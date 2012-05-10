@@ -245,8 +245,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         """Export a generated amplitude to file"""
 
         def generate_matrix_elements(self):
-            """Helper function to generate the matrix elements before
-            exporting"""
+            """Helper function to generate the matrix elements before exporting"""
 
             # Sort amplitudes according to number of diagrams,
             # to get most efficient multichannel output
@@ -257,7 +256,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
             ndiags = 0
             if not self._curr_matrix_elements.get_matrix_elements():
                 self._curr_matrix_elements = \
-                    helas_objects.HelasMultiProcess(self._curr_amps)
+                    helas_objects.HelasMultiProcess(self._curr_amps,
+                    optimized_output = self.options['loop_optimized_output'])
                 ndiags = sum([len(me.get('diagrams')) for \
                               me in self._curr_matrix_elements.\
                               get_matrix_elements()])
@@ -271,7 +271,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
             return ndiags, cpu_time2 - cpu_time1
 
         # Start of the actual routine
-
         ndiags, cpu_time = generate_matrix_elements(self)
 
         calls = 0

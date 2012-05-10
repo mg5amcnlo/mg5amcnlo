@@ -1170,7 +1170,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                  and argument.get('is_loop')) or \
                  ((isinstance(argument,helas_objects.HelasAmplitude) \
                  and argument['type']=='loop')):
-            base_wf = "W%(L{0})s,"
+            base_wf = "W%(WF{0})s,"
         else:
             base_wf = self.format_helas_object('W(1,','%({0})d')+','
         
@@ -1235,7 +1235,191 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
     """ Version of FortranUFOHelasCallWriter meeting the needs of the optimized
     output for loop processes """
 
-    pass
+    def format_helas_object(self, prefix, number):
+        """ Returns the string for accessing the wavefunction with number in
+        argument. Typical output is {prefix}(1,{number}) """
+        
+        if self.hel_sum:
+            return '%s%s,H)'%(prefix, number)
+        else:
+            return '%s%s)'%(prefix, number)
+
+    def get_coef_construction_calls(self, matrix_element):
+        """ Return the calls to the helas routines to construct the coefficients
+        of the polynomial representation of the loop numerator (i.e. Pozzorini
+        method)"""
+
+        assert isinstance(matrix_element, loop_helas_objects.LoopHelasMatrixElement), \
+                  "%s not valid argument for get_born_ct_helas_calls" % \
+                  repr(matrix_element)
+
+        res = []                  
+        for ldiag in matrix_element.get_loop_diagrams():
+            res.append("# Coefficient construction for loop diagram with ID %d"\
+                       %ldiag.get('number'))
+            for lwf in ldiag.get('loop_wavefunctions'):
+                    res.append(self.get_wavefunction_call(lwf))
+        res.append("# Now create the loop coefficients")
+        for ldiag in matrix_element.get_loop_diagrams():
+            for lamp in ldiag.get_loop_amplitudes():
+                create_coef='CALL CREATE_LOOP_COEFS(WL(1,1,1,%(number)d),'
+                create_coef+='%(loop_rank)d,LOOPCOEFS(1,%(loop_number)d),'
+                create_coef+='%(amp_number)d)'
+                res.append(create_coef%{\
+                  'number':lamp.get_final_loop_wavefunction().get('number'),
+                  'loop_rank':lamp.get_rank(),
+                  'loop_number':lamp.get('number'),
+                  'amp_number':lamp.get('amplitudes')[0].get('number')})
+        return res
+
+    def get_loop_CT_calls(self, matrix_element):
+        """ Return the calls to CutTools interface routines to launch the
+        computation of the contribution of one loop group."""
+
+        assert isinstance(matrix_element, loop_helas_objects.LoopHelasMatrixElement), \
+                  "%s not valid argument for get_born_ct_helas_calls" % \
+                  repr(matrix_element)
+        
+        res = []
+        for ldiag in matrix_element.get_loop_diagrams():
+            res.append("# CutTools call for loop groups with representative ID %d"\
+                       %ldiag.get('number'))
+            for lamp in ldiag.get_loop_amplitudes():
+                res.append(self.get_amplitude_call(lamp))
+
+        return res
+
+    def generate_external_wavefunction(self,argument):
+        """ Generate an external wavefunction """
+        
+        call="CALL "
+        call_function = None
+        if argument.get('is_loop'):
+            call=call+"LCUT_OPT(PL(1,%(number)d),WL(1,1,1,%(number)d))"
+            call_function = lambda wf: call % {'number':wf.get('number')}
+            self.add_wavefunction(argument.get_call_key(), call_function)
+        else:
+            # For the tree external wavefunction, just call the mother
+            FortranUFOHelasCallWriter.generate_external_wavefunction(self,
+                                                                       argument)
+
+    def generate_loop_amplitude_call(self, loopamp):
+        """ Routine for automatic generation of a call to CutTools for loop
+        amplitudes for the optimized output."""
+        
+        call = "CALL LOOP%(numLoopLines)s"
+        if (len(loopamp.get('pairing')) != len(loopamp.get('mothers'))):
+            call += "%(numMotherWfs)s%(numCouplings)s(%(numeratorNumber)d,"
+            for i in range(len(loopamp.get('pairing'))):
+                call = call + "%(Pairing{0})d,".format(i)
+        else:
+            call += "%(numCouplings)s(%(numeratorNumber)d,"            
+        for i in range(len(loopamp.get('mothers'))):
+            call = call + "%(MotherID{0})d,%(MotherStatus{0})d,".format(i+1)
+        for i in range(len(loopamp.get('wavefunctions'))-2):
+            call = call + \
+            "DCMPLX(%(LoopMass{0})s),".format(i+1)
+        call = call + "%(LoopRank)d,"
+        call = call + "%(LoopSymmetryFactor)d,"
+        call = call + "LOOPRES(1,%(ampNumber)d),S(%(ampNumber)d),%(ampNumber)d)"
+        
+        call_function = lambda amp: call % amp.get_helas_call_dict(\
+                                                           OptimizedOutput=True)
+        self.add_amplitude(loopamp.get_call_key(), call_function)
+        return
+
+    def generate_all_other_helas_objects(self,argument):
+        """ Generate all the helas objects for which no special handlers was
+        placed in generate_helas_call """
+        
+        if isinstance(argument, helas_objects.HelasWavefunction):
+            outgoing = argument.find_outgoing_number()
+        else:
+            outgoing = 0
+            
+        if isinstance(argument, helas_objects.HelasAmplitude) and \
+                                                  argument.get('type')=='loop':
+           raise MadGraph5Error, 'There should not be any helas call '+\
+                                'associated with helas amplitudes of type loop.'
+
+        # Check if we need to append a charge conjugation flag
+        l = [str(l) for l in argument.get('lorentz')]
+        flag = []
+        if argument.needs_hermitian_conjugate():
+            flag = ['C%d' % i for i in \
+                                  argument.get_conjugate_index()]
+        
+        if (isinstance(argument, helas_objects.HelasWavefunction) and \
+           argument.get('is_loop')):
+            flag.append("L%d"%argument.get_loop_index())
+
+        # Creating line formatting:
+        call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s)'
+
+        arg = {'routine_name': aloha_writers.combine_name(\
+                                        '%s' % l[0], l[1:], outgoing, flag),
+               'coup': ("%%(coup%d)s," * len(argument.get('coupling'))) % \
+                                     tuple(range(len(argument.get('coupling'))))                                            
+               }
+
+        # select how to write a single wf
+        if (isinstance(argument,helas_objects.HelasWavefunction) \
+                 and argument.get('is_loop')):
+            base_wf = "%(WF{0})s,"
+        else:
+            base_wf = self.format_helas_object('W(1,','%({0})d')+','
+        
+        # compute the full list of wf
+        wf = ''
+        for i in range(len(argument.get('mothers'))):
+            wf += base_wf.format(i)
+        arg['wf'] = wf
+
+                
+        # Treat other argument
+        # First WaveFunction
+        if isinstance(argument, helas_objects.HelasWavefunction):
+            if argument['is_loop']:
+                arg['out'] = 'PL(1,%(out)d),COEFS'
+            else:
+                arg['out']=self.format_helas_object('W(1,','%(out)d')                   
+            if aloha.complex_mass:
+                arg['mass'] = "DCMPLX(%(CM)s),"
+            else:
+                arg['mass'] = "%(M)s,%(W)s,"
+        # Standard Amplitude
+        elif argument['type'] == 'base':      
+            arg['mass'] = ''  
+            arg['out'] = self.format_helas_object('AMP(','%(out)d')
+        # UV Counterterm (and other)
+        else:
+            arg['mass'] = ''
+            ampl = "AMPL({0},%(out)d)".format(argument.get_epsilon_order()+1)
+            arg['out'] = '%s' % ampl
+            if isinstance(argument,loop_helas_objects.LoopHelasUVCTAmplitude)\
+                   and argument.get_UVCT_couplings()!='1.0d0':
+                 # add a second line to take into account the multiplicative factor                 
+                 call += "\n %(second_line)s "
+                 arg['second_line'] = ampl+"="+ampl+"*(%(uvct)s)"        
+
+        # ALL ARGUMENT FORMATTED ###############################################
+        # Store the result.
+        call = call % arg
+        if (isinstance(argument, helas_objects.HelasWavefunction) and \
+           argument.get('is_loop')):
+            # We add here the call to the UPDATE_COEF subroutine
+            call += "\n CALL UPDATE_WL(WL(1,1,1,%(loop_mother_number)d),"
+            call += "%(loop_mother_rank)d,COEFS,%(vertex_rank)d,"
+            call += "WL(1,1,1,%(out)d))"
+        # Now we have a line correctly formatted
+        call_function = lambda wf: call % wf.get_helas_call_dict(\
+          OptimizedOutput=True, specifyHel=self.hel_sum)
+
+        # Add the constructed function to wavefunction or amplitude dictionary
+        if isinstance(argument, helas_objects.HelasWavefunction):
+            self.add_wavefunction(argument.get_call_key(), call_function)
+        else:
+            self.add_amplitude(argument.get_call_key(), call_function)        
 
 #===============================================================================
 # CPPUFOHelasCallWriter
