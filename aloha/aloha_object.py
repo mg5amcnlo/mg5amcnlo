@@ -45,10 +45,10 @@ class L_P(aloha_lib.LorentzObject):
         aloha_lib.LorentzObject.__init__(self, name,[lorentz1], [],['P%s'%particle])
     
     def create_representation(self):
-        self.sub0 = aloha_lib.Variable('P%s_0' % self.particle)
-        self.sub1 = aloha_lib.Variable('P%s_1' % self.particle)
-        self.sub2 = aloha_lib.Variable('P%s_2' % self.particle)
-        self.sub3 = aloha_lib.Variable('P%s_3' % self.particle)
+        self.sub0 = aloha_lib.DVariable('P%s_0' % self.particle)
+        self.sub1 = aloha_lib.DVariable('P%s_1' % self.particle)
+        self.sub2 = aloha_lib.DVariable('P%s_2' % self.particle)
+        self.sub3 = aloha_lib.DVariable('P%s_3' % self.particle)
 
         self.representation= aloha_lib.LorentzObjectRepresentation(
                                     {(0,): self.sub0, (1,): self.sub1, \
@@ -90,10 +90,10 @@ class PSlash(aloha_lib.LorentzObject):
     
     def create_representation(self):
         """create representation"""
-        p0 = aloha_lib.Variable('P%s_0' % self.particle)
-        p1 = aloha_lib.Variable('P%s_1' % self.particle)
-        p2 = aloha_lib.Variable('P%s_2' % self.particle)
-        p3 = aloha_lib.Variable('P%s_3' % self.particle)    
+        p0 = aloha_lib.DVariable('P%s_0' % self.particle)
+        p1 = aloha_lib.DVariable('P%s_1' % self.particle)
+        p2 = aloha_lib.DVariable('P%s_2' % self.particle)
+        p3 = aloha_lib.DVariable('P%s_3' % self.particle)    
     
     
         gamma = {
@@ -118,7 +118,7 @@ class L_Mass(aloha_lib.LorentzObject):
         aloha_lib.LorentzObject.__init__(self, name,[], [])
             
     def create_representation(self):
-        mass = aloha_lib.Variable('M%s' % self.particle)
+        mass = aloha_lib.DVariable('M%s' % self.particle)
 
         self.representation = aloha_lib.LorentzObjectRepresentation(
                                 mass, self.lorentz_ind, self.spin_ind)
@@ -142,7 +142,7 @@ class L_OverMass2(aloha_lib.LorentzObject):
         aloha_lib.LorentzObject.__init__(self, name, [], [], tags=['OM%s' % particle])
     
     def create_representation(self):
-        mass = aloha_lib.Variable('OM%s' % self.particle)
+        mass = aloha_lib.DVariable('OM%s' % self.particle)
 
         self.representation = aloha_lib.LorentzObjectRepresentation(
                                 mass, self.lorentz_ind, self.spin_ind)
@@ -169,7 +169,7 @@ class L_Width(aloha_lib.LorentzObject):
         aloha_lib.LorentzObject.__init__(self, name, [], [])
         
     def create_representation(self):
-        width = aloha_lib.Variable('W%s' % self.particle)
+        width = aloha_lib.DVariable('W%s' % self.particle)
 
         self.representation= aloha_lib.LorentzObjectRepresentation(
                             width, self.lorentz_ind, self.spin_ind)

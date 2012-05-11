@@ -1,1 +1,3 @@
-#depth = 0 # for debug
+complex_mass = False  # Tag for activating the complex mass scheme
+unitary_gauge = True  # Tag choosing between Feynman Gauge or unitary gauge
+loop_mode = False     # Tag for encoding momenta with complex number.

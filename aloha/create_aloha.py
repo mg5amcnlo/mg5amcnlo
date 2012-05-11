@@ -177,6 +177,7 @@ class AbstractRoutineBuilder(object):
         output.contracted = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
                                           for name in aloha_lib.KERNEL.use_tag
                                           if name.startswith('TMP')])
+        
         output.tag += ['C%s' % pair for pair in self.conjg]
         return output
 

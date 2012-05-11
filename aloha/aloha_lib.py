@@ -36,6 +36,7 @@ from array import array
 import collections
 from fractions import Fraction
 import numbers
+import aloha # define mode of writting
 
 class defaultdict(collections.defaultdict):
 
@@ -78,7 +79,7 @@ class Computation(dict):
             return out
 
         # Add a new one
-        tag = 'TMP_%s' % len(self.reduced_expr)
+        tag = 'TMP%s' % len(self.reduced_expr)
         new = Variable(tag)
         self.reduced_expr[str_expr] = [new, tag]
         
@@ -89,9 +90,6 @@ class Computation(dict):
         return new
         
         
-            
-        
-
 KERNEL = Computation()
 
 #===============================================================================
@@ -515,10 +513,30 @@ class FactoryVar(object):
 class Variable(FactoryVar):
     
     def __new__(self, name):
+        return FactoryVar(name, C_Variable)
+
+class DVariable(FactoryVar):
+    
+    def __new__(self, name):
+        
+        if aloha.complex_mass:
+            #some parameter are pass to complex
+            if name[0] in ['M','W'] or name.startswith('OM'):
+                return FactoryVar(name, C_Variable)
+        if aloha.loop_mode and name.startswith('P'):
+            return FactoryVar(name, C_Variable)
+        
+        #Normal case:
         return FactoryVar(name, R_Variable)
 
+
+class C_Variable(str):
+    vartype=0
+    type = 'complex'
+    
 class R_Variable(str):
-    pass
+    vartype=0
+    type = 'double'
 
 
 #===============================================================================
