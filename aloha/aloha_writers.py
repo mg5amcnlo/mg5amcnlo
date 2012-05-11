@@ -1087,7 +1087,7 @@ class ALOHAWriterForCPP(WriteALOHA):
  
     def write_combined(self, lor_names, mode='self', offshell=None, **opt):
         """Write the .h and .cc files associated to the combined file"""
-
+        
         # Set some usefull command
         if offshell is None:
             offshell = self.offshell
