@@ -3246,7 +3246,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                and self._export_format in ['madevent', 'standalone']:
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
-            logger.info('If you continue this directory will be cleaned')
+            logger.info('If you continue this directory will be deleted and replaced.')
             answer = self.ask('Do you want to continue?', 'y', ['y','n'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
