@@ -5,9 +5,6 @@ Update notes for MadGraph 5 (in reverse time order)
 		      example ./bin/madevent multi_run 10 
                   JA: Added new restriction card for the sm model with massive
                       muon and electron, and non-zero tau decay width
-                  JA: Improved integration grid setting in myamp.f giving better 
-                      generation efficiency for certain processes with offshell
-                      massive s-channel propagators (in particular p p > w+ w- a j).
                   JA: Ensure assignment of colors to intermediate propagators
                       works also in fermion flow- and color flow-violating 
                       RPV processes (thanks Brock Tweedie for finding this).
