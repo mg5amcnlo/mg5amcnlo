@@ -2344,7 +2344,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         path = os.path.join(self.dir_path, 'SubProcesses')
 
         os.chdir(path)
-
         pathdir = os.getcwd()
 
         # Create the directory PN in the specified path

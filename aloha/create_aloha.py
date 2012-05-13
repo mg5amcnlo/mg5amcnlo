@@ -153,18 +153,15 @@ class AbstractRoutineBuilder(object):
         old_id = 2 * pair - 1
         new_id = _conjugate_gap + old_id
         
-        if self.routine_kernel is None:
-            self.kernel_tag = set()
-            self.routine_kernel = eval(self.lorentz_expr)
+        #if self.routine_kernel is None:
+        self.kernel_tag = set()
+        self.routine_kernel = eval(self.lorentz_expr)
         
         # We need to compute C Gamma^T C^-1 = C_ab G_cb (-1) C_cd 
         #                  = C_ac G_bc (-1) C_bd = C_ac G_bc C_db
         self.routine_kernel = \
              C(new_id, old_id + 1) * self.routine_kernel * C(new_id + 1, old_id)
 
-#        self.name += 'C'
-#        if pair:
-#            self.name += str(pair)
         self.conjg.append(pair)
 
     
@@ -192,8 +189,10 @@ class AbstractRoutineBuilder(object):
         
         if not flip_sign:
             return self.lorentz_expr
+
         momentum_pattern = re.compile(r'\bP\(([\+\-\d]+),(%s)\)' % '|'.join(flip_sign))
         lorentz_expr = momentum_pattern.sub(r'-P(\1,\2)', self.lorentz_expr)
+        
         return lorentz_expr
                 
     def compute_aloha_high_kernel(self, mode, factorize=True):
@@ -220,10 +219,13 @@ class AbstractRoutineBuilder(object):
                 raise ALOHAERROR, 'unknow type in Lorentz Evaluation' 
             else:
                 self.kernel_tag = set(aloha_lib.KERNEL.use_tag)
-        else:
+        elif isinstance(self.routine_kernel,str):
             lorentz = eval(self.routine_kernel)
             aloha_lib.KERNEL.use_tag = set(self.kernel_tag) 
-          
+        else:
+            lorentz = copy.copy(self.routine_kernel)
+            aloha_lib.KERNEL.use_tag = set(self.kernel_tag) 
+        
         for (i, spin ) in enumerate(self.spins):   
             id = i + 1
             #Check if this is the outgoing particle
@@ -295,6 +297,7 @@ class AbstractRoutineBuilder(object):
         lorentz = lorentz.simplify()
         if factorize:
             lorentz = lorentz.factorize()
+            
         lorentz.tag = set(aloha_lib.KERNEL.use_tag)
         return lorentz     
                         

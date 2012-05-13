@@ -72,6 +72,7 @@ class Computation(dict):
         self.use_tag.update(tag)
         
     def add_expression_contraction(self, expression):
+
         str_expr = str(expression)
         if str_expr in self.reduced_expr:
             out, tag = self.reduced_expr[str_expr]
@@ -81,12 +82,12 @@ class Computation(dict):
         # Add a new one
         tag = 'TMP%s' % len(self.reduced_expr)
         new = Variable(tag)
-        self.reduced_expr[str_expr] = [new, tag]
-        
+        self.reduced_expr[str_expr] = [new, tag]            
         new_2 = expression.simplify()
         new_2 = expression.factorize()
         self.reduced_expr2[tag] = new_2
         self.add_tag((tag,))
+        #return expression
         return new
         
         
@@ -152,16 +153,16 @@ class AddVariable(list):
         
         if not self:
             return self
-        
         if self.prefactor == 1:
             new = self[0].expand()
         else:
             new = self.prefactor * self[0].expand()
+            
         for item in self[1:]:
             if self.prefactor == 1:
                 new += item.expand()
             else:
-                new += self.prefactor * item.expand()
+                new += (self.prefactor) * item.expand()
         return new
 
     def __mul__(self, obj):
@@ -219,7 +220,10 @@ class AddVariable(list):
             return new         
         elif obj.vartype == 2: # obj is a MultVariable
             new = AddVariable(self, self.prefactor)
-            new.append(obj)
+            if self.prefactor == 1:
+                new.append(obj)
+            else:
+                new.append((1/self.prefactor)*obj)
             return new     
         elif obj.vartype == 1: # obj is a AddVariable
             new = AddVariable(self, self.prefactor)
@@ -232,14 +236,16 @@ class AddVariable(list):
 
     def __iadd__(self, obj):
         """Define all the different addition."""
-        
         if not hasattr(obj, 'vartype'):
             if not obj: # obj is zero
                 return self
             self.prefactor *= obj
             return self
         elif obj.vartype == 2: # obj is a MultVariable
-            self.append(obj)
+            if self.prefactor == 1:
+                self.append(obj)
+            else:
+                self.append((1/self.prefactor)*obj)
             return self
         elif obj.vartype == 1: # obj is a AddVariable
             for item in obj:
@@ -663,7 +669,11 @@ class MultLorentz(MultVariable):
             out *= fact
         return out
 
-
+    def __copy__(self):
+        """ create a shadow copy """
+        new = MultLorentz(self)
+        new.prefactor = self.prefactor
+        return new
 
 #===============================================================================
 # LorentzObject
@@ -783,6 +793,7 @@ class LorentzObjectRepresentation(dict):
 
     @staticmethod
     def get_mapping(l1,l2, switch_order=[]):
+        shift = len(switch_order)
         for value in l1:
             try:
                 index = l2.index(value)
@@ -791,7 +802,7 @@ class LorentzObjectRepresentation(dict):
                         "Invalid addition. Object doen't have the same lorentz "+ \
                         "indices : %s != %s" % (l1, l2))
             else:
-                switch_order.append(index)
+                switch_order.append(shift + index)
         return switch_order
     
     
@@ -839,6 +850,7 @@ class LorentzObjectRepresentation(dict):
         assert(obj.vartype == 4 == self.vartype) # are LorentzObjectRepresentation
         
         if self.lorentz_ind != obj.lorentz_ind or self.spin_ind != obj.spin_ind:
+            
             # if the order of indices are different compute a mapping 
             switch_order = []
             self.get_mapping(obj.lorentz_ind, self.lorentz_ind, switch_order)
@@ -849,7 +861,7 @@ class LorentzObjectRepresentation(dict):
             switch = lambda ind : (ind)
    
         # Some sanity check  
-        assert tuple(switch(self.lorentz_ind+self.spin_ind)) == tuple(obj.lorentz_ind+obj.spin_ind), '%s!=%s' % (switch(self.lorentz_ind+self.spin_ind), (obj.lorentz_ind+self.spin_ind))
+        assert tuple(switch(self.lorentz_ind+self.spin_ind)) == tuple(obj.lorentz_ind+obj.spin_ind), '%s!=%s' % (switch(self.lorentz_ind+self.spin_ind), (obj.lorentz_ind+obj.spin_ind))
         assert tuple(switch(self.lorentz_ind) )== tuple(obj.lorentz_ind), '%s!=%s' % (switch(self.lorentz_ind), tuple(obj.lorentz_ind))
         
         # loop over all indices and fullfill the new object         
@@ -914,6 +926,7 @@ class LorentzObjectRepresentation(dict):
         return new_object
         
     __rmul__ = __mul__
+    __imul__ = __mul__
 
     def contraction(self, obj, l_sum, s_sum, l_dict, s_dict):
         """ make the Lorentz/spin contraction of object self and obj.

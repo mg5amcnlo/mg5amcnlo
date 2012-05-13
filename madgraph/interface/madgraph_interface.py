@@ -2135,6 +2135,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         line = " ".join(args[1:])
         myprocdef = self.extract_process(line)
+        print dir(myprocdef),type(myprocdef)
+        print myprocdef['required_s_channels']
 
         # Check that we have something    
         if not myprocdef:

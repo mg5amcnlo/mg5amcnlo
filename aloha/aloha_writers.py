@@ -59,15 +59,16 @@ class WriteALOHA:
         
         if len(indices) == 1:
             return indices[0] + start
-        
-        ind_name = self.obj.numerator.lorentz_ind 
+        print dir(self.routine.expr)
+        ind_name = self.routine.expr.lorentz_ind
+        print self.routine.expr 
         if ind_name == ['I3', 'I2']:
             return  4 * indices[1] + indices[0] + start 
         elif len(indices) == 2: 
             return  4 * indices[0] + indices[1] + start 
         else:
             raise Exception, 'WRONG CONTRACTION OF LORENTZ OBJECT for routine %s: %s' \
-                    % (self.name, indices)                                 
+                    % (self.name, ind_name)                                 
                                  
     def get_header_txt(self): 
         """ Prototype for language specific header""" 
@@ -99,11 +100,10 @@ class WriteALOHA:
         else:
             global_sign = -1
         
-        flipped = [2*(int(c[1:])-1) for c in self.tag if c.startswith('C')]
-        
-        for index, spin in enumerate(self.particles): 
+        flipped = [2*(int(c[1:])-1) for c in self.routine.tag if c.startswith('C')]
+        for index, spin in enumerate(self.particles):
             assert(spin in ['S','F','V','T'])  
-      
+                  
             #compute the sign
             if spin != 'F':
                 sign = -1 * global_sign
@@ -117,51 +117,44 @@ class WriteALOHA:
                 nb_fermion += 1
                 if index-1 in flipped:
                     sign *= -1
+            
             # No need to include the outgoing particles in the definitions
             if index == self.outgoing -1:
-                continue 
-            
-            momentum_conserve.append('%s%s%d' % (sign_dict[sign], spin, \
-                                                                     index + 1))
-        
-        # Remove the
-        if momentum_conserve[0][0] == '+':
-            momentum_conserve[0] = momentum_conserve[0][1:]
-        
-        return momentum_conserve
-
-
-
-
-        
-        ids = [i+1 for i in range(len(self.particles)) if i !=self.offshell]
-        
-        signs = []
-        for index in ids:
-            #Mom is in format PX with X the number of the particle
-            type = self.particles[index - 1]
-            energy_pos = self.type_to_size[type] -1
-            sign = 1
-            if self.offshell == index and type in ['V','S']:
-                sign = -1
-            if 'C%s' % ((index +1) // 2)  in self.tag: 
-                if index == self.outgoing:
-                    pass
-                elif index % 2 and index -1 != self.outgoing:
-                    pass
-                elif index % 2 == 1 and index + 1  != self.outgoing:
-                    pass
-                else:
-                    sign *= -1
-            
-            if sign == -1 :
-                signs.append('-')
-            else:
+                signs.append('0*')
+                continue     
+                
+            if sign == 1:    
                 signs.append('+')
+            else:
+                signs.append('-')
         return signs
-    
-    
-    
+
+
+    def get_P_sign(self, index):
+
+        type = self.particles[index - 1]
+        energy_pos = self.type_to_size[type] -1
+        sign = 1
+        if self.offshell == index and type in ['V','S']:
+            sign = -1
+        if 'C%s' % ((index +1) // 2)  in self.routine.tag: 
+            if index == self.outgoing:
+                pass
+            elif index % 2 and index -1 != self.outgoing:
+                pass
+            elif index % 2 == 1 and index + 1  != self.outgoing:
+                pass
+            else:
+                sign *= -1
+        
+        if sign == -1 :
+            return '-'
+        else:
+            return ''
+        
+        
+        
+        
     
     def get_foot_txt(self):
         """Prototype for language specific footer"""
@@ -233,7 +226,6 @@ class WriteALOHA:
             writer.write_comments(commentstring)
             writer.write(text)
 
-        print text
         return text + '\n'
 
 
@@ -323,7 +315,7 @@ class WriteALOHA:
                 else:
                     file_str.write('+')
                     file_str.write(nb_str)
-                file_str.write('*')
+                file_str.write('*(')
             elif value == -1:
                 add = '-' 
                 file_str.write('-')
@@ -334,8 +326,8 @@ class WriteALOHA:
             first = False
             file_str.write(add.join([self.write_obj(obj, prefactor=False) 
                                                           for obj in obj_list]))
-            #if value not in [1,-1]:
-            #    file_str.write(')')
+            if value not in [1,-1]:
+                file_str.write(')')
                 
         file_str.write(')')
         return file_str.getvalue()
@@ -1438,10 +1430,11 @@ class ALOHAWriterForPython(WriteALOHA):
         # Define all the required momenta
         p1,p2 = [], [] # a list for keeping track how to write the momentum
         
+        signs = self.get_momentum_conservation_sign()
         
         for i,type in enumerate(self.particles):
             if self.declaration.is_used('OM%s' % (i+1)):
-                out.write("    OM{0} = 0.0\n    if (M{0}): OM{0}s=1.0/M{0}**2\n".format( (i+1) ))
+                out.write("    OM{0} = 0.0\n    if (M{0}): OM{0}=1.0/M{0}**2\n".format( (i+1) ))
             
             if i+1 == self.offshell:
                 out_type = type
@@ -1449,13 +1442,14 @@ class ALOHAWriterForPython(WriteALOHA):
                 continue
             elif self.offshell:
                 energy_pos = self.type_to_size[type] -2
-                p1.append('%s%s[%s]' % (type,i+1, energy_pos))
-                p2.append('%s%s[%s]' % (type,i+1, energy_pos+1))      
+                p1.append('%s%s%s[%s]' % (signs[i],type,i+1, energy_pos))
+                p2.append('%s%s%s[%s]' % (signs[i],type,i+1, energy_pos+1))      
             
             if self.declaration.is_used('P%s' % (i+1)):
                 energy_pos = self.type_to_size[type] -2
-                out.write('''    P%(i)d = [complex(%(type)s%(i)d[%(nb)d]).real, complex(%(type)s%(i)d[%(nb2)d]).real, complex(%(type)s%(i)d[%(nb2)d]).imag, complex(%(type)s%(i)d[%(nb)d]).imag]\n''' % \
-                {'type': type, 'i': i+1, 'nb': energy_pos, 'nb2': energy_pos + 1})               
+                out.write('''    P%(i)d = [%(sign)scomplex(%(type)s%(i)d[%(nb)d]).real, %(sign)scomplex(%(type)s%(i)d[%(nb2)d]).real, %(sign)scomplex(%(type)s%(i)d[%(nb2)d]).imag, %(sign)scomplex(%(type)s%(i)d[%(nb)d]).imag]\n''' % \
+                {'type': type, 'i': i+1, 'nb': energy_pos, 'nb2': energy_pos + 1,
+                 'sign': self.get_P_sign(i+1)})               
                 
         # define the resulting momenta
         if self.offshell:
@@ -1463,13 +1457,13 @@ class ALOHAWriterForPython(WriteALOHA):
             type = self.particles[self.offshell-1]
             out.write('    %s = wavefunctions.WaveFunction(size=%s)\n' % \
                                                        (self.outname, out_size))
-            out.write('    %s%s[%s] = %s\n' % (type,self.offshell, energy_pos, '+'.join(p1)))
-            out.write('    %s%s[%s] = %s\n' % (type,self.offshell, energy_pos+1, '+'.join(p2)))
             
-            out.write('''    P%(i)d = [complex(%(type)s%(i)d[%(nb)d]).real, complex(%(type)s%(i)d[%(nb2)d]).real, complex(%(type)s%(i)d[%(nb2)d]).imag, complex(%(type)s%(i)d[%(nb)d]).imag]\n''' % \
+            out.write('    %s%s[%s] = %s\n' % (type,self.offshell, energy_pos, ''.join(p1)))
+            out.write('    %s%s[%s] = %s\n' % (type,self.offshell, energy_pos+1, ''.join(p2)))
+            
+            out.write('''    P%(i)d = [%(sign)scomplex(%(type)s%(i)d[%(nb)d]).real, %(sign)scomplex(%(type)s%(i)d[%(nb2)d]).real, %(sign)scomplex(%(type)s%(i)d[%(nb2)d]).imag, %(sign)scomplex(%(type)s%(i)d[%(nb)d]).imag]\n''' % \
                 {'type': out_type, 'i': self.offshell, 'nb': energy_pos, 
-                                                         'nb2': energy_pos + 1})
-            
+                 'nb2': energy_pos + 1, 'sign': self.get_P_sign(self.offshell)}) 
         
         # Returning result
         return out.getvalue()
