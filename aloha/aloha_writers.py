@@ -59,9 +59,9 @@ class WriteALOHA:
         
         if len(indices) == 1:
             return indices[0] + start
-        print dir(self.routine.expr)
+
         ind_name = self.routine.expr.lorentz_ind
-        print self.routine.expr 
+
         if ind_name == ['I3', 'I2']:
             return  4 * indices[1] + indices[0] + start 
         elif len(indices) == 2: 
@@ -1436,7 +1436,7 @@ class ALOHAWriterForPython(WriteALOHA):
             if self.declaration.is_used('OM%s' % (i+1)):
                 out.write("    OM{0} = 0.0\n    if (M{0}): OM{0}=1.0/M{0}**2\n".format( (i+1) ))
             
-            if i+1 == self.offshell:
+            if i+1 == self.outgoing:
                 out_type = type
                 out_size = self.type_to_size[type] 
                 continue
@@ -1454,15 +1454,15 @@ class ALOHAWriterForPython(WriteALOHA):
         # define the resulting momenta
         if self.offshell:
             energy_pos = out_size -2
-            type = self.particles[self.offshell-1]
+            type = self.particles[self.outgoing-1]
             out.write('    %s = wavefunctions.WaveFunction(size=%s)\n' % \
                                                        (self.outname, out_size))
             
-            out.write('    %s%s[%s] = %s\n' % (type,self.offshell, energy_pos, ''.join(p1)))
-            out.write('    %s%s[%s] = %s\n' % (type,self.offshell, energy_pos+1, ''.join(p2)))
+            out.write('    %s%s[%s] = %s\n' % (type,self.outgoing, energy_pos, ''.join(p1)))
+            out.write('    %s%s[%s] = %s\n' % (type,self.outgoing, energy_pos+1, ''.join(p2)))
             
             out.write('''    P%(i)d = [%(sign)scomplex(%(type)s%(i)d[%(nb)d]).real, %(sign)scomplex(%(type)s%(i)d[%(nb2)d]).real, %(sign)scomplex(%(type)s%(i)d[%(nb2)d]).imag, %(sign)scomplex(%(type)s%(i)d[%(nb)d]).imag]\n''' % \
-                {'type': out_type, 'i': self.offshell, 'nb': energy_pos, 
+                {'type': out_type, 'i': self.outgoing, 'nb': energy_pos, 
                  'nb2': energy_pos + 1, 'sign': self.get_P_sign(self.offshell)}) 
         
         # Returning result
