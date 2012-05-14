@@ -9571,8 +9571,7 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         
         # couplings
         self.assertEqual(len(mg4_model.coups_dep), 3)
-        sol= ['GC_1', 'GC_2', 'GC_3', 'GC_7', 'GC_8', 'GC_9', 'GC_10', 'GC_16', 'GC_21', 'GC_22', 'GC_23', 'GC_24', 'GC_25', 'GC_26', 'GC_27', 'GC_28', 'GC_29', 'GC_30', 'GC_31', 'GC_32', 'GC_33', 'GC_37', 'GC_38']
-        
+        sol = ['GC_1', 'GC_2', 'GC_3', 'GC_7', 'GC_8', 'GC_9', 'GC_10', 'GC_11', 'GC_17', 'GC_22', 'GC_23', 'GC_24', 'GC_25', 'GC_26', 'GC_27', 'GC_28', 'GC_29', 'GC_30', 'GC_31', 'GC_32', 'GC_33', 'GC_34', 'GC_38', 'GC_39']
         self.assertEqual(sol, [ p.name for p in mg4_model.coups_indep])
 
         

@@ -1897,68 +1897,54 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
         """Test writing the Pythia model parameter files"""
 
         goal_file_h = \
-"""//==========================================================================
-// This file has been automatically generated for Pythia 8
+"""//==========================================================================\n
+// This file has been automatically generated for Pythia 8\n
 #  MadGraph 5 v. %(version)s, %(date)s
-#  By the MadGraph Development Team
-#  Please visit us at https://launchpad.net/madgraph5
-//==========================================================================
-
-#ifndef Pythia8_parameters_sm_H
-#define Pythia8_parameters_sm_H
-
-#include <complex>
-
-#include "ParticleData.h"
-#include "StandardModel.h"
-#include "SusyLesHouches.h"
-
-using namespace std;
-
-namespace Pythia8 {
-
-class Parameters_sm
-{
-public:
-
-static Parameters_sm* getInstance();
-
-// Model parameters independent of aS
-double WTau,WH,WW,WZ,WT,MTA,MM,Me,MH,MZ,MB,MT,MC,ymtau,ymm,yme,ymt,ymb,ymc,etaWS,rhoWS,AWS,lamWS,Gf,aEWM1,ZERO,lamWS__exp__2,lamWS__exp__3,MZ__exp__2,MZ__exp__4,sqrt__2,MH__exp__2,aEW,MW,sqrt__aEW,ee,MW__exp__2,sw2,cw,sqrt__sw2,sw,g1,gw,v,v__exp__2,lam,yb,yc,ye,ym,yt,ytau,muH,gw__exp__2,cw__exp__2,ee__exp__2,sw__exp__2;
-std::complex<double> CKM11,CKM12,complexi,CKM13,CKM21,CKM22,CKM23,CKM31,CKM32,CKM33,conjg__CKM11,conjg__CKM12,conjg__CKM13,conjg__CKM21,conjg__CKM22,conjg__CKM23,conjg__CKM31,conjg__CKM32,conjg__CKM33;
-// Model parameters dependent on aS
-double aS,sqrt__aS,G,G__exp__2;
-// Model couplings independent of aS
-std::complex<double> GC_1,GC_2,GC_3,GC_7,GC_8,GC_9,GC_10,GC_11,GC_12,GC_13,GC_14,GC_15,GC_16,GC_17,GC_18,GC_19,GC_20,GC_21,GC_22,GC_23,GC_24,GC_25,GC_26,GC_27,GC_28,GC_29,GC_30,GC_31,GC_32,GC_33,GC_34,GC_35,GC_36,GC_37,GC_38,GC_39,GC_40,GC_41,GC_42,GC_43,GC_44,GC_45,GC_46,GC_47;
-// Model couplings dependent on aS
-std::complex<double> GC_6,GC_5,GC_4;
-
-// Set parameters that are unchanged during the run
-void setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr);
-// Set couplings that are unchanged during the run
-void setIndependentCouplings();
-// Set parameters that are changed event by event
-void setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS);
-// Set couplings that are changed event by event
-void setDependentCouplings();
-
-// Print parameters that are unchanged during the run
-void printIndependentParameters();
-// Print couplings that are unchanged during the run
-void printIndependentCouplings();
-// Print parameters that are changed event by event
-void printDependentParameters();
-// Print couplings that are changed event by event
-void printDependentCouplings();
-
-
-  private:
-static Parameters_sm* instance;
-};
-
-} // end namespace Pythia8
-#endif // Pythia8_parameters_sm_H
-""" % misc.get_pkg_info()
+#  By the MadGraph Development Team\n
+#  Please visit us at https://launchpad.net/madgraph5\n
+//==========================================================================\n\n
+#ifndef Pythia8_parameters_sm_H\n
+#define Pythia8_parameters_sm_H\n\n
+#include <complex>\n\n
+#include "ParticleData.h"\n
+#include "StandardModel.h"\n
+#include "SusyLesHouches.h"\n\n
+using namespace std;\n\n
+namespace Pythia8 {\n\n
+class Parameters_sm\n
+{\n
+public:\n\n
+static Parameters_sm* getInstance();\n\n
+// Model parameters independent of aS\n
+double WTau,WH,WW,WZ,WT,MTA,MM,Me,MH,MZ,MB,MT,MC,ymtau,ymm,yme,ymt,ymb,ymc,etaWS,rhoWS,AWS,lamWS,Gf,aEWM1,ZERO,lamWS__exp__2,lamWS__exp__3,MZ__exp__2,MZ__exp__4,sqrt__2,MH__exp__2,aEW,MW,sqrt__aEW,ee,MW__exp__2,sw2,cw,sqrt__sw2,sw,g1,gw,v,v__exp__2,lam,yb,yc,ye,ym,yt,ytau,muH,gw__exp__2,cw__exp__2,ee__exp__2,sw__exp__2;\n
+std::complex<double> CKM1x1,CKM1x2,complexi,CKM1x3,CKM2x1,CKM2x2,CKM2x3,CKM3x1,CKM3x2,CKM3x3,conjg__CKM1x1,conjg__CKM1x2,conjg__CKM1x3,conjg__CKM2x1,conjg__CKM2x2,conjg__CKM2x3,conjg__CKM3x1,conjg__CKM3x2,conjg__CKM3x3;\n
+// Model parameters dependent on aS\n
+double aS,sqrt__aS,G,G__exp__2;\n
+// Model couplings independent of aS\n
+std::complex<double> GC_1,GC_2,GC_3,GC_7,GC_8,GC_9,GC_10,GC_11,GC_12,GC_13,GC_14,GC_15,GC_16,GC_17,GC_18,GC_19,GC_20,GC_21,GC_22,GC_23,GC_24,GC_25,GC_26,GC_27,GC_28,GC_29,GC_30,GC_31,GC_32,GC_33,GC_34,GC_35,GC_36,GC_37,GC_38,GC_39,GC_40,GC_41,GC_42,GC_43,GC_44,GC_45,GC_46,GC_47,GC_48;\n
+// Model couplings dependent on aS\n
+std::complex<double> GC_6,GC_5,GC_4;\n\n
+// Set parameters that are unchanged during the run\n
+void setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr);\n
+// Set couplings that are unchanged during the run\n
+void setIndependentCouplings();\n
+// Set parameters that are changed event by event\n
+void setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS);\n
+// Set couplings that are changed event by event\n
+void setDependentCouplings();\n\n
+// Print parameters that are unchanged during the run\n
+void printIndependentParameters();\n
+// Print couplings that are unchanged during the run\n
+void printIndependentCouplings();\n
+// Print parameters that are changed event by event\n
+void printDependentParameters();\n
+// Print couplings that are changed event by event\n
+void printDependentCouplings();\n\n\n
+  private:\n
+static Parameters_sm* instance;\n
+};\n\n
+} // end namespace Pythia8\n
+#endif // Pythia8_parameters_sm_H\n""" % misc.get_pkg_info()
 
         goal_file_cc = \
 """//==========================================================================
@@ -1979,14 +1965,14 @@ namespace Pythia8 {
 
     // Function to get static instance - only one instance per program
     Parameters_sm* Parameters_sm::getInstance(){
-	if (instance == 0)
-	    instance = new Parameters_sm();
+\tif (instance == 0)
+\t    instance = new Parameters_sm();
 
-	return instance;
+    return instance;
     }
 
     void Parameters_sm::setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr){
-	WTau=pd->mWidth(15);
+\tWTau=pd->mWidth(15);
 WH=pd->mWidth(25);
 WW=pd->mWidth(24);
 WZ=pd->mWidth(23);
@@ -2021,30 +2007,30 @@ Gf = M_PI*csm->alphaEM(pow(pd->m0(23),2))*pow(pd->m0(23),2)/(sqrt(2.)*pow(pd->m0
 aEWM1 = 1./csm->alphaEM(pow(pd->m0(23),2));
 ZERO = 0.;
 lamWS__exp__2 = pow(lamWS,2.);
-CKM11 = 1.-lamWS__exp__2/2.;
-CKM12 = lamWS;
+CKM1x1 = 1.-lamWS__exp__2/2.;
+CKM1x2 = lamWS;
 complexi = std::complex<double>(0.,1.);
 lamWS__exp__3 = pow(lamWS,3.);
-CKM13 = AWS*lamWS__exp__3*(-(etaWS*complexi)+rhoWS);
-CKM21 = -lamWS;
-CKM22 = 1.-lamWS__exp__2/2.;
-CKM23 = AWS*lamWS__exp__2;
-CKM31 = AWS*lamWS__exp__3*(1.-etaWS*complexi-rhoWS);
-CKM32 = -(AWS*lamWS__exp__2);
-CKM33 = 1.;
+CKM1x3 = AWS*lamWS__exp__3*(-(etaWS*complexi)+rhoWS);
+CKM2x1 = -lamWS;
+CKM2x2 = 1.-lamWS__exp__2/2.;
+CKM2x3 = AWS*lamWS__exp__2;
+CKM3x1 = AWS*lamWS__exp__3*(1.-etaWS*complexi-rhoWS);
+CKM3x2 = -(AWS*lamWS__exp__2);
+CKM3x3 = 1.;
 MZ__exp__2 = pow(MZ,2.);
 MZ__exp__4 = pow(MZ,4.);
 sqrt__2 = sqrt(2.);
 MH__exp__2 = pow(MH,2.);
-conjg__CKM11 = conj(CKM11);
-conjg__CKM12 = conj(CKM12);
-conjg__CKM13 = conj(CKM13);
-conjg__CKM21 = conj(CKM21);
-conjg__CKM22 = conj(CKM22);
-conjg__CKM23 = conj(CKM23);
-conjg__CKM31 = conj(CKM31);
-conjg__CKM32 = conj(CKM32);
-conjg__CKM33 = conj(CKM33);
+conjg__CKM1x1 = conj(CKM1x1);
+conjg__CKM1x2 = conj(CKM1x2);
+conjg__CKM1x3 = conj(CKM1x3);
+conjg__CKM2x1 = conj(CKM2x1);
+conjg__CKM2x2 = conj(CKM2x2);
+conjg__CKM2x3 = conj(CKM2x3);
+conjg__CKM3x1 = conj(CKM3x1);
+conjg__CKM3x2 = conj(CKM3x2);
+conjg__CKM3x3 = conj(CKM3x3);
 aEW = 1./aEWM1;
 MW = sqrt(MZ__exp__2/2.+sqrt(MZ__exp__4/4.-(aEW*M_PI*MZ__exp__2)/(Gf*sqrt__2)));
 sqrt__aEW = sqrt(aEW);
@@ -2072,67 +2058,68 @@ ee__exp__2 = pow(ee,2.);
 sw__exp__2 = pow(sw,2.);
     }
     void Parameters_sm::setIndependentCouplings(){
-	GC_1 = -(ee*complexi)/3.;
+\tGC_1 = -(ee*complexi)/3.;
 GC_2 = (2.*ee*complexi)/3.;
 GC_3 = -(ee*complexi);
 GC_7 = cw*complexi*gw;
 GC_8 = -(complexi*gw__exp__2);
 GC_9 = cw__exp__2*complexi*gw__exp__2;
-GC_10 = (ee__exp__2*complexi)/(2.*sw__exp__2);
-GC_11 = (ee*complexi)/(sw*sqrt__2);
-GC_12 = (CKM11*ee*complexi)/(sw*sqrt__2);
-GC_13 = (CKM12*ee*complexi)/(sw*sqrt__2);
-GC_14 = (CKM13*ee*complexi)/(sw*sqrt__2);
-GC_15 = (CKM21*ee*complexi)/(sw*sqrt__2);
-GC_16 = (CKM22*ee*complexi)/(sw*sqrt__2);
-GC_17 = (CKM23*ee*complexi)/(sw*sqrt__2);
-GC_18 = (CKM31*ee*complexi)/(sw*sqrt__2);
-GC_19 = (CKM32*ee*complexi)/(sw*sqrt__2);
-GC_20 = (CKM33*ee*complexi)/(sw*sqrt__2);
-GC_21 = -(cw*ee*complexi)/(2.*sw);
-GC_22 = (cw*ee*complexi)/(2.*sw);
-GC_23 = -(ee*complexi*sw)/(6.*cw);
-GC_24 = (ee*complexi*sw)/(2.*cw);
-GC_25 = complexi*gw*sw;
-GC_26 = -2.*cw*complexi*gw__exp__2*sw;
-GC_27 = complexi*gw__exp__2*sw__exp__2;
-GC_28 = (cw*ee*complexi)/(2.*sw)+(ee*complexi*sw)/(2.*cw);
-GC_29 = ee__exp__2*complexi+(cw__exp__2*ee__exp__2*complexi)/(2.*sw__exp__2)+(ee__exp__2*complexi*sw__exp__2)/(2.*cw__exp__2);
-GC_30 = -6.*complexi*lam*v;
-GC_31 = (ee__exp__2*complexi*v)/(2.*sw__exp__2);
-GC_32 = ee__exp__2*complexi*v+(cw__exp__2*ee__exp__2*complexi*v)/(2.*sw__exp__2)+(ee__exp__2*complexi*sw__exp__2*v)/(2.*cw__exp__2);
-GC_33 = -((complexi*yb)/sqrt__2);
-GC_34 = -((complexi*yc)/sqrt__2);
-GC_35 = -((complexi*ye)/sqrt__2);
-GC_36 = -((complexi*ym)/sqrt__2);
-GC_37 = -((complexi*yt)/sqrt__2);
-GC_38 = -((complexi*ytau)/sqrt__2);
-GC_39 = (ee*complexi*conjg__CKM11)/(sw*sqrt__2);
-GC_40 = (ee*complexi*conjg__CKM12)/(sw*sqrt__2);
-GC_41 = (ee*complexi*conjg__CKM13)/(sw*sqrt__2);
-GC_42 = (ee*complexi*conjg__CKM21)/(sw*sqrt__2);
-GC_43 = (ee*complexi*conjg__CKM22)/(sw*sqrt__2);
-GC_44 = (ee*complexi*conjg__CKM23)/(sw*sqrt__2);
-GC_45 = (ee*complexi*conjg__CKM31)/(sw*sqrt__2);
-GC_46 = (ee*complexi*conjg__CKM32)/(sw*sqrt__2);
-GC_47 = (ee*complexi*conjg__CKM33)/(sw*sqrt__2);
+GC_10 = -6.*complexi*lam;
+GC_11 = (ee__exp__2*complexi)/(2.*sw__exp__2);
+GC_12 = (ee*complexi)/(sw*sqrt__2);
+GC_13 = (CKM1x1*ee*complexi)/(sw*sqrt__2);
+GC_14 = (CKM1x2*ee*complexi)/(sw*sqrt__2);
+GC_15 = (CKM1x3*ee*complexi)/(sw*sqrt__2);
+GC_16 = (CKM2x1*ee*complexi)/(sw*sqrt__2);
+GC_17 = (CKM2x2*ee*complexi)/(sw*sqrt__2);
+GC_18 = (CKM2x3*ee*complexi)/(sw*sqrt__2);
+GC_19 = (CKM3x1*ee*complexi)/(sw*sqrt__2);
+GC_20 = (CKM3x2*ee*complexi)/(sw*sqrt__2);
+GC_21 = (CKM3x3*ee*complexi)/(sw*sqrt__2);
+GC_22 = -(cw*ee*complexi)/(2.*sw);
+GC_23 = (cw*ee*complexi)/(2.*sw);
+GC_24 = -(ee*complexi*sw)/(6.*cw);
+GC_25 = (ee*complexi*sw)/(2.*cw);
+GC_26 = complexi*gw*sw;
+GC_27 = -2.*cw*complexi*gw__exp__2*sw;
+GC_28 = complexi*gw__exp__2*sw__exp__2;
+GC_29 = (cw*ee*complexi)/(2.*sw)+(ee*complexi*sw)/(2.*cw);
+GC_30 = ee__exp__2*complexi+(cw__exp__2*ee__exp__2*complexi)/(2.*sw__exp__2)+(ee__exp__2*complexi*sw__exp__2)/(2.*cw__exp__2);
+GC_31 = -6.*complexi*lam*v;
+GC_32 = (ee__exp__2*complexi*v)/(2.*sw__exp__2);
+GC_33 = ee__exp__2*complexi*v+(cw__exp__2*ee__exp__2*complexi*v)/(2.*sw__exp__2)+(ee__exp__2*complexi*sw__exp__2*v)/(2.*cw__exp__2);
+GC_34 = -((complexi*yb)/sqrt__2);
+GC_35 = -((complexi*yc)/sqrt__2);
+GC_36 = -((complexi*ye)/sqrt__2);
+GC_37 = -((complexi*ym)/sqrt__2);
+GC_38 = -((complexi*yt)/sqrt__2);
+GC_39 = -((complexi*ytau)/sqrt__2);
+GC_40 = (ee*complexi*conjg__CKM1x1)/(sw*sqrt__2);
+GC_41 = (ee*complexi*conjg__CKM1x2)/(sw*sqrt__2);
+GC_42 = (ee*complexi*conjg__CKM1x3)/(sw*sqrt__2);
+GC_43 = (ee*complexi*conjg__CKM2x1)/(sw*sqrt__2);
+GC_44 = (ee*complexi*conjg__CKM2x2)/(sw*sqrt__2);
+GC_45 = (ee*complexi*conjg__CKM2x3)/(sw*sqrt__2);
+GC_46 = (ee*complexi*conjg__CKM3x1)/(sw*sqrt__2);
+GC_47 = (ee*complexi*conjg__CKM3x2)/(sw*sqrt__2);
+GC_48 = (ee*complexi*conjg__CKM3x3)/(sw*sqrt__2);
     }
     void Parameters_sm::setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS){
-	aS = alpS;
+\taS = alpS;
 sqrt__aS = sqrt(aS);
 G = 2.*sqrt__aS*sqrt(M_PI);
 G__exp__2 = pow(G,2.);
     }
     void Parameters_sm::setDependentCouplings(){
-	GC_6 = complexi*G__exp__2;
+\tGC_6 = complexi*G__exp__2;
 GC_5 = complexi*G;
 GC_4 = -G;
     }
 
     // Routines for printing out parameters
     void Parameters_sm::printIndependentParameters(){
-	cout << "sm model parameters independent of event kinematics:" << endl;
-	cout << setw(20) << "WTau " << "= " << setiosflags(ios::scientific) << setw(10) << WTau << endl;
+\tcout << "sm model parameters independent of event kinematics:" << endl;
+\tcout << setw(20) << "WTau " << "= " << setiosflags(ios::scientific) << setw(10) << WTau << endl;
 cout << setw(20) << "WH " << "= " << setiosflags(ios::scientific) << setw(10) << WH << endl;
 cout << setw(20) << "WW " << "= " << setiosflags(ios::scientific) << setw(10) << WW << endl;
 cout << setw(20) << "WZ " << "= " << setiosflags(ios::scientific) << setw(10) << WZ << endl;
@@ -2159,30 +2146,30 @@ cout << setw(20) << "Gf " << "= " << setiosflags(ios::scientific) << setw(10) <<
 cout << setw(20) << "aEWM1 " << "= " << setiosflags(ios::scientific) << setw(10) << aEWM1 << endl;
 cout << setw(20) << "ZERO " << "= " << setiosflags(ios::scientific) << setw(10) << ZERO << endl;
 cout << setw(20) << "lamWS__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << lamWS__exp__2 << endl;
-cout << setw(20) << "CKM11 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM11 << endl;
-cout << setw(20) << "CKM12 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM12 << endl;
+cout << setw(20) << "CKM1x1 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM1x1 << endl;
+cout << setw(20) << "CKM1x2 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM1x2 << endl;
 cout << setw(20) << "complexi " << "= " << setiosflags(ios::scientific) << setw(10) << complexi << endl;
 cout << setw(20) << "lamWS__exp__3 " << "= " << setiosflags(ios::scientific) << setw(10) << lamWS__exp__3 << endl;
-cout << setw(20) << "CKM13 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM13 << endl;
-cout << setw(20) << "CKM21 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM21 << endl;
-cout << setw(20) << "CKM22 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM22 << endl;
-cout << setw(20) << "CKM23 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM23 << endl;
-cout << setw(20) << "CKM31 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM31 << endl;
-cout << setw(20) << "CKM32 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM32 << endl;
-cout << setw(20) << "CKM33 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM33 << endl;
+cout << setw(20) << "CKM1x3 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM1x3 << endl;
+cout << setw(20) << "CKM2x1 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM2x1 << endl;
+cout << setw(20) << "CKM2x2 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM2x2 << endl;
+cout << setw(20) << "CKM2x3 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM2x3 << endl;
+cout << setw(20) << "CKM3x1 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM3x1 << endl;
+cout << setw(20) << "CKM3x2 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM3x2 << endl;
+cout << setw(20) << "CKM3x3 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM3x3 << endl;
 cout << setw(20) << "MZ__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << MZ__exp__2 << endl;
 cout << setw(20) << "MZ__exp__4 " << "= " << setiosflags(ios::scientific) << setw(10) << MZ__exp__4 << endl;
 cout << setw(20) << "sqrt__2 " << "= " << setiosflags(ios::scientific) << setw(10) << sqrt__2 << endl;
 cout << setw(20) << "MH__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << MH__exp__2 << endl;
-cout << setw(20) << "conjg__CKM11 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM11 << endl;
-cout << setw(20) << "conjg__CKM12 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM12 << endl;
-cout << setw(20) << "conjg__CKM13 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM13 << endl;
-cout << setw(20) << "conjg__CKM21 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM21 << endl;
-cout << setw(20) << "conjg__CKM22 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM22 << endl;
-cout << setw(20) << "conjg__CKM23 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM23 << endl;
-cout << setw(20) << "conjg__CKM31 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM31 << endl;
-cout << setw(20) << "conjg__CKM32 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM32 << endl;
-cout << setw(20) << "conjg__CKM33 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM33 << endl;
+cout << setw(20) << "conjg__CKM1x1 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM1x1 << endl;
+cout << setw(20) << "conjg__CKM1x2 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM1x2 << endl;
+cout << setw(20) << "conjg__CKM1x3 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM1x3 << endl;
+cout << setw(20) << "conjg__CKM2x1 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM2x1 << endl;
+cout << setw(20) << "conjg__CKM2x2 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM2x2 << endl;
+cout << setw(20) << "conjg__CKM2x3 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM2x3 << endl;
+cout << setw(20) << "conjg__CKM3x1 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM3x1 << endl;
+cout << setw(20) << "conjg__CKM3x2 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM3x2 << endl;
+cout << setw(20) << "conjg__CKM3x3 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM3x3 << endl;
 cout << setw(20) << "aEW " << "= " << setiosflags(ios::scientific) << setw(10) << aEW << endl;
 cout << setw(20) << "MW " << "= " << setiosflags(ios::scientific) << setw(10) << MW << endl;
 cout << setw(20) << "sqrt__aEW " << "= " << setiosflags(ios::scientific) << setw(10) << sqrt__aEW << endl;
@@ -2210,8 +2197,8 @@ cout << setw(20) << "ee__exp__2 " << "= " << setiosflags(ios::scientific) << set
 cout << setw(20) << "sw__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << sw__exp__2 << endl;
     }
     void Parameters_sm::printIndependentCouplings(){
-	cout << "sm model couplings independent of event kinematics:" << endl;
-	cout << setw(20) << "GC_1 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_1 << endl;
+\tcout << "sm model couplings independent of event kinematics:" << endl;
+\tcout << setw(20) << "GC_1 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_1 << endl;
 cout << setw(20) << "GC_2 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_2 << endl;
 cout << setw(20) << "GC_3 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_3 << endl;
 cout << setw(20) << "GC_7 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_7 << endl;
@@ -2255,17 +2242,18 @@ cout << setw(20) << "GC_44 " << "= " << setiosflags(ios::scientific) << setw(10)
 cout << setw(20) << "GC_45 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_45 << endl;
 cout << setw(20) << "GC_46 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_46 << endl;
 cout << setw(20) << "GC_47 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_47 << endl;
+cout << setw(20) << "GC_48 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_48 << endl;
     }
     void Parameters_sm::printDependentParameters(){
-	cout << "sm model parameters dependent on event kinematics:" << endl;
-	cout << setw(20) << "aS " << "= " << setiosflags(ios::scientific) << setw(10) << aS << endl;
+\tcout << "sm model parameters dependent on event kinematics:" << endl;
+\tcout << setw(20) << "aS " << "= " << setiosflags(ios::scientific) << setw(10) << aS << endl;
 cout << setw(20) << "sqrt__aS " << "= " << setiosflags(ios::scientific) << setw(10) << sqrt__aS << endl;
 cout << setw(20) << "G " << "= " << setiosflags(ios::scientific) << setw(10) << G << endl;
 cout << setw(20) << "G__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << G__exp__2 << endl;
     }
     void Parameters_sm::printDependentCouplings(){
-	cout << "sm model couplings dependent on event kinematics:" << endl;
-	cout << setw(20) << "GC_6 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_6 << endl;
+\tcout << "sm model couplings dependent on event kinematics:" << endl;
+\tcout << setw(20) << "GC_6 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_6 << endl;
 cout << setw(20) << "GC_5 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_5 << endl;
 cout << setw(20) << "GC_4 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_4 << endl;
     }
@@ -2275,6 +2263,9 @@ cout << setw(20) << "GC_4 " << "= " << setiosflags(ios::scientific) << setw(10) 
 
         file_h, file_cc = self.model_builder.generate_parameters_class_files()
 
-        self.assertEqual(file_h, goal_file_h)
-        self.assertEqual(file_cc, goal_file_cc)
+        self.assertEqual([l for l in file_h.split('\n') if l.strip()], 
+                         [l for l in goal_file_h.split('\n') if l.strip()])
+
+        self.assertEqual([l.strip() for l in file_cc.split('\n') if l.strip()], 
+                          [l.strip() for l in goal_file_cc.split('\n') if l.strip()])
 
