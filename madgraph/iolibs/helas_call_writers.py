@@ -1309,11 +1309,11 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         
         call = "CALL LOOP%(numLoopLines)s"
         if (len(loopamp.get('pairing')) != len(loopamp.get('mothers'))):
-            call += "%(numMotherWfs)s%(numCouplings)s(%(numeratorNumber)d,"
+            call += "%(numMotherWfs)s(%(numeratorNumber)d,"
             for i in range(len(loopamp.get('pairing'))):
                 call = call + "%(Pairing{0})d,".format(i)
         else:
-            call += "%(numCouplings)s(%(numeratorNumber)d,"            
+            call += "(%(numeratorNumber)d,"            
         for i in range(len(loopamp.get('mothers'))):
             call = call + "%(MotherID{0})d,%(MotherStatus{0})d,".format(i+1)
         for i in range(len(loopamp.get('wavefunctions'))-2):
@@ -1321,7 +1321,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
             "DCMPLX(%(LoopMass{0})s),".format(i+1)
         call = call + "%(LoopRank)d,"
         call = call + "%(LoopSymmetryFactor)d,"
-        call = call + "LOOPRES(1,%(ampNumber)d),S(%(ampNumber)d),%(ampNumber)d)"
+        call = call + "%(ampNumber)d,LOOPRES(1,%(ampNumber)d),S(%(ampNumber)d))"
         
         call_function = lambda amp: call % amp.get_helas_call_dict(\
                                                            OptimizedOutput=True)
@@ -1408,8 +1408,8 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         if (isinstance(argument, helas_objects.HelasWavefunction) and \
            argument.get('is_loop')):
             # We add here the call to the UPDATE_COEF subroutine
-            call += "\n CALL UPDATE_WL(WL(1,1,1,%(loop_mother_number)d),"
-            call += "%(loop_mother_rank)d,COEFS,%(vertex_rank)d,"
+            call += "\n CALL UPDATE_WL_%(loop_mother_rank)d_%(vertex_rank)d("
+            call += "WL(1,1,1,%(loop_mother_number)d),COEFS,"
             call += "WL(1,1,1,%(out)d))"
         # Now we have a line correctly formatted
         call_function = lambda wf: call % wf.get_helas_call_dict(\

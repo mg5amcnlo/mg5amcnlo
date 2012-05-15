@@ -481,12 +481,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             nbornamps = matrix_element.get_number_of_born_amplitudes()
             dict['nbornamps'] = nbornamps
             dict['ncomb_helas_objs'] = ',ncomb'
-            dict['dp_born_amps_decl'] = \
-              dict['complex_dp_format']+" AMP(NBORNAMPS,NCOMB)"+\
-              "\n common/AMPS/AMP"
-            dict['mp_born_amps_decl'] = \
-              dict['complex_mp_format']+" AMP(NBORNAMPS,NCOMB)"+\
-              "\n common/MP_AMPS/AMP"
             dict['nbornamps_decl'] = \
               """INTEGER NBORNAMPS
                  PARAMETER (NBORNAMPS=%d)"""%nbornamps
@@ -520,6 +514,14 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         # Extract max number of loop couplings (specific to this output type)
         self.general_replace_dict['maxlcouplings']= \
                                          matrix_element.find_max_loop_coupling()
+        # The born amp declaration suited for also outputing the loop-induced
+        # processes as well.
+        self.general_replace_dict['dp_born_amps_decl'] = \
+              self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS,NCOMB)"+\
+              "\n common/AMPS/AMP"
+        self.general_replace_dict['mp_born_amps_decl'] = \
+              self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS,NCOMB)"+\
+              "\n common/MP_AMPS/AMP"
         
         if writer:
             files=[]
@@ -618,7 +620,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         else:
             return file
 
-    def write_CT_interface(self, writer, matrix_element):
+    def write_CT_interface(self, writer, matrix_element, optimized_output=False):
         """ Create the file CT_interface.f which contains the subroutine defining
         the loop HELAS-like calls along with the general interfacing subroutine. """
 
@@ -643,28 +645,40 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         
         # Now collect the different kind of subroutines needed for the
         # loop HELAS-like calls.
-        CallKeys=[]
-        for ldiag in matrix_element.get_loop_diagrams():
-            for lamp in ldiag.get_loop_amplitudes():
-                if lamp.get_call_key()[1:] not in CallKeys:
-                    CallKeys.append(lamp.get_call_key()[1:])
-                
-        for callkey in CallKeys:
+        HelasLoopAmpsCallKeys=matrix_element.get_used_helas_loop_amps()
+
+        for callkey in HelasLoopAmpsCallKeys:
             replace_dict=copy.copy(self.general_replace_dict)
             # Add to this dictionary all other attribute common to all
             # HELAS-like loop subroutines.
             if matrix_element.get('processes')[0].get('has_born'):
                 replace_dict['validh_or_nothing']=',validh'
             else:
-                replace_dict['validh_or_nothing']=''                
+                replace_dict['validh_or_nothing']=''
+            # In the optimized output, the number of couplings in the loop is
+            # not specified so we only treat it here if necessary:
+            if len(callkey)>2:
+                replace_dict['ncplsargs']=callkey[2]
+                cplsargs="".join(["C%d,MP_C%d, "%(i,i) for i in range(1,callkey[2]+1)])
+                replace_dict['cplsargs']=cplsargs
+                cplsdecl="".join(["C%d, "%i for i in range(1,callkey[2]+1)])[:-2]
+                replace_dict['cplsdecl']=cplsdecl
+                mp_cplsdecl="".join(["MP_C%d, "%i for i in range(1,callkey[2]+1)])[:-2]
+                replace_dict['mp_cplsdecl']=mp_cplsdecl
+                cplset="\n".join(["\n".join(["LC(%d)=C%d"%(i,i),\
+                                         "MP_LC(%d)=MP_C%d"%(i,i)])\
+                              for i in range(1,callkey[2]+1)])
+                replace_dict['cplset']=cplset
+            
             replace_dict['nloopline']=callkey[0]
             wfsargs="".join([("W%d, MP%d, "%(i,i)) for i in range(1,callkey[1]+1)])
-            replace_dict['ncplsargs']=callkey[2]
             replace_dict['wfsargs']=wfsargs
-            margs="".join(["M%d,MP_M%d, "%(i,i) for i in range(1,callkey[0]+1)])
-            replace_dict['margs']=margs
-            cplsargs="".join(["C%d,MP_C%d, "%(i,i) for i in range(1,callkey[2]+1)])
-            replace_dict['cplsargs']=cplsargs
+            # We don't pass the multiple precision mass in the optimized_output
+            if not optimized_output:
+                margs="".join(["M%d,MP_M%d, "%(i,i) for i in range(1,callkey[0]+1)])
+            else:
+                margs="".join(["M%d, "%i for i in range(1,callkey[0]+1)])
+            replace_dict['margs']=margs                
             wfsargsdecl="".join([("W%d, "%i) for i in range(1,callkey[1]+1)])[:-2]
             replace_dict['wfsargsdecl']=wfsargsdecl
             momposdecl="".join([("MP%d, "%i) for i in range(1,callkey[1]+1)])[:-2]
@@ -673,10 +687,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             replace_dict['margsdecl']=margsdecl
             mp_margsdecl="".join(["MP_M%d, "%i for i in range(1,callkey[0]+1)])[:-2]
             replace_dict['mp_margsdecl']=mp_margsdecl
-            cplsdecl="".join(["C%d, "%i for i in range(1,callkey[2]+1)])[:-2]
-            replace_dict['cplsdecl']=cplsdecl
-            mp_cplsdecl="".join(["MP_C%d, "%i for i in range(1,callkey[2]+1)])[:-2]
-            replace_dict['mp_cplsdecl']=mp_cplsdecl
             weset="\n".join([("WE("+str(i)+")=W"+str(i)) for \
                              i in range(1,callkey[1]+1)])
             replace_dict['weset']=weset
@@ -686,11 +696,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             msetlines=["M2L(1)=M%d**2"%(callkey[0]),]
             mset="\n".join(msetlines+["M2L(%d)=M%d**2"%(i,i-1) for \
                              i in range(2,callkey[0]+1)])
-            replace_dict['mset']=mset
-            cplset="\n".join(["\n".join(["LC(%d)=C%d"%(i,i),\
-                                         "MP_LC(%d)=MP_C%d"%(i,i)])\
-                              for i in range(1,callkey[2]+1)])
-            replace_dict['cplset']=cplset            
+            replace_dict['mset']=mset            
             mset2lines=["ML(1)=M%d"%(callkey[0]),"ML(2)=M%d"%(callkey[0]),
                   "MP_ML(1)=MP_M%d"%(callkey[0]),"MP_ML(2)=MP_M%d"%(callkey[0])]
             mset2="\n".join(mset2lines+["\n".join(["ML(%d)=M%d"%(i,i-2),
@@ -1007,39 +1013,92 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         self.general_replace_dict['nloops']=len(\
                         [1 for ldiag in matrix_element.get_loop_diagrams() for \
                                            lamp in ldiag.get_loop_amplitudes()])
-        if writer:
-            files=[]
-#            files.append(self.write_loop_num(None,matrix_element,\
-#                                                         OptimizedFortranModel))
-#            files.append(self.write_CT_interface(None,matrix_element))
-            calls, loop_matrix = self.write_loopmatrix(None,matrix_element,\
-                                                          OptimizedFortranModel)
-            files.append(loop_matrix)
-#            files.append(write_born_amps_and_wfs(None,matrix_element,\
-#                                                        OptimizedFortranModel))
-            file = "\n".join(files)
-            writer.writelines(file)
-            return calls
+        # The born amp declaration suited for also outputing the loop-induced
+        # processes as well.
+        self.general_replace_dict['dp_born_amps_decl'] = \
+              self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS)"+\
+              "\n common/AMPS/AMP"
+        self.general_replace_dict['mp_born_amps_decl'] = \
+              self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS)"+\
+              "\n common/MP_AMPS/AMP"
         
+        if writer:
+            raise MadGraph5Error, "The 'matrix' format output is disabled in "+\
+                                                           "the optimized mode."
         else:
                         
             filename = 'loop_matrix.f'
             calls = self.write_loopmatrix(writers.FortranWriter(filename),
                                           matrix_element,
-                                          OptimizedFortranModel)             
-#            filename = 'CT_interface.f'
-#            self.write_CT_interface(writers.FortranWriter(filename),\
-#                                    matrix_element)
+                                          OptimizedFortranModel)
+            filename = 'polynomial.f'
+            calls = self.write_polynomial_subroutines(
+                                          writers.FortranWriter(filename),
+                                          matrix_element)
             
-#            filename = 'loop_num.f'
-#            self.write_loop_num(writers.FortranWriter(filename),\
-#                                    matrix_element,OptimizedFortranModel)
+            filename = 'CT_interface.f'
+            self.write_CT_interface(writers.FortranWriter(filename),\
+                                    matrix_element)
+
+            filename = 'loop_num.f'
+            self.write_loop_num(writers.FortranWriter(filename),\
+                                    matrix_element,OptimizedFortranModel)
             
 #            filename = 'mp_born_amps_and_wfs.f'
 #            self.write_born_amps_and_wfs(writers.FortranWriter(filename),\
 #                                         matrix_element,OptimizedFortranModel)
 
             return calls
+
+    def write_loop_num(self, writer, matrix_element,fortran_model):
+        """ Create the file containing the core subroutine called by CutTools
+        which contains the Helas calls building the loop"""
+
+        file = open(os.path.join(self.template_dir,'loop_num.inc')).read()  
+        file = file % self.general_replace_dict
+        writer.writelines(file)
+
+    def write_CT_interface(self, writer, matrix_element):
+        """ We can re-use the mother one for the loop optimized output."""
+        LoopProcessExporterFortranSA.write_CT_interface(\
+                            self, writer, matrix_element,optimized_output=True)
+
+    def write_polynomial_subroutines(self,writer,matrix_element):
+        """ Subroutine to create all the subroutines relevant for handling
+        the polynomials representing the loop numerator """
+        
+        # First create 'coef_specs.inc'
+        IncWriter=writers.FortranWriter('coef_specs.inc','w')
+        IncWriter.writelines("""INTEGER MAXLWFSIZE
+                           PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
+                           INTEGER LOOP_MAXCOEFS
+                           PARAMETER (LOOP_MAXCOEFS=%(loop_max_coefs)d)
+                           INTEGER VERTEXMAXCOEFS
+                           PARAMETER (VERTEXMAXCOEFS=%(vertex_max_coefs)d)"""\
+                           %self.general_replace_dict)
+        IncWriter.close()
+        
+        # List of all subroutines to place there
+        subroutines=[]
+        
+        # Start from the routine in the template
+        file = open(os.path.join(self.template_dir,'polynomial.inc')).read()  
+        file = file % self.general_replace_dict
+        subroutines.append(file)
+        
+        # Initialize the polynomial routine writer
+        poly_writer=q_polynomial.FortranPolynomialRoutines(
+                                             matrix_element.get_max_loop_rank())
+        
+        # The eval subroutine
+        subroutines.append(poly_writer.write_polynomial_evaluator())
+        # The merging one for creating the loop coefficients
+        subroutines.append(poly_writer.write_wl_merger())
+        # Now the udpate subroutines
+        for wl_update in matrix_element.get_used_wl_updates():
+            subroutines.append(poly_writer.write_wl_updater(\
+                                                     wl_update[0],wl_update[1]))
+        writer.writelines('\n\n'.join(subroutines))
 
     def write_loopmatrix(self, writer, matrix_element, fortran_model, \
                          noSplit=False):

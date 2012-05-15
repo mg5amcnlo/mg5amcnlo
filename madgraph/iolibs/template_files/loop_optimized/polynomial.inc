@@ -1,0 +1,47 @@
+C THE SUBROUTINE TO CREATE THE COEFFICIENTS FROM LAST LOOP WF AND 
+C MULTIPLY BY THE BORN
+
+      SUBROUTINE CREATE_LOOP_COEFS(LOOP_WF,RANK,LOOP_COEFS,COLOR_ID)
+C  
+C CONSTANTS 
+C 
+	  %(nbornamps_decl)s
+	  %(complex_dp_format)s IMAG1
+      PARAMETER (IMAG1=(0D0,1D0))
+	  INTEGER MAXLWFSIZE
+	  PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
+	  INTEGER LOOPMAXCOEFS
+	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
+	  %(nbornamps_decl)s	  
+C  
+C ARGUMENTS 
+C  
+      %(complex_dp_format)s LOOP_WF(MAXLWFSIZE,LOOPMAXCOEFS,MAXLWFSIZE)
+	  INTEGER RANK, COLOR_ID
+	  %(complex_dp_format)s LOOP_COEFS(LOOPMAXCOEFS)
+C  
+C LOCAL VARIABLES 
+C
+      %(complex_dp_format)s CFTOT
+      %(complex_dp_format)s CONST
+      INTEGER I,H
+C
+C GLOBAL VARIABLES
+C
+	  INTEGER CF_D(NLOOPAMPS,%(color_matrix_size)s)
+	  INTEGER CF_N(NLOOPAMPS,%(color_matrix_size)s)
+	  common/CF/CF_D,CF_N
+
+	  %(dp_born_amps_decl)s
+
+	  CONST=(0.0d0,0.0d0)
+
+    DO I=1,NBORNAMPS
+	  CFTOT=DCMPLX(CF_N(COLOR_ID,I)/DBLE(ABS(CF_D(COLOR_ID,I))),0.0d0)
+	  IF(CF_D(COLOR_ID,I).LT.0) CFTOT=CFTOT*IMAG1
+	  CONST=CONST+CFTOT*DCONJG(AMP(I))
+	ENDDO 
+	  CONST=CONST/SYMFACT
+	  CALL MERGE_WL(LOOP_WF,RANK,CONST,LOOP_COEFS)
+
+	  END

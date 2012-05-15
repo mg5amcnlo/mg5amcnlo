@@ -539,7 +539,7 @@ class LoopDiagram(base_objects.Diagram):
             if isinstance(endLeg,int):
                 number=endLeg
             else:
-                number=engLeg['number']
+                number=endLeg['number']
             # If last vertex was dummy, then recuperate the original leg
             if vertFoundID not in [0,-1]:
                 starting_Leg=copy.copy(myleglist[-1])

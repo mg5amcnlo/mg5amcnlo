@@ -1172,6 +1172,8 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                                     # Since we reuse the old wavefunction, reset
                                     # wfNumber
                                     wfNumber = wfNumber - 1
+                                    # For developper purposes
+                                    # self.lwf_reused += 1
                                 except ValueError:
                                     diagram_wavefunctions.append(wf)
 
@@ -1394,12 +1396,14 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 helas_diagrams.append(helBornDiag)
         
         # Now we treat the loop diagrams
+        # self.lwf_reused=0
         for diagram in amplitude.get('loop_diagrams'):
             loopHelDiag, wf_number, amplitude_number=\
               process_loop_diagram(diagram, wf_number, amplitude_number)
             diagram_number = diagram_number + 1
             loopHelDiag.set('number', diagram_number)
             helas_diagrams.append(loopHelDiag)
+        # print "I have been reusing ",self.lwf_reused
 
         # We finally turn to the UVCT diagrams
         for diagram in amplitude.get('loop_UVCT_diagrams'):
@@ -1411,7 +1415,10 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             helas_diagrams.append(loopHelDiag)
  
         self.set('diagrams', helas_diagrams)
-
+        # print "Total # of loop wfs ",\
+        #                        sum([len(ldiag.get('loop_wavefunctions')) for \
+        #                                    ldiag in self.get_loop_diagrams()])
+ 
         # Sort all mothers according to the order wanted in Helas calls
         for wf in self.get_all_wavefunctions():
             wf.set('mothers', helas_objects.HelasMatrixElement.sorted_mothers(wf))
@@ -1698,6 +1705,30 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                                                      wa.find_outgoing_number()))
         return output
 
+    def get_used_helas_loop_amps(self):
+        """ Returns the list of the helas loop amplitude of type 
+        CALL LOOP_I_J(_K)(...) used for this matrix element """
+        
+        # In the optimized output, we don't care about the number of couplings
+        # in a given loop.
+        if self.optimized_output:
+            last_relevant_index=3
+        else:
+            last_relevant_index=4
+
+        return list(set([lamp.get_call_key()[1:last_relevant_index] \
+          for ldiag in self.get_loop_diagrams() for lamp in \
+                                                  ldiag.get_loop_amplitudes()]))
+
+    def get_used_wl_updates(self):
+        """ Returns a list of the necessary updates of the loop wavefunction
+        polynomials """
+        
+        res=list(set([(lwf.get_rank()-lwf.get_interaction_q_power(),
+          lwf.get_interaction_q_power()) for ldiag in self.get_loop_diagrams() 
+          for lwf in ldiag.get('loop_wavefunctions')]))
+        return res
+        
     def get_used_couplings(self):
         """Return a list with all couplings used by this
         HelasMatrixElement."""
