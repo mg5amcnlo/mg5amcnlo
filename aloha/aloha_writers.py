@@ -1013,11 +1013,11 @@ class ALOHAWriterForCPP(WriteALOHA):
         else:
             main = '%(spin)s%(id)d' % \
                           {'spin': self.particles[self.offshell -1],
-                           'id': self.offshell}
+                           'id': self.outgoing}
             call_arg = '%(args)s, %(COUP)s, M%(id)d, W%(id)d, %(LAST)s' % \
                     {'args': ', '.join(self.calllist['CallList']), 
                      'COUP':'COUP%d',
-                     'id': self.offshell,
+                     'id': self.outgoing,
                      'LAST': '%s'}
 
         # make the first call
