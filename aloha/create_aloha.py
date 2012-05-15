@@ -517,7 +517,9 @@ class AbstractALOHAModel(dict):
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
         self.look_for_symmetries()
-        
+        print '##################'
+        print data
+        print '##################'
         # reorganize the data (in order to use optimization for a given lorentz
         #structure
         request = {}
