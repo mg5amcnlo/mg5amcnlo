@@ -1195,12 +1195,11 @@ class ProcessExporterPythia8(ProcessExporterCPP):
 
             for schannel in schannels:
                 sid = schannel.get('legs')[-1].get('id')
-                try:
+                part = self.model.get_particle(sid)
+                if part:
                     width = self.model.get_particle(sid).get('width')
                     if width.lower() != 'zero':
                         resonances.append(sid)
-                except KeyError:
-                    pass
         resonance_set = set(resonances)
 
         singleres = 0

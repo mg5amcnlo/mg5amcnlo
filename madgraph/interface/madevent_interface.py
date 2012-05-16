@@ -24,6 +24,7 @@ import math
 import optparse
 import os
 import pydoc
+import random
 import re
 import shutil
 import subprocess
@@ -532,7 +533,7 @@ class CheckValidForCmd(object):
         if not self.me_dir:
             if not os.path.isfile(args[0]):
                 self.help_open()
-                raise self.InvalidCmd('No MadEvent path defined. Impossible to associate this name to a file')
+                raise self.InvalidCmd('No MadEvent path defined. Unable to associate this name to a file')
             else:
                 return True
             
@@ -683,7 +684,7 @@ class CheckValidForCmd(object):
             if self.results.lastrun:
                 self.set_run_name(self.results.lastrun)
             else:
-                raise self.InvalidCmd('No run_name currently define. Impossible to run refine')
+                raise self.InvalidCmd('No run_name currently define. Unable to run refine')
 
         if len(args) > 2:
             self.help_refine()
@@ -719,7 +720,7 @@ class CheckValidForCmd(object):
         
         if not self.run_name:
             if not self.results.lastrun:
-                raise self.InvalidCmd('No run_name currently define. Impossible to run combine')
+                raise self.InvalidCmd('No run_name currently define. Unable to run combine')
             else:
                 self.set_run_name(self.results.lastrun)
         
@@ -1324,9 +1325,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Check that the directory is not currently running
         if os.path.exists(pjoin(me_dir,'RunWeb')): 
             message = '''Another instance of madevent is currently running.
-            Please wait that all instance of madevent are closed. If this message
-            is an error in itself, you can suppress the files: 
-            %s.''' % pjoin(me_dir,'RunWeb')
+            Please wait that all instance of madevent are closed. If no
+            instance is running, you can delete the file
+            %s and try again.''' % pjoin(me_dir,'RunWeb')
             raise MadEventAlreadyRunning, message
         else:
             os.system('touch %s' % pjoin(me_dir,'RunWeb'))
@@ -1357,8 +1358,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
             self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
-            self.results.path = self.me_dir # allowed to move the directory after some launch
-            self.results.resetall()
+            self.results.resetall(self.me_dir)
         else:
             model = self.find_model_name()
             process = self.process # define in find_model_name
@@ -1729,7 +1729,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             # pythia launches pgs/delphes if needed
             self.store_result()
-        
+            
+            
             
     def print_results_in_shell(self, data):
         """Have a nice results prints in the shell,
@@ -1748,8 +1749,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
             logger.info("     Nb of events after Matching :  %s" % data['nb_event_pythia'])
         logger.info(" " )
-        
-            
     
     ############################################################################      
     def do_calculate_decay_widths(self, line):
@@ -2119,6 +2118,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if not self.banner:
             self.banner = banner_mod.recover_banner(self.results, 'parton')
         self.banner.load_basic(self.me_dir)
+        # Add cross-section/event information
+        self.banner.add_generation_info(self.results.current['cross'], nb_event)        
         if not hasattr(self, 'random'): self.random = 0
         self.banner.change_seed(self.random)
         if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
@@ -2133,11 +2134,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                             cwd=pjoin(self.me_dir, 'Events'))
         misc.call(['%s/put_banner'% self.dirbin, 'unweighted_events.lhe'],
                             cwd=pjoin(self.me_dir, 'Events'))
-        
-        #if os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
-        #    misc.call(['%s/extract_banner-pl' % self.dirbin, 
-        #                     'unweighted_events.lhe', 'banner.txt'],
-        #                    cwd=pjoin(self.me_dir, 'Events'))
         
         eradir = self.options['exrootanalysis_path']
         madir = self.options['madanalysis_path']
@@ -2220,8 +2216,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 output = pjoin(O_path, name)
                 files.mv(input, output) 
                 misc.call(['gzip', output], stdout=devnull, stderr=devnull, 
-                                                                     cwd=O_path)
-                
+                                                                     cwd=O_path) 
         self.update_status('End Parton', level='parton', makehtml=False)
 
     ############################################################################ 
@@ -2458,14 +2453,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             pass # Just ensure that html never makes crash this function
 
 
-        # Found the file to suppress
+        # Found the file to delete
         
-        to_suppress = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
-        to_suppress += glob.glob(pjoin(self.me_dir, 'HTML', run, '*'))
+        to_delete = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
+        to_delete += glob.glob(pjoin(self.me_dir, 'HTML', run, '*'))
         # forbid the banner to be removed
-        to_suppress = [os.path.basename(f) for f in to_suppress if 'banner' not in f]
+        to_delete = [os.path.basename(f) for f in to_delete if 'banner' not in f]
         if tag:
-            to_suppress = [f for f in to_suppress if tag in f]
+            to_delete = [f for f in to_delete if tag in f]
             if 'parton' in mode or 'all' in mode:
                 try:
                     if self.results[run][0]['tag'] != tag:
@@ -2473,35 +2468,35 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 except:
                     pass
                 else:
-                    nb_rm = len(to_suppress)
+                    nb_rm = len(to_delete)
                     if os.path.exists(pjoin(self.me_dir, 'Events', run, 'events.lhe.gz')):
-                        to_suppress.append('events.lhe.gz')
+                        to_delete.append('events.lhe.gz')
                     if os.path.exists(pjoin(self.me_dir, 'Events', run, 'unweighted_events.lhe.gz')):
-                        to_suppress.append('unweighted_events.lhe.gz')
-                    if nb_rm != len(to_suppress):
+                        to_delete.append('unweighted_events.lhe.gz')
+                    if nb_rm != len(to_delete):
                         logger.warning('Be carefull that partonic information are on the point to be removed.')
         if 'all' in mode:
-            pass # suppress everything
+            pass # delete everything
         else:
             if 'pythia' not in mode:
-                to_suppress = [f for f in to_suppress if 'pythia' not in f]
+                to_delete = [f for f in to_delete if 'pythia' not in f]
             if 'pgs' not in mode:
-                to_suppress = [f for f in to_suppress if 'pgs' not in f]
+                to_delete = [f for f in to_delete if 'pgs' not in f]
             if 'delphes' not in mode:
-                to_suppress = [f for f in to_suppress if 'delphes' not in f]
+                to_delete = [f for f in to_delete if 'delphes' not in f]
             if 'parton' not in mode:
-                to_suppress = [f for f in to_suppress if 'delphes' in f 
+                to_delete = [f for f in to_delete if 'delphes' in f 
                                                       or 'pgs' in f 
                                                       or 'pythia' in f]
-        if not self.force and len(to_suppress):
-            question = 'Do you want to suppress the following files?\n     %s' % \
-                               '\n    '.join(to_suppress)
+        if not self.force and len(to_delete):
+            question = 'Do you want to delete the following files?\n     %s' % \
+                               '\n    '.join(to_delete)
             ans = self.ask(question, 'y', choices=['y','n'])
         else:
             ans = 'y'
         
         if ans == 'y':
-            for file2rm in to_suppress:
+            for file2rm in to_delete:
                 if os.path.exists(pjoin(self.me_dir, 'Events', run, file2rm)):
                     try:
                         os.remove(pjoin(self.me_dir, 'Events', run, file2rm))
@@ -2523,23 +2518,23 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             except:
                 pass
             else:
-                to_suppress = glob.glob(pjoin(self.me_dir, 'SubProcesses', '%s*' % run))
-                to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','%s*' % run))
-                to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','*','%s*' % run))
+                to_delete = glob.glob(pjoin(self.me_dir, 'SubProcesses', '%s*' % run))
+                to_delete += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','%s*' % run))
+                to_delete += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','*','%s*' % run))
 
-                if self.force or len(to_suppress) == 0:
+                if self.force or len(to_delete) == 0:
                     ans = 'y'
                 else:
-                    question = 'Do you want to suppress the following files?\n     %s' % \
-                               '\n    '.join(to_suppress)
+                    question = 'Do you want to delete the following files?\n     %s' % \
+                               '\n    '.join(to_delete)
                     ans = self.ask(question, 'y', choices=['y','n'])
 
                 if ans == 'y':
-                    for file2rm in to_suppress:
+                    for file2rm in to_delete:
                         os.remove(file2rm)
                         
         if 'banner' in mode:
-            to_suppress = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
+            to_delete = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
             if tag:
                 # remove banner
                 try:
@@ -2550,8 +2545,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 if run in self.results:
                     self.results.delete_run(run, tag)
                     return
-            elif any(['banner' not in os.path.basename(p) for p in to_suppress]):
-                if to_suppress:
+            elif any(['banner' not in os.path.basename(p) for p in to_delete]):
+                if to_delete:
                     raise MadGraph5Error, '''Some output still exists for this run. 
                 Please remove those output first. Do for example: 
                 remove %s all banner
@@ -3064,7 +3059,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         out = misc.call([pjoin(self.dirbin, 'compile_Source')],
                               cwd = self.me_dir)
         if out:
-            raise MadEventError, 'Impossible to compile'
+            raise MadEventError, 'Unable to compile'
         
         # set random number
         if self.run_card['iseed'] != '0':

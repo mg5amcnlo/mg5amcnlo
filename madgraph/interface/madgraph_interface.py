@@ -24,6 +24,7 @@ import pydoc
 import re
 import subprocess
 import sys
+import shutil
 import traceback
 import time
 
@@ -1373,7 +1374,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         
         
         # options
-        options = ['--format=Fortran', '--format=Python','--format=Cpp','--output=']
+        options = ['--format=Fortran', '--format=Python','--format=CPP','--output=']
         options = self.list_completion(text, options)
         if options:
             completion_categories['options'] = options
@@ -3209,7 +3210,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         ################
         if self._export_format == 'aloha':
             # catch format
-            format = [d[11:] for d in args if d.startswith('--language=')]
+            format = [d[9:] for d in args if d.startswith('--format=')]
             if not format:
                 format = 'Fortran'
             else:
@@ -3245,10 +3246,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                and self._export_format in ['madevent', 'standalone']:
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
-            logger.info('If you continue this directory will be cleaned')
+            logger.info('If you continue this directory will be deleted and replaced.')
             answer = self.ask('Do you want to continue?', 'y', ['y','n'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
+            else:
+                shutil.rmtree(self._export_dir)
 
         #check if we need to group processes
         group_subprocesses = False
