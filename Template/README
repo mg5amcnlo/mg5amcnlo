@@ -1,5 +1,5 @@
 MadGraph/MadEvent 5
-By Fabio Maltoni, Tim Stelzer and the CP3 development team
+By Johan Alwall, Michel Herquet, Fabio Maltoni, Olivier Mattelaer and Tim Stelzer
 
 http://madgraph.phys.ucl.ac.be/
 http://madgraph.hep.uiuc.edu/
@@ -14,8 +14,8 @@ This README includes information on how
 A) generate events
 B) how to run in cluster/multi-core mode
 C) how to launch sequential run (called multi-run)
-D) How to launch pythia-pgs/Delphes
-E) How to prevent the html opening
+D) How to launch Pythia/PGS/Delphes
+E) How to prevent automatic opening of html pages
 
 A) To generate events:
 -------------------
@@ -83,29 +83,29 @@ the maximum number of cores is used) by setting cluster_type and
 nb_core.
 
 
-C) Launch Sequential generation of events:
-------------------------------------------
+C) Launch sequential runs for generation of large number of events:
+-------------------------------------------------------------------
 
-For various reason, we forbids to generate more than 100k events
-by generation. In order to generate more events, you then need to
-run 'generate_events' multiple times. In order to simplify that
-task we have created a special command 'multi_run' which is 
-doing exactly that, and combine the lhe sample in a single file 
-automatically.
-This command can be launch via the madevent user interface:
-`./bin/madevent`. Then you can launch it with the following command:
+For various reason, we recommend not to generate more than 100k events
+pre run. In order to simplify generating large numbers of events,
+we have created a special command 'multi_run', which is equivalent to
+running generate_events multiple times (ensuring that the random seed is
+different for each run), and also automatically combines the resulting
+lhe files into a single file.
+This command can be launched via the madevent user interface
+./bin/madevent using the following command:
 multi_run NBRUN [RUN_NAME] [options]
-for more information about this command (valid options), you can type
-`help multi_run`
+For more information about this command (valid options), you can type
+`help multi_run` inside the interface.
 
-Note that you can launch this single command whithout entering the interactive mode:
+Note that you can also launch a command whithout entering the interactive mode:
 ./bin/madevent multi_run NBRUN 
 
 
 D) Launching pythia/pgs/delphes on a (previously) generated sample:
 -------------------------------------------------------------------
 
-In this section, I will presupose that the corresponding package are
+In this section, I will presupose that the corresponding package is
 already installed and configured properly. (See section how to generate 
 events if this is not the case)
 
@@ -115,18 +115,20 @@ and then you can enter of the following command
 pythia RUN [--run_options]
 pgs RUN [--run_options]
 delphes RUN [--run_options]
-where RUN is the run_name of the run. One of the convenient option is
+where RUN is the run_name of the run. One of the convenient options is
 --tag=XXXX
-which allow to specify the tag name in case of multiple running of 
-the same program.
+which allow to specify the tag name in case of multiple runs with
+the same program. Note that by default, a unique run tag is generated 
+for each time you run.
 
-E) How to prevent the html opening:
------------------------------------
+E) How to prevent automatic opening of the crossx.html page:
+------------------------------------------------------------
 
-Edit the file ./Cards/me5_configuration.txt and put
-the option automatic_html_opening on `False`.
-You can edit the MG5 configuration cards, in order to
-have this value on False by default for all subsequent 
-run.
+Edit the file ./Cards/me5_configuration.txt and set
+the option automatic_html_opening to `False`.
+You can also edit the MG5 configuration card
+input/mg5_configuration.txt
+in order to have this value on False by default for all subsequently 
+generated processes.
 
 
