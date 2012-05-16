@@ -21,6 +21,7 @@ import os
 import time
 import aloha.aloha_object as aloha_obj
 import aloha.aloha_lib as aloha_lib
+from aloha.aloha_lib import *
 import aloha.create_aloha as create_aloha
 import aloha.aloha_writers as aloha_writers
 import models.sm.object_library as object_library
@@ -206,17 +207,17 @@ class TestAddVariable(unittest.TestCase):
 
     def setUp(self):
         """Initialize basic object"""
-        self.var1 = 2 * aloha_lib.Variable( 'var1')
-        self.var2 = 3 * aloha_lib.Variable( 'var2')
+        self.var1 = 2 * aloha_lib.Variable('var1')
+        self.var2 = 3 * aloha_lib.Variable('var2')
         self.add1 = aloha_lib.AddVariable()
-        self.add1.append(self.var1)
-        self.add1.append(self.var2)
+        self.add1 += self.var1
+        self.add1 += self.var2
 
         self.var3 = 11 * aloha_lib.Variable( 'var3')
         self.var4 = 4 * aloha_lib.Variable( 'var4')
         self.add2 = aloha_lib.AddVariable()
-        self.add2.append(self.var3)
-        self.add2.append(self.var4)        
+        self.add2 += self.var3
+        self.add2 += self.var4        
     
     def testsumaddint(self):
         """Test the sum of an Add variable with an integer"""
@@ -436,7 +437,23 @@ class TestAddVariable(unittest.TestCase):
                 self.assertEqual(data.__class__, aloha_lib.MultVariable)
                 self.assertEqual(data.prefactor, 12)
         
-
+    def test_replace(self):
+        """test that the replace command works"""
+        
+        id = self.var1.get_id()
+        new = self.add1.replace(id, self.add2)
+        
+        self.assertEqual(len(new),3)
+        self.assertEqual(set([a.prefactor for a in new]),set([3,22,8]))
+        for i in new:
+            self.assertNotEqual(i,id)
+        
+        self.setUp()
+        id = self.var1.get_id()
+        new = self.add1.replace(id, self.var1 * self.var2)
+        self.assertEqual(len(new),2)
+        self.assertEqual(set([a.prefactor for a in new]),set([12,3]))
+           
     def test_factorization(self):
         """test the factorization"""
         
@@ -1669,7 +1686,19 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         for ind in test1.listindices():
             self.assertEqual(ind,[0])
             already_use.append(list(ind))
-        self.assertEqual(len(already_use), 1)                
+        self.assertEqual(len(already_use), 1)    
+        
+    def test_split(self):
+        """check that we can split correctly an expression"""
+        p2rho = aloha_obj.P(3,2)
+        p2rho = p2rho.expand()
+        expr = self.p1mu *self.gamma_mu_ij *self.gamma_nu_ji * p2rho
+        #expr = expr.expand()
+        ids = [aloha_lib.KERNEL['P2_%s'%i] for i in [0,1,2,3]] 
+        data = expr.split(ids)
+        self.assertTrue((0,0,0,0) not in data)
+        self.assertEqual(len(data),4)
+        
 
     def testgetrepresentation(self):
         """Check the way to find representation"""

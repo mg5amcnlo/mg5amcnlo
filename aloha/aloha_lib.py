@@ -49,7 +49,6 @@ class Computation(dict):
     
     def __init__(self):
         self.objs = []
-        self.name2obj = {}
         self.use_tag = set()
         self.id = -1
         self.reduced_expr = {}
@@ -147,6 +146,32 @@ class AddVariable(list):
             return 0 #ConstantObject()
         
         return self
+    
+    def split(self, variables_id):
+        """return a dict with the key being the power associated to each variables
+           and the value being the object remaining after the suppression of all
+           the variable"""
+        
+        out = defaultdict(int)
+        for obj in self:
+            for key, value in obj.split(variables_id).items():
+                out[key] += value
+        return out
+    
+    def replace(self, id, expression):
+        """replace one object (identify by his id) by a given expression.
+           Note that expression cann't be zero.
+           Note that this should be canonical form (this should contains ONLY
+           MULTVARIABLE) --so this should be called before a factorize.
+        """
+
+        new = self.__class__()
+        new.prefactor = self.prefactor
+        for obj in self:
+            assert isinstance(obj, MultVariable)
+            new += obj.replace(id, expression)
+        return new
+
 
     def expand(self):
         """Pass from High level object to low level object"""
@@ -239,7 +264,7 @@ class AddVariable(list):
         if not hasattr(obj, 'vartype'):
             if not obj: # obj is zero
                 return self
-            self.prefactor *= obj
+            self.append(obj)
             return self
         elif obj.vartype == 2: # obj is a MultVariable
             if self.prefactor == 1:
@@ -395,6 +420,10 @@ class MultVariable(array):
         array.__init__(self, 'i', old)
         self.prefactor = prefactor
     
+    def get_id(self):
+        assert len(self) == 1
+        return self[0]
+    
     def sort(self):
         a = list(self)
         a.sort()
@@ -404,6 +433,59 @@ class MultVariable(array):
     def simplify(self):
         """ simplify the product"""
         return self  
+    
+    def split(self, variables_id):
+        """return a dict with the key being the power associated to each variables
+           and the value being the object remaining after the suppression of all
+           the variable"""
+           
+        key = tuple([self.count(i) for i in variables_id])
+        print key
+        arg = [id for id in self if id not in variables_id]
+        print 'old',self
+        self[:] = array('i', arg)
+        print 'new',self,type(self)
+        return {key:self}
+        
+    def replace(self, id, expression):
+        """replace one object (identify by his id) by a given expression.
+           Note that expression cann't be zero.
+        """
+        assert hasattr(expression, 'vartype') , 'expression should be of type Add or Mult'
+        
+        if expression.vartype == 1: # AddVariable
+            nb = self.count(id)
+            if not nb:
+                return self
+            for i in range(nb):
+                self.remove(id)
+            new = self
+            for i in range(nb):
+                new *= expression
+            return new             
+        elif expression.vartype == 2: # MultLorentz
+            # be carefull about A -> A * B
+            nb = self.count(id)
+            for i in range(nb):
+                self.remove(id)
+                self.__imul__(expression)
+            return self           
+#        elif expression.vartype == 0: # Variable
+#           new_id = expression.id 
+#            assert new_id != id
+#            while 1:
+#                try:
+#                    self.remove(id)
+#                except ValueError:
+#                    break
+#                else:
+#                    self.append(new_id)
+#            return self
+        else:
+            raise Exception, 'Cann\'t replace a Variable by %s' % type(expression)
+        
+        
+
 
     #Defining rule of Multiplication    
     def __mul__(self, obj):
@@ -416,7 +498,9 @@ class MultVariable(array):
                 return 0
         elif obj.vartype == 1: # obj is an AddVariable
             new = obj.__class__([], self.prefactor*obj.prefactor)
+            old, self.prefactor = self.prefactor, 1
             new[:] = [self * term for term in obj]
+            self.prefactor = old
             return new
         elif obj.vartype == 4:
             return NotImplemented
@@ -436,6 +520,7 @@ class MultVariable(array):
                 return 0
         elif obj.vartype == 1: # obj is an AddVariable
             new = obj.__class__([], self.prefactor * obj.prefactor)
+            self.prefactor = 1
             new[:] = [self * term for term in obj]
             return new
         elif obj.vartype == 4:
@@ -611,6 +696,9 @@ class MultLorentz(MultVariable):
             if obj.has_component(home.lorentz_ind, home.spin_ind):
                 return obj
         return None
+    
+
+        
 
     def expand(self):
         """ expand each part of the product and combine them.
@@ -1068,6 +1156,31 @@ class LorentzObjectRepresentation(dict):
             out.append(s_dict[value])
             
         return out
+    
+    def split(self, variables_id):
+        """return a dict with the key being the power associated to each variables
+           and the value being the object remaining after the suppression of all
+           the variable"""
+
+        out = {}
+        zero_rep = {}
+        for ind in self.listindices():
+            print ind
+            zero_rep[tuple(ind)] = 0
+        
+        for ind in self.listindices():
+            for key, value in self.get_rep(ind).split(variables_id).items():
+                if key in out:
+                    out[key][tuple(ind)] += value
+                else:
+                    out[key] = LorentzObjectRepresentation(dict(zero_rep), 
+                                                self.lorentz_ind, self.spin_ind)
+                    out[key][tuple(ind)] += value
+        
+        return out
+                    
+           
+        
 
 #===============================================================================
 # IndicesIterator

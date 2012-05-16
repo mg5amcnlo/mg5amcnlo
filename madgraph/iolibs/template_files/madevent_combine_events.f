@@ -328,7 +328,7 @@ C   Write out compulsory init info
          write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,maxwgt,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
       enddo
       write(lunw,'(a)') '</init>'
- 90   FORMAT(2i9,2e19.11,2i2,2i6,i2,i3)
+ 90   FORMAT(2i9,2e19.11,2i2,2i6,i2,i5)
  91   FORMAT(3e19.11,i4)
       end
 
@@ -432,7 +432,7 @@ C   Write out compulsory init info
          write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,sum/nevent,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
       enddo
       write(lunw,'(a)') '</init>'
- 90   FORMAT(2i9,2e19.11,2i2,2i6,i2,i3)
+ 90   FORMAT(2i9,2e19.11,2i2,2i6,i2,i5)
  91   FORMAT(3e19.11,i4)
 
       end
