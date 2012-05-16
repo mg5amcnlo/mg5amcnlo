@@ -659,7 +659,10 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
 
         # Extract ncolorborn
         ncolorborn = max(1, len(matrix_element.get('born_color_basis')))
-        replace_dict['ncolorborn'] = ncolorborn
+        if matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['ncolorborn'] = ncolorborn
+        else:
+            replace_dict['ncolorborn'] = ncolorloop            
 
         # Extract color data lines
         color_data_lines = self.get_color_data_lines(matrix_element)
