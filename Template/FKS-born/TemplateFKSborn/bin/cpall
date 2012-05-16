@@ -1,4 +1,0 @@
-#!/bin/bash
-for i in `cat subproc.mg` ; do
-   cp -p $1 $i/$1
-done
