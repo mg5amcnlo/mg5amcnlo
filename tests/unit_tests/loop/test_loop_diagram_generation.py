@@ -1418,6 +1418,8 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         l28 = base_objects.Leg({'id':21,'number':2,'loop_line':True})
         l128 = base_objects.Leg({'id':21,'number':1,'loop_line':True})
         l19 = base_objects.Leg({'id':21,'number':1,'loop_line':True})
+        l18 = base_objects.Leg({'id':21,'number':1,'loop_line':True})
+        l12 = base_objects.Leg({'id':21,'number':1,'loop_line':True})
 
         vx19 = base_objects.Vertex({'legs':base_objects.LegList([l1, l9, l19]), 'id': 1})
         vx67 = base_objects.Vertex({'legs':base_objects.LegList([l6, l7, l67]), 'id': 1})
@@ -1443,11 +1445,11 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         myStruct.generate_vertices(self.myproc)
         self.assertEqual(myStruct['vertices'],goal_vxList)
 
-        goal_tag=[[21, [0], 1], [21, [1], 1]]
-        vx28_tag=base_objects.Vertex({'legs':base_objects.LegList([l235, l8, l28]), 'id': 1})
-        vx129_tag=base_objects.Vertex({'legs':base_objects.LegList([l1, l28, l128]), 'id': 1})
-        closing_vx=base_objects.Vertex({'legs':base_objects.LegList([l128, l9]), 'id': -1})
-        goal_vertices=base_objects.VertexList([vx28_tag,vx129_tag,closing_vx])
+        goal_tag=[[21, [1], 1], [21, [0], 1]]
+        vx18_tag=base_objects.Vertex({'legs':base_objects.LegList([l1, l8, l18]), 'id': 1})
+        vx12_tag=base_objects.Vertex({'legs':base_objects.LegList([l24, l18, l12]), 'id': 1})
+        closing_vx=base_objects.Vertex({'legs':base_objects.LegList([l12, l9]), 'id': -1})
+        goal_vertices=base_objects.VertexList([vx18_tag,vx12_tag,closing_vx])
         myBubbleDiag.tag(myStructRep,8,9,self.myproc)
         self.assertEqual(myBubbleDiag.get('canonical_tag'), goal_tag)
         self.assertEqual(myBubbleDiag.get('vertices'), goal_vertices)

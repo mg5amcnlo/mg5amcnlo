@@ -46,7 +46,7 @@ class LoopDiagram(base_objects.Diagram):
         # and ordered in the same way as originally generated. It contains
         # the full information about the loop vertices and the loop legs.
         # It is of the form:
-        #   [(Leg,[Structure_IDs],Vertex), (...), ...]
+        #   [(Leg,[Structure_IDs],VertexID), (...), ...]
         self['tag'] = []        
         # This tag uniquely define a loop particle. It is not used for born, 
         # R2 and UV diagrams. It is only a list of integers, so not too
@@ -246,64 +246,186 @@ class LoopDiagram(base_objects.Diagram):
         else:
             return None
 
-    def tag(self, struct_rep, start, end, process):
+    @classmethod
+    def compute_weight(cls, FD_ids_list, struct_rep, number_legs):
+        """ Computes the weighting function S for this structure 'i' such that
+        S(i)>0 for each any i, S(i)!=S(j) if i['external_legs']!=j['external_legs']
+        and S(i+j)>max(S(i),S(j)). """
+        
+        external_numbers=[leg['number'] for id in FD_ids_list for leg in \
+                                 struct_rep.get_struct(id).get('external_legs')]
+        external_numbers.sort()
+        weight=0
+        for i, number in enumerate(external_numbers):
+            weight=i*number_legs+number
+        return weight
+    
+    @classmethod
+    def choose_optimal_lcut(cls,intag,struct_rep,process):
+        """ This function chooses the place where to cut the loop in order to
+        maximize the loop wavefunction recycling in the open loops method.
+        This amounts to cut just before the combined structure with smallest 
+        weight and then chose the direction to go towards the one with smallest
+        weight."""
+        
+        tag=copy.deepcopy(intag)
+        model=process['model']
+        number_legs=len(process.get('legs'))
+        
+        # Put the smallest weight first
+        weights=[cls.compute_weight(t[1],struct_rep,number_legs) for t in tag]
+        imin = weights.index(min(weights))
+        tag=tag[imin:]+tag[:imin]
+        weights=weights[imin:]+weights[:imin]
+        
+        # Now chose the direction
+        rev_tag=cls.mirrored_tag(tag, model)
+        # Put it back with the smallest weight first
+        rev_tag=rev_tag[-1:]+rev_tag[:-1]
+        rev_weights=[cls.compute_weight(t[1],struct_rep,number_legs) for t in rev_tag]
+        
+        # Finally return the appropriate tag
+        if len(tag)==1:
+            return tag
+        elif len(tag)==2:
+            if tag[0][0]['id']>tag[1][0]['id']:
+                return rev_tag
+            else:
+                return tag
+        else:
+            if rev_weights[1]<weights[1]:
+                return rev_tag
+            else:
+                return tag
+
+    @classmethod
+    def choose_default_lcut(cls,tag, model):
+        """ This function chooses where to cut the loop. It returns the
+            canonical tag corresponding to this unambiguous choice."""
+        # We then construct the canonical_tag such that it is a cyclic
+        # permutation of tag such that the first loop vertex appearing in 
+        # canonical_tag is the one carrying the structure with the lowest 
+        # ID. This is a safe procedure because a given structure can only
+        # appear once in a diagram since FDStructures are characterized by 
+        # the particle numbers and a given particle number can only appear 
+        # once in a diagram.
+        canonical_tag=copy.deepcopy(tag)
+        canonical_tag=cls.make_canonical_cyclic(canonical_tag)
+        canonical_mirrored_tag=copy.deepcopy(canonical_tag)
+        canonical_mirrored_tag=cls.mirrored_tag(canonical_mirrored_tag,model)
+        # We must put it back in the canonical cyclic order
+        canonical_mirrored_tag=canonical_mirrored_tag[-1:]+\
+                                 canonical_mirrored_tag[:-1]
+        # Now to relieve the remaining ambiguity due to the mirrored L-cut 
+        # diagram, we chose among the two equivalent tag 'canonical_tag' and
+        # 'canonical_mirrored_tag' the one having the lowest structure ID in 
+        # second position (this is equivalent as saying that we always 
+        # construct the tag starting next to the lowest structure ID and
+        # in the direction of the next-to-lowest structure ID). This is 
+        # irrelevant in the case of tadpoles (len(tag)==1) and bubbles made
+        # of the same particle. If these bubbles are not made of the same
+        # two particle, the tag chosen is the one starting from the biggest 
+        # particle id.
+        if((len(tag)==2 and canonical_mirrored_tag[0][0]['id']>\
+          canonical_tag[0][0]['id']) or (len(tag)>2 and \
+          canonical_mirrored_tag[1][1]<canonical_tag[1][1])):
+            canonical_tag=canonical_mirrored_tag
+        return canonical_tag        
+
+    def tag(self, struct_rep, start_in, end_in, process):
         """ Construct the tag of the diagram providing the loop structure 
         of it. """
        
         # Create the container for the new vertices which create the loop flow
+        # It is dummy at this stage
         loopVertexList=base_objects.VertexList()
-
+        
         # Notice here that start and end can be either the Legs object
         # specification of the two L-cut particles or simply their 'number'.
+        if isinstance(start_in,int) and isinstance(end_in,int):
+            start=start_in
+            end=end_in
+        elif isinstance(start_in,base_objects.Leg) and \
+                                            isinstance(end_in,base_objects.Leg):
+            start=start_in.get('number')
+            end=end_in.get('number')
+        else:
+            raise MadGraph5Error, "In the diagram tag function, 'start' and "+\
+                " 'end' must be either integers or Leg objects." 
+        
         if(self.process_next_loop_leg(struct_rep,-1,-1,start,end,\
-                                      loopVertexList,process)):
-            # First, we must assign the loopVertexList to the list of vertices 
+                                                       loopVertexList,process)):
+            # Possible check here is:
+            #mytype=self['type']
+            #self.synchronize_loop_vertices_with_tag(process['model'],
+            #                                               struct_rep,start,end)
+            #assert(loopVertexList==self['vertices'] and mytype==self['type'])
+            
+            # Different choices of the loop cut can be made suited for different
+            # optimizations. The default one has no specific property.
+            #canonical_tag=self.choose_default_lcut(self['tag'],process['model'])
+            # The choice below is optimized for recycling the loop wavefunction
+            # in the open loops method.
+            canonical_tag=self.choose_optimal_lcut(self['tag'],struct_rep,process)
+            # The tag of the diagram is now updated with the canonical tag
+            self['tag']=canonical_tag
+            # We assign here the loopVertexList to the list of vertices 
             # building this loop diagram. Keep in mind the the structures are 
             # factored out.
-            self['vertices']=loopVertexList
-            # We then construct the canonical_tag such that it is a cyclic
-            # permutation of tag such that the first loop vertex appearing in 
-            # canonical_tag is the one carrying the structure with the lowest 
-            # ID. This is a safe procedure because a given structure can only
-            # appear once in a diagram since FDStructures are characterized by 
-            # the particle numbers and a given particle number can only appear 
-            # once in a diagram.
-            canonical_tag=copy.deepcopy(self['tag'])
-            canonical_tag=self.make_canonical_cyclic(canonical_tag)
-            canonical_mirrored_tag=copy.deepcopy(canonical_tag)
-            canonical_mirrored_tag=self.mirrored_tag(canonical_mirrored_tag, \
-                                                     process['model'])
-            # We must put it back in the canonical cyclic order
-            canonical_mirrored_tag=canonical_mirrored_tag[-1:]+\
-                                     canonical_mirrored_tag[:-1]
-            # Now to relieve the remaining ambiguity due to the mirrored L-cut 
-            # diagram, we chose among the two equivalent tag 'canonical_tag' and
-            # 'canonical_mirrored_tag' the one having the lowest structure ID in 
-            # second position (this is equivalent as saying that we always 
-            # construct the tag starting next to the lowest structure ID and
-            # in the direction of the next-to-lowest structure ID). This is 
-            # irrelevant in the case of tadpoles (len(tag)==1) and bubbles made
-            # of the same particle. If these bubbles are not made of the same
-            # two particle, the tag chosen is the one starting from the biggest 
-            # particle id.
-            if((len(self['tag'])==2 and canonical_mirrored_tag[0][0]['id']>\
-              canonical_tag[0][0]['id']) or (len(self['tag'])>2 and \
-              canonical_mirrored_tag[1][1]<canonical_tag[1][1])):
-                self['canonical_tag']=canonical_mirrored_tag
-            else:
-                self['canonical_tag']=canonical_tag
+            self.synchronize_loop_vertices_with_tag(process['model'],
+                                                           struct_rep,start,end)
             # Now we just have to replace, in the canonical_tag, the legs with
             # the corresponding leg PDG since this is the only thing that matter
             # when building a canonical representation for the loop to perform 
             # the selection of the loop basis.
-            for i, elem in enumerate(self['canonical_tag']):
-                self['canonical_tag'][i][0]=elem[0]['id']
-
+            self['canonical_tag']=[[t[0]['id'],t[1],t[2]] for t in canonical_tag]
             return True
         else:
             raise self.PhysicsObjectError, \
                   "Loop diagram tagging failed."
             return False
+
+
+    @classmethod
+    def generate_loop_vertex(cls,myleglist, model, vertID):
+        """ Generate a loop vertex from incoming legs myleglist and the 
+        interaction with id vertID of the model given in argument """
+        # Define easy access point
+        ref_dict_to1 = model.get('ref_dict_to1')
+        # Now we make sure we can combine those legs together (and 
+        # obtain the output particle ID)
+        key=tuple(sorted([leg.get('id') for leg in myleglist]))
+        if ref_dict_to1.has_key(key):
+            for interaction in ref_dict_to1[key]:
+                # Find the interaction with the right ID
+                if interaction[1]==vertID:
+                    # Create the output Leg and add it to the 
+                    # existing list 
+                    #1) id is like defined by ref_dict_to1
+                    legid = interaction[0]
+                    # 2) number is the minimum of leg numbers 
+                    #    involved in the combination
+                    number = min([leg.get('number') for leg in\
+                                   myleglist])
+                    # 3) state is final, unless there is exactly 
+                    #    one initial state particle involved in the
+                    #    combination -> t-channel
+                    if len(myleglist)>1 and len(filter(lambda leg: \
+                            leg.get('state') == False, myleglist)) == 1:
+                        state = False
+                    else:
+                        state = True
+                    myleglist.append(base_objects.Leg(\
+                                            {'number': number,\
+                                             'id': legid,\
+                                             'state': state,
+                                             'loop_line': True}))
+                    # Now we can add the corresponding vertex
+                    return base_objects.Vertex({'legs':myleglist,'id':vertID})
+        else:
+            raise self.PhysicsObjectError, \
+            "An interaction from the original L-cut diagram could"+\
+            " not be found when reconstructing the loop vertices."
 
     def process_next_loop_leg(self, structRep, fromVert, fromPos, currLeg, \
                               endLeg, loopVertexList, process):
@@ -494,52 +616,11 @@ class LoopDiagram(base_objects.Diagram):
             # guarantees that its number is NOT propagated and that as soon 
             # as we reach this number, we reached the EXTERNAL outter leg 
             # which set the end of the tagging algorithm.
-            # Define easy access point
-            ref_dict_to1 = process['model'].get('ref_dict_to1')
-            # Now we make sure we can combine those legs together (and 
-            # obtain the output particle ID)
-            key=tuple(sorted([leg.get('id') for leg in myleglist]))
-            if ref_dict_to1.has_key(key):
-                for interaction in ref_dict_to1[key]:
-                    # Find the interaction with the right ID
-                    if interaction[1]==vertFoundID:
-                        # Create the output Leg and add it to the 
-                        # existing list 
-                        #1) id is like defined by ref_dict_to1
-                        legid = interaction[0]
-                        # 2) number is the minimum of leg numbers 
-                        #    involved in the combination
-                        number = min([leg.get('number') for leg in\
-                                       myleglist])
-                        # 3) state is final, unless there is exactly 
-                        #    one initial state particle involved in the
-                        #    combination -> t-channel
-                        if len(myleglist)>1 and len(filter(lambda leg: \
-                                leg.get('state') == False, myleglist)) == 1:
-                            state = False
-                        else:
-                            state = True
-                        myleglist.append(base_objects.Leg(\
-                                                {'number': number,\
-                                                 'id': legid,\
-                                                 'state': state,
-                                                 'loop_line': True}))
-                        # Now we can add the corresponding vertex
-                        loopVertexList.append(base_objects.Vertex(\
-                                   {'legs':myleglist,'id':vertFoundID}))
-                        break
-            else:
-                raise self.PhysicsObjectError, \
-                "An interaction from the original L-cut diagram could"+\
-                " not be found when reconstructing the loop vertices."
-
+            loopVertexList.append(\
+              self.generate_loop_vertex(myleglist,process['model'],vertFoundID))
         if nextLoopLeg.same(endLeg):
             # Now we can add the corresponding 'fake' amplitude vertex
             # with flagged id = -1
-            if isinstance(endLeg,int):
-                number=endLeg
-            else:
-                number=endLeg['number']
             # If last vertex was dummy, then recuperate the original leg
             if vertFoundID not in [0,-1]:
                 starting_Leg=copy.copy(myleglist[-1])
@@ -554,7 +635,7 @@ class LoopDiagram(base_objects.Diagram):
 
             loopVertexList.append(base_objects.Vertex(\
                 {'legs':base_objects.LegList([starting_Leg,\
-                 base_objects.Leg({'number': number,
+                 base_objects.Leg({'number': endLeg,
                                    'id': legid,
                                     'state': state,
                                     'loop_line': True})]),
@@ -569,6 +650,47 @@ class LoopDiagram(base_objects.Diagram):
             return self.process_next_loop_leg(structRep, vertPos, legPos, \
                         nextLoopLeg, endLeg, loopVertexList, process)
 
+    def synchronize_loop_vertices_with_tag(self,model,struct_rep,
+                                                       start_number,end_number):
+        """ Construct the loop vertices from the tag of the loop diagram."""
+        
+        if not self['tag']:
+            return
+        
+        # Easy access point to the interaction dictionary
+        ref_dict_to1 = model.get('ref_dict_to1')
+        
+        # Create the container for the new vertices which create the loop flow
+        loopVertexList=base_objects.VertexList()
+        for i, t in enumerate(self['tag']):
+            # Tag elements are organized like this 
+            # (Incoming_loop_leg,[Structures_ID_list],vertex_ID)
+            myleglist=base_objects.LegList([copy.copy(\
+                       struct_rep[FDindex]['binding_leg']) for FDindex in t[1]])
+            if i==0:
+                starting_leg=copy.copy(t[0])
+                starting_leg['number']=start_number
+                starting_leg['state']=True
+            else:
+                starting_leg=loopVertexList[-1].get('legs')[-1]
+            self['tag'][i][0]=starting_leg
+            myleglist.append(starting_leg)
+            loopVertexList.append(self.generate_loop_vertex(myleglist,model,t[2]))
+        # Now we can add the corresponding 'fake' amplitude vertex
+        # with flagged id = -1
+        first_leg=copy.copy(loopVertexList[-1].get('legs')[-1])
+        sec_leg_id=model.get_particle(first_leg['id']).get_anti_pdg_code()
+        second_leg=base_objects.Leg({'number': end_number,
+                                     'id': sec_leg_id,
+                                     'state': first_leg.get('state'),
+                                     'loop_line': True})
+        loopVertexList.append(base_objects.Vertex(\
+            {'legs':base_objects.LegList([first_leg,second_leg]),
+             'id':-1}))
+
+        self['type'] = abs(first_leg['id'])
+        self['vertices'] = loopVertexList
+    
     def construct_FDStructure(self, fromVert, fromPos, currLeg, FDStruct):
         """ Construct iteratively a Feynman Diagram structure attached to a Loop, 
         given at each step a vertex and the position of the leg this function is 
@@ -775,6 +897,13 @@ class LoopDiagram(base_objects.Diagram):
 
     # Helper function
 
+    def get_starting_loop_line(self):
+        """ Return the starting loop line of this diagram """
+        for v in self['vertices']:
+            for l in v['legs']:
+                if l['loop_line']:
+                    return l
+
     def get_loop_line_types(self):
         """ Return a set with one occurence of each different PDG code of the
         particles running in the loop. By convention, the PDF of the particle,
@@ -801,8 +930,9 @@ class LoopDiagram(base_objects.Diagram):
                     else:
                         loop_orders[order]=vertex_orders[order]
         return loop_orders
-
-    def make_canonical_cyclic(self, atag):
+    
+    @classmethod
+    def make_canonical_cyclic(cls,atag):
         """ Perform cyclic permutations on the tag given in parameter such that 
         the structure with the lowest ID appears first."""
         
@@ -819,8 +949,9 @@ class LoopDiagram(base_objects.Diagram):
         atag=atag[imin:]+atag[:imin]
 
         return atag
-     
-    def mirrored_tag(self, atag, model):
+
+    @classmethod
+    def mirrored_tag(cls,atag, model):
         """ Performs a mirror operation on A COPY of the tag and returns it. """
         
         if not atag:
@@ -1093,6 +1224,11 @@ class FDStructure(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
         "id %s is not an integer" % repr(value)
 
+        if name == 'weight':
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+        "weight %s is not an integer" % repr(value)
+
         if name == 'external_legs':
             if not isinstance(value, base_objects.LegList):
                 raise self.PhysicsObjectError, \
@@ -1109,7 +1245,7 @@ class FDStructure(base_objects.PhysicsObject):
         "canonical %s is not a valid tuple" % str(value)
 
         return True
-
+    
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 

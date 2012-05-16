@@ -1629,8 +1629,7 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
         # Sort according to interaction pdg codes
 
         mother_codes = [ wf.get_pdg_code() for wf \
-                         in mothers ]
-
+                         in mothers ]    
         if pdg_codes == mother_codes:
             # Already sorted - skip sort below
             return mothers, my_index

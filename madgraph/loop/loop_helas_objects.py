@@ -593,6 +593,10 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                                         leg, 0, model, decay_ids)) \
                                         for leg in process.get('legs')])
 
+        # To store the starting external loop wavefunctions needed
+        # (They are never output so they are not in the diagrams wavefunctions)
+        external_loop_wfs_dict={}
+
         # For initial state bosons, need to flip part-antipart
         # since all bosons should be treated as outgoing
         for key in external_wavefunctions.keys():
@@ -1061,22 +1065,24 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             external_loop_wf=helas_objects.HelasWavefunction(\
                                                 tag[0][0], 0, model, decay_ids)
             # When on the optimized output mode, the starting loop wavefunction
-            # is always recycled (so we do not add it to the diagram wavefunction)
-            # and identical for all loops so we give them all the same
-            # wavefunction number 0.
-            # (i.e in this case, recycled means that all starting external loop
-            # wavefunction have the same number but there will exist several 
-            # different copies of this external wf with number 0. It does not
-            # matter because they are not added to the diagrams_wavefunctions.
-            # It might only trigger a memory issue when creating helas diagrams
-            #, but that's minor here).
+            # can be recycled if it has the same pdg.
+            # It is anyway never output because whatever its pdg it has the
+            # same coefficients and loop momentum zero, so we never add it to
+            # the diagram wavefunctions.
             if not self.optimized_output:
                 wavefunctionNumber=wavefunctionNumber+1
                 external_loop_wf.set('number',wavefunctionNumber)
                 diagram_wavefunctions.append(external_loop_wf)
             else:
-                external_loop_wf.set('number',0)
-                                
+                try:
+                    external_loop_wf=\
+                        external_loop_wfs_dict[external_loop_wf.get('pdg_code')]
+                except KeyError:
+                    wavefunctionNumber=wavefunctionNumber+1
+                    external_loop_wf.set('number',wavefunctionNumber)
+                    external_loop_wfs_dict[external_loop_wf.get('pdg_code')]=\
+                                                                external_loop_wf
+            # Setup the starting point of the reading of the loop flow.
             last_loop_wfs.append(external_loop_wf)
 
             def process_tag_elem(tagElem, wfNumber, lastloopwfs, colorlists):
@@ -1163,6 +1169,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                                 # loop_optimized_output mode or now we want to
                                 # reuse the loop wavefunctions as well.
                                 try:
+                                    raise ValueError
                                     if not self.optimized_output:
                                         raise ValueError
                                     # Use wf_mother_arrays to locate existing
@@ -1173,7 +1180,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                                     # wfNumber
                                     wfNumber = wfNumber - 1
                                     # For developper purposes
-                                    # self.lwf_reused += 1
+                                    self.lwf_reused += 1
                                 except ValueError:
                                     diagram_wavefunctions.append(wf)
 
@@ -1396,14 +1403,14 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 helas_diagrams.append(helBornDiag)
         
         # Now we treat the loop diagrams
-        # self.lwf_reused=0
+        self.lwf_reused=0
         for diagram in amplitude.get('loop_diagrams'):
             loopHelDiag, wf_number, amplitude_number=\
               process_loop_diagram(diagram, wf_number, amplitude_number)
             diagram_number = diagram_number + 1
             loopHelDiag.set('number', diagram_number)
             helas_diagrams.append(loopHelDiag)
-        # print "I have been reusing ",self.lwf_reused
+        print "I have been reusing ",self.lwf_reused
 
         # We finally turn to the UVCT diagrams
         for diagram in amplitude.get('loop_UVCT_diagrams'):
@@ -1415,9 +1422,9 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             helas_diagrams.append(loopHelDiag)
  
         self.set('diagrams', helas_diagrams)
-        # print "Total # of loop wfs ",\
-        #                        sum([len(ldiag.get('loop_wavefunctions')) for \
-        #                                    ldiag in self.get_loop_diagrams()])
+        print "Total # of loop wfs ",\
+                                sum([len(ldiag.get('loop_wavefunctions')) for \
+                                            ldiag in self.get_loop_diagrams()])
  
         # Sort all mothers according to the order wanted in Helas calls
         for wf in self.get_all_wavefunctions():

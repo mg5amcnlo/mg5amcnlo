@@ -397,15 +397,17 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         self['loop_diagrams']=newloopselection
 
-        # The loop diagrams are filtered according to the 'squared_order' specification
+        # The loop diagrams are filtered according to the 'squared_order' 
+        # specification
         if self['process']['has_born']:
             # If there are born diagrams the selection is simple
             self.check_squared_orders(self['process']['squared_orders'])
         else:
-            # In case there is no born, we must make the selection of the loop diagrams based on themselves.
-            # The minimum of the different orders used for the selections can possibly increase, after some
-            # loop diagrams are selected out. So this check must be iterated until the number of diagrams
-            # remaining is stable
+            # In case there is no born, we must make the selection of the loop 
+            # diagrams based on themselves. The minimum of the different orders 
+            # used for the selections can possibly increase, after some loop 
+            # diagrams are selected out. So this check must be iterated until 
+            # the number of diagrams remaining is stable
             while True:
                 nloopdiag_remaining=len(self['loop_diagrams'])
                 self.check_squared_orders(self['process']['squared_orders'])
@@ -420,8 +422,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
         tag_selected=[]
         loop_basis=base_objects.DiagramList()
         for diag in self['loop_diagrams']:
-            diag.tag(self['structure_repository'],len(self['process']['legs'])+1,len(self['process']['legs'])+2,\
-                     self['process'])
+            diag.tag(self['structure_repository'],len(self['process']['legs'])+1\
+                                ,len(self['process']['legs'])+2,self['process'])
             # Make sure not to consider wave-function renormalization, tadpoles, or redundant diagrams
             if not diag.is_wf_correction(self['structure_repository'],self['process']['model']) \
                and not diag.is_tadpole() and diag['canonical_tag'] not in tag_selected:
