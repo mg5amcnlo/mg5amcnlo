@@ -87,7 +87,7 @@ C) Launch sequential runs for generation of large number of events:
 -------------------------------------------------------------------
 
 For various reason, we recommend not to generate more than 100k events
-pre run. In order to simplify generating large numbers of events,
+per run. In order to simplify generating large numbers of events,
 we have created a special command 'multi_run', which is equivalent to
 running generate_events multiple times (ensuring that the random seed is
 different for each run), and also automatically combines the resulting
