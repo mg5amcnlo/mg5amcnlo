@@ -328,7 +328,7 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         """writes the leshouche_info.inc file which contains the LHA informations
         for all the real emission processes"""
         lines = []
-        nconfs = len(matrix_element.real_processes)
+        nconfs = len(matrix_element.get_fks_info_list())
         (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
 
         lines.append('integer idup_d(%d,%d,maxproc_used)' % (nconfs, nexternal))
@@ -339,8 +339,10 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
 
         maxproc = 0
         maxflow = 0
-        for i, real in enumerate(matrix_element.real_processes):
-            (newlines, nprocs, nflows) = self.get_leshouche_lines(real.matrix_element, i + 1)
+        for i, conf in enumerate(matrix_element.get_fks_info_list()):
+#        for i, real in enumerate(matrix_element.real_processes):
+            (newlines, nprocs, nflows) = self.get_leshouche_lines(
+                    matrix_element.real_processes[conf['n_me'] - 1].matrix_element, i + 1)
             lines.extend(newlines)
             maxproc = max(maxproc, nprocs)
             maxflow = max(maxflow, nflows)
@@ -361,11 +363,11 @@ implicit none
 integer nfksprocess
 common/c_nfksprocess/nfksprocess
 """
-        for n in range(len(matrix_element.real_processes)):
+        for n, info in enumerate(matrix_element.get_fks_info_list()):
             file += \
 """if (nfksprocess.eq.%(n)d) then
-call dlum_%(n)d(dlum)
-else""" % {'n': n + 1}
+call dlum_%(n_me)d(dlum)
+else""" % {'n': n + 1, 'n_me' : info['n_me']}
         file += \
 """
 write(*,*) 'ERROR: invalid n in dlum :', nfksprocess
@@ -392,11 +394,11 @@ double precision wgt
 integer nfksprocess
 common/c_nfksprocess/nfksprocess
 """
-        for n in range(len(matrix_element.real_processes)):
+        for n, info in enumerate(matrix_element.get_fks_info_list()):
             file += \
 """if (nfksprocess.eq.%(n)d) then
-call smatrix_%(n)d(p, wgt)
-else""" % {'n': n + 1}
+call smatrix_%(n_me)d(p, wgt)
+else""" % {'n': n + 1, 'n_me' : info['n_me']}
         file += \
 """
 write(*,*) 'ERROR: invalid n in real_matrix :', nfksprocess
@@ -706,7 +708,7 @@ NJetSymmetrizeFinal     %(symfin)s\n\
         replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
     
         # Extract the number of FKS process
-        replace_dict['nconfs'] = len(fksborn.real_processes)
+        replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
 
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/born_fks_tilde_from_born.inc')).read()
@@ -870,7 +872,7 @@ c     this subdir has no soft singularities
     
     
         # Extract the number of FKS process
-        replace_dict['nconfs'] = len(fksborn.real_processes)
+        replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
 
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/b_sf_xxx_fks_from_born.inc')).read()
@@ -924,24 +926,24 @@ c     this subdir has no soft singularities
         possible splittings of the born ME"""
 
         replace_dict = {}
-        replace_dict['nconfs'] = len(fksborn.real_processes)
-        replace_dict['fks_i_values'] = ', '.join(['%d' % real.i_fks \
-                                                 for real in fksborn.real_processes]) 
-        replace_dict['fks_j_values'] = ', '.join(['%d' % real.j_fks \
-                                                 for real in fksborn.real_processes]) 
+        fks_info_list = fksborn.get_fks_info_list()
+        replace_dict['nconfs'] = len(fks_info_list)
+        replace_dict['fks_i_values'] = ', '.join(['%d' % info['fks_info']['i'] \
+                                                 for info in fks_info_list]) 
+        replace_dict['fks_j_values'] = ', '.join(['%d' % info['fks_info']['j'] \
+                                                 for info in fks_info_list]) 
 
         col_lines = []
         pdg_lines = []
         fks_j_from_i_lines = []
-        for i, real in enumerate(fksborn.real_processes):
+        for i, info in enumerate(fks_info_list):
             col_lines.append( \
                 'DATA (PARTICLE_TYPE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
-                % (i + 1, ', '.join('%d' % col for col in real.colors) ))
+                % (i + 1, ', '.join('%d' % col for col in fksborn.real_processes[info['n_me']-1].colors) ))
             pdg_lines.append( \
                 'DATA (PDG_TYPE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
-                % (i + 1, ', '.join('%d' % leg['id'] \
-                for leg in real.matrix_element.get('processes')[0]['legs']) ))
-            fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(real, i + 1))
+                % (i + 1, ', '.join('%d' % pdg for pdg in info['pdgs'])))
+            fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(fksborn.real_processes[info['n_me']-1], i + 1))
 
         replace_dict['col_lines'] = '\n'.join(col_lines)
         replace_dict['pdg_lines'] = '\n'.join(pdg_lines)
@@ -1411,13 +1413,14 @@ C
         of the identical particle factors in the various real emissions"""
     
         lines = []
-        lines.append('INTEGER IDEN_VALUES(%d)' % len(fks_born.real_processes))
+        info_list = fks_born.get_fks_info_list()
+        lines.append('INTEGER IDEN_VALUES(%d)' % len(info_list))
         lines.append('DATA IDEN_VALUES /' + \
                      ', '.join(['%d' % ( 
                      fks_born.born_matrix_element.get_denominator_factor() / \
                      fks_born.born_matrix_element['identical_particle_factor'] * \
-                     real.matrix_element['identical_particle_factor'] ) \
-                     for real in fks_born.real_processes]) + '/')
+                     fks_born.real_processes[info['n_me'] - 1].matrix_element['identical_particle_factor'] ) \
+                     for info in info_list]) + '/')
 
         return lines
 
@@ -1428,11 +1431,11 @@ C
     def get_ij_lines(self, fks_born):
         """returns the lines with the information on the particle number of the born 
         that splits"""
-    
+        info_list = fks_born.get_fks_info_list()
         lines = []
-        lines.append('INTEGER IJ_VALUES(%d)' % len(fks_born.real_processes))
+        lines.append('INTEGER IJ_VALUES(%d)' % len(info_list))
         lines.append('DATA IJ_VALUES /' + \
-                     ', '.join(['%d' % real.ij for real in fks_born.real_processes]) + '/')
+                     ', '.join(['%d' % info['fks_info']['ij'] for info in info_list]) + '/')
 
         return lines
 

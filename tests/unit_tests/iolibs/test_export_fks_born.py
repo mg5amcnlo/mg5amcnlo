@@ -83,8 +83,8 @@ class IOExportBornFKSTest(unittest.TestCase,
     myfksmulti = fks_born.FKSMultiProcessFromBorn(\
             {'process_definitions': my_process_definitions})
     
-#    myfks_me = fks_born_helas.FKSHelasMultiProcessFromBorn(\
-#           myfksmulti)['matrix_elements'][0]
+    myfks_me = fks_born_helas.FKSHelasMultiProcessFromBorn(\
+           myfksmulti)['matrix_elements'][0]
 
     def setUp(self):
 
@@ -130,19 +130,19 @@ NJetSymmetrizeFinal     Yes
       IF (NFKSPROCESS.EQ.1) THEN
         CALL SMATRIX_1(P, WGT)
       ELSEIF (NFKSPROCESS.EQ.2) THEN
-        CALL SMATRIX_2(P, WGT)
+        CALL SMATRIX_1(P, WGT)
       ELSEIF (NFKSPROCESS.EQ.3) THEN
-        CALL SMATRIX_3(P, WGT)
+        CALL SMATRIX_1(P, WGT)
       ELSEIF (NFKSPROCESS.EQ.4) THEN
-        CALL SMATRIX_4(P, WGT)
+        CALL SMATRIX_1(P, WGT)
       ELSEIF (NFKSPROCESS.EQ.5) THEN
-        CALL SMATRIX_5(P, WGT)
+        CALL SMATRIX_2(P, WGT)
       ELSEIF (NFKSPROCESS.EQ.6) THEN
-        CALL SMATRIX_6(P, WGT)
+        CALL SMATRIX_3(P, WGT)
       ELSEIF (NFKSPROCESS.EQ.7) THEN
-        CALL SMATRIX_7(P, WGT)
+        CALL SMATRIX_4(P, WGT)
       ELSEIF (NFKSPROCESS.EQ.8) THEN
-        CALL SMATRIX_8(P, WGT)
+        CALL SMATRIX_5(P, WGT)
       ELSE
         WRITE(*,*) 'ERROR: invalid n in real_matrix :', NFKSPROCESS
         STOP
@@ -172,19 +172,19 @@ NJetSymmetrizeFinal     Yes
       IF (NFKSPROCESS.EQ.1) THEN
         CALL DLUM_1(DLUM)
       ELSEIF (NFKSPROCESS.EQ.2) THEN
-        CALL DLUM_2(DLUM)
+        CALL DLUM_1(DLUM)
       ELSEIF (NFKSPROCESS.EQ.3) THEN
-        CALL DLUM_3(DLUM)
+        CALL DLUM_1(DLUM)
       ELSEIF (NFKSPROCESS.EQ.4) THEN
-        CALL DLUM_4(DLUM)
+        CALL DLUM_1(DLUM)
       ELSEIF (NFKSPROCESS.EQ.5) THEN
-        CALL DLUM_5(DLUM)
+        CALL DLUM_2(DLUM)
       ELSEIF (NFKSPROCESS.EQ.6) THEN
-        CALL DLUM_6(DLUM)
+        CALL DLUM_3(DLUM)
       ELSEIF (NFKSPROCESS.EQ.7) THEN
-        CALL DLUM_7(DLUM)
+        CALL DLUM_4(DLUM)
       ELSEIF (NFKSPROCESS.EQ.8) THEN
-        CALL DLUM_8(DLUM)
+        CALL DLUM_5(DLUM)
       ELSE
         WRITE(*,*) 'ERROR: invalid n in dlum :', NFKSPROCESS
         STOP
@@ -231,47 +231,37 @@ NJetSymmetrizeFinal     Yes
       DATA (ICOLUP_D(1,1,ILH,  6),ILH=1, 5)/503,504,501,  0,504/
       DATA (ICOLUP_D(1,2,ILH,  6),ILH=1, 5)/502,503,  0,502,501/
 
-      DATA (IDUP_D(2,ILH,1),ILH=1,5)/-1,21,6,-6,-1/
+      DATA (IDUP_D(2,ILH,1),ILH=1,5)/21,21,6,-6,21/
       DATA (MOTHUP_D(2,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
       DATA (MOTHUP_D(2,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(2,1,ILH,  1),ILH=1, 5)/  0,502,502,  0,  0/
-      DATA (ICOLUP_D(2,2,ILH,  1),ILH=1, 5)/501,503,  0,501,503/
-      DATA (ICOLUP_D(2,1,ILH,  2),ILH=1, 5)/  0,502,502,  0,  0/
-      DATA (ICOLUP_D(2,2,ILH,  2),ILH=1, 5)/501,503,  0,503,501/
-      DATA (ICOLUP_D(2,1,ILH,  3),ILH=1, 5)/  0,501,502,  0,  0/
-      DATA (ICOLUP_D(2,2,ILH,  3),ILH=1, 5)/501,503,  0,503,502/
-      DATA (ICOLUP_D(2,1,ILH,  4),ILH=1, 5)/  0,501,502,  0,  0/
-      DATA (ICOLUP_D(2,2,ILH,  4),ILH=1, 5)/501,503,  0,502,503/
-      DATA (IDUP_D(2,ILH,2),ILH=1,5)/-3,21,6,-6,-3/
-      DATA (MOTHUP_D(2,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(2,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (IDUP_D(2,ILH,3),ILH=1,5)/-2,21,6,-6,-2/
-      DATA (MOTHUP_D(2,1,ILH,  3),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(2,2,ILH,  3),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (IDUP_D(2,ILH,4),ILH=1,5)/-4,21,6,-6,-4/
-      DATA (MOTHUP_D(2,1,ILH,  4),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(2,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (ICOLUP_D(2,1,ILH,  1),ILH=1, 5)/501,502,501,  0,504/
+      DATA (ICOLUP_D(2,2,ILH,  1),ILH=1, 5)/502,503,  0,504,503/
+      DATA (ICOLUP_D(2,1,ILH,  2),ILH=1, 5)/501,504,501,  0,504/
+      DATA (ICOLUP_D(2,2,ILH,  2),ILH=1, 5)/502,503,  0,503,502/
+      DATA (ICOLUP_D(2,1,ILH,  3),ILH=1, 5)/503,501,501,  0,504/
+      DATA (ICOLUP_D(2,2,ILH,  3),ILH=1, 5)/502,503,  0,504,502/
+      DATA (ICOLUP_D(2,1,ILH,  4),ILH=1, 5)/504,501,501,  0,504/
+      DATA (ICOLUP_D(2,2,ILH,  4),ILH=1, 5)/502,503,  0,502,503/
+      DATA (ICOLUP_D(2,1,ILH,  5),ILH=1, 5)/504,502,501,  0,504/
+      DATA (ICOLUP_D(2,2,ILH,  5),ILH=1, 5)/502,503,  0,503,501/
+      DATA (ICOLUP_D(2,1,ILH,  6),ILH=1, 5)/503,504,501,  0,504/
+      DATA (ICOLUP_D(2,2,ILH,  6),ILH=1, 5)/502,503,  0,502,501/
 
-      DATA (IDUP_D(3,ILH,1),ILH=1,5)/1,21,6,-6,1/
+      DATA (IDUP_D(3,ILH,1),ILH=1,5)/21,21,6,-6,21/
       DATA (MOTHUP_D(3,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
       DATA (MOTHUP_D(3,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(3,1,ILH,  1),ILH=1, 5)/503,501,501,  0,502/
-      DATA (ICOLUP_D(3,2,ILH,  1),ILH=1, 5)/  0,503,  0,502,  0/
-      DATA (ICOLUP_D(3,1,ILH,  2),ILH=1, 5)/502,501,501,  0,502/
-      DATA (ICOLUP_D(3,2,ILH,  2),ILH=1, 5)/  0,503,  0,503,  0/
-      DATA (ICOLUP_D(3,1,ILH,  3),ILH=1, 5)/503,502,501,  0,502/
-      DATA (ICOLUP_D(3,2,ILH,  3),ILH=1, 5)/  0,503,  0,501,  0/
-      DATA (ICOLUP_D(3,1,ILH,  4),ILH=1, 5)/501,502,501,  0,502/
-      DATA (ICOLUP_D(3,2,ILH,  4),ILH=1, 5)/  0,503,  0,503,  0/
-      DATA (IDUP_D(3,ILH,2),ILH=1,5)/3,21,6,-6,3/
-      DATA (MOTHUP_D(3,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(3,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (IDUP_D(3,ILH,3),ILH=1,5)/2,21,6,-6,2/
-      DATA (MOTHUP_D(3,1,ILH,  3),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(3,2,ILH,  3),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (IDUP_D(3,ILH,4),ILH=1,5)/4,21,6,-6,4/
-      DATA (MOTHUP_D(3,1,ILH,  4),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(3,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (ICOLUP_D(3,1,ILH,  1),ILH=1, 5)/501,502,501,  0,504/
+      DATA (ICOLUP_D(3,2,ILH,  1),ILH=1, 5)/502,503,  0,504,503/
+      DATA (ICOLUP_D(3,1,ILH,  2),ILH=1, 5)/501,504,501,  0,504/
+      DATA (ICOLUP_D(3,2,ILH,  2),ILH=1, 5)/502,503,  0,503,502/
+      DATA (ICOLUP_D(3,1,ILH,  3),ILH=1, 5)/503,501,501,  0,504/
+      DATA (ICOLUP_D(3,2,ILH,  3),ILH=1, 5)/502,503,  0,504,502/
+      DATA (ICOLUP_D(3,1,ILH,  4),ILH=1, 5)/504,501,501,  0,504/
+      DATA (ICOLUP_D(3,2,ILH,  4),ILH=1, 5)/502,503,  0,502,503/
+      DATA (ICOLUP_D(3,1,ILH,  5),ILH=1, 5)/504,502,501,  0,504/
+      DATA (ICOLUP_D(3,2,ILH,  5),ILH=1, 5)/502,503,  0,503,501/
+      DATA (ICOLUP_D(3,1,ILH,  6),ILH=1, 5)/503,504,501,  0,504/
+      DATA (ICOLUP_D(3,2,ILH,  6),ILH=1, 5)/502,503,  0,502,501/
 
       DATA (IDUP_D(4,ILH,1),ILH=1,5)/21,21,6,-6,21/
       DATA (MOTHUP_D(4,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
@@ -289,79 +279,89 @@ NJetSymmetrizeFinal     Yes
       DATA (ICOLUP_D(4,1,ILH,  6),ILH=1, 5)/503,504,501,  0,504/
       DATA (ICOLUP_D(4,2,ILH,  6),ILH=1, 5)/502,503,  0,502,501/
 
-      DATA (IDUP_D(5,ILH,1),ILH=1,5)/21,-1,6,-6,-1/
+      DATA (IDUP_D(5,ILH,1),ILH=1,5)/-1,21,6,-6,-1/
       DATA (MOTHUP_D(5,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
       DATA (MOTHUP_D(5,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(5,1,ILH,  1),ILH=1, 5)/501,  0,502,  0,  0/
-      DATA (ICOLUP_D(5,2,ILH,  1),ILH=1, 5)/503,501,  0,503,502/
-      DATA (ICOLUP_D(5,1,ILH,  2),ILH=1, 5)/501,  0,502,  0,  0/
-      DATA (ICOLUP_D(5,2,ILH,  2),ILH=1, 5)/503,501,  0,502,503/
-      DATA (ICOLUP_D(5,1,ILH,  3),ILH=1, 5)/502,  0,502,  0,  0/
-      DATA (ICOLUP_D(5,2,ILH,  3),ILH=1, 5)/503,501,  0,503,501/
-      DATA (ICOLUP_D(5,1,ILH,  4),ILH=1, 5)/502,  0,502,  0,  0/
-      DATA (ICOLUP_D(5,2,ILH,  4),ILH=1, 5)/503,501,  0,501,503/
-      DATA (IDUP_D(5,ILH,2),ILH=1,5)/21,-3,6,-6,-3/
+      DATA (ICOLUP_D(5,1,ILH,  1),ILH=1, 5)/  0,502,502,  0,  0/
+      DATA (ICOLUP_D(5,2,ILH,  1),ILH=1, 5)/501,503,  0,501,503/
+      DATA (ICOLUP_D(5,1,ILH,  2),ILH=1, 5)/  0,502,502,  0,  0/
+      DATA (ICOLUP_D(5,2,ILH,  2),ILH=1, 5)/501,503,  0,503,501/
+      DATA (ICOLUP_D(5,1,ILH,  3),ILH=1, 5)/  0,501,502,  0,  0/
+      DATA (ICOLUP_D(5,2,ILH,  3),ILH=1, 5)/501,503,  0,503,502/
+      DATA (ICOLUP_D(5,1,ILH,  4),ILH=1, 5)/  0,501,502,  0,  0/
+      DATA (ICOLUP_D(5,2,ILH,  4),ILH=1, 5)/501,503,  0,502,503/
+      DATA (IDUP_D(5,ILH,2),ILH=1,5)/-3,21,6,-6,-3/
       DATA (MOTHUP_D(5,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
       DATA (MOTHUP_D(5,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (IDUP_D(5,ILH,3),ILH=1,5)/21,-2,6,-6,-2/
+      DATA (IDUP_D(5,ILH,3),ILH=1,5)/-2,21,6,-6,-2/
       DATA (MOTHUP_D(5,1,ILH,  3),ILH=1, 5)/  0,  0,  1,  1,  1/
       DATA (MOTHUP_D(5,2,ILH,  3),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (IDUP_D(5,ILH,4),ILH=1,5)/21,-4,6,-6,-4/
+      DATA (IDUP_D(5,ILH,4),ILH=1,5)/-4,21,6,-6,-4/
       DATA (MOTHUP_D(5,1,ILH,  4),ILH=1, 5)/  0,  0,  1,  1,  1/
       DATA (MOTHUP_D(5,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
 
-      DATA (IDUP_D(6,ILH,1),ILH=1,5)/21,1,6,-6,1/
+      DATA (IDUP_D(6,ILH,1),ILH=1,5)/1,21,6,-6,1/
       DATA (MOTHUP_D(6,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
       DATA (MOTHUP_D(6,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(6,1,ILH,  1),ILH=1, 5)/501,503,501,  0,502/
-      DATA (ICOLUP_D(6,2,ILH,  1),ILH=1, 5)/503,  0,  0,502,  0/
-      DATA (ICOLUP_D(6,1,ILH,  2),ILH=1, 5)/501,502,501,  0,502/
-      DATA (ICOLUP_D(6,2,ILH,  2),ILH=1, 5)/503,  0,  0,503,  0/
-      DATA (ICOLUP_D(6,1,ILH,  3),ILH=1, 5)/502,503,501,  0,502/
-      DATA (ICOLUP_D(6,2,ILH,  3),ILH=1, 5)/503,  0,  0,501,  0/
-      DATA (ICOLUP_D(6,1,ILH,  4),ILH=1, 5)/502,501,501,  0,502/
-      DATA (ICOLUP_D(6,2,ILH,  4),ILH=1, 5)/503,  0,  0,503,  0/
-      DATA (IDUP_D(6,ILH,2),ILH=1,5)/21,3,6,-6,3/
+      DATA (ICOLUP_D(6,1,ILH,  1),ILH=1, 5)/503,501,501,  0,502/
+      DATA (ICOLUP_D(6,2,ILH,  1),ILH=1, 5)/  0,503,  0,502,  0/
+      DATA (ICOLUP_D(6,1,ILH,  2),ILH=1, 5)/502,501,501,  0,502/
+      DATA (ICOLUP_D(6,2,ILH,  2),ILH=1, 5)/  0,503,  0,503,  0/
+      DATA (ICOLUP_D(6,1,ILH,  3),ILH=1, 5)/503,502,501,  0,502/
+      DATA (ICOLUP_D(6,2,ILH,  3),ILH=1, 5)/  0,503,  0,501,  0/
+      DATA (ICOLUP_D(6,1,ILH,  4),ILH=1, 5)/501,502,501,  0,502/
+      DATA (ICOLUP_D(6,2,ILH,  4),ILH=1, 5)/  0,503,  0,503,  0/
+      DATA (IDUP_D(6,ILH,2),ILH=1,5)/3,21,6,-6,3/
       DATA (MOTHUP_D(6,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
       DATA (MOTHUP_D(6,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (IDUP_D(6,ILH,3),ILH=1,5)/21,2,6,-6,2/
+      DATA (IDUP_D(6,ILH,3),ILH=1,5)/2,21,6,-6,2/
       DATA (MOTHUP_D(6,1,ILH,  3),ILH=1, 5)/  0,  0,  1,  1,  1/
       DATA (MOTHUP_D(6,2,ILH,  3),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (IDUP_D(6,ILH,4),ILH=1,5)/21,4,6,-6,4/
+      DATA (IDUP_D(6,ILH,4),ILH=1,5)/4,21,6,-6,4/
       DATA (MOTHUP_D(6,1,ILH,  4),ILH=1, 5)/  0,  0,  1,  1,  1/
       DATA (MOTHUP_D(6,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
 
-      DATA (IDUP_D(7,ILH,1),ILH=1,5)/21,21,6,-6,21/
+      DATA (IDUP_D(7,ILH,1),ILH=1,5)/21,-1,6,-6,-1/
       DATA (MOTHUP_D(7,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
       DATA (MOTHUP_D(7,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(7,1,ILH,  1),ILH=1, 5)/501,502,501,  0,504/
-      DATA (ICOLUP_D(7,2,ILH,  1),ILH=1, 5)/502,503,  0,504,503/
-      DATA (ICOLUP_D(7,1,ILH,  2),ILH=1, 5)/501,504,501,  0,504/
-      DATA (ICOLUP_D(7,2,ILH,  2),ILH=1, 5)/502,503,  0,503,502/
-      DATA (ICOLUP_D(7,1,ILH,  3),ILH=1, 5)/503,501,501,  0,504/
-      DATA (ICOLUP_D(7,2,ILH,  3),ILH=1, 5)/502,503,  0,504,502/
-      DATA (ICOLUP_D(7,1,ILH,  4),ILH=1, 5)/504,501,501,  0,504/
-      DATA (ICOLUP_D(7,2,ILH,  4),ILH=1, 5)/502,503,  0,502,503/
-      DATA (ICOLUP_D(7,1,ILH,  5),ILH=1, 5)/504,502,501,  0,504/
-      DATA (ICOLUP_D(7,2,ILH,  5),ILH=1, 5)/502,503,  0,503,501/
-      DATA (ICOLUP_D(7,1,ILH,  6),ILH=1, 5)/503,504,501,  0,504/
-      DATA (ICOLUP_D(7,2,ILH,  6),ILH=1, 5)/502,503,  0,502,501/
+      DATA (ICOLUP_D(7,1,ILH,  1),ILH=1, 5)/501,  0,502,  0,  0/
+      DATA (ICOLUP_D(7,2,ILH,  1),ILH=1, 5)/503,501,  0,503,502/
+      DATA (ICOLUP_D(7,1,ILH,  2),ILH=1, 5)/501,  0,502,  0,  0/
+      DATA (ICOLUP_D(7,2,ILH,  2),ILH=1, 5)/503,501,  0,502,503/
+      DATA (ICOLUP_D(7,1,ILH,  3),ILH=1, 5)/502,  0,502,  0,  0/
+      DATA (ICOLUP_D(7,2,ILH,  3),ILH=1, 5)/503,501,  0,503,501/
+      DATA (ICOLUP_D(7,1,ILH,  4),ILH=1, 5)/502,  0,502,  0,  0/
+      DATA (ICOLUP_D(7,2,ILH,  4),ILH=1, 5)/503,501,  0,501,503/
+      DATA (IDUP_D(7,ILH,2),ILH=1,5)/21,-3,6,-6,-3/
+      DATA (MOTHUP_D(7,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(7,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(7,ILH,3),ILH=1,5)/21,-2,6,-6,-2/
+      DATA (MOTHUP_D(7,1,ILH,  3),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(7,2,ILH,  3),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(7,ILH,4),ILH=1,5)/21,-4,6,-6,-4/
+      DATA (MOTHUP_D(7,1,ILH,  4),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(7,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
 
-      DATA (IDUP_D(8,ILH,1),ILH=1,5)/21,21,6,-6,21/
+      DATA (IDUP_D(8,ILH,1),ILH=1,5)/21,1,6,-6,1/
       DATA (MOTHUP_D(8,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
       DATA (MOTHUP_D(8,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(8,1,ILH,  1),ILH=1, 5)/501,502,501,  0,504/
-      DATA (ICOLUP_D(8,2,ILH,  1),ILH=1, 5)/502,503,  0,504,503/
-      DATA (ICOLUP_D(8,1,ILH,  2),ILH=1, 5)/501,504,501,  0,504/
-      DATA (ICOLUP_D(8,2,ILH,  2),ILH=1, 5)/502,503,  0,503,502/
-      DATA (ICOLUP_D(8,1,ILH,  3),ILH=1, 5)/503,501,501,  0,504/
-      DATA (ICOLUP_D(8,2,ILH,  3),ILH=1, 5)/502,503,  0,504,502/
-      DATA (ICOLUP_D(8,1,ILH,  4),ILH=1, 5)/504,501,501,  0,504/
-      DATA (ICOLUP_D(8,2,ILH,  4),ILH=1, 5)/502,503,  0,502,503/
-      DATA (ICOLUP_D(8,1,ILH,  5),ILH=1, 5)/504,502,501,  0,504/
-      DATA (ICOLUP_D(8,2,ILH,  5),ILH=1, 5)/502,503,  0,503,501/
-      DATA (ICOLUP_D(8,1,ILH,  6),ILH=1, 5)/503,504,501,  0,504/
-      DATA (ICOLUP_D(8,2,ILH,  6),ILH=1, 5)/502,503,  0,502,501/
+      DATA (ICOLUP_D(8,1,ILH,  1),ILH=1, 5)/501,503,501,  0,502/
+      DATA (ICOLUP_D(8,2,ILH,  1),ILH=1, 5)/503,  0,  0,502,  0/
+      DATA (ICOLUP_D(8,1,ILH,  2),ILH=1, 5)/501,502,501,  0,502/
+      DATA (ICOLUP_D(8,2,ILH,  2),ILH=1, 5)/503,  0,  0,503,  0/
+      DATA (ICOLUP_D(8,1,ILH,  3),ILH=1, 5)/502,503,501,  0,502/
+      DATA (ICOLUP_D(8,2,ILH,  3),ILH=1, 5)/503,  0,  0,501,  0/
+      DATA (ICOLUP_D(8,1,ILH,  4),ILH=1, 5)/502,501,501,  0,502/
+      DATA (ICOLUP_D(8,2,ILH,  4),ILH=1, 5)/503,  0,  0,503,  0/
+      DATA (IDUP_D(8,ILH,2),ILH=1,5)/21,3,6,-6,3/
+      DATA (MOTHUP_D(8,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(8,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(8,ILH,3),ILH=1,5)/21,2,6,-6,2/
+      DATA (MOTHUP_D(8,1,ILH,  3),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(8,2,ILH,  3),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(8,ILH,4),ILH=1,5)/21,4,6,-6,4/
+      DATA (MOTHUP_D(8,1,ILH,  4),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(8,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
 
 """
         process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
@@ -383,13 +383,13 @@ NJetSymmetrizeFinal     Yes
       INTEGER PARTICLE_TYPE_D(8, NEXTERNAL), PDG_TYPE_D(8, NEXTERNAL)
 
       DATA FKS_I_D / 5, 5, 5, 5, 5, 5, 5, 5 /
-      DATA FKS_J_D / 1, 1, 1, 2, 2, 2, 3, 4 /
+      DATA FKS_J_D / 1, 2, 3, 4, 1, 1, 2, 2 /
 
       DATA (FKS_J_FROM_I_D(1, 5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
 
-      DATA (FKS_J_FROM_I_D(2, 5, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
+      DATA (FKS_J_FROM_I_D(2, 5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
 
-      DATA (FKS_J_FROM_I_D(3, 5, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
+      DATA (FKS_J_FROM_I_D(3, 5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
 
       DATA (FKS_J_FROM_I_D(4, 5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
 
@@ -397,9 +397,9 @@ NJetSymmetrizeFinal     Yes
 
       DATA (FKS_J_FROM_I_D(6, 5, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
 
-      DATA (FKS_J_FROM_I_D(7, 5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
+      DATA (FKS_J_FROM_I_D(7, 5, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
 
-      DATA (FKS_J_FROM_I_D(8, 5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
+      DATA (FKS_J_FROM_I_D(8, 5, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
 
 
 C     
@@ -407,38 +407,38 @@ C     Particle type:
 C     octet = 8, triplet = 3, singlet = 1
       DATA (PARTICLE_TYPE_D(1, IPOS), IPOS=1, NEXTERNAL) / 8, 8, 3, 
      $ -3, 8 /
-      DATA (PARTICLE_TYPE_D(2, IPOS), IPOS=1, NEXTERNAL) / -3, 8, 3, 
-     $ -3, -3 /
-      DATA (PARTICLE_TYPE_D(3, IPOS), IPOS=1, NEXTERNAL) / 3, 8, 3, 
-     $ -3, 3 /
+      DATA (PARTICLE_TYPE_D(2, IPOS), IPOS=1, NEXTERNAL) / 8, 8, 3, 
+     $ -3, 8 /
+      DATA (PARTICLE_TYPE_D(3, IPOS), IPOS=1, NEXTERNAL) / 8, 8, 3, 
+     $ -3, 8 /
       DATA (PARTICLE_TYPE_D(4, IPOS), IPOS=1, NEXTERNAL) / 8, 8, 3, 
      $ -3, 8 /
-      DATA (PARTICLE_TYPE_D(5, IPOS), IPOS=1, NEXTERNAL) / 8, -3, 3, 
+      DATA (PARTICLE_TYPE_D(5, IPOS), IPOS=1, NEXTERNAL) / -3, 8, 3, 
      $ -3, -3 /
-      DATA (PARTICLE_TYPE_D(6, IPOS), IPOS=1, NEXTERNAL) / 8, 3, 3, 
+      DATA (PARTICLE_TYPE_D(6, IPOS), IPOS=1, NEXTERNAL) / 3, 8, 3, 
      $ -3, 3 /
-      DATA (PARTICLE_TYPE_D(7, IPOS), IPOS=1, NEXTERNAL) / 8, 8, 3, 
-     $ -3, 8 /
-      DATA (PARTICLE_TYPE_D(8, IPOS), IPOS=1, NEXTERNAL) / 8, 8, 3, 
-     $ -3, 8 /
+      DATA (PARTICLE_TYPE_D(7, IPOS), IPOS=1, NEXTERNAL) / 8, -3, 3, 
+     $ -3, -3 /
+      DATA (PARTICLE_TYPE_D(8, IPOS), IPOS=1, NEXTERNAL) / 8, 3, 3, 
+     $ -3, 3 /
 
 C     
 C     Particle type according to PDG:
 C     
       DATA (PDG_TYPE_D(1, IPOS), IPOS=1, NEXTERNAL) / 21, 21, 6, 
      $ -6, 21 /
-      DATA (PDG_TYPE_D(2, IPOS), IPOS=1, NEXTERNAL) / -1, 21, 6, -6, 
-     $ -1 /
-      DATA (PDG_TYPE_D(3, IPOS), IPOS=1, NEXTERNAL) / 1, 21, 6, -6, 1 /
+      DATA (PDG_TYPE_D(2, IPOS), IPOS=1, NEXTERNAL) / 21, 21, 6, 
+     $ -6, 21 /
+      DATA (PDG_TYPE_D(3, IPOS), IPOS=1, NEXTERNAL) / 21, 21, 6, 
+     $ -6, 21 /
       DATA (PDG_TYPE_D(4, IPOS), IPOS=1, NEXTERNAL) / 21, 21, 6, 
      $ -6, 21 /
-      DATA (PDG_TYPE_D(5, IPOS), IPOS=1, NEXTERNAL) / 21, -1, 6, -6, 
+      DATA (PDG_TYPE_D(5, IPOS), IPOS=1, NEXTERNAL) / -1, 21, 6, -6, 
      $ -1 /
-      DATA (PDG_TYPE_D(6, IPOS), IPOS=1, NEXTERNAL) / 21, 1, 6, -6, 1 /
-      DATA (PDG_TYPE_D(7, IPOS), IPOS=1, NEXTERNAL) / 21, 21, 6, 
-     $ -6, 21 /
-      DATA (PDG_TYPE_D(8, IPOS), IPOS=1, NEXTERNAL) / 21, 21, 6, 
-     $ -6, 21 /
+      DATA (PDG_TYPE_D(6, IPOS), IPOS=1, NEXTERNAL) / 1, 21, 6, -6, 1 /
+      DATA (PDG_TYPE_D(7, IPOS), IPOS=1, NEXTERNAL) / 21, -1, 6, -6, 
+     $ -1 /
+      DATA (PDG_TYPE_D(8, IPOS), IPOS=1, NEXTERNAL) / 21, 1, 6, -6, 1 /
 
 
 """
@@ -754,14 +754,14 @@ C
 C     
 C     LOCAL VARIABLES 
 C     
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY(8),T_IDENT(NCOMB)
+      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY,T_IDENT(NCOMB)
       REAL*8 T,T_SAVE(NCOMB)
       SAVE T_SAVE,T_IDENT
       REAL*8 MATRIX_1
       INTEGER IHEL,IDEN, I
       INTEGER JC(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
-      DATA NTRY/8*0/
+      DATA NTRY/0/
       DATA GOODHEL/NCOMB*.FALSE./
       DATA (NHEL(I,   1),I=1,5) /-1,-1,-1,-1,-1/
       DATA (NHEL(I,   2),I=1,5) /-1,-1,-1,-1, 1/
@@ -1110,7 +1110,7 @@ C
       INTEGER IDEN_VALUES(8)
       DATA IDEN_VALUES /256, 256, 256, 256, 256, 256, 256, 256/
       INTEGER IJ_VALUES(8)
-      DATA IJ_VALUES /1, 1, 1, 2, 2, 2, 3, 4/
+      DATA IJ_VALUES /1, 2, 3, 4, 1, 1, 2, 2/
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -1290,7 +1290,7 @@ C
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       INTEGER IJ_VALUES(8)
-      DATA IJ_VALUES /1, 1, 1, 2, 2, 2, 3, 4/
+      DATA IJ_VALUES /1, 2, 3, 4, 1, 1, 2, 2/
 C     
 C     COLOR DATA
 C     
@@ -1798,7 +1798,7 @@ C     Number of configs
         
         goal = \
             ["INTEGER IJ_VALUES(8)",
-             "DATA IJ_VALUES /1, 1, 1, 2, 2, 2, 3, 4/"]
+             "DATA IJ_VALUES /1, 2, 3, 4, 1, 1, 2, 2/"]
         process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
         self.assertEqual(goal,

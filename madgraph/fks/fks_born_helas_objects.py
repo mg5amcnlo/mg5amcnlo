@@ -255,6 +255,18 @@ class FKSHelasProcessFromBorn(object):
 #                self.real_processes[i].bornfromreal = rb_link
 
 
+    def get_fks_info_list(self):
+        """Returns the list of the fks infos for all processes in the format
+        {n_me, fks_info}, where n_me is the number of real_matrix_element the configuration
+        belongs to"""
+        info_list = []
+        for n, real in enumerate(self.real_processes):
+            pdgs = [l['id'] for l in real.matrix_element.get_base_amplitude()['process']['legs']]
+            for info in real.fks_infos:
+                info_list.append({'n_me' : n + 1,'pdgs' : pdgs, 'fks_info' : info})
+        return info_list
+        
+
     def get_lh_pdg_string(self):
         """Returns the pdgs of the legs in the form "i1 i2 -> f1 f2 ...", which may
         be useful (eg. to be written in a B-LH order file)"""
@@ -340,7 +352,6 @@ class FKSHelasRealProcess(object): #test written
             self.isfinite = False
             self.colors = fksrealproc.colors
             self.fks_infos = fksrealproc.fks_infos
-            print self.fks_infos
             self.is_to_integrate = fksrealproc.is_to_integrate
 
             self.matrix_element = helas_objects.HelasMatrixElement(

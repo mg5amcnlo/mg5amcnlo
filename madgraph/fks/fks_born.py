@@ -276,9 +276,9 @@ class FKSProcessFromBorn(object):
             logger.info("Generating FKS-subtracted matrix elements for born process%s" \
                 % self.born_proc.nice_string().replace('Process', '')) 
 
-            self.model = self.born_proc['model']
+#            self.model = self.born_proc['model']
             self.leglist = fks_common.to_fks_legs(
-                                    self.born_proc['legs'], self.model)
+                                    self.born_proc['legs'], self.born_proc['model'])
             self.nlegs = len(self.leglist)
             self.pdg_codes = [leg.get('id') for leg in self.leglist]
             self.colors = [leg.get('color') for leg in self.leglist]
@@ -315,7 +315,7 @@ class FKSProcessFromBorn(object):
         of fks_infos"""
         pdgs = []
         real_amps = []
-        old_real_amps = copy.deepcopy(self.real_amps)
+        old_real_amps = copy.copy(self.real_amps)
         for amp in old_real_amps:
             try:
                 real_amps[pdgs.index(amp.pdgs)].fks_infos.extend(amp.fks_infos)
@@ -356,7 +356,7 @@ class FKSProcessFromBorn(object):
         for i in self.leglist:
             i_i = i['number'] - 1
             self.reals.append([])
-            self.splittings[i_i] = fks_common.find_splittings(i, self.model, {}, pert_order)
+            self.splittings[i_i] = fks_common.find_splittings(i, self.born_proc['model'], {}, pert_order)
             for split in self.splittings[i_i]:
                 self.reals[i_i].append(
                             fks_common.insert_legs(self.leglist, i, split))

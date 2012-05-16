@@ -21,6 +21,7 @@ import copy
 import fractions
 import operator
 import re
+import array
 
 import madgraph.core.color_algebra as color_algebra
 import madgraph.core.diagram_generation as diagram_generation

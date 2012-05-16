@@ -5,10 +5,9 @@ PROG   = check
 LOOPLIB= libMadLoop.a
 LINKLIBS =  -L$(LIBDIR) -lcts -ldhelas -lmodel
 LIBS =  $(LIBDIR)libcts.$(libext) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)
-PROCESS= loop_matrix.o loop_num.o CT_interface.o $(patsubst %.f,%.o,$(wildcard helas_calls_*.f)) $(patsubst %.f,%.o,$(wildcard jamp?_calls_*.f))
-CHECK  = born_matrix.o check_sa.o
+PROCESS= born_matrix.o loop_matrix.o loop_num.o CT_interface.o $(patsubst %.f,%.o,$(wildcard helas_calls_*.f)) $(patsubst %.f,%.o,$(wildcard jamp?_calls_*.f))
 
-all: cleanlib $(PROG) $(LOOPLIB) 
+all: cleanlib $(LOOPLIB) 
 
 $(PROG):  $(PROCESS) $(CHECK) makefile $(LIBS) 
 	$(FC) $(FFLAGS) -o $(PROG) $(PROCESS) $(CHECK) $(LINKLIBS)

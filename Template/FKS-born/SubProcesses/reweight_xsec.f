@@ -1049,6 +1049,7 @@ c
       subroutine fill_rwgt_NLOplot()
       implicit none
       include "genps.inc"
+      include 'nexternal.inc'
       include 'coupl.inc'
       include 'run.inc'
       include "reweight.inc"
@@ -1103,6 +1104,7 @@ c
       subroutine setup_fill_rwgt_NLOplot()
       implicit none
       include "genps.inc"
+      include 'nexternal.inc'
       include 'coupl.inc'
       include 'run.inc'
       include "reweight.inc"

@@ -464,15 +464,21 @@ class testFKSBornHelasObjects(unittest.TestCase):
         
         self.assertEqual(helas_born_proc.born_matrix_element,
                           helas_objects.HelasMatrixElement(
-                                    fks1.born_amp)
-                          )
+                                    fks1.born_amp))
         res_reals = []
         for real in fks1.real_amps:
             res_reals.append(fks_born_helas.FKSHelasRealProcess(
                                 real,res_me_list, res_me_id_list))
+            # the process u g > u g g corresponds to 4 fks configs
+            if real.pdgs == array.array('i', [2,21,2,21,21]):
+                self.assertEqual(len(real.fks_infos), 4)
+            else:
+            # any other process has only 1 fks config
+                self.assertEqual(len(real.fks_infos), 1)
+
         self.assertEqual(me_list, res_me_list)
         self.assertEqual(me_id_list, res_me_id_list)
-        self.assertEqual(11, len(helas_born_proc.real_processes))
+        self.assertEqual(8, len(helas_born_proc.real_processes))
 #        for a,b in zip(res_reals, helas_born_proc.real_processes):
 #            self.assertEqual(a,b)
         #more (in)sanity checks
@@ -481,6 +487,49 @@ class testFKSBornHelasObjects(unittest.TestCase):
         for a,b in zip(helas_born_proc3.real_processes, 
                     helas_born_proc.real_processes):
             self.assertNotEqual(a,b)
+
+
+    def test_get_fks_info_list(self):
+        """tests that the get_fks_info_list of a FKSHelasProcessFromBorn 
+        returns the correct list of configurations/fks_configs"""
+        
+        #ug> ug
+        fks1 = fks_born.FKSProcessFromBorn(self.myproc1)
+        me_list=[]
+        me_id_list=[]
+        fks1.generate_reals()
+        helas_born_proc = fks_born_helas.FKSHelasProcessFromBorn(
+                                    fks1, me_list, me_id_list)
+        goal = \
+            [
+             {'n_me' : 1, 'pdgs':[2,21,2,21,21], \
+                 'fks_info': {'i':5, 'j':1, 'ij':1, 'ij_glu':0, 'need_color_links':True}},
+             {'n_me' : 1, 'pdgs':[2,21,2,21,21], \
+                 'fks_info': {'i':5, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':True}},
+             {'n_me' : 1, 'pdgs':[2,21,2,21,21], \
+                 'fks_info': {'i':5, 'j':3, 'ij':3, 'ij_glu':0, 'need_color_links':True}},
+             {'n_me' : 1, 'pdgs':[2,21,2,21,21], \
+                 'fks_info': {'i':5, 'j':4, 'ij':4, 'ij_glu':4, 'need_color_links':True}},
+             {'n_me' : 2, 'pdgs':[21,21,-2,2,21], \
+                 'fks_info': {'i':3, 'j':1, 'ij':1, 'ij_glu':0, 'need_color_links':False}},
+             {'n_me' : 3, 'pdgs':[2,1,1,2,21], \
+                 'fks_info': {'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}},
+             {'n_me' : 4, 'pdgs':[2,-1,-1,2,21], \
+                 'fks_info': {'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}},
+             {'n_me' : 5, 'pdgs':[2,2,2,2,21], \
+                 'fks_info': {'i':4, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}},
+             {'n_me' : 6, 'pdgs':[2,-2,-2,2,21], \
+                 'fks_info': {'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}},
+             {'n_me' : 7, 'pdgs':[2,21,2,1,-1], \
+                 'fks_info': {'i':5, 'j':4, 'ij':4, 'ij_glu':4, 'need_color_links':False}},
+             {'n_me' : 8, 'pdgs':[2,21,2,2,-2], \
+                 'fks_info': {'i':5, 'j':4, 'ij':4, 'ij_glu':4, 'need_color_links':False}},
+             ]
+        for a, b in zip(goal, helas_born_proc.get_fks_info_list()):
+            self.assertEqual(a,b)
+
+        self.assertEqual(goal, helas_born_proc.get_fks_info_list())
+
         
     def test_fks_helas_process_from_born_add_process(self):
         """test the correct implementation of the add process function, which
@@ -516,8 +565,8 @@ class testFKSBornHelasObjects(unittest.TestCase):
         reals_2= []
         for me in helas_born_proc2.real_processes:
             reals_2.append(copy.deepcopy(me.matrix_element.get('processes')))
-        self.assertEqual(len(reals_1),11)
-        self.assertEqual(len(reals_2),11)
+        self.assertEqual(len(reals_1),8)
+        self.assertEqual(len(reals_2),8)
         helas_born_proc1.add_process(helas_born_proc2)
         
         born_1.extend(born_2)
