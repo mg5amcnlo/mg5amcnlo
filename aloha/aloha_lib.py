@@ -158,6 +158,16 @@ class AddVariable(list):
                 out[key] += value
         return out
     
+    def contains(self, variables):
+        """returns true if the variable is in the expression"""
+        for i, var in enumerate(variables):
+            if hasattr(var, 'vartype'):
+                variables[i] = vari.get_id()
+            
+        return any((v in obj for obj in self for v in var))
+            
+    
+    
     def replace(self, id, expression):
         """replace one object (identify by his id) by a given expression.
            Note that expression cann't be zero.
@@ -173,21 +183,21 @@ class AddVariable(list):
         return new
 
 
-    def expand(self):
+    def expand(self, veto=[]):
         """Pass from High level object to low level object"""
         
         if not self:
             return self
         if self.prefactor == 1:
-            new = self[0].expand()
+            new = self[0].expand(veto)
         else:
-            new = self.prefactor * self[0].expand()
+            new = self.prefactor * self[0].expand(veto)
             
         for item in self[1:]:
             if self.prefactor == 1:
-                new += item.expand()
+                new += item.expand(veto)
             else:
-                new += (self.prefactor) * item.expand()
+                new += (self.prefactor) * item.expand(veto)
         return new
 
     def __mul__(self, obj):
@@ -700,9 +710,11 @@ class MultLorentz(MultVariable):
 
         
 
-    def expand(self):
+    def expand(self, veto=[]):
         """ expand each part of the product and combine them.
             Try to use a smart order in order to minimize the number of uncontracted indices.
+            Veto forbids the use of sub-expression if it contains some of the variable in the 
+            expression. Veto contains the id of the vetoed variables
         """
 
         self.unused = self[:] # list of not expanded
@@ -752,8 +764,9 @@ class MultLorentz(MultVariable):
             if hasattr(fact, 'vartype') and fact.lorentz_ind == fact.spin_ind == []:
                 scalar = fact.get_rep([0])
                 if hasattr(scalar, 'vartype') and scalar.vartype == 1:
-                    new = KERNEL.add_expression_contraction(scalar)
-                    fact.set_rep([0], new)
+                    if not veto or not scalar.contains(veto):
+                        new = KERNEL.add_expression_contraction(scalar)
+                        fact.set_rep([0], new)
             out *= fact
         return out
 

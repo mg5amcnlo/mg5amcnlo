@@ -289,12 +289,16 @@ class AbstractRoutineBuilder(object):
                 lorentz *= self.aloha_lib[('Spin2PropMassless', id)]
             else:
                 AbstractRoutineBuilder.load_library(('Spin2Prop', id))
-                lorentz *= self.aloha_lib[('Spin2Prop', id)]
-            aloha_lib.USE_TAG.add('OM%d' % id)
-            aloha_lib.USE_TAG.add('P%d' % id)       
+                lorentz *= self.aloha_lib[('Spin2Prop', id)]      
         
 
         lorentz = lorentz.simplify()
+        
+        # Check for Loop routine and compute the coefficient
+        if any((tag.startswith('L') for tqg in self.tqg)):
+            loop_input = [int(tag[1:] for tag in self.tag][0]
+        
+        
         if factorize:
             lorentz = lorentz.factorize()
             
@@ -517,9 +521,6 @@ class AbstractALOHAModel(dict):
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
         self.look_for_symmetries()
-        print '##################'
-        print data
-        print '##################'
         # reorganize the data (in order to use optimization for a given lorentz
         #structure
         request = {}
@@ -815,7 +816,7 @@ def create_prop_library(tag, lib={}):
         return obj        
     
     # avoid to add tag in global
-    old_tag = set(aloha_lib.USE_TAG)
+    old_tag = set(aloha_lib.KERNEL.use_tag)
     print 'create lib',tag
     name, i = tag
     if name == "Spin2Prop":
@@ -825,7 +826,7 @@ def create_prop_library(tag, lib={}):
         lib[('Spin2PropMassless',i)] = create( Spin2masslessPropagator(
                              _spin2_mult + i, 2 * _spin2_mult + i,'I2','I3'))
     
-    aloha_lib.USE_TAG = old_tag
+    aloha_lib.KERNEL.use_tag = old_tag
     return lib
 
 if '__main__' == __name__:       
