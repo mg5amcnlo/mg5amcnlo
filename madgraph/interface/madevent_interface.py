@@ -24,6 +24,7 @@ import math
 import optparse
 import os
 import pydoc
+import random
 import re
 import shutil
 import subprocess
@@ -1728,7 +1729,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             # pythia launches pgs/delphes if needed
             self.store_result()
-        
+            
+            
             
     def print_results_in_shell(self, data):
         """Have a nice results prints in the shell,
@@ -1747,8 +1749,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
             logger.info("     Nb of events after Matching :  %s" % data['nb_event_pythia'])
         logger.info(" " )
-        
-            
     
     ############################################################################      
     def do_calculate_decay_widths(self, line):
@@ -2118,6 +2118,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if not self.banner:
             self.banner = banner_mod.recover_banner(self.results, 'parton')
         self.banner.load_basic(self.me_dir)
+        # Add cross-section/event information
+        self.banner.add_generation_info(self.results.current['cross'], nb_event)        
         if not hasattr(self, 'random'): self.random = 0
         self.banner.change_seed(self.random)
         if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
@@ -2132,11 +2134,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                             cwd=pjoin(self.me_dir, 'Events'))
         misc.call(['%s/put_banner'% self.dirbin, 'unweighted_events.lhe'],
                             cwd=pjoin(self.me_dir, 'Events'))
-        
-        #if os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
-        #    misc.call(['%s/extract_banner-pl' % self.dirbin, 
-        #                     'unweighted_events.lhe', 'banner.txt'],
-        #                    cwd=pjoin(self.me_dir, 'Events'))
         
         eradir = self.options['exrootanalysis_path']
         madir = self.options['madanalysis_path']
@@ -2219,8 +2216,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 output = pjoin(O_path, name)
                 files.mv(input, output) 
                 misc.call(['gzip', output], stdout=devnull, stderr=devnull, 
-                                                                     cwd=O_path)
-                
+                                                                     cwd=O_path) 
         self.update_status('End Parton', level='parton', makehtml=False)
 
     ############################################################################ 

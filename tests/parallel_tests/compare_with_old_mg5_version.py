@@ -38,7 +38,7 @@ class OLDMG5Comparator(unittest.TestCase):
     """A class to compare the value of a old MG5 version and the current one"""
     
     old_mg5 = None # link to the previous version of MG5 (prevent multiple build)
-    reference_number = 186 #146 corresponds to 1.3.3 
+    reference_number = 229 #186 #146 corresponds to 1.3.3 
     nb_test = 0
     
     

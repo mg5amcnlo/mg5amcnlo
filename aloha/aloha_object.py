@@ -43,6 +43,7 @@ class L_P(aloha_lib.LorentzObject):
     def __init__(self, name, lorentz1, particle):
         self.particle = particle
         aloha_lib.LorentzObject.__init__(self, name,[lorentz1], [],['P%s'%particle])
+        aloha_lib.KERNEL.add_tag((name,))
     
     def create_representation(self):
         self.sub0 = aloha_lib.DVariable('P%s_0' % self.particle)

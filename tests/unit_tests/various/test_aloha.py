@@ -453,6 +453,26 @@ class TestAddVariable(unittest.TestCase):
         new = self.add1.replace(id, self.var1 * self.var2)
         self.assertEqual(len(new),2)
         self.assertEqual(set([a.prefactor for a in new]),set([12,3]))
+
+        self.setUp()
+        add2 = 2 * self.add2
+        id  = self.var1.get_id()
+        new = self.var1.replace(id, add2)
+        self.assertEqual(len(new),2)
+        self.assertEqual(set([a.prefactor for a in new]),set([11,4]))
+        for i in new:
+            self.assertNotEqual(i,id)
+        
+        self.setUp()
+        add1 = 5 * self.add1
+        add2 = 2 * self.add2
+        id  = self.var1.get_id()
+        new = add1.replace(id, add2)
+        self.assertEqual(len(new),3)
+        self.assertEqual(set([a.prefactor*new.prefactor for a in new]),set([15,220,80]))
+        for i in new:
+            self.assertNotEqual(i,id)
+        
            
     def test_factorization(self):
         """test the factorization"""
@@ -3087,7 +3107,8 @@ class test_aloha_creation(unittest.TestCase):
         # Check that full identification symmetry works
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         helas_suite.look_for_symmetries()
-        solution = {'VVVV2': {2: 1 ,4: 3}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVS1': {2: 1}}  
+        solution = {'VVVV2': {2: 1 ,4: 3}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 
+                    'VVS1': {2: 1},'SSSS1': {2: 1, 3: 2, 4:3}}  
         self.assertEqual(solution, helas_suite.symmetries)
         
     def test_has_symmetries(self):

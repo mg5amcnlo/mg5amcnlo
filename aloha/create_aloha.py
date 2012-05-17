@@ -25,11 +25,13 @@ import shutil
 import sys
 import time
 
+
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 from aloha.aloha_object import *
 import aloha.aloha_writers as aloha_writers
 import aloha.aloha_lib as aloha_lib
+import aloha.aloha_object as aloha_object
 try:
     import madgraph.iolibs.files as files
 except:
@@ -40,6 +42,7 @@ logger = logging.getLogger('ALOHA')
 
 _conjugate_gap = 50
 _spin2_mult = 1000
+
 
 class ALOHAERROR(Exception): pass
 
@@ -90,8 +93,8 @@ class AbstractRoutine(object):
 class AbstractRoutineBuilder(object):
     """ Launch the creation of the Helicity Routine"""
     
-    aloha_lib = {}
-    counter = 0
+    prop_lib = {} # Store computation for the propagator
+    counter = 0   # counter for statistic only
     
     class AbstractALOHAError(Exception):
         """ An error class for ALOHA"""
@@ -114,9 +117,10 @@ class AbstractRoutineBuilder(object):
         self.contracted = {}
         
     
-    def compute_routine(self, mode, factorize=True):
+    def compute_routine(self, mode, tag=[], factorize=True):
         """compute the expression and return it"""
         self.outgoing = mode
+        self.tag = tag
         self.expr = self.compute_aloha_high_kernel(mode, factorize)
         return self.define_simple_output()
     
@@ -153,7 +157,6 @@ class AbstractRoutineBuilder(object):
         old_id = 2 * pair - 1
         new_id = _conjugate_gap + old_id
         
-        #if self.routine_kernel is None:
         self.kernel_tag = set()
         self.routine_kernel = eval(self.lorentz_expr)
         
@@ -281,29 +284,61 @@ class AbstractRoutineBuilder(object):
             # Propagator are taken care separately
         
         lorentz = lorentz.simplify()
+        
+        # Modify the expression in case of loop-pozzorini
+        if any((tag.startswith('L') for tag in self.tag)):
+            return self.compute_loop_coefficient(lorentz, outgoing)
+            
         lorentz = lorentz.expand()
-        
-        if outgoing and self.spins[outgoing-1] == 5:
-            if self.spin2_massless:
-                AbstractRoutineBuilder.load_library(('Spin2PropMassless', id))
-                lorentz *= self.aloha_lib[('Spin2PropMassless', id)]
-            else:
-                AbstractRoutineBuilder.load_library(('Spin2Prop', id))
-                lorentz *= self.aloha_lib[('Spin2Prop', id)]      
-        
-
         lorentz = lorentz.simplify()
-        
-        # Check for Loop routine and compute the coefficient
-        if any((tag.startswith('L') for tqg in self.tqg)):
-            loop_input = [int(tag[1:] for tag in self.tag][0]
-        
         
         if factorize:
             lorentz = lorentz.factorize()
             
         lorentz.tag = set(aloha_lib.KERNEL.use_tag)
         return lorentz     
+    
+    def compute_loop_coefficient(self, lorentz, outgoing):
+        
+                    
+        l_in = [int(tag[1:]) for tag in self.tag][0]
+        
+        # modify the expression for the momenta
+        # P_i -> P_i + P_L and P_o -> P_o + P_L
+        Pdep = [aloha_lib.KERNEL.get(P) for P in aloha_lib.KERNEL.use_tag 
+                                                      if P.startswith('_P')]
+        Pdep = [P for P in Pdep if P.particle in [outgoing, l_in]]
+        for P in Pdep:
+            id = P.id
+            lorentz_ind = P.lorentz_ind[0]
+            P_Lid = aloha_object.P(lorentz_ind, 'L')
+            P_obj = aloha_object.P(lorentz_ind, P.particle)
+            new_expr = P_Lid + P_obj
+            lorentz = lorentz.replace(id, new_expr)
+            
+        # Compute the veto
+        veto = []
+        var_veto = ['P%s_0' % l_in,'P%s_1'% l_in,'P%s_2'% l_in,'P%s_3'% l_in,
+                    'P%s_0'% l_in,'P%s_1'% l_in,'P%s_2'% l_in,'P%s_3'% l_in,
+                    ]
+        var_veto += ['%s%s' % (aloha_writers.WriteAloha.type_to_variable[self.spins[l_in-1]],i)
+                      for i in range(aloha_writers.WriteAloha.type_to_size[self.spins[l_in-1]])]
+        for var in var_veto:
+            try:
+                id = aloha_lib.KERNEL[var]
+            except KeyError:
+                var = Variable(var)
+                id = var.id
+            veto.append(id)
+        else:
+            veto = []
+        lorentz = lorentz.expand(veto = veto)
+        coeff_expr = lorentz.split(veto)
+        
+        for key, expr in coeff_expr.items():
+            coeff.expr[key] = expr.factorize()
+        coeff_expr.tag = set(aloha_lib.KERNEL.use_tag)
+        return coeff_expr
                         
     def define_lorentz_expr(self, lorentz_expr):
         """Define the expression"""
@@ -339,10 +374,10 @@ class AbstractRoutineBuilder(object):
     @classmethod
     def load_library(cls, tag):
         # load the library
-        if tag in cls.aloha_lib:
+        if tag in cls.prop_lib:
             return
         else:
-            cls.aloha_lib = create_prop_library(tag, cls.aloha_lib)
+            cls.prop_lib = create_prop_library(tag, cls.aloha_lib)
         
 
 class AbstractALOHAModel(dict):
@@ -498,14 +533,21 @@ class AbstractALOHAModel(dict):
                 conjg_builder_list= builder.define_all_conjugate_builder(\
                                                    conjugate_list[lorentz.name])
                 for conjg_builder in conjg_builder_list:
+                    print conjg_builder
                     # No duplication of conjugation:
                     assert conjg_builder_list.count(conjg_builder) == 1
                     self.compute_aloha(conjg_builder, lorentz.name)
                     if lorentz.name in self.multiple_lor:
                         for m in self.multiple_lor[lorentz.name]:
                             for outgoing in range(len(lorentz.spins)+1):
-                                self[(conjg_builder.name, outgoing)].add_combine(m)
-                                                
+                                realname = conjg_builder.name + ''.join(['C%s' % pair for pair in conjg_builder.conjg])
+                                try:
+                                    self[(realname, outgoing)].add_combine(m)
+                                except Exception,error:
+                                    print self.keys()
+                                    print error
+                                    raise
+                                    self[(realname, self.symmetries[lorentz.name][outgoing])].add_combine(m)          
                     
                     
         if save:
@@ -525,14 +567,15 @@ class AbstractALOHAModel(dict):
         #structure
         request = {}
         for list_l_name, tag, outgoing in data:
+            conjugate = tuple([int(c[1:]) for c in tag if c.startswith('C')])
             for l_name in list_l_name:
                 try:
-                    request[l_name][tag].append(outgoing)
+                    request[l_name][conjugate].append((outgoing,tag))
                 except:
                     try:
-                        request[l_name][tag] = [outgoing]
+                        request[l_name][conjugate] = [(outgoing,tag)]
                     except:
-                        request[l_name] = {tag: [outgoing]}
+                        request[l_name] = {conjugate: [(outgoing,tag)]}
                         
         # Loop on the structure to build exactly what is request
         for l_name in request:
@@ -549,7 +592,11 @@ class AbstractALOHAModel(dict):
             
             for conjg in request[l_name]:
                 #ensure that routines are in rising order (for symetries)
-                routines = sorted(request[l_name][conjg])
+                def sorting(a,b):
+                    if a[0] < b[0]: return -1
+                    else: return 1
+                routines = request[l_name][conjg]
+                routines.sort(sorting)
                 if not conjg:
                     # No need to conjugate -> compute directly
                     self.compute_aloha(builder, routines=routines)
@@ -568,7 +615,7 @@ class AbstractALOHAModel(dict):
                     lorentzname += 'C%s' % c
                 self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
                         
-    def compute_aloha(self, builder, symmetry=None, routines=None):
+    def compute_aloha(self, builder, symmetry=None, routines=None, tag=[]):
         """ define all the AbstractRoutine linked to a given lorentz structure
         symmetry authorizes to use the symmetry of anoter lorentz structure.
         routines to define only a subset of the routines."""
@@ -577,18 +624,21 @@ class AbstractALOHAModel(dict):
         if not symmetry:
             symmetry = name
         if not routines:
-            routines = range(len(builder.spins) + 1)
+            tag = ['C%s' % i for i in builder.conjg]
+            routines = [ tuple([i,tag]) for i in range(len(builder.spins) + 1 )]
 
         # Create the routines
-        for outgoing in routines:
+        for outgoing, tag in routines:
             symmetric = self.has_symmetries(symmetry, outgoing, valid_output=routines)
+            realname = name + ''.join(tag)
             if symmetric:
-                self.get(name, symmetric).add_symmetry(outgoing)
+                self.get(realname, symmetric).add_symmetry(outgoing)
             else:
-                wavefunction = builder.compute_routine(outgoing)
+                wavefunction = builder.compute_routine(outgoing, tag)
                 #Store the information
-                realname = name + ''.join(wavefunction.tag)
+                print realname
                 self.set(realname, outgoing, wavefunction)
+            
 
     def compute_aloha_without_kernel(self, builder, symmetry=None, routines=None):
         """define all the AbstractRoutine linked to a given lorentz structure
@@ -599,11 +649,11 @@ class AbstractALOHAModel(dict):
 
         name = builder.name
         if not routines:
-            routines = range(len(builder.spins) + 1 )         
+            routines = [ tuple([i,[]]) for i in range(len(builder.spins) + 1 )]         
         
-        for outgoing in routines:
+        for outgoing, tag in routines:
             builder.routine_kernel = None
-            wavefunction = builder.compute_routine(outgoing)
+            wavefunction = builder.compute_routine(outgoing, tag)
             self.set(name, outgoing, wavefunction)
 
 

@@ -176,10 +176,12 @@ class AddVariable(list):
         """
 
         new = self.__class__()
-        new.prefactor = self.prefactor
+        
         for obj in self:
             assert isinstance(obj, MultVariable)
-            new += obj.replace(id, expression)
+            tmp = obj.replace(id, expression)
+            new += tmp
+        new.prefactor = self.prefactor
         return new
 
 

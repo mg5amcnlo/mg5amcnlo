@@ -89,7 +89,7 @@ class FileWriter(file):
         for line in splitlines:
             res_lines = self.write_line(line)
             for line_to_write in res_lines:
-                if line_to_write[-1] != '\n':
+                if not line_to_write or line_to_write[-1] != '\n':
                     file.write(self, '%s\n' % line_to_write)
                 else:
                     file.write(self, '%s' % line_to_write)
