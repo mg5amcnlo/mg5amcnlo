@@ -25,7 +25,6 @@ import shutil
 import sys
 import time
 
-
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 from aloha.aloha_object import *
@@ -302,7 +301,6 @@ class AbstractRoutineBuilder(object):
         
                     
         l_in = [int(tag[1:]) for tag in self.tag][0]
-        print l_in
         
         # modify the expression for the momenta
         # P_i -> P_i + P_L and P_o -> P_o + P_L
@@ -317,29 +315,24 @@ class AbstractRoutineBuilder(object):
             new_expr = P_Lid + P_obj
             lorentz = lorentz.replace(id, new_expr)
             
-        # Compute the veto
-        veto = []
-        var_veto = ['P%s_0' % l_in,'P%s_1'% l_in,'P%s_2'% l_in,'P%s_3'% l_in,
-                    'P%s_0'% l_in,'P%s_1'% l_in,'P%s_2'% l_in,'P%s_3'% l_in,
-                    ]
+        # Compute the variable from which we need to split the expression
+        var_veto =  ['PL_0', 'PL_1', 'PL_2', 'PL_3']
         spin = aloha_writers.WriteALOHA.type_to_variable[self.spins[l_in-1]]
-        size = aloha_writers.WriteALOHA.type_to_size[spin]
-        var_veto += ['%s%s' % (spin,i) for i in range(size)]
-        for var in var_veto:
-            try:
-                id = aloha_lib.KERNEL[var]
-            except KeyError:
-                id = aloha_lib.Variable(var).get_id()
-            veto.append(id)
-        else:
-            veto = []
-        lorentz = lorentz.expand(veto = veto)
-        coeff_expr = lorentz.split(veto)
+        size = aloha_writers.WriteALOHA.type_to_size[spin]-1
+        var_veto += ['%s%s_%s' % (spin,l_in,i) for i in range(1,size)]
+        print var_veto
+        # compute their unique identifiant
+        veto_ids = aloha_lib.KERNEL.get_ids(var_veto)
+        
+        lorentz = lorentz.expand(veto = veto_ids)
+        coeff_expr = lorentz.split(veto_ids)
         
         for key, expr in coeff_expr.items():
             coeff_expr[key] = expr.factorize()
-        print type(coeff_expr)
+            print key, '------->'
+            print coeff_expr[key]
         coeff_expr.tag = set(aloha_lib.KERNEL.use_tag)
+        
         return coeff_expr
                         
     def define_lorentz_expr(self, lorentz_expr):
@@ -535,7 +528,6 @@ class AbstractALOHAModel(dict):
                 conjg_builder_list= builder.define_all_conjugate_builder(\
                                                    conjugate_list[lorentz.name])
                 for conjg_builder in conjg_builder_list:
-                    print conjg_builder
                     # No duplication of conjugation:
                     assert conjg_builder_list.count(conjg_builder) == 1
                     self.compute_aloha(conjg_builder, lorentz.name)
@@ -546,9 +538,6 @@ class AbstractALOHAModel(dict):
                                 try:
                                     self[(realname, outgoing)].add_combine(m)
                                 except Exception,error:
-                                    print self.keys()
-                                    print error
-                                    raise
                                     self[(realname, self.symmetries[lorentz.name][outgoing])].add_combine(m)          
                     
                     
@@ -638,7 +627,6 @@ class AbstractALOHAModel(dict):
             else:
                 wavefunction = builder.compute_routine(outgoing, tag)
                 #Store the information
-                print realname
                 self.set(realname, outgoing, wavefunction)
             
 

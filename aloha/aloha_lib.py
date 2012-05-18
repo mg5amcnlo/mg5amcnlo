@@ -70,6 +70,20 @@ class Computation(dict):
     def add_tag(self, tag):
         self.use_tag.update(tag)
         
+    def get_ids(self, variables):
+        """return the list of identification number associate to the 
+        given variables names. If a variable didn't exists, create it (in complex).
+        """
+        out = []
+        for var in variables:
+            try:
+                id = self[var]
+            except KeyError:
+                id = DVariable(var).get_id()
+            out.append(id)
+        return out
+        
+        
     def add_expression_contraction(self, expression):
 
         str_expr = str(expression)
@@ -159,12 +173,9 @@ class AddVariable(list):
         return out
     
     def contains(self, variables):
-        """returns true if the variable is in the expression"""
-        for i, var in enumerate(variables):
-            if hasattr(var, 'vartype'):
-                variables[i] = vari.get_id()
+        """returns true if one of the variables is in the expression"""
             
-        return any((v in obj for obj in self for v in var))
+        return any((v in obj for obj in self for v in variables  ))
             
     
     
@@ -450,8 +461,9 @@ class MultVariable(array):
         """return a dict with the key being the power associated to each variables
            and the value being the object remaining after the suppression of all
            the variable"""
-           
+
         key = tuple([self.count(i) for i in variables_id])
+
         arg = [id for id in self if id not in variables_id]
         self[:] = array('i', arg)
         return SplitCoefficient([(key,self)])
@@ -1173,11 +1185,10 @@ class LorentzObjectRepresentation(dict):
         """return a dict with the key being the power associated to each variables
            and the value being the object remaining after the suppression of all
            the variable"""
-
+           
         out = SplitCoefficient()
         zero_rep = {}
         for ind in self.listindices():
-            print ind
             zero_rep[tuple(ind)] = 0
         
         for ind in self.listindices():

@@ -112,6 +112,5 @@ def guess_routine_from_name(names):
         
         # add in the results
         output.append((tuple(lorentz), tuple(tags), int(offshell)))
-    print output
     return output
          
