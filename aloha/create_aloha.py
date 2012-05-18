@@ -28,6 +28,7 @@ import time
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 from aloha.aloha_object import *
+import aloha
 import aloha.aloha_writers as aloha_writers
 import aloha.aloha_lib as aloha_lib
 import aloha.aloha_object as aloha_object
@@ -79,7 +80,7 @@ class AbstractRoutine(object):
     def write(self, output_dir, language='Fortran', mode='self', **opt):
         """ write the content of the object """
         
-        writer = getattr(aloha_writers, 'ALOHAWriterFor%s' % language)(self, output_dir)
+        writer = aloha_writers.WriterFactory(self, language, output_dir)
         text = writer.write(mode=mode, **opt)
         for grouped in self.combined:
             if isinstance(text, tuple):
@@ -109,6 +110,7 @@ class AbstractRoutineBuilder(object):
         self.spins = lorentz.spins
         self.name = lorentz.name
         self.conjg = []
+        tag = []
         self.outgoing = None
         self.lorentz_expr = lorentz.structure        
         self.routine_kernel = None
@@ -176,7 +178,7 @@ class AbstractRoutineBuilder(object):
         output.contracted = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
                                           for name in aloha_lib.KERNEL.use_tag
                                           if name.startswith('TMP')])
-        
+        output.tag = [t for t in self.tag if not t.startswith('C')]
         output.tag += ['C%s' % pair for pair in self.conjg]
         return output
 
@@ -320,7 +322,6 @@ class AbstractRoutineBuilder(object):
         spin = aloha_writers.WriteALOHA.type_to_variable[self.spins[l_in-1]]
         size = aloha_writers.WriteALOHA.type_to_size[spin]-1
         var_veto += ['%s%s_%s' % (spin,l_in,i) for i in range(1,size)]
-        print var_veto
         # compute their unique identifiant
         veto_ids = aloha_lib.KERNEL.get_ids(var_veto)
         
@@ -329,8 +330,6 @@ class AbstractRoutineBuilder(object):
         
         for key, expr in coeff_expr.items():
             coeff_expr[key] = expr.factorize()
-            print key, '------->'
-            print coeff_expr[key]
         coeff_expr.tag = set(aloha_lib.KERNEL.use_tag)
         
         return coeff_expr
@@ -559,6 +558,10 @@ class AbstractALOHAModel(dict):
         request = {}
         for list_l_name, tag, outgoing in data:
             conjugate = tuple([int(c[1:]) for c in tag if c.startswith('C')])
+            loop = any((t.startswith('L') for t in tag))
+            if loop:
+                aloha.loop_mode = True
+                       
             for l_name in list_l_name:
                 try:
                     request[l_name][conjugate].append((outgoing,tag))

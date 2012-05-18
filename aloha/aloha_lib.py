@@ -463,7 +463,6 @@ class MultVariable(array):
            the variable"""
 
         key = tuple([self.count(i) for i in variables_id])
-
         arg = [id for id in self if id not in variables_id]
         self[:] = array('i', arg)
         return SplitCoefficient([(key,self)])

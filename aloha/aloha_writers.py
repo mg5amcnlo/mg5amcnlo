@@ -54,7 +54,7 @@ class WriteALOHA:
         
         #initialize global helper routine
         self.declaration = Declaration_list()
-        self.define_argument_list()
+
                                    
                                        
     def pass_to_HELAS(self, indices, start=0):
@@ -206,7 +206,8 @@ class WriteALOHA:
     def write(self, mode=None):
                          
         self.mode = mode
-            
+        
+        self.define_argument_list()
         core_text = self.define_expression()    
         out = StringIO()
         
@@ -229,6 +230,7 @@ class WriteALOHA:
             commentstring += self.routine.infostr + '\n'
             writer.write_comments(commentstring)
             writer.write(text)
+        print text
         return text + '\n'
 
 
@@ -399,7 +401,6 @@ class WriteALOHA:
      
 class ALOHAWriterForFortran(WriteALOHA): 
     """routines for writing out Fortran"""
-
     
     extension = '.f'
     writer = writers.FortranWriter
@@ -448,11 +449,15 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         out = StringIO()
         out.write('implicit none\n')
+        print self.call_arg
+        argument_var = [name for type,name in self.call_arg]
+        print argument_var
+        print self.declaration
         for type, name in self.declaration:
             if type.startswith('list'):
                 type = type[5:]
                 #determine the size of the list
-                if name in self.call_arg:
+                if name in argument_var:
                     size ='*'
                 elif name.startswith('P'):
                     size='0:3'
@@ -466,16 +471,19 @@ class ALOHAWriterForFortran(WriteALOHA):
                         size = 5
                     else:
                         size = 3
-                elif aloha.loop_mode:
-                    size = 20
+                elif name[0] in ['R','T']: 
+                    if aloha.loop_mode:
+                        size = 20
+                    else:
+                        size = 18
                 else:
-                    size = 18
-                    
-                    size=3
+                    size = '*'
+    
                 out.write(' %s %s(%s)\n' % (self.type2def[type], name, size))
             else:
                 out.write(' %s %s\n' % (self.type2def[type], name))
 
+        print out.getvalue()
         return out.getvalue()
         
     def get_momenta_txt(self):
@@ -486,7 +494,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         out = StringIO()
         
         # Define all the required momenta
-        p1,p2 = [], [] # a list for keeping track how to write the momentum
+        p = [] # a list for keeping track how to write the momentum
         
         signs = self.get_momentum_conservation_sign()
         
@@ -501,9 +509,8 @@ class ALOHAWriterForFortran(WriteALOHA):
                 continue
             elif self.offshell:
                 energy_pos = self.type_to_size[type] -2
-                p1.append('%s%s%s(%s)' % (signs[i],type,i+1, energy_pos+1))
-                p2.append('%s%s%s(%s)' % (signs[i],type,i+1, energy_pos+2))      
-            
+                p.append('%s%s%s({0})' % (signs[i],type,i+1))    
+                
             if self.declaration.is_used('P%s' % (i+1)):
                 self.get_one_momenta_def(i+1, out)
                 
@@ -511,9 +518,14 @@ class ALOHAWriterForFortran(WriteALOHA):
         if self.offshell:
             energy_pos = out_size -2
             type = self.particles[self.outgoing-1]
+            if aloha.loop_mode:
+                size_p = 4
+            else:
+                size_p = 2
+            for i in range(size_p):
+                out.write('    %s%s(%s) = %s\n' % (type,self.outgoing, energy_pos+1+i, 
+                                             ''.join(p).format(energy_pos+1+i)))
             
-            out.write('    %s%s(%s) = %s\n' % (type,self.outgoing, energy_pos+1, ''.join(p1)))
-            out.write('    %s%s(%s) = %s\n' % (type,self.outgoing, energy_pos+2, ''.join(p2)))
             
             self.get_one_momenta_def(self.outgoing, out)
 
@@ -533,18 +545,22 @@ class ALOHAWriterForFortran(WriteALOHA):
 
         nb2 = energy_pos + 1
         for j in range(4):
-            nb = energy_pos + j
-            if j == 0: 
-                assert not aloha.mp_precision 
-                operator = 'dble' # not suppose to pass here in mp
-            elif j == 1: 
-                nb2 += 1
-            elif j == 2:
-                assert not aloha.mp_precision 
-                operator = 'dimag' # not suppose to pass here in mp
-            elif j ==3:
-                nb2 -= 1
-            
+            if not aloha.loop_mode:
+                nb = energy_pos + j
+                if j == 0: 
+                    assert not aloha.mp_precision 
+                    operator = 'dble' # not suppose to pass here in mp
+                elif j == 1: 
+                    nb2 += 1
+                elif j == 2:
+                    assert not aloha.mp_precision 
+                    operator = 'dimag' # not suppose to pass here in mp
+                elif j ==3:
+                    nb2 -= 1
+            else:
+                operator =''
+                nb = energy_pos + 1+ j
+                nb2 = energy_pos + 1 + j
             strfile.write(template % {'j':j,'type': type, 'i': i, 
                         'nb': nb, 'nb2': nb2, 'operator':operator,
                         'sign': self.get_P_sign(i)})  
@@ -706,6 +722,180 @@ class ALOHAWriterForFortran(WriteALOHA):
             writer.write(text)
         return text
     
+
+class ALOHAWriterForFortranLoop(ALOHAWriterForFortran): 
+    """routines for writing out Fortran"""
+
+    def __init__(self, abstract_routine, dirpath):
+
+        
+        ALOHAWriterForFortran.__init__(self, abstract_routine, dirpath)
+        print 'pass here in LOOP'
+        # position of the outgoing in particle list        
+        self.l_id = [int(c[1:]) for c in abstract_routine.tag if c[0] == 'L'][0] 
+        self.l_helas_id = self.l_id   # expected position for the argument list
+        if 'C%s' %((self.outgoing + 1) // 2) in abstract_routine.tag:
+            #flip the outgoing tag if in conjugate
+            self.l_helas_id += self.l_id % 2 - (self.l_id +1) % 2 
+       
+            
+        print 'define ', self.l_helas_id
+        
+
+    def define_expression(self):
+        """Define the functions in a 100% way """
+
+        out = StringIO()
+
+        if self.routine.contracted:
+            for name,obj in self.routine.contracted.items():
+                out.write(' %s = %s\n' % (name, self.write_obj(obj)))
+
+
+        OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
+                                                              self.offshell)
+
+        for key,expr in self.routine.expr.items():
+            arg = self.get_loop_argument(key)
+            for ind in expr.listindices():
+                data = expr.get_rep(ind)
+                if data:
+                    out.write('    COEFF(%s,%s)= denom*%s\n' % ( 
+                                    self.pass_to_HELAS(ind)+1, ','.join(arg), 
+                                    self.write_obj(data)))
+                else:
+                    out.write('    COEFF(%s,%s)= %s\n' % ( 
+                                    self.pass_to_HELAS(ind)+1, ','.join(arg), 
+                                    self.write_obj(data)))                    
+        return out.getvalue()
+    
+    def define_argument_list(self, couplings=['COUP']):
+        """define a list with the string of object required as incoming argument"""
+
+
+        conjugate = [2*(int(c[1:])-1) for c in self.routine.tag if c[0] == 'C']
+        call_arg = [('list_complex', 'P%s'% self.l_helas_id)] #incoming argument of the routine
+        self.declaration.add(call_arg[0])
+        
+        for index,spin in enumerate(self.particles):
+            if self.offshell == index + 1:
+                continue
+            if self.l_helas_id == index + 1:
+                continue
+            
+            if index in conjugate:
+                index2, spin2 = index+1, self.particles[index+1]
+                call_arg.append(('complex','%s%d' % (spin2, index2 +1))) 
+                #call_arg.append('%s%d' % (spin, index +1)) 
+            elif index-1 in conjugate:
+                index2, spin2 = index-1, self.particles[index-1]
+                call_arg.append(('complex','%s%d' % (spin2, index2 +1))) 
+            else:
+                call_arg.append(('complex','%s%d' % (spin, index +1)))
+        
+        for coup in couplings:       
+            call_arg.append(('complex', coup))              
+            self.declaration.add(('complex',coup))
+            
+        if self.offshell:
+            if aloha.complex_mass:
+                call_arg.append(('complex','M%s' % self.outgoing))              
+                self.declaration.add(('complex','M%s' % self.outgoing))
+            else:
+                call_arg.append(('double','M%s' % self.outgoing))              
+                self.declaration.add(('double','M%s' % self.outgoing))                
+                call_arg.append(('double','W%s' % self.outgoing))              
+                self.declaration.add(('double','W%s' % self.outgoing))
+            
+        self.call_arg = call_arg
+                
+        return call_arg
+
+    def get_momenta_txt(self):
+        """Define the Header of the fortran file. This include
+            - momentum conservation
+            - definition of the impulsion"""
+                    
+        out = StringIO()
+        
+        # Define all the required momenta
+        p = [] # a list for keeping track how to write the momentum
+        size = []
+        
+        signs = self.get_momentum_conservation_sign()
+        
+        for i,type in enumerate(self.particles):
+            if self.declaration.is_used('OM%s' % (i+1)):
+                out.write("    OM{0} = {1}\n    if (M{0}.ne.{1}) OM{0}={2}/M{0}**2\n".format( 
+                         i+1, self.change_number_format(0), self.change_number_format(1)))
+            
+            if i+1 == self.outgoing:
+                out_type = 'P'
+                continue
+            elif i+1 == self.l_helas_id:
+                p.append('%sP%s({%s})' % (signs[i],i+1,len(size))) 
+                size.append(0)
+                continue
+            elif self.offshell:
+                p.append('%s%s%s({%s})' % (signs[i],type,i+1,len(size)))
+                size.append(self.type_to_size[type] -1)
+                
+            if self.declaration.is_used('P%s' % (i+1)):
+                    self.get_one_momenta_def(i+1, out)
+                
+        # define the resulting momenta
+        if self.offshell:
+            type = self.particles[self.outgoing-1]
+            if aloha.loop_mode:
+                size_p = 4
+            else:
+                size_p = 2
+            for i in range(size_p):
+                out.write('    %s%s(%s) = %s\n' % (type,self.outgoing, i, 
+                                             ''.join(p).format(*[s+i for s in size])))
+
+        
+        # Returning result
+        return out.getvalue()
+  
+
+    def get_loop_argument(self, key):
+        """return the position for the argument in the HELAS convention"""
+        
+        loop_momentum = key[:4]
+        basis = key[4:]
+        
+        loop_pos = sum([loop_momentum[i] * (i+1) for i in range(4)])
+        basis_pos = sum([basis[i] * (i+1) for i in range(len(basis))])
+        return (str(loop_pos), str(basis_pos))
+        
+
+        
+        
+        
+        
+    def get_header_txt(self, name=None, couplings=['COUP']):
+        """Define the Header of the fortran file. This include
+            - function tag
+            - definition of variable
+        """
+        if name is None:
+            name = self.name
+           
+        out = StringIO()
+        # define the type of function and argument
+        
+        arguments = [arg for format, arg in self.define_argument_list(couplings)]
+        self.declaration.add(('list_complex', 'P%s'% self.outgoing))
+        self.declaration.add(('list_complex', 'P%s'% self.l_helas_id))        
+        self.declaration.add(('list_complex', 'coeff'))
+        out.write('subroutine %(name)s(%(args)s, P%(out)s, COEFF)\n' % \
+                  {'name': name, 'args': ', '.join(arguments),
+                   'out':self.outgoing})
+        
+        return out.getvalue() 
+        
+
 def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     """ build the name of the aloha function """
     
@@ -1440,9 +1630,26 @@ class Declaration_list(set):
         self.var_name = [name for type,name in self]
         return var in self.var_name
             
-            
+
+class WriterFactory(object):
+    
+    def __new__(cls, data, language, outputdir):
         
+        language = language.lower()
+        if isinstance(data.expr, aloha_lib.SplitCoefficient):
+            assert language == 'fortran'
+            print 'pass here'
+            return ALOHAWriterForFortranLoop(data, outputdir)
         
+        if language == 'fortran':
+            return ALOHAWriterForFortran(data, outputdir)
+        elif language == 'python':
+            return ALOHAWriterForPython(data, outputdir)
+        elif language == 'cpp':
+            raise Exception, 'CPP output not yet implemented'
+            return ALOHAWriterForCPP(data, outputdir)
+        else:
+            raise Exception, 'Unknown output format'
 
 
 
