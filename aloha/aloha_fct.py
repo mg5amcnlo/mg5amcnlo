@@ -89,7 +89,8 @@ def guess_routine_from_name(names):
             main, multiple, offshell = data[0], data[1:-1],data[-1]
         
         # search for tag allow tag [L, C$]
-        allow_tag = ['C1','C2','C3','C4','C5','C6','C7']    
+        allow_tag = ['C1','C2','C3','C4','C5','C6','C7']
+        allow_tag += ['L%s' % i for i in range(1,20)]
         tags = []
         len_tag = -1
         while len(tags) != len_tag:
@@ -97,7 +98,7 @@ def guess_routine_from_name(names):
             for tag in allow_tag:
                 if main.endswith(tag):
                     main = main[:-len(tag)]
-                    tags.append(int(tag[1:]))
+                    tags.append(tag)
                     break
         
         # create the correct lorentz
@@ -111,5 +112,6 @@ def guess_routine_from_name(names):
         
         # add in the results
         output.append((tuple(lorentz), tuple(tags), int(offshell)))
+    print output
     return output
          

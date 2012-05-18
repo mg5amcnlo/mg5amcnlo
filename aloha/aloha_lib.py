@@ -452,12 +452,9 @@ class MultVariable(array):
            the variable"""
            
         key = tuple([self.count(i) for i in variables_id])
-        print key
         arg = [id for id in self if id not in variables_id]
-        print 'old',self
         self[:] = array('i', arg)
-        print 'new',self,type(self)
-        return {key:self}
+        return SplitCoefficient([(key,self)])
         
     def replace(self, id, expression):
         """replace one object (identify by his id) by a given expression.
@@ -1177,7 +1174,7 @@ class LorentzObjectRepresentation(dict):
            and the value being the object remaining after the suppression of all
            the variable"""
 
-        out = {}
+        out = SplitCoefficient()
         zero_rep = {}
         for ind in self.listindices():
             print ind
@@ -1235,6 +1232,12 @@ class IndicesIterator:
         else:
             self.data = True
             return [0]
+
+class SplitCoefficient(dict):
+    
+    def __init__(self, *args, **opt):
+        dict.__init__(self, *args, **opt)
+        self.tag=set()
 
       
 if '__main__' ==__name__:

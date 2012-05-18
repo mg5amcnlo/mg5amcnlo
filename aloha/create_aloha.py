@@ -302,6 +302,7 @@ class AbstractRoutineBuilder(object):
         
                     
         l_in = [int(tag[1:]) for tag in self.tag][0]
+        print l_in
         
         # modify the expression for the momenta
         # P_i -> P_i + P_L and P_o -> P_o + P_L
@@ -321,14 +322,14 @@ class AbstractRoutineBuilder(object):
         var_veto = ['P%s_0' % l_in,'P%s_1'% l_in,'P%s_2'% l_in,'P%s_3'% l_in,
                     'P%s_0'% l_in,'P%s_1'% l_in,'P%s_2'% l_in,'P%s_3'% l_in,
                     ]
-        var_veto += ['%s%s' % (aloha_writers.WriteAloha.type_to_variable[self.spins[l_in-1]],i)
-                      for i in range(aloha_writers.WriteAloha.type_to_size[self.spins[l_in-1]])]
+        spin = aloha_writers.WriteALOHA.type_to_variable[self.spins[l_in-1]]
+        size = aloha_writers.WriteALOHA.type_to_size[spin]
+        var_veto += ['%s%s' % (spin,i) for i in range(size)]
         for var in var_veto:
             try:
                 id = aloha_lib.KERNEL[var]
             except KeyError:
-                var = Variable(var)
-                id = var.id
+                id = aloha_lib.Variable(var).get_id()
             veto.append(id)
         else:
             veto = []
@@ -336,7 +337,8 @@ class AbstractRoutineBuilder(object):
         coeff_expr = lorentz.split(veto)
         
         for key, expr in coeff_expr.items():
-            coeff.expr[key] = expr.factorize()
+            coeff_expr[key] = expr.factorize()
+        print type(coeff_expr)
         coeff_expr.tag = set(aloha_lib.KERNEL.use_tag)
         return coeff_expr
                         
@@ -878,6 +880,7 @@ def create_prop_library(tag, lib={}):
     
     aloha_lib.KERNEL.use_tag = old_tag
     return lib
+
 
 if '__main__' == __name__:       
     logging.basicConfig(level=0)
