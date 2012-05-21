@@ -108,25 +108,25 @@ class Decay_info:
             #print "mother"
             #print decay_item[leg].mother
             #print "channel"
-            #print topo[leg]['channel']
-            if decay_item[leg].pid[0]==21: 
-                decay_item[leg].mother=0  # off-shell gluons should not be part of the decay chain
+#            print topo[leg]['mass']
+            if  topo[leg]['mass']=='ZERO': 
+                decay_item[leg].mother=0  # off-shell gluons/photons/quarks should not be part of the decay chain
                 decay_item[leg].des[0].mother=0
                 decay_item[leg].des[1].mother=0 
-                if topo[leg]['daughters'][0]>0:particles_from_HI.append(topo[leg]['daughters'][0]) 
-                if topo[leg]['daughters'][1]>0:particles_from_HI.append(topo[leg]['daughters'][1]) 
-                continue 
+                if topo[leg]['daughters'][0]>2 and topo[leg]['daughters'][0] not in particles_from_HI :particles_from_HI.append(topo[leg]['daughters'][0]) 
+                if topo[leg]['daughters'][1]>2 and topo[leg]['daughters'][1] not in particles_from_HI :particles_from_HI.append(topo[leg]['daughters'][1]) 
+                continue  
 
             # consider T-channel here
             if topo[leg]['channel']=='T':
-                if topo[leg]['daughters'][0]>0:particles_from_HI.append(topo[leg]['daughters'][0])
-                if topo[leg]['daughters'][1]>0:particles_from_HI.append(topo[leg]['daughters'][1])
-            # I also need to check if we have A(virtual) > A(real) + B
+                if topo[leg]['daughters'][0]>2 and topo[leg]['daughters'][0] not in particles_from_HI  :particles_from_HI.append(topo[leg]['daughters'][0])
+                if topo[leg]['daughters'][1]>2 and topo[leg]['daughters'][1] not in particles_from_HI :particles_from_HI.append(topo[leg]['daughters'][1])
+            # I also need to check if we have A(virtual) > A(real) + B 
             if decay_item[leg].pid[0]==decay_item[leg].des[0].pid[0] or decay_item[leg].pid[0]==decay_item[leg].des[1].pid[0]:
                 decay_item[leg].des[0].mother=0
                 decay_item[leg].des[1].mother=0
-                if topo[leg]['daughters'][0]>0:particles_from_HI.append(topo[leg]['daughters'][0]) 
-                if topo[leg]['daughters'][1]>0:particles_from_HI.append(topo[leg]['daughters'][1]) 
+                if topo[leg]['daughters'][0]>2 and topo[leg]['daughters'][0] not in particles_from_HI  :particles_from_HI.append(topo[leg]['daughters'][0]) 
+                if topo[leg]['daughters'][1]>2 and topo[leg]['daughters'][1] not in particles_from_HI  :particles_from_HI.append(topo[leg]['daughters'][1]) 
                 continue
             if decay_item[leg].mother==0 and topo[leg]['channel']=='S':
                 particles_from_HI.append(leg)
