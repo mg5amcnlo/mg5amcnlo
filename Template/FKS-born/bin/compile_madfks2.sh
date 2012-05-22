@@ -255,7 +255,7 @@ for dir in $dirs ; do
         for vdir in $virt_dirs ; do
             echo '     make MadLoop library for the virtual ME in '$vdir...
             cd $vdir
-            make >> $Maindir/compile_madfks.log 2>&1
+            make >> $Maindir/compile_madloop.log 2>&1
             cd ..
         done
         if [[ -e libMadLoop.a ]]; then

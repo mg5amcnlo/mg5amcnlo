@@ -705,6 +705,7 @@ c From dsample_fks
       common/c_uwgt_table/unwgt_table
       integer maxproc_save
       save maxproc_save
+      double precision rfrac
 c
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then

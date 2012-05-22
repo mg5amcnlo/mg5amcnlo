@@ -94,10 +94,10 @@ madevent_vegas: $(VEGAS)  makefile $(LIBS)
 	$(F77) $(FFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_mint: $(MINT)  makefile $(LIBS)
-	$(F77) $(FFLAGS) -o madevent_mint $(MINT) $(LINKLIBS) $(FJLIBS)
+	$(F77) $(FFLAGS) -o madevent_mint $(MINT) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_mintMC: $(MINTMC)  makefile $(LIBS)
-	$(F77) $(FFLAGS) -o madevent_mintMC $(MINTMC) $(LINKLIBS) $(FJLIBS)
+	$(F77) $(FFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_reweight: $(BORN_REWEIGHT)  makefile $(LIBS)
 	$(F77) $(FFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS)
