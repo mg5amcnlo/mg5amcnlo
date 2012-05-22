@@ -972,7 +972,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
        the loop numerators as polynomial to render its evaluations faster."""
 
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop_optimized')
-
+    # The option below controls wether one wants to group together in one single
+    # CutTools call the loops with same denominator structure
+    group_loops=True
+    
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                                 proc_id = "", config_map = []):
         """ Writes loop_matrix.f, CT_interface.f and loop_num.f only but with
@@ -991,8 +994,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # many files generated here.
         self.general_replace_dict=LoopProcessExporterFortranSA.\
                               generate_general_replace_dict(self,matrix_element)
-
-        # Now some features specific to the optimized output
+            
+        # Now some features specific to the optimized output        
         max_loop_rank=matrix_element.get_max_loop_rank()
         self.general_replace_dict['loop_max_coefs']=\
                         q_polynomial.get_number_of_coefs_for_rank(max_loop_rank)
@@ -1013,6 +1016,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         self.general_replace_dict['nloops']=len(\
                         [1 for ldiag in matrix_element.get_loop_diagrams() for \
                                            lamp in ldiag.get_loop_amplitudes()])
+        if self.group_loops and \
+                             matrix_element.get('processes')[0].get('has_born'):
+            self.general_replace_dict['nloop_groups']=\
+                                          len(matrix_element.get('loop_groups'))
+        else:
+            self.general_replace_dict['nloop_groups']=\
+                                              self.general_replace_dict['nloops']
         # The born amp declaration suited for also outputing the loop-induced
         # processes as well.
         self.general_replace_dict['dp_born_amps_decl'] = \
@@ -1044,9 +1054,9 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             self.write_loop_num(writers.FortranWriter(filename),\
                                     matrix_element,OptimizedFortranModel)
             
-#            filename = 'mp_born_amps_and_wfs.f'
-#            self.write_born_amps_and_wfs(writers.FortranWriter(filename),\
-#                                         matrix_element,OptimizedFortranModel)
+            filename = 'mp_compute_loop_coefs.f'
+            self.write_mp_compute_loop_coefs(writers.FortranWriter(filename),\
+                                         matrix_element,OptimizedFortranModel)
 
             return calls
 
@@ -1054,8 +1064,20 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         """ Create the file containing the core subroutine called by CutTools
         which contains the Helas calls building the loop"""
 
+        replace_dict=copy.copy(self.general_replace_dict)
+        
+        # Now stuff for the multiple precision numerator function
+        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
+        replace_dict['n_initial']=ninitial
+        # The last momenta is fixed by the others and the last two particles
+        # are the L-cut ones, so -3.
+        mass_list=matrix_element.get_external_masses()[:-3]
+        replace_dict['force_onshell']='\n'.join([\
+        'P(3,%(i)d)=SIGN(SQRT(P(0,%(i)d)**2-P(1,%(i)d)**2-P(2,%(i)d)**2-%(m)s**2),P(3,%(i)d))'%\
+         {'i':i+1,'m':m} for i, m in enumerate(mass_list)])
+
         file = open(os.path.join(self.template_dir,'loop_num.inc')).read()  
-        file = file % self.general_replace_dict
+        file = file % replace_dict
         writer.writelines(file)
 
     def write_CT_interface(self, writer, matrix_element):
@@ -1089,16 +1111,83 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # Initialize the polynomial routine writer
         poly_writer=q_polynomial.FortranPolynomialRoutines(
                                              matrix_element.get_max_loop_rank())
-        
+        mp_poly_writer=q_polynomial.FortranPolynomialRoutines(
+                    matrix_element.get_max_loop_rank(),coef_format='complex*32',
+                                                               sub_prefix='MP_')
         # The eval subroutine
         subroutines.append(poly_writer.write_polynomial_evaluator())
+        subroutines.append(mp_poly_writer.write_polynomial_evaluator())
+        # The add coefs subroutine
+        subroutines.append(poly_writer.write_add_coefs())
+        subroutines.append(mp_poly_writer.write_add_coefs())        
         # The merging one for creating the loop coefficients
         subroutines.append(poly_writer.write_wl_merger())
+        subroutines.append(mp_poly_writer.write_wl_merger())
         # Now the udpate subroutines
         for wl_update in matrix_element.get_used_wl_updates():
             subroutines.append(poly_writer.write_wl_updater(\
                                                      wl_update[0],wl_update[1]))
+            subroutines.append(mp_poly_writer.write_wl_updater(\
+                                                     wl_update[0],wl_update[1]))
         writer.writelines('\n\n'.join(subroutines))
+
+    def write_mp_compute_loop_coefs(self, writer, matrix_element, fortran_model, \
+                                    noSplit=False):
+        """Create the write_mp_compute_loop_coefs.f file."""
+        
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+        
+        # Set lowercase/uppercase Fortran code
+        
+        writers.FortranWriter.downcase = False
+
+        replace_dict = copy.copy(self.general_replace_dict)                 
+
+        # These entries are specific for the output for loop-induced processes
+        # Also sets here the details of the squaring of the loop ampltiudes
+        # with the born or the loop ones.
+        if not matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['nctamps_or_nloopamps']='nctamps'
+            replace_dict['nbornamps_or_nloopamps']='nctamps'
+            replace_dict['mp_squaring']=\
+          'ANS(1)=ANS(1)+REAL(CFTOT*AMPL(1,I)*CONJG(AMPL(1,J),KIND=16),KIND=16)'        
+        else:
+            replace_dict['nctamps_or_nloopamps']='nctamps'
+            replace_dict['nbornamps_or_nloopamps']='nbornamps'
+            replace_dict['mp_squaring']='\n'.join(['DO K=1,3',
+                'ANS(K)=ANS(K)+2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J))'+\
+                ',KIND=16)','ENDDO'])
+        
+        # Extract helas calls
+        born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
+                                                            matrix_element)
+        self.turn_to_mp_calls(born_ct_helas_calls)
+        coef_construction = fortran_model.get_coef_construction_calls(\
+                                    matrix_element,group_loops=self.group_loops)
+        self.turn_to_mp_calls(coef_construction)
+                                         
+        file = open(os.path.join(self.template_dir,\
+                                           'mp_compute_loop_coefs.inc')).read()
+
+        # Decide here wether we need to split the loop_matrix.f file or not.
+        # 200 is reasonable but feel free to change it.
+        if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
+            file=self.split_HELASCALLS(writer,replace_dict,\
+                            'mp_helas_calls_split.inc',file,born_ct_helas_calls,\
+                            'mp_born_ct_helas_calls','mp_helas_calls_ampb')
+            file=self.split_HELASCALLS(writer,replace_dict,\
+                    'mp_helas_calls_split.inc',file,coef_construction,\
+                    'mp_coef_construction','mp_coef_construction')
+        else:
+            replace_dict['mp_born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
+            replace_dict['mp_coef_construction']='\n'.join(coef_construction)
+        
+        file = file % replace_dict
+ 
+        # Write the file
+        writer.writelines(file)  
 
     def write_loopmatrix(self, writer, matrix_element, fortran_model, \
                          noSplit=False):
@@ -1126,8 +1215,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['set_reference']='\n'.join(['! ===',
               '!  Please specify below the reference value you want to use for'+\
               ' comparisons.','ref=LSCALE**(-2*NEXTERNAL+8)','! ==='])
-            replace_dict['nctamps_or_nloopamps']='nloopgroups'
-            replace_dict['nbornamps_or_nloopamps']='nloopgroups'
+            replace_dict['nctamps_or_nloopamps']='nctamps'
+            replace_dict['nbornamps_or_nloopamps']='nctamps'
             replace_dict['squaring']=\
                     'ANS(1)=ANS(1)+DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))'        
         else:
@@ -1135,7 +1224,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
             replace_dict['squaring']='\n'.join(['DO K=1,3',
-                   'ANS(K)=ANS(K)+2.0d0*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J,H)))',
+                   'ANS(K)=ANS(K)+2.0d0*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))',
                                                                        'ENDDO'])
 
         # Actualize results from the loops computed. Only necessary for
@@ -1174,22 +1263,24 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
                                                             matrix_element)
         coef_construction = fortran_model.get_coef_construction_calls(\
-                                                            matrix_element)
-        loop_CT_calls = fortran_model.get_loop_CT_calls(matrix_element)
+                                    matrix_element,group_loops=self.group_loops)
+        loop_CT_calls = fortran_model.get_loop_CT_calls(\
+                                    matrix_element,group_loops=self.group_loops)
         
         file = open(os.path.join(self.template_dir,\
                                            'loop_matrix_standalone.inc')).read()
 
         # Decide here wether we need to split the loop_matrix.f file or not.
-        if (not noSplit and (len(matrix_element.get_all_amplitudes())>1000)):
+        # 200 is reasonable but feel free to change it.
+        if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'helas_calls_split.inc',file,born_ct_helas_calls,\
                             'born_ct_helas_calls','helas_calls_ampb')
             file=self.split_HELASCALLS(writer,replace_dict,\
-                    'loop_handling_split.inc',file,coef_construction,\
+                    'helas_calls_split.inc',file,coef_construction,\
                     'coef_construction','coef_construction')
             file=self.split_HELASCALLS(writer,replace_dict,\
-                    'loop_handling_split.inc',file,loop_CT_calls,\
+                    'helas_calls_split.inc',file,loop_CT_calls,\
                     'loop_CT_calls','loop_CT_calls')
         else:
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)

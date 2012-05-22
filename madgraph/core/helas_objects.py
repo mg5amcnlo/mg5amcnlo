@@ -1061,14 +1061,20 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def find_outgoing_number(self):
         "Return the position of the resulting particles in the interactions"
         # First shot: just the index in the interaction
+        
         if self.get('interaction_id') == 0:
             return 0
         
+        return self.find_leg_index(self.get_anti_pdg_code(),\
+                                                   self.get_spin_state_number())
+        
+    def find_leg_index(self, pdg_code, spin_state):
+        """ Find the place in the interaction list of the given particle with
+        pdg 'pdg_code' and spin 'spin_stat'."""
         wf_indices = self.get('pdg_codes')
         # Take the first index in case of identical particles
-        wf_index = wf_indices.index(self.get_anti_pdg_code())
+        wf_index = wf_indices.index(pdg_code)
         # If fermion, then we need to correct for I/O status
-        spin_state = self.get_spin_state_number()
         if spin_state % 2 == 0:
             if wf_index % 2 == 0 and spin_state < 0:
                 # Outgoing particle at even slot -> increase by 1
@@ -1362,6 +1368,20 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return schannels, tchannels
 
+    def get_struct_external_leg_ids(self):
+        """ Return a set containing the ids of all the non-loop outter-most
+        external legs attached to the loop at the interaction point of this 
+        loop wavefunction """
+        
+        if not self.get('mothers'):
+            return set([self.get('number_external'),])
+
+        res=set([])
+        for wf in self.get('mothers'):
+            if not wf['is_loop']:
+                res=res.union(wf.get_struct_external_leg_ids())
+        return res
+
     def get_loop_index(self):
         """Return the index of the wavefunction in the mothers which is the 
         loop one"""
@@ -1373,8 +1393,23 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if len(loop_wfs)!=1:
             raise MadGraph5Error, "The loop wavefunctions should have exactly"+\
                 " one loop wavefunction mother, but here it has %d."%len(loop_wfs)
+        return self.find_leg_index(loop_wfs[0].get_pdg_code(),\
+                                            loop_wfs[0].get_spin_state_number())
         
-        return self.get('mothers').index(loop_wfs[0])+1
+    def get_loop_mother(self):
+        """ Return the mother of type 'loop', if any. """
+        
+        if not self.get('mothers'):
+            return None
+        loop_wfs=[wf for wf in self.get('mothers') if wf['is_loop']]
+        if loop_wfs:
+            if len(loop_wfs)==1:
+                return loop_wfs[0]
+            else:
+                raise MadGraph5Error, "The loop wavefunction must have either"+\
+                  " no mothers, or exactly one mother with type 'loop'."
+        else:
+            return None
         
     def get_conjugate_index(self):
         """Return the index of the particle that should be conjugated."""

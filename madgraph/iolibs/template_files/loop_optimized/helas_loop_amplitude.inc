@@ -1,4 +1,4 @@
-      SUBROUTINE LOOP_%(nloopline)d%(nwfsargs_header)s( LID, %(pairingargs)s%(wfsargs)s%(margs)s RANK, LSYMFACT, LOOPNUM, RES, STABLE)
+      SUBROUTINE LOOP_%(nloopline)d%(nwfsargs_header)s( LID, %(pairingargs)s%(wfsargs)s%(margs)s RANK, RES, STABLE, LOOPNUM)
 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
@@ -6,6 +6,10 @@
       PARAMETER (NLOOPLINE=%(nloopline)d)
 	  INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d)
+      INTEGER    NLOOPGROUPS
+      PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
+	  INTEGER    NCOMB
+      PARAMETER (NCOMB=%(ncomb)d)
 C
 C ARGUMENTS 
 C
@@ -28,11 +32,15 @@ C
 C
 C GLOBAL VARIABLES
 C
-      INTEGER ID,R,SYMFACT
-      COMMON/LOOP/ID,R,SYMFACT
+      INTEGER ID,R
+      COMMON/LOOP/ID,R
+
+	  LOGICAL CHECKPHASE
+	  DATA CHECKPHASE/.TRUE./
+      common/INIT/CHECKPHASE
 
 	  LOGICAL GOODHEL(NCOMB)
-	  LOGICAL GOODAMP(NLOOPS)
+	  LOGICAL GOODAMP(NLOOPGROUPS)
 	  common/Filters/GOODAMP,GOODHEL
 
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
@@ -48,13 +56,12 @@ C ----------
       %(pairingset)s
 	  R=RANK
       ID=LID
-	  SYMFACT=LSYMFACT
       DO I=0,3
         TEMP=1
         DO J=1,NLOOPLINE
 		  PL(I,J)=0.D0
           DO K=TEMP,(TEMP+PAIRING(J)-1)
-            PL(I,J)=PL(I,J)+SIGN(1,MOMPOS(K))*DBLE(W(ABS(MOMPOS(K))+I,WE(K)%(validh_or_nothing)s))
+            PL(I,J)=PL(I,J)+SIGN(1,MOMPOS(K))*DBLE(W(ABS(MOMPOS(K))+I,WE(K)))
           ENDDO
           TEMP=TEMP+PAIRING(J)
         ENDDO

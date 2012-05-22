@@ -1244,10 +1244,11 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         else:
             return '%s%s)'%(prefix, number)
 
-    def get_coef_construction_calls(self, matrix_element):
+    def get_coef_construction_calls(self, matrix_element, group_loops=False):
         """ Return the calls to the helas routines to construct the coefficients
         of the polynomial representation of the loop numerator (i.e. Pozzorini
-        method)"""
+        method). Group the coefficients of the loop with same denominator 
+        together if group_loops is set True."""
 
         assert isinstance(matrix_element, loop_helas_objects.LoopHelasMatrixElement), \
                   "%s not valid argument for get_born_ct_helas_calls" % \
@@ -1262,17 +1263,33 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         res.append("# Now create the loop coefficients")
         for ldiag in matrix_element.get_loop_diagrams():
             for lamp in ldiag.get_loop_amplitudes():
-                create_coef='CALL CREATE_LOOP_COEFS(WL(1,1,1,%(number)d),'
-                create_coef+='%(loop_rank)d,LOOPCOEFS(1,%(loop_number)d),'
-                create_coef+='%(amp_number)d)'
-                res.append(create_coef%{\
+                create_coef=['CALL CREATE_LOOP_COEFS(WL(1,1,1,%(number)d)',
+                             '%(loop_rank)d','LOOPCOEFS(1,%(loop_number)d)',
+                             '%(LoopSymmetryFactor)d','%(amp_number)d)']
+                res.append(','.join(create_coef)%{\
                   'number':lamp.get_final_loop_wavefunction().get('number'),
                   'loop_rank':lamp.get_rank(),
                   'loop_number':lamp.get('number'),
-                  'amp_number':lamp.get('amplitudes')[0].get('number')})
+                  'amp_number':lamp.get('amplitudes')[0].get('number'),
+                  'LoopSymmetryFactor':lamp.get('loopsymmetryfactor')})
+        
+        if group_loops and matrix_element.get('processes')[0].get('has_born'):
+            for (denoms, lamps) in matrix_element.get('loop_groups'):
+                # Only necessary if they are more than one loop with this kind of
+                # denominator.
+                refamp=lamps[0]
+                for lamp in lamps[1:]:
+                    merge_coef=['CALL ADD_COEFS(LOOPCOEFS(1,%(ref_number)d)',
+                                '%(ref_rank)d','LOOPCOEFS(1,%(new_number)d)',
+                                '%(new_rank)d)']
+                    res.append(','.join(merge_coef)%{\
+                      'ref_number':refamp.get('number'),
+                      'ref_rank':refamp.get_rank(),
+                      'new_number':lamp.get('number'),
+                      'new_rank':lamp.get_rank()})
         return res
 
-    def get_loop_CT_calls(self, matrix_element):
+    def get_loop_CT_calls(self, matrix_element, group_loops=False):
         """ Return the calls to CutTools interface routines to launch the
         computation of the contribution of one loop group."""
 
@@ -1281,11 +1298,26 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                   repr(matrix_element)
         
         res = []
-        for ldiag in matrix_element.get_loop_diagrams():
-            res.append("# CutTools call for loop groups with representative ID %d"\
-                       %ldiag.get('number'))
-            for lamp in ldiag.get_loop_amplitudes():
+        # Either call CutTools for all loop diagrams or for only the reference
+        # amplitude for each group (for which the coefficients are the sum of
+        # all others)
+        if group_loops and matrix_element.get('processes')[0].get('has_born'):
+            for ldiag in matrix_element.get_loop_diagrams():
+                res.append("# Loop ID %d has amps numbers %s"%(\
+                  ldiag.get('number'),','.join(['%d'%lamp.get('number') for 
+                                         lamp in ldiag.get_loop_amplitudes()])))
+            # sort them by their amplitude number
+            loop_group_refs=[lamps[1][0] for lamps in \
+                                              matrix_element.get('loop_groups')]
+            loop_group_refs=sorted(loop_group_refs,\
+                                            key=lambda lamp: lamp.get('number'))
+            for lamp in loop_group_refs:
                 res.append(self.get_amplitude_call(lamp))
+        else:
+            for ldiag in matrix_element.get_loop_diagrams():
+                res.append("# CutTools call for loop ID %d"%ldiag.get('number'))
+                for lamp in ldiag.get_loop_amplitudes():
+                    res.append(self.get_amplitude_call(lamp))
 
         return res
 
@@ -1320,8 +1352,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
             call = call + \
             "DCMPLX(%(LoopMass{0})s),".format(i+1)
         call = call + "%(LoopRank)d,"
-        call = call + "%(LoopSymmetryFactor)d,"
-        call = call + "%(ampNumber)d,LOOPRES(1,%(ampNumber)d),S(%(ampNumber)d))"
+        call = call + "LOOPRES(1,%(loopNumber)d),S(%(loopNumber)d),%(loopNumber)d)"
         
         call_function = lambda amp: call % amp.get_helas_call_dict(\
                                                            OptimizedOutput=True)

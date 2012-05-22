@@ -13,8 +13,6 @@ C
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d)
 	  INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
-	  INTEGER    NCOMBAMP
-      PARAMETER (NCOMBAMP=NCOMB*NLOOPAMPS)
       %(real_dp_format)s     ZERO
       PARAMETER (ZERO=0D0)
 	  %(real_mp_format)s     MP__ZERO

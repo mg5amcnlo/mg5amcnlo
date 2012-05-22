@@ -771,3 +771,9 @@ class CPPWriter(FileWriter):
             
         return res_lines
 
+class PythonWriter(FileWriter):
+    
+    def write_comments(self, text):
+        text = '#%s\n' % text.replace('\n','\n#')
+        file.write(self, text)
+

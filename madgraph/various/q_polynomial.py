@@ -65,8 +65,10 @@ class Polynomial(object):
 class PolynomialRoutines(object):
     """ The mother class to output the polynomial subroutines """
     
-    def __init__(self, max_rank, coef_format='complex*16', line_split=10):
+    def __init__(self, max_rank, coef_format='complex*16', sub_prefix='' 
+                                                                ,line_split=30):
         self.coef_format=coef_format
+        self.sub_prefix=sub_prefix
         self.line_split=line_split
         if max_rank<0:
             raise PolynomialError, \
@@ -93,13 +95,14 @@ class FortranPolynomialRoutines(PolynomialRoutines):
         lines=[]
         
         # Start by writing out the header:
-        lines.append("""SUBROUTINE UPDATE_WL_%(r_1)d_%(r_2)d(A,B,OUT)
+        lines.append("""SUBROUTINE %(sub_prefix)sUPDATE_WL_%(r_1)d_%(r_2)d(A,B,OUT)
                         include 'coef_specs.inc'
                         INTEGER I,J,K
                         %(coef_format)s A(MAXLWFSIZE,0:LOOP_MAXCOEFS-1,MAXLWFSIZE)
                         %(coef_format)s B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
                         %(coef_format)s OUT(MAXLWFSIZE,0:LOOP_MAXCOEFS-1,MAXLWFSIZE)          
-                        """%{'r_1':r_1,'r_2':r_2,'coef_format':self.coef_format})
+                        """%{'sub_prefix':self.sub_prefix,'r_1':r_1,'r_2':r_2,
+                                                'coef_format':self.coef_format})
         
         # Start the loop on the elements i,j of the vector OUT(i,coef,j)
         lines.append("DO I=1,MAXLWFSIZE")
@@ -145,13 +148,14 @@ class FortranPolynomialRoutines(PolynomialRoutines):
         lines=[]
         
         # Start by writing out the header:
-        lines.append("""SUBROUTINE EVAL_POLY(C,R,Q,OUT)
+        lines.append("""SUBROUTINE %(sub_prefix)sEVAL_POLY(C,R,Q,OUT)
                         include 'coef_specs.inc'
                         %(coef_format)s C(0:LOOP_MAXCOEFS-1)
                         INTEGER R
                         %(coef_format)s Q(0:3)
                         %(coef_format)s OUT                                                 
-                        """%{'coef_format':self.coef_format})
+                        """%{'sub_prefix':self.sub_prefix,
+                             'coef_format':self.coef_format})
         
         # Start by the trivial coefficient of order 0.
         lines.append("OUT=C(0)")
@@ -181,14 +185,15 @@ class FortranPolynomialRoutines(PolynomialRoutines):
         lines=[]
         
         # Start by writing out the header:
-        lines.append("""SUBROUTINE MERGE_WL(WL,R,CONST,OUT)
+        lines.append("""SUBROUTINE %(sub_prefix)sMERGE_WL(WL,R,CONST,OUT)
                         include 'coef_specs.inc'
                         INTEGER I,J
                         %(coef_format)s WL(MAXLWFSIZE,0:LOOP_MAXCOEFS-1,MAXLWFSIZE)
                         INTEGER R
                         %(coef_format)s CONST
                         %(coef_format)s OUT(0:LOOP_MAXCOEFS-1)
-                        """%{'coef_format':self.coef_format})
+                        """%{'sub_prefix':self.sub_prefix,
+                             'coef_format':self.coef_format})
 
         # Add an array specifying how many coefs there are for given ranks
         lines.append("""INTEGER NCOEF_R(0:%(max_rank)d)
@@ -198,8 +203,8 @@ class FortranPolynomialRoutines(PolynomialRoutines):
                                                     range(0,self.max_rank+1)])})                     
      
         # Now scan them all progressively
-        lines.append("DO I=1,MAXLWFSIZE then")
-        lines.append("  DO J=0,NCOEF_R(R)-1 then")
+        lines.append("DO I=1,MAXLWFSIZE")
+        lines.append("  DO J=0,NCOEF_R(R)-1")
         lines.append("    OUT(J)=OUT(J)+WL(I,J,I)*CONST")               
         lines.append("  ENDDO")
         lines.append("ENDDO")
@@ -207,4 +212,32 @@ class FortranPolynomialRoutines(PolynomialRoutines):
         
         return '\n'.join(lines)       
              
+    def write_add_coefs(self):
+        """ Give out the subroutine to simply add together the coefficients
+        of two loop polynomials of rank R1 and R2 storing the result in the
+        first polynomial given in the arguments."""
+        lines=[]
         
+        # Start by writing out the header:
+        lines.append("""SUBROUTINE %(sub_prefix)sADD_COEFS(A,RA,B,RB)
+                        include 'coef_specs.inc'
+                        INTEGER I
+                        %(coef_format)s A(0:LOOP_MAXCOEFS-1),B(0:LOOP_MAXCOEFS-1)
+                        INTEGER RA,RB
+                        """%{'sub_prefix':self.sub_prefix,
+                             'coef_format':self.coef_format})
+
+        # Add an array specifying how many coefs there are for given ranks
+        lines.append("""INTEGER NCOEF_R(0:%(max_rank)d)
+                        DATA NCOEF_R/%(ranks)s/
+                        """%{'max_rank':self.max_rank,'ranks':','.join([
+                            str(get_number_of_coefs_for_rank(r)) for r in
+                                                    range(0,self.max_rank+1)])})                     
+     
+        # Now scan them all progressively
+        lines.append("DO I=1,NCOEF_R(RB)-1")
+        lines.append("  A(I)=A(I)+B(I)")               
+        lines.append("ENDDO")
+        lines.append("END")
+        
+        return '\n'.join(lines)

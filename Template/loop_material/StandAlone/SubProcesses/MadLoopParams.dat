@@ -31,6 +31,10 @@
 !     If it is the case then the unstable phase-space point could be cured. If it is
 !     not the case, MadLoop outputs a warning.
 !     Notice that MLStabThres is used only when CTModeRun is '-1'.
+!     As a final word, due to the architecture of the program, you are better off
+!     rerunning the full PS point in quadruple precision than just a single loop 
+!     because the two thing would almost take the same time. So '-1' is always
+!     very recommended.
 #CTModeRun
 -1
 ! Default :: -1

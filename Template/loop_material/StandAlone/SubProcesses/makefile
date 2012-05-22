@@ -12,7 +12,11 @@ PROCESS= check_sa.o loop_matrix.o \
 		 $(patsubst %.f,%.o,$(wildcard helas_calls*.f)) \
 		 $(patsubst %.f,%.o,$(wildcard jamp?_calls_*.f)) \
 		 $(patsubst %.f,%.o,$(wildcard mp_born_amps_and_wfs.f)) \
-		 $(patsubst %.f,%.o,$(wildcard mp_helas_calls*.f))
+		 $(patsubst %.f,%.o,$(wildcard mp_compute_loop_coefs.f)) \
+		 $(patsubst %.f,%.o,$(wildcard mp_helas_calls*.f)) \
+		 $(patsubst %.f,%.o,$(wildcard coef_construction_*.f)) \
+		 $(patsubst %.f,%.o,$(wildcard loop_CT_calls_*.f)) \
+		 $(patsubst %.f,%.o,$(wildcard mp_coef_construction_*.f))
 
 
 $(PROG):  $(PROCESS) makefile $(LIBS)
