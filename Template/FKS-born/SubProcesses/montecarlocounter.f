@@ -992,6 +992,14 @@ c Assign emsca on statistical basis
         jpartner=0
         do npartner=1,ipartners(0)
           if(lzone(npartner).and.jpartner.eq.0)then
+            if (xmcxsec(npartner).lt.0d0) then
+              write (*,*) 'ERROR in montecarlocounter. '/
+     &            /'This number should be positive',
+     &            xmcxsec(npartner)
+              write (*,*)
+     &             'Should use absolute values for assignment of emsca'
+              stop
+            endif
             wgt1 = wgt1 + xmcxsec(npartner)
             if(wgt1.ge.rrnd*wgt)then
               jpartner=ipartners(npartner)
@@ -1007,7 +1015,9 @@ c
           emsca=emscav(mpartner)
         endif
       endif
-      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
+c Where in the dead zone, so we can set emsca to shat or scalemax 
+c$$$      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
+      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=scalemax
 c Additional information for LHE
       if(AddInfoLHE)then
         fksfather_lhe(nFKSprocess)=fksfather
@@ -1656,6 +1666,14 @@ c Assign emsca on statistical basis
         jpartner=0
         do npartner=1,ipartners(0)
           if(lzone(npartner).and.jpartner.eq.0)then
+            if (xmcxsec(npartner).lt.0d0) then
+              write (*,*) 'ERROR in montecarlocounter. '/
+     &            /'This number should be positive',
+     &            xmcxsec(npartner)
+              write (*,*)
+     &             'Should use absolute values for assignment of emsca'
+              stop
+            endif
             wgt1 = wgt1 + xmcxsec(npartner)
             if(wgt1.ge.rrnd*wgt)then
               jpartner=ipartners(npartner)
@@ -2410,6 +2428,14 @@ c Assign emsca on statistical basis
         jpartner=0
         do npartner=1,ipartners(0)
           if(lzone(npartner).and.jpartner.eq.0)then
+            if (xmcxsec(npartner).lt.0d0) then
+              write (*,*) 'ERROR in montecarlocounter. '/
+     &            /'This number should be positive',
+     &            xmcxsec(npartner)
+              write (*,*)
+     &             'Should use absolute values for assignment of emsca'
+              stop
+            endif
             wgt1 = wgt1 + xmcxsec(npartner)
             if(wgt1.ge.rrnd*wgt)then
               jpartner=ipartners(npartner)
@@ -3056,6 +3082,14 @@ c Assign emsca on statistical basis
         jpartner=0
         do npartner=1,ipartners(0)
           if(lzone(npartner).and.jpartner.eq.0)then
+            if (xmcxsec(npartner).lt.0d0) then
+              write (*,*) 'ERROR in montecarlocounter. '/
+     &            /'This number should be positive',
+     &            xmcxsec(npartner)
+              write (*,*)
+     &             'Should use absolute values for assignment of emsca'
+              stop
+            endif
             wgt1 = wgt1 + xmcxsec(npartner)
             if(wgt1.ge.rrnd*wgt)then
               jpartner=ipartners(npartner)
@@ -3821,6 +3855,14 @@ c Assign emsca on statistical basis
         jpartner=0
         do npartner=1,ipartners(0)
           if(lzone(npartner).and.jpartner.eq.0)then
+            if (xmcxsec(npartner).lt.0d0) then
+              write (*,*) 'ERROR in montecarlocounter. '/
+     &            /'This number should be positive',
+     &            xmcxsec(npartner)
+              write (*,*)
+     &             'Should use absolute values for assignment of emsca'
+              stop
+            endif
             wgt1 = wgt1 + xmcxsec(npartner)
             if(wgt1.ge.rrnd*wgt)then
               jpartner=ipartners(npartner)

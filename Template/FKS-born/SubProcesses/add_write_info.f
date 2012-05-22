@@ -1,5 +1,5 @@
       subroutine add_write_info(p_born,pp,ybst_til_tolab,iconfig,Hevents
-     &     ,putonshell,ndim,ipole,x,jpart,npart,pb)
+     &     ,putonshell,ndim,ipole,x,jpart,npart,pb,shower_scale)
 c Computes all the info needed to write out the events including the
 c intermediate resonances. It also boosts the events to the lab frame
       implicit none
@@ -9,10 +9,11 @@ c intermediate resonances. It also boosts the events to the lab frame
       include "coloramps.inc"
       include "reweight0.inc"
       include "nFKSconfigs.inc"
+      include "leshouche_info.inc"
 
 c Arguments
       double precision p_born(0:3,nexternal-1),pp(0:3,nexternal)
-      double precision ybst_til_tolab
+      double precision ybst_til_tolab,shower_scale
       integer iconfig
       logical Hevents,putonshell
       integer ndim,ipole,jpart(7,-nexternal+3:2*nexternal-3),npart
@@ -29,12 +30,14 @@ c Local
       data firsttime2/.true./
 
 c Combined SubProcesses (from auto_dsig() or dlum())
-      double precision xlum,dlum
-      external dlum
-      integer              IPROC 
-      DOUBLE PRECISION PD(0:MAXPROC)
-      COMMON /SubProc/ PD, IPROC
-
+c$$$      double precision xlum,dlum
+c$$$      external dlum
+c$$$      integer              IPROC 
+c$$$      DOUBLE PRECISION PD(0:MAXPROC)
+c$$$      COMMON /SubProc/ PD, IPROC
+      integer i_process
+      common/c_addwrite/i_process
+      
 c Random numbers
       double precision ran2
       external ran2
@@ -106,6 +109,8 @@ c cFKSprocess
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer save_nFKSprocess
+      double precision SCALUP(fks_configs*2)
+      common /cshowerscale/SCALUP
 
       integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
      &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
@@ -137,28 +142,45 @@ c
      &        ,pwidth_tree)
          firsttime=.false.
       endif
+c Set the shower scale
+      if (Hevents) then
+         shower_scale=SCALUP(nFKSprocess*2)
+      else
+         shower_scale=SCALUP(nFKSprocess*2-1)
+      endif
 c
 c Choose a process. iproc comes set to the number of processes
 c
-c set-up Bjorken x's
-      save_nFKSprocess=nFKSprocess
-      if (Hevents) then
-         call set_cms_stuff(-100)
-         nFKSprocess=nFKSprocess_used
-      else
-         call set_cms_stuff(0)
-         nFKSprocess=nFKSprocess_used_born
+c$$$c set-up Bjorken x's
+c$$$      save_nFKSprocess=nFKSprocess
+c$$$      if (Hevents) then
+c$$$         call set_cms_stuff(-100)
+c$$$         nFKSprocess=nFKSprocess_used
+c$$$      else
+c$$$         call set_cms_stuff(0)
+c$$$         nFKSprocess=nFKSprocess_used_born
+c$$$      endif
+c$$$c compute the PDFs (this sets 'pd' and 'iproc')
+c$$$      xlum=dlum()
+c$$$c choose the subprocess
+c$$$      np = iproc
+c$$$      xtarget=ran2()*pd(np)
+c$$$      ip = 1
+c$$$      do while (pd(ip) .lt. xtarget .and. ip .lt. np)
+c$$$         ip=ip+1
+c$$$      enddo
+c$$$      nFKSprocess=save_nFKSprocess
+
+c This is an (n+1)-body process (see update_unwgt_table in
+c driver_mintMC.f). For S events it corresponds to the underlying Born
+c process chosen
+      ip=i_process
+      if (ip.lt.1 .or. ip.gt.maxproc_used) then
+         write (*,*)'ERROR #12 in add_write_info,'/
+     &        /' not a well-defined process',ip,Hevents
+         stop
       endif
-c compute the PDFs (this sets 'pd' and 'iproc')
-      xlum=dlum()
-c choose the subprocess
-      np = iproc
-      xtarget=ran2()*pd(np)
-      ip = 1
-      do while (pd(ip) .lt. xtarget .and. ip .lt. np)
-         ip=ip+1
-      enddo
-      nFKSprocess=save_nFKSprocess
+
 c
 c Fill jpart particle info for the final state particles of
 c the (n+1)-body events. Color is done below.
@@ -331,7 +353,6 @@ c
          icolalt(1,i)=jpart(4,i)
          icolalt(2,i)=jpart(5,i)
       enddo
-
 
 c
 c Set-up the external momenta that should be written in event file

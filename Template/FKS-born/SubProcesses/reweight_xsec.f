@@ -285,6 +285,8 @@ c should not be used if wgtkin(0,1,*)=-99
             enddo
          enddo
          do k=1,4
+            wgtxbj_all(1,k,0)=0.d0
+            wgtxbj_all(2,k,0)=0.d0
             wgtkin_all(0,1,k,0)=-99.d0
             wgtmuR2_all(k,0)=0.d0
             wgtmuF12_all(k,0)=0.d0
@@ -1049,7 +1051,7 @@ c
       subroutine fill_rwgt_NLOplot()
       implicit none
       include "genps.inc"
-      include 'nexternal.inc'
+      include "nexternal.inc"
       include 'coupl.inc'
       include 'run.inc'
       include "reweight.inc"
@@ -1104,7 +1106,7 @@ c
       subroutine setup_fill_rwgt_NLOplot()
       implicit none
       include "genps.inc"
-      include 'nexternal.inc'
+      include "nexternal.inc"
       include 'coupl.inc'
       include 'run.inc'
       include "reweight.inc"

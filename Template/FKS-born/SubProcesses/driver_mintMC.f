@@ -641,20 +641,24 @@ c
       function sigintF(xx,w,ifl,f_abs)
 c From dsample_fks
       implicit none
+      include 'mint.inc'
+      include 'nexternal.inc'
+      include 'genps.inc'
+      include 'nFKSconfigs.inc'
+      include 'reweight_all.inc'
       integer ndim,ipole
       common/tosigint/ndim,ipole
       integer           iconfig
       common/to_configs/iconfig
-      integer i,j
+      integer i,j,k
       integer ifl
       integer fold
       common /cfl/fold
-      include 'mint.inc'
       real*8 sigintF,xx(ndimmax),w
       integer ione
       parameter (ione=1)
-      double precision wgt,dsigS,dsigH,f_abs
-      include 'nexternal.inc'
+      double precision wgt,dsigS,dsigH,f_abs,lum,dlum
+      external dlum
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
@@ -663,12 +667,9 @@ c From dsample_fks
       double precision result1,result2,ran2,rnd
       external ran2
       double precision p(0:3,nexternal)
-      double precision sigintF_save,f_abs_save
-      save sigintF_save,f_abs_save
+      double precision f_check
       double precision x(99),sigintF_without_w,f_abs_without_w
       common /c_sigint/ x,sigintF_without_w,f_abs_without_w
-      include 'nFKSconfigs.inc'
-      include 'reweight_all.inc'
       double precision f(2),result(0:fks_configs,2)
       save f,result
       INTEGER NFKSPROCESS
@@ -684,27 +685,36 @@ c From dsample_fks
       common/fks_indices/i_fks,j_fks
       logical firsttime
       integer sum
-      parameter (sum=2)
+      parameter (sum=0)
       data firsttime /.true./
-      logical foundB(2)
+      logical foundB(2),j_fks_initial(fks_configs),found_ini1,found_ini2
+     $     ,found_fnl
       integer nFKSprocessBorn(2)
       save nFKSprocessBorn,foundB
-      double precision vol,sigintR,res,f_tot
-      integer proc_map(fks_configs,0:fks_configs),tot_proc
+      double precision vol,sigintR,res,f_tot,rfract
+      integer proc_map(0:fks_configs,0:fks_configs)
      $     ,i_fks_proc(fks_configs),j_fks_proc(fks_configs)
-     $     ,nFKSproc_m,nFKSprocess_all
-      logical found
+     $     ,nFKSprocess_all,i_fks_pdg_proc(fks_configs)
+     $     ,j_fks_pdg_proc(fks_configs)
       integer itotalpoints
       common/ctotalpoints/itotalpoints
+      INTEGER              IPROC
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
+      double precision unwgt_table(0:fks_configs,2,maxproc)
+      common/c_uwgt_table/unwgt_table
+      integer maxproc_save
+      save maxproc_save
 c
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.
          foundB(1)=.false.
          foundB(2)=.false.
+         maxproc_save=0
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
-            if (particle_type(i_fks).eq.8) then
+            if (PDG_type(i_fks).eq.21) then
                if (j_fks.le.nincoming) then
                   foundB(1)=.true.
                   nFKSprocessBorn(1)=nFKSprocess
@@ -718,13 +728,27 @@ c Find the nFKSprocess for which we compute the Born-like contributions
                call reweight_settozero_all(nFKSprocess*2,.true.)
                call reweight_settozero_all(nFKSprocess*2-1,.true.)
             endif
+            lum=dlum()
+            maxproc_save=max(maxproc_save,IPROC)
          enddo
          write (*,*) 'Total number of FKS directories is', fks_configs
          write (*,*) 'For the Born we use nFKSprocesses  #',
      &        nFKSprocessBorn
 c For sum over identical FKS pairs, need to find the identical structures
-         if (sum.eq.2) then
-            tot_proc=0
+         if (sum.eq.0) then
+            proc_map(0,0)=fks_configs
+            do i=1,fks_configs
+               proc_map(i,0)=1
+               proc_map(i,1)=i
+            enddo
+         elseif (sum.eq.1) then
+            proc_map(0,0)=1
+            proc_map(1,0)=fks_configs
+            do i=1,fks_configs
+               proc_map(1,i)=i
+            enddo
+         elseif (sum.eq.2) then
+            proc_map(0,0)=0
             do i=1,fks_configs
                proc_map(i,0)=0
                i_fks_proc(i)=0
@@ -732,9 +756,8 @@ c For sum over identical FKS pairs, need to find the identical structures
             enddo
             do nFKSprocess=1,fks_configs
                call fks_inc_chooser()
-               found=.false.
                i=1
-               do while ( i.le.tot_proc )
+               do while ( i.le.proc_map(0,0) )
                   if (i_fks.eq.i_fks_proc(i)
      &              .and. j_fks.eq.j_fks_proc(i) ) then
                      exit
@@ -743,14 +766,134 @@ c For sum over identical FKS pairs, need to find the identical structures
                enddo
                proc_map(i,0)=proc_map(i,0)+1
                proc_map(i,proc_map(i,0))=nFKSprocess
-               if (i.gt.tot_proc) then
-                  tot_proc=tot_proc+1
-                  i_fks_proc(tot_proc)=i_fks
-                  j_fks_proc(tot_proc)=j_fks
+               if (i.gt.proc_map(0,0)) then
+                  proc_map(0,0)=proc_map(0,0)+1
+                  i_fks_proc(proc_map(0,0))=i_fks
+                  j_fks_proc(proc_map(0,0))=j_fks
                endif
             enddo
             write (*,*) 'FKS process map:'
-            do i=1,tot_proc
+            do i=1,proc_map(0,0)
+               write (*,*) i,'-->',proc_map(i,0),':',
+     &              (proc_map(i,j),j=1,proc_map(i,0))
+            enddo
+         elseif (sum.eq.3) then
+            proc_map(0,0)=0
+            do i=1,fks_configs
+               proc_map(i,0)=0
+               i_fks_pdg_proc(i)=0
+               j_fks_pdg_proc(i)=0
+               j_fks_proc(i)=0
+            enddo
+c First find all the nFKSprocesses that have a soft singularity and put
+c them in the process map
+            do nFKSprocess=1,fks_configs
+               call fks_inc_chooser()
+               if (PDG_type(i_fks).eq.21) then
+                  proc_map(0,0)=proc_map(0,0)+1
+                  proc_map(proc_map(0,0),0)=proc_map(proc_map(0,0),0)+1
+                  proc_map(proc_map(0,0),proc_map(proc_map(0,0),0))
+     $                 =nFKSprocess
+                  i_fks_pdg_proc(proc_map(0,0))=PDG_type(i_fks)
+                  j_fks_pdg_proc(proc_map(0,0))=PDG_type(j_fks)
+                  j_fks_proc(proc_map(0,0))=j_fks
+               endif
+            enddo
+c Check to make sure that there is at most two initial and one final
+c state all gluon
+            found_ini1=.false.
+            found_ini2=.false.
+            found_fnl=.false.
+            do i=1,proc_map(0,0)
+               if (i_fks_pdg_proc(i).eq.21 .and. j_fks_proc(i).eq.1
+     $              .and. .not.found_ini1) then
+                  found_ini1=.true.
+               elseif (i_fks_pdg_proc(i).eq.21 .and. j_fks_proc(i).eq.1
+     $                 .and. found_ini1) then
+                  write (*,*)'Initial state 1 g->gg already'/
+     $                 /' found in driver_mintMC'
+                  write (*,*) i_fks_pdg_proc
+                  write (*,*) j_fks_pdg_proc
+                  write (*,*) j_fks_proc
+                  stop
+               elseif (i_fks_pdg_proc(i).eq.21 .and. j_fks_proc(i).eq.2
+     $                 .and. .not.found_ini2) then
+                  found_ini2=.true.
+               elseif (i_fks_pdg_proc(i).eq.21 .and. j_fks_proc(i).eq.2
+     $                 .and. found_ini2) then
+                  write (*,*)'Initial state 2 g->gg already'/
+     $                 /' found in driver_mintMC'
+                  write (*,*) i_fks_pdg_proc
+                  write (*,*) j_fks_pdg_proc
+                  write (*,*) j_fks_proc
+                  stop
+               elseif (i_fks_pdg_proc(i).eq.21 .and.
+     $                 j_fks_pdg_proc(i).eq.21 .and.
+     $                 j_fks_proc(i).gt.nincoming .and. .not.found_fnl)
+     $                 then
+                  found_fnl=.true.
+               elseif (i_fks_pdg_proc(i).eq.21 .and.
+     $                 j_fks_pdg_proc(i).eq.21 .and.
+     $                 j_fks_proc(i).gt.nincoming .and. found_fnl) then
+                  write (*,*)
+     &              'Final state g->gg already found in driver_mintMC'
+                  write (*,*) i_fks_pdg_proc
+                  write (*,*) j_fks_pdg_proc
+                  write (*,*) j_fks_proc
+                  stop
+               endif
+            enddo
+c Loop again, and identify the nFKSprocesses that do not have a soft
+c singularity and put them together with the corresponding gluon to
+c gluons splitting
+            do nFKSprocess=1,fks_configs
+               call fks_inc_chooser()
+               if (PDG_type(i_fks).ne.21) then
+                  if (j_fks.eq.1 .and. found_ini1) then
+                     do i=1,proc_map(0,0)
+                        if (i_fks_pdg_proc(i).eq.21 .and.
+     $                       j_fks_proc(i).eq.1) then
+                           proc_map(i,0)=proc_map(i,0)+1
+                           proc_map(i,proc_map(i,0))=nFKSprocess
+                           exit
+                        endif
+                     enddo
+                  elseif (j_fks.eq.2 .and. found_ini2) then
+                     do i=1,proc_map(0,0)
+                        if (i_fks_pdg_proc(i).eq.21 .and.
+     $                       j_fks_proc(i).eq.2) then
+                           proc_map(i,0)=proc_map(i,0)+1
+                           proc_map(i,proc_map(i,0))=nFKSprocess
+                           exit
+                        endif
+                     enddo
+                  elseif (j_fks.gt.nincoming .and. found_fnl) then
+                     do i=1,proc_map(0,0)
+                        if (i_fks_pdg_proc(i).eq.21 .and.
+     $                       j_fks_pdg_proc(i).eq.21.and.
+     $                       j_fks_proc(i).gt.nincoming) then
+                           proc_map(i,0)=proc_map(i,0)+1
+                           proc_map(i,proc_map(i,0))=nFKSprocess
+                           exit
+                        endif
+                     enddo
+                  else
+                     write (*,*) 'Driver_mintMC: inconsistent process'
+                     write (*,*) 'This process has nFKSprocesses'/
+     $                    /' without soft singularities, but not a'/
+     $                    /' corresponding g->gg splitting that has a'/
+     $                    /' soft singularity.',found_ini1,found_ini2
+     $                    ,found_fnl
+                     do i=1,proc_map(0,0)
+                        write (*,*) i,'-->',proc_map(i,0),':',
+     &                       (proc_map(i,j),j=1,proc_map(i,0))
+                     enddo
+                     stop
+                  endif
+               endif
+            enddo
+            write (*,*) 'FKS process map:'
+            do i=1,proc_map(0,0)
                write (*,*) i,'-->',proc_map(i,0),':',
      &              (proc_map(i,j),j=1,proc_map(i,0))
             enddo
@@ -759,6 +902,13 @@ c For sum over identical FKS pairs, need to find the identical structures
 
       fold=ifl
       if (ifl.eq.0) then
+         do k=1,maxproc_save
+            do j=1,2
+               do i=0,fks_configs
+                  unwgt_table(i,j,k)=0d0
+               enddo
+            enddo
+         enddo
          f(1)=0d0
          f(2)=0d0
          do i=0,fks_configs
@@ -791,14 +941,11 @@ c For sum over identical FKS pairs, need to find the identical structures
 c
 c Compute the Born-like contributions with nbody=.true.
 c     
-         if (sum.eq.0) then
-            call get_MC_integer(fks_configs,nFKSprocess,vol)
-            nFKSprocess_all=nFKSprocess
-         elseif (sum.eq.2) then
-            call get_MC_integer(tot_proc,nFKSproc_m,vol)
-            nFKSprocess=proc_map(nFKSproc_m,1) ! just pick the first, because 
-                                               ! j_fks is fixed for all of them
-         endif
+         call get_MC_integer(proc_map(0,0),proc_map(0,1),vol)
+         nFKSprocess=proc_map(proc_map(0,1),1) ! just pick the first
+                                               ! because it only matters
+                                               ! which parton is j_fks
+         nFKSprocess_all=nFKSprocess
          call fks_inc_chooser()
          if (j_fks.le.nincoming) then
             if (.not.foundB(1)) then
@@ -835,31 +982,19 @@ c THIS CAN BE OPTIMIZED
          f(2) = f(2)+result(0,2)
 c
 c Compute the subtracted real-emission corrections either as an explicit
-c sum or a Monte Carlo sum.
+c sum or a Monte Carlo sum or a combination
 c      
          if (.not.( abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &        abrv(1:2).eq.'vi') ) then
             nbody=.false.
-            if (sum.eq.1) then
-               write (*,*)
-     &              'This option # 1322 has not been implemented'
+            if (sum.eq.1 .or. sum.eq.2) then
+               write (*,*) 'This option # 1322 has not been implemented'
+     $              ,sum
                stop
-c$$$               do nFKSprocess=1,fks_configs
-c$$$                  call fks_inc_chooser()
-c$$$                  call leshouche_inc_chooser()
-c$$$c THIS CAN BE OPTIMIZED
-c$$$                  call setcuts
-c$$$                  call setfksfactor(iconfig)
-c$$$                  wgt=1d0
-c$$$                  call generate_momenta(ndim,iconfig,wgt,x,p)
-c$$$                  call dsigF(p,wgt,w,dsigS,dsigH)
-c$$$                  result(nFKSprocess,1)= w*dsigS
-c$$$                  result(nFKSprocess,2)= w*dsigH
-c$$$                  f(1) = f(1)+result(nFKSprocess,1)
-c$$$                  f(2) = f(2)+result(nFKSprocess,2)
-c$$$               enddo
-            elseif(sum.eq.0) then ! Monte Carlo over nFKSprocess
-               nFKSprocess=nFKSprocess_all
+            endif
+            sigintR=0d0
+            do i=1,proc_map(proc_map(0,1),0)
+               nFKSprocess=proc_map(proc_map(0,1),i)
                nFKSprocess_used=nFKSprocess
                call fks_inc_chooser()
                call leshouche_inc_chooser()
@@ -867,109 +1002,56 @@ c THIS CAN BE OPTIMIZED
                call setcuts
                call setfksfactor(iconfig)
                wgt=1d0/vol
+c When sum=3, we can compute the nFKSprocesses without soft
+c singularities fewer number of PS points, because their contribution is
+c small. This should save some time, without degrading the uncertainty
+c much. Do this by overwrite the 'wgt' variable
+               if (sum.eq.3 .and. PDG_type(i_fks).ne.21) then
+                  rnd=ran2()
+                  rfrac=0.25d0  ! fraction of PS points to include
+                                ! them. This could be determined
+                                ! dynamically, based on the relative
+                                ! importance of this contribution.
+                  if (rnd.gt.rfract) then
+                     wgt=0d0    ! fks_singular will not compute anything
+                  else
+                     wgt=wgt/rfract
+                  endif
+               endif
                call generate_momenta(ndim,iconfig,wgt,x,p)
                call dsigF(p,wgt,w,dsigS,dsigH)
-               sigintR = (abs(dsigS)+abs(dsigH))*vol*w
-               call fill_MC_integer(nFKSprocess,sigintR)
+               sigintR = sigintR+(abs(dsigS)+abs(dsigH))*vol*w
                result(nFKSprocess,1)= w*dsigS
                result(nFKSprocess,2)= w*dsigH
                f(1) = f(1)+result(nFKSprocess,1)
                f(2) = f(2)+result(nFKSprocess,2)
-            elseif(sum.eq.2) then ! MC over i_fks/j_fks pairs
-               do i=1,proc_map(nFKSproc_m,0)
-                  nFKSprocess=proc_map(nFKSproc_m,i)
-                  nFKSprocess_used=nFKSprocess
-                  call fks_inc_chooser()
-                  call leshouche_inc_chooser()
-c THIS CAN BE OPTIMIZED
-                  call setcuts
-                  call setfksfactor(iconfig)
-                  wgt=1d0/vol
-                  call generate_momenta(ndim,iconfig,wgt,x,p)
-                  call dsigF(p,wgt,w,dsigS,dsigH)
-                  result(nFKSprocess,1)= w*dsigS
-                  result(nFKSprocess,2)= w*dsigH
-                  f(1) = f(1)+result(nFKSprocess,1)
-                  f(2) = f(2)+result(nFKSprocess,2)
-               enddo
-               sigintR=0d0
-               do i=1,proc_map(nFKSproc_m,0)
-                  sigintR=sigintR+
-     &                 (abs(result(proc_map(nFKSproc_m,i),1))+
-     &                 abs(result(proc_map(nFKSproc_m,i),2)))*vol
-               enddo
-               call fill_MC_integer(nFKSproc_m,sigintR)
-            endif
+            enddo
+            call fill_MC_integer(proc_map(0,1),sigintR)
          endif
          sigintF=f(1)+f(2)
-         f_abs=abs(f(1))+abs(f(2))
-         sigintF_save=sigintF
-         f_abs_save=f_abs
+         unwgt=.false.
+         call update_unwgt_table(unwgt_table,proc_map,unwgt,f_check
+     $        ,f_abs)
+         if (f_check.ne.0d0.or.sigintF.ne.0d0) then
+            if (abs(sigintF-f_check)/max(abs(f_check),abs(sigintF))
+     $           .gt.1d-6) then
+               write (*,*) 'Warning inaccuracy in unweight table 1'
+     $              ,sigintF,f_check
+            endif
+         endif
          if (f_abs.ne.0d0) itotalpoints=itotalpoints+1
       elseif(ifl.eq.1) then
          write (*,*) 'Folding not implemented'
          stop
       elseif(ifl.eq.2) then
-         sigintF = sigintF_save
+         unwgt=.true.
+         call update_unwgt_table(unwgt_table,proc_map,unwgt,f_check
+     $        ,f_abs)
+c The following two are needed when writing events to do NLO/Born
+c reweighting
+         sigintF=f_check
          sigintF_without_w=sigintF/w
-         f_abs = f_abs_save
          f_abs_without_w=f_abs/w
-c Determine if we need to write S or H events according to their
-c relative weights
-         if (f_abs.gt.0d0) then
-            if (sum.eq.1) then
-               write (*,*) 'event generation for "sum"'/
-     $              /' not yet implemented',sum
-               stop
-            elseif (sum.eq.0 .or. sum.eq.2) then
-               if (ran2().le.abs(f(1))/f_abs) then
-                  Hevents=.false.
-                  evtsgn=sign(1d0,f(1))
-                  j=1
-               else
-                  Hevents=.true.
-                  evtsgn=sign(1d0,f(2))
-                  j=2
-               endif
-               if (sum.eq.2 .and. .not.( abrv.eq.'born' .or. abrv.eq
-     &              .'grid' .or.abrv(1:2).eq.'vi') ) then
-c Pick one of the nFKSprocess contributing to the given nFKSproc_m
-c according to their (absolute value of the) relative weight.
-                  f_tot=0d0
-                  do i=1,proc_map(nFKSproc_m,0)
-                    f_tot=f_tot+
-     &                 abs(result(0,j)+result(proc_map(nFKSproc_m,i),j))
-                  enddo
-                  rnd=ran2()
-                  i=1
-                  res=abs(result(0,j)+result(proc_map(nFKSproc_m,1),j))
-                  do while (res.le.rnd*f_tot)
-                     i=i+1
-                    res=res+
-     &                 abs(result(0,j)+result(proc_map(nFKSproc_m,i),j))
-                  enddo
-                  nFKSprocess=proc_map(nFKSproc_m,i)
-                  nFKSprocess_used=nFKSprocess
-                  call fks_inc_chooser()
-                  call leshouche_inc_chooser()
-c THIS CAN BE OPTIMIZED
-                  call setcuts
-                  call setfksfactor(iconfig)
-               endif
-            endif
-            if(doreweight) then
-               if (Hevents) then
-                  call fill_reweight0inc(nFKSprocess*2)
-                  wgtwborn(2)=0d0
-                  wgtwns(2)=0d0
-                  wgtwnsmuf(2)=0d0
-                  wgtwnsmur(2)=0d0
-               else
-                  call fill_reweight0inc(nFKSprocess*2-1)
-               endif
-               call reweight_fill_extra()
-            endif
-         endif
       endif
       return
       end
@@ -1080,6 +1162,322 @@ c
          sigintH = result
          f_abs=abs(sigintH)
          evtsgn=sign(1d0,result)
+      endif
+      return
+      end
+
+
+
+
+      subroutine update_unwgt_table(unwgt_table,proc_map,unweight,f
+     $     ,f_abs)
+      implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
+      include 'nFKSconfigs.inc'
+      include 'reweight.inc'
+      double precision unwgt_table(0:fks_configs,2,maxproc),f,f_abs
+     $     ,dummy,dlum,f_abs_H,f_abs_S,rnd,ran2,current,f_abs_S_un
+     $     ,f_unwgt(fks_configs,maxproc)
+      external ran2
+      external dlum
+      integer maxproc_found,maxproc_found_first,iproc_save(fks_configs)
+     $     ,i,j,ii,jj,k,proc_map(0:fks_configs,0:fks_configs)
+      save maxproc_found
+      logical unweight,firsttime
+      data firsttime /.true./
+      integer nFKSprocess_save,ifound
+      integer id_current(maxproc,nexternal),id_first(maxproc,nexternal)
+     $     ,nequal,equal_to(maxproc),equal_to_inverse(maxproc)
+      INTEGER              IPROC
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      integer maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow)
+      common /c_leshouche_inc/idup,mothup,icolup
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      logical Hevents
+      common/SHevents/Hevents
+      integer i_process
+      common/c_addwrite/i_process
+      logical unwgt
+      double precision evtsgn
+      common /c_unwgt/evtsgn,unwgt
+
+c For the S-events, we can combine processes when they give identical
+c processes at the Born. Make sure we check that we get indeed identical
+c IRPOC's
+      if (firsttime) then
+         nFKSprocess_save=nFKSprocess
+         do nFKSprocess=1,fks_configs
+            call fks_inc_chooser()
+            call leshouche_inc_chooser()
+            dummy=dlum()
+c 1. First map the IPROC's for this nFKSprocess to the underlying Born
+c to get the unique IPROC's
+            iproc_save(nFKSprocess)=iproc
+            do j=1,iproc
+               do i=1,nexternal-1
+                  if (i.eq.min(j_fks,i_fks)) then
+                     if (abs(idup(i_fks,j)).eq.abs(idup(j_fks,j))) then
+                        id_current(i,j)=21
+                     elseif(abs(particle_type(j_fks)).eq.3) then
+                        id_current(i,j)=idup(j_fks,j)
+                     elseif (abs(particle_type(i_fks)).eq.3) then
+                        id_current(i,j)=-idup(i_fks,j)
+                     else
+                        write (*,*) 'Error #1 in unwgt_table'
+                        stop
+                     endif
+                  elseif (i.lt.max(j_fks,i_fks)) then
+                     id_current(i,j)=idup(i,j)
+                  else
+                     id_current(i,j)=idup(i+1,j)
+                  endif
+               enddo
+c 1a. if IPROC not yet found, save it for checking. Also fill an array
+c equal_to() that maps the IPROC to the set of unique IPROCs
+               if (j.eq.1) then
+                  maxproc_found=1
+                  equal_to(j)=1
+                  equal_to_inverse(1)=j
+               elseif (j.gt.1) then
+                  do jj=1,maxproc_found
+                     nequal=0
+                     do ii=1,nexternal-1
+                        if (id_current(ii,j).eq.id_current(ii,jj)) then
+                           nequal=nequal+1
+                        endif
+                     enddo
+                     if (nequal.eq.nexternal-1) then
+                        equal_to(j)=jj
+                        exit
+                     endif
+                  enddo
+                  if (nequal.ne.nexternal-1) then
+                     maxproc_found=maxproc_found+1
+                     equal_to(j)=maxproc_found
+                     equal_to_inverse(maxproc_found)=j
+                  endif
+               endif
+            enddo
+c 2. Now that we have the unique IPROCs for a given nFKSprocess, we need
+c to check that they are equal among all nFKSprocesses.
+            if (nFKSprocess.eq.1) then
+               do j=1,maxproc_found
+                  do i=1,nexternal-1
+                     id_first(i,j)=id_current(i,j)
+                     maxproc_found_first=maxproc_found
+                  enddo
+               enddo
+            else
+               if (maxproc_found.ne.maxproc_found_first) then
+                  write (*,*) 'Number of unique IPROCs not identical'/
+     $                 /' among nFKSprocesses',nFKSprocess,maxproc_found
+     $                 ,maxproc_found_first
+                  stop
+               endif
+               do j=1,maxproc_found
+                  do i=1,nexternal-1
+                     if (id_current(i,j).ne.id_first(i,j)) then
+                        write (*,*)'Particle IDs not equal',i,j
+                        do jj=1,maxproc_found
+                           write (*,*) jj,' current:',
+     &                          (id_current(ii,jj),ii=1,nexternal-1)
+                           write (*,*) jj,' saved  :',
+     &                          (id_first(ii,jj),ii=1,nexternal-1)
+                        enddo
+                        stop
+                     endif
+                  enddo
+               enddo
+            endif
+         enddo
+         if (maxproc_found.ne.iproc_save(nFKSprocess_used_born)) then
+            write (*,*) 'ERROR #5 in unweight_table',maxproc_found
+     $           ,nFKSprocess_used_born
+     $           ,iproc_save(nFKSprocess_used_born)
+            stop
+         endif
+c Restore nFKSprocess
+         nFKSprocess=nFKSprocess_save
+         call fks_inc_chooser()
+         call leshouche_inc_chooser()
+         firsttime=.false.
+      endif
+c Trivial check on the Born contribution
+      if (unwgt_table(0,2 ,iproc_save(nFKSprocess_used_born)).ne.0d0)
+     $     then
+         write (*,*) 'H-event contribution to the n-body should be zero'
+         stop
+      endif
+c$$$c Check that only one nFKSprocess is non-zero
+c$$$      do i=1,fks_configs
+c$$$         if ((unwgt_table(i,1,iproc_save(i)).ne.0d0 .or. unwgt_table(i,2
+c$$$     $        ,iproc_save(i)).ne.0d0) .and.nFKSprocess.ne.i) then
+c$$$            write (*,*) 'error #3 in unweight_table'
+c$$$            stop
+c$$$         endif
+c$$$      enddo
+c
+c
+c Compute the total rate. This is simply the sum of all
+c
+      f=0d0
+c all the (n+1)-body contributions
+      do i=1,proc_map(proc_map(0,1),0)
+         nFKSprocess=proc_map(proc_map(0,1),i)
+         do j=1,iproc_save(nFKSprocess)
+            f = f + unwgt_table(nFKSprocess,1,j)+
+     &              unwgt_table(nFKSprocess,2,j)
+         enddo
+      enddo
+c and the n-body contributions
+      do j=1,iproc_save(nFKSprocess_used_born)
+         f=f+unwgt_table(0,1,j)+unwgt_table(0,2,j)
+      enddo
+c
+c Compute the abs of the total rate. Need to take ABS of all
+c contributions separately, except when they give equal events
+c (i.e. equal momenta, particle IDs, color info and shower starting
+c scale, this might happen for S-events)
+c
+      f_abs_H=0d0
+      f_abs_S=0d0
+c Nothing to combine for H-events, so need to sum them independently
+      do i=1,proc_map(proc_map(0,1),0)
+         nFKSprocess=proc_map(proc_map(0,1),i)
+         do j=1,iproc_save(nFKSprocess)
+            f_abs_H=f_abs_H+abs(unwgt_table(nFKSprocess,2,j))
+         enddo
+      enddo
+      do i=1,fks_configs
+         do j=1,maxproc_found
+            f_unwgt(i,j)=0d0
+         enddo
+      enddo
+c Add the Born and the S-events
+      do k=1,proc_map(proc_map(0,1),0)
+         nFKSprocess=proc_map(proc_map(0,1),k)
+         do i=1,maxproc_found
+            if (proc_map(proc_map(0,1),0).gt.1) then
+c if there are more than one nFKSprocesses compute (i.e. sum.eq.3) we
+c should add the Born only the one with the soft singularity
+               call fks_inc_chooser()
+               if (PDG_type(i_fks).eq.21) then
+                  f_unwgt(nFKSprocess,i)=
+     &                 unwgt_table(0,1,i)+unwgt_table(0,2,i)
+               endif
+               do j=1,iproc_save(nFKSprocess)
+                  if (equal_to(j).eq.i) then
+                     f_unwgt(nFKSprocess,i)=f_unwgt(nFKSprocess,i)
+     $                    +unwgt_table(nFKSprocess,1,j)
+                  endif
+               enddo
+            else
+               f_unwgt(nFKSprocess,i)=
+     &              unwgt_table(0,1,i)+unwgt_table(0,2,i)
+               do j=1,iproc_save(nFKSprocess)
+                  if (equal_to(j).eq.i) then
+                     f_unwgt(nFKSprocess,i)=f_unwgt(nFKSprocess,i)
+     $                    +unwgt_table(nFKSprocess,1,j)
+                  endif
+               enddo
+            endif
+            f_abs_S=f_abs_S+abs(f_unwgt(nFKSprocess,i))
+         enddo
+      enddo
+      if (.not.unweight)then
+c just return the (correct) absolute value
+         f_abs=f_abs_H+f_abs_S
+      else
+c pick one at random and update reweight info and all that
+         f_abs=f_abs_H+f_abs_S
+         if (f_abs.ne.0d0) then
+            rnd=ran2()
+            if (rnd.le.f_abs_H/f_abs) then
+               Hevents=.true.
+c Pick one of the nFKSprocesses and one of the IPROC's 
+               i_process=1
+               nFKSprocess=1
+               current=abs(unwgt_table(1,2,1))
+               rnd=ran2()
+               do while (current.lt.rnd*f_abs_H .and.
+     $              (i_process.le.iproc_save(nFKSprocess) .or.
+     $              nFKSprocess.le.fks_configs))
+                  i_process=i_process+1
+                  if (i_process.gt.iproc_save(nFKSprocess)) then
+                     i_process=1
+                     nFKSprocess=nFKSprocess+1
+                  endif
+                  current=current+abs(unwgt_table(nFKSprocess,2
+     $                 ,i_process))
+               enddo
+               if (i_process.gt.iproc_save(nFKSprocess) .or.
+     $              nFKSprocess.gt.fks_configs) then
+                  write (*,*) 'ERROR #4 in unweight table',i_process
+     $                 ,nFKSprocess
+                  stop
+               endif
+               evtsgn=sign(1d0,unwgt_table(nFKSprocess,2,i_process))
+            else
+               Hevents=.false.
+c Pick one of the nFKSprocesses and IPROC's of the Born
+               i_process=1
+               nFKSprocess=1
+               current=abs(f_unwgt(1,1))
+               rnd=ran2()
+               do while (current.lt.rnd*f_abs_S .and.
+     $              (i_process.le.maxproc_found .or.
+     $              nFKSprocess.le.fks_configs))
+                  i_process=i_process+1
+                  if (i_process.gt.maxproc_found) then
+                     i_process=1
+                     nFKSprocess=nFKSprocess+1
+                  endif
+                  current=current+abs(f_unwgt(nFKSprocess,i_process))
+               enddo
+               if (i_process.gt.maxproc_found .or.
+     $              nFKSprocess.gt.fks_configs) then
+                  write (*,*) 'ERROR #4 in unweight table',i_process
+     $                 ,maxproc_found,nFKSprocess
+                  stop
+               endif
+               evtsgn=sign(1d0,f_unwgt(nFKSprocess,i_process))
+c Set the i_process to one of the (n+1)-body configurations that leads
+c to this Born configuration. Needed for add_write_info to work properly
+               i_process=equal_to_inverse(i_process)
+            endif
+         endif
+c Now update the reweight information
+         if(doreweight) then
+            call fks_inc_chooser()
+            call leshouche_inc_chooser()
+            if (Hevents) then
+               call fill_reweight0inc(nFKSprocess*2)
+            else
+               call fill_reweight0inc(nFKSprocess*2-1)
+            endif
+c Set the n-body contributions to zero for H-events, or for S-events
+c with more than one nFKSprocess contribution and not nFKSprocess with
+c soft singularity
+            if (Hevents.or.(PDG_type(i_fks).ne.21.and.proc_map(0
+     $           ,1).gt.1)) then
+               wgtwborn(2)=0d0
+               wgtwns(2)=0d0
+               wgtwnsmuf(2)=0d0
+               wgtwnsmur(2)=0d0
+            endif
+            call reweight_fill_extra()
+         endif
       endif
       return
       end
