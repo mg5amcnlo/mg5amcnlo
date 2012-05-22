@@ -61,6 +61,8 @@ C ----------
       else
 %(pdf_lines)s
       endif
-      lum = pd(IPROC) * conv 
+      do i=1,IPROC
+        lum = lum + pd(IPROC) * conv 
+      enddo
       return
       END                                                             

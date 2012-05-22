@@ -1453,7 +1453,7 @@ C
             for i, proc in enumerate(processes):
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + 1d0\n"
+                pdf_lines = pdf_lines + "\nPD(IPROC) = 1d0\n"
         else:
             # Set notation for the variables used for different particles
             pdf_codes = {1: 'd', 2: 'u', 3: 's', 4: 'c', 5: 'b',
@@ -1511,7 +1511,7 @@ C
             for proc in processes:
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + "
+                pdf_lines = pdf_lines + "\nPD(IPROC) = "
                 for ibeam in [1, 2]:
                     initial_state = proc.get_initial_pdg(ibeam)
                     if initial_state in pdf_codes.keys():
