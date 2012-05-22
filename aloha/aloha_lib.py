@@ -20,8 +20,8 @@
 ##                                
 ##
 ##    list <--- AddVariable (vartype :1)   
-##           |
-##           +- MultVariable  <--- MultLorentz (vartype:2) 
+##           
+##    array <--- MultVariable  <--- MultLorentz (vartype:2) 
 ##           
 ##    list <--- LorentzObjectRepresentation (vartype :4) <-- ConstantObject
 ##                                                               (vartype:5)
@@ -31,6 +31,17 @@
 ##    MultContainer (vartype:6)
 ##
 ################################################################################
+##
+##   Variable is in fact Factory wich adds a references to the variable name
+##   Into the KERNEL (Of class Computation) instantiate a real variable object
+##   (of class C_Variable, DVariable for complex/real) and return a MUltVariable
+##   with a single element.
+##
+##   Lorentz Object works in the same way.
+##
+################################################################################
+
+
 from __future__ import division
 from array import array
 import collections

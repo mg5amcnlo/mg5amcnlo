@@ -88,9 +88,10 @@ def guess_routine_from_name(names):
         else:
             main, multiple, offshell = data[0], data[1:-1],data[-1]
         
-        # search for tag allow tag [L, C$]
+        # search for tag allow tag [L, L$, C$, MP]
         allow_tag = ['C1','C2','C3','C4','C5','C6','C7']
         allow_tag += ['L%s' % i for i in range(1,20)]
+        allow_tag += ['L', 'MP']
         tags = []
         len_tag = -1
         while len(tags) != len_tag:

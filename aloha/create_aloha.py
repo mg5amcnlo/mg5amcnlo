@@ -80,7 +80,7 @@ class AbstractRoutine(object):
     def write(self, output_dir, language='Fortran', mode='self', **opt):
         """ write the content of the object """
         
-        writer = aloha_writers.WriterFactory(self, language, output_dir)
+        writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag)
         text = writer.write(mode=mode, **opt)
         for grouped in self.combined:
             if isinstance(text, tuple):
@@ -88,6 +88,13 @@ class AbstractRoutine(object):
                              writer.write_combined(grouped, mode=mode, **opt))])
             else:
                 text += writer.write_combined(grouped, mode=mode, **opt)
+                
+        if aloha.quad_precision and 'MP' not in self.tag:
+            self.tag.append('MP')
+            text += self.write(output_dir, language, mode, **opt)
+            
+            
+        
         return text
 
 class AbstractRoutineBuilder(object):
@@ -287,7 +294,7 @@ class AbstractRoutineBuilder(object):
         lorentz = lorentz.simplify()
         
         # Modify the expression in case of loop-pozzorini
-        if any((tag.startswith('L') for tag in self.tag)):
+        if any((tag.startswith('L') for tag in self.tag if len(tag)>2)):
             return self.compute_loop_coefficient(lorentz, outgoing)
             
         lorentz = lorentz.expand()
