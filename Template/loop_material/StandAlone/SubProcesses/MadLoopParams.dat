@@ -1,0 +1,99 @@
+/* This file is for the user to set the different parameters of MadLoop.
+ * The name of the variable to define must start with the '#' sign and then
+ * the value should be put immediately on the next line.
+ */
+
+!     =================================================================================
+!     The parameters below set the general behavior of MadLoop at run time
+!     =================================================================================
+
+!     Decide in which mode to set CutTools at runtime.
+!     The possible modes are:
+!
+!     imode:|  actions performed by ctsxcut:                                     
+!           |                                                                    
+!      	0   | (dp_dir,dp_inv)-> dp_Atest -> stable -> (only if stable=.false.) ->
+!	        | (mp_dir,mp_inv)-> mp_Atest -> stable                                
+!       1   | (dp_dir)       -> dp_Ntest -> stable                               
+!       2   | (dp_inv)       -> dp_Ntest -> stable                               
+!       3   | (dp_dir,dp_inv)-> dp_Atest -> stable                               
+!       4   | (mp_dir)       -> mp_Ntest -> stable                                 
+!       5   | (mp_inv)       -> mp_Ntest -> stable                                
+!       6   | (mp_dir,mp_inv)-> mp_Atest -> stable
+!      -1   | Special mode, see below
+!     
+!     In the mode '-1', MadLoop first evaluates each PS points in modes 1 and 2,
+!     yielding results Res1 and Res2, and then check if:
+!                    (Res1-Res2)/(2*(Res1+Res2)< StabThres
+!     If it is not the case, MadLoop evaluates again the PS point in modes 4 and 5,
+!     yielding results Res4 and Res5, and then check if:
+!                    (Res4-Res5)/(2*(Res4+Res5)< StabThres
+!     If it is the case then the unstable phase-space point could be cured. If it is
+!     not the case, MadLoop outputs a warning.
+!     Notice that MLStabThres is used only when CTModeRun is '-1'.
+#CTModeRun
+-1
+! Default :: -1
+#MLStabThres
+1.0d-5
+! Default :: 1.0d-5
+
+!     =================================================================================
+!     The parameters below set two CutTools internal parameters accessible to the user. 
+!     =================================================================================
+
+!     Choose here what library to chose for CutTools to compute the scalar loops of the
+!     master integral basis. The choices are as follows:
+!     2 | AVH
+!     3 | QCDLoop
+#CTLoopLibrary
+3
+! Default :: 3
+
+!     Choose here the stability threshold used within CutTools to decide when to go to
+!     higher precision.
+#CTStabThres
+1.0d-2
+! Default :: 1.0d-2
+
+!     =================================================================================
+!     The parameters below set the general behavior of MadLoop for the initialization
+!     =================================================================================
+
+!     Decide in which mode to set CutTools when performing MadLoop's initialization of
+!     the helicity (and possibly loop) filter. The possible modes are:
+!
+!     imode:|  actions performed by ctsxcut:                                     
+!           |                                                                    
+!      	0   | (dp_dir,dp_inv)-> dp_Atest -> stable -> (only if stable=.false.) ->
+!	        | (mp_dir,mp_inv)-> mp_Atest -> stable                                
+!       1   | (dp_dir)       -> dp_Ntest -> stable                               
+!       2   | (dp_inv)       -> dp_Ntest -> stable                               
+!       3   | (dp_dir,dp_inv)-> dp_Atest -> stable                               
+!       4   | (mp_dir)       -> mp_Ntest -> stable                                 
+!       5   | (mp_inv)       -> mp_Ntest -> stable                                
+!       6   | (mp_dir,mp_inv)-> mp_Atest -> stable                               
+!
+#CTModeInit
+0
+! Default :: 0
+
+!     CheckCycle sets on how many PS points trials the initialization filters must be 
+!     obtained. As long as MadLoop does not find that many consecutive PS points for 
+!     which the filters are the same, it will start over but only a maximum of
+!     MaxAttempts times.
+#CheckCycle
+3
+! Default :: 3
+#MaxAttempts
+10
+! Default :: 10
+
+!     Some loop contributions my be zero for some helicities which are however
+!     contributing. In order to save their computing time, you can chose here to try
+!     to filter them out. As the gain is minimal, this option is turned off by default.
+#UseLoopFilter
+.TRUE.
+! Default .TRUE.
+
+/* End of param file */

@@ -23,6 +23,8 @@ import logging
 import itertools
 import math
 
+import aloha
+
 import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -150,6 +152,16 @@ class LoopHelasUVCTAmplitude(helas_objects.HelasAmplitude):
                                     'UVCT_couplings': self['UVCT_couplings'], \
                                     'UVCT_orders': self['UVCT_orders'], \
                                     'type': self['type']})
+        
+    def get_helas_call_dict(self, index=1, OptimizedOutput=False):
+        """ return a dictionary to be used for formatting
+        HELAS call. """
+        
+        
+        out = helas_objects.HelasAmplitude.get_helas_call_dict(self, 
+                index=index,OptimizedOutput=OptimizedOutput)
+        out['uvct'] = self.get_UVCT_couplings()
+        return out
 
 #===============================================================================
 # LoopHelasAmplitude
@@ -302,24 +314,25 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
                    HelasAmplitude"
         
         self.set('mothers',helas_objects.HelasWavefunctionList())
-        # Keep in mind that the two first wavefunctions are the L-cut particles
-        for lwf in self.get('wavefunctions')[2:]:
+        for lwf in [wf for wf in self.get('wavefunctions') if wf.get('mothers')]:
             mothersList=[wf for wf in lwf.get('mothers') if not wf['is_loop']]
             self['mothers'].extend(mothersList)
             self['pairing'].append(len(mothersList))
-        mothersList=[wf for wf in self.get('amplitudes')[0].get('mothers') \
-                            if not wf['is_loop']]
-        self['mothers'].extend(mothersList)
-        self['pairing'].append(len(mothersList))
 
     def get_masses(self):
         """ Returns the list of the masses of the loop particles as they should
         appear for cuttools (L-cut particles specified last) """
         
         masses=[]
-        for wf in self.get('wavefunctions')[2:]:
-            masses.append(wf.get('mass'))
-        masses.append(self.get('wavefunctions')[0].get('mass'))
+        if not aloha.complex_mass:
+            for lwf in [wf for wf in self.get('wavefunctions') if wf.get('mothers')]:
+                    masses.append(lwf.get('mass'))
+        else:
+            for lwf in [wf for wf in self.get('wavefunctions') if wf.get('mothers')]:
+                if (lwf.get('width') == 'ZERO' or lwf.get('mass') == 'ZERO'):
+                    masses.append(lwf.get('mass'))
+                else: 
+                    masses.append('CMASS_%s' % lwf.get('mass'))
         return masses
 
     def get_couplings(self):
@@ -329,13 +342,40 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
 
         return (sum([wf.get('coupling') for wf in self.get('wavefunctions') if \
              wf.get('coupling')!=['none']],[])\
-             +sum([amp.get('coupling') for amp in self.get('amplitudes')],[]))
+             +sum([amp.get('coupling') for amp in self.get('amplitudes') if \
+             amp.get('coupling')!=['none']],[]))
+
+    def get_helas_call_dict(self,OptimizedOutput=False):
+        """ return a dictionary to be used for formatting
+        HELAS call. """
+        
+        output = {}
+        output['numLoopLines']='_%d'%(len(self.get('wavefunctions'))-2)
+        if len(self.get('mothers'))!=len(self.get('coupling')):
+            output['numMotherWfs']='_%d'%len(self.get('mothers'))
+        else:
+            output['numMotherWfs']=''            
+        for i, pairing in enumerate(self.get('pairing')):
+            output["Pairing%d"%i]=pairing
+        output['numCouplings']='_%d'%len(self.get('coupling'))
+        output['numeratorNumber']=self.get('number')
+        output['ampNumber']=self.get('amplitudes')[0].get('number')
+        for i , wf in enumerate(self.get('mothers')):
+            output["MotherID%d"%(i+1)]=wf.get('number')
+            output["MotherStatus%d"%(i+1)]=wf.get_momentum_place()
+        for i , mass in enumerate(self.get_masses()):
+            output["LoopMass%d"%(i+1)]=mass
+        for i , coupling in enumerate(self.get('coupling')):
+            output["LoopCoupling%d"%(i+1)]=coupling
+        output["LoopRank"]=self.get_rank()
+        output["LoopSymmetryFactor"]=self.get('loopsymmetryfactor')
+        return output
 
     def get_call_key(self):
         """ The helas call to a loop is simple and only depends on the number
         of loop lines and mothers. This how it is reflected in the call key. """
         
-        return ("LOOP",len(self.get('wavefunctions'))-1,\
+        return ("LOOP",len(self.get('wavefunctions'))-2,\
                 len(self.get('mothers')),len(self.get('coupling')))
 
     def get_rank(self):
@@ -349,18 +389,11 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         # First add one power for each fermion propagator
         rank=rank+len([ wf for wf in self.get('wavefunctions') if \
                        wf.get('mothers') and wf.is_fermion()])
-        # Add one if the L-cut particle is a fermion
-        if True in [ wf.is_fermion() for wf in self.get('wavefunctions') if \
-                       not wf.get('mothers')]:
-            rank=rank+1
+        
         # Add one for each three-boson vertex
         rank=rank+len([ wf for wf in self.get('wavefunctions') if \
                        wf.is_boson() and len([w for w in wf.get('mothers') \
                          if w.is_boson()])==2])
-        # Counting the amplitude as well (there is only one normally)
-        rank=rank+len([ amp for amp in self.get('amplitudes') if \
-                        len([w for w in amp.get('mothers') \
-                         if w.is_boson()])==3])
         return rank
 
     def calculate_fermionfactor(self):
@@ -373,8 +406,8 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         for the SM only where all symmetry factors are 1 except for the gluon bubble which
         exhibits a factor 2."""
         
-        if len(self.get('wavefunctions'))==3 and \
-           len([wf for wf in self.get('wavefunctions') if wf.get('pdg_code')==21])==3:
+        if len(self.get('wavefunctions'))==4 and \
+           len([wf for wf in self.get('wavefunctions') if wf.get('pdg_code')==21])==4:
             self['loopsymmetryfactor']=2
         else:
             self['loopsymmetryfactor']=1
@@ -1013,9 +1046,6 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             for i in range(len(tag)):
                 tag[i][2]=loop_vertices[i]
             
-            # Single out last tag element, since this will give amplitude
-            lastTagElem = tag.pop()
-            
             # Copy the ct vertices of the loop
             ct_vertices = copy.copy(diagram.get('CT_vertices'))      
 
@@ -1131,12 +1161,12 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             # Go through all vertices except the last and create
             # wavefunctions
             
-            def process_last_tag_Elem(tagElem, wfNumber, amplitudeNumber):
+            def create_amplitudes(lastvx, wfNumber, amplitudeNumber):
                 """Treat the last tag element of the loop diagram (which 
                 provides an amplitude)"""
                 # First create the other external loop leg closing the loop.
-                lastvx=lastTagElem[2]  
-                lastvx_structureIDs=lastTagElem[1]
+                # It will not be in the final output, and in this sense, it is
+                # a dummy wavefunction, but it is structurally important.
                 other_external_loop_wf=helas_objects.HelasWavefunction()
                 wfNumber=wfNumber+1
                 for leg in [leg for leg in lastvx['legs'] if leg['loop_line']]:
@@ -1150,96 +1180,60 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 
                 for last_loop_wf, color_list in zip(last_loop_wfs,color_lists):
                     # Now generate HelasAmplitudes from the last vertex.
-                    if not lastvx.get('id'):
+                    if lastvx.get('id')!=-1:
                         raise self.PhysicsObjectError, \
-                          "A decay chain placeholder was found in a loop diagram." 
-                    inter = model.get_interaction(lastvx.get('id'))
-                        
-                    keys = sorted(inter.get('couplings').keys())
-                    pdg_codes = [p.get_pdg_code() for p in \
-                                     inter.get('particles')]
+                          "The amplitude vertex of a loop diagram must be a "+\
+                          "two point vertex with id=-1" 
 
-                    (motherslist, colorlists), wfNumber = getloopmothers(\
-                      helas_objects.HelasWavefunctionList(\
-                                [other_external_loop_wf,last_loop_wf]), \
-                      lastvx_structureIDs, color_list, \
-                      diagram_wavefunctions, wfNumber)
-                    
-                    for mothers, structcolorlist in zip(motherslist, colorlists):
-                        mothers.sort_by_pdg_codes(pdg_codes, 0)[0]      
-                        # Need to check for clashing fermion flow due to
-                        # Majorana fermions, and modify if necessary
-                        wfNumber = mothers.check_and_fix_fermion_flow(wavefunctions,
-                                                  diagram_wavefunctions,
-                                                  external_wavefunctions,
-                                                  None,
-                                                  wfNumber,
-                                                  False,
-                                                  [])
-                        done_color = {}
-                        for i, coupl_key in enumerate(keys):
-                            color = coupl_key[0]
-                            if color in done_color.keys():
-                                amp, loop_amp = done_color[color]
-                                amp.get('coupling').append(inter.get('couplings')[coupl_key])
-                                amp.get('lorentz').append(inter.get('lorentz')[coupl_key[1]])
-                                # Update the coupling attribute of the loop_amp
-                                loop_amp.set('coupling',loop_amp.get_couplings())
-                                continue
-                            amp = helas_objects.HelasAmplitude(lastvx, model)
-                            amp.set('coupling', [inter.get('couplings')[coupl_key]])
-                            amp.set('lorentz', [inter.get('lorentz')[coupl_key[1]]])
-                            if inter.get('color'):
-                                amp.set('inter_color', inter.get('color')[color])
-                            amp.set('color_key', color) 
-                            amp.set('mothers', mothers)
+                    amp = helas_objects.HelasAmplitude(lastvx, model)
+                    amp.set('interaction_id',-1)
+                    amp.set('mothers', helas_objects.HelasWavefunctionList(\
+                                [last_loop_wf,other_external_loop_wf]))
+                    amp.set('pdg_codes',[last_loop_wf.get_pdg_code(),
+                                     other_external_loop_wf.get_pdg_code()])
                             ###print "mothers added for amp="
                             ###for wf in mothers:
                             ###    print "    mother =",wf['number_external'],"("+str(wf.get_pdg_code())+") number=",wf['number']                             
                             # Add the list with color indices to the amplitude
-                            new_color_list = copy.copy(color_list)+\
-                                               copy.copy(structcolorlist)
-                            new_color_list.append(color)
-                            amp.set('color_indices', new_color_list)
-                            # Add this amplitude to the LoopHelasAmplitude of this
-                            # diagram.
-                            amplitudeNumber = amplitudeNumber + 1
-                            amp.set('number', amplitudeNumber)
-                            amp.set('type','loop')
-                            loop_amp = LoopHelasAmplitude()
-                            loop_amp.set('amplitudes',\
-                              helas_objects.HelasAmplitudeList([amp,]))
-                            # Set the loop wavefunctions building this amplitude
-                            # by tracking them from the last loop wavefunction
-                            # added and its loop wavefunction among its mothers
-                            loop_amp_wfs=helas_objects.HelasWavefunctionList(\
-                              [last_loop_wf,])
-                            while loop_amp_wfs[-1].get('mothers'):
-                              loop_amp_wfs.append([lwf for lwf in \
-                                loop_amp_wfs[-1].get('mothers') if lwf['is_loop']][0])
-                            # Sort the loop wavefunctions of this amplitude
-                            # according to their correct order of creation for 
-                            # the HELAS calls (using their 'number' attribute
-                            # would work as well, but I want something less naive)
-                            # 1) Add the other L-cut particle at the end
-                            loop_amp_wfs.append(other_external_loop_wf)
-                            # 2) Reverse to have a consistent ordering of creation
-                            # of helas wavefunctions.
-                            loop_amp_wfs.reverse()
-                            # Sort the loop wavefunctions of this amplitude
-                            # according to their number.
-                            #loop_amp_wfs.sort(lambda wf1, wf2: \
-                            #  wf1.get('number') - wf2.get('number'))
-                            loop_amp.set('wavefunctions',loop_amp_wfs)
-                            loop_amp.set('type',diagram.get('type'))
-                            loop_amp.set('number',min([amp.get('number') for amp
-                                                       in loop_amp.get('amplitudes')]))
-                            loop_amp.set('coupling',loop_amp.get_couplings())
-                            helas_diagram.get('amplitudes').append(loop_amp)
-                            # Save amp and loop_amp to the corresponding color
-                            # in order to reuse them if the vertex has other
-                            # lorentz structure linked to the same color one
-                            done_color[color] = (amp, loop_amp)
+
+                    amp.set('color_indices', copy.copy(color_list))
+                    # Add this amplitude to the LoopHelasAmplitude of this
+                    # diagram.
+                    amplitudeNumber = amplitudeNumber + 1
+                    amp.set('number', amplitudeNumber)
+                    amp.set('type','loop')
+                    loop_amp = LoopHelasAmplitude()
+                    loop_amp.set('amplitudes',\
+                      helas_objects.HelasAmplitudeList([amp,]))
+                    # Set the loop wavefunctions building this amplitude
+                    # by tracking them from the last loop wavefunction
+                    # added and its loop wavefunction among its mothers
+                    loop_amp_wfs=helas_objects.HelasWavefunctionList(\
+                      [last_loop_wf,])
+                    while loop_amp_wfs[-1].get('mothers'):
+                      loop_amp_wfs.append([lwf for lwf in \
+                        loop_amp_wfs[-1].get('mothers') if lwf['is_loop']][0])
+                    # Sort the loop wavefunctions of this amplitude
+                    # according to their correct order of creation for 
+                    # the HELAS calls (using their 'number' attribute
+                    # would work as well, but I want something less naive)
+                    # 1) Add the other L-cut particle at the end
+                    loop_amp_wfs.append(other_external_loop_wf)
+                    # 2) Reverse to have a consistent ordering of creation
+                    # of helas wavefunctions.
+                    loop_amp_wfs.reverse()
+                    # Sort the loop wavefunctions of this amplitude
+                    # according to their number.
+                    #loop_amp_wfs.sort(lambda wf1, wf2: \
+                    #  wf1.get('number') - wf2.get('number'))
+                    loop_amp.set('wavefunctions',loop_amp_wfs)
+                    loop_amp.set('type',diagram.get('type'))
+                    # 'number' is not important as it will be redefined later.
+                    loop_amp.set('number',min([amp.get('number') for amp
+                                               in loop_amp.get('amplitudes')]))
+                    loop_amp.set('coupling',loop_amp.get_couplings())
+                    helas_diagram.get('amplitudes').append(loop_amp)
+
                 return wfNumber, amplitudeNumber
                 
             def process_counterterms(ct_vertices, wfNumber, amplitudeNumber):
@@ -1249,7 +1243,6 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 structIDs=[]
                 for tagElem in tag:
                     structIDs += tagElem[1]
-                structIDs += lastTagElem[1]
                 # Here we call getloopmothers without any incoming loop
                 # wavefunctions such that the function will return exactly
                 # the mother of the counter-term amplitude we wish to create
@@ -1310,8 +1303,8 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                   
             # Generate all amplitudes corresponding to the different
             # copies of this diagram
-            wavefunctionNumber, amplitudeNumber = process_last_tag_Elem(lastTagElem, \
-                                          wavefunctionNumber, amplitudeNumber)
+            wavefunctionNumber, amplitudeNumber = create_amplitudes(
+                         loop_vertices[-1], wavefunctionNumber, amplitudeNumber)
 
             # Add now the counter-terms vertices
             if ct_vertices:
@@ -1381,7 +1374,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         for amp in self.get_all_amplitudes():
             amp.set('mothers', helas_objects.HelasMatrixElement.sorted_mothers(amp))
             amp.set('color_indices', amp.get_color_indices())
-            
+
         for loopdiag in self.get_loop_diagrams():
             for loopamp in loopdiag.get_loop_amplitudes():
                 loopamp.set_mothers_and_pairing()
@@ -1389,7 +1382,6 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
     def find_max_loop_coupling(self):
         """ Find the maximum number of loop couplings appearing in any of the
         LoopHelasAmplitude in this LoopHelasMatrixElement"""
-        
         return max([len(amp.get('coupling')) for amp in \
             sum([d.get_loop_amplitudes() for d in self.get_loop_diagrams()],[])])
 
@@ -1426,7 +1418,9 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             for amp in borndiag.get('amplitudes'):
                 amp.set('number',ampnumber)
                 ampnumber=ampnumber+1
-        ampnumber=1
+        # We want first the CT amplitudes and only then the loop ones.
+        CT_ampnumber=1
+        loop_ampnumber=self.get_number_of_CT_amplitudes()+1
         # Now the loop ones
         for loopdiag in self.get_loop_diagrams():
             for wf in loopdiag.get('wavefunctions'):
@@ -1438,19 +1432,19 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                     loopwf.set('number',loopwfnumber)
                     loopwfnumber=loopwfnumber+1
                 for amp in loopamp['amplitudes']:
-                    amp.set('number',ampnumber)
-                    ampnumber=ampnumber+1
+                    amp.set('number',loop_ampnumber)
+                    loop_ampnumber=loop_ampnumber+1
             for ctamp in loopdiag.get_ct_amplitudes():
-                    ctamp.set('number',ampnumber)
-                    ampnumber=ampnumber+1
+                    ctamp.set('number',CT_ampnumber)
+                    CT_ampnumber=CT_ampnumber+1
         # Finally the loopUVCT ones
         for loopUVCTdiag in self.get_loop_UVCT_diagrams():
             for wf in loopUVCTdiag.get('wavefunctions'):
                 wf.set('number',wfnumber)
                 wfnumber=wfnumber+1
             for amp in loopUVCTdiag.get('amplitudes'):
-                amp.set('number',ampnumber)
-                ampnumber=ampnumber+1            
+                amp.set('number',CT_ampnumber)
+                CT_ampnumber=CT_ampnumber+1            
     
     def get_number_of_wavefunctions(self):
         """Gives the total number of wavefunctions for this ME, including the
@@ -1481,6 +1475,13 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         ones."""
 
         return len(self.get_all_amplitudes())
+
+    def get_number_of_CT_amplitudes(self):
+        """Gives the total number of CT amplitudes for this ME. (i.e the amplitudes
+        which are not LoopHelasAmplitudes nor within them.)"""
+
+        return sum([len(d.get_ct_amplitudes()) for d in (self.get_loop_diagrams()+
+                    self.get_loop_UVCT_diagrams())])
 
     def get_number_of_external_amplitudes(self):
         """Gives the total number of amplitudes for this ME, excluding those
@@ -1545,7 +1546,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         # which removes the denominator in the propagator of the wavefunction created.
         output = []
         for wa in self.get_all_wavefunctions() + self.get_all_amplitudes():
-            if wa.get('interaction_id') == 0:
+            if wa.get('interaction_id') in [0,-1]:
                 continue
             
             tags = ['C%s' % w for w in wa.get_conjugate_index()]

@@ -36,7 +36,7 @@ try:
 except:
     GNU_SPLITTING = True
 
-
+import aloha
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
@@ -406,7 +406,16 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   fortran_compiler NAME")
         logger.info("      (default None) Force a specific fortran compiler.")
         logger.info("      If None, it tries first g77 and if not present gfortran.")
-
+        logger.info("   fks_mode real/born")
+        logger.info("      (default real) Build the real-emission contributions")
+        logger.info("      from the real or born topologies.")
+        logger.info("   loop_optimized_output True/Flase")
+        logger.info("      Abandon the JAMP structure in order to bring considerable")
+        logger.info("      improvement in running time.")
+        logger.info("   gauge unitary|Feynman")        
+        logger.info("      (default unitary) choose the gauge.")
+        logger.info("   complex_mass_scheme True|False")        
+        logger.info("      (default False) Set complex mass scheme.")
 
 #===============================================================================
 # CheckValidForCmd
@@ -522,7 +531,7 @@ class CheckValidForCmd(cmd.CheckCmd):
 
         if args[0] not in self._check_opts:
             args.insert(0, 'full')
-        
+
         if any([',' in elem for elem in args]):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
@@ -778,6 +787,10 @@ This will take effect only in a NEW terminal
     def check_set(self, args):
         """ check the validity of the line"""
         
+        if len(args) == 1 and args[0] in ['complex_mass_scheme',\
+                                          'loop_optimized_output']:
+            args.append('True')
+        
         if len(args) < 2:
             self.help_set()
             raise self.InvalidCmd('set needs an option and an argument')
@@ -801,10 +814,19 @@ This will take effect only in a NEW terminal
             if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL']:
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')       
+
         if args[0] in ['fks_mode']:
             if args[1] not in ['born', 'real']:
                 raise self.InvalidCmd('fks_mode needs argument real or born')       
+
+        if args[0] in ['loop_optimized_output']:
+            if args[1] not in ['True', 'False']:
+                raise self.InvalidCmd('loop_optimized_output needs argument True or False') 
     
+        if args[0] in ['gauge']:
+            if args[1] not in ['unitary','Feynman']:
+                raise self.InvalidCmd('gauge needs argument unitary or Feynman.')       
+				      
     def check_open(self, args):
         """ check the validity of the line """
         
@@ -1354,12 +1376,17 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text, opts)
 
         if len(args) == 2:
-            if args[1] in ['group_subprocesses']:
-                return self.list_completion(text, ['False', 'True', 'Auto'])
+            if args[1] in ['group_subprocesses', 'complex_mass_scheme',\
+                           'loop_optimized_output']:
+                return self.list_completion(text, ['False', 'True'])
             
+            elif args[1] in ['fks_mode']:
+                return self.list_completion(text, ['None', 'born', 'real'])
+
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
-            
+            elif args[1] == 'gauge':
+                return self.list_completion(text, ['unitary', 'Feynman'])
             elif args[1] == 'stdout_level':
                 return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR','CRITICAL'])
         
@@ -1576,17 +1603,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _save_opts = ['model', 'processes', 'options']
     _tutorial_opts = ['start', 'stop']
     _switch_opts = ['mg5','aMC@NLO','ML5']
-    _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
+    _check_opts = ['full', 'permutation', 'gauge', 'lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
-    _nlo_export_formats = ['NLO']
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
                     'stdout_level',
                     'fortran_compiler',
-                    'fks_mode']
+                    'fks_mode','loop_optimized_output','complex_mass_scheme']
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
@@ -1636,10 +1662,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._mgme_dir = MG4DIR
         self._comparisons = None
 
+
         # Set defaults for options
         self.options['group_subprocesses'] = 'Auto'
         self.options['ignore_six_quark_processes'] = False
         self.options['fks_mode'] = 'born'
+        self.options['loop_optimized_output'] = False
         
         # Load the configuration file
         self.set_configuration()
@@ -1657,6 +1685,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()    
+        
+        self._v4_export_formats = ['madevent', 'standalone', 'matrix'] 
+        self._export_formats = self._v4_export_formats + ['standalone_cpp', 'pythia8']
     
     def do_quit(self, line):
         """Do quit"""
@@ -1896,8 +1927,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text = "Current model contains %i parameters\n" % \
                     sum([len(part) for part in 
                                        self._curr_model['parameters'].values()])
-            
-            for key, item in self._curr_model['parameters'].items():
+            keys = self._curr_model['parameters'].keys()
+            def key_sort(x, y):
+                if ('external',) == x:
+                    return -1
+                elif ('external',) == y:
+                    return +1
+                elif  len(x) < len(y):
+                    return -1
+                else:
+                    return 1
+            keys.sort(key_sort)
+            for key in keys:
+                item = self._curr_model['parameters'][key]
                 text += '\nparameter type: %s\n' % str(key)
                 for value in item:
                     if hasattr(value, 'expr'):
@@ -1966,13 +2008,17 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         text+= '        %s = %s\n' % (value.name, value.expr)
 
             pydoc.pager(text)
-                    
+
         elif args[0] == 'couplings':
             if self._model_v4_path:
                 print 'No couplings information available in V4 model'
                 return
+            
             try:
                 ufomodel = ufomodels.load_model(self._curr_model.get('name'))
+                print 'Note that this is the UFO informations.'
+                print ' "display couplings" present the actual definition'
+                print 'prints the current states of mode'
                 print eval('ufomodel.couplings.%s.nice_string()'%args[1])
             except:
                 raise self.InvalidCmd, 'no couplings %s in current model' % args[1]
@@ -2134,9 +2180,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # run the check
         cpu_time1 = time.time()
         # Run matrix element generation check on processes
+        mass_scheme = self.options['complex_mass_scheme']
 
         comparisons = []
         gauge_result = []
+        gauge_result_no_brs = []
         lorentz_result =[]
         nb_processes = 0
         
@@ -2152,32 +2200,80 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                 mg_root=self._mgme_dir,
                                                 cuttools=CT_dir)
             nb_processes += len(comparisons[0])
+
+        if args[0] in ['lorentz', 'full']:
+            lorentz_result = process_checks.check_lorentz(myprocdef,
+                                                      param_card = param_card,
+                                                      mg_root=self._mgme_dir,
+                                                      cuttools=CT_dir,
+                                                      cmass_scheme = mass_scheme)
+            nb_processes += len(lorentz_result)
             
-        if args[0] in  ['gauge', 'full']:
+        if args[0] in  ['brs', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
                                                       param_card = param_card,
                                                       mg_root=self._mgme_dir,
-                                                      cuttools=CT_dir)
+                                                      cuttools=CT_dir,
+                                                      cmass_scheme = mass_scheme)
             nb_processes += len(gauge_result)
+
             
         if args[0] in ['lorentz_invariance', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
                                                       param_card = param_card,
                                                       mg_root=self._mgme_dir,
-                                                      cuttools=CT_dir)
+                                                      cuttools=CT_dir,
+                                                      cmass_scheme=mass_scheme)
             nb_processes += len(lorentz_result)
+
+        if args[0] in  ['gauge', 'full'] and len(self._curr_model.get('gauge')) == 2:            
+            gauge = str(self.options['gauge'])
+            line = " ".join(args[1:])
+            myprocdef = self.extract_process(line)
+            model_name = self._curr_model['name']
+            if gauge == 'unitarity':
+                myprocdef_unit = myprocdef
+                self.do_set('gauge Feynman', log=False)
+                self.do_import('model %s' % model_name)
+                myprocdef_feyn = self.extract_process(line)
+            else:
+                myprocdef_feyn = myprocdef
+                self.do_set('gauge unitary', log=False)
+                self.do_import('model %s' % model_name)
+                myprocdef_unit = self.extract_process(line)            
+            
+            gauge_result_no_brs = process_checks.check_unitary_feynman(
+                                                myprocdef_unit, myprocdef_feyn,
+                                                param_card = param_card,
+                                                mg_root=self._mgme_dir,
+                                                cuttools=self._cuttools_dir,
+                                                cmass_scheme = mass_scheme)
+            
+            # restore previous settings
+            self.do_set('gauge %s' % gauge, log=False)
+            self.do_import('model %s' % model_name)
+            
+            nb_processes += len(gauge_result_no_brs)            
+            
             
         cpu_time2 = time.time()
 
-        logger.info("%i processes checked in %0.3f s" \
+        logger.info("%i checked performed in %0.3f s" \
                     % (nb_processes,
                       (cpu_time2 - cpu_time1)))
 
-        text = ""
-
+        if mass_scheme:
+            text = "Note that Complex mass scheme gives gauge/lorentz invariant\n"
+            text+= "results only for stable particles in final states.\n\n"
+        else:
+            text = "Note That all width have been set to zero for those checks\n\n"
+            
         if gauge_result:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'
+        if gauge_result_no_brs:
+            text += 'Gauge results (switching between Unitary/Feynman):\n'
+            text += process_checks.output_unitary_feynman(gauge_result_no_brs) + '\n'
 
         if lorentz_result:
             text += 'Lorentz invariance results:\n'
@@ -2194,7 +2290,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         for i, logger in enumerate(loggers):
             logger.setLevel(old_levels[i])
 
-        return
+        # clean the globals created.
+        process_checks.clean_added_globals(process_checks.ADDED_GLOBAL)
     
     # Generate a new amplitude
     def do_generate(self, line):
@@ -2311,6 +2408,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Now check for forbidden particles, specified using "/"
         slash = line.find("/")
+        dollar = line.find("$")
         dollar = line.find("$")
         forbidden_particles = ""
         if slash > 0:
@@ -2615,11 +2713,29 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 try:
                     self._curr_model = import_ufo.import_model(args[1])
                 except import_ufo.UFOImportError, error:
-                    logger_stderr.warning('WARNING: %s' % error)
-                    logger_stderr.info('Trying to run `import model_v4 %s` instead.' \
+                    if 'not a valid UFO model' in str(error):
+                        logger_stderr.warning('WARNING: %s' % error)
+                        logger_stderr.warning('Try to recover by running automatically `import model_v4 %s` instead.' \
                                                                       % args[1])
-                    self.exec_cmd('import model_v4 %s ' % args[1], precmd=True)
-                    return
+                    self.exec_cmd('import model_v4 %s ' % args[1], precmd=True)    
+                if self.options['complex_mass_scheme']:
+                    self._curr_model.change_mass_to_complex_scheme()
+                    if hasattr(self._curr_model, 'set_parameters_and_couplings'):
+                        self._curr_model.set_parameters_and_couplings()
+                if self.options['gauge']=='unitary':
+                    if 1 not in self._curr_model.get('gauge') :
+                        logger.warning('Change the gauge to Feynman since the model does not allow unitary gauge') 
+                        self.do_set('gauge Feynman', log=False)
+                        self.do_import(line)
+                        return                        
+                else:
+                    if 0 not in self._curr_model.get('gauge') :
+                        logger.warning('Change the gauge to unitary since the model does not allow Feynman gauge')
+                        self._curr_model = None
+                        self.do_set('gauge unitary', log= False)
+                        self.do_import(line)
+                        return 
+                
                 self._curr_fortran_model = \
                       helas_call_writers.FortranUFOHelasCallWriter(\
                                                                self._curr_model)
@@ -2922,7 +3038,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def set_configuration(self, config_path=None, test=False):
         """ assign all configuration variable from file 
             ./input/mg5_configuration.txt. assign to default if not define """
-            
+
         self.options = {'pythia8_path': './pythia8',
                               'web_browser':None,
                               'eps_viewer':None,
@@ -2931,7 +3047,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                               'automatic_html_opening':True,
                               'group_subprocesses': 'Auto',
                               'ignore_six_quark_processes': False,
-                              'fks_mode': 'born'}
+                              'fks_mode': 'born',
+                              'loop_optimized_output':False,
+                              'complex_mass_scheme': False,
+                              'gauge':'unitary'}
                 
         if not config_path:
             try:
@@ -3197,7 +3316,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def do_set(self, line, log=True):
         """Set an option, which will be default for coming generations/outputs
         """
-
+	
         args = self.split_arg(line)
         
         # Check the validity of the arguments
@@ -3236,7 +3355,80 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
             if log:
                 logger.info('set output information to level: %s' % args[1])
-        
+
+        elif args[0] == "complex_mass_scheme":
+            old = self.options[args[0]] 
+            self.options[args[0]] = eval(args[1])
+            aloha.complex_mass = eval(args[1])
+            if not self._curr_model:
+                pass
+            elif self.options[args[0]]:
+                if old:
+                    if log:
+                        logger.info('Complex mass already activated.')
+                    return
+                if log:
+                    logger.info('Activate complex mass scheme.')
+                self._curr_model.change_mass_to_complex_scheme()
+                if hasattr(self._curr_model, 'set_parameters_and_couplings'):
+                        self._curr_model.set_parameters_and_couplings()
+            else:
+                if not old:
+                    if log:
+                        logger.info('Complex mass already desactivated.')
+                    return
+                if log:
+                    logger.info('Desactivate complex mass scheme.')
+                self.exec_cmd('import model %s' % self._curr_model.get('name'))
+
+        elif args[0] == "gauge":
+            
+            # Treat the case where they are no model loaded
+            if not self._curr_model:
+                if args[1] == 'unitary':
+                    aloha.unitary_gauge = True
+                else:
+                    aloha.unitary_gauge = False
+                self.options[args[0]] = args[1]
+                if log: logger.info('Pass to gauge %s.' % args[1])
+                return
+            
+            # They are a valid model
+            able_to_mod = True
+            if args[1] == 'unitary':
+                if 1 in self._curr_model.get('gauge'):		   
+                    aloha.unitary_gauge = True
+                else:
+                    able_to_mod = False
+                    if log: logger.warning('Note that unitary gauge is not allowed for your current model %s' \
+		                                     % self._curr_model.get('name'))
+            else:
+                if 0 in self._curr_model.get('gauge'):		   
+                    aloha.unitary_gauge = False
+                else:
+                    able_to_mod = False
+                    if log: logger.warning('Note that Feynman gauge is not allowed for your current model %s' \
+		                                     % self._curr_model.get('name'))
+            self.options[args[0]] = args[1]
+
+            #re-init all variable
+            model_name = self._curr_model.get('name')
+            self._curr_model = None
+            self._curr_amps = diagram_generation.AmplitudeList()
+            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+            self._curr_fortran_model = None
+            self._curr_cpp_model = None
+            self._curr_exporter = None
+            self._done_export = False
+            import_ufo._import_once = []
+            logger.info('Pass to gauge %s.' % args[1])
+            
+            if able_to_mod:
+                self.do_import('model %s' % model_name)
+            elif log:
+                logger.info('Note that you have to reload the model') 
+
+		
         elif args[0] == 'fortran_compiler':
             if args[1] != 'None':
                 if log:
@@ -3255,14 +3447,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._curr_amps = diagram_generation.AmplitudeList()
             self._fks_multi_proc = None
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-
+        elif args[0] == 'loop_optimized_output':
+            aloha.quad_precision = eval(args[1])
+            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+            self.options[args[0]] = eval(args[1])
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
             else:
                 self.options[args[0]] = args[1]             
 
-    
     def do_open(self, line):
         """Open a text file/ eps file / html file"""
         
@@ -3316,9 +3510,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Make a Template Copy
         if self._export_format == 'madevent':                
             if group_subprocesses:
-                self._curr_exporter = export_v4.ProcessExporterFortranMEGroup(\
+                if not self.options['complex_mass_scheme']:
+                    self._curr_exporter = export_v4.ProcessExporterFortranMEGroup(\
                                       self._mgme_dir, self._export_dir,
                                       not noclean)
+                else:
+                    self._curr_exporter = \
+                            export_v4.ProcessExporterFortranMEGroupComplexMass(\
+                                      self._mgme_dir, self._export_dir,
+                                      not noclean)                    
             else:
                 self._curr_exporter = export_v4.ProcessExporterFortranME(\
                                       self._mgme_dir, self._export_dir,
@@ -3326,7 +3526,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         elif self._export_format in ['standalone', 'matrix']:
             self._curr_exporter = export_v4.ProcessExporterFortranSA(\
-                                  self._mgme_dir, self._export_dir,not noclean)
+              self._mgme_dir, self._export_dir,not noclean, \
+              complex_mass_scheme=self.options['complex_mass_scheme'])
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif not os.path.isdir(self._export_dir):

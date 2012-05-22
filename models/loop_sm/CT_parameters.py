@@ -87,14 +87,14 @@ tWcft_UV = CTParameter(name = 'tWcft_UV',
                        texname = '\delta Z_t')
 
 bMass_UV = CTParameter(name = 'bMass_UV',
-                       type = 'real',
+                       type = 'complex',
                        value = {-1:'cond(MB,0.0,complex(0,1)*((G**2)/(16.0*cmath.pi**2))*(3.0*CF)*MB)',
                                  0:'cond(MB,0.0,complex(0,1)*((G**2)/(16.0*cmath.pi**2))*CF*(4.0-3.0*reglog(MB**2/MU_R**2))*MB)'
                                },
                        texname = '\delta m_b')
 
 tMass_UV = CTParameter(name = 'tMass_UV',
-                       type = 'real',
+                       type = 'cocomplex',
                        value = {-1:'cond(MT,0.0,complex(0,1)*((G**2)/(16.0*cmath.pi**2))*3.0*CF*MT)',
                                  0:'cond(MT,0.0,complex(0,1)*((G**2)/(16.0*cmath.pi**2))*CF*(4.0-3.0*reglog(MT**2/MU_R**2))*MT)'
                                },

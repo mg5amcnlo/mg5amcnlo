@@ -65,16 +65,11 @@ class ColorBasis(dict):
         for i, vertex in enumerate(diagram.get('vertices')):
             min_index, res_dict = self.add_vertex(vertex, diagram, model,
                             repl_dict, res_dict, min_index)
-            
 
         # Return an empty list if all entries are empty
         if all([cs == color_algebra.ColorString() \
                         for cs in res_dict.values()]):
             res_dict = {}
-        
-        
-
-
                     
         return res_dict
 
@@ -114,8 +109,14 @@ class ColorBasis(dict):
                 curr_color = curr_part.get_anti_color()
                 curr_pdg = curr_part.get_anti_pdg_code()
                 if not id0_rep:
-                    repl_dict[curr_num] = min_index
-                    min_index = min_index - 1
+                    if not ( diagram.get('vertices')[-1].get('id')==-1 and \
+                    vertex == diagram.get('vertices')[-2]):
+                        repl_dict[curr_num] = min_index
+                        min_index = min_index - 1
+                    else:
+                        repl_dict[curr_num] = \
+                          max(l.get('number') for l in \
+                                        diagram.get('vertices')[-1].get('legs'))
 
             # Take into account previous replacements
             try:
@@ -135,9 +136,13 @@ class ColorBasis(dict):
             pdg_codes.insert(0, last_pdg)
 
         # Order the legs according to the interaction particles
-        interaction_pdgs = [p.get_pdg_code() for p in \
-                            model.get_interaction(vertex.get('id')).\
-                            get('particles')]
+        if vertex.get('id')!=-1:
+            interaction_pdgs = [p.get_pdg_code() for p in \
+                                model.get_interaction(vertex.get('id')).\
+                                get('particles')]
+        else:
+            interaction_pdgs = [l.get('id') for l in vertex.get('legs')]
+            
 
         sorted_color_num_pairs = []
         #print "interactions_pdg=",interaction_pdgs
@@ -158,11 +163,14 @@ class ColorBasis(dict):
         # ... and the associated dictionary for replacement
         match_dict = dict(enumerate(list_numbers))
 
+        if vertex['id'] == -1:
+            return (min_index, res_dict)
+
         # Update the result dict using the current vertex ColorString object
         # If more than one, create different entries
         inter_color = model.get_interaction(vertex['id'])['color']
         inter_indices = [i for (i,j) in \
-                         model.get_interaction(vertex['id'])['couplings'].keys()]
+                        model.get_interaction(vertex['id'])['couplings'].keys()]
         
         # For colorless vertices, return a copy of res_dict
         # Where one 0 has been added to each color index chain key

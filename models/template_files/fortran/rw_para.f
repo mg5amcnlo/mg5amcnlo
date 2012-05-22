@@ -12,8 +12,7 @@ c************************************************************************
       character*(*) param_name
       logical readlha
 
-      include 'coupl.inc'
-      include 'input.inc'
+      %(includes)s
 
       integer maxpara
       parameter (maxpara=5000)

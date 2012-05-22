@@ -389,7 +389,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
 
                 if checkColor:
                     numEntries=1
-                    for vert in diag['vertices']:
+                    for vert in [v for v in diag['vertices'] if v['id']!=-1]:
                         numColorKeys=\
           len(process['model'].get('interaction_dict')[vert['id']].get('color'))
                         if numColorKeys>1:
@@ -689,15 +689,15 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         myloopamplitude.generate_diagrams()
         
         ME=self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
-        target_lorentz=[(('R2_QQ_1',), (), 0), (('FFV1',), ('L',), 1)]
-        target_lorentz+=[(('FFV1',), ('L',), 0), (('VVVV3',), ('L',), 0)]
-        target_lorentz+=[(('R2_GG_1', 'R2_GG_2'), (), 0), (('R2_GG_1', 'R2_GG_3'), (), 0)]
-        target_lorentz+=[(('FFV1',), ('L',), 3), (('VVVV3',), ('L',), 1), (('VVVV4',), ('L',), 0)]
-        target_lorentz+=[(('VVV1',), (), 0), (('GHGHG',), ('L',), 0), (('VVV1',), (), 1)]
-        target_lorentz+=[(('GHGHG',), ('L',), 1),(('VVVV1',), ('L',), 0), (('VVVV1',), ('L',), 1)]
-        target_lorentz+=[(('VVV1',), ('L',), 1), (('VVV1',), ('L',), 0),(('VVV1',), ('L',), 0)]
-        target_lorentz+=[(('FFV1',), (), 2), (('FFV1',), (), 3),(('FFV1',), (), 0)]
-        target_lorentz+=[(('FFV1',), (), 1), (('VVVV4',), ('L',), 1), (('R2_GG_1',), (), 0)]
+        target_lorentz=[(('VVVV1',), ('L',), 1), (('FFV1',), (), 1),
+                        (('R2_GG_1', 'R2_GG_3'), (), 0), 
+                        (('VVV1',), ('L',), 1), (('FFV1',), ('L',), 1),
+                        (('FFV1',), (), 0), (('GHGHG',), ('L',), 1),
+                        (('VVV1',), (), 0), (('FFV1',), (), 2), 
+                        (('R2_GG_1', 'R2_GG_2'), (), 0), (('VVV1',), (), 1),
+                        (('FFV1',), ('L',), 3), (('FFV1',), (), 3),
+                        (('R2_GG_1',), (), 0), (('VVVV4',), ('L',), 1), 
+                        (('R2_QQ_1',), (), 0), (('VVVV3',), ('L',), 1)]
         self.assertEqual(set(target_lorentz),set(ME.get_used_lorentz()))
 
     def test_helas_diagrams_gd_ggd(self):
