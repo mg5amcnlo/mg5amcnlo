@@ -289,7 +289,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 self._curr_exporter = export_fks_born.ProcessExporterFortranFKS_born(\
                                           self._mgme_dir, self._export_dir,
                                           not noclean, 
-                                          self.options['complex_mass_scheme'], False,
+                                          self.options['complex_mass_scheme'], True,
                                           os.path.join(self._mgme_dir, 'loop_material'),
                                           self._cuttools_dir)
             
