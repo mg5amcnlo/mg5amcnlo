@@ -279,12 +279,12 @@ c should not be used if wgtkin(0,1,*)=-99
          wgtwnstmpmuf=0.d0
          wgtwnstmpmur=0.d0
          wgtref_nbody=0.d0
-         do i=1,nexternal
-            do j=0,3
-               wgtkin_all(j,i,k,0)=0.d0
-            enddo
-         enddo
          do k=1,4
+            do i=1,nexternal
+               do j=0,3
+                  wgtkin_all(j,i,k,0)=0.d0
+               enddo
+            enddo
             wgtxbj_all(1,k,0)=0.d0
             wgtxbj_all(2,k,0)=0.d0
             wgtkin_all(0,1,k,0)=-99.d0
@@ -924,10 +924,10 @@ c Should cause the code to crash if used
             if(wgtwreal(k).ne.0.d0.or.
      #         wgtwdeg(k).ne.0.d0.or.
      #         wgtwdegmuf(k).ne.0.d0.or.
-     #         (k.eq.2.and.(wgtwborn(k).ne.0.d0.or.
-     #                      wgtwns(k).ne.0.d0.or.
-     #                      wgtwnsmuf(k).ne.0.d0.or.
-     #                      wgtwnsmur(k).ne.0.d0)))then
+     #         (k.eq.2.and.(wgtwborn(2).ne.0.d0.or.
+     #                      wgtwns(2).ne.0.d0.or.
+     #                      wgtwnsmuf(2).ne.0.d0.or.
+     #                      wgtwnsmur(2).ne.0.d0)))then
               write(*,*)'Error #2 in compute_rwgt_wgt_Sev'
               write(*,*)k,xbk(1),xbk(2)
               write(*,*)wgtwreal(k),wgtwdeg(k),wgtwdegmuf(k)
