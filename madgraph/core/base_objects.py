@@ -1106,7 +1106,6 @@ class Model(PhysicsObject):
             else:
                 expr = mass.name
             param_depend = self.get_parameter(expr)
-            print 'add', yukawa.name, param_depend.name, depend
             self.add_param(New_param, [param_depend])
             
             
@@ -1139,7 +1138,6 @@ class Model(PhysicsObject):
         """add the parameter in the list of parameter in a correct position"""
             
         pos = 0
-        print self.get('parameters').keys()
         for i,param in enumerate(self.get('parameters')[new_param.depend]):
             if param.name in depend_param:
                 pos = i + 1

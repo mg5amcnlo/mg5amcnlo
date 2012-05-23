@@ -110,41 +110,6 @@ class ModelReader(base_objects.Model):
             exec("def %s(%s):\n   return %s" % (func.name,
                                                 ",".join(func.arguments),
                                                 func.expr))
-#        # Pass in complex mass scheme:
-#        if cmass_scheme:
-#            for particle in self.get('particles'):
-#                 if particle.get('width') != 'ZERO':
-#                     try:
-#                         #if particle.get('spin') == 2: #fermion
-#                         exec("%(mass)s = %(mass)s + complex(0, 1/2) * %(width)s" % {'mass':particle.get('mass'), 'width': particle.get('width')})
-#                         #else:
-#                         #    exec("locals()[\'%(mass)s\'] = cmath.sqrt(%(mass)s**2 + complex(0,-1) * %(mass)s * %(width)s)" % {'mass':particle.get('mass'), 'width': particle.get('width')})
-#                         for param in external_parameters:
-#                             if param.name == particle.get('mass'):
-#                                 if particle.get('spin') == 2:
-#                                     print "%(mass)s - complex(0, 1/2) * %(width)s" % {'mass':particle.get('mass'), 'width':particle.get('width')}
-#                                     param.value = eval("%(mass)s + complex(0, 1/2) * %(width)s" % {'mass':particle.get('mass'), 'width':particle.get('width')}) 
-#                                 else:
-#                                     param.value = eval("cmath.sqrt(%(mass)s**2 + complex(0,-1) * %(mass)s * %(width)s)" % {'mass':particle.get('mass'), 'width':particle.get('width')}) 
-#                                 break
-#    
-#                     except Exception as error:
-#                         print 'mass not pass in complex scheme for', particle.get('name')
-#                         print error
-#                         pass
-#    
-#                     try:
-#                         exec("locals()[\'%s\'] = 0" % (particle.get('width')))
-#                         for param in external_parameters:
-#                             if param.name == particle.get('width'):
-#                                 param.value = 0
-#                                 break
-#                     except Exception as error:
-#                         print 'width not pass in complex scheme for', particle.get('name')
-#                         print error
-#                         pass
-
-
 
         # Extract derived parameters
         derived_parameters = []
@@ -158,7 +123,6 @@ class ModelReader(base_objects.Model):
         # Now calculate derived parameters
         for param in derived_parameters:
             try:
-                print "%s = %s" % (param.name, param.expr)
                 exec("locals()[\'%s\'] = %s" % (param.name, param.expr))
             except Exception as error:
                 msg = 'Unable to evaluate %s: raise error: %s' % (param.expr, error)

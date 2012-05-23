@@ -1582,6 +1582,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'ignore_six_quark_processes',
                     'stdout_level',
                     'fortran_compiler',
+                    'gauge',
                     'complex_mass_scheme']
 
     # Variables to store object information
