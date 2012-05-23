@@ -104,6 +104,14 @@ class Banner(dict):
         new_seed_str = "     %s       = iseed" % seed
         self['mgruncard'] = p.sub(new_seed_str, self['mgruncard'])
     
+    def add_generation_info(self, cross, nb_event):
+        """add info on MGGeneration"""
+        
+        text = """
+#  Number of Events        :       %s
+#  Integrated weight (pb)  :       %s
+""" % (nb_event, cross)
+        self['MGGenerationInfo'] = text
     
     ############################################################################
     #  SPLIT BANNER

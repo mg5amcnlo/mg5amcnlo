@@ -1622,7 +1622,20 @@ class Diagram(PhysicsObject):
         this diagram"""
 
         return [len(v.get('legs')) for v in self.get('vertices')]
+
+    def get_num_configs(self, model, ninitial):
+        """Return the maximum number of configs from this diagram,
+        given by 2^(number of non-zero width s-channel propagators)"""
+
+        s_channels = [v.get_s_channel_id(model,ninitial) for v in \
+                              self.get('vertices')[:-1]]
+        num_props = len([i for i in s_channels if i != 0 and \
+                         model.get_particle(i).get('width').lower() != 'zero'])
         
+        if num_props <= 1:
+            return 1
+        else:
+            return 2**num_props
 #===============================================================================
 # DiagramList
 #===============================================================================
@@ -2125,7 +2138,11 @@ class Process(PhysicsObject):
         tmp = [(k,v) for (k,v) in expansion_orders.items() if 0 < v < 99]
         for (k,v) in tmp:  
             if k in orders:
-                orders[k] = min(orders[k], v)
+                if v < orders[k]:
+                    logger.warning('''The coupling order (%s=%s) specified is larger than the one allowed 
+             by the model builder. The maximal value allowed is %s. 
+             We set the %s order to this value''' % (k,orders[k],v,k))
+                    orders[k] = v
             else:
                 orders[k] = v
 

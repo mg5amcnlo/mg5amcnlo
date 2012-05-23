@@ -376,9 +376,7 @@ class MasterCmd(Switcher, MGcmd.MadGraphCmd, cmd.CmdShell):
             self.debug_link_to_command()      
         
 class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
- 
-    timeout = 1 # time authorize to answer question [0 is no time limit]
-    
+   
     def __init__(self, *arg, **opt):
     
         if os.environ.has_key('_CONDOR_SCRATCH_DIR'):
@@ -391,6 +389,8 @@ class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
         
         #standard initialization
         Switcher.__init__(self, mgme_dir = '', *arg, **opt)
+        
+        self.options['timeout'] = 1 # time authorize to answer question [0 is no time limit]
         
     def change_principal_cmd(self, name):
         if name == 'MadGraph':

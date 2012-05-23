@@ -1383,7 +1383,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             logger.info("Generate jpeg diagrams")
             for Pdir in P_dir_list:
                 os.chdir(Pdir)
-                subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+                try:
+                    subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+                                stdout = devnull)
+                except:
+                    os.system('chmod +x %s ' % os.path.join(old_pos, self.dir_path, 'bin', 'internal', '*'))
+                    subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
                                 stdout = devnull)
                 os.chdir(os.path.pardir)
 
@@ -2848,11 +2853,14 @@ class UFO_model_to_mg4(object):
                 
         # MG4 use G and not aS as it basic object for alphas related computation
         #Pass G in the  independant list
-        index = self.params_dep.index('G')
-        self.params_indep.insert(0, self.params_dep.pop(index))
-        index = self.params_dep.index('sqrt__aS')
-        self.params_indep.insert(0, self.params_dep.pop(index))
-        
+        if 'G' in self.params_dep:
+            index = self.params_dep.index('G')
+            G = self.params_dep.pop(index)
+        #    G.expr = '2*cmath.sqrt(as*pi)'
+        #    self.params_indep.insert(0, self.params_dep.pop(index))
+        # No need to add it if not defined   
+            
+            
     def build(self, wanted_couplings = [], full=True):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""
@@ -3004,7 +3012,7 @@ class UFO_model_to_mg4(object):
             if aloha.complex_mass:
                 already_def.add('cmass_%s' % particle.get('mass').lower())
 
-        is_valid = lambda name: name!='G' and name.lower() not in already_def
+        is_valid = lambda name: name !='G' and name.lower() not in already_def
         
         real_parameters = [param.name for param in self.params_dep + 
                             self.params_indep if param.type == 'real'
@@ -3035,7 +3043,7 @@ class UFO_model_to_mg4(object):
         fsock.write_comments(\
                 "Parameters that should not be recomputed event by event.\n")
         fsock.writelines("if(readlha) then\n")
-        
+        fsock.writelines("G = 2 * DSQRT(AS*PI) ! for the first init\n")
         for param in self.params_indep:
             if param.name == 'ZERO':
                 continue
@@ -3045,6 +3053,7 @@ class UFO_model_to_mg4(object):
         fsock.writelines('endif')
         
         fsock.write_comments('\nParameters that should be recomputed at an event by even basis.\n')
+        fsock.writelines("aS = G**2/4/pi\n")
         for param in self.params_dep:
             fsock.writelines("%s = %s\n" % (param.name,
                                             self.p_to_f.parse(param.expr)))

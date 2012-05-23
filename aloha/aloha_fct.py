@@ -73,4 +73,41 @@ def check_flow_validity(expression, nb_fermion):
                         raise WrongFermionFlow, 'Not coherent Incoming/outcoming fermion flow'
                     elif pos == i+1:
                         break
+   
+def guess_routine_from_name(names):
+    """ return (UFO name, tag , offshell) from a given name """
+    
+    output =[]
+    for name in names:
+        data = name.split('_')
+        if len(data) == 2:
+            main, offshell = data
+            multiple = []
+        else:
+            main, multiple, offshell = data[0], data[1:-1],data[-1]
         
+        # search for tag allow tag [L, C$]
+        allow_tag = ['C1','C2','C3','C4','C5','C6','C7']    
+        tags = []
+        len_tag = -1
+        while len(tags) != len_tag:
+            len_tag = len(tags)
+            for tag in allow_tag:
+                if main.endswith(tag):
+                    main = main[:-len(tag)]
+                    tags.append(int(tag[1:]))
+                    break
+        
+        # create the correct lorentz
+        lorentz = [main]
+        if multiple:
+            base = main
+            while base[-1].isdigit():
+                base = base[:-1]
+            for nb in multiple:
+                lorentz.append('%s%s' % (base, nb))
+        
+        # add in the results
+        output.append((tuple(lorentz), tuple(tags), int(offshell)))
+    return output
+         

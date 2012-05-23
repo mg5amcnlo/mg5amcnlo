@@ -293,10 +293,12 @@ class TestMEfromPdirectory(unittest.TestCase):
         ff.write('set automatic_html_opening False\n')
         ff.write('generate_events -f \n') 
         ff.close()
-        devnull =open(os.devnull,'w')
-        id = subprocess.call(['./bin/madevent','cmd.cmd'],stdout=devnull,stderr=devnull)
+        if logger.getEffectiveLevel() > 20:
+            output = open(os.devnull,'w')
+        else:
+            output = None
+        id = subprocess.call(['./bin/madevent','cmd.cmd'], stdout=output, stderr=output)
         self.assertEqual(id, 0)
-        
         self.check_parton_output(cross=944.4, error=1e-2)
         os.chdir(cmd)
         

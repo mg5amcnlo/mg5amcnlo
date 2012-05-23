@@ -20,3 +20,4 @@ echo "      LHAPATH=$pydir/PDFsets" >> ../Cards/pythia_card.dat
 export PDG_MASS_TBL=$pydir/mass_width_2004.mc
 
 $pydir/pythia && touch pythia.done
+

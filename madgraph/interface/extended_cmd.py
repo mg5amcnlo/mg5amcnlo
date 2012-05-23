@@ -38,7 +38,9 @@ try:
     import madgraph.various.misc as misc
     from madgraph import MG5DIR
     MADEVENT = False
-except:
+except Exception, error:
+    if __debug__:
+        print error
     import internal.misc as misc
     MADEVENT = True
 
@@ -46,6 +48,24 @@ pjoin = os.path.join
 
 class TimeOutError(Exception):
     """Class for run-time error"""
+
+def debug(debug_only=True):
+
+    def deco_debug(f):
+        
+        if debug_only and not __debug__:
+            return f
+        
+        def deco_f(*args, **opt):
+            try:
+                return f(*args, **opt)
+            except Exception, error:
+                print error
+                print traceback.print_exc(file=sys.stdout)
+                return
+        return deco_f
+    return deco_debug
+            
 
 #===============================================================================
 # CmdExtended
@@ -90,7 +110,8 @@ class BasicCmd(cmd.Cmd):
         if valid == 1:
             out = out[1:]
         return out
-
+    
+    @debug()
     def print_suggestions(self, substitution, matches, longest_match_length) :
         """print auto-completions by category"""
         longest_match_length += len(self.completion_prefix)
@@ -162,6 +183,7 @@ class BasicCmd(cmd.Cmd):
          If a command has not been entered, then complete against command list.
          Otherwise try to call complete_<command> to get list of completions.
         """
+                
         if state == 0:
             import readline
             origline = readline.get_line_buffer()
@@ -188,8 +210,18 @@ class BasicCmd(cmd.Cmd):
                         compfunc = self.completedefault
             else:
                 compfunc = self.completenames
+                
+            # correct wrong splittion with '\ '
+            if line and begidx > 2 and line[begidx-2:begidx] == '\ ':
+                Ntext = line.split(os.path.sep)[-1]
+                self.completion_prefix = Ntext.rsplit('\ ', 1)[0] + '\ '
+                to_rm = len(self.completion_prefix) - 1
+                Nbegidx = len(line.rsplit(os.path.sep, 1)[0]) + 1
+                data = compfunc(Ntext.replace('\ ', ' '), line, Nbegidx, endidx)
+                self.completion_matches = [p[to_rm:] for p in data 
+                                              if len(p)>to_rm]                
             # correct wrong splitting with '-'
-            if line and line[begidx-1] == '-':
+            elif line and line[begidx-1] == '-':
              try:    
                 Ntext = line.split()[-1]
                 self.completion_prefix = Ntext.rsplit('-',1)[0] +'-'
@@ -244,12 +276,12 @@ class CheckCmd(object):
         
         if len(args) > 2:
             self.help_save()
-            raise self.InvalidCmd, '\'%s\' is not recoginzed as first argument.'
+            raise self.InvalidCmd, 'too many arguments for save command.'
         
         if len(args) == 2:
             if args[0] != 'options':
                 self.help_save()
-                raise self.InvalidCmd, '\'%s\' is not recoginzed as first argument.' % \
+                raise self.InvalidCmd, '\'%s\' is not recognized as first argument.' % \
                                                 args[0]
             else:
                 args.pop(0)           
@@ -336,7 +368,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     next_possibility = {} # command : [list of suggested command]
     history_header = ""
     
-    timeout = 1 # time authorize to answer question [0 is no time limit]
     _display_opts = ['options','variable']
     
     class InvalidCmd(Exception):
@@ -428,7 +459,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if os.path.exists(self.debug_output):
             os.remove(self.debug_output)
         try:
-            cmd.Cmd.onecmd(self, 'history %s' % self.debug_output)
+            cmd.Cmd.onecmd(self, 'history %s' % self.debug_output.replace(' ', '\ '))
         except Exception, error:
             print error
             
@@ -587,7 +618,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if data[-1] == '\\':
                 tmp += data[:-1]+' '
             elif tmp:
-                out.append(tmp+data)
+                tmp += data
+                tmp = os.path.expanduser(os.path.expandvars(tmp))
+                out.append(tmp)
             else:
                 out.append(data)
         return out
@@ -674,7 +707,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # remove this call from history
         if self.history:
             self.history.pop()
-        self.timeout, old_time_out = 20, self.timeout
         
         # Read the lines of the file and execute them
         self.inputfile = open(filepath)
@@ -691,7 +723,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if self.child:
             self.child.exec_cmd('quit')        
                 
-        self.timeout = old_time_out
         return
     
     def get_history_header(self):
@@ -771,7 +802,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     # Ask a question with nice options handling
     #===============================================================================    
     def ask(self, question, default, choices=[], path_msg=None, 
-            timeout = None, fct_timeout=None):
+            timeout = True, fct_timeout=None):
         """ ask a question with some pre-define possibility
             path info is
         """
@@ -780,6 +811,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             path_msg = [path_msg]
         else:
             path_msg = []
+            
+        if timeout:
+            try:
+                timeout = self.options['timeout']
+            except:
+                pass
                     
         # add choice info to the question
         if choices + path_msg:
@@ -796,16 +833,18 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             question = question[:-2]+']'
                 
         if path_msg:
-            fct = lambda q: raw_path_input(q, allow_arg=choices, default=default)
+            f = lambda q: raw_path_input(q, allow_arg=choices, default=default)
         else:
-            fct = lambda q: smart_input(q, allow_arg=choices, default=default)
+            f = lambda q: smart_input(q, allow_arg=choices, default=default)
 
         answer = self.check_answer_in_input_file(choices, path_msg)
         if answer is not None:
             return answer
         
-        return  Cmd.timed_input(question, default, timeout=timeout,
-                                    fct=fct, fct_timeout=fct_timeout)
+        value =   Cmd.timed_input(question, default, timeout=timeout,
+                                    fct=f, fct_timeout=fct_timeout)
+
+        return value
         
     def check_answer_in_input_file(self, options, path=False):
         """Questions can have answer in output file (or not)"""
@@ -1093,10 +1132,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     def path_completion(text, base_dir = None, only_dirs = False, 
                                                                  relative=True):
         """Propose completions of text to compose a valid path"""
-        
+
         if base_dir is None:
             base_dir = os.getcwd()
-            
+
+        base_dir = os.path.expanduser(os.path.expandvars(base_dir))
+        
         prefix, text = os.path.split(text)
         base_dir = os.path.join(base_dir, prefix)
         if prefix:
@@ -1128,7 +1169,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if relative:
             completion += [prefix + f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
                        f.startswith(text) and not prefix.startswith('.')]
-
+        
+        completion = [a.replace(' ','\ ') for a in completion]
         return completion
     
 
@@ -1252,7 +1294,7 @@ def smart_input(input_text, allow_arg=[], default=None):
 #===============================================================================
 class OneLinePathCompletion(SmartQuestion):
     """ a class for answering a question with the path autocompletion"""
-
+    
 
     def completenames(self, text, line, begidx, endidx):
         prev_timer = signal.alarm(0) # avoid timer if any

@@ -1256,8 +1256,6 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
             # Now we have a line correctly formatted
             call_function = lambda wf: call % wf.get_helas_call_dict(index=0)
                 
-                
-                
             routine_name = aloha_writers.combine_name(
                                         '%s' % l[0], l[1:], outgoing, flag)
         
