@@ -1639,6 +1639,22 @@ C     ----------
         self.assertFileContains('test', goal) 
 
 
+    def test_write_nfksconfigs_file_B(self):
+        """tests if the nFKSconfigs.inc file is correctly written"""
+        goal = \
+"""      INTEGER FKS_CONFIGS
+      PARAMETER (FKS_CONFIGS=8)
+
+
+"""        
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter.write_nfksconfigs_file(\
+            writers.FortranWriter(self.give_pos('test')),
+            self.myfks_me,
+            self.myfortranmodel)
+        self.assertFileContains('test', goal)
+
+
     def test_write_configs_file_born_B(self):
         """Tests if the configs.inc file is corretly written 
         for the born matrix element.

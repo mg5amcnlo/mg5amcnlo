@@ -911,7 +911,7 @@ c     this subdir has no soft singularities
         """Writes the content of nFKSconfigs.inc, which just gives the
         total FKS dirs as a parameter"""
         replace_dict = {}
-        replace_dict['nconfs'] = len(fksborn.real_processes)
+        replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
         content = \
 """      INTEGER FKS_CONFIGS
       PARAMETER (FKS_CONFIGS=%(nconfs)d)
