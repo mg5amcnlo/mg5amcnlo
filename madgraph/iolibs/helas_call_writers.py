@@ -925,10 +925,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 
             # Check if we need to append a charge conjugation flag
             l = [str(l) for l in argument.get('lorentz')]
-            flag = []
-            if argument.needs_hermitian_conjugate():
-                flag = ['C%d' % i for i in \
-                                  argument.get_conjugate_index()]
+            flag = ['C%d' % i for i in argument.get('conjugate_indices')]
             routine_name = aloha_writers.combine_name(
                                         '%s' % l[0], l[1:], outgoing, flag)
             call = 'CALL %s' % (routine_name)
@@ -1062,10 +1059,7 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
 
             # Check if we need to append a charge conjugation flag
             l = [str(l) for l in argument.get('lorentz')]
-            flag = [] 
-            if argument.needs_hermitian_conjugate():
-                flag = ['C%d' % i for i in \
-                                            argument.get_conjugate_index()]
+            flag = ['C%d' % i for i in argument.get('conjugate_indices')]
             routine_name = aloha_writers.combine_name(
                                         '%s' % l[0], l[1:], outgoing, flag)
             call = '%s' % (routine_name)
@@ -1237,9 +1231,7 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
 
             # Check if we need to append a charge conjugation flag
             l = [str(l) for l in argument.get('lorentz')]
-            flag = []
-            if argument.needs_hermitian_conjugate():
-                flag = ['C%d' % i for i in argument.get_conjugate_index()]
+            flag = ['C%d' % i for i in argument.get('conjugate_indices')]
             routine_name = aloha_writers.combine_name(
                                         '%s' % l[0], l[1:], outgoing, flag)
 

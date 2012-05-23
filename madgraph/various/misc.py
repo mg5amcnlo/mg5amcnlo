@@ -288,7 +288,8 @@ the file and returns last line in an internal buffer."""
             self.data = (self.read(self.blksize) + line).split('\n')
           except IOError:  # can't seek before the beginning of the file
             self.seek(0)
-            self.data = string.split(self.read(self.size - (self.blksize * (self.blkcount-1))) + line, '\n')
+            data = self.read(self.size - (self.blksize * (self.blkcount-1))) + line
+            self.data = data.split('\n')
     
         if len(self.data) == 0:
           return ""
@@ -322,13 +323,6 @@ the file and returns last line in an internal buffer."""
             return line
         else:
             raise StopIteration
-        
-    def close(self):
-        """ close correctly file """
-        try:
-            self.close()
-        except:
-           pass
 
 
 

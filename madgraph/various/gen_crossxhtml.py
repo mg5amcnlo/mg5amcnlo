@@ -227,8 +227,13 @@ class AllResults(dict):
         if makehtml:
             self.output()
 
-    def resetall(self):
-        """check the output status of all run"""
+    def resetall(self, main_path=None):
+        """check the output status of all run
+           main_path redefines the path associated to the run (allowing to move 
+           the directory)
+        """
+        
+        self.path = main_path
         
         for key,run in self.items():
             if key == 'web':
@@ -236,6 +241,7 @@ class AllResults(dict):
             for i,subrun in enumerate(run):
                 self.def_current(subrun)
                 self.clean()
+                self.current.event_path = pjoin(main_path,'Events') 
                 if i==0:
                     self.current.update_status()
                 else:

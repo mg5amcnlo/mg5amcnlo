@@ -519,8 +519,11 @@ class AbstractALOHAModel(dict):
                     if lorentz.name in self.multiple_lor:
                         for m in self.multiple_lor[lorentz.name]:
                             for outgoing in range(len(lorentz.spins)+1):
-                                self[(conjg_builder.name, outgoing)].add_combine(m)
-                                                
+                                realname = conjg_builder.name + ''.join(['C%s' % pair for pair in conjg_builder.conjg])
+                                try:
+                                    self[(realname, outgoing)].add_combine(m)
+                                except Exception,error:
+                                    self[(realname, self.symmetries[lorentz.name][outgoing])].add_combine(m)          
                     
                     
         if save:
@@ -605,6 +608,7 @@ class AbstractALOHAModel(dict):
                 #Store the information
                 realname = name + ''.join(wavefunction.tag)
                 self.set(realname, outgoing, wavefunction)
+            
 
     def compute_aloha_without_kernel(self, builder, symmetry=None, routines=None):
         """define all the AbstractRoutine linked to a given lorentz structure
