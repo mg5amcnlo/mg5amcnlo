@@ -36,7 +36,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
     # Dictionaries used for automatic generation of Helas calls
     # Dictionaries from spin states to letters in Helas call
-    mother_dict = {1: 'S', 2: 'O', -2: 'I', 3: 'V', 5: 'T'}
+    mother_dict = {1: 'S', 2: 'O', -2: 'I', 3: 'V', 5: 'T', 4:'OR', -4:'IR'}
 
     def default_setup(self):
 

@@ -182,7 +182,7 @@ class AbstractRoutineBuilder(object):
         
         flip_sign = []
         for i in range(1,len(self.spins),2):
-            if self.spins[i] == 2:
+            if self.spins[i] % 2 == 0:
                 flip_sign.append(str(i))
         
         if not flip_sign:
@@ -219,6 +219,7 @@ class AbstractRoutineBuilder(object):
             lorentz = self.routine_kernel
             aloha_lib.USE_TAG = set(self.kernel_tag) 
             
+
         for (i, spin ) in enumerate(self.spins):   
             id = i + 1
                      
@@ -238,6 +239,18 @@ class AbstractRoutineBuilder(object):
                         lorentz *= SpinorPropagator('I2', id, outgoing)
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)
+                elif spin == 4:
+                    # shift and flip the tag if we multiply by C matrices
+                    if (id + 1) // 2 in self.conjg:
+                        spin_id = id + _conjugate_gap + id % 2 - (id +1) % 2
+                    else:
+                        spin_id = id
+                    nb_spinor += 1
+                    if id %2:
+                        lorentz *= Spin3halfPropagator(id, 'I2', spin_id,'I3', outgoing)
+                    else:
+                        lorentz *= Spin3halfPropagator(id, 'I2', 'I3', spin_id, outgoing)                     
+                    
                 elif spin == 5 :
                     lorentz *= 1 # delayed evaluation (fastenize the code)
                     #if self.spin2_massless:
@@ -262,6 +275,14 @@ class AbstractRoutineBuilder(object):
                     lorentz *= Spinor(spin_id, id)
                 elif spin == 3:        
                     lorentz *= Vector(id, id)
+                elif spin == 4:
+                    # shift the tag if we multiply by C matrices
+                    if (id+1) // 2 in self.conjg:
+                        spin_id = id + _conjugate_gap + id % 2 - (id +1) % 2
+                    else:
+                        spin_id = id
+                    nb_spinor += 1
+                    lorentz *= Spin3Half(id, spin_id, id)
                 elif spin == 5:
                     lorentz *= Spin2(1 * _spin2_mult + id, 2 * _spin2_mult + id, id)
                 else:

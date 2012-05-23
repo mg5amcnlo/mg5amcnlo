@@ -438,7 +438,7 @@ class CheckValidForCmd(object):
         tag = [a[6:] for a in args if a.startswith('--tag=')]
         
         
-        if os.path.isfile(args[0]):
+        if os.path.exists(args[0]):
             type ='banner'
             format = self.detect_card_type(args[0])
             if format != 'banner':
@@ -1339,15 +1339,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.banner = None
 
         # Get number of initial states
-        try:
-            nexternal = open(pjoin(me_dir,'Source','nexternal.inc')).read()
-            found = re.search("PARAMETER\s*\(NINCOMING=(\d)\)", nexternal)
-            self.ninitial = int(found.group(1))
-        except:
-            # in gridpack this file might be remove. In that case, let suppose
-            # that ninitial is 2
-            self.ninitial = 2
-            
+        nexternal = open(pjoin(me_dir,'Source','nexternal.inc')).read()
+        found = re.search("PARAMETER\s*\(NINCOMING=(\d)\)", nexternal)
+        self.ninitial = int(found.group(1))
+        
         # Load the configuration file
         self.set_configuration()
         self.nb_refine=0
@@ -2017,6 +2012,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     ############################################################################      
     def do_refine(self, line):
         """Advanced commands: launch survey for the current process """
+        devnull = os.open(os.devnull, os.O_RDWR)
+
         self.nb_refine += 1
         args = self.split_arg(line)
         # Check argument's validity
@@ -2039,7 +2036,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.total_jobs = 0
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
                                                                  'subproc.mg'))]
-        devnull = os.open(os.devnull, os.O_RDWR)
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -2190,16 +2186,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                         files.mv(input, output) 
                         misc.call(['gzip', output], stdout=devnull, 
                                         stderr=devnull, cwd=G_path)
-        
-        # 2) restore links in local this is require due to chrome over-security
-        if not self.web: 
-            results = pjoin(self.me_dir, 'HTML', run, 'results.html')
-            text = open(results).read()
-            text = text.replace('''if ( ! UrlExists(alt)){
-         obj.href = alt;''','''if ( ! UrlExists(alt)){
-         obj.href = url;''')
-            open(results, 'w').write(text)
-            
         # 3) Update the index.html
         misc.call(['%s/gen_cardhtml-pl' % self.dirbin],
                             cwd=pjoin(self.me_dir))
@@ -3668,7 +3654,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                  answer = card[int(answer)]
              if answer == 'done':
                  return
-             if os.path.isfile(answer):
+             if os.path.exists(answer):
                  # detect which card is provide
                  card_name = self.detect_card_type(answer)
                  if card_name == 'unknown':
@@ -3727,7 +3713,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                  answer = card[int(answer)]
              if answer == 'done':
                  return
-             if os.path.isfile(answer):
+             if os.path.exists(answer):
                  # detect which card is provide
                  card_name = self.detect_card_type(answer)
                  if card_name == 'unknown':

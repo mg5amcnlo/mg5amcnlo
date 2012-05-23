@@ -16,9 +16,9 @@ class WriteALOHA:
     change_var_format = str
     change_number_format = str
     extension = ''
-    type_to_variable = {2:'F',3:'V',5:'T',1:'S'}
-    type_to_size = {'S':3, 'T':18, 'V':6, 'F':6}
-          
+    type_to_variable = {1:'S', 2:'F', 3:'V', 4:'R', 5:'T'}
+    type_to_size = {'S':3, 'T':18, 'R':18, 'V':6, 'F':6}
+    
     def __init__(self, abstract_routine, dirpath):
 
 
@@ -191,17 +191,15 @@ class WriteALOHA:
         for index,spin in enumerate(self.particles):
             if self.offshell == index + 1:
                 continue
-            
             if index in conjugate:
                 index2, spin2 = index+1, self.particles[index+1]
                 call_arg.append('%s%d' % (spin2, index2 +1)) 
-                #call_arg.append('%s%d' % (spin, index +1)) 
             elif index-1 in conjugate:
                 index2, spin2 = index-1, self.particles[index-1]
                 call_arg.append('%s%d' % (spin2, index2 +1)) 
             else:
                 call_arg.append('%s%d' % (spin, index +1)) 
-                
+
         return call_arg
 
 #    def reorder_call_list(self, call_list, old, new):
@@ -231,19 +229,18 @@ class WriteALOHA:
         nb_fermion =0
         
         #compute global sign
-        if not self.offshell % 2 and self.particles[self.offshell -1] == 'F': 
+        if not self.offshell % 2 and self.particles[self.offshell -1] in ['F', 'R']: 
             global_sign = 1
         else:
             global_sign = -1
         
         flipped = [2*(int(c[1:])-1) for c in self.tag if c.startswith('C')]
-         
         
         for index, spin in enumerate(self.particles): 
-            assert(spin in ['S','F','V','T'])  
+            assert(spin in ['S','F','V','R','T'])  
       
             #compute the sign
-            if spin != 'F':
+            if spin not in ['F','R']:
                 sign = -1 * global_sign
             elif nb_fermion % 2 == 0:
                 sign = global_sign
@@ -289,6 +286,7 @@ class ALOHAWriterForFortran(WriteALOHA):
     declare_dict = {'S':'double complex S%d(*)',
                     'F':'double complex F%d(*)',
                     'V':'double complex V%d(*)',
+                    'R':'double complex R%d(*)',
                     'T':'double complex T%s(*)'}
     
     def define_header(self, name=None):
@@ -383,7 +381,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         str_out = ''
         # Conservation of Energy Impulsion
         if self.offshell: 
-            offshelltype = self.particles[self.offshell -1]
+            offshelltype = self.particles[self.outgoing -1]
             offshell_size = self.type_to_size[offshelltype]            
             #Implement the conservation of Energy Impulsion
             for i in range(-1,1):
@@ -480,7 +478,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 string = re.sub('(?P<num>[0-9])[Jj]\.', '\g<num>.*(0d0,1d0)', string)
                 OutString = OutString + string + '\n'
         else:
-            OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
+            OffShellParticle = '%s%d' % (self.particles[self.outgoing-1],\
                                                                   self.outgoing)
             numerator = self.obj.numerator
             denominator = self.obj.denominator
@@ -556,7 +554,9 @@ class ALOHAWriterForFortran(WriteALOHA):
         if offshell is None:
             sym = 1 
             offshell = self.offshell
+            outgoing = self.outgoing
         else:
+            outgoing = self.offshell # this is a symmetry call
             sym = None  # deactivate symetry
             
         name = combine_name(self.abstractname, lor_names, offshell, self.tag)
@@ -570,7 +570,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         if not offshell:
             text += ' double complex TMP\n'
         else:
-            spin = self.particles[offshell -1] 
+            spin = self.particles[outgoing -1] 
             text += ' double complex TMP(%s)\n integer i' % self.type_to_size[spin]         
         
         # Define which part of the routine should be called
@@ -593,7 +593,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             call_arg = '%(args)s, %(COUP)s, %(LAST)s' % \
                     {'args': ', '.join(self.calllist['CallList']), 
                      'COUP':'COUP%d',
-                     'spin': self.particles[self.offshell -1],
+                     'spin': self.particles[outgoing -1],
                      'LAST': '%s'}
         else:
             main = '%(spin)s%(id)d' % \
@@ -609,7 +609,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                     call_arg = '%(args)s, %(COUP)s, M%(id)d, W%(id)d, %(LAST)s' % \
                     {'args': ', '.join(self.calllist['CallList']), 
                      'COUP':'COUP%d',
-                     'id': self.outgoing,
+                     'id': outgoing,
                      'LAST': '%s'}
 
         # make the first call
@@ -714,6 +714,7 @@ class ALOHAWriterForCPP(WriteALOHA):
     declare_dict = {'S':'double complex S%d[3]',
                     'F':'double complex F%d[6]',
                     'V':'double complex V%d[6]',
+                    'R':'double complex R%d[18]',
                     'T':'double complex T%s[18]'}
     
     def define_header(self, name=None):
@@ -880,7 +881,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                 string = string.replace('+-', '-')
                 OutString = OutString + string + ';\n'
         else:
-            OffShellParticle = self.particles[self.offshell-1]+'%s'%(self.outgoing)
+            OffShellParticle = self.particles[self.outgoing-1]+'%s'%(self.outgoing)
             numerator = self.obj.numerator
             denominator = self.obj.denominator
             for ind in denominator.listindices():
@@ -1162,7 +1163,7 @@ class ALOHAWriterForPython(WriteALOHA):
         return a string (which can be evaluated by an exec"""
         
         WriteALOHA.__init__(self, abstract_routine, dirpath)
-        self.outname = '%s%s' % (self.particles[self.offshell -1], \
+        self.outname = '%s%s' % (self.particles[self.outgoing -1], \
                                                                self.outgoing)
     
     @staticmethod
@@ -1204,9 +1205,8 @@ class ALOHAWriterForPython(WriteALOHA):
                 string = string.replace('+-', '-')
                 OutString = OutString + string + '\n'
         else:
-            OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
-                                                                  self.offshell)
-
+            OffShellParticle = '%s%d' % (self.particles[self.outgoing-1],\
+                                                                  self.outgoing)
             numerator = self.obj.numerator
             denominator = self.obj.denominator
             for ind in denominator.listindices():
@@ -1278,7 +1278,7 @@ class ALOHAWriterForPython(WriteALOHA):
         
         # Definition of the output
         if self.offshell:
-            offshelltype = self.particles[self.offshell -1]
+            offshelltype = self.particles[self.outgoing -1]
             offshell_size = self.type_to_size[offshelltype]            
             str_out += '%s = wavefunctions.WaveFunction(size=%s)\n' % \
                                                 (self.outname, offshell_size)
@@ -1376,8 +1376,10 @@ class ALOHAWriterForPython(WriteALOHA):
         # Set some usefull command
         if offshell is None:
             sym = 1
-            offshell = self.offshell  
+            offshell = self.offshell
+            outgoing = self.outgoing  
         else:
+            outgoing = self.offshell
             sym = None
         name = combine_name(self.abstractname, lor_names, offshell, self.tag)
 
@@ -1401,10 +1403,10 @@ class ALOHAWriterForPython(WriteALOHA):
             call_arg = '%(args)s, %(COUP)s' % \
                     {'args': ', '.join(self.calllist['CallList']), 
                      'COUP':'COUP%d',
-                     'spin': self.particles[self.offshell -1]}
+                     'spin': self.particles[self.outgoing -1]}
         else:
             main = '%(spin)s%(id)d' % \
-                          {'spin': self.particles[self.offshell -1],
+                          {'spin': self.particles[self.outgoing -1],
                            'id': self.outgoing}
             if aloha.complex_mass:
                 call_arg = '%(args)s, %(COUP)s, M%(id)d' % \
@@ -1428,7 +1430,7 @@ class ALOHAWriterForPython(WriteALOHA):
             if not offshell:
                text += '    vertex += tmp\n'
             else:
-                size = self.type_to_size[self.particles[offshell -1]] -2
+                size = self.type_to_size[self.particles[self.outgoing -1]] -2
                 text += "    for i in range(%(id)d):\n" % {'id': size}
                 text += "        %(main)s[i] += tmp[i]\n" %{'main': main}
         

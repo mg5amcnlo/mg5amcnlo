@@ -352,6 +352,13 @@ class Particle(PhysicsObject):
         elif spin == 3:
             # Massive vector
             return [ -1, 0, 1 ]
+        elif spin == 4 and self.get('mass').lower() == 'zero':
+            # Massless tensor
+            return [-3, 3]
+        elif spin == 4:
+            # Massive tensor
+            return [-3, -1, 1, 3]
+        
         elif spin == 5 and self.get('mass').lower() == 'zero':
             # Massless tensor
             return [-2, -1, 1, 2]
