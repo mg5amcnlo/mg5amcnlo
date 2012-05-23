@@ -226,10 +226,10 @@ c x(ndim-1) -> tau_cnt(0); x(ndim) -> ycm_cnt(0)
 c tau is fixed by the mass of the final state particle
             call compute_tau_one_body(totmass,stot,tau_born,xjac0)
          else
-            if(nt_channel.eq.0 .and. qwidth(-ns_channel).ne.0.d0 )then
+            if(nt_channel.eq.0 .and. qwidth(-ns_channel-1).ne.0.d0 )then
 c Generate tau according to a Breit-Wiger function
-               call generate_tau_BW(stot,x(ndim-4),qmass(-ns_channel)
-     &              ,qwidth(-ns_channel),tau_born,xjac0)
+               call generate_tau_BW(stot,x(ndim-4),qmass(-ns_channel-1)
+     &              ,qwidth(-ns_channel-1),tau_born,xjac0)
             else
 c not a Breit Wigner
                call generate_tau(x(ndim-4),tau_born,xjac0)
@@ -1822,7 +1822,6 @@ c If the order is different, we should quit.
      &        ,tau_lower_bound_resonance
          stop
       endif
-
       roH=tau_Born_lower_bound
       roHj=tau_lower_bound
       roHs=tau_lower_bound_resonance

@@ -474,15 +474,21 @@ c were on-shell
 c If daughter is a jet, we should treat the ptj as a mass. Except if
 c d1=nexternal, because we check the Born, so final parton should be
 c skipped.
-                  if (d1.gt.0 .and. is_a_j(d1) .and. d1.ne.nexternal)
-     &                 then
-                     xm1=ptj
+                  if (d1.gt.0) then
+                     if (is_a_j(d1) .and. d1.ne.nexternal) then
+                        xm1=ptj
+                     else
+                        xm1=xm(d1)
+                     endif
                   else
                      xm1=xm(d1)
                   endif
-                  if (d2.gt.0 .and. is_a_j(d2) .and. d2.ne.nexternal)
-     &                 then
-                     xm2=ptj
+                  if (d2.gt.0) then
+                     if(is_a_j(d2) .and. d2.ne.nexternal) then
+                        xm2=ptj
+                     else
+                        xm2=xm(d2)
+                     endif
                   else
                      xm2=xm(d2)
                   endif
