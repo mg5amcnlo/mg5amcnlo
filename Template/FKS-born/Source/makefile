@@ -21,7 +21,7 @@ COMBINE = combine_events.o  rw_events.o ranmar.o  kin_functions.o open_file.o rw
 
 
 
-.f.o: ; $(F77) $(FFLAGS) -c $*.f
+.f.o: ; $(FC) $(FFLAGS) -c $*.f
 
 all: $(LIBDIR)libdhelas.a $(LIBDIR)libdsample.a $(LIBDIR)libdsample_fks.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a  $(LIBDIR)libmodel.a
 
@@ -29,7 +29,7 @@ scaled.dat:
 	combine_events
 
 $(BINDIR)sum_html: sum_html.o 
-	$(F77) $(FFLAGS) -o sum_html sum_html.o   
+	$(FC) $(FFLAGS) -o sum_html sum_html.o   
 	mv sum_html $(BINDIR)
 
 $(LIBDIR)libdhelas.a: DHELAS
@@ -65,10 +65,10 @@ genps.inc: nexternal.inc
 	touch genps.inc
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o
-	$(F77) $(FFLAGS) -o gen_ximprove gen_ximprove.o ranmar.o rw_routines.o open_file.o
+	$(FC) $(FFLAGS) -o gen_ximprove gen_ximprove.o ranmar.o rw_routines.o open_file.o
 	mv gen_ximprove $(BINDIR)
 
 $(BINDIR)combine_events: $(COMBINE)
-	$(F77) $(FFLAGS) -o combine_events $(COMBINE) $(LIBDIR)/libmodel.a $(LIBDIR)/libpdf.a 
+	$(FC) $(FFLAGS) -o combine_events $(COMBINE) $(LIBDIR)/libmodel.a $(LIBDIR)/libpdf.a 
 	mv combine_events $(BINDIR)
 
