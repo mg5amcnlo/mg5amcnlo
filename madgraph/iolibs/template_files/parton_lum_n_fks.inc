@@ -62,7 +62,7 @@ C ----------
 %(pdf_lines)s
       endif
       do i=1,IPROC
-        lum = lum + pd(IPROC) * conv 
+        lum = lum + pd(i) * conv 
       enddo
       return
       END                                                             

@@ -704,7 +704,7 @@ C
         PD(IPROC) = G1*G2
       ENDIF
       DO I=1,IPROC
-        LUM = LUM + PD(IPROC) * CONV
+        LUM = LUM + PD(I) * CONV
       ENDDO
       RETURN
       END
