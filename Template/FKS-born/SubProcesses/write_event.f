@@ -35,13 +35,10 @@
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
 
       integer np,npart
-
-      double precision jampsum,sumborn
+      double precision jampsum,sumborn,shower_scale
       double complex wgt1(2)
-
       character*4 abrv
       common /to_abrv/ abrv
-
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
@@ -68,10 +65,8 @@ c
          call set_cms_stuff(0)
       endif
 
-      call set_shower_scale()
-
       call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
-     &     putonshell,ndim,ipole,x,jpart,npart,pb)
+     &     putonshell,ndim,ipole,x,jpart,npart,pb,shower_scale)
 
 c Plot the events also on the fly
       if(plotEv) then
@@ -92,7 +87,8 @@ c Plot the events also on the fly
 
       if (abrv.ne.'grid') then
 c  Write-out the events
-         call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe)
+         call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe
+     &        ,shower_scale)
       else
          call write_random_numbers(lunlhe)
       endif
@@ -154,7 +150,7 @@ c get info on beam and PDFs
       return
       end
 
-      subroutine write_events_lhe(p,wgt,ic,npart,lunlhe)
+      subroutine write_events_lhe(p,wgt,ic,npart,lunlhe,shower_scale)
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -162,19 +158,14 @@ c get info on beam and PDFs
       include 'reweight.inc'
       double precision p(0:4,2*nexternal-3),wgt
       integer ic(7,2*nexternal-3),npart,lunlhe
-
       double precision pi,zero
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0.d0)
       integer ievent,izero
       parameter (izero=0)
       double precision aqcd,aqed,scale
-
       character*140 buff
-
-      double precision SCALUP
-      common /cshowerscale/SCALUP
-
+      double precision shower_scale
       INTEGER MAXNUP,i
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
@@ -192,7 +183,7 @@ c get info on beam and PDFs
       common/cto_LHE2/scale1_lhe,scale2_lhe
 c
       ievent=66
-      scale = SCALUP
+      scale = shower_scale
       aqcd=g**2/(4d0*pi)
       aqed=gal(1)**2/(4d0*pi)
 
