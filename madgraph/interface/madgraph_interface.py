@@ -409,7 +409,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   fks_mode real/born")
         logger.info("      (default real) Build the real-emission contributions")
         logger.info("      from the real or born topologies.")
-        logger.info("   loop_optimized_output True/Flase")
+        logger.info("   loop_optimized_output True|False")
         logger.info("      Abandon the JAMP structure in order to bring considerable")
         logger.info("      improvement in running time.")
         logger.info("   gauge unitary|Feynman")        

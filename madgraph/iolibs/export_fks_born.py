@@ -44,6 +44,11 @@ from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_fks')
 
+
+
+#=================================================================================
+# Class for used of the (non-optimized) Loop process
+#=================================================================================
 class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
@@ -1657,3 +1662,212 @@ C
         writer.writelines(lines)
     
         return True
+
+
+
+
+
+#=================================================================================
+# Class for using the optimized Loop process
+#=================================================================================
+class ProcessOptimizedExporterFortranFKS_born(loop_exporters.LoopProcessOptimizedExporterFortranSA,ProcessExporterFortranFKS_born):
+    """Class to take care of exporting a set of matrix elements to
+    Fortran (v4) format."""
+    
+    def __init__(self, mgme_dir = "", dir_path = "", clean = False, \
+                 complex_mass_scheme = False, mp = False, \
+                 loop_dir = "", cts_dir = ""):
+        """Initiate the ProcessExporterFortran with directory information"""
+        self.mgme_dir = mgme_dir
+        self.dir_path = dir_path
+        self.clean = clean
+        self.loop_dir = loop_dir
+        self.cuttools_dir = cts_dir
+        self.complex_mass_scheme = complex_mass_scheme
+        self.mp = mp
+
+
+#===============================================================================
+# copy the Template in a new directory.
+#===============================================================================
+    def copy_fkstemplate(self):
+        """create the directory run_name as a copy of the MadEvent
+        Template, and clean the directory
+        For now it is just the same as copy_v4template, but it will be modified
+        """
+        mgme_dir = self.mgme_dir
+        dir_path = self.dir_path
+        clean =self.clean
+        
+        #First copy the full template tree if dir_path doesn't exit
+        if not os.path.isdir(dir_path):
+            if not mgme_dir:
+                raise MadGraph5Error, \
+                      "No valid MG_ME path given for MG4 run directory creation."
+            logger.info('initialize a new directory: %s' % \
+                        os.path.basename(dir_path))
+            shutil.copytree(os.path.join(mgme_dir, 'Template', 'FKS-born'), dir_path, True)
+        elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
+            if not mgme_dir:
+                raise MadGraph5Error, \
+                      "No valid MG_ME path given for MG4 run directory creation."
+        try:
+            shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
+        except IOError:
+            MG5_version = misc.get_pkg_info()
+            open(os.path.join(dir_path, 'MGMEVersion.txt'), 'w').write( \
+                "5." + MG5_version['version'])
+        
+        #Ensure that the Template is clean
+        if clean:
+            logger.info('remove old information in %s' % os.path.basename(dir_path))
+            if os.environ.has_key('MADGRAPH_BASE'):
+                subprocess.call([os.path.join('bin', 'clean_template'), '--web'], \
+                                                                       cwd=dir_path)
+            else:
+                try:
+                    subprocess.call([os.path.join('bin', 'clean_template')], \
+                                                                       cwd=dir_path)
+                except Exception, why:
+                    raise MadGraph5Error('Failed to clean correctly %s: \n %s' \
+                                                % (os.path.basename(dir_path),why))
+            #Write version info
+            MG_version = misc.get_pkg_info()
+            open(os.path.join(dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
+                                                              MG_version['version'])
+
+        # We must link the CutTools to the Library folder of the active Template
+        self.link_CutTools(os.path.join(dir_path, 'lib'))
+
+        cwd = os.getcwd()
+        dirpath = os.path.join(self.dir_path, 'SubProcesses')
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+                                       
+        # We add here the user-friendly MadLoop option setter.
+        cpfiles= ["SubProcesses/MadLoopParamReader.f",
+                  "SubProcesses/MadLoopParams.dat",
+                  "SubProcesses/MadLoopParams.inc"]
+        
+        for file in cpfiles:
+            shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
+                        os.path.join(self.dir_path, file))
+
+        # link the files from the MODEL
+        model_path = self.dir_path + '/Source/MODEL/'
+        ln(model_path + '/mp_coupl.inc', self.dir_path + '/SubProcesses')
+        ln(model_path + '/mp_coupl_same_name.inc', self.dir_path + '/SubProcesses')
+
+        # Write the cts_mpc.h and cts_mprec.h files imported from CutTools
+        self.write_mp_files(writers.FortranWriter('cts_mprec.h'),\
+                            writers.FortranWriter('cts_mpc.h'),)
+
+        # Return to original PWD
+        os.chdir(cwd)
+
+    def generate_virt_directory(self, loop_matrix_element, fortran_model, dir_name):
+        """writes the V**** directory inside the P**** directories specified in
+        dir_name"""
+
+        cwd = os.getcwd()
+
+        matrix_element = loop_matrix_element
+
+        # Create the directory PN_xx_xxxxx in the specified path
+        name = "V%s" % matrix_element.get('processes')[0].shell_string()
+        dirpath = os.path.join(dir_name, name)
+
+        try:
+            os.mkdir(dirpath)
+        except os.error as error:
+            logger.warning(error.strerror + " " + dirpath)
+
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+
+        logger.info('Creating files in directory %s' % name)
+
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+
+        calls=self.write_matrix_element_v4(None,matrix_element,fortran_model)
+        # The born matrix element, if needed
+        filename = 'born_matrix.f'
+        calls = self.write_bornmatrix(
+            writers.FortranWriter(filename),
+            matrix_element,
+            fortran_model)
+
+        filename = 'nexternal.inc'
+        self.write_nexternal_file(writers.FortranWriter(filename),
+                             (nexternal-2), ninitial)
+
+        filename = 'pmass.inc'
+        self.write_pmass_file(writers.FortranWriter(filename),
+                         matrix_element)
+
+        filename = 'ngraphs.inc'
+        self.write_ngraphs_file(writers.FortranWriter(filename),
+                           len(matrix_element.get_all_amplitudes()))
+
+        filename = "loop_matrix.ps"
+#        Not ready yet
+        writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
+#        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+#                                             get('loop_diagrams'),
+#                                          filename,
+#                                          model=matrix_element.get('processes')[0].\
+#                                             get('model'),
+#                                          amplitude='')
+#        logger.info("Generating loop Feynman diagrams for " + \
+#                     matrix_element.get('processes')[0].nice_string())
+#        plot.draw()
+
+        filename = "born_matrix.ps"
+        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                             get('born_diagrams'),
+                                          filename,
+                                          model=matrix_element.get('processes')[0].\
+                                             get('model'),
+                                          amplitude='')
+        logger.info("Generating born Feynman diagrams for " + \
+                     matrix_element.get('processes')[0].nice_string())
+        plot.draw()
+
+        linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
+                     'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
+                     'MadLoopParams.dat', 'MadLoopParams.inc']
+
+        for file in linkfiles:
+            ln('../../%s' % file)
+
+        os.system("ln -s "+name+"/MadLoopParams.dat ../")
+        os.system("ln -s "+name+"/ColorDenomFactors.dat ../")
+        os.system("ln -s "+name+"/HelConfigs.dat ../")
+        os.system("ln -s "+name+"/ColorNumFactors.dat ../")
+
+
+        os.system("ln -s ../../check_sa_loop.f check_sa.f")
+        os.system("ln -s ../../makefile_loop makefile")
+
+        linkfiles = ['mpmodule.mod']
+
+        for file in linkfiles:
+            ln('../../../lib/%s' % file)
+
+        # Return to original PWD
+        os.chdir(cwd)
+
+        if not calls:
+            calls = 0
+        return calls
+
+
+
+            

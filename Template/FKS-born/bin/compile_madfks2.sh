@@ -85,7 +85,7 @@ if [[ $gensym == "1" || $madevent_run == "1" ]] ; then
     fi
 fi
 
-if [[ $gensym == "1" || $madevent_compile == "1" ]] ; then
+if [[ $madevent_compile == "1" ]] ; then
     echo 'press: "0" for Vegas, "1" for Mint, "2" for MintMC"'
     read vegas_mint
     if [[ $vegas_mint == "0" ]] ; then

@@ -284,13 +284,24 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                                           os.path.join(self._mgme_dir, 'loop_material'),
                                           self._cuttools_dir)
     
-            if self.options['fks_mode'] == 'born':
+            if self.options['fks_mode'] == 'born' \
+              and not self.options['loop_optimized_output']:
                 logger.info("Exporting in MadFKS format, starting from born process")
                 self._curr_exporter = export_fks_born.ProcessExporterFortranFKS_born(\
                                           self._mgme_dir, self._export_dir,
                                           not noclean, 
                                           self.options['complex_mass_scheme'], True,
                                           os.path.join(self._mgme_dir, 'loop_material'),
+                                          self._cuttools_dir)
+            
+            if self.options['fks_mode'] == 'born' \
+              and self.options['loop_optimized_output']:
+                logger.info("Exporting in MadFKS format, starting from born process using Optimized Loops")
+                self._curr_exporter = export_fks_born.ProcessOptimizedExporterFortranFKS_born(\
+                                          self._mgme_dir, self._export_dir,
+                                          not noclean, 
+                                          self.options['complex_mass_scheme'], True,
+                                          os.path.join(self._mgme_dir,'Template/loop_material'),
                                           self._cuttools_dir)
             
         # check if a dir with the same name already exists
