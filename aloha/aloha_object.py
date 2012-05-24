@@ -133,6 +133,33 @@ class Mass(aloha_lib.FactoryLorentz):
         return '_M%s' % particle
 
 #===============================================================================
+# FCT
+#===============================================================================
+class L_FCT(aloha_lib.LorentzObject):
+    """ Helas Object for a Mass"""
+       
+    
+    def __init__(self, name, id):
+        self.fctid = id
+        aloha_lib.LorentzObject.__init__(self, name,[], [])
+            
+    def create_representation(self):
+        var = aloha_lib.Variable('FCT%s' % self.fctid)
+
+        self.representation = aloha_lib.LorentzObjectRepresentation(
+                                var, self.lorentz_ind, self.spin_ind)
+  
+class FCT(aloha_lib.FactoryLorentz):
+
+    object_class = L_FCT
+    
+    @classmethod
+    def get_unique_name(self, name):
+        
+        return '_FCT%s' % name
+
+
+#===============================================================================
 # OverMass2
 #===============================================================================
 class L_OverMass2(aloha_lib.LorentzObject):

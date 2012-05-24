@@ -32,6 +32,7 @@ import aloha
 import aloha.aloha_writers as aloha_writers
 import aloha.aloha_lib as aloha_lib
 import aloha.aloha_object as aloha_object
+import aloha.aloha_parsers as aloha_parsers
 try:
     import madgraph.iolibs.files as files
 except:
@@ -89,7 +90,7 @@ class AbstractRoutine(object):
             else:
                 text += writer.write_combined(grouped, mode=mode, **opt)
                 
-        if aloha.quad_precision and 'MP' not in self.tag:
+        if aloha.mp_precision and 'MP' not in self.tag:
             self.tag.append('MP')
             text += self.write(output_dir, language, mode, **opt)
             
@@ -123,6 +124,7 @@ class AbstractRoutineBuilder(object):
         self.routine_kernel = None
         self.spin2_massless = False
         self.contracted = {}
+        self.fct = {}
         
     
     def compute_routine(self, mode, tag=[], factorize=True):
@@ -185,6 +187,10 @@ class AbstractRoutineBuilder(object):
         output.contracted = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
                                           for name in aloha_lib.KERNEL.use_tag
                                           if name.startswith('TMP')])
+        output.fct = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
+                                          for name in aloha_lib.KERNEL.use_tag
+                                          if name.startswith('FCT')])
+        
         output.tag = [t for t in self.tag if not t.startswith('C')]
         output.tag += ['C%s' % pair for pair in self.conjg]
         return output
@@ -192,7 +198,6 @@ class AbstractRoutineBuilder(object):
     def change_sign_for_outcoming_fermion(self):
         """change the sign of P for outcoming fermion in order to 
         correct the mismatch convention between HELAS and FR"""
-        
         flip_sign = []
         for i in range(1,len(self.spins),2):
             if self.spins[i] == 2:
@@ -203,6 +208,11 @@ class AbstractRoutineBuilder(object):
 
         momentum_pattern = re.compile(r'\bP\(([\+\-\d]+),(%s)\)' % '|'.join(flip_sign))
         lorentz_expr = momentum_pattern.sub(r'-P(\1,\2)', self.lorentz_expr)
+        
+        print lorentz_expr
+        calc = aloha_parsers.ALOHAExpressionParser()
+        lorentz_expr = calc.parse(lorentz_expr)
+        print 'L',lorentz_expr
         
         return lorentz_expr
                 
@@ -226,8 +236,8 @@ class AbstractRoutineBuilder(object):
                 self.routine_kernel = lorentz
                 lorentz = eval(lorentz)
             except NameError, error:
-                logger.error('unknow type in Lorentz Evaluation')
-                raise ALOHAERROR, 'unknow type in Lorentz Evaluation' 
+                logger.error('unknow type in Lorentz Evaluation:%s'%str(error))
+                raise ALOHAERROR, 'unknow type in Lorentz Evaluation: %s ' % str(error) 
             else:
                 self.kernel_tag = set(aloha_lib.KERNEL.use_tag)
         elif isinstance(self.routine_kernel,str):
@@ -294,7 +304,7 @@ class AbstractRoutineBuilder(object):
         lorentz = lorentz.simplify()
         
         # Modify the expression in case of loop-pozzorini
-        if any((tag.startswith('L') for tag in self.tag if len(tag)>2)):
+        if any((tag.startswith('L') for tag in self.tag if len(tag)>1)):
             return self.compute_loop_coefficient(lorentz, outgoing)
             
         lorentz = lorentz.expand()

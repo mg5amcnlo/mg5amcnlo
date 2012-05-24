@@ -63,6 +63,7 @@ class Computation(dict):
         self.use_tag = set()
         self.id = -1
         self.reduced_expr = {}
+        self.fct_expr = {}
         self.reduced_expr2 = {}
         dict.__init__(self)
 
@@ -113,7 +114,25 @@ class Computation(dict):
         self.add_tag((tag,))
         #return expression
         return new
-        
+    
+    def add_function_expression(self, fct_tag, expression):
+
+        str_expr = str(expression)
+        if str_expr in self.fct_expr:
+            tag, expression = self.fct_expr[str_expr]
+            print tag
+            self.add_tag(tag)
+            return 'FCT(%s)' % len(tag[3:])
+        tag = 'FCT%s' % len(self.fct_expr)
+        print tag
+        new = Variable(tag)
+        expr = expression.expand().get_rep([0])
+        new = expr.simplify()
+        new = expr.factorize()       
+        self.fct_expr[str_expr] = (tag, fct_tag, new) 
+        self.reduced_expr2[tag] = (fct_tag, new)
+        self.add_tag((tag,))
+        return 'FCT(%s)' % (len(self.fct_expr) -1)
         
 KERNEL = Computation()
 

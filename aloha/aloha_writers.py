@@ -23,8 +23,8 @@ class WriteALOHA:
     power_symbol = '**'
     change_number_format = str
     extension = ''
-    type_to_variable = {2:'F',3:'V',5:'T',1:'S'}
-    type_to_size = {'S':3, 'T':18, 'V':6, 'F':6}
+    type_to_variable = {2:'F',3:'V',5:'T',1:'S',4:'R'}
+    type_to_size = {'S':3, 'T':18, 'V':6, 'F':6,'R':18}
     
             
     def __init__(self, abstract_routine, dirpath):
@@ -418,6 +418,27 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         format = 'd0'
     
+    def get_fct_format(self, fct):
+        """Put the function in the correct format"""
+        if not hasattr(self, 'fct_format'):
+            one = self.change_number_format(1)
+            self.fct_format = {'csc' : '{0}/cos(%s)'.format(one),
+                   'sec': '{0}/sin(%s)'.format(one),
+                   'acsc': 'asin({0}/(%s))'.format(one),
+                   'asec': 'acos({0}/(%s))'.format(one),
+                   're': ' dble(%s)',
+                   'im': 'imag(%s)',
+                   'cmath.sqrt':'sqrt(%s)', 
+                   'sqrt': 'sqrt(%s)',
+                   'complexconjugate': 'conjg(%s)',
+                   '/' : '{0}/%s'.format(one) 
+                   }
+            
+        if fct in self.fct_format:
+            return self.fct_format[fct]
+        else:
+            return '{0}(0)'.format(fct)
+
     
     def get_header_txt(self, name=None, couplings=['COUP']):
         """Define the Header of the fortran file. This include
@@ -450,10 +471,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         out = StringIO()
         out.write('implicit none\n')
-        print self.call_arg
         argument_var = [name for type,name in self.call_arg]
-        print argument_var
-        print self.declaration
         for type, name in self.declaration:
             if type.startswith('list'):
                 type = type[5:]
@@ -484,7 +502,6 @@ class ALOHAWriterForFortran(WriteALOHA):
             else:
                 out.write(' %s %s\n' % (self.type2def[type], name))
 
-        print out.getvalue()
         return out.getvalue()
         
     def get_momenta_txt(self):
@@ -611,6 +628,12 @@ class ALOHAWriterForFortran(WriteALOHA):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
+                
+        for name, (fct, obj) in self.routine.fct.items():
+            format = ' %s = %s\n' % (name, self.get_fct_format(fct))
+            print obj, type(obj)
+            out.write(format % self.write_obj(obj))
+        
 
         numerator = self.routine.expr
         
@@ -743,16 +766,12 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
 
         
         ALOHAWriterForFortran.__init__(self, abstract_routine, dirpath)
-        print 'pass here in LOOP'
         # position of the outgoing in particle list        
         self.l_id = [int(c[1:]) for c in abstract_routine.tag if c[0] == 'L'][0] 
         self.l_helas_id = self.l_id   # expected position for the argument list
         if 'C%s' %((self.outgoing + 1) // 2) in abstract_routine.tag:
             #flip the outgoing tag if in conjugate
             self.l_helas_id += self.l_id % 2 - (self.l_id +1) % 2 
-       
-            
-        print 'define ', self.l_helas_id
         
 
     def define_expression(self):
@@ -773,7 +792,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
             for ind in expr.listindices():
                 data = expr.get_rep(ind)
                 if data:
-                    out.write('    COEFF(%s,%s)= denom*%s\n' % ( 
+                    out.write('    COEFF(%s,%s)= coup*%s\n' % ( 
                                     self.pass_to_HELAS(ind)+1, ','.join(arg), 
                                     self.write_obj(data)))
                 else:

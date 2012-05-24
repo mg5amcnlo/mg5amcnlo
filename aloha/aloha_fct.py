@@ -29,7 +29,10 @@ def check_flow_validity(expression, nb_fermion):
     assert nb_fermion != 0 and (nb_fermion % 2) == 0
     
     # Need to expand the expression in order to have a simple sum of expression
-    expr = eval(expression)
+    try:
+        expr = eval(expression)
+    except:
+        return
     expr = expr.simplify()
     #expr is now a valid AddVariable object if they are a sum or
     if expr.vartype != 1: # not AddVariable 
