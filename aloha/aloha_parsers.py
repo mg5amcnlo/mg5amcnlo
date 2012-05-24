@@ -285,7 +285,7 @@ class ALOHAExpressionParser(UFOExpressionParser):
             p[0] = p[1]+'('+p[3]+','+ p[5]+','+ p[7]+')'
             return
         
-        args = [eval(2*i+1) for i in [1,2]]
+        args = [eval(p[2*i+1]) for i in [1,2,3]]
         new = aloha_lib.KERNEL.add_function_expression(p[1], *args)
         p[0] = str(new)
         
@@ -296,7 +296,7 @@ class ALOHAExpressionParser(UFOExpressionParser):
         if p[1] in self.aloha_object:
             p[0] = p[1]+'('+p[3]+','+ p[5]+','+ p[7]+','+ p[9]+')'            
             return
-        args = [eval(2*i+1) for i in [1,2,3]]
+        args = [eval(p[2*i+1]) for i in [1,2,3,4]]
         new = aloha_lib.KERNEL.add_function_expression(p[1], *args)
         p[0] = str(new)
 

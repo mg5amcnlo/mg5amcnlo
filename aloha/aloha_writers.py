@@ -437,7 +437,9 @@ class ALOHAWriterForFortran(WriteALOHA):
         if fct in self.fct_format:
             return self.fct_format[fct]
         else:
+            self.declaration.add(('fct', fct))
             return '{0}(%s)'.format(fct)
+            
 
     
     def get_header_txt(self, name=None, couplings=['COUP']):
@@ -499,6 +501,9 @@ class ALOHAWriterForFortran(WriteALOHA):
                     size = '*'
     
                 out.write(' %s %s(%s)\n' % (self.type2def[type], name, size))
+            elif type == 'fct':
+                out.write(' %s %s\n' % (self.type2def['complex'], name))
+                out.write(' external %s\n' % (name))
             else:
                 out.write(' %s %s\n' % (self.type2def[type], name))
 

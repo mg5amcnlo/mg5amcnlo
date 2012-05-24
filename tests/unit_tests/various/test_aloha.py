@@ -930,152 +930,7 @@ class TestMultVariable(unittest.TestCase):
         
         
                 
-class TestFracVariable(unittest.TestCase):
-    """ Class to test the Operation linked to a FracVariable """
-    
-    def setUp(self):
-        """ some building block """
-        
-        self.p1 = aloha_obj.P(1,2)
-        self.p2 = aloha_obj.P(1,3)
-        self.mass1 = aloha_obj.Mass(2)
-        self.mass2 = aloha_obj.Mass(3)
-        self.frac1 = aloha_lib.FracVariable(self.p1, self.mass1)
-        self.frac2 = aloha_lib.FracVariable(self.p2, self.mass2)
-        
-    def testcreation(self):
-        """ test if we can create FracVariable Object with division"""
-        
-        #
-        # First check the creation at Lorentz Object
-        #
-        frac1= self.p1 / self.mass1
-        self.assertEqual(frac1.__class__, aloha_lib.FracVariable)
-        self.assertEqual(frac1, self.frac1)
-        # Verif that the object are different
-        self.assertFalse(frac1.numerator is self.p1)
-        self.assertFalse(frac1.denominator is self.mass1)
-        
-        sum = self.p1 +self.p2
-        frac2 = sum / self.mass1
-        self.assertEqual(frac2.__class__, aloha_lib.FracVariable)        
-        self.assertEqual(frac2.numerator, sum)
-        self.assertEqual(frac2.denominator, self.mass1)
-        # Verif that the object are different
-        self.assertFalse(frac2.numerator is sum)
-        self.assertFalse(frac2.denominator is self.mass1)
-        
-        prod = self.p1 * self.p2
-        frac3 = prod / self.mass1
-        self.assertEqual(frac3.__class__, aloha_lib.FracVariable)        
-        self.assertEqual(frac3.numerator, prod)
-        self.assertEqual(frac3.denominator, self.mass1)        
-        # Verif that the object are different
-        self.assertFalse(frac3.numerator is prod)
-        self.assertFalse(frac3.denominator is self.mass1)
-        
-        frac4 = 2 / self.mass1
-        self.assertEqual(frac4.__class__, aloha_lib.FracVariable)
-        self.assertTrue(isinstance(frac4.numerator, int))
-        self.assertEqual(frac4.numerator, 2)
-        self.assertTrue(isinstance(frac4.denominator,aloha_lib.Variable))
-        self.assertEqual(frac4.denominator, self.mass1)
-        self.assertFalse(frac4.denominator is self.mass1)
-        
-        sum = (self.mass1 + self.mass2)
-        frac4 = 2 / sum
-        self.assertEqual(frac4.__class__, aloha_lib.FracVariable)
-        self.assertTrue(isinstance(frac4.numerator, int))
-        self.assertEqual(frac4.numerator, 2)
-        self.assertTrue(isinstance(frac4.denominator,aloha_lib.AddVariable))
-        self.assertEqual(frac4.denominator, sum)
-        self.assertFalse(frac4.denominator is sum)        
-        
-        prod = self.mass1 * self.mass2
-        frac4 = 2 / prod
-        self.assertEqual(frac4.__class__, aloha_lib.FracVariable)
-        self.assertTrue(isinstance(frac4.numerator, int))
-        self.assertEqual(frac4.numerator, 2)
-        self.assertTrue(isinstance(frac4.denominator,aloha_lib.MultVariable))
-        self.assertTrue(isinstance(frac4.denominator,aloha_lib.MultLorentz))
-        self.assertEqual(frac4.denominator, prod)
-        self.assertFalse(frac4.denominator is prod)  
-        
 
-    def testmultiplacation(self):
-        """Frac Variable can be multiply by any object"""
-        
-        #product with Variable
-        prod1 = self.frac1 * self.p1
-        self.assertEqual(prod1.__class__, aloha_lib.FracVariable)
-        self.assertEqual(prod1.numerator, self.p1 * self.p1)
-        self.assertEqual(prod1.denominator, self.mass1)
-        
-        prod2 = self.p1 * self.frac1
-        self.assertEqual(prod2.__class__, aloha_lib.FracVariable)
-        self.assertEqual(prod2.numerator, self.p1 * self.p1)
-        self.assertEqual(prod2.denominator, self.mass1)        
-    
-        #product with MultVariable
-        prod = self.p1 * self.p2
-        prod2 = prod * self.frac1
-        self.assertEqual(prod2.__class__, aloha_lib.FracVariable)
-        self.assertEqual(prod2.numerator, self.p1 * self.p2 * self.p1)
-        self.assertEqual(prod2.denominator, self.mass1)          
-        
-        prod3 = self.frac1 * prod
-        self.assertEqual(prod3.__class__, aloha_lib.FracVariable)
-        self.assertEqual(prod3.numerator, self.p1 * self.p2 * self.p1)
-        self.assertEqual(prod3.denominator, self.mass1)
-        
-        # Product with SumVariable
-        sum = self.p1 +self.p2
-        prod2 = sum * self.frac1
-        self.assertEqual(prod2.__class__, aloha_lib.FracVariable)
-        self.assertEqual(prod2.numerator, sum * self.p1)
-        self.assertEqual(prod2.denominator, self.mass1) 
-        
-        prod3 = self.frac1 * sum
-        self.assertEqual(prod3.__class__, aloha_lib.FracVariable)
-        self.assertEqual(prod3.numerator, sum * self.p1)
-        self.assertEqual(prod3.denominator, self.mass1) 
-               
-               
-        # Product with FracVariable
-        prod = self.frac1 * self.frac2
-        self.assertEqual(prod.__class__, aloha_lib.FracVariable)
-        self.assertEqual(prod.numerator.__class__, aloha_lib.MultLorentz)
-        self.assertEqual(prod.numerator, self.p2 * self.p1)
-        self.assertEqual(prod.denominator, self.mass1 * self.mass2)
-               
-        prod3 = self.frac2 * self.frac1
-        self.assertEqual(prod3.__class__, aloha_lib.FracVariable)
-        self.assertEqual(prod3.numerator, self.p2 * self.p1)
-        self.assertEqual(prod3.denominator, self.mass1 * self.mass2)       
-        
-    
-    def testdivision(self):
-        """ Test division with a FracVariable """ 
-        
-        #divide with Variable
-        prod1 = self.frac1 / self.p1
-        self.assertEqual(prod1.__class__, aloha_lib.FracVariable)
-        self.assertEqual(prod1.numerator, self.p1)
-        self.assertEqual(prod1.denominator, self.p1 * self.mass1)
-        
-        #divide with a MultVariable
-        prod= self.p1 * self.p2
-        prod3 = self.frac1 / prod
-        self.assertEqual(prod3.__class__, aloha_lib.FracVariable)
-        self.assertEqual(prod3.numerator, self.p1)
-        self.assertEqual(prod3.denominator, self.mass1 * self.p1 * self.p2)
-        
-        # divide with AddVariable
-        sum = self.p1 +self.p2
-        prod2 = self.frac1 / sum
-        self.assertEqual(prod2.__class__, aloha_lib.FracVariable)
-        self.assertEqual(prod2.numerator, self.p1)
-        self.assertEqual(prod2.denominator, sum * self.mass1) 
         
 
         
@@ -1774,12 +1629,12 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         
         obj1b_rep = obj1b.simplify().expand().simplify()
         assert obj1b_rep.lorentz_ind == [4,2,1,5] , "test not valid if condition not met"
-        self.assertEqual(str(obj1b_rep.get_rep([0,1,0,0])), '-5 * ( P3_0 * P3_1 * OM3 )')       
+        self.assertEqual(str(obj1b_rep.get_rep([0,1,0,0])), '(-5 * P3_0 * P3_1 * OM3)')       
         
         obj1_rep = obj1.simplify().expand().simplify()
         
-        assert obj1_rep.lorentz_ind == [4,2,1,5] , "test not valid if condition not met"
-        self.assertEqual(str(obj1_rep.get_rep([0,1,0,0])), '-5 * ( P3_0 * P3_1 * OM3 )')
+        assert obj1_rep.lorentz_ind == [2,5,1,4] , "test not valid if condition not met"
+        self.assertEqual(str(obj1_rep.get_rep([1,0,0,0])), '(-5 * P3_0 * P3_1 * OM3)')
         
     
         
@@ -1848,10 +1703,10 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
             self.assertEqual(rep.__class__, aloha_lib.MultVariable)
             self.assertEqual(len(rep), 2)
             for data in rep:
-                if not( data.variable == 'P1_%s' % ind[0] or data.variable == \
-                                                            'P2_%s' % ind[1]):
+                name = str(aloha_lib.KERNEL.objs[data])
+                if not( name == 'P1_%s' % ind[0] or name == 'P2_%s' % ind[1]):
                     raise Exception('invalid product')
-            self.assertNotEqual(rep[0].variable, rep[1].variable)
+            self.assertNotEqual(str(aloha_lib.KERNEL.objs[rep[0]]), str(aloha_lib.KERNEL.objs[rep[1]]))
         
         
     def testtensorialproductspin(self):
@@ -2014,22 +1869,32 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
       
     def testeinsteinsum2(self):
         
-        class gamma_in_lorentz(aloha_lib.LorentzObject):
+        class L_gamma_in_lorentz(aloha_lib.LorentzObject):
             """ local representation """
             
-            def __init__(self, l1, l2, prefactor=1, constant=0):
-                aloha_lib.LorentzObject.__init__(self,[l1, l2], [])
+            def __init__(self, name, l1, l2):
+                """ (name, s1,s2)"""
+                
+                aloha_lib.LorentzObject.__init__(self,name,[l1,l2], [])
             
-            representation = aloha_lib.LorentzObjectRepresentation(
-            {(0,0): 0, (0,1): 0, (0,2): 0, (0,3):-1,
-             (1,0): 0, (1,1): 0, (1,2): -1, (1,3):0,
-             (2,0): 0, (2,1): 1, (2,2): 0, (2,3):0,
-             (3,0): 1, (3,1): 0, (3,2): 0, (3,3):0
-             }, [1,2], [])
+                representation = aloha_lib.LorentzObjectRepresentation(
+                            {(0,0): 0, (0,1): 0, (0,2): 0, (0,3):-1,
+                             (1,0): 0, (1,1): 0, (1,2): -1, (1,3):0,
+                             (2,0): 0, (2,1): 1, (2,2): 0, (2,3):0,
+                             (3,0): 1, (3,1): 0, (3,2): 0, (3,3):0},
+                                        [1,2], [])
+        class gamma_in_lorentz(aloha_lib.FactoryLorentz):
+            object_class = L_gamma_in_lorentz
+        
+            @classmethod
+            def get_unique_name(self, s1, s2):
+                return 'gamma_%s_%s' % (s1,s2)
+        
+    
             
 #            create_representation = lambda : representation
             
-        obj = gamma_in_lorentz([1,2],[],[])
+        obj = gamma_in_lorentz(1,2)
         
         
         obj2 = obj.expand()
@@ -2055,11 +1920,14 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         
     def testspinsum(self):
         
-        class gamma_in_spin(aloha_lib.LorentzObject):
+
+        class L_gamma_in_spin(aloha_lib.LorentzObject):
             """ local representation """
             
-            def __init__(self, s1, s2, prefactor=1, constant=0):
-                aloha_lib.LorentzObject.__init__(self, [], [s1, s2])
+            def __init__(self, name, spin1, spin2):
+                """ (name, s1,s2)"""
+                
+                aloha_lib.LorentzObject.__init__(self,name,[], [spin1, spin2])
             
             representation = aloha_lib.LorentzObjectRepresentation(
                             {(0,0): 0, (0,1): 0, (0,2): 0, (0,3):-1,
@@ -2067,7 +1935,12 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
                              (2,0): 0, (2,1): 1, (2,2): 0, (2,3):0,
                              (3,0): 1, (3,1): 0, (3,2): 0, (3,3):0},
                                         [], [1,2])
-            
+        class gamma_in_spin(aloha_lib.FactoryLorentz):
+            object_class = L_gamma_in_spin
+        
+            @classmethod
+            def get_unique_name(self, s1, s2):
+                return 'gamma_%s_%s' % (s1,s2)
 #            create_representation = lambda : representation
         
         
@@ -2085,10 +1958,10 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         new = new.simplify()
         self.assertEqual(new.__class__, aloha_lib.LorentzObjectRepresentation)
         self.assertEqual(new.spin_ind, [1])
-        self.assertEqual(new.get_rep([3]), aloha_lib.ScalarVariable('F2_1'))
-        self.assertEqual(new.get_rep([2]), aloha_lib.ScalarVariable('F2_2'))
-        self.assertEqual(new.get_rep([1]), aloha_lib.ScalarVariable('F2_3'))
-        self.assertEqual(new.get_rep([0]), aloha_lib.ScalarVariable('F2_4')) 
+        self.assertEqual(new.get_rep([3]), aloha_lib.Variable('F2_1'))
+        self.assertEqual(new.get_rep([2]), aloha_lib.Variable('F2_2'))
+        self.assertEqual(new.get_rep([1]), aloha_lib.Variable('F2_3'))
+        self.assertEqual(new.get_rep([0]), aloha_lib.Variable('F2_4')) 
         self.assertEqual(new.get_rep([0]).prefactor, -1)
         self.assertEqual(new.get_rep([1]).prefactor, -1)   
         self.assertEqual(new.get_rep([2]).prefactor, 1)                  

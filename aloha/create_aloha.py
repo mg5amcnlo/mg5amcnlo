@@ -209,10 +209,8 @@ class AbstractRoutineBuilder(object):
         momentum_pattern = re.compile(r'\bP\(([\+\-\d]+),(%s)\)' % '|'.join(flip_sign))
         lorentz_expr = momentum_pattern.sub(r'-P(\1,\2)', self.lorentz_expr)
         
-        print lorentz_expr
         calc = aloha_parsers.ALOHAExpressionParser()
         lorentz_expr = calc.parse(lorentz_expr)
-        print 'L',lorentz_expr
         
         return lorentz_expr
                 
@@ -346,6 +344,7 @@ class AbstractRoutineBuilder(object):
         coeff_expr = lorentz.split(veto_ids)
         
         for key, expr in coeff_expr.items():
+            expr = expr.simplify()
             coeff_expr[key] = expr.factorize()
         coeff_expr.tag = set(aloha_lib.KERNEL.use_tag)
         
