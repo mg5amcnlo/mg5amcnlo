@@ -3550,7 +3550,7 @@ c i_fks is (anti-)quark
             stop
          endif
       else
-         call smatrix(pp,wgt)
+         call smatrix_real(pp,wgt)
          wgt=wgt*xi_i_fks**2*(1d0-y_ij_fks)
       endif
 

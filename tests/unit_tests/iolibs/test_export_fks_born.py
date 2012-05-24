@@ -120,7 +120,7 @@ NJetSymmetrizeFinal     Yes
         that chooses among the different real emissions"""
 
         goal = \
-"""      SUBROUTINE SMATRIX(P, WGT)
+"""      SUBROUTINE SMATRIX_REAL(P, WGT)
       IMPLICIT NONE
       INCLUDE 'nexternal.inc'
       DOUBLE PRECISION P(0:3, NEXTERNAL)
