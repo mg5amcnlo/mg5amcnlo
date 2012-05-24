@@ -629,9 +629,9 @@ class ALOHAWriterForFortran(WriteALOHA):
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
                 
-        for name, (fct, obj) in self.routine.fct.items():
+        for name, (fct, objs) in self.routine.fct.items():
             format = ' %s = %s\n' % (name, self.get_fct_format(fct))
-            out.write(format % self.write_obj(obj))
+            out.write(format % ','.join([self.write_obj(obj) for obj in objs]))
         
 
         numerator = self.routine.expr
