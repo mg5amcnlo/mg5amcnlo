@@ -1,63 +1,44 @@
       subroutine LesHouches(p,born_wgt,virt_wgt)
 c
-c Given the Born momenta, this is the Binoth-Les Houches interface
-c file that calls the OLP and returns the virtual weights. For
-c convenience also the born_wgt is passed to this subroutine.
+c Given the Born momenta, this is the Binoth-Les Houches interface file
+c that calls the OLP and returns the virtual weights. For convenience
+c also the born_wgt is passed to this subroutine.
 c
-C********************************************************************
-c WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
-C********************************************************************
-c The Born in MadFKS -- and therefore also the virtual!-- should have
-c a slightly adapted identical particle symmetry factor. The normal
-c virtual weight as coming from the OLP should be divided by the
-c number of gluons in the corresponding real-emission process (i.e.
-c the number of gluons in the Born plus one). This factor is passed
-c to this subroutine in /numberofparticles/ common block, as
-c "ngluons". So, divided virt_wgt by dble(ngluons) to get the correct
-c virtual to be used in MadFKS.
-C********************************************************************
+C************************************************************************
+c WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
+C************************************************************************
+c The Born in MadFKS -- and therefore also the virtual!-- should have a
+c slightly adapted identical particle symmetry factor. The normal
+c virtual weight as coming from the OLP should be divided by the number
+c of gluons in the corresponding real-emission process (i.e.  the number
+c of gluons in the Born plus one). This factor is passed to this
+c subroutine in /numberofparticles/ common block, as "ngluons". So,
+c divided virt_wgt by dble(ngluons) to get the correct virtual to be
+c used in MadFKS. The born_wgt that is passed to this subroutine has
+c already been divided by this factor.
+C************************************************************************
 c
       implicit none
-
       include "nexternal.inc"
-      include "born_nhel.inc"
       include "coupl.inc"
-      include "run.inc"
-
       double precision pi
       parameter (pi=3.1415926535897932385d0)
-      integer procnum,i,j,dummyHel(nexternal-1)
       double precision p(0:3,nexternal-1)
-      double precision virt_wgt,born_wgt,double,single
-      double precision mu,alphaS,alphaEW,virt_wgts(3),UVnorm(2),s
-      double precision virtcor,ao2pi,conversion,hel_fac,sumdot
-      external sumdot
-      logical firsttime
-      data firsttime /.true./
+      double precision virt_wgt,born_wgt,double,single,virt_wgts(3)
+      double precision mu,ao2pi,conversion,alpha_S
       save conversion
-      common /LH_procnum /procnum
-
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
      &     fkssymmetryfactorDeg
       integer ngluons,nquarks(-6:6)
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg,ngluons,nquarks
-
-      character*79         hel_buff(2)
-      common/to_helicity/  hel_buff
-
-
-      INTEGER NHEL(NEXTERNAL-1,2)
-      integer nhelall(nexternal-1,max_bhel)
-      INTEGER GOODHEL(2),HEL_WGT
-      common /c_nhelborn/ nhel,nhelall,goodhel,hel_wgt
-
-      integer nhel_cts(nexternal-1),sum_hel
-
+      logical firsttime,firsttime_conversion
+      data firsttime,firsttime_conversion /.true.,.true./
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
-
+      double precision qes2
+      common /coupl_es/ qes2
       integer nvtozero
       logical doVirtTest
       common/cvirt2test/nvtozero,doVirtTest
@@ -65,25 +46,6 @@ c
       double precision  virtmax,virtmin,virtsum
       common/cvirt3test/virtmax,virtmin,virtsum,ivirtpoints,
      &     ivirtpointsExcept
-
-      logical ExceptPSpoint
-      integer iminmax
-      common/cExceptPSpoint/iminmax,ExceptPSpoint
-      double precision minmax_virt(2,2)
-      logical exceptional
-      save minmax_virt, exceptional
-
-      double precision vegas_wgt
-      double precision vegas_weight
-      common/cvegas_weight/vegas_weight
-      double precision epinv, epinv2
-      common/to_poles/epinv, epinv2
-
-      double precision pmass(nexternal),zero
-      parameter (zero=0d0)
-      double precision qes2
-      common /coupl_es/ qes2
-      double precision conv
       logical fksprefact
       parameter (fksprefact=.true.)
       double precision tolerance, madfks_single, madfks_double
@@ -91,45 +53,54 @@ c
       integer nbad, nbadmax
       parameter (nbadmax = 5)
       data nbad / 0 /
-      include "pmass.inc"
-
-      do i=1, nexternal-1
-          dummyHel(i)=1
-      enddo
-
-c update the ren_scale for MadLoop and the couplings
-      mu_r = scale
+      if (isum_hel.ne.0) then
+         write (*,*) 'Can only do explicit helicity sum'//
+     &        ' for Virtual corrections',
+     &        isum_hel
+      endif
+c update the ren_scale for MadLoop and the couplings (should be the
+c Ellis-Sexton scale)
+      mu_r = sqrt(QES2)
       call update_as_param()
-
-      alphaS=g**2/(4d0*PI)
-      if (firsttime) write(*,*) "alpha_s value used by MadLoop: ",
-     1  alphas
-      ao2pi=alphaS/(2d0*Pi)
-      alphaEW=dble(gal(1))**2/(4d0*PI)
+      alpha_S=g**2/(4d0*PI)
+      if (firsttime) write(*,*) "alpha_s value used for the virtuals"/
+     &     /" is (for the first PS point): ", alpha_S
       call sloopmatrix(p, virt_wgts)
       virt_wgt= virt_wgts(1)/dble(ngluons)
       single  = virt_wgts(2)/dble(ngluons)
       double  = virt_wgts(3)/dble(ngluons)
-      vegas_wgt=vegas_weight
-
-c Ellis-Sexton scale squared
-      mu = QES2
-c     check for poles cancellation      
+c======================================================================
+c If the Virtuals are in the Dimensional Reduction scheme, convert them
+c to the CDR scheme with the following factor (not needed for MadLoop,
+c because they are already in the CDR scheme format)
+c      if (firsttime_conversion) then
+c         call DRtoCDR(conversion)
+c         firsttime_conversion=.false.
+c      endif
+c      ao2pi= alpha_S/(2d0*PI)
+c      virt_wgt=virt_wgt+conversion*born_wgt*ao2pi
+c======================================================================
+c check for poles cancellation      
       if (firsttime) then
-          call getpoles(p, mu, madfks_double, madfks_single, fksprefact)
-          if (dabs(single - madfks_single).lt.tolerance .and.
-     1        dabs(double - madfks_double).lt.tolerance) then
+          call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
+c Check only the double poles: the single poles are not correctly
+c computed in MadLoop when there are massive particles around.
+c$$$          if (dabs(single - madfks_single).lt.tolerance .and.
+c$$$     1        dabs(double - madfks_double).lt.tolerance) then
+          if (dabs(double - madfks_double).lt.tolerance) then
               write(*,*) "---- POLES CANCELLED ----"
               firsttime = .false.
           else
               write(*,*) "POLES MISCANCELLATION, DIFFERENCE > ",
      1         tolerance
-              write(*,*) " DOUBLE:"
+              write(*,*) " COEFFICIENT DOUBLE POLE:"
               write(*,*) "       MadFKS: ", madfks_double,
      1                   "          OLP: ", double
-              write(*,*) " SINGLE:"
+              write(*,*) " COEFFICIENT SINGLE POLE:"
               write(*,*) "       MadFKS: ",madfks_single,
      1                   "          OLP: ",single
+              write(*,*) " FINITE:"
+              write(*,*) "          OLP: ",virt_wgt
               if (nbad .lt. nbadmax) then
                   nbad = nbad + 1
                   write(*,*) " Trying another PS point"
@@ -139,7 +110,11 @@ c     check for poles cancellation
               endif
           endif
       endif
-
+      if(doVirtTest.and.born_wgt.ne.0d0)then
+         virtmax=max(virtmax,virt_wgt/born_wgt/ao2pi)
+         virtmin=min(virtmin,virt_wgt/born_wgt/ao2pi)
+         virtsum=virtsum+virt_wgt/born_wgt/ao2pi
+      endif
       return
       end
 
