@@ -437,7 +437,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         if fct in self.fct_format:
             return self.fct_format[fct]
         else:
-            return '{0}(0)'.format(fct)
+            return '{0}(%s)'.format(fct)
 
     
     def get_header_txt(self, name=None, couplings=['COUP']):
@@ -631,7 +631,6 @@ class ALOHAWriterForFortran(WriteALOHA):
                 
         for name, (fct, obj) in self.routine.fct.items():
             format = ' %s = %s\n' % (name, self.get_fct_format(fct))
-            print obj, type(obj)
             out.write(format % self.write_obj(obj))
         
 
