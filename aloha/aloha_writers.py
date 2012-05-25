@@ -806,6 +806,49 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                                     self.write_obj(data)))                    
         return out.getvalue()
     
+    def get_declaration_txt(self):
+        """ Prototype for how to write the declaration of variable"""
+        
+        out = StringIO()
+        out.write('implicit none\n')
+        argument_var = [name for type,name in self.call_arg]
+        for type, name in self.declaration:
+            if type.startswith('list'):
+                type = type[5:]
+                #determine the size of the list
+                if name in argument_var:
+                    size ='*'
+                elif name.startswith('P'):
+                    size='0:3'
+                elif name[0] in ['F','V']:
+                    if aloha.loop_mode:
+                        size = 8
+                    else:
+                        size = 6
+                elif name[0] == 'S':
+                    if aloha.loop_mode:
+                        size = 5
+                    else:
+                        size = 3
+                elif name[0] in ['R','T']: 
+                    if aloha.loop_mode:
+                        size = 20
+                    else:
+                        size = 18
+                elif name == 'coeff':
+                    out.write("include 'coef_specs.inc'\n")
+                    size = 'MAXLWFSIZE,VERTEXMAXCOEFS,MAXLWFSIZE'
+    
+                out.write(' %s %s(%s)\n' % (self.type2def[type], name, size))
+            elif type == 'fct':
+                out.write(' %s %s\n' % (self.type2def['complex'], name))
+                out.write(' external %s\n' % (name))
+            else:
+                out.write(' %s %s\n' % (self.type2def[type], name))
+
+        return out.getvalue()
+    
+    
     def define_argument_list(self, couplings=['COUP']):
         """define a list with the string of object required as incoming argument"""
 
@@ -882,13 +925,12 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                 
         # define the resulting momenta
         if self.offshell:
-            type = self.particles[self.outgoing-1]
             if aloha.loop_mode:
                 size_p = 4
             else:
                 size_p = 2
             for i in range(size_p):
-                out.write('    %s%s(%s) = %s\n' % (type,self.outgoing, i, 
+                out.write('    P%s(%s) = %s\n' % (self.outgoing, i, 
                                              ''.join(p).format(*[s+i for s in size])))
 
         
@@ -932,7 +974,8 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         
         return out.getvalue() 
 
-class ALOHAWriterForFortranLoopQP(ALOHAWriterForFortranQP): 
+class ALOHAWriterForFortranLoopQP(ALOHAWriterForFortranLoop, \
+                                                       ALOHAWriterForFortranQP): 
     """routines for writing out Fortran"""        
 
 def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
