@@ -751,6 +751,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             commentstring += self.routine.infostr + '\n'
             writer.write_comments(commentstring)
             writer.write(text)
+        print text
         return text
 
 class ALOHAWriterForFortranQP(ALOHAWriterForFortran): 

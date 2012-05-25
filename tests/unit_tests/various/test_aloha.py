@@ -1840,7 +1840,8 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
             self.assertEqual(len(rep), 4)
             for data in rep:
                 self.assertEqual(data.__class__, aloha_lib.MultVariable)
-                power = [data2.power for data2 in data]
+                power = [data.count(data2) for i,data2 in enumerate(data) 
+                         if data2 not in data[:i]]
                 power.sort()
                 if len(power) == 2:
                     self.assertEqual(power, [1,2])
@@ -1865,7 +1866,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
             for data in rep:
                 self.assertEqual(data.__class__, aloha_lib.MultVariable)
                 self.assertEqual(len(data), 2)
-                self.assertNotEqual(data[0].variable, data[1].variable)
+                self.assertNotEqual(data[0], data[1])
       
     def testeinsteinsum2(self):
         
@@ -1877,18 +1878,19 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
                 
                 aloha_lib.LorentzObject.__init__(self,name,[l1,l2], [])
             
-                representation = aloha_lib.LorentzObjectRepresentation(
+            representation = aloha_lib.LorentzObjectRepresentation(
                             {(0,0): 0, (0,1): 0, (0,2): 0, (0,3):-1,
                              (1,0): 0, (1,1): 0, (1,2): -1, (1,3):0,
                              (2,0): 0, (2,1): 1, (2,2): 0, (2,3):0,
                              (3,0): 1, (3,1): 0, (3,2): 0, (3,3):0},
                                         [1,2], [])
+ 
         class gamma_in_lorentz(aloha_lib.FactoryLorentz):
             object_class = L_gamma_in_lorentz
         
             @classmethod
             def get_unique_name(self, s1, s2):
-                return 'gamma_%s_%s' % (s1,s2)
+                return 'gamma_l_%s_%s' % (s1,s2)
         
     
             
@@ -1909,10 +1911,10 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         new = new.simplify()
         self.assertEqual(new.__class__, aloha_lib.LorentzObjectRepresentation)
         self.assertEqual(new.lorentz_ind, [1])
-        self.assertEqual(new.get_rep([3]), aloha_lib.ScalarVariable('P2_0'))
-        self.assertEqual(new.get_rep([2]), aloha_lib.ScalarVariable('P2_1'))
-        self.assertEqual(new.get_rep([1]), aloha_lib.ScalarVariable('P2_2'))
-        self.assertEqual(new.get_rep([0]), aloha_lib.ScalarVariable('P2_3')) 
+        self.assertEqual(new.get_rep([3]), aloha_lib.Variable('P2_0'))
+        self.assertEqual(new.get_rep([2]), aloha_lib.Variable('P2_1'))
+        self.assertEqual(new.get_rep([1]), aloha_lib.Variable('P2_2'))
+        self.assertEqual(new.get_rep([0]), aloha_lib.Variable('P2_3')) 
         self.assertEqual(new.get_rep([0]).prefactor, 1)
         self.assertEqual(new.get_rep([1]).prefactor, 1)   
         self.assertEqual(new.get_rep([2]).prefactor, -1)                  
@@ -1935,12 +1937,13 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
                              (2,0): 0, (2,1): 1, (2,2): 0, (2,3):0,
                              (3,0): 1, (3,1): 0, (3,2): 0, (3,3):0},
                                         [], [1,2])
+            
         class gamma_in_spin(aloha_lib.FactoryLorentz):
             object_class = L_gamma_in_spin
         
             @classmethod
             def get_unique_name(self, s1, s2):
-                return 'gamma_%s_%s' % (s1,s2)
+                return 'gamma_s_%s_%s' % (s1,s2)
 #            create_representation = lambda : representation
         
         
@@ -1985,7 +1988,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
             self.assertEqual(rep.__class__, aloha_lib.AddVariable)
             self.assertEqual(len(rep), 2)
             for data in rep:
-                self.assertEqual(data.__class__, aloha_lib.ScalarVariable)
+                self.assertEqual(data.__class__, aloha_lib.MultVariable)
         
         ##
         ## check more complex with indices in wrong order
@@ -2684,21 +2687,6 @@ class TestSomeObjectProperty(unittest.TestCase):
         if false:
             raise AssertionError, 'empty list are not False'      
           
-class TestConstantObject(unittest.TestCase):
-    """Check the different Operation for a Constant Object"""
-    
-    def testsum(self):
-        
-        const = aloha_lib.ConstantObject()
-        p = aloha_obj.P(1,1)
-        
-        sum = const + p
-        self.assertEqual(type(sum),type(p))
-        self.assertEqual(sum, p)
-                
-        p2 = aloha_obj.P(1,2) 
-        add = p + p2   
-
 
 class TestSimplify(unittest.TestCase):
     """Check that the simplification works correctly"""        
@@ -2712,54 +2700,13 @@ class TestSimplify(unittest.TestCase):
         self.assertEqual(simp, prod)
         
         # Look if Multiply by Propagator
-        prod = aloha_obj.Gamma(1, 2, 3) * aloha_obj.SpinorPropagator(1, 2 ,3) / \
-                                            aloha_obj.DenominatorPropagator(3) 
+        prod = aloha_obj.Gamma(1, 2, 3) * aloha_obj.SpinorPropagator(1, 2 ,3)
         simp = prod.simplify()
         
-        self.assertEqual(simp.__class__, aloha_lib.FracVariable)
-        self.assertEqual(simp.denominator.__class__, aloha_lib.AddVariable)
+        self.assertEqual(simp.__class__, aloha_lib.AddVariable)
         simp = simp.expand()
         simp = simp.simplify()
-        self.assertEqual(simp.denominator.__class__, aloha_lib.LorentzObjectRepresentation) 
-        denominator = simp.denominator.get_rep([0])     
-        for data in denominator:
-            if aloha_lib.ScalarVariable('P3_0') == data:
-                self.assertEqual(data.prefactor, 1)
-                self.assertEqual(data.power, 2)
-            elif aloha_lib.ScalarVariable('P3_1') == data:
-                self.assertEqual(data.prefactor, -1)
-                self.assertEqual(data.power, 2)
-            elif aloha_lib.ScalarVariable('P3_2') == data:
-                self.assertEqual(data.prefactor, -1)
-                self.assertEqual(data.power, 2)                
-            elif aloha_lib.ScalarVariable('P3_3') == data:
-                self.assertEqual(data.prefactor, -1)
-                self.assertEqual(data.power, 2)
-            elif aloha_lib.ScalarVariable('M3') == data:
-                self.assertEqual(data.prefactor, -1)
-                self.assertEqual(data.power, 2)                
-            elif aloha_lib.ScalarVariable('W3') in data:
-                self.assertEqual(data.prefactor, complex(0,1))
-
-        
-        
-    def testsimplifyFracVariable(self):
-        
-        # For Standard Product : No Simplification
-        prod = aloha_obj.Gamma(1, 2, 3) * aloha_obj.Gamma(3, 4, 5)
-        
-        simp = prod.simplify()
-        self.assertEqual(simp, prod)
-        
-        # Look if Multiply by Propagator
-        
-        prod = aloha_obj.Gamma(1, 2, 3) * aloha_obj.SpinorPropagator(1, 2 ,3) / \
-                                            aloha_obj.DenominatorPropagator(3) 
-        simp = prod.simplify()
-        
-        self.assertEqual(simp.__class__, aloha_lib.FracVariable)
-        self.assertEqual(simp.denominator.__class__, aloha_lib.AddVariable)
-        
+                
         
 class test_aloha_creation(unittest.TestCase):
     """ test the creation of one aloha routine from the create_aloha routine """
@@ -2810,6 +2757,8 @@ class test_aloha_creation(unittest.TestCase):
         P1_0,P1_1,P1_2,P1_3 = 10, 11, 12, 19
         P2_0,P2_1,P2_2,P2_3 = 101, 111, 121, 134
         P3_0,P3_1,P3_2,P3_3 = 1001, 1106, 1240, 1320
+        for name, cexpr in abstract_ZP.contracted.items():
+            exec('%s = %s' % (name, cexpr))
 
         for ind in expr.listindices():
             self.assertEqual(eval(str(expr.get_rep(ind))), 178727040j)
@@ -2851,9 +2800,14 @@ class test_aloha_creation(unittest.TestCase):
         OM1,OM2,OM3 = 0 , 0, 1.0 / 500**2
         M3 = 500
         
+        #for name, cexpr in one_exp.contracted.items():
+        #    exec('%s = %s' % (name, cexpr))
+        for name, cexpr in aloha_lib.KERNEL.reduced_expr2.items():
+            try:
+                exec('%s = %s' % (name, cexpr))            
+            except:
+                pass
         for ind in one_exp.listindices():
-            data = one_exp.get_rep(ind) - two_exp.get_rep(ind)
-            data.simplify()
             self.assertAlmostEqual(eval(str(one_exp.get_rep(ind))), eval(str(two_exp.get_rep(ind))))
                 
     def test_aloha_FFT2(self):
@@ -2885,6 +2839,8 @@ class test_aloha_creation(unittest.TestCase):
         OM1,OM2,OM3 = 0 , 0, 1.0 / 500**2
         M3 = 500
         
+        for name, cexpr in aloha_lib.KERNEL.reduced_expr2.items():
+            exec('%s = %s' % (name, cexpr)) 
         
         for ind in zero.listindices():
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)
@@ -2917,7 +2873,10 @@ class test_aloha_creation(unittest.TestCase):
         OM3 = 0
         j = complex(0,1)
         P3_0,P3_1,P3_2,P3_3 = 10, 11, 12, 13
-            
+        
+        for name, cexpr in aloha_lib.KERNEL.reduced_expr2.items():
+            exec('%s = %s' % (name, cexpr)) 
+        
         for ind in abstract.expr.listindices():                        
             self.assertAlmostEqual(eval(str(abstract.expr.get_rep(ind))) -
                              eval(str(abstract_M.expr.get_rep(ind))) -
@@ -2930,7 +2889,10 @@ class test_aloha_creation(unittest.TestCase):
 
     def test_aloha_FFV_MG4(self):
         """ test the FFV creation of vertex against MG4 """ 
-         
+        
+        aloha_lib.KERNEL.clean()
+        self.assertEqual(len(aloha_lib.KERNEL), 0)
+        
         FFV_M = self.Lorentz(name = 'FFV_4',
                  spins = [ 2, 2, 3 ],
                  structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)')        
@@ -2954,6 +2916,9 @@ class test_aloha_creation(unittest.TestCase):
         s3 = -j*((OM3*(P3_2*((F2_1*((F1_3*(-P3_0-P3_3))+(F1_4*(-P3_1-1*j*P3_2))))+(F2_2*((F1_3*(-P3_1+1*j*P3_2))+(F1_4*(-P3_0+P3_3)))))))+(-1*j*(F1_4*F2_1)+1*j*(F1_3*F2_2)))
         s4 = -j*((OM3*(P3_3*((F2_1*((F1_3*(-P3_0-P3_3))+(F1_4*(-P3_1-1*j*P3_2))))+(F2_2*((F1_3*(-P3_1+1*j*P3_2))+(F1_4*(-P3_0+P3_3)))))))+(-(F1_3*F2_1)+(F1_4*F2_2)))
 
+        for name, cexpr in aloha_lib.KERNEL.reduced_expr2.items():
+            exec('%s = %s' % (name, cexpr)) 
+
         self.assertEqual(s1, eval(str(abstract_M.expr.get_rep([0]))))
         self.assertEqual(s2, eval(str(abstract_M.expr.get_rep([1]))))    
         self.assertEqual(s3, eval(str(abstract_M.expr.get_rep([2]))))    
@@ -2970,7 +2935,8 @@ class test_aloha_creation(unittest.TestCase):
          
         zero = abstract_6.expr - abstract_M.expr - \
                                                     2* abstract_P.expr   
-        
+        for name, cexpr in aloha_lib.KERNEL.reduced_expr2.items():
+            exec('%s = %s' % (name, cexpr)) 
         for ind in zero.listindices():
             self.assertEqual(eval(str(zero.get_rep(ind))),0)
         
@@ -3034,7 +3000,36 @@ class test_aloha_creation(unittest.TestCase):
         
         text =  abstract.write(None, 'Fortran')
 
-        goal =""" subroutine VVS1_1(V2, S3, COUP, M1, W1, V1)
+        goal = """subroutine VVS1_1(V2, S3, COUP, M1, W1,V1)
+implicit none
+ complex*16 V2(*)
+ complex*16 TMP15
+ complex*16 S3(*)
+ real*8 P1(0:3)
+ real*8 M1
+ real*8 W1
+ complex*16 denom
+ real*8 OM1
+ complex*16 COUP
+ complex*16 V1(6)
+    OM1 = 0d0
+    if (M1.ne.0d0) OM1=1d0/M1**2
+    V1(5) = +V2(5)+S3(5)
+    V1(6) = +V2(6)+S3(6)
+P1(0) = -dble(V1(5))
+P1(1) = -dble(V1(6))
+P1(2) = -dimag(V1(6))
+P1(3) = -dimag(V1(5))
+ TMP15 = (V2(1)*P1(0)-V2(2)*P1(1)-V2(3)*P1(2)-V2(4)*P1(3))
+    denom = COUP/(P1(0)**2-P1(1)**2-P1(2)**2-P1(3)**2 - M1 * (M1 -(0,1)* W1))
+    V1(1)= denom*S3(1)*(+(0d0, -1d0)*(V2(1))+(0d0, 1d0)*(P1(0)*OM1*TMP15))
+    V1(2)= denom*S3(1)*(+(0d0, -1d0)*(V2(2))+(0d0, 1d0)*(P1(1)*OM1*TMP15))
+    V1(3)= denom*S3(1)*(+(0d0, -1d0)*(V2(3))+(0d0, 1d0)*(P1(2)*OM1*TMP15))
+    V1(4)= denom*S3(1)*(+(0d0, -1d0)*(V2(4))+(0d0, 1d0)*(P1(3)*OM1*TMP15))
+end
+
+
+subroutine VVS1_2(V2, S3, COUP, M1, W1,V1)
 implicit none 
 double complex V1(*)
 double complex V2(*)
@@ -3045,79 +3040,57 @@ double precision M1, W1
 double complex OM1
 double precision P1(0:3)
 
-V1(5)= V2(5)+S3(2)
-V1(6)= V2(6)+S3(3)
-P1(0) = - dble(V1(5))
-P1(1) = - dble(V1(6))
-P1(2) = - dimag(V1(6))
-P1(3) = - dimag(V1(5))
-OM1 = 0d0
-if (M1 .ne. 0d0) OM1=1d0/M1**2
-
-denom =1d0/(( (M1*( -M1+(0, 1)*W1))+( (P1(0)**2)-(P1(1)**2)-(P1(2)**2)-(P1(3)**2))))
-V1(1)= COUP*denom*(S3(1)*( (OM1*( (0, 1)*(V2(1)*P1(0))+(0, -1)*(V2(2)*P1(1))+(0, -1)*(V2(3)*P1(2))+(0, -1)*(V2(4)*P1(3)))*P1(0))+(0, -1)*V2(1)))
-V1(2)= COUP*denom*(S3(1)*( (OM1*( (0, 1)*(V2(1)*P1(0))+(0, -1)*(V2(2)*P1(1))+(0, -1)*(V2(3)*P1(2))+(0, -1)*(V2(4)*P1(3)))*P1(1))+(0, -1)*V2(2)))
-V1(3)= COUP*denom*(S3(1)*( (OM1*( (0, 1)*(V2(1)*P1(0))+(0, -1)*(V2(2)*P1(1))+(0, -1)*(V2(3)*P1(2))+(0, -1)*(V2(4)*P1(3)))*P1(2))+(0, -1)*V2(3)))
-V1(4)= COUP*denom*(S3(1)*( (OM1*( (0, 1)*(V2(1)*P1(0))+(0, -1)*(V2(2)*P1(1))+(0, -1)*(V2(3)*P1(2))+(0, -1)*(V2(4)*P1(3)))*P1(3))+(0, -1)*V2(4)))
+    call VVS1_1(V2,S3,COUP,M1,W1,V1)
+    
+subroutine VVS1_2_1(V2, S3, COUP1, COUP2, M1, W1,V1)
+implicit none
+ complex*16 V2(*)
+ complex*16 TMP15
+ complex*16 S3(*)
+ real*8 P1(0:3)
+ real*8 M1
+ real*8 W1
+ complex*16 COUP1
+ complex*16 denom
+ complex*16 COUP2
+ integer*4 i
+ complex*16 Vtmp(6)
+ real*8 OM1
+ complex*16 COUP
+ complex*16 V1(6)
+    call VVS1_1(V2,S3,COUP1,M1,W1,V1)
+    call VVS2_1(V2,S3,COUP2,M1,W1,Vtmp)
+ do i = 1, 4
+        V1(i) = V1(i) + Vtmp(i)
+ enddo
 end
 
-
-
- subroutine VVS1_2(V2, S3, COUP, M1, W1, V1)
-implicit none 
-double complex V1(*)
-double complex V2(*)
-double complex S3(*)
-double complex COUP
-double complex denom
-double precision M1, W1
-double complex OM1
-double precision P1(0:3)
-call VVS1_1(V2,S3,COUP,M1,W1,V1)
-end
-
-
- subroutine VVS1_2_1(V2, S3, COUP1,COUP2, M1, W1, V1)
-implicit none 
-double complex V1(*)
-double complex V2(*)
-double complex S3(*)
-double complex COUP1,COUP2
-double complex denom
-double precision M1, W1
-double complex OM1
-double precision P1(0:3)
- double complex TMP(6)
- integer i
-
- CALL VVS1_1(V2, S3, COUP1, M1, W1, V1)
- CALL VVS2_1(V2, S3, COUP2, M1, W1, TMP)
- do i=1,4
-                V1(i) = V1(i) + tmp(i)
-                enddo
-end
-
- subroutine VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1, V1)
-implicit none 
-double complex V1(*)
-double complex V2(*)
-double complex S3(*)
-double complex COUP1,COUP2
-double complex denom
-double precision M1, W1
-double complex OM1
-double precision P1(0:3)
- double complex TMP(6)
- integer i
-
- CALL VVS1_1(V2, S3, COUP1, M1, W1, V1)
- CALL VVS2_1(V2, S3, COUP2, M1, W1, TMP)
- do i=1,4
-                V1(i) = V1(i) + tmp(i)
-                enddo
+subroutine VVS1_2_2(V2, S3, COUP1, COUP2, M1, W1,V1)
+implicit none
+ complex*16 V2(*)
+ complex*16 TMP15
+ complex*16 S3(*)
+ real*8 P1(0:3)
+ real*8 M1
+ real*8 W1
+ complex*16 COUP1
+ complex*16 denom
+ complex*16 COUP2
+ integer*4 i
+ complex*16 Vtmp(6)
+ real*8 OM1
+ complex*16 COUP
+ complex*16 V1(6)
+    call VVS1_1(V2,S3,COUP1,M1,W1,V1)
+    call VVS2_1(V2,S3,COUP2,M1,W1,Vtmp)
+ do i = 1, 4
+        V1(i) = V1(i) + Vtmp(i)
+ enddo
 end
 
 """
+
+        print text
         self.assertEqual(text.split('\n'),goal.split('\n')) 
    
         text_h, text_cpp =  abstract.write(None, 'CPP')
@@ -3281,7 +3254,7 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         requested_routines=[(('FFV1',) , (), 0), 
-                            (('FFV1','FFV2') , (1,), 0)]
+                            (('FFV1','FFV2') , ('C1',), 0)]
         
         helas_suite.compute_subset(requested_routines)
 
@@ -3302,33 +3275,28 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
         
         content = set(os.listdir('/tmp/mg5'))
         self.assertEqual(content, set(['FFV1_0.f',
-                                       'FFV1C1_0.f','FFV2C1_0.f',
-                                       'FFV1C1_2_0.f']))
+                                       'FFV1C1_0.f','FFV2C1_0.f']))
         
         # Check the content of FFV1__FFV2C1_0.f
-        fsock = open('/tmp/mg5/FFV1C1_2_0.f')
-        goal = """C     This File is Automatically generated by ALOHA 
-C     
-      SUBROUTINE FFV1C1_2_0(F2,F1,V3,COUP1,COUP2,VERTEX)
+        fsock = open('/tmp/mg5/FFV1C1_0.f')
+        goal = """
+      SUBROUTINE FFV1C1_2_0(F2, F1, V3, COUP1, COUP2,VERTEX)
       IMPLICIT NONE
-      DOUBLE COMPLEX F1(*)
-      DOUBLE COMPLEX F2(*)
-      DOUBLE COMPLEX V3(*)
-      DOUBLE COMPLEX COUP1,COUP2
-      DOUBLE COMPLEX VERTEX
-      DOUBLE COMPLEX TMP
-
-
-      CALL FFV1C1_0(F2, F1, V3, COUP1, VERTEX)
-      CALL FFV2C1_0(F2, F1, V3, COUP2, TMP)
+      COMPLEX*16 F1(*)
+      COMPLEX*16 F2(*)
+      COMPLEX*16 V3(*)
+      COMPLEX*16 COUP1
+      COMPLEX*16 COUP2
+      COMPLEX*16 VERTEX
+      COMPLEX*16 TMP
+      CALL FFV1C1_0(F2,F1,V3,COUP1,VERTEX)
+      CALL FFV2C1_0(F2,F1,V3,COUP2,TMP)
       VERTEX = VERTEX + TMP
-      END
+      END"""
 
-
-"""
-        self.assertEqual(fsock.read().split('\n'), goal.split('\n'))
-        
-        
+        data = fsock.read().split('\n')
+        for line in goal.split('\n'):
+                self.assertTrue(line in data)
         
         
         
@@ -3340,8 +3308,8 @@ C
         
         requested_routines=[(('FFV1',) , (), 0), 
                             (('FFV1',), (), 2),
-                            (('FFV1',), (1,), 0),
-                            (('FFV2',), (1,), 3),
+                            (('FFV1',), ('C1',), 0),
+                            (('FFV2',), ('C1',), 3),
                             (('VVV1',), (), 3)]
         
         helas_suite.compute_subset(requested_routines)        
@@ -3408,6 +3376,9 @@ C
         # For V4:
         cImag = complex(0,1)
 
+        for name, expr in amp.contracted.items():
+            exec('%s = %s' % (name,expr))
+            
         ufo_value = eval(str(amp.expr.get_rep([0])))
     
         #v4_value = ( (F2_1*F1_3+F2_2*F1_4)*V3_1 \
@@ -3419,8 +3390,6 @@ C
                     +(F1_1*F2_4-F1_2*F2_3)*V3_3*cImag \
                     -(F1_1*F2_3-F1_2*F2_4)*V3_4       )
 
-
-
         self.assertEqual(complex(0,-1)*ufo_value, v4_value)
 
         FFV = Lorentz(name = 'FFV2',
@@ -3429,7 +3398,9 @@ C
         builder = create_aloha.AbstractRoutineBuilder(FFV)
         conjg_builder= builder.define_conjugate_builder()
         amp = conjg_builder.compute_routine(0, factorize=False)
-        
+        for name, expr in amp.contracted.items():
+            exec('%s = %s' % (name,expr))
+                    
         ufo_value = eval(str(amp.expr.get_rep([0])))
         self.assertNotEqual(complex(0,1)*ufo_value, v4_value)
         v4_value = (F1_3*F2_1+F1_4*F2_2)*V3_1 \
@@ -3453,7 +3424,6 @@ C
         amp = conjg_builder.compute_routine(0)
 
         self.assertEqual(builder.conjg,[])
-
         self.assertEqual(amp.expr.nb_spin, 0)
         self.assertEqual(amp.expr.nb_lor, 0)
 

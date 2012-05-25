@@ -83,11 +83,14 @@ class AbstractRoutine(object):
         
         writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag)
         text = writer.write(mode=mode, **opt)
+        print 'self.combined',self.combined
         for grouped in self.combined:
             if isinstance(text, tuple):
+                print 'pass here'
                 text = tuple([old.__add__(new)  for old, new in zip(text, 
                              writer.write_combined(grouped, mode=mode, **opt))])
             else:
+                print 'pass here 2', type(writer), writer.__class__
                 text += writer.write_combined(grouped, mode=mode, **opt)
                 
         if aloha.mp_precision and 'MP' not in self.tag:
@@ -168,12 +171,16 @@ class AbstractRoutineBuilder(object):
         new_id = _conjugate_gap + old_id
         
         self.kernel_tag = set()
-        self.routine_kernel = eval(self.lorentz_expr)
+        if not self.routine_kernel or isinstance(self.routine_kernel, str):
+            self.routine_kernel = eval(self.lorentz_expr)
         
         # We need to compute C Gamma^T C^-1 = C_ab G_cb (-1) C_cd 
         #                  = C_ac G_bc (-1) C_bd = C_ac G_bc C_db
         self.routine_kernel = \
              C(new_id, old_id + 1) * self.routine_kernel * C(new_id + 1, old_id)
+             
+        self.lorentz_expr = '('+self.lorentz_expr+') * C(%s,%s) * C(%s,%s)' % \
+                        (new_id, old_id + 1, new_id + 1, old_id ) 
 
         self.conjg.append(pair)
 
@@ -211,7 +218,6 @@ class AbstractRoutineBuilder(object):
         
         calc = aloha_parsers.ALOHAExpressionParser()
         lorentz_expr = calc.parse(lorentz_expr)
-        
         return lorentz_expr
                 
     def compute_aloha_high_kernel(self, mode, factorize=True):
@@ -621,8 +627,7 @@ class AbstractALOHAModel(dict):
         for list_l_name, conjugate, outgoing in data:
             if len(list_l_name) >1:
                 lorentzname = list_l_name[0]
-                for c in conjugate:
-                    lorentzname += 'C%s' % c
+                lorentzname += ''.join(tag)
                 self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
                         
     def compute_aloha(self, builder, symmetry=None, routines=None, tag=[]):

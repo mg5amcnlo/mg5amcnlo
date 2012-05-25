@@ -69,6 +69,7 @@ class Computation(dict):
 
     def clean(self):
         self.__init__()
+        self.clear()
         
     def add(self, name, obj):
         self.id += 1
@@ -119,7 +120,6 @@ class Computation(dict):
 
         tag = 'FCT%s' % len(self.fct_expr)
         argument = []
-        print args
         for expression in args:
             expr = expression.expand().get_rep([0])
             new = expr.simplify()
@@ -468,6 +468,7 @@ class MultVariable(array):
         """ initialization of the object with default value """        
         array.__init__(self, 'i', old)
         self.prefactor = prefactor
+        assert isinstance(self.prefactor, (float,int,long,complex))
     
     def get_id(self):
         assert len(self) == 1

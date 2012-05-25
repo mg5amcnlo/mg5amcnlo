@@ -62,7 +62,7 @@ class UFOExpressionParser(object):
         'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'FUNCTION',
         'VARIABLE', 'NUMBER'
         )
-    literals = "=+-*/(),"
+    literals = "=+-*/(),'"
 
     # Definition of tokens
 
@@ -211,7 +211,14 @@ class ALOHAExpressionParser(UFOExpressionParser):
     def p_expression_variable(self, p):
         "expression : VARIABLE"
         p[0] = p[1]
+        
+    def p_expression_variable2(self, p):
+        "expression : '\\'' VARIABLE '\\''"
+        p[0] = '\'%s\'' % p[2]
 
+    def p_expression_expression(self, p):
+        "expression : '\\'' expression '\\''"
+        p[0] = '\'%s\'' % p[2]
 
     def p_expression_complex(self, p):
         "expression : COMPLEX '(' expression ',' expression ')'"

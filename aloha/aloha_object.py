@@ -649,7 +649,7 @@ def give_sign_perm(perm0, perm1):
     return -2 * (transCount % 2) + 1
     
 # Practical definition of Epsilon
-class Epsilon(aloha_lib.LorentzObject):
+class L_Epsilon(aloha_lib.LorentzObject):
     """ The fully anti-symmetric object in Lorentz-Space """
  
     def give_parity(self, perm):
@@ -658,46 +658,51 @@ class Epsilon(aloha_lib.LorentzObject):
         
         i1 , i2, i3, i4 = perm
         #formula found on wikipedia
-        return -1 * ((i2-i1) * (i3-i1) *(i4-i1) * (i3-i2) * (i4-i2) *(i4-i3))/12 
+        return -self.sign * ((i2-i1) * (i3-i1) *(i4-i1) * (i3-i2) * (i4-i2) *(i4-i3))/12 
    
     # DEFINE THE REPRESENTATION OF EPSILON
            
-    def __init__(self, lorentz1, lorentz2, lorentz3, lorentz4, prefactor=1):
+    def __init__(self, name, lorentz1, lorentz2, lorentz3, lorentz4):
        
        lorentz_list = [lorentz1 , lorentz2, lorentz3, lorentz4]
        order_lor = list(lorentz_list)
        order_lor.sort()
        
-       sign = give_sign_perm(order_lor, lorentz_list)
+       self.sign = give_sign_perm(order_lor, lorentz_list)
        
-       aloha_lib.LorentzObject.__init__(self, order_lor, \
-                                                 [], prefactor=sign * prefactor)
+       aloha_lib.LorentzObject.__init__(self, name, order_lor, [])
 
 
     def create_representation(self):
 
         if not hasattr(self, 'epsilon'):
             # init all element to zero
-            epsilon = dict( ((l1, l2, l3, l4), 0)
+            self.epsilon = dict( ((l1, l2, l3, l4), 0)
                                   for l1 in range(4) \
                                   for l2 in range(4) \
                                   for l3 in range(4) \
                                   for l4 in range(4))        
             # update non trivial one
-            epsilon.update(dict(
+            self.epsilon.update(dict(
              ((l1, l2, l3, l4), self.give_parity((l1,l2,l3,l4)))
                                  for l1 in range(4) \
                                  for l2 in range(4) if l2 != l1\
                                  for l3 in range(4) if l3 not in [l1,l2]\
                                  for l4 in range(4) if l4 not in [l1,l2,l3]))
 
-            Epsilon.epsilon = epsilon
-        
-
+            #Epsilon.epsilon = epsilon
         
         self.representation = aloha_lib.LorentzObjectRepresentation(self.epsilon,
                                 self.lorentz_ind,self.spin_ind)
-   
+
+
+class Epsilon(aloha_lib.FactoryLorentz):
+         
+    object_class = L_Epsilon
+    
+    @classmethod
+    def get_unique_name(cls,l1,l2,l3,l4):
+        return '_EPSILON_%s_%s_%s_%s' % (l1,l2,l3,l4)
     
             
 #===============================================================================
