@@ -309,6 +309,8 @@ c endif
      &        'if [[ -e $CONDOR_INITIAL_DIR/../randinit ]]; then'
          write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/../randinit .'
          write(lun,20) 'fi'
+         write(lun,20)
+     &        'if [[ -e $CONDOR_INITIAL_DIR/symfact.dat ]]; then'
          write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/symfact.dat .'
          write(lun,20) 'fi'
          write(lun,20)

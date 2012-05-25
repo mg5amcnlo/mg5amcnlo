@@ -83,11 +83,8 @@ c======================================================================
 c check for poles cancellation      
       if (firsttime) then
           call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
-c Check only the double poles: the single poles are not correctly
-c computed in MadLoop when there are massive particles around.
-c$$$          if (dabs(single - madfks_single).lt.tolerance .and.
-c$$$     1        dabs(double - madfks_double).lt.tolerance) then
-          if (dabs(double - madfks_double).lt.tolerance) then
+          if (dabs(single - madfks_single).lt.tolerance .and.
+     1        dabs(double - madfks_double).lt.tolerance) then
               write(*,*) "---- POLES CANCELLED ----"
               firsttime = .false.
           else
