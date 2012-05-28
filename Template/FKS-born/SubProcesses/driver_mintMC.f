@@ -594,6 +594,8 @@ c These should be ignored (but kept for 'historical reasons')
       write (*,*) " a pure n-body integration (no S functions)"
       read(*,*) abrvinput
       if(abrvinput(5:5).eq.'0')then
+         write (*,*) 'This option is no longer supported:',abrvinput
+         stop
         nbody=.true.
       else
         nbody=.false.
@@ -1217,6 +1219,8 @@ c
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
+      character*4 abrv
+      common /to_abrv/ abrv
 
 c For the S-events, we can combine processes when they give identical
 c processes at the Born. Make sure we check that we get indeed identical
@@ -1337,152 +1341,202 @@ c
 c
 c Compute the total rate. This is simply the sum of all
 c
-      f=0d0
+      if (.not.( abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &     abrv(1:2).eq.'vi') ) then
+         f=0d0
 c all the (n+1)-body contributions
-      do i=1,proc_map(proc_map(0,1),0)
-         nFKSprocess=proc_map(proc_map(0,1),i)
-         do j=1,iproc_save(nFKSprocess)
-            f = f + unwgt_table(nFKSprocess,1,j)+
+         do i=1,proc_map(proc_map(0,1),0)
+            nFKSprocess=proc_map(proc_map(0,1),i)
+            do j=1,iproc_save(nFKSprocess)
+               f = f + unwgt_table(nFKSprocess,1,j)+
      &              unwgt_table(nFKSprocess,2,j)
+            enddo
          enddo
-      enddo
 c and the n-body contributions
-      do j=1,iproc_save(nFKSprocess_used_born)
-         f=f+unwgt_table(0,1,j)+unwgt_table(0,2,j)
-      enddo
+         do j=1,iproc_save(nFKSprocess_used_born)
+            f=f+unwgt_table(0,1,j)+unwgt_table(0,2,j)
+         enddo
 c
 c Compute the abs of the total rate. Need to take ABS of all
 c contributions separately, except when they give equal events
 c (i.e. equal momenta, particle IDs, color info and shower starting
 c scale, this might happen for S-events)
-c
-      f_abs_H=0d0
-      f_abs_S=0d0
+c     
+         f_abs_H=0d0
+         f_abs_S=0d0
 c Nothing to combine for H-events, so need to sum them independently
-      do i=1,proc_map(proc_map(0,1),0)
-         nFKSprocess=proc_map(proc_map(0,1),i)
-         do j=1,iproc_save(nFKSprocess)
-            f_abs_H=f_abs_H+abs(unwgt_table(nFKSprocess,2,j))
+         do i=1,proc_map(proc_map(0,1),0)
+            nFKSprocess=proc_map(proc_map(0,1),i)
+            do j=1,iproc_save(nFKSprocess)
+               f_abs_H=f_abs_H+abs(unwgt_table(nFKSprocess,2,j))
+            enddo
          enddo
-      enddo
-      do i=1,fks_configs
-         do j=1,maxproc_found
-            f_unwgt(i,j)=0d0
+         do i=1,fks_configs
+            do j=1,maxproc_found
+               f_unwgt(i,j)=0d0
+            enddo
          enddo
-      enddo
 c Add the Born and the S-events
-      do k=1,proc_map(proc_map(0,1),0)
-         nFKSprocess=proc_map(proc_map(0,1),k)
-         do i=1,maxproc_found
-            if (proc_map(proc_map(0,1),0).gt.1) then
+         do k=1,proc_map(proc_map(0,1),0)
+            nFKSprocess=proc_map(proc_map(0,1),k)
+            do i=1,maxproc_found
+               if (proc_map(proc_map(0,1),0).gt.1) then
 c if there are more than one nFKSprocesses compute (i.e. sum.eq.3) we
 c should add the Born only the one with the soft singularity
-               call fks_inc_chooser()
-               if (PDG_type(i_fks).eq.21) then
+                  call fks_inc_chooser()
+                  if (PDG_type(i_fks).eq.21) then
+                     f_unwgt(nFKSprocess,i)=
+     &                    unwgt_table(0,1,i)+unwgt_table(0,2,i)
+                  endif
+                  do j=1,iproc_save(nFKSprocess)
+                     if (equal_to(j).eq.i) then
+                        f_unwgt(nFKSprocess,i)=f_unwgt(nFKSprocess,i)
+     $                       +unwgt_table(nFKSprocess,1,j)
+                     endif
+                  enddo
+               else
                   f_unwgt(nFKSprocess,i)=
      &                 unwgt_table(0,1,i)+unwgt_table(0,2,i)
+                  do j=1,iproc_save(nFKSprocess)
+                     if (equal_to(j).eq.i) then
+                        f_unwgt(nFKSprocess,i)=f_unwgt(nFKSprocess,i)
+     $                       +unwgt_table(nFKSprocess,1,j)
+                     endif
+                  enddo
                endif
-               do j=1,iproc_save(nFKSprocess)
-                  if (equal_to(j).eq.i) then
-                     f_unwgt(nFKSprocess,i)=f_unwgt(nFKSprocess,i)
-     $                    +unwgt_table(nFKSprocess,1,j)
-                  endif
-               enddo
-            else
-               f_unwgt(nFKSprocess,i)=
-     &              unwgt_table(0,1,i)+unwgt_table(0,2,i)
-               do j=1,iproc_save(nFKSprocess)
-                  if (equal_to(j).eq.i) then
-                     f_unwgt(nFKSprocess,i)=f_unwgt(nFKSprocess,i)
-     $                    +unwgt_table(nFKSprocess,1,j)
-                  endif
-               enddo
-            endif
-            f_abs_S=f_abs_S+abs(f_unwgt(nFKSprocess,i))
+               f_abs_S=f_abs_S+abs(f_unwgt(nFKSprocess,i))
+            enddo
          enddo
-      enddo
-      if (.not.unweight)then
+         if (.not.unweight)then
 c just return the (correct) absolute value
-         f_abs=f_abs_H+f_abs_S
-      else
+            f_abs=f_abs_H+f_abs_S
+         else
 c pick one at random and update reweight info and all that
-         f_abs=f_abs_H+f_abs_S
-         if (f_abs.ne.0d0) then
-            rnd=ran2()
-            if (rnd.le.f_abs_H/f_abs) then
-               Hevents=.true.
+            f_abs=f_abs_H+f_abs_S
+            if (f_abs.ne.0d0) then
+               rnd=ran2()
+               if (rnd.le.f_abs_H/f_abs) then
+                  Hevents=.true.
 c Pick one of the nFKSprocesses and one of the IPROC's 
-               i_process=1
-               nFKSprocess=1
-               current=abs(unwgt_table(1,2,1))
-               rnd=ran2()
-               do while (current.lt.rnd*f_abs_H .and.
-     $              (i_process.le.iproc_save(nFKSprocess) .or.
-     $              nFKSprocess.le.fks_configs))
-                  i_process=i_process+1
-                  if (i_process.gt.iproc_save(nFKSprocess)) then
-                     i_process=1
-                     nFKSprocess=nFKSprocess+1
+                  i_process=1
+                  nFKSprocess=1
+                  current=abs(unwgt_table(1,2,1))
+                  rnd=ran2()
+                  do while (current.lt.rnd*f_abs_H .and.
+     $                 (i_process.le.iproc_save(nFKSprocess) .or.
+     $                 nFKSprocess.le.fks_configs))
+                     i_process=i_process+1
+                     if (i_process.gt.iproc_save(nFKSprocess)) then
+                        i_process=1
+                        nFKSprocess=nFKSprocess+1
+                     endif
+                     current=current+abs(unwgt_table(nFKSprocess,2
+     $                    ,i_process))
+                  enddo
+                  if (i_process.gt.iproc_save(nFKSprocess) .or.
+     $                 nFKSprocess.gt.fks_configs) then
+                     write (*,*) 'ERROR #4 in unweight table',i_process
+     $                    ,nFKSprocess
+                     stop
                   endif
-                  current=current+abs(unwgt_table(nFKSprocess,2
-     $                 ,i_process))
-               enddo
-               if (i_process.gt.iproc_save(nFKSprocess) .or.
-     $              nFKSprocess.gt.fks_configs) then
-                  write (*,*) 'ERROR #4 in unweight table',i_process
-     $                 ,nFKSprocess
-                  stop
-               endif
-               evtsgn=sign(1d0,unwgt_table(nFKSprocess,2,i_process))
-            else
-               Hevents=.false.
+                  evtsgn=sign(1d0,unwgt_table(nFKSprocess,2,i_process))
+               else
+                  Hevents=.false.
 c Pick one of the nFKSprocesses and IPROC's of the Born
-               i_process=1
-               nFKSprocess=1
-               current=abs(f_unwgt(1,1))
-               rnd=ran2()
-               do while (current.lt.rnd*f_abs_S .and.
-     $              (i_process.le.maxproc_found .or.
-     $              nFKSprocess.le.fks_configs))
-                  i_process=i_process+1
-                  if (i_process.gt.maxproc_found) then
-                     i_process=1
-                     nFKSprocess=nFKSprocess+1
+                  i_process=1
+                  nFKSprocess=1
+                  current=abs(f_unwgt(1,1))
+                  rnd=ran2()
+                  do while (current.lt.rnd*f_abs_S .and.
+     $                 (i_process.le.maxproc_found .or.
+     $                 nFKSprocess.le.fks_configs))
+                     i_process=i_process+1
+                     if (i_process.gt.maxproc_found) then
+                        i_process=1
+                        nFKSprocess=nFKSprocess+1
+                     endif
+                     current=current+abs(f_unwgt(nFKSprocess,i_process))
+                  enddo
+                  if (i_process.gt.maxproc_found .or.
+     $                 nFKSprocess.gt.fks_configs) then
+                     write (*,*) 'ERROR #4 in unweight table',i_process
+     $                    ,maxproc_found,nFKSprocess
+                     stop
                   endif
-                  current=current+abs(f_unwgt(nFKSprocess,i_process))
-               enddo
-               if (i_process.gt.maxproc_found .or.
-     $              nFKSprocess.gt.fks_configs) then
-                  write (*,*) 'ERROR #4 in unweight table',i_process
-     $                 ,maxproc_found,nFKSprocess
-                  stop
-               endif
-               evtsgn=sign(1d0,f_unwgt(nFKSprocess,i_process))
+                  evtsgn=sign(1d0,f_unwgt(nFKSprocess,i_process))
 c Set the i_process to one of the (n+1)-body configurations that leads
 c to this Born configuration. Needed for add_write_info to work properly
-               i_process=equal_to_inverse(i_process)
+                  i_process=equal_to_inverse(i_process)
+               endif
             endif
-         endif
 c Now update the reweight information
-         if(doreweight) then
-            call fks_inc_chooser()
-            call leshouche_inc_chooser()
-            if (Hevents) then
-               call fill_reweight0inc(nFKSprocess*2)
-            else
-               call fill_reweight0inc(nFKSprocess*2-1)
-            endif
+            if(doreweight) then
+               call fks_inc_chooser()
+               call leshouche_inc_chooser()
+               if (Hevents) then
+                  call fill_reweight0inc(nFKSprocess*2)
+               else
+                  call fill_reweight0inc(nFKSprocess*2-1)
+               endif
 c Set the n-body contributions to zero for H-events, or for S-events
 c with more than one nFKSprocess contribution and not nFKSprocess with
 c soft singularity
-            if (Hevents.or.(PDG_type(i_fks).ne.21.and.proc_map(0
-     $           ,1).gt.1)) then
-               wgtwborn(2)=0d0
-               wgtwns(2)=0d0
-               wgtwnsmuf(2)=0d0
-               wgtwnsmur(2)=0d0
+               if (Hevents.or.(PDG_type(i_fks).ne.21.and.proc_map(0
+     $              ,1).gt.1)) then
+                  wgtwborn(2)=0d0
+                  wgtwns(2)=0d0
+                  wgtwnsmuf(2)=0d0
+                  wgtwnsmur(2)=0d0
+               endif
+               call reweight_fill_extra()
             endif
-            call reweight_fill_extra()
+         endif
+      else  ! abrv='born' or 'grid' or 'vi*' (ie. doing only the nbody)
+         f=0d0
+c and the n-body contributions
+         do j=1,iproc_save(nFKSprocess_used_born)
+            if (unwgt_table(0,2,j).ne.0d0) then
+               write (*,*) 'Error #4 in unwgt_table',unwgt_table(0,2,j)
+               stop
+            endif
+            f=f+unwgt_table(0,1,j)
+         enddo
+         f_abs_H=0d0
+         f_abs_S=0d0
+         do i=1,maxproc_found
+            f_abs_S=f_abs_S+abs(unwgt_table(0,1,i))
+         enddo
+         if (.not.unweight)then
+c just return the (correct) absolute value
+            f_abs=f_abs_H+f_abs_S
+         else
+c pick one at random and update reweight info and all that
+            f_abs=f_abs_H+f_abs_S
+            Hevents=.false.
+            if (f_abs.ne.0d0) then
+               rnd=ran2()
+c Pick one of the IPROC's of the Born
+               i_process=1
+               current=abs(unwgt_table(0,1,1))
+               do while (current.lt.rnd*f_abs_S .and.
+     $              i_process.le.maxproc_found)
+                  i_process=i_process+1
+                  current=current+abs(unwgt_table(0,1,i_process))
+               enddo
+               if (i_process.gt.maxproc_found) then
+                  write (*,*) 'ERROR #4 in unweight table',i_process 
+                  stop
+               endif
+               evtsgn=sign(1d0,unwgt_table(0,1,i_process))
+            endif
+c Now update the reweight information
+            if(doreweight) then
+               nFKSprocess=nFKSprocess_used_born
+               call fks_inc_chooser()
+               call leshouche_inc_chooser()
+               call fill_reweight0inc(nFKSprocess_used_born*2-1)
+               call reweight_fill_extra()
+            endif
          endif
       endif
       return

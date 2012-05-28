@@ -40,7 +40,7 @@ c
       double precision qes2
       common /coupl_es/ qes2
       integer nvtozero
-      logical doVirtTest
+      logical doVirtTest 
       common/cvirt2test/nvtozero,doVirtTest
       integer ivirtpoints,ivirtpointsExcept
       double precision  virtmax,virtmin,virtsum
@@ -202,11 +202,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
             endif
          endif
       enddo
-
-c      write (*,*) 'From DR to CDR conversion: ',octet,' octets and ',
-c     &     triplet,' triplets in Born (both massless), sum =',conversion
-c
-c         stop
+      write (*,*) 'From DR to CDR conversion: ',octet,' octets and ',
+     &     triplet,' triplets in Born (both massless), sum =',conversion
       return
       
       end

@@ -3434,7 +3434,8 @@ c assign SCALUP for HERWIG6 and HERWIGPP
          if(Hevents)then
             SCALUP(iFKS)=sqrt(shat)
          else
-            if(dampMCsubt .and. abrv.ne.'born' .and. abrv.ne.'grid')then
+            if(dampMCsubt .and. abrv.ne.'born' .and. abrv.ne.'grid'
+     &           .and. emsca.ne.0d0)then
                SCALUP(iFKS)=min( emsca,sqrt(shat) )
             else
                SCALUP(iFKS)=sqrt(shat)
@@ -3465,8 +3466,10 @@ c FSR, S events: sbar = s  ,  shat = s  , upper_scale = x*s ==> tmp = x
       endif
 
       if(SCALUP(iFKS).le.0.d0)then
-        write(*,*)'Scale too small in set_shower_scale:',SCALUP
-        stop
+         write(*,*)'Scale too small in set_shower_scale:',iFKS
+     &        ,SCALUP(iFKS),emsca,sqrt(shat)
+         write(*,*) SCALUP
+         stop
       endif
 c
       return

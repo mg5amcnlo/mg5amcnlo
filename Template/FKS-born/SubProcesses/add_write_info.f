@@ -148,28 +148,6 @@ c Set the shower scale
       else
          shower_scale=SCALUP(nFKSprocess*2-1)
       endif
-c
-c Choose a process. iproc comes set to the number of processes
-c
-c$$$c set-up Bjorken x's
-c$$$      save_nFKSprocess=nFKSprocess
-c$$$      if (Hevents) then
-c$$$         call set_cms_stuff(-100)
-c$$$         nFKSprocess=nFKSprocess_used
-c$$$      else
-c$$$         call set_cms_stuff(0)
-c$$$         nFKSprocess=nFKSprocess_used_born
-c$$$      endif
-c$$$c compute the PDFs (this sets 'pd' and 'iproc')
-c$$$      xlum=dlum()
-c$$$c choose the subprocess
-c$$$      np = iproc
-c$$$      xtarget=ran2()*pd(np)
-c$$$      ip = 1
-c$$$      do while (pd(ip) .lt. xtarget .and. ip .lt. np)
-c$$$         ip=ip+1
-c$$$      enddo
-c$$$      nFKSprocess=save_nFKSprocess
 
 c This is an (n+1)-body process (see update_unwgt_table in
 c driver_mintMC.f). For S events it corresponds to the underlying Born
