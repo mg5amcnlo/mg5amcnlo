@@ -7443,7 +7443,7 @@ C     Number of configs
         fortran_model = helas_call_writers.FortranHelasCallWriter(mymodel)
 
         # Test dname.mg
-        writer = writers.FortranWriter(self.give_pos('test'))
+        writer = writers.FileWriter(self.give_pos('test'))
         exporter.write_dname_file(writer,
                                   "P"+me.get('processes')[0].shell_string())
         writer.close()
@@ -9517,22 +9517,24 @@ class AlohaFortranWriterTest(unittest.TestCase):
 C     The process calculated in this file is: 
 C     Gamma(3,2,1)
 C     
-      SUBROUTINE FFV1_1(F2, V3, COUP, M1, W1, F1)
+      SUBROUTINE FFV1_1(F2, V3, COUP, M1, W1,F1)
       IMPLICIT NONE
-      DOUBLE COMPLEX F1(*)
-      DOUBLE COMPLEX F2(*)
-      DOUBLE COMPLEX V3(*)
-      DOUBLE COMPLEX COUP
-      DOUBLE COMPLEX DENOM
-      DOUBLE PRECISION M1, W1
-      DOUBLE PRECISION P1(0:3)
-
-      F1(5)= F2(5)+V3(5)
-      F1(6)= F2(6)+V3(6)
-      P1(0) =  DBLE(F1(5))
-      P1(1) =  DBLE(F1(6))
-      P1(2) =  DIMAG(F1(6))
-      P1(3) =  DIMAG(F1(5))"""
+      COMPLEX*16 F2(*)
+      COMPLEX*16 V3(*)
+      REAL*8 P1(0:3)
+      REAL*8 M1
+      REAL*8 W1
+      COMPLEX*16 F1(6)
+      COMPLEX*16 DENOM
+      COMPLEX*16 COUP
+      F1(5) = +F2(5)+V3(5)
+      F1(6) = +F2(6)+V3(6)
+      P1(0) = DBLE(F1(5))
+      P1(1) = DBLE(F1(6))
+      P1(2) = DIMAG(F1(6))
+      P1(3) = DIMAG(F1(5))
+      DENOM = COUP/(P1(0)**2-P1(1)**2-P1(2)**2-P1(3)**2 - M1 * (M1 
+     $ -(0,1)* W1))"""
 
         abstract_M = create_aloha.AbstractRoutineBuilder(FFV1).compute_routine(1)
         abstract_M.add_symmetry(2)
@@ -9541,6 +9543,7 @@ C
         self.assertTrue(os.path.exists('/tmp/FFV1_1.f'))
         textfile = open('/tmp/FFV1_1.f','r').read()
         split_sol = solution.split('\n')
+        print textfile
         self.assertEqual(split_sol, textfile.split('\n')[:len(split_sol)])
 
 

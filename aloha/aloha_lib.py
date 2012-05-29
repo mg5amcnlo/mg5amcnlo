@@ -171,8 +171,9 @@ class AddVariable(list):
                 del self[pos]
                 pos -=1
             else:
-                items[tag] = term
-
+                items[tag] = term.__class__(term, term.prefactor)
+                self[pos] = items[tag]
+                         
         for var in items.values():
             if var.prefactor == 0:
                 self.remove(var)
@@ -182,9 +183,8 @@ class AddVariable(list):
         varlen = len(self)
         if varlen == 1:
             return self.prefactor * self[0]
-        elif varlen == 0: 
+        elif varlen == 0:
             return 0 #ConstantObject()
-        
         return self
     
     def split(self, variables_id):
@@ -200,7 +200,7 @@ class AddVariable(list):
     
     def contains(self, variables):
         """returns true if one of the variables is in the expression"""
-            
+        
         return any((v in obj for obj in self for v in variables  ))
             
     
@@ -231,7 +231,7 @@ class AddVariable(list):
             new = self[0].expand(veto)
         else:
             new = self.prefactor * self[0].expand(veto)
-            
+        
         for item in self[1:]:
             if self.prefactor == 1:
                 new += item.expand(veto)
@@ -285,12 +285,12 @@ class AddVariable(list):
 
     def __add__(self, obj):
         """Define all the different addition."""
-        
+
         if not hasattr(obj, 'vartype'):
             if not obj: # obj is zero
                 return self
             new = self.__class__(self, self.prefactor)
-            new.append(obj)
+            new.append(obj/self.prefactor)
             return new         
         elif obj.vartype == 2: # obj is a MultVariable
             new = AddVariable(self, self.prefactor)
@@ -310,10 +310,11 @@ class AddVariable(list):
 
     def __iadd__(self, obj):
         """Define all the different addition."""
+
         if not hasattr(obj, 'vartype'):
             if not obj: # obj is zero
                 return self
-            self.append(obj)
+            self.append(obj/self.prefactor)
             return self
         elif obj.vartype == 2: # obj is a MultVariable
             if self.prefactor == 1:
@@ -354,7 +355,11 @@ class AddVariable(list):
         count = defaultdict(int)
         correlation = defaultdict(defaultdict(int))
         for i,term in enumerate(self):
-            set_term = set(term)           
+            try:
+                set_term = set(term)
+            except TypeError: 
+                #constant term
+                continue           
             for val1 in set_term:
                 count[val1] +=1
                 # allow to find optimized factorization for identical count
@@ -378,6 +383,13 @@ class AddVariable(list):
             if wgt > max_wgt:
                 maxvar = var
                 max_wgt = wgt
+                str_maxvar = str(KERNEL.objs[var])
+            elif wgt == max_wgt:
+                # keep the one with the lowest string expr
+                new_str = str(KERNEL.objs[var])
+                if new_str < str_maxvar:
+                    maxvar = var
+                    str_maxvar = new_str
         return maxnb, maxvar
     
     def factorize(self):
@@ -398,7 +410,10 @@ class AddVariable(list):
                 except:
                     constant.append(term)
                 else:
-                    newadd.append(term)
+                    if len(term):
+                        newadd.append(term)
+                    else: 
+                        newadd.append(term.prefactor)
         newadd = newadd.factorize()
         
         # optimize the prefactor 
@@ -416,9 +431,11 @@ class AddVariable(list):
             if nbplus < nbminus:
                 newadd.prefactor *= -1
             if newadd.prefactor != 1:
-                for a in newadd:
-                    a.prefactor /= newadd.prefactor
-        
+                for i,a in enumerate(newadd):
+                    try:
+                        a.prefactor /= newadd.prefactor
+                    except AttributeError:
+                        newadd[i] /= newadd.prefactor
         
         
         if len(constant) > 1:
@@ -482,6 +499,8 @@ class MultVariable(array):
     
     def simplify(self):
         """ simplify the product"""
+        if not len(self):
+            return self.prefactor
         return self  
     
     def split(self, variables_id):
@@ -577,7 +596,10 @@ class MultVariable(array):
         return array.__iadd__(self, obj)
     
     def __pow__(self,value):
-        return array.__imul__(self,value)
+        out = 1
+        for i in range(value):
+            out *= self
+        return out
         
 
     def __add__(self, obj):
@@ -1144,6 +1166,8 @@ class LorentzObjectRepresentation(dict):
         for ind, fact in self.items(): 
             if fact:
                 self.set_rep(ind, fact.factorize())
+                
+                
         return self
     
     def simplify(self):
@@ -1153,7 +1177,6 @@ class LorentzObjectRepresentation(dict):
         for ind, term in self.items():
             if hasattr(term, 'vartype'):
                 self[ind] = term.simplify()
-        
         #no additional simplification    
         return self  
 

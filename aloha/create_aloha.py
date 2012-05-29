@@ -83,14 +83,11 @@ class AbstractRoutine(object):
         
         writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag)
         text = writer.write(mode=mode, **opt)
-        print 'self.combined',self.combined
         for grouped in self.combined:
             if isinstance(text, tuple):
-                print 'pass here'
                 text = tuple([old.__add__(new)  for old, new in zip(text, 
                              writer.write_combined(grouped, mode=mode, **opt))])
             else:
-                print 'pass here 2', type(writer), writer.__class__
                 text += writer.write_combined(grouped, mode=mode, **opt)
                 
         if aloha.mp_precision and 'MP' not in self.tag:
@@ -98,7 +95,6 @@ class AbstractRoutine(object):
             text += self.write(output_dir, language, mode, **opt)
             
             
-        
         return text
 
 class AbstractRoutineBuilder(object):
@@ -121,7 +117,7 @@ class AbstractRoutineBuilder(object):
         self.spins = lorentz.spins
         self.name = lorentz.name
         self.conjg = []
-        tag = []
+        self.tag = []
         self.outgoing = None
         self.lorentz_expr = lorentz.structure        
         self.routine_kernel = None
@@ -197,7 +193,7 @@ class AbstractRoutineBuilder(object):
         output.fct = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
                                           for name in aloha_lib.KERNEL.use_tag
                                           if name.startswith('FCT')])
-        
+
         output.tag = [t for t in self.tag if not t.startswith('C')]
         output.tag += ['C%s' % pair for pair in self.conjg]
         return output

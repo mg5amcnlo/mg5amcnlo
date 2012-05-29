@@ -31,6 +31,7 @@
 ################################################################################
 from __future__ import division
 import aloha.aloha_lib as aloha_lib
+import aloha
 
 #===============================================================================
 # P (Momenta)
@@ -72,7 +73,7 @@ class P(aloha_lib.FactoryLorentz):
 #===============================================================================
 # Pslash
 #===============================================================================
-class PSlash(aloha_lib.LorentzObject):
+class L_PSlash(aloha_lib.LorentzObject):
     """ Gamma Matrices """
     
     #gamma0 = [[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]]
@@ -83,11 +84,10 @@ class PSlash(aloha_lib.LorentzObject):
     #    
     #gamma = [gamma0, gamma1, gamma2, gamma3]
 
-    def __init__(self, spin1, spin2, particle, prefactor=1):
+    def __init__(self, name, spin1, spin2, particle):
         
         self.particle = particle
-        aloha_lib.LorentzObject.__init__(self,[], [spin1, spin2], \
-                                                            prefactor=prefactor)
+        aloha_lib.LorentzObject.__init__(self,name,[], [spin1, spin2])
     
     def create_representation(self):
         """create representation"""
@@ -106,6 +106,15 @@ class PSlash(aloha_lib.LorentzObject):
                 
         self.representation = aloha_lib.LorentzObjectRepresentation(gamma,
                                 self.lorentz_ind,self.spin_ind)
+
+class PSlash(aloha_lib.FactoryLorentz):
+
+    object_class = L_PSlash
+    
+    @classmethod
+    def get_unique_name(self, spin1, spin2, particle):
+        return '_P%s/_%s_%s' % (particle, spin1,spin2)
+
 
 #===============================================================================
 # Mass
@@ -191,8 +200,6 @@ class L_Width(aloha_lib.LorentzObject):
  
     
     def __init__(self, name, particle):
-        if self:
-            return
         self.particle = particle
         aloha_lib.LorentzObject.__init__(self, name, [], [])
         
@@ -449,7 +456,7 @@ class Gamma(aloha_lib.FactoryLorentz):
 #===============================================================================
 # Sigma
 #===============================================================================
-class Sigma(aloha_lib.LorentzObject):
+class L_Sigma(aloha_lib.LorentzObject):
     """ Sigma Matrices """
     
     
@@ -541,23 +548,28 @@ class Sigma(aloha_lib.LorentzObject):
              (0, 0, 1, 0): 0, (2, 0, 3, 3): 0, (3, 2, 1, 2): 0, (1, 3, 3, 2): -0.5j, 
              (1, 0, 2, 1): 0, (3, 2, 1, 1): 0, (0, 2, 0, 2): 0, (1, 0, 2, 2): 0}
 
-    def __init__(self, lorentz1, lorentz2, spin1, spin2, prefactor=1):
-        if lorentz1 < lorentz2:
-            aloha_lib.LorentzObject.__init__(self,[lorentz1, lorentz2], \
-                                                  [spin1, spin2], prefactor=prefactor)
-        else:
-            aloha_lib.LorentzObject.__init__(self,[lorentz2, lorentz1], 
-                                             [spin1, spin2], prefactor=-prefactor)
+    def __init__(self, name, lorentz1, lorentz2, spin1, spin2):
+            aloha_lib.LorentzObject.__init__(self, name, [lorentz1, lorentz2], \
+                                                  [spin1, spin2])
 
     def create_representation(self):
                 
         self.representation = aloha_lib.LorentzObjectRepresentation(self.sigma,
                                 self.lorentz_ind,self.spin_ind)
 
+class Sigma(aloha_lib.FactoryLorentz):
+    
+    object_class = L_Sigma
+
+    @classmethod
+    def get_unique_name(self, lorentz1, lorentz2, spin1, spin2):
+        return 'Sigma_[%s,%s]^[%s,%s]' % (spin1, spin2, lorentz1, lorentz2)
+
+
 #===============================================================================
 # Gamma5
 #===============================================================================        
-class Gamma5(aloha_lib.LorentzObject):
+class L_Gamma5(aloha_lib.LorentzObject):
     
     #gamma5 = [[-1, 0, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
     gamma5 = {(0,0): -1, (0,1): 0, (0,2): 0, (0,3): 0,\
@@ -565,16 +577,24 @@ class Gamma5(aloha_lib.LorentzObject):
               (2,0): 0, (2,1): 0, (2,2): 1, (2,3): 0,\
               (3,0): 0, (3,1): 0, (3,2): 0, (3,3): 1}
     
-    def __init__(self, spin1, spin2, prefactor=1):
-        if spin1 > spin2:
-            aloha_lib.LorentzObject.__init__(self,[], [spin1, spin2], prefactor)
-        else:
-            aloha_lib.LorentzObject.__init__(self,[], [spin2, spin1], prefactor)
+    def __init__(self, name, spin1, spin2):
+        aloha_lib.LorentzObject.__init__(self, name, [], [spin1, spin2])
 
     def create_representation(self):
         
         self.representation = aloha_lib.LorentzObjectRepresentation(self.gamma5,
                                              self.lorentz_ind,self.spin_ind) 
+
+class Gamma5(aloha_lib.FactoryLorentz):
+    
+    object_class = L_Gamma5
+
+    @classmethod
+    def get_unique_name(self, spin1, spin2):
+        if spin1 < spin2:
+            return 'Gamma5_%s_%s' % (spin1, spin2)
+        else: 
+            return 'Gamma5_%s_%s' % (spin2, spin1)
         
 #===============================================================================
 # Conjugate Matrices
@@ -665,32 +685,32 @@ class L_Epsilon(aloha_lib.LorentzObject):
     def __init__(self, name, lorentz1, lorentz2, lorentz3, lorentz4):
        
        lorentz_list = [lorentz1 , lorentz2, lorentz3, lorentz4]
-       order_lor = list(lorentz_list)
-       order_lor.sort()
+       #order_lor = list(lorentz_list)
+       #order_lor.sort()
        
-       self.sign = give_sign_perm(order_lor, lorentz_list)
-       
-       aloha_lib.LorentzObject.__init__(self, name, order_lor, [])
+       #self.sign = give_sign_perm(order_lor, lorentz_list)
+       self.sign=1
+       aloha_lib.LorentzObject.__init__(self, name, lorentz_list, [])
 
 
     def create_representation(self):
 
         if not hasattr(self, 'epsilon'):
             # init all element to zero
-            self.epsilon = dict( ((l1, l2, l3, l4), 0)
+            epsilon = dict( ((l1, l2, l3, l4), 0)
                                   for l1 in range(4) \
                                   for l2 in range(4) \
                                   for l3 in range(4) \
                                   for l4 in range(4))        
             # update non trivial one
-            self.epsilon.update(dict(
+            epsilon.update(dict(
              ((l1, l2, l3, l4), self.give_parity((l1,l2,l3,l4)))
                                  for l1 in range(4) \
                                  for l2 in range(4) if l2 != l1\
                                  for l3 in range(4) if l3 not in [l1,l2]\
                                  for l4 in range(4) if l4 not in [l1,l2,l3]))
 
-            #Epsilon.epsilon = epsilon
+            L_Epsilon.epsilon = epsilon
         
         self.representation = aloha_lib.LorentzObjectRepresentation(self.epsilon,
                                 self.lorentz_ind,self.spin_ind)

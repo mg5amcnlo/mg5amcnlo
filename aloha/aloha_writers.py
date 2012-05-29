@@ -230,8 +230,8 @@ class WriteALOHA:
             commentstring += 'The process calculated in this file is: \n'
             commentstring += self.routine.infostr + '\n'
             writer.write_comments(commentstring)
-            writer.write(text)
-        print text
+            writer.writelines(text)
+
         return text + '\n'
 
 
@@ -750,8 +750,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             commentstring += 'The process calculated in this file is: \n'
             commentstring += self.routine.infostr + '\n'
             writer.write_comments(commentstring)
-            writer.write(text)
-        print text
+            writer.writelines(text)
         return text
 
 class ALOHAWriterForFortranQP(ALOHAWriterForFortran): 
@@ -1704,7 +1703,7 @@ class ALOHAWriterForPython(WriteALOHA):
             commentstring += 'The process calculated in this file is: \n'
             commentstring += self.routine.infostr + '\n'
             writer.write_comments(commentstring)
-            writer.write(text)
+            writer.writelines(text)
 
 
         return text
