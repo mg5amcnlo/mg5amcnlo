@@ -700,7 +700,7 @@ class UFOMG5Converter(object):
 class OrganizeModelExpression:
     """Organize the couplings/parameters of a model"""
     
-    track_dependant = ['aS','aEWM1'] # list of variable from which we track 
+    track_dependant = ['aS','aEWM1','MU_R'] # list of variable from which we track 
                                    #dependencies those variables should be define
                                    #as external parameters
     

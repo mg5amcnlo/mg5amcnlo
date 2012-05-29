@@ -48,6 +48,12 @@
                  stop 'CTStabThres must be > 0'
              endif
 
+           else if (buff .eq. '#ZeroThres') then
+             read(666,*,end=999) ZeroThres
+             if (ZeroThres.le.0.0d0) then
+                 stop 'ZeroThres must be > 0'
+             endif
+
            else if (buff .eq. '#CheckCycle') then
              read(666,*,end=999) CheckCycle
              if (CheckCycle.lt.1) then
@@ -108,6 +114,7 @@
       write(*,*) ' > MaxAttempts               = ',MaxAttempts
       write(*,*) ' > UseLoopFilter             = ',UseLoopFilter
       write(*,*) ' > LoopInitStartOver         = ',LoopInitStartOver
+      write(*,*) ' > ZeroThres                 = ',ZeroThres
       write(*,*)
      & '==============================================================='
       paramPrinted=.TRUE.
@@ -132,5 +139,6 @@
       MaxAttempts=10
       UseLoopFilter=.True.
       LoopInitStartOver=.False.
+      ZeroThres=1.0d-9
 
       end
