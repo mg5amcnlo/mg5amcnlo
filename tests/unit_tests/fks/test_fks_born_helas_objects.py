@@ -31,6 +31,7 @@ import madgraph.core.color_amp as color_amp
 import madgraph.core.diagram_generation as diagram_generation
 import copy
 import array
+import models.import_ufo as import_ufo
 
 class testFKSBornHelasObjects(unittest.TestCase):
     """a class to test the module FKSBornHelasObjects"""
@@ -126,189 +127,7 @@ class testFKSBornHelasObjects(unittest.TestCase):
     for i in mylegs:
         myleglist3.append(MG.Leg(i))
 
-    
-    mypartlist = MG.ParticleList()
-    mypartlistbad = MG.ParticleList()
-    myinterlist = MG.InteractionList()
-    myinterlistbad = MG.InteractionList()
-    mypartlist.append(MG.Particle({'name':'u',
-                  'antiname':'u~',
-                  'spin':2,
-                  'color':3,
-                  'mass':'zero',
-                  'width':'zero',
-                  'texname':'u',
-                  'antitexname':'\\overline{u}',
-                  'line':'straight',
-                  'charge':2. / 3.,
-                  'pdg_code':2,
-                  'propagating':True,
-                  #'is_part': True,
-                  'self_antipart':False}))
-    mypartlist.append(MG.Particle({'name':'d',
-                  'antiname':'d~',
-                  'spin':2,
-                  'color':3,
-                  'mass':'zero',
-                  'width':'zero',
-                  'texname':'d',
-                  'antitexname':'\\overline{d}',
-                  'line':'straight',
-                  'charge':-1. / 3.,
-                  'pdg_code':1,
-                  #'is_part': True,
-                  'propagating':True,
-                  'self_antipart':False}))
-    mypartlist.append(MG.Particle({'name':'g',
-                      'antiname':'g',
-                      'spin':3,
-                      'color':8,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'g',
-                      'antitexname':'g',
-                      'line':'curly',
-                      'charge':0.,
-                      'pdg_code':21,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-
-    mypartlist.append(MG.Particle({'name':'a',
-                      'antiname':'a',
-                      'spin':3,
-                      'color':1,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
-                      'line':'wavy',
-                      'charge':0.,
-                      'pdg_code':22,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-    
-    mypartlist.append(MG.Particle({'name':'t',
-                  'antiname':'t~',
-                  'spin':2,
-                  'color':3,
-                  'mass':'tmass',
-                  'width':'twidth',
-                  'texname':'t',
-                  'antitexname':'\\overline{t}',
-                  'line':'straight',
-                  'charge':2. / 3.,
-                  'pdg_code':6,
-                  'propagating':True,
-                  #'is_part': True,
-                  'self_antipart':False}))
-        
-    antiu = MG.Particle({'name':'u',
-                  'antiname':'u~',
-                  'spin':2,
-                  'color': 3,
-                  'mass':'zero',
-                  'width':'zero',
-                  'texname':'u',
-                  'antitexname':'\\overline{u}',
-                  'line':'straight',
-                  'charge':  2. / 3.,
-                  'pdg_code': 2,
-                  'propagating':True,
-                  'is_part':False,
-                  'self_antipart':False})
-  #  mypartlist.append(antiu)
-
-    
-    antid = MG.Particle({'name':'d',
-                  'antiname':'d~',
-                  'spin':2,
-                  'color':3,
-                  'mass':'zero',
-                  'width':'zero',
-                  'texname':'d',
-                  'antitexname':'\\overline{d}',
-                  'line':'straight',
-                  'charge':-1. / 3.,
-                  'pdg_code':1,
-                  'is_part': False,
-                  'propagating':True,
-                  'self_antipart':False})
-    
-    antit = MG.Particle({'name':'t',
-                  'antiname':'t~',
-                  'spin':2,
-                  'color':3,
-                  'mass':'tmass',
-                  'width':'twidth',
-                  'texname':'t',
-                  'antitexname':'\\overline{t}',
-                  'line':'straight',
-                  'charge':2. / 3.,
-                  'pdg_code':6,
-                  'propagating':True,
-                  'is_part': False,
-                  'self_antipart':False})
-    
-        
-    myinterlist.append(MG.Interaction({\
-                      'id':1,\
-                      'particles': MG.ParticleList(\
-                                            [mypartlist[1], \
-                                             antid, \
-                                             mypartlist[2]]),
-                      'color': [color.ColorString([color.T(2, 0, 1)])],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1}}))    
-    
-    myinterlist.append(MG.Interaction({\
-                      'id':2,\
-                      'particles': MG.ParticleList(\
-                                            [mypartlist[0], \
-                                             antiu, \
-                                             mypartlist[2]]),
-                      'color': [color.ColorString([color.T(2,0,1)])],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1}}))
-
-    myinterlist.append(MG.Interaction({\
-                      'id':5,\
-                      'particles': MG.ParticleList(\
-                                            [mypartlist[4], \
-                                             antit, \
-                                             mypartlist[2]]),
-                      'color': [color.ColorString([color.T(2, 0, 1)])],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1}}))
-    
-    myinterlist.append(MG.Interaction({\
-                      'id':3,\
-                      'particles': MG.ParticleList(\
-                                            [mypartlist[2]] *3 \
-                                             ),
-                      'color': [color.ColorString([color.f(0, 1, 2)])],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1}}))
-    
-    myinterlist.append(MG.Interaction({\
-                      'id':4,\
-                      'particles': MG.ParticleList([mypartlist[1], \
-                                             antid, \
-                                             mypartlist[3]]
-                                             ),
-                      'color': [color.ColorString([color.T(0,1)])],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'ADD'},
-                      'orders':{'QED':1}}))
-    
-    mymodel = MG.Model()
-    mymodel.set('particles', mypartlist)
-    mymodel.set('interactions', myinterlist)
+    mymodel = import_ufo.import_model('sm')
 
     dict1 = {'legs' : myleglist1, 'orders':{'QCD':10, 'QED':0},
                        'model': mymodel,
@@ -355,17 +174,19 @@ class testFKSBornHelasObjects(unittest.TestCase):
     def test_fks_helas_multi_process_from_born(self):
         """tests the correct initialization of a FKSHelasMultiProcess, 
         given an FKSMultiProcess"""
-        p = [1,2, 21]
+        p= [21, 1, 2, 3, 4, -1, -2, -3, -4]
+        t= MG.MultiLeg({'ids':[6], 'state': True})
+        tx= MG.MultiLeg({'ids':[-6], 'state': True})
 
-        my_multi_leg = MG.MultiLeg({'ids': p, 'state': True});
+
+        p_leg = MG.MultiLeg({'ids': p, 'state': False});
 
         # Define the multiprocess
-        my_multi_leglist = MG.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 4])
+        my_multi_leglist = MG.MultiLegList([copy.copy(leg) for leg in [p_leg] * 2] \
+                    + MG.MultiLegList([t, tx]))
         
-        my_multi_leglist[0].set('state', False)
-        my_multi_leglist[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({ \
-                        'orders': {'WEIGHTED': 3},
+                        'orders': {'WEIGHTED': 2},
                         'legs': my_multi_leglist,
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
@@ -377,13 +198,42 @@ class testFKSBornHelasObjects(unittest.TestCase):
                 {'process_definitions': my_process_definitions})
         my_helas_mp = fks_born_helas.FKSHelasMultiProcessFromBorn(my_multi_process, False)
         
-        #there should be 6 independent born_matrix_elements 
-        #for me in my_helas_mp.get('matrix_elements'):
-        #    print "--"
-        #    for proc in me.born_matrix_element.get('processes'):
-        #        print proc.nice_string()
-        self.assertEqual(len(my_helas_mp.get('matrix_elements')),6)
-        
+        #there are 3 (gg uux uxu initiated) borns 
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')),3)
+        # and 25 real matrix elements
+        self.assertEqual(len(my_helas_mp.get('real_matrix_elements')), 25)
+        # the first me is gg tt, with 5 different real emissions
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[0].real_processes), 5)
+        # the first real emission corresponds to gg ttxg, with 4 different configs
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[0].real_processes[0].matrix_element['processes']), 1)
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[0].real_processes[0].fks_infos), 4)
+        # for the 2nd to the 5th real emissions, corresponding to the q g > t tx g and crossings
+        # there is only one config per processes, and the 4 quark flavours should be combined together
+        for real in my_helas_mp.get('matrix_elements')[0].real_processes[1:]:
+            self.assertEqual(len(real.matrix_element['processes']), 4)
+            self.assertEqual(len(real.fks_infos), 1)
+
+        # the 2nd me is uux tt, with 3 different real emissions
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[1].real_processes), 3)
+        # the first real emission corresponds to qqx ttxg, with 4 different configs
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[1].real_processes[0].matrix_element['processes']), 4)
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[1].real_processes[0].fks_infos), 4)
+        # the 2nd and 3rd real emission corresponds to qg ttxq (and gqx...), with 1 config
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[1].real_processes[1].matrix_element['processes']), 4)
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[1].real_processes[1].fks_infos), 1)
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[1].real_processes[2].matrix_element['processes']), 4)
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[1].real_processes[2].fks_infos), 1)
+
+        # the 3rd me is uxu tt, with 3 different real emissions
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[2].real_processes), 3)
+        # the first real emission corresponds to qxq ttxg, with 4 different configs
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[2].real_processes[0].matrix_element['processes']), 4)
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[2].real_processes[0].fks_infos), 4)
+        # the 2nd and 3rd real emission corresponds to qxg ttxqx (and gq...), with 1 config
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[2].real_processes[1].matrix_element['processes']), 4)
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[2].real_processes[1].fks_infos), 1)
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[2].real_processes[2].matrix_element['processes']), 4)
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')[2].real_processes[2].fks_infos), 1)
         
         
     
@@ -447,14 +297,19 @@ class testFKSBornHelasObjects(unittest.TestCase):
         #uu~> dd~
         fks3 = fks_born.FKSProcessFromBorn(self.myproc3)
         
+        pdg_list1 = []
+        real_amp_list1 = diagram_generation.AmplitudeList()
+        pdg_list3 = [] 
+        real_amp_list3 = diagram_generation.AmplitudeList()
+        fks1.generate_reals(pdg_list1, real_amp_list1)
+        fks3.generate_reals(pdg_list3, real_amp_list3)
+
         me_list=[]
         me_id_list=[]
         me_list3=[]
         me_id_list3=[]
         res_me_list=[]
         res_me_id_list=[]
-        fks1.generate_reals()
-        fks3.generate_reals()
 
 
         helas_born_proc = fks_born_helas.FKSHelasProcessFromBorn(
@@ -497,7 +352,9 @@ class testFKSBornHelasObjects(unittest.TestCase):
         fks1 = fks_born.FKSProcessFromBorn(self.myproc1)
         me_list=[]
         me_id_list=[]
-        fks1.generate_reals()
+        pdg_list1 = []
+        real_amp_list1 = diagram_generation.AmplitudeList()
+        fks1.generate_reals(pdg_list1, real_amp_list1)
         helas_born_proc = fks_born_helas.FKSHelasProcessFromBorn(
                                     fks1, me_list, me_id_list)
         goal = \
@@ -512,14 +369,14 @@ class testFKSBornHelasObjects(unittest.TestCase):
                  'fks_info': {'i':5, 'j':4, 'ij':4, 'ij_glu':4, 'need_color_links':True}},
              {'n_me' : 2, 'pdgs':[21,21,-2,2,21], \
                  'fks_info': {'i':3, 'j':1, 'ij':1, 'ij_glu':0, 'need_color_links':False}},
-             {'n_me' : 3, 'pdgs':[2,1,1,2,21], \
+             {'n_me' : 3, 'pdgs':[2,-1,-1,2,21], \
                  'fks_info': {'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}},
-             {'n_me' : 4, 'pdgs':[2,-1,-1,2,21], \
+             {'n_me' : 4, 'pdgs':[2,1,1,2,21], \
                  'fks_info': {'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}},
-             {'n_me' : 5, 'pdgs':[2,2,2,2,21], \
+             {'n_me' : 5, 'pdgs':[2,-2,-2,2,21], \
+                 'fks_info': {'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}},
+             {'n_me' : 6, 'pdgs':[2,2,2,2,21], \
                  'fks_info': {'i':4, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}},
-             {'n_me' : 6, 'pdgs':[2,-2,-2,2,21], \
-                 'fks_info': {'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}},
              {'n_me' : 7, 'pdgs':[2,21,2,1,-1], \
                  'fks_info': {'i':5, 'j':4, 'ij':4, 'ij_glu':4, 'need_color_links':False}},
              {'n_me' : 8, 'pdgs':[2,21,2,2,-2], \
@@ -546,9 +403,14 @@ class testFKSBornHelasObjects(unittest.TestCase):
         fks2 = fks_born.FKSProcessFromBorn(self.myproc2)
         #uu~> dd~
         fks3 = fks_born.FKSProcessFromBorn(self.myproc3)
-        
-        fks1.generate_reals()
-        fks2.generate_reals()
+
+        pdg_list1 = []
+        real_amp_list1 = diagram_generation.AmplitudeList()
+        fks1.generate_reals(pdg_list1, real_amp_list1)
+        pdg_list2 = []
+        real_amp_list2 = diagram_generation.AmplitudeList()
+        fks2.generate_reals(pdg_list2, real_amp_list2)
+
         helas_born_proc1 = copy.deepcopy(fks_born_helas.FKSHelasProcessFromBorn(
                                     fks1, me_list, me_id_list))
         helas_born_proc2 = copy.deepcopy(fks_born_helas.FKSHelasProcessFromBorn(

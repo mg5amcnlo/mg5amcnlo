@@ -515,7 +515,7 @@ class TestFKSProcess(unittest.TestCase):
         
         #process u g > u g 
         fksproc = fks_born.FKSProcessFromBorn(self.myproc)
-        fksproc.generate_reals(False)
+        fksproc.generate_reals([],[],False)
         
         #there should be 11 real processes for this born
         self.assertEqual(len(fksproc.real_amps), 11)
@@ -530,7 +530,7 @@ class TestFKSProcess(unittest.TestCase):
         
         #process u g > u g 
         fksproc = fks_born.FKSProcessFromBorn(self.myproc)
-        fksproc.generate_reals()
+        fksproc.generate_reals([],[])
         
         #there should be 8 real processes for this born
         self.assertEqual(len(fksproc.real_amps), 8)

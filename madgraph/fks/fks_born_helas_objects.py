@@ -34,18 +34,37 @@ logger = logging.getLogger('madgraph.fks_born_helas_objects')
 
 class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
     """class to generate the helas calls for a FKSMultiProcess"""
+
+    def get_sorted_keys(self):
+        """Return particle property names as a nicely sorted list."""
+        keys = super(FKSMultiProcessFromBorn, self).get_sorted_keys()
+        keys += ['real_matrix_elements']
+        return keys
+
+    def filter(self, name, value):
+        """Filter for valid leg property values."""
+
+        if name == 'real_matrix_elements':
+            if not isinstance(value, helas_objetcs.HelasMultiProcess):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list for real_matrix_element " % str(value)                             
     
     def __init__(self, fksmulti, gen_color =True, decay_ids =[]):
         """Initialization from a FKSMultiProcess"""
 
         #swhich the other loggers off
-        loggers_off = [logging.getLogger('madgraph.diagram_generation') ]
+        loggers_off = [logging.getLogger('madgraph.diagram_generation'),
+                       logging.getLogger('madgraph.helas_objects')]
         old_levels = [logg.getEffectiveLevel() for logg in loggers_off]
         for logg in loggers_off:
             logg.setLevel(logging.WARNING)
 
+        logger.info('Generating real emission matrix-elements...')
+        self['real_matrix_elements'] = self.generate_matrix_elements(
+                copy.copy(fksmulti['real_amplitudes']), combine_matrix_elements = False)
+
         self['matrix_elements'] = self.generate_matrix_elements_fks(
-                                fksmulti['born_processes'], 
+                                fksmulti, 
                                 gen_color, decay_ids)
 
         for i, logg in enumerate(loggers_off):
@@ -72,7 +91,7 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
         return self.get('matrix_elements')        
         
 
-    def generate_matrix_elements_fks(self, fksprocs, gen_color = True,
+    def generate_matrix_elements_fks(self, fksmulti, gen_color = True,
                                  decay_ids = []):
         """Generate the HelasMatrixElements for the amplitudes,
         identifying processes with identical matrix elements, as
@@ -82,6 +101,7 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
         particle ids, since those should not be combined even if
         matrix element is identical."""
 
+        fksprocs = fksmulti['born_processes']
         assert isinstance(fksprocs, fks_born.FKSProcessFromBornList), \
                   "%s is not valid FKSProcessFromBornList" % \
                    repr(FKSProcessFromBornList)
@@ -107,8 +127,8 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
             logger.info("Generating Helas calls for FKS process %s" % \
                          proc.born_amp.get('process').nice_string().\
                                            replace('Process', 'process'))
-            matrix_element_list = [FKSHelasProcessFromBorn(proc, real_me_list,
-                                                           me_id_list,
+            matrix_element_list = [FKSHelasProcessFromBorn(proc, self['real_matrix_elements'],
+                                                           fksmulti['real_amplitudes'],
                                                           decay_ids=decay_ids,
                                                           gen_color=False)]
             for matrix_element in matrix_element_list:
@@ -190,9 +210,10 @@ class FKSHelasProcessFromBorn(object):
     -- list of FKSHelasRealProcesses
     -- color links"""
     
-    def __init__(self, fksproc=None, me_list =[], me_id_list=[], **opts):#test written
+    def __init__(self, fksproc=None, real_me_list =[], real_amp_list=[], **opts):#test written
         """ constructor, starts from a FKSProcessFromBorn, 
-        sets reals and color links"""
+        sets reals and color links. Real_me_list and real_amp_list are the lists of pre-genrated
+        matrix elements in 1-1 correspondence wiht the amplitudes"""
         
         if fksproc != None:
             self.born_matrix_element = helas_objects.HelasMatrixElement(
@@ -201,7 +222,7 @@ class FKSHelasProcessFromBorn(object):
             self.orders = fksproc.born_proc.get('orders')
             real_amps_new = []
             for proc in fksproc.real_amps:
-                fksreal_me = FKSHelasRealProcess(proc, me_list, me_id_list, **opts)
+                fksreal_me = FKSHelasRealProcess(proc, real_me_list, real_amp_list, **opts)
                 try:
                     other = self.real_processes[self.real_processes.index(fksreal_me)]
                     other.matrix_element.get('processes').extend(\
@@ -327,8 +348,10 @@ class FKSHelasProcessFromBorn(object):
         self.born_matrix_element.get('processes').extend(
                 other.born_matrix_element.get('processes'))
         for real1, real2 in zip(self.real_processes, other.real_processes):
-            real1.matrix_element.get('processes').extend(
-                real2.matrix_element.get('processes'))  
+            real1.matrix_element.get('processes').extend(\
+                    [p for p in real2.matrix_element['processes'] if p not in real1.matrix_element['processes']])
+#                real2.matrix_element.get('processes'))  
+#            real1.matrix_element['processes'] = set(real1.matrix_element['processes'])
             
     
 class FKSHelasRealProcess(object): #test written
@@ -343,10 +366,12 @@ class FKSHelasRealProcess(object): #test written
     -- is_to_integrate
     -- leg permutation<<REMOVED"""
     
-    def __init__(self, fksrealproc=None, me_list = [], me_id_list =[], **opts):
+    def __init__(self, fksrealproc=None, real_me_list = [], real_amp_list =[], **opts):
         """constructor, starts from a fksrealproc and then calls the
         initialization for HelasMatrixElement.
-        Sets i/j fks and the permutation"""
+        Sets i/j fks and the permutation.
+        real_me_list and real_amp_list are the lists of pre-generated matrix elements in 1-1 
+        correspondance with the amplitudes"""
         
         if fksrealproc != None:
             self.isfinite = False
@@ -354,14 +379,22 @@ class FKSHelasRealProcess(object): #test written
             self.fks_infos = fksrealproc.fks_infos
             self.is_to_integrate = fksrealproc.is_to_integrate
 
-            self.matrix_element = helas_objects.HelasMatrixElement(
-                                    fksrealproc.amplitude, **opts)
-            #generate the color for the real
-            self.matrix_element.get('color_basis').build(
-                                self.matrix_element.get('base_amplitude'))
-            self.matrix_element.set('color_matrix',
-                             color_amp.ColorMatrix(
-                                self.matrix_element.get('color_basis')))
+            if len(real_me_list) != len(real_amp_list):
+                raise fks_common.FKSProcessError(
+                        'not same number of amplitudes and matrix elements: %d, %d' % \
+                                (len(real_amp_list), len(real_me_list)))
+            if real_me_list and real_amp_list:
+                self.matrix_element = real_me_list[real_amp_list.index(fksrealproc.amplitude)]
+            else:
+                logger.info('generating matrix element...')
+                self.matrix_element = helas_objects.HelasMatrixElement(
+                                        fksrealproc.amplitude, **opts)
+                #generate the color for the real
+                self.matrix_element.get('color_basis').build(
+                                    self.matrix_element.get('base_amplitude'))
+                self.matrix_element.set('color_matrix',
+                                 color_amp.ColorMatrix(
+                                    self.matrix_element.get('color_basis')))
             self.fks_j_from_i = fksrealproc.find_fks_j_from_i()
 
     def get_nexternal_ninitial(self):

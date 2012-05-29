@@ -46,7 +46,7 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         keys = super(FKSMultiProcessFromBorn, self).get_sorted_keys()
-        keys += ['born_processes']
+        keys += ['born_processes', 'real_amplitudes', 'real_pdgs']
         return keys
 
     def filter(self, name, value):
@@ -56,11 +56,22 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
             if not isinstance(value, FKSProcessFromBornList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list for born_processes " % str(value)                             
+
+        if name == 'real_amplitudes':
+            if not isinstance(value, diagram_generation.AmplitudeList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list for real_amplitudes " % str(value)                             
+        if name == 'real_pdgs':
+            if not isinstance(value, List):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list for real_amplitudes " % str(value)                             
         return super(FKSMultiProcessFromBorn,self).filter(name, value)
     
     def __init__(self,  *arguments):
         """Initializes the original multiprocess, then generates the amps for the 
-        borns, then geneare the born processes and the reals.
+        borns, then generate the born processes and the reals.
+        Real amplitudes are stored in real_amplitudes according on the pdgs of their
+        legs (stored in pdgs, so that they need to be generated only once and then reicycled
         """
 
         #swhich the other loggers off
@@ -70,12 +81,16 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
         for logg in loggers_off:
             logg.setLevel(logging.WARNING)
 
+        self['real_amplitudes'] = diagram_generation.AmplitudeList()
+        self['pdgs'] = []
+
         super(FKSMultiProcessFromBorn, self).__init__(*arguments)   
         amps = self.get('amplitudes')
+
         for amp in amps:
             born = FKSProcessFromBorn(amp)
             self['born_processes'].append(born)
-            born.generate_reals()
+            born.generate_reals(self['pdgs'], self['real_amplitudes'])
 
         if self['process_definitions'][0].get('NLO_mode') == 'all':
             logger.info('Generating virtual matrix elements:')
@@ -114,9 +129,10 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
 
     def get_real_amplitudes(self):
         """return an amplitudelist with the real amplitudes"""
-        return diagram_generation.AmplitudeList([real.amplitude \
-                           for born in self['born_processes'] \
-                           for real in born.real_amps])
+#        return diagram_generation.AmplitudeList([real.amplitude \
+#                           for born in self['born_processes'] \
+#                           for real in born.real_amps])
+        return self.get('real_amplitudes')
 
 
     def generate_virtuals(self):
@@ -187,6 +203,7 @@ class FKSRealProcess(object):
     def generate_real_amplitude(self):
         """generates the real emission amplitude starting from self.process"""
         self.amplitude = diagram_generation.Amplitude(self.process)
+        return self.amplitude
 
 
     def find_fks_j_from_i(self): #test written
@@ -304,10 +321,16 @@ class FKSProcessFromBorn(object):
         return self.color_links
 
 
-    def generate_real_amplitudes(self):
-        """generates the real amplitudes for all the real emission processes"""
+    def generate_real_amplitudes(self, pdg_list, real_amp_list):
+        """generates the real amplitudes for all the real emission processes, using pdgs and real_amps
+        to avoid multiple generation of the same amplitude"""
+
         for amp in self.real_amps:
-            amp.generate_real_amplitude()
+            try:
+                amp.amplitude = real_amp_list[pdg_list.index(amp.pdgs)]
+            except ValueError:
+                pdg_list.append(amp.pdgs)
+                real_amp_list.append(amp.generate_real_amplitude())
 
 
     def combine_real_amplitudes(self):
@@ -327,7 +350,7 @@ class FKSProcessFromBorn(object):
 
 
         
-    def generate_reals(self, combine=True): #test written
+    def generate_reals(self, pdg_list, real_amp_list, combine=True): #test written
         """For all the possible splittings, creates an FKSRealProcess.
         It removes double counted configorations from the ones to integrates and
         sets the one which includes the bosn (is_nbody_only).
@@ -347,7 +370,7 @@ class FKSProcessFromBorn(object):
         self.find_reals_to_integrate()
         if combine:
             self.combine_real_amplitudes()
-        self.generate_real_amplitudes()
+        self.generate_real_amplitudes(pdg_list, real_amp_list)
 #        self.find_real_nbodyonly()
 
 
