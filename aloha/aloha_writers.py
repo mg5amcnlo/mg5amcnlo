@@ -983,10 +983,19 @@ def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     assert (name and outgoing) or abstract
 
     if tag is None:
-        tag = abstract.tag
+        tag = list(abstract.tag)
+    else:
+        tag=list(tag)
+
+
+        
 
     if name is None:
-        name = abstract.name + ''.join(tag)
+        prefix=''
+        if 'MP' in tag:
+            prefix = 'MP_'
+            tag.remove('MP')
+        name = prefix + abstract.name + ''.join(tag)
     
     if outgoing is None:
         outgoing = abstract.outgoing
