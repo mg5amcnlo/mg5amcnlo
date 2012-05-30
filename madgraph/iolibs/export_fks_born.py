@@ -260,7 +260,6 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                              matrix_element.real_processes[0].matrix_element)
 
         linkfiles = ['LesHouchesDummy.f',
-                     'LesHouches.f',
                      'MCmasses_HERWIG6.inc',
                      'MCmasses_HERWIGPP.inc',
                      'MCmasses_PYTHIA6Q.inc',
@@ -320,6 +319,11 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
 
         #copy the makefile 
         os.system("ln -s ../makefile_fks_dir ./makefile")
+        if matrix_element.virt_matrix_element:
+            os.system("ln -s ../LesHouches.f ./LesHouches.f")
+        else:
+            os.system("ln -s ../LesHouches_user.f ./LesHouches.f")
+
 
         #import nexternal/leshouches in Source
         ln('nexternal.inc', '../../Source', log=False)

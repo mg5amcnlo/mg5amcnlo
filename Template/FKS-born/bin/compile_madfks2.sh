@@ -245,19 +245,22 @@ for dir in $dirs ; do
 # COMPILE MADEVENT
 #
     if [[ $madevent_compile == "1" ]] ; then
-        export madloop=true
         virt_dirs=`ls -d V0*`
+        if [[ $virt_dirs == "" ]] ; then
+            echo "Virtuals have not been exported"
+        fi
         for vdir in $virt_dirs ; do
+            export madloop=true
             echo '     make MadLoop library for the virtual ME in '$vdir...
             cd $vdir
             make >> $Maindir/compile_madloop.log 2>&1
             cd ..
+            if [[ -e libMadLoop.a ]]; then
+                echo '     MadLoop library compiled'
+            else
+                echo 'ERROR in compilation, see compile_madfks.log for details'
+            fi
         done
-        if [[ -e libMadLoop.a ]]; then
-            echo '     MadLoop library compiled'
-        else
-	    echo 'ERROR in compilation, see compile_madfks.log for details'
-	fi
 	echo '     make' $executable...
 	if [[ -e $executable ]]; then
 	    rm -f $executable
