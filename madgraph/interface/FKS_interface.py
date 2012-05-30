@@ -240,14 +240,13 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                         % ', '.join(myprocdef['perturbation_couplings']))
 
         if self.options['fks_mode'] == 'born':
-            self._fks_multi_proc = fks_born.FKSMultiProcessFromBorn(myprocdef,
+            self._fks_multi_proc.add(fks_born.FKSMultiProcessFromBorn(myprocdef,
                                        collect_mirror_procs,
-                                       ignore_six_quark_processes)
+                                       ignore_six_quark_processes))
         elif self.options['fks_mode'] == 'real':
-            self._fks_multi_proc = fks_real.FKSMultiProcessFromReals(myprocdef,
+            self._fks_multi_proc.add(fks_real.FKSMultiProcessFromReals(myprocdef,
                                        collect_mirror_procs,
-                                       ignore_six_quark_processes)
-            # this is for testing, to be removed
+                                       ignore_six_quark_processes))
         else: 
             raise MadGraph5Error, 'Unknown FKS mode: %s' % self.options['fks_mode']
 

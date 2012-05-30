@@ -92,29 +92,36 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
             self['born_processes'].append(born)
             born.generate_reals(self['pdgs'], self['real_amplitudes'])
 
-        if self['process_definitions'][0].get('NLO_mode') == 'all':
-            logger.info('Generating virtual matrix elements:')
-            self.generate_virtuals()
-        
-        elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real']:
-            raise fks_common.FKSProcessError(), \
-               "Not a valid NLO_mode for a FKSMultiProcess: %s" % \
-               self['process_definitions'][0].get('NLO_mode')
+        if amps:
+            if self['process_definitions'][0].get('NLO_mode') == 'all':
+                logger.info('Generating virtual matrix elements:')
+                self.generate_virtuals()
+            
+            elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real']:
+                raise fks_common.FKSProcessError(), \
+                   "Not a valid NLO_mode for a FKSMultiProcess: %s" % \
+                   self['process_definitions'][0].get('NLO_mode')
 
-        # now get the total number of diagrams
-        n_diag_born = sum([len(amp.get('diagrams')) 
-                 for amp in self.get_born_amplitudes()])
-        n_diag_real = sum([len(amp.get('diagrams')) 
-                 for amp in self.get_real_amplitudes()])
-        n_diag_virt = sum([len(amp.get('diagrams')) 
-                 for amp in self.get_virt_amplitudes()])
+            # now get the total number of diagrams
+            n_diag_born = sum([len(amp.get('diagrams')) 
+                     for amp in self.get_born_amplitudes()])
+            n_diag_real = sum([len(amp.get('diagrams')) 
+                     for amp in self.get_real_amplitudes()])
+            n_diag_virt = sum([len(amp.get('diagrams')) 
+                     for amp in self.get_virt_amplitudes()])
 
-        logger.info(('Generated %d subprocesses with %d real emission diagrams, ' + \
-                    '%d born diagrams and %d virtual diagrams') % \
-                            (len(self['born_processes']), n_diag_real, n_diag_born, n_diag_virt))
+            logger.info(('Generated %d subprocesses with %d real emission diagrams, ' + \
+                        '%d born diagrams and %d virtual diagrams') % \
+                                (len(self['born_processes']), n_diag_real, n_diag_born, n_diag_virt))
 
         for i, logg in enumerate(loggers_off):
             logg.setLevel(old_levels[i])
+
+    def add(self, other):
+        """combines self and other, extending the lists of born/real amplitudes"""
+        self['born_processes'].extend(other['born_processes'])
+        self['real_amplitudes'].extend(other['real_amplitudes'])
+        self['pdgs'].extend(other['pdgs'])
 
 
     def get_born_amplitudes(self):
