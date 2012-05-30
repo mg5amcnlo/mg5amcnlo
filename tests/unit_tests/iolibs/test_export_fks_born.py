@@ -1083,7 +1083,7 @@ C
       DATA NTRY /8*0/
       DATA XTRY, XREJ /0,0/
       SAVE YFRAC
-      DATA JAMP2(0) /   1/
+      DATA JAMP2(0) /   2/
       DATA GOODHEL/THEL*.FALSE./
       DATA (NHEL(I,   1),I=1,4) /-1,-1,-1,-1/
       DATA (NHEL(I,   2),I=1,4) /-1,-1,-1, 1/
@@ -1131,15 +1131,12 @@ C     ----------
           JC(IHEL) = +1
         ENDDO
 
-        IF (MULTI_CHANNEL) THEN
-          DO IHEL=1,NGRAPHS
-            AMP2(IHEL)=0D0
-            JAMP2(IHEL)=0D0
-          ENDDO
-          DO IHEL=1,INT(JAMP2(0))
-            JAMP2(IHEL)=0D0
-          ENDDO
-        ENDIF
+        DO IHEL=1,NGRAPHS
+          AMP2(IHEL)=0D0
+        ENDDO
+        DO IHEL=1,INT(JAMP2(0))
+          JAMP2(IHEL)=0D0
+        ENDDO
         IF (CALCULATEDBORN) THEN
           DO J=1,NEXTERNAL-1
             IF (SAVEMOM(J,1).NE.P1(0,J) .OR. SAVEMOM(J,2).NE.P1(3

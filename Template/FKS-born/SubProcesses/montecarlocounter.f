@@ -262,7 +262,7 @@ c
       double precision pp(0:3,nexternal),wgt
       double precision xi_i_fks,y_ij_fks
       double precision xmc,xrealme,gfactsf,gfactcl,probne
-      double precision xmcxsec(nexternal),z
+      double precision xmcxsec(nexternal),z(nexternal)
       integer nofpartners
       logical lzone(nexternal),flagmc
 
@@ -343,7 +343,7 @@ c Wrapper for different Monte Carlo showers
       include "fks_powers.inc"
       include "madfks_mcatnlo.inc"
       double precision pp(0:3,nexternal),gfactsf,gfactcl,probne,wgt,
-     &z(nexternal),xi_i_fks,y_ij_fks,xmcxsec(nexternal)
+     &     z(nexternal),xi_i_fks,y_ij_fks,xmcxsec(nexternal)
       integer nofpartners
       logical lzone(nexternal),flagmc
       character*10 MonteCarlo

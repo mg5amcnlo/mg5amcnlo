@@ -75,7 +75,7 @@ C
       DATA NTRY /%(nconfs)d*0/
       DATA xtry, xrej /0,0/
       SAVE yfrac
-      DATA jamp2(0) /   1/          
+      DATA jamp2(0) /   %(ncolor)d/          
       DATA GOODHEL/THEL*.FALSE./
   %(helicity_lines)s
       double precision hel_fac
@@ -106,15 +106,12 @@ C ----------
          JC(IHEL) = +1
       ENDDO
        
-      IF (multi_channel) THEN
-          DO IHEL=1,NGRAPHS
-              amp2(ihel)=0d0
-              jamp2(ihel)=0d0
-          ENDDO
-          DO IHEL=1,int(jamp2(0))
-              jamp2(ihel)=0d0
-          ENDDO
-      ENDIF
+      DO IHEL=1,NGRAPHS
+          amp2(ihel)=0d0
+      ENDDO
+      DO IHEL=1,int(jamp2(0))
+          jamp2(ihel)=0d0
+      ENDDO
       if (calculatedBorn) then
          do j=1,nexternal-1
             if (savemom(j,1).ne.p1(0,j) .or. savemom(j,2).ne.p1(3,j)) then

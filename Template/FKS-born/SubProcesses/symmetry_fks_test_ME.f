@@ -170,8 +170,6 @@ c
 
          call fks_inc_chooser()
          call leshouche_inc_chooser()
-         call setcuts
-         call setfksfactor(iconfig)
          write (*,*) 'FKS configuration number is ',nFKSprocess
          write (*,*) 'FKS partons are: i=',i_fks,'  j=',j_fks
          write (*,*) 'with PDGs:       i=',PDG_type(i_fks),'  j='
@@ -235,7 +233,8 @@ c x_to_f_arg subroutine
       endif
 
       do iconfig=bs_min,bs_max       ! Born configurations
-
+      call setcuts
+      call setfksfactor(iconfig)
       wgt=1d0
       ntry=1
 

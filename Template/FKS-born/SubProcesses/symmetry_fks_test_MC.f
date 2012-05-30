@@ -217,7 +217,6 @@ c
          call fks_inc_chooser()
          call leshouche_inc_chooser()
          call setcuts
-         call setfksfactor(iconfig)
          write (*,*) 'FKS configuration number is ',nFKSprocess
          write (*,*) 'FKS partons are: i=',i_fks,'  j=',j_fks
          write (*,*) 'with PDGs:       i=',PDG_type(i_fks),'  j='
@@ -245,9 +244,18 @@ c Set color types of i_fks, j_fks and fks_mother.
             stop
          endif
       elseif(abs(i_type).eq.3 .and. j_type.eq.8)then
-         m_type=-i_type
-      elseif(abs(j_type).eq.3 .and. i_type.eq.8)then
-         m_type=j_type
+         if(j_fks.le.nincoming)then
+            m_type=-i_type
+         else
+            write (*,*) 'Error in setfksfactor: (i,j)=(q,g)'
+            stop
+         endif
+      elseif(i_type.eq.8 .and. abs(j_type).eq.3)then
+         if (j_fks.le.nincoming) then
+            m_type=j_type
+         else
+            m_type=j_type
+         endif
       else
          write(*,*)'Flavour mismatch #2 in setfksfactor',
      &        i_type,j_type,m_type
@@ -280,10 +288,9 @@ c x_to_f_arg subroutine
          bs_max=iconfig_in
       endif
 
-c Set matrices used by MC counterterms
-      call set_mc_matrices
-
       do iconfig=bs_min,bs_max       ! Born configurations
+
+      call set_mc_matrices
 
       wgt=1d0
       ntry=1
@@ -489,8 +496,8 @@ c in genps_fks_test.f
             call generate_momenta(ndim,iconfig,wgt,x,p)
             ntry=ntry+1
          enddo
-         if(ncolltests.le.10)write (*,*) 'ntry',ntry
          calculatedBorn=.false.
+         if(ncolltests.le.10)write (*,*) 'ntry',ntry
          call set_cms_stuff(1)
          if(ilim.eq.0)then
            call xmcsubt_wrap(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fxl)
@@ -498,7 +505,6 @@ c in genps_fks_test.f
            call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fxl) 
          endif
          fxl=fxl*jac_cnt(1)
-
          call set_cms_stuff(-100)
          call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
          limit(1)=fx*wgt
