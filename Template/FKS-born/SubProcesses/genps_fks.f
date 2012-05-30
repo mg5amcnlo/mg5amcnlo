@@ -611,8 +611,9 @@ c local
      &     ,costh_mother_fks,sinth_mother_fks, phi_mother_fks
      &     ,cosphi_mother_fks,sinphi_mother_fks,recoil(0:3),sumrec
      &     ,sumrec2,betabst,gammabst,shybst,chybst,chybstmo,xdir(3)
-     &     ,resAoR0,veckn,veckbarn,xp_mother(0:3),cosphi_i_fks
+     &     ,veckn,veckbarn,xp_mother(0:3),cosphi_i_fks
      &     ,sinphi_i_fks,xi_i_hat
+      double complex resAoR0
 c external
       double precision rho
       external rho
@@ -858,8 +859,6 @@ c arguments
 c common blocks
       double precision  veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
-      double complex xij_aor
-      common/cxij_aor/xij_aor
       logical softtest,colltest
       common/sctests/softtest,colltest
       double precision xi_i_fks_fix,y_ij_fks_fix
@@ -867,14 +866,14 @@ c common blocks
 c local
       integer i,j
       double precision xmj,xmj2,xmjhat,xmhat,xim,cffA2,cffB2,cffC2
-     &     ,cffDEL2,xiBm,ximax,xirplus,xirminus,rat_xi,xjactmp,xitmp1
-     &     ,E_i_fks,x3len_i_fks,b2m4ac,x3len_j_fks_num,x3len_j_fks_den
-     &     ,x3len_j_fks,x3len_fks_mother,costh_i_fks,sinth_i_fks
-     &     ,xpifksred(0:3),recoil(0:3),xp_mother(0:3),sumrec,expybst
-     &     ,shybst,chybst,chybstmo,xdir(3),resAoR0,veckn,veckbarn
-     &     ,cosphi_i_fks,sinphi_i_fks,cosphi_mother_fks,costh_mother_fks
-     &     ,phi_mother_fks,sinphi_mother_fks,th_mother_fks,xitmp2
-     &     ,sinth_mother_fks,xi_i_hat
+     $     ,cffDEL2,xiBm,ximax,xirplus,xirminus,rat_xi,xjactmp,xitmp1
+     $     ,E_i_fks,x3len_i_fks,b2m4ac,x3len_j_fks_num,x3len_j_fks_den
+     $     ,x3len_j_fks,x3len_fks_mother,costh_i_fks,sinth_i_fks
+     $     ,xpifksred(0:3),recoil(0:3),xp_mother(0:3),sumrec,expybst
+     $     ,shybst,chybst,chybstmo,xdir(3),veckn,veckbarn ,cosphi_i_fks
+     $     ,sinphi_i_fks,cosphi_mother_fks,costh_mother_fks
+     $     ,phi_mother_fks,sinphi_mother_fks,th_mother_fks,xitmp2
+     $     ,sinth_mother_fks,xi_i_hat
 c external
       double precision rho
       external rho
@@ -886,11 +885,9 @@ c parameters
       double precision y_ij_fks_matrix(-2:2)
       data y_ij_fks_matrix/-1.d0,-1.d0,-1.d8,1.d0,1.d0/
       double precision stiny,sstiny,qtiny,ctiny,cctiny
-      double complex ximag
       parameter (stiny=1d-6)
       parameter (qtiny=1d-7)
       parameter (ctiny=5d-7)
-      parameter (ximag=(0d0,1d0))
 c
       if(colltest .or.
      &     abs(icountevts).eq.1.or.abs(icountevts).eq.2)then
@@ -1142,20 +1139,6 @@ c Boost the momenta
      &      call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),xp(0,i))
       enddo
 c
-c Collinear limit of <ij>/[ij]. See innerp3.m. 
-      if( ( icountevts.eq.-100 .or.
-     &     (icountevts.eq.1.and.xij_aor.eq.0) ) .and.
-     &     m_j_fks.eq.0.d0 )then
-         resAoR0=-exp( 2*ximag*(phi_mother_fks+phi_i_fks) )
-c The term O(srt(1-y)) is formally correct but may be numerically large
-c Set it to zero
-c$$$          resAoR5=-ximag*sqrt(2.d0)*
-c$$$       &          sinphi_i_fks*tan(th_mother_fks/2.d0)*
-c$$$       &          exp( 2*ximag*(phi_mother_fks+phi_i_fks) )
-c$$$          xij_aor=resAoR0+resAoR5*sqrt(1-y_ij_fks)
-         xij_aor=resAoR0
-      endif
-c
 c Phase-space factor for (xii,yij,phii)
       veckn=rho(xp(0,j_fks))
       veckbarn=rho(p_born_imother)
@@ -1203,10 +1186,11 @@ c common blocks
 c local
       integer i,j,idir
       double precision yijdir,costh_i_fks,x1bar2,x2bar2,yij_sol,xi1,xi2
-     &     ,ximaxtmp,omega,bstfact,shy_tbst,chy_tbst,chy_tbstmo
-     &     ,xdir_t(3),cosphi_i_fks,sinphi_i_fks,shy_lbst,chy_lbst
-     &     ,encmso2,E_i_fks,sinth_i_fks,xpifksred(0:3),resAoR0,xi_i_fks
-     &     ,xi_i_hat,xiimin,yij_upp,yij_low,y_ij_fks_upp,y_ij_fks_low
+     $     ,ximaxtmp,omega,bstfact,shy_tbst,chy_tbst,chy_tbstmo
+     $     ,xdir_t(3),cosphi_i_fks,sinphi_i_fks,shy_lbst,chy_lbst
+     $     ,encmso2,E_i_fks,sinth_i_fks,xpifksred(0:3),xi_i_fks
+     $     ,xi_i_hat,xiimin,yij_upp,yij_low,y_ij_fks_upp,y_ij_fks_low
+      double complex resAoR0
 c external
 c
 c parameters
@@ -1496,11 +1480,7 @@ c
 c Collinear limit of <ij>/[ij]. See innerpin.m. 
       if( icountevts.eq.-100 .or.
      &     (icountevts.eq.1.and.xij_aor.eq.0) )then
-         if(j_fks.eq.1)then
-            resAoR0=-exp( 2*ximag*phi_i_fks )
-         elseif(j_fks.eq.2)then
-            resAoR0=-exp( -2*ximag*phi_i_fks )
-         endif
+         resAoR0=-exp( 2*idir*ximag*phi_i_fks )
          xij_aor=resAoR0
       endif
 c

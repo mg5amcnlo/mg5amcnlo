@@ -10,6 +10,7 @@ c
       include 'genps.inc'      
       include 'nexternal.inc'
       include '../../Source/run_config.inc'
+      include 'nFKSconfigs.inc'
       
       double precision ZERO,one
       parameter       (ZERO = 0d0)
@@ -132,6 +133,10 @@ c helicity stuff
       logical Hevents
       common/SHevents/Hevents
 
+      integer fks_conf_number,fks_loop_min,fks_loop_max,fks_loop
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
 c      integer icomp
@@ -190,15 +195,33 @@ c-----
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts 
 c
-c Read FKS configuration from file
-      open (unit=61,file='config.fks',status='old')
-      read(61,'(I2)',err=99,end=99) fksconfiguration
- 99   close(61)
-c Use the fks.inc include file to set i_fks and j_fks
-      i_fks=fks_i(fksconfiguration)
-      j_fks=fks_j(fksconfiguration)
-      write (*,*) 'FKS configuration number is ',fksconfiguration
-      write (*,*) 'FKS partons are: i=',i_fks,'  j=',j_fks
+
+      write (*,*) 'Give FKS configuration number ("0" loops over all)'
+      read (*,*) fks_conf_number
+
+      if (fks_conf_number.eq.0) then
+         fks_loop_min=1
+         fks_loop_max=fks_configs
+      else
+         fks_loop_min=fks_conf_number
+         fks_loop_max=fks_conf_number
+      endif
+
+      do fks_loop=fks_loop_min,fks_loop_max
+         nFKSprocess=fks_loop
+         write (*,*) ''
+         write (*,*) '================================================='
+         write (*,*) ''
+         write (*,*) 'NEW FKS CONFIGURATION:'
+
+         call fks_inc_chooser()
+         call leshouche_inc_chooser()
+         call setcuts
+         call setfksfactor(iconfig)
+         write (*,*) 'FKS configuration number is ',fksconfiguration
+         write (*,*) 'FKS partons are: i=',i_fks,'  j=',j_fks
+         write (*,*) 'with PDGs:       i=',PDG_type(i_fks),'  j='
+     $        ,PDG_type(j_fks)
 
 
 c
@@ -547,6 +570,7 @@ c
       endif
 
       enddo                     ! Loop over Born configurations
+      enddo                     ! Loop over nFKSprocess
 
       stop
       return
