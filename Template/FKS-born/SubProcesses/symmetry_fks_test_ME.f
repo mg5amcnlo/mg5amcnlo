@@ -172,7 +172,7 @@ c
          call leshouche_inc_chooser()
          call setcuts
          call setfksfactor(iconfig)
-         write (*,*) 'FKS configuration number is ',fksconfiguration
+         write (*,*) 'FKS configuration number is ',nFKSprocess
          write (*,*) 'FKS partons are: i=',i_fks,'  j=',j_fks
          write (*,*) 'with PDGs:       i=',PDG_type(i_fks),'  j='
      $        ,PDG_type(j_fks)
