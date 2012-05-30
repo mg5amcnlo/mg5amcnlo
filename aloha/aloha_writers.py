@@ -566,8 +566,8 @@ class ALOHAWriterForFortran(WriteALOHA):
     
                 out.write('    %s%s(%s) = %s\n' % (type,self.outgoing, energy_pos+1+i, 
                                              ''.join(p) % dict_energy))
-            
-            self.get_one_momenta_def(self.outgoing, out)
+            if self.declaration.is_used('P%s' % self.outgoing):
+                self.get_one_momenta_def(self.outgoing, out)
 
         
         # Returning result

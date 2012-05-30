@@ -3333,96 +3333,7 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
             if lorentz.name == name:
                 return lorentz
             
-        raise Exception('the test is confuse by name %s' % name)
-    
-    def test_aloha_MP_mode(self):
-        """ """
-        aloha_lib.KERNEL.clean()
-        old_mp_mode = aloha.mp_precision
-        old_loop_mode = aloha.loop_mode
-        try:
-            aloha.mp_precision = True
-            aloha.loop_mode = True
-            FFV_M = self.Lorentz(name = 'FFVM',
-                 spins = [ 2, 2, 3 ],
-                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)') 
-            
-            abstract = create_aloha.AbstractRoutineBuilder(FFV_M).compute_routine(3)
-            text = abstract.write('/tmp')
-
-            # Not performed the Fortran formatting
-            target = """subroutine FFVM_3(F1, F2, COUP, M3, W3,V3)
-implicit none
- complex*16 denom
- complex*16 V3(8)
- real*8 W3
- complex*16 TMP0
- real*8 M3
- complex*16 F1(*)
- complex*16 P3(0:3)
- complex*16 F2(*)
- real*8 OM3
- complex*16 COUP
-    OM3 = 0d0
-    if (M3.ne.0d0) OM3=1d0/M3**2
-    V3(5) = -F1(5)+F2(5)
-    V3(6) = -F1(6)+F2(6)
-    V3(7) = -F1(7)+F2(7)
-    V3(8) = -F1(8)+F2(8)
-P3(0) = -V3(5)
-P3(1) = -V3(6)
-P3(2) = -V3(7)
-P3(3) = -V3(8)
- TMP0 = (F1(3)*(F2(1)*(P3(0)+P3(3))+F2(2)*(P3(1)+(0d0, -1d0)*(P3(2))))+F1(4)*(F2(1)*(P3(1)+(0d0, 1d0)*(P3(2)))+F2(2)*(P3(0)-P3(3))))
-    denom = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 -(0,1)* W3))
-    V3(1)= denom*(0d0, -1d0)*(F2(1)*F1(3)+F2(2)*F1(4)-P3(0)*OM3*TMP0)
-    V3(2)= denom*(0d0, -1d0)*(-F2(2)*F1(3)-F2(1)*F1(4)-P3(1)*OM3*TMP0)
-    V3(3)= denom*(0d0, -1d0)*(+(0d0, -1d0)*(F2(1)*F1(4))+(0d0, 1d0)*(F2(2)*F1(3))-P3(2)*OM3*TMP0)
-    V3(4)= denom*(0d0, -1d0)*(F2(2)*F1(4)-F2(1)*F1(3)-P3(3)*OM3*TMP0)
-end
-
-
-subroutine MP_FFVM_3(F1, F2, COUP, M3, W3,V3)
-implicit none
- complex*32 denom
- complex*32 V3(8)
- real*16 W3
- complex*32 TMP0
- real*16 M3
- complex*32 F1(*)
- complex*32 P3(0:3)
- complex*32 F2(*)
- real*16 OM3
- complex*32 COUP
-    OM3 = 0q0
-    if (M3.ne.0q0) OM3=1q0/M3**2
-    V3(5) = -F1(5)+F2(5)
-    V3(6) = -F1(6)+F2(6)
-    V3(7) = -F1(7)+F2(7)
-    V3(8) = -F1(8)+F2(8)
-P3(0) = -V3(5)
-P3(1) = -V3(6)
-P3(2) = -V3(7)
-P3(3) = -V3(8)
- TMP0 = (F1(3)*(F2(1)*(P3(0)+P3(3))+F2(2)*(P3(1)+(0q0, -1q0)*(P3(2))))+F1(4)*(F2(1)*(P3(1)+(0q0, 1q0)*(P3(2)))+F2(2)*(P3(0)-P3(3))))
-    denom = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 -(0,1)* W3))
-    V3(1)= denom*(0q0, -1q0)*(F2(1)*F1(3)+F2(2)*F1(4)-P3(0)*OM3*TMP0)
-    V3(2)= denom*(0q0, -1q0)*(-F2(2)*F1(3)-F2(1)*F1(4)-P3(1)*OM3*TMP0)
-    V3(3)= denom*(0q0, -1q0)*(+(0q0, -1q0)*(F2(1)*F1(4))+(0q0, 1q0)*(F2(2)*F1(3))-P3(2)*OM3*TMP0)
-    V3(4)= denom*(0q0, -1q0)*(F2(2)*F1(4)-F2(1)*F1(3)-P3(3)*OM3*TMP0)
-end
-
-
-"""
-            self.assertEqual(text.split('\n'), target.split('\n'))         
-
-            
-        except Exception:
-            aloha.mp_precision = old_mp_mode
-            aloha.loop_mode = old_loop_mode
-            raise
-        aloha.mp_precision = old_mp_mode
-        aloha.loop_mode = old_loop_mode          
+        raise Exception('the test is confuse by name %s' % name)     
 
     def test_aloha_FFVC(self):
         """ test the FFV creation of vertex """
@@ -3959,6 +3870,161 @@ x(0,1)*P(-1,2)*P(-1,3)*Gamma(3,2,-2)*ProjP(-2,1)')
         #            print split_routine[i][j*77:(j+1)*77]
             
         
+    def test_aloha_Loop_feynmangauge(self):
+        """Test the definition of the momenta"""
+        aloha_lib.KERNEL.clean()
+        old_mp_mode = aloha.mp_precision
+        old_loop_mode = aloha.loop_mode
+        old_gauge_mode = aloha.unitary_gauge
+        try:
+            aloha.mp_precision = True
+            aloha.loop_mode = True
+            aloha.unitary_gauge = False
+            FFV_M = UFOLorentz(name = 'FFVM',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)') 
+            
+            abstract = create_aloha.AbstractRoutineBuilder(FFV_M).compute_routine(3,'L')
+            text = abstract.write('/tmp')
+            
+            target = """subroutine FFVML_3(F1, F2, COUP, M3, W3,V3)
+implicit none
+ complex*16 V3(8)
+ real*8 W3
+ real*8 M3
+ complex*16 F1(*)
+ complex*16 F2(*)
+ complex*16 COUP
+    V3(5) = -F1(5)+F2(5)
+    V3(6) = -F1(6)+F2(6)
+    V3(7) = -F1(7)+F2(7)
+    V3(8) = -F1(8)+F2(8)
+    V3(1)= COUP*(0d0, -1d0)*(F2(1)*F1(3)+F2(2)*F1(4))
+    V3(2)= COUP*(0d0, -1d0)*(-F2(2)*F1(3)-F2(1)*F1(4))
+    V3(3)= COUP*(0d0, -1d0)*(+(0d0, -1d0)*(F2(1)*F1(4))+(0d0, 1d0)*(F2(2)*F1(3)))
+    V3(4)= COUP*(0d0, -1d0)*(F2(2)*F1(4)-F2(1)*F1(3))
+end
+
+
+subroutine MP_FFVML_3(F1, F2, COUP, M3, W3,V3)
+implicit none
+ complex*32 V3(8)
+ real*16 W3
+ real*16 M3
+ complex*32 F1(*)
+ complex*32 F2(*)
+ complex*32 COUP
+    V3(5) = -F1(5)+F2(5)
+    V3(6) = -F1(6)+F2(6)
+    V3(7) = -F1(7)+F2(7)
+    V3(8) = -F1(8)+F2(8)
+    V3(1)= COUP*(0q0, -1q0)*(F2(1)*F1(3)+F2(2)*F1(4))
+    V3(2)= COUP*(0q0, -1q0)*(-F2(2)*F1(3)-F2(1)*F1(4))
+    V3(3)= COUP*(0q0, -1q0)*(+(0q0, -1q0)*(F2(1)*F1(4))+(0q0, 1q0)*(F2(2)*F1(3)))
+    V3(4)= COUP*(0q0, -1q0)*(F2(2)*F1(4)-F2(1)*F1(3))
+end
+
+
+"""
+            self.assertEqual(text.split('\n'), target.split('\n'))
+            
+        except Exception:
+            aloha.mp_precision = old_mp_mode
+            aloha.loop_mode = old_loop_mode
+            aloha.unitary_gauge = old_gauge_mode
+            raise
+        aloha.mp_precision = old_mp_mode
+        aloha.loop_mode = old_loop_mode   
+        aloha.unitary_gauge = old_gauge_mode  
+    
+    def test_aloha_MP_mode(self):
+        """ """
+        aloha_lib.KERNEL.clean()
+        old_mp_mode = aloha.mp_precision
+        old_loop_mode = aloha.loop_mode
+        try:
+            aloha.mp_precision = True
+            aloha.loop_mode = True
+            FFV_M = self.Lorentz(name = 'FFVM',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)') 
+            
+            abstract = create_aloha.AbstractRoutineBuilder(FFV_M).compute_routine(3)
+            text = abstract.write('/tmp')
+
+            # Not performed the Fortran formatting
+            target = """subroutine FFVM_3(F1, F2, COUP, M3, W3,V3)
+implicit none
+ complex*16 denom
+ complex*16 V3(8)
+ real*8 W3
+ complex*16 TMP0
+ real*8 M3
+ complex*16 F1(*)
+ complex*16 P3(0:3)
+ complex*16 F2(*)
+ real*8 OM3
+ complex*16 COUP
+    OM3 = 0d0
+    if (M3.ne.0d0) OM3=1d0/M3**2
+    V3(5) = -F1(5)+F2(5)
+    V3(6) = -F1(6)+F2(6)
+    V3(7) = -F1(7)+F2(7)
+    V3(8) = -F1(8)+F2(8)
+P3(0) = -V3(5)
+P3(1) = -V3(6)
+P3(2) = -V3(7)
+P3(3) = -V3(8)
+ TMP0 = (F1(3)*(F2(1)*(P3(0)+P3(3))+F2(2)*(P3(1)+(0d0, -1d0)*(P3(2))))+F1(4)*(F2(1)*(P3(1)+(0d0, 1d0)*(P3(2)))+F2(2)*(P3(0)-P3(3))))
+    denom = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 -(0,1)* W3))
+    V3(1)= denom*(0d0, -1d0)*(F2(1)*F1(3)+F2(2)*F1(4)-P3(0)*OM3*TMP0)
+    V3(2)= denom*(0d0, -1d0)*(-F2(2)*F1(3)-F2(1)*F1(4)-P3(1)*OM3*TMP0)
+    V3(3)= denom*(0d0, -1d0)*(+(0d0, -1d0)*(F2(1)*F1(4))+(0d0, 1d0)*(F2(2)*F1(3))-P3(2)*OM3*TMP0)
+    V3(4)= denom*(0d0, -1d0)*(F2(2)*F1(4)-F2(1)*F1(3)-P3(3)*OM3*TMP0)
+end
+
+
+subroutine MP_FFVM_3(F1, F2, COUP, M3, W3,V3)
+implicit none
+ complex*32 denom
+ complex*32 V3(8)
+ real*16 W3
+ complex*32 TMP0
+ real*16 M3
+ complex*32 F1(*)
+ complex*32 P3(0:3)
+ complex*32 F2(*)
+ real*16 OM3
+ complex*32 COUP
+    OM3 = 0q0
+    if (M3.ne.0q0) OM3=1q0/M3**2
+    V3(5) = -F1(5)+F2(5)
+    V3(6) = -F1(6)+F2(6)
+    V3(7) = -F1(7)+F2(7)
+    V3(8) = -F1(8)+F2(8)
+P3(0) = -V3(5)
+P3(1) = -V3(6)
+P3(2) = -V3(7)
+P3(3) = -V3(8)
+ TMP0 = (F1(3)*(F2(1)*(P3(0)+P3(3))+F2(2)*(P3(1)+(0q0, -1q0)*(P3(2))))+F1(4)*(F2(1)*(P3(1)+(0q0, 1q0)*(P3(2)))+F2(2)*(P3(0)-P3(3))))
+    denom = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 -(0,1)* W3))
+    V3(1)= denom*(0q0, -1q0)*(F2(1)*F1(3)+F2(2)*F1(4)-P3(0)*OM3*TMP0)
+    V3(2)= denom*(0q0, -1q0)*(-F2(2)*F1(3)-F2(1)*F1(4)-P3(1)*OM3*TMP0)
+    V3(3)= denom*(0q0, -1q0)*(+(0q0, -1q0)*(F2(1)*F1(4))+(0q0, 1q0)*(F2(2)*F1(3))-P3(2)*OM3*TMP0)
+    V3(4)= denom*(0q0, -1q0)*(F2(2)*F1(4)-F2(1)*F1(3)-P3(3)*OM3*TMP0)
+end
+
+
+"""
+            self.assertEqual(text.split('\n'), target.split('\n'))         
+
+            
+        except Exception:
+            aloha.mp_precision = old_mp_mode
+            aloha.loop_mode = old_loop_mode
+            raise
+        aloha.mp_precision = old_mp_mode
+        aloha.loop_mode = old_loop_mode     
 
 
 
