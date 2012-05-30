@@ -191,7 +191,7 @@ c
       call sborn(p_born,wgt1)
       sumborn=0.d0
       do i=1,max_bcol
-         if (icolamp(iBornGraph,i)) then
+         if (icolamp(i,iBornGraph,1)) then
             sumborn=sumborn+jamp2(i)
          endif
       enddo
@@ -204,14 +204,14 @@ c
       xtarget=ran2()*sumborn
 
       iflow=1
-      if (icolamp(iBornGraph,1)) then
+      if (icolamp(1,iBornGraph,1)) then
          jampsum=jamp2(1)
       else
          jampsum=0d0
       endif
       do while (jampsum .lt. xtarget)
          iflow=iflow+1
-         if (icolamp(iBornGraph,iflow)) then
+         if (icolamp(iflow,iBornGraph,1)) then
             jampsum=jampsum+jamp2(iflow)
          endif
       enddo
