@@ -450,10 +450,11 @@ end
 
 
         filename = 'born_conf.inc'
-        nconfigs, s_and_t_channels = self.write_configs_file(\
-            writers.FortranWriter(filename),
-            matrix_element.born_matrix_element, 
-            fortran_model)
+        nconfigs, mapconfigs, s_and_t_channels = \
+                    self.write_configs_file(
+                    writers.FortranWriter(filename),
+                    matrix_element.born_matrix_element, 
+                    fortran_model)
 
         filename = 'born_props.inc'
         self.write_props_file(writers.FortranWriter(filename),
@@ -482,6 +483,7 @@ end
 
         filename = 'coloramps.inc'
         self.write_coloramps_file(writers.FortranWriter(filename),
+                             mapconfigs,
                              matrix_element.born_matrix_element,
                              fortran_model)
         
@@ -1124,10 +1126,15 @@ C
     # write_coloramps_file
     #===============================================================================
     #test written
-    def write_coloramps_file(self, writer, matrix_element, fortran_model):
+    def write_coloramps_file(self, writer, mapconfigs, matrix_element, fortran_model):
         """Write the coloramps.inc file for MadEvent"""
+
+        lines = []
+        lines.append( "logical icolamp(%d,%d,1)" % \
+                        (max(len(matrix_element.get('color_basis').keys()), 1),
+                         len(mapconfigs)))
     
-        lines = self.get_icolamp_lines(matrix_element)
+        lines += self.get_icolamp_lines(mapconfigs, matrix_element, 1)
     
         # Write the file
         writer.writelines(lines)
@@ -1207,7 +1214,7 @@ C
         iconfig = 0
     
         s_and_t_channels = []
-
+        mapconfigs = []
 
         model = matrix_element.get('processes')[0].get('model')
 #        new_pdg = model.get_first_non_pdg()
@@ -1223,6 +1230,7 @@ C
                 continue
             iconfig = iconfig + 1
             helas_diag = matrix_element.get('diagrams')[idiag]
+            mapconfigs.append(helas_diag.get('number'))
             lines.append("# Diagram %d" % \
                          (helas_diag.get('number')))
             # Correspondance between the config and the amplitudes
@@ -1264,7 +1272,7 @@ C
         # Write the file
         writer.writelines(lines)
     
-        return iconfig, s_and_t_channels
+        return iconfig, mapconfigs, s_and_t_channels
 
     
     #===============================================================================
@@ -1556,40 +1564,6 @@ C
             return ret_list
     
     
-    def get_icolamp_lines(self, matrix_element): 
-        #test written
-        """Return the ICOLAMP matrix, showing which AMPs are parts of
-        which JAMPs."""
-    
-        ret_list = []
-    
-        booldict = {False: ".false.", True: ".true."}
-    
-        amplitudes = matrix_element.get_all_amplitudes()
-    
-        color_amplitudes = matrix_element.get_color_amplitudes()
-    
-        ret_list.append("logical icolamp(%d,%d)" % \
-                        (len(amplitudes), len(color_amplitudes)))
-    
-        for icolor, coeff_list in enumerate(color_amplitudes):
-    
-            # List of amplitude numbers used in this JAMP
-            amp_list = [amp_number for (dummy, amp_number) in coeff_list]
-    
-            # List of True or False 
-            bool_list = [(i + 1 in amp_list) for i in \
-                              range(len(amplitudes))]
-            # Add line
-            ret_list.append("DATA(icolamp(i,%d),i=1,%d)/%s/" % \
-                                (icolor + 1, len(bool_list),
-                                 ','.join(["%s" % booldict[i] for i in \
-                                           bool_list])))
-        return ret_list
-        # Write the file
-        writer.writelines(lines)
-    
-        return True
     
     #===============================================================================
     # write_ncombs_file

@@ -1679,7 +1679,7 @@ C     Number of configs
 """
         process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         
-        nconfigs, s_and_t_channels = \
+        nconfigs, mapconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
                     writers.FortranWriter(self.give_pos('test')),
                     self.myfks_me.born_matrix_element,
@@ -1705,7 +1705,7 @@ C     Number of configs
 """
         process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         
-        nconfigs, s_and_t_channels = \
+        nconfigs, mapconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
                     writers.FortranWriter(self.give_pos('test1')),
                     self.myfks_me.born_matrix_element,
@@ -1725,14 +1725,22 @@ C     Number of configs
         for the born process
         """
         goal = \
-"""      LOGICAL ICOLAMP(3,2)
-      DATA(ICOLAMP(I,1),I=1,3)/.TRUE.,.TRUE.,.FALSE./
-      DATA(ICOLAMP(I,2),I=1,3)/.TRUE.,.FALSE.,.TRUE./
+"""      LOGICAL ICOLAMP(2,3,1)
+      DATA(ICOLAMP(I,1,1),I=1,2)/.TRUE.,.TRUE./
+      DATA(ICOLAMP(I,2,1),I=1,2)/.TRUE.,.FALSE./
+      DATA(ICOLAMP(I,3,1),I=1,2)/.FALSE.,.TRUE./
 """
         process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+
+        nconfigs, mapconfigs, s_and_t_channels = \
+            process_exporter.write_configs_file(
+                    writers.FortranWriter(self.give_pos('test1')),
+                    self.myfks_me.born_matrix_element,
+                    self.myfortranmodel)
         
         process_exporter.write_coloramps_file(
                     writers.FortranWriter(self.give_pos('test')),
+                    mapconfigs,
                     self.myfks_me.born_matrix_element,
                     self.myfortranmodel)        
 
@@ -1749,7 +1757,7 @@ C     Number of configs
 
         process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
-        nconfigs, s_and_t_channels = \
+        nconfigs, mapconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
                     writers.FortranWriter(self.give_pos('test1')),
                     self.myfks_me.born_matrix_element,
