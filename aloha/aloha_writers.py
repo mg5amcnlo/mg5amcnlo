@@ -637,7 +637,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             else:
                 out = '%s' % (self.change_number_format(number.real))
         else:
-            tmp = Fraction(number)
+            tmp = Fraction(str(number))
             tmp = tmp.limit_denominator(100)
             out = '%s%s/%s%s' % (tmp.numerator, self.format, tmp.denominator, self.format)
         return out

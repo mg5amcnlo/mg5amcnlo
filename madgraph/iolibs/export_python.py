@@ -134,7 +134,6 @@ class ProcessExporterPython(object):
             # Extract ndiags
             ndiags = len(matrix_element.get('diagrams'))
             replace_dict['ndiags'] = ndiags
-            print ndiags
 
             # Extract nwavefuncs
             nwavefuncs = matrix_element.get_number_of_wavefunctions()

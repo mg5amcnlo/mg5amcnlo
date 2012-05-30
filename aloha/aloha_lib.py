@@ -483,7 +483,7 @@ class MultVariable(array):
     
     def __init__(self, old=[], prefactor=1):
         """ initialization of the object with default value """        
-        array.__init__(self, 'i', old)
+        #array.__init__(self, 'i', old) <- done already in new !!
         self.prefactor = prefactor
         assert isinstance(self.prefactor, (float,int,long,complex))
     

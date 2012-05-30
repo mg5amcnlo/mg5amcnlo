@@ -1972,7 +1972,6 @@ c           This is dummy particle used in multiparticle vertices
         else:
             card = 'param_card.dat' 
         text = open(path).read() % {'param_card_name':card} 
-        print text
         writer.write(text)
         
         return True

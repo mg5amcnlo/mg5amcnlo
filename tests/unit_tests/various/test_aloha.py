@@ -3591,8 +3591,11 @@ class TestAlohaWriter(unittest.TestCase):
         numbers +=[0, 1, 2, -3, 3.0, 3.00, 1.01, 2000, 1/3, 1/4, 3/4]
  
         solution = ['(0d0, 1d0)', '(0d0, 1d0/2d0)', '(3d0, 9d0)', '1d0', '0d0', '1d0', '2d0', '-3d0', '3d0', '3d0', '101d0/100d0', '2000d0', '1d0/3d0', '1d0/4d0', '3d0/4d0']
-        converted = [writer.change_number_format(number) for number in numbers]
-        map(self.assertEqual, converted, solution)
+#        converted = [writer.change_number_format(number) for number in numbers]
+        for i, number in enumerate(numbers):
+            value = writer.change_number_format(number)
+            self.assertEqual(value, solution[i])
+        #map(self.assertEqual, converted, solution)
  
  
     def test_pythonwriter(self):
@@ -3945,7 +3948,7 @@ end
         try:
             aloha.mp_precision = True
             aloha.loop_mode = True
-            FFV_M = self.Lorentz(name = 'FFVM',
+            FFV_M = UFOLorentz(name = 'FFVM',
                  spins = [ 2, 2, 3 ],
                  structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)') 
             

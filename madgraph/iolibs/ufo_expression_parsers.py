@@ -45,10 +45,9 @@ class UFOExpressionParser(object):
 
         modname = self.__class__.__name__
         self.debugfile = os.path.devnull
-        print modname
         self.tabmodule = os.path.join(root_path, "iolibs",  modname + "_" + "parsetab.py")
-        lex.lex(module=self, debug=1)
-        yacc.yacc(module=self, debug=1, debugfile=self.debugfile,
+        lex.lex(module=self, debug=0)
+        yacc.yacc(module=self, debug=0, debugfile=self.debugfile,
                   tabmodule=self.tabmodule)
         
     def parse(self, buf):

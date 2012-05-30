@@ -318,7 +318,7 @@ if __name__ == '__main__':
         except EOFError:
             break
         if not s: continue
-        print calc.parse(s)
+        logger.info(calc.parse(s))
         
     
     
