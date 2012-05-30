@@ -442,7 +442,8 @@ c
       if(nsofttests.gt.10)then
          write(*,*)'Soft tests done for (Born) config',iconfig
          write(*,*)'Failures:',nerr
-         write(*,*)'Failures (fraction):',nerr/dfloat(nsofttests)
+         write(*,*)'Failures (fraction) (soft limit,     ',nFKSprocess
+     &        ,'):',nerr/dfloat(nsofttests)
          if (nerr/dble(nsofttests).gt.0.4d0) then
             write (12,*) 'ERROR soft test ME failed',
      &           iconfig,nerr/dble(nsofttests)
@@ -568,7 +569,8 @@ c
       if(ncolltests.gt.10)then
          write(*,*)'Collinear tests done for (Born) config', iconfig
          write(*,*)'Failures:',nerr
-         write(*,*)'Failures (fraction):',nerr/dfloat(ncolltests)
+         write(*,*)'Failures (fraction) (collinear limit,',nFKSprocess
+     &        ,'):',nerr/dfloat(ncolltests)
          if (nerr/dble(ncolltests).gt.0.4d0) then
             write (12,*) 'ERROR collinear test ME failed',
      &           iconfig,nerr/dble(ncolltests)
@@ -578,7 +580,6 @@ c
       enddo                     ! Loop over Born configurations
       enddo                     ! Loop over nFKSprocess
 
-      stop
       return
       end
 

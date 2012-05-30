@@ -55,6 +55,10 @@ if [[ $test == "1" ]] ; then
     read MCname
     echo 'Enter number of points for tests'
     read points
+    if [[ $points -le 10 ]] ; then
+	echo 'Points <= 10 not good. Using 11 points for test'
+	points=11
+    fi
 fi
 
 echo 'Compile and run gensym?'
@@ -117,18 +121,15 @@ read j
 
 if [[ $test == "1" ]] ; then
     echo 'Running the tests for' $points 'points'
-# input for the tests (test_ME, test_Sij & testMC)
+# input for the tests (test_ME & testMC)
     echo $MCname > $Maindir/input_MC
     echo '1' >> $Maindir/input_MC
     echo '1 -0.1' >> $Maindir/input_MC
     echo '-1 -0.1' >> $Maindir/input_MC
-    echo '-2 -2' > $Maindir/input_Sij
     echo '-2 -2' > $Maindir/input_ME
     echo '-2 -2' >> $Maindir/input_MC
-    echo $points $points >> $Maindir/input_Sij
     echo $points $points >> $Maindir/input_ME
     echo $points $points >> $Maindir/input_MC
-    echo '-1' >> $Maindir/input_Sij
     dir=`ls -d SubProcesses/P*/R* | tail -n1`
     if [[ -e $dir"/helicities.inc" ]]; then
 	echo '1' >> $Maindir/input_ME
@@ -137,9 +138,12 @@ if [[ $test == "1" ]] ; then
 	echo '0' >> $Maindir/input_ME
 	echo '0' >> $Maindir/input_MC
     fi
-    echo '-1' >> $Maindir/input_ME
-    echo '-1' >> $Maindir/input_MC
-    echo 'results from test_Sij' > $Maindir/test_Sij.log
+    echo '0' >> $Maindir/input_ME
+    echo '0' >> $Maindir/input_MC
+    for i in {1..50} ; do 
+	echo '-1' >> $Maindir/input_ME
+	echo '-1' >> $Maindir/input_MC
+    done
     echo 'results from test_ME' > $Maindir/test_ME.log
     echo 'results from test_MC' > $Maindir/test_MC.log
 fi
@@ -193,17 +197,8 @@ for dir in $dirs ; do
 # COMPILE AND RUN TESTS
 #
     if [[ $test == '1' ]]; then
-	echo $dir >> $Maindir/test_Sij.log
 	echo $dir >> $Maindir/test_ME.log
 	echo $dir >> $Maindir/test_MC.log
-	echo '     make test_Sij...'
-	make -j$j test_Sij >> $Maindir/compile_madfks.log 2>&1
-	if [[ -e "test_Sij" ]]; then
-	    echo '     ...running test_Sij'
-	    ./test_Sij < $Maindir/input_Sij | tee -a $Maindir/test_Sij.log | grep 'Failures (fraction)'
-	else
-	    echo 'ERROR in compilation, see compile_madfks.log for details'
-	fi
 	echo '     make test_ME...'
 	make -j$j test_ME >> $Maindir/compile_madfks.log 2>&1
 	if [[ -e "test_ME" ]]; then
@@ -288,7 +283,6 @@ for dir in $dirs ; do
 done
 
 if [[ $test == "1" ]]; then
-    rm  $Maindir/input_Sij
     rm  $Maindir/input_ME
     rm  $Maindir/input_MC
 fi

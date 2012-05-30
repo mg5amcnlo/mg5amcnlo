@@ -197,9 +197,18 @@ c Set color types of i_fks, j_fks and fks_mother.
             stop
          endif
       elseif(abs(i_type).eq.3 .and. j_type.eq.8)then
-         m_type=-i_type
-      elseif(abs(j_type).eq.3 .and. i_type.eq.8)then
-         m_type=j_type
+         if(j_fks.le.nincoming)then
+            m_type=-i_type
+         else
+            write (*,*) 'Error in setfksfactor: (i,j)=(q,g)'
+            stop
+         endif
+      elseif(i_type.eq.8 .and. abs(j_type).eq.3)then
+         if (j_fks.le.nincoming) then
+            m_type=j_type
+         else
+            m_type=j_type
+         endif
       else
          write(*,*)'Flavour mismatch #2 in setfksfactor',
      &        i_type,j_type,m_type
@@ -367,7 +376,8 @@ c
       if(nsofttests.gt.10)then
          write(*,*)'Soft tests done for (Born) config',iconfig
          write(*,*)'Failures:',nerr
-         write(*,*)'Failures (fraction):',nerr/dfloat(nsofttests)
+         write(*,*)'Failures (fraction) (soft limit,     ',nFKSprocess
+     &        ,'):',nerr/dfloat(nsofttests) 
          if (nerr/dble(nsofttests).gt.0.4d0) then
             write (12,*) 'ERROR soft test ME failed',
      &           iconfig,nerr/dble(nsofttests)
@@ -490,7 +500,8 @@ c
       if(ncolltests.gt.10)then
          write(*,*)'Collinear tests done for (Born) config', iconfig
          write(*,*)'Failures:',nerr
-         write(*,*)'Failures (fraction):',nerr/dfloat(ncolltests)
+         write(*,*)'Failures (fraction) (collinear limit,',nFKSprocess
+     &        ,'):',nerr/dfloat(ncolltests)
          if (nerr/dble(ncolltests).gt.0.4d0) then
             write (12,*) 'ERROR collinear test ME failed',
      &           iconfig,nerr/dble(ncolltests)
