@@ -383,7 +383,7 @@ c
 
       if (pmass(j_fks).ne.0d0) then
          write (*,*) 'No collinear test for massive j_fks'
-         ncolltests=0
+         goto 123
       endif
 
       softtest=.false.
@@ -497,6 +497,8 @@ c
      &           iconfig,nerr/dble(ncolltests)
          endif
       endif
+
+ 123  continue
 
       enddo                     ! Loop over Born configurations
       enddo                     ! Loop over nFKSprocess
