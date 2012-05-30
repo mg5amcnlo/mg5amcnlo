@@ -575,6 +575,12 @@ class AbstractALOHAModel(dict):
         #structure
         request = {}
         for list_l_name, tag, outgoing in data:
+            #allow tag to have integer for retrocompatibility
+            conjugate = [i for i in tag if isinstance(i, int)]
+            tag =  [i for i in tag if isinstance(i, str)]
+            tag = tag + ['C%s'%i for i in conjugate] 
+            #
+            
             conjugate = tuple([int(c[1:]) for c in tag if c.startswith('C')])
             loop = any((t.startswith('L') for t in tag))
             if loop:

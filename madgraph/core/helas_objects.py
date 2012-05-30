@@ -3552,7 +3552,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Return a list of (lorentz_name, conjugate, outgoing) with
         all lorentz structures used by this HelasMatrixElement."""
 
-        return [(tuple(wa.get('lorentz')), tuple(wa.get('conjugate_indices')),
+        return [(tuple(wa.get('lorentz')),  wa.get('conjugate_indices'),
                  wa.find_outgoing_number()) for wa in \
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
                 if wa.get('interaction_id') != 0]

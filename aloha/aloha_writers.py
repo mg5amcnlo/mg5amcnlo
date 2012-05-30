@@ -469,7 +469,9 @@ class ALOHAWriterForFortran(WriteALOHA):
         return out.getvalue() 
     
     def get_declaration_txt(self):
-        """ Prototype for how to write the declaration of variable"""
+        """ Prototype for how to write the declaration of variable
+            Include the symmetry line (entry FFV_2)
+        """
         
         out = StringIO()
         out.write('implicit none\n')
@@ -506,6 +508,20 @@ class ALOHAWriterForFortran(WriteALOHA):
                 out.write(' external %s\n' % (name))
             else:
                 out.write(' %s %s\n' % (self.type2def[type], name))
+                
+        # Add the lines corresponding to the symmetry
+        
+        #number = self.offshell
+        #arguments = [name for format, name in self.define_argument_list()]
+        #new_name = self.name.rsplit('_')[0] + '_%s' % new_nb
+        #return '%s\n    call %s(%s)' % \
+        #    (self.get_header_txt(new_name, couplings), self.name, ','.join(arguments))
+        couplings = [name for type, name in self.declaration if name.startswith('COUP') ]
+        couplings.sort()
+        for elem in self.routine.symmetries:
+            new_name = self.name.rsplit('_',1)[0] + '_%s' % elem
+            out.write('%s\n' % self.get_header_txt(new_name, couplings).replace('subroutine','entry'))
+                    
 
         return out.getvalue()
         
@@ -651,6 +667,11 @@ class ALOHAWriterForFortran(WriteALOHA):
                 out.write('    denom = COUP/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -(0,1)* W%(i)s))\n' % \
                       {'i': self.outgoing})
                 self.declaration.add(('complex','denom'))
+                if aloha.loop_mode:
+                    ptype = 'list_complex'
+                else:
+                    ptype = 'list_double'
+                self.declaration.add((ptype,'P%s' % self.outgoing))
             else:
                 coeff = 'COUP'
                 
@@ -661,11 +682,12 @@ class ALOHAWriterForFortran(WriteALOHA):
         return out.getvalue()
 
     def define_symmetry(self, new_nb, couplings=['COUP']):
-        number = self.offshell
-        arguments = [name for format, name in self.define_argument_list()]
-        new_name = self.name.rsplit('_')[0] + '_%s' % new_nb
-        return '%s\n    call %s(%s)' % \
-            (self.get_header_txt(new_name, couplings), self.name, ','.join(arguments))
+        return ''
+        #number = self.offshell
+        #arguments = [name for format, name in self.define_argument_list()]
+        #new_name = self.name.rsplit('_')[0] + '_%s' % new_nb
+        #return '%s\n    call %s(%s)' % \
+        #    (self.get_header_txt(new_name, couplings), self.name, ','.join(arguments))
 
     def get_foot_txt(self):
         return 'end\n\n' 
@@ -679,8 +701,8 @@ class ALOHAWriterForFortran(WriteALOHA):
             offshell = self.offshell  
         else:
             sym = None
-            
         name = combine_name(self.routine.name, lor_names, offshell, self.tag)
+        self.name = name
         # write head - momenta - body - foot
         text = StringIO()
         routine = StringIO()
@@ -732,16 +754,18 @@ class ALOHAWriterForFortran(WriteALOHA):
                                {'main': main, 'tmp': data['out']})
                     routine.write(' enddo\n')
                     self.declaration.add(('int','i'))
-                   
+
+        self.declaration.discard(('complex','COUP'))
+        for name in aloha_lib.KERNEL.reduced_expr2:
+            self.declaration.discard(('complex', name))
+        
+        #clean pointless declaration
+        #self.declaration.discard
+        
+        
         text.write(self.get_declaration_txt())
         text.write(routine.getvalue())
         text.write(self.get_foot_txt())
-
-        #ADD SYMETRY
-        if sym:
-            for elem in self.routine.symmetries:
-                text.write(self.write_combined(lor_names, mode, elem))
-
 
         text = text.getvalue()
         if self.out_path:        
@@ -753,7 +777,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             writer.writelines(text)
         return text
 
-class ALOHAWriterForFortranQP(ALOHAWriterForFortran): 
+class QP(object): 
     """routines for writing out Fortran"""
     
     type2def = {}    
@@ -762,7 +786,11 @@ class ALOHAWriterForFortranQP(ALOHAWriterForFortran):
     type2def['complex'] = 'complex*32'
     format = 'q0'
     
-
+class ALOHAWriterForFortranQP(QP, ALOHAWriterForFortran):
+    
+    def __init__(self, *arg):
+        return ALOHAWriterForFortran.__init__(self, *arg)
+    
 class ALOHAWriterForFortranLoop(ALOHAWriterForFortran): 
     """routines for writing out Fortran"""
 
@@ -973,9 +1001,11 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         
         return out.getvalue() 
 
-class ALOHAWriterForFortranLoopQP(ALOHAWriterForFortranLoop, \
-                                                       ALOHAWriterForFortranQP): 
-    """routines for writing out Fortran"""        
+class ALOHAWriterForFortranLoopQP(QP, ALOHAWriterForFortranLoop): 
+    """routines for writing out Fortran"""     
+    
+    def __init__(self, *arg):
+        return ALOHAWriterForFortranLoop.__init__(self, *arg)   
 
 def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     """ build the name of the aloha function """

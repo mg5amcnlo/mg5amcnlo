@@ -610,9 +610,9 @@ class TestMultVariable(unittest.TestCase):
                 
         sum =  self.mult1 - self.mult1
         sum = sum.simplify()
-        self.assertEqual(sum.__class__, aloha_lib.ConstantObject)
-        self.assertEqual(len(sum),0)
-        self.assertEqual(sum.prefactor, 1)
+        self.assertEqual(sum.__class__, int)
+        self.assertEqual(sum,0)
+
         
     def testdealingwithpower1(self):
         """Check that the power is correctly set in a product"""
@@ -623,31 +623,28 @@ class TestMultVariable(unittest.TestCase):
         prod = p1 * p1
         self.assertEqual(prod.__class__, aloha_lib.MultVariable)       
         prod = prod.simplify()
-        self.assertEqual(prod.__class__, aloha_lib.ScalarVariable)
-        self.assertEqual(prod.power, 2)
-        self.assertEqual(p1.power, 1)
+        self.assertEqual(prod.__class__, aloha_lib.MultVariable)
+        self.assertEqual(len(prod), 2)
+        self.assertEqual(len(p1), 1)
         
         prod *= p1
         prod = prod.simplify()
-        self.assertEqual(prod.__class__, aloha_lib.ScalarVariable)
-        self.assertEqual(prod.power, 3)
-        self.assertEqual(p1.power, 1)
+        self.assertEqual(prod.__class__, aloha_lib.MultVariable)
+        self.assertEqual(len(prod), 3)
+        self.assertEqual(len(p1), 1)
         
         prod *= p2
         prod.simplify()
         self.assertEqual(prod.__class__, aloha_lib.MultVariable)
-        self.assertEqual(prod[0].power, 3)
-        self.assertEqual(prod[1].power, 1)       
-        self.assertEqual(p1.power, 1)
-        self.assertEqual(p2.power, 1)                                
+        self.assertEqual(prod.count(p1.get_id()), 3)
+        self.assertEqual(prod.count(p2.get_id()), 1)                                
         
         prod *= p1
         prod.simplify()
         self.assertEqual(prod.__class__, aloha_lib.MultVariable)
-        self.assertEqual(prod[0].power, 4)
-        self.assertEqual(prod[1].power, 1)       
-        self.assertEqual(p1.power, 1)
-        self.assertEqual(p2.power, 1)                                   
+        self.assertEqual(prod.count(p1.get_id()), 4)
+        self.assertEqual(prod.count(p2.get_id()), 1)  
+                                 
                                 
     def r_testdealingwithpower2(self):
         """Check that the power is correctly set in a product"""       
@@ -728,9 +725,9 @@ class TestMultVariable(unittest.TestCase):
         """Check that a sum-product-... doesn't change part of the objects"""
         
         sum = self.mult1 + self.mult2
-        for term in sum:
-            self.assertFalse(term is self.mult1)
-            self.assertFalse(term is self.mult2)
+        #for term in sum:
+        #    self.assertFalse(term is self.mult1)
+        #    self.assertFalse(term is self.mult2)
             
         
         sum2 = sum - (self.mult1 + self.mult2)
@@ -741,9 +738,7 @@ class TestMultVariable(unittest.TestCase):
         sum2 = sum2.simplify()
         
         #check that sum2 is zero
-        self.assertEqual(len(sum2), 0)
-        self.assertEqual(sum2.__class__, aloha_lib.ConstantObject)
-        self.assertEqual(sum2, 0)       
+        self.assertEqual(sum2, 0)
         
         #check that the sum is not modify in this game      
         self.assertEqual(sum.__class__, aloha_lib.AddVariable)
@@ -752,13 +747,13 @@ class TestMultVariable(unittest.TestCase):
         
         for data in sum:
             self.assertEqual(len(data), 2)
-            if self.var1 in data:
+            if 'var1' in str(data):
                 self.assertEqual(data.prefactor, 6)
-                self.assertTrue(self.var2 in data)
+                self.assertTrue('var2' in str(data))
             else:
                 self.assertEqual(data.prefactor, 20)
-                self.assertTrue(self.var3 in data)
-                self.assertTrue(self.var4 in data)
+                self.assertTrue('var3' in str(data))
+                self.assertTrue('var4' in str(data))
             
     def testsummultint(self):
         """Test the sum of a MultVariable object with a number"""
@@ -772,8 +767,8 @@ class TestMultVariable(unittest.TestCase):
                 self.assertEqual(len(term), 2)
                 #self.assertFalse(term is self.mult1)
             else:
-                self.assertEqual(term.__class__, aloha_lib.ConstantObject)
-                self.assertEqual(term.value, 2)
+                self.assertEqual(term.__class__, int)
+                self.assertEqual(term, 2)
         
         return
         
@@ -856,14 +851,12 @@ class TestMultVariable(unittest.TestCase):
         prod1 = self.mult1 * self.mult2
         self.assertEqual(prod1.__class__, aloha_lib.MultVariable)
         self.assertEqual(len(prod1), 4)
-        self.assertTrue(self.var1 in prod1)
-        self.assertTrue(self.var2 in prod1)
-        self.assertTrue(self.var3 in prod1)
-        self.assertTrue(self.var4 in prod1)        
+        self.assertTrue('var1' in str(prod1))
+        self.assertTrue('var2' in str(prod1))
+        self.assertTrue('var3' in str(prod1))
+        self.assertTrue('var4' in str(prod1))        
         self.assertEqual(prod1.prefactor, 120)
 
-        for fact in prod1:
-            self.assertEqual(fact.prefactor, 1)
         
         
                 
@@ -1149,7 +1142,7 @@ class testLorentzObject(unittest.TestCase):
         #                     (Mass(part) * Identity(-3, s2) )
                                      
         zero = Spin3halfPropagator(nu,s1,s2, t)
-        zero = zero.expand()
+        zero = zero.expand(veto=range(100))
         P1_0, P1_1, P1_2, P1_3 = 2,0,0,0
         OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
         M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
@@ -1186,6 +1179,11 @@ class testLorentzObject(unittest.TestCase):
         P1_0, P1_1, P1_2, P1_3 = 20,3,4,5
         OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
         M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        for name, cexpr in aloha_lib.KERNEL.reduced_expr2.items():
+            try:
+                exec('%s = %s' % (name, cexpr))   
+            except:
+                pass
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertEqual(eval(str(data)),0)
@@ -3019,6 +3017,7 @@ class test_aloha_creation(unittest.TestCase):
     def test_aloha_multiple_lorentz_and_symmetry(self):
         """ check if the detection of multiple lorentz work """
         
+        aloha_lib.KERNEL.clean()
         VVS1 = self.Lorentz(name = 'VVS1',
                  spins = [ 3, 3, 1 ],
                  structure = 'Metric(1,2)')
@@ -3036,15 +3035,17 @@ class test_aloha_creation(unittest.TestCase):
         goal = """subroutine VVS1_1(V2, S3, COUP, M1, W1,V1)
 implicit none
  complex*16 V2(*)
- complex*16 TMP15
  complex*16 S3(*)
  real*8 P1(0:3)
  real*8 M1
+ complex*16 TMP0
  real*8 W1
  complex*16 denom
  real*8 OM1
  complex*16 COUP
  complex*16 V1(6)
+entry VVS1_2(V2, S3, COUP, M1, W1,V1)
+
     OM1 = 0d0
     if (M1.ne.0d0) OM1=1d0/M1**2
     V1(5) = +V2(5)+S3(5)
@@ -3053,67 +3054,32 @@ P1(0) = -dble(V1(5))
 P1(1) = -dble(V1(6))
 P1(2) = -dimag(V1(6))
 P1(3) = -dimag(V1(5))
- TMP15 = (V2(1)*P1(0)-V2(2)*P1(1)-V2(3)*P1(2)-V2(4)*P1(3))
+ TMP0 = (V2(1)*P1(0)-V2(2)*P1(1)-V2(3)*P1(2)-V2(4)*P1(3))
     denom = COUP/(P1(0)**2-P1(1)**2-P1(2)**2-P1(3)**2 - M1 * (M1 -(0,1)* W1))
-    V1(1)= denom*S3(1)*(+(0d0, -1d0)*(V2(1))+(0d0, 1d0)*(P1(0)*OM1*TMP15))
-    V1(2)= denom*S3(1)*(+(0d0, -1d0)*(V2(2))+(0d0, 1d0)*(P1(1)*OM1*TMP15))
-    V1(3)= denom*S3(1)*(+(0d0, -1d0)*(V2(3))+(0d0, 1d0)*(P1(2)*OM1*TMP15))
-    V1(4)= denom*S3(1)*(+(0d0, -1d0)*(V2(4))+(0d0, 1d0)*(P1(3)*OM1*TMP15))
+    V1(1)= denom*S3(1)*(+(0d0, -1d0)*(V2(1))+(0d0, 1d0)*(P1(0)*OM1*TMP0))
+    V1(2)= denom*S3(1)*(+(0d0, -1d0)*(V2(2))+(0d0, 1d0)*(P1(1)*OM1*TMP0))
+    V1(3)= denom*S3(1)*(+(0d0, -1d0)*(V2(3))+(0d0, 1d0)*(P1(2)*OM1*TMP0))
+    V1(4)= denom*S3(1)*(+(0d0, -1d0)*(V2(4))+(0d0, 1d0)*(P1(3)*OM1*TMP0))
 end
 
 
-subroutine VVS1_2(V2, S3, COUP, M1, W1,V1)
-implicit none 
-double complex V1(*)
-double complex V2(*)
-double complex S3(*)
-double complex COUP
-double complex denom
-double precision M1, W1
-double complex OM1
-double precision P1(0:3)
 
-    call VVS1_1(V2,S3,COUP,M1,W1,V1)
-    
 subroutine VVS1_2_1(V2, S3, COUP1, COUP2, M1, W1,V1)
 implicit none
  complex*16 V2(*)
- complex*16 TMP15
+ complex*16 COUP2
  complex*16 S3(*)
  real*8 P1(0:3)
  real*8 M1
  real*8 W1
  complex*16 COUP1
  complex*16 denom
- complex*16 COUP2
  integer*4 i
  complex*16 Vtmp(6)
  real*8 OM1
- complex*16 COUP
  complex*16 V1(6)
-    call VVS1_1(V2,S3,COUP1,M1,W1,V1)
-    call VVS2_1(V2,S3,COUP2,M1,W1,Vtmp)
- do i = 1, 4
-        V1(i) = V1(i) + Vtmp(i)
- enddo
-end
+entry VVS1_2_2(V2, S3, COUP1, COUP2, M1, W1,V1)
 
-subroutine VVS1_2_2(V2, S3, COUP1, COUP2, M1, W1,V1)
-implicit none
- complex*16 V2(*)
- complex*16 TMP15
- complex*16 S3(*)
- real*8 P1(0:3)
- real*8 M1
- real*8 W1
- complex*16 COUP1
- complex*16 denom
- complex*16 COUP2
- integer*4 i
- complex*16 Vtmp(6)
- real*8 OM1
- complex*16 COUP
- complex*16 V1(6)
     call VVS1_1(V2,S3,COUP1,M1,W1,V1)
     call VVS2_1(V2,S3,COUP2,M1,W1,Vtmp)
  do i = 1, 4
@@ -3123,7 +3089,6 @@ end
 
 """
 
-        print text
         self.assertEqual(text.split('\n'),goal.split('\n')) 
    
         text_h, text_cpp =  abstract.write(None, 'CPP')
@@ -3265,7 +3230,7 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
         start = time.time()
         helas_suite.compute_all()
         timing = time.time()-start
-        if timing > 10:
+        if timing > 5:
             print "WARNING ALOHA SLOW (taking %s s for the full sm)" % timing
         lorentz_index = {1:0, 2:0,3:1}
         spin_index = {1:0, 2:1, 3:0}
@@ -3369,7 +3334,96 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
                 return lorentz
             
         raise Exception('the test is confuse by name %s' % name)
-        
+    
+    def test_aloha_MP_mode(self):
+        """ """
+        aloha_lib.KERNEL.clean()
+        old_mp_mode = aloha.mp_precision
+        old_loop_mode = aloha.loop_mode
+        try:
+            aloha.mp_precision = True
+            aloha.loop_mode = True
+            FFV_M = self.Lorentz(name = 'FFVM',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)') 
+            
+            abstract = create_aloha.AbstractRoutineBuilder(FFV_M).compute_routine(3)
+            text = abstract.write('/tmp')
+
+            # Not performed the Fortran formatting
+            target = """subroutine FFVM_3(F1, F2, COUP, M3, W3,V3)
+implicit none
+ complex*16 denom
+ complex*16 V3(8)
+ real*8 W3
+ complex*16 TMP0
+ real*8 M3
+ complex*16 F1(*)
+ complex*16 P3(0:3)
+ complex*16 F2(*)
+ real*8 OM3
+ complex*16 COUP
+    OM3 = 0d0
+    if (M3.ne.0d0) OM3=1d0/M3**2
+    V3(5) = -F1(5)+F2(5)
+    V3(6) = -F1(6)+F2(6)
+    V3(7) = -F1(7)+F2(7)
+    V3(8) = -F1(8)+F2(8)
+P3(0) = -V3(5)
+P3(1) = -V3(6)
+P3(2) = -V3(7)
+P3(3) = -V3(8)
+ TMP0 = (F1(3)*(F2(1)*(P3(0)+P3(3))+F2(2)*(P3(1)+(0d0, -1d0)*(P3(2))))+F1(4)*(F2(1)*(P3(1)+(0d0, 1d0)*(P3(2)))+F2(2)*(P3(0)-P3(3))))
+    denom = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 -(0,1)* W3))
+    V3(1)= denom*(0d0, -1d0)*(F2(1)*F1(3)+F2(2)*F1(4)-P3(0)*OM3*TMP0)
+    V3(2)= denom*(0d0, -1d0)*(-F2(2)*F1(3)-F2(1)*F1(4)-P3(1)*OM3*TMP0)
+    V3(3)= denom*(0d0, -1d0)*(+(0d0, -1d0)*(F2(1)*F1(4))+(0d0, 1d0)*(F2(2)*F1(3))-P3(2)*OM3*TMP0)
+    V3(4)= denom*(0d0, -1d0)*(F2(2)*F1(4)-F2(1)*F1(3)-P3(3)*OM3*TMP0)
+end
+
+
+subroutine MP_FFVM_3(F1, F2, COUP, M3, W3,V3)
+implicit none
+ complex*32 denom
+ complex*32 V3(8)
+ real*16 W3
+ complex*32 TMP0
+ real*16 M3
+ complex*32 F1(*)
+ complex*32 P3(0:3)
+ complex*32 F2(*)
+ real*16 OM3
+ complex*32 COUP
+    OM3 = 0q0
+    if (M3.ne.0q0) OM3=1q0/M3**2
+    V3(5) = -F1(5)+F2(5)
+    V3(6) = -F1(6)+F2(6)
+    V3(7) = -F1(7)+F2(7)
+    V3(8) = -F1(8)+F2(8)
+P3(0) = -V3(5)
+P3(1) = -V3(6)
+P3(2) = -V3(7)
+P3(3) = -V3(8)
+ TMP0 = (F1(3)*(F2(1)*(P3(0)+P3(3))+F2(2)*(P3(1)+(0q0, -1q0)*(P3(2))))+F1(4)*(F2(1)*(P3(1)+(0q0, 1q0)*(P3(2)))+F2(2)*(P3(0)-P3(3))))
+    denom = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 -(0,1)* W3))
+    V3(1)= denom*(0q0, -1q0)*(F2(1)*F1(3)+F2(2)*F1(4)-P3(0)*OM3*TMP0)
+    V3(2)= denom*(0q0, -1q0)*(-F2(2)*F1(3)-F2(1)*F1(4)-P3(1)*OM3*TMP0)
+    V3(3)= denom*(0q0, -1q0)*(+(0q0, -1q0)*(F2(1)*F1(4))+(0q0, 1q0)*(F2(2)*F1(3))-P3(2)*OM3*TMP0)
+    V3(4)= denom*(0q0, -1q0)*(F2(2)*F1(4)-F2(1)*F1(3)-P3(3)*OM3*TMP0)
+end
+
+
+"""
+            self.assertEqual(text.split('\n'), target.split('\n'))         
+
+            
+        except Exception:
+            aloha.mp_precision = old_mp_mode
+            aloha.loop_mode = old_loop_mode
+            raise
+        aloha.mp_precision = old_mp_mode
+        aloha.loop_mode = old_loop_mode          
+
     def test_aloha_FFVC(self):
         """ test the FFV creation of vertex """
         from models.mssm.object_library import Lorentz
@@ -4086,7 +4140,8 @@ F1[3]= COUP*denom*( (F2[2]*( (V3[1]*( complex<double>(0., 1.)*P1[0]+complex<doub
         
     def test_python_routine_are_exec(self):
         """ check if the python routine can be call """
-            
+        
+        aloha_lib.KERNEL.clean()
         FFV2 = UFOLorentz(name = 'FFV2',
                spins = [ 2, 2, 3 ],
                structure = 'Gamma(3,2,\'s1\')*ProjM(\'s1\',1)')
@@ -4095,7 +4150,6 @@ F1[3]= COUP*denom*( (F2[2]*( (V3[1]*( complex<double>(0., 1.)*P1[0]+complex<doub
         builder.apply_conjugation()
         amp = builder.compute_routine(0)
         routine = amp.write(output_dir=None, language='Python')
-        print routine
         
         solution = """import wavefunctions
 def FFV2C1_0(F2,F1,V3,COUP):

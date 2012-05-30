@@ -9527,6 +9527,8 @@ C
       COMPLEX*16 F1(6)
       COMPLEX*16 DENOM
       COMPLEX*16 COUP
+      ENTRY FFV1_2(F2, V3, COUP, M1, W1,F1)
+
       F1(5) = +F2(5)+V3(5)
       F1(6) = +F2(6)+V3(6)
       P1(0) = DBLE(F1(5))
@@ -9543,7 +9545,6 @@ C
         self.assertTrue(os.path.exists('/tmp/FFV1_1.f'))
         textfile = open('/tmp/FFV1_1.f','r').read()
         split_sol = solution.split('\n')
-        print textfile
         self.assertEqual(split_sol, textfile.split('\n')[:len(split_sol)])
 
 
