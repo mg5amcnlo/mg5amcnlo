@@ -26,8 +26,6 @@ C CONSTANTS
 C
       INTEGER    NLOOPAMPS
 	  PARAMETER (NLOOPAMPS=%(nloopamps)d)
-	  %(real_dp_format)s vtiny
-	  parameter (vtiny=1.0d-7)
 C  
 C ARGUMENTS 
 C  
@@ -39,6 +37,7 @@ C
       %(complex_dp_format)s AMPL(3,NLOOPAMPS)
 	  LOGICAL S(NLOOPAMPS)
 	  common/SPLITHELAS/AMPL,S
+	  include 'MadLoopParams.inc'	  
 C ----------
 C BEGIN CODE
 C ----------
@@ -47,7 +46,7 @@ C ----------
 		write(*,*) '##E02 ERRROR Reference value for comparison is zero.'
 		STOP
 	  else
-	    IsZero=((abs(toTest)/abs(reference_value)).lt.vtiny)
+	    IsZero=((abs(toTest)/abs(reference_value)).lt.ZEROTHRES)
 	  endif
 
 	  IF((.NOT.ISZERO).AND.(AMPLN.NE.-1).AND.(.NOT.S(AMPLN))) THEN
