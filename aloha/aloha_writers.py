@@ -477,7 +477,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         out.write('implicit none\n')
         argument_var = [name for type,name in self.call_arg]
         # define the complex number CI = 0+1j
-        if aloha.mp_precision:
+        if 'MP' in self.tag:
             out.write(' complex*32 CI\n')
         else:
             out.write(' complex*16 CI\n')

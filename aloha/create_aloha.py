@@ -322,16 +322,21 @@ class AbstractRoutineBuilder(object):
         l_in = [int(tag[1:]) for tag in self.tag][0]
         
         # modify the expression for the momenta
-        # P_i -> P_i + P_L and P_o -> P_o + P_L
+        # P_i -> P_i + P_L and P_o -> -P_o - P_L
         Pdep = [aloha_lib.KERNEL.get(P) for P in aloha_lib.KERNEL.use_tag 
                                                       if P.startswith('_P')]
+        
         Pdep = [P for P in Pdep if P.particle in [outgoing, l_in]]
         for P in Pdep:
+            if P.particle == l_in:
+                sign = 1
+            else:
+                sign = -1
             id = P.id
             lorentz_ind = P.lorentz_ind[0]
             P_Lid = aloha_object.P(lorentz_ind, 'L')
             P_obj = aloha_object.P(lorentz_ind, P.particle)
-            new_expr = P_Lid + P_obj
+            new_expr = sign*(P_Lid + P_obj)
             lorentz = lorentz.replace(id, new_expr)
             
         # Compute the variable from which we need to split the expression
