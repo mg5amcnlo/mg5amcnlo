@@ -575,7 +575,7 @@ class AbstractALOHAModel(dict):
         #structure
         request = {}
         for list_l_name, tag, outgoing in data:
-            #allow tag to have integer for retrocompatibility
+            #allow tag to have integer for retro-compatibility
             conjugate = [i for i in tag if isinstance(i, int)]
             tag =  [i for i in tag if isinstance(i, str)]
             tag = tag + ['C%s'%i for i in conjugate] 
@@ -626,8 +626,13 @@ class AbstractALOHAModel(dict):
                                         routines=routines)
         
         # Build mutiple lorentz call
-        for list_l_name, conjugate, outgoing in data:
+        for list_l_name, tag, outgoing in data:
             if len(list_l_name) >1:
+                #allow tag to have integer for retrocompatibility
+                conjugate = [i for i in tag if isinstance(i, int)]
+                tag =  [i for i in tag if isinstance(i, str)]
+                tag = tag + ['C%s'%i for i in conjugate] 
+                
                 lorentzname = list_l_name[0]
                 lorentzname += ''.join(tag)
                 self[(lorentzname, outgoing)].add_combine(list_l_name[1:])

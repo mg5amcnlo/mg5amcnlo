@@ -476,6 +476,13 @@ class ALOHAWriterForFortran(WriteALOHA):
         out = StringIO()
         out.write('implicit none\n')
         argument_var = [name for type,name in self.call_arg]
+        # define the complex number CI = 0+1j
+        if aloha.mp_precision:
+            out.write(' complex*32 CI\n')
+        else:
+            out.write(' complex*16 CI\n')
+        out.write(' parameter (CI=(%s,%s))\n' % 
+                    (self.change_number_format(0),self.change_number_format(1)))
         for type, name in self.declaration:
             if type.startswith('list'):
                 type = type[5:]
@@ -632,8 +639,16 @@ class ALOHAWriterForFortran(WriteALOHA):
             out = '%s%s' % (str(int(number)),self.format)
         elif isinstance(number, complex):
             if number.imag:
-                out = '(%s, %s)' % (self.change_number_format(number.real), \
+                if number.real:
+                    out = '(%s + %s*CI)' % (self.change_number_format(number.real), \
                                     self.change_number_format(number.imag))
+                else:
+                    if number.imag == 1:
+                        out = 'CI'
+                    elif number.imag == -1:
+                        out = '-CI'
+                    else: 
+                        out = '%s * CI' % self.change_number_format(number.imag)
             else:
                 out = '%s' % (self.change_number_format(number.real))
         else:
