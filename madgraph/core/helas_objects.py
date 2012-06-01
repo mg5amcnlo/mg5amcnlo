@@ -4230,12 +4230,18 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 # Check if identical matrix element already present
                 if matrix_element in matrix_elements:
                     me = matrix_elements[matrix_elements.index(matrix_element)]
+                    me_procs = me.get('processes')
                     logger.info("Combining process %s with %s" % \
                             (matrix_element.get('processes')[0].nice_string().\
                                  replace('Process: ', ''),
                              me.get('processes')[0].nice_string().\
                                  replace('Process: ', '')))
-                    me.get('processes').extend(matrix_element.get('processes'))
+                    for proc in  matrix_element.get('processes'):
+                        if proc not in me_procs:
+                            me_procs.append(proc)
+                        else:
+                            logger.warning("Found duplicate process %s" % \
+                                   proc.nice_string().replace('Process: ', ''))
                     continue
 
                 # Otherwise, add this matrix element to list
