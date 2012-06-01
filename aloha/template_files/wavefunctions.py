@@ -24,11 +24,9 @@ def ixxxxx(p,fmass,nhel,nsf):
     
     fi = WaveFunction(2)
     
-    fi[4] = complex(p[0]*nsf,p[3]*nsf)
-    fi[5] = complex(p[1]*nsf,p[2]*nsf) 
-    
+    fi[4] = complex(-p[0]*nsf,-p[3]*nsf)
+    fi[5] = complex(-p[1]*nsf,-p[2]*nsf) 
     nh = nhel*nsf 
-
     if (fmass != 0.):
         pp = min(p[0],sqrt(p[1]**2 + p[2]**2 + p[3]**2 ))
         if (pp == 0.): 
@@ -84,12 +82,9 @@ def oxxxxx(p,fmass,nhel,nsf):
     """ initialize an outgoing fermion"""
     
     fo = WaveFunction(2)
-         
     fo[4] = complex(p[0]*nsf,p[3]*nsf)
     fo[5] = complex(p[1]*nsf,p[2]*nsf)
-
     nh = nhel*nsf
-
     if (fmass != 0.):
         pp = min(p[0],sqrt(p[1]**2 + p[2]**2 + p[3]**2 ))
         if (pp == 0.): 

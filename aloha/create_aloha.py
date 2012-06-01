@@ -94,7 +94,7 @@ class AbstractRoutine(object):
             self.tag.append('MP')
             text += self.write(output_dir, language, mode, **opt)
             
-            
+        print text
         return text
 
 class AbstractRoutineBuilder(object):
@@ -201,17 +201,18 @@ class AbstractRoutineBuilder(object):
     def change_sign_for_outcoming_fermion(self):
         """change the sign of P for outcoming fermion in order to 
         correct the mismatch convention between HELAS and FR"""
-        flip_sign = []
-        for i in range(1,len(self.spins),2):
-            if self.spins[i] == 2:
-                flip_sign.append(str(i))
+        #flip_sign = []
+        #for i in range(1,len(self.spins),2):
+        #    if self.spins[i] == 2:
+        #        flip_sign.append(str(i))
         
-        if not flip_sign:
-            return self.lorentz_expr
+        #if not flip_sign:
+        #    return self.lorentz_expr
 
-        momentum_pattern = re.compile(r'\bP\(([\+\-\d]+),(%s)\)' % '|'.join(flip_sign))
-        lorentz_expr = momentum_pattern.sub(r'-P(\1,\2)', self.lorentz_expr)
+        #momentum_pattern = re.compile(r'\bP\(([\+\-\d]+),(%s)\)' % '|'.join(flip_sign))
+        #lorentz_expr = momentum_pattern.sub(r'-P(\1,\2)', self.lorentz_expr)
         
+        lorentz_expr = self.lorentz_expr
         calc = aloha_parsers.ALOHAExpressionParser()
         lorentz_expr = calc.parse(lorentz_expr)
         return lorentz_expr
@@ -257,11 +258,11 @@ class AbstractRoutineBuilder(object):
                     # shift and flip the tag if we multiply by C matrices
                     if (id + 1) // 2 in self.conjg:
                         id += _conjugate_gap + id % 2 - (id +1) % 2
-                    if id % 2:
+                    if not (i % 2):
                         #propagator outcoming
                         lorentz *= SpinorPropagator(id, 'I2', outgoing)
                     else:
-                        #propagator incoming
+                    #    #propagator incoming
                         lorentz *= SpinorPropagator('I2', id, outgoing)
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)

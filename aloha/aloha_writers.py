@@ -100,17 +100,15 @@ class WriteALOHA:
         nb_fermion =0
         
         #compute global sign
-        if not self.offshell % 2 and self.particles[self.offshell -1] == 'F': 
-            global_sign = 1
-        else:
-            global_sign = -1
+
+        global_sign = -1
         
         flipped = [2*(int(c[1:])-1) for c in self.tag if c.startswith('C')]
         for index, spin in enumerate(self.particles):
             assert(spin in ['S','F','V','T'])  
                   
             #compute the sign
-            if spin != 'F':
+            if 1:#spin != 'F':
                 sign = -1 * global_sign
             elif nb_fermion % 2 == 0:
                 sign = global_sign
@@ -132,6 +130,7 @@ class WriteALOHA:
                 signs.append('+')
             else:
                 signs.append('-')
+        print self.outgoing,signs                    
         return signs
 
 
@@ -140,17 +139,17 @@ class WriteALOHA:
         type = self.particles[index - 1]
         energy_pos = self.type_to_size[type] -1
         sign = 1
-        if self.outgoing == index and type in ['V','S']:
+        if self.outgoing == index:
             sign = -1
-        if 'C%s' % ((index +1) // 2)  in self.tag: 
-            if index == self.outgoing:
-                pass
-            elif index % 2 and index -1 != self.outgoing:
-                pass
-            elif index % 2 == 1 and index + 1  != self.outgoing:
-                pass
-            else:
-                sign *= -1
+        #if 'C%s' % ((index +1) // 2)  in self.tag: 
+        #    if index == self.outgoing:
+        #        pass
+        #       elif index % 2 and index -1 != self.outgoing:
+#                pass
+#            elif index % 2 == 1 and index + 1  != self.outgoing:
+#                pass
+#            else:
+#                sign *= -1
         
         if sign == -1 :
             return '-'

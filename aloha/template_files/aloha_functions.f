@@ -70,8 +70,8 @@ c         write(stdo,*) '             : nsf = ',nsf
 c      endif
 c#endif
 
-      fi(5) = dcmplx(p(0),p(3))*nsf
-      fi(6) = dcmplx(p(1),p(2))*nsf
+      fi(5) = dcmplx(p(0),p(3))*nsf*-1
+      fi(6) = dcmplx(p(1),p(2))*nsf*-1
 
       nh = nhel*nsf
 
