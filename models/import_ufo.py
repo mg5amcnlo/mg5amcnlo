@@ -176,7 +176,7 @@ def import_full_model(model_path, decay=False):
             p = model['particles'].find_name(name)
             if hasattr(ufo_part, 'partial_widths'):
                 p.partial_widths = ufo_part.partial_widths
-            elif p:
+            elif p and not hasattr(p, 'partial_widths'):
                 p.partial_widths = {}
             # might be None for ghost
             

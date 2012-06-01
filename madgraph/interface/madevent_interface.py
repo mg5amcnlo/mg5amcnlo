@@ -1998,7 +1998,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 continue
             if decay_info[key][0][0]:
                 param_card.append("#  BR             NDA  ID1    ID2   ...")
-                brs = [[val[1]/width, val[0]] for val in decay_info[key] if val[1]]
+                brs = [[(val[1]/width).real, val[0]] for val in decay_info[key] if val[1]]
                 for val in sorted(brs, reverse=True):
                     param_card.append("   %e   %i    %s" % (val[0].real, len(val[1]),
                                            "  ".join([str(v) for v in val[1]])))
@@ -2284,8 +2284,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             particle = model.get_particle(pid)
             decay_info[pid] = []
             for mode, expr in particle.partial_widths.items():
+                mass = eval(str(particle.get('mass')), data).real
+                for p in mode:
+                    mass -= eval(str(p.mass), data).real
+                if mass <=0:
+                    continue
+                
                 decay_to = [p.get('pdg_code') for p in mode]
-                value = eval(expr,{'cmath':cmath},data)
+                value = eval(expr,{'cmath':cmath},data).real
                 decay_info[particle.get('pdg_code')].append([decay_to, value])
                            
         self.update_width_in_param_card(decay_info, args['input'], args['output'])
