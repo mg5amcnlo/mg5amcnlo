@@ -1717,7 +1717,8 @@ C       Flip x values (to get boost right)
             'decay_chains': decays})
 
         dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
-                          group_amplitudes(decay_chains)
+              group_amplitudes(\
+                 diagram_generation.DecayChainAmplitudeList([decay_chains]))
 
         subproc_groups = \
                        dc_subproc_group.generate_helas_decay_chain_subproc_groups()
@@ -2104,9 +2105,20 @@ mirror  d~ d > d d~ g d d~ g"""
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
 
-        # Gluon couplings to gluino
         myinterlist.append(base_objects.Interaction({
                       'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antid, \
+                                             d, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        # Gluon couplings to gluino
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
                       'particles': base_objects.ParticleList(\
                                             [go, \
                                              go, \
@@ -2208,12 +2220,13 @@ mirror  d~ d > d d~ g d d~ g"""
 
         mymodel.set('interactions', myinterlist)
 
-        procs = [[2,-2,1000021,1000021]]
+        procs = [[2,-2,1000021,1000021], [1,-1,1000021,1000021]]
         decays = [[1000021,1,-1,1000022],[1000021,2,-2,1000022]]
-        coreamplitudes = diagram_generation.AmplitudeList()
+        coreamplitudes = []
+        coreamplitude2 = diagram_generation.AmplitudeList()
         decayamplitudes = diagram_generation.AmplitudeList()
         decayprocs = base_objects.ProcessList()
-        proc_diags = [1]
+        proc_diags = [1,1]
         decay_diags = [2,2]
         
         for iproc, proc in enumerate(procs):
@@ -2228,7 +2241,7 @@ mirror  d~ d > d d~ g d d~ g"""
                                                'model':mymodel,
                                                'required_s_channels':[[21]]})
             my_amplitude = diagram_generation.Amplitude(my_process)
-            coreamplitudes.append(my_amplitude)
+            coreamplitudes.append(diagram_generation.AmplitudeList([my_amplitude]))
             self.assertEqual(len(my_amplitude.get('diagrams')), proc_diags[iproc])
 
         for iproc, proc in enumerate(decays):
@@ -2247,16 +2260,25 @@ mirror  d~ d > d d~ g d d~ g"""
             decayprocs.append(my_process)
             self.assertEqual(len(my_amplitude.get('diagrams')), decay_diags[iproc])
 
-        decays = diagram_generation.DecayChainAmplitudeList([\
+        decays1 = diagram_generation.DecayChainAmplitudeList([\
                          diagram_generation.DecayChainAmplitude({\
-                                            'amplitudes': decayamplitudes})])
+                                            'amplitudes': copy.copy(decayamplitudes)})])
+        decays2 = diagram_generation.DecayChainAmplitudeList([\
+                         diagram_generation.DecayChainAmplitude({\
+                                            'amplitudes': copy.copy(decayamplitudes)})])
 
-        decay_chains = diagram_generation.DecayChainAmplitude({\
-            'amplitudes': coreamplitudes,
-            'decay_chains': decays})
+        decay_chains1 = diagram_generation.DecayChainAmplitude({\
+            'amplitudes': coreamplitudes[0],
+            'decay_chains': decays1})
+
+        decay_chains2 = diagram_generation.DecayChainAmplitude({\
+            'amplitudes': coreamplitudes[1],
+            'decay_chains': decays2})
 
         dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
-                          group_amplitudes(decay_chains)
+              group_amplitudes(\
+                 diagram_generation.DecayChainAmplitudeList([decay_chains1,
+                                                             decay_chains2]))
 
         subproc_groups = \
                        dc_subproc_group.generate_helas_decay_chain_subproc_groups()
@@ -2270,6 +2292,8 @@ mirror  d~ d > d d~ g d d~ g"""
         self.assertEqual(subprocess_group.get('name'),
                          group_name)
         self.assertEqual(len(subprocess_group.get('matrix_elements')), me_len)
+
+        self.assertEqual(len(subprocess_group.get('matrix_elements')[0].get('processes')), 2)
 
         # Exporter
         exporter = export_v4.ProcessExporterFortranMEGroup()

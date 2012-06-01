@@ -4153,7 +4153,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         matrix element is identical."""
 
         assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
-                  "%s is not valid AmplitudeList" % repr(amplitudes)
+                  "%s is not valid AmplitudeList" % type(amplitudes)
 
         # Keep track of already generated color objects, to reuse as
         # much as possible
@@ -4215,7 +4215,8 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                         amplitude_tag[-1][0].get_external_numbers()))
                     # Go on to next amplitude
                     continue
-            # Deal with newly generated matrix element
+
+            # Deal with newly generated matrix elements
             for matrix_element in copy.copy(matrix_element_list):
                 assert isinstance(matrix_element, HelasMatrixElement), \
                           "Not a HelasMatrixElement: %s" % matrix_element
@@ -4225,6 +4226,18 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 if not matrix_element.get('processes') or \
                        not matrix_element.get('diagrams'):
                     continue
+
+                # Check if identical matrix element already present
+                if matrix_element in matrix_elements:
+                    me = matrix_elements[matrix_elements.index(matrix_element)]
+                    logger.info("Combining process %s with %s" % \
+                            (matrix_element.get('processes')[0].nice_string().\
+                                 replace('Process: ', ''),
+                             me.get('processes')[0].nice_string().\
+                                 replace('Process: ', '')))
+                    me.get('processes').extend(matrix_element.get('processes'))
+                    continue
+
                 # Otherwise, add this matrix element to list
                 matrix_elements.append(matrix_element)
 

@@ -3328,8 +3328,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if not self._curr_matrix_elements.get_matrix_elements():
                 if group:
                     cpu_time1 = time.time()
-                    dc_amps = [amp for amp in self._curr_amps if isinstance(amp, \
-                                        diagram_generation.DecayChainAmplitude)]
+                    dc_amps = diagram_generation.DecayChainAmplitudeList(\
+                        [amp for amp in self._curr_amps if isinstance(amp, \
+                                        diagram_generation.DecayChainAmplitude)])
                     non_dc_amps = diagram_generation.AmplitudeList(\
                              [amp for amp in self._curr_amps if not \
                               isinstance(amp, \
@@ -3339,10 +3340,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         subproc_groups.extend(\
                                    group_subprocs.SubProcessGroup.group_amplitudes(\
                                                                        non_dc_amps))
-                    for dc_amp in dc_amps:
+                    if dc_amps:
                         dc_subproc_group = \
                                  group_subprocs.DecayChainSubProcessGroup.\
-                                                           group_amplitudes(dc_amp)
+                                                           group_amplitudes(dc_amps)
                         subproc_groups.extend(\
                                   dc_subproc_group.\
                                         generate_helas_decay_chain_subproc_groups())

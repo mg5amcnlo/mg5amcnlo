@@ -1,6 +1,10 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.6 (XX/04/12)  JA: Added cuts on lepton pt for each of the 4 hardest leptons
+1.4.7 (XX/06/12)  JA: Ensure that identical matrix element in different process 
+                      definitions are combined also when using the decay chain 
+                      formalism (thanks to Zhen Liu for pointing this out).
+
+1.4.6 (16/05/12)  JA: Added cuts on lepton pt for each of the 4 hardest leptons
                   OM: allow bin/madevent script to be feeded by a single line command:
 		      example ./bin/madevent multi_run 10 
 		  OM: Adding the 4 higgs interactions in the standard model UFO model
