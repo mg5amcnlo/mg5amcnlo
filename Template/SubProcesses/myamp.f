@@ -390,7 +390,7 @@ c     Reset variables
       enddo
 c     Find non-zero process number
       do iproc=1,maxsproc
-         if(sprop(iproc,-1,iconfig).gt.0) goto 10
+         if(sprop(iproc,-1,iconfig).ne.0) goto 10
       enddo
  10   continue
 c     If no non-zero sprop, set iproc to 1

@@ -4,6 +4,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       definitions are combined also when using the decay chain 
                       formalism (thanks to Zhen Liu for pointing this out).
                   JA+BF: Updated the NMSSM model to the latest FR version.
+                  JA: Fixed minor typo in myamp.f.
 
 1.4.6 (16/05/12)  JA: Added cuts on lepton pt for each of the 4 hardest leptons
                   OM: allow bin/madevent script to be feeded by a single line command:
