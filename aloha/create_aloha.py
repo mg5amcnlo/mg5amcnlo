@@ -258,12 +258,12 @@ class AbstractRoutineBuilder(object):
                     # shift and flip the tag if we multiply by C matrices
                     if (id + 1) // 2 in self.conjg:
                         id += _conjugate_gap + id % 2 - (id +1) % 2
-                    if not (i % 2):
+                    if (id % 2):
                         #propagator outcoming
-                        lorentz *= SpinorPropagator(id, 'I2', outgoing)
+                        lorentz *= SpinorPropagatorout(id, 'I2', outgoing)
                     else:
                     #    #propagator incoming
-                        lorentz *= SpinorPropagator('I2', id, outgoing)
+                        lorentz *= SpinorPropagatorin('I2', id, outgoing)
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)
                     

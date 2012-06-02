@@ -918,8 +918,12 @@ class DenominatorPropagator(aloha_lib.LorentzObject):
 #===============================================================================            
 
 
-SpinorPropagator = lambda spin1, spin2, particle: complex(0,1) * (Gamma('mu', spin1, spin2) * \
+SpinorPropagatorout = lambda spin1, spin2, particle: complex(0,-1) * (Gamma('mu', spin1, spin2) * \
+                    P('mu', particle) - Mass(particle) * Identity(spin1, spin2))
+
+SpinorPropagatorin = lambda spin1, spin2, particle: complex(0,+1) * (Gamma('mu', spin1, spin2) * \
                     P('mu', particle) + Mass(particle) * Identity(spin1, spin2))
+
 
 def VectorPropagator(l1,l2,part):
     """Define numerator of vector propagator"""
