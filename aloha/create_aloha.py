@@ -94,7 +94,6 @@ class AbstractRoutine(object):
             self.tag.append('MP')
             text += self.write(output_dir, language, mode, **opt)
             
-        print text
         return text
 
 class AbstractRoutineBuilder(object):

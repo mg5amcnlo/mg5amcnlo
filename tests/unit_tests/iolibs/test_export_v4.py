@@ -9519,6 +9519,8 @@ C     Gamma(3,2,1)
 C     
       SUBROUTINE FFV1_1(F2, V3, COUP, M1, W1,F1)
       IMPLICIT NONE
+      COMPLEX*16 CI
+      PARAMETER (CI=(0D0,1D0))
       COMPLEX*16 F2(*)
       COMPLEX*16 V3(*)
       REAL*8 P1(0:3)
@@ -9529,14 +9531,14 @@ C
       COMPLEX*16 COUP
       ENTRY FFV1_2(F2, V3, COUP, M1, W1,F1)
 
-      F1(5) = +F2(5)+V3(5)
-      F1(6) = +F2(6)+V3(6)
-      P1(0) = DBLE(F1(5))
-      P1(1) = DBLE(F1(6))
-      P1(2) = DIMAG(F1(6))
-      P1(3) = DIMAG(F1(5))
+      F1(1) = +F2(1)+V3(1)
+      F1(2) = +F2(2)+V3(2)
+      P1(0) = -DBLE(F1(1))
+      P1(1) = -DBLE(F1(2))
+      P1(2) = -DIMAG(F1(2))
+      P1(3) = -DIMAG(F1(1))
       DENOM = COUP/(P1(0)**2-P1(1)**2-P1(2)**2-P1(3)**2 - M1 * (M1 
-     $ -(0,1)* W1))"""
+     $ -CI* W1))"""
 
         abstract_M = create_aloha.AbstractRoutineBuilder(FFV1).compute_routine(1)
         abstract_M.add_symmetry(2)

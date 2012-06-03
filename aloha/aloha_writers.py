@@ -25,6 +25,10 @@ class WriteALOHA:
     extension = ''
     type_to_variable = {2:'F',3:'V',5:'T',1:'S',4:'R'}
     type_to_size = {'S':3, 'T':18, 'V':6, 'F':6,'R':18}
+    if aloha.loop_mode:
+        momentum_size = 4
+    else:
+        momentum_size = 2
     
             
     def __init__(self, abstract_routine, dirpath):
@@ -63,14 +67,14 @@ class WriteALOHA:
         
         
         if len(indices) == 1:
-            return indices[0] + start
+            return indices[0] + start + self.momentum_size
 
         ind_name = self.routine.expr.lorentz_ind
 
         if ind_name == ['I3', 'I2']:
-            return  4 * indices[1] + indices[0] + start 
+            return  4 * indices[1] + indices[0] + start + self.momentum_size
         elif len(indices) == 2: 
-            return  4 * indices[0] + indices[1] + start 
+            return  4 * indices[0] + indices[1] + start + self.momentum_size
         else:
             raise Exception, 'WRONG CONTRACTION OF LORENTZ OBJECT for routine %s: %s' \
                     % (self.name, ind_name)                                 
@@ -130,7 +134,6 @@ class WriteALOHA:
                 signs.append('+')
             else:
                 signs.append('-')
-        print self.outgoing,signs                    
         return signs
 
 
@@ -553,8 +556,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 out_size = self.type_to_size[type] 
                 continue
             elif self.offshell:
-                energy_pos = self.type_to_size[type] -2
-                p.append('{0}{1}{2}(%({3})s)'.format(signs[i],type,i+1,type))    
+                p.append('{0}{1}{2}(%(i)s)'.format(signs[i],type,i+1,type))    
                 
             if self.declaration.is_used('P%s' % (i+1)):
                 self.get_one_momenta_def(i+1, out)
@@ -567,10 +569,10 @@ class ALOHAWriterForFortran(WriteALOHA):
                 size_p = 4
             else:
                 size_p = 2
+            
             for i in range(size_p):
-                dict_energy = {'S':2+i,'V':5+i,'F':5+i,'R':17+i,'T':17+i}
-    
-                out.write('    %s%s(%s) = %s\n' % (type,self.outgoing, energy_pos+1+i, 
+                dict_energy = {'i':1+i}
+                out.write('    %s%s(%s) = %s\n' % (type,self.outgoing, 1+i, 
                                              ''.join(p) % dict_energy))
             if self.declaration.is_used('P%s' % self.outgoing):
                 self.get_one_momenta_def(self.outgoing, out)
@@ -582,17 +584,16 @@ class ALOHAWriterForFortran(WriteALOHA):
     def get_one_momenta_def(self, i, strfile):
         
         type = self.particles[i-1]
-        energy_pos = self.type_to_size[type] -2
         
         if aloha.loop_mode:
             template ='P%(i)d(%(j)d) = %(sign)s%(type)s%(i)d(%(nb)d)\n'
         else:
             template ='P%(i)d(%(j)d) = %(sign)s%(operator)s(%(type)s%(i)d(%(nb2)d))\n'
 
-        nb2 = energy_pos + 1
+        nb2 = 1
         for j in range(4):
             if not aloha.loop_mode:
-                nb = energy_pos + j
+                nb = j + 1
                 if j == 0: 
                     assert not aloha.mp_precision 
                     operator = 'dble' # not suppose to pass here in mp
@@ -605,12 +606,19 @@ class ALOHAWriterForFortran(WriteALOHA):
                     nb2 -= 1
             else:
                 operator =''
-                nb = energy_pos + 1+ j
-                nb2 = energy_pos + 1 + j
+                nb = 1+ j
+                nb2 = 1 + j
             strfile.write(template % {'j':j,'type': type, 'i': i, 
                         'nb': nb, 'nb2': nb2, 'operator':operator,
                         'sign': self.get_P_sign(i)})  
-            
+    
+    def shift_indices(self, match):
+        """shift the indices for non impulsion object"""
+        if match.group('var').startswith('P'):
+            shift = 0
+        else:
+            shift =  self.momentum_size 
+        return '%s(%s)' % (match.group('var'), int(match.group('num')) + shift)
               
     def change_var_format(self, name): 
         """Formatting the variable name to Fortran format"""
@@ -618,11 +626,10 @@ class ALOHAWriterForFortran(WriteALOHA):
         if '_' in name:
             type = name.type
             decla = name.split('_',1)[0]
-            name = name.replace('_', '(', 1) + ')'
             self.declaration.add(('list_%s' % type, decla))
         else:
             self.declaration.add((name.type, name.split('_',1)[0]))
-        #name = re.sub('\_(?P<num>\d+)$', '(\g<num>)', name)
+        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         return name
   
     def change_number_format(self, number):
@@ -679,7 +686,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                                                                   self.offshell)
             if 'L' not in self.tag:
                 coeff = 'denom'
-                out.write('    denom = COUP/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -(0,1)* W%(i)s))\n' % \
+                out.write('    denom = COUP/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -CI* W%(i)s))\n' % \
                       {'i': self.outgoing})
                 self.declaration.add(('complex','denom'))
                 if aloha.loop_mode:
@@ -764,7 +771,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                     routine.write( '    vertex = vertex + tmp\n')
                 else:
                     size = self.type_to_size[self.particles[offshell -1]] -2
-                    routine.write(" do i = 1, %s\n" % size)
+                    routine.write(" do i = %s, %s\n" % (self.momentum_size, self.momentum_size+size))
                     routine.write("        %(main)s(i) = %(main)s(i) + %(tmp)s(i)\n" %\
                                {'main': main, 'tmp': data['out']})
                     routine.write(' enddo\n')
@@ -1551,13 +1558,13 @@ class ALOHAWriterForPython(WriteALOHA):
         else: 
             return str(obj)
     
-    @staticmethod
-    def shift_indices(match):
+    
+    def shift_indices(self, match):
         """shift the indices for non impulsion object"""
         if match.group('var').startswith('P'):
             shift = 0
-        else: 
-            shift = -1
+        else:
+            shift = -1 + self.momentum_size
             
         return '%s[%s]' % (match.group('var'), int(match.group('num')) + shift)
 
@@ -1656,14 +1663,13 @@ class ALOHAWriterForPython(WriteALOHA):
                 out_size = self.type_to_size[type] 
                 continue
             elif self.offshell:
-                p.append('{0}{1}{2}[%({3})s]'.format(signs[i],type,i+1,type))  
+                p.append('{0}{1}{2}[%(i)s]'.format(signs[i],type,i+1))  
                 
             if self.declaration.is_used('P%s' % (i+1)):
                 self.get_one_momenta_def(i+1, out)             
              
         # define the resulting momenta
         if self.offshell:
-            energy_pos = out_size -2
             type = self.particles[self.outgoing-1]
             out.write('    %s%s = wavefunctions.WaveFunction(size=%s)\n' % (type, self.outgoing, out_size))
             if aloha.loop_mode:
@@ -1671,9 +1677,9 @@ class ALOHAWriterForPython(WriteALOHA):
             else:
                 size_p = 2
             for i in range(size_p):
-                dict_energy = {'S':1+i,'V':4+i,'F':4+i,'R':16+i,'T':16+i}
+                dict_energy = {'i':i}
     
-                out.write('    %s%s[%s] = %s\n' % (type,self.outgoing, energy_pos+i, 
+                out.write('    %s%s[%s] = %s\n' % (type,self.outgoing, i, 
                                              ''.join(p) % dict_energy))
             
             self.get_one_momenta_def(self.outgoing, out)
@@ -1686,21 +1692,19 @@ class ALOHAWriterForPython(WriteALOHA):
         """return the string defining the momentum"""
 
         type = self.particles[i-1]
-        energy_pos = self.type_to_size[type] -2
-
-
+        
         main = '    P%d = [' % i
         if aloha.loop_mode:
             template ='%(sign)s%(type)s%(i)d[%(nb)d]'
         else:
             template ='%(sign)scomplex(%(type)s%(i)d[%(nb2)d])%(operator)s'
 
-        nb2 = energy_pos 
+        nb2 = 0
         strfile.write(main)
         data = []
         for j in range(4):
             if not aloha.loop_mode:
-                nb = energy_pos + j
+                nb = j
                 if j == 0: 
                     assert not aloha.mp_precision 
                     operator = '.real' # not suppose to pass here in mp
@@ -1779,7 +1783,7 @@ class ALOHAWriterForPython(WriteALOHA):
                     text.write( '    vertex += tmp\n')
                 else:
                     size = self.type_to_size[self.particles[offshell -1]] -2
-                    text.write("    for i in range(%(id)d):\n" % {'id': size})
+                    text.write("    for i in range(%s,%s):\n" % (self.momentum_size, self.momentum_size+size))
                     text.write("        %(main)s[i] += tmp[i]\n" %{'main': main})
         
         text.write(self.get_foot_txt())

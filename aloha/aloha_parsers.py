@@ -279,7 +279,7 @@ class ALOHAExpressionParser(UFOExpressionParser):
                       | expression '-' expression
                       | expression '*' expression
                       | expression '/' expression'''
-        if p[2] != '/':
+        if p[2] != '/' or p[3].isdigit() or p[3].endswith('.'):
             p[0] = p[1] + p[2] + p[3]
         else:
             new = aloha_lib.KERNEL.add_function_expression('/', eval(p[3]))
