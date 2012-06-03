@@ -167,6 +167,7 @@ C
       else
         NDIM=Ndimens-num_propa(config_pos)
       endif
+      if(ISR.eq.3) NDIM=NDIM+2
 c
             if(order_value(counter).gt.check_value) then
               if (integrator.eq.'v') then
