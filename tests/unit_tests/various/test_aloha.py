@@ -2461,23 +2461,6 @@ class TestSomeObjectProperty(unittest.TestCase):
             self.assertEqual(zero.get_rep(ind), 0)         
         
         
-
-            
-#    def test_Spin2Contraction(self): 
-#        """check spin2 contraction"""
-#        
-#        T = aloha_obj.Spin2
-#        metric = aloha_obj.Metric
-#        F = aloha_obj.Spinor
-#        Id = aloha_obj.Identity 
-#        
-##        obj = T(1,2,3) * metric(1,2) *F(1,1) * F(2,2) * Id(1,2)    
- #       obj = obj.expand().simplify().factorize()
- ##       print obj
-  #      obj = metric(1,2) * Id(1,2) * F(1,1) * F(2,2) * T(1,2,3)    
-  #      obj = obj.expand().simplify().factorize()
-  #      #self.assertEqual(str(obj), '')
-        
         
     def test_parity_for_epsilon(self):
 
@@ -3092,7 +3075,7 @@ entry VVS1_2_2(V2, S3, COUP1, COUP2, M1, W1,V1)
 end
 
 """
-        print text
+
         self.assertEqual(text.split('\n'),goal.split('\n')) 
    
         text_h, text_cpp =  abstract.write(None, 'CPP')
@@ -3102,10 +3085,8 @@ end
 #include <complex>
 using namespace std;
 
-void VVS1_1(complex<double> V2[],complex<double> S3[],complex<double> COUP, double M1, double W1, complex<double>V1[]);
-
-void VVS1_2(complex<double> V2[],complex<double> S3[],complex<double> COUP, double M1, double W1, complex<double>V1[]);
-
+void VVS1_1(complex<double> V2[], complex<double> S3[], complex<double> COUP, double M1, double W1,complex<double> V1[]);
+void VVS1_2(complex<double> V2[], complex<double> S3[], complex<double> COUP, double M1, double W1,complex<double> V1[]);
 #endif
 
 #ifndef VVS1_2_1_guard
@@ -3113,110 +3094,117 @@ void VVS1_2(complex<double> V2[],complex<double> S3[],complex<double> COUP, doub
 #include <complex>
 using namespace std;
 
-void VVS1_2_1(complex<double> V2[],complex<double> S3[],complex<double> COUP1, complex <double>COUP2, double M1, double W1, complex<double>V1[]);
-
-void VVS1_2_2(complex<double> V2[],complex<double> S3[],complex<double> COUP1, complex <double>COUP2, double M1, double W1, complex<double>V1[]);
-
-#endif"""
-        goal_cpp = """#include "VVS1_1.h"
-
-void VVS1_1(complex<double> V2[],complex<double> S3[],complex<double> COUP, double M1, double W1, complex<double>V1[]){
-complex<double> denom;
-complex<double> OM1;
-double P1[4];
-V1[4]= V2[4]+S3[1];
-V1[5]= V2[5]+S3[2];
-P1[0] = -V1[4].real();
-P1[1] = -V1[5].real();
-P1[2] = -V1[5].imag();
-P1[3] = -V1[4].imag();
-OM1 = 0;
-if (M1 != 0) OM1= 1./pow(M1,2);
-denom =1./(( (M1*( -M1+complex<double>(0., 1.)*W1))+( (pow(P1[0],2))-(pow(P1[1],2))-(pow(P1[2],2))-(pow(P1[3],2)))));
-V1[0]= COUP*denom*(S3[0]*( (OM1*( complex<double>(0., 1.)*(V2[0]*P1[0])+complex<double>(0., -1.)*(V2[1]*P1[1])+complex<double>(0., -1.)*(V2[2]*P1[2])+complex<double>(0., -1.)*(V2[3]*P1[3]))*P1[0])+complex<double>(0., -1.)*V2[0]));
-V1[1]= COUP*denom*(S3[0]*( (OM1*( complex<double>(0., 1.)*(V2[0]*P1[0])+complex<double>(0., -1.)*(V2[1]*P1[1])+complex<double>(0., -1.)*(V2[2]*P1[2])+complex<double>(0., -1.)*(V2[3]*P1[3]))*P1[1])+complex<double>(0., -1.)*V2[1]));
-V1[2]= COUP*denom*(S3[0]*( (OM1*( complex<double>(0., 1.)*(V2[0]*P1[0])+complex<double>(0., -1.)*(V2[1]*P1[1])+complex<double>(0., -1.)*(V2[2]*P1[2])+complex<double>(0., -1.)*(V2[3]*P1[3]))*P1[2])+complex<double>(0., -1.)*V2[2]));
-V1[3]= COUP*denom*(S3[0]*( (OM1*( complex<double>(0., 1.)*(V2[0]*P1[0])+complex<double>(0., -1.)*(V2[1]*P1[1])+complex<double>(0., -1.)*(V2[2]*P1[2])+complex<double>(0., -1.)*(V2[3]*P1[3]))*P1[3])+complex<double>(0., -1.)*V2[3]));
-}
-
-void VVS1_2(complex<double> V2[],complex<double> S3[],complex<double> COUP, double M1, double W1, complex<double>V1[]){
-VVS1_1(V2,S3,COUP,M1,W1,V1);
-}
-
-#include "VVS1_2_1.h"
-
-void VVS1_2_1(complex<double> V2[],complex<double> S3[],complex<double> COUP1, complex<double>COUP2, double M1, double W1, complex<double>V1[]){
-complex<double> tmp[6];
- int i = 0;
-
-VVS1_1(V2, S3, COUP1, M1, W1, V1);
-VVS2_1(V2, S3, COUP2, M1, W1, tmp);
- while (i < 4)
-                {
-                V1[i] = V1[i] + tmp[i];
-                i++;
-                }
-}
-
-#include "VVS1_2_2.h"
-
-void VVS1_2_2(complex<double> V2[],complex<double> S3[],complex<double> COUP1, complex<double>COUP2, double M1, double W1, complex<double>V1[]){
-complex<double> tmp[6];
- int i = 0;
-
-VVS1_1(V2, S3, COUP1, M1, W1, V1);
-VVS2_1(V2, S3, COUP2, M1, W1, tmp);
- while (i < 4)
-                {
-                V1[i] = V1[i] + tmp[i];
-                i++;
-                }
-}
+void VVS1_2_1(complex<double> V2[], complex<double> S3[], complex<double> COUP1, complex<double> COUP2, double M1, double W1,complex<double> V1[]);
+void VVS1_2_2(complex<double> V2[], complex<double> S3[], complex<double> COUP1, complex<double> COUP2, double M1, double W1,complex<double> V1[]);
+#endif
 
 """
-        
+        goal_cpp = """#include "VVS1_1.h"
+
+void VVS1_1(complex<double> V2[], complex<double> S3[], complex<double> COUP, double M1, double W1,complex<double> V1[])
+{
+ complex<double> cI = (0.,1.);
+ double  P1[4];
+ complex<double>  TMP0;
+ complex<double>  denom;
+ double  OM1;
+    OM1 = 0.;
+    if (M1 != 0.)
+ OM1=1./pow(M1,2);
+    V1[0] = +V2[0]+S3[0];
+    V1[1] = +V2[1]+S3[1];
+P1[0] = -V1[0].real();
+P1[1] = -V1[1].real();
+P1[2] = -V1[1].imag();
+P1[3] = -V1[0].imag();
+ TMP0 = (V2[2]*P1[0]-V2[3]*P1[1]-V2[4]*P1[2]-V2[5]*P1[3]);
+    denom = COUP/(pow(P1[0],2)-pow(P1[1],2)-pow(P1[2],2)-pow(P1[3],2) - M1 * (M1 -cI* W1));
+    V1[2]= denom*S3[2]*(-cI*(V2[2])+cI*(P1[0]*OM1*TMP0));
+    V1[3]= denom*S3[2]*(-cI*(V2[3])+cI*(P1[1]*OM1*TMP0));
+    V1[4]= denom*S3[2]*(-cI*(V2[4])+cI*(P1[2]*OM1*TMP0));
+    V1[5]= denom*S3[2]*(-cI*(V2[5])+cI*(P1[3]*OM1*TMP0));
+}
+
+void VVS1_2(complex<double> V2[], complex<double> S3[], complex<double> COUP, double M1, double W1,complex<double> V1[])
+{
+
+ VVS1_1(V2,S3,COUP,M1,W1,V1);
+}
+void VVS1_2_1(complex<double> V2[], complex<double> S3[], complex<double> COUP1, complex<double> COUP2, double M1, double W1,complex<double> V1[])
+{
+ complex<double> cI = (0.,1.);
+ double  P1[4];
+ complex<double>  denom;
+ int i;
+ complex<double>  Vtmp[6];
+ double  OM1;
+    VVS1_1(V2,S3,COUP1,M1,W1,V1);
+    VVS2_1(V2,S3,COUP2,M1,W1,Vtmp);
+ i= 2;
+while (i < 6)
+{
+ V1[i] = V1[i] + Vtmp[i];
+ i++;
+}
+}
+void VVS1_2_2(complex<double> V2[], complex<double> S3[], complex<double> COUP1, complex<double> COUP2, double M1, double W1,complex<double> V1[])
+{
+ complex<double> cI = (0.,1.);
+ double  P1[4];
+ complex<double>  denom;
+ int i;
+ complex<double>  Vtmp[6];
+ double  OM1;
+    VVS1_1(V2,S3,COUP1,M1,W1,V1);
+    VVS2_1(V2,S3,COUP2,M1,W1,Vtmp);
+ i= 2;
+while (i < 6)
+{
+ V1[i] = V1[i] + Vtmp[i];
+ i++;
+}
+}
+"""
         self.assertEqual(text_h.split('\n'),goal_h.split('\n'))
         self.assertEqual(text_cpp.split('\n'),goal_cpp.split('\n'))
         
         
         text =  abstract.write(None, 'Python')
+
         goal = """import wavefunctions
-def VVS1_1(V2, S3, COUP, M1, W1):
-    V1 = wavefunctions.WaveFunction(size=6)
-    V1[4] = V2[4]+S3[1]
-    V1[5] = V2[5]+S3[2]
-    P1 = [- complex(V1[4]).real, \\
-             - complex(V1[5]).real, \\
-             - complex(V1[5]).imag, \\
-             - complex(V1[4]).imag]
+def VVS1_1(V2,S3,COUP,M1,W1):
     OM1 = 0.0
     if (M1): OM1=1.0/M1**2
-    denom =1.0/(( (M1*( -M1+1j*W1))+( (P1[0]**2)-(P1[1]**2)-(P1[2]**2)-(P1[3]**2))))
-    V1[0]= COUP*denom*(S3[0]*( (OM1*( 1j*(V2[0]*P1[0])-1j*(V2[1]*P1[1])-1j*(V2[2]*P1[2])-1j*(V2[3]*P1[3]))*P1[0])-1j*V2[0]))
-    V1[1]= COUP*denom*(S3[0]*( (OM1*( 1j*(V2[0]*P1[0])-1j*(V2[1]*P1[1])-1j*(V2[2]*P1[2])-1j*(V2[3]*P1[3]))*P1[1])-1j*V2[1]))
-    V1[2]= COUP*denom*(S3[0]*( (OM1*( 1j*(V2[0]*P1[0])-1j*(V2[1]*P1[1])-1j*(V2[2]*P1[2])-1j*(V2[3]*P1[3]))*P1[2])-1j*V2[2]))
-    V1[3]= COUP*denom*(S3[0]*( (OM1*( 1j*(V2[0]*P1[0])-1j*(V2[1]*P1[1])-1j*(V2[2]*P1[2])-1j*(V2[3]*P1[3]))*P1[3])-1j*V2[3]))
+    V1 = wavefunctions.WaveFunction(size=6)
+    V1[0] = +V2[0]+S3[0]
+    V1[1] = +V2[1]+S3[1]
+    P1 = [-complex(V1[0]).real, -complex(V1[1]).real, -complex(V1[1]).imag, -complex(V1[0]).imag]
+    TMP0 = (V2[2]*P1[0]-V2[3]*P1[1]-V2[4]*P1[2]-V2[5]*P1[3])
+    denom = COUP/(P1[0]**2-P1[1]**2-P1[2]**2-P1[3]**2 - M1 * (M1 -1j* W1))
+    V1[2]= denom*S3[2]*(-1j*(V2[2])+1j*(P1[0]*OM1*TMP0))
+    V1[3]= denom*S3[2]*(-1j*(V2[3])+1j*(P1[1]*OM1*TMP0))
+    V1[4]= denom*S3[2]*(-1j*(V2[4])+1j*(P1[2]*OM1*TMP0))
+    V1[5]= denom*S3[2]*(-1j*(V2[5])+1j*(P1[3]*OM1*TMP0))
     return V1
-    
-    
-def VVS1_2(V2, S3, COUP, M1, W1):
+
+
+import wavefunctions
+def VVS1_2(V2,S3,COUP,M1,W1):
+
     return VVS1_1(V2,S3,COUP,M1,W1)
-
-def VVS1_2_1(V2, S3, COUP1,COUP2, M1, W1):
-
-
-    V1 = VVS1_1(V2, S3, COUP1, M1, W1)
-    tmp = VVS2_1(V2, S3, COUP2, M1, W1)
-    for i in range(4):
+import wavefunctions
+def VVS1_2_1(V2,S3,COUP1,COUP2,M1,W1):
+    V1 = VVS1_1(V2,S3,COUP1,M1,W1)
+    tmp = VVS2_1(V2,S3,COUP2,M1,W1)
+    for i in range(2,6):
         V1[i] += tmp[i]
     return V1
 
-def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
-
-
-    V1 = VVS1_1(V2, S3, COUP1, M1, W1)
-    tmp = VVS2_1(V2, S3, COUP2, M1, W1)
-    for i in range(4):
+import wavefunctions
+def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
+    V1 = VVS1_1(V2,S3,COUP1,M1,W1)
+    tmp = VVS2_1(V2,S3,COUP2,M1,W1)
+    for i in range(2,6):
         V1[i] += tmp[i]
     return V1
 
@@ -3868,13 +3856,6 @@ x(0,1)*P(-1,2)*P(-1,3)*Gamma(3,2,-2)*ProjP(-2,1)')
         split_routine = routine.split('\n')
         self.assertEqual(len(split_routine), len(split_solution))
         self.assertEqual(split_solution, split_routine)
-        #for i in range(len(split_routine)):
-        #    if len(split_routine[i]) > 77:
-        #        to_split = min(len(split_routine[i]), len(split_solution[i]))
-        #        print to_split
-        #        for j in range(0, to_split // 77):
-        #            self.assertEqual(split_routine[i][j*77:(j+1)*77], split_solution[i][j*77:(j+1)*77])
-        #            print split_routine[i][j*77:(j+1)*77]
             
         
     def test_aloha_Loop_feynmangauge(self):
@@ -4130,30 +4111,53 @@ end
 #include <complex>
 using namespace std;
 
-void FFV1C1_1(complex<double> F1[],complex<double> V3[],complex<double> COUP, double M2, double W2, complex<double>F2[]);
-
+void FFV1C1_1(complex<double> F1[], complex<double> V3[], complex<double> COUP, double M2, double W2,complex<double> F2[]);
 #endif
 
 """
         solution_c = """#include "FFV1C1_1.h"
 
-void FFV1C1_1(complex<double> F1[],complex<double> V3[],complex<double> COUP, double M2, double W2, complex<double>F2[]){
-complex<double> denom;
-double P2[4];
-F2[4]= F1[4]+V3[4];
-F2[5]= F1[5]+V3[5];
-P2[0] = F2[4].real();
-P2[1] = F2[5].real();
-P2[2] = F2[5].imag();
-P2[3] = F2[4].imag();
-denom =1./(( (M2*( -M2+complex<double>(0., 1.)*W2))+( (pow(P2[0],2))-(pow(P2[1],2))-(pow(P2[2],2))-(pow(P2[3],2)))));
-F2[0]= COUP*denom*( (F1[1]*( (P2[0]*( complex<double>(0., 1.)*V3[1]-V3[2]))+( (P2[1]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., -1.)*V3[3]))+( (P2[2]*( V3[0]+V3[3]))+(P2[3]*( complex<double>(0., 1.)*V3[1]-V3[2]))))))+( (F1[0]*( (P2[0]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))+( (P2[1]*( complex<double>(0., 1.)*V3[1]+V3[2]))+( (P2[2]*( -V3[1]+complex<double>(0., 1.)*V3[2]))+(P2[3]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))))))+(M2*( (F1[3]*( complex<double>(0., -1.)*V3[1]+V3[2]))+(F1[2]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., -1.)*V3[3]))))));
-F2[1]= COUP*denom*( (F1[1]*( (P2[0]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., -1.)*V3[3]))+( (P2[1]*( complex<double>(0., 1.)*V3[1]-V3[2]))+( (P2[2]*( V3[1]+complex<double>(0., 1.)*V3[2]))+(P2[3]*( complex<double>(0., 1.)*V3[0]+complex<double>(0., 1.)*V3[3]))))))+( (F1[0]*( (P2[0]*( complex<double>(0., 1.)*V3[1]+V3[2]))+( (P2[1]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))+( (P2[2]*( -V3[0]+V3[3]))+(P2[3]*( complex<double>(0., -1.)*V3[1]-V3[2]))))))+(M2*( (F1[3]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))+(F1[2]*( complex<double>(0., -1.)*V3[1]-V3[2]))))));
-F2[2]= COUP*denom*( (F1[3]*( (P2[0]*( complex<double>(0., -1.)*V3[1]+V3[2]))+( (P2[1]*( complex<double>(0., 1.)*V3[0]+complex<double>(0., -1.)*V3[3]))+( (P2[2]*( -V3[0]+V3[3]))+(P2[3]*( complex<double>(0., 1.)*V3[1]-V3[2]))))))+( (F1[2]*( (P2[0]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., -1.)*V3[3]))+( (P2[1]*( complex<double>(0., 1.)*V3[1]+V3[2]))+( (P2[2]*( -V3[1]+complex<double>(0., 1.)*V3[2]))+(P2[3]*( complex<double>(0., 1.)*V3[0]+complex<double>(0., 1.)*V3[3]))))))+(M2*( (F1[1]*( complex<double>(0., 1.)*V3[1]-V3[2]))+(F1[0]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))))));
-F2[3]= COUP*denom*( (F1[3]*( (P2[0]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))+( (P2[1]*( complex<double>(0., 1.)*V3[1]-V3[2]))+( (P2[2]*( V3[1]+complex<double>(0., 1.)*V3[2]))+(P2[3]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))))))+( (F1[2]*( (P2[0]*( complex<double>(0., -1.)*V3[1]-V3[2]))+( (P2[1]*( complex<double>(0., 1.)*V3[0]+complex<double>(0., 1.)*V3[3]))+( (P2[2]*( V3[0]+V3[3]))+(P2[3]*( complex<double>(0., -1.)*V3[1]-V3[2]))))))+(M2*( (F1[1]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., -1.)*V3[3]))+(F1[0]*( complex<double>(0., 1.)*V3[1]+V3[2]))))));
+void FFV1C1_1(complex<double> F1[], complex<double> V3[], complex<double> COUP, double M2, double W2,complex<double> F2[])
+{
+ complex<double> cI = (0.,1.);
+ double  P2[4];
+ complex<double>  denom;
+    F2[0] = +F1[0]+V3[0];
+    F2[1] = +F1[1]+V3[1];
+P2[0] = -F2[0].real();
+P2[1] = -F2[1].real();
+P2[2] = -F2[1].imag();
+P2[3] = -F2[0].imag();
+    denom = COUP/(pow(P2[0],2)-pow(P2[1],2)-pow(P2[2],2)-pow(P2[3],2) - M2 * (M2 -cI* W2));
+    F2[2]= denom*cI*(F1[2]*(P2[0]*(V3[2]-V3[5])+(P2[1]*(+cI*(V3[4])-V3[3])+(P2[2]*-1.*(V3[4]+cI*(V3[3]))+P2[3]*(V3[2]-V3[5]))))+(F1[3]*(P2[0]*-1.*(V3[3]+cI*(V3[4]))+(P2[1]*(V3[2]+V3[5])+(P2[2]*(+cI*(V3[2]+V3[5]))+P2[3]*-1.*(V3[3]+cI*(V3[4])))))+M2*(F1[4]*-1.*(V3[2]+V3[5])+F1[5]*-1.*(V3[3]+cI*(V3[4])))));
+    F2[3]= denom*-cI*(F1[2]*(P2[0]*(V3[3]-cI*(V3[4]))+(P2[1]*(V3[5]-V3[2])+(P2[2]*(-cI*(V3[5])+cI*(V3[2]))+P2[3]*(+cI*(V3[4])-V3[3]))))+(F1[3]*(P2[0]*-1.*(V3[2]+V3[5])+(P2[1]*(V3[3]+cI*(V3[4]))+(P2[2]*(V3[4]-cI*(V3[3]))+P2[3]*(V3[2]+V3[5]))))+M2*(F1[4]*(V3[3]-cI*(V3[4]))+F1[5]*(V3[2]-V3[5]))));
+    F2[4]= denom*cI*(F1[4]*(P2[0]*(V3[2]+V3[5])+(P2[1]*(+cI*(V3[4])-V3[3])+(P2[2]*-1.*(V3[4]+cI*(V3[3]))+P2[3]*-1.*(V3[2]+V3[5]))))+(F1[5]*(P2[0]*(V3[3]+cI*(V3[4]))+(P2[1]*(V3[5]-V3[2])+(P2[2]*(-cI*(V3[2])+cI*(V3[5]))+P2[3]*-1.*(V3[3]+cI*(V3[4])))))+M2*(F1[2]*(V3[5]-V3[2])+F1[3]*(V3[3]+cI*(V3[4])))));
+    F2[5]= denom*-cI*(F1[4]*(P2[0]*(+cI*(V3[4])-V3[3])+(P2[1]*(V3[2]+V3[5])+(P2[2]*-1.*(+cI*(V3[2]+V3[5]))+P2[3]*(+cI*(V3[4])-V3[3]))))+(F1[5]*(P2[0]*(V3[5]-V3[2])+(P2[1]*(V3[3]+cI*(V3[4]))+(P2[2]*(V3[4]-cI*(V3[3]))+P2[3]*(V3[5]-V3[2]))))+M2*(F1[2]*(+cI*(V3[4])-V3[3])+F1[3]*(V3[2]+V3[5]))));
 }
 
 """
+        solution2_c="""#include "FFV1C1_1.h"
+
+void FFV1C1_1(complex<double> F1[], complex<double> V3[], complex<double> COUP, double M2, double W2,complex<double> F2[])
+{
+ complex<double> cI = (0.,1.);
+ double  P2[4];
+ complex<double>  denom;
+    F2[0] = +F1[0]+V3[0];
+    F2[1] = +F1[1]+V3[1];
+P2[0] = -F2[0].real();
+P2[1] = -F2[1].real();
+P2[2] = -F2[1].imag();
+P2[3] = -F2[0].imag();
+    denom = COUP/(pow(P2[0],2)-pow(P2[1],2)-pow(P2[2],2)-pow(P2[3],2) - M2 * (M2 -cI* W2));
+    F2[2]= denom*cI*(F1[2]*(P2[0]*(V3[2]-V3[5])+(P2[1]*(+cI*(V3[4])-V3[3])+(P2[2]*-1.*(V3[4]+cI*(V3[3]))+P2[3]*(V3[2]-V3[5]))))+(F1[3]*(P2[0]*-1.*(V3[3]+cI*(V3[4]))+(P2[1]*(V3[2]+V3[5])+(P2[2]*(+cI*(V3[2]+V3[5]))+P2[3]*-1.*(V3[3]+cI*(V3[4])))))+M2*(F1[4]*-1.*(V3[2]+V3[5])+F1[5]*-1.*(V3[3]+cI*(V3[4])))));
+    F2[3]= denom*-cI*(F1[2]*(P2[0]*(V3[3]-cI*(V3[4]))+(P2[1]*(V3[5]-V3[2])+(P2[2]*(-cI*(V3[5])+cI*(V3[2]))+P2[3]*(+cI*(V3[4])-V3[3]))))+(F1[3]*(P2[0]*-1.*(V3[2]+V3[5])+(P2[1]*(V3[3]+cI*(V3[4]))+(P2[2]*(V3[4]-cI*(V3[3]))+P2[3]*(V3[2]+V3[5]))))+M2*(F1[4]*(V3[3]-cI*(V3[4]))+F1[5]*(V3[2]-V3[5]))));
+    F2[4]= denom*-cI*(F1[4]*(P2[0]*-1.*(V3[2]+V3[5])+(P2[1]*(V3[3]-cI*(V3[4]))+(P2[2]*(V3[4]+cI*(V3[3]))+P2[3]*(V3[2]+V3[5]))))+(F1[5]*(P2[0]*-1.*(V3[3]+cI*(V3[4]))+(P2[1]*(V3[2]-V3[5])+(P2[2]*(-cI*(V3[5])+cI*(V3[2]))+P2[3]*(V3[3]+cI*(V3[4])))))+M2*(F1[2]*(V3[2]-V3[5])+F1[3]*-1.*(V3[3]+cI*(V3[4])))));
+    F2[5]= denom*cI*(F1[4]*(P2[0]*(V3[3]-cI*(V3[4]))+(P2[1]*-1.*(V3[2]+V3[5])+(P2[2]*(+cI*(V3[2]+V3[5]))+P2[3]*(V3[3]-cI*(V3[4])))))+(F1[5]*(P2[0]*(V3[2]-V3[5])+(P2[1]*-1.*(V3[3]+cI*(V3[4]))+(P2[2]*(+cI*(V3[3])-V3[4])+P2[3]*(V3[2]-V3[5]))))+M2*(F1[2]*(V3[3]-cI*(V3[4]))+F1[3]*-1.*(V3[2]+V3[5]))));
+}
+
+"""
+     
         
         FFV = UFOLorentz(name = 'FFV1',
                  spins = [ 2, 2, 3 ],
@@ -4170,7 +4174,11 @@ F2[3]= COUP*denom*( (F1[3]*( (P2[0]*( complex<double>(0., -1.)*V3[0]+complex<dou
 
         split_solution = solution_c.split('\n')
         split_routine = routine[1].split('\n')
-        self.assertEqual(split_solution, split_routine)
+        try:
+            self.assertEqual(split_solution, split_routine)
+        except:
+            split_solution = solution2_c.split('\n')
+            self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
         solution_h = """#ifndef FFV1C1_2_guard
@@ -4178,32 +4186,53 @@ F2[3]= COUP*denom*( (F1[3]*( (P2[0]*( complex<double>(0., -1.)*V3[0]+complex<dou
 #include <complex>
 using namespace std;
 
-void FFV1C1_2(complex<double> F2[],complex<double> V3[],complex<double> COUP, double M1, double W1, complex<double>F1[]);
-
+void FFV1C1_2(complex<double> F2[], complex<double> V3[], complex<double> COUP, double M1, double W1,complex<double> F1[]);
 #endif
 
 """
 
         solution_c = """#include "FFV1C1_2.h"
 
-void FFV1C1_2(complex<double> F2[],complex<double> V3[],complex<double> COUP, double M1, double W1, complex<double>F1[]){
-complex<double> denom;
-double P1[4];
-F1[4]= F2[4]-V3[4];
-F1[5]= F2[5]-V3[5];
-P1[0] = F1[4].real();
-P1[1] = F1[5].real();
-P1[2] = F1[5].imag();
-P1[3] = F1[4].imag();
-denom =1./(( (M1*( -M1+complex<double>(0., 1.)*W1))+( (pow(P1[0],2))-(pow(P1[1],2))-(pow(P1[2],2))-(pow(P1[3],2)))));
-F1[0]= COUP*denom*( (F2[0]*( (V3[1]*( complex<double>(0., 1.)*P1[1]+P1[2]))+( (V3[2]*( -P1[1]+complex<double>(0., 1.)*P1[2]))+( (V3[0]*( complex<double>(0., -1.)*P1[0]+complex<double>(0., 1.)*P1[3]))+(V3[3]*( complex<double>(0., -1.)*P1[0]+complex<double>(0., 1.)*P1[3]))))))+( (F2[1]*( (V3[0]*( complex<double>(0., 1.)*P1[1]+P1[2]))+( (V3[3]*( complex<double>(0., -1.)*P1[1]-P1[2]))+( (V3[1]*( complex<double>(0., -1.)*P1[0]+complex<double>(0., 1.)*P1[3]))+(V3[2]*( -P1[0]+P1[3]))))))+(M1*( (F2[2]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))+(F2[3]*( complex<double>(0., 1.)*V3[1]+V3[2]))))));
-F1[1]= COUP*denom*( (F2[0]*( (V3[1]*( complex<double>(0., -1.)*P1[0]+complex<double>(0., -1.)*P1[3]))+( (V3[2]*( P1[0]+P1[3]))+( (V3[0]*( complex<double>(0., 1.)*P1[1]-P1[2]))+(V3[3]*( complex<double>(0., 1.)*P1[1]-P1[2]))))))+( (F2[1]*( (V3[0]*( complex<double>(0., -1.)*P1[0]+complex<double>(0., -1.)*P1[3]))+( (V3[3]*( complex<double>(0., 1.)*P1[0]+complex<double>(0., 1.)*P1[3]))+( (V3[1]*( complex<double>(0., 1.)*P1[1]-P1[2]))+(V3[2]*( P1[1]+complex<double>(0., 1.)*P1[2]))))))+(M1*( (F2[2]*( complex<double>(0., 1.)*V3[1]-V3[2]))+(F2[3]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., -1.)*V3[3]))))));
-F1[2]= COUP*denom*( (F2[2]*( (V3[1]*( complex<double>(0., 1.)*P1[1]+P1[2]))+( (V3[2]*( -P1[1]+complex<double>(0., 1.)*P1[2]))+( (V3[0]*( complex<double>(0., -1.)*P1[0]+complex<double>(0., -1.)*P1[3]))+(V3[3]*( complex<double>(0., 1.)*P1[0]+complex<double>(0., 1.)*P1[3]))))))+( (F2[3]*( (V3[0]*( complex<double>(0., -1.)*P1[1]-P1[2]))+( (V3[3]*( complex<double>(0., -1.)*P1[1]-P1[2]))+( (V3[1]*( complex<double>(0., 1.)*P1[0]+complex<double>(0., 1.)*P1[3]))+(V3[2]*( P1[0]+P1[3]))))))+(M1*( (F2[0]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., -1.)*V3[3]))+(F2[1]*( complex<double>(0., -1.)*V3[1]-V3[2]))))));
-F1[3]= COUP*denom*( (F2[2]*( (V3[1]*( complex<double>(0., 1.)*P1[0]+complex<double>(0., -1.)*P1[3]))+( (V3[2]*( -P1[0]+P1[3]))+( (V3[0]*( complex<double>(0., -1.)*P1[1]+P1[2]))+(V3[3]*( complex<double>(0., 1.)*P1[1]-P1[2]))))))+( (F2[3]*( (V3[0]*( complex<double>(0., -1.)*P1[0]+complex<double>(0., 1.)*P1[3]))+( (V3[3]*( complex<double>(0., -1.)*P1[0]+complex<double>(0., 1.)*P1[3]))+( (V3[1]*( complex<double>(0., 1.)*P1[1]-P1[2]))+(V3[2]*( P1[1]+complex<double>(0., 1.)*P1[2]))))))+(M1*( (F2[0]*( complex<double>(0., -1.)*V3[1]+V3[2]))+(F2[1]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))))));
+void FFV1C1_2(complex<double> F2[], complex<double> V3[], complex<double> COUP, double M1, double W1,complex<double> F1[])
+{
+ complex<double> cI = (0.,1.);
+ double  P1[4];
+ complex<double>  denom;
+    F1[0] = +F2[0]+V3[0];
+    F1[1] = +F2[1]+V3[1];
+P1[0] = -F1[0].real();
+P1[1] = -F1[1].real();
+P1[2] = -F1[1].imag();
+P1[3] = -F1[0].imag();
+    denom = COUP/(pow(P1[0],2)-pow(P1[1],2)-pow(P1[2],2)-pow(P1[3],2) - M1 * (M1 -cI* W1));
+    F1[2]= denom*cI*(F2[2]*(P1[0]*-1.*(V3[2]+V3[5])+(P1[1]*(V3[3]+cI*(V3[4]))+(P1[2]*(V3[4]-cI*(V3[3]))+P1[3]*(V3[2]+V3[5]))))+(F2[3]*(P1[0]*(+cI*(V3[4])-V3[3])+(P1[1]*(V3[2]-V3[5])+(P1[2]*(-cI*(V3[2])+cI*(V3[5]))+P1[3]*(V3[3]-cI*(V3[4])))))+M1*(F2[4]*(V3[5]-V3[2])+F2[5]*(V3[3]-cI*(V3[4])))));
+    F1[3]= denom*cI*(F2[2]*(P1[0]*-1.*(V3[3]+cI*(V3[4]))+(P1[1]*(V3[2]+V3[5])+(P1[2]*(+cI*(V3[2]+V3[5]))+P1[3]*-1.*(V3[3]+cI*(V3[4])))))+(F2[3]*(P1[0]*(V3[5]-V3[2])+(P1[1]*(V3[3]-cI*(V3[4]))+(P1[2]*(V3[4]+cI*(V3[3]))+P1[3]*(V3[5]-V3[2]))))+M1*(F2[4]*(V3[3]+cI*(V3[4]))+F2[5]*-1.*(V3[2]+V3[5]))));
+    F1[4]= denom*cI*(F2[4]*(P1[0]*(V3[5]-V3[2])+(P1[1]*(V3[3]+cI*(V3[4]))+(P1[2]*(V3[4]-cI*(V3[3]))+P1[3]*(V3[5]-V3[2]))))+(F2[5]*(P1[0]*(V3[3]-cI*(V3[4]))+(P1[1]*-1.*(V3[2]+V3[5])+(P1[2]*(+cI*(V3[2]+V3[5]))+P1[3]*(V3[3]-cI*(V3[4])))))+M1*(F2[2]*-1.*(V3[2]+V3[5])+F2[3]*(+cI*(V3[4])-V3[3]))));
+    F1[5]= denom*cI*(F2[4]*(P1[0]*(V3[3]+cI*(V3[4]))+(P1[1]*(V3[5]-V3[2])+(P1[2]*(-cI*(V3[2])+cI*(V3[5]))+P1[3]*-1.*(V3[3]+cI*(V3[4])))))+(F2[5]*(P1[0]*-1.*(V3[2]+V3[5])+(P1[1]*(V3[3]-cI*(V3[4]))+(P1[2]*(V3[4]+cI*(V3[3]))+P1[3]*(V3[2]+V3[5]))))+M1*(F2[2]*-1.*(V3[3]+cI*(V3[4]))+F2[3]*(V3[5]-V3[2]))));
 }
 
 """
+        solution2_c="""#include "FFV1C1_2.h"
 
+void FFV1C1_2(complex<double> F2[], complex<double> V3[], complex<double> COUP, double M1, double W1,complex<double> F1[])
+{
+ complex<double> cI = (0.,1.);
+ double  P1[4];
+ complex<double>  denom;
+    F1[0] = +F2[0]+V3[0];
+    F1[1] = +F2[1]+V3[1];
+P1[0] = -F1[0].real();
+P1[1] = -F1[1].real();
+P1[2] = -F1[1].imag();
+P1[3] = -F1[0].imag();
+    denom = COUP/(pow(P1[0],2)-pow(P1[1],2)-pow(P1[2],2)-pow(P1[3],2) - M1 * (M1 -cI* W1));
+    F1[2]= denom*-cI*(F2[2]*(P1[0]*(V3[2]+V3[5])+(P1[1]*-1.*(V3[3]+cI*(V3[4]))+(P1[2]*(+cI*(V3[3])-V3[4])+P1[3]*-1.*(V3[2]+V3[5]))))+(F2[3]*(P1[0]*(V3[3]-cI*(V3[4]))+(P1[1]*(V3[5]-V3[2])+(P1[2]*(-cI*(V3[5])+cI*(V3[2]))+P1[3]*(+cI*(V3[4])-V3[3]))))+M1*(F2[4]*(V3[2]-V3[5])+F2[5]*(+cI*(V3[4])-V3[3]))));
+    F1[3]= denom*cI*(F2[2]*(P1[0]*-1.*(V3[3]+cI*(V3[4]))+(P1[1]*(V3[2]+V3[5])+(P1[2]*(+cI*(V3[2]+V3[5]))+P1[3]*-1.*(V3[3]+cI*(V3[4])))))+(F2[3]*(P1[0]*(V3[5]-V3[2])+(P1[1]*(V3[3]-cI*(V3[4]))+(P1[2]*(V3[4]+cI*(V3[3]))+P1[3]*(V3[5]-V3[2]))))+M1*(F2[4]*(V3[3]+cI*(V3[4]))+F2[5]*-1.*(V3[2]+V3[5]))));
+    F1[4]= denom*cI*(F2[4]*(P1[0]*(V3[5]-V3[2])+(P1[1]*(V3[3]+cI*(V3[4]))+(P1[2]*(V3[4]-cI*(V3[3]))+P1[3]*(V3[5]-V3[2]))))+(F2[5]*(P1[0]*(V3[3]-cI*(V3[4]))+(P1[1]*-1.*(V3[2]+V3[5])+(P1[2]*(+cI*(V3[2]+V3[5]))+P1[3]*(V3[3]-cI*(V3[4])))))+M1*(F2[2]*-1.*(V3[2]+V3[5])+F2[3]*(+cI*(V3[4])-V3[3]))));
+    F1[5]= denom*-cI*(F2[4]*(P1[0]*-1.*(V3[3]+cI*(V3[4]))+(P1[1]*(V3[2]-V3[5])+(P1[2]*(-cI*(V3[5])+cI*(V3[2]))+P1[3]*(V3[3]+cI*(V3[4])))))+(F2[5]*(P1[0]*(V3[2]+V3[5])+(P1[1]*(+cI*(V3[4])-V3[3])+(P1[2]*-1.*(V3[4]+cI*(V3[3]))+P1[3]*-1.*(V3[2]+V3[5]))))+M1*(F2[2]*(V3[3]+cI*(V3[4]))+F2[3]*(V3[2]-V3[5]))));
+}
+
+"""
         amp = builder.compute_routine(2)
         
         routine = amp.write(output_dir=None, language='CPP')
@@ -4215,7 +4244,11 @@ F1[3]= COUP*denom*( (F2[2]*( (V3[1]*( complex<double>(0., 1.)*P1[0]+complex<doub
 
         split_solution = solution_c.split('\n')
         split_routine = routine[1].split('\n')
-        self.assertEqual(split_solution, split_routine)
+        try:
+            self.assertEqual(split_solution, split_routine)
+        except:
+            split_solution = solution2_c.split('\n')
+            self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
         
 
