@@ -66,10 +66,20 @@ c Ellis-Sexton scale)
       ao2pi= alpha_S/(2d0*PI)
       if (firsttime) write(*,*) "alpha_s value used for the virtuals"/
      &     /" is (for the first PS point): ", alpha_S
-      call sloopmatrix(p, virt_wgts)
+
+c======================================================================
+c Replace the following line with the call to the one-loop code you 
+c wish to use. virt_wgts contains finite part, single and double pole
+c      
+c      call sloopmatrix(p, virt_wgts)
+c
+c======================================================================
+
+c Do not comment the following lines
       virt_wgt= virt_wgts(1)/dble(ngluons)
       single  = virt_wgts(2)/dble(ngluons)
       double  = virt_wgts(3)/dble(ngluons)
+
 c======================================================================
 c If the Virtuals are in the Dimensional Reduction scheme, convert them
 c to the CDR scheme with the following factor (not needed for MadLoop,
@@ -80,6 +90,7 @@ c         firsttime_conversion=.false.
 c      endif
 c      virt_wgt=virt_wgt+conversion*born_wgt*ao2pi
 c======================================================================
+
 c check for poles cancellation      
       if (firsttime) then
           call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
