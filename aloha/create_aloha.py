@@ -205,9 +205,6 @@ class AbstractRoutineBuilder(object):
         #    if self.spins[i] == 2:
         #        flip_sign.append(str(i))
         
-        #if not flip_sign:
-        #    return self.lorentz_expr
-
         #momentum_pattern = re.compile(r'\bP\(([\+\-\d]+),(%s)\)' % '|'.join(flip_sign))
         #lorentz_expr = momentum_pattern.sub(r'-P(\1,\2)', self.lorentz_expr)
         

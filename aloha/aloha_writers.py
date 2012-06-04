@@ -940,7 +940,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         return call_arg
 
     def get_momenta_txt(self):
-        """Define the Header of the fortran file. This include
+        """Define the Header of the ortran file. This include
             - momentum conservation
             - definition of the impulsion"""
                     
@@ -966,7 +966,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                 continue
             elif self.offshell:
                 p.append('%s%s%s({%s})' % (signs[i],type,i+1,len(size)))
-                size.append(self.type_to_size[type] -1)
+                size.append(1)
                 
             if self.declaration.is_used('P%s' % (i+1)):
                     self.get_one_momenta_def(i+1, out)
