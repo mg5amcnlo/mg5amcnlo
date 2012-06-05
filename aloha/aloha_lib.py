@@ -1156,7 +1156,6 @@ class LorentzObjectRepresentation(dict):
             
             fac1 = self.get_rep(tuple(selfind(indices)))
             fac2 = obj.get_rep(tuple(objind(indices)))            
-            
             new_object.set_rep(indices, fac1 * fac2)
         
         return new_object

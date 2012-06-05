@@ -4999,7 +4999,7 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
         #                get_matrix_element_calls(matrix_element))
 
         self.assertEqual("\n".join(helas_call_writers.FortranUFOHelasCallWriter().\
-                                   get_matrix_element_calls(matrix_element)),
+                                   get_matrix_element_calls(matrix_element)).split('\n'),
                          """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
 CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
@@ -5017,7 +5017,7 @@ CALL L1_1(W(1,7),W(1,1),GQQ,MGO, WGO, W(1,13))
 CALL L1_0(W(1,12),W(1,13),W(1,2),GQQ,AMP(1))
 CALL L1_2(W(1,12),W(1,1),-GQQ,MGO, WGO, W(1,14))
 # Amplitude(s) for diagram number 2
-CALL L1_0(W(1,14),W(1,7),W(1,2),GQQ,AMP(2))""")
+CALL L1_0(W(1,14),W(1,7),W(1,2),GQQ,AMP(2))""".split('\n'))
 
         # Test get_used_lorentz
         goal_lorentz_list = [(('FFV2',), (), 1), (('L1',), (), 1), 
@@ -5299,13 +5299,13 @@ CALL VXXXXX(P(0,3),MZ,NHEL(3),+1*IC(3),W(1,3))
 CALL IXXXXX(P(0,4),Mx1p,NHEL(4),-1*IC(4),W(1,4))
 CALL OXXXXX(P(0,5),Mx1p,NHEL(5),+1*IC(5),W(1,5))
 CALL VVV1_2(W(1,1),W(1,3),GC_214,MW, WW, W(1,6))
-CALL FFV2C1_3_2(W(1,4),W(1,2),GC_422,GC_628,Mneu1, Wneu1, W(1,7))
+CALL FFV2_3C1_2(W(1,4),W(1,2),GC_422,GC_628,Mneu1, Wneu1, W(1,7))
 # Amplitude(s) for diagram number 1
 CALL FFV2_3_0(W(1,7),W(1,5),W(1,6),GC_422,GC_628,AMP(1))
 CALL FFV2_3_1(W(1,5),W(1,2),GC_422,GC_628,Mneu1, Wneu1, W(1,8))
 # Amplitude(s) for diagram number 2
-CALL FFV2C1_3_0(W(1,4),W(1,8),W(1,6),GC_422,GC_628,AMP(2))
-CALL FFV2C1_3_2(W(1,4),W(1,1),GC_422,GC_628,Mneu1, Wneu1, W(1,9))
+CALL FFV2_3C1_0(W(1,4),W(1,8),W(1,6),GC_422,GC_628,AMP(2))
+CALL FFV2_3C1_2(W(1,4),W(1,1),GC_422,GC_628,Mneu1, Wneu1, W(1,9))
 CALL VVV1_2(W(1,2),W(1,3),GC_214,MW, WW, W(1,10))
 # Amplitude(s) for diagram number 3
 CALL FFV2_3_0(W(1,9),W(1,5),W(1,10),GC_422,GC_628,AMP(3))
@@ -5313,7 +5313,7 @@ CALL FFV2_3_0(W(1,9),W(1,5),W(1,10),GC_422,GC_628,AMP(3))
 CALL FFV5_0(W(1,9),W(1,8),W(1,3),GC_418,AMP(4))
 CALL FFV2_3_1(W(1,5),W(1,1),GC_422,GC_628,Mneu1, Wneu1, W(1,11))
 # Amplitude(s) for diagram number 5
-CALL FFV2C1_3_0(W(1,4),W(1,11),W(1,10),GC_422,GC_628,AMP(5))
+CALL FFV2_3C1_0(W(1,4),W(1,11),W(1,10),GC_422,GC_628,AMP(5))
 # Amplitude(s) for diagram number 6
 CALL FFV5_0(W(1,7),W(1,11),W(1,3),GC_418,AMP(6))""".split('\n')
 
@@ -6018,14 +6018,14 @@ CALL FFS3_4_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL SXXXXX(P(0,3),+1*IC(3),W(1,3))
 # Amplitude(s) for diagram number 1
-CALL FFS3C1_4_0(W(1,2),W(1,1),W(1,3),GC_108,GC_111,AMP(1))""".split('\n'))
+CALL FFS3_4C1_0(W(1,2),W(1,1),W(1,3),GC_108,GC_111,AMP(1))""".split('\n'))
         result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element.get('decay_chains')[0].get('core_processes')[0])
         self.assertEqual(result,
                          """CALL SXXXXX(P(0,1),-1*IC(1),W(1,1))
 CALL OXXXXX(P(0,2),zero,NHEL(2),+1*IC(2),W(1,2))
 CALL IXXXXX(P(0,3),MT,NHEL(3),-1*IC(3),W(1,3))
-CALL FFS3C1_4_3(W(1,3),W(1,2),GC_108,GC_111,Msix1, Wsix1, W(1,4))
+CALL FFS3_4C1_3(W(1,3),W(1,2),GC_108,GC_111,Msix1, Wsix1, W(1,4))
 # Amplitude(s) for diagram number 1
 #""".split('\n'))
 
@@ -6040,9 +6040,9 @@ CALL FFS3C1_4_3(W(1,3),W(1,2),GC_108,GC_111,Msix1, Wsix1, W(1,4))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
 CALL IXXXXX(P(0,4),MT,NHEL(4),-1*IC(4),W(1,4))
-CALL FFS3C1_4_3(W(1,4),W(1,3),GC_108,GC_111,Msix1, Wsix1, W(1,5))
+CALL FFS3_4C1_3(W(1,4),W(1,3),GC_108,GC_111,Msix1, Wsix1, W(1,5))
 # Amplitude(s) for diagram number 1
-CALL FFS3C1_4_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
+CALL FFS3_4C1_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
 
         
         self.assertEqual(result, goal)

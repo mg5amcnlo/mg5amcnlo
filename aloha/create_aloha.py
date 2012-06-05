@@ -78,17 +78,18 @@ class AbstractRoutine(object):
         if lor_list not in self.combined:
             self.combined.append(lor_list)
         
-    def write(self, output_dir, language='Fortran', mode='self', **opt):
+    def write(self, output_dir, language='Fortran', mode='self', combine=True,**opt):
         """ write the content of the object """
         
         writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag)
         text = writer.write(mode=mode, **opt)
-        for grouped in self.combined:
-            if isinstance(text, tuple):
-                text = tuple([old.__add__(new)  for old, new in zip(text, 
+        if combine:
+            for grouped in self.combined:
+                if isinstance(text, tuple):
+                    text = tuple([old.__add__(new)  for old, new in zip(text, 
                              writer.write_combined(grouped, mode=mode, **opt))])
-            else:
-                text += writer.write_combined(grouped, mode=mode, **opt)
+                else:
+                    text += writer.write_combined(grouped, mode=mode, **opt)
                 
         if aloha.mp_precision and 'MP' not in self.tag:
             self.tag.append('MP')
@@ -394,11 +395,44 @@ class AbstractRoutineBuilder(object):
             cls.prop_lib = create_prop_library(tag, cls.aloha_lib)
         
 
+class CombineRoutineBuilder(AbstractRoutineBuilder):
+    """A special builder for combine routine if needed to write those
+        explicitely.
+    """
+    def __init__(self, l_lorentz):
+        """ initialize the run
+        l_lorentz: list  of lorentz information analyzed (UFO format)
+        language: define in which language we write the output
+        modes: 0 for  all incoming particles 
+              >0 defines the outgoing part (start to count at 1)
+        """
+
+        lorentz = l_lorentz[0]
+        self.spins = lorentz.spins
+        l_name = [l.name for l in l_lorentz]
+        self.name = aloha_writers.combine_name(l_name[0], l_name[1:], None)
+        self.conjg = []
+        self.tag = []
+        self.outgoing = None
+        self.lorentz_expr = []
+        for i, lor in enumerate(l_lorentz):
+            self.lorentz_expr.append( 'Coup(%s) * (%s)' % (i+1, lor.structure))
+        self.lorentz_expr = ' + '.join(self.lorentz_expr)
+        self.routine_kernel = None
+        self.spin2_massless = False
+        self.contracted = {}
+        self.fct = {}
+
 class AbstractALOHAModel(dict):
     """ A class to build and store the full set of Abstract ALOHA Routine"""
 
-    def __init__(self, model_name, write_dir=None, format='Fortran'):
+
+    def __init__(self, model_name, write_dir=None, format='Fortran', 
+                 explicit_combine=False):
         """ load the UFO model and init the dictionary """
+        
+        # Option
+        self.explicit_combine = explicit_combine
         
         # Extract the model name if combined with restriction
         model_name_pattern = re.compile("^(?P<name>.+)-(?P<rest>[\w\d_]+)$")
@@ -587,6 +621,10 @@ class AbstractALOHAModel(dict):
             loop = any((t.startswith('L') for t in tag))
             if loop:
                 aloha.loop_mode = True
+                self.explicit_combine = True
+                
+            
+                
                        
             for l_name in list_l_name:
                 try:
@@ -629,15 +667,47 @@ class AbstractALOHAModel(dict):
         
         # Build mutiple lorentz call
         for list_l_name, tag, outgoing in data:
-            if len(list_l_name) >1:
-                #allow tag to have integer for retrocompatibility
-                conjugate = [i for i in tag if isinstance(i, int)]
-                tag =  [i for i in tag if isinstance(i, str)]
-                tag = tag + ['C%s'%i for i in conjugate] 
-                
+            if len(list_l_name) ==1:
+                continue
+            #allow tag to have integer for retrocompatibility
+            conjugate = [i for i in tag if isinstance(i, int)]
+            tag =  [i for i in tag if isinstance(i, str)]
+            tag = tag + ['C%s'%i for i in conjugate] 
+            
+            if not self.explicit_combine:
                 lorentzname = list_l_name[0]
                 lorentzname += ''.join(tag)
                 self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
+            else:
+                l_lorentz = []
+                for l_name in list_l_name: 
+                    l_lorentz.append(eval('self.model.lorentz.%s' % l_name))
+                builder = CombineRoutineBuilder(l_lorentz)
+                # add information for spin2mass
+                if 5 in l_lorentz[0].spins and self.massless_spin2 is not None:
+                    builder.spin2_massless = self.massless_spin2 
+            
+                for conjg in request[list_l_name[0]]:
+                    #ensure that routines are in rising order (for symetries)
+                    def sorting(a,b):
+                        if a[0] < b[0]: return -1
+                        else: return 1
+                    routines = request[list_l_name[0]][conjg]
+                    routines.sort(sorting)
+                    if not conjg:
+                        # No need to conjugate -> compute directly
+                        self.compute_aloha(builder, routines=routines)
+                    else:
+                        # Define the high level conjugate routine
+                        conjg_builder = builder.define_conjugate_builder(conjg)
+                        # Compute routines
+                        self.compute_aloha(conjg_builder, symmetry=lorentz.name,
+                                        routines=routines)
+
+                
+                      
+  
+                
                         
     def compute_aloha(self, builder, symmetry=None, routines=None, tag=[]):
         """ define all the AbstractRoutine linked to a given lorentz structure

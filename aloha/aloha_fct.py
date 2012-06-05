@@ -84,9 +84,9 @@ def guess_routine_from_name(names):
     
     output =[]
     for name in names:
-        if name.startswith('MP'):
+        if name.startswith('MP_'):
            name = name[3:]
-           tags = ['MP']
+           tags = ['MP_']
         else: 
             tags = []
         
@@ -102,16 +102,13 @@ def guess_routine_from_name(names):
         allow_tag += ['L%s' % i for i in range(1,20)]
         allow_tag += ['L']
         tags = []
-        if name.startswith('MP_'):
-            name = name[3:]
-            tags.append('MP')
         
         len_tag = -1
         while len(tags) != len_tag:
             len_tag = len(tags)
             for tag in allow_tag:
-                if main.endswith(tag):
-                    main = main[:-len(tag)]
+                if multiple[-1].endswith(tag):
+                    multiple[-1] = multiple[-1][:-len(tag)]
                     tags.append(tag)
                     break
         

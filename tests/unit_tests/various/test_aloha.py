@@ -3270,7 +3270,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         # Check the content of FFV1__FFV2C1_0.f
         fsock = open('/tmp/mg5/FFV1C1_0.f')
         goal = """
-      SUBROUTINE FFV1C1_2_0(F2, F1, V3, COUP1, COUP2,VERTEX)
+      SUBROUTINE FFV1_2C1_0(F2, F1, V3, COUP1, COUP2,VERTEX)
       IMPLICIT NONE
       COMPLEX*16 F1(*)
       COMPLEX*16 F2(*)
@@ -3701,7 +3701,7 @@ def FFV1C1_1(F1,V3,COUP,M2,W2):
 
 
 import wavefunctions
-def FFV1C1_2_1(F1,V3,COUP1,COUP2,M2,W2):
+def FFV1_2C1_1(F1,V3,COUP1,COUP2,M2,W2):
     F2 = FFV1C1_1(F1,V3,COUP1,M2,W2)
     tmp = FFV2C1_1(F1,V3,COUP2,M2,W2)
     for i in range(2,6):

@@ -167,7 +167,7 @@ class WriteALOHA:
         """Prototype for language specific footer"""
         return ''
     
-    def define_argument_list(self, couplings=['COUP']):
+    def define_argument_list(self, couplings=None):
         """define a list with the string of object required as incoming argument"""
 
         call_arg = [] #incoming argument of the routine
@@ -188,6 +188,15 @@ class WriteALOHA:
             else:
                 call_arg.append(('list_complex','%s%d' % (spin, index +1)))
         
+        # couplings
+        if  couplings is None:
+            detected_couplings = [name for type, name in self.declaration if name.startswith('COUP')]
+            detected_couplings.sort()
+            if detected_couplings:
+                couplings = detected_couplings
+            else:
+                couplings = ['COUP']
+                
         for coup in couplings:       
             call_arg.append(('complex', coup))              
             self.declaration.add(('complex',coup))
@@ -203,15 +212,15 @@ class WriteALOHA:
                 self.declaration.add(('double','W%s' % self.outgoing))
             
         self.call_arg = call_arg
-                
         return call_arg
 
     def write(self, mode=None):
                          
         self.mode = mode
         
-        self.define_argument_list()
+        
         core_text = self.define_expression()    
+        self.define_argument_list()
         out = StringIO()
         
         out.write(self.get_header_txt())
@@ -444,7 +453,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             
 
     
-    def get_header_txt(self, name=None, couplings=['COUP']):
+    def get_header_txt(self, name=None, couplings=None):
         """Define the Header of the fortran file. 
         """
         if name is None:
@@ -676,16 +685,24 @@ class ALOHAWriterForFortran(WriteALOHA):
         
 
         numerator = self.routine.expr
+        if not 'Coup(1)' in self.routine.infostr:
+            coup_name = 'COUP'
+        else:
+            coup_name = '%s' % self.change_number_format(1)
+        
         
         if not self.offshell:
-            out.write(' vertex = COUP*%s\n' % self.write_obj(numerator.get_rep([0])))
+            if coup_name == 'COUP':
+                out.write(' vertex = COUP*%s\n' % self.write_obj(numerator.get_rep([0])))
+            else:
+                out.write(' vertex = %s\n' % self.write_obj(numerator.get_rep([0])))
         else:
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                                   self.offshell)
             if 'L' not in self.tag:
-                coeff = 'denom'
-                out.write('    denom = COUP/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -CI* W%(i)s))\n' % \
-                      {'i': self.outgoing})
+                coeff = 'denom'                    
+                out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -CI* W%(i)s))\n' % \
+                      {'i': self.outgoing, 'COUP': coup_name})
                 self.declaration.add(('complex','denom'))
                 if aloha.loop_mode:
                     ptype = 'list_complex'
@@ -701,7 +718,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                                         self.write_obj(numerator.get_rep(ind))))
         return out.getvalue()
 
-    def define_symmetry(self, new_nb, couplings=['COUP']):
+    def define_symmetry(self, new_nb, couplings=None):
         return ''
         #number = self.offshell
         #arguments = [name for format, name in self.define_argument_list()]
@@ -839,12 +856,17 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
 
         OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                               self.offshell)
+        if not 'Coup(1)' in self.routine.infostr:
+            coup = True
+        else:
+            coup = False
 
         for key,expr in self.routine.expr.items():
             arg = self.get_loop_argument(key)
             for ind in expr.listindices():
                 data = expr.get_rep(ind)
-                if data:
+                
+                if data and coup:
                     out.write('    COEFF(%s,%s)= coup*%s\n' % ( 
                                     self.pass_to_HELAS(ind)+1, ','.join(arg), 
                                     self.write_obj(data)))
@@ -897,9 +919,8 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         return out.getvalue()
     
     
-    def define_argument_list(self, couplings=['COUP']):
+    def define_argument_list(self, couplings=None):
         """define a list with the string of object required as incoming argument"""
-
 
         conjugate = [2*(int(c[1:])-1) for c in self.tag if c[0] == 'C']
         call_arg = [('list_complex', 'P%s'% self.l_helas_id)] #incoming argument of the routine
@@ -921,6 +942,15 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
             else:
                 call_arg.append(('complex','%s%d' % (spin, index +1)))
         
+        # couplings
+        if couplings is None:
+            detected_couplings = [name for type, name in self.declaration if name.startswith('COUP')]
+            detected_couplings.sort()
+            if detected_couplings:
+                couplings = detected_couplings
+            else:
+                couplings = ['COUP']
+                
         for coup in couplings:       
             call_arg.append(('complex', coup))              
             self.declaration.add(('complex',coup))
@@ -1001,7 +1031,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         
         
         
-    def get_header_txt(self, name=None, couplings=['COUP']):
+    def get_header_txt(self, name=None, couplings=None):
         """Define the Header of the fortran file. This include
             - function tag
             - definition of variable
@@ -1064,10 +1094,7 @@ def combine_name(name, other_names, outgoing, tag=None):
     routine = ''
     if p.search(name):
         base, id = p.search(name).groups()
-        if tag is not None:
-            routine = name + ''.join(tag)
-        else:
-            routine = name
+        routine = name
         for s in other_names:
             try:
                 base2,id2 = p.search(s).groups()
@@ -1079,8 +1106,14 @@ def combine_name(name, other_names, outgoing, tag=None):
                 break  # one matching not good -> other scheme
             else:
                 routine += '_%s' % id2
+    
     if routine:
-        return routine +'_%s' % outgoing
+        if tag is not None:
+            routine += ''.join(tag)
+        if outgoing is not None:
+            return routine +'_%s' % outgoing
+        else:
+            return routine
 
     if tag is not None:
         addon = ''.join(tag)
@@ -1184,7 +1217,7 @@ class ALOHAWriterForCPP(WriteALOHA):
     
     
     
-    def get_header_txt(self, name=None, couplings=['COUP'],mode=None):
+    def get_header_txt(self, name=None, couplings=None,mode=None):
         """Define the Header of the fortran file. This include
             - function tag
             - definition of variable
@@ -1367,16 +1400,22 @@ class ALOHAWriterForCPP(WriteALOHA):
         
 
         numerator = self.routine.expr
-        
+        if not 'Coup(1)' in self.routine.infostr:
+            coup_name = 'COUP'
+        else:
+            coup_name = '%s' % self.change_number_format(1)
         if not self.offshell:
-            out.write(' vertex = COUP*%s;\n' % self.write_obj(numerator.get_rep([0])))
+            if coup_name == 'COUP':
+                out.write(' vertex = COUP*%s;\n' % self.write_obj(numerator.get_rep([0])))
+            else:
+                out.write(' vertex = %s;\n' % self.write_obj(numerator.get_rep([0])))
         else:
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                                   self.offshell)
             if 'L' not in self.tag:
                 coeff = 'denom'
-                out.write('    denom = COUP/(pow(P%(i)s[0],2)-pow(P%(i)s[1],2)-pow(P%(i)s[2],2)-pow(P%(i)s[3],2) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
-                      {'i': self.outgoing})
+                out.write('    denom = %(coup)s/(pow(P%(i)s[0],2)-pow(P%(i)s[1],2)-pow(P%(i)s[2],2)-pow(P%(i)s[3],2) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
+                      {'i': self.outgoing, 'coup': coup_name})
                 self.declaration.add(('complex','denom'))
                 if aloha.loop_mode:
                     ptype = 'list_complex'
@@ -1393,7 +1432,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         return out.getvalue()
         
     remove_double = re.compile('complex<double> (?P<name>[\w]+)\[\]')
-    def define_symmetry(self, new_nb, couplings=['COUP']):
+    def define_symmetry(self, new_nb, couplings=None):
         """Write the call for symmetric routines"""
         number = self.offshell
         arguments = [name for format, name in self.define_argument_list()]
@@ -1405,7 +1444,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             (self.get_header_txt(new_name, couplings, mode='no_include'), 
              self.name, ','.join(arguments), output)
     
-    def get_h_text(self,couplings=['COUP']):
+    def get_h_text(self,couplings=None):
         """Return the full contents of the .h file"""
 
         h_string = StringIO()
@@ -1609,7 +1648,7 @@ class ALOHAWriterForPython(WriteALOHA):
         """
         
         if '_' not in name:
-            self.declaration.add(('', name))
+            self.declaration.add(('complex', name))
         else:
             self.declaration.add(('', name.split('_',1)[0]))
         name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
@@ -1626,16 +1665,24 @@ class ALOHAWriterForPython(WriteALOHA):
                 out.write('    %s = %s\n' % (name, self.write_obj(obj)))
 
         numerator = self.routine.expr
-        
+        if not 'Coup(1)' in self.routine.infostr:
+            coup_name = 'COUP'
+        else:
+            coup_name = '%s' % self.change_number_format(1)
+
         if not self.offshell:
-            out.write('    vertex = COUP*%s\n' % self.write_obj(numerator.get_rep([0])))
+            if coup_name == 'COUP':
+                out.write('    vertex = COUP*%s\n' % self.write_obj(numerator.get_rep([0])))
+            else:
+                out.write('    vertex = %s\n' % self.write_obj(numerator.get_rep([0])))
         else:
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                                   self.offshell)
 
             if not 'L' in self.tag:
                 coeff = 'denom'
-                out.write('    denom = COUP/(P%(i)s[0]**2-P%(i)s[1]**2-P%(i)s[2]**2-P%(i)s[3]**2 - M%(i)s * (M%(i)s -1j* W%(i)s))\n' % {'i': self.outgoing})
+                out.write('    denom = %(coup)s/(P%(i)s[0]**2-P%(i)s[1]**2-P%(i)s[2]**2-P%(i)s[3]**2 - M%(i)s * (M%(i)s -1j* W%(i)s))\n' % 
+                          {'i': self.outgoing,'coup':coup_name})
             else:
                 coeff = 'COUP'
                 
@@ -1652,7 +1699,7 @@ class ALOHAWriterForPython(WriteALOHA):
             return '    return %s\n\n' % (self.outname)
             
     
-    def get_header_txt(self, name=None, couplings=['COUP']):
+    def get_header_txt(self, name=None, couplings=None):
         """Define the Header of the fortran file. This include
             - function tag
             - definition of variable
@@ -1760,7 +1807,7 @@ class ALOHAWriterForPython(WriteALOHA):
         strfile.write(']\n')
 
 
-    def define_symmetry(self, new_nb, couplings=['COUP']):
+    def define_symmetry(self, new_nb, couplings=None):
         number = self.offshell
         arguments = [name for format, name in self.define_argument_list()]
         new_name = self.name.rsplit('_')[0] + '_%s' % new_nb
@@ -1846,7 +1893,6 @@ class Declaration_list(set):
             return var in self.var_name
         self.var_name = [name for type,name in self]
         return var in self.var_name
-            
 
 class WriterFactory(object):
     

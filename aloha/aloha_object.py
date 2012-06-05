@@ -142,6 +142,32 @@ class Mass(aloha_lib.FactoryLorentz):
         return '_M%s' % particle
 
 #===============================================================================
+# Mass
+#===============================================================================
+class L_Coup(aloha_lib.LorentzObject):
+    """ Helas Object for a Mass"""
+       
+    
+    def __init__(self, name, nb):
+        self.nb = nb
+        aloha_lib.LorentzObject.__init__(self, name,[], [])
+            
+    def create_representation(self):
+        coup = aloha_lib.Variable('COUP%s' % self.nb)
+
+        self.representation = aloha_lib.LorentzObjectRepresentation(
+                                coup, self.lorentz_ind, self.spin_ind)
+
+class Coup(aloha_lib.FactoryLorentz):
+
+    object_class = L_Coup
+    
+    @classmethod
+    def get_unique_name(self, nb):
+        return 'coup%s' % nb
+
+
+#===============================================================================
 # FCT
 #===============================================================================
 class L_FCT(aloha_lib.LorentzObject):
