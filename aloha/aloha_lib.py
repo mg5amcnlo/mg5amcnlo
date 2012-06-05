@@ -202,6 +202,15 @@ class AddVariable(list):
         """returns true if one of the variables is in the expression"""
         
         return any((v in obj for obj in self for v in variables  ))
+    
+    
+    def get_all_var_names(self):
+        
+        out = []
+        for term in self:
+            if hasattr(term, 'get_all_var_names'):
+                out += term.get_all_var_names()
+        return out
             
     
     
@@ -550,6 +559,10 @@ class MultVariable(array):
         else:
             raise Exception, 'Cann\'t replace a Variable by %s' % type(expression)
         
+    
+    def get_all_var_names(self):
+        """return the list of variable used in this multiplication"""
+        return ['%s' % KERNEL.objs[n] for n in self]
         
 
 
@@ -1297,6 +1310,10 @@ class SplitCoefficient(dict):
     def __init__(self, *args, **opt):
         dict.__init__(self, *args, **opt)
         self.tag=set()
+        
+    def get_max_rank(self):
+        """return the highest rank of the coefficient"""
+        return max([max(arg[:4]) for arg in self])
 
       
 if '__main__' ==__name__:

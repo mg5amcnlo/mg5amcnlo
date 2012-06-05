@@ -14,7 +14,7 @@ from fractions import Fraction
 from cStringIO import StringIO
 # Look at http://www.skymind.com/~ocrow/python_string/ 
 # For knowing how to deal with long strings efficiently.
-
+import itertools
 
 
 class WriteALOHA: 
@@ -25,14 +25,15 @@ class WriteALOHA:
     extension = ''
     type_to_variable = {2:'F',3:'V',5:'T',1:'S',4:'R'}
     type_to_size = {'S':3, 'T':18, 'V':6, 'F':6,'R':18}
-    if aloha.loop_mode:
-        momentum_size = 4
-    else:
-        momentum_size = 2
-    
+
             
     def __init__(self, abstract_routine, dirpath):
-
+        
+        if aloha.loop_mode:
+            self.momentum_size = 4
+        else:
+            self.momentum_size = 2
+        
         name = get_routine_name(abstract = abstract_routine)
 
         if dirpath:
@@ -572,12 +573,8 @@ class ALOHAWriterForFortran(WriteALOHA):
         if self.offshell:
             energy_pos = out_size -2
             type = self.particles[self.outgoing-1]
-            if aloha.loop_mode:
-                size_p = 4
-            else:
-                size_p = 2
             
-            for i in range(size_p):
+            for i in range(self.momentum_size):
                 dict_energy = {'i':1+i}
                 out.write('    %s%s(%s) = %s\n' % (type,self.outgoing, 1+i, 
                                              ''.join(p) % dict_energy))
@@ -865,6 +862,11 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         else:
             coup = False
 
+        print 'nb_def',len(self.routine.expr) * 4
+        print 'rank',self.routine.expr.get_max_rank()
+
+        
+        
         for key,expr in self.routine.expr.items():
             arg = self.get_loop_argument(key)
             for ind in expr.listindices():
@@ -885,15 +887,22 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         
         out = StringIO()
         out.write('implicit none\n')
+        # define the complex number CI = 0+1j
+        if 'MP' in self.tag:
+            out.write(' complex*32 CI\n')
+        else:
+            out.write(' complex*16 CI\n')
+        out.write(' parameter (CI=(%s,%s))\n' % 
+                    (self.change_number_format(0),self.change_number_format(1)))
         argument_var = [name for type,name in self.call_arg]
         for type, name in self.declaration:
             if type.startswith('list'):
                 type = type[5:]
                 #determine the size of the list
-                if name in argument_var:
-                    size ='*'
-                elif name.startswith('P'):
+                if name.startswith('P'):
                     size='0:3'
+                elif name in argument_var:
+                    size ='*'
                 elif name[0] in ['F','V']:
                     if aloha.loop_mode:
                         size = 8
@@ -911,7 +920,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                         size = 18
                 elif name == 'coeff':
                     out.write("include 'coef_specs.inc'\n")
-                    size = 'MAXLWFSIZE,VERTEXMAXCOEFS,MAXLWFSIZE'
+                    size = 'MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE'
     
                 out.write(' %s %s(%s)\n' % (self.type2def[type], name, size))
             elif type == 'fct':

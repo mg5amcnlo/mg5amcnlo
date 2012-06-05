@@ -103,12 +103,17 @@ def guess_routine_from_name(names):
         allow_tag += ['L']
         tags = []
         
+        
         len_tag = -1
         while len(tags) != len_tag:
             len_tag = len(tags)
             for tag in allow_tag:
-                if multiple[-1].endswith(tag):
+                if multiple and multiple[-1].endswith(tag):
                     multiple[-1] = multiple[-1][:-len(tag)]
+                    tags.append(tag)
+                    break
+                elif main.endswith(tag):
+                    main = main[:-len(tag)]
                     tags.append(tag)
                     break
         

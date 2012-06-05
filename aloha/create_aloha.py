@@ -339,9 +339,9 @@ class AbstractRoutineBuilder(object):
         
         # modify the expression for the momenta
         # P_i -> P_i + P_L and P_o -> -P_o - P_L
-        Pdep = [aloha_lib.KERNEL.get(P) for P in aloha_lib.KERNEL.use_tag 
+        Pdep = [aloha_lib.KERNEL.get(P) for P in lorentz.get_all_var_names()
                                                       if P.startswith('_P')]
-        
+
         Pdep = [P for P in Pdep if P.particle in [outgoing, l_in]]
         for P in Pdep:
             if P.particle == l_in:
