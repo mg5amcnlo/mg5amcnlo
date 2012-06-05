@@ -5004,24 +5004,24 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
 CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
 CALL VXXXXX(P(0,4),MW,NHEL(4),+1*IC(4),W(1,4))
-CALL FFV2_1(W(1,3),W(1,4),GC_108,MT, WT, W(1,5))
+CALL FFV2_1(W(1,3),W(1,4),GC_108,MT,WT,W(1,5))
 CALL SXXXXX(P(0,5),+1*IC(5),W(1,6))
-CALL L1_1(W(1,5),W(1,6),GQQ,MGO, WGO, W(1,7))
+CALL L1_1(W(1,5),W(1,6),GQQ,MGO,WGO,W(1,7))
 CALL IXXXXX(P(0,6),zero,NHEL(6),-1*IC(6),W(1,8))
 CALL VXXXXX(P(0,7),MW,NHEL(7),+1*IC(7),W(1,9))
-CALL FFV2C1_2(W(1,8),W(1,9),GC_108,MT, WT, W(1,10))
+CALL FFV2C1_2(W(1,8),W(1,9),GC_108,MT,WT,W(1,10))
 CALL SXXXXX(P(0,8),+1*IC(8),W(1,11))
-CALL L1C1_2(W(1,10),W(1,11),GQQ,MGO, WGO, W(1,12))
-CALL L1_1(W(1,7),W(1,1),GQQ,MGO, WGO, W(1,13))
+CALL L1C1_2(W(1,10),W(1,11),GQQ,MGO,WGO,W(1,12))
+CALL L1_1(W(1,7),W(1,1),GQQ,MGO,WGO,W(1,13))
 # Amplitude(s) for diagram number 1
 CALL L1_0(W(1,12),W(1,13),W(1,2),GQQ,AMP(1))
-CALL L1_2(W(1,12),W(1,1),-GQQ,MGO, WGO, W(1,14))
+CALL L1_2(W(1,12),W(1,1),-GQQ,MGO,WGO,W(1,14))
 # Amplitude(s) for diagram number 2
 CALL L1_0(W(1,14),W(1,7),W(1,2),GQQ,AMP(2))""")
 
         # Test get_used_lorentz
         goal_lorentz_list = [(('FFV2',), (), 1), (('L1',), (), 1), 
-                             (('FFV2',), (1,), 2), (('L1',), (1,), 2), 
+                             (('FFV2',), ('C1',), 2), (('L1',), ('C1',), 2), 
                              (('L1',), (), 1), (('L1',), (), 2), 
                              (('L1',), (), 0), (('L1',), (), 0)]
 
