@@ -1911,11 +1911,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             inv_sq_err+=1.0/error**2
             self.results[main_name][-1]['cross'] = crossoversig/inv_sq_err
             self.results[main_name][-1]['error'] = math.sqrt(1.0/inv_sq_err)
-            if self.run_card['iseed'] != 0:
-                seed = self.random + 1
-                text = open(pjoin(self.me_dir, 'Cards','run_card.dat')).read()
-                (t,n) = re.subn(r'\s\d+\s*= iseed','   %s       = iseed' % seed,text)
-                open(pjoin(self.me_dir, 'Cards','run_card.dat'),'w').write(t)
         
         self.run_name = main_name
         self.results.def_current(main_name)
@@ -1962,7 +1957,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             os.remove(pjoin(self.me_dir,'error'))
                         
         self.configure_directory()
-        # treat random number
+        # Save original random number
+        self.random_orig = self.random
+        logger.info("Using random number seed offset = %s" % self.random)
+        # Update random number
         self.update_random()
         self.save_random()
         self.update_status('Running Survey', level=None)
@@ -2031,10 +2029,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # initialize / remove lhapdf mode
         self.configure_directory()
 
+        # Update random number
+        self.update_random()
+        self.save_random()
+
         if self.cluster_mode:
             logger.info('Creating Jobs')
         self.update_status('Refine results to %s' % precision, level=None)
-        logger.info("Using random number seed offset = %s" % self.random)
         
         self.total_jobs = 0
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
@@ -2120,8 +2121,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.banner.load_basic(self.me_dir)
         # Add cross-section/event information
         self.banner.add_generation_info(self.results.current['cross'], nb_event)        
-        if not hasattr(self, 'random'): self.random = 0
-        self.banner.change_seed(self.random)
+        if not hasattr(self, 'random_orig'): self.random_orig = 0
+        self.banner.change_seed(self.random_orig)
         if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
@@ -3064,6 +3065,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # set random number
         if self.run_card['iseed'] != '0':
             self.random = int(self.run_card['iseed'])
+            # Reset seed in run_card to 0, to ensure that following runs
+            # will be statistically independent
+            text = open(pjoin(self.me_dir, 'Cards','run_card.dat')).read()
+            (t,n) = re.subn(r'\d+\s*= iseed','0 = iseed',text)
+            open(pjoin(self.me_dir, 'Cards','run_card.dat'),'w').write(t)
         elif os.path.exists(pjoin(self.me_dir,'SubProcesses','randinit')):
             for line in open(pjoin(self.me_dir,'SubProcesses','randinit')):
                 data = line.split('=')
@@ -3246,7 +3252,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def update_random(self):
         """ change random number"""
         
-        self.random += 5
+        self.random += 3
         assert self.random < 31328*30081 # cann't use too big random number
 
     ############################################################################

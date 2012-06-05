@@ -5,9 +5,16 @@ Update notes for MadGraph 5 (in reverse time order)
                       formalism (thanks to Zhen Liu for pointing this out).
                   JA+BF: Updated the NMSSM model to the latest FR version.
                   JA: Fixed minor typo in myamp.f.
+                  JA: Change the random seed treatment to ensure that the original 
+                      seed is stored in the banner (this was broken in v. 1.4.0).
+                      If a non-zero seed is given in the run_card, this seed
+                      is used as starting value for the SubProcesses/randinit file,
+                      while the seed in the run_card is set to 0.
+                      This way, the seed for a multi_run is automatically
+                      updated in the same way as for individual runs.
 
 1.4.6 (16/05/12)  JA: Added cuts on lepton pt for each of the 4 hardest leptons
-                  OM: allow bin/madevent script to be feeded by a single line command:
+                  OM: allow bin/madevent script to be run with a single line command:
 		      example ./bin/madevent multi_run 10 
 		  OM: Adding the 4 higgs interactions in the standard model UFO model
                   JA: Added new restriction card for the sm model with massive

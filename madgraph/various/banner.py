@@ -101,7 +101,7 @@ class Banner(dict):
         """Change the seed value in the banner"""
         #      0       = iseed
         p = re.compile(r'''^\s*\d+\s*=\s*iseed''', re.M)
-        new_seed_str = "     %s       = iseed" % seed
+        new_seed_str = " %s = iseed" % seed
         self['mgruncard'] = p.sub(new_seed_str, self['mgruncard'])
     
     def add_generation_info(self, cross, nb_event):
