@@ -11,6 +11,7 @@
 #
 ################################################################################
 from aloha.aloha_object import *
+import aloha.aloha_lib as aloha_lib
 import cmath
 
 class WrongFermionFlow(Exception):
@@ -28,12 +29,15 @@ def check_flow_validity(expression, nb_fermion):
     assert nb_fermion != 0 and (nb_fermion % 2) == 0
     
     # Need to expand the expression in order to have a simple sum of expression
-    expr = eval(expression)
+    try:
+        expr = eval(expression)
+    except:
+        return
     expr = expr.simplify()
     #expr is now a valid AddVariable object if they are a sum or
     if expr.vartype != 1: # not AddVariable 
         expr = [expr] # put in a list to allow comparison
-    
+
     for term in expr:
         if term.vartype == 0: # Single object
             if not term.spin_ind in [[1,2], [2,1]]:
@@ -45,6 +49,7 @@ def check_flow_validity(expression, nb_fermion):
         elif term.vartype == 2: # product of object
             link, rlink = {}, {}
             for obj in term:
+                obj = aloha_lib.KERNEL.objs[obj]
                 if not obj.spin_ind:
                     continue
                 ind1, ind2 = obj.spin_ind
@@ -79,24 +84,34 @@ def guess_routine_from_name(names):
     
     output =[]
     for name in names:
+        if name.startswith('MP_'):
+           name = name[3:]
+           tags = ['MP_']
+        else: 
+            tags = []
+        
         data = name.split('_')
         if len(data) == 2:
             main, offshell = data
-            multiple = []
+            multiple = []            
         else:
             main, multiple, offshell = data[0], data[1:-1],data[-1]
         
-        # search for tag allow tag [L, C$]
-        allow_tag = ['C1','C2','C3','C4','C5','C6','C7']    
+        # search for tag allow tag [L, L$, C$, MP]
+        allow_tag = ['C1','C2','C3','C4','C5','C6','C7']
+        allow_tag += ['L%s' % i for i in range(1,20)]
+        allow_tag += ['L']
         tags = []
+        
         len_tag = -1
         while len(tags) != len_tag:
             len_tag = len(tags)
             for tag in allow_tag:
-                if main.endswith(tag):
-                    main = main[:-len(tag)]
-                    tags.append(int(tag[1:]))
+                if multiple[-1].endswith(tag):
+                    multiple[-1] = multiple[-1][:-len(tag)]
+                    tags.append(tag)
                     break
+        
         
         # create the correct lorentz
         lorentz = [main]

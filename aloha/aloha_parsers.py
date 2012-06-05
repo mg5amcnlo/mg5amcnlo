@@ -22,19 +22,20 @@ import os
 import re
 import sys
 
-root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
-sys.path.append(os.path.join(root_path, os.path.pardir))
 
-from madgraph import MadGraph5Error
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+sys.path.append(os.path.join(root_path))
+
+from madgraph import MadGraph5Error, MG5DIR
+import aloha_lib
+from aloha_object import *
 import vendor.ply.lex as lex
 import vendor.ply.yacc as yacc
-logger = logging.getLogger('madgraph.ufo_parsers')
+from aloha.aloha_lib import KERNEL
+logger = logging.getLogger('aloha.parsers')
+
 
 # PLY lexer class
-
-class ModelError(MadGraph5Error):
-    """Appropriate Error for a wrong parsing"""
-
 class UFOExpressionParser(object):
     """A base class for parsers for algebraic expressions coming from UFO."""
 
@@ -61,7 +62,7 @@ class UFOExpressionParser(object):
         'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'FUNCTION',
         'VARIABLE', 'NUMBER'
         )
-    literals = "=+-*/(),"
+    literals = "=+-*/(),'"
 
     # Definition of tokens
 
@@ -185,97 +186,50 @@ class UFOExpressionParser(object):
 
     def p_error(self, p):
         if p:
-            raise ModelError("Syntax error at '%s' in '%s'" % (p.value, self.f))
+            raise Exception("Syntax error at '%s' in '%s'" % (p.value, self.f))
         else:
             logger.error("Syntax error at EOF")
         self.parsed_string = "Error"
 
-class UFOExpressionParserFortran(UFOExpressionParser):
-    """A parser for UFO algebraic expressions, outputting
-    Fortran-style code."""
 
-    # The following parser expressions need to be defined for each
-    # output language/framework
+class ALOHAExpressionParser(UFOExpressionParser):
 
-    def p_expression_number(self, p):
-        "expression : NUMBER"
-        p[0] = ('%e' % float(p[1])).replace('e', 'd')
-
-    def p_expression_variable(self, p):
-        "expression : VARIABLE"
-        p[0] = p[1].lower()
-
-    def p_expression_power(self, p):
-        'expression : expression POWER expression'
-        try:
-            p3 = float(p[3].replace('d','e'))
-            # Chebck if exponent is an integer
-            if p3 == int(p3):
-                p3 = str(int(p3))
-                p[0] = p[1] + "**" + p3
-            else:
-                p[0] = p[1] + "**" + p[3]
-        except:
-            p[0] = p[1] + "**" + p[3]
-
-    def p_expression_complex(self, p):
-        "expression : COMPLEX '(' expression ',' expression ')'"
-        p[0] = '(' + p[3] + ',' + p[5] + ')'
-
-    def p_expression_func(self, p):
-        '''expression : CSC group
-                      | SEC group
-                      | ACSC group
-                      | ASEC group
-                      | RE group
-                      | IM group
-                      | SQRT group
-                      | CONJ group'''
-        if p[1] == 'csc': p[0] = '1d0/cos' + p[2]
-        elif p[1] == 'sec': p[0] = '1d0/sin' + p[2]
-        elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
-        elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
-        elif p[1] == 're': p[0] = 'dble' + p[2]
-        elif p[1] == 'im': p[0] = 'dimag' + p[2]
-        elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
-        elif p[1] == 'complexconjugate': p[0] = 'conjg' + p[2]
+    aloha_object = ['P','Gamma','Gamma5','Sigma','Mass','PSlash',
+                    'OverMass2','Width','Scalar','Spinor','Vector',
+                    'Spin2','Spin32','C','Epsilon','Metric','Identity',
+                    'ProjM','ProjP','Coup']
 
     def p_expression_pi(self, p):
         '''expression : PI'''
-        p[0] = 'pi'
+        p[0] = 'M_PI'
 
-class UFOExpressionParserCPP(UFOExpressionParser):
-    """A parser for UFO algebraic expressions, outputting
-    C++-style code."""
-
-    # The following parser expressions need to be defined for each
-    # output language/framework
-
-    def p_expression_number(self, p):
-        "expression : NUMBER"
-        p[0] = p[1]
-        # Check number is an integer, if so add "."
-        if float(p[1]) == int(float(p[1])) and float(p[1]) < 1000:
-            p[0] = str(int(float(p[1]))) + '.'
+    def p_expression_power(self, p):
+        'expression : expression POWER expression'
+        
+        p[0] = ''.join(p[1:])
 
     def p_expression_variable(self, p):
         "expression : VARIABLE"
         p[0] = p[1]
+        
+    def p_expression_variable2(self, p):
+        "expression : '\\'' VARIABLE '\\''"
+        p[0] = '\'%s\'' % p[2]
 
-    def p_expression_power(self, p):
-        'expression : expression POWER expression'
-        p1=p[1]
-        p3=p[3]
-        if p[1][0] == '(' and p[1][-1] == ')':
-            p1 = p[1][1:-1]
-        if p[3][0] == '(' and p[3][-1] == ')':
-            p3 = p[3][1:-1]
-        p[0] = 'pow(' + p1 + ',' + p3 + ')'        
+    def p_expression_expression(self, p):
+        "expression : '\\'' expression '\\''"
+        p[0] = '\'%s\'' % p[2]
 
     def p_expression_complex(self, p):
         "expression : COMPLEX '(' expression ',' expression ')'"
         p[0] = 'std::complex<double>(' + p[3] + ',' + p[5] + ')'
 
+    def p_expression_number(self, p):
+        "expression : NUMBER"
+        p[0] = p[1]
+        if float(p[1]) == int(float(p[1])) and float(p[1]) < 1000:
+            p[0] = str(int(float(p[1])))
+
     def p_expression_func(self, p):
         '''expression : CSC group
                       | SEC group
@@ -285,42 +239,90 @@ class UFOExpressionParserCPP(UFOExpressionParser):
                       | IM group
                       | SQRT group
                       | CONJ group'''
-        if p[1] == 'csc': p[0] = '1./cos' + p[2]
-        elif p[1] == 'sec': p[0] = '1./sin' + p[2]
-        elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
-        elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
-        elif p[1] == 're': p[0] = 'real' + p[2]
-        elif p[1] == 'im': p[0] = 'imag' + p[2]
-        elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
-        elif p[1] == 'complexconjugate': p[0] = 'conj' + p[2]
 
-    def p_expression_pi(self, p):
-        '''expression : PI'''
-        p[0] = 'M_PI'
-           
+        new = aloha_lib.KERNEL.add_function_expression(p[1], eval(p[2])) 
+        p[0] = str(new)
 
+    def p_expression_function1(self, p):
+        "expression : FUNCTION '(' expression ')'"
+        
+        p1 = p[1]
+        if p1 in self.aloha_object:
+            p[0] = p[1]+'('+p[3]+')'
+            return 
+        re_groups = self.re_cmath_function.match(p1)
+        
+        if re_groups:
+            p1 = re_groups.group("name")
+            
+        new = aloha_lib.KERNEL.add_function_expression(p1, eval(p[3]))
+        p[0] = str(new)
+    
+    def p_expression_function2(self, p):
+        "expression : FUNCTION '(' expression ',' expression ')'"
+        
+        if p[1] in self.aloha_object:
+            p[0] = p[1]+'('+p[3]+','+ p[5]+')'
+            return
+        
+        p1 = p[1]
+        re_groups = self.re_cmath_function.match(p1)
+        if re_groups:
+            p1 = re_groups.group("name")
+        new = aloha_lib.KERNEL.add_function_expression(p1, eval(p[3]), eval(p[5]))
+        p[0] = str(new)
+    
+    
+    def p_expression_binop(self, p):
+        '''expression : expression '=' expression
+                      | expression '+' expression
+                      | expression '-' expression
+                      | expression '*' expression
+                      | expression '/' expression'''
+        if p[2] != '/' or p[3].isdigit() or p[3].endswith('.'):
+            p[0] = p[1] + p[2] + p[3]
+        else:
+            new = aloha_lib.KERNEL.add_function_expression('/', eval(p[3]))
+            p[0] = p[1] + ' * ' + str(new)
+        
+    def p_expression_function3(self, p):
+        "expression : FUNCTION '(' expression ',' expression ',' expression ')'"
+        
+        if p[1] in self.aloha_object:
+            p[0] = p[1]+'('+p[3]+','+ p[5]+','+ p[7]+')'
+            return
+        
+        args = [eval(p[2*i+1]) for i in [1,2,3]]
+        new = aloha_lib.KERNEL.add_function_expression(p[1], *args)
+        p[0] = str(new)
+        
+        
+        
+    def p_expression_function4(self, p):
+        "expression : FUNCTION '(' expression ',' expression ',' expression ',' expression ')'"
+        if p[1] in self.aloha_object:
+            p[0] = p[1]+'('+p[3]+','+ p[5]+','+ p[7]+','+ p[9]+')'            
+            return
+        args = [eval(p[2*i+1]) for i in [1,2,3,4]]
+        new = aloha_lib.KERNEL.add_function_expression(p[1], *args)
+        p[0] = str(new)
 
 # Main program, allows to interactively test the parser
 if __name__ == '__main__':
 
-    if len(sys.argv) == 1:
-        print "Please specify a parser: fortran, pythia8, aloha"
-        exit()
-    if sys.argv[1] == "fortran":
-        calc = UFOExpressionParserFortran()
-    elif sys.argv[1] == "c++":
-        calc = UFOExpressionParserCPP()
-    elif sys.argv[1] == "aloha":
-        calc = ALOHAParserCpp()
-    else:
-        print "Please specify a parser: tex, fortran or c++"
-        print "You gave", sys.argv
-        exit()
 
+    calc = ALOHAExpressionParser()
     while 1:
         try:
             s = raw_input('calc > ')
         except EOFError:
             break
         if not s: continue
-        print calc.parse(s)
+        logger.info(calc.parse(s))
+        
+    
+    
+        
+            
+    
+    

@@ -28,8 +28,11 @@ import time
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 from aloha.aloha_object import *
+import aloha
 import aloha.aloha_writers as aloha_writers
 import aloha.aloha_lib as aloha_lib
+import aloha.aloha_object as aloha_object
+import aloha.aloha_parsers as aloha_parsers
 try:
     import madgraph.iolibs.files as files
 except:
@@ -40,6 +43,7 @@ logger = logging.getLogger('ALOHA')
 
 _conjugate_gap = 50
 _spin2_mult = 1000
+
 
 class ALOHAERROR(Exception): pass
 
@@ -58,6 +62,8 @@ class AbstractRoutine(object):
         self.symmetries = []
         self.combined = []
         self.tag = []
+        self.contracted = {}
+        
 
         
     def add_symmetry(self, outgoing):
@@ -72,24 +78,30 @@ class AbstractRoutine(object):
         if lor_list not in self.combined:
             self.combined.append(lor_list)
         
-    def write(self, output_dir, language='Fortran', mode='self', **opt):
+    def write(self, output_dir, language='Fortran', mode='self', combine=True,**opt):
         """ write the content of the object """
         
-        writer = getattr(aloha_writers, 'ALOHAWriterFor%s' % language)(self, output_dir)
+        writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag)
         text = writer.write(mode=mode, **opt)
-        for grouped in self.combined:
-            if isinstance(text, tuple):
-                text = tuple([old.__add__(new)  for old, new in zip(text, 
+        if combine:
+            for grouped in self.combined:
+                if isinstance(text, tuple):
+                    text = tuple([old.__add__(new)  for old, new in zip(text, 
                              writer.write_combined(grouped, mode=mode, **opt))])
-            else:
-                text += writer.write_combined(grouped, mode=mode, **opt)
+                else:
+                    text += writer.write_combined(grouped, mode=mode, **opt)
+                
+        if aloha.mp_precision and 'MP' not in self.tag:
+            self.tag.append('MP')
+            text += self.write(output_dir, language, mode, **opt)
+            
         return text
 
 class AbstractRoutineBuilder(object):
     """ Launch the creation of the Helicity Routine"""
     
-    aloha_lib = None
-    counter = 0
+    prop_lib = {} # Store computation for the propagator
+    counter = 0   # counter for statistic only
     
     class AbstractALOHAError(Exception):
         """ An error class for ALOHA"""
@@ -105,15 +117,19 @@ class AbstractRoutineBuilder(object):
         self.spins = lorentz.spins
         self.name = lorentz.name
         self.conjg = []
+        self.tag = []
         self.outgoing = None
         self.lorentz_expr = lorentz.structure        
         self.routine_kernel = None
         self.spin2_massless = False
+        self.contracted = {}
+        self.fct = {}
         
     
-    def compute_routine(self, mode, factorize=True):
+    def compute_routine(self, mode, tag=[], factorize=True):
         """compute the expression and return it"""
         self.outgoing = mode
+        self.tag = tag
         self.expr = self.compute_aloha_high_kernel(mode, factorize)
         return self.define_simple_output()
     
@@ -150,21 +166,20 @@ class AbstractRoutineBuilder(object):
         old_id = 2 * pair - 1
         new_id = _conjugate_gap + old_id
         
-        if self.routine_kernel is None:
-            self.kernel_tag = set()
+        self.kernel_tag = set()
+        if not self.routine_kernel or isinstance(self.routine_kernel, str):
             self.routine_kernel = eval(self.lorentz_expr)
         
         # We need to compute C Gamma^T C^-1 = C_ab G_cb (-1) C_cd 
         #                  = C_ac G_bc (-1) C_bd = C_ac G_bc C_db
         self.routine_kernel = \
              C(new_id, old_id + 1) * self.routine_kernel * C(new_id + 1, old_id)
+             
+        self.lorentz_expr = '('+self.lorentz_expr+') * C(%s,%s) * C(%s,%s)' % \
+                        (new_id, old_id + 1, new_id + 1, old_id ) 
 
-#        self.name += 'C'
-#        if pair:
-#            self.name += str(pair)
         self.conjg.append(pair)
 
-    
     
     def define_simple_output(self):
         """ define a simple output for this AbstractRoutine """
@@ -172,30 +187,38 @@ class AbstractRoutineBuilder(object):
         infostr = str(self.lorentz_expr)        
         output = AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
                                                                         infostr)
+        output.contracted = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
+                                          for name in aloha_lib.KERNEL.use_tag
+                                          if name.startswith('TMP')])
+        output.fct = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
+                                          for name in aloha_lib.KERNEL.use_tag
+                                          if name.startswith('FCT')])
 
+        output.tag = [t for t in self.tag if not t.startswith('C')]
         output.tag += ['C%s' % pair for pair in self.conjg]
         return output
 
     def change_sign_for_outcoming_fermion(self):
         """change the sign of P for outcoming fermion in order to 
         correct the mismatch convention between HELAS and FR"""
+        #flip_sign = []
+        #for i in range(1,len(self.spins),2):
+        #    if self.spins[i] == 2:
+        #        flip_sign.append(str(i))
         
-        flip_sign = []
-        for i in range(1,len(self.spins),2):
-            if self.spins[i] % 2 == 0:
-                flip_sign.append(str(i))
+        #momentum_pattern = re.compile(r'\bP\(([\+\-\d]+),(%s)\)' % '|'.join(flip_sign))
+        #lorentz_expr = momentum_pattern.sub(r'-P(\1,\2)', self.lorentz_expr)
         
-        if not flip_sign:
-            return self.lorentz_expr
-        momentum_pattern = re.compile(r'\bP\(([\+\-\d]+),(%s)\)' % '|'.join(flip_sign))
-        lorentz_expr = momentum_pattern.sub(r'P(\1,\2, -1)', self.lorentz_expr)
+        lorentz_expr = self.lorentz_expr
+        calc = aloha_parsers.ALOHAExpressionParser()
+        lorentz_expr = calc.parse(lorentz_expr)
         return lorentz_expr
                 
     def compute_aloha_high_kernel(self, mode, factorize=True):
         """compute the abstract routine associate to this mode """
-        
+
         # reset tag for particles
-        aloha_lib.USE_TAG=set()
+        aloha_lib.KERNEL.use_tag=set()
         #multiply by the wave functions
         nb_spinor = 0
         outgoing = self.outgoing
@@ -207,36 +230,37 @@ class AbstractRoutineBuilder(object):
             AbstractRoutineBuilder.counter += 1
             logger.info('aloha creates %s routines' % self.name)
             try:
-                lorentz = self.change_sign_for_outcoming_fermion()       
-                lorentz = eval(lorentz)
-            except NameError:
-                logger.error('unknow type in Lorentz Evaluation')
-                raise ALOHAERROR, 'unknow type in Lorentz Evaluation' 
-            else:
+                lorentz = self.change_sign_for_outcoming_fermion()  
                 self.routine_kernel = lorentz
-                self.kernel_tag = set(aloha_lib.USE_TAG)
+                lorentz = eval(lorentz)
+            except NameError, error:
+                logger.error('unknow type in Lorentz Evaluation:%s'%str(error))
+                raise ALOHAERROR, 'unknow type in Lorentz Evaluation: %s ' % str(error) 
+            else:
+                self.kernel_tag = set(aloha_lib.KERNEL.use_tag)
+        elif isinstance(self.routine_kernel,str):
+            lorentz = eval(self.routine_kernel)
+            aloha_lib.KERNEL.use_tag = set(self.kernel_tag) 
         else:
-            lorentz = self.routine_kernel
-            aloha_lib.USE_TAG = set(self.kernel_tag) 
-            
-
+            lorentz = copy.copy(self.routine_kernel)
+            aloha_lib.KERNEL.use_tag = set(self.kernel_tag) 
+        
         for (i, spin ) in enumerate(self.spins):   
             id = i + 1
-                     
             #Check if this is the outgoing particle
             if id == outgoing:
-                if abs(spin) == 1: 
+                if spin == 1: 
                     lorentz *= complex(0,1)
                 elif spin == 2:
                     # shift and flip the tag if we multiply by C matrices
                     if (id + 1) // 2 in self.conjg:
                         id += _conjugate_gap + id % 2 - (id +1) % 2
-                    if id % 2:
+                    if (id % 2):
                         #propagator outcoming
-                        lorentz *= SpinorPropagator(id, 'I2', outgoing)
+                        lorentz *= SpinorPropagatorout(id, 'I2', outgoing)
                     else:
-                        #propagator incoming
-                        lorentz *= SpinorPropagator('I2', id, outgoing)
+                    #    #propagator incoming
+                        lorentz *= SpinorPropagatorin('I2', id, outgoing)
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)
                 elif spin == 4:
@@ -249,22 +273,21 @@ class AbstractRoutineBuilder(object):
                     if id %2:
                         lorentz *= Spin3halfPropagator(id, 'I2', spin_id,'I3', outgoing)
                     else:
-                        lorentz *= Spin3halfPropagator(id, 'I2', 'I3', spin_id, outgoing)                     
-                    
+                        lorentz *= Spin3halfPropagator('I2', id, 'I3', spin_id, outgoing)                      
                 elif spin == 5 :
-                    lorentz *= 1 # delayed evaluation (fastenize the code)
-                    #if self.spin2_massless:
-                    #    lorentz *= Spin2masslessPropagator(_spin2_mult + id, \
-                    #                         2 * _spin2_mult + id,'I2','I3')
-                    #else:
-                    #    lorentz *= Spin2Propagator(_spin2_mult + id, \
-                    #                         2 * _spin2_mult + id,'I2','I3', id)
+                    #lorentz *= 1 # delayed evaluation (fastenize the code)
+                    if self.spin2_massless:
+                        lorentz *= Spin2masslessPropagator(_spin2_mult + id, \
+                                             2 * _spin2_mult + id,'I2','I3')
+                    else:
+                        lorentz *= Spin2Propagator(_spin2_mult + id, \
+                                             2 * _spin2_mult + id,'I2','I3', id)
                 else:
                     raise self.AbstractALOHAError(
                                 'The spin value %s is not supported yet' % spin)
             else:
                 # This is an incoming particle
-                if abs(spin) == 1:
+                if spin == 1:
                     lorentz *= Scalar(id)
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices
@@ -290,32 +313,65 @@ class AbstractRoutineBuilder(object):
                                 'The spin value %s is not supported yet' % spin)                    
 
         # If no particle OffShell
-        if outgoing:
-            lorentz /= DenominatorPropagator(outgoing)
-            #lorentz.tag.add('OM%s' % self.outgoing )  
-            #lorentz.tag.add('P%s' % self.outgoing)  
-        else:
+        if not outgoing:
             lorentz *= complex(0,-1)
-
-          
-        lorentz = lorentz.simplify()
-
-        lorentz = lorentz.expand()
-        if outgoing and self.spins[outgoing-1] == 5:
-            if not self.aloha_lib:
-                AbstractRoutineBuilder.load_library()
-            if self.spin2_massless:
-                lorentz *= self.aloha_lib[('Spin2PropMassless', id)]
-            else:
-                lorentz *= self.aloha_lib[('Spin2Prop', id)]
-            aloha_lib.USE_TAG.add('OM%d' % id)
-            aloha_lib.USE_TAG.add('P%d' % id)       
+            # Propagator are taken care separately
         
         lorentz = lorentz.simplify()
+        
+        # Modify the expression in case of loop-pozzorini
+        if any((tag.startswith('L') for tag in self.tag if len(tag)>1)):
+            return self.compute_loop_coefficient(lorentz, outgoing)
+            
+        lorentz = lorentz.expand()
+        lorentz = lorentz.simplify()
+        
         if factorize:
             lorentz = lorentz.factorize()
-        lorentz.tag = set(aloha_lib.USE_TAG)
-        return lorentz         
+            
+        lorentz.tag = set(aloha_lib.KERNEL.use_tag)
+        return lorentz     
+    
+    def compute_loop_coefficient(self, lorentz, outgoing):
+        
+                    
+        l_in = [int(tag[1:]) for tag in self.tag][0]
+        
+        # modify the expression for the momenta
+        # P_i -> P_i + P_L and P_o -> -P_o - P_L
+        Pdep = [aloha_lib.KERNEL.get(P) for P in aloha_lib.KERNEL.use_tag 
+                                                      if P.startswith('_P')]
+        
+        Pdep = [P for P in Pdep if P.particle in [outgoing, l_in]]
+        for P in Pdep:
+            if P.particle == l_in:
+                sign = 1
+            else:
+                sign = -1
+            id = P.id
+            lorentz_ind = P.lorentz_ind[0]
+            P_Lid = aloha_object.P(lorentz_ind, 'L')
+            P_obj = aloha_object.P(lorentz_ind, P.particle)
+            new_expr = sign*(P_Lid + P_obj)
+            lorentz = lorentz.replace(id, new_expr)
+            
+        # Compute the variable from which we need to split the expression
+        var_veto =  ['PL_0', 'PL_1', 'PL_2', 'PL_3']
+        spin = aloha_writers.WriteALOHA.type_to_variable[self.spins[l_in-1]]
+        size = aloha_writers.WriteALOHA.type_to_size[spin]-1
+        var_veto += ['%s%s_%s' % (spin,l_in,i) for i in range(1,size)]
+        # compute their unique identifiant
+        veto_ids = aloha_lib.KERNEL.get_ids(var_veto)
+        
+        lorentz = lorentz.expand(veto = veto_ids)
+        coeff_expr = lorentz.split(veto_ids)
+        
+        for key, expr in coeff_expr.items():
+            expr = expr.simplify()
+            coeff_expr[key] = expr.factorize()
+        coeff_expr.tag = set(aloha_lib.KERNEL.use_tag)
+        
+        return coeff_expr
                         
     def define_lorentz_expr(self, lorentz_expr):
         """Define the expression"""
@@ -349,22 +405,52 @@ class AbstractRoutineBuilder(object):
         return name
             
     @classmethod
-    def load_library(cls):
-    # load the library
-        try:
-            fsock = open(os.path.join(aloha_path, 'ALOHALib.pkl'), 'r')
-        except IOError:
-            cls.aloha_lib = create_library()
+    def load_library(cls, tag):
+        # load the library
+        if tag in cls.prop_lib:
+            return
         else:
-            #cls.aloha_lib = create_library()
-            cls.aloha_lib = cPickle.load(fsock)
+            cls.prop_lib = create_prop_library(tag, cls.aloha_lib)
         
+
+class CombineRoutineBuilder(AbstractRoutineBuilder):
+    """A special builder for combine routine if needed to write those
+        explicitely.
+    """
+    def __init__(self, l_lorentz):
+        """ initialize the run
+        l_lorentz: list  of lorentz information analyzed (UFO format)
+        language: define in which language we write the output
+        modes: 0 for  all incoming particles 
+              >0 defines the outgoing part (start to count at 1)
+        """
+
+        lorentz = l_lorentz[0]
+        self.spins = lorentz.spins
+        l_name = [l.name for l in l_lorentz]
+        self.name = aloha_writers.combine_name(l_name[0], l_name[1:], None)
+        self.conjg = []
+        self.tag = []
+        self.outgoing = None
+        self.lorentz_expr = []
+        for i, lor in enumerate(l_lorentz):
+            self.lorentz_expr.append( 'Coup(%s) * (%s)' % (i+1, lor.structure))
+        self.lorentz_expr = ' + '.join(self.lorentz_expr)
+        self.routine_kernel = None
+        self.spin2_massless = False
+        self.contracted = {}
+        self.fct = {}
 
 class AbstractALOHAModel(dict):
     """ A class to build and store the full set of Abstract ALOHA Routine"""
 
-    def __init__(self, model_name, write_dir=None, format='Fortran'):
+
+    def __init__(self, model_name, write_dir=None, format='Fortran', 
+                 explicit_combine=False):
         """ load the UFO model and init the dictionary """
+        
+        # Option
+        self.explicit_combine = explicit_combine
         
         # Extract the model name if combined with restriction
         model_name_pattern = re.compile("^(?P<name>.+)-(?P<rest>[\w\d_]+)$")
@@ -539,19 +625,33 @@ class AbstractALOHAModel(dict):
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
         self.look_for_symmetries()
-        
         # reorganize the data (in order to use optimization for a given lorentz
         #structure
         request = {}
         for list_l_name, tag, outgoing in data:
+            #allow tag to have integer for retro-compatibility
+            conjugate = [i for i in tag if isinstance(i, int)]
+            tag =  [i for i in tag if isinstance(i, str)]
+            tag = tag + ['C%s'%i for i in conjugate] 
+            #
+            
+            conjugate = tuple([int(c[1:]) for c in tag if c.startswith('C')])
+            loop = any((t.startswith('L') for t in tag))
+            if loop:
+                aloha.loop_mode = True
+                self.explicit_combine = True
+                
+            
+                
+                       
             for l_name in list_l_name:
                 try:
-                    request[l_name][tag].append(outgoing)
+                    request[l_name][conjugate].append((outgoing,tag))
                 except:
                     try:
-                        request[l_name][tag] = [outgoing]
+                        request[l_name][conjugate] = [(outgoing,tag)]
                     except:
-                        request[l_name] = {tag: [outgoing]}
+                        request[l_name] = {conjugate: [(outgoing,tag)]}
                         
         # Loop on the structure to build exactly what is request
         for l_name in request:
@@ -568,7 +668,11 @@ class AbstractALOHAModel(dict):
             
             for conjg in request[l_name]:
                 #ensure that routines are in rising order (for symetries)
-                routines = sorted(request[l_name][conjg])
+                def sorting(a,b):
+                    if a[0] < b[0]: return -1
+                    else: return 1
+                routines = request[l_name][conjg]
+                routines.sort(sorting)
                 if not conjg:
                     # No need to conjugate -> compute directly
                     self.compute_aloha(builder, routines=routines)
@@ -580,14 +684,50 @@ class AbstractALOHAModel(dict):
                                         routines=routines)
         
         # Build mutiple lorentz call
-        for list_l_name, conjugate, outgoing in data:
-            if len(list_l_name) >1:
+        for list_l_name, tag, outgoing in data:
+            if len(list_l_name) ==1:
+                continue
+            #allow tag to have integer for retrocompatibility
+            conjugate = [i for i in tag if isinstance(i, int)]
+            tag =  [i for i in tag if isinstance(i, str)]
+            tag = tag + ['C%s'%i for i in conjugate] 
+            
+            if not self.explicit_combine:
                 lorentzname = list_l_name[0]
-                for c in conjugate:
-                    lorentzname += 'C%s' % c
+                lorentzname += ''.join(tag)
                 self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
+            else:
+                l_lorentz = []
+                for l_name in list_l_name: 
+                    l_lorentz.append(eval('self.model.lorentz.%s' % l_name))
+                builder = CombineRoutineBuilder(l_lorentz)
+                # add information for spin2mass
+                if 5 in l_lorentz[0].spins and self.massless_spin2 is not None:
+                    builder.spin2_massless = self.massless_spin2 
+            
+                for conjg in request[list_l_name[0]]:
+                    #ensure that routines are in rising order (for symetries)
+                    def sorting(a,b):
+                        if a[0] < b[0]: return -1
+                        else: return 1
+                    routines = request[list_l_name[0]][conjg]
+                    routines.sort(sorting)
+                    if not conjg:
+                        # No need to conjugate -> compute directly
+                        self.compute_aloha(builder, routines=routines)
+                    else:
+                        # Define the high level conjugate routine
+                        conjg_builder = builder.define_conjugate_builder(conjg)
+                        # Compute routines
+                        self.compute_aloha(conjg_builder, symmetry=lorentz.name,
+                                        routines=routines)
+
+                
+                      
+  
+                
                         
-    def compute_aloha(self, builder, symmetry=None, routines=None):
+    def compute_aloha(self, builder, symmetry=None, routines=None, tag=[]):
         """ define all the AbstractRoutine linked to a given lorentz structure
         symmetry authorizes to use the symmetry of anoter lorentz structure.
         routines to define only a subset of the routines."""
@@ -596,17 +736,18 @@ class AbstractALOHAModel(dict):
         if not symmetry:
             symmetry = name
         if not routines:
-            routines = range(len(builder.spins) + 1)
+            tag = ['C%s' % i for i in builder.conjg]
+            routines = [ tuple([i,tag]) for i in range(len(builder.spins) + 1 )]
 
         # Create the routines
-        for outgoing in routines:
+        for outgoing, tag in routines:
             symmetric = self.has_symmetries(symmetry, outgoing, valid_output=routines)
+            realname = name + ''.join(tag)
             if symmetric:
-                self.get(name, symmetric).add_symmetry(outgoing)
+                self.get(realname, symmetric).add_symmetry(outgoing)
             else:
-                wavefunction = builder.compute_routine(outgoing)
+                wavefunction = builder.compute_routine(outgoing, tag)
                 #Store the information
-                realname = name + ''.join(wavefunction.tag)
                 self.set(realname, outgoing, wavefunction)
             
 
@@ -619,11 +760,11 @@ class AbstractALOHAModel(dict):
 
         name = builder.name
         if not routines:
-            routines = range(len(builder.spins) + 1 )         
+            routines = [ tuple([i,[]]) for i in range(len(builder.spins) + 1 )]         
         
-        for outgoing in routines:
+        for outgoing, tag in routines:
             builder.routine_kernel = None
-            wavefunction = builder.compute_routine(outgoing)
+            wavefunction = builder.compute_routine(outgoing, tag)
             self.set(name, outgoing, wavefunction)
 
 
@@ -826,7 +967,7 @@ def write_aloha_file_inc(aloha_dir,file_ext, comp_ext):
 
 
             
-def create_library():
+def create_prop_library(tag, lib={}):
     
     def create(obj):
         """ """
@@ -836,29 +977,19 @@ def create_library():
         return obj        
     
     # avoid to add tag in global
-    old_tag = set(aloha_lib.USE_TAG)
-    
-    lib = {} # key: (name, part_nb, special) -> object
-    for i in range(1, 10):
-        logger.info('step %s/9' % i)
-        #lib[('Scalar', i)] = create( Scalar(i) )
-        #lib[('ScalarProp', i)] = complex(0,1)
-        #lib[('Denom', i )] = create( DenominatorPropagator(i) )
-        #lib[('Spinor', i )] = create( Spinor(i, i) )
-        #lib[('SpinorProp', i, 0)] = create( SpinorPropagator(i, 'I2', i) )
-        #lib[('SpinorProp', i, 1)] = create( SpinorPropagator('I2', i, i) )
-        #lib[('Vector', i)] = create( Vector(i+1, i+1) )
-        #lib[('VectorProp', i)] = create( VectorPropagator(i,'I2', i) )
-        #lib[('Spin2', i )] = create( Spin2(10*i+1, 10*i+2, i) )
+    old_tag = set(aloha_lib.KERNEL.use_tag)
+    print 'create lib',tag
+    name, i = tag
+    if name == "Spin2Prop":
         lib[('Spin2Prop',i)] = create( Spin2Propagator(_spin2_mult + i, \
                                              2 * _spin2_mult + i,'I2','I3', i) )
+    elif name == "Spin2PropMassless":
         lib[('Spin2PropMassless',i)] = create( Spin2masslessPropagator(
                              _spin2_mult + i, 2 * _spin2_mult + i,'I2','I3'))
-    logger.info('writing Spin2 lib')         
-    fsock = open(os.path.join(aloha_path, 'ALOHALib.pkl'),'wb')
-    cPickle.dump(lib, fsock, -1)
-    aloha_lib.USE_TAG = old_tag
+    
+    aloha_lib.KERNEL.use_tag = old_tag
     return lib
+
 
 if '__main__' == __name__:       
     logging.basicConfig(level=0)

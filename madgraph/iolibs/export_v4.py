@@ -126,7 +126,7 @@ class ProcessExporterFortran(object):
             
         # add the makefile in Source directory 
         filename = os.path.join(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FortranWriter(filename))
+        self.write_source_makefile(writers.FileWriter(filename))
             
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
@@ -828,7 +828,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     os.path.join(self.dir_path, 'Source'))        
         # add the makefile 
         filename = os.path.join(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FortranWriter(filename))            
+        self.write_source_makefile(writers.FileWriter(filename))            
         
     #===========================================================================
     # export model files
@@ -1072,7 +1072,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.model_name = modelname
         # Add the combine_events.f 
         filename = os.path.join(self.dir_path,'Source','combine_events.f')
-        self.write_combine_events(writers.FortranWriter(filename))
+        self.write_combine_events(writers.FortranWriter(filename)) # already formatted
         # Add the symmetry.f 
         filename = os.path.join(self.dir_path,'SubProcesses','symmetry.f')
         self.write_symmetry(writers.FortranWriter(filename))
@@ -1223,7 +1223,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                            s_and_t_channels)
 
         filename = 'dname.mg'
-        self.write_dname_file(writers.FortranWriter(filename),
+        self.write_dname_file(writers.FileWriter(filename),
                          "P"+matrix_element.get('processes')[0].shell_string())
 
         filename = 'iproc.dat'
@@ -1975,7 +1975,6 @@ c           This is dummy particle used in multiparticle vertices
         else:
             card = 'param_card.dat' 
         text = open(path).read() % {'param_card_name':card} 
-
         writer.write(text)
         
         return True
@@ -2347,7 +2346,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         path = os.path.join(self.dir_path, 'SubProcesses')
 
         os.chdir(path)
-
         pathdir = os.getcwd()
 
         # Create the directory PN in the specified path
