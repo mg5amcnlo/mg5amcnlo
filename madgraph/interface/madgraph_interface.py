@@ -24,6 +24,7 @@ import pydoc
 import re
 import subprocess
 import sys
+import shutil
 import traceback
 import time
 
@@ -71,6 +72,9 @@ import madgraph.various.cluster as cluster
 
 import models as ufomodels
 import models.import_ufo as import_ufo
+
+import aloha.aloha_fct as aloha_fct
+import aloha.create_aloha as create_aloha
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
@@ -316,6 +320,11 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("     the processes using Pythia 8. The files are written in")
         logger.info("     the Pythia 8 directory (default).")
         logger.info("     NOTE: The Pythia 8 directory is set in the ./input/mg5_configuration.txt")
+        logger.info("   - If mode is aloha: Special syntax output:")
+        logger.info("     syntax: aloha [ROUTINE] [--options]" )
+        logger.info("     valid options for aloha output are:")
+        logger.info("      --format=Fortran|Python|Cpp : defining the output language")
+        logger.info("      --output= : defining output directory")
         logger.info("   path: The path of the process directory.")
         logger.info("     If you put '.' as path, your pwd will be used.")
         logger.info("     If you put 'auto', an automatic directory PROC_XX_n will be created.")
@@ -416,6 +425,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("      (default unitary) choose the gauge.")
         logger.info("   complex_mass_scheme True|False")        
         logger.info("      (default False) Set complex mass scheme.")
+        logger.info("   timeout VALUE")
+        logger.info("      (default 20) Seconds allowed to answer questions.")
+        logger.info("      Note that pressing tab always stops the timer.")
 
 #===============================================================================
 # CheckValidForCmd
@@ -818,6 +830,10 @@ This will take effect only in a NEW terminal
         if args[0] in ['fks_mode']:
             if args[1] not in ['born', 'real']:
                 raise self.InvalidCmd('fks_mode needs argument real or born')       
+        
+        if args[0] in ['timeout']:
+            if not args[1].isdigit():
+                raise self.InvalidCmd('timeout values should be a integer')   
 
         if args[0] in ['loop_optimized_output']:
             if args[1] not in ['True', 'False']:
@@ -874,10 +890,6 @@ This will take effect only in a NEW terminal
         else:
             self._export_format = 'madevent'
 
-        if not self._curr_amps:
-            text = 'No processes generated. Please generate a process first.'
-            raise self.InvalidCmd(text)
-
         if not self._curr_model:
             text = 'No model found. Please import a model first and then retry.'
             raise self.InvalidCmd(text)
@@ -891,9 +903,25 @@ This will take effect only in a NEW terminal
             logger.warning(text)
             raise self.InvalidCmd('')
 
+        if self._export_format == 'aloha':
+            return
+
+
+        if not self._curr_amps:
+            text = 'No processes generated. Please generate a process first.'
+            raise self.InvalidCmd(text)
+
+
+
+
+
         if args and args[0][0] != '-':
             # This is a path
             path = args.pop(0)
+            forbiden_chars = ['>','<',';','&']
+            for char in forbiden_chars:
+                if char in path:
+                    raise self.invalidCmd('%s is not allowed in the output path' % char)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
                      ['madevent', 'standalone', 'standalone_cpp']:
@@ -1161,8 +1189,7 @@ class CompleteForCmd(cmd.CompleteCmd):
 
         # Directory continuation
         if args[-1].endswith(os.path.sep):
-            return self.path_completion(text,
-                                        pjoin('.',*[a for a in args \
+            return self.path_completion(text, pjoin(*[a for a in args \
                                                     if a.endswith(os.path.sep)]))
         # autocompletion for particles/couplings
         model_comp = self.model_completion(text, ' '.join(args[2:]))
@@ -1194,7 +1221,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text, self._display_opts)
 
         if len(args) == 2 and args[1] == 'checks':
-            return self.list_completion(text, 'failed')
+            return self.list_completion(text, ['failed'])
 
         if len(args) == 2 and args[1] == 'particles':
             return self.model_completion(text, line[begidx:])
@@ -1207,7 +1234,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text,
-                                        pjoin('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        pjoin(*[a for a in args if a.endswith(os.path.sep)]),
                                         only_dirs = True)
         # Format
         if len(args) == 1:
@@ -1227,7 +1254,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text,
-                                        pjoin('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        pjoin(*[a for a in args if a.endswith(os.path.sep)]),
                                         only_dirs = True)
         # Format
         if len(args) == 1:
@@ -1268,7 +1295,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text,
-                                        pjoin('.',*[a for a in args if \
+                                        pjoin(*[a for a in args if \
                                                       a.endswith(os.path.sep)]))
 
         # Filename if directory is not given
@@ -1287,22 +1314,23 @@ class CompleteForCmd(cmd.CompleteCmd):
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text,
-                                        pjoin('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        pjoin(*[a for a in args if a.endswith(os.path.sep)]),
                                         only_dirs = True)
 
         # Filename if directory is not given
         if len(args) == 2:
             return self.path_completion(text)
-        
+
+    @cmd.debug()    
     def complete_open(self, text, line, begidx, endidx): 
         """ complete the open command """
-
+        
         args = self.split_arg(line[0:begidx])
         
         # Directory continuation
         if os.path.sep in args[-1] + text:
             return self.path_completion(text,
-                                    pjoin('.',*[a for a in args if \
+                                    pjoin(*[a for a in args if \
                                                       a.endswith(os.path.sep)]))
 
         possibility = []
@@ -1325,7 +1353,8 @@ class CompleteForCmd(cmd.CompleteCmd):
             possibility.append('ME5_debug')            
 
         return self.list_completion(text, possibility)
-       
+    
+    @cmd.debug()
     def complete_output(self, text, line, begidx, endidx,
                         possible_options = ['f', 'noclean', 'nojpeg'],
                         possible_options_full = ['-f', '-noclean', '-nojpeg']):
@@ -1336,15 +1365,20 @@ class CompleteForCmd(cmd.CompleteCmd):
         forbidden_names = ['MadGraphII', 'Template', 'pythia-pgs', 'CVS',
                             'Calculators', 'MadAnalysis', 'SimpleAnalysis',
                             'mg5', 'DECAY', 'EventConverter', 'Models',
-                            'ExRootAnalysis', 'HELAS', 'Transfer_Fct']
+                            'ExRootAnalysis', 'HELAS', 'Transfer_Fct', 'aloha']
         
         #name of the run =>proposes old run name
         args = self.split_arg(line[0:begidx])
         if len(args) >= 1: 
+            if len(args) > 1 and args[1] == 'aloha':
+                try:
+                    return self.aloha_complete_output(text, line, begidx, endidx)
+                except Exception, error:
+                    print error
             # Directory continuation
             if args[-1].endswith(os.path.sep):
                 return [name for name in self.path_completion(text,
-                        pjoin('.',*[a for a in args if a.endswith(os.path.sep)]),
+                        pjoin(*[a for a in args if a.endswith(os.path.sep)]),
                         only_dirs = True) if name not in forbidden_names]
             # options
             if args[-1][0] == '-' or len(args) > 1 and args[-2] == '-':
@@ -1353,11 +1387,8 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.list_completion(text, possible_options_full)
             # Formats
             if len(args) == 1:
-                if any([p.startswith(text) for p in possible_format]):
-                    return [name for name in \
-                            self.list_completion(text, possible_format) + \
-                            ['.' + os.path.sep, '..' + os.path.sep, 'auto'] \
-                            if name.startswith(text)]
+                format = possible_format + ['.' + os.path.sep, '..' + os.path.sep, 'auto']
+                return self.list_completion(text, format)
 
             # directory names
             content = [name for name in self.path_completion(text, '.', only_dirs = True) \
@@ -1365,6 +1396,46 @@ class CompleteForCmd(cmd.CompleteCmd):
             content += ['auto']
             return self.list_completion(text, content)
 
+    def aloha_complete_output(self, text, line, begidx, endidx):
+        "Complete the output aloha command"
+        args = self.split_arg(line[0:begidx])
+        completion_categories = {}
+        
+        forbidden_names = ['MadGraphII', 'Template', 'pythia-pgs', 'CVS',
+                            'Calculators', 'MadAnalysis', 'SimpleAnalysis',
+                            'mg5', 'DECAY', 'EventConverter', 'Models',
+                            'ExRootAnalysis', 'Transfer_Fct', 'aloha',
+                            'apidoc','vendor']
+        
+        
+        # options
+        options = ['--format=Fortran', '--format=Python','--format=CPP','--output=']
+        options = self.list_completion(text, options)
+        if options:
+            completion_categories['options'] = options
+        
+        if args[-1] == '--output=' or args[-1].endswith(os.path.sep):
+            # Directory continuation
+            completion_categories['path'] =  [name for name in self.path_completion(text,
+                        pjoin(*[a for a in args if a.endswith(os.path.sep)]),
+                        only_dirs = True) if name not in forbidden_names]
+
+        else:
+            ufomodel = ufomodels.load_model(self._curr_model.get('name'))
+            wf_opt = []
+            amp_opt = []
+            opt_conjg = []
+            for lor in ufomodel.all_lorentz:
+                amp_opt.append('%s_0' % lor.name)
+                for i in range(len(lor.spins)):
+                    wf_opt.append('%s_%i' % (lor.name,i+1))
+                    if i % 2 == 0 and lor.spins[i] == 2:
+                        opt_conjg.append('%sC%i_%i' % (lor.name,i //2 +1,i+1))
+            completion_categories['amplitude routines'] = self.list_completion(text, amp_opt) 
+            completion_categories['Wavefunctions routines'] = self.list_completion(text, wf_opt)        
+            completion_categories['conjugate_routines'] = self.list_completion(text, opt_conjg)
+            
+        return self.deal_multiple_categories(completion_categories)
 
     def complete_set(self, text, line, begidx, endidx):
         "Complete the set command"
@@ -1408,7 +1479,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.list_completion(text, first_set + second_set)
         elif len(args) >2 and args[-1].endswith(os.path.sep):
                 return self.path_completion(text,
-                        pjoin('.',*[a for a in args if a.endswith(os.path.sep)]),
+                        pjoin(*[a for a in args if a.endswith(os.path.sep)]),
                         only_dirs = True)
         
     def complete_import(self, text, line, begidx, endidx):
@@ -1500,7 +1571,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                                       or os.path.exists(pjoin(MG5DIR,'models',p,'particles.dat')) \
                                       or os.path.exists(pjoin(self._mgme_dir,'Models',p,'particles.dat')) 
             else:
-                cur_path = pjoin('.',*[a for a in args \
+                cur_path = pjoin(*[a for a in args \
                                                    if a.endswith(os.path.sep)])
                 all_path =  self.path_completion(text, cur_path)
                 completion_categories['model name'] = all_path
@@ -1522,7 +1593,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                         all_name += self.find_restrict_card(model_name, 
                                             base_dir=pjoin(MG5DIR,'models'))
                 if mode == 'all':
-                    cur_path = pjoin('.',*[a for a in args \
+                    cur_path = pjoin(*[a for a in args \
                                                         if a.endswith(os.path.sep)])
                     all_path =  self.path_completion(text, cur_path)
                     completion_categories['model name'] = all_path + all_name 
@@ -1593,7 +1664,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     """The command line processor of MadGraph"""    
 
     writing_dir = '.'
-    timeout = 0 # time authorize to answer question [0 is no time limit]
   
     # Options and formats available
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
@@ -1607,7 +1677,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
-    _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8']
+    _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
                     'stdout_level',
@@ -1902,7 +1972,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 # check if a particle is asked more than once
                 if len(request_part) > len(set(request_part)):
                     for p in request_part:
-                        print p, request_part.count(p),present_part.count(p)
                         if request_part.count(p) > present_part.count(p):
                             continue
                         
@@ -2955,11 +3024,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Load that path
         logger.info('Downloading %s' % path[args[0]])
         if sys.platform == "darwin":
-            subprocess.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
+            misc.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
         else:
-            subprocess.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
+            misc.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
         # Untar the file
-        returncode = subprocess.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR, 
+        returncode = misc.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR, 
                                      stdout=open(os.devnull, 'w'))
         if returncode:
             raise MadGraph5Error, 'Fail to download correctly the File. Stop'
@@ -2985,7 +3054,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Compile the file
         # Check for F77 compiler
         if 'FC' not in os.environ or not os.environ['FC']:
-            if misc.which('gfortran'):
+            if self.options['fortran_compiler']:
+                compiler = self.options['fortran_compiler']
+            elif misc.which('gfortran'):
                  compiler = 'gfortran'
             elif misc.which('g77'):
                 compiler = 'g77'
@@ -2995,16 +3066,24 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
                 text = open(path).read()
                 text = text.replace('FC=g77','FC=gfortran')
-                open(path, 'w').writelines(text)            
-        
-        if logger.level <= logging.INFO: 
-            subprocess.call(['make', 'clean'], )
-            status = subprocess.call(['make'], cwd = os.path.join(MG5DIR, name))
+                open(path, 'w').writelines(text)    
+            elif compiler == 'gfortran' and args[0] == 'MadAnalysis':
+                path = os.path.join(MG5DIR, 'MadAnalysis', 'makefile')
+                text = open(path).read()
+                text = text.replace('FC=g77','FC=gfortran')
+                open(path, 'w').writelines(text)
+                            
+        if logger.level <= logging.INFO:
+            devnull = open(os.devnull,'w') 
+            misc.call(['make', 'clean'], stdout=devnull, stderr=-2)
+            status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
             misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
             status = misc.compile(mode='', cwd = os.path.join(MG5DIR, name))
         if not status:
             logger.info('compilation succeeded')
+        else:
+            logger.warning('Error detected during the compilation. Please check the compilation error and run make manually.')
 
 
         # Special treatment for TD program (require by MadAnalysis)
@@ -3019,15 +3098,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if sys.platform == "darwin":
                 logger.info('Downloading TD for Mac')
                 target = 'http://theory.fnal.gov/people/parke/TD/td_mac_intel.tar.gz'
-                subprocess.call(['curl', target, '-otd.tgz'], 
+                misc.call(['curl', target, '-otd.tgz'], 
                                                   cwd=pjoin(MG5DIR,'td'))      
-                subprocess.call(['tar', '-xzpvf', 'td.tgz'], 
+                misc.call(['tar', '-xzpvf', 'td.tgz'], 
                                                   cwd=pjoin(MG5DIR,'td'))
                 files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
             else:
                 logger.info('Downloading TD for Linux 32 bit')
                 target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
-                subprocess.call(['wget', target], cwd=pjoin(MG5DIR,'td'))      
+                misc.call(['wget', target], cwd=pjoin(MG5DIR,'td'))      
                 os.chmod(pjoin(MG5DIR,'td','td'), 0775)
                 if sys.maxsize > 2**32:
                     logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer
@@ -3040,6 +3119,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             ./input/mg5_configuration.txt. assign to default if not define """
 
         self.options = {'pythia8_path': './pythia8',
+                              'timeout': 20,
                               'web_browser':None,
                               'eps_viewer':None,
                               'text_editor':None,
@@ -3169,8 +3249,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # args is now MODE PATH
         
         if args[0].startswith('standalone'):
-            ext_program = launch_ext.SALauncher(self, args[1], self.timeout,
-                                                **options)
+            ext_program = launch_ext.SALauncher(self, args[1], **options)
         elif args[0] == 'madevent':
             if options['interactive']:
                 if hasattr(self, 'do_shell'):
@@ -3195,23 +3274,17 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 generate_info = self._generate_info
             
             if len(generate_info.split('>')[0].strip().split())>1:
-                ext_program = launch_ext.MELauncher(args[1], self.timeout, self,
-                                pythia=self.options['pythia-pgs_path'],
-                                delphes=self.options['delphes_path'],
+                ext_program = launch_ext.MELauncher(args[1], self,
                                 shell = hasattr(self, 'do_shell'),
                                 **options)
             else:
                 # This is a width computation
-                ext_program = launch_ext.MELauncher(args[1], self.timeout, self, 
-                                unit='GeV',
-                                pythia=self.options['pythia-pgs_path'],
-                                delphes=self.options['delphes_path'],
+                ext_program = launch_ext.MELauncher(args[1], self, unit='GeV',
                                 shell = hasattr(self, 'do_shell'),
                                 **options)
 
         elif args[0] == 'pythia8':
-            ext_program = launch_ext.Pythia8Launcher( args[1], self.timeout, self,
-                                                **options)
+            ext_program = launch_ext.Pythia8Launcher( args[1], self, **options)
         else:
             os.chdir(start_cwd) #ensure to go to the initial path
             raise self.InvalidCmd , '%s cannot be run from MG5 interface' % args[0]
@@ -3436,6 +3509,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.options['fortran_compiler'] = args[1]
             else:
                 self.options['fortran_compiler'] = None
+        
         elif args[0] == 'fks_mode':
             if args[1] != 'None':
                 if log:
@@ -3451,6 +3525,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             aloha.quad_precision = eval(args[1])
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             self.options[args[0]] = eval(args[1])
+        
+        elif args[0] == 'timeout':
+                self.options[args[0]] = int(args[1]) 
+        
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -3487,16 +3565,54 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             main_file_name = args[args.index('-name') + 1]
         except:
             pass
-            
+        
+        ################
+        # ALOHA OUTPUT #
+        ################
+        if self._export_format == 'aloha':
+            # catch format
+            format = [d[9:] for d in args if d.startswith('--format=')]
+            if not format:
+                format = 'Fortran'
+            else:
+                format = format[-1]
+            # catch output dir
+            output = [d for d in args if d.startswith('--output=')]
+            if not output:
+                output = import_ufo.find_ufo_path(self._curr_model['name'])
+                output = pjoin(output, format)
+                if not os.path.isdir(output):
+                    os.mkdir(output)
+            else:
+                output = output[-1]
+                if not os.path.isdir(output):
+                    raise self.InvalidCmd('%s is not a valid directory' % output)
+            logger.info('creating routines in directory %s ' % output)
+            # build the calling list for aloha
+            names = [d for d in args if not d.startswith('-')]
+            wanted_lorentz = aloha_fct.guess_routine_from_name(names)
+            # Create and write ALOHA Routine
+            aloha_model = create_aloha.AbstractALOHAModel(self._curr_model.get('name'))
+            if wanted_lorentz:
+                aloha_model.compute_subset(wanted_lorentz)
+            else:
+                aloha_model.compute_all(save=False)
+            aloha_model.write(output, format)
+            return
+        
+        #################
+        ## Other Output #
+        #################
         if not force and not noclean and os.path.isdir(self._export_dir)\
                and self._export_format in ['madevent', 'standalone']:
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
-            logger.info('If you continue this directory will be cleaned')
-            answer = self.ask('Do you want to continue?', 'y', ['y','n'], 
-                                                           timeout=self.timeout)
+            logger.info('If you continue this directory will be deleted and replaced.')
+            answer = self.ask('Do you want to continue?', 'y', ['y','n'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
+            else:
+                shutil.rmtree(self._export_dir)
 
         #check if we need to group processes
         group_subprocesses = False
@@ -3804,7 +3920,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         elif self._export_format == 'madevent':          
             # Create configuration file [path to executable] for madevent
             filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
-            self.do_save('options %s' % filename, check=False)
+            self.do_save('options %s' % filename.replace(' ', '\ '), check=False)
 
         if self._export_format in ['madevent', 'standalone']:
             

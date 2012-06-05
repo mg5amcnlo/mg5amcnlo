@@ -258,7 +258,13 @@ class SubProcessGroup(base_objects.PhysicsObject):
     def get_num_configs(self):
         """Get number of configs for this group"""
 
-        return len(self.get('mapping_diagrams'))
+        model = self.get('matrix_elements')[0].get('processes')[0].\
+                get('model')
+        
+        next, nini = self.get_nexternal_ninitial()
+        
+        return sum([md.get_num_configs(model, nini) for md in 
+                    self.get('mapping_diagrams')])
 
     def find_mapping_diagrams(self):
         """Find all unique diagrams for all processes in this
@@ -514,6 +520,7 @@ class DecayChainSubProcessGroup(SubProcessGroup):
         for me in matrix_elements:
             group_assignment = self.assign_group_to_decay_process(\
                                     me.get('processes')[0])
+            assert group_assignment
             try:
                 me_assignments[group_assignment].append(me)
             except KeyError:
@@ -550,24 +557,23 @@ class DecayChainSubProcessGroup(SubProcessGroup):
         for decay in process.get('decay_chains'):
             # Find decay group that has this decay in it
             ids = [l.get('id') for l in decay.get('legs')]
-            decay_group = [(i, group) for (i, group) in \
+            decay_groups = [(i, group) for (i, group) in \
                            enumerate(self.get('decay_groups')) \
                            if any([ids in [[l.get('id') for l in \
                                             a.get('process').get('legs')] \
                                            for a in g.get('amplitudes')] \
                                    for g in group.get('core_groups')])]
 
-            assert len(decay_group) > 0
+            for decay_group in decay_groups:
 
-            for i in range(1,len(decay_group)):
-                assert decay_group[i-1][1] == decay_group[i][1]
-                
-            decay_group = decay_group[0]
+                group_assignment = \
+                    decay_group[1].assign_group_to_decay_process(decay)
 
-            group_assignment = \
-                          decay_group[1].assign_group_to_decay_process(decay)
+                if group_assignment:
+                    group_assignments.append((decay_group[0], group_assignment))
 
-            group_assignments.append((decay_group[0], group_assignment))
+        if process.get('decay_chains') and not group_assignments:
+            return None
 
         # Now calculate the corresponding properties for process
 
@@ -578,6 +584,10 @@ class DecayChainSubProcessGroup(SubProcessGroup):
                       if ids in [[l.get('id') for l in \
                                   a.get('process').get('legs')] \
                                  for a in group.get('amplitudes')]]
+
+        if not core_group:
+            return None
+
         assert len(core_group) == 1
         
         core_group = core_group[0]

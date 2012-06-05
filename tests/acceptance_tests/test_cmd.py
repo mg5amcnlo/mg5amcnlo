@@ -126,12 +126,15 @@ class TestCmdShell1(unittest.TestCase):
                     'automatic_html_opening': 'True', 
                     'pythia8_path': './pythia8',
                     'group_subprocesses': 'Auto',
-                    'ignore_six_quark_processes': False,
                     'complex_mass_scheme': False,
                     'gauge': 'unitary',
                     'lhapdf': 'lhapdf-config',  
-                    'fks_mode': 'real', 
-                    'fastjet': 'fastjet-config'}        
+                    'fks_mode': 'real',
+                    'loop_optimized_output': False,
+                    'fastjet': 'fastjet-config',
+                    'timeout': '20',
+                    'ignore_six_quark_processes': False
+                    }
 
         self.assertEqual(config, expected)
         
@@ -1042,18 +1045,18 @@ P1_qq_wp_wp_lvl
         
         self.do('import model sm')
         self.assertEqual(len(self.cmd._curr_model.get('particles')), 17)
-        self.assertEqual(len(self.cmd._curr_model.get('interactions')), 55)
+        self.assertEqual(len(self.cmd._curr_model.get('interactions')), 56)
         self.do('save model /tmp/model.pkl')
         self.do('import model mssm-full')
         self.do('load model /tmp/model.pkl')
         self.assertEqual(len(self.cmd._curr_model.get('particles')), 17)
-        self.assertEqual(len(self.cmd._curr_model.get('interactions')), 55)
+        self.assertEqual(len(self.cmd._curr_model.get('interactions')), 56)
         self.do('generate mu+ mu- > ta+ ta-') 
         self.assertEqual(len(self.cmd._curr_amps), 1)
         nicestring = """Process: mu+ mu- > ta+ ta- WEIGHTED=4
-2 diagrams:
-1  ((1(13),2(-13)>1(22),id:34),(3(-15),4(15),1(22),id:35)) (QCD=0,QED=2,WEIGHTED=4)
-2  ((1(13),2(-13)>1(23),id:40),(3(-15),4(15),1(23),id:41)) (QCD=0,QED=2,WEIGHTED=4)"""
+1  ((1(13),2(-13)>1(22),id:35),(3(-15),4(15),1(22),id:36)) (QCD=0,QED=2,WEIGHTED=4)
+2  ((1(13),2(-13)>1(23),id:41),(3(-15),4(15),1(23),id:42)) (QCD=0,QED=2,WEIGHTED=4)"""
+       
         self.assertEqual(self.cmd._curr_amps[0].nice_string().split('\n'), nicestring.split('\n'))
         self.do('save processes /tmp/model.pkl')
         self.do('generate e+ e- > e+ e-')

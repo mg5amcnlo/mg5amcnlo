@@ -264,6 +264,19 @@ c*********************************************************************
 	call get_real   (npara,param,value,"cutuse",cutuse,0d0)
 
 c*********************************************************************
+c Check   the pt's of leptons sorted by pt                           *
+c*********************************************************************
+
+ 	call get_real   (npara,param,value,"ptl1min",ptl1min,0d0)
+ 	call get_real   (npara,param,value,"ptl1max",ptl1max,1d5)
+ 	call get_real   (npara,param,value,"ptl2min",ptl2min,0d0)
+ 	call get_real   (npara,param,value,"ptl2max",ptl2max,1d5)
+ 	call get_real   (npara,param,value,"ptl3min",ptl3min,0d0)
+ 	call get_real   (npara,param,value,"ptl3max",ptl3max,1d5)
+ 	call get_real   (npara,param,value,"ptl4min",ptl4min,0d0)
+ 	call get_real   (npara,param,value,"ptl4max",ptl4max,1d5)
+
+c*********************************************************************
 c Check  Ht                                                          *
 c*********************************************************************
 

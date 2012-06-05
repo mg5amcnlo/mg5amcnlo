@@ -19,8 +19,6 @@ from __future__ import division
 import math
 import os
 import time
-
-import aloha
 import aloha.aloha_object as aloha_obj
 import aloha.aloha_lib as aloha_lib
 import aloha.create_aloha as create_aloha
@@ -3053,7 +3051,8 @@ class test_aloha_creation(unittest.TestCase):
         # Check that full identification symmetry works
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         helas_suite.look_for_symmetries()
-        solution = {'VVVV2': {2: 1 ,4: 3}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVS1': {2: 1},'SSSS1': {2: 1, 3: 2, 4: 3}}  
+        solution = {'VVVV2': {2: 1 ,4: 3}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 
+                    'VVS1': {2: 1},'SSSS1': {2: 1, 3: 2, 4:3}}  
         self.assertEqual(solution, helas_suite.symmetries)
         
     def test_has_symmetries(self):
@@ -3085,12 +3084,12 @@ class test_aloha_creation(unittest.TestCase):
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         helas_suite.look_for_multiple_lorentz_interactions()
-        solution = {'FFV2': [('FFV3',), ('FFV4',), ('FFV5',)],'FFS3': [('FFS4',)]}
+        solution = {'FFV2': [('FFV3',), ('FFV4',), ('FFV5',)]}
         self.assertEqual(solution, helas_suite.multiple_lor)
         
 
     def test_aloha_multiple_lorentz_and_symmetry(self):
-        """ check if the detection of multiple lorentz work"""
+        """ check if the detection of multiple lorentz work """
         
         VVS1 = self.Lorentz(name = 'VVS1',
                  spins = [ 3, 3, 1 ],
@@ -3099,8 +3098,7 @@ class test_aloha_creation(unittest.TestCase):
         #VVS2 = self.Lorentz(name = 'VVS2',
         #         spins = [ 3, 3, 1 ],
         #         structure = 'Metric(2,1)')
-# WARNING, make sure the LOOP_MODE is False if it fails.
-#        create_aloha.LOOP_MODE = False
+        
         abstract = create_aloha.AbstractRoutineBuilder(VVS1).compute_routine(1)
         abstract.add_symmetry(2)
         abstract.add_combine(('VVS2',))
@@ -3109,14 +3107,14 @@ class test_aloha_creation(unittest.TestCase):
 
         goal =""" subroutine VVS1_1(V2, S3, COUP, M1, W1, V1)
 implicit none 
-COMPLEX*16 V1(*)
-COMPLEX*16 V2(*)
-COMPLEX*16 S3(*)
-COMPLEX*16 COUP
-COMPLEX*16 denom
-real*8 M1, W1
-COMPLEX*16 OM1
-real*8 P1(0:3)
+double complex V1(*)
+double complex V2(*)
+double complex S3(*)
+double complex COUP
+double complex denom
+double precision M1, W1
+double complex OM1
+double precision P1(0:3)
 
 V1(5)= V2(5)+S3(2)
 V1(6)= V2(6)+S3(3)
@@ -3138,29 +3136,29 @@ end
 
  subroutine VVS1_2(V2, S3, COUP, M1, W1, V1)
 implicit none 
-COMPLEX*16 V1(*)
-COMPLEX*16 V2(*)
-COMPLEX*16 S3(*)
-COMPLEX*16 COUP
-COMPLEX*16 denom
-real*8 M1, W1
-COMPLEX*16 OM1
-real*8 P1(0:3)
+double complex V1(*)
+double complex V2(*)
+double complex S3(*)
+double complex COUP
+double complex denom
+double precision M1, W1
+double complex OM1
+double precision P1(0:3)
 call VVS1_1(V2,S3,COUP,M1,W1,V1)
 end
 
 
  subroutine VVS1_2_1(V2, S3, COUP1,COUP2, M1, W1, V1)
 implicit none 
-COMPLEX*16 V1(*)
-COMPLEX*16 V2(*)
-COMPLEX*16 S3(*)
-COMPLEX*16 COUP1,COUP2
-COMPLEX*16 denom
-real*8 M1, W1
-COMPLEX*16 OM1
-real*8 P1(0:3)
- COMPLEX*16 TMP(6)
+double complex V1(*)
+double complex V2(*)
+double complex S3(*)
+double complex COUP1,COUP2
+double complex denom
+double precision M1, W1
+double complex OM1
+double precision P1(0:3)
+ double complex TMP(6)
  integer i
 
  CALL VVS1_1(V2, S3, COUP1, M1, W1, V1)
@@ -3172,15 +3170,15 @@ end
 
  subroutine VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1, V1)
 implicit none 
-COMPLEX*16 V1(*)
-COMPLEX*16 V2(*)
-COMPLEX*16 S3(*)
-COMPLEX*16 COUP1,COUP2
-COMPLEX*16 denom
-real*8 M1, W1
-COMPLEX*16 OM1
-real*8 P1(0:3)
- COMPLEX*16 TMP(6)
+double complex V1(*)
+double complex V2(*)
+double complex S3(*)
+double complex COUP1,COUP2
+double complex denom
+double precision M1, W1
+double complex OM1
+double precision P1(0:3)
+ double complex TMP(6)
  integer i
 
  CALL VVS1_1(V2, S3, COUP1, M1, W1, V1)
@@ -3354,7 +3352,7 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         requested_routines=[(('FFV1',) , (), 0), 
-                            (('FFV1','FFV2') , ('C1',), 0)]
+                            (('FFV1','FFV2') , (1,), 0)]
         
         helas_suite.compute_subset(requested_routines)
 
@@ -3384,12 +3382,12 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
 C     
       SUBROUTINE FFV1C1_2_0(F2,F1,V3,COUP1,COUP2,VERTEX)
       IMPLICIT NONE
-      COMPLEX*16 F1(*)
-      COMPLEX*16 F2(*)
-      COMPLEX*16 V3(*)
-      COMPLEX*16 COUP1,COUP2
-      COMPLEX*16 VERTEX
-      COMPLEX*16 TMP
+      DOUBLE COMPLEX F1(*)
+      DOUBLE COMPLEX F2(*)
+      DOUBLE COMPLEX V3(*)
+      DOUBLE COMPLEX COUP1,COUP2
+      DOUBLE COMPLEX VERTEX
+      DOUBLE COMPLEX TMP
 
 
       CALL FFV1C1_0(F2, F1, V3, COUP1, VERTEX)
@@ -3413,8 +3411,8 @@ C
         
         requested_routines=[(('FFV1',) , (), 0), 
                             (('FFV1',), (), 2),
-                            (('FFV1',), ('C1',), 0),
-                            (('FFV2',), ('C1',), 3),
+                            (('FFV1',), (1,), 0),
+                            (('FFV2',), (1,), 3),
                             (('VVV1',), (), 3)]
         
         helas_suite.compute_subset(requested_routines)        
@@ -3567,9 +3565,6 @@ class TestAlohaWriter(unittest.TestCase):
     """ simple unittest of the writer more test are in test_export_v4
     and test_export_pythia"""
     
-    def tearDown(self):
-        aloha.complex_mass = False
-        aloha.unitary_gauge = True
     
     def old_test_reorder_call_listFFVV(self):
         
@@ -3998,20 +3993,22 @@ x(0,1)*P(-1,2)*P(-1,3)*Gamma(3,2,-2)*ProjP(-2,1)')
         #            self.assertEqual(split_routine[i][j*77:(j+1)*77], split_solution[i][j*77:(j+1)*77])
         #            print split_routine[i][j*77:(j+1)*77]
             
-   
+        
+
+
 
     def test_fortranwriter_C(self):
         """ test that python writer works """
 
         solution = """ subroutine FFV1C1_1(F1, V3, COUP, M2, W2, F2)
 implicit none 
-COMPLEX*16 F1(*)
-COMPLEX*16 F2(*)
-COMPLEX*16 V3(*)
-COMPLEX*16 COUP
-COMPLEX*16 denom
-real*8 M2, W2
-real*8 P2(0:3)
+double complex F1(*)
+double complex F2(*)
+double complex V3(*)
+double complex COUP
+double complex denom
+double precision M2, W2
+double precision P2(0:3)
 
 F2(5)= F1(5)+V3(5)
 F2(6)= F1(6)+V3(6)
@@ -4044,13 +4041,13 @@ end
 
         solution=""" subroutine FFV1C1_2(F2, V3, COUP, M1, W1, F1)
 implicit none 
-COMPLEX*16 F1(*)
-COMPLEX*16 F2(*)
-COMPLEX*16 V3(*)
-COMPLEX*16 COUP
-COMPLEX*16 denom
-real*8 M1, W1
-real*8 P1(0:3)
+double complex F1(*)
+double complex F2(*)
+double complex V3(*)
+double complex COUP
+double complex denom
+double precision M1, W1
+double precision P1(0:3)
 
 F1(5)= F2(5)-V3(5)
 F1(6)= F2(6)-V3(6)
@@ -4178,230 +4175,6 @@ F1[3]= COUP*denom*( (F2[2]*( (V3[1]*( complex<double>(0., 1.)*P1[0]+complex<doub
         
         
         
-
-    def test_pythonwriter_complex_mass_scheme(self):
-        """ test that python writer works """
-        
-        aloha.complex_mass = True
-        solution ="""import wavefunctions
-def SSS1_1(S2, S3, COUP, M1):
-    S1 = wavefunctions.WaveFunction(size=3)
-    S1[1] = S2[1]+S3[1]
-    S1[2] = S2[2]+S3[2]
-    P1 = [- complex(S1[1]).real, \\
-             - complex(S1[2]).real, \\
-             - complex(S1[2]).imag, \\
-             - complex(S1[1]).imag]
-    denom =1.0/(( (P1[0]**2)-(P1[1]**2)-(P1[2]**2)-(P1[3]**2)-(M1**2)))
-    S1[0]= COUP*denom*1j*(S3[0]*S2[0])
-    return S1
-    
-    
-def SSS1_2(S2, S3, COUP, M1):
-    return SSS1_1(S2,S3,COUP,M1)
-
-def SSS1_3(S2, S3, COUP, M1):
-    return SSS1_1(S2,S3,COUP,M1)
-
-"""
-        
-        SSS = UFOLorentz(name = 'SSS1',
-                 spins = [ 1, 1, 1 ],
-                 structure = '1')        
-        builder = create_aloha.AbstractRoutineBuilder(SSS)
-        amp = builder.compute_routine(1)
-        amp.add_symmetry(2)
-        amp.add_symmetry(3)
-        
-        routine = amp.write(output_dir=None, language='Python')
-        
-        split_solution = solution.split('\n')
-        split_routine = routine.split('\n')
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
-
-    def test_F77writer_complex_mass_scheme(self):
-        """ test that python writer works """
-        
-        aloha.complex_mass = True
-        solution = """ subroutine SSS1_1(S2, S3, COUP, M1, S1)
-implicit none 
-COMPLEX*16 S1(*)
-COMPLEX*16 S2(*)
-COMPLEX*16 S3(*)
-COMPLEX*16 COUP
-COMPLEX*16 denom
-COMPLEX*16 M1
-real*8 P1(0:3)
-COMPLEX*16 Complex_M
-
-S1(2)= S2(2)+S3(2)
-S1(3)= S2(3)+S3(3)
-P1(0) = - dble(S1(2))
-P1(1) = - dble(S1(3))
-P1(2) = - dimag(S1(3))
-P1(3) = - dimag(S1(2))
-
-denom =1d0/(( (P1(0)**2)-(P1(1)**2)-(P1(2)**2)-(P1(3)**2)-(M1**2)))
-S1(1)= COUP*denom*(0, 1)*(S3(1)*S2(1))
-end
-
-
-
- subroutine SSS1_2(S2, S3, COUP, M1, S1)
-implicit none 
-COMPLEX*16 S1(*)
-COMPLEX*16 S2(*)
-COMPLEX*16 S3(*)
-COMPLEX*16 COUP
-COMPLEX*16 denom
-COMPLEX*16 M1
-real*8 P1(0:3)
-COMPLEX*16 Complex_M
-call SSS1_1(S2,S3,COUP,M1,S1)
-end
-
-
-
- subroutine SSS1_3(S2, S3, COUP, M1, S1)
-implicit none 
-COMPLEX*16 S1(*)
-COMPLEX*16 S2(*)
-COMPLEX*16 S3(*)
-COMPLEX*16 COUP
-COMPLEX*16 denom
-COMPLEX*16 M1
-real*8 P1(0:3)
-COMPLEX*16 Complex_M
-call SSS1_1(S2,S3,COUP,M1,S1)
-end
-
-
-"""
-        SSS = UFOLorentz(name = 'SSS1',
-                 spins = [ 1, 1, 1 ],
-                 structure = '1')        
-        builder = create_aloha.AbstractRoutineBuilder(SSS)
-        amp = builder.compute_routine(1)
-        amp.add_symmetry(2)
-        amp.add_symmetry(3)
-        
-        routine = amp.write(output_dir=None, language='Fortran')
-        
-        split_solution = solution.split('\n')
-        split_routine = routine.split('\n')
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
-
-
-    def test_Cwriter_complex_mass_scheme(self):
-        """ test that python writer works """
-        
-        aloha.complex_mass = True
-        solution_h="""#ifndef SSS1_1_guard
-#define SSS1_1_guard
-#include <complex>
-using namespace std;
-
-void SSS1_1(complex<double> S2[],complex<double> S3[],complex<double> COUP, complex M1, complex<double>S1[]);
-
-void SSS1_2(complex<double> S2[],complex<double> S3[],complex<double> COUP, complex M1, complex<double>S1[]);
-
-void SSS1_3(complex<double> S2[],complex<double> S3[],complex<double> COUP, complex M1, complex<double>S1[]);
-
-#endif
-
-"""     
-        SSS = UFOLorentz(name = 'SSS1',
-                 spins = [ 1, 1, 1 ],
-                 structure = '1')        
-        builder = create_aloha.AbstractRoutineBuilder(SSS)
-        amp = builder.compute_routine(1)
-        amp.add_symmetry(2)
-        amp.add_symmetry(3)
-        
-        routine_h, routine_c = amp.write(output_dir=None, language='CPP')
-        
-        split_solution = solution_h.split('\n')
-        split_routine = routine_h.split('\n')
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
-
-        solution_c = """#include "SSS1_1.h"
-
-void SSS1_1(complex<double> S2[],complex<double> S3[],complex<double> COUP, complex M1, complex<double>S1[]){
-complex<double> denom;
-double P1[4];
-S1[1]= S2[1]+S3[1];
-S1[2]= S2[2]+S3[2];
-P1[0] = -S1[1].real();
-P1[1] = -S1[2].real();
-P1[2] = -S1[2].imag();
-P1[3] = -S1[1].imag();
-denom =1./(( (pow(P1[0],2))-(pow(P1[1],2))-(pow(P1[2],2))-(pow(P1[3],2))-(pow(M1,2))));
-S1[0]= COUP*denom*complex<double>(0., 1.)*(S3[0]*S2[0]);
-}
-
-void SSS1_2(complex<double> S2[],complex<double> S3[],complex<double> COUP, complex M1, complex<double>S1[]){
-SSS1_1(S2,S3,COUP,M1,S1);
-}
-
-void SSS1_3(complex<double> S2[],complex<double> S3[],complex<double> COUP, complex M1, complex<double>S1[]){
-SSS1_1(S2,S3,COUP,M1,S1);
-}
-
-"""
-        split_solution = solution_c.split('\n')
-        split_routine = routine_c.split('\n')
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
-
-    def test_F77writer_feynman(self):
-        """ test that python writer works """
-        
-        aloha.unitary_gauge = False
-        solution = """ subroutine FFV1_3(F1, F2, COUP, M3, W3, V3)
-implicit none 
-COMPLEX*16 F1(*)
-COMPLEX*16 F2(*)
-COMPLEX*16 V3(*)
-COMPLEX*16 COUP
-COMPLEX*16 denom
-real*8 M3, W3
-real*8 P3(0:3)
-
-V3(5)= -F1(5)+F2(5)
-V3(6)= -F1(6)+F2(6)
-P3(0) = - dble(V3(5))
-P3(1) = - dble(V3(6))
-P3(2) = - dimag(V3(6))
-P3(3) = - dimag(V3(5))
-
-denom =1d0/(( (M3*( -M3+(0, 1)*W3))+( (P3(0)**2)-(P3(1)**2)-(P3(2)**2)-(P3(3)**2))))
-V3(1)= COUP*denom*( (0, -1)*(F2(3)*F1(1))+(0, -1)*(F2(4)*F1(2))+(0, -1)*(F2(1)*F1(3))+(0, -1)*(F2(2)*F1(4)))
-V3(2)= COUP*denom*( (0, 1)*(F2(4)*F1(1))+(0, 1)*(F2(3)*F1(2))+(0, -1)*(F2(2)*F1(3))+(0, -1)*(F2(1)*F1(4)))
-V3(3)= COUP*denom*( -(F2(4)*F1(1))+(F2(3)*F1(2))+(F2(2)*F1(3))-(F2(1)*F1(4)))
-V3(4)= COUP*denom*( (0, 1)*(F2(3)*F1(1))+(0, -1)*(F2(4)*F1(2))+(0, -1)*(F2(1)*F1(3))+(0, 1)*(F2(2)*F1(4)))
-end
-
-
-"""
-        SSS = UFOLorentz(name = 'FFV1',
-                 spins = [ 2, 2, 3 ],
-                 structure = 'Gamma(3,2,1)')        
-        builder = create_aloha.AbstractRoutineBuilder(SSS)
-        amp = builder.compute_routine(3)
-        
-        routine = amp.write(output_dir=None, language='Fortran')
-     
-        split_solution = solution.split('\n')
-        split_routine = routine.split('\n')
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
-
-
-
-
         
     def test_python_routine_are_exec(self):
         """ check if the python routine can be call """

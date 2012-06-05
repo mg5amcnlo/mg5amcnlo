@@ -248,7 +248,7 @@ class AbstractRoutineBuilder(object):
                         lorentz *= SpinorPropagator(id, 'I2', outgoing)
                     else:
                         #propagator incoming
-                        lorentz *= SpinorPropagator('I2', id, outgoing) 
+                        lorentz *= SpinorPropagator('I2', id, outgoing)
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)
                 elif spin == 5 :
@@ -515,8 +515,11 @@ class AbstractALOHAModel(dict):
                     if lorentz.name in self.multiple_lor:
                         for m in self.multiple_lor[lorentz.name]:
                             for outgoing in range(len(lorentz.spins)+1):
-                                self[(conjg_builder.name, outgoing)].add_combine(m)
-                                                
+                                realname = conjg_builder.name + ''.join(['C%s' % pair for pair in conjg_builder.conjg])
+                                try:
+                                    self[(realname, outgoing)].add_combine(m)
+                                except Exception,error:
+                                    self[(realname, self.symmetries[lorentz.name][outgoing])].add_combine(m)          
                     
                     
         if save:

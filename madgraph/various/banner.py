@@ -104,6 +104,14 @@ class Banner(dict):
         new_seed_str = "     %s       = iseed" % seed
         self['mgruncard'] = p.sub(new_seed_str, self['mgruncard'])
     
+    def add_generation_info(self, cross, nb_event):
+        """add info on MGGeneration"""
+        
+        text = """
+#  Number of Events        :       %s
+#  Integrated weight (pb)  :       %s
+""" % (nb_event, cross)
+        self['MGGenerationInfo'] = text
     
     ############################################################################
     #  SPLIT BANNER
@@ -132,7 +140,7 @@ class Banner(dict):
             
             ff.write(open(pjoin(MEDIR, 'Source', 'banner_header.txt')).read())
         else:
-            ff.write(open(pjoin(MG5DIR,'Template', 'Source', 'banner_header.txt')).read())
+            ff.write(open(pjoin(MG5DIR,'Template', 'LO', 'Source', 'banner_header.txt')).read())
         for tag, text in self.items():
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
                      {'tag':tag, 'text':text})
