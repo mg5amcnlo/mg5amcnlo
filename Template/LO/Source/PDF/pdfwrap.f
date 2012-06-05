@@ -250,13 +250,13 @@ C
      .'cteq5f3,','cteq5f4,','cteq5m1,','ctq5hq1,','cteq5l1,',
      .'cteq6_m,','cteq6_d,','cteq6_l,','cteq6l1,'
 c
-c
-	   write(6,*) 'Setting it to default cteq6l1'
-       pdlabel='cteq6l1'
-       asmz=0.130d0
-       nloop=1
-       Call SetCtq6(4)
-
+c     make madgraph to stop evaluating
+      stop 1
+c	   write(6,*) 'Setting it to default cteq6l1'
+c       pdlabel='cteq6l1'
+c       asmz=0.130d0
+c       nloop=1
+c       Call SetCtq6(4)
       endif      
       return
       end

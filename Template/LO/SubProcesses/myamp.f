@@ -566,6 +566,10 @@ c        Take into account special cuts
          xo = max(xo, ht4min**2/stot)
          xo = max(xo, misset**2/stot)
          xo = max(xo, ptllmin**2/stot)
+         xo = max(xo, ptl1min**2/stot)
+         xo = max(xo, ptl2min**2/stot)
+         xo = max(xo, ptl3min**2/stot)
+         xo = max(xo, ptl4min**2/stot)
          if (swidth(i).eq.0.and.xo.eq.1d0/stot) then
             write(*,*) 'Warning: No minimum found for integration'
             write(*,*) '         Setting minimum to ',1d0/stot

@@ -102,7 +102,7 @@ C
 C GLOBAL VARIABLES
 C
 	  %(complex_dp_format)s LC(MAXLCOUPLINGS)
-	  %(mass_dp_format)s ML(NEXTERNAL+1)
+	  %(mass_dp_format)s ML(NEXTERNAL+2)
       COMMON/DP_LOOP/LC,ML
 
       INTEGER WE(NEXTERNAL)  
@@ -289,7 +289,7 @@ C
 C GLOBAL VARIABLES
 C
 	  %(complex_mp_format)s LC(MAXLCOUPLINGS)
-	  %(mass_mp_format)s ML(NEXTERNAL+1)
+	  %(mass_mp_format)s ML(NEXTERNAL+2)
       COMMON/MP_LOOP/LC,ML
 
       INTEGER WE(NEXTERNAL)

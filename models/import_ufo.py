@@ -38,7 +38,6 @@ import aloha.aloha_fct as aloha_fct
 import models as ufomodels
 import models.model_reader as model_reader
 logger = logging.getLogger('madgraph.model')
-#logger = logging.getLogger('models.import_ufo')
 logger_mod = logging.getLogger('madgraph.model')
 
 root_path = os.path.dirname(os.path.realpath( __file__ ))
@@ -230,7 +229,7 @@ class UFOMG5Converter(object):
         for param in self.ufomodel.all_parameters:
             if param.nature == "external":
                 if len(param.lhablock.split())>1:
-                    raise UFOImportError, '''LHABlock should be single word which is not the case for
+                    raise InvalidModel, '''LHABlock should be single word which is not the case for
     \'%s\' parameter with lhablock \'%s\'''' % (param.name, param.lhablock)
          
 	if hasattr(self.ufomodel, 'gauge'):    
@@ -534,11 +533,13 @@ class UFOMG5Converter(object):
             # check if the interaction meet requirements:
             pdg = [p.pdg_code for p in interaction_info.particles if p.spin in [2,4]]
             if len(pdg) % 2:
-                raise UFOImportError, 'Odd number of fermion in vertex: %s' % [p.pdg_code for p in interaction_info.particles]
+                raise InvalidModel, 'Odd number of fermion in vertex: %s' % [p.pdg_code for p in interaction_info.particles]
             for i in range(0, len(pdg),2):
                 if pdg[i] == - pdg[i+1]:
                     if pdg[i] in self.outcoming:
-                        raise UFOImportError, 'Input output not coherent'
+                        raise InvalidModel, '%s has not coherent incoming/outcoming status between interactions' %\
+                            [p for p in interaction_info.particles if p.spin in [2,4]][i].name
+                            
                     elif not pdg[i] in self.incoming:
                         self.incoming.append(pdg[i])
                         self.outcoming.append(pdg[i+1])
@@ -580,6 +581,10 @@ class UFOMG5Converter(object):
                 couplings = [couplings]
             for coupling in couplings:
                 order = tuple(coupling.order.items())
+                if '1' in order:
+                    raise InvalidModel, '''Some couplings have \'1\' order. 
+                    This is not allowed in MG. 
+                    Please defines an additional coupling to your model''' 
                 if order in order_to_int:
                     order_to_int[order].get('couplings')[key] = coupling.name
                 else:
@@ -777,13 +782,12 @@ class OrganizeModelExpression:
         
         if coupling.name in self.all_expr.keys():
             return
-        
         self.all_expr[coupling.value] = coupling
         try:
             self.coupling[coupling.depend].append(coupling)
         except:
             self.coupling[coupling.depend] = [coupling]            
-                
+        
                 
 
     def analyze_couplings(self):

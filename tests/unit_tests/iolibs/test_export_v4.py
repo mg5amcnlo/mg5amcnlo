@@ -899,6 +899,7 @@ C     ----------
               NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
               IGOOD(NGOOD(IMIRROR),IMIRROR) = I
               PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS
+     $         ,' in event ',NTRY(IMIRROR)
             ENDIF
           ENDDO
         ENDIF
@@ -1906,6 +1907,15 @@ C     Diagram 8
       DATA (IFOREST(I,-6,8),I=1,2)/-5,-4/
 C     Number of configs
       DATA MAPCONFIG(0)/8/
+""")
+
+        # Test maxconfigs.inc
+        writer = writers.FortranWriter(self.give_pos('test'))
+        exporter.write_maxconfigs_file(writer, subproc_groups)
+        writer.close()
+        self.assertFileContains('test',
+                                """      INTEGER LMAXCONFIGS
+      PARAMETER(LMAXCONFIGS=32)
 """)
 
         # Test config_subproc_map.inc
@@ -4765,6 +4775,259 @@ CALL JW3WNX(W(1,3),W(1,5),W(1,1),MGVX7,DUM0,MZ,WZ,W(1,24))
 # Amplitude(s) for diagram number 28
 CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
 
+    def test_helas_diagrams_gg_gogo_go_tt1x_t_wpb(self):
+        """Testing g g > go go, (go > t t1~, t > w+ b)
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon and gluino
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        g = mypartlist[-1]
+
+        mypartlist.append(base_objects.Particle({'name':'go',
+                      'antiname':'go',
+                      'spin':2,
+                      'color':8,
+                      'mass':'MGO',
+                      'width':'WGO',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':1000021,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        go = mypartlist[-1]
+
+        # A top quark and stop squark
+        mypartlist.append(base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'MT',
+                      'width':'WT',
+                      'texname':'t',
+                      'antitexname':'\bar t',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t = mypartlist[len(mypartlist) - 1]
+        antit = copy.copy(t)
+        antit.set('is_part', False)
+
+        mypartlist.append(base_objects.Particle({'name':'t1',
+                      'antiname':'t1~',
+                      'spin':0,
+                      'color':3,
+                      'mass':'MT1',
+                      'width':'WT1',
+                      'texname':'t1',
+                      'antitexname':'\bar t1',
+                      'line':'dashed',
+                      'charge':2. / 3.,
+                      'pdg_code':1000006,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t1 = mypartlist[len(mypartlist) - 1]
+        antit1 = copy.copy(t1)
+        antit1.set('is_part', False)
+
+        # A W
+        mypartlist.append(base_objects.Particle({'name':'W+',
+                      'antiname':'W-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MW',
+                      'width':'WW',
+                      'texname':'W^+',
+                      'antitexname':'W^-',
+                     'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        Wplus = mypartlist[len(mypartlist) - 1]
+        Wminus = copy.copy(Wplus)
+        Wminus.set('is_part', False)
+
+        # b quark
+        mypartlist.append(base_objects.Particle({'name':'b',
+                      'antiname':'b~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'b',
+                      'antitexname':'\bar b',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':5,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        b = mypartlist[len(mypartlist) - 1]
+        antib = copy.copy(b)
+        antib.set('is_part', False)
+
+        # top-w-b coupling
+        myinterlist.append(base_objects.Interaction({
+            'id': 1,
+            'particles': base_objects.ParticleList([antib, t, Wminus]),
+            'color': [color.ColorString([color.T(1,0)])],
+            'lorentz': ['FFV2'],
+            'couplings': {(0, 0): 'GC_108'},
+            'orders': {'QED': 1}
+            }))
+        myinterlist.append(base_objects.Interaction({
+            'id': 2,
+            'particles': base_objects.ParticleList([antit, b, Wplus]),
+            'color': [color.ColorString([color.T(1,0)])],
+            'lorentz': ['FFV2'],
+            'couplings': {(0, 0): 'GC_108'},
+            'orders': {'QED': 1}
+            }))
+
+        # Gluon couplings to gluino
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [go, \
+                                             go, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        # Gluino couplings to top and stop
+        myinterlist.append(base_objects.Interaction({
+                      'id': 11,
+                      'particles': base_objects.ParticleList(\
+                                            [go, \
+                                             t, \
+                                             antit1]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 12,
+                      'particles': base_objects.ParticleList(\
+                                            [antit, \
+                                             go, \
+                                             t1]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1000021}))
+        myleglist.append(base_objects.Leg({'id':1000021}))
+
+        core_proc = base_objects.Process({'legs':myleglist,
+                                          'model':mybasemodel})
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1000021,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':6}))
+        myleglist.append(base_objects.Leg({'id':-1000006}))
+
+        decay1_process = base_objects.Process({'legs':myleglist,
+                                               'model':mybasemodel,
+                                               'is_decay_chain': True})
+
+        core_proc.get('decay_chains').append(decay1_process)
+        
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':5}))
+        myleglist.append(base_objects.Leg({'id':24}))
+
+        decay2_process = base_objects.Process({'legs':myleglist,
+                                               'model':mybasemodel,
+                                               'is_decay_chain': True})
+
+        decay1_process.get('decay_chains').append(decay2_process)
+
+        amplitude = diagram_generation.DecayChainAmplitude(core_proc)
+
+        self.assertEqual(len(amplitude.get('amplitudes')),1)
+
+        matrix_elements = helas_objects.HelasDecayChainProcess(amplitude)
+
+        matrix_element = matrix_elements.combine_decay_chain_processes()[0]
+
+        #print "\n".join(helas_call_writers.FortranUFOHelasCallWriter().\
+        #                get_matrix_element_calls(matrix_element))
+
+        self.assertEqual("\n".join(helas_call_writers.FortranUFOHelasCallWriter().\
+                                   get_matrix_element_calls(matrix_element)),
+                         """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
+CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
+CALL VXXXXX(P(0,4),MW,NHEL(4),+1*IC(4),W(1,4))
+CALL FFV2_1(W(1,3),W(1,4),GC_108,MT,WT,W(1,5))
+CALL SXXXXX(P(0,5),+1*IC(5),W(1,6))
+CALL L1_1(W(1,5),W(1,6),GQQ,MGO,WGO,W(1,7))
+CALL IXXXXX(P(0,6),zero,NHEL(6),-1*IC(6),W(1,8))
+CALL VXXXXX(P(0,7),MW,NHEL(7),+1*IC(7),W(1,9))
+CALL FFV2C1_2(W(1,8),W(1,9),GC_108,MT,WT,W(1,10))
+CALL SXXXXX(P(0,8),+1*IC(8),W(1,11))
+CALL L1C1_2(W(1,10),W(1,11),GQQ,MGO,WGO,W(1,12))
+CALL L1_1(W(1,7),W(1,1),GQQ,MGO,WGO,W(1,13))
+# Amplitude(s) for diagram number 1
+CALL L1_0(W(1,12),W(1,13),W(1,2),GQQ,AMP(1))
+CALL L1_2(W(1,12),W(1,1),-GQQ,MGO,WGO,W(1,14))
+# Amplitude(s) for diagram number 2
+CALL L1_0(W(1,14),W(1,7),W(1,2),GQQ,AMP(2))""")
+
+        # Test get_used_lorentz
+        goal_lorentz_list = [(('FFV2',), (), 1), (('L1',), (), 1), 
+                             (('FFV2',), ('C1',), 2), (('L1',), ('C1',), 2), 
+                             (('L1',), (), 1), (('L1',), (), 2), 
+                             (('L1',), (), 0), (('L1',), (), 0)]
+
+        self.assertEqual(matrix_element.get_used_lorentz(),
+                         goal_lorentz_list)
+
     def test_multiple_lorentz_structures(self):
         """Testing multiple Lorentz structures for one diagram.
         """
@@ -7205,6 +7468,15 @@ C     Number of configs
                                 "MAXPROC, MAXSPROC\n" + \
                                 "      PARAMETER (MAXAMPS=8, MAXFLOW=1)\n" + \
                                 "      PARAMETER (MAXPROC=1, MAXSPROC=1)\n")
+        # Test maxconfigs.inc
+        writer = writers.FortranWriter(self.give_pos('test'))
+        exporter.write_maxconfigs_file(writer, matrix_elements)
+        writer.close()
+        self.assertFileContains('test',
+                                """      INTEGER LMAXCONFIGS
+      PARAMETER(LMAXCONFIGS=72)
+""")
+
         # Test mg.sym
         writer = writers.FortranWriter(self.give_pos('test'))
         exporter.write_mg_sym_file(writer, me)
@@ -8533,6 +8805,15 @@ C     Number of configs
       DATA MAPCONFIG(0)/10/
 """)
         
+        # Test maxconfigs.inc
+        writer = writers.FortranWriter(self.give_pos('test'))
+        exporter.write_maxconfigs_file(writer, [me])
+        writer.close()
+        self.assertFileContains('test',
+                                """      INTEGER LMAXCONFIGS
+      PARAMETER(LMAXCONFIGS=10)
+""")
+
     def test_configs_4f_decay(self):
         """Test configs.inc for 4f decay process that failed in v. 1.3.27
         """
@@ -9285,21 +9566,22 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         self.assertEqual(expected, solution)
         
         #  internal params
-        self.assertEqual(len(mg4_model.params_dep), 1)
-        self.assertEqual(len(mg4_model.params_indep), 33)
+        self.assertEqual(len(mg4_model.params_dep), 2)
+        self.assertEqual(len(mg4_model.params_indep), 29)
         
         # couplings
         self.assertEqual(len(mg4_model.coups_dep), 3)
-        sol= ['GC_1', 'GC_2', 'GC_3', 'GC_5', 'GC_6', 'GC_7', 'GC_8', 'GC_13', 'GC_14', 'GC_15', 'GC_16', 'GC_17', 'GC_18', 'GC_19', 'GC_20', 'GC_21', 'GC_22', 'GC_23', 'GC_34', 'GC_35', 'GC_36', 'GC_37', 'GC_38', 'GC_39', 'GC_40', 'GC_41', 'GC_42', 'GC_43', 'GC_44', 'GC_45', 'GC_46', 'GC_47', 'GC_48', 'GC_49', 'GC_50', 'GC_51', 'GC_52', 'GC_53', 'GC_54', 'GC_55', 'GC_56', 'GC_57', 'GC_58', 'GC_59', 'GC_60', 'GC_61', 'GC_62', 'GC_63', 'GC_64', 'GC_67', 'GC_68', 'GC_69', 'GC_72', 'GC_86', 'GC_87', 'GC_90', 'GC_91', 'GC_92', 'GC_93', 'GC_94', 'GC_101', 'GC_111', 'GC_112']
+        sol = ['GC_1', 'GC_2', 'GC_3', 'GC_7', 'GC_8', 'GC_9', 'GC_10', 'GC_11', 'GC_17', 'GC_22', 'GC_23', 'GC_24', 'GC_25', 'GC_26', 'GC_27', 'GC_28', 'GC_29', 'GC_30', 'GC_31', 'GC_32', 'GC_33', 'GC_34', 'GC_38', 'GC_39']
         self.assertEqual(sol, [ p.name for p in mg4_model.coups_indep])
 
         
         # MG4 use G and not aS as it basic object for alphas related computation
-        #Pass G in the  independant list
-        self.assertTrue('G' not in [p.name for p in mg4_model.params_dep])
-        self.assertTrue('G' in [p.name for p in mg4_model.params_indep])
-        self.assertTrue('sqrt__aS' not in [p.name for p in mg4_model.params_dep])
-        self.assertTrue('sqrt__aS' in [p.name for p in mg4_model.params_indep])
+        # G is out of any list!
+        self.assertFalse('G' in [p.name for p in mg4_model.params_dep])
+        self.assertFalse('G' in [p.name for p in mg4_model.params_indep])
+        # check that sqrt__aS is correctly set
+        self.assertTrue('sqrt__aS' in [p.name for p in mg4_model.params_dep])
+        self.assertTrue('sqrt__aS' not in [p.name for p in mg4_model.params_indep])
         
         
     def test_case_sensitive(self):

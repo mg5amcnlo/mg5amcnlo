@@ -1557,8 +1557,8 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
                                       tuple(range(len(argument.get('mothers')))),
                     'coup': ("pars->%%(coup%d)s," * len(argument.get('coupling'))) % \
                                      tuple(range(len(argument.get('coupling'))))           
-                   }
-            
+                   } 
+
             if isinstance(argument, helas_objects.HelasWavefunction):
                 arg['out'] = 'w[%(out)d]'
                 if aloha.complex_mass:
@@ -1736,8 +1736,6 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
             call = call % arg
             # Now we have a line correctly formatted
             call_function = lambda wf: call % wf.get_helas_call_dict(index=0)
-                
-                
                 
             routine_name = aloha_writers.combine_name(
                                         '%s' % l[0], l[1:], outgoing, flag)
