@@ -1605,6 +1605,15 @@ C===============================================================================
       CALL LCUT_V(Q,CFIG,W)
       END
 
+      SUBROUTINE LCUT_AF(Q,CFIG,W)
+
+      COMPLEX*16 Q(0:3)
+      INTEGER CFIG
+      COMPLEX*16 W(20)
+      
+      CALL LCUT_V(-Q,CFIG,W)
+      END
+
       SUBROUTINE LCUT_V(Q,CFIG,W)
 
       COMPLEX*16 Q(0:3)
@@ -1646,6 +1655,15 @@ C===============================================================================
       COMPLEX*32 W(20)
       
       CALL MP_LCUT_V(Q,CFIG,W)
+      END
+
+      SUBROUTINE MP_LCUT_AF(Q,CFIG,W)
+
+      COMPLEX*32 Q(0:3)
+      INTEGER CFIG
+      COMPLEX*32 W(20)
+      
+      CALL MP_LCUT_V(-Q,CFIG,W)
       END
 
       SUBROUTINE MP_LCUT_V(Q,CFIG,W)

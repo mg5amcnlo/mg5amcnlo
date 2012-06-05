@@ -52,7 +52,6 @@ C
 	  include 'mp_coupl_same_name.inc'
 
 	  LOGICAL CHECKPHASE
-	  DATA CHECKPHASE/.TRUE./
       common/INIT/CHECKPHASE
 
 	  LOGICAL GOODHEL(NCOMB)
@@ -60,7 +59,6 @@ C
 	  common/Filters/GOODAMP,GOODHEL
 
 	  INTEGER HELPICKED
-	  DATA HELPICKED/-1/
 	  common/HELCHOICE/HELPICKED
 
 	  %(mp_born_amps_decl)s	  

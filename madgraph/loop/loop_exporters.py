@@ -186,17 +186,22 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         # their business but only relevant to the output algorithm.
         # Also the cast to complex masses DCMPLX(*) must be replaced by
         # CMPLX(*,KIND=16)
-        MP=re.compile(r"(?P<toSub>^.*CALL\s+)",re.IGNORECASE)
+        MP=re.compile(r"(?P<toSub>^.*CALL\s+)",re.IGNORECASE | re.MULTILINE)
         
         def replaceWith(match_obj):
             return match_obj.group('toSub')+'MP_'
 
-        DCMPLX=re.compile(r"DCMPLX\((?P<toSub>([^\)]*))\)",re.IGNORECASE)
+        DCMPLX=re.compile(r"DCMPLX\((?P<toSub>([^\)]*))\)",\
+                                                   re.IGNORECASE | re.MULTILINE)
         
         for i, helas_call in enumerate(helas_calls_list):
             new_helas_call=MP.sub(replaceWith,helas_call)
             helas_calls_list[i]=DCMPLX.sub(r"CMPLX(\g<toSub>,KIND=16)",\
                                                                  new_helas_call)
+
+    def make_source_links(self):
+        """ In the loop output, we don't need the files fromt he Source folder """
+        pass
 
     def make_model_symbolic_link(self):
         """ Add the linking of the additional model files for multiple precision
@@ -232,7 +237,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         res_list = [[] for i in range(n_amps)]
         
         for i, coeff_list in enumerate(color_amplitudes):
-                for (coefficient, amp_number) in coeff_list:                
+                for (coefficient, amp_number) in coeff_list: 
                     res_list[amp_number-1].append((i,self.cat_coeff(\
                       coefficient[0],coefficient[1],coefficient[2],coefficient[3])))
 
@@ -404,7 +409,8 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                                      'check_sa_loop_induced.f'),
                         os.path.join(self.dir_path, 'Subprocesses','check_sa.f'))
 
-        self.link_files_from_Subprocesses()
+        self.link_files_from_Subprocesses(proc_name=\
+                              matrix_element.get('processes')[0].shell_string())
         
         # Return to original PWD
         os.chdir(cwd)
@@ -413,7 +419,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             calls = 0
         return calls
 
-    def link_files_from_Subprocesses(self):
+    def link_files_from_Subprocesses(self,proc_name=""):
         """ To link required files from the Subprocesses directory to the
         different P* ones"""
         
@@ -430,6 +436,11 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
 
         for file in linkfiles:
             ln('../../lib/%s' % file)
+            
+        # Link the coef_specs.inc for aloha to define the coefficient
+        # general properties (of course necessary in the optimized mode only)
+        ln(os.path.join(self.dir_path, 'SubProcesses', "P%s" % proc_name,
+                 'coef_specs.inc'),os.path.join(self.dir_path,'Source/DHELAS/'))
 
     def generate_general_replace_dict(self,matrix_element):
         """Generates the entries for the general replacement dictionary used
@@ -516,12 +527,13 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                                          matrix_element.find_max_loop_coupling()
         # The born amp declaration suited for also outputing the loop-induced
         # processes as well.
-        self.general_replace_dict['dp_born_amps_decl'] = \
-              self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS,NCOMB)"+\
-              "\n common/AMPS/AMP"
-        self.general_replace_dict['mp_born_amps_decl'] = \
-              self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS,NCOMB)"+\
-              "\n common/MP_AMPS/AMP"
+        if matrix_element.get('processes')[0].get('has_born'):
+            self.general_replace_dict['dp_born_amps_decl'] = \
+                  self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS,NCOMB)"+\
+                  "\n common/AMPS/AMP"
+            self.general_replace_dict['mp_born_amps_decl'] = \
+                  self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS,NCOMB)"+\
+                  "\n common/MP_AMPS/AMP"
         
         if writer:
             files=[]
@@ -693,6 +705,8 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             momposset="\n".join([("MOMPOS(%d)=MP%d"%(i,i)) for \
                              i in range(1,callkey[1]+1)])
             replace_dict['momposset']=momposset
+            weset="\n".join([("WE(%d)=W%d"%(i,i)) for i in range(1,callkey[1]+1)])
+            replace_dict['weset']=weset
             msetlines=["M2L(1)=M%d**2"%(callkey[0]),]
             mset="\n".join(msetlines+["M2L(%d)=M%d**2"%(i,i-1) for \
                              i in range(2,callkey[0]+1)])
@@ -1025,12 +1039,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                               self.general_replace_dict['nloops']
         # The born amp declaration suited for also outputing the loop-induced
         # processes as well.
-        self.general_replace_dict['dp_born_amps_decl'] = \
-              self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS)"+\
-              "\n common/AMPS/AMP"
-        self.general_replace_dict['mp_born_amps_decl'] = \
-              self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS)"+\
-              "\n common/MP_AMPS/AMP"
+        if matrix_element.get('processes')[0].get('has_born'):
+            self.general_replace_dict['dp_born_amps_decl'] = \
+                  self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS)"+\
+                  "\n common/AMPS/AMP"
+            self.general_replace_dict['mp_born_amps_decl'] = \
+                  self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS)"+\
+                  "\n common/MP_AMPS/AMP"
         
         if writer:
             raise MadGraph5Error, "The 'matrix' format output is disabled in "+\

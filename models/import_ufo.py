@@ -113,11 +113,11 @@ def import_model(model_name):
             
         if logger_mod.getEffectiveLevel() > 10:
             logger.info('Run \"set stdout_level DEBUG\" before import for more information.')
-            
+
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
         model.restrict_model(restrict_file)
-        
+    
     return model
 
 _import_once = []
@@ -311,7 +311,7 @@ class UFOMG5Converter(object):
 
         #clean memory
         del self.checked_lor
-        
+                
         return self.model
         
     
@@ -700,7 +700,7 @@ class UFOMG5Converter(object):
 class OrganizeModelExpression:
     """Organize the couplings/parameters of a model"""
     
-    track_dependant = ['aS','aEWM1'] # list of variable from which we track 
+    track_dependant = ['aS','aEWM1','MU_R'] # list of variable from which we track 
                                    #dependencies those variables should be define
                                    #as external parameters
     
@@ -840,7 +840,6 @@ class OrganizeModelExpression:
             elif subexpr in self.all_expr.keys() and self.all_expr[subexpr].depend:
                 [depend_on.add(value) for value in self.all_expr[subexpr].depend 
                                 if  self.all_expr[subexpr].depend != ('external',)]
-
         if depend_on:
             return tuple(depend_on)
         else:

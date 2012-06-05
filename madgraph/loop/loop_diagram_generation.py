@@ -496,8 +496,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
                     # First create the two L-cut particles to add to the process.
                     # Remember that in the model only the particles should be tagged as 
                     # contributing to the a perturbation. Never the anti-particle.
-                    # We chose here a specific orientation for the loop momentum flow:
-                    # It goes OUT of lcutone and IN lcuttwo.
+                    # We chose here a specific orientation for the loop momentum flow
+                    # , say going IN lcutone and OUT lcuttwo. We also define here
+                    # the 'positive' loop fermion flow by always setting lcutone
+                    # to be a particle and lcuttwo the corresponding anti-particle
                     if partGenInfo: print "partGenInfo:: L-cut particle generated                = ",part.get_name()
                     lcutone=base_objects.Leg({'id': part.get_pdg_code(),
                                               'state': True,

@@ -61,7 +61,7 @@ class LoopColorBasis(color_amp.ColorBasis):
         else:
             raise ColorBasis.ColorBasisError, \
         "L-cut particle has an unsupported color representation %s" % lcut_charge
-        
+                
         # Append it to all color strings for this diagram.
         for CS in colorize_dict.values():
             CS.product(closingCS)
@@ -80,14 +80,15 @@ class LoopColorBasis(color_amp.ColorBasis):
             colorize_dict = self.colorize(diagram,
                                         amplitude.get('process').get('model'))
             if diagram['type']>0:
-                starting_particle=amplitude['process']['model'].get_particle(\
-                                     diagram.get_starting_loop_line().get('id'))
-                lcut_charge=starting_particle.get_color()                
                 # We close here the color loop for loop diagrams (R2 have
                 # negative 'type') by adding a delta in the two color indices of
                 # loop_leg_numbers.
-                lcut_numbers=[len(amplitude['process']['legs'])+1,\
-                                            len(amplitude['process']['legs'])+2]
+                starting_leg=diagram.get_starting_loop_line()
+                finishing_leg=diagram.get_finishing_loop_line()
+                lcut_charge=amplitude['process']['model'].get_particle(\
+                                     starting_leg.get('id')).get_color()
+                lcut_numbers=[starting_leg.get('number'),\
+                                                    finishing_leg.get('number')]
                 self.closeColorLoop(colorize_dict,lcut_charge,lcut_numbers)
 
             list_color_dict.append(colorize_dict)

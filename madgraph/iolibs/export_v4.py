@@ -211,6 +211,10 @@ class ProcessExporterFortran(object):
         mv(model_path + '/param_card.dat', self.dir_path + '/Cards/param_card_default.dat')
         ln(model_path + '/coupl.inc', self.dir_path + '/Source')
         ln(model_path + '/coupl.inc', self.dir_path + '/SubProcesses')
+        self.make_source_links()
+        
+    def make_source_links(self):
+        """ Create the links from the files in sources """
         ln(self.dir_path + '/Source/run.inc', self.dir_path + '/SubProcesses', log=False)
         ln(self.dir_path + '/Source/genps.inc', self.dir_path + '/SubProcesses', log=False)
         ln(self.dir_path + '/Source/maxconfigs.inc', self.dir_path + '/SubProcesses', log=False)
@@ -354,7 +358,7 @@ class ProcessExporterFortran(object):
 
         #copy Helas Template
         cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
-        if any(['L' in d[1] for d in wanted_lorentz]):
+        if any([any(['L' in tag for tag in d[1]]) for d in wanted_lorentz]):
             cp(MG5DIR + '/aloha/template_files/aloha_functions_loop.f', write_dir+'/aloha_functions.f')
         else:
             cp(MG5DIR + '/aloha/template_files/aloha_functions.f', write_dir+'/aloha_functions.f')
@@ -2834,6 +2838,12 @@ python_to_fortran = lambda x: parsers.UFOExpressionParserFortran().parse(x)
 
 class UFO_model_to_mg4(object):
     """ A converter of the UFO-MG5 Model to the MG4 format """
+
+    # The list below shows the only variables the user is allowed to change by
+    # himself for each PS point. If he changes any other, then calling 
+    # UPDATE_AS_PARAM() (or equivalently MP_UPDATE_AS_PARAM()) will not
+    # correctly account for the change.
+    PS_dependent_key = ['aS','MU_R']
     
     def __init__(self, model, output_path, cmass_scheme=False, mp=False):
         """ initialization of the objects """
@@ -2918,7 +2928,7 @@ class UFO_model_to_mg4(object):
         for key in keys:
             if key == ('external',):
                 self.params_ext += self.model['parameters'][key]
-            elif 'aS' in key:
+            elif any([(k in key) for k in self.PS_dependent_key]):
                 self.params_dep += self.model['parameters'][key]
             else:
                 self.params_indep += self.model['parameters'][key]
@@ -2926,7 +2936,7 @@ class UFO_model_to_mg4(object):
         keys = self.model['couplings'].keys()
         keys.sort(key=len)
         for key, coup_list in self.model['couplings'].items():
-            if 'aS' in key:
+            if any([(k in key) for k in self.PS_dependent_key]):
                 self.coups_dep += [c for c in coup_list if
                                    (not wanted_couplings or c.name in \
                                     wanted_couplings)]
@@ -2980,10 +2990,13 @@ class UFO_model_to_mg4(object):
         
         #write the definition of the parameter
         self.create_input()
-        self.create_intparam_def()
+        self.create_intparam_def(dp=True,mp=False)
+        if self.mp:
+            self.create_intparam_def(dp=False,mp=True)
         
         
         # definition of the coupling.
+        self.create_actualize_mp_ext_param_inc()
         self.create_coupl_inc()
         self.create_write_couplings()
         self.create_couplings()
@@ -3210,10 +3223,15 @@ class UFO_model_to_mg4(object):
     
     
 
-    def create_intparam_def(self):
-        """ create intparam_definition.inc """
+    def create_intparam_def(self, dp=True, mp=False):
+        """ create intparam_definition.inc setting the internal parameters.
+        Output the double precision and/or the multiple precision parameters
+        depending on the parameters dp and mp. If mp only, then the file names
+        get the 'mp_' prefix.
+         """
 
-        fsock = self.open('intparam_definition.inc', format='fortran')
+        fsock = self.open('%sintparam_definition.inc'%
+                             ('mp_' if mp and not dp else ''), format='fortran')
         
         fsock.write_comments(\
                 "Parameters that should not be recomputed event by event.\n")
@@ -3222,9 +3240,10 @@ class UFO_model_to_mg4(object):
         for param in self.params_indep:
             if param.name == 'ZERO':
                 continue
-            fsock.writelines("%s = %s\n" % (param.name,
+            if dp:
+                fsock.writelines("%s = %s\n" % (param.name,
                                             self.p_to_f.parse(param.expr)))
-            if self.mp:
+            if mp:
                 fsock.writelines("%s%s = %s\n" % (self.mp_prefix,param.name,
                                             self.mp_p_to_f.parse(param.expr)))    
 
@@ -3232,17 +3251,18 @@ class UFO_model_to_mg4(object):
         
         fsock.write_comments('\nParameters that should be recomputed at an event by even basis.\n')
         for param in self.params_dep:
-            fsock.writelines("%s = %s\n" % (param.name,
+            if dp:
+                fsock.writelines("%s = %s\n" % (param.name,
                                             self.p_to_f.parse(param.expr)))
-            if self.mp:
+            if mp:
                 fsock.writelines("%s%s = %s\n" % (self.mp_prefix,param.name,
                                             self.mp_p_to_f.parse(param.expr)))
-
-        fsock.write_comments("\nDefinition of the EW coupling used in the write out of aqed\n")
-        fsock.writelines(""" gal(1) = 1d0
-                             gal(2) = 1d0
-                         """)
-        if self.mp:
+        if dp:
+            fsock.write_comments("\nDefinition of the EW coupling used in the write out of aqed\n")
+            fsock.writelines(""" gal(1) = 1d0
+                                 gal(2) = 1d0
+                             """)
+        if mp:
             fsock.writelines(""" %(mp_prefix)sgal(1) = 1e0_16
                                  %(mp_prefix)sgal(2) = 1e0_16
                              """%{'mp_prefix':self.mp_prefix})
@@ -3257,14 +3277,22 @@ class UFO_model_to_mg4(object):
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
         
         for i in range(nb_coup_indep):
+            # For the independent couplings, we compute the double and multiple
+            # precision ones together
             data = self.coups_indep[nb_def_by_file * i: 
                              min(len(self.coups_indep), nb_def_by_file * (i+1))]
-            self.create_couplings_part(i + 1, data)
+            self.create_couplings_part(i + 1, data, dp=True, mp=self.mp)
             
         for i in range(nb_coup_dep):
+            # For the dependent couplings, we compute the double and multiple
+            # precision ones in separate subroutines.
             data = self.coups_dep[nb_def_by_file * i: 
                                min(len(self.coups_dep), nb_def_by_file * (i+1))]
-            self.create_couplings_part( i + 1 + nb_coup_indep , data)        
+            self.create_couplings_part( i + 1 + nb_coup_indep , data, 
+                                                               dp=True,mp=False)
+            if self.mp:
+                self.create_couplings_part( i + 1 + nb_coup_indep , data, 
+                                                              dp=False,mp=True)
         
         
     def create_couplings_main(self, nb_def_by_file=25):
@@ -3287,8 +3315,9 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'
                             READLHA = .true.
-                            include \'intparam_definition.inc\'\n\n
-                         """)
+                            include \'intparam_definition.inc\'""")
+        if self.mp:
+            fsock.writelines("""include \'mp_intparam_definition.inc\'\n""")
         
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
@@ -3301,6 +3330,10 @@ class UFO_model_to_mg4(object):
         fsock.writelines('\n'.join(\
                     ['call coup%s()' %  (nb_coup_indep + i + 1) \
                       for i in range(nb_coup_dep)]))
+        if self.mp:
+            fsock.writelines('\n'.join(\
+                    ['call mp_coup%s()' %  (nb_coup_indep + i + 1) \
+                      for i in range(nb_coup_dep)]))
         fsock.writelines('''\n return \n end\n''')
 
         fsock.writelines("""subroutine update_as_param()
@@ -3308,19 +3341,14 @@ class UFO_model_to_mg4(object):
                             implicit none
                             double precision PI
                             logical READLHA
-                            parameter  (PI=3.141592653589793d0)""")
-        if self.mp:
-            fsock.writelines("""%s MP__PI
-                                parameter (MP__PI=3.1415926535897932384626433832795e0_16)
-                                include \'mp_input.inc\'
-                                include \'mp_coupl.inc\'
-                        """%self.mp_real_format)                
+                            parameter  (PI=3.141592653589793d0)""")               
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'
-                            READLHA = .false.
-                            include \'intparam_definition.inc\'\n\n
+                            READLHA = .false.""")
+        fsock.writelines("""    
+                            include \'intparam_definition.inc\'\n
                          """)
-        
+            
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
                 
@@ -3331,30 +3359,65 @@ class UFO_model_to_mg4(object):
                       for i in range(nb_coup_dep)]))
         fsock.writelines('''\n return \n end\n''')
 
-    def create_couplings_part(self, nb_file, data):
-        """ create couplings[nb_file].f containing information coming from data
+        if self.mp:
+            fsock.writelines("""subroutine mp_update_as_param()
+    
+                                implicit none
+                                logical READLHA""")
+            fsock.writelines("""%s MP__PI
+                                    parameter (MP__PI=3.1415926535897932384626433832795e0_16)
+                                    include \'mp_input.inc\'
+                                    include \'mp_coupl.inc\'
+                            """%self.mp_real_format)
+            fsock.writelines("""include \'input.inc\'
+                                include \'coupl.inc\'
+                                include \'actualize_mp_ext_params.inc\'
+                                READLHA = .false.
+                                include \'mp_intparam_definition.inc\'\n
+                             """)
+            
+            nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
+            nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
+                    
+            fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
+    
+            fsock.writelines('\n'.join(\
+                        ['call mp_coup%s()' %  (nb_coup_indep + i + 1) \
+                          for i in range(nb_coup_dep)]))
+            fsock.writelines('''\n return \n end\n''')
+
+    def create_couplings_part(self, nb_file, data, dp=True, mp=False):
+        """ create couplings[nb_file].f containing information coming from data.
+        Outputs the computation of the double precision and/or the multiple
+        precision couplings depending on the parameters dp and mp.
+        If mp is True and dp is False, then the prefix 'MP_' is appended to the
+        filename and subroutine name.
         """
         
-        fsock = self.open('couplings%s.f' % nb_file, format='fortran')
-        fsock.writelines("""subroutine coup%s()
-        
-          implicit none
-          double precision PI
-          parameter  (PI=3.141592653589793d0)"""% nb_file)
-        if self.mp:
+        fsock = self.open('%scouplings%s.f' %('mp_' if mp and not dp else '',
+                                                     nb_file), format='fortran')
+        fsock.writelines("""subroutine %scoup%s()
+          
+          implicit none"""%('mp_' if mp and not dp else '',nb_file))
+        if dp:
+            fsock.writelines("""
+              double precision PI
+              parameter  (PI=3.141592653589793d0)
+              include 'input.inc'
+              include 'coupl.inc'""")
+        if mp:
             fsock.writelines("""%s MP__PI
                                 parameter (MP__PI=3.1415926535897932384626433832795e0_16)
                                 include \'mp_input.inc\'
                                 include \'mp_coupl.inc\'
                         """%self.mp_real_format) 
-        fsock.writelines("""include 'input.inc'
-          include 'coupl.inc'
-          include 'model_functions.inc'
-                        """)
-        for coupling in data:            
-            fsock.writelines('%s = %s' % (coupling.name,
+        fsock.writelines("""
+          include 'model_functions.inc'""")
+        for coupling in data:
+            if dp:            
+                fsock.writelines('%s = %s' % (coupling.name,
                                           self.p_to_f.parse(coupling.expr)))
-            if self.mp:
+            if mp:
                 fsock.writelines('%s%s = %s' % (self.mp_prefix,coupling.name,
                                           self.mp_p_to_f.parse(coupling.expr)))
         fsock.writelines('end')
@@ -3427,8 +3490,12 @@ class UFO_model_to_mg4(object):
         
         nb_coup_indep = 1 + len(self.coups_dep) // 25 
         nb_coup_dep = 1 + len(self.coups_indep) // 25
-        text += ' '.join(['couplings%s.o' % (i+1) \
-                                  for i in range(nb_coup_dep + nb_coup_indep) ])
+        couplings_files=['couplings%s.o' % (i+1) \
+                                for i in range(nb_coup_dep + nb_coup_indep) ]
+        if self.mp:
+            couplings_files+=['mp_couplings%s.o' % (i+1) for i in \
+                               range(nb_coup_dep,nb_coup_dep + nb_coup_indep) ]
+        text += ' '.join(couplings_files)
         fsock.writelines(text)
         
     def create_param_write(self):
@@ -3476,7 +3543,23 @@ class UFO_model_to_mg4(object):
         external_param = [format(param) for param in self.params_ext]
         fsock.writelines('\n'.join(external_param))
 
+    def create_actualize_mp_ext_param_inc(self):
+        """ create the actualize_mp_ext_params.inc code """
         
+        # In principle one should actualize all external, but for now, it is
+        # hardcoded that only AS and MU_R can by dynamically changed by the user
+        # so that we only update those ones.
+        # Of course, to be on the safe side, one could decide to update all
+        # external parameters.
+        update_params_list=[p for p in self.params_ext if p.name in 
+                                                          self.PS_dependent_key]
+        
+        res_strings = ["%(mp_prefix)s%(name)s=%(name)s"\
+                        %{'mp_prefix':self.mp_prefix,'name':param.name}\
+                                                for param in update_params_list]
+        fsock = self.open('actualize_mp_ext_params.inc', format='fortran')
+        fsock.writelines('\n'.join(res_strings))
+
     def create_param_read(self):    
         """create param_read"""
     

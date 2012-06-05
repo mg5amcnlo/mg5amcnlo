@@ -19,26 +19,25 @@ C ----------
       CALL SLOOPMATRIX(P,ANS)
 	  END
 
-	  logical function IsZero(toTest, reference_value, ampLn, helN)
+	  logical function IsZero(toTest, reference_value, loop)
       IMPLICIT NONE
 C  
 C CONSTANTS
 C
       INTEGER    NLOOPGROUPS
 	  PARAMETER (NLOOPGROUPS=%(nloops)d)
-	  %(real_dp_format)s vtiny
-	  parameter (vtiny=1.0d-7)
 C  
 C ARGUMENTS 
 C  
 	  %(real_dp_format)s toTest, reference_value
-	  integer ampLn,heln
+	  integer loop
 C  
 C GLOBAL 
 C
-      %(complex_dp_format)s AMPL(3,NLOOPGROUPS)
+      INCLUDE 'MadLoopParams.inc'
+      %(complex_dp_format)s LOOPRES(3,NLOOPGROUPS)
 	  LOGICAL S(NLOOPGROUPS)
-	  common/AMPL/AMPL,S
+      common/LOOPRES/LOOPRES,S
 C ----------
 C BEGIN CODE
 C ----------
@@ -47,11 +46,11 @@ C ----------
 		write(*,*) '##E02 ERRROR Reference value for comparison is zero.'
 		STOP
 	  else
-	    IsZero=((abs(toTest)/abs(reference_value)).lt.vtiny)
+	    IsZero=((abs(toTest)/abs(reference_value)).lt.ZEROTHRES)
 	  endif
 
-	  IF((.NOT.ISZERO).AND.(AMPLN.NE.-1).AND.(.NOT.S(AMPLN))) THEN
-	    write(*,*) '##W01 WARNING Contribution ',ampLn,' for hel ',helN,' is detected as contributing with CR=',(abs(toTest)/abs(reference_value)),' but is unstable.' 
+	  IF((.NOT.ISZERO).AND.(loop.NE.-1).AND.(.NOT.S(loop))) THEN
+	    write(*,*) '##W01 WARNING Contribution ',loop,' is detected as contributing with CR=',(abs(toTest)/abs(reference_value)),' but is unstable.' 
 	  ENDIF
 
 	  end
@@ -316,7 +315,7 @@ MP_DONE=.FALSE.
 200 CONTINUE
 
 DO I=1,NLOOPS
-  DO J=1,LOOPMAXCOEFS
+  DO J=0,LOOPMAXCOEFS-1
     LOOPCOEFS(J,I)=(0.0d0,0.0d0)
   ENDDO
 ENDDO
@@ -363,7 +362,7 @@ IF (CHECKPHASE) THEN
 
 C SET THE HELICITY FILTER
   IF(.NOT.FOUNDHELFILTER) THEN
-  IF(ISZERO(ABS(ANS(1)+ANS(2)+ANS(3)),REF/DBLE(NCOMB),-1,HELPICKED)) THEN
+  IF(ISZERO(ABS(ANS(1)+ANS(2)+ANS(3)),REF/DBLE(NCOMB),-1)) THEN
     IF(NTRY.EQ.1) THEN
 	  GOODHEL(HELPICKED)=.FALSE.
 	ELSEIF(GOODHEL(HELPICKED)) THEN
@@ -376,7 +375,7 @@ C SET THE HELICITY FILTER
 C SET THE LOOP FILTER
   IF(.NOT.FOUNDLOOPFILTER.AND.USELOOPFILTER) THEN
   	DO I=1,NLOOPGROUPS
-      IF(.NOT.ISZERO(ABS(LOOPRES(1,I))+ABS(LOOPRES(2,I))+ABS(LOOPRES(3,I)),(REF*1.0d-4),I,HELPICKED)) THEN
+      IF(.NOT.ISZERO(ABS(LOOPRES(1,I))+ABS(LOOPRES(2,I))+ABS(LOOPRES(3,I)),(REF*1.0d-4),I)) THEN
         IF(NTRY.EQ.1) THEN
 	      GOODAMP(I)=.TRUE.
 		  LOOPFILTERBUFF(I)=.TRUE.

@@ -651,7 +651,7 @@ class LoopDiagram(base_objects.Diagram):
                         nextLoopLeg, endLeg, loopVertexList, process)
 
     def synchronize_loop_vertices_with_tag(self,model,struct_rep,
-                                                       start_number,end_number):
+                                         lcut_part_number,lcut_antipart_number):
         """ Construct the loop vertices from the tag of the loop diagram."""
         
         if not self['tag']:
@@ -669,7 +669,15 @@ class LoopDiagram(base_objects.Diagram):
                        struct_rep[FDindex]['binding_leg']) for FDindex in t[1]])
             if i==0:
                 starting_leg=copy.copy(t[0])
-                starting_leg['number']=start_number
+                # Remember here that it is crucial to stick to one convention
+                # chosen here to be that the lcut leg 'start_number' always
+                # is a particle and the lcut leg 'end_number' always is the
+                # corresponding anti-particle. (if not self). This is to ensure
+                # a correct evaluation of the fermion number for amplitude.
+                if model.get_particle(starting_leg['id']).get('is_part'):
+                    starting_leg['number']=lcut_part_number
+                else:
+                    starting_leg['number']=lcut_antipart_number                    
                 starting_leg['state']=True
             else:
                 starting_leg=loopVertexList[-1].get('legs')[-1]
@@ -680,6 +688,10 @@ class LoopDiagram(base_objects.Diagram):
         # with flagged id = -1
         first_leg=copy.copy(loopVertexList[-1].get('legs')[-1])
         sec_leg_id=model.get_particle(first_leg['id']).get_anti_pdg_code()
+        if model.get_particle(sec_leg_id).get('is_part'):
+            end_number=lcut_part_number
+        else:
+            end_number=lcut_antipart_number
         second_leg=base_objects.Leg({'number': end_number,
                                      'id': sec_leg_id,
                                      'state': first_leg.get('state'),
@@ -898,11 +910,21 @@ class LoopDiagram(base_objects.Diagram):
     # Helper function
 
     def get_starting_loop_line(self):
-        """ Return the starting loop line of this diagram """
+        """ Return the starting loop line of this diagram, i.e. lcut leg one."""
         for v in self['vertices']:
             for l in v['legs']:
                 if l['loop_line']:
                     return l
+    
+    def get_finishing_loop_line(self):
+        """ Return the finishing line of this diagram, i.e. lcut leg two.
+        Notice that this function is only available when the loop diagram is 
+        constructed with the special two-point vertex with id -1. """
+        
+        assert self['vertices'][-1].get('id')==-1, "Loop diagrams must finish "+\
+          " with vertex with id '-1' for get_finishing_loop_line to be called"
+        
+        return max(self['vertices'][-1].get('legs'), key=lambda l: l['number'])
 
     def get_loop_line_types(self):
         """ Return a set with one occurence of each different PDG code of the

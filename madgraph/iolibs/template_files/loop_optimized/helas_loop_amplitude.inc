@@ -26,7 +26,7 @@ C LOCAL VARIABLES
 C
       %(real_dp_format)s PL(0:3,NLOOPLINE)
       %(mass_dp_format)s M2L(NLOOPLINE)
-      INTEGER PAIRING(NLOOPLINE)
+      INTEGER PAIRING(NLOOPLINE),WE(%(nwfsargs)d)
 	  INTEGER MOMPOS(%(nwfsargs)d)
       INTEGER I, J, K, TEMP
 C
@@ -36,7 +36,6 @@ C
       COMMON/LOOP/ID,R
 
 	  LOGICAL CHECKPHASE
-	  DATA CHECKPHASE/.TRUE./
       common/INIT/CHECKPHASE
 
 	  LOGICAL GOODHEL(NCOMB)
@@ -52,6 +51,7 @@ C ----------
 
 	  IF (CHECKPHASE.OR.GOODAMP(LOOPNUM)) THEN
 	  %(momposset)s
+	  %(weset)s
       %(mset)s
       %(pairingset)s
 	  R=RANK

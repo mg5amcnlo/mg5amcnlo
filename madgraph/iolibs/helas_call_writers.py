@@ -150,92 +150,6 @@ class HelasCallWriter(base_objects.PhysicsObject):
         res = res + self.get_loop_amp_helas_calls(loop_matrix_element)
         return res
     
-    def get_loop_amplitude_helas_calls(self, loop_matrix_element):
-        """ Returns a list of strings corresponding to the Helas calls for each 
-        loop amplitude of this loop matrix element."""        
-        
-        res = []
-        loopHelasAmpNumberTreated=[]
-        for ldiag in loop_matrix_element.get_loop_diagrams():
-            for lamp in ldiag.get_loop_amplitudes():
-                if lamp.get('number') in loopHelasAmpNumberTreated:
-                    continue
-                else:
-                    loopHelasAmpNumberTreated.append(lamp.get('number'))
-                lcutpart=self['model'].get_particle(lamp['type'])
-                res.append("ELSEIF (ID.EQ.%d) THEN"%lamp.get('number'))
-                res.append("#Loop diagram number %d (might be others, just an example)"\
-                                                           %ldiag.get('number'))                
-                if lcutpart.get('spin')==1:
-                    res.append("DO I=1,1")
-                elif lcutpart.get('spin')==2 or lcutpart.get('spin')==3:
-                    res.append("DO I=1,4")
-                else:
-                    raise self.PhysicsObjectError, \
-                  "The L-cut particle type is not supported"
-                # Relabel the 'number' attribute of the external wavefunctions
-                # in this wavefunction's mothers so to have them matching the
-                # convention in the loop helas calls.
-                # The same relabeling is performed for couplings.
-                # We save the original values to reset them afterwards.
-                externalWfNumber=1
-                originalNumbers=[]
-                couplingNumber=1
-                originalCouplings=[]
-                for lwf in lamp.get('wavefunctions'):
-                    if lwf.get('coupling')!=['none']:
-                        originalCouplings.append(lwf.get('coupling'))
-                        couplings=[]
-                        for coup in lwf.get('coupling'):
-                            couplings.append("LC(%d)"%couplingNumber)
-                            couplingNumber=couplingNumber+1
-                        lwf.set('coupling',couplings)
-                    for mother in lwf.get('mothers'):
-                        if not mother.get('is_loop'):
-                            originalNumbers.append(mother.get('number'))
-                            mother.set('number',externalWfNumber)
-                            externalWfNumber=externalWfNumber+1
-                # Now we can generate the call for the starting loop wavefunction
-                external_loop_wfs=[w for w in  lamp.get('wavefunctions') if \
-                                                          not w.get('mothers')]
-                external_loop_wfs_numbers = [w.get('number_external') for\
-                                              w in external_loop_wfs]
-                starting_ext_loop_wf_index = external_loop_wfs_numbers.index(
-                                                min(external_loop_wfs_numbers))
-                res.append(self.get_wavefunction_call(external_loop_wfs[\
-                                                   starting_ext_loop_wf_index]))
-                # And now for all the other wavefunctions
-                res.extend([ self.get_wavefunction_call(wf) for \
-                          wf in lamp.get('wavefunctions') if wf.get('mothers')])
-                # Get the last wf generated and the corresponding loop
-                # wavefunction number
-                for lwf in lamp.get('amplitudes')[0].get('mothers'):
-                    if lwf.get('mothers'):
-                        last_lwf_number=lwf.get('number')
-                        break
-                res.append('BUFF(I)=WL(I,%d)'%last_lwf_number)
-                # And re-establish the original numbering
-                indexMothers=0
-                indexWfs=0
-                for lwf in lamp.get('wavefunctions'):
-                    if lwf.get('coupling')!=['none']:
-                        lwf.set('coupling',originalCouplings[indexWfs])
-                        indexWfs=indexWfs+1
-                    for mother in lwf.get('mothers'):
-                        if not mother.get('is_loop'):
-                            mother.set('number',originalNumbers[indexMothers])
-                            indexMothers=indexMothers+1 
-                res.append('ENDDO')
-                if lcutpart.get('spin')==1:
-                    res.append("CALL CLOSE_1(BUFF(1),RES)")
-                elif lcutpart.get('spin')==2 or lcutpart.get('spin')==3:
-                    res.append("CALL CLOSE_4(BUFF(1),RES)")
-        # We must change the first 'ELSE IF' into an 'IF'
-        res[0]=res[0][4:]
-        # And add an ENDIF at the end
-        res.append('ENDIF')
-        
-        return res
 
     def get_matrix_element_calls(self, matrix_element):
         """Return a list of strings, corresponding to the Helas calls
@@ -1228,6 +1142,89 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         else:
             self.add_amplitude(argument.get_call_key(), call_function)
 
+    def get_loop_amplitude_helas_calls(self, loop_matrix_element):
+        """ Returns a list of strings corresponding to the Helas calls for each 
+        loop amplitude of this loop matrix element. This function is placed in
+        this class and not in HelasWriter, because it contains fortran-specific
+        code."""        
+        
+        res = []
+        loopHelasAmpNumberTreated=[]
+        for ldiag in loop_matrix_element.get_loop_diagrams():
+            for lamp in ldiag.get_loop_amplitudes():
+                if lamp.get('number') in loopHelasAmpNumberTreated:
+                    continue
+                else:
+                    loopHelasAmpNumberTreated.append(lamp.get('number'))
+                lcutpart=self['model'].get_particle(lamp['type'])
+                res.append("ELSEIF (ID.EQ.%d) THEN"%lamp.get('number'))
+                res.append("#Loop diagram number %d (might be others, just an example)"\
+                                                           %ldiag.get('number'))                
+                if lcutpart.get('spin')==1:
+                    res.append("DO I=1,1")
+                elif lcutpart.get('spin')==2 or lcutpart.get('spin')==3:
+                    res.append("DO I=1,4")
+                else:
+                    raise self.PhysicsObjectError, \
+                  "The L-cut particle type is not supported"
+                # Relabel the 'number' attribute of the external wavefunctions
+                # in this wavefunction's mothers so to have them matching the
+                # convention in the loop helas calls.
+                # The same relabeling is performed for couplings.
+                # We save the original values to reset them afterwards.
+                externalWfNumber=1
+                originalNumbers=[]
+                couplingNumber=1
+                originalCouplings=[]
+                for lwf in lamp.get('wavefunctions'):
+                    if lwf.get('coupling')!=['none']:
+                        originalCouplings.append(lwf.get('coupling'))
+                        couplings=[]
+                        for coup in lwf.get('coupling'):
+                            couplings.append("LC(%d)"%couplingNumber)
+                            couplingNumber=couplingNumber+1
+                        lwf.set('coupling',couplings)
+                    for mother in lwf.get('mothers'):
+                        if not mother.get('is_loop'):
+                            originalNumbers.append(mother.get('number'))
+                            mother.set('number',externalWfNumber)
+                            externalWfNumber=externalWfNumber+1
+                # Now we can generate the call for the starting loop wavefunction
+                res.append(self.get_wavefunction_call(\
+                                         lamp.get_starting_loop_wavefunction()))
+                # And now for all the other wavefunctions
+                res.extend([ self.get_wavefunction_call(wf) for \
+                          wf in lamp.get('wavefunctions') if wf.get('mothers')])
+                # Get the last wf generated and the corresponding loop
+                # wavefunction number
+                for lwf in lamp.get('amplitudes')[0].get('mothers'):
+                    if lwf.get('mothers'):
+                        last_lwf_number=lwf.get('number')
+                        break
+                res.append('BUFF(I)=WL(I,%d)'%last_lwf_number)
+                # And re-establish the original numbering
+                indexMothers=0
+                indexWfs=0
+                for lwf in lamp.get('wavefunctions'):
+                    if lwf.get('coupling')!=['none']:
+                        lwf.set('coupling',originalCouplings[indexWfs])
+                        indexWfs=indexWfs+1
+                    for mother in lwf.get('mothers'):
+                        if not mother.get('is_loop'):
+                            mother.set('number',originalNumbers[indexMothers])
+                            indexMothers=indexMothers+1 
+                res.append('ENDDO')
+                if lcutpart.get('spin')==1:
+                    res.append("CALL CLOSE_1(BUFF(1),RES)")
+                elif lcutpart.get('spin')==2 or lcutpart.get('spin')==3:
+                    res.append("CALL CLOSE_4(BUFF(1),RES)")
+        # We must change the first 'ELSE IF' into an 'IF'
+        res[0]=res[0][4:]
+        # And add an ENDIF at the end
+        res.append('ENDIF')
+        
+        return res
+
 #===============================================================================
 # FortranUFOHelasCallWriterOptimized
 #===============================================================================
@@ -1263,12 +1260,14 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         res.append("# Now create the loop coefficients")
         for ldiag in matrix_element.get_loop_diagrams():
             for lamp in ldiag.get_loop_amplitudes():
-                create_coef=['CALL CREATE_LOOP_COEFS(WL(1,1,1,%(number)d)',
-                             '%(loop_rank)d','LOOPCOEFS(1,%(loop_number)d)',
+                create_coef=['CALL CREATE_LOOP_COEFS(WL(1,0,1,%(number)d)',
+                             '%(loop_rank)d','%(lcut_size)d',
+                             'LOOPCOEFS(0,%(loop_number)d)',
                              '%(LoopSymmetryFactor)d','%(amp_number)d)']
                 res.append(','.join(create_coef)%{\
                   'number':lamp.get_final_loop_wavefunction().get('number'),
                   'loop_rank':lamp.get_rank(),
+                  'lcut_size':lamp.get_lcut_size(),
                   'loop_number':lamp.get('number'),
                   'amp_number':lamp.get('amplitudes')[0].get('number'),
                   'LoopSymmetryFactor':lamp.get('loopsymmetryfactor')})
@@ -1279,8 +1278,8 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                 # denominator.
                 refamp=lamps[0]
                 for lamp in lamps[1:]:
-                    merge_coef=['CALL ADD_COEFS(LOOPCOEFS(1,%(ref_number)d)',
-                                '%(ref_rank)d','LOOPCOEFS(1,%(new_number)d)',
+                    merge_coef=['CALL ADD_COEFS(LOOPCOEFS(0,%(ref_number)d)',
+                                '%(ref_rank)d','LOOPCOEFS(0,%(new_number)d)',
                                 '%(new_rank)d)']
                     res.append(','.join(merge_coef)%{\
                       'ref_number':refamp.get('number'),
@@ -1327,7 +1326,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         call="CALL "
         call_function = None
         if argument.get('is_loop'):
-            call=call+"LCUT_OPT(PL(1,%(number)d),WL(1,1,1,%(number)d))"
+            call=call+"LCUT_OPT(PL(0,%(number)d),WL(1,1,1,%(number)d))"
             call_function = lambda wf: call % {'number':wf.get('number')}
             self.add_wavefunction(argument.get_call_key(), call_function)
         else:
@@ -1411,7 +1410,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         # First WaveFunction
         if isinstance(argument, helas_objects.HelasWavefunction):
             if argument['is_loop']:
-                arg['out'] = 'PL(1,%(out)d),COEFS'
+                arg['out'] = 'PL(0,%(out)d),COEFS'
             else:
                 arg['out']=self.format_helas_object('W(1,','%(out)d')                   
             if aloha.complex_mass:
@@ -1440,8 +1439,8 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
            argument.get('is_loop')):
             # We add here the call to the UPDATE_COEF subroutine
             call += "\n CALL UPDATE_WL_%(loop_mother_rank)d_%(vertex_rank)d("
-            call += "WL(1,1,1,%(loop_mother_number)d),COEFS,"
-            call += "WL(1,1,1,%(out)d))"
+            call += "WL(1,0,1,%(loop_mother_number)d),%(lcut_size)d,COEFS,"
+            call += "%(in_size)d,%(out_size)d,WL(1,0,1,%(out)d))"
         # Now we have a line correctly formatted
         call_function = lambda wf: call % wf.get_helas_call_dict(\
           OptimizedOutput=True, specifyHel=self.hel_sum)

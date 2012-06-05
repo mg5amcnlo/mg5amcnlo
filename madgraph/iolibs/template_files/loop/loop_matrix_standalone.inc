@@ -19,23 +19,23 @@ C ----------
       CALL SLOOPMATRIX(P,ANS)
 	  END
 
-	  logical function IsZero(toTest, reference_value, ampLn, helN)
+	  logical function IsZero(toTest, reference_value, ampLn)
       IMPLICIT NONE
 C  
 C CONSTANTS
 C
       INTEGER    NLOOPAMPS
 	  PARAMETER (NLOOPAMPS=%(nloopamps)d)
-	  %(real_dp_format)s vtiny
-	  parameter (vtiny=1.0d-7)
 C  
 C ARGUMENTS 
 C  
 	  %(real_dp_format)s toTest, reference_value
-	  integer ampLn,heln
+	  integer ampLn
 C  
 C GLOBAL 
 C
+	  include 'MadLoopParams.inc'
+
       %(complex_dp_format)s AMPL(3,NLOOPAMPS)
 	  LOGICAL S(NLOOPAMPS)
 	  common/AMPL/AMPL,S
@@ -47,11 +47,11 @@ C ----------
 		write(*,*) '##E02 ERRROR Reference value for comparison is zero.'
 		STOP
 	  else
-	    IsZero=((abs(toTest)/abs(reference_value)).lt.vtiny)
+	    IsZero=((abs(toTest)/abs(reference_value)).lt.ZeroThres)
 	  endif
 
 	  IF((.NOT.ISZERO).AND.(AMPLN.NE.-1).AND.(.NOT.S(AMPLN))) THEN
-	    write(*,*) '##W01 WARNING Contribution ',ampLn,' for hel ',helN,' is detected as contributing with CR=',(abs(toTest)/abs(reference_value)),' but is unstable.' 
+	    write(*,*) '##W01 WARNING Contribution ',ampLn,' is detected as contributing with CR=',(abs(toTest)/abs(reference_value)),' but is unstable.' 
 	  ENDIF
 
 	  end
@@ -326,7 +326,7 @@ IF (CHECKPHASE) THEN
 
 C SET THE HELICITY FILTER
   IF(.NOT.FOUNDHELFILTER) THEN
-  IF(ISZERO(ABS(ANS(1)+ANS(2)+ANS(3)),REF/DBLE(NCOMB),-1,HELPICKED)) THEN
+  IF(ISZERO(ABS(ANS(1)+ANS(2)+ANS(3)),REF/DBLE(NCOMB),-1)) THEN
     IF(NTRY.EQ.1) THEN
 	  GOODHEL(HELPICKED)=.FALSE.
 	ELSEIF(GOODHEL(HELPICKED)) THEN
@@ -339,7 +339,7 @@ C SET THE HELICITY FILTER
 C SET THE LOOP FILTER
   IF(.NOT.FOUNDLOOPFILTER.AND.USELOOPFILTER) THEN
   	DO I=NCTAMPS+1,NLOOPAMPS
-      IF(.NOT.ISZERO(ABS(AMPL(1,I))+ABS(AMPL(2,I))+ABS(AMPL(3,I)),(REF*1.0d-4),I,HELPICKED)) THEN
+      IF(.NOT.ISZERO(ABS(AMPL(1,I))+ABS(AMPL(2,I))+ABS(AMPL(3,I)),(REF*1.0d-4),I)) THEN
         IF(NTRY.EQ.1) THEN
 	      GOODAMP(I,HELPICKED)=.TRUE.
 	    ELSEIF(.NOT.GOODAMP(I,HELPICKED)) THEN

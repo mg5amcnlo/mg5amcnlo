@@ -95,19 +95,21 @@ class FortranPolynomialRoutines(PolynomialRoutines):
         lines=[]
         
         # Start by writing out the header:
-        lines.append("""SUBROUTINE %(sub_prefix)sUPDATE_WL_%(r_1)d_%(r_2)d(A,B,OUT)
+        lines.append(
+          """SUBROUTINE %(sub_prefix)sUPDATE_WL_%(r_1)d_%(r_2)d(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE,OUT)
                         include 'coef_specs.inc'
                         INTEGER I,J,K
                         %(coef_format)s A(MAXLWFSIZE,0:LOOP_MAXCOEFS-1,MAXLWFSIZE)
                         %(coef_format)s B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
-                        %(coef_format)s OUT(MAXLWFSIZE,0:LOOP_MAXCOEFS-1,MAXLWFSIZE)          
+                        %(coef_format)s OUT(MAXLWFSIZE,0:LOOP_MAXCOEFS-1,MAXLWFSIZE)
+                        INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
                         """%{'sub_prefix':self.sub_prefix,'r_1':r_1,'r_2':r_2,
                                                 'coef_format':self.coef_format})
         
         # Start the loop on the elements i,j of the vector OUT(i,coef,j)
-        lines.append("DO I=1,MAXLWFSIZE")
-        lines.append("  DO J=1,MAXLWFSIZE")
-        lines.append("    DO K=1,MAXLWFSIZE")
+        lines.append("DO I=1,LCUT_SIZE")
+        lines.append("  DO J=1,OUT_SIZE")
+        lines.append("    DO K=1,IN_SIZE")
         
         # Now we write the lines defining the coefs of OUT(j,*,i) from those
         # of A(k,*,i) and B(j,*,k)
@@ -185,11 +187,11 @@ class FortranPolynomialRoutines(PolynomialRoutines):
         lines=[]
         
         # Start by writing out the header:
-        lines.append("""SUBROUTINE %(sub_prefix)sMERGE_WL(WL,R,CONST,OUT)
+        lines.append("""SUBROUTINE %(sub_prefix)sMERGE_WL(WL,R,LCUT_SIZE,CONST,OUT)
                         include 'coef_specs.inc'
                         INTEGER I,J
                         %(coef_format)s WL(MAXLWFSIZE,0:LOOP_MAXCOEFS-1,MAXLWFSIZE)
-                        INTEGER R
+                        INTEGER R,LCUT_SIZE
                         %(coef_format)s CONST
                         %(coef_format)s OUT(0:LOOP_MAXCOEFS-1)
                         """%{'sub_prefix':self.sub_prefix,
@@ -203,7 +205,7 @@ class FortranPolynomialRoutines(PolynomialRoutines):
                                                     range(0,self.max_rank+1)])})                     
      
         # Now scan them all progressively
-        lines.append("DO I=1,MAXLWFSIZE")
+        lines.append("DO I=1,LCUT_SIZE")
         lines.append("  DO J=0,NCOEF_R(R)-1")
         lines.append("    OUT(J)=OUT(J)+WL(I,J,I)*CONST")               
         lines.append("  ENDDO")

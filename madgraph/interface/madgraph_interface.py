@@ -3448,8 +3448,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._fks_multi_proc = None
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         elif args[0] == 'loop_optimized_output':
+            if log:
+                    logger.info('set loop optimized output to %s' % args[1])
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             self.options[args[0]] = eval(args[1])
+            # In the open loops method, in order to have a maximum loop numerator
+            # rank of 1, one must work in the Feynman gauge
+            self.do_set('gauge Feynman')
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])

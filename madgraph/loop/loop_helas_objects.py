@@ -297,6 +297,24 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         return super(LoopHelasAmplitude,self).get_sorted_keys()+\
                ['wavefunctions', 'amplitudes','loop_group_id']
 
+    def get_lcut_size(self):
+        """ Return the wavefunction size (i.e. number of elements) based on the
+        spin of the l-cut particle """
+                
+        return helas_objects.HelasWavefunction.spin_to_size(
+                                 self.get_final_loop_wavefunction().get('spin'))
+
+    def get_starting_loop_wavefunction(self):
+        """ Return the starting external loop mother of this loop helas amplitude.
+        It is the loop wavefunction of the l-cut leg one."""
+        
+        loop_wf=self.get_final_loop_wavefunction()
+        loop_wf_mother=loop_wf.get_loop_mother()
+        while loop_wf_mother:
+            loop_wf=loop_wf_mother
+            loop_wf_mother=loop_wf.get_loop_mother()
+        return loop_wf
+
     def get_final_loop_wavefunction(self):
         """Return the non-external loop mother of the helas amplitude building 
         this loop amplitude"""
@@ -344,10 +362,12 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         
         denoms=[]
         last_loop_wf=self.get_final_loop_wavefunction()
-        while last_loop_wf.get_loop_mother():
+        last_loop_wf_mother=last_loop_wf.get_loop_mother()
+        while last_loop_wf_mother:
             denoms.append((tuple(last_loop_wf.get_struct_external_leg_ids()),
                                                       last_loop_wf.get('mass')))
-            last_loop_wf=last_loop_wf.get_loop_mother()
+            last_loop_wf=last_loop_wf_mother
+            last_loop_wf_mother=last_loop_wf.get_loop_mother()
         denoms.reverse()
         
         return tuple(denoms)
@@ -384,6 +404,7 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         output = {}
         output['numLoopLines']='_%d'%(len(self.get('wavefunctions'))-2)
         output['loop_group_id']=self.get('loop_group_id')
+        output['ampNumber']=self.get('amplitudes')[0].get('number')
         if len(self.get('mothers'))!=len(self.get('coupling')):
             output['numMotherWfs']='_%d'%len(self.get('mothers'))
         else:
@@ -566,8 +587,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         self['loop_groups']=[(d[0],helas_objects.HelasAmplitudeList(
                     sorted(d[1],key=lambda lamp: lamp.get_rank(),reverse=True)))
                                                    for d in self['loop_groups']]
-        print "I got oop_groups_val",[(d[0],tuple([lamp.get('number') for lamp in 
-                                                   d[1]])) for d in self['loop_groups']]
+
     def process_color(self):
         """ Perform the simple color processing from a single matrix element 
         (without optimization then). This is called from the initialization
@@ -1609,8 +1629,11 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 wfnumber=wfnumber+1
             for lwf in loopdiag.get('loop_wavefunctions'):
                 lwf.set('number',loopwfnumber)
-                loopwfnumber=loopwfnumber+1                
+                loopwfnumber=loopwfnumber+1
             for loopamp in loopdiag.get_loop_amplitudes():
+                # Set the number of the starting wavefunction (common to all 
+                # diagrams) to one.
+                loopamp.get_starting_loop_wavefunction().set('number',0)
                 for amp in loopamp['amplitudes']:
                     amp.set('number',loop_ampnumber)
                     loop_ampnumber=loop_ampnumber+1

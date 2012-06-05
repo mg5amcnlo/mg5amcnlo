@@ -17,6 +17,8 @@ C
 	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d, VERTEXMAXCOEFS=%(vertex_max_coefs)d)
 	  %(real_mp_format)s     MP__ZERO
       PARAMETER (MP__ZERO=0.0e0_16)
+	  %(complex_mp_format)s     MP__IZERO
+      PARAMETER (MP__IZERO=CMPLX(0.0e0_16,0.0e0_16,KIND=16))
 C  
 C ARGUMENTS
 C
@@ -53,6 +55,26 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+
+      DO I=0,3
+        PL(I,0)=MP__IZERO
+      ENDDO
+      DO I=1,MAXLWFSIZE
+        DO J=0,LOOPMAXCOEFS-1
+          DO K=1,MAXLWFSIZE
+            IF(I.EQ.K.AND.J.EQ.0) THEN
+              WL(I,J,K,0)=CMPLX(1.0e0_16,MP__ZERO,KIND=16)
+            ELSE
+              WL(I,J,K,0)=MP__IZERO
+            ENDIF
+          ENDDO
+        ENDDO
+      ENDDO
+	  DO I=1,NLOOPS
+  	    DO J=0,LOOPMAXCOEFS-1
+    	  LOOPCOEFS(J,I)=MP__IZERO
+        ENDDO
+      ENDDO
 
 %(helas_calls)s
 

@@ -93,11 +93,23 @@
 10
 ! Default :: 10
 
+!     Setting the threshold for deciding wether a numerical contribution is analytically 
+!     zero or not.
+#ZeroThres
+1.0d-9
+! Default :: 1.0d-9
+
 !     Some loop contributions my be zero for some helicities which are however
 !     contributing. In order to save their computing time, you can chose here to try
 !     to filter them out. As the gain is minimal, this option is turned off by default.
 #UseLoopFilter
 .TRUE.
-! Default .TRUE.
+! Default :: .TRUE.
+
+!     This decides wether consecutive consistency for the loop filtering setup is also 
+!     required.
+#LoopInitStartOver
+.FALSE.
+! Default :: .FALSE.
 
 /* End of param file */

@@ -70,8 +70,8 @@ c         write(stdo,*) '             : nsf = ',nsf
 c      endif
 c#endif
 
-      fi(5) = dcmplx(p(0),p(3))*nsf
-      fi(6) = dcmplx(p(1),p(2))*nsf
+      fi(1) = dcmplx(p(0),p(3))*nsf*-1
+      fi(2) = dcmplx(p(1),p(2))*nsf*-1
 
       nh = nhel*nsf
 
@@ -86,10 +86,10 @@ c#endif
             ip = (1+nh)/2
             im = (1-nh)/2
 
-            fi(1) = ip     * sqm(ip)
-            fi(2) = im*nsf * sqm(ip)
-            fi(3) = ip*nsf * sqm(im)
-            fi(4) = im     * sqm(im)
+            fi(3) = ip     * sqm(ip)
+            fi(4) = im*nsf * sqm(ip)
+            fi(5) = ip*nsf * sqm(im)
+            fi(6) = im     * sqm(im)
 
          else
 
@@ -109,10 +109,10 @@ c#endif
                chi(2) = dcmplx( nh*p(1) , p(2) )/dsqrt(rTwo*pp*pp3)
             endif
 
-            fi(1) = sfomeg(1)*chi(im)
-            fi(2) = sfomeg(1)*chi(ip)
-            fi(3) = sfomeg(2)*chi(im)
-            fi(4) = sfomeg(2)*chi(ip)
+            fi(3) = sfomeg(1)*chi(im)
+            fi(4) = sfomeg(1)*chi(ip)
+            fi(5) = sfomeg(2)*chi(im)
+            fi(6) = sfomeg(2)*chi(ip)
 
          endif
 
@@ -130,15 +130,15 @@ c#endif
             chi(2) = dcmplx( nh*p(1), p(2) )/sqp0p3
          endif
          if ( nh.eq.1 ) then
-            fi(1) = dcmplx( rZero )
-            fi(2) = dcmplx( rZero )
-            fi(3) = chi(1)
-            fi(4) = chi(2)
-         else
-            fi(1) = chi(2)
-            fi(2) = chi(1)
             fi(3) = dcmplx( rZero )
             fi(4) = dcmplx( rZero )
+            fi(5) = chi(1)
+            fi(6) = chi(2)
+         else
+            fi(3) = chi(2)
+            fi(4) = chi(1)
+            fi(5) = dcmplx( rZero )
+            fi(6) = dcmplx( rZero )
          endif
       endif
 c
@@ -206,8 +206,8 @@ c         write(stdo,*) '             : nsf = ',nsf
 c      endif
 c#endif
 
-      fo(5) = dcmplx(p(0),p(3))*nsf
-      fo(6) = dcmplx(p(1),p(2))*nsf
+      fo(1) = dcmplx(p(0),p(3))*nsf
+      fo(2) = dcmplx(p(1),p(2))*nsf
 
       nh = nhel*nsf
 
@@ -246,10 +246,10 @@ c#endif
                chi(2) = dcmplx( nh*p(1) , -p(2) )/dsqrt(rTwo*pp*pp3)
             endif
 
-            fo(1) = sfomeg(2)*chi(im)
-            fo(2) = sfomeg(2)*chi(ip)
-            fo(3) = sfomeg(1)*chi(im)
-            fo(4) = sfomeg(1)*chi(ip)
+            fo(3) = sfomeg(2)*chi(im)
+            fo(4) = sfomeg(2)*chi(ip)
+            fo(5) = sfomeg(1)*chi(im)
+            fo(6) = sfomeg(1)*chi(ip)
 
          endif
 
@@ -267,15 +267,15 @@ c#endif
             chi(2) = dcmplx( nh*p(1), -p(2) )/sqp0p3
          endif
          if ( nh.eq.1 ) then
-            fo(1) = chi(1)
-            fo(2) = chi(2)
+            fo(3) = chi(1)
+            fo(4) = chi(2)
+            fo(5) = dcmplx( rZero )
+            fo(6) = dcmplx( rZero )
+         else
             fo(3) = dcmplx( rZero )
             fo(4) = dcmplx( rZero )
-         else
-            fo(1) = dcmplx( rZero )
-            fo(2) = dcmplx( rZero )
-            fo(3) = chi(2)
-            fo(4) = chi(1)
+            fo(5) = chi(2)
+            fo(6) = chi(1)
          endif
 
       endif
@@ -313,9 +313,9 @@ c
       parameter( rOne = 1.0d0, rTwo = 2.0d0 )
 
 
-      tc(1)=NHEL
-      tc(17) = dcmplx(p(0),p(3))*nst
-      tc(18) = dcmplx(p(1),p(2))*nst
+      tc(18)=NHEL
+      tc(1) = dcmplx(p(0),p(3))*nst
+      tc(2) = dcmplx(p(1),p(2))*nst
 
       return
       end
@@ -371,9 +371,9 @@ c         write(stdo,*) '             : nss = ',nss
 c      endif
 c#endif
 
-      sc(1) = dcmplx( rOne )
-      sc(2) = dcmplx(p(0),p(3))*nss
-      sc(3) = dcmplx(p(1),p(2))*nss
+      sc(3) = dcmplx( rOne )
+      sc(1) = dcmplx(p(0),p(3))*nss
+      sc(2) = dcmplx(p(1),p(2))*nss
 c
       return
       end
@@ -525,24 +525,24 @@ c construct eps0
         end if
       end if
 
-      tc(1) = ft(1,1)
-      tc(2) = ft(1,2)
-      tc(3) = ft(1,3)
-      tc(4) = ft(1,4)
-      tc(5) = ft(2,1)
-      tc(6) = ft(2,2)
-      tc(7) = ft(2,3)
-      tc(8) = ft(2,4)
-      tc(9) = ft(3,1)
-      tc(10) = ft(3,2)
-      tc(11) = ft(3,3)
-      tc(12) = ft(3,4)
-      tc(13) = ft(4,1)
-      tc(14) = ft(4,2)
-      tc(15) = ft(4,3)
-      tc(16) = ft(4,4)
-      tc(17) = ft(5,1)
-      tc(18) = ft(6,1)
+      tc(3) = ft(1,1)
+      tc(4) = ft(1,2)
+      tc(5) = ft(1,3)
+      tc(6) = ft(1,4)
+      tc(7) = ft(2,1)
+      tc(8) = ft(2,2)
+      tc(9) = ft(2,3)
+      tc(10) = ft(2,4)
+      tc(11) = ft(3,1)
+      tc(12) = ft(3,2)
+      tc(13) = ft(3,3)
+      tc(14) = ft(3,4)
+      tc(15) = ft(4,1)
+      tc(16) = ft(4,2)
+      tc(17) = ft(4,3)
+      tc(18) = ft(4,4)
+      tc(1) = ft(5,1)
+      tc(2) = ft(6,1)
 
       return
       end
@@ -622,8 +622,8 @@ c#endif
       pp = min(p(0),dsqrt(pt2+p(3)**2))
       pt = min(pp,dsqrt(pt2))
 
-      vc(5) = dcmplx(p(0),p(3))*nsv
-      vc(6) = dcmplx(p(1),p(2))*nsv
+      vc(1) = dcmplx(p(0),p(3))*nsv
+      vc(2) = dcmplx(p(1),p(2))*nsv
 
 c#ifdef HELAS_CHECK
 c nhel=4 option for scalar polarization
@@ -649,25 +649,25 @@ c#endif
 
          if ( pp.eq.rZero ) then
 
-            vc(1) = dcmplx( rZero )
-            vc(2) = dcmplx(-hel*sqh )
-            vc(3) = dcmplx( rZero , nsvahl*sqh )
-            vc(4) = dcmplx( hel0 )
+            vc(3) = dcmplx( rZero )
+            vc(4) = dcmplx(-hel*sqh )
+            vc(5) = dcmplx( rZero , nsvahl*sqh )
+            vc(6) = dcmplx( hel0 )
 
          else
 
             emp = p(0)/(vmass*pp)
-            vc(1) = dcmplx( hel0*pp/vmass )
-            vc(4) = dcmplx( hel0*p(3)*emp+hel*pt/pp*sqh )
+            vc(3) = dcmplx( hel0*pp/vmass )
+            vc(6) = dcmplx( hel0*p(3)*emp+hel*pt/pp*sqh )
             if ( pt.ne.rZero ) then
                pzpt = p(3)/(pp*pt)*sqh*hel
-               vc(2) = dcmplx( hel0*p(1)*emp-p(1)*pzpt ,
+               vc(4) = dcmplx( hel0*p(1)*emp-p(1)*pzpt ,
      &                         -nsvahl*p(2)/pt*sqh       )
-               vc(3) = dcmplx( hel0*p(2)*emp-p(2)*pzpt ,
+               vc(5) = dcmplx( hel0*p(2)*emp-p(2)*pzpt ,
      &                          nsvahl*p(1)/pt*sqh       )
             else
-               vc(2) = dcmplx( -hel*sqh )
-               vc(3) = dcmplx( rZero , nsvahl*sign(sqh,p(3)) )
+               vc(4) = dcmplx( -hel*sqh )
+               vc(5) = dcmplx( rZero , nsvahl*sign(sqh,p(3)) )
             endif
 
          endif
@@ -676,15 +676,15 @@ c#endif
 
          pp = p(0)
          pt = sqrt(p(1)**2+p(2)**2)
-         vc(1) = dcmplx( rZero )
-         vc(4) = dcmplx( hel*pt/pp*sqh )
+         vc(3) = dcmplx( rZero )
+         vc(6) = dcmplx( hel*pt/pp*sqh )
          if ( pt.ne.rZero ) then
             pzpt = p(3)/(pp*pt)*sqh*hel
-            vc(2) = dcmplx( -p(1)*pzpt , -nsv*p(2)/pt*sqh )
-            vc(3) = dcmplx( -p(2)*pzpt ,  nsv*p(1)/pt*sqh )
+            vc(4) = dcmplx( -p(1)*pzpt , -nsv*p(2)/pt*sqh )
+            vc(5) = dcmplx( -p(2)*pzpt ,  nsv*p(1)/pt*sqh )
          else
-            vc(2) = dcmplx( -hel*sqh )
-            vc(3) = dcmplx( rZero , nsv*sign(sqh,p(3)) )
+            vc(4) = dcmplx( -hel*sqh )
+            vc(5) = dcmplx( rZero , nsv*sign(sqh,p(3)) )
          endif
 
       endif

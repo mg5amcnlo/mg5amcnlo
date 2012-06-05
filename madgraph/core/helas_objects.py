@@ -167,6 +167,17 @@ class HelasWavefunction(base_objects.PhysicsObject):
     state, wavefunction number
     """
 
+    @staticmethod
+    def spin_to_size(spin):
+        """ Returns the size of a wavefunction (i.e. number of element) carrying
+        a particle with spin 'spin' """
+
+        sizes = {1:1,2:4,3:4,4:16,5:16}
+        try:
+            return sizes[abs(spin)]
+        except KeyError:
+            raise MadGraph5Error, "L-cut particle has spin %d which is not supported."%spin
+
     def default_setup(self):
         """Default values for all properties"""
 
@@ -221,7 +232,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['number'] = 0
         self['fermionflow'] = 1
         self['is_loop'] = False
+        # The rank is used in the open loops method and stores the rank of the
+        # polynomial describing the loop numerator up to this loop wavefunction
         self['rank'] = None
+        # The lcut_size stores the size of the L-Cut wavefunction at the origin
+        # of the loopwavefunction.
+        self['lcut_size']=None
         # The decay flag is used in processes with defined decay chains,
         # to indicate that this wavefunction has a decay defined
         self['decay'] = False
@@ -428,6 +444,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         "%s is not a valid int" % str(value) + \
                         " for the rank"
 
+        if name == 'lcut_size':
+            if not isinstance(value, int) and value != None:
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid int" % str(value) + \
+                        " for the lcut_size"
+
         return True
 
     # Enhanced get function, where we can directly call the properties of the particle
@@ -441,6 +463,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         if name == 'rank' and self[name] == None:
             self['rank'] = self.get_rank()
+        
+        if name == 'lcut_size' and self[name] == None:
+            self['lcut_size'] = self.get_lcut_size()  
 
         if name in ['spin', 'mass', 'width', 'self_antipart']:
             return self['particle'].get(name)
@@ -548,7 +573,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
             rank=rank+1
         return rank
         
-
     def get_rank(self):
         """ Returns the rank of this wavefunction. Which means the rank of the 
         polynomial in the loop momenta q which is built at this point in the 
@@ -999,8 +1023,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
             flip = 1
         
         output = {}
-        if self.get('is_loop'):
+        if self.get('is_loop') and OptimizedOutput:
             output['vertex_rank']=self.get_interaction_q_power()
+            output['lcut_size']=self.get('lcut_size')
+            output['out_size']=self.spin_to_size(self.get('spin'))
         for i, mother in enumerate(self.get('mothers')):
             nb = mother.get('number') - flip
             output[str(i)] = nb
@@ -1013,14 +1039,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if mother.get('is_loop'):
                     output['loop_mother_number']=nb
                     output['loop_mother_rank']=mother.get('rank')
-                    output['WF%d'%i] = 'PL(1,%d)'%nb
+                    output['in_size']=self.spin_to_size(mother.get('spin'))
+                    output['WF%d'%i] = 'PL(0,%d)'%nb
                 else:
                     output['WF%d'%i] = 'W(1,%d'%nb
             if not mother.get('is_loop'):
                 if specifyHel:
                     output['WF%d'%i]=output['WF%d'%i]+',H)'
                 else:
-                    output['WF%d'%i]=output['WF%d'%i]+')'                    
+                    output['WF%d'%i]=output['WF%d'%i]+')'
                     
         #fixed argument
         for i, coup in enumerate(self.get_with_flow('coupling')):
@@ -1036,11 +1063,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 output['CM'] ='CMASS_%s' % self.get('mass')
         return output
     
-    def get_spin_state_number(self):
+    def get_spin_state_number(self, flip=False):
         """Returns the number corresponding to the spin state, with a
-        minus sign for incoming fermions"""
+        minus sign for incoming fermions. For flip=True, this 
+        spin_state_number is suited for find the index in the interaction 
+        of a MOTHER wavefunction. """
 
-        state_number = {'incoming':-1, 'outgoing': 1,
+        state_number = {'incoming':-1 if not flip else 1,
+                        'outgoing': 1 if not flip else -1,
                         'intermediate': 1, 'initial': 1, 'final': 1}
         return self.get('fermionflow') * \
                state_number[self.get('state')] * \
@@ -1217,7 +1247,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if self.get('spin') == 1:
                 return 'S'
             if self.get('spin') == 2:
-                return 'F'
+                if self.get('particle').get('is_part'):
+                    return 'F'
+                else:
+                    return 'AF'
             if self.get('spin') == 3:
                 return 'V'
             else:
@@ -1390,11 +1423,30 @@ class HelasWavefunction(base_objects.PhysicsObject):
         
         loop_wfs=[wf for wf in self.get('mothers') if wf['is_loop']]
                 
-        if len(loop_wfs)!=1:
-            raise MadGraph5Error, "The loop wavefunctions should have exactly"+\
-                " one loop wavefunction mother, but here it has %d."%len(loop_wfs)
+        assert len(loop_wfs)==1, "The loop wavefunctions should have exactly"+\
+              " one loop wavefunction mother, but here it has %d."%len(loop_wfs)
+
         return self.find_leg_index(loop_wfs[0].get_pdg_code(),\
-                                            loop_wfs[0].get_spin_state_number())
+                                   loop_wfs[0].get_spin_state_number(flip=True))
+        
+    def get_lcut_size(self):
+        """ Return the size (i.e number of elements) of the L-Cut wavefunction
+        this loop wavefunction originates from. """
+        
+        if not self['is_loop']:
+            return 0
+        
+        # Obtain the L-cut wavefunction this loop wavefunction comes from.
+        # (I'm using two variable instead of one in order to have only one call
+        #  to get_loop_mother())
+        last_loop_wf=self
+        last_loop_wf_loop_mother=last_loop_wf.get_loop_mother()
+        while last_loop_wf_loop_mother:
+            last_loop_wf=last_loop_wf_loop_mother
+            last_loop_wf_loop_mother=last_loop_wf_loop_mother.get_loop_mother()
+        
+        # Translate its spin into a wavefunction size.
+        return self.spin_to_size(last_loop_wf.get('spin'))
         
     def get_loop_mother(self):
         """ Return the mother of type 'loop', if any. """

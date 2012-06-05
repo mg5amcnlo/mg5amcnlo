@@ -38,8 +38,7 @@ class FileWriter(file):
     def write_line(self, line):
         """Write a line with proper indent and splitting of long lines
         for the language in question."""
-
-        pass
+        return [line]
 
     def write_comment_line(self, line):
         """Write a comment line, with correct indent and line splits,
@@ -68,6 +67,10 @@ class FileWriter(file):
                 self.write(line_to_write)
 
         pass
+    
+    def write(self, text):
+        return self.writelines(text)
+        
 
     def writelines(self, lines):
         """Extends the regular file.writeline() function to write out
@@ -83,11 +86,13 @@ class FileWriter(file):
             splitlines.extend(lines.split('\n'))
         else:
             raise self.FileWriterError("%s not string" % repr(lines))
-
         for line in splitlines:
             res_lines = self.write_line(line)
             for line_to_write in res_lines:
-                self.write(line_to_write)
+                if not line_to_write or line_to_write[-1] != '\n':
+                    file.write(self, '%s\n' % line_to_write)
+                else:
+                    file.write(self, '%s' % line_to_write)
 
 #===============================================================================
 # FortranWriter
@@ -776,4 +781,5 @@ class PythonWriter(FileWriter):
     def write_comments(self, text):
         text = '#%s\n' % text.replace('\n','\n#')
         file.write(self, text)
-
+        
+    
