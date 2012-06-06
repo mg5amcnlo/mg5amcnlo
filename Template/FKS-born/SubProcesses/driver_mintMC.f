@@ -1269,7 +1269,6 @@ c equal_to() that maps the IPROC to the set of unique IPROCs
                      enddo
                      if (nequal.eq.nexternal-1) then
                         equal_to(j)=jj
-                        write (*,*) 'YES',j,equal_to(j)
                         exit
                      endif
                   enddo
