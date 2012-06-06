@@ -136,7 +136,7 @@ c
                else
                   wgt = -xzoomfact
                endif
-               if (wgt .gt. 0d0) call graph_point(p,wgt) !Update graphs
+               if (wgt .ne. 0d0) call graph_point(p,wgt) !Update graphs
             else
                fx =0d0
                wgt=0d0
@@ -1291,7 +1291,7 @@ c-----
       if (iteration .eq. cur_it) then
          kn = kn + 1
          if (.true.) then       !Average points to increase error estimate
-            twgt1=twgt1+wgt     !This doesn't change anything should remove
+            twgt1=twgt1+dabs(wgt)     !This doesn't change anything should remove
             iavg = iavg+1
             if (iavg .ge. navg) then
                sigma=sigma+twgt1**2
@@ -1301,12 +1301,12 @@ c-----
          else
             sigma = sigma + wgt**2
          endif
-         if (wgt .gt. 0.) then
-            if (wgt*iter*events .gt. wmax) then
-               wmax=wgt*iter*events
+         if (wgt .ne. 0.) then
+            if (dabs(wgt)*iter*events .gt. wmax) then
+               wmax=dabs(wgt)*iter*events
             endif
             non_zero = non_zero + 1
-            mean = mean + wgt
+            mean = mean + dabs(wgt)
             if (.true. ) then
 c               psect(ipole)=psect(ipole)+wgt*wgt/alpha(ipole)  !Ohl 
 c               psect(ipole)=1d0                 !Not doing multi_config

@@ -76,16 +76,16 @@ c        Select a flavor combination (need to do here for right sign)
             IPSEL=0
             DO WHILE (R.GT.0D0 .AND. IPSEL.LT.IPROC)
                IPSEL=IPSEL+1
-               R=R-PD(IPSEL)/PD(0)
+               R=R-DABS(PD(IPSEL))/PD(0)
             ENDDO
 c           Set sign of dsig based on sign of PDF and matrix element
-            DSIG%(proc_id)s=SIGN(%(dsig_line)s,DSIGUU*PD(IPSEL))
+            DSIG%(proc_id)s=DSIGN(%(dsig_line)s,DSIGUU*PD(IPSEL))
          ELSE
              write(*,*) "Error in matrix element"
              DSIGUU=0D0
              DSIG%(proc_id)s=0D0
          ENDIF
-        IF(IMODE.EQ.0.AND.DSIG%(proc_id)s.GT.0D0)THEN
+        IF(IMODE.EQ.0.AND.DABS(DSIG%(proc_id)s).GT.0D0)THEN
 C       Call UNWGT to unweight and store events
            CALL UNWGT(PP,DSIG%(proc_id)s*WGT,%(numproc)d)
         ENDIF

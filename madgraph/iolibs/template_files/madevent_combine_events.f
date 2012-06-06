@@ -169,11 +169,11 @@ c
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &           ((p(m,j),m=0,4),j=1,maxexternal),scale,aqcd,aqed,
      &        buff
-            if (wgt .gt. goal_wgt*xran1(iseed)) then
+            if (dabs(wgt) .gt. goal_wgt*xran1(iseed)) then
                keep(i) = .true.
                nunwgt=nunwgt+1
-               if (wgt .gt. goal_wgt) then
-                  xtrunc=xtrunc+wgt-goal_wgt
+               if (dabs(wgt) .gt. goal_wgt) then
+                  xtrunc=xtrunc+dabs(wgt)-goal_wgt
                endif
             else
                keep(i)=.false.
@@ -221,7 +221,8 @@ C $E$ output_file2 $E$ !this is tag for automatic modification by MW
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &           ((p(m,j),m=0,4),j=1,maxexternal),scale,aqcd,aqed,
      $        buff
-            call write_event(15,P,xsec/nreq,n,ic,ievent,scale,aqcd,aqed,buff)
+            wgt=dsign(xsec/nreq,wgt)
+            call write_event(15,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff)
             ntry=ntry+1
          endif
       enddo
@@ -328,7 +329,7 @@ C   Write out compulsory init info
          write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,maxwgt,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
       enddo
       write(lunw,'(a)') '</init>'
- 90   FORMAT(2i9,2e19.11,2i2,2i6,i2,i5)
+ 90   FORMAT(2i9,2e19.11,2i2,2i6,i2,i3)
  91   FORMAT(3e19.11,i4)
       end
 
@@ -432,7 +433,7 @@ C   Write out compulsory init info
          write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,sum/nevent,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
       enddo
       write(lunw,'(a)') '</init>'
- 90   FORMAT(2i9,2e19.11,2i2,2i6,i2,i5)
+ 90   FORMAT(2i9,2e19.11,2i2,2i6,i2,i3)
  91   FORMAT(3e19.11,i4)
 
       end
@@ -594,25 +595,25 @@ c
          if (.not. done) then
             revent = revent+1
             wgt = wgt*nj*gsfact                 !symmetry factor * grid factor
-            if (wgt .gt. maxwgt) maxwgt=wgt
-            if (wgt .ge. goal_wgt*xran1(iseed)) then
+            if (dabs(wgt) .gt. maxwgt) maxwgt=dabs(wgt)
+            if (dabs(wgt) .ge. goal_wgt*xran1(iseed)) then
                kevent=kevent+1
-               if (wgt .lt. goal_wgt) wgt = goal_wgt
+               if (dabs(wgt) .lt. goal_wgt) wgt = dsign(goal_wgt,wgt)
                write(sfnum,rec=kevent) wgt,n,
      &              ((ic(i,j),j=1,maxexternal),i=1,7),ievent,
      &              ((p(i,j),i=0,4),j=1,maxexternal),scale,aqcd,aqed,buff
-               sum=sum+wgt
+               sum=sum+dabs(wgt)
                found=.false.
                do i=1,nprup
                   if(ievent.eq.lprup(i))then
-                     xsecup(i)=xsecup(i)+wgt
+                     xsecup(i)=xsecup(i)+dabs(wgt)
                      found=.true.
                   endif
                enddo
                if(.not.found)then
                   nprup=nprup+1
                   lprup(nprup)=ievent
-                  xsecup(nprup)=wgt
+                  xsecup(nprup)=dabs(wgt)
                endif
                tmpsum=0d0
                do i=1,nprup

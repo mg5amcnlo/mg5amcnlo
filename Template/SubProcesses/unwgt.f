@@ -192,12 +192,14 @@ C-----
                p(j,i)=px(j,i)
             enddo
          enddo
-         xwgt = wgt
+         xwgt = abs(wgt)
          if (zooming) call zoom_event(xwgt,P)
          if (xwgt .eq. 0d0) return
          yran = xran1(idum)
          if (xwgt .gt. twgt*fudge*yran) then
             uwgt = max(xwgt,twgt*fudge)
+c           Set sign of uwgt to sign of wgt
+            uwgt = dsign(uwgt,wgt)
             if (twgt .gt. 0) uwgt=uwgt/twgt/fudge
 c            call write_event(p,uwgt)
 c            write(29,'(2e15.5)') matrix,wgt
@@ -274,19 +276,19 @@ c
       xtot=0
       call dsort(nw, swgt)
       do i=1,nw
-         xtot=xtot+swgt(i)
+         xtot=xtot+dabs(swgt(i))
       enddo
 c
 c     Determine minimum target weight given truncation parameter
 c
       xsum = 0d0
       i = nw
-      do while (xsum-swgt(i)*(nw-i) .lt. xtot*trunc_max .and. i .gt. 2)
-         xsum = xsum + swgt(i)
+      do while (xsum-dabs(swgt(i))*(nw-i) .lt. xtot*trunc_max .and. i .gt. 2)
+         xsum = xsum + dabs(swgt(i))
          i = i-1
       enddo
       if (i .lt. nw) i=i+1
-      target_wgt = swgt(i)
+      target_wgt = dabs(swgt(i))
 c
 c     Select events which will be written
 c
@@ -300,8 +302,8 @@ c
          else
             wgt = 0d0
          endif
-         if (wgt .gt. target_wgt*xran1(iseed)) then
-            xsum=xsum+max(wgt,target_Wgt)
+         if (dabs(wgt) .gt. target_wgt*xran1(iseed)) then
+            xsum=xsum+max(dabs(wgt),target_Wgt)
             store_event(i)=.true.
             nstore=nstore+1
          else
@@ -331,12 +333,12 @@ c      endif
          endif
          if (store_event(j) .and. .not. done) then
             wgt=wgt*xscale
-            wgt = max(wgt, target_wgt)
-            if (wgt .gt. target_wgt) then
-               xover = xover + wgt - target_wgt
+            wgt = dsign(max(dabs(wgt), target_wgt),wgt)
+            if (dabs(wgt) .gt. target_wgt) then
+               xover = xover + dabs(wgt) - target_wgt
                nover = nover+1
             endif
-            xtot = xtot + wgt
+            xtot = xtot + dabs(wgt)
             i=i+1
             call write_Event(lunw,p,wgt,n,ic,ngroup,scale,aqcd,aqed,buff)
          endif
@@ -377,7 +379,7 @@ c
 c     Local
 c
       integer i,j,k
-      double precision sum_wgt,sum_wgt2, xtarget,targetamp(maxflow)
+      double precision xtarget,targetamp(maxflow)
       integer ic, nc, jpart(7,-nexternal+3:2*nexternal-3)
       integer ida(2),ito(-nexternal+3:nexternal),ns,nres,ires,icloop
       integer iseed
@@ -442,10 +444,10 @@ C  BEGIN CODE
 C-----
       
       if (nw .ge. maxevents) return
+
+c     Store weight for event
       nw = nw+1
       swgt(nw)=wgt
-      sum_wgt=sum_wgt+wgt
-      sum_wgt2=sum_wgt2+wgt**2
 c
 c     In case of identical particles symmetry, choose assignment
 c
@@ -613,7 +615,7 @@ c      write(*,*) 'Number unweighted ',sum/swgt(i), nw
 
       subroutine dsort(n,ra)
       integer n
-      double precision ra(n)
+      double precision ra(n),rra
 
       l=n/2+1
       ir=n
@@ -634,9 +636,9 @@ c      write(*,*) 'Number unweighted ',sum/swgt(i), nw
         j=l+l
 20      if(j.le.ir)then
           if(j.lt.ir)then
-            if(ra(j).lt.ra(j+1))j=j+1
+            if(dabs(ra(j)).lt.dabs(ra(j+1))) j=j+1
           endif
-          if(rra.lt.ra(j))then
+          if(dabs(rra).lt.dabs(ra(j)))then
             ra(i)=ra(j)
             i=j
             j=j+j

@@ -291,6 +291,7 @@ c-----
          call read_event(35,P,xwgt,n,ic,ievent,scale,
      $        aqcd,aqed,buff,done)
          if (.not. done) then
+            wgt = dsign(wgt,xwgt)
             call write_event(lunw,P,wgt,n,ic,ievent,scale,
      $           aqcd,aqed,buff)
             nw=nw+1
