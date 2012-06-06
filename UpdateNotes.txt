@@ -5,7 +5,8 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Allow MG5 to run in feynman Gauge
 		      (mg5> set gauge Feynman)
 		  OM: Support now UFO model with spin 3/2
-
+		  JA: Added support for negative weights in matrix elements
+                      (as required for interference-only terms) and PDFs.
 
 1.4.6 (16/05/12)  JA: Added cuts on lepton pt for each of the 4 hardest leptons
                   OM: allow bin/madevent script to be feeded by a single line command:

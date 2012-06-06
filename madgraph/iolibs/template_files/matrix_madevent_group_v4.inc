@@ -143,6 +143,8 @@ C ----------
         ENDDO
         IF (ISHEL(IMIRROR) .EQ. 1) THEN
           WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+c         Set right sign for ANS, based on sign of chosen helicity
+          ANS=DSIGN(ANS,TS(I))
         ENDIF
     ENDIF
     IF (ISHEL(IMIRROR) .NE. 1) THEN
