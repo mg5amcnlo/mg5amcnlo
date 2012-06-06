@@ -316,11 +316,17 @@ class FKSHelasProcessFromBorn(object):
                 other.born_matrix_element.get('processes'))
         self_reals = [real.matrix_element for real in self.real_processes]
         for oth_real in other.real_processes:
-            self.real_processes[\
-                self_reals.index(oth_real.matrix_element)].matrix_element['processes'].extend(
-                    [p for p in oth_real.matrix_element['processes'] \
-                        if p not in self.real_processes[\
-                        self_reals.index(oth_real.matrix_element)].matrix_element['processes']])
+            this_real = self.real_processes[self_reals.index(oth_real.matrix_element)]
+            #need to store pdg lists rather than processes in order to keep mirror processes different
+            this_pdgs = [[leg['id'] for leg in proc['legs']] \
+                    for proc in this_real.matrix_element['processes']]
+            for oth_proc in oth_real.matrix_element['processes']:
+                oth_pdgs = [leg['id'] for leg in oth_proc['legs']]
+                if oth_pdgs not in this_pdgs:
+                    this_real.matrix_element['processes'].append(oth_proc)
+
+ #                       if p not in self.real_processes[\
+ #                       self_reals.index(oth_real.matrix_element)].matrix_element['processes']])
             
     
 class FKSHelasRealProcess(object): #test written
