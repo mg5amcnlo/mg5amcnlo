@@ -40,9 +40,9 @@ c colorflow(i,j): the actual label (according to born_leshouche.inc)
 c   of the j^th colour flow in which the father and ipartners(i) are
 c   colour partners
 c
-c Example: in the process q(1) qbar(2) --> g(3) g(4), the two color flows are
+c Example: in the process q(1) qbar(2) -> (g) -> g(3) g(4), the two color flows are
 c
-c i=1    j    icolup(1)    icolup(2)       i=2    j    icolup(1)    icolup(2)
+c j=1    i    icolup(1)    icolup(2)       j=2    i    icolup(1)    icolup(2)
 c        1      500           0                   1      500           0
 c        2       0           501                  2       0           501
 c        3      500          502                  3      502          501
@@ -91,12 +91,12 @@ c colour (1) with colour (i1(1)), and anticolour (2) with anticolour (i1(2))
                   i1(2)=2
                else
 c father and j both in the initial or in the final state -- connect
-c colour (1) with anticolour (i1(1)), and anticolour (2) with colour (i1(2))
+c colour (1) with anticolour (i1(2)), and anticolour (2) with colour (i1(1))
                   i1(1)=2
                   i1(2)=1
                endif
                do l=1,2
-c Loop over colour and anticolour of father 
+c Loop over colour and anticolour of father
                   found=.false.
                   if( ICOLUP(i1(l),j,i).eq.mothercol(l) .and.
      &                ICOLUP(i1(l),j,i).ne.0 ) then
@@ -428,6 +428,8 @@ c      include "fks.inc"
 
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
+      logical isspecial
+      common/cisspecial/isspecial
 
       integer fksfather
       common/cfksfather/fksfather
@@ -642,6 +644,7 @@ c Compute MC subtraction terms
 c g --> g g (icode=1) and go --> go g (SUSY) splitting 
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
+                 if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
                     xkern=(g**2/N_p)*64*vca*E0sq(npartner)/
      &                    (s*(s*(1-yi)+4*E0sq(npartner)*(1+yi)))
@@ -663,6 +666,7 @@ c g --> g g (icode=1) and go --> go g (SUSY) splitting
               elseif(ileg.eq.3)then
 c Works only for SUSY
                 N_p=2
+                if(isspecial)N_p=1
 c ileg = 3: xm12 = squared FKS-mother and FKS-sister mass
 c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
@@ -685,6 +689,7 @@ c           xm22 = squared recoil mass
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
+                if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
                   xkern=(g**2/N_p)*64*vca*E0sq(npartner)/
      &                  ( s*(s*(1-yj)+4*E0sq(npartner)*(1+yj))-
@@ -733,6 +738,7 @@ c g --> q qbar splitting (icode=2)
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
+                if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
                   xkern=0.d0
                   xkernazi=0.d0
@@ -771,6 +777,7 @@ c rescaled energy is 1 - x and in the soft limit, where x --> z --> 1,
 c it has to coincide with the fraction appearing in the AP kernel
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
+                 if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
                     xkern=0.d0
                     xkernazi=0.d0
@@ -1109,6 +1116,8 @@ c      include "fks.inc"
 
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
+      logical isspecial
+      common/cisspecial/isspecial
 
       integer fksfather
       common/cfksfather/fksfather
@@ -1317,6 +1326,7 @@ c Compute MC subtraction terms
 c g --> g g (icode=1) and go --> go g (SUSY) splitting 
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
+                 if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
                     xkern=(g**2/N_p)*16*vca/(s*(1+yi))
                     xkernazi=0.d0
@@ -1337,6 +1347,7 @@ c g --> g g (icode=1) and go --> go g (SUSY) splitting
               elseif(ileg.eq.3)then
 c Works only for SUSY
                 N_p=2
+                if(isspecial)N_p=1
 c ileg = 3: xm12 = squared FKS-mother and FKS-sister mass
 c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
@@ -1359,6 +1370,7 @@ c           xm22 = squared recoil mass
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
+                if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
                   xkern=(g**2/N_p)*16*vca/(s*(1+yj))
                   xkernazi=0.d0
@@ -1409,6 +1421,7 @@ cooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
+                if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
                   xkern=0.d0
                   xkernazi=0.d0
@@ -1451,6 +1464,7 @@ c rescaled energy is 1 - x and in the soft limit, where x --> z --> 1,
 c it has to coincide with the fraction appearing in the AP kernel
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
+                 if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
                     xkern=0.d0
                     xkernazi=0.d0
@@ -1785,6 +1799,8 @@ c      include "fks.inc"
 
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
+      logical isspecial
+      common/cisspecial/isspecial
 
       integer fksfather
       common/cfksfather/fksfather
@@ -2083,6 +2099,7 @@ c Compute MC subtraction terms
 c g --> g g (icode=1) and go --> go g (SUSY) splitting 
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
+                 if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
                     xkern=(g**2/N_p)*8*vca/s
                     xkernazi=0.d0
@@ -2103,6 +2120,7 @@ c g --> g g (icode=1) and go --> go g (SUSY) splitting
               elseif(ileg.eq.3)then
 c Works only for SUSY
                 N_p=2
+                if(isspecial)N_p=1
 c ileg = 3: xm12 = squared FKS-mother and FKS-sister mass
 c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
@@ -2125,6 +2143,7 @@ c           xm22 = squared recoil mass
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
+                if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
                   xkern=(g**2/N_p)*8*vca/s
                   xkernazi=0.d0
@@ -2171,6 +2190,7 @@ c g --> q qbar splitting (icode=2)
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
+                if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
                   xkern=0.d0
                   xkernazi=0.d0
@@ -2210,6 +2230,7 @@ c it has to coincide with the fraction appearing in the AP kernel.
 c The definition of z here does tend to 1 only in the massless case
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
+                 if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
                     xkern=0.d0
                     xkernazi=0.d0
@@ -2544,6 +2565,8 @@ c      include "fks.inc"
 
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
+      logical isspecial
+      common/cisspecial/isspecial
 
       integer fksfather
       common/cfksfather/fksfather
@@ -2745,6 +2768,7 @@ c Compute MC subtraction terms
 c g --> g g (icode=1) and go --> go g (SUSY) splitting 
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
+                 if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
 c$$$                    xkern=(g**2/N_p)*8*vca/s
 c$$$                    xkernazi=0.d0
@@ -2765,6 +2789,7 @@ c$$$                    xkernazi=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
               elseif(ileg.eq.3)then
 c Works only for SUSY
                 N_p=2
+                if(isspecial)N_p=1
 c ileg = 3: xm12 = squared FKS-mother and FKS-sister mass
 c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
@@ -2787,6 +2812,7 @@ c$$$                  xkernazi=0.d0
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
+                if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
 c$$$                  xkern=(g**2/N_p)*8*vca/s
 c$$$                  xkernazi=0.d0
@@ -2833,6 +2859,7 @@ c$$$                    xkernazi=0.d0
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
+                if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
 c$$$                  xkern=0.d0
 c$$$                  xkernazi=0.d0
@@ -2871,6 +2898,7 @@ c rescaled energy is 1 - x and in the soft limit, where x --> z --> 1,
 c it has to coincide with the fraction appearing in the AP kernel
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
+                 if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
 c$$$                    xkern=0.d0
 c$$$                    xkernazi=0.d0
@@ -3203,6 +3231,8 @@ c      include "fks.inc"
 
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
+      logical isspecial
+      common/cisspecial/isspecial
 
       integer fksfather
       common/cfksfather/fksfather
@@ -3506,6 +3536,7 @@ c Compute MC subtraction terms
 c g --> g g (icode=1) and go --> go g (SUSY) splitting 
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
+                 if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
                     xkern=(g**2/N_p)*8*vca/s
                     xkernazi=0.d0
@@ -3526,6 +3557,7 @@ c g --> g g (icode=1) and go --> go g (SUSY) splitting
               elseif(ileg.eq.3)then
 c Works only for SUSY
                 N_p=2
+                if(isspecial)N_p=1
 c ileg = 3: xm12 = squared FKS-mother and FKS-sister mass
 c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
@@ -3548,6 +3580,7 @@ c           xm22 = squared recoil mass
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
+                if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
                   xkern=(g**2/N_p)*8*vca/s
                   xkernazi=0.d0
@@ -3596,6 +3629,7 @@ cc PUT THE MASSIVE KERNELS
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
+                if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
                   xkern=0.d0
                   xkernazi=0.d0
@@ -3635,6 +3669,7 @@ c it has to coincide with the fraction appearing in the AP kernel.
 c The definition of z here does tend to 1 only in the massless case
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
+                 if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
                     xkern=0.d0
                     xkernazi=0.d0
@@ -6279,12 +6314,40 @@ c entering this function
       end
 
 
-      subroutine assign_upper_scale(f,x,sh,up_sc)
+      subroutine assign_scalemax(sh,xi,xxscalemax)
       implicit none
-      double precision f,up_sc,x,sh
+      include "nexternal.inc"
+      include "coupl.inc"
+      include "madfks_mcatnlo.inc"
 
-      up_sc=sqrt(x*sh)
-      up_sc=up_sc*f
+      integer i
+      double precision sh,xi,ref_scale,xxscalemax,xxscalemin,
+     &     delta_scale,zero
+      parameter(delta_scale=10d0)
+      parameter(zero=0d0)
+
+      character*10 MonteCarlo
+      common/cMonteCarloType/MonteCarlo
+
+      double precision sum_mass
+      double precision pmass(nexternal)
+      include "pmass.inc"
+c
+      ref_scale=sqrt((1-xi)*sh)
+      xxscalemin=max(frac_low*ref_scale,scaleMClow)
+      xxscalemax=max(frac_upp*ref_scale,xxscalemin+scaleMCdelta)
+
+      if(MonteCarlo(1:6).eq.'PYTHIA')then
+         sum_mass=0d0
+         do i=1,nexternal
+            sum_mass=sum_mass+pmass(i)
+         enddo
+         sum_mass=max(sum_mass,delta_scale)
+
+         xxscalemin=max(xxscalemin,sum_mass)
+         xxscalemax=min(xxscalemax,ref_scale)
+         if(xxscalemax.lt.xxscalemin)xxscalemax=xxscalemin
+      endif
 
       return
       end
