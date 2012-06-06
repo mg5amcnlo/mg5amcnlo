@@ -12,7 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-from compiler.ast import Continue
 """ How to import a UFO model to the MG5 format """
 
 
@@ -28,9 +27,10 @@ import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
 import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
-
 import madgraph.various.misc as misc
 
+
+import aloha
 import aloha.create_aloha as create_aloha
 import aloha.aloha_fct as aloha_fct
 
@@ -137,10 +137,16 @@ def import_full_model(model_path):
         files_list.append(filepath)
         
     # use pickle files if defined and up-to-date
-    if files.is_uptodate(os.path.join(model_path, 'model.pkl'), files_list):
+    if aloha.unitary_gauge: 
+        pickle_name = 'model.pkl'
+    else:
+        pickle_name = 'model_Feynman.pkl'
+        
+    
+    if files.is_uptodate(os.path.join(model_path, pickle_name), files_list):
         try:
             model = save_load_object.load_from_file( \
-                                          os.path.join(model_path, 'model.pkl'))
+                                          os.path.join(model_path, pickle_name))
         except Exception, error:
             logger.info('failed to load model from pickle file. Try importing UFO from File')
         else:
@@ -168,7 +174,7 @@ def import_full_model(model_path):
     model.set('functions', ufo_model.all_functions)
     
     # save in a pickle files to fasten future usage
-    save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model) 
+    save_load_object.save_to_file(os.path.join(model_path, pickle_name), model) 
  
     #if default and os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
     #    restrict_file = os.path.join(model_path, 'restrict_default.dat') 
@@ -208,8 +214,10 @@ class UFOMG5Converter(object):
                 if len(param.lhablock.split())>1:
                     raise InvalidModel, '''LHABlock should be single word which is not the case for
     \'%s\' parameter with lhablock \'%s\'''' % (param.name, param.lhablock)
-            
-
+         
+	if hasattr(self.ufomodel, 'gauge'):    
+            self.model.set('gauge', self.ufomodel.gauge)
+	
         logger.info('load particles')
         # Check if multiple particles have the same name but different case.
         # Otherwise, we can use lowercase particle names.
@@ -275,15 +283,18 @@ class UFOMG5Converter(object):
         pdg = particle_info.pdg_code
         if pdg in self.incoming or (pdg not in self.outcoming and pdg <0):
             return
-                        
-        # MG5 doesn't use ghost (use unitary gauges)
+        
+        # MG5 doesn't use ghost (The sum over polarization has momenta term)
         if particle_info.spin < 0:
             return 
         
-        # MG5 doesn't use goldstone boson 
-        if hasattr(particle_info, 'GoldstoneBoson'):
-            if particle_info.GoldstoneBoson:
-                return
+        if (aloha.unitary_gauge and 1 in self.model['gauge']) \
+	          or (0 not in self.model['gauge']): 
+        
+            # MG5 doesn't use goldstone boson 
+            if hasattr(particle_info, 'GoldstoneBoson'):
+                if particle_info.GoldstoneBoson:
+                    return
                
         # Initialize a particles
         particle = base_objects.Particle()
@@ -404,7 +415,6 @@ class UFOMG5Converter(object):
         # Import particles content:
         particles = [self.model.get_particle(particle.pdg_code) \
                                     for particle in interaction_info.particles]
-      
         if None in particles:
             # Interaction with a ghost/goldstone
             return 
@@ -433,7 +443,6 @@ class UFOMG5Converter(object):
                                     interaction_info.color]
         
         order_to_int={}
-        
         for key, couplings in interaction_info.couplings.items():
             if not isinstance(couplings, list):
                 couplings = [couplings]
@@ -788,6 +797,7 @@ class RestrictModel(model_reader.ModelReader):
     def restrict_model(self, param_card):
         """apply the model restriction following param_card"""
 
+        self.restrict_card = param_card
         # Reset particle dict to ensure synchronized particles and interactions
         self.set('particles', self.get('particles'))
 

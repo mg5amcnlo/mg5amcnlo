@@ -106,7 +106,7 @@ class TestMECmdShell(unittest.TestCase):
    5.626776e-02   2    -11  11
    5.626776e-02   2    -13  13
 #
-#      PDG        Width""", data.strip())
+#      PDG        Width""".split('\n'), data.strip().split('\n'))
         
     def test_creating_matched_plot(self):
         """test that the creation of matched plot works"""

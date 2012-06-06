@@ -1898,7 +1898,7 @@ class UFOModelConverterCPP(object):
             
         for abstracthelas in dict(aloha_model).values():
             h_rout, cc_rout = abstracthelas.write(output_dir=None, language='CPP', 
-                                                              compiler_cmd=False)
+                                                              mode='no_include')
 
             template_h_files.append(h_rout)
             template_cc_files.append(cc_rout)

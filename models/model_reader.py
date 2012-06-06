@@ -152,7 +152,6 @@ class ModelReader(base_objects.Model):
                                                              coup.expr))
 
         # Set parameter and coupling dictionaries
-
         self.set('parameter_dict', dict([(param.name, param.value) \
                                         for param in external_parameters + \
                                          derived_parameters]))

@@ -25,6 +25,9 @@ import shutil
 import subprocess
 import sys
 
+
+import aloha
+
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
@@ -123,7 +126,7 @@ class ProcessExporterFortran(object):
             
         # add the makefile in Source directory 
         filename = os.path.join(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FortranWriter(filename))
+        self.write_source_makefile(writers.FileWriter(filename))
             
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
@@ -825,7 +828,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     os.path.join(self.dir_path, 'Source'))        
         # add the makefile 
         filename = os.path.join(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FortranWriter(filename))            
+        self.write_source_makefile(writers.FileWriter(filename))            
         
     #===========================================================================
     # export model files
@@ -1069,7 +1072,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.model_name = modelname
         # Add the combine_events.f 
         filename = os.path.join(self.dir_path,'Source','combine_events.f')
-        self.write_combine_events(writers.FortranWriter(filename))
+        self.write_combine_events(writers.FortranWriter(filename)) # already formatted
         # Add the symmetry.f 
         filename = os.path.join(self.dir_path,'SubProcesses','symmetry.f')
         self.write_symmetry(writers.FortranWriter(filename))
@@ -1220,7 +1223,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                            s_and_t_channels)
 
         filename = 'dname.mg'
-        self.write_dname_file(writers.FortranWriter(filename),
+        self.write_dname_file(writers.FileWriter(filename),
                          "P"+matrix_element.get('processes')[0].shell_string())
 
         filename = 'iproc.dat'
@@ -1972,7 +1975,6 @@ c           This is dummy particle used in multiparticle vertices
         else:
             card = 'param_card.dat' 
         text = open(path).read() % {'param_card_name':card} 
-
         writer.write(text)
         
         return True
@@ -2344,7 +2346,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         path = os.path.join(self.dir_path, 'SubProcesses')
 
         os.chdir(path)
-
         pathdir = os.getcwd()
 
         # Create the directory PN in the specified path
@@ -2760,12 +2761,13 @@ python_to_fortran = lambda x: parsers.UFOExpressionParserFortran().parse(x)
 class UFO_model_to_mg4(object):
     """ A converter of the UFO-MG5 Model to the MG4 format """
     
-    def __init__(self, model, output_path):
+    def __init__(self, model, output_path, cmass_scheme=False):
         """ initialization of the objects """
        
         self.model = model
         self.model_name = model['name']
         self.dir_path = output_path
+        self.cmass_scheme=cmass_scheme
         
         self.coups_dep = []    # (name, expression, type)
         self.coups_indep = []  # (name, expression, type)
@@ -2819,7 +2821,8 @@ class UFO_model_to_mg4(object):
                 coup.expr = rep_pattern.sub(replace, coup.expr)
 
 
-        
+               
+                
     def refactorize(self, wanted_couplings = []):    
         """modify the couplings to fit with MG4 convention """
             
@@ -2866,6 +2869,7 @@ class UFO_model_to_mg4(object):
         # write the files
         if full:
             self.write_all()
+            
 
     def open(self, name, comment='c', format='default'):
         """ Open the file name in the correct directory and with a valid
@@ -2945,6 +2949,9 @@ class UFO_model_to_mg4(object):
         # Write the Mass definition/ common block
         masses = set()
         widths = set()
+        if aloha.complex_mass:
+            complex_mass = set()
+            
         for particle in self.model.get('particles'):
             #find masses
             one_mass = particle.get('mass')
@@ -2955,7 +2962,8 @@ class UFO_model_to_mg4(object):
             one_width = particle.get('width')
             if one_width.lower() != 'zero':
                 widths.add(one_width)
-            
+                if aloha.complex_mass and one_mass.lower() != 'zero':
+                    complex_mass.add('CMASS_%s' % one_mass)
         
         fsock.writelines('double precision '+','.join(masses)+'\n')
         fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
@@ -2967,6 +2975,11 @@ class UFO_model_to_mg4(object):
         coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep]       
         fsock.writelines('double complex '+', '.join(coupling_list)+'\n')
         fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
+        
+        # Write complex mass for complex mass scheme (if activated)
+        if aloha.complex_mass:
+            fsock.writelines('double complex '+', '.join(complex_mass)+'\n')
+            fsock.writelines('common/couplings/ '+', '.join(complex_mass)+'\n')            
         
     def create_write_couplings(self):
         """ write the file coupl_write.inc """
@@ -2994,6 +3007,8 @@ class UFO_model_to_mg4(object):
         for particle in self.model.get('particles'):
             already_def.add(particle.get('mass').lower())
             already_def.add(particle.get('width').lower())
+            if aloha.complex_mass:
+                already_def.add('cmass_%s' % particle.get('mass').lower())
 
         is_valid = lambda name: name !='G' and name.lower() not in already_def
         
@@ -3009,7 +3024,8 @@ class UFO_model_to_mg4(object):
         fsock.writelines('common/params_R/ '+','.join(real_parameters)+'\n\n')
         
         complex_parameters = [param.name for param in self.params_dep + 
-                            self.params_indep if param.type == 'complex']
+                            self.params_indep if param.type == 'complex' and
+                            is_valid(param.name)]
 
 
         fsock.writelines('double complex '+','.join(complex_parameters)+'\n')
@@ -3248,4 +3264,43 @@ class UFO_model_to_mg4(object):
                 translator.make_valid_param_card(out_path, out_path2)
             translator.convert_to_slha1(out_path)
         
+
+
+#===============================================================================
+# ProcessExporterFortranMEGroup
+#===============================================================================
+class ProcessExporterFortranMEGroupComplexMass(ProcessExporterFortranMEGroup):
+    """Class to take care of exporting a set of matrix elements to
+    MadEvent subprocess group format in complex mass scheme format"""
+
+    def convert_model_to_mg4(self, model, wanted_lorentz = [],
+                             wanted_couplings = []):
+        """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
+
+        # create the MODEL
+        write_dir=os.path.join(self.dir_path, 'Source', 'MODEL')
+        model_builder = UFO_model_to_mg4(model, write_dir, cmass_scheme=True)
+        model_builder.build(wanted_couplings)
+
+        # Create and write ALOHA Routine
+        aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+        if wanted_lorentz:
+            aloha_model.compute_subset(wanted_lorentz)
+        else:
+            aloha_model.compute_all(save=False)
+        write_dir=os.path.join(self.dir_path, 'Source', 'DHELAS')
+        aloha_model.write(write_dir, 'Fortran')
+
+        #copy Helas Template
+        cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
+        for filename in os.listdir(os.path.join(MG5DIR,'aloha','template_files')):
+            if not filename.lower().endswith('.f'):
+                continue
+            cp((MG5DIR + '/aloha/template_files/' + filename), write_dir)
+        create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
+
+        # Make final link in the Process
+        self.make_model_symbolic_link()
+
+
 

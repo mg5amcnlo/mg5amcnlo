@@ -15,7 +15,7 @@ all_lorentz = lorentz.all_lorentz
 all_parameters = parameters.all_parameters
 all_orders = coupling_orders.all_orders
 all_functions = function_library.all_functions
-
+gauge=[1]  # allowed gauge 1: unitary
 
 __author__ = "Priscila de Aquino"
 __version__ = "2.1"

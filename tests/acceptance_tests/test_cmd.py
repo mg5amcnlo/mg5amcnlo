@@ -28,6 +28,7 @@ import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 
 import madgraph.interface.master_interface as Cmd
 import madgraph.interface.launch_ext_program as launch_ext
+import madgraph.various.misc as misc
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
@@ -125,8 +126,10 @@ class TestCmdShell1(unittest.TestCase):
                     'automatic_html_opening': 'True', 
                     'pythia8_path': './pythia8',
                     'group_subprocesses': 'Auto',
+                    'ignore_six_quark_processes': False,
+                    'complex_mass_scheme': False,
+                    'gauge': 'unitary',
                     'timeout': '20',
-                    'ignore_six_quark_processes': False
                     }
 
         self.assertEqual(config, expected)
@@ -604,6 +607,44 @@ class TestCmdShell2(unittest.TestCase,
                                                     'P1_udx_wp_wp_epve',
                                                     'madevent')))
         
+    def test_complex_mass_SA(self):
+        """ Test that the complex_mass compile in fortran """
+        
+        self.do('import model sm')
+        self.do('set complex_mass_scheme')
+        self.do('generate e+ e- > e+ e-')
+        self.do('output standalone %s ' % self.out_dir)
+        misc.compile(cwd=os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem'))
+        p = subprocess.Popen(['./check'], cwd=os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem'),
+                            stdout=subprocess.PIPE)
+        #output = p.stdout.read()
+        for line in p.stdout:
+            if 'Matrix element' in line:
+                value = line.split('=')[1]
+                value = value. split('GeV')[0]
+                value = eval(value)
+                self.assertAlmostEqual(value, 1.951829785476705e-2)
+
+    def test_load_feynman(self):
+        """ Test that the complex_mass compile in fortran """
+        
+        self.do('import model SM_Feyn')
+        # check that the model is correctly loaded (has some goldstone)
+        nb_goldstone = 0
+        for part in self.cmd._curr_model['particles']:
+            if part.get('pdg_code') in [250, 251]:
+                nb_goldstone += 1
+        self.assertEqual(nb_goldstone, 0)
+        self.do('set gauge Feynman')
+        self.do('import model SM_Feyn')
+        # check that the model is correctly loaded (has some goldstone)
+        nb_goldstone = 0
+        for part in self.cmd._curr_model['particles']:
+            if part.get('pdg_code') in [250, 251]:
+                nb_goldstone += 1
+        self.assertEqual(nb_goldstone, 2)
+        
+
     def test_madevent_subproc_group(self):
         """Test MadEvent output using the SubProcess group functionality"""
 
@@ -1011,9 +1052,9 @@ P1_qq_wp_wp_lvl
         self.assertEqual(len(self.cmd._curr_amps), 1)
         nicestring = """Process: mu+ mu- > ta+ ta- WEIGHTED=4
 2 diagrams:
-1  ((1(13),2(-13)>1(22),id:35),(3(-15),4(15),1(22),id:36)) (QCD=0,QED=2,WEIGHTED=4)
-2  ((1(13),2(-13)>1(23),id:41),(3(-15),4(15),1(23),id:42)) (QCD=0,QED=2,WEIGHTED=4)"""
-       
+1  ((1(13),2(-13)>1(22),id:34),(3(-15),4(15),1(22),id:35)) (QCD=0,QED=2,WEIGHTED=4)
+2  ((1(13),2(-13)>1(23),id:40),(3(-15),4(15),1(23),id:41)) (QCD=0,QED=2,WEIGHTED=4)"""
+
         self.assertEqual(self.cmd._curr_amps[0].nice_string().split('\n'), nicestring.split('\n'))
         self.do('save processes /tmp/model.pkl')
         self.do('generate e+ e- > e+ e-')
