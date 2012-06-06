@@ -378,7 +378,7 @@ c     Local
 c
       integer i,j,k
       double precision sum_wgt,sum_wgt2, xtarget,targetamp(maxflow)
-      integer ip, np, ic, nc, jpart(7,-nexternal+3:2*nexternal-3)
+      integer ic, nc, jpart(7,-nexternal+3:2*nexternal-3)
       integer ida(2),ito(-nexternal+3:nexternal),ns,nres,ires,icloop
       integer iseed
       double precision pboost(0:3),pb(0:4,-nexternal+3:2*nexternal-3),eta
@@ -406,9 +406,8 @@ C
       integer                             lun, nw, itmin
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
 
-      integer              IPROC 
-      DOUBLE PRECISION PD(0:MAXPROC)
-      COMMON /SubProc/ PD, IPROC
+      integer          IPSEL
+      COMMON /SubProc/ IPSEL
 
       Double Precision amp2(maxamps), jamp2(0:maxflow)
       common/to_amps/  amp2,       jamp2
@@ -448,20 +447,6 @@ C-----
       sum_wgt=sum_wgt+wgt
       sum_wgt2=sum_wgt2+wgt**2
 c
-c     First choose a process  iproc comes set to the number of processes
-c
-      if(ickkw.gt.0)then
-        ip = iprocset
-      else
-        np = iproc
-        xtarget=ran1(iseed)*pd(np)
-        ip = 1
-        do while (pd(ip) .lt. xtarget .and. ip .lt. np)
-          ip=ip+1
-        enddo
-      endif
-      
-c
 c     In case of identical particles symmetry, choose assignment
 c
       xtarget = ran1(iseed)*nsym
@@ -473,7 +458,7 @@ c
 c     Fill jpart color and particle info
 c
       do i=1,nexternal
-         jpart(1,isym(i,jsym)) = idup(i,ip,numproc)
+         jpart(1,isym(i,jsym)) = idup(i,ipsel,numproc)
          jpart(2,isym(i,jsym)) = mothup(1,i)
          jpart(3,isym(i,jsym)) = mothup(2,i)
 c        Color info is filled in mothup
@@ -533,7 +518,7 @@ c      Add mass information in pb(4)
 c
 c     Add info on resonant mothers
 c
-      call addmothers(ip,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
+      call addmothers(ipsel,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
      $                npart,numproc)
 
 c     Need to flip after addmothers, since color might get overwritten

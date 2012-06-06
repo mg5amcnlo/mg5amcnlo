@@ -106,14 +106,14 @@ C ----------
                   T=T*(2d0-ABS(POL(JJ)))
                ENDIF
             ENDDO
-            ANS=ANS+T
+            ANS=ANS+DABS(T)
             TS(I)=T
          ENDIF
       ENDDO
       JHEL(IMIRROR) = 1
       IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
          DO I=1,NCOMB
-            IF (.NOT.GOODHEL(I,IMIRROR) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB)) THEN
+            IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
                GOODHEL(I,IMIRROR)=.TRUE.
                NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
                IGOOD(NGOOD(IMIRROR),IMIRROR) = I
@@ -138,7 +138,7 @@ C ----------
                 T=T*(2d0-ABS(POL(JJ)))
               ENDIF
             ENDDO
-            ANS=ANS+T*HWGT
+            ANS=ANS+DABS(T)*HWGT
             TS(I)=T*HWGT
         ENDDO
         IF (ISHEL(IMIRROR) .EQ. 1) THEN
@@ -146,12 +146,14 @@ C ----------
         ENDIF
     ENDIF
     IF (ISHEL(IMIRROR) .NE. 1) THEN
-    R=XRAN1(IDUM)*ANS
+    CALL RANMAR(R)
     SUMHEL=0d0
     DO I=1,NCOMB
-       SUMHEL=SUMHEL+TS(I)
+       SUMHEL=SUMHEL+DABS(TS(I))/ANS
        IF(R.LT.SUMHEL)THEN
           WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+c         Set right sign for ANS, based on sign of chosen helicity
+          ANS=DSIGN(ANS,TS(I))
           GOTO 10
        ENDIF
     ENDDO

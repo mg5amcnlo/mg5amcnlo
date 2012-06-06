@@ -720,9 +720,8 @@ C   global variables
 C     Present process number
       INTEGER IMIRROR,IPROC
       COMMON/TO_MIRROR/IMIRROR, IPROC
-      integer              ISPROC 
-      DOUBLE PRECISION PD(0:MAXPROC)
-      COMMON /SubProc/ PD, ISPROC
+      integer              IPSEL
+      COMMON /SubProc/ IPSEL
       INTEGER SUBDIAG(MAXSPROC),IB(2)
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
       data IB/1,2/
@@ -778,15 +777,8 @@ c   Set etot, used for non-radiating partons
       etot=2d0*sqrt(ebeam(1)*ebeam(2))
 
 c   Since we use pdf reweighting, need to know particle identities
-      iprocset=1
-      np = isproc
-      xtarget=xran1(iseed)*pd(np)
-      iprocset = 1
-      do while (pd(iprocset) .lt. xtarget .and. iprocset .lt. np)
-         iprocset=iprocset+1
-      enddo
       if (btest(mlevel,1)) then
-         write(*,*) 'Set process number ',iprocset
+         write(*,*) 'Set process number ',ipsel
       endif
 
 c   Preparing graph particle information (ipart, needed to keep track of

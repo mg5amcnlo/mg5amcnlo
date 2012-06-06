@@ -613,7 +613,8 @@ class ProcessExporterFortran(object):
             for i, proc in enumerate(processes):
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + 1d0\n"
+                pdf_lines = pdf_lines + "\nPD(IPROC)=1d0\n"
+                pdf_lines = pdf_lines + "\nPD(0)=PD(0)+PD(IPROC)\n"
         else:
             # Pick out all initial state particles for the two beams
             initial_states = [sorted(list(set([p.get_initial_pdg(1) for \
@@ -688,7 +689,7 @@ class ProcessExporterFortran(object):
             for proc in processes:
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + "
+                pdf_lines = pdf_lines + "\nPD(IPROC)="
                 for ibeam in [1, 2]:
                     initial_state = proc.get_initial_pdg(ibeam)
                     if initial_state in pdf_codes.keys():
@@ -698,6 +699,7 @@ class ProcessExporterFortran(object):
                         pdf_lines = pdf_lines + "1d0*"
                 # Remove last "*" from pdf_lines
                 pdf_lines = pdf_lines[:-1] + "\n"
+                pdf_lines = pdf_lines + "PD(0)=PD(0)+DABS(PD(IPROC))\n"
 
         # Remove last line break from the return variables
         return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1]
@@ -1581,10 +1583,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Set dsig_line
         if ninitial == 1:
             # No conversion, since result of decay should be given in GeV
-            dsig_line = "pd(IPROC)*dsiguu"
+            dsig_line = "pd(0)*dsiguu"
         else:
             # Convert result (in GeV) to pb
-            dsig_line = "pd(IPROC)*conv*dsiguu"
+            dsig_line = "pd(0)*conv*dsiguu"
 
         replace_dict['dsig_line'] = dsig_line
 
