@@ -1408,6 +1408,8 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         l7=myleglist[6]
         l8=myleglist[7]
         l9=myleglist[8]
+        lfinal=copy.copy(l9)
+        lfinal.set('number',8)
 
         self.myproc.set('legs',myleglist)
 
@@ -1448,7 +1450,7 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         goal_tag=[[21, [1], 1], [21, [0], 1]]
         vx18_tag=base_objects.Vertex({'legs':base_objects.LegList([l1, l8, l18]), 'id': 1})
         vx12_tag=base_objects.Vertex({'legs':base_objects.LegList([l24, l18, l12]), 'id': 1})
-        closing_vx=base_objects.Vertex({'legs':base_objects.LegList([l12, l9]), 'id': -1})
+        closing_vx=base_objects.Vertex({'legs':base_objects.LegList([l12, lfinal]), 'id': -1})
         goal_vertices=base_objects.VertexList([vx18_tag,vx12_tag,closing_vx])
         myBubbleDiag.tag(myStructRep,8,9,self.myproc)
         self.assertEqual(myBubbleDiag.get('canonical_tag'), goal_tag)

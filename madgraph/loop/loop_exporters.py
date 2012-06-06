@@ -436,11 +436,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
 
         for file in linkfiles:
             ln('../../lib/%s' % file)
-            
-        # Link the coef_specs.inc for aloha to define the coefficient
-        # general properties (of course necessary in the optimized mode only)
-        ln(os.path.join(self.dir_path, 'SubProcesses', "P%s" % proc_name,
-                 'coef_specs.inc'),os.path.join(self.dir_path,'Source/DHELAS/'))
 
     def generate_general_replace_dict(self,matrix_element):
         """Generates the entries for the general replacement dictionary used
@@ -989,7 +984,18 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     # The option below controls wether one wants to group together in one single
     # CutTools call the loops with same denominator structure
     group_loops=True
-    
+
+    def link_files_from_Subprocesses(self,proc_name=""):
+        """ Does the same as the mother routine except that it also links
+        coef_specs.inc in the HELAS folder."""
+
+        LoopProcessExporterFortranSA.link_files_from_Subprocesses(self,proc_name)
+        
+        # Link the coef_specs.inc for aloha to define the coefficient
+        # general properties (of course necessary in the optimized mode only)
+        ln(os.path.join(self.dir_path, 'SubProcesses', "P%s" % proc_name,
+                 'coef_specs.inc'),os.path.join(self.dir_path,'Source/DHELAS/'))
+
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                                 proc_id = "", config_map = []):
         """ Writes loop_matrix.f, CT_interface.f and loop_num.f only but with

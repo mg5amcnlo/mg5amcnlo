@@ -3242,7 +3242,10 @@ class UFO_model_to_mg4(object):
         fsock.write_comments(\
                 "Parameters that should not be recomputed event by event.\n")
         fsock.writelines("if(readlha) then\n")
-        fsock.writelines("G = 2 * DSQRT(AS*PI) ! for the first init\n")
+        if dp:        
+            fsock.writelines("G = 2 * DSQRT(AS*PI) ! for the first init\n")
+        if mp:
+            fsock.writelines("MP__G = 2 * SQRT(MP__AS*MP__PI) ! for the first init\n")
         for param in self.params_indep:
             if param.name == 'ZERO':
                 continue
@@ -3256,7 +3259,10 @@ class UFO_model_to_mg4(object):
         fsock.writelines('endif')
         
         fsock.write_comments('\nParameters that should be recomputed at an event by even basis.\n')
-        fsock.writelines("aS = G**2/4/pi\n")
+        if dp:        
+            fsock.writelines("aS = G**2/4/pi\n")
+        if mp:
+            fsock.writelines("MP__aS = MP__G**2/4/MP__PI\n")
         for param in self.params_dep:
             if dp:
                 fsock.writelines("%s = %s\n" % (param.name,

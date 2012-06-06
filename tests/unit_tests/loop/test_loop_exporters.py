@@ -43,6 +43,7 @@ import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.import_ufo as models
+import aloha
 import aloha.create_aloha as create_aloha
 
 from madgraph import MadGraph5Error
@@ -69,7 +70,7 @@ class LoopExporterTest(unittest.TestCase):
     fortran_model= helas_call_writers.FortranUFOHelasCallWriter()
     loopExporter = loop_exporters.LoopProcessExporterFortranSA(\
                                   _mgme_file_path, _proc_file_path,
-                                  False, False, False, _loop_file_path,
+                                  False, False, True, _loop_file_path,
                                   _cuttools_file_path)
     def setUp(self):
         """load the NLO toy model"""
@@ -92,6 +93,10 @@ class LoopExporterTest(unittest.TestCase):
         LoopMatrixElement given in argument to check the correct behavior
         of the loop exporter"""
         
+        # Set aloha global variables to our choice
+        aloha_original_quad_mode = aloha.mp_precision
+        aloha.mp_precision = True
+
         # Cleaning last process directory
         if os.path.exists(_proc_file_path):
             shutil.rmtree(_proc_file_path)
@@ -135,6 +140,10 @@ class LoopExporterTest(unittest.TestCase):
         for file in files:
             self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
                              ,'SubProcesses',proc_name,file)))
+        
+        # Restore aloha global variables to our choice
+        aloha.mp_precision = aloha_original_quad_mode
+
     
     def test_aloha_loop_HELAS_subroutines(self):
         """ Test that Aloha correctly processes loop HELAS subroutines. """
@@ -322,17 +331,18 @@ class LoopExporterTest(unittest.TestCase):
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
         # Further Check that the right ALOHA subroutines are created
-        HELAS_files=['FFV1L_1.f', 'FFV1L_3.f', 'FFV1_0.f', 'FFV1_1.f', 
-                     'FFV1_2.f', 'FFV1_3.f', 'GHGHGL_1.f', 'GHGHG_0.f', 
-                     'GHGHG_1.f', 'GHGHG_2.f', 'GHGHG_3.f', 'R2_GG_1_0.f',
-                     'R2_GG_1_R2_GG_2_0.f', 'R2_GG_1_R2_GG_3_0.f', 
-                     'R2_GG_2_0.f', 'R2_GG_3_0.f', 'R2_QQ_1_0.f', 'VVV1L_1.f', 
-                     'VVV1_0.f', 'VVV1_1.f', 'VVVV1L_1.f', 'VVVV1_0.f', 
-                     'VVVV1_1.f', 'VVVV1_2.f', 'VVVV1_3.f', 'VVVV1_4.f', 
-                     'VVVV3L_1.f', 'VVVV3_0.f', 'VVVV3_1.f', 'VVVV3_2.f', 
-                     'VVVV3_3.f', 'VVVV3_4.f', 'VVVV4L_1.f', 'VVVV4_0.f',
-                     'VVVV4_1.f', 'VVVV4_2.f', 'VVVV4_3.f', 'VVVV4_4.f', 
-                     'aloha_functions.f']
+        HELAS_files=['aloha_file.inc', 'aloha_functions.f',
+                     'FFV1_0.f', 'FFV1_1.f', 'FFV1_2.f', 'FFV1_3.f', 'FFV1L_1.f',
+                     'FFV1L_2.f', 'FFV1L_3.f', 'GHGHGL_1.f', 'GHGHGL_2.f', 'makefile',
+                     'MP_FFV1_0.f', 'MP_FFV1_1.f', 'MP_FFV1_2.f', 'MP_FFV1_3.f',
+                     'MP_FFV1L_1.f', 'MP_FFV1L_2.f', 'MP_FFV1L_3.f', 'MP_GHGHGL_1.f',
+                     'MP_GHGHGL_2.f', 'MP_R2_GG_1_0.f', 'MP_R2_GG_1_R2_GG_2_0.f',
+                     'MP_R2_GG_1_R2_GG_3_0.f', 'MP_R2_GG_2_0.f', 'MP_R2_GG_3_0.f',
+                     'MP_R2_QQ_1_0.f', 'MP_VVV1_0.f', 'MP_VVV1_1.f', 'MP_VVV1L_1.f',
+                     'MP_VVVV1L_1.f', 'MP_VVVV3L_1.f', 'MP_VVVV4L_1.f', 'R2_GG_1_0.f',
+                     'R2_GG_1_R2_GG_2_0.f', 'R2_GG_1_R2_GG_3_0.f',
+                     'R2_GG_2_0.f', 'R2_GG_3_0.f', 'R2_QQ_1_0.f', 'VVV1_0.f',
+                     'VVV1_1.f', 'VVV1L_1.f', 'VVVV1L_1.f', 'VVVV3L_1.f', 'VVVV4L_1.f']
         for hFile in HELAS_files:
             self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
                                               ,'Source','DHELAS',hFile)))        
