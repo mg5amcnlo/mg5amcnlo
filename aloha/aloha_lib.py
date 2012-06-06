@@ -103,14 +103,15 @@ class Computation(dict):
         if str_expr in self.reduced_expr:
             out, tag = self.reduced_expr[str_expr]
             self.add_tag((tag,))
-            return out
-
-        # Add a new one
+            return out          
+        new_2 = expression.simplify()
+        if new_2 == 0:
+            return 0
+        # Add a new variable
         tag = 'TMP%s' % len(self.reduced_expr)
         new = Variable(tag)
-        self.reduced_expr[str_expr] = [new, tag]            
-        new_2 = expression.simplify()
-        new_2 = expression.factorize()
+        self.reduced_expr[str_expr] = [new, tag]  
+        new_2 = new_2.factorize()
         self.reduced_expr2[tag] = new_2
         self.add_tag((tag,))
         #return expression
@@ -182,7 +183,11 @@ class AddVariable(list):
         # deal with one/zero length object
         varlen = len(self)
         if varlen == 1:
-            return self.prefactor * self[0]
+            if hasattr(self[0], 'vartype'):
+                return self.prefactor * self[0].simplify()
+            else:
+                #self[0] is a number
+                return self.prefactor * self[0]
         elif varlen == 0:
             return 0 #ConstantObject()
         return self

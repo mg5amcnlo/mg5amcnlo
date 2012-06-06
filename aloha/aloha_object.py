@@ -975,14 +975,16 @@ def VectorPropagator(l1,l2,part):
 #                             * (Gamma(nu, -3, s2) + Identity(-3, s2) * P(nu, part) * Mass(part) * OverMass2(part) ) \
 #            -1*( Gamma(-1,s1,s2)*P(-1,part) + Identity(s1,s2)*Mass(part)) * (Metric(mu,nu)-Metric(mu,'I3')*P('I3',part)*P(nu,part)*OverMass2(part)) \
 
-Spin3halfPropagator =  lambda mu, nu, s1, s2, part:  - 1/3 * (Gamma(mu,s1,-2) + Identity(s1, -2) *  P(mu, part) * Mass(part) * OverMass2(part))* \
+
+
+Spin3halfPropagatorout =  lambda mu, nu, s1, s2, part:  - 1/3 * (Gamma(mu,s1,-2) + Identity(s1, -2) *  P(mu, part) * Mass(part) * OverMass2(part))* \
                              (PSlash(-2,-3, part) - Identity(-2,-3) * Mass(part)) * \
                              ( Gamma(nu, -3, s2)+ Mass(part) * OverMass2(part) * Identity(-3, s2) * P(nu, part) )
 
-Spin3halfPropagator =  lambda mu, nu, s1, s2, part:  - 1/3 * (Gamma(mu,s1,-2) + Identity(s1, -2) *  P(mu, part) * Mass(part) * OverMass2(part))* \
-                             (PSlash(-2,-3, part) - Identity(-2,-3) * Mass(part)) * \
-                             ( Gamma(nu, -3, s2)+ Mass(part) * OverMass2(part) * Identity(-3, s2) * P(nu, part) )
-                             
+
+Spin3halfPropagatorin =  lambda mu, nu, s1, s2, part:  + 1/3 * (Gamma(mu,s1,-2) - Identity(s1, -2) *  P(mu, part) * Mass(part) * OverMass2(part))* \
+                             (PSlash(-2,-3, part) + Identity(-2,-3) * Mass(part)) * \
+                             ( Gamma(nu, -3, s2)- Mass(part) * OverMass2(part) * Identity(-3, s2) * P(nu, part) )                             
 
 Spin2masslessPropagator = lambda mu, nu, alpha, beta: complex(0,1/2)*( Metric(mu, alpha)* Metric(nu, beta) +\
                      Metric(mu, beta) * Metric(nu, alpha) - Metric(mu, nu) * Metric(alpha, beta))

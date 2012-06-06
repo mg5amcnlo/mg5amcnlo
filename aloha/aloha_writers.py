@@ -55,7 +55,7 @@ class WriteALOHA:
             #flip the outgoing tag if in conjugate
             self.outgoing = self.outgoing + self.outgoing % 2 - (self.outgoing +1) % 2
         
-        self.outname = '%s%s' % (self.particles[self.offshell -1], \
+        self.outname = '%s%s' % (self.particles[self.outgoing -1], \
                                                                self.outgoing)
         
         #initialize global helper routine
@@ -243,12 +243,8 @@ class WriteALOHA:
             commentstring += self.routine.infostr + '\n'
             writer.write_comments(commentstring)
             writer.writelines(text)
-
+            
         return text + '\n'
-
-
-
-
 
     
     def write_indices_part(self, indices, obj): 
@@ -469,7 +465,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             self.declaration.add(('complex','vertex'))
         else:
             output = '%(spin)s%(id)d' % {
-                     'spin': self.particles[self.offshell -1],
+                     'spin': self.particles[self.outgoing -1],
                      'id': self.outgoing}
             self.declaration.add(('list_complex', output))
         
@@ -862,9 +858,6 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         else:
             coup = False
 
-        print 'nb_def',len(self.routine.expr) * 4
-        print 'rank',self.routine.expr.get_max_rank()
-
         
         
         for key,expr in self.routine.expr.items():
@@ -1255,7 +1248,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             self.declaration.add(('complex','vertex'))
         else:
             output = 'complex<double> %(spin)s%(id)d[]' % {
-                     'spin': self.particles[self.offshell -1],
+                     'spin': self.particles[self.outgoing -1],
                      'id': self.outgoing}
             self.declaration.add(('list_complex', output))
         

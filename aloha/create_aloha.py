@@ -271,9 +271,9 @@ class AbstractRoutineBuilder(object):
                         spin_id = id
                     nb_spinor += 1
                     if id %2:
-                        lorentz *= Spin3halfPropagator(id, 'I2', spin_id,'I3', outgoing)
+                        lorentz *= Spin3halfPropagatorout(id, 'I2', spin_id,'I3', outgoing)
                     else:
-                        lorentz *= Spin3halfPropagator('I2', id, 'I3', spin_id, outgoing)                      
+                        lorentz *= Spin3halfPropagatorin('I2', id, 'I3', spin_id, outgoing)                      
                 elif spin == 5 :
                     #lorentz *= 1 # delayed evaluation (fastenize the code)
                     if self.spin2_massless:
