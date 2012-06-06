@@ -1037,7 +1037,7 @@ c much. Do this by overwrite the 'wgt' variable
      $        ,f_abs)
          if (f_check.ne.0d0.or.sigintF.ne.0d0) then
             if (abs(sigintF-f_check)/max(abs(f_check),abs(sigintF))
-     $           .gt.1d-2) then
+     $           .gt.1d-4) then
                write (*,*) 'Error inaccuracy in unweight table 1'
      $              ,sigintF,f_check
                stop
@@ -1297,13 +1297,15 @@ c to check that they are equal among all nFKSprocesses.
                endif
                do j=1,maxproc_found
                   do i=1,nexternal-1
-                     if (id_current(i,j).ne.id_first(i,j)) then
+                     if (id_current(i,equal_to_inverse(j)).ne.id_first(i
+     &                    ,j)) then
                         write (*,*)'Particle IDs not equal',i,j
+     &                       ,nFKSprocess
                         do jj=1,maxproc_found
-                           write (*,*) jj,' current:',
-     &                          (id_current(ii,jj),ii=1,nexternal-1)
-                           write (*,*) jj,' saved  :',
-     &                          (id_first(ii,jj),ii=1,nexternal-1)
+                           write (*,*) jj,' current:', (id_current(ii
+     &                          ,equal_to_inverse(jj)),ii=1,nexternal-1)
+                           write (*,*) jj,' saved  :', (id_first(ii
+     &                          ,equal_to_inverse(jj)),ii=1,nexternal-1)
                         enddo
                         stop
                      endif
@@ -1324,20 +1326,13 @@ c Restore nFKSprocess
          firsttime=.false.
       endif
 c Trivial check on the Born contribution
-      if (unwgt_table(0,2 ,iproc_save(nFKSprocess_used_born)).ne.0d0)
-     $     then
-         write (*,*) 'H-event contribution to the n-body should be zero'
-         stop
-      endif
-c$$$c Check that only one nFKSprocess is non-zero
-c$$$      do i=1,fks_configs
-c$$$         if ((unwgt_table(i,1,iproc_save(i)).ne.0d0 .or. unwgt_table(i,2
-c$$$     $        ,iproc_save(i)).ne.0d0) .and.nFKSprocess.ne.i) then
-c$$$            write (*,*) 'error #3 in unweight_table'
-c$$$            stop
-c$$$         endif
-c$$$      enddo
-c
+      do i=1,iproc_save(nFKSprocess_used_born)
+         if (unwgt_table(0,2,i).ne.0d0) then
+            write (*,*)
+     &           'H-event contribution to the n-body should be zero',i
+            stop
+         endif
+      enddo
 c
 c Compute the total rate. This is simply the sum of all
 c
@@ -1481,8 +1476,8 @@ c Now update the reweight information
 c Set the n-body contributions to zero for H-events, or for S-events
 c with more than one nFKSprocess contribution and not nFKSprocess with
 c soft singularity
-               if (Hevents.or.(PDG_type(i_fks).ne.21.and.proc_map(0
-     $              ,1).gt.1)) then
+               if (Hevents.or.(PDG_type(i_fks).ne.21.and.
+     &              proc_map(proc_map(0,1),0).gt.1)) then
                   wgtwborn(2)=0d0
                   wgtwns(2)=0d0
                   wgtwnsmuf(2)=0d0
@@ -1504,7 +1499,12 @@ c and the n-body contributions
          f_abs_H=0d0
          f_abs_S=0d0
          do i=1,maxproc_found
-            f_abs_S=f_abs_S+abs(unwgt_table(0,1,i))
+            do j=1,iproc_save(nFKSprocess_used_born)
+               if (equal_to(j).eq.i) then
+                  f_unwgt(nFKSprocess_used_born,i)=unwgt_table(0,1,i)
+               endif
+            enddo
+            f_abs_S=f_abs_S+abs(f_unwgt(nFKSprocess_used_born,i))
          enddo
          if (.not.unweight)then
 c just return the (correct) absolute value
@@ -1517,17 +1517,21 @@ c pick one at random and update reweight info and all that
                rnd=ran2()
 c Pick one of the IPROC's of the Born
                i_process=1
-               current=abs(unwgt_table(0,1,1))
+               current=abs(f_unwgt(nFKSprocess_used_born,1))
                do while (current.lt.rnd*f_abs_S .and.
      $              i_process.le.maxproc_found)
                   i_process=i_process+1
-                  current=current+abs(unwgt_table(0,1,i_process))
+                  current=current+abs(f_unwgt(nFKSprocess_used_born
+     &                 ,i_process))
                enddo
                if (i_process.gt.maxproc_found) then
                   write (*,*) 'ERROR #4 in unweight table',i_process 
                   stop
                endif
-               evtsgn=sign(1d0,unwgt_table(0,1,i_process))
+               evtsgn=sign(1d0,f_unwgt(nFKSprocess_used_born,i_process))
+c Set the i_process to one of the (n+1)-body configurations that leads
+c to this Born configuration. Needed for add_write_info to work properly
+               i_process=equal_to_inverse(i_process)
             endif
 c Now update the reweight information
             if(doreweight) then

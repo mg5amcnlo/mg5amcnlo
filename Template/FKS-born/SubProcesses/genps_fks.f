@@ -25,11 +25,14 @@ c      integer mapconfig(0:lmaxconfigs)
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      integer iconfig0
+      common/ciconfig0/iconfig0
       include 'coupl.inc'
       include 'born_props.inc'
 c      
       this_config=iconfig
       iconf=iconfig
+      iconfig0=iconfig
       do i=-max_branch,-1
          do j=1,2
             itree(j,i)=iforest(j,i,iconfig)
@@ -124,6 +127,9 @@ c     2 soft-collinear
       common /cxinormev/xinorm_ev
       double precision xinorm_cnt(-2:2)
       common /cxinormcnt/xinorm_cnt
+      integer iconfig0,iconfigsave
+      common/ciconfig0/iconfig0
+      save iconfigsave
 c Masses of particles. Should be filled in setcuts.f
       double precision pmass(nexternal)
       common /to_mass/pmass
@@ -164,7 +170,7 @@ c saves
             m(i)=pmass(i+1)
          endif
       enddo
-      if (firsttime) then
+      if( firsttime .or. iconfig0.ne.iconfigsave ) then
          stot = 4d0*ebeam(1)*ebeam(2)
 c Make sure have enough mass for external particles
          totmassin=0d0
@@ -210,6 +216,7 @@ c Set one_body to true if it's a 2->1 process at the Born (i.e. 2->2 for the n+1
             stop
          endif
          firsttime=.false.
+         iconfigsave=iconfig0
       endif                     ! firsttime
 c Set the minimal tau = x1*x2.
       call set_tau_min()
@@ -478,6 +485,8 @@ c the correct normalization of the phase space
 c
  112  continue
 c Catch the points for which there is no viable phase-space generation
+c (still fill the common blocks with some information that is needed
+c (e.g. ycm_cnt)).
       if (xjac .le. 0d0 ) then
          xp(0,1)=-99d0
       endif
@@ -505,6 +514,12 @@ c Fill common blocks
          jac=xjac
       else
          tau_cnt(icountevts)=tau
+c Special fix in the case the soft counter-events are not generated but
+c the Born and real are. (This can happen if ptj>0 in the
+c run_card). This fix is needed for set_cms_stuff to work properly.
+         if (icountevts.eq.0) then
+            ycm=ycm_born
+         endif
          ycm_cnt(icountevts)=ycm
          shat_cnt(icountevts)=shat
          sqrtshat_cnt(icountevts)=sqrtshat
@@ -790,11 +805,6 @@ c boosted along the direction of the mother; start by redefining the
 c mother four momenta
       do i=0,3
          xp_mother(i)=xp(i,i_fks)+xp(i,j_fks)
-c$$$         if( p_born(i,1).ne.xp(i,1) .or.
-c$$$     &       p_born(i,2).ne.xp(i,2) )then
-c$$$            write(*,*)'Fatal error #9 in one_tree'
-c$$$            stop
-c$$$         endif
          recoil(i)=xp(i,1)+xp(i,2)-xp_mother(i)
       enddo
       sumrec=recoil(0)+rho(recoil)
@@ -1106,11 +1116,6 @@ c boosted along the direction of the mother; start by redefining the
 c mother four momenta
       do i=0,3
          xp_mother(i)=xp(i,i_fks)+xp(i,j_fks)
-c$$$         if( p_born(i,1).ne.xp(i,1) .or.
-c$$$     &        p_born(i,2).ne.xp(i,2) )then
-c$$$            write(*,*)'Fatal error #9 in one_tree'
-c$$$            stop
-c$$$         endif
          recoil(i)=xp(i,1)+xp(i,2)-xp_mother(i)
       enddo
 c
@@ -1395,7 +1400,7 @@ c$$$         xi_i_fks=xi_i_hat*xiimax
          endif
       elseif(abs(icountevts).eq.2.or.icountevts.eq.0)then
          xi_i_fks=xi_i_fks_matrix(icountevts)
-c Check that y_ij_fks is in the allowed range. If not, counter events
+c Check that xi_i_fks is in the allowed range. If not, counter events
 c cannot be generated
          if ( xi_i_fks.gt.xiimax+1d-12 .or.
      &        xi_i_fks.lt.xiimin-1d-12 ) then
@@ -1740,11 +1745,6 @@ c-----
       tau=roH
 c Jacobian due to delta() of tau_born
       jac=jac*2*totmass/stot
-c$$$      if(totmass.ne.m(ionebody))then
-c$$$         write(*,*)'Error #511 in one_tree',
-c$$$     &        totmass,m(ionebody),ionebody
-c$$$         stop
-c$$$      endif
       return
       end
 
