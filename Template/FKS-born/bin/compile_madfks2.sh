@@ -112,7 +112,7 @@ if [[ $all_dirs != '1' ]] ; then
     read dirs
 else
     cd SubProcesses
-    dirs=`ls -d P0_*`
+    dirs=`ls -d P*`
     cd ..
 fi
 
@@ -130,7 +130,7 @@ if [[ $test == "1" ]] ; then
     echo '-2 -2' >> $Maindir/input_MC
     echo $points $points >> $Maindir/input_ME
     echo $points $points >> $Maindir/input_MC
-    dir=`ls -d SubProcesses/P*/R* | tail -n1`
+    dir=`ls -d SubProcesses/P* | tail -n1`
     if [[ -e $dir"/helicities.inc" ]]; then
 	echo '1' >> $Maindir/input_ME
 	echo '1' >> $Maindir/input_MC
@@ -245,9 +245,9 @@ for dir in $dirs ; do
 # COMPILE MADEVENT
 #
     if [[ $madevent_compile == "1" ]] ; then
-        virt_dirs=`ls -d V0*`
+        virt_dirs=`ls -d V0* > /dev/null 2>&1`
         if [[ $virt_dirs == "" ]] ; then
-            echo "Virtuals have not been exported"
+            echo "        Virtuals have not been exported"
         fi
         for vdir in $virt_dirs ; do
             export madloop=true

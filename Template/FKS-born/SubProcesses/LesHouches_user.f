@@ -58,27 +58,26 @@ c
      &        ' for Virtual corrections',
      &        isum_hel
       endif
+      virt_wgt=0d0
 c update the ren_scale for MadLoop and the couplings (should be the
 c Ellis-Sexton scale)
       mu_r = sqrt(QES2)
       call update_as_param()
       alpha_S=g**2/(4d0*PI)
       ao2pi= alpha_S/(2d0*PI)
-      if (firsttime) write(*,*) "alpha_s value used for the virtuals"/
-     &     /" is (for the first PS point): ", alpha_S
 
 c======================================================================
 c Replace the following line with the call to the one-loop code you 
 c wish to use. virt_wgts contains finite part, single and double pole
+c To understand why we need to divide them by ngluons, read the warning
+c message at the beginning of this subroutine
 c      
 c      call sloopmatrix(p, virt_wgts)
+c      virt_wgt= virt_wgts(1)/dble(ngluons)
+c      single  = virt_wgts(2)/dble(ngluons)
+c      double  = virt_wgts(3)/dble(ngluons)
 c
 c======================================================================
-
-c Do not comment the following lines
-      virt_wgt= virt_wgts(1)/dble(ngluons)
-      single  = virt_wgts(2)/dble(ngluons)
-      double  = virt_wgts(3)/dble(ngluons)
 
 c======================================================================
 c If the Virtuals are in the Dimensional Reduction scheme, convert them
@@ -91,33 +90,35 @@ c      endif
 c      virt_wgt=virt_wgt+conversion*born_wgt*ao2pi
 c======================================================================
 
-c check for poles cancellation      
-      if (firsttime) then
-          call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
-          if (dabs(single - madfks_single).lt.tolerance .and.
-     1        dabs(double - madfks_double).lt.tolerance) then
-              write(*,*) "---- POLES CANCELLED ----"
-              firsttime = .false.
-          else
-              write(*,*) "POLES MISCANCELLATION, DIFFERENCE > ",
-     1         tolerance
-              write(*,*) " COEFFICIENT DOUBLE POLE:"
-              write(*,*) "       MadFKS: ", madfks_double,
-     1                   "          OLP: ", double
-              write(*,*) " COEFFICIENT SINGLE POLE:"
-              write(*,*) "       MadFKS: ",madfks_single,
-     1                   "          OLP: ",single
-              write(*,*) " FINITE:"
-              write(*,*) "          OLP: ",virt_wgt
-              if (nbad .lt. nbadmax) then
-                  nbad = nbad + 1
-                  write(*,*) " Trying another PS point"
-              else
-                  write(*,*) " TOO MANY FAILURES, QUITTING"
-                  stop
-              endif
-          endif
-      endif
+c======================================================================
+c example for checking the cancelation of the poles
+c      if (firsttime) then
+c          call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
+c          if (dabs(single - madfks_single).lt.tolerance .and.
+c     &        dabs(double - madfks_double).lt.tolerance) then
+c              write(*,*) "---- POLES CANCELLED ----"
+c              firsttime = .false.
+c          else
+c              write(*,*) "POLES MISCANCELLATION, DIFFERENCE > ",
+c     &         tolerance
+c              write(*,*) " COEFFICIENT DOUBLE POLE:"
+c              write(*,*) "       MadFKS: ", madfks_double,
+c     &                   "          OLP: ", double
+c              write(*,*) " COEFFICIENT SINGLE POLE:"
+c              write(*,*) "       MadFKS: ",madfks_single,
+c     &                   "          OLP: ",single
+c              write(*,*) " FINITE:"
+c              write(*,*) "          OLP: ",virt_wgt
+c              if (nbad .lt. nbadmax) then
+c                  nbad = nbad + 1
+c                  write(*,*) " Trying another PS point"
+c              else
+c                  write(*,*) " TOO MANY FAILURES, QUITTING"
+c                  stop
+c              endif
+c          endif
+c      endif
+c======================================================================
       if(doVirtTest.and.born_wgt.ne.0d0)then
          virtmax=max(virtmax,virt_wgt/born_wgt/ao2pi)
          virtmin=min(virtmin,virt_wgt/born_wgt/ao2pi)

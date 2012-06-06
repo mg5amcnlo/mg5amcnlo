@@ -29,12 +29,7 @@ c Local
       data firsttime/.true./
       data firsttime2/.true./
 
-c Combined SubProcesses (from auto_dsig() or dlum())
-c$$$      double precision xlum,dlum
-c$$$      external dlum
-c$$$      integer              IPROC 
-c$$$      DOUBLE PRECISION PD(0:MAXPROC)
-c$$$      COMMON /SubProc/ PD, IPROC
+c The process chosen to write
       integer i_process
       common/c_addwrite/i_process
       
@@ -57,10 +52,6 @@ c Masses and widths of the (internal) propagators. Read once and saved.
       double precision pmass_tree(-nexternal:0)
       double precision pwidth_tree(-nexternal:0)
       save pmass_tree,pwidth_tree
-
-c$$$c Identical particles symmetry
-c$$$      integer isym(nexternal,200), nsym, jsym
-c$$$      include 'symswap.inc'
 
 c LesHouches info
       integer maxflow
@@ -111,7 +102,6 @@ c cFKSprocess
       integer save_nFKSprocess
       double precision SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
-
       integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
      &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
