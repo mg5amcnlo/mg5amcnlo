@@ -120,10 +120,6 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
         while fksprocs:
             # Pop the amplitude to save memory space
             proc = fksprocs.pop(0)
-#            if isinstance(proc, diagram_generation.DecayChainAmplitude):
-#                matrix_element_list = HelasDecayChainProcess(amplitude).\
-#                                      combine_decay_chain_processes()
-#            else:
             logger.info("Generating Helas calls for FKS process %s" % \
                          proc.born_amp.get('process').nice_string().\
                                            replace('Process', 'process'))
@@ -141,9 +137,6 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
                     # processes for that matrix element
                     other = \
                           matrix_elements[matrix_elements.index(matrix_element)]
-                    other.add_process(matrix_element)
-                    logger.info("Combining process with %s" % \
-                      other.born_matrix_element.get('processes')[0].nice_string().replace('Process: ', ''))
                 except ValueError:
                     # Otherwise, if the matrix element has any diagrams,
                     # add this matrix element.
@@ -171,8 +164,6 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
                               "Reusing existing color information for %s" % \
                               matrix_element.born_matrix_element.get('processes')[0].nice_string().\
                                                  replace('Process', 'process'))
-                            
-                            
                         except ValueError:
                             # If not, create color basis and color
                             # matrix accordingly
@@ -187,6 +178,10 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
                               "Processing color information for %s" % \
                               matrix_element.born_matrix_element.get('processes')[0].nice_string().\
                                              replace('Process', 'process'))
+                else:
+                    # this is in order not to handle valueErrors coming from other plaeces,
+                    # e.g. from the add_process function
+                    other.add_process(matrix_element)
 
                 if gen_color:
                     matrix_element.born_matrix_element.set('color_basis',
@@ -227,8 +222,6 @@ class FKSHelasProcessFromBorn(object):
                     other = self.real_processes[self.real_processes.index(fksreal_me)]
                     other.matrix_element.get('processes').extend(\
                             fksreal_me.matrix_element.get('processes') )
-#                    logger.info("Combining real process with %s" % \
-#                            other.matrix_element.get('processes')[0].nice_string().replace('Process: ', ''))
                 except ValueError:
                     if fksreal_me.matrix_element.get('processes') and \
                             fksreal_me.matrix_element.get('diagrams'):
@@ -241,39 +234,11 @@ class FKSHelasProcessFromBorn(object):
             else: 
                 self.virt_matrix_element = None
 
-################################################################################
-
-#            self.matrix_element = helas_objects.HelasMatrixElement(
-#                                    fksrealproc.amplitude, **opts)
-#
-#
-#                try:
-#                    # If an identical matrix element is already in the list,
-#                    # then simply add this process to the list of
-#                    # processes for that matrix element
-#                    other = \
-#                          matrix_elements[matrix_elements.index(matrix_element)]
-#                    other.add_process(matrix_element)
-#                    logger.info("Combining process with %s" % \
-#                      other.born_matrix_element.get('processes')[0].nice_string().replace('Process: ', ''))
-#                except ValueError:
-#                    # Otherwise, if the matrix element has any diagrams,
-#                    # add this matrix element.
-#                    if matrix_element.born_matrix_element.get('processes') and \
-#                           matrix_element.born_matrix_element.get('diagrams'):
-#                        matrix_elements.append(matrix_element)
-################################################################################
-
-
             col_basis = color_amp.ColorBasis()
             col_basis.build(fksproc.born_amp)
             self.color_links = fks_common.insert_color_links(col_basis,
                                 col_basis.create_color_dict_list(fksproc.born_amp),
                                 fksproc.find_color_links())    
-
-# Don't need to link Born to real diagrams anymore for FKS from Born processes
-#            for i, rb_link in enumerate(fksproc.link_rb_confs()):
-#                self.real_processes[i].bornfromreal = rb_link
 
 
     def get_fks_info_list(self):
@@ -344,14 +309,18 @@ class FKSHelasProcessFromBorn(object):
         return True
     
     def add_process(self, other): #test written
-        """adds processes from born and reals of other to itself"""
+        """adds processes from born and reals of other to itself. Note that 
+        corresponding real processes may not be in the same order. This is 
+        taken care of by constructing the list of self_reals."""
         self.born_matrix_element.get('processes').extend(
                 other.born_matrix_element.get('processes'))
-        for real1, real2 in zip(self.real_processes, other.real_processes):
-            real1.matrix_element.get('processes').extend(\
-                    [p for p in real2.matrix_element['processes'] if p not in real1.matrix_element['processes']])
-#                real2.matrix_element.get('processes'))  
-#            real1.matrix_element['processes'] = set(real1.matrix_element['processes'])
+        self_reals = [real.matrix_element for real in self.real_processes]
+        for oth_real in other.real_processes:
+            self.real_processes[\
+                self_reals.index(oth_real.matrix_element)].matrix_element['processes'].extend(
+                    [p for p in oth_real.matrix_element['processes'] \
+                        if p not in self.real_processes[\
+                        self_reals.index(oth_real.matrix_element)].matrix_element['processes']])
             
     
 class FKSHelasRealProcess(object): #test written

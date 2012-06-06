@@ -37,111 +37,27 @@ class testFKSBornHelasObjects(unittest.TestCase):
     """a class to test the module FKSBornHelasObjects"""
     myleglist1 = MG.LegList()
     # PROCESS: u g > u g 
-    mylegs = [{ \
-    'id': 2,\
-    'number': 1,\
-    'state': False,\
- #   'from_group': True \
-}, \
-{ \
-    'id': 21,\
-    'number': 2,\
-    'state': False,\
-    #'from_group': True\
-},\
-{\
-    'id': 2,\
-    'number': 3,\
-    'state': True,\
-  #  'from_group': True\
-},\
-{\
-    'id': 21,\
-    'number': 4,\
-    'state': True,\
-   # 'from_group': True\
-}
-]
+    mylegs = [{'id': 2, 'number': 1, 'state': False},
+              {'id': 21, 'number': 2, 'state': False},
+              {'id': 2, 'number': 3, 'state': True},
+              {'id': 21, 'number': 4, 'state': True}]
 
     for i in mylegs:
         myleglist1.append(MG.Leg(i))
         
-    myleglist2 = MG.LegList()
-    # PROCESS: d g > d g 
-    mylegs = [{ \
-    'id': 1,\
-    'number': 1,\
-    'state': False,\
- #   'from_group': True \
-}, \
-{ \
-    'id': 21,\
-    'number': 2,\
-    'state': False,\
-    #'from_group': True\
-},\
-{\
-    'id': 1,\
-    'number': 3,\
-    'state': True,\
-  #  'from_group': True\
-},\
-{\
-    'id': 21,\
-    'number': 4,\
-    'state': True,\
-   # 'from_group': True\
-}
-]
-
-    for i in mylegs:
-        myleglist2.append(MG.Leg(i))
 
     myleglist3 = MG.LegList()
     # PROCESS: d d~ > u u~
-    mylegs = [{ \
-    'id': 1,\
-    'number': 1,\
-    'state': False,\
- #   'from_group': True \
-}, \
-{ \
-    'id': -1,\
-    'number': 2,\
-    'state': False,\
-    #'from_group': True\
-},\
-{\
-    'id': 2,\
-    'number': 3,\
-    'state': True,\
-  #  'from_group': True\
-},\
-{\
-    'id': -2,\
-    'number': 4,\
-    'state': True,\
-   # 'from_group': True\
-}
-]
+    mylegs = [{'id': 1, 'number': 1, 'state': False},
+              {'id': -1, 'number': 2, 'state': False},
+              {'id': 2, 'number': 3, 'state': True},
+              {'id': -2, 'number': 4, 'state': True}]
     for i in mylegs:
         myleglist3.append(MG.Leg(i))
 
     mymodel = import_ufo.import_model('sm')
 
     dict1 = {'legs' : myleglist1, 'orders':{'QCD':10, 'QED':0},
-                       'model': mymodel,
-                       'id': 1,
-                       'required_s_channels':[],
-                       'forbidden_s_channels':[],
-                       'forbidden_particles':[],
-                       'is_decay_chain': False,
-                       'perturbation_couplings' : ['QCD'],
-                       'decay_chains': MG.ProcessList(),
-                       'overall_orders': {}}
-
-
-    dict2 = {'legs' : myleglist2, 'orders':{'QCD':10, 'QED':0},
                        'model': mymodel,
                        'id': 1,
                        'required_s_channels':[],
@@ -165,19 +81,114 @@ class testFKSBornHelasObjects(unittest.TestCase):
     
     myproc1 = MG.Process(dict1)
     myproc1.set('orders', {'QED':0})
-    myproc2 = MG.Process(dict2)
-    myproc2.set('orders', {'QED':0})
     myproc3 = MG.Process(dict3)
     myproc3.set('orders', {'QED':0})
 
 
-    def test_fks_helas_multi_process_from_born(self):
+    def test_fks_helas_multi_process_from_born_ppwj(self):
         """tests the correct initialization of a FKSHelasMultiProcess, 
-        given an FKSMultiProcess"""
+        given an FKSMultiProcess. This also checks that, when combining 
+        2 FKSHelasProcessFromBorn using the add_process function, the real
+        emissions are combined consistently.
+        The p p > w+ j process is studied
+        """
+        p= [21, 1, 2, 3, 4, -1, -2, -3, -4]
+        w_leg= MG.MultiLeg({'ids':[24], 'state': True})
+        j_leg= MG.MultiLeg({'ids':p, 'state': True})
+        p_leg = MG.MultiLeg({'ids': p, 'state': False});
+
+        # Define the multiprocess
+        my_multi_leglist = MG.MultiLegList([copy.copy(leg) for leg in [p_leg] * 2] \
+                    + MG.MultiLegList([w_leg, j_leg]))
+        
+        my_process_definition = MG.ProcessDefinition({ \
+                        'orders': {'WEIGHTED': 3},
+                        'legs': my_multi_leglist,
+                        'perturbation_couplings': ['QCD'],
+                        'NLO_mode': 'real',
+                        'model': self.mymodel})
+        my_process_definitions = MG.ProcessDefinitionList(\
+            [my_process_definition])
+
+        my_multi_process = fks_born.FKSMultiProcessFromBorn(\
+                {'process_definitions': my_process_definitions})
+        my_helas_mp = fks_born_helas.FKSHelasMultiProcessFromBorn(my_multi_process, False)
+
+        #there are 6  borns 
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')),6)
+        #born processes are initiated by : gu, gdx, ug, udx, dxg, dxu
+        n_real_processes = [8,8,8,6,8,6]
+        real_subprocesses = \
+                [     [ #these are for gu -initiated born
+                    [ [21,2,24,1,21], [21,4,24,3,21] ], #subrpocs for real 1
+                    [ [-1,2,24,-1,1], [-3,4,24,-3,3] ], #subrpocs for real 2
+                    [ [1,2,24,1,1], [3,4,24,3,3] ],     #subrpocs for real 3
+                    [ [-3,2,24,-3,1], [-4,2,24,-4,1], [-1,4,24,-1,3], [-2,4,24,-2,3] ], #subrpocs for real 4
+                    [ [3,2,24,3,1], [4,2,24,4,1], [1,4,24,1,3], [2,4,24,2,3] ], #subrpocs for real 5
+                    [ [-2,2,24,-2,1], [-4,4,24,-4,3] ], #subrpocs for real 6
+                    [ [2,2,24,2,1], [4,4,24,4,3] ],     #subrpocs for real 7
+                    [ [21,21,24,-2,1], [21,21,24,-4,3] ]#subrpocs for real 8
+                    ],[ #these are for gdx-initiated born
+                    [ [21,-1,24,-2,21], [21,-3,24,-4,21] ], #subrpocs for real 1
+                    [ [-1,-1,24,-1,-2], [-3,-3,24,-3,-4] ], #subrpocs for real 2
+                    [ [1,-1,24,1,-2], [3,-3,24,3,-4] ],     #subrpocs for real 3
+                    [ [-3,-1,24,-3,-2], [-4,-1,24,-4,-2], [-1,-3,24,-1,-4], [-2,-3,24,-2,-4] ], #subrpocs for real 4
+                    [ [3,-1,24,3,-2], [4,-1,24,4,-2], [1,-3,24,1,-4], [2,-3,24,2,-4] ], #subrpocs for real 5
+                    [ [-2,-1,24,-2,-2], [-4,-3,24,-4,-4] ], #subrpocs for real 6
+                    [ [2,-1,24,2,-2], [4,-3,24,4,-4] ],     #subrpocs for real 7
+                    [ [21,21,24,1,-2], [21,21,24,3,-4] ]#subrpocs for real 8
+                    ],[ #these are for ug -initiated born
+                    [ [2,21,24,1,21], [4,21,24,3,21] ], #subrpocs for real 1
+                    [ [21,21,24,-2,1], [21,21,24,-4,3] ],#subrpocs for real 2
+                    [ [2,-1,24,-1,1], [4,-3,24,-3,3] ], #subrpocs for real 3
+                    [ [2,1,24,1,1], [4,3,24,3,3] ],     #subrpocs for real 4
+                    [ [2,-3,24,-3,1], [2,-4,24,-4,1], [4,-1,24,-1,3], [4,-2,24,-2,3] ], #subrpocs for real 5
+                    [ [2,3,24,3,1], [2,4,24,4,1], [4,1,24,1,3], [4,2,24,2,3] ], #subrpocs for real 6
+                    [ [2,-2,24,-2,1], [4,-4,24,-4,3] ], #subrpocs for real 7
+                    [ [2,2,24,2,1], [4,4,24,4,3] ]     #subrpocs for real 8
+                    ],[ #these are for udx-initiated born
+                    [ [2,-1,24,21,21], [4,-3,24,21,21] ], #subrpocs for real 1
+                    [ [21,-1,24,-2,21], [21,-3,24,-4,21] ],#subrpocs for real 2
+                    [ [2,21,24,1,21], [4,21,24,3,21] ], #subrpocs for real 3
+                    [ [2,-1,24,1,-1], [4,-3,24,3,-3] ],     #subrpocs for real 4
+                    [ [2,-1,24,3,-3], [2,-1,24,4,-4], [4,-3,24,1,-1], [4,-3,24,2,-2] ], #subrpocs for real 5
+                    [ [2,-1,24,2,-2], [4,-3,24,4,-4]] #subrpocs for real 6
+                    ],[ #these are for dxg-initiated born
+                    [ [-1,21,24,-2,21], [-3,21,24,-4,21] ], #subrpocs for real 1
+                    [ [21,21,24,1,-2], [21,21,24,3,-4] ],#subrpocs for real 2
+                    [ [-1,-1,24,-1,-2], [-3,-3,24,-3,-4] ], #subrpocs for real 3
+                    [ [-1,1,24,1,-2], [-3,3,24,3,-4] ],     #subrpocs for real 4
+                    [ [-1,-3,24,-3,-2], [-1,-4,24,-4,-2], [-3,-1,24,-1,-4], [-3,-2,24,-2,-4] ], #subrpocs for real 5
+                    [ [-1,3,24,3,-2], [-1,4,24,4,-2], [-3,1,24,1,-4], [-3,2,24,2,-4] ], #subrpocs for real 6
+                    [ [-1,-2,24,-2,-2], [-3,-4,24,-4,-4] ], #subrpocs for real 7
+                    [ [-1,2,24,2,-2], [-3,4,24,4,-4] ]     #subrpocs for real 8
+                    ],[ #these are for dxu-initiated born
+                    [ [-1,2,24,21,21], [-3,4,24,21,21] ], #subrpocs for real 1
+                    [ [21,2,24,1,21], [21,4,24,3,21] ],#subrpocs for real 2
+                    [ [-1,21,24,-2,21], [-3,21,24,-4,21] ], #subrpocs for real 3
+                    [ [-1,2,24,1,-1], [-3,4,24,3,-3] ],     #subrpocs for real 4
+                    [ [-1,2,24,3,-3], [-1,2,24,4,-4], [-3,4,24,1,-1], [-3,4,24,2,-2] ], #subrpocs for real 5
+                    [ [-1,2,24,2,-2], [-3,4,24,4,-4]] #subrpocs for real 6
+                ]]
+                  
+        #each born correspond to 2 partonic processes
+        for i, me in enumerate(my_helas_mp.get('matrix_elements')):
+            self.assertEqual(len(me.get('processes')),2)
+            self.assertEqual(len(me.real_processes), n_real_processes[i])
+            for j,real in enumerate(me.real_processes):
+                pdgs = [ [leg['id'] for leg in proc['legs'] ] for proc in real.matrix_element['processes']]
+                self.assertEqual(real_subprocesses[i][j], pdgs)
+
+
+    def test_fks_helas_multi_process_from_born_pptt(self):
+        """tests the correct initialization of a FKSHelasMultiProcess, 
+        given an FKSMultiProcess. This test also checks that each real
+        process corresponds to the correct number of FKS configurations.
+        The p p > t t~ process is studied
+        """
         p= [21, 1, 2, 3, 4, -1, -2, -3, -4]
         t= MG.MultiLeg({'ids':[6], 'state': True})
         tx= MG.MultiLeg({'ids':[-6], 'state': True})
-
 
         p_leg = MG.MultiLeg({'ids': p, 'state': False});
 
@@ -235,7 +246,6 @@ class testFKSBornHelasObjects(unittest.TestCase):
         self.assertEqual(len(my_helas_mp.get('matrix_elements')[2].real_processes[2].matrix_element['processes']), 4)
         self.assertEqual(len(my_helas_mp.get('matrix_elements')[2].real_processes[2].fks_infos), 1)
         
-        
     
     def test_fks_helas_real_process_init(self):
         """tests the correct initialization of an FKSHelasRealProcess, from a 
@@ -246,10 +256,6 @@ class testFKSBornHelasObjects(unittest.TestCase):
         --permutation
         --matrix element
         """         
-        #ug> ug
-        fks1 = fks_born.FKSProcessFromBorn(self.myproc1)
-        #dg> dg
-        fks2 = fks_born.FKSProcessFromBorn(self.myproc2)
         #uu~> dd~
         fks3 = fks_born.FKSProcessFromBorn(self.myproc3)
  
@@ -288,12 +294,10 @@ class testFKSBornHelasObjects(unittest.TestCase):
         -- born ME
         -- list of FKSHelasRealProcesses
         -- color links
-        we use the born process ug > ug"""
-        
+        -- fks_infos
+        """
         #ug> ug
         fks1 = fks_born.FKSProcessFromBorn(self.myproc1)
-        #dg> dg
-        fks2 = fks_born.FKSProcessFromBorn(self.myproc2)
         #uu~> dd~
         fks3 = fks_born.FKSProcessFromBorn(self.myproc3)
         
@@ -310,7 +314,6 @@ class testFKSBornHelasObjects(unittest.TestCase):
         me_id_list3=[]
         res_me_list=[]
         res_me_id_list=[]
-
 
         helas_born_proc = fks_born_helas.FKSHelasProcessFromBorn(
                                     fks1, me_list, me_id_list)
@@ -334,9 +337,6 @@ class testFKSBornHelasObjects(unittest.TestCase):
         self.assertEqual(me_list, res_me_list)
         self.assertEqual(me_id_list, res_me_id_list)
         self.assertEqual(8, len(helas_born_proc.real_processes))
-#        for a,b in zip(res_reals, helas_born_proc.real_processes):
-#            self.assertEqual(a,b)
-        #more (in)sanity checks
         self.assertNotEqual(helas_born_proc.born_matrix_element,
                             helas_born_proc3.born_matrix_element)
         for a,b in zip(helas_born_proc3.real_processes, 
@@ -388,59 +388,3 @@ class testFKSBornHelasObjects(unittest.TestCase):
         self.assertEqual(goal, helas_born_proc.get_fks_info_list())
 
         
-    def test_fks_helas_process_from_born_add_process(self):
-        """test the correct implementation of the add process function, which
-        should add both the born and the reals.
-        We consider the process ug>ug and dg>dg, which 11 reals each"""
-        me_list=[]
-        me_id_list=[]
-        res_me_list=[]
-        res_me_id_list=[]
-        
-        #ug> ug
-        fks1 = fks_born.FKSProcessFromBorn(self.myproc1)
-        #dg> dg
-        fks2 = fks_born.FKSProcessFromBorn(self.myproc2)
-        #uu~> dd~
-        fks3 = fks_born.FKSProcessFromBorn(self.myproc3)
-
-        pdg_list1 = []
-        real_amp_list1 = diagram_generation.AmplitudeList()
-        fks1.generate_reals(pdg_list1, real_amp_list1)
-        pdg_list2 = []
-        real_amp_list2 = diagram_generation.AmplitudeList()
-        fks2.generate_reals(pdg_list2, real_amp_list2)
-
-        helas_born_proc1 = copy.deepcopy(fks_born_helas.FKSHelasProcessFromBorn(
-                                    fks1, me_list, me_id_list))
-        helas_born_proc2 = copy.deepcopy(fks_born_helas.FKSHelasProcessFromBorn(
-                                    fks2, me_list, me_id_list))
-        
-        #check the correct adding of the reals
-        born_1 =copy.deepcopy(helas_born_proc1.born_matrix_element.get('processes'))
-        born_2 =copy.deepcopy(helas_born_proc2.born_matrix_element.get('processes'))
-        
-        
-        reals_1= []
-        for me in helas_born_proc1.real_processes:
-            reals_1.append(copy.deepcopy(me.matrix_element.get('processes')))
-        reals_2= []
-        for me in helas_born_proc2.real_processes:
-            reals_2.append(copy.deepcopy(me.matrix_element.get('processes')))
-        self.assertEqual(len(reals_1),8)
-        self.assertEqual(len(reals_2),8)
-        helas_born_proc1.add_process(helas_born_proc2)
-        
-        born_1.extend(born_2)
-        self.assertEqual(len(born_1), 
-            len(helas_born_proc1.born_matrix_element.get('processes')))
-        self.assertEqual(born_1, 
-            helas_born_proc1.born_matrix_element.get('processes'))
-      
-        
-        for me, r1, r2 in  zip(helas_born_proc1.real_processes, reals_1, reals_2):
-            r1.extend(r2)
-            self.assertEqual(len(me.matrix_element.get('processes')),
-                             len(r1)
-                             )
-            
