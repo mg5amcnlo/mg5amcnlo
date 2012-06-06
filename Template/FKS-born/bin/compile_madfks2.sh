@@ -245,7 +245,7 @@ for dir in $dirs ; do
 # COMPILE MADEVENT
 #
     if [[ $madevent_compile == "1" ]] ; then
-        virt_dirs=`ls -d V0* > /dev/null 2>&1`
+        virt_dirs=`ls -d V0* 2> /dev/null`
         if [[ $virt_dirs == "" ]] ; then
             echo "        Virtuals have not been exported"
         fi
