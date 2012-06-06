@@ -131,9 +131,9 @@ if nevents>0:
     totrest=0.
     for proc in processes:
         proc['lhefile'] = os.path.join(proc['folder'], proc['channel'], 'events.lhe')
-        proc['nevents'] = math.trunc(proc['result']/tot * nevents)
+        proc['nevents'] = math.floor(proc['result']/tot * nevents)
         totevts += proc['nevents']
-        proc['rest'] = proc['result']/tot * nevents - math.trunc(proc['result']/tot * nevents)
+        proc['rest'] = proc['result']/tot * nevents - math.floor(proc['result']/tot * nevents)
         totrest += totrest + math.sqrt(proc['rest'] + proc['nevents'])
 
 
