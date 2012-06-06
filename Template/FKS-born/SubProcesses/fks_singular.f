@@ -2496,6 +2496,12 @@ c$$$        iSorH_lhe=1+2 ! filled elsewhere
         scale1_lhe(nFKSprocess)=0.d0
         scale2_lhe(nFKSprocess)=0.d0
       endif
+c Set the upper value of the shower scale for the H and S events,
+c respectively
+      call set_cms_stuff(mohdr)
+      call set_shower_scale_noshape(pp,nFKSprocess*2)
+      call set_cms_stuff(izero)
+      call set_shower_scale_noshape(pp,nFKSprocess*2-1)
 c
 c Make sure that the result can be non-zero. If the jacobian from the
 c PS-setup or vegas are zero, we can skip this PS point and 'return'.
@@ -2553,7 +2559,6 @@ c
       endif
 c
       probne=1.d0
-c
 c All counterevent have the same final-state kinematics. Check that
 c one of them passes the hard cuts, and they exist at all
 c
@@ -2705,7 +2710,6 @@ c Collinear subtraction term:
             call reweight_fillkin_all(pp,ithree,nFKSprocess*2-1)
             ifill3S=1
          endif
-
          s_c = fks_Sij(p1_cnt(0,1,1),i_fks,j_fks,xi_i_fks_cnt(ione),one)
          if(s_c.gt.0.d0)then
             if(abs(s_c-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
@@ -3132,12 +3136,11 @@ c
       deg_wgt = deg_wgt * enhance
       deg_swgt = deg_swgt * enhance
 
-c Set the shower starting scale
+c Update the shower starting scale with the shape from montecarlocounter
       call set_cms_stuff(mohdr)
       call set_shower_scale(nFKSprocess*2,.true.)
       call set_cms_stuff(izero)
       call set_shower_scale(nFKSprocess*2-1,.false.)
-
       if(iminmax.eq.0) then
          dsigS = (Sev_wgt+Sxmc_wgt+cnt_wgt)*fkssymmetryfactor +
      &        cnt_swgt*fkssymmetryfactor +
@@ -3168,7 +3171,6 @@ c Set the shower starting scale
      $              *enhance*fkssymmetryfactorBorn*unwgtfun*vegaswgt
             endif
          enddo
-
          if(doreweight)then
             if(ifill2S.eq.0.and.(ifill3S.ne.0.or.ifill4S.ne.0))then
                write(*,*)'Error #2[wg] in dsigF S',ifill2S ,ifill3S
@@ -3246,7 +3248,6 @@ c     &                                    iwgtinfo)
 
          total_wgt_sum=total_wgt_sum+dsigS*vegaswgt
          central_wgt_saved=dsigS
-
 c For tests
          if(abs(dsigS).gt.fksmaxwgt)then
             fksmaxwgt=abs(dsigS)
@@ -3287,7 +3288,6 @@ c Plot observables for counterevents and Born
      $              *enhance*fkssymmetryfactor*unwgtfun*vegaswgt
             enddo
          endif
-
          if(doreweight)then
             if(ifill2H.eq.0.and.(ifill3H.ne.0.or.ifill4H.ne.0))then
                write(*,*)'Error #2[wg] in dsigF H',ifill2H,ifill3H
@@ -3387,7 +3387,6 @@ c If exceptional PS point found, go back to beginning recompute
 c the weight for this PS point using an approximation
 c based on previous PS points (done in LesHouches.f)
       if (ExceptPSpoint .and. iminmax.le.1) goto 44
-
       return
       end
 
@@ -3400,78 +3399,192 @@ c based on previous PS points (done in LesHouches.f)
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
       double precision dot,tmp
       external dot
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
+      double precision sqrtshat_ev,shat_ev
+      common/parton_cms_ev/sqrtshat_ev,shat_ev
       double precision emsca,scalemax
       common/cemsca/emsca,scalemax
-
-      double precision etot
-      common/cetot/etot
-
       character*4 abrv
       common /to_abrv/ abrv
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
-
       include 'nFKSconfigs.inc'
       integer iFKS
       double precision SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,pt_hardness
+      double precision xscalemax,xxscalemax
+      logical condition
 
-      double precision upper_scale,up_scale,fff
-      common/cupscale/upper_scale,fff
+      xscalemax = scalemax
 
-      double precision tiny
-      parameter(tiny=1.d-4)
-c
-c assign SCALUP for HERWIG6 and HERWIGPP
-      if(MonteCarlo(1:6).eq.'HERWIG')then
-         if(Hevents)then
-            SCALUP(iFKS)=sqrt(shat)
-         else
-            if(dampMCsubt .and. abrv.ne.'born' .and. abrv.ne.'grid'
-     &           .and. emsca.ne.0d0)then
-               SCALUP(iFKS)=min( emsca,sqrt(shat) )
-            else
-               SCALUP(iFKS)=sqrt(shat)
-            endif
-         endif
-c assign SCALUP for PYTHIA     
-      elseif(MonteCarlo(1:6).eq.'PYTHIA')then
-         up_scale=0.d0
+      if(MonteCarlo(1:6).eq.'HERWIG')condition=.not.Hevents
+      if(MonteCarlo(1:6).eq.'PYTHIA')condition=.true.
+
+      if(condition)then
          if(dampMCsubt .and. abrv.ne.'born' .and. abrv.ne.'grid')then
-            SCALUP(iFKS)=emsca
-            if(emsca.gt.scalemax)SCALUP(iFKS)=scalemax
+            SCALUP(iFKS)=min(emsca,xscalemax)
          else
-            up_scale=upper_scale
-            if(abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &           abrv(1:2).eq.'vi')then
-               tmp=1.d0-xi_i_fks_ev
-               if(j_fks.le.2)tmp=1.d0
-               fff=1d0
-c recall that upper_scale = x*s (up to fff rescaling); here shat = sbar
-c for S events:
-c
-c ISR, S events: sbar = x*s,  shat = x*s, upper_scale = x*s ==> tmp = 1
-c FSR, S events: sbar = s  ,  shat = s  , upper_scale = x*s ==> tmp = x
-               call assign_upper_scale(fff,tmp,shat,up_scale)
-            endif
-            SCALUP(iFKS)=up_scale
+            call assign_scalemax(shat_ev,xi_i_fks_ev,xxscalemax)
+            SCALUP(iFKS)=xxscalemax
          endif
+      else
+         SCALUP(iFKS)=xscalemax
+      endif
+
+      if (Hevents) then
+         SCALUP(iFKS)=min(SCALUP(iFKS),shower_H_scale(iFKS))
+      else
+         SCALUP(iFKS)=min(SCALUP(iFKS),shower_S_scale(iFKS))
       endif
 
       if(SCALUP(iFKS).le.0.d0)then
          write(*,*)'Scale too small in set_shower_scale:',iFKS
-     &        ,SCALUP(iFKS),emsca,sqrt(shat)
-         write(*,*) SCALUP
+     &        ,SCALUP(iFKS),emsca,sqrt(shat_ev),shower_S_scale(iFKS)
+     &        ,shower_H_scale(iFKS),Hevents
+         write(*,*)
          stop
       endif
 c
+      return
+      end
+
+
+      subroutine set_shower_scale_noshape(pp,iFKS)
+      implicit none
+      integer iFKS,j,i
+      double precision sqrt2,pfrac
+      parameter (sqrt2=1.414213562373095d0)
+      parameter (pfrac=0.9d0)
+      include "nexternal.inc"
+      include "madfks_mcatnlo.inc"
+      include 'nFKSconfigs.inc'
+      LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
+      LOGICAL  IS_A_B(NEXTERNAL),IS_A_A(NEXTERNAL)
+      LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY
+      double precision sqrtshat_ev,shat_ev
+      common/parton_cms_ev/sqrtshat_ev,shat_ev
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
+      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
+      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
+      double precision p1_cnt(0:3,nexternal,-2:2)
+      double precision wgt_cnt(-2:2)
+      double precision pswgt_cnt(-2:2)
+      double precision jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision ref_H_scale(fks_configs*2)
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,pt_hardness
+      double precision ptparton,pt,pp(0:3,nexternal)
+      external pt
+c jet cluster algorithm
+      integer NN,NJET,JET(nexternal)
+      double precision pQCD(0:3,nexternal),PJET(0:3,nexternal),rfj,sycut
+     &     ,palg,fastjetdmergemax,di_ev(nexternal),di_cnt(nexternal)
+      external fastjetdmergemax
+c
+      NN=0
+      do j=nincoming+1,nexternal
+         if (is_a_j(j)) then
+            NN=NN+1
+            ptparton=pt(pp(0,j))
+         endif
+      enddo
+      if (NN.le.0) then
+         write (*,*) 'Error in set_shower_scale_noshape '/
+     &        /'not enough QCD partons in process',NN
+         stop
+      elseif (NN.eq.1) then
+c
+c For processes without jets at the Born
+c
+         pt_hardness=0d0
+         shower_S_scale(iFKS)=sqrtshat_cnt(0)
+         shower_H_scale(iFKS)=sqrtshat_ev-ptparton
+      else
+         pt_hardness=0d0        ! updated below if event exists
+c     
+c For processes with jets at the Born
+c Assign shower_S_scale:
+c
+         if (p_born(0,1).gt.0d0) then
+c Put all (light) QCD partons in momentum array for jet clustering.
+c Use here the Born momenta
+            NN=0
+            do j=nincoming+1,nexternal-1
+               if (is_a_j(j))then
+                  NN=NN+1
+                  do i=0,3
+                     pQCD(i,NN)=p_born(i,j)
+                  enddo
+               endif
+            enddo
+c one MUST use kt, and no lower pt cut. The radius parameter
+c can be changed
+            palg=1.d0           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
+            sycut=0.d0          ! minimum jet pt
+            rfj=0.4d0           ! the radius parameter
+            call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
+            do i=1,NN
+               di_cnt(i)=sqrt(fastjetdmergemax(i-1))
+               if(i.gt.1.and.di_cnt(i).gt.di_cnt(i-1))then
+                  write (*,*) 'Error in set_shower_scale_noshape '/
+     &                 /'-- di_cnt(i) not ordered'
+                  write (*,*) NN,i,di_cnt(i),di_cnt(i-1)
+                  stop
+               endif
+            enddo
+            shower_S_scale(iFKS)=di_cnt(NN)
+         else
+            shower_S_scale(iFKS)=sqrtshat_cnt(0)
+         endif
+c
+c Assign shower_H_scale:
+c
+         if (pp(0,1).gt.0d0) then
+c Put all (light) QCD partons in momentum array for jet clustering.
+c Use here the real-emission momenta
+            NN=0
+            do j=nincoming+1,nexternal
+               if (is_a_j(j))then
+                  NN=NN+1
+                  do i=0,3
+                     pQCD(i,NN)=pp(i,j)
+                  enddo
+               endif
+            enddo
+c One MUST use kt, and no lower pt cut. The radius parameter
+c can be changed
+            palg=1.d0           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
+            sycut=0.d0          ! minimum jet pt
+            rfj=0.4d0           ! the radius parameter
+            call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
+            do i=1,NN
+               di_ev(i)=sqrt(fastjetdmergemax(i-1))
+               if(i.gt.1.and.di_ev(i).gt.di_ev(i-1))then
+                  write (*,*) 'Error in set_shower_scale_noshape '/
+     &                 /'-- di_ev(i) not ordered'
+                  write (*,*) NN,i,di_ev(i),di_ev(i-1)
+                  stop
+               endif
+            enddo
+            ref_H_scale(iFKS)=di_ev(NN-1)
+            pt_hardness=di_ev(NN)
+            shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness
+         else
+            ref_H_scale(iFKS)=shower_S_scale(iFKS)
+            shower_H_scale(iFKS)=ref_H_scale(iFKS)
+         endif
+      endif
       return
       end
 

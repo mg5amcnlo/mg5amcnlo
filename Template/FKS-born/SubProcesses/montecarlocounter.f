@@ -458,6 +458,12 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
 
+c Radiation hardness needed (pt_hardness) for the theta function
+c Should be zero if there are no jets at the Born
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,pt_hardness
+
       double precision becl,delta
 c alsf and besf are the parameters that control gfunsoft
       double precision alsf,besf
@@ -587,6 +593,22 @@ c this is standard MC@NLO
         probne=bogus_probne_fun(ptHW6)
       endif
 c
+C
+C For processes that have jets at the Born level, we need to include a
+C theta-function: The radiation from the shower (ptdamp) should always
+C be softer than the jets at the Born (defined by the shower_S_scale),
+C hence no need to include the MC counter terms when the radiation is
+C hard.
+C
+C THIS NEEDS TO BE UPDATED FOR OTHER MC'S AS WELL
+C
+      if(pt_hardness.gt.shower_S_scale(nFKSprocess*2-1))then
+         emsca=etot
+         wgt=0.d0
+         flagmc=.false.
+         return
+      endif
+C
       wgt=0.d0
       nofpartners=ipartners(0)
       flagmc=.false.
@@ -1198,7 +1220,7 @@ c entering this function
         stop
       endif
 
-c May remove UseSudakov from the definition below if ptHW6 (or similar
+c May remove UseSudakov from the definition below if ptHWPP (or similar
 c variable, not yet defined) will not be needed in the computation of probne
       extra=dampMCsubt.or.AddInfoLHE.or.UseSudakov
       call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
