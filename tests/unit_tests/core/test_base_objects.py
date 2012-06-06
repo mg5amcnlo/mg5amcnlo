@@ -919,7 +919,8 @@ class ModelTest2(unittest.TestCase):
         model.change_mass_to_complex_scheme()
         
         # Check that the Width of the W is not anymore in the external parameter
-        self.assertEqual(len(self.model['parameters'][('external',)]) -1,
+        # and the yukawa
+        self.assertEqual(len(self.model['parameters'][('external',)]) -4,
                          len(model['parameters'][('external',)]) )
         
         

@@ -40,7 +40,7 @@ try:
     MADEVENT = False
 except Exception, error:
     if __debug__:
-        print error
+       logger_stderr.info(error)
     import internal.misc as misc
     MADEVENT = True
 
@@ -60,8 +60,8 @@ def debug(debug_only=True):
             try:
                 return f(*args, **opt)
             except Exception, error:
-                print error
-                print traceback.print_exc(file=sys.stdout)
+                logger.error(error)
+                logger.error(traceback.print_exc(file=sys.stdout))
                 return
         return deco_f
     return deco_debug
@@ -152,7 +152,7 @@ class BasicCmd(cmd.Cmd):
             self.stdout.flush()
         except Exception, error:
             if __debug__:
-                 print error
+                logger.error(error)
             
     def getTerminalSize(self):
         def ioctl_GWINSZ(fd):
@@ -244,9 +244,8 @@ class BasicCmd(cmd.Cmd):
             return self.completion_matches[state]
         except IndexError, error:
             #if __debug__:
-            #    print '\n Completion ERROR:'
-            #    print error
-            #    print '\n'
+            #    logger.error('\n Completion ERROR:')
+            #    logger.error( error)
             return None    
 
 class CheckCmd(object):
@@ -461,7 +460,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         try:
             cmd.Cmd.onecmd(self, 'history %s' % self.debug_output.replace(' ', '\ '))
         except Exception, error:
-            print error
+           logger.error(error)
             
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
@@ -561,7 +560,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         except KeyboardInterrupt as error:
             self.stop_on_keyboard_stop()
             #self.nice_error_handling(error, line)
-            print self.keyboard_stop_msg
+            logger.error(self.keyboard_stop_msg)
     
     def stop_on_keyboard_stop(self):
         """action to perform to close nicely on a keyboard interupt"""
@@ -646,7 +645,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         self.check_history(args)
 
         if len(args) == 0:
-            print '\n'.join(self.history)
+            logger.info('\n'.join(self.history))
             return
         elif args[0] == 'clean':
             self.history = []
@@ -784,7 +783,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             result = fct(question)
         except TimeOutError:
             if noerror:
-                print '\nuse %s' % default
+                logger.info('\nuse %s' % default)
                 if fct_timeout:
                     fct_timeout(True)
                 return default
@@ -984,8 +983,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             else: 
                 last_action_2 = 'none'
         
-        print 'Contextual Help'
-        print '==============='
+        logger.info('Contextual Help')
+        logger.info('===============')
         if last_action_2 in authorize:
             options = self.next_possibility[last_action_2]
         elif last_action in authorize:
@@ -994,7 +993,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         text = 'The following command(s) may be useful in order to continue.\n'
         for option in options:
             text+='\t %s \n' % option      
-        print text
+        logger.info(text)
 
     def do_display(self, line, output=sys.stdout):
         """Advanced commands: basic display"""

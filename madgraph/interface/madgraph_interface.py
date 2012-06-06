@@ -842,7 +842,11 @@ This will take effect only in a NEW terminal
         if args[0] in ['gauge']:
             if args[1] not in ['unitary','Feynman']:
                 raise self.InvalidCmd('gauge needs argument unitary or Feynman.')       
-				      
+
+        if args[0] in ['timeout']:
+            if not args[1].isdigit():
+                raise self.InvalidCmd('timeout values should be a integer')   
+
     def check_open(self, args):
         """ check the validity of the line """
         
@@ -1682,7 +1686,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'ignore_six_quark_processes',
                     'stdout_level',
                     'fortran_compiler',
-                    'fks_mode','loop_optimized_output','complex_mass_scheme']
+                    'fks_mode','loop_optimized_output','complex_mass_scheme',
+                    'gauge']
+
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()

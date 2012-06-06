@@ -400,6 +400,13 @@ class Particle(PhysicsObject):
         elif spin == 3:
             # Massive vector
             return [ -1, 0, 1 ]
+        elif spin == 4 and self.get('mass').lower() == 'zero':
+            # Massless tensor
+            return [-3, 3]
+        elif spin == 4:
+            # Massive tensor
+            return [-3, -1, 1, 3]
+        
         elif spin == 5 and self.get('mass').lower() == 'zero':
             # Massless tensor
             return [-2, -1, 1, 2]
@@ -1051,8 +1058,12 @@ class Model(PhysicsObject):
         
         # If information is saved
         if hasattr(self, 'parameters_dict') and self.parameters_dict:
-            return self.parameters_dict[name]
-        
+            try:
+                return self.parameters_dict[name]
+            except:
+                # try to reload it before crashing 
+                pass
+            
         # Else first build the dictionary
         self.parameters_dict = {}
         for data in self['parameters'].values():
@@ -1242,7 +1253,8 @@ class Model(PhysicsObject):
         #   -> Both need to be fixed with a real() /Imag()
         # 3) Find All width fixed by the model
         #   -> Need to be fixed with a real()
-        # 4) Loop through all expression and modify those accordingly
+        # 4) Fix the Yukawa mass to the value of the complex mass/ real mass
+        # 5) Loop through all expression and modify those accordingly
         #    Including all parameter expression as complex
         
         to_change = {}
@@ -1294,7 +1306,36 @@ class Model(PhysicsObject):
                     mass.expr = 're(%s)' % mass.expr                
                 self.add_param(New_param, (mass, width))
                 to_change[mass.name] = New_param.name
-                                                    
+        
+        # Remove the Yukawa and fix those accordingly to the mass/complex mass
+        yukawas = [p for p in self.get('parameters')[('external',)] 
+                                              if p.lhablock.lower() == 'yukawa']
+        for yukawa in yukawas:
+            # clean the pevious parameter
+            self.get('parameters')[('external',)].remove(yukawa)
+            
+            particle = self.get_particle(yukawa.lhacode[0])
+            mass = self.get_parameter(particle.get('mass'))
+            
+            # add the new parameter in the correct category
+            if mass.depend == ('external',):
+                depend = ()
+            else:
+                depend = mass.depend
+                
+            New_param = ModelVariable(yukawa.name, mass.name, 'real', depend)
+            
+            # Add it in the model at the correct place (for the dependences)
+            if mass.name in to_change:
+                expr = 'CMASS_%s' % mass.name
+            else:
+                expr = mass.name
+            param_depend = self.get_parameter(expr)
+            self.add_param(New_param, [param_depend])
+            
+            
+            
+            
         # So at this stage we still need to modify all parameters depending of
         # particle's mass. In addition all parameter (but mass/width/external 
         # parameter) should be pass in complex mode.

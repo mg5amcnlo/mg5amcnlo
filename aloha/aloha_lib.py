@@ -103,14 +103,15 @@ class Computation(dict):
         if str_expr in self.reduced_expr:
             out, tag = self.reduced_expr[str_expr]
             self.add_tag((tag,))
-            return out
-
-        # Add a new one
+            return out          
+        new_2 = expression.simplify()
+        if new_2 == 0:
+            return 0
+        # Add a new variable
         tag = 'TMP%s' % len(self.reduced_expr)
         new = Variable(tag)
-        self.reduced_expr[str_expr] = [new, tag]            
-        new_2 = expression.simplify()
-        new_2 = expression.factorize()
+        self.reduced_expr[str_expr] = [new, tag]  
+        new_2 = new_2.factorize()
         self.reduced_expr2[tag] = new_2
         self.add_tag((tag,))
         #return expression
@@ -182,7 +183,11 @@ class AddVariable(list):
         # deal with one/zero length object
         varlen = len(self)
         if varlen == 1:
-            return self.prefactor * self[0]
+            if hasattr(self[0], 'vartype'):
+                return self.prefactor * self[0].simplify()
+            else:
+                #self[0] is a number
+                return self.prefactor * self[0]
         elif varlen == 0:
             return 0 #ConstantObject()
         return self
@@ -202,6 +207,15 @@ class AddVariable(list):
         """returns true if one of the variables is in the expression"""
         
         return any((v in obj for obj in self for v in variables  ))
+    
+    
+    def get_all_var_names(self):
+        
+        out = []
+        for term in self:
+            if hasattr(term, 'get_all_var_names'):
+                out += term.get_all_var_names()
+        return out
             
     
     
@@ -550,6 +564,10 @@ class MultVariable(array):
         else:
             raise Exception, 'Cann\'t replace a Variable by %s' % type(expression)
         
+    
+    def get_all_var_names(self):
+        """return the list of variable used in this multiplication"""
+        return ['%s' % KERNEL.objs[n] for n in self]
         
 
 
@@ -1297,6 +1315,10 @@ class SplitCoefficient(dict):
     def __init__(self, *args, **opt):
         dict.__init__(self, *args, **opt)
         self.tag=set()
+        
+    def get_max_rank(self):
+        """return the highest rank of the coefficient"""
+        return max([max(arg[:4]) for arg in self])
 
       
 if '__main__' ==__name__:

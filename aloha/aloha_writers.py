@@ -14,7 +14,7 @@ from fractions import Fraction
 from cStringIO import StringIO
 # Look at http://www.skymind.com/~ocrow/python_string/ 
 # For knowing how to deal with long strings efficiently.
-
+import itertools
 
 
 class WriteALOHA: 
@@ -25,14 +25,15 @@ class WriteALOHA:
     extension = ''
     type_to_variable = {2:'F',3:'V',5:'T',1:'S',4:'R'}
     type_to_size = {'S':3, 'T':18, 'V':6, 'F':6,'R':18}
-    if aloha.loop_mode:
-        momentum_size = 4
-    else:
-        momentum_size = 2
-    
+
             
     def __init__(self, abstract_routine, dirpath):
-
+        
+        if aloha.loop_mode:
+            self.momentum_size = 4
+        else:
+            self.momentum_size = 2
+        
         name = get_routine_name(abstract = abstract_routine)
 
         if dirpath:
@@ -54,7 +55,7 @@ class WriteALOHA:
             #flip the outgoing tag if in conjugate
             self.outgoing = self.outgoing + self.outgoing % 2 - (self.outgoing +1) % 2
         
-        self.outname = '%s%s' % (self.particles[self.offshell -1], \
+        self.outname = '%s%s' % (self.particles[self.outgoing -1], \
                                                                self.outgoing)
         
         #initialize global helper routine
@@ -109,7 +110,7 @@ class WriteALOHA:
         
         flipped = [2*(int(c[1:])-1) for c in self.tag if c.startswith('C')]
         for index, spin in enumerate(self.particles):
-            assert(spin in ['S','F','V','T'])  
+            assert(spin in ['S','F','V','T', 'R'])  
                   
             #compute the sign
             if 1:#spin != 'F':
@@ -242,12 +243,8 @@ class WriteALOHA:
             commentstring += self.routine.infostr + '\n'
             writer.write_comments(commentstring)
             writer.writelines(text)
-
+            
         return text + '\n'
-
-
-
-
 
     
     def write_indices_part(self, indices, obj): 
@@ -468,7 +465,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             self.declaration.add(('complex','vertex'))
         else:
             output = '%(spin)s%(id)d' % {
-                     'spin': self.particles[self.offshell -1],
+                     'spin': self.particles[self.outgoing -1],
                      'id': self.outgoing}
             self.declaration.add(('list_complex', output))
         
@@ -572,12 +569,8 @@ class ALOHAWriterForFortran(WriteALOHA):
         if self.offshell:
             energy_pos = out_size -2
             type = self.particles[self.outgoing-1]
-            if aloha.loop_mode:
-                size_p = 4
-            else:
-                size_p = 2
             
-            for i in range(size_p):
+            for i in range(self.momentum_size):
                 dict_energy = {'i':1+i}
                 out.write('    %s%s(%s) = %s\n' % (type,self.outgoing, 1+i, 
                                              ''.join(p) % dict_energy))
@@ -700,8 +693,12 @@ class ALOHAWriterForFortran(WriteALOHA):
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                                   self.offshell)
             if 'L' not in self.tag:
-                coeff = 'denom'                    
-                out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -CI* W%(i)s))\n' % \
+                coeff = 'denom'    
+                if not aloha.complex_mass:                
+                    out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -CI* W%(i)s))\n' % \
+                      {'i': self.outgoing, 'COUP': coup_name})
+                else:
+                    out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s**2)\n' % \
                       {'i': self.outgoing, 'COUP': coup_name})
                 self.declaration.add(('complex','denom'))
                 if aloha.loop_mode:
@@ -861,6 +858,8 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         else:
             coup = False
 
+        
+        
         for key,expr in self.routine.expr.items():
             arg = self.get_loop_argument(key)
             for ind in expr.listindices():
@@ -881,15 +880,22 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         
         out = StringIO()
         out.write('implicit none\n')
+        # define the complex number CI = 0+1j
+        if 'MP' in self.tag:
+            out.write(' complex*32 CI\n')
+        else:
+            out.write(' complex*16 CI\n')
+        out.write(' parameter (CI=(%s,%s))\n' % 
+                    (self.change_number_format(0),self.change_number_format(1)))
         argument_var = [name for type,name in self.call_arg]
         for type, name in self.declaration:
             if type.startswith('list'):
                 type = type[5:]
                 #determine the size of the list
-                if name in argument_var:
-                    size ='*'
-                elif name.startswith('P'):
+                if name.startswith('P'):
                     size='0:3'
+                elif name in argument_var:
+                    size ='*'
                 elif name[0] in ['F','V']:
                     if aloha.loop_mode:
                         size = 8
@@ -907,7 +913,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                         size = 18
                 elif name == 'coeff':
                     out.write("include 'coef_specs.inc'\n")
-                    size = 'MAXLWFSIZE,VERTEXMAXCOEFS,MAXLWFSIZE'
+                    size = 'MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE'
     
                 out.write(' %s %s(%s)\n' % (self.type2def[type], name, size))
             elif type == 'fct':
@@ -1141,13 +1147,7 @@ class ALOHAWriterForCPP(WriteALOHA):
     type2def['double'] = 'double '
     type2def['complex'] = 'complex<double> '
     
-    
-    #Needed?
-    declare_dict = {'S':'double complex S%d[3]',
-                    'F':'double complex F%d[6]',
-                    'V':'double complex V%d[6]',
-                    'T':'double complex T%s[18]'}
-    
+        
     def change_number_format(self, number):
         """Format numbers into C++ format"""
         if isinstance(number, complex):
@@ -1248,7 +1248,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             self.declaration.add(('complex','vertex'))
         else:
             output = 'complex<double> %(spin)s%(id)d[]' % {
-                     'spin': self.particles[self.offshell -1],
+                     'spin': self.particles[self.outgoing -1],
                      'id': self.outgoing}
             self.declaration.add(('list_complex', output))
         
@@ -1414,7 +1414,11 @@ class ALOHAWriterForCPP(WriteALOHA):
                                                                   self.offshell)
             if 'L' not in self.tag:
                 coeff = 'denom'
-                out.write('    denom = %(coup)s/(pow(P%(i)s[0],2)-pow(P%(i)s[1],2)-pow(P%(i)s[2],2)-pow(P%(i)s[3],2) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
+                if not aloha.complex_mass:
+                    out.write('    denom = %(coup)s/(pow(P%(i)s[0],2)-pow(P%(i)s[1],2)-pow(P%(i)s[2],2)-pow(P%(i)s[3],2) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
+                      {'i': self.outgoing, 'coup': coup_name})
+                else:
+                    out.write('    denom = %(coup)s/(pow(P%(i)s[0],2)-pow(P%(i)s[1],2)-pow(P%(i)s[2],2)-pow(P%(i)s[3],2) - pow(M%(i)s,2));\n' % \
                       {'i': self.outgoing, 'coup': coup_name})
                 self.declaration.add(('complex','denom'))
                 if aloha.loop_mode:
@@ -1681,8 +1685,12 @@ class ALOHAWriterForPython(WriteALOHA):
 
             if not 'L' in self.tag:
                 coeff = 'denom'
-                out.write('    denom = %(coup)s/(P%(i)s[0]**2-P%(i)s[1]**2-P%(i)s[2]**2-P%(i)s[3]**2 - M%(i)s * (M%(i)s -1j* W%(i)s))\n' % 
+                if not aloha.complex_mass:
+                    out.write('    denom = %(coup)s/(P%(i)s[0]**2-P%(i)s[1]**2-P%(i)s[2]**2-P%(i)s[3]**2 - M%(i)s * (M%(i)s -1j* W%(i)s))\n' % 
                           {'i': self.outgoing,'coup':coup_name})
+                else:
+                    out.write('    denom = %(coup)s/(P%(i)s[0]**2-P%(i)s[1]**2-P%(i)s[2]**2-P%(i)s[3]**2 - M%(i)s**2)\n' % 
+                          {'i': self.outgoing,'coup':coup_name})                    
             else:
                 coeff = 'COUP'
                 
@@ -1797,8 +1805,8 @@ class ALOHAWriterForPython(WriteALOHA):
                     nb2 -= 1
             else:
                 operator =''
-                nb = energy_pos + j
-                nb2 = energy_pos + j
+                nb = j
+                nb2 = j
             data.append(template % {'j':j,'type': type, 'i': i, 
                         'nb': nb, 'nb2': nb2, 'operator':operator,
                         'sign': self.get_P_sign(i)}) 

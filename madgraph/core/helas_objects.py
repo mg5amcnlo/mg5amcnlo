@@ -2089,6 +2089,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         # Pick out fermion mothers
         fermions = [wf for wf in self.get('mothers') if wf.is_fermion()]
+        assert len(fermions) % 2 == 0
 
         # Pick out bosons
         bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))

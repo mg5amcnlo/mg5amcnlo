@@ -1909,15 +1909,6 @@ C     Number of configs
       DATA MAPCONFIG(0)/8/
 """)
 
-        # Test maxconfigs.inc
-        writer = writers.FortranWriter(self.give_pos('test'))
-        exporter.write_maxconfigs_file(writer, subproc_groups)
-        writer.close()
-        self.assertFileContains('test',
-                                """      INTEGER LMAXCONFIGS
-      PARAMETER(LMAXCONFIGS=32)
-""")
-
         # Test config_subproc_map.inc
 
         exporter.write_config_subproc_map_file(\
@@ -4999,7 +4990,7 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
         #                get_matrix_element_calls(matrix_element))
 
         self.assertEqual("\n".join(helas_call_writers.FortranUFOHelasCallWriter().\
-                                   get_matrix_element_calls(matrix_element)),
+                                   get_matrix_element_calls(matrix_element)).split('\n'),
                          """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
 CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
@@ -5017,7 +5008,7 @@ CALL L1_1(W(1,7),W(1,1),GQQ,MGO,WGO,W(1,13))
 CALL L1_0(W(1,12),W(1,13),W(1,2),GQQ,AMP(1))
 CALL L1_2(W(1,12),W(1,1),-GQQ,MGO,WGO,W(1,14))
 # Amplitude(s) for diagram number 2
-CALL L1_0(W(1,14),W(1,7),W(1,2),GQQ,AMP(2))""")
+CALL L1_0(W(1,14),W(1,7),W(1,2),GQQ,AMP(2))""".split('\n'))
 
         # Test get_used_lorentz
         goal_lorentz_list = [(('FFV2',), (), 1), (('L1',), (), 1), 
@@ -5299,13 +5290,13 @@ CALL VXXXXX(P(0,3),MZ,NHEL(3),+1*IC(3),W(1,3))
 CALL IXXXXX(P(0,4),Mx1p,NHEL(4),-1*IC(4),W(1,4))
 CALL OXXXXX(P(0,5),Mx1p,NHEL(5),+1*IC(5),W(1,5))
 CALL VVV1_2(W(1,1),W(1,3),GC_214,MW,WW,W(1,6))
-CALL FFV2C1_3_2(W(1,4),W(1,2),GC_422,GC_628,Mneu1,Wneu1,W(1,7))
+CALL FFV2_3C1_2(W(1,4),W(1,2),GC_422,GC_628,Mneu1,Wneu1,W(1,7))
 # Amplitude(s) for diagram number 1
 CALL FFV2_3_0(W(1,7),W(1,5),W(1,6),GC_422,GC_628,AMP(1))
 CALL FFV2_3_1(W(1,5),W(1,2),GC_422,GC_628,Mneu1,Wneu1,W(1,8))
 # Amplitude(s) for diagram number 2
-CALL FFV2C1_3_0(W(1,4),W(1,8),W(1,6),GC_422,GC_628,AMP(2))
-CALL FFV2C1_3_2(W(1,4),W(1,1),GC_422,GC_628,Mneu1,Wneu1,W(1,9))
+CALL FFV2_3C1_0(W(1,4),W(1,8),W(1,6),GC_422,GC_628,AMP(2))
+CALL FFV2_3C1_2(W(1,4),W(1,1),GC_422,GC_628,Mneu1,Wneu1,W(1,9))
 CALL VVV1_2(W(1,2),W(1,3),GC_214,MW,WW,W(1,10))
 # Amplitude(s) for diagram number 3
 CALL FFV2_3_0(W(1,9),W(1,5),W(1,10),GC_422,GC_628,AMP(3))
@@ -5313,7 +5304,7 @@ CALL FFV2_3_0(W(1,9),W(1,5),W(1,10),GC_422,GC_628,AMP(3))
 CALL FFV5_0(W(1,9),W(1,8),W(1,3),GC_418,AMP(4))
 CALL FFV2_3_1(W(1,5),W(1,1),GC_422,GC_628,Mneu1,Wneu1,W(1,11))
 # Amplitude(s) for diagram number 5
-CALL FFV2C1_3_0(W(1,4),W(1,11),W(1,10),GC_422,GC_628,AMP(5))
+CALL FFV2_3C1_0(W(1,4),W(1,11),W(1,10),GC_422,GC_628,AMP(5))
 # Amplitude(s) for diagram number 6
 CALL FFV5_0(W(1,7),W(1,11),W(1,3),GC_418,AMP(6))""".split('\n')
 
@@ -6018,14 +6009,14 @@ CALL FFS3_4_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL SXXXXX(P(0,3),+1*IC(3),W(1,3))
 # Amplitude(s) for diagram number 1
-CALL FFS3C1_4_0(W(1,2),W(1,1),W(1,3),GC_108,GC_111,AMP(1))""".split('\n'))
+CALL FFS3_4C1_0(W(1,2),W(1,1),W(1,3),GC_108,GC_111,AMP(1))""".split('\n'))
         result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element.get('decay_chains')[0].get('core_processes')[0])
         self.assertEqual(result,
                          """CALL SXXXXX(P(0,1),-1*IC(1),W(1,1))
 CALL OXXXXX(P(0,2),zero,NHEL(2),+1*IC(2),W(1,2))
 CALL IXXXXX(P(0,3),MT,NHEL(3),-1*IC(3),W(1,3))
-CALL FFS3C1_4_3(W(1,3),W(1,2),GC_108,GC_111,Msix1,Wsix1,W(1,4))
+CALL FFS3_4C1_3(W(1,3),W(1,2),GC_108,GC_111,Msix1,Wsix1,W(1,4))
 # Amplitude(s) for diagram number 1
 #""".split('\n'))
 
@@ -6040,9 +6031,9 @@ CALL FFS3C1_4_3(W(1,3),W(1,2),GC_108,GC_111,Msix1,Wsix1,W(1,4))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
 CALL IXXXXX(P(0,4),MT,NHEL(4),-1*IC(4),W(1,4))
-CALL FFS3C1_4_3(W(1,4),W(1,3),GC_108,GC_111,Msix1,Wsix1,W(1,5))
+CALL FFS3_4C1_3(W(1,4),W(1,3),GC_108,GC_111,Msix1,Wsix1,W(1,5))
 # Amplitude(s) for diagram number 1
-CALL FFS3C1_4_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
+CALL FFS3_4C1_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
 
         
         self.assertEqual(result, goal)
@@ -7443,7 +7434,7 @@ C     Number of configs
         fortran_model = helas_call_writers.FortranHelasCallWriter(mymodel)
 
         # Test dname.mg
-        writer = writers.FortranWriter(self.give_pos('test'))
+        writer = writers.FileWriter(self.give_pos('test'))
         exporter.write_dname_file(writer,
                                   "P"+me.get('processes')[0].shell_string())
         writer.close()
@@ -7468,15 +7459,6 @@ C     Number of configs
                                 "MAXPROC, MAXSPROC\n" + \
                                 "      PARAMETER (MAXAMPS=8, MAXFLOW=1)\n" + \
                                 "      PARAMETER (MAXPROC=1, MAXSPROC=1)\n")
-        # Test maxconfigs.inc
-        writer = writers.FortranWriter(self.give_pos('test'))
-        exporter.write_maxconfigs_file(writer, matrix_elements)
-        writer.close()
-        self.assertFileContains('test',
-                                """      INTEGER LMAXCONFIGS
-      PARAMETER(LMAXCONFIGS=72)
-""")
-
         # Test mg.sym
         writer = writers.FortranWriter(self.give_pos('test'))
         exporter.write_mg_sym_file(writer, me)
@@ -8805,15 +8787,6 @@ C     Number of configs
       DATA MAPCONFIG(0)/10/
 """)
         
-        # Test maxconfigs.inc
-        writer = writers.FortranWriter(self.give_pos('test'))
-        exporter.write_maxconfigs_file(writer, [me])
-        writer.close()
-        self.assertFileContains('test',
-                                """      INTEGER LMAXCONFIGS
-      PARAMETER(LMAXCONFIGS=10)
-""")
-
     def test_configs_4f_decay(self):
         """Test configs.inc for 4f decay process that failed in v. 1.3.27
         """
@@ -9517,22 +9490,29 @@ class AlohaFortranWriterTest(unittest.TestCase):
 C     The process calculated in this file is: 
 C     Gamma(3,2,1)
 C     
-      SUBROUTINE FFV1_1(F2, V3, COUP, M1, W1, F1)
+      SUBROUTINE FFV1_1(F2, V3, COUP, M1, W1,F1)
       IMPLICIT NONE
       COMPLEX*16 F1(*)
+      COMPLEX*16 CI
+      PARAMETER (CI=(0D0,1D0))
       COMPLEX*16 F2(*)
       COMPLEX*16 V3(*)
-      COMPLEX*16 COUP
-      COMPLEX*16 DENOM
-      REAL*8 M1, W1
       REAL*8 P1(0:3)
+      REAL*8 M1
+      REAL*8 W1
+      COMPLEX*16 F1(6)
+      COMPLEX*16 DENOM
+      COMPLEX*16 COUP
+      ENTRY FFV1_2(F2, V3, COUP, M1, W1,F1)
 
-      F1(5)= F2(5)+V3(5)
-      F1(6)= F2(6)+V3(6)
-      P1(0) =  DBLE(F1(5))
-      P1(1) =  DBLE(F1(6))
-      P1(2) =  DIMAG(F1(6))
-      P1(3) =  DIMAG(F1(5))"""
+      F1(1) = +F2(1)+V3(1)
+      F1(2) = +F2(2)+V3(2)
+      P1(0) = -DBLE(F1(1))
+      P1(1) = -DBLE(F1(2))
+      P1(2) = -DIMAG(F1(2))
+      P1(3) = -DIMAG(F1(1))
+      DENOM = COUP/(P1(0)**2-P1(1)**2-P1(2)**2-P1(3)**2 - M1 * (M1 
+     $ -CI* W1))"""
 
         abstract_M = create_aloha.AbstractRoutineBuilder(FFV1).compute_routine(1)
         abstract_M.add_symmetry(2)
@@ -9567,11 +9547,11 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         
         #  internal params
         self.assertEqual(len(mg4_model.params_dep), 2)
-        self.assertEqual(len(mg4_model.params_indep), 29)
+        self.assertEqual(len(mg4_model.params_indep), 31)
         
         # couplings
         self.assertEqual(len(mg4_model.coups_dep), 3)
-        sol = ['GC_1', 'GC_2', 'GC_3', 'GC_7', 'GC_8', 'GC_9', 'GC_10', 'GC_11', 'GC_17', 'GC_22', 'GC_23', 'GC_24', 'GC_25', 'GC_26', 'GC_27', 'GC_28', 'GC_29', 'GC_30', 'GC_31', 'GC_32', 'GC_33', 'GC_34', 'GC_38', 'GC_39']
+        sol =['GC_1', 'GC_2', 'GC_3', 'GC_5', 'GC_6', 'GC_7', 'GC_8', 'GC_13', 'GC_14', 'GC_15', 'GC_16', 'GC_17', 'GC_18', 'GC_19', 'GC_20', 'GC_21', 'GC_22', 'GC_23', 'GC_34', 'GC_35', 'GC_36', 'GC_37', 'GC_38', 'GC_39', 'GC_40', 'GC_41', 'GC_42', 'GC_43', 'GC_44', 'GC_45', 'GC_46', 'GC_47', 'GC_48', 'GC_49', 'GC_50', 'GC_51', 'GC_52', 'GC_53', 'GC_54', 'GC_55', 'GC_56', 'GC_57', 'GC_58', 'GC_59', 'GC_60', 'GC_61', 'GC_62', 'GC_63', 'GC_64', 'GC_67', 'GC_68', 'GC_69', 'GC_72', 'GC_86', 'GC_87', 'GC_90', 'GC_91', 'GC_92', 'GC_93', 'GC_94', 'GC_101', 'GC_111', 'GC_112']
         self.assertEqual(sol, [ p.name for p in mg4_model.coups_indep])
 
         

@@ -263,7 +263,17 @@ class AbstractRoutineBuilder(object):
                         lorentz *= SpinorPropagatorin('I2', id, outgoing)
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)
-                    
+                elif spin == 4:
+                    # shift and flip the tag if we multiply by C matrices
+                    if (id + 1) // 2 in self.conjg:
+                        spin_id = id + _conjugate_gap + id % 2 - (id +1) % 2
+                    else:
+                        spin_id = id
+                    nb_spinor += 1
+                    if id %2:
+                        lorentz *= Spin3halfPropagatorout(id, 'I2', spin_id,'I3', outgoing)
+                    else:
+                        lorentz *= Spin3halfPropagatorin('I2', id, 'I3', spin_id, outgoing)                      
                 elif spin == 5 :
                     #lorentz *= 1 # delayed evaluation (fastenize the code)
                     if self.spin2_massless:
@@ -288,6 +298,14 @@ class AbstractRoutineBuilder(object):
                     lorentz *= Spinor(spin_id, id)
                 elif spin == 3:        
                     lorentz *= Vector(id, id)
+                elif spin == 4:
+                    # shift the tag if we multiply by C matrices
+                    if (id+1) // 2 in self.conjg:
+                        spin_id = id + _conjugate_gap + id % 2 - (id +1) % 2
+                    else:
+                        spin_id = id
+                    nb_spinor += 1
+                    lorentz *= Spin3Half(id, spin_id, id)
                 elif spin == 5:
                     lorentz *= Spin2(1 * _spin2_mult + id, 2 * _spin2_mult + id, id)
                 else:
@@ -321,9 +339,9 @@ class AbstractRoutineBuilder(object):
         
         # modify the expression for the momenta
         # P_i -> P_i + P_L and P_o -> -P_o - P_L
-        Pdep = [aloha_lib.KERNEL.get(P) for P in aloha_lib.KERNEL.use_tag 
+        Pdep = [aloha_lib.KERNEL.get(P) for P in lorentz.get_all_var_names()
                                                       if P.startswith('_P')]
-        
+
         Pdep = [P for P in Pdep if P.particle in [outgoing, l_in]]
         for P in Pdep:
             if P.particle == l_in:

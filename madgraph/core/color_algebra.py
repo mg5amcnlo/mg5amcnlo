@@ -890,7 +890,7 @@ class ColorFactor(list):
     They can be simplified by simplifying all their elements."""
 
     def __str__(self):
-        """Returns a nice string for print"""
+        """Returns a nice string for printing"""
 
         return '+'.join(['(%s)' % str(col_str) for col_str in self])
 

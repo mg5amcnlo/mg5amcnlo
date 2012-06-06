@@ -59,7 +59,7 @@ from madgraph import MG5DIR, InvalidCmd
 import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
 from aloha.template_files.wavefunctions import \
-     ixxxxx, oxxxxx, vxxxxx, sxxxxx, txxxxx
+     ixxxxx, oxxxxx, vxxxxx, sxxxxx, txxxxx, irxxxx, orxxxx
 
 ADDED_GLOBAL = []
 
@@ -1025,7 +1025,7 @@ def check_gauge(processes, param_card = None, mg_root="",cuttools="",cmass_schem
 
         if not cmass_scheme:
             # Set all widths to zero for gauge check
-            logger.info('Set All width to zero for non complex mass scheme cheks')
+            logger.info('Set All width to zero for non complex mass scheme checks')
             for particle in evaluator.full_model.get('particles'):
                 if particle.get('width') != 'ZERO':
                     evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
@@ -1271,7 +1271,7 @@ def check_lorentz(processes, param_card = None, mg_root="",cuttools="",cmass_sch
 
         if not cmass_scheme:
             # Set all widths to zero for lorentz check
-            logger.info('Set All width to zero for non complex mass scheme cheks')
+            logger.info('Set All width to zero for non complex mass scheme checks')
             for particle in evaluator.full_model.get('particles'):
                 if particle.get('width') != 'ZERO':
                     evaluator.full_model.get('parameter_dict')[\
