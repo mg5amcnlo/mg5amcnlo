@@ -1260,7 +1260,7 @@ c equal_to() that maps the IPROC to the set of unique IPROCs
                   equal_to(j)=1
                   equal_to_inverse(1)=j
                elseif (j.gt.1) then
-                  do jj=1,maxproc_found
+                  do jj=1,j-1
                      nequal=0
                      do ii=1,nexternal-1
                         if (id_current(ii,j).eq.id_current(ii,jj)) then
@@ -1269,6 +1269,7 @@ c equal_to() that maps the IPROC to the set of unique IPROCs
                      enddo
                      if (nequal.eq.nexternal-1) then
                         equal_to(j)=jj
+                        write (*,*) 'YES',j,equal_to(j)
                         exit
                      endif
                   enddo
