@@ -44,6 +44,7 @@ import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.import_ufo as models
 import aloha
+import tests.unit_tests.various.test_aloha as test_aloha
 import aloha.create_aloha as create_aloha
 
 from madgraph import MadGraph5Error
@@ -87,15 +88,12 @@ class LoopExporterTest(unittest.TestCase):
             self.fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
                                                             self.myloopmodel)
             return
-        
+
+    @test_aloha.set_global(loop=True, unitary=False, mp=True, cms=False) 
     def check_output_sanity(self, loopME):
         """ Test different characteristics of the output of the 
         LoopMatrixElement given in argument to check the correct behavior
         of the loop exporter"""
-        
-        # Set aloha global variables to our choice
-        aloha_original_quad_mode = aloha.mp_precision
-        aloha.mp_precision = True
 
         # Cleaning last process directory
         if os.path.exists(_proc_file_path):
@@ -140,10 +138,6 @@ class LoopExporterTest(unittest.TestCase):
         for file in files:
             self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
                              ,'SubProcesses',proc_name,file)))
-        
-        # Restore aloha global variables to our choice
-        aloha.mp_precision = aloha_original_quad_mode
-
     
     def test_aloha_loop_HELAS_subroutines(self):
         """ Test that Aloha correctly processes loop HELAS subroutines. """
