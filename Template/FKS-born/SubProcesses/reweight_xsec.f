@@ -1016,6 +1016,13 @@ c
       double precision wgtnew,tiny
       parameter (tiny=1.d-3)
 c
+      INTEGER              IPROC
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
+      integer iproc_save
+      save iproc_save
+c
+      iproc_save=iproc
       if(idstring.eq."NLO")then
         wgtnew=compute_rwgt_wgt_NLO(muR_over_ref,muF1_over_ref,
      #                              muF2_over_ref,QES_over_ref,
@@ -1039,10 +1046,9 @@ c
      #    (abs(wgtref).lt.1.d0 .and.
      #     abs(wgtnew-wgtref).gt.tiny) )then
         write(*,*)'Error in check_rwgt_wgt: ',idstring,wgtref,wgtnew
-        write(*,*)wgtkin(0,3,1),wgtkin(1,3,1),
-     #            wgtkin(2,3,1),wgtkin(3,3,1)
         stop
       endif
+      iproc=iproc_save
 c
       return
       end

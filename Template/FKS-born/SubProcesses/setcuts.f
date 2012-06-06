@@ -527,11 +527,10 @@ c
      &           /' into account)' ,tau_lower_bound_resonance
      &           ,taumin_s(iFKS) ,dsqrt(stot)
          enddo
-      else
-         tau_Born_lower_bound=taumin(nFKSprocess)**2/stot
-         tau_lower_bound=taumin_j(nFKSprocess)**2/stot
-         tau_lower_bound_resonance=taumin_s(nFKSprocess)**2/stot
       endif
+      tau_Born_lower_bound=taumin(nFKSprocess)**2/stot
+      tau_lower_bound=taumin_j(nFKSprocess)**2/stot
+      tau_lower_bound_resonance=taumin_s(nFKSprocess)**2/stot
       return
       end
 
