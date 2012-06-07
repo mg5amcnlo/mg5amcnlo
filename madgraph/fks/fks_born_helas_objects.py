@@ -324,6 +324,7 @@ class FKSHelasProcessFromBorn(object):
                 oth_pdgs = [leg['id'] for leg in oth_proc['legs']]
                 if oth_pdgs not in this_pdgs:
                     this_real.matrix_element['processes'].append(oth_proc)
+                    this_pdgs.append(oth_pdgs)
 
  #                       if p not in self.real_processes[\
  #                       self_reals.index(oth_real.matrix_element)].matrix_element['processes']])
