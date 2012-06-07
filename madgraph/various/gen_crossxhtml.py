@@ -118,9 +118,9 @@ status_template = """
         %(status)s
  </TR>
  <tr></tr>
- <tr colspan=2>
+ <tr colspan=2><td>
    %(stop_form)s
- </tr> 
+ </td></tr> 
  </TABLE>
 """
 
@@ -355,7 +355,7 @@ class AllResults(dict):
 <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
 <INPUT TYPE=HIDDEN NAME=whattodo VALUE="stop_job">
 <INPUT TYPE=SUBMIT VALUE="Stop Current job">
-</FORM>"""
+</FORM>""" % {'me_dir': self.path, 'web': self.web}
             else:
                 status_dict['stop_form'] = ""
             
