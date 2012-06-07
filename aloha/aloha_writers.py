@@ -867,11 +867,9 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                 
                 if data and coup:
                     out.write('    COEFF(%s,%s)= coup*%s\n' % ( 
-                                    self.pass_to_HELAS(ind)+1, ','.join(arg), 
-                                    self.write_obj(data)))
+                                    ind+1, ','.join(arg), self.write_obj(data)))
                 else:
-                    out.write('    COEFF(%s,%s)= %s\n' % ( 
-                                    self.pass_to_HELAS(ind)+1, ','.join(arg), 
+                    out.write('    COEFF(%s,%s)= %s\n' % ( ind+1, ','.join(arg), 
                                     self.write_obj(data)))                    
         return out.getvalue()
     
