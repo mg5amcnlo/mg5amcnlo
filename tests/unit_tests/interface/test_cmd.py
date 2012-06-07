@@ -20,11 +20,13 @@ import madgraph.interface.master_interface as cmd
 import madgraph.interface.extended_cmd as ext_cmd
 import os
 
-
+import tests.unit_tests.various.test_aloha as test_aloha
 class TestValidCmd(unittest.TestCase):
     """ check if the ValidCmd works correctly """
     
-    cmd = cmd.MasterCmd()
+    def setUp(self):
+        if not hasattr(self, 'cmd'):
+            TestValidCmd.cmd = cmd.MasterCmd()
     
     def wrong(self,*opt):
         self.assertRaises(madgraph.MadGraph5Error, *opt)
@@ -82,7 +84,7 @@ class TestValidCmd(unittest.TestCase):
     
     
     
-    
+    @test_aloha.set_global()
     def test_check_generate(self):
         """check if generate format are correctly supported"""
     
@@ -107,6 +109,7 @@ class TestValidCmd(unittest.TestCase):
         self.wrong(cmd.check_process_format, 'e+ > ')
         self.wrong(cmd.check_process_format, 'e+ >')
         
+    @test_aloha.set_global()
     def test_output_default(self):
         """check that if a export_dir is define before an output
            a new one is propose"""

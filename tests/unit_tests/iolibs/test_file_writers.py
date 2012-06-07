@@ -38,9 +38,19 @@ class CheckFileCreate():
         current_value = open(self.give_pos(filename)).read()
         list_cur=current_value.split('\n')
         list_sol=solution.split('\n')
+        while 1:
+            if '' in list_sol:
+                list_sol.remove('')
+            else:
+                break
+        while 1:
+            if '' in list_cur:
+                list_cur.remove('')
+            else:
+                break            
         for a, b in zip(list_sol, list_cur):
             self.assertEqual(a,b)
-        self.assertEqual(current_value.split('\n'), solution.split('\n'))
+        #self.assertEqual(current_value.split('\n'), solution.split('\n'))
         self.assertEqual(len(list_sol), len(list_cur))
 
     def give_pos(self, filename):

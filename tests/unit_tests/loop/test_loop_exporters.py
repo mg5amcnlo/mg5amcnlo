@@ -45,6 +45,7 @@ import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.import_ufo as models
 import aloha
 import aloha.create_aloha as create_aloha
+from tests.unit_tests.various.test_aloha import set_global
 
 from madgraph import MadGraph5Error
 
@@ -144,7 +145,7 @@ class LoopExporterTest(unittest.TestCase):
         # Restore aloha global variables to our choice
         aloha.mp_precision = aloha_original_quad_mode
 
-    
+    @set_global()
     def test_aloha_loop_HELAS_subroutines(self):
         """ Test that Aloha correctly processes loop HELAS subroutines. """
         
@@ -165,7 +166,8 @@ class LoopExporterTest(unittest.TestCase):
             self.assertTrue(entry_tuple in aloha_model.keys())
             AbstractRoutine=aloha_model[entry_tuple]
             self.assertEqual(list(tag),AbstractRoutine.tag)
-        
+
+    @set_global()        
     def test_LoopProcessExporterFortranSA_ddx_uux(self):
         """Test the StandAlone output for different processes.
         """
@@ -198,6 +200,7 @@ class LoopExporterTest(unittest.TestCase):
         
         #        shutil.rmtree(_proc_file_path)
 
+    @set_global()
     def test_LoopProcessExporterFortranSA_ddx_ddx(self):
         """Test the StandAlone output for different processes.
         """
@@ -223,7 +226,8 @@ class LoopExporterTest(unittest.TestCase):
         myloopamplitude.generate_diagrams()
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
-
+    
+    @set_global()
     def test_LoopProcessExporterFortranSA_ddx_ttx(self):
         """Test the StandAlone output for different processes.
         """
@@ -250,6 +254,7 @@ class LoopExporterTest(unittest.TestCase):
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
 
+    @set_global()
     def test_LoopProcessExporterFortranSA_gg_ttx(self):
         """Test the StandAlone output for different processes.
         """
@@ -275,6 +280,7 @@ class LoopExporterTest(unittest.TestCase):
         myloopamplitude.generate_diagrams()
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
+
 
     def notest_LoopProcessExporterFortranSA_gg_gddx(self):
         """Test the StandAlone output for different processes.
@@ -304,6 +310,7 @@ class LoopExporterTest(unittest.TestCase):
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
 
+    @set_global()
     def test_LoopProcessExporterFortranSA_ddx_gg(self):
         """Test the StandAlone output for different processes.
         """
@@ -403,6 +410,7 @@ class LoopExporterTest(unittest.TestCase):
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
 
+    @set_global()
     def notest_LoopProcessExporterFortranSA_ddx_ddxddx(self):
         """Test the StandAlone output for different processes.
         """
@@ -432,7 +440,8 @@ class LoopExporterTest(unittest.TestCase):
         myloopamplitude.generate_diagrams()
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
-        
+
+    @set_global()
     def test_LoopProcessExporterFortranSA_gg_gg(self):
         """Test the StandAlone output for different processes.
         """

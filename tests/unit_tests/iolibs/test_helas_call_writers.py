@@ -32,7 +32,7 @@ import madgraph.various.misc as misc
 import tests.unit_tests as unittest
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
-
+import tests.unit_tests.various.test_aloha as test_aloha
 
 
 #===============================================================================
@@ -952,17 +952,16 @@ class UFOHELASCallWriterTest(unittest.TestCase):
 class UFOHELASCALLWriterComplexMass(unittest.TestCase):
     """testing the writting in case of complex mass scheme"""
 
-
+    @test_aloha.set_global(cms=True) 
     def setUp(self):
         """load the model"""
 
         import madgraph.interface.master_interface as interface
         cmd = interface.MasterCmd()
-        cmd.do_load('model %s' % os.path.join(MG5DIR,'tests','input_files','sm.pkl'))
+        cmd.do_import('model sm')
         
         self.mybasemodel = cmd._curr_model
         self.mybasemodel.change_mass_to_complex_scheme()
-        aloha.complex_mass = True
 
         leg1 = base_objects.Leg({'id':22,'state':False})
         leg2 = base_objects.Leg({'id':24,'state':False})
@@ -979,9 +978,7 @@ class UFOHELASCALLWriterComplexMass(unittest.TestCase):
         
         self.mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
 
-    def tearDown(self):
-        aloha.complex_mass = False
-        
+    @test_aloha.set_global(cms=True)        
     def test_UFO_fortran_helas_call_writer(self):
         """Test automatic generation of UFO helas calls in Fortran"""
         
@@ -997,8 +994,8 @@ CALL VXXXXX(P(0,5),MZ,NHEL(5),+1*IC(5),W(1,5))
 CALL VVV1_3(W(1,1),W(1,2),GC_49,DCMPLX(CMASS_MW),W(1,6))
 CALL VVV1_2(W(1,3),W(1,4),GC_49,DCMPLX(CMASS_MW),W(1,7))
 # Amplitude(s) for diagram number 1
-CALL VVV1_0(W(1,6),W(1,7),W(1,5),GC_12,AMP(1))
-CALL VVV1_1(W(1,4),W(1,5),GC_12,DCMPLX(CMASS_MW),W(1,8))
+CALL VVV1_0(W(1,6),W(1,7),W(1,5),GC_37,AMP(1))
+CALL VVV1_1(W(1,4),W(1,5),GC_37,DCMPLX(CMASS_MW),W(1,8))
 # Amplitude(s) for diagram number 2
 CALL VVV1_0(W(1,3),W(1,6),W(1,8),GC_49,AMP(2))
 # Amplitude(s) for diagram number 3
@@ -1006,8 +1003,8 @@ CALL VVVV5_0(W(1,3),W(1,6),W(1,4),W(1,5),GC_50,AMP(3))
 CALL VVV1_2(W(1,1),W(1,4),GC_49,DCMPLX(CMASS_MW),W(1,9))
 CALL VVV1_3(W(1,3),W(1,2),GC_49,DCMPLX(CMASS_MW),W(1,10))
 # Amplitude(s) for diagram number 4
-CALL VVV1_0(W(1,10),W(1,9),W(1,5),GC_12,AMP(4))
-CALL VVV1_2(W(1,2),W(1,5),GC_12,DCMPLX(CMASS_MW),W(1,11))
+CALL VVV1_0(W(1,10),W(1,9),W(1,5),GC_37,AMP(4))
+CALL VVV1_2(W(1,2),W(1,5),GC_37,DCMPLX(CMASS_MW),W(1,11))
 # Amplitude(s) for diagram number 5
 CALL VVV1_0(W(1,3),W(1,11),W(1,9),GC_49,AMP(5))
 # Amplitude(s) for diagram number 6
@@ -1018,21 +1015,22 @@ CALL VVV1_0(W(1,1),W(1,10),W(1,8),GC_49,AMP(7))
 CALL VVV1_0(W(1,1),W(1,11),W(1,7),GC_49,AMP(8))
 CALL VVVV2_4(W(1,1),W(1,3),W(1,2),GC_51,DCMPLX(CMASS_MW),W(1,12))
 # Amplitude(s) for diagram number 9
-CALL VVV1_0(W(1,12),W(1,4),W(1,5),GC_12,AMP(9))
+CALL VVV1_0(W(1,12),W(1,4),W(1,5),GC_37,AMP(9))
 CALL VVVV5_3(W(1,1),W(1,2),W(1,5),GC_50,DCMPLX(CMASS_MW),W(1,13))
 # Amplitude(s) for diagram number 10
 CALL VVV1_0(W(1,3),W(1,13),W(1,4),GC_49,AMP(10))
 CALL VVVV2_3(W(1,1),W(1,3),W(1,4),GC_51,DCMPLX(CMASS_MW),W(1,14))
 # Amplitude(s) for diagram number 11
-CALL VVV1_0(W(1,2),W(1,14),W(1,5),GC_12,AMP(11))
+CALL VVV1_0(W(1,2),W(1,14),W(1,5),GC_37,AMP(11))
 CALL VVVV5_2(W(1,1),W(1,4),W(1,5),GC_50,DCMPLX(CMASS_MW),W(1,15))
 # Amplitude(s) for diagram number 12
 CALL VVV1_0(W(1,3),W(1,2),W(1,15),GC_49,AMP(12))"""
-    
+
+
         for i, line in enumerate(solution.split('\n')):
             self.assertEqual(line, result[i])
 
-        
+    @test_aloha.set_global(cms=True)   
     def test_UFO_CPP_helas_call_writer(self):
         """Test automatic generation of UFO helas calls in C++"""
         
@@ -1040,6 +1038,7 @@ CALL VVV1_0(W(1,3),W(1,2),W(1,15),GC_49,AMP(12))"""
             self.mybasemodel)
         
         result = cpp_model.get_matrix_element_calls(self.mymatrixelement)
+        
         solution = """vxxxxx(p[perm[0]],mME[0],hel[0],-1,w[0]);
 vxxxxx(p[perm[1]],mME[1],hel[1],-1,w[1]);
 vxxxxx(p[perm[2]],mME[2],hel[2],+1,w[2]);
@@ -1048,8 +1047,8 @@ vxxxxx(p[perm[4]],mME[4],hel[4],+1,w[4]);
 VVV1_3(w[0],w[1],pars->GC_49,pars->CMASS_MW,w[5]);
 VVV1_2(w[2],w[3],pars->GC_49,pars->CMASS_MW,w[6]);
 # Amplitude(s) for diagram number 1
-VVV1_0(w[5],w[6],w[4],pars->GC_12,amp[0]);
-VVV1_1(w[3],w[4],pars->GC_12,pars->CMASS_MW,w[7]);
+VVV1_0(w[5],w[6],w[4],pars->GC_37,amp[0]);
+VVV1_1(w[3],w[4],pars->GC_37,pars->CMASS_MW,w[7]);
 # Amplitude(s) for diagram number 2
 VVV1_0(w[2],w[5],w[7],pars->GC_49,amp[1]);
 # Amplitude(s) for diagram number 3
@@ -1057,8 +1056,8 @@ VVVV5_0(w[2],w[5],w[3],w[4],pars->GC_50,amp[2]);
 VVV1_2(w[0],w[3],pars->GC_49,pars->CMASS_MW,w[8]);
 VVV1_3(w[2],w[1],pars->GC_49,pars->CMASS_MW,w[9]);
 # Amplitude(s) for diagram number 4
-VVV1_0(w[9],w[8],w[4],pars->GC_12,amp[3]);
-VVV1_2(w[1],w[4],pars->GC_12,pars->CMASS_MW,w[10]);
+VVV1_0(w[9],w[8],w[4],pars->GC_37,amp[3]);
+VVV1_2(w[1],w[4],pars->GC_37,pars->CMASS_MW,w[10]);
 # Amplitude(s) for diagram number 5
 VVV1_0(w[2],w[10],w[8],pars->GC_49,amp[4]);
 # Amplitude(s) for diagram number 6
@@ -1069,21 +1068,22 @@ VVV1_0(w[0],w[9],w[7],pars->GC_49,amp[6]);
 VVV1_0(w[0],w[10],w[6],pars->GC_49,amp[7]);
 VVVV2_4(w[0],w[2],w[1],pars->GC_51,pars->CMASS_MW,w[11]);
 # Amplitude(s) for diagram number 9
-VVV1_0(w[11],w[3],w[4],pars->GC_12,amp[8]);
+VVV1_0(w[11],w[3],w[4],pars->GC_37,amp[8]);
 VVVV5_3(w[0],w[1],w[4],pars->GC_50,pars->CMASS_MW,w[12]);
 # Amplitude(s) for diagram number 10
 VVV1_0(w[2],w[12],w[3],pars->GC_49,amp[9]);
 VVVV2_3(w[0],w[2],w[3],pars->GC_51,pars->CMASS_MW,w[13]);
 # Amplitude(s) for diagram number 11
-VVV1_0(w[1],w[13],w[4],pars->GC_12,amp[10]);
+VVV1_0(w[1],w[13],w[4],pars->GC_37,amp[10]);
 VVVV5_2(w[0],w[3],w[4],pars->GC_50,pars->CMASS_MW,w[14]);
 # Amplitude(s) for diagram number 12
 VVV1_0(w[2],w[1],w[14],pars->GC_49,amp[11]);"""
 
+        self.assertEqual(solution.split('\n'), result)
         for i, line in enumerate(solution.split('\n')):
             self.assertEqual(line, result[i])
         
-
+    @test_aloha.set_global(cms=True) 
     def test_UFO_Python_helas_call_writer(self):
         """Test automatic generation of UFO helas calls in Python"""
         
@@ -1099,8 +1099,8 @@ w[4] = vxxxxx(p[4],MZ,hel[4],+1)
 w[5]= VVV1_3(w[0],w[1],GC_49,CMASS_MW)
 w[6]= VVV1_2(w[2],w[3],GC_49,CMASS_MW)
 # Amplitude(s) for diagram number 1
-amp[0]= VVV1_0(w[5],w[6],w[4],GC_12)
-w[7]= VVV1_1(w[3],w[4],GC_12,CMASS_MW)
+amp[0]= VVV1_0(w[5],w[6],w[4],GC_37)
+w[7]= VVV1_1(w[3],w[4],GC_37,CMASS_MW)
 # Amplitude(s) for diagram number 2
 amp[1]= VVV1_0(w[2],w[5],w[7],GC_49)
 # Amplitude(s) for diagram number 3
@@ -1108,8 +1108,8 @@ amp[2]= VVVV5_0(w[2],w[5],w[3],w[4],GC_50)
 w[8]= VVV1_2(w[0],w[3],GC_49,CMASS_MW)
 w[9]= VVV1_3(w[2],w[1],GC_49,CMASS_MW)
 # Amplitude(s) for diagram number 4
-amp[3]= VVV1_0(w[9],w[8],w[4],GC_12)
-w[10]= VVV1_2(w[1],w[4],GC_12,CMASS_MW)
+amp[3]= VVV1_0(w[9],w[8],w[4],GC_37)
+w[10]= VVV1_2(w[1],w[4],GC_37,CMASS_MW)
 # Amplitude(s) for diagram number 5
 amp[4]= VVV1_0(w[2],w[10],w[8],GC_49)
 # Amplitude(s) for diagram number 6
@@ -1120,17 +1120,17 @@ amp[6]= VVV1_0(w[0],w[9],w[7],GC_49)
 amp[7]= VVV1_0(w[0],w[10],w[6],GC_49)
 w[11]= VVVV2_4(w[0],w[2],w[1],GC_51,CMASS_MW)
 # Amplitude(s) for diagram number 9
-amp[8]= VVV1_0(w[11],w[3],w[4],GC_12)
+amp[8]= VVV1_0(w[11],w[3],w[4],GC_37)
 w[12]= VVVV5_3(w[0],w[1],w[4],GC_50,CMASS_MW)
 # Amplitude(s) for diagram number 10
 amp[9]= VVV1_0(w[2],w[12],w[3],GC_49)
 w[13]= VVVV2_3(w[0],w[2],w[3],GC_51,CMASS_MW)
 # Amplitude(s) for diagram number 11
-amp[10]= VVV1_0(w[1],w[13],w[4],GC_12)
+amp[10]= VVV1_0(w[1],w[13],w[4],GC_37)
 w[14]= VVVV5_2(w[0],w[3],w[4],GC_50,CMASS_MW)
 # Amplitude(s) for diagram number 12
 amp[11]= VVV1_0(w[2],w[1],w[14],GC_49)"""
-    
+        
         for i, line in enumerate(solution.split('\n')):
             self.assertEqual(line, result[i])        
 

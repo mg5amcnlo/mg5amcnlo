@@ -908,8 +908,7 @@ class ModelTest2(unittest.TestCase):
         """ """
         import madgraph.interface.master_interface as Cmd
         cmd = Cmd.MasterCmd() 
-        cmd.do_load('model %s' % os.path.join(madgraph.MG5DIR, 'tests',
-                                                        'input_files','sm.pkl'))
+        cmd.do_import('model sm')
         self.model = cmd._curr_model
         
     def test_change_to_complex_mass_scheme(self):
@@ -936,7 +935,7 @@ class ModelTest2(unittest.TestCase):
                 self.assertFalse(WW)
             elif param.name == 'WW':
                 WW = param
-            else:
+            elif param.name == 'MW': 
                 MW = param
                 self.assertFalse(WW)
                 self.assertFalse(WComplex)
@@ -945,7 +944,7 @@ class ModelTest2(unittest.TestCase):
         self.assertTrue(WComplex)
         # Check that WW and MW are the real/imaginary part
         self.assertEqual(WW.expr, '-1 * im(CMASS_MW**2) / MW')
-        self.assertEqual('cmath.sqrt(re(%s**2))' % WComplex.expr, MW.expr)
+        self.assertEqual(['cmath.sqrt(re(%s**2))' % WComplex.expr], [MW.expr])
         
         # Check that MZ has a complex_mass definition
         # and that the width and the mass are external

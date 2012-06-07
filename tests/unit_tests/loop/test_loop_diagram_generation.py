@@ -838,7 +838,6 @@ class LoopDiagramGenerationTest(unittest.TestCase):
     def setUp(self):
         """Load different objects for the tests."""
         
-
         #self.myloopmodel = models.import_full_model(os.path.join(\
         #    _model_file_path,'loop_sm'))
         #self.myloopmodel.actualize_dictionaries()

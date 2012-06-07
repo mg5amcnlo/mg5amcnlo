@@ -1058,6 +1058,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # optimization
         if aloha.complex_mass: 
             if (self.get('width') == 'ZERO' or self.get('mass') == 'ZERO'):
+                print self.get('width'), self.get('mass')
                 output['CM'] = '%s' % self.get('mass') 
             else: 
                 output['CM'] ='CMASS_%s' % self.get('mass')
