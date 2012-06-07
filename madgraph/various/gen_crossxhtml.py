@@ -118,6 +118,9 @@ status_template = """
         %(status)s
  </TR>
  <tr></tr>
+ <tr colspan=2>
+   %(stop_form)s
+ </tr> 
  </TABLE>
 """
 
@@ -345,6 +348,17 @@ class AllResults(dict):
                 status_dict['delphes_card'] = """ <a href="./Cards/delphes_card.dat">delphes_card</a><BR>"""
             else:
                 status_dict['delphes_card'] = ""
+            
+            if self.web:
+                status_dict['stop_form'] = """
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="stop_job">
+<INPUT TYPE=SUBMIT VALUE="Stop Current job">
+</FORM>"""
+            else:
+                status_dict['stop_form'] = ""
+            
             
             status = status_template % status_dict
             refresh = "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"10\">"

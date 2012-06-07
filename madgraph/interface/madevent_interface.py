@@ -1330,7 +1330,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             %s and try again.''' % pjoin(me_dir,'RunWeb')
             raise MadEventAlreadyRunning, message
         else:
-            os.system('touch %s' % pjoin(me_dir,'RunWeb'))
+            pid = os.getpid()
+            fsock = open(pjoin(me_dir,'RunWeb'),'w')
+            fsock.write(`pid`)
+            fsock.close()
             misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
       
         self.to_store = []
