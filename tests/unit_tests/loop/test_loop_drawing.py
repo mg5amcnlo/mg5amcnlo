@@ -470,7 +470,7 @@ class LoopDiagramDrawerTest(unittest.TestCase):
 
         box_diagram, box_struct = self.def_box()
         pent_diagram, pent_struct = self.def_pent()
-        
+       
         self.box_drawing = draw_lib.LoopFeynmanDiagram(
                                 box_diagram, box_struct, self.myloopmodel)
 

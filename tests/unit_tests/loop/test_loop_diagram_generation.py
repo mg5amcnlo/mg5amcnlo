@@ -814,10 +814,8 @@ def loadLoopModel():
     myloopmodel.set('perturbation_couplings', ['QCD','QED'])
     myloopmodel.set('order_hierarchy', {'QCD':1,'QED':2})
 
-    return myloopmodel
+    return myloopmodel    
 
-    # Save this model so that it can be loaded by other loop tests
-    # save_load_object.save_to_file(os.path.join(_input_file_path, 'test_toyLoopModel.pkl'),self.myloopmodel)
 
 #===============================================================================
 # LoopDiagramGeneration Test
@@ -1511,3 +1509,8 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         closing_vx=base_objects.Vertex({'legs':base_objects.LegList([l617, l8]), 'id': -1})              
         goal_vertices=base_objects.VertexList([vx17_tag,vx12_tag,vx13_tag,vx15_tag,vx168_tag,closing_vx])
         self.assertEqual(myPentaDiag1.get('vertices'), goal_vertices)
+
+if __name__ == '__main__':
+        # Save this model so that it can be loaded by other loop tests
+        save_load_object.save_to_file(os.path.join(_input_file_path, 'test_toyLoopModel.pkl'),loadLoopModel())
+        print "test_toyLoopModel.pkl created."
