@@ -58,36 +58,35 @@ class IOExportBornFKSTest(unittest.TestCase,
                      test_file_writers.CheckFileCreate):
     """Test class for the export bornfks module"""
 
-    mymatrixelement = helas_objects.HelasMatrixElement()
-    created_files = ['test'
-                    ]
-
-    mymodel = import_ufo.import_model('sm')
-    myfortranmodel = helas_call_writers.FortranUFOHelasCallWriter(mymodel)
-
-    myleglist = MG.MultiLegList()
-    
-    myleglist.append(MG.MultiLeg({'ids':[2], 'state':False}))
-    myleglist.append(MG.MultiLeg({'ids':[21], 'state':False}))
-    myleglist.append(MG.MultiLeg({'ids':[2], 'state':True}))
-    myleglist.append(MG.MultiLeg({'ids':[21], 'state':True}))
-
-    myproc = MG.ProcessDefinition({'legs': myleglist,
-                         'model': mymodel,
-                         'orders':{'QCD': 2, 'QED': 0},
-                         'perturbation_couplings': ['QCD'],
-                         'NLO_mode': 'real'})
-    my_process_definitions = MG.ProcessDefinitionList([myproc])
-
-    myfksmulti = fks_born.FKSMultiProcessFromBorn(\
-            {'process_definitions': my_process_definitions})
-    
-    myfks_me = fks_born_helas.FKSHelasMultiProcessFromBorn(\
-            myfksmulti)['matrix_elements'][0]
 
     def setUp(self):
 
-        #self.myfortranmodel.downcase = False
+        if not hasattr(self, 'myfks_me') or \
+           not hasattr(self, 'myfortranmodel'):
+            created_files = ['test']
+
+            mymodel = import_ufo.import_model('sm')
+            IOExportBornFKSTest.myfortranmodel = helas_call_writers.FortranUFOHelasCallWriter(mymodel)
+
+            myleglist = MG.MultiLegList()
+            
+            myleglist.append(MG.MultiLeg({'ids':[2], 'state':False}))
+            myleglist.append(MG.MultiLeg({'ids':[21], 'state':False}))
+            myleglist.append(MG.MultiLeg({'ids':[2], 'state':True}))
+            myleglist.append(MG.MultiLeg({'ids':[21], 'state':True}))
+
+            myproc = MG.ProcessDefinition({'legs': myleglist,
+                                 'model': mymodel,
+                                 'orders':{'QCD': 2, 'QED': 0},
+                                 'perturbation_couplings': ['QCD'],
+                                 'NLO_mode': 'real'})
+            my_process_definitions = MG.ProcessDefinitionList([myproc])
+
+            myfksmulti = fks_born.FKSMultiProcessFromBorn(\
+                    {'process_definitions': my_process_definitions})
+            
+            IOExportBornFKSTest.myfks_me = fks_born_helas.FKSHelasMultiProcessFromBorn(\
+                    myfksmulti)['matrix_elements'][0]
 
         tearDown = test_file_writers.CheckFileCreate.clean_files
 
