@@ -117,10 +117,9 @@ status_template = """
         <TD nowrap ROWSPAN=2> %(results)s </TD> 
         %(status)s
  </TR>
- <tr></tr>
- <tr colspan=2><td>
+ <TR COLSPAN=7><TD>
    %(stop_form)s
- </td></tr> 
+ </TD></TR> 
  </TABLE>
 """
 
