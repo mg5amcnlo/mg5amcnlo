@@ -172,7 +172,7 @@ echo 'continuing with the P* directories...'
 echo ''
 
 if [[ $gensym == '1' || $madevent_compile == '1' ]]; then
-    dir=`ls -d P*/R* | tail -n1`
+    dir=`ls -d P* | tail -n1`
     if [[ -e $dir"/helicities.inc" ]]; then
 	echo 'helicities.inc found: it is recommended to MC over helicities'
 	echo 'converting fks_singular.f'

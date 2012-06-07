@@ -12,9 +12,9 @@ FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
 #FJLIBS=
 
 NLOLIBS=$(libmadloop)
-LINKLIBS = -L$(LIBDIR) -ldhelas -ldsample_fks -lmodel -lgeneric -lpdf $(lhapdf)
+LINKLIBS = -L$(LIBDIR) -ldhelas -ldsample_fks -lgeneric -lmodel -lpdf $(lhapdf)
 LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libdsample_fks.a		\
-	$(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a $(LIBDIR)libmodel.a
+	$(LIBDIR)libgeneric.a $(LIBDIR)libmodel.a $(LIBDIR)libpdf.a
 
 # Files for all executables
 FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
@@ -102,5 +102,5 @@ madevent_mintMC: $(MINTMC)  makefile $(LIBS)
 madevent_reweight: $(BORN_REWEIGHT)  makefile $(LIBS)
 	$(FC) $(FFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS)
 
-reweight_xsec_events: $(RWGFILES)
+reweight_xsec_events: $(RWGFILES)  makefile $(LIBS)
 	$(FC) $(FFLAGS) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS)
