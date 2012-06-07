@@ -35,313 +35,253 @@ import array
 class testFKSRealHelasObjects(unittest.TestCase):
     """a class to test the module FKSRealHelasObjects"""
     
-    myleglist = MG.LegList()
-    # PROCESS: u u~ > d d~ g g 
-    mylegs = [{ \
-    'id': 2,\
-    'number': 1,\
-    'state': False,\
- #   'from_group': True \
-}, \
-{ \
-    'id': -2,\
-    'number': 2,\
-    'state': False,\
-    #'from_group': True\
-},\
-{\
-    'id': 1,\
-    'number': 3,\
-    'state': True,\
-  #  'from_group': True\
-},\
-{\
-    'id': -1,\
-    'number': 4,\
-    'state': True,\
-   # 'from_group': True\
-},\
-{\
-    'id': 21,\
-    'number': 5,\
-    'state': True,\
-   # 'from_group': True\
-},\
-{\
-    'id': 21,\
-    'number': 6,\
-    'state': True,\
-   # 'from_group': True\
-}
-]
+    def setUp(self):
 
-    for i in mylegs:
-        myleglist.append(MG.Leg(i))
+        if not hasattr(self, 'mymodel') or \
+           not hasattr(self, 'myproc') or \
+           not hasattr(self, 'fks1') or \
+           not hasattr(self, 'fks2'):
 
-    myleglist2 = MG.LegList()
-    # PROCESS: u u~ > u u~ g  
-    mylegs2 = [{ \
-    'id': 2,\
-    'number': 1,\
-    'state': False,\
- #   'from_group': True \
-}, \
-{ \
-    'id': -2,\
-    'number': 2,\
-    'state': False,\
-    #'from_group': True\
-},\
-{\
-    'id': 2,\
-    'number': 3,\
-    'state': True,\
-  #  'from_group': True\
-},\
-{\
-    'id': -2,\
-    'number': 4,\
-    'state': True,\
-   # 'from_group': True\
-},\
-{\
-    'id': 21,\
-    'number': 5,\
-    'state': True,\
-   # 'from_group': True\
-}
-]
-    for i in mylegs2:
-        myleglist2.append(MG.Leg(i))
+            myleglist = MG.LegList()
+            # PROCESS: u u~ > d d~ g g 
+            mylegs = [{'id': 2, 'number': 1, 'state': False},
+                      {'id': -2, 'number': 2, 'state': False},
+                      {'id': 1, 'number': 3, 'state': True},
+                      {'id': -1, 'number': 4, 'state': True},
+                      {'id': 21, 'number': 5, 'state': True},
+                      {'id': 21, 'number': 6, 'state': True}]
+            for i in mylegs:
+                myleglist.append(MG.Leg(i))
 
-    
-    mypartlist = MG.ParticleList()
-    mypartlistbad = MG.ParticleList()
-    myinterlist = MG.InteractionList()
-    myinterlistbad = MG.InteractionList()
-    mypartlist.append(MG.Particle({'name':'u',
-                  'antiname':'u~',
-                  'spin':2,
-                  'color':3,
-                  'mass':'zero',
-                  'width':'zero',
-                  'texname':'u',
-                  'antitexname':'\\overline{u}',
-                  'line':'straight',
-                  'charge':2. / 3.,
-                  'pdg_code':2,
-                  'propagating':True,
-                  #'is_part': True,
-                  'self_antipart':False}))
-    mypartlist.append(MG.Particle({'name':'d',
-                  'antiname':'d~',
-                  'spin':2,
-                  'color':3,
-                  'mass':'zero',
-                  'width':'zero',
-                  'texname':'d',
-                  'antitexname':'\\overline{d}',
-                  'line':'straight',
-                  'charge':-1. / 3.,
-                  'pdg_code':1,
-                  #'is_part': True,
-                  'propagating':True,
-                  'self_antipart':False}))
-    mypartlist.append(MG.Particle({'name':'g',
-                      'antiname':'g',
-                      'spin':3,
-                      'color':8,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'g',
-                      'antitexname':'g',
-                      'line':'curly',
-                      'charge':0.,
-                      'pdg_code':21,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
+            myleglist2 = MG.LegList()
+            # PROCESS: u u~ > u u~ g  
+            mylegs = [{'id': 2, 'number': 1, 'state': False},
+                      {'id': -2, 'number': 2, 'state': False},
+                      {'id': 2, 'number': 3, 'state': True},
+                      {'id': -2, 'number': 4, 'state': True},
+                      {'id': 21, 'number': 6, 'state': True}]
+            for i in mylegs:
+                myleglist2.append(MG.Leg(i))
 
-    mypartlist.append(MG.Particle({'name':'a',
-                      'antiname':'a',
-                      'spin':3,
-                      'color':1,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
-                      'line':'wavy',
-                      'charge':0.,
-                      'pdg_code':22,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-    
-    mypartlist.append(MG.Particle({'name':'t',
-                  'antiname':'t~',
-                  'spin':2,
-                  'color':3,
-                  'mass':'tmass',
-                  'width':'twidth',
-                  'texname':'t',
-                  'antitexname':'\\overline{t}',
-                  'line':'straight',
-                  'charge':2. / 3.,
-                  'pdg_code':6,
-                  'propagating':True,
-                  #'is_part': True,
-                  'self_antipart':False}))
-        
-    antiu = MG.Particle({'name':'u',
-                  'antiname':'u~',
-                  'spin':2,
-                  'color': 3,
-                  'mass':'zero',
-                  'width':'zero',
-                  'texname':'u',
-                  'antitexname':'\\overline{u}',
-                  'line':'straight',
-                  'charge':  2. / 3.,
-                  'pdg_code': 2,
-                  'propagating':True,
-                  'is_part':False,
-                  'self_antipart':False})
-  #  mypartlist.append(antiu)
+            
+            mypartlist = MG.ParticleList()
+            myinterlist = MG.InteractionList()
 
-    
-    antid = MG.Particle({'name':'d',
-                  'antiname':'d~',
-                  'spin':2,
-                  'color':3,
-                  'mass':'zero',
-                  'width':'zero',
-                  'texname':'d',
-                  'antitexname':'\\overline{d}',
-                  'line':'straight',
-                  'charge':-1. / 3.,
-                  'pdg_code':1,
-                  'is_part': False,
-                  'propagating':True,
-                  'self_antipart':False})
-    
-    antit = MG.Particle({'name':'t',
-                  'antiname':'t~',
-                  'spin':2,
-                  'color':3,
-                  'mass':'tmass',
-                  'width':'twidth',
-                  'texname':'t',
-                  'antitexname':'\\overline{t}',
-                  'line':'straight',
-                  'charge':2. / 3.,
-                  'pdg_code':6,
-                  'propagating':True,
-                  'is_part': False,
-                  'self_antipart':False})
-    
-        
-    myinterlist.append(MG.Interaction({\
-                      'id':1,\
-                      'particles': MG.ParticleList(\
-                                            [mypartlist[1], \
-                                             antid, \
-                                             mypartlist[2]]),
-                      'color': [color.ColorString([color.T(2, 0, 1)])],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1}}))    
-    
-    myinterlist.append(MG.Interaction({\
-                      'id':2,\
-                      'particles': MG.ParticleList(\
-                                            [mypartlist[0], \
-                                             antiu, \
-                                             mypartlist[2]]),
-                      'color': [color.ColorString([color.T(2,0,1)])],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1}}))
+            mypartlist.append(MG.Particle({'name':'u',
+                          'antiname':'u~',
+                          'spin':2,
+                          'color':3,
+                          'mass':'zero',
+                          'width':'zero',
+                          'texname':'u',
+                          'antitexname':'\\overline{u}',
+                          'line':'straight',
+                          'charge':2. / 3.,
+                          'pdg_code':2,
+                          'propagating':True,
+                          'self_antipart':False}))
 
-    myinterlist.append(MG.Interaction({\
-                      'id':5,\
-                      'particles': MG.ParticleList(\
-                                            [mypartlist[4], \
-                                             antit, \
-                                             mypartlist[2]]),
-                      'color': [color.ColorString([color.T(2, 0, 1)])],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1}}))
-    
-    myinterlist.append(MG.Interaction({\
-                      'id':3,\
-                      'particles': MG.ParticleList(\
-                                            [mypartlist[2]] *3 \
-                                             ),
-                      'color': [color.ColorString([color.f(0, 1, 2)])],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1}}))
-    
-    myinterlist.append(MG.Interaction({\
-                      'id':4,\
-                      'particles': MG.ParticleList([mypartlist[1], \
-                                             antid, \
-                                             mypartlist[3]]
-                                             ),
-                      'color': [color.ColorString([color.T(0,1)])],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'ADD'},
-                      'orders':{'QED':1}}))
-    myinterlist.append(MG.Interaction({\
-                      'id':6,\
-                      'particles': MG.ParticleList(\
-                                            [mypartlist[0], \
-                                             antiu, \
-                                             mypartlist[3]]),
-                      'color': [color.ColorString([color.T(0,1)])],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'AUU'},
-                      'orders':{'QED':1}}))
-    
+            mypartlist.append(MG.Particle({'name':'d',
+                          'antiname':'d~',
+                          'spin':2,
+                          'color':3,
+                          'mass':'zero',
+                          'width':'zero',
+                          'texname':'d',
+                          'antitexname':'\\overline{d}',
+                          'line':'straight',
+                          'charge':-1. / 3.,
+                          'pdg_code':1,
+                          'propagating':True,
+                          'self_antipart':False}))
 
-    mymodel = MG.Model()
-    mymodel.set('particles', mypartlist)
-    mymodel.set('interactions', myinterlist)
- #   mymodel.set('couplings', {(0, 0):'GQQ'})
- #   mymodel.set('lorentz', ['L1'])
+            mypartlist.append(MG.Particle({'name':'g',
+                              'antiname':'g',
+                              'spin':3,
+                              'color':8,
+                              'mass':'zero',
+                              'width':'zero',
+                              'texname':'g',
+                              'antitexname':'g',
+                              'line':'curly',
+                              'charge':0.,
+                              'pdg_code':21,
+                              'propagating':True,
+                              'is_part':True,
+                              'self_antipart':True}))
 
-    #mymodel.set('couplings',{(0, 0):'GQQ'} )
+            mypartlist.append(MG.Particle({'name':'a',
+                              'antiname':'a',
+                              'spin':3,
+                              'color':1,
+                              'mass':'zero',
+                              'width':'zero',
+                              'texname':'\gamma',
+                              'antitexname':'\gamma',
+                              'line':'wavy',
+                              'charge':0.,
+                              'pdg_code':22,
+                              'propagating':True,
+                              'is_part':True,
+                              'self_antipart':True}))
+            
+            mypartlist.append(MG.Particle({'name':'t',
+                          'antiname':'t~',
+                          'spin':2,
+                          'color':3,
+                          'mass':'tmass',
+                          'width':'twidth',
+                          'texname':'t',
+                          'antitexname':'\\overline{t}',
+                          'line':'straight',
+                          'charge':2. / 3.,
+                          'pdg_code':6,
+                          'propagating':True,
+                          'self_antipart':False}))
+                
+            antiu = MG.Particle({'name':'u',
+                          'antiname':'u~',
+                          'spin':2,
+                          'color': 3,
+                          'mass':'zero',
+                          'width':'zero',
+                          'texname':'u',
+                          'antitexname':'\\overline{u}',
+                          'line':'straight',
+                          'charge':  2. / 3.,
+                          'pdg_code': 2,
+                          'propagating':True,
+                          'is_part':False,
+                          'self_antipart':False})
+            
+            antid = MG.Particle({'name':'d',
+                          'antiname':'d~',
+                          'spin':2,
+                          'color':3,
+                          'mass':'zero',
+                          'width':'zero',
+                          'texname':'d',
+                          'antitexname':'\\overline{d}',
+                          'line':'straight',
+                          'charge':-1. / 3.,
+                          'pdg_code':1,
+                          'is_part': False,
+                          'propagating':True,
+                          'self_antipart':False})
+            
+            antit = MG.Particle({'name':'t',
+                          'antiname':'t~',
+                          'spin':2,
+                          'color':3,
+                          'mass':'tmass',
+                          'width':'twidth',
+                          'texname':'t',
+                          'antitexname':'\\overline{t}',
+                          'line':'straight',
+                          'charge':2. / 3.,
+                          'pdg_code':6,
+                          'propagating':True,
+                          'is_part': False,
+                          'self_antipart':False})
+            
+            myinterlist.append(MG.Interaction({\
+                              'id':1,\
+                              'particles': MG.ParticleList(\
+                                                    [mypartlist[1], \
+                                                     antid, \
+                                                     mypartlist[2]]),
+                              'color': [color.ColorString([color.T(2, 0, 1)])],
+                              'lorentz':['L1'],
+                              'couplings':{(0, 0):'GQQ'},
+                              'orders':{'QCD':1}}))    
+            
+            myinterlist.append(MG.Interaction({\
+                              'id':2,\
+                              'particles': MG.ParticleList(\
+                                                    [mypartlist[0], \
+                                                     antiu, \
+                                                     mypartlist[2]]),
+                              'color': [color.ColorString([color.T(2,0,1)])],
+                              'lorentz':['L1'],
+                              'couplings':{(0, 0):'GQQ'},
+                              'orders':{'QCD':1}}))
 
-    
-    dict = {'legs' : fks_common.to_fks_legs(myleglist, mymodel), 'orders':{'QCD':10, 'QED':0},
-                       'model': mymodel,
-                       'id': 1,
-                       'required_s_channels':[],
-                       'forbidden_s_channels':[],
-                       'forbidden_particles':[],
-                       'is_decay_chain': False,
-                       'perturbation_couplings': ['QCD'],
-                       'decay_chains': MG.ProcessList(),
-                       'overall_orders': {}}
+            myinterlist.append(MG.Interaction({\
+                              'id':5,\
+                              'particles': MG.ParticleList(\
+                                                    [mypartlist[4], \
+                                                     antit, \
+                                                     mypartlist[2]]),
+                              'color': [color.ColorString([color.T(2, 0, 1)])],
+                              'lorentz':['L1'],
+                              'couplings':{(0, 0):'GQQ'},
+                              'orders':{'QCD':1}}))
+            
+            myinterlist.append(MG.Interaction({\
+                              'id':3,\
+                              'particles': MG.ParticleList(\
+                                                    [mypartlist[2]] *3 \
+                                                     ),
+                              'color': [color.ColorString([color.f(0, 1, 2)])],
+                              'lorentz':['L1'],
+                              'couplings':{(0, 0):'GQQ'},
+                              'orders':{'QCD':1}}))
+            
+            myinterlist.append(MG.Interaction({\
+                              'id':4,\
+                              'particles': MG.ParticleList([mypartlist[1], \
+                                                     antid, \
+                                                     mypartlist[3]]
+                                                     ),
+                              'color': [color.ColorString([color.T(0,1)])],
+                              'lorentz':['L1'],
+                              'couplings':{(0, 0):'ADD'},
+                              'orders':{'QED':1}}))
 
-    dict2 = {'legs' : fks_common.to_fks_legs(myleglist2, mymodel), 'orders':{'QCD':10, 'QED':0},
-                       'model': mymodel,
-                       'id': 1,
-                       'required_s_channels':[],
-                       'forbidden_s_channels':[],
-                       'forbidden_particles':[],
-                       'is_decay_chain': False,
-                       'perturbation_couplings': ['QCD'],
-                       'decay_chains': MG.ProcessList(),
-                       'overall_orders': {}}
-    
-    myproc = MG.Process(dict)
+            myinterlist.append(MG.Interaction({\
+                              'id':6,\
+                              'particles': MG.ParticleList(\
+                                                    [mypartlist[0], \
+                                                     antiu, \
+                                                     mypartlist[3]]),
+                              'color': [color.ColorString([color.T(0,1)])],
+                              'lorentz':['L1'],
+                              'couplings':{(0, 0):'AUU'},
+                              'orders':{'QED':1}}))
+            
+            mymodel = MG.Model()
+            mymodel.set('particles', mypartlist)
+            mymodel.set('interactions', myinterlist)
 
-    myproc2 = MG.Process(dict2)
-    
-    fks1 = fks.FKSProcessFromReals(myproc)
-    fks2 = fks.FKSProcessFromReals(myproc2)
+            dict = {'legs' : fks_common.to_fks_legs(myleglist, mymodel), 'orders':{'QCD':10, 'QED':0},
+                               'model': mymodel,
+                               'id': 1,
+                               'required_s_channels':[],
+                               'forbidden_s_channels':[],
+                               'forbidden_particles':[],
+                               'is_decay_chain': False,
+                               'perturbation_couplings': ['QCD'],
+                               'decay_chains': MG.ProcessList(),
+                               'overall_orders': {}}
+
+            dict2 = {'legs' : fks_common.to_fks_legs(myleglist2, mymodel), 'orders':{'QCD':10, 'QED':0},
+                               'model': mymodel,
+                               'id': 1,
+                               'required_s_channels':[],
+                               'forbidden_s_channels':[],
+                               'forbidden_particles':[],
+                               'is_decay_chain': False,
+                               'perturbation_couplings': ['QCD'],
+                               'decay_chains': MG.ProcessList(),
+                               'overall_orders': {}}
+            
+            myproc = MG.Process(dict)
+            myproc2 = MG.Process(dict2)
+
+            testFKSRealHelasObjects.mymodel = mymodel
+            testFKSRealHelasObjects.myproc = myproc
+            testFKSRealHelasObjects.fks1 = fks.FKSProcessFromReals(myproc)
+            testFKSRealHelasObjects.fks2 = fks.FKSProcessFromReals(myproc2)
     
 
     def test_fks_helas_multi_process_from_reals(self):

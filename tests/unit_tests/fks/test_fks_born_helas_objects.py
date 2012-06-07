@@ -35,54 +35,61 @@ import models.import_ufo as import_ufo
 
 class testFKSBornHelasObjects(unittest.TestCase):
     """a class to test the module FKSBornHelasObjects"""
-    myleglist1 = MG.LegList()
-    # PROCESS: u g > u g 
-    mylegs = [{'id': 2, 'number': 1, 'state': False},
-              {'id': 21, 'number': 2, 'state': False},
-              {'id': 2, 'number': 3, 'state': True},
-              {'id': 21, 'number': 4, 'state': True}]
 
-    for i in mylegs:
-        myleglist1.append(MG.Leg(i))
-        
+    def setUp(self):
+        if not hasattr(self, 'mymodel') or \
+           not hasattr(self, 'myleglist3') or \
+           not hasattr(self, 'myproc1') or \
+           not hasattr(self, 'myproc3'):
 
-    myleglist3 = MG.LegList()
-    # PROCESS: d d~ > u u~
-    mylegs = [{'id': 1, 'number': 1, 'state': False},
-              {'id': -1, 'number': 2, 'state': False},
-              {'id': 2, 'number': 3, 'state': True},
-              {'id': -2, 'number': 4, 'state': True}]
-    for i in mylegs:
-        myleglist3.append(MG.Leg(i))
+            myleglist1 = MG.LegList()
+            # PROCESS: u g > u g 
+            mylegs = [{'id': 2, 'number': 1, 'state': False},
+                      {'id': 21, 'number': 2, 'state': False},
+                      {'id': 2, 'number': 3, 'state': True},
+                      {'id': 21, 'number': 4, 'state': True}]
+            for i in mylegs:
+                myleglist1.append(MG.Leg(i))
+                
+            myleglist3 = MG.LegList()
+            # PROCESS: d d~ > u u~
+            mylegs = [{'id': 1, 'number': 1, 'state': False},
+                      {'id': -1, 'number': 2, 'state': False},
+                      {'id': 2, 'number': 3, 'state': True},
+                      {'id': -2, 'number': 4, 'state': True}]
+            for i in mylegs:
+                myleglist3.append(MG.Leg(i))
 
-    mymodel = import_ufo.import_model('sm')
+            mymodel = import_ufo.import_model('sm')
 
-    dict1 = {'legs' : myleglist1, 'orders':{'QCD':10, 'QED':0},
-                       'model': mymodel,
-                       'id': 1,
-                       'required_s_channels':[],
-                       'forbidden_s_channels':[],
-                       'forbidden_particles':[],
-                       'is_decay_chain': False,
-                       'perturbation_couplings' : ['QCD'],
-                       'decay_chains': MG.ProcessList(),
-                       'overall_orders': {}}
+            dict1 = {'legs' : myleglist1, 'orders':{'QCD':10, 'QED':0},
+                               'model': mymodel,
+                               'id': 1,
+                               'required_s_channels':[],
+                               'forbidden_s_channels':[],
+                               'forbidden_particles':[],
+                               'is_decay_chain': False,
+                               'orders': {'QED': 0},
+                               'perturbation_couplings' : ['QCD'],
+                               'decay_chains': MG.ProcessList(),
+                               'overall_orders': {}}
 
-    dict3 = {'legs' : myleglist3, 'orders':{'QCD':10, 'QED':0},
-                       'model': mymodel,
-                       'id': 1,
-                       'required_s_channels':[],
-                       'forbidden_s_channels':[],
-                       'forbidden_particles':[],
-                       'is_decay_chain': False,
-                       'perturbation_couplings' : ['QCD'],
-                       'decay_chains': MG.ProcessList(),
-                       'overall_orders': {}}
-    
-    myproc1 = MG.Process(dict1)
-    myproc1.set('orders', {'QED':0})
-    myproc3 = MG.Process(dict3)
-    myproc3.set('orders', {'QED':0})
+            dict3 = {'legs' : myleglist3, 'orders':{'QCD':10, 'QED':0},
+                               'model': mymodel,
+                               'id': 1,
+                               'required_s_channels':[],
+                               'forbidden_s_channels':[],
+                               'forbidden_particles':[],
+                               'is_decay_chain': False,
+                               'orders': {'QED': 0},
+                               'perturbation_couplings' : ['QCD'],
+                               'decay_chains': MG.ProcessList(),
+                               'overall_orders': {}}
+            
+            testFKSBornHelasObjects.mymodel = mymodel
+            testFKSBornHelasObjects.myleglist3 = myleglist3
+            testFKSBornHelasObjects.myproc1 = MG.Process(dict1)
+            testFKSBornHelasObjects.myproc3 = MG.Process(dict3)
 
 
     def test_fks_helas_multi_process_from_born_ppwj(self):

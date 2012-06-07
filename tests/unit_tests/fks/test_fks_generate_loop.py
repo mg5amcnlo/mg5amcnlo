@@ -37,7 +37,9 @@ import string
 class TestGenerateLoopFKSFromBorn(unittest.TestCase):
     """a class to test the generation of the virtual amps for a FKSMultiProcessFromReals"""
 
-    mymodel = import_ufo.import_model('loop_sm')
+    def setUp(self):
+        if not hasattr(self, 'mymodel'):
+            TestGenerateLoopFKSFromBorn.mymodel = import_ufo.import_model('loop_sm')
     
 
     def test_generate_virtuals_single_processB(self):
@@ -111,7 +113,9 @@ class TestGenerateLoopFKSFromBorn(unittest.TestCase):
 class TestGenerateLoopFKSFromReals(unittest.TestCase):
     """a class to test the generation of the virtual amps for a FKSMultiProcessFromReals"""
 
-    mymodel = import_ufo.import_model('loop_sm')
+    def setUp(self):
+        if not hasattr(self, 'mymodel'):
+            TestGenerateLoopFKSFromReals.mymodel = import_ufo.import_model('loop_sm')
     
 
     def test_generate_virtuals_single_process_from_procdefR(self):
