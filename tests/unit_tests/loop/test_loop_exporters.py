@@ -46,6 +46,7 @@ import models.import_ufo as models
 import aloha
 import tests.unit_tests.various.test_aloha as test_aloha
 import aloha.create_aloha as create_aloha
+from tests.unit_tests.various.test_aloha import set_global
 
 from madgraph import MadGraph5Error
 
@@ -138,7 +139,8 @@ class LoopExporterTest(unittest.TestCase):
         for file in files:
             self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
                              ,'SubProcesses',proc_name,file)))
-    
+
+    @test_aloha.set_global()
     def test_aloha_loop_HELAS_subroutines(self):
         """ Test that Aloha correctly processes loop HELAS subroutines. """
         
@@ -159,7 +161,7 @@ class LoopExporterTest(unittest.TestCase):
             self.assertTrue(entry_tuple in aloha_model.keys())
             AbstractRoutine=aloha_model[entry_tuple]
             self.assertEqual(list(tag),AbstractRoutine.tag)
-        
+
     def test_LoopProcessExporterFortranSA_ddx_uux(self):
         """Test the StandAlone output for different processes.
         """
@@ -217,7 +219,7 @@ class LoopExporterTest(unittest.TestCase):
         myloopamplitude.generate_diagrams()
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
-
+    
     def test_LoopProcessExporterFortranSA_ddx_ttx(self):
         """Test the StandAlone output for different processes.
         """
@@ -269,6 +271,7 @@ class LoopExporterTest(unittest.TestCase):
         myloopamplitude.generate_diagrams()
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
+
 
     def notest_LoopProcessExporterFortranSA_gg_gddx(self):
         """Test the StandAlone output for different processes.
@@ -426,7 +429,7 @@ class LoopExporterTest(unittest.TestCase):
         myloopamplitude.generate_diagrams()
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
-        
+
     def test_LoopProcessExporterFortranSA_gg_gg(self):
         """Test the StandAlone output for different processes.
         """

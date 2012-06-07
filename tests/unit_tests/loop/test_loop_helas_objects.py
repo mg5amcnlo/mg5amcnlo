@@ -43,6 +43,7 @@ import madgraph.iolibs.save_load_object as save_load_object
 import models.import_ufo as models
 from madgraph import MadGraph5Error
 
+
 _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
@@ -57,7 +58,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
     
     def setUp(self):
         """load the NLO toy model"""
-        
+
 #        self.myloopmodel = models.import_full_model(os.path.join(\
 #            _input_file_path,'LoopModelTest'))
         self.myloopmodel = models.import_full_model(os.path.join(\

@@ -3534,7 +3534,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self.options[args[0]] = eval(args[1])
             # In the open loops method, in order to have a maximum loop numerator
             # rank of 1, one must work in the Feynman gauge
-            self.do_set('gauge Feynman')
+            #self.do_set('gauge Feynman')
         
         elif args[0] == 'timeout':
                 self.options[args[0]] = int(args[1]) 

@@ -1256,14 +1256,17 @@ class Model(PhysicsObject):
         # 4) Fix the Yukawa mass to the value of the complex mass/ real mass
         # 5) Loop through all expression and modify those accordingly
         #    Including all parameter expression as complex
-        
+
         to_change = {}
         mass_widths = [] # parameter which should stay real
         for particle in self.get('particles'):
+            m = particle.get('width')
+            if m in mass_widths:
+                continue
             mass_widths.append(particle.get('width'))
             mass_widths.append(particle.get('mass'))
             if particle.get('width') == 'ZERO':
-                #everything is fine when the width is zero
+                #everything is fine since the width is zero
                 continue
             width = self.get_parameter(particle.get('width'))
             if not isinstance(width, ParamCardVariable):
@@ -1279,7 +1282,7 @@ class Model(PhysicsObject):
                 depend = tuple(depend)
                 if depend == ('external',):
                     depend = ()
-                    
+                
                 # Create the new parameter
                 if isinstance(mass, ParamCardVariable):
                     New_param = ModelVariable('CMASS_'+mass.name,

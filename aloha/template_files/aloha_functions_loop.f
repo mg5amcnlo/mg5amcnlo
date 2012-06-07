@@ -75,10 +75,10 @@ c      fi(5) = dcmplx(p(0),p(3))*nsf
 c      fi(6) = dcmplx(p(1),p(2))*nsf
 
 c     Convention for loop computations
-      fi(5) = dcmplx(p(0),0.D0)*nsf
-      fi(6) = dcmplx(p(1),0.D0)*nsf
-      fi(7) = dcmplx(p(2),0.D0)*nsf
-      fi(8) = dcmplx(p(3),0.D0)*nsf
+      fi(1) = dcmplx(p(0),0.D0)*(-nsf)
+      fi(2) = dcmplx(p(1),0.D0)*(-nsf)
+      fi(3) = dcmplx(p(2),0.D0)*(-nsf)
+      fi(4) = dcmplx(p(3),0.D0)*(-nsf)
 
       nh = nhel*nsf
 
@@ -93,10 +93,10 @@ c     Convention for loop computations
             ip = (1+nh)/2
             im = (1-nh)/2
 
-            fi(1) = ip     * sqm(ip)
-            fi(2) = im*nsf * sqm(ip)
-            fi(3) = ip*nsf * sqm(im)
-            fi(4) = im     * sqm(im)
+            fi(5) = ip     * sqm(ip)
+            fi(6) = im*nsf * sqm(ip)
+            fi(7) = ip*nsf * sqm(im)
+            fi(8) = im     * sqm(im)
 
          else
 
@@ -116,10 +116,10 @@ c     Convention for loop computations
                chi(2) = dcmplx( nh*p(1) , p(2) )/dsqrt(rTwo*pp*pp3)
             endif
 
-            fi(1) = sfomeg(1)*chi(im)
-            fi(2) = sfomeg(1)*chi(ip)
-            fi(3) = sfomeg(2)*chi(im)
-            fi(4) = sfomeg(2)*chi(ip)
+            fi(5) = sfomeg(1)*chi(im)
+            fi(6) = sfomeg(1)*chi(ip)
+            fi(7) = sfomeg(2)*chi(im)
+            fi(8) = sfomeg(2)*chi(ip)
 
          endif
 
@@ -137,15 +137,15 @@ c     Convention for loop computations
             chi(2) = dcmplx( nh*p(1), p(2) )/sqp0p3
          endif
          if ( nh.eq.1 ) then
-            fi(1) = dcmplx( rZero )
-            fi(2) = dcmplx( rZero )
-            fi(3) = chi(1)
-            fi(4) = chi(2)
+            fi(5) = dcmplx( rZero )
+            fi(6) = dcmplx( rZero )
+            fi(7) = chi(1)
+            fi(8) = chi(2)
          else
-            fi(1) = chi(2)
-            fi(2) = chi(1)
-            fi(3) = dcmplx( rZero )
-            fi(4) = dcmplx( rZero )
+            fi(5) = chi(2)
+            fi(6) = chi(1)
+            fi(7) = dcmplx( rZero )
+            fi(8) = dcmplx( rZero )
          endif
       endif
 c
@@ -175,10 +175,10 @@ c
       real*16 rZero, rHalf, rTwo
       parameter( rZero = 0.0e0_16, rHalf = 0.5e0_16, rTwo = 2.0e0_16 )
 c     Convention for loop computations
-      fi(5) = cmplx(p(0),rZero,KIND=16)*nsf
-      fi(6) = cmplx(p(1),rZero,KIND=16)*nsf
-      fi(7) = cmplx(p(2),rZero,KIND=16)*nsf
-      fi(8) = cmplx(p(3),rZero,KIND=16)*nsf
+      fi(1) = cmplx(p(0),rZero,KIND=16)*(-nsf)
+      fi(2) = cmplx(p(1),rZero,KIND=16)*(-nsf)
+      fi(3) = cmplx(p(2),rZero,KIND=16)*(-nsf)
+      fi(4) = cmplx(p(3),rZero,KIND=16)*(-nsf)
 
       nh = nhel*nsf
 
@@ -193,10 +193,10 @@ c     Convention for loop computations
             ip = (1+nh)/2
             im = (1-nh)/2
 
-            fi(1) = ip     * sqm(ip)
-            fi(2) = im*nsf * sqm(ip)
-            fi(3) = ip*nsf * sqm(im)
-            fi(4) = im     * sqm(im)
+            fi(5) = ip     * sqm(ip)
+            fi(6) = im*nsf * sqm(ip)
+            fi(7) = ip*nsf * sqm(im)
+            fi(8) = im     * sqm(im)
 
          else
 
@@ -216,10 +216,10 @@ c     Convention for loop computations
                chi(2) = cmplx( nh*p(1) , p(2),KIND=16)/sqrt(rTwo*pp*pp3)
             endif
 
-            fi(1) = sfomeg(1)*chi(im)
-            fi(2) = sfomeg(1)*chi(ip)
-            fi(3) = sfomeg(2)*chi(im)
-            fi(4) = sfomeg(2)*chi(ip)
+            fi(5) = sfomeg(1)*chi(im)
+            fi(6) = sfomeg(1)*chi(ip)
+            fi(7) = sfomeg(2)*chi(im)
+            fi(8) = sfomeg(2)*chi(ip)
 
          endif
 
@@ -237,15 +237,15 @@ c     Convention for loop computations
             chi(2) = cmplx( nh*p(1), p(2) ,KIND=16)/sqp0p3
          endif
          if ( nh.eq.1 ) then
-            fi(1) = cmplx( rZero ,KIND=16)
-            fi(2) = cmplx( rZero ,KIND=16)
-            fi(3) = chi(1)
-            fi(4) = chi(2)
+            fi(5) = cmplx( rZero ,KIND=16)
+            fi(6) = cmplx( rZero ,KIND=16)
+            fi(7) = chi(1)
+            fi(8) = chi(2)
          else
-            fi(1) = chi(2)
-            fi(2) = chi(1)
-            fi(3) = cmplx( rZero ,KIND=16)
-            fi(4) = cmplx( rZero ,KIND=16)
+            fi(5) = chi(2)
+            fi(6) = chi(1)
+            fi(7) = cmplx( rZero ,KIND=16)
+            fi(8) = cmplx( rZero ,KIND=16)
          endif
       endif
 c
@@ -317,10 +317,10 @@ c      fo(5) = dcmplx(p(0),p(3))*nsf
 c      fo(6) = dcmplx(p(1),p(2))*nsf
 
 c     Convention for loop computations
-      fo(5) = dcmplx(p(0),0.D0)*nsf
-      fo(6) = dcmplx(p(1),0.D0)*nsf
-      fo(7) = dcmplx(p(2),0.D0)*nsf
-      fo(8) = dcmplx(p(3),0.D0)*nsf
+      fo(1) = dcmplx(p(0),0.D0)*(nsf)
+      fo(2) = dcmplx(p(1),0.D0)*(nsf)
+      fo(3) = dcmplx(p(2),0.D0)*(nsf)
+      fo(4) = dcmplx(p(3),0.D0)*(nsf)
 
 
       nh = nhel*nsf
@@ -336,10 +336,10 @@ c     Convention for loop computations
             ip = -((1+nh)/2)
             im =  (1-nh)/2
 
-            fo(1) = im     * sqm(im)
-            fo(2) = ip*nsf * sqm(im)
-            fo(3) = im*nsf * sqm(-ip)
-            fo(4) = ip     * sqm(-ip)
+            fo(5) = im     * sqm(im)
+            fo(6) = ip*nsf * sqm(im)
+            fo(7) = im*nsf * sqm(-ip)
+            fo(8) = ip     * sqm(-ip)
 
          else
 
@@ -360,10 +360,10 @@ c     Convention for loop computations
                chi(2) = dcmplx( nh*p(1) , -p(2) )/dsqrt(rTwo*pp*pp3)
             endif
 
-            fo(1) = sfomeg(2)*chi(im)
-            fo(2) = sfomeg(2)*chi(ip)
-            fo(3) = sfomeg(1)*chi(im)
-            fo(4) = sfomeg(1)*chi(ip)
+            fo(5) = sfomeg(2)*chi(im)
+            fo(6) = sfomeg(2)*chi(ip)
+            fo(7) = sfomeg(1)*chi(im)
+            fo(8) = sfomeg(1)*chi(ip)
 
          endif
 
@@ -381,15 +381,15 @@ c     Convention for loop computations
             chi(2) = dcmplx( nh*p(1), -p(2) )/sqp0p3
          endif
          if ( nh.eq.1 ) then
-            fo(1) = chi(1)
-            fo(2) = chi(2)
-            fo(3) = dcmplx( rZero )
-            fo(4) = dcmplx( rZero )
+            fo(5) = chi(1)
+            fo(6) = chi(2)
+            fo(7) = dcmplx( rZero )
+            fo(8) = dcmplx( rZero )
          else
-            fo(1) = dcmplx( rZero )
-            fo(2) = dcmplx( rZero )
-            fo(3) = chi(2)
-            fo(4) = chi(1)
+            fo(5) = dcmplx( rZero )
+            fo(6) = dcmplx( rZero )
+            fo(7) = chi(2)
+            fo(8) = chi(1)
          endif
 
       endif
@@ -421,10 +421,10 @@ c
       parameter( rZero = 0.0e0_16, rHalf = 0.5e0_16, rTwo = 2.0e0_16 )
 
 c     Convention for loop computations
-      fo(5) = cmplx(p(0),rZero,KIND=16)*nsf
-      fo(6) = cmplx(p(1),rZero,KIND=16)*nsf
-      fo(7) = cmplx(p(2),rZero,KIND=16)*nsf
-      fo(8) = cmplx(p(3),rZero,KIND=16)*nsf
+      fo(1) = cmplx(p(0),rZero,KIND=16)*nsf
+      fo(2) = cmplx(p(1),rZero,KIND=16)*nsf
+      fo(3) = cmplx(p(2),rZero,KIND=16)*nsf
+      fo(4) = cmplx(p(3),rZero,KIND=16)*nsf
 
 
       nh = nhel*nsf
@@ -440,10 +440,10 @@ c     Convention for loop computations
             ip = -((1+nh)/2)
             im =  (1-nh)/2
 
-            fo(1) = im     * sqm(im)
-            fo(2) = ip*nsf * sqm(im)
-            fo(3) = im*nsf * sqm(-ip)
-            fo(4) = ip     * sqm(-ip)
+            fo(5) = im     * sqm(im)
+            fo(6) = ip*nsf * sqm(im)
+            fo(7) = im*nsf * sqm(-ip)
+            fo(8) = ip     * sqm(-ip)
 
          else
 
@@ -465,10 +465,10 @@ c     Convention for loop computations
      & sqrt(rTwo*pp*pp3)
             endif
 
-            fo(1) = sfomeg(2)*chi(im)
-            fo(2) = sfomeg(2)*chi(ip)
-            fo(3) = sfomeg(1)*chi(im)
-            fo(4) = sfomeg(1)*chi(ip)
+            fo(5) = sfomeg(2)*chi(im)
+            fo(6) = sfomeg(2)*chi(ip)
+            fo(7) = sfomeg(1)*chi(im)
+            fo(8) = sfomeg(1)*chi(ip)
 
          endif
 
@@ -486,15 +486,15 @@ c     Convention for loop computations
             chi(2) = cmplx( nh*p(1), -p(2) , KIND=16)/sqp0p3
          endif
          if ( nh.eq.1 ) then
-            fo(1) = chi(1)
-            fo(2) = chi(2)
-            fo(3) = cmplx( rZero , KIND=16)
-            fo(4) = cmplx( rZero , KIND=16)
+            fo(5) = chi(1)
+            fo(6) = chi(2)
+            fo(7) = cmplx( rZero , KIND=16)
+            fo(8) = cmplx( rZero , KIND=16)
          else
-            fo(1) = cmplx( rZero , KIND=16)
-            fo(2) = cmplx( rZero , KIND=16)
-            fo(3) = chi(2)
-            fo(4) = chi(1)
+            fo(5) = cmplx( rZero , KIND=16)
+            fo(6) = cmplx( rZero , KIND=16)
+            fo(7) = chi(2)
+            fo(8) = chi(1)
          endif
 
       endif
@@ -532,17 +532,17 @@ c
       parameter( rOne = 1.0d0, rTwo = 2.0d0 )
 
 
-      tc(1)=NHEL
+      tc(5)=NHEL
 
 c     Convention for trees
 c      tc(17) = dcmplx(p(0),p(3))*nst
 c      tc(18) = dcmplx(p(1),p(2))*nst
 
 c     Convention for loop computations
-      tc(17) = dcmplx(p(0),0.D0)*nst
-      tc(18) = dcmplx(p(1),0.D0)*nst
-      tc(19) = dcmplx(p(2),0.D0)*nst
-      tc(20) = dcmplx(p(3),0.D0)*nst
+      tc(1) = dcmplx(p(0),0.D0)*nst
+      tc(2) = dcmplx(p(1),0.D0)*nst
+      tc(3) = dcmplx(p(2),0.D0)*nst
+      tc(4) = dcmplx(p(3),0.D0)*nst
 
       return
       end
@@ -577,17 +577,17 @@ c
       parameter( rOne = 1.0e0_16, rTwo = 2.0e0_16 )
 
 
-      tc(1)=NHEL
+      tc(5)=NHEL
 
 c     Convention for trees
 c      tc(17) = dcmplx(p(0),p(3))*nst
 c      tc(18) = dcmplx(p(1),p(2))*nst
 
 c     Convention for loop computations
-      tc(17) = cmplx(p(0),0.0e0_16,KIND=16)*nst
-      tc(18) = cmplx(p(1),0.0e0_16,KIND=16)*nst
-      tc(19) = cmplx(p(2),0.0e0_16,KIND=16)*nst
-      tc(20) = cmplx(p(3),0.0e0_16,KIND=16)*nst
+      tc(1) = cmplx(p(0),0.0e0_16,KIND=16)*nst
+      tc(2) = cmplx(p(1),0.0e0_16,KIND=16)*nst
+      tc(3) = cmplx(p(2),0.0e0_16,KIND=16)*nst
+      tc(4) = cmplx(p(3),0.0e0_16,KIND=16)*nst
 
       return
       end
@@ -643,17 +643,17 @@ c         write(stdo,*) '             : nss = ',nss
 c      endif
 c#endif
 
-      sc(1) = dcmplx( rOne )
+      sc(5) = dcmplx( rOne )
 
 c     Convention for trees
 c      sc(2) = dcmplx(p(0),p(3))*nss
 c      sc(3) = dcmplx(p(1),p(2))*nss
 
 c     Convention for loop computations
-      sc(2) = dcmplx(p(0),0.D0)*nss
-      sc(3) = dcmplx(p(1),0.D0)*nss
-      sc(4) = dcmplx(p(2),0.D0)*nss
-      sc(5) = dcmplx(p(3),0.D0)*nss
+      sc(1) = dcmplx(p(0),0.D0)*nss
+      sc(2) = dcmplx(p(1),0.D0)*nss
+      sc(3) = dcmplx(p(2),0.D0)*nss
+      sc(4) = dcmplx(p(3),0.D0)*nss
 c
       return
       end
@@ -678,17 +678,17 @@ c
       real*16 rOne
       parameter( rOne = 1.0e0_16 )
 
-      sc(1) = cmplx( rOne , KIND=16)
+      sc(5) = cmplx( rOne , KIND=16)
 
 c     Convention for trees
 c      sc(2) = dcmplx(p(0),p(3))*nss
 c      sc(3) = dcmplx(p(1),p(2))*nss
 
 c     Convention for loop computations
-      sc(2) = cmplx(p(0),0.0e0_16, KIND=16)*nss
-      sc(3) = cmplx(p(1),0.0e0_16, KIND=16)*nss
-      sc(4) = cmplx(p(2),0.0e0_16, KIND=16)*nss
-      sc(5) = cmplx(p(3),0.0e0_16, KIND=16)*nss
+      sc(1) = cmplx(p(0),0.0e0_16, KIND=16)*nss
+      sc(2) = cmplx(p(1),0.0e0_16, KIND=16)*nss
+      sc(3) = cmplx(p(2),0.0e0_16, KIND=16)*nss
+      sc(4) = cmplx(p(3),0.0e0_16, KIND=16)*nss
 c
       return
       end
@@ -712,7 +712,7 @@ c
       integer nhel, nst
       double complex tc(20)
 
-      double complex ft(6,4), ep(4), em(4), e0(4)
+      double complex ft(8,4), ep(4), em(4), e0(4)
       double precision pt, pt2, pp, pzpt, emp, sqh, sqs
       integer i, j
 
@@ -847,26 +847,27 @@ c construct eps0
         end if
       end if
 
-      tc(1) = ft(1,1)
-      tc(2) = ft(1,2)
-      tc(3) = ft(1,3)
-      tc(4) = ft(1,4)
-      tc(5) = ft(2,1)
-      tc(6) = ft(2,2)
-      tc(7) = ft(2,3)
-      tc(8) = ft(2,4)
-      tc(9) = ft(3,1)
-      tc(10) = ft(3,2)
-      tc(11) = ft(3,3)
-      tc(12) = ft(3,4)
-      tc(13) = ft(4,1)
-      tc(14) = ft(4,2)
-      tc(15) = ft(4,3)
-      tc(16) = ft(4,4)
-      tc(17) = ft(5,1)
-      tc(18) = ft(6,1)
-      tc(19) = ft(5,1)
-      tc(20) = ft(6,1)
+      tc(5) = ft(1,1)
+      tc(6) = ft(1,2)
+      tc(7) = ft(1,3)
+      tc(8) = ft(1,4)
+      tc(9) = ft(2,1)
+      tc(10) = ft(2,2)
+      tc(11) = ft(2,3)
+      tc(12) = ft(2,4)
+      tc(13) = ft(3,1)
+      tc(14) = ft(3,2)
+      tc(15) = ft(3,3)
+      tc(16) = ft(3,4)
+      tc(17) = ft(4,1)
+      tc(18) = ft(4,2)
+      tc(19) = ft(4,3)
+      tc(20) = ft(4,4)
+
+      tc(1) = ft(5,1)
+      tc(2) = ft(6,1)
+      tc(3) = ft(7,1)
+      tc(4) = ft(8,1)
 
       return
       end
@@ -891,7 +892,7 @@ c
       integer nhel, nst
       complex*32 tc(20)
 
-      complex*32 ft(6,4), ep(4), em(4), e0(4)
+      complex*32 ft(8,4), ep(4), em(4), e0(4)
       real*16 pt, pt2, pp, pzpt, emp, sqh, sqs
       integer i, j
 
@@ -1026,26 +1027,27 @@ c construct eps0
         end if
       end if
 
-      tc(1) = ft(1,1)
-      tc(2) = ft(1,2)
-      tc(3) = ft(1,3)
-      tc(4) = ft(1,4)
-      tc(5) = ft(2,1)
-      tc(6) = ft(2,2)
-      tc(7) = ft(2,3)
-      tc(8) = ft(2,4)
-      tc(9) = ft(3,1)
-      tc(10) = ft(3,2)
-      tc(11) = ft(3,3)
-      tc(12) = ft(3,4)
-      tc(13) = ft(4,1)
-      tc(14) = ft(4,2)
-      tc(15) = ft(4,3)
-      tc(16) = ft(4,4)
-      tc(17) = ft(5,1)
-      tc(18) = ft(6,1)
-      tc(19) = ft(5,1)
-      tc(20) = ft(6,1)
+      tc(5) = ft(1,1)
+      tc(6) = ft(1,2)
+      tc(7) = ft(1,3)
+      tc(8) = ft(1,4)
+      tc(9) = ft(2,1)
+      tc(10) = ft(2,2)
+      tc(11) = ft(2,3)
+      tc(12) = ft(2,4)
+      tc(13) = ft(3,1)
+      tc(14) = ft(3,2)
+      tc(15) = ft(3,3)
+      tc(16) = ft(3,4)
+      tc(17) = ft(4,1)
+      tc(18) = ft(4,2)
+      tc(19) = ft(4,3)
+      tc(20) = ft(4,4)
+
+      tc(1) = ft(5,1)
+      tc(2) = ft(6,1)
+      tc(3) = ft(7,1)
+      tc(4) = ft(8,1)
 
       return
       end
@@ -1129,10 +1131,10 @@ c      vc(5) = dcmplx(p(0),p(3))*nsv
 c      vc(6) = dcmplx(p(1),p(2))*nsv
 
 c     Convention for loop computations
-      vc(5) = dcmplx(p(0),0.D0)*nsv
-      vc(6) = dcmplx(p(1),0.D0)*nsv
-      vc(7) = dcmplx(p(2),0.D0)*nsv
-      vc(8) = dcmplx(p(3),0.D0)*nsv
+      vc(1) = dcmplx(p(0),0.D0)*nsv
+      vc(2) = dcmplx(p(1),0.D0)*nsv
+      vc(3) = dcmplx(p(2),0.D0)*nsv
+      vc(4) = dcmplx(p(3),0.D0)*nsv
 
 c#ifdef HELAS_CHECK
 c nhel=4 option for scalar polarization
@@ -1158,25 +1160,25 @@ c#endif
 
          if ( pp.eq.rZero ) then
 
-            vc(1) = dcmplx( rZero )
-            vc(2) = dcmplx(-hel*sqh )
-            vc(3) = dcmplx( rZero , nsvahl*sqh )
-            vc(4) = dcmplx( hel0 )
+            vc(5) = dcmplx( rZero )
+            vc(6) = dcmplx(-hel*sqh )
+            vc(7) = dcmplx( rZero , nsvahl*sqh )
+            vc(8) = dcmplx( hel0 )
 
          else
 
             emp = p(0)/(vmass*pp)
-            vc(1) = dcmplx( hel0*pp/vmass )
-            vc(4) = dcmplx( hel0*p(3)*emp+hel*pt/pp*sqh )
+            vc(5) = dcmplx( hel0*pp/vmass )
+            vc(8) = dcmplx( hel0*p(3)*emp+hel*pt/pp*sqh )
             if ( pt.ne.rZero ) then
                pzpt = p(3)/(pp*pt)*sqh*hel
-               vc(2) = dcmplx( hel0*p(1)*emp-p(1)*pzpt ,
+               vc(6) = dcmplx( hel0*p(1)*emp-p(1)*pzpt ,
      &                         -nsvahl*p(2)/pt*sqh       )
-               vc(3) = dcmplx( hel0*p(2)*emp-p(2)*pzpt ,
+               vc(7) = dcmplx( hel0*p(2)*emp-p(2)*pzpt ,
      &                          nsvahl*p(1)/pt*sqh       )
             else
-               vc(2) = dcmplx( -hel*sqh )
-               vc(3) = dcmplx( rZero , nsvahl*sign(sqh,p(3)) )
+               vc(6) = dcmplx( -hel*sqh )
+               vc(7) = dcmplx( rZero , nsvahl*sign(sqh,p(3)) )
             endif
 
          endif
@@ -1185,15 +1187,15 @@ c#endif
 
          pp = p(0)
          pt = sqrt(p(1)**2+p(2)**2)
-         vc(1) = dcmplx( rZero )
-         vc(4) = dcmplx( hel*pt/pp*sqh )
+         vc(5) = dcmplx( rZero )
+         vc(8) = dcmplx( hel*pt/pp*sqh )
          if ( pt.ne.rZero ) then
             pzpt = p(3)/(pp*pt)*sqh*hel
-            vc(2) = dcmplx( -p(1)*pzpt , -nsv*p(2)/pt*sqh )
-            vc(3) = dcmplx( -p(2)*pzpt ,  nsv*p(1)/pt*sqh )
-         else
-            vc(2) = dcmplx( -hel*sqh )
-            vc(3) = dcmplx( rZero , nsv*sign(sqh,p(3)) )
+            vc(6) = dcmplx( -p(1)*pzpt , -nsv*p(2)/pt*sqh )
+            vc(7) = dcmplx( -p(2)*pzpt ,  nsv*p(1)/pt*sqh )
+        else
+            vc(6) = dcmplx( -hel*sqh )
+            vc(7) = dcmplx( rZero , nsv*sign(sqh,p(3)) )
          endif
 
       endif
@@ -1232,10 +1234,10 @@ c
       pt = min(pp,sqrt(pt2))
 
 c     Convention for loop computations
-      vc(5) = cmplx(p(0),0.e0_16, KIND=16)*nsv
-      vc(6) = cmplx(p(1),0.e0_16, KIND=16)*nsv
-      vc(7) = cmplx(p(2),0.e0_16, KIND=16)*nsv
-      vc(8) = cmplx(p(3),0.e0_16, KIND=16)*nsv
+      vc(1) = cmplx(p(0),0.e0_16, KIND=16)*nsv
+      vc(2) = cmplx(p(1),0.e0_16, KIND=16)*nsv
+      vc(3) = cmplx(p(2),0.e0_16, KIND=16)*nsv
+      vc(4) = cmplx(p(3),0.e0_16, KIND=16)*nsv
 
       if ( vmass.ne.rZero ) then
 
@@ -1243,25 +1245,25 @@ c     Convention for loop computations
 
          if ( pp.eq.rZero ) then
 
-            vc(1) = cmplx( rZero , KIND=16)
-            vc(2) = cmplx(-hel*sqh , KIND=16)
-            vc(3) = cmplx( rZero , nsvahl*sqh , KIND=16)
-            vc(4) = cmplx( hel0 , KIND=16)
+            vc(5) = cmplx( rZero , KIND=16)
+            vc(6) = cmplx(-hel*sqh , KIND=16)
+            vc(7) = cmplx( rZero , nsvahl*sqh , KIND=16)
+            vc(8) = cmplx( hel0 , KIND=16)
 
          else
 
             emp = p(0)/(vmass*pp)
-            vc(1) = cmplx( hel0*pp/vmass , KIND=16)
-            vc(4) = cmplx( hel0*p(3)*emp+hel*pt/pp*sqh , KIND=16 )
+            vc(5) = cmplx( hel0*pp/vmass , KIND=16)
+            vc(8) = cmplx( hel0*p(3)*emp+hel*pt/pp*sqh , KIND=16 )
             if ( pt.ne.rZero ) then
                pzpt = p(3)/(pp*pt)*sqh*hel
-               vc(2) = cmplx( hel0*p(1)*emp-p(1)*pzpt ,
+               vc(6) = cmplx( hel0*p(1)*emp-p(1)*pzpt ,
      &                         -nsvahl*p(2)/pt*sqh       , KIND=16)
-               vc(3) = cmplx( hel0*p(2)*emp-p(2)*pzpt ,
+               vc(7) = cmplx( hel0*p(2)*emp-p(2)*pzpt ,
      &                          nsvahl*p(1)/pt*sqh       , KIND=16)
             else
-               vc(2) = cmplx( -hel*sqh , KIND=16)
-               vc(3) = cmplx( rZero , nsvahl*sign(sqh,p(3)) , KIND=16)
+               vc(6) = cmplx( -hel*sqh , KIND=16)
+               vc(7) = cmplx( rZero , nsvahl*sign(sqh,p(3)) , KIND=16)
             endif
 
          endif
@@ -1270,15 +1272,15 @@ c     Convention for loop computations
 
          pp = p(0)
          pt = sqrt(p(1)**2+p(2)**2)
-         vc(1) = cmplx( rZero , KIND=16)
-         vc(4) = cmplx( hel*pt/pp*sqh , KIND=16)
+         vc(5) = cmplx( rZero , KIND=16)
+         vc(8) = cmplx( hel*pt/pp*sqh , KIND=16)
          if ( pt.ne.rZero ) then
             pzpt = p(3)/(pp*pt)*sqh*hel
-            vc(2) = cmplx( -p(1)*pzpt , -nsv*p(2)/pt*sqh , KIND=16)
-            vc(3) = cmplx( -p(2)*pzpt ,  nsv*p(1)/pt*sqh , KIND=16)
+            vc(6) = cmplx( -p(1)*pzpt , -nsv*p(2)/pt*sqh , KIND=16)
+            vc(7) = cmplx( -p(2)*pzpt ,  nsv*p(1)/pt*sqh , KIND=16)
          else
-            vc(2) = cmplx( -hel*sqh , KIND=16)
-            vc(3) = cmplx( rZero , nsv*sign(sqh,p(3)), KIND=16 )
+            vc(6) = cmplx( -hel*sqh , KIND=16)
+            vc(7) = cmplx( rZero , nsv*sign(sqh,p(3)), KIND=16 )
          endif
 
       endif
@@ -1620,16 +1622,16 @@ C===============================================================================
       INTEGER CFIG
       COMPLEX*16 W(20)
       
-      W(1)=(0.d0,0.d0)
-      W(2)=(0.d0,0.d0)
-      W(3)=(0.d0,0.d0)
-      W(4)=(0.d0,0.d0)
-      W(CFIG)=(1.d0,0.d0)
+      W(5)=(0.d0,0.d0)
+      W(6)=(0.d0,0.d0)
+      W(7)=(0.d0,0.d0)
+      W(8)=(0.d0,0.d0)
+      W(CFIG+4)=(1.d0,0.d0)
       
-      W(5)=Q(0)
-      W(6)=Q(1)
-      W(7)=Q(2)
-      W(8)=Q(3)
+      W(1)=Q(0)
+      W(2)=Q(1)
+      W(3)=Q(2)
+      W(4)=Q(3)
 
       END
 
@@ -1639,12 +1641,12 @@ C===============================================================================
       INTEGER CFIG
       COMPLEX*16 W(20)
 
-      W(1)=(1.D0,0.D0)
+      W(5)=(1.D0,0.D0)
 
-      W(2)=Q(0)
-      W(3)=Q(1)
-      W(4)=Q(2)
-      W(5)=Q(3)
+      W(1)=Q(0)
+      W(2)=Q(1)
+      W(3)=Q(2)
+      W(4)=Q(3)
 
       END
 
@@ -1675,16 +1677,16 @@ C===============================================================================
       PARAMETER (IONE=(1.0e0_16,0.0e0_16))
       PARAMETER (IZERO=(0.0e0_16,0.0e0_16))      
       
-      W(1)=IZERO
-      W(2)=IZERO
-      W(3)=IZERO
-      W(4)=IZERO
-      W(CFIG)=IONE
+      W(5)=IZERO
+      W(6)=IZERO
+      W(7)=IZERO
+      W(8)=IZERO
+      W(CFIG+4)=IONE
 
-      W(5)=Q(0)
-      W(6)=Q(1)
-      W(7)=Q(2)
-      W(8)=Q(3)
+      W(1)=Q(0)
+      W(2)=Q(1)
+      W(3)=Q(2)
+      W(4)=Q(3)
 
       END
 
@@ -1696,12 +1698,12 @@ C===============================================================================
       COMPLEX*32 IONE
       PARAMETER (IONE=(1.0e0_16,0.0e0_16))
 
-      W(1)=IONE
+      W(5)=IONE
 
-      W(2)=Q(0)
-      W(3)=Q(1)
-      W(4)=Q(2)
-      W(5)=Q(3)
+      W(1)=Q(0)
+      W(2)=Q(1)
+      W(3)=Q(2)
+      W(4)=Q(3)
 
       END
 

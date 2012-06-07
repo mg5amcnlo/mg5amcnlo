@@ -174,7 +174,9 @@ class TestRestrictModel(unittest.TestCase):
         content =  [[p.get('name') for p in v.get('particles')] \
                for v in self.model.get('interactions') \
                if any([c in target for c in v['couplings'].values()])]
-        
+        [a.sort() for a in check_content+content]
+        check_content.sort()
+        content.sort()
         assert check_content == content, 'test not up-to-date'      
 
         vertex_id = [v.get('id') \
