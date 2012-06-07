@@ -51,14 +51,16 @@ _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
 class TestLoopDrawer(unittest.TestCase):
     """ Test class for all functions related to the LoopDiagramDrawer """
 
-    cmd = MasterCmd()
-    cmd.do_import('model loop_SM_QCD' )
-    model = cmd._curr_model
-    try:
-        store_diagram = pickle.load(open(os.path.join(_file_path, \
-                                    '../../input_files/test_draw_nlo.obj'), 'r'))
-    except:
-        pass
+    def setUp(self):
+        if not hasattr(self, 'model'):
+            cmd = MasterCmd()
+            cmd.do_import('model loop_SM_QCD' )
+            TestLoopDrawer.model = cmd._curr_model
+            try:
+                TestLoopDrawer.store_diagram = pickle.load(open(os.path.join(_file_path, \
+                                        '../../input_files/test_draw_nlo.obj'), 'r'))
+            except:
+                pass
 
     class FakeAMP(dict):
         
