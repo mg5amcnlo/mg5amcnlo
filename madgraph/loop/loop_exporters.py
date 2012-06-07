@@ -678,7 +678,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                 replace_dict['cplset']=cplset
             
             replace_dict['nloopline']=callkey[0]
-            wfsargs="".join([("W%d, MP%d, "%(i,i)) for i in range(1,callkey[1]+1)])
+            wfsargs="".join(["W%d, "%i for i in range(1,callkey[1]+1)])
             replace_dict['wfsargs']=wfsargs
             # We don't pass the multiple precision mass in the optimized_output
             if not optimized_output:
@@ -688,8 +688,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             replace_dict['margs']=margs                
             wfsargsdecl="".join([("W%d, "%i) for i in range(1,callkey[1]+1)])[:-2]
             replace_dict['wfsargsdecl']=wfsargsdecl
-            momposdecl="".join([("MP%d, "%i) for i in range(1,callkey[1]+1)])[:-2]
-            replace_dict['momposdecl']=momposdecl
             margsdecl="".join(["M%d, "%i for i in range(1,callkey[0]+1)])[:-2]
             replace_dict['margsdecl']=margsdecl
             mp_margsdecl="".join(["MP_M%d, "%i for i in range(1,callkey[0]+1)])[:-2]
@@ -697,9 +695,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             weset="\n".join([("WE("+str(i)+")=W"+str(i)) for \
                              i in range(1,callkey[1]+1)])
             replace_dict['weset']=weset
-            momposset="\n".join([("MOMPOS(%d)=MP%d"%(i,i)) for \
-                             i in range(1,callkey[1]+1)])
-            replace_dict['momposset']=momposset
             weset="\n".join([("WE(%d)=W%d"%(i,i)) for i in range(1,callkey[1]+1)])
             replace_dict['weset']=weset
             msetlines=["M2L(1)=M%d**2"%(callkey[0]),]

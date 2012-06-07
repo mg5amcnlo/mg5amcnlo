@@ -422,7 +422,6 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
             output['loopNumber']=self.get('amplitudes')[0].get('number')
         for i , wf in enumerate(self.get('mothers')):
             output["MotherID%d"%(i+1)]=wf.get('number')
-            output["MotherStatus%d"%(i+1)]=wf.get_momentum_place()
         for i , mass in enumerate(self.get_masses()):
             output["LoopMass%d"%(i+1)]=mass
         for i , coupling in enumerate(self.get('coupling')):

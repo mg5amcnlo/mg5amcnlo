@@ -14,7 +14,6 @@ C
 C ARGUMENTS 
 C
       INTEGER %(wfsargsdecl)s
-	  INTEGER %(momposdecl)s
       %(mass_dp_format)s %(margsdecl)s
       %(pairingdecl)s
       %(complex_dp_format)s RES(3)
@@ -27,7 +26,6 @@ C
       %(real_dp_format)s PL(0:3,NLOOPLINE)
       %(mass_dp_format)s M2L(NLOOPLINE)
       INTEGER PAIRING(NLOOPLINE),WE(%(nwfsargs)d)
-	  INTEGER MOMPOS(%(nwfsargs)d)
       INTEGER I, J, K, TEMP
 C
 C GLOBAL VARIABLES
@@ -50,7 +48,6 @@ C BEGIN CODE
 C ----------
 
 	  IF (CHECKPHASE.OR.GOODAMP(LOOPNUM)) THEN
-	  %(momposset)s
 	  %(weset)s
       %(mset)s
       %(pairingset)s
@@ -61,7 +58,7 @@ C ----------
         DO J=1,NLOOPLINE
 		  PL(I,J)=0.D0
           DO K=TEMP,(TEMP+PAIRING(J)-1)
-            PL(I,J)=PL(I,J)+SIGN(1,MOMPOS(K))*DBLE(W(ABS(MOMPOS(K))+I,WE(K)))
+            PL(I,J)=PL(I,J)+DBLE(W(1+I,WE(K)))
           ENDDO
           TEMP=TEMP+PAIRING(J)
         ENDDO

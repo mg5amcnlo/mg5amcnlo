@@ -962,7 +962,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         else:
             call += "%(numCouplings)s(%(numeratorNumber)d,"            
         for i in range(len(loopamp.get('mothers'))):
-            call = call + "%(MotherID{0})d,%(MotherStatus{0})d,".format(i+1)
+            call = call + "%(MotherID{0})d,".format(i+1)
         for i in range(len(loopamp.get('wavefunctions'))-2):
             call = call + \
             "DCMPLX(%(LoopMass{0})s),CMPLX(MP__%(LoopMass{0})s,KIND=16),".format(i+1)
@@ -1202,7 +1202,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                     if lwf.get('mothers'):
                         last_lwf_number=lwf.get('number')
                         break
-                res.append('BUFF(I)=WL(I,%d)'%last_lwf_number)
+                res.append('BUFF(I)=WL(I+4,%d)'%last_lwf_number)
                 # And re-establish the original numbering
                 indexMothers=0
                 indexWfs=0
