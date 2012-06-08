@@ -273,6 +273,8 @@ def ij_final(pair):
 
 def insert_legs(leglist_orig, leg, split):
     """Returns a new leglist with leg splitted into split.
+    The convention is to remove leg ij, replace it with leg j, and put
+    i at the end of the group of legs with the same color representation
     """
     # the deepcopy statement is crucial
     leglist = FKSLegList(copy.deepcopy(leglist_orig))         
@@ -280,19 +282,21 @@ def insert_legs(leglist_orig, leg, split):
     for i in range(len(leglist)):
         if leglist[-i - 1].get('state'):
             firstfinal = len(leglist) - i - 1
-    i = leglist.index(leg)
-    leglist.remove(leg)
-
-    for sleg in split:            
-        leglist.insert(i, sleg)
-        #keep track of the number for initial state legs
-        #if not sleg.get('state') and not leg.get('state'):
-        leglist[i]['number'] = leg['number']
-        i += 1
-        if i < firstfinal:
-            i = firstfinal
-            
-    leglist.sort()
+    # replace leg with leg_j  (split[0])
+    leglist[leglist.index(leg)] = split[0]
+    # and find where to insert i  (split[1])
+    pos = max([leglist.index(l) for l in leglist if l['color'] == split[1]['color']])
+    leglist.insert(pos + 1, split[1])
+#    for sleg in split:            
+#        leglist.insert(i, sleg)
+#        #keep track of the number for initial state legs
+#        #if not sleg.get('state') and not leg.get('state'):
+#        leglist[i]['number'] = leg['number']
+#        i += 1
+#        if i < firstfinal:
+#            i = firstfinal
+#            
+#    leglist.sort()
     for i, leg in enumerate(leglist):
         leg['number'] = i + 1        
     return leglist 
@@ -598,8 +602,8 @@ class FKSLegList(MG.LegList):
             #find massive and massless legs in this color repr
             massive_legs = [l for l in col_legs if not l['massless']]
             massless_legs = [l for l in col_legs if l['massless']]
-            # sorting is different for massive and massless particles
-            keys = [itemgetter('id','fks'), itemgetter('fks','id')]
+            # sorting may be different for massive and massless particles
+            keys = [itemgetter('id'), itemgetter('id')]
             for i, list in enumerate([massive_legs, massless_legs]):
                 init_pdg_legs = []
                 if len(initial_legs) == 2:
