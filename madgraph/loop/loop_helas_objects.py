@@ -351,7 +351,7 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         
         output = {}
         output['numLoopLines']='_%d'%(len(self.get('wavefunctions'))-2)
-        if len(self.get('mothers'))!=len(self.get('coupling')):
+        if len(self.get('mothers'))!=len(self.get('pairing')):
             output['numMotherWfs']='_%d'%len(self.get('mothers'))
         else:
             output['numMotherWfs']=''            
