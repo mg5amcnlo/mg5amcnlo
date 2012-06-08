@@ -598,7 +598,9 @@ class FKSLegList(MG.LegList):
             #find massive and massless legs in this color repr
             massive_legs = [l for l in col_legs if not l['massless']]
             massless_legs = [l for l in col_legs if l['massless']]
-            for list in [massive_legs, massless_legs]:
+            # sorting is different for massive and massless particles
+            keys = [itemgetter('id','fks'), itemgetter('fks','id')]
+            for i, list in enumerate([massive_legs, massless_legs]):
                 init_pdg_legs = []
                 if len(initial_legs) == 2:
                 #put first legs which have the same abs(pdg) of the initial ones
@@ -608,15 +610,15 @@ class FKSLegList(MG.LegList):
                         if init_pdg_legs:
                             # sort in order to put first quarks then antiparticles,
                             #  and to put fks partons as n j i
-                            init_pdg_legs.sort(key = itemgetter('fks','id'), reverse=True)
+                            init_pdg_legs.sort(key = keys[i], reverse=True)
                             sorted_leglist.extend(FKSLegList(init_pdg_legs))
 
                     init_pdgs = [ abs(l['id']) for l in initial_legs]
                     other_legs = [l for l in list if not abs(l['id']) in init_pdgs]
-                    other_legs.sort(key = itemgetter('fks','id'), reverse=True)
+                    other_legs.sort(key = keys[i], reverse=True)
                     sorted_leglist.extend(FKSLegList(other_legs))
                 else:
-                    list.sort(key = itemgetter('fks','id'), reverse=True)
+                    list.sort(key = keys[i], reverse=True)
                     soerted_leglist.extend(FKSLegList(list))
 
         for i, l in enumerate(sorted_leglist):
