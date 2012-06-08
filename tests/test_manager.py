@@ -40,7 +40,7 @@ import optparse
 import os
 import re
 import unittest
-
+import time
 
 #Add the ROOT dir to the current PYTHONPATH
 root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -156,7 +156,8 @@ class TestFinder(list):
 
     def collect_file(self, filename, checking=True):
         """ Find the different class instance derivated of TestCase """
-
+        
+        start = time.time()
         pyname = self.passin_pyformat(filename)
         __import__(pyname)
         obj = sys.modules[pyname]
@@ -176,6 +177,10 @@ class TestFinder(list):
 
                 self.collect_function(class_, checking=check_inside, \
                                           base=pyname)
+        used_time = time.time() - start
+        if used_time > 0.1:
+            logging.critical('test files %s takes long time to load (%ss)' % (pyname, used_time))
+
 
     def collect_function(self, class_, checking=True, base=''):
         """
