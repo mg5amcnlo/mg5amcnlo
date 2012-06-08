@@ -608,15 +608,15 @@ class FKSLegList(MG.LegList):
                         if init_pdg_legs:
                             # sort in order to put first quarks then antiparticles,
                             #  and to put fks partons as n j i
-                            init_pdg_legs.sort(key = itemgetter('id', 'fks'), reverse=True)
+                            init_pdg_legs.sort(key = itemgetter('fks','id'), reverse=True)
                             sorted_leglist.extend(FKSLegList(init_pdg_legs))
 
                     init_pdgs = [ abs(l['id']) for l in initial_legs]
                     other_legs = [l for l in list if not abs(l['id']) in init_pdgs]
-                    other_legs.sort(key = itemgetter('id', 'fks'), reverse=True)
+                    other_legs.sort(key = itemgetter('fks','id'), reverse=True)
                     sorted_leglist.extend(FKSLegList(other_legs))
                 else:
-                    list.sort(key = itemgetter('id', 'fks'), reverse=True)
+                    list.sort(key = itemgetter('fks','id'), reverse=True)
                     soerted_leglist.extend(FKSLegList(list))
 
         for i, l in enumerate(sorted_leglist):
