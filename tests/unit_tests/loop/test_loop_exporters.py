@@ -342,7 +342,8 @@ class LoopExporterTest(unittest.TestCase):
                      'VVV1_1.f', 'VVV1L_1.f', 'VVVV1L_1.f', 'VVVV3L_1.f', 'VVVV4L_1.f']
         for hFile in HELAS_files:
             self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
-                                              ,'Source','DHELAS',hFile)))        
+                        ,'Source','DHELAS',hFile)), 'file %s not found in %s' % 
+                                                       (hFile, _proc_file_path))        
         
     def notest_LoopProcessExporterFortranSA_dg_dg(self):
         """Test the StandAlone output for different processes.

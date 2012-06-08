@@ -1,7 +1,9 @@
 try:
     import madgraph.iolibs.file_writers as writers 
+    import madgraph.various.q_polynomial as q_polynomial
 except:
     import aloha.file_writers as writers
+    import aloha.q_polynomial as q_polynomial
 
 import aloha
 import aloha.aloha_lib as aloha_lib
@@ -858,19 +860,33 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         else:
             coup = False
 
-        
-        
-        for key,expr in self.routine.expr.items():
-            arg = self.get_loop_argument(key)
-            for ind in expr.listindices():
-                data = expr.get_rep(ind)
+        rank = self.routine.expr.get_max_rank()
+        poly_object = q_polynomial.Polynomial(rank)
+        nb_coeff = q_polynomial.get_number_of_coefs_for_rank(rank)
+        for K in range(4):
+            for J in range(nb_coeff):
+                data = poly_object.get_coef_at_position(J)
+                arg = [data.count(i) for i in range(4)]
+                arg += [0] * (K) + [1] + [0] * (3-K) 
                 
-                if data and coup:
-                    out.write('    COEFF(%s,%s)= coup*%s\n' % ( 
-                                    ind+1, ','.join(arg), self.write_obj(data)))
-                else:
-                    out.write('    COEFF(%s,%s)= %s\n' % ( ind+1, ','.join(arg), 
-                                    self.write_obj(data)))                    
+                try:
+                    expr = self.routine.expr[tuple(arg)]
+                except KeyError:
+                    expr = None
+                for ind in self.routine.expr.values()[0].listindices():
+                    if expr:
+                        data = expr.get_rep(ind)
+                    else:
+                        data = 0
+                    if data and coup:
+                        out.write('    COEFF(%s,%s,%s)= coup*%s\n' % ( 
+                                    self.pass_to_HELAS(ind)+1-self.momentum_size,
+                                    J, K, self.write_obj(data)))
+                    else:
+                        out.write('    COEFF(%s,%s,%s)= %s\n' % ( 
+                                    self.pass_to_HELAS(ind)+1-self.momentum_size,
+                                    J, K, self.write_obj(data)))
+                    
         return out.getvalue()
     
     def get_declaration_txt(self):
@@ -1132,8 +1148,10 @@ def combine_name(name, other_names, outgoing, tag=None):
             else:
                 name = short_name
 
-    return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
- 
+    if outgoing is not None:
+        return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
+    else:
+        return '_'.join((name,) + tuple(other_names)) + addon
 
 class ALOHAWriterForCPP(WriteALOHA): 
     """Routines for writing out helicity amplitudes as C++ .h and .cc files."""

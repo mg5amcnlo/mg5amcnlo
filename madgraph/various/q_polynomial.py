@@ -12,9 +12,8 @@ class Polynomial(object):
     """ A class to represent a polynomial in the loop momentum (4-vector) q"""
     
     def __init__(self, rank):
-        if rank<0:
-            raise PolynomialError, \
-                            "The rank of a q-polynomial should be 0 or positive"
+        
+        assert rank > -1, "The rank of a q-polynomial should be 0 or positive"
         self.rank=rank
         self.init_coef_list()
         
