@@ -8,7 +8,7 @@
 	  integer CTModeInit,CTModeRun,CheckCycle,MaxAttempts,
      &CTLoopLibrary
 
-      real*8 MLStabThres,CTStabThres, ZeroThres
+      real*8 MLStabThres,CTStabThres,ZeroThres
 
       logical UseLoopFilter,LoopInitStartOver
 

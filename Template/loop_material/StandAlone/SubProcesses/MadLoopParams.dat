@@ -31,6 +31,10 @@
 !     If it is the case then the unstable phase-space point could be cured. If it is
 !     not the case, MadLoop outputs a warning.
 !     Notice that MLStabThres is used only when CTModeRun is '-1'.
+!     As a final word, due to the architecture of the program, you are better off
+!     rerunning the full PS point in quadruple precision than just a single loop 
+!     because the two thing would almost take the same time. So '-1' is always
+!     very recommended.
 #CTModeRun
 -1
 ! Default :: -1
@@ -89,11 +93,23 @@
 10
 ! Default :: 10
 
+!     Setting the threshold for deciding wether a numerical contribution is analytically 
+!     zero or not.
+#ZeroThres
+1.0d-9
+! Default :: 1.0d-9
+
 !     Some loop contributions my be zero for some helicities which are however
 !     contributing. In order to save their computing time, you can chose here to try
 !     to filter them out. As the gain is minimal, this option is turned off by default.
 #UseLoopFilter
 .TRUE.
-! Default .TRUE.
+! Default :: .TRUE.
+
+!     This decides wether consecutive consistency for the loop filtering setup is also 
+!     required.
+#LoopInitStartOver
+.FALSE.
+! Default :: .FALSE.
 
 /* End of param file */
