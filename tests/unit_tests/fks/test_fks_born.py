@@ -968,20 +968,20 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :False,
                                          'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :-1,
-                                         'number' :3,
-                                         'state' :True,
-                                         'fks' : 'i'}),
-                                        fks_common.FKSLeg(
                                          {'id' :2,
-                                         'number' :4,
+                                         'number' :3,
                                          'state' :True,
                                          'fks' : 'n'}),
                                         fks_common.FKSLeg( 
                                          {'id' :-2,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
                                          'number' :5,
                                          'state' :True,
-                                         'fks' : 'n'})
+                                         'fks' : 'i'})
                                         ], self.mymodel)]
                                         )
         
@@ -1025,15 +1025,15 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :False,
                                          'fks' : 'j'}),
                                         fks_common.FKSLeg(
-                                         {'id' : 1,
+                                         {'id' :2,
                                          'number' :3,
                                          'state' :True,
-                                         'fks' : 'i'}),
+                                         'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :2,
+                                         {'id' : 1,
                                          'number' :4,
                                          'state' :True,
-                                         'fks' : 'n'}),
+                                         'fks' : 'i'}),
                                         fks_common.FKSLeg( 
                                          {'id' :-2,
                                          'number' :5,

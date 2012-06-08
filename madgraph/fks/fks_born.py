@@ -389,6 +389,7 @@ class FKSProcessFromBorn(object):
             for split in self.splittings[i_i]:
                 self.reals[i_i].append(
                             fks_common.insert_legs(self.leglist, i, split))
+                
 
 
     def find_reals_to_integrate(self): #test written
@@ -421,9 +422,17 @@ class FKSProcessFromBorn(object):
                         and \
                         real_m.get_leg_j()['id'] == real_n.get_leg_i()['id']):
                         if i_m > i_n:
-                            self.real_amps[n].is_to_integrate = False
+                            print real_m.get_leg_i()['id'], real_m.get_leg_j()['id']
+                            if real_m.get_leg_i()['id'] == -real_m.get_leg_j()['id']:
+                                self.real_amps[m].is_to_integrate = False
+                            else:
+                                self.real_amps[n].is_to_integrate = False
                         elif i_m == i_n and j_m > j_n:
-                            self.real_amps[n].is_to_integrate = False
+                            print real_m.get_leg_i()['id'], real_m.get_leg_j()['id']
+                            if real_m.get_leg_i()['id'] == -real_m.get_leg_j()['id']:
+                                self.real_amps[m].is_to_integrate = False
+                            else:
+                                self.real_amps[n].is_to_integrate = False
                         # in case of g > qqx splitting, keep the lowest ij
                         elif i_m == i_n and j_m == j_n and \
                           abs(real_m.get_leg_j()['color']) == 3 and \
@@ -433,7 +442,11 @@ class FKSProcessFromBorn(object):
                             else:
                                 real_n.is_to_integrate = False
                         else:
-                            self.real_amps[m].is_to_integrate = False
+                            if real_m.get_leg_i()['id'] == -real_m.get_leg_j()['id']:
+                                self.real_amps[n].is_to_integrate = False
+                            else:
+                                self.real_amps[m].is_to_integrate = False
+                         # self.real_amps[m].is_to_integrate = False
                 elif j_m <= self.nincoming and j_n == j_m:
                     if real_m.get_leg_i()['id'] == real_n.get_leg_i()['id'] and \
                        real_m.get_leg_j()['id'] == real_n.get_leg_j()['id']:

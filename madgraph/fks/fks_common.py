@@ -285,8 +285,28 @@ def insert_legs(leglist_orig, leg, split):
     # replace leg with leg_j  (split[0])
     leglist[leglist.index(leg)] = split[0]
     # and find where to insert i  (split[1])
-    pos = max([leglist.index(l) for l in leglist if l['color'] == split[1]['color']])
-    leglist.insert(pos + 1, split[1])
+    col_maxindex = {}
+    mass_col_maxindex = {}
+    for col in set([l['color'] for l in leglist[firstfinal:] if l['massless']]):
+        col_maxindex[col] = max([0] + [leglist.index(l) for l in leglist[firstfinal:] if l['color'] == col and l['massless']])
+    for col in set([abs(l['color']) for l in leglist[firstfinal:] if not l['massless']]):
+        mass_col_maxindex[col] = max([0] + [leglist.index(l) for l in leglist[firstfinal:] if abs(l['color']) == col and not l['massless']])
+    #no need to keep info on particles with color > i
+    for col in copy.copy(col_maxindex.keys()):
+        if abs(col) > abs(split[1]['color']):
+            del col_maxindex[col]
+    for col in copy.copy(mass_col_maxindex.keys()):
+        if abs(col) > abs(split[1]['color']):
+            del mass_col_maxindex[col]
+    #also remove antiquarks if i is a quark
+    if split[1]['color'] > 0:
+        try:
+            del col_maxindex[-split[1]['color']]
+        except KeyError:
+            pass
+    #so now the maximum of the max_col entries should be the position to insert leg i
+
+    leglist.insert(max(col_maxindex.values() + mass_col_maxindex.values() + [firstfinal - 1] ) + 1, split[1])
 #    for sleg in split:            
 #        leglist.insert(i, sleg)
 #        #keep track of the number for initial state legs
