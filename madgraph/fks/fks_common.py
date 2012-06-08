@@ -21,6 +21,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
+from operator import itemgetter
 import copy
 import logging
 import array
@@ -273,7 +274,8 @@ def ij_final(pair):
 def insert_legs(leglist_orig, leg, split):
     """Returns a new leglist with leg splitted into split.
     """
-    leglist = copy.deepcopy(leglist_orig)         
+    # the deepcopy statement is crucial
+    leglist = FKSLegList(copy.deepcopy(leglist_orig))         
     #find the position of the first final state leg
     for i in range(len(leglist)):
         if leglist[-i - 1].get('state'):
@@ -574,6 +576,54 @@ class FKSLegList(MG.LegList):
         """Test if object obj is a valid FKSLeg for the list."""
         return isinstance(obj, FKSLeg)
 
+    def sort(self):
+        """Sorting routine, sorting chosen to be optimal for madfks"""
+        sorted_leglist = FKSLegList()
+        #find initial state legs
+        initial_legs = FKSLegList([l for l in copy.copy(self) if not l['state']])
+        #find final state legs
+        final_legs = FKSLegList([l for l in copy.copy(self) if l['state']])
+        if len(initial_legs) == 1:
+            sorted_leglist.extend(initial_legs)
+        elif len(initial_legs) == 2:
+            if initial_legs[0]['number'] > initial_legs[1]['number']:
+                initial_legs.reverse()
+            sorted_leglist.extend(initial_legs)
+        else: 
+            raise FKSProcessError('Too many initial legs')
+        #find color representations
+        colors = sorted(set([abs(l['color']) for l in final_legs]))
+        for col in colors:
+            col_legs = FKSLegList([l for l in final_legs if abs(l['color']) == col])
+            #find massive and massless legs in this color repr
+            massive_legs = [l for l in col_legs if not l['massless']]
+            massless_legs = [l for l in col_legs if l['massless']]
+            for list in [massive_legs, massless_legs]:
+                init_pdg_legs = []
+                if len(initial_legs) == 2:
+                #put first legs which have the same abs(pdg) of the initial ones
+                    for i in range(len(set([ abs(l['id']) for l in initial_legs]))):
+                        pdg = abs(initial_legs[i]['id'])
+                        init_pdg_legs = [l for l in list if abs(l['id']) == pdg]
+                        if init_pdg_legs:
+                            # sort in order to put first quarks then antiparticles,
+                            #  and to put fks partons as n j i
+                            init_pdg_legs.sort(key = itemgetter('id', 'fks'), reverse=True)
+                            sorted_leglist.extend(FKSLegList(init_pdg_legs))
+
+                    init_pdgs = [ abs(l['id']) for l in initial_legs]
+                    other_legs = [l for l in list if not abs(l['id']) in init_pdgs]
+                    other_legs.sort(key = itemgetter('id', 'fks'), reverse=True)
+                    sorted_leglist.extend(FKSLegList(other_legs))
+                else:
+                    list.sort(key = itemgetter('id', 'fks'), reverse=True)
+                    soerted_leglist.extend(FKSLegList(list))
+
+        for i, l in enumerate(sorted_leglist):
+            self[i] = l
+
+
+
 
 class FKSLeg(MG.Leg):
     """a class for FKS legs: it inherits from the ususal leg class, with two
@@ -621,32 +671,3 @@ class FKSLeg(MG.Leg):
         return super(FKSLeg,self).filter(name, value)
     
      
-    def __lt__(self, other):
-        #two initial state legs are sorted by their number:
-        if (not self.get('state') and not other.get('state')):
-            return self.get('number') < other.get('number')
-        
-        #an initial state leg comes before a final state leg
-        if (self.get('state') or other.get('state')) and \
-          not (self.get('state') and other.get('state')):
-            return other.get('state')
-        #two final state legs with the same pdg are sorted so that
-        # i_fks is put after
-        if self.get('state') == other.get('state') and \
-           self.get('id') == other.get('id'):
-               return self.get('fks') > other.get('fks')
-        
-        #two final state particles are ordered by increasing color
-        elif self.get('state') and other.get('state'):
-            if abs(self.get('color')) != abs(other.get('color')):
-                return abs(self.get('color')) < abs(other.get('color'))
-            else:
-        #if same color, put massive particles first
-                if (self.get('massless') or other.get('massless')) and \
-                  not (self.get('massless') and other.get('massless')):
-                    return other.get('massless')
-                else:
-                   return self.get('number') < other.get('number')
-        return False
-         
-

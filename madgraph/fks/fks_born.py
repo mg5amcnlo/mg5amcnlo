@@ -378,7 +378,6 @@ class FKSProcessFromBorn(object):
         if combine:
             self.combine_real_amplitudes()
         self.generate_real_amplitudes(pdg_list, real_amp_list)
-#        self.find_real_nbodyonly()
 
 
     def find_reals(self, pert_order):
@@ -425,6 +424,14 @@ class FKSProcessFromBorn(object):
                             self.real_amps[n].is_to_integrate = False
                         elif i_m == i_n and j_m > j_n:
                             self.real_amps[n].is_to_integrate = False
+                        # in case of g > qqx splitting, keep the lowest ij
+                        elif i_m == i_n and j_m == j_n and \
+                          abs(real_m.get_leg_j()['color']) == 3 and \
+                          abs(real_m.get_leg_i()['color']) == 3:
+                            if real_m.fks_infos[0]['ij'] > real_n.fks_infos[0]['ij']:
+                                real_m.is_to_integrate = False
+                            else:
+                                real_n.is_to_integrate = False
                         else:
                             self.real_amps[m].is_to_integrate = False
                 elif j_m <= self.nincoming and j_n == j_m:
