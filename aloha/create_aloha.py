@@ -628,7 +628,6 @@ class AbstractALOHAModel(dict):
         self.look_for_symmetries()
         # reorganize the data (in order to use optimization for a given lorentz
         #structure
-        old_aloha_loop_mode = aloha.loop_mode
         request = {}
         for list_l_name, tag, outgoing in data:
             #allow tag to have integer for retro-compatibility
@@ -640,7 +639,6 @@ class AbstractALOHAModel(dict):
             conjugate = tuple([int(c[1:]) for c in tag if c.startswith('C')])
             loop = any((t.startswith('L') for t in tag))
             if loop:
-                
                 aloha.loop_mode = True
                 self.explicit_combine = True
                 
@@ -724,8 +722,6 @@ class AbstractALOHAModel(dict):
                         # Compute routines
                         self.compute_aloha(conjg_builder, symmetry=lorentz.name,
                                         routines=routines)
-                        
-        aloha.loop_mode = old_aloha_loop_mode
         #
                       
   

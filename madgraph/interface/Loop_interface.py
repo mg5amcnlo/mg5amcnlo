@@ -138,7 +138,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         args = self.split_arg(line)
         self.check_set(args)
 
-        if args[0] == 'loop_optimized_output' and eval(args[1]):
+        if args[0] == 'loop_optimized_output' and eval(args[1]) and \
+                                           not self.options['gauge']=='Feynman':
             mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
     
     def do_generate(self, line, *args,**opt):
