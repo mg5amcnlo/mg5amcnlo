@@ -336,6 +336,7 @@ class AbstractRoutineBuilder(object):
         
                     
         l_in = [int(tag[1:]) for tag in self.tag][0]
+        assert l_in != outgoing, 'incoming Open Loop can not be the outcoming one'
         
         # modify the expression for the momenta
         # P_i -> P_i + P_L and P_o -> -P_o - P_L
@@ -364,6 +365,7 @@ class AbstractRoutineBuilder(object):
         veto_ids = aloha_lib.KERNEL.get_ids(var_veto)
         
         lorentz = lorentz.expand(veto = veto_ids)
+        lorentz = lorentz.simplify()
         coeff_expr = lorentz.split(veto_ids)
         
         for key, expr in coeff_expr.items():

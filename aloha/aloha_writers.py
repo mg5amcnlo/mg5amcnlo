@@ -863,12 +863,13 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         rank = self.routine.expr.get_max_rank()
         poly_object = q_polynomial.Polynomial(rank)
         nb_coeff = q_polynomial.get_number_of_coefs_for_rank(rank)
-        for K in range(4):
+        size = self.type_to_size[OffShellParticle[0]] - 2
+        one_pass=False
+        for K in range(size):
             for J in range(nb_coeff):
                 data = poly_object.get_coef_at_position(J)
-                arg = [data.count(i) for i in range(4)]
-                arg += [0] * (K) + [1] + [0] * (3-K) 
-                
+                arg = [data.count(i) for i in range(4)] # momentum
+                arg += [0] * (K) + [1] + [0] * (size-1-K) 
                 try:
                     expr = self.routine.expr[tuple(arg)]
                 except KeyError:
@@ -881,12 +882,14 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                     if data and coup:
                         out.write('    COEFF(%s,%s,%s)= coup*%s\n' % ( 
                                     self.pass_to_HELAS(ind)+1-self.momentum_size,
-                                    J, K, self.write_obj(data)))
+                                    J, K+1, self.write_obj(data)))
+                        one_pass = True
                     else:
                         out.write('    COEFF(%s,%s,%s)= %s\n' % ( 
                                     self.pass_to_HELAS(ind)+1-self.momentum_size,
-                                    J, K, self.write_obj(data)))
-                    
+                                    J, K+1, self.write_obj(data)))
+
+        assert one_pass, 'fail to generate %s' % self.name
         return out.getvalue()
     
     def get_declaration_txt(self):

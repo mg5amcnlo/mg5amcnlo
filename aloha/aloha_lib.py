@@ -152,7 +152,7 @@ class AddVariable(list):
         
     def simplify(self):
         """ apply rule of simplification """
-        
+
         # deal with one length object
         if len(self) == 1:
             return self.prefactor * self[0].simplify()
@@ -162,6 +162,10 @@ class AddVariable(list):
         for term in self[:]:
             pos += 1 # current position in the real self
             if not hasattr(term, 'vartype'):
+                if isinstance(term, dict):
+                    # allow term of type{(0,):x}
+                    assert term.values() == [0]
+                    term = term[(0,)]
                 constant += term
                 del self[pos]
                 pos -= 1
@@ -196,7 +200,7 @@ class AddVariable(list):
         """return a dict with the key being the power associated to each variables
            and the value being the object remaining after the suppression of all
            the variable"""
-        
+
         out = defaultdict(int)
         for obj in self:
             for key, value in obj.split(variables_id).items():
@@ -1318,6 +1322,7 @@ class SplitCoefficient(dict):
         
     def get_max_rank(self):
         """return the highest rank of the coefficient"""
+        
         return max([max(arg[:4]) for arg in self])
 
       
