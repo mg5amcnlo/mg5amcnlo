@@ -48,9 +48,11 @@
 !                                                                            !  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
+  use scale
   use loopfunctions
   use mp_loopfunctions
   use coefficients
+  use avh_olo
   implicit none
   integer, intent(in) :: imode
   integer, intent(in) :: number_propagators
@@ -101,7 +103,7 @@
   roots  = rootsvalue
   muscale= muscalein
   if (scaloop.eq.2) then
-    call avh_olo_mu_set(muscale)
+    call olo_scale(muscale)
   elseif (scaloop.eq.3) then
 !
 !   set the scale in qcdloop
@@ -110,7 +112,7 @@
 !
 !   some 2-point OneLoop 2-point function is also used
 !
-    call avh_olo_mu_set(muscale)
+    call olo_scale(muscale)
   else
     stop 'value of scaloop not allowed'
   endif
@@ -216,7 +218,7 @@
     mpcomputation=.true.
     n_mp= n_mp+1
     if (scaloop.eq.2) then
-      call avh_olo_mp_mu_set(muscale)
+      call olo_scale(muscale)
     else
       if (firsttime) then
        firsttime=.false.
