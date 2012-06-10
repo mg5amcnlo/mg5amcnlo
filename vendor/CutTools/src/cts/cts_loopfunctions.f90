@@ -7,31 +7,35 @@
   use denominators
   use scale
   use dimensions
+  use avh_olo
   implicit none
+  private
+  public :: allocate_loopfun,getloop
+  public :: aloopfun,bloopfun,b1loopfun,b11loopfun,cloopfun,dloopfun
 !
 ! variables for the 1-point sector:
 !
   include 'cts_dpc.h'
-   , dimension(:,:), public, allocatable :: aloopfun
+   , dimension(:,:), allocatable :: aloopfun
 !
 ! variables for the 2-point sector:
 !
   include 'cts_dpc.h'
-   , dimension(:,:), public, allocatable :: bloopfun
+   , dimension(:,:), allocatable :: bloopfun
   include 'cts_dpc.h'
-   , dimension(:,:), public, allocatable :: b1loopfun
+   , dimension(:,:), allocatable :: b1loopfun
   include 'cts_dpc.h'
-   , dimension(:,:), public, allocatable :: b11loopfun
+   , dimension(:,:), allocatable :: b11loopfun
 !
 ! variables for the 3-point sector:
 !
   include 'cts_dpc.h'
-   , dimension(:,:), public, allocatable :: cloopfun
+   , dimension(:,:), allocatable :: cloopfun
 !
 ! variables for the 4-point sector:
 !
   include 'cts_dpc.h'
-   , dimension(:,:), public, allocatable :: dloopfun
+   , dimension(:,:), allocatable :: dloopfun
   save aloopfun,bloopfun,b1loopfun,b11loopfun,cloopfun,dloopfun
 !
   contains
@@ -108,7 +112,7 @@
      stop 'value of scaloop not implemented'
     elseif (scaloop.eq.2) then
      cm12= den(bn1(np,1,i))%m2
-     call avh_olo_a0c(value,cm12)
+     call olo(value,cm12)
      aloopfun(:,ib)= value(:) 
     elseif (scaloop.eq.3) then
      m12= dreal(den(bn1(np,1,i))%m2)
@@ -131,8 +135,6 @@
    integer :: i,ib
    include 'cts_dpr.h' 
     :: k12
-   include 'cts_dpc.h' 
-    :: ck12
    include 'cts_dpr.h'
     , dimension(0:3) :: k1
    include 'cts_dpc.h'
@@ -159,8 +161,7 @@
     elseif (scaloop.eq.2) then
      cm12= den(bn2(np,1,i))%m2
      cm22= den(bn2(np,2,i))%m2
-     ck12= k12
-     call avh_olo_b11c(valb11,valb00,valb1,valb0,ck12,cm12,cm22)
+     call olo(valb11,valb00,valb1,valb0,k12,cm12,cm22)
      bloopfun(:,ib)  =  valb0(:)
      b1loopfun(:,ib) =  valb1(:)
      b11loopfun(:,ib)=  valb11(:)
@@ -170,7 +171,7 @@
      bloopfun(2,ib)= qlI2(k12,m12,m22,musq,-2)     
      bloopfun(1,ib)= qlI2(k12,m12,m22,musq,-1)     
      bloopfun(0,ib)= qlI2(k12,m12,m22,musq,0)     
-     call avh_olo_b11m(valb11,valb00,valb1,valb0,k12,m12,m22)
+     call olo(valb11,valb00,valb1,valb0,k12,m12,m22)
      b1loopfun(:,ib) =  valb1(:)
      b11loopfun(:,ib)=  valb11(:)
     else 
@@ -189,8 +190,6 @@
    integer :: i,ib
    include 'cts_dpr.h' 
     :: k12,k22,k32
-   include 'cts_dpc.h' 
-    :: ck12,ck22,ck32
    include 'cts_dpr.h'
     , dimension(0:3) :: k1,k2,k3
    include 'cts_dpc.h'
@@ -220,10 +219,7 @@
      cm12= den(bn3(np,1,i))%m2
      cm22= den(bn3(np,2,i))%m2
      cm32= den(bn3(np,3,i))%m2
-     ck12= k12
-     ck22= k22
-     ck32= k32
-     call avh_olo_c0c(value,ck12,ck22,ck32,cm12,cm22,cm32)
+     call olo(value,k12,k22,k32,cm12,cm22,cm32)
      cloopfun(:,ib)  =        value(:) 
     elseif (scaloop.eq.3) then
      m12= dreal(den(bn3(np,1,i))%m2)
@@ -248,8 +244,6 @@
    integer :: i,ib
    include 'cts_dpr.h' 
     :: k12,k22,k32,k42,k122,k232
-   include 'cts_dpc.h' 
-    :: ck12,ck22,ck32,ck42,ck122,ck232
    include 'cts_dpr.h'
     , dimension(0:3) :: k1,k2,k3,k4,p12,p23
    include 'cts_dpc.h'
@@ -289,13 +283,7 @@
      cm22= den(bn4(np,2,i))%m2
      cm32= den(bn4(np,3,i))%m2
      cm42= den(bn4(np,4,i))%m2
-     ck12= k12
-     ck22= k22
-     ck32= k32
-     ck42= k42
-     ck122= k122
-     ck232= k232
-     call avh_olo_d0c(value,ck12,ck22,ck32,ck42,ck122,ck232,cm12,cm22,cm32,cm42)
+     call olo(value,k12,k22,k32,k42,k122,k232,cm12,cm22,cm32,cm42)
      dloopfun(:,ib)  =        value(:) 
     elseif (scaloop.eq.3) then
      m12= dreal(den(bn4(np,1,i))%m2)
@@ -322,7 +310,11 @@
   use denominators
   use scale
   use dimensions
+  use avh_olo
   implicit none
+  private
+  public :: allocate_mp_loopfun,get_mp_loop
+  public :: mp_aloopfun,mp_bloopfun,mp_b1loopfun,mp_b11loopfun,mp_cloopfun,mp_dloopfun
   include 'cts_mpc.h'
    , private :: mp_czero
   integer, private :: ic
@@ -330,26 +322,26 @@
 ! variables for the 1-point sector:
 !
   include 'cts_mpc.h'
-   , dimension(:,:), public, allocatable :: mp_aloopfun
+   , dimension(:,:), allocatable :: mp_aloopfun
 !
 ! variables for the 2-point sector:
 !
   include 'cts_mpc.h'
-   , dimension(:,:), public, allocatable :: mp_bloopfun
+   , dimension(:,:), allocatable :: mp_bloopfun
   include 'cts_mpc.h'
-   , dimension(:,:), public, allocatable :: mp_b1loopfun
+   , dimension(:,:), allocatable :: mp_b1loopfun
   include 'cts_mpc.h'
-   , dimension(:,:), public, allocatable :: mp_b11loopfun
+   , dimension(:,:), allocatable :: mp_b11loopfun
 !
 ! variables for the 3-point sector:
 !
   include 'cts_mpc.h'
-   , dimension(:,:), public, allocatable :: mp_cloopfun
+   , dimension(:,:), allocatable :: mp_cloopfun
 !
 ! variables for the 4-point sector:
 !
   include 'cts_mpc.h'
-   , dimension(:,:), public, allocatable :: mp_dloopfun
+   , dimension(:,:), allocatable :: mp_dloopfun
   save mp_aloopfun,mp_bloopfun,mp_b1loopfun,mp_b11loopfun
   save mp_cloopfun,mp_dloopfun
 !
@@ -427,7 +419,7 @@
     ib= mbn1(np,i)
     if     (scaloop.eq.2) then
      cm12= mp_den(bn1(np,1,i))%m2
-     call avh_olo_mp_a0c(value,cm12)
+     call olo(value,cm12)
      mp_aloopfun(:,ib)= value(:) 
     elseif (scaloop.eq.3) then
      dm12= mp_den(bn1(np,1,i))%m2
@@ -450,8 +442,6 @@
    integer :: i,ib
    include 'cts_mpr.h' 
     :: k12
-   include 'cts_mpc.h' 
-    :: ck12
    include 'cts_mpr.h'
     , dimension(0:3) :: k1
    include 'cts_mpc.h'
@@ -482,8 +472,7 @@
     if     (scaloop.eq.2) then
      cm12= mp_den(bn2(np,1,i))%m2
      cm22= mp_den(bn2(np,2,i))%m2
-     ck12= k12
-     call avh_olo_mp_b11c(valb11,valb00,valb1,valb0,ck12,cm12,cm22)
+     call olo(valb11,valb00,valb1,valb0,k12,cm12,cm22)
      mp_bloopfun(:,ib)  =  valb0(:)
      mp_b1loopfun(:,ib) =  valb1(:)
      mp_b11loopfun(:,ib)=  valb11(:)
@@ -494,7 +483,7 @@
      mp_bloopfun(2,ib)= qlI2(dk12,dm12,dm22,musq,-2)     
      mp_bloopfun(1,ib)= qlI2(dk12,dm12,dm22,musq,-1)     
      mp_bloopfun(0,ib)= qlI2(dk12,dm12,dm22,musq,0)     
-     call avh_olo_b11m(dvalb11,dvalb00,dvalb1,dvalb0,dk12,dm12,dm22)
+     call olo(dvalb11,dvalb00,dvalb1,dvalb0,dk12,dm12,dm22)
      mp_b1loopfun(0,ib) =  dvalb1(0)
      mp_b11loopfun(0,ib)=  dvalb11(0)
      mp_b1loopfun(1,ib) =  dvalb1(1)
@@ -517,8 +506,6 @@
    integer :: i,ib
    include 'cts_mpr.h' 
     :: k12,k22,k32
-   include 'cts_mpc.h' 
-    :: ck12,ck22,ck32
    include 'cts_mpr.h'
     , dimension(0:3) :: k1,k2,k3
    include 'cts_mpc.h'
@@ -554,10 +541,7 @@
      cm12= mp_den(bn3(np,1,i))%m2
      cm22= mp_den(bn3(np,2,i))%m2
      cm32= mp_den(bn3(np,3,i))%m2
-     ck12= k12
-     ck22= k22
-     ck32= k32
-     call avh_olo_mp_c0c(value,ck12,ck22,ck32,cm12,cm22,cm32)
+     call olo(value,k12,k22,k32,cm12,cm22,cm32)
      mp_cloopfun(:,ib)  =        value(:) 
     elseif (scaloop.eq.3) then
      dm12= mp_den(bn3(np,1,i))%m2
@@ -585,8 +569,6 @@
    integer :: i,ib
    include 'cts_mpr.h' 
     :: k12,k22,k32,k42,k122,k232
-   include 'cts_mpc.h' 
-    :: ck12,ck22,ck32,ck42,ck122,ck232
    include 'cts_mpr.h'
     , dimension(0:3) :: k1,k2,k3,k4,p12,p23
    include 'cts_mpc.h'
@@ -635,14 +617,7 @@
      cm22= mp_den(bn4(np,2,i))%m2
      cm32= mp_den(bn4(np,3,i))%m2
      cm42= mp_den(bn4(np,4,i))%m2
-     ck12= k12
-     ck22= k22
-     ck32= k32
-     ck42= k42
-     ck122= k122
-     ck232= k232
-     call avh_olo_mp_d0c(value,ck12,ck22,ck32,ck42,ck122, &
-                         ck232,cm12,cm22,cm32,cm42)
+     call olo(value,k12,k22,k32,k42,k122,k232,cm12,cm22,cm32,cm42)
      mp_dloopfun(:,ib)  =        value(:) 
     elseif (scaloop.eq.3) then
      dm12= mp_den(bn4(np,1,i))%m2

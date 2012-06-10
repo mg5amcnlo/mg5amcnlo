@@ -1347,7 +1347,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         else:
             call += "(%(numeratorNumber)d,"            
         for i in range(len(loopamp.get('mothers'))):
-            call = call + "%(MotherID{0})d,%(MotherStatus{0})d,".format(i+1)
+            call = call + "%(MotherID{0})d,".format(i+1)
         for i in range(len(loopamp.get('wavefunctions'))-2):
             call = call + \
             "DCMPLX(%(LoopMass{0})s),".format(i+1)

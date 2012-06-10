@@ -1077,12 +1077,23 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return self.find_leg_index(self.get_anti_pdg_code(),\
                                                    self.get_spin_state_number())
         
-    def find_leg_index(self, pdg_code, spin_state):
+    def find_leg_index(self, pdg_code, spin_state, reverse=False):
         """ Find the place in the interaction list of the given particle with
-        pdg 'pdg_code' and spin 'spin_stat'."""
+        pdg 'pdg_code' and spin 'spin_stat'. If reverse is True, it will pick
+        the last occurence of the given pdg_code instead of the first one. This
+        is relevant for interactions with several identical particles (or 
+        fermion pairs) and allows for differentiating the incoming loop index
+        (always last occurrence) with the outgoing index (always first occurence)
+        """
         wf_indices = self.get('pdg_codes')
-        # Take the first index in case of identical particles
-        wf_index = wf_indices.index(pdg_code)
+        if not reverse:
+            wf_index = wf_indices.index(pdg_code)
+        else:
+            rev_wf_indices=copy.copy(wf_indices)
+            rev_wf_indices.reverse()
+            wf_index = rev_wf_indices.index(pdg_code)
+            # Convert the obtained index to the original order of the wf_indices
+            wf_index = len(wf_indices)-1-wf_index
         # If fermion, then we need to correct for I/O status
         if spin_state % 2 == 0:
             if wf_index % 2 == 0 and spin_state < 0:
@@ -1406,7 +1417,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
               " one loop wavefunction mother, but here it has %d."%len(loop_wfs)
 
         return self.find_leg_index(loop_wfs[0].get_pdg_code(),\
-                                   loop_wfs[0].get_spin_state_number(flip=True))
+                    loop_wfs[0].get_spin_state_number(flip=True), reverse=True)
         
     def get_lcut_size(self):
         """ Return the size (i.e number of elements) of the L-Cut wavefunction

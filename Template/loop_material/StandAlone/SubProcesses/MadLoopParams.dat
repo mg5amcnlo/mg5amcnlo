@@ -51,8 +51,8 @@
 !     2 | AVH
 !     3 | QCDLoop
 #CTLoopLibrary
-3
-! Default :: 3
+2
+! Default :: 2
 
 !     Choose here the stability threshold used within CutTools to decide when to go to
 !     higher precision.

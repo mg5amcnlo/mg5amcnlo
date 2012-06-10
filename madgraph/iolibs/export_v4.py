@@ -350,6 +350,7 @@ class ProcessExporterFortran(object):
         # Create and write ALOHA Routine
         aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
         if wanted_lorentz:
+            print "I got wanted_lorentz=",wanted_lorentz
             aloha_model.compute_subset(wanted_lorentz)
         else:
             aloha_model.compute_all(save=False)
