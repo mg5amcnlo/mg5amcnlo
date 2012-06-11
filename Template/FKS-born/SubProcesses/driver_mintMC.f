@@ -648,6 +648,7 @@ c From dsample_fks
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'reweight_all.inc'
+      include 'run.inc'
       integer ndim,ipole
       common/tosigint/ndim,ipole
       integer           iconfig
@@ -731,6 +732,9 @@ c Find the nFKSprocess for which we compute the Born-like contributions
                call reweight_settozero_all(nFKSprocess*2,.true.)
                call reweight_settozero_all(nFKSprocess*2-1,.true.)
             endif
+c Set Bjorken x's to some random value before calling the dlum() function
+            xbk(1)=0.5d0
+            xbk(2)=0.5d0
             lum=dlum()
             maxproc_save=max(maxproc_save,IPROC)
          enddo
