@@ -461,8 +461,10 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
 c Radiation hardness needed (pt_hardness) for the theta function
 c Should be zero if there are no jets at the Born
       double precision shower_S_scale(fks_configs*2)
-     &     ,shower_H_scale(fks_configs*2),pt_hardness
-      common /cshowerscale2/shower_S_scale,shower_H_scale,pt_hardness
+     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
+     &     ,pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
+     &     ,pt_hardness
 
       double precision becl,delta
 c alsf and besf are the parameters that control gfunsoft
