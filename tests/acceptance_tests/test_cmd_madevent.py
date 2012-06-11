@@ -188,7 +188,7 @@ class TestMEfromfile(unittest.TestCase):
         
         devnull =open(os.devnull,'w')
         if not os.path.exists(pjoin(_file_path, os.path.pardir, 'pythia-pgs')):
-            p = subprocess.POPEN([pjoin(_file_path, os.path.pardir,'bin','mg5')],
+            p = subprocess.Popen([pjoin(_file_path, os.path.pardir,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=devnull,stderr=devnull)
             out = p.communicate('install pythia-pgs')
@@ -274,7 +274,6 @@ class TestMEfromPdirectory(unittest.TestCase):
         data = self.load_result(run_name)
         self.assertEqual(int(data[0]['nb_event']), target_event)
         self.assertTrue('lhe' in data[0].parton)
-        
         if cross:
             self.assertTrue(abs(cross - float(data[0]['cross']))/error < 3)
 
@@ -299,6 +298,6 @@ class TestMEfromPdirectory(unittest.TestCase):
             output = None
         id = subprocess.call(['./bin/madevent','cmd.cmd'], stdout=output, stderr=output)
         self.assertEqual(id, 0)
-        self.check_parton_output(cross=944.4, error=1e-2)
+        self.check_parton_output(cross=946.49, error=1e-2)
         os.chdir(cmd)
         
