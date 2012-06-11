@@ -623,7 +623,12 @@ class FKSLegList(MG.LegList):
             massive_legs = [l for l in col_legs if not l['massless']]
             massless_legs = [l for l in col_legs if l['massless']]
             # sorting may be different for massive and massless particles
-            keys = [itemgetter('id'), itemgetter('id')]
+            # for color singlets, do not change order
+            if col = 1:
+                keys = [itemgetter('number'), itemgetter('number')]
+            else:
+                keys = [itemgetter('id'), itemgetter('id')]
+
             for i, list in enumerate([massive_legs, massless_legs]):
                 init_pdg_legs = []
                 if len(initial_legs) == 2:
