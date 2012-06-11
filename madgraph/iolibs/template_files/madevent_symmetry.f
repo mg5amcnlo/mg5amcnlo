@@ -25,8 +25,8 @@ c
       integer use_config(0:lmaxconfigs)
       integer i,j, npara, nhel_survey
       double precision xdum
-      double precision pmass(-max_branch:-1,lmaxconfigs)   !Propagotor mass
-      double precision pwidth(-max_branch:-1,lmaxconfigs)  !Propagotor width
+      double precision prmass(-max_branch:-1,lmaxconfigs)   !Propagotor mass
+      double precision prwidth(-max_branch:-1,lmaxconfigs)  !Propagotor width
       integer pow(-max_branch:-1,lmaxconfigs)
       character*20 param(maxpara),value(maxpara)
 c
@@ -85,7 +85,7 @@ c
       close(25)
 
       call write_input(j, nhel_survey)
-      call write_bash(mapconfig,use_config,pwidth,icomp,iforest,sprop)
+      call write_bash(mapconfig,use_config,prwidth,icomp,iforest,sprop)
       end
 
       subroutine write_input(nconfigs, nhel_survey)
@@ -175,9 +175,9 @@ c     Write ic with correct number of digits
 c      write(lun,15) '#PBS -q ' // PBS_QUE
 c      write(lun,15) '#PBS -o PBS.log'
 c      write(lun,15) '#PBS -e PBS.err'
-      write(lun,15) 'if [[ "$PBS_O_WORKDIR" != "" ]]; then' 
-      write(lun,15) '    cd $PBS_O_WORKDIR'
-      write(lun,15) 'fi'
+c      write(lun,15) 'if [[ "$PBS_O_WORKDIR" != "" ]]; then' 
+c      write(lun,15) '    cd $PBS_O_WORKDIR'
+c      write(lun,15) 'fi'
       write(lun,15) 'k=run1_app.log'
       write(lun,15) 'script=' // fname
 c      write(lun,15) 'rm -f wait.$script >& /dev/null'
@@ -186,7 +186,7 @@ c      write(lun,15) 'touch run.$script'
  15   format(a)
       end
 
-      subroutine write_bash(mapconfig,use_config, pwidth, jcomp,iforest,
+      subroutine write_bash(mapconfig,use_config, prwidth, jcomp,iforest,
      $     sprop)
 c***************************************************************************
 c     Writes out bash commands to run integration over all of the various
@@ -208,7 +208,7 @@ c
 c     Arguments
 c
       integer mapconfig(0:lmaxconfigs),use_config(0:lmaxconfigs)
-      double precision pwidth(-max_branch:-1,lmaxconfigs)  !Propagotor width
+      double precision prwidth(-max_branch:-1,lmaxconfigs)  !Propagotor width
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer jcomp
@@ -243,9 +243,9 @@ c     ncode is number of digits needed for the code
                   iarray(j)=0   !Assume no cuts on BW
                enddo
                do j=1,nexternal-3
-c                  write(*,*) 'Width',pwidth(-j,i),j,i
+c                  write(*,*) 'Width',prwidth(-j,i),j,i
                   nbw=nbw+1
-                  if (pwidth(-j,i) .gt. 1d-20 .and. sprop(1,-j,i).ne.0) then
+                  if (prwidth(-j,i) .gt. 1d-20 .and. sprop(1,-j,i).ne.0) then
                      write(*,*) 'Got bw',-nbw,j
 c                    JA 4/8/11 don't treat forced BW differently
                      if(lconflict(-j)) then
@@ -310,7 +310,7 @@ c
                enddo
                do j=1,nexternal-3
                   nbw=nbw+1
-                  if (pwidth(-j,i) .gt. 1d-20  .and. sprop(1,-j,i).ne.0) then
+                  if (prwidth(-j,i) .gt. 1d-20  .and. sprop(1,-j,i).ne.0) then
                      write(*,*) 'Got bw',nbw,j
 c                    JA 4/8/11 don't treat forced BW differently
                      if(lconflict(-j)) then
@@ -372,10 +372,11 @@ c     local
 c
       integer i,j
       integer iden_part(-max_branch:-1)
-      double precision pwidth(-max_branch:-1,lmaxconfigs)  !Propagator width
-      double precision pmass(-max_branch:-1,lmaxconfigs)   !Propagator mass
+      double precision prwidth(-max_branch:-1,lmaxconfigs)  !Propagator width
+      double precision prmass(-max_branch:-1,lmaxconfigs)   !Propagator mass
       double precision pow(-max_branch:-1,lmaxconfigs)    !Not used, in props.inc
       double precision xmass(-max_branch:nexternal)
+      double precision pmass(nexternal)   !External particle mass
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
@@ -388,13 +389,14 @@ c
 c-----
 c  Begin Code
 c-----
-      include 'props.inc'   !Propagator mass and width information pmass,pwidth
+      include 'props.inc'   !Propagator mass and width information prmass,prwidth
+      include 'pmass.inc'   !External particle masses
       write(*,*) 'Checking for BW ',iconfig
 c
 c     Reset variables
 c      
       do i=1,nexternal
-         xmass(i) = 0d0
+         xmass(i) = pmass(i)
       enddo
       do i=1,nexternal-1
          lconflict(-i) = .false.
@@ -407,7 +409,7 @@ c
       i=1
       do while (i .lt. nexternal-2 .and. itree(1,-i) .ne. 1)
          xmass(-i) = xmass(itree(1,-i))+xmass(itree(2,-i))
-         if (pwidth(-i,iconfig) .gt. 0d0) then
+         if (prwidth(-i,iconfig) .gt. 0d0) then
 c     JA 3/31/11 Keep track of identical particles (i.e., radiation vertices)
 c     by tracing the particle identity from the external particle.
             if(itree(1,-i).gt.0) then
@@ -432,14 +434,14 @@ c     by tracing the particle identity from the external particle.
      $           sprop(1,-i).eq.sprop(1,itree(2,-i)))
      $              iden_part(-i) = sprop(1,-i)
             endif
-            if (xmass(-i) .gt. pmass(-i,iconfig) .and.
+            if (xmass(-i) .gt. prmass(-i,iconfig) .and.
      $           iden_part(-i).eq.0) then !Can't be on shell, and not radiation
                lconflict(-i)=.true.
                write(*,*) "Found Conflict", iconfig,i,
-     $              pmass(-i,iconfig),xmass(-i)
+     $              prmass(-i,iconfig),xmass(-i)
             endif
          endif
-         xmass(-i) = max(xmass(-i),pmass(-i,iconfig)+3d0*pwidth(-i,iconfig))        
+         xmass(-i) = max(xmass(-i),prmass(-i,iconfig)+3d0*prwidth(-i,iconfig))        
          i=i+1
       enddo
 c
@@ -457,7 +459,7 @@ c     Only include BW props as conflicting, but not if radiation
 c
       do j=i,1,-1
          if (lconflict(-j)) then 
-            if (pwidth(-j,iconfig) .le. 0 .or. iden_part(-j).gt.0) then 
+            if (prwidth(-j,iconfig) .le. 0 .or. iden_part(-j).gt.0) then 
                lconflict(-j) = .false.
                write(*,*) 'No conflict BW',iconfig,j
             else

@@ -397,9 +397,9 @@ c     Write ic with correct number of digits
 c      write(26,15) '#PBS -q ' // PBS_QUE
 c      write(26,15) '#PBS -o /dev/null'
 c      write(26,15) '#PBS -e /dev/null'
-      write(26,15) 'if [[ "$PBS_O_WORKDIR" != "" ]]; then' 
-      write(26,15) '    cd $PBS_O_WORKDIR'
-      write(26,15) 'fi'
+c      write(26,15) 'if [[ "$PBS_O_WORKDIR" != "" ]]; then' 
+c      write(26,15) '    cd $PBS_O_WORKDIR'
+c      write(26,15) 'fi'
       write(26,15) 'k=run1_app.log'
       write(lun,15) 'script=' // fname
 c      write(lun,15) 'rm -f wait.$script >& /dev/null'

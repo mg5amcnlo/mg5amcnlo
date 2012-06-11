@@ -2202,9 +2202,9 @@ c           This is dummy particle used in multiparticle vertices
 
                     pow_part = 1 + int(particle.is_boson())
 
-                lines.append("pmass(%d,%d)  = %s" % \
+                lines.append("prmass(%d,%d)  = %s" % \
                              (leg.get('number'), iconf + 1, mass))
-                lines.append("pwidth(%d,%d) = %s" % \
+                lines.append("prwidth(%d,%d) = %s" % \
                              (leg.get('number'), iconf + 1, width))
                 lines.append("pow(%d,%d) = %d" % \
                              (leg.get('number'), iconf + 1, pow_part))

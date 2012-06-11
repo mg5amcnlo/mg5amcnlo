@@ -33,11 +33,11 @@ c     Variables for combination of color indices (including multipart. vert)
 
       double precision ZERO
       parameter (ZERO=0d0)
-      double precision pmass(-nexternal:0,lmaxconfigs)
-      double precision pwidth(-nexternal:0,lmaxconfigs)
+      double precision prmass(-nexternal:0,lmaxconfigs)
+      double precision prwidth(-nexternal:0,lmaxconfigs)
       integer pow(-nexternal:0,lmaxconfigs)
       logical first_time,tchannel
-      save pmass,pwidth,pow
+      save prmass,prwidth,pow
       data first_time /.true./
 
       Double Precision amp2(maxamps), jamp2(0:maxflow)
@@ -249,7 +249,7 @@ c       Calculate momentum (p1+p2 for s-channel, p2-p1 for t-channel)
           enddo
           pb(4,i)=sqrt(max(0d0,pb(0,i)**2-pb(1,i)**2-pb(2,i)**2-pb(3,i)**2))
 c          if(jpart(6,i).eq.2.and.
-c     $       abs(pb(4,i)-pmass(i,iconfig)).gt.5d0*pwidth(i,iconfig)) then
+c     $       abs(pb(4,i)-prmass(i,iconfig)).gt.5d0*prwidth(i,iconfig)) then
 c            jpart(6,i)=3
 c            nres=nres-1
 c          endif
