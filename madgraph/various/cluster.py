@@ -304,13 +304,17 @@ class PBSCluster(Cluster):
         if argument:
             text += ' ' + ' '.join(argument)
 
-        a = subprocess.Popen(['qsub','-o', stdout,
-                                     '-N', me_dir, 
-                                     '-e', stderr,
-                                     '-q', self.cluster_queue,
-                                     '-V'], stdout=subprocess.PIPE, 
-                                     stderr=subprocess.STDOUT,
-                                     stdin=subprocess.PIPE, cwd=cwd)
+        command = ['qsub','-o', stdout,
+                   '-N', me_dir, 
+                   '-e', stderr,
+                   '-V']
+
+        if self.cluster_queue and self.cluster_queue != 'None':
+            command.extend(['-q', self.cluster_queue])
+
+        a = subprocess.Popen(command, stdout=subprocess.PIPE, 
+                                      stderr=subprocess.STDOUT,
+                                      stdin=subprocess.PIPE, cwd=cwd)
             
         output = a.communicate(text)[0]
         id = output.split('.')[0]
@@ -439,13 +443,17 @@ class SGECluster(Cluster):
         logger.debug("!=== error  %s" % stderr)
         logger.debug("!=== logs   %s" % log)
 
-        a = subprocess.Popen(['qsub','-o', stdout,
-                                    '-N', me_dir, 
-                                    '-e', stderr,
-                                    '-q', self.cluster_queue,
-                                    '-V'], stdout=subprocess.PIPE, 
-                                    stderr=subprocess.STDOUT,
-                                    stdin=subprocess.PIPE, cwd=cwd)
+        command = ['qsub','-o', stdout,
+                   '-N', me_dir, 
+                   '-e', stderr,
+                   '-V']
+
+        if self.cluster_queue and self.cluster_queue != 'None':
+            command.extend(['-q', self.cluster_queue])
+
+        a = subprocess.Popen(command, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             stdin=subprocess.PIPE, cwd=cwd)
 
         output = a.communicate(text)[0]
         id = output.split(' ')[2]
@@ -550,13 +558,16 @@ class LSFCluster(Cluster):
         if argument:
             text += ' ' + ' '.join(argument)
 
-        a = subprocess.Popen(['bsub','-o', stdout,
-                                     '-J', me_dir, 
-                                     '-e', stderr,
-                                     '-q', self.cluster_queue],
-                                     stdout=subprocess.PIPE, 
-                                     stderr=subprocess.STDOUT,
-                                     stdin=subprocess.PIPE, cwd=cwd)
+        command = ['bsub','-o', stdout,
+                   '-J', me_dir, 
+                   '-e', stderr]
+
+        if self.cluster_queue and self.cluster_queue != 'None':
+            command.extend(['-q', self.cluster_queue])
+
+        a = subprocess.Popen(command, stdout=subprocess.PIPE, 
+                                      stderr=subprocess.STDOUT,
+                                      stdin=subprocess.PIPE, cwd=cwd)
             
         output = a.communicate(text)[0]
         #Job <nnnn> is submitted to default queue <normal>.
