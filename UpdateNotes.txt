@@ -9,6 +9,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       updated in the same way as for individual runs.
                   JA: Turn off automatic checking for minimal coupling
                       hierarchy in decay processes A > B C ...
+                  JA: Optimize phase space integration and event generation
+                      for decay processes with very squeezed mass spectrum.
                   JA: Ensure that identical matrix element in different process 
                       definitions are combined also when using the decay chain 
                       formalism (thanks to Zhen Liu for pointing this out).
