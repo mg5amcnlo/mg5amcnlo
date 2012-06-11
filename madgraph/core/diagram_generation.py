@@ -1457,6 +1457,11 @@ class MultiProcess(base_objects.PhysicsObject):
                process_definition.get('overall_orders'):
             return process_definition.get('orders')
 
+        # If this is a decay process (and not a decay chain), return
+        if process_definition.get_ninitial() == 1 and not \
+                process_definition.get('is_decay_chain'):
+            return process_definition.get('orders')
+
         logger.info("Checking for minimal orders which gives processes.")
         logger.info("Please specify coupling orders to bypass this step.")
 
