@@ -53,7 +53,7 @@ c Vegas stuff
       integer ipole
       common/tosigint/ndim,ipole
 
-      real*8 sigintH,sigintS,sigintF,resA,errA,resS,errS,chi2a
+      real*8 sigintH,sigintS,sigintF,resA,errA,resS,errS,chi2
       external sigintH,sigintS,sigintF
 
       integer irestart
@@ -199,13 +199,13 @@ c
          write (*,*) 'imode is ',imode
          if (Hevents.and.SHsep) then
             call mint(sigintH,ndim,ncall,itmax,imode,
-     &           xgrid,xint,ymax,resA,errA,resS,errS)
+     &           xgrid,xint,ymax,resA,errA,resS,errS,chi2)
          elseif(.not.SHsep) then
             call mint(sigintF,ndim,ncall,itmax,imode,
-     &           xgrid,xint,ymax,resA,errA,resS,errS)
+     &           xgrid,xint,ymax,resA,errA,resS,errS,chi2)
          else
             call mint(sigintS,ndim,ncall,itmax,imode,
-     &           xgrid,xint,ymax,resA,errA,resS,errS)
+     &           xgrid,xint,ymax,resA,errA,resS,errS,chi2)
          endif
          open(unit=58,file='res_0',status='unknown')
          write(58,*)'Final result [ABS]:',resA,' +/-',errA
@@ -213,6 +213,7 @@ c
          close(58)
          write(*,*)'Final result [ABS]:',resA,' +/-',errA
          write(*,*)'Final result:',resS,' +/-',errS
+         write(*,*)'chi**2 per D.o.F.:',chi2
       
 c to save grids:
          open (unit=12, file='mint_grids',status='unknown')
@@ -262,13 +263,13 @@ c Prepare the MINT folding
          write (*,*) 'imode is ',imode
          if (Hevents.and.SHsep) then
             call mint(sigintH,ndim,ncall,itmax,imode,
-     &           xgrid,xint,ymax,resA,errA,resS,errS)
+     &           xgrid,xint,ymax,resA,errA,resS,errS,chi2)
          elseif (.not.SHsep) then
             call mint(sigintF,ndim,ncall,itmax,imode,
-     &           xgrid,xint,ymax,resA,errA,resS,errS)
+     &           xgrid,xint,ymax,resA,errA,resS,errS,chi2)
          else
             call mint(sigintS,ndim,ncall,itmax,imode,
-     &           xgrid,xint,ymax,resA,errA,resS,errS)
+     &           xgrid,xint,ymax,resA,errA,resS,errS,chi2)
          endif
          open(unit=58,file='res_1',status='unknown')
          write(58,*)'Final result [ABS]:',resA,' +/-',errA
@@ -277,6 +278,7 @@ c Prepare the MINT folding
 
          write(*,*)'Final result [ABS]:',resA,' +/-',errA
          write(*,*)'Final result:',resS,' +/-',errS
+         write(*,*)'chi**2 per D.o.F.:',chi2
 
 c to save grids:
          open (unit=12, file='mint_grids_NLO',status='unknown')
