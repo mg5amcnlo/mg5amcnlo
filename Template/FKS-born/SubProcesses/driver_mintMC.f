@@ -1199,7 +1199,7 @@ c
       logical unweight,firsttime
       data firsttime /.true./
       integer nFKSprocess_save,ifound
-      integer id_current(maxproc,nexternal),id_first(maxproc,nexternal)
+      integer id_current(nexternal,maxproc),id_first(nexternal,maxproc)
      &     ,nequal,equal_to(maxproc,fks_configs),eto(maxproc
      &     ,fks_configs),equal_to_inverse(maxproc,fks_configs)
      &     ,etoi(maxproc,fks_configs)
