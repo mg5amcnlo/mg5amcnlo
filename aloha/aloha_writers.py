@@ -678,7 +678,6 @@ class ALOHAWriterForFortran(WriteALOHA):
         
 
         numerator = self.routine.expr
-        print self.routine.infostr, 'Coup(1)' in self.routine.infostr
         if not 'Coup(1)' in self.routine.infostr:
             coup_name = 'COUP'
         else:
