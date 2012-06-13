@@ -1413,7 +1413,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         
         
         # options
-        options = ['--format=Fortran', '--format=Python','--format=CPP','--output=']
+        options = ['--format=Fortran', '--format=Python','--format=gpu','--format=CPP','--output=']
         options = self.list_completion(text, options)
         if options:
             completion_categories['options'] = options

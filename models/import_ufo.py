@@ -153,7 +153,7 @@ def import_full_model(model_path):
         else:
             # check path is correct 
             if model.has_key('version_tag') and model.get('version_tag') == os.path.realpath(model_path) + str(misc.get_pkg_info()):
-                _import_once.append((model_path,aloha.unitary_gauge))
+                _import_once.append((model_path, aloha.unitary_gauge))
                 return model
 
     if (model_path, aloha.unitary_gauge) in _import_once:

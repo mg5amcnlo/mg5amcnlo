@@ -695,7 +695,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                                   self.offshell)
             if 'L' not in self.tag:
-                coeff = 'denom'    
+                coeff = 'denom*'    
                 if not aloha.complex_mass:                
                     out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -CI* W%(i)s))\n' % \
                       {'i': self.outgoing, 'COUP': coup_name})
@@ -709,10 +709,13 @@ class ALOHAWriterForFortran(WriteALOHA):
                     ptype = 'list_double'
                 self.declaration.add((ptype,'P%s' % self.outgoing))
             else:
-                coeff = 'COUP'
+                if coup_name == 'COUP':
+                    coeff = 'COUP*'
+                else:
+                    coeff = ''
                 
             for ind in numerator.listindices():
-                out.write('    %s(%d)= %s*%s\n' % (self.outname, 
+                out.write('    %s(%d)= %s%s\n' % (self.outname, 
                                         self.pass_to_HELAS(ind)+1, coeff,
                                         self.write_obj(numerator.get_rep(ind))))
         return out.getvalue()
@@ -1159,6 +1162,7 @@ def combine_name(name, other_names, outgoing, tag=None):
 class ALOHAWriterForCPP(WriteALOHA): 
     """Routines for writing out helicity amplitudes as C++ .h and .cc files."""
     
+    extension = '.c'
     writer = writers.CPPWriter
 
     type2def = {}    
@@ -1166,7 +1170,12 @@ class ALOHAWriterForCPP(WriteALOHA):
     type2def['double'] = 'double '
     type2def['complex'] = 'complex<double> '
     
-        
+    #variable overwritten by gpu
+    realoperator = '.real()'
+    imagoperator = '.imag()'
+    ci_definition = ' complex<double> cI = (0.,1.);\n'
+    
+    
     def change_number_format(self, number):
         """Format numbers into C++ format"""
         if isinstance(number, complex):
@@ -1236,7 +1245,7 @@ class ALOHAWriterForCPP(WriteALOHA):
     
     
     
-    def get_header_txt(self, name=None, couplings=None,mode=None):
+    def get_header_txt(self, name=None, couplings=None,mode=''):
         """Define the Header of the fortran file. This include
             - function tag
             - definition of variable
@@ -1244,8 +1253,9 @@ class ALOHAWriterForCPP(WriteALOHA):
         if name is None:
             name = self.name
            
-        if mode is None:
+        if mode=='':
             mode = self.mode
+        
         
         
         out = StringIO()
@@ -1288,8 +1298,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         out = StringIO()
         argument_var = [name for type,name in self.call_arg]
         # define the complex number CI = 0+1j
-        out.write(' complex<double> cI = (%s,%s);\n' % \
-                  (self.change_number_format(0),self.change_number_format(1)))
+        out.write(self.ci_definition)
                     
         for type, name in self.declaration:
             if type.startswith('list'):
@@ -1387,12 +1396,12 @@ class ALOHAWriterForCPP(WriteALOHA):
                 nb = j 
                 if j == 0: 
                     assert not aloha.mp_precision 
-                    operator = '.real()' # not suppose to pass here in mp
+                    operator = self.realoperator # not suppose to pass here in mp
                 elif j == 1: 
                     nb2 += 1
                 elif j == 2:
                     assert not aloha.mp_precision 
-                    operator = '.imag()' # not suppose to pass here in mp
+                    operator = self.imagoperator # not suppose to pass here in mp
                 elif j ==3:
                     nb2 -= 1
             else:
@@ -1491,7 +1500,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         return h_string.getvalue()
 
 
-    def write_combined_cc(self, lor_names, offshell=None, sym=True):
+    def write_combined_cc(self, lor_names, offshell=None, sym=True, mode=''):
         "Return the content of the .cc file linked to multiple lorentz call."
 
         # Set some usefull command
@@ -1507,7 +1516,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                    
         # write header 
         new_couplings = ['COUP%s' % (i+1) for i in range(len(lor_names)+1)]
-        text.write(self.get_header_txt(name=name, couplings=new_couplings))
+        text.write(self.get_header_txt(name=name, couplings=new_couplings, mode=mode))
   
         # Define which part of the routine should be called
         data['addon'] = ''.join(self.tag) + '_%s' % self.offshell
@@ -1579,7 +1588,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         
         # write in two file
         if self.out_path:
-            writer_h = writers.CPPWriter(self.out_path + ".h")
+            writer_h = writers.CPPWriter(self.out_path[:-len(self.extension)] + ".h")
             commentstring = 'This File is Automatically generated by ALOHA \n'
             commentstring += 'The process calculated in this file is: \n'
             commentstring += self.routine.infostr + '\n'
@@ -1608,7 +1617,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         
         #h_text = self.write_combined_h(lor_names, offshell, **opt)
         cc_text, h_text = StringIO() , StringIO() 
-        cc_text.write(self.write_combined_cc(lor_names, offshell, **opt))
+        cc_text.write(self.write_combined_cc(lor_names, offshell, mode=mode,**opt))
         couplings = ['COUP%d' % (i+1) for i in range(len(lor_names)+1)]
         
         if mode == 'self':
@@ -1637,6 +1646,49 @@ class ALOHAWriterForCPP(WriteALOHA):
         
         return h_text.getvalue(), cc_text.getvalue()
         
+        
+class ALOHAWriterForGPU(ALOHAWriterForCPP):
+    
+    extension = '.cu'
+    realoperator = '.re'
+    imagoperator = '.im'
+    ci_definition = 'complex<double> cI = mkcmplx(0., 1.);\n'
+    
+    def get_header_txt(self, name=None, couplings=None,mode=''):
+        """Define the Header of the fortran file. This include
+            - function tag
+            - definition of variable
+        """
+        text = StringIO()
+        if not 'is_h' in mode:
+            text.write('__device__=__forceinclude__\n')
+        text.write(ALOHAWriterForCPP.get_header_txt(self, name, couplings, mode))
+        return text.getvalue()
+        
+    def get_h_text(self,couplings=None):
+        """Return the full contents of the .h file"""
+
+        h_string = StringIO()
+        if not self.mode == 'no_include':
+            h_string.write('#ifndef '+ self.name + '_guard\n')
+            h_string.write('#define ' + self.name + '_guard\n')
+            h_string.write('#include "cmplx.h"\n')
+            h_string.write('using namespace std;\n\n')
+
+        h_header = self.get_header_txt(mode='no_include__is_h', couplings=couplings)
+        h_string.write(h_header)
+
+        for elem in self.routine.symmetries: 
+            symmetryhead = h_header.replace( \
+                             self.name,self.name[0:-1]+'%s' %(elem))
+            h_string.write(symmetryhead)
+
+        if not self.mode == 'no_include':
+            h_string.write('#endif\n\n')
+
+        return h_string.getvalue()
+    
+
 class ALOHAWriterForPython(WriteALOHA):
     """ A class for returning a file/a string for python evaluation """
     
@@ -1942,6 +1994,8 @@ class WriterFactory(object):
             return ALOHAWriterForPython(data, outputdir)
         elif language == 'cpp':
             return ALOHAWriterForCPP(data, outputdir)
+        elif language == 'gpu':
+            return ALOHAWriterForGPU(data, outputdir)
         else:
             raise Exception, 'Unknown output format'
 
