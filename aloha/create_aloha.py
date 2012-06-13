@@ -232,7 +232,7 @@ class AbstractRoutineBuilder(object):
                 lorentz = self.change_sign_for_outcoming_fermion()  
                 self.routine_kernel = lorentz
                 lorentz = eval(lorentz)
-            except NameError, error:
+            except NameError as error:
                 logger.error('unknow type in Lorentz Evaluation:%s'%str(error))
                 raise ALOHAERROR, 'unknow type in Lorentz Evaluation: %s ' % str(error) 
             else:
