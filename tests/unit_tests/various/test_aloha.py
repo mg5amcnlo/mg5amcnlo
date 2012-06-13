@@ -3120,7 +3120,6 @@ end
 """
 
         self.assertEqual(text.split('\n'),goal.split('\n')) 
-   
         text_h, text_cpp =  abstract.write(None, 'CPP')
     
         goal_h = """#ifndef VVS1_1_guard
@@ -3707,7 +3706,6 @@ def RFSC1_1(R1,S3,COUP,M2,W2):
         amp = builder.compute_routine(1)
         
         routine = amp.write(output_dir=None, language='Python')
-        print routine
         
         split_solution = solution.split('\n')
         split_routine = routine.split('\n')
@@ -3812,7 +3810,6 @@ end
         amp = builder.compute_routine(1)
         
         routine = amp.write(output_dir=None, language='Fortran')
-        print routine
         split_solution = solution.split('\n')
         split_routine = routine.split('\n')
         self.assertEqual(split_solution, split_routine)

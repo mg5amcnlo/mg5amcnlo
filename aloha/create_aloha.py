@@ -80,21 +80,20 @@ class AbstractRoutine(object):
         
     def write(self, output_dir, language='Fortran', mode='self', combine=True,**opt):
         """ write the content of the object """
-        
+
         writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag)
         text = writer.write(mode=mode, **opt)
         if combine:
             for grouped in self.combined:
                 if isinstance(text, tuple):
                     text = tuple([old.__add__(new)  for old, new in zip(text, 
-                             writer.write_combined(grouped, mode=mode, **opt))])
+                             writer.write_combined(grouped, mode=mode+'no_include', **opt))])
                 else:
-                    text += writer.write_combined(grouped, mode=mode, **opt)
+                    text += writer.write_combined(grouped, mode=mode+'no_include', **opt)
                 
         if aloha.mp_precision and 'MP' not in self.tag:
             self.tag.append('MP')
             text += self.write(output_dir, language, mode, **opt)
-            
         return text
 
 class AbstractRoutineBuilder(object):

@@ -693,7 +693,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                                   self.offshell)
             if 'L' not in self.tag:
-                coeff = 'denom *'    
+                coeff = 'denom*'    
                 if not aloha.complex_mass:                
                     out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -CI* W%(i)s))\n' % \
                       {'i': self.outgoing, 'COUP': coup_name})
@@ -1154,7 +1154,7 @@ class ALOHAWriterForCPP(WriteALOHA):
     #variable overwritten by gpu
     realoperator = '.real()'
     imagoperator = '.imag()'
-    ci_definition = 'complex<double> cI = (0., 1.);\n'
+    ci_definition = ' complex<double> cI = (0.,1.);\n'
     
     
     def change_number_format(self, number):
@@ -1234,8 +1234,9 @@ class ALOHAWriterForCPP(WriteALOHA):
         if name is None:
             name = self.name
            
-        if mode is None:
+        if mode=='':
             mode = self.mode
+        
         
         
         out = StringIO()
@@ -1480,7 +1481,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         return h_string.getvalue()
 
 
-    def write_combined_cc(self, lor_names, offshell=None, sym=True):
+    def write_combined_cc(self, lor_names, offshell=None, sym=True, mode=''):
         "Return the content of the .cc file linked to multiple lorentz call."
 
         # Set some usefull command
@@ -1496,7 +1497,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                    
         # write header 
         new_couplings = ['COUP%s' % (i+1) for i in range(len(lor_names)+1)]
-        text.write(self.get_header_txt(name=name, couplings=new_couplings))
+        text.write(self.get_header_txt(name=name, couplings=new_couplings, mode=mode))
   
         # Define which part of the routine should be called
         data['addon'] = ''.join(self.tag) + '_%s' % self.offshell
@@ -1597,7 +1598,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         
         #h_text = self.write_combined_h(lor_names, offshell, **opt)
         cc_text, h_text = StringIO() , StringIO() 
-        cc_text.write(self.write_combined_cc(lor_names, offshell, **opt))
+        cc_text.write(self.write_combined_cc(lor_names, offshell, mode=mode,**opt))
         couplings = ['COUP%d' % (i+1) for i in range(len(lor_names)+1)]
         
         if mode == 'self':
