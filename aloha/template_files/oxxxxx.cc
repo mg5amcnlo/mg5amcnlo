@@ -6,8 +6,8 @@ void oxxxxx(double p[4],double fmass,int nhel,int nsf, complex<double> fo[6]){
   complex<double> chi[2];
   double sf[2],sfomeg[2],omega[2],pp,pp3,sqp0p3,sqm[2];
   int nh,ip,im;
-  fo[4] = complex<double>(p[0]*nsf,p[3]*nsf);
-  fo[5] = complex<double>(p[1]*nsf,p[2]*nsf);
+  fo[0] = complex<double>(p[0]*nsf,p[3]*nsf);
+  fo[1] = complex<double>(p[1]*nsf,p[2]*nsf);
   nh = nhel*nsf;
   if (fmass != 0.000){
     pp = min(p[0],pow(pow(p[1],2)+pow(p[2],2)+pow(p[3],2),0.5));
@@ -16,10 +16,10 @@ void oxxxxx(double p[4],double fmass,int nhel,int nsf, complex<double> fo[6]){
       sqm[1] = Sgn(sqm[0],fmass); 
       ip = -((1-nh)/2) * nhel ;
       im = (1+nh)/2 * nhel;
-      fo[0] = im *sqm[im];
-      fo[1] = ip*nsf*sqm[im];
-      fo[2] = im*nsf*sqm[-ip];
-      fo[3] = ip*sqm[-ip];
+      fo[2] = im *sqm[im];
+      fo[3] = ip*nsf*sqm[im];
+      fo[4] = im*nsf*sqm[-ip];
+      fo[5] = ip*sqm[-ip];
     }
     else{
       pp = min(p[0],pow(pow(p[1],2)+pow(p[2],2)+pow(p[3],2),0.5));
@@ -39,10 +39,10 @@ void oxxxxx(double p[4],double fmass,int nhel,int nsf, complex<double> fo[6]){
       else{
 	chi[1] = complex<double>(nh*p[1],-p[2])/pow(2.0*pp*pp3,0.5);
       }
-      fo[0] = sfomeg[1]*chi[im];
-      fo[1] = sfomeg[1]*chi[ip];
-      fo[2] = sfomeg[0]*chi[im];
-      fo[3] = sfomeg[0]*chi[ip];
+      fo[2] = sfomeg[1]*chi[im];
+      fo[3] = sfomeg[1]*chi[ip];
+      fo[4] = sfomeg[0]*chi[im];
+      fo[5] = sfomeg[0]*chi[ip];
     }
   }
   else{
@@ -60,16 +60,16 @@ void oxxxxx(double p[4],double fmass,int nhel,int nsf, complex<double> fo[6]){
       chi[1] = complex<double>(nh*p[1],-p[2])/sqp0p3;
     }
     if(nh==1){
-      fo[0] = chi[0];
-      fo[1] = chi[1];
-      fo[2] = complex<double>(0.00,0.00);
-      fo[3] = complex<double>(0.00,0.00);
+      fo[2] = chi[0];
+      fo[3] = chi[1];
+      fo[4] = complex<double>(0.00,0.00);
+      fo[5] = complex<double>(0.00,0.00);
     }
     else{      
-      fo[0] = complex<double>(0.00,0.00);
-      fo[1] = complex<double>(0.00,0.00);
-      fo[2] = chi[1];
-      fo[3] = chi[0];
+      fo[2] = complex<double>(0.00,0.00);
+      fo[3] = complex<double>(0.00,0.00);
+      fo[4] = chi[1];
+      fo[5] = chi[0];
     }
   }
   return;

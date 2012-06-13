@@ -3145,7 +3145,7 @@ void VVS1_2_2(complex<double> V2[], complex<double> S3[], complex<double> COUP1,
 
 void VVS1_1(complex<double> V2[], complex<double> S3[], complex<double> COUP, double M1, double W1,complex<double> V1[])
 {
- complex<double> cI = (0.,1.);
+ complex<double> cI = complex<double>(0.,1.);
  double  P1[4];
  complex<double>  TMP0;
  complex<double>  denom;
@@ -3174,7 +3174,7 @@ void VVS1_2(complex<double> V2[], complex<double> S3[], complex<double> COUP, do
 }
 void VVS1_2_1(complex<double> V2[], complex<double> S3[], complex<double> COUP1, complex<double> COUP2, double M1, double W1,complex<double> V1[])
 {
- complex<double> cI = (0.,1.);
+ complex<double> cI = complex<double>(0.,1.);
  double  P1[4];
  complex<double>  denom;
  int i;
@@ -3191,7 +3191,7 @@ while (i < 6)
 }
 void VVS1_2_2(complex<double> V2[], complex<double> S3[], complex<double> COUP1, complex<double> COUP2, double M1, double W1,complex<double> V1[])
 {
- complex<double> cI = (0.,1.);
+ complex<double> cI = complex<double>(0.,1.);
  double  P1[4];
  complex<double>  denom;
  int i;
@@ -4372,7 +4372,7 @@ P2[3] = -F2[0].imag();
 
 void FFV1C1_1(complex<double> F1[], complex<double> V3[], complex<double> COUP, double M2, double W2,complex<double> F2[])
 {
- complex<double> cI = (0.,1.);
+ complex<double> cI = complex<double>(0.,1.);
  double  P2[4];
  complex<double>  denom;
     F2[0] = +F1[0]+V3[0];
@@ -4427,7 +4427,7 @@ void FFV1C1_2(complex<double> F2[], complex<double> V3[], complex<double> COUP, 
 
 void FFV1C1_2(complex<double> F2[], complex<double> V3[], complex<double> COUP, double M1, double W1,complex<double> F1[])
 {
- complex<double> cI = (0.,1.);
+ complex<double> cI = complex<double>(0.,1.);
  double  P1[4];
  complex<double>  denom;
     F1[0] = +F2[0]+V3[0];
@@ -4448,7 +4448,7 @@ P1[3] = -F1[0].imag();
 
 void FFV1C1_2(complex<double> F2[], complex<double> V3[], complex<double> COUP, double M1, double W1,complex<double> F1[])
 {
- complex<double> cI = (0.,1.);
+ complex<double> cI = complex<double>(0.,1.);
  double  P1[4];
  complex<double>  denom;
     F1[0] = +F2[0]+V3[0];
@@ -4608,7 +4608,7 @@ void SSS1_3(complex<double> S2[], complex<double> S3[], complex<double> COUP, co
 
 void SSS1_1(complex<double> S2[], complex<double> S3[], complex<double> COUP, complex<double> M1,complex<double> S1[])
 {
- complex<double> cI = (0.,1.);
+ complex<double> cI = complex<double>(0.,1.);
  double  P1[4];
  complex<double>  denom;
     S1[0] = +S2[0]+S3[0];
