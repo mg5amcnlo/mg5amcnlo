@@ -1098,7 +1098,7 @@ c
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
       DOUBLE PRECISION       CONV
-      PARAMETER (CONV=389379.66*1000)  !CONV TO PICOBARNS
+      PARAMETER (CONV=389379660d0)  !CONV TO PICOBARNS
 
       double precision pmass(nexternal)
       include "pmass.inc"
@@ -1178,9 +1178,9 @@ c
 c Make sure that the result can be non-zero. If the jacobian from the
 c PS-setup or vegas are zero, we can skip this PS point and 'return'.
 c
-      if (wgt.eq.0d0.or.vegaswgt.eq.0d0) return
+      if ( (wgt.eq.0d0 .and. jac_cnt(0).eq.0d0 .and. jac_cnt(1).eq.0d0
+     &     .and. jac_cnt(2).eq.0d0) .or. vegaswgt.eq.0d0) return
 c
-
       if (fold.eq.0) then
          calculatedBorn=.false.
          call get_helicity(i_fks,j_fks)

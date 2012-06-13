@@ -625,9 +625,7 @@ C
       INCLUDE 'genps.inc'
       INCLUDE 'nexternal.inc'
       DOUBLE PRECISION       CONV
-      PARAMETER (CONV=389379.66*1000)  !CONV TO PICOBARNS             
-      REAL*8     PI
-      PARAMETER (PI=3.1415926D0)
+      PARAMETER (CONV=389379660D0)  !CONV TO PICOBARNS             
 C     
 C     ARGUMENTS                                                       
 C         
