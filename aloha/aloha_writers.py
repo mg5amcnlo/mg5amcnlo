@@ -82,7 +82,7 @@ class WriteALOHA:
             raise Exception, 'WRONG CONTRACTION OF LORENTZ OBJECT for routine %s: %s' \
                     % (self.name, ind_name)                                 
                                  
-    def get_header_txt(self): 
+    def get_header_txt(self,mode=''): 
         """ Prototype for language specific header""" 
         raise Exception, 'THis function should be overwritten'
         return ''
@@ -221,12 +221,11 @@ class WriteALOHA:
                          
         self.mode = mode
         
-        
         core_text = self.define_expression()    
         self.define_argument_list()
         out = StringIO()
         
-        out.write(self.get_header_txt())
+        out.write(self.get_header_txt(mode=self.mode))
         out.write(self.get_declaration_txt())
         out.write(self.get_momenta_txt())
         out.write(core_text)
@@ -452,7 +451,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             
 
     
-    def get_header_txt(self, name=None, couplings=None):
+    def get_header_txt(self, name=None, couplings=None,mode=''):
         """Define the Header of the fortran file. 
         """
         if name is None:
@@ -893,6 +892,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                                     J, K+1, self.write_obj(data)))
 
         assert one_pass, 'fail to generate %s' % self.name
+
         return out.getvalue()
     
     def get_declaration_txt(self):
@@ -1173,7 +1173,7 @@ class ALOHAWriterForCPP(WriteALOHA):
     #variable overwritten by gpu
     realoperator = '.real()'
     imagoperator = '.imag()'
-    ci_definition = ' complex<double> cI = (0.,1.);\n'
+    ci_definition = ' complex<double> cI = complex<double>(0.,1.);\n'
     
     
     def change_number_format(self, number):
@@ -1273,8 +1273,8 @@ class ALOHAWriterForCPP(WriteALOHA):
             args.append('%s%s%s'% (type, argname, list_arg))
                 
         if not self.offshell:
-            output = 'vertex'
-            self.declaration.add(('complex','vertex'))
+            output = 'complex<double> & vertex'
+            #self.declaration.add(('complex','vertex'))
         else:
             output = 'complex<double> %(spin)s%(id)d[]' % {
                      'spin': self.particles[self.outgoing -1],
@@ -1552,7 +1552,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             routine.write(line % data)
             if i:
                 if not offshell:
-                    routine.write( '    vertex = vertex + tmp\n')
+                    routine.write( '    vertex = vertex + tmp;\n')
                 else:
                     size = self.type_to_size[self.particles[offshell -1]] -2
                     routine.write(""" i= %s;\nwhile (i < %s)\n{\n""" % (self.momentum_size, self.momentum_size+size))
@@ -1574,10 +1574,6 @@ class ALOHAWriterForCPP(WriteALOHA):
         text = text.getvalue()
 
         return text
-
-
-
-
 
     
     def write(self, **opt):
@@ -1601,7 +1597,7 @@ class ALOHAWriterForCPP(WriteALOHA):
  
     def write_combined(self, lor_names, mode='', offshell=None, **opt):
         """Write the .h and .cc files associated to the combined file"""
-        
+
         # Set some usefull command
         if offshell is None:
             sym = 1
@@ -1778,7 +1774,7 @@ class ALOHAWriterForPython(WriteALOHA):
             return '    return %s\n\n' % (self.outname)
             
     
-    def get_header_txt(self, name=None, couplings=None):
+    def get_header_txt(self, name=None, couplings=None, mode=''):
         """Define the Header of the fortran file. This include
             - function tag
             - definition of variable
