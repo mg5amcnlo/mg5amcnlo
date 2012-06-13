@@ -722,7 +722,7 @@ class OrganizeModelExpression:
             return old_expr
         
         if expr.isdigit():
-            output = '_' + output #prevent to start with a number
+            output = 'nb__' + output #prevent to start with a number
             new_param = base_objects.ModelVariable(output, old_expr,'real')
         else:
             depend_on = self.find_dependencies(expr)
