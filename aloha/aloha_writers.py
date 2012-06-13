@@ -678,6 +678,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         
 
         numerator = self.routine.expr
+        print self.routine.infostr, 'Coup(1)' in self.routine.infostr
         if not 'Coup(1)' in self.routine.infostr:
             coup_name = 'COUP'
         else:
@@ -693,7 +694,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                                   self.offshell)
             if 'L' not in self.tag:
-                coeff = 'denom'    
+                coeff = 'denom *'    
                 if not aloha.complex_mass:                
                     out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -CI* W%(i)s))\n' % \
                       {'i': self.outgoing, 'COUP': coup_name})
@@ -707,10 +708,13 @@ class ALOHAWriterForFortran(WriteALOHA):
                     ptype = 'list_double'
                 self.declaration.add((ptype,'P%s' % self.outgoing))
             else:
-                coeff = 'COUP'
+                if coup_name == 'COUP':
+                    coeff = 'COUP*'
+                else:
+                    coeff = ''
                 
             for ind in numerator.listindices():
-                out.write('    %s(%d)= %s*%s\n' % (self.outname, 
+                out.write('    %s(%d)= %s%s\n' % (self.outname, 
                                         self.pass_to_HELAS(ind)+1, coeff,
                                         self.write_obj(numerator.get_rep(ind))))
         return out.getvalue()

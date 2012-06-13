@@ -200,7 +200,7 @@ class AddVariable(list):
         out = defaultdict(int)
         for obj in self:
             for key, value in obj.split(variables_id).items():
-                out[key] += value
+                out[key] += self.prefactor * value
         return out
     
     def contains(self, variables):

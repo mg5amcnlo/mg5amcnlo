@@ -1042,6 +1042,9 @@ class Model(PhysicsObject):
         to_change = {}
         mass_widths = [] # parameter which should stay real
         for particle in self.get('particles'):
+            m = particle.get('width')
+            if m in mass_widths:
+                continue
             mass_widths.append(particle.get('width'))
             mass_widths.append(particle.get('mass'))
             if particle.get('width') == 'ZERO':
