@@ -218,7 +218,7 @@ class CondorCluster(Cluster):
         self.submitted_ids.append(id)
         return id
     
-    @multiple_try()
+    @multiple_try(nb_try=10, sleep=10)
     def control_one_job(self, id):
         """ control the status of a single job with it's cluster id """
         cmd = 'condor_q '+str(id)+" -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
@@ -231,7 +231,7 @@ class CondorCluster(Cluster):
         return status.stdout.readline().strip()
     
     @check_interupt()
-    @multiple_try()
+    @multiple_try(nb_try=10, sleep=10)
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
         
@@ -241,10 +241,9 @@ class CondorCluster(Cluster):
         cmd = "condor_q " + ' '.join(self.submitted_ids) + " -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
         status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE, 
                                                          stderr=subprocess.PIPE)
-
-        if status.returncode:
-            raise ClusterManagmentError, 'condor_q returns error: %s' % \
-                                                            status.stderr.read()
+        error = status.stderr.read()
+        if status.returncode or error:
+            raise ClusterManagmentError, 'condor_q returns error: %s' % error
             
             
         idle, run, fail = 0, 0, 0
