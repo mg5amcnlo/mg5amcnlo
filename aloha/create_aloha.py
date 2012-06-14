@@ -785,22 +785,24 @@ class AbstractALOHAModel(dict):
                            'Fortran' : 'f',
                            'CPP': 'C'}
         ext = language_to_ext[language]
-         
-        if os.path.exists(os.path.join(self.model_pos, '%s.%s' % (name, ext))):
-            filepos = '%s/%s.%s' % (self.model_pos, name, ext)
+        paths = [os.path.join(self.model_pos, language), self.model_pos, 
+                           os.path.join(root_path, 'aloha', 'template_files', )]
 
-        elif os.path.exists(os.path.join(root_path, 'aloha', 'template_files', 
-                                                       '%s.%s' %(name, ext))):
-            filepos = '%s/aloha/template_files/%s.%s' % (root_path, name, ext)
-        else:
-            path1 = self.model_pos
-            path2 = os.path.join(root_path, 'aloha', 'template_files', )
-            raise ALOHAERROR, 'No external routine \"%s.%s\" in directories\n %s\n %s' % \
-                        (name, ext, path1, path2)
-        
+        ext_files  = []
+        for path in paths:
+            ext_files = glob.glob(os.path.join(path, '%s_*.%s' % (name, ext)))
+            if ext_files:
+                break
+        else: 
+
+            raise ALOHAERROR, 'No external routine \"%s.%s\" in directories\n %s' % \
+                        (name, ext, '\n'.join(paths))
+       
         if output_dir:
-            files.cp(filepos, output_dir)
-        return filepos
+            for filepath in ext_files:
+                
+                files.cp(filepath, output_dir)
+        return ext_files
                     
         
 

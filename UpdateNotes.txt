@@ -3,14 +3,19 @@ Update notes for MadGraph 5 (in reverse time order)
 1.5.0 (XX/XX/XX)  OM: Allow MG5 to run in complex mass scheme mode
                       (mg5> set complex_mass True)
                   OM: Allow MG5 to run in feynman Gauge
-		      (mg5> set gauge Feynman)
-		  OM: Support now UFO model with spin 3/2
-
-
+		              (mg5> set gauge Feynman)
+		          OM: Support now UFO model with spin 3/2
+		          OM: Aloha modifications: faster to create routine and those 
+		              ones are more optimized and therefore can be evaluated up
+		              to 30% faster than previous version.
+                  OM: Aloha now supports lorentz expression with denominator.
+		          OM: Improve error message when Source didn't compile properly.    
+		              
+		                     
 1.4.6 (16/05/12)  JA: Added cuts on lepton pt for each of the 4 hardest leptons
                   OM: allow bin/madevent script to be feeded by a single line command:
-		      example ./bin/madevent multi_run 10 
-		  OM: Adding the 4 higgs interactions in the standard model UFO model
+		              example ./bin/madevent multi_run 10 
+		          OM: Adding the 4 higgs interactions in the standard model UFO model
                   JA: Added new restriction card for the sm model with massive
                       muon and electron, and non-zero tau decay width
                   JA: Ensure assignment of colors to intermediate propagators

@@ -3042,6 +3042,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             del os.environ['lhapdf']
         
         # Compile
+        for name in ['../bin/internal/gen_ximprove', 'all', 
+                     '../bin/internal/combine_events', 
+                     '../bin/internal/combine_runs']:
+            misc.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
+        
+
+        
         out = misc.call([pjoin(self.dirbin, 'compile_Source')],
                               cwd = self.me_dir)
         if out:

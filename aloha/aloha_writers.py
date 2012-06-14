@@ -449,7 +449,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             
 
     
-    def get_header_txt(self, name=None, couplings=None, mode=''):
+    def get_header_txt(self, name=None, couplings=None, **opt):
         """Define the Header of the fortran file. 
         """
         if name is None:
@@ -1037,7 +1037,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         
         
         
-    def get_header_txt(self, name=None, couplings=None, mode=''):
+    def get_header_txt(self, name=None, couplings=None, **opt):
         """Define the Header of the fortran file. This include
             - function tag
             - definition of variable
