@@ -1052,8 +1052,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         'outgoing': 1 if not flip else -1,
                         'intermediate': 1, 'initial': 1, 'final': 1}
         return self.get('fermionflow') * \
-               state_number[self.get('state')] * \
-               self.get('spin')
+                  state_number[self.get('state')] * \
+                  self.get('spin')
 
     def find_mother_fermion(self):
         """Return the fermion mother which is fermion flow connected to
@@ -1114,7 +1114,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         # Sort according to spin and flow direction
         res.sort()
-
 #        if not self['is_loop']:
         res.append(self.get_spin_state_number())
         res.append(self.find_outgoing_number())

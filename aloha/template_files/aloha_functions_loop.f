@@ -1613,7 +1613,7 @@ C===============================================================================
       INTEGER CFIG
       COMPLEX*16 W(20)
       
-      CALL LCUT_V(-Q,CFIG,W)
+      CALL LCUT_V(Q,CFIG,W)
       END
 
       SUBROUTINE LCUT_V(Q,CFIG,W)
@@ -1665,7 +1665,7 @@ C===============================================================================
       INTEGER CFIG
       COMPLEX*32 W(20)
       
-      CALL MP_LCUT_V(-Q,CFIG,W)
+      CALL MP_LCUT_V(Q,CFIG,W)
       END
 
       SUBROUTINE MP_LCUT_V(Q,CFIG,W)

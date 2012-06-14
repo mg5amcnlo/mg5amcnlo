@@ -22,6 +22,7 @@ import os
 import re
 import shutil
 import subprocess
+import itertools
 
 import aloha
 
@@ -221,9 +222,9 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
 
     def get_amp_to_jamp_map(self, col_amps, n_amps):
         """ Returns a list with element 'i' being a list of tuples corresponding
-        to all appearance of amplitude number 'i' in the jamp number 'j'
-        with coeff 'coeff_j'. The format of each tuple describing an appearance 
-        is (j, coeff_j)."""
+        to all apparition of amplitude number 'i' in the jamp number 'j'
+        with coeff 'coeff_j'. The format of each tuple describing an apparition 
+        is (j, coeff_j). where coeff_j is of the form (Fraction, is_imag)."""
 
         if(isinstance(col_amps,list)):
             if(col_amps and isinstance(col_amps[0],list)):
@@ -237,7 +238,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         res_list = [[] for i in range(n_amps)]
         
         for i, coeff_list in enumerate(color_amplitudes):
-                for (coefficient, amp_number) in coeff_list: 
+                for (coefficient, amp_number) in coeff_list:
                     res_list[amp_number-1].append((i,self.cat_coeff(\
                       coefficient[0],coefficient[1],coefficient[2],coefficient[3])))
 
@@ -248,9 +249,11 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         NLOOPAMPSxNBORNAMPS and allows for squaring individually each Loop and Born
         amplitude."""
 
+        logger.info('Computing diagram color coefficients')
+
         # The two lists have a list of tuples at element 'i' which correspond
-        # to all appearance of loop amplitude number 'i' in the jampl number 'j'
-        # with coeff 'coeffj'. The format of each tuple describing an appearance 
+        # to all apparitions of loop amplitude number 'i' in the jampl number 'j'
+        # with coeff 'coeffj'. The format of each tuple describing an apparition 
         # is (j, coeffj).
         ampl_to_jampl=self.get_amp_to_jamp_map(\
           matrix_element.get_loop_color_amplitudes(),
@@ -260,7 +263,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
           matrix_element.get_born_color_amplitudes(),
           matrix_element.get_number_of_born_amplitudes())
         else:
-            ampb_to_jampb=ampl_to_jampl
+            ampb_to_jampb=ampl_to_jamp
         # Below is the original color matrix multiplying the JAMPS
         if matrix_element.get('color_matrix'):
             ColorMatrixDenom = \
@@ -279,46 +282,50 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         # Now we construct the color factors between each born and loop amplitude
         # by scanning their contributions to the different jamps.
         for jampl_list in ampl_to_jampl:
-            line=[]
+            line_num=[]
             line_denom=[]
             for jampb_list in ampb_to_jampb:
-                coeff_real=fractions.Fraction(0,1)
-                coeff_imag=fractions.Fraction(0,1)
-                for (jampl, ampl_coeff) in jampl_list:
-                    for (jampb, ampb_coeff) in jampb_list:
-                        buff=ampl_coeff[0]*ampb_coeff[0]*\
-                          fractions.Fraction(ColorMatrixNum[jampl][jampb],\
-                            ColorMatrixDenom[jampl])
-                        # Remember that we must take the complex conjugate of
-                        # the born jamp color coefficient because we will compute
-                        # the square with 2 Re(LoopAmp x BornAmp*)
-                        if ampl_coeff[1] and ampb_coeff[1]:
-                            coeff_real=coeff_real+buff
-                        elif not ampl_coeff[1] and not ampb_coeff[1]:
-                            coeff_real=coeff_real+buff
-                        elif not ampl_coeff[1] and ampb_coeff[1]:
-                            coeff_imag=coeff_imag-buff
-                        else:
-                            coeff_imag=coeff_imag+buff
-                if coeff_real!=0 and coeff_imag!=0:
-                    raise MadGraph5Error,"MadGraph5 found a color matrix element"+\
-                      " which has both a real and imaginary part."
-                elif coeff_imag!=0:
-                    line.append(coeff_imag)
-                    # Negative denominator means imaginary color coef of the final color matrix
-                    line_denom.append(-1)
+                real_num=0
+                imag_num=0
+                common_denom=color_amp.ColorMatrix.lcmm(*[abs(ColorMatrixDenom[jampl]*
+                    ampl_coeff[0].denominator*ampb_coeff[0].denominator) for 
+                    ((jampl, ampl_coeff),(jampb,ampb_coeff)) in 
+                    itertools.product(jampl_list,jampb_list)])
+                for ((jampl, ampl_coeff),(jampb, ampb_coeff)) in \
+                                       itertools.product(jampl_list,jampb_list):
+                    # take the numerator and multiply by lcm/denominator
+                    # as we will later divide by the lcm.
+                    buff_num=ampl_coeff[0].numerator*\
+                        ampb_coeff[0].numerator*ColorMatrixNum[jampl][jampb]*\
+                        abs(common_denom)/(ampl_coeff[0].denominator*\
+                        ampb_coeff[0].denominator*ColorMatrixDenom[jampl])
+                    # Remember that we must take the complex conjugate of
+                    # the born jamp color coefficient because we will compute
+                    # the square with 2 Re(LoopAmp x BornAmp*)
+                    if ampl_coeff[1] and ampb_coeff[1]:
+                        real_num=real_num+buff_num
+                    elif not ampl_coeff[1] and not ampb_coeff[1]:
+                        real_num=real_num+buff_num
+                    elif not ampl_coeff[1] and ampb_coeff[1]:
+                        imag_num=imag_num-buff_num
+                    else:
+                        imag_num=imag_num+buff_num
+                assert(not (real_num!=0 and imag_num!=0), "MadGraph5 found a "+\
+                  "color matrix element which has both a real and imaginary part.")
+                if imag_num!=0:
+                    res=fractions.Fraction(imag_num,common_denom)
+                    line_num.append(res.numerator)
+                    # Negative denominator means imaginary color coef of the
+                    # final color matrix
+                    line_denom.append(res.denominator*-1)
                 else:
-                    line.append(coeff_real)
+                    res=fractions.Fraction(real_num,common_denom)
+                    line_num.append(res.numerator)
                     # Positive denominator means real color coef of the final color matrix
-                    line_denom.append(1)
-              
-            lcmm = color_amp.ColorMatrix.lcmm(*[coeff.denominator \
-                                      for coeff in line])
-            # The sign of the denom is already provided, we only set the absolute value here
-            line_denom = [denom*lcmm for denom in line_denom]
+                    line_denom.append(res.denominator)
+
+            ColorMatrixNumOutput.append(line_num)
             ColorMatrixDenomOutput.append(line_denom)
-            ColorMatrixNumOutput.append([\
-              (coeff.numerator*abs(line_denom[0])/coeff.denominator) for coeff in line])
 
         return (ColorMatrixNumOutput,ColorMatrixDenomOutput)
 
@@ -545,11 +552,10 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             return calls
         
         else:
-                        
             filename = 'loop_matrix.f'
             calls = self.write_loopmatrix(writers.FortranWriter(filename),
                                           matrix_element,
-                                          LoopFortranModel)             
+                                          LoopFortranModel) 
             filename = 'CT_interface.f'
             self.write_CT_interface(writers.FortranWriter(filename),\
                                     matrix_element)

@@ -656,7 +656,6 @@ class LoopDiagram(base_objects.Diagram):
         
         if not self['tag']:
             return
-        
         # Easy access point to the interaction dictionary
         ref_dict_to1 = model.get('ref_dict_to1')
         
@@ -674,10 +673,20 @@ class LoopDiagram(base_objects.Diagram):
                 # is a particle and the lcut leg 'end_number' always is the
                 # corresponding anti-particle. (if not self). This is to ensure
                 # a correct evaluation of the fermion number for amplitude.
+                # Also and alternatively, it would have been possible at this
+                # stage to have the end_number and starting_number set to the 
+                # same value while assigning the delta in color and lorentz as
+                # the structure of this 2-point closing interaction.
+                # There would have been one such interaction per particle in the
+                # model so it would be natural to create this interaction when
+                # importing the model. This is a cleaner implementation which
+                # I will be setting up soon.
                 if model.get_particle(starting_leg['id']).get('is_part'):
                     starting_leg['number']=lcut_part_number
+                    end_number=lcut_antipart_number
                 else:
-                    starting_leg['number']=lcut_antipart_number                    
+                    starting_leg['number']=lcut_antipart_number       
+                    end_number=lcut_part_number             
                 starting_leg['state']=True
             else:
                 starting_leg=loopVertexList[-1].get('legs')[-1]
@@ -688,10 +697,6 @@ class LoopDiagram(base_objects.Diagram):
         # with flagged id = -1
         first_leg=copy.copy(loopVertexList[-1].get('legs')[-1])
         sec_leg_id=model.get_particle(first_leg['id']).get_anti_pdg_code()
-        if model.get_particle(sec_leg_id).get('is_part'):
-            end_number=lcut_part_number
-        else:
-            end_number=lcut_antipart_number
         second_leg=base_objects.Leg({'number': end_number,
                                      'id': sec_leg_id,
                                      'state': first_leg.get('state'),
