@@ -644,7 +644,7 @@ class CheckValidForCmd(object):
             the number of times that it call generate_events command""")
             
         if args[-1].startswith('--laststep='):
-            run = args[-1][6:]
+            run = args[-1].split('=')[-1]
             if run not in ['parton', 'pythia', 'pgs', 'delphes']:
                 self.help_multi_run()
                 raise self.InvalidCmd('invalid %s argument'% args[-1])
@@ -1894,9 +1894,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         args = self.split_arg(line)
         # Check argument's validity
         mode = self.check_multi_run(args)
+        nb_run = args.pop(0)
+        if nb_run == 1:
+            logger.warn("'multi_run 1' command is not optimal. Think of using generate_events instead")
         self.ask_run_configuration(mode)
         main_name = self.run_name
-        nb_run = args.pop(0)
+
+
+        
+        
+        
         crossoversig = 0
         inv_sq_err = 0
         nb_event = 0
@@ -1911,9 +1918,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             inv_sq_err+=1.0/error**2
             self.results[main_name][-1]['cross'] = crossoversig/inv_sq_err
             self.results[main_name][-1]['error'] = math.sqrt(1.0/inv_sq_err)
+        self.results.def_current(main_name)
         
         self.run_name = main_name
-        self.results.def_current(main_name)
         self.update_status("Merging LHE files", level='parton')
         try:
             os.mkdir(pjoin(self.me_dir,'Events', self.run_name))
