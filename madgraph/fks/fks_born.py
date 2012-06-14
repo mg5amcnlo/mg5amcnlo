@@ -22,7 +22,7 @@ import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.fks.fks_common as fks_common
-import madgraph.fks.fks_real as fks_real
+#import madgraph.fks.fks_real as fks_real
 import copy
 import logging
 import array
@@ -85,12 +85,44 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
         self['pdgs'] = []
 
         super(FKSMultiProcessFromBorn, self).__init__(*arguments)   
-        amps = self.get('amplitudes')
 
+        #check process definition(s):
+        # a process such as g g > g g will lead to real emissions 
+        #   (e.g: u g > u g g ) which will miss some corresponding born,
+        #   leading to non finite results
+        for procdef in self['process_definitions']:
+            soft_particles = []
+            for pert in procdef['perturbation_couplings']:
+                soft_particles.extend(\
+                        fks_common.find_pert_particles_interactions(\
+                    procdef['model'], pert)['soft_particles'])
+                soft_particles_string = ', '.join( \
+                    [procdef['model'].get('particle_dict')[id][\
+                    {True:'name', False:'antiname'}[id >0] ] \
+                    for id in sorted(soft_particles, reverse=True)])
+            for leg in procdef['legs']:
+                if any([id in soft_particles for id in leg['ids']]) \
+                        and sorted(leg['ids']) != soft_particles:
+                    logger.warning(('%s can have real emission processes ' + \
+            'which are not finite.\nTo avoid this, please use multiparticles ' + \
+            'when generating the process and be sure to include all the following ' + \
+            'particles in the multiparticle definition:\n %s' ) \
+               % (procdef.nice_string(), soft_particles_string) )
+                    break
+
+        amps = self.get('amplitudes')
         for amp in amps:
             born = FKSProcessFromBorn(amp)
             self['born_processes'].append(born)
             born.generate_reals(self['pdgs'], self['real_amplitudes'])
+
+        born_pdg_list = [[l['id'] for l in born.born_proc['legs']] \
+                for born in self['born_processes'] ]
+
+        for born in self['born_processes']:
+            for real in born.real_amps:
+                real.find_fks_j_from_i(born_pdg_list)
+
 
         if amps:
             if self['process_definitions'][0].get('NLO_mode') == 'all':
@@ -205,6 +237,7 @@ class FKSRealProcess(object):
         self.amplitude = diagram_generation.Amplitude()
         self.is_to_integrate = True
         self.is_nbody_only = False
+        self.fks_j_from_i = {}
 
 
     def generate_real_amplitude(self):
@@ -213,8 +246,9 @@ class FKSRealProcess(object):
         return self.amplitude
 
 
-    def find_fks_j_from_i(self): #test written
-        """Returns a dictionary with the entries i : [j_from_i]."""
+    def find_fks_j_from_i(self, born_pdg_list): #test written
+        """Returns a dictionary with the entries i : [j_from_i], if the born pdgs are in 
+        born_pdg_list"""
         fks_j_from_i = {}
         dict = {}
         for i in self.process.get('legs'):
@@ -224,10 +258,18 @@ class FKSRealProcess(object):
                     if j.get('number') != i.get('number') :
                         ijlist = fks_common.combine_ij(i, j, self.process.get('model'), dict)
                         for ij in ijlist:
-                            born = fks_real.FKSBornProcess(self.process, i, j, ij)
-                            if born.amplitude.get('diagrams'):
+                            born_leglist = fks_common.to_fks_legs(
+                                          copy.deepcopy(self.process.get('legs')), 
+                                          self.process.get('model'))
+                            born_leglist.remove(i)
+                            born_leglist.remove(j)
+                            born_leglist.insert(ij.get('number') - 1, ij)
+                            born_leglist.sort()
+                            if [l['id'] for l in born_leglist] in born_pdg_list:
                                 fks_j_from_i[i.get('number')].append(\
                                                         j.get('number'))                                
+
+        self.fks_j_from_i = fks_j_from_i
         return fks_j_from_i
 
         

@@ -393,13 +393,13 @@ NJetSymmetrizeFinal     Yes
 
       DATA (FKS_J_FROM_I_D(4, 5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
 
-      DATA (FKS_J_FROM_I_D(5, 5, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
+      DATA (FKS_J_FROM_I_D(5, 5, JPOS), JPOS = 0, 1)  / 1, 1 /
 
-      DATA (FKS_J_FROM_I_D(6, 5, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
+      DATA (FKS_J_FROM_I_D(6, 5, JPOS), JPOS = 0, 1)  / 1, 1 /
 
-      DATA (FKS_J_FROM_I_D(7, 5, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
+      DATA (FKS_J_FROM_I_D(7, 5, JPOS), JPOS = 0, 1)  / 1, 2 /
 
-      DATA (FKS_J_FROM_I_D(8, 5, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
+      DATA (FKS_J_FROM_I_D(8, 5, JPOS), JPOS = 0, 1)  / 1, 2 /
 
 
 C     
@@ -1771,7 +1771,7 @@ C     Number of configs
         """Test that the lines corresponding to the fks_j_from_i array, to be 
         written in fks.inc. 
         """
-        lines = ['DATA (FKS_J_FROM_I_D(2, 5, JPOS), JPOS = 0, 2)  / 2, 1, 2 /','']
+        lines = ['DATA (FKS_J_FROM_I_D(2, 5, JPOS), JPOS = 0, 1)  / 1, 1 /','']
 
         process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         self.assertEqual(lines, process_exporter.get_fks_j_from_i_lines(self.myfks_me.real_processes[1], 2))

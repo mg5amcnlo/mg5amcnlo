@@ -23,8 +23,7 @@ rm -f P*/G*/events_*.lhe
 
 # Compile and run the fortran code that writes the updated version of nevents_unweighted
 # and also writes the nevts_?? files in the P*/G* directories
-gfortran -o split_jobs split_jobs.f
-./split_jobs
+./split_jobs.py
 
 # Loop over the directories
 for pdir in P*; do

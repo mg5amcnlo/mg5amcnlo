@@ -546,8 +546,13 @@ class TestFKSProcess(unittest.TestCase):
         #take the first real for this process 2j 21 >2 21 21i
         leglist = fksproc.reals[0][0]
         realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist, 1,0)
-        target = {1:[], 2:[], 3:[1,2], 4:[1,2,3,5], 5:[1,2,3,4] }
-        self.assertEqual(target, realproc.find_fks_j_from_i())
+        target_full = {1:[], 2:[], 3:[1,2], 4:[1,2,3,5], 5:[1,2,3,4] }
+        borns = [[2,21,2,21], [21,21,21,21], [2,-2,21,21]]
+        self.assertEqual(target_full, realproc.find_fks_j_from_i(borns))
+        #now the fks_j from_i corresponding onluy to u g > u g born
+        target_born = {1:[], 2:[], 3:[], 4:[1,2,3,5], 5:[1,2,3,4]}
+        borns = [[2,21,2,21]]
+        self.assertEqual(target_born, realproc.find_fks_j_from_i(borns))
 
 
     def test_fks_real_process_get_leg_i_j(self):

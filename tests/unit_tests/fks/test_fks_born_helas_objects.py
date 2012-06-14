@@ -130,16 +130,16 @@ class testFKSBornHelasObjects(unittest.TestCase):
                     [ [21,2,24,1,21], [21,4,24,3,21] ], #subrpocs for real 1
                     [ [-1,2,24,1,-1], [-3,4,24,3,-3] ], #subrpocs for real 2
                     [ [1,2,24,1,1], [3,4,24,3,3] ],     #subrpocs for real 3
-                    [ [-3,2,24,-3,1], [-4,2,24,-4,1], [-1,4,24,-1,3], [-2,4,24,-2,3] ], #subrpocs for real 4
-                    [ [3,2,24,3,1], [4,2,24,4,1], [1,4,24,1,3], [2,4,24,2,3] ], #subrpocs for real 5
-                    [ [-2,2,24,-2,1], [-4,4,24,-4,3] ], #subrpocs for real 6
-                    [ [2,2,24,2,1], [4,4,24,4,3] ],     #subrpocs for real 7
+                    [ [-3,2,24,1,-3], [-4,2,24,1,-4], [-1,4,24,3,-1], [-2,4,24,3,-2] ], #subrpocs for real 4
+                    [ [3,2,24,1,3], [4,2,24,1,4], [1,4,24,3,1], [2,4,24,3,2] ], #subrpocs for real 5
+                    [ [-2,2,24,1,-2], [-4,4,24,3,-4] ], #subrpocs for real 6
+                    [ [2,2,24,1,2], [4,4,24,3,4] ],     #subrpocs for real 7
                     [ [21,21,24,1,-2], [21,21,24,3,-4] ]#subrpocs for real 8
                     ],[ #these are for gdx-initiated born
                     [ [21,-1,24,-2,21], [21,-3,24,-4,21] ], #subrpocs for real 1
-                    [ [-1,-1,24,-1,-2], [-3,-3,24,-3,-4] ], #subrpocs for real 2
+                    [ [-1,-1,24,-2,-1], [-3,-3,24,-4,-3] ], #subrpocs for real 2
                     [ [1,-1,24,1,-2], [3,-3,24,3,-4] ],     #subrpocs for real 3
-                    [ [-3,-1,24,-3,-2], [-4,-1,24,-4,-2], [-1,-3,24,-1,-4], [-2,-3,24,-2,-4] ], #subrpocs for real 4
+                    [ [-3,-1,24,-2,-3], [-4,-1,24,-2,-4], [-1,-3,24,-4,-1], [-2,-3,24,-4,-2] ], #subrpocs for real 4
                     [ [3,-1,24,3,-2], [4,-1,24,4,-2], [1,-3,24,1,-4], [2,-3,24,2,-4] ], #subrpocs for real 5
                     [ [-2,-1,24,-2,-2], [-4,-3,24,-4,-4] ], #subrpocs for real 6
                     [ [2,-1,24,2,-2], [4,-3,24,4,-4] ],     #subrpocs for real 7
@@ -149,10 +149,10 @@ class testFKSBornHelasObjects(unittest.TestCase):
                     [ [21,21,24,1,-2], [21,21,24,3,-4] ],#subrpocs for real 2
                     [ [2,-1,24,1,-1], [4,-3,24,3,-3] ], #subrpocs for real 3
                     [ [2,1,24,1,1], [4,3,24,3,3] ],     #subrpocs for real 4
-                    [ [2,-3,24,-3,1], [2,-4,24,-4,1], [4,-1,24,-1,3], [4,-2,24,-2,3] ], #subrpocs for real 5
-                    [ [2,3,24,3,1], [2,4,24,4,1], [4,1,24,1,3], [4,2,24,2,3] ], #subrpocs for real 6
-                    [ [2,-2,24,-2,1], [4,-4,24,-4,3] ], #subrpocs for real 7
-                    [ [2,2,24,2,1], [4,4,24,4,3] ]     #subrpocs for real 8
+                    [ [2,-3,24,1,-3], [2,-4,24,1,-4], [4,-1,24,3,-1], [4,-2,24,3,-2] ], #subrpocs for real 5
+                    [ [2,3,24,1,3], [2,4,24,1,4], [4,1,24,3,1], [4,2,24,3,2] ], #subrpocs for real 6
+                    [ [2,-2,24,1,-2], [4,-4,24,3,-4] ], #subrpocs for real 7
+                    [ [2,2,24,1,2], [4,4,24,3,4] ]     #subrpocs for real 8
                     ],[ #these are for udx-initiated born
                     [ [2,-1,24,21,21], [4,-3,24,21,21] ], #subrpocs for real 1
                     [ [21,-1,24,-2,21], [21,-3,24,-4,21] ],#subrpocs for real 2
@@ -163,9 +163,9 @@ class testFKSBornHelasObjects(unittest.TestCase):
                     ],[ #these are for dxg-initiated born
                     [ [-1,21,24,-2,21], [-3,21,24,-4,21] ], #subrpocs for real 1
                     [ [21,21,24,1,-2], [21,21,24,3,-4] ],#subrpocs for real 2
-                    [ [-1,-1,24,-1,-2], [-3,-3,24,-3,-4] ], #subrpocs for real 3
+                    [ [-1,-1,24,-2,-1], [-3,-3,24,-4,-3] ], #subrpocs for real 3
                     [ [-1,1,24,1,-2], [-3,3,24,3,-4] ],     #subrpocs for real 4
-                    [ [-1,-3,24,-3,-2], [-1,-4,24,-4,-2], [-3,-1,24,-1,-4], [-3,-2,24,-2,-4] ], #subrpocs for real 5
+                    [ [-1,-3,24,-2,-3], [-1,-4,24,-2,-4], [-3,-1,24,-4,-1], [-3,-2,24,-4,-2] ], #subrpocs for real 5
                     [ [-1,3,24,3,-2], [-1,4,24,4,-2], [-3,1,24,1,-4], [-3,2,24,2,-4] ], #subrpocs for real 6
                     [ [-1,-2,24,-2,-2], [-3,-4,24,-4,-4] ], #subrpocs for real 7
                     [ [-1,2,24,2,-2], [-3,4,24,4,-4] ]     #subrpocs for real 8

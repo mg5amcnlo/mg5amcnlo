@@ -371,7 +371,8 @@ class FKSHelasRealProcess(object): #test written
                 self.matrix_element.set('color_matrix',
                                  color_amp.ColorMatrix(
                                     self.matrix_element.get('color_basis')))
-            self.fks_j_from_i = fksrealproc.find_fks_j_from_i()
+            #self.fks_j_from_i = fksrealproc.find_fks_j_from_i()
+            self.fks_j_from_i = fksrealproc.fks_j_from_i
 
     def get_nexternal_ninitial(self):
         """Refers to the matrix_element function"""
