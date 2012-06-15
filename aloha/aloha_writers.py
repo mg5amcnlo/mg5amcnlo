@@ -224,7 +224,6 @@ class WriteALOHA:
         core_text = self.define_expression()    
         self.define_argument_list()
         out = StringIO()
-        
         out.write(self.get_header_txt(mode=self.mode))
         out.write(self.get_declaration_txt())
         out.write(self.get_momenta_txt())
@@ -1057,7 +1056,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         
         
         
-    def get_header_txt(self, name=None, couplings=None):
+    def get_header_txt(self, name=None, couplings=None,mode=''):
         """Define the Header of the fortran file. This include
             - function tag
             - definition of variable

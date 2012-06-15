@@ -68,6 +68,15 @@ class PolynomialRoutines(object):
                                                                 ,line_split=30):
         self.coef_format=coef_format
         self.sub_prefix=sub_prefix
+        if coef_format=='complex*16':
+            self.rzero='0.0d0'
+            self.czero='(0.0d0,0.0d0)'
+        elif coef_format=='complex*32':
+            self.rzero='0.0e0_16'
+            self.czero='CMPLX(0.0e0_16,0.0e0_16,KIND=16)'            
+        else:
+            self.rzero='0.0e0'
+            self.czero='(0.0e0,0.0e0)'            
         self.line_split=line_split
         if max_rank<0:
             raise PolynomialError, \
@@ -108,6 +117,9 @@ class FortranPolynomialRoutines(PolynomialRoutines):
         # Start the loop on the elements i,j of the vector OUT(i,coef,j)
         lines.append("DO I=1,LCUT_SIZE")
         lines.append("  DO J=1,OUT_SIZE")
+        lines.append("    DO K=0,%d"%(get_number_of_coefs_for_rank(r_2+r_1)-1))
+        lines.append("      OUT(J,K,I)=%s"%self.czero)
+        lines.append("    ENDDO")
         lines.append("    DO K=1,IN_SIZE")
         
         # Now we write the lines defining the coefs of OUT(j,*,i) from those
