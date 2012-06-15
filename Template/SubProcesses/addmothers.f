@@ -443,7 +443,9 @@ c     Arguments
       integer maxcolmp
       parameter(maxcolmp=20)
       integer set1colmp
-      integer ncolmp,icolmp(2,*),icol1,icol2
+      integer ncolmp,icolmp(2,*),icol1,icol2,i,j
+
+c      print *,'icol1,icol2: ',icol1,icol2
 
       ncolmp=ncolmp+1
       icolmp(1,ncolmp)=icol1
@@ -460,6 +462,7 @@ c     Avoid color sextet-type negative indices
          icolmp(2,ncolmp-1)=0
          icolmp(2,ncolmp)=0
       endif
+c      print *,'icolmp: ',((icolmp(i,j),i=1,2),j=1,ncolmp)
       if(ncolmp.gt.maxcolmp)
      $     call write_error(1000,ncolmp,maxcolmp)
       set1colmp=ncolmp
@@ -671,8 +674,11 @@ c     indices remain
          endif
       enddo
 
-      if(n3.eq.0) icol(1,ires)=0
-      if(n3bar.eq.0) icol(2,ires)=0
+c      print *,'i3,n3,i3bar,n3bar: ',i3,n3,i3bar,n3bar
+c      print *,'icol(1,ires),icol(2,ires): ',icol(1,ires),icol(2,ires)
+
+      if(n3bar.le.1.and.n3.eq.0) icol(1,ires)=0
+      if(n3.le.1.and.n3bar.eq.0) icol(2,ires)=0
 
       if(i3.ne.n3.or.i3bar.ne.n3bar) then
          if(n3.gt.0.and.n3bar.eq.0.and.mod(i3bar+n3,3).eq.0)then
