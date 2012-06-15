@@ -865,7 +865,6 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         poly_object = q_polynomial.Polynomial(rank)
         nb_coeff = q_polynomial.get_number_of_coefs_for_rank(rank)
         size = self.type_to_size[OffShellParticle[0]] - 2
-        one_pass=False
         for K in range(size):
             for J in range(nb_coeff):
                 data = poly_object.get_coef_at_position(J)
@@ -884,13 +883,11 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                         out.write('    COEFF(%s,%s,%s)= coup*%s\n' % ( 
                                     self.pass_to_HELAS(ind)+1-self.momentum_size,
                                     J, K+1, self.write_obj(data)))
-                        one_pass = True
                     else:
                         out.write('    COEFF(%s,%s,%s)= %s\n' % ( 
                                     self.pass_to_HELAS(ind)+1-self.momentum_size,
                                     J, K+1, self.write_obj(data)))
 
-        assert one_pass, 'fail to generate %s' % self.name
 
         return out.getvalue()
     
