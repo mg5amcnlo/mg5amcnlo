@@ -42,16 +42,25 @@ c Jamp amplitudes of the Born (to be filled with a call the sborn())
       common/to_amps/  amp2,       jamp2
 
 C iforest and other configuration info. Read once and saved.
+      integer itree_S(2,-max_branch:-1),sprop_tree_S(-max_branch:-1)
+      integer itree_H(2,-max_branch:-1),sprop_tree_H(-max_branch:-1)
+      save itree_S,sprop_tree_S,itree_H,sprop_tree_H
+
+c Masses and widths of the (internal) propagators. Read once and saved.
+      double precision pmass_tree_S(-nexternal:0)
+      double precision pwidth_tree_S(-nexternal:0)
+      double precision pmass_tree_H(-nexternal:0)
+      double precision pwidth_tree_H(-nexternal:0)
+      save pmass_tree_S,pwidth_tree_S,pmass_tree_H,pwidth_tree_H
+
+c tree, s-channel props, masses and widths, copied from the save values
+c above
       integer itree(2,-max_branch:-1),sprop_tree(-max_branch:-1)
-      save itree,sprop_tree
+      double precision pmass_tree(-nexternal:0)
+      double precision pwidth_tree(-nexternal:0)
 
 c On Breit-Wigner
       logical OnBW(-nexternal:0)
-
-c Masses and widths of the (internal) propagators. Read once and saved.
-      double precision pmass_tree(-nexternal:0)
-      double precision pwidth_tree(-nexternal:0)
-      save pmass_tree,pwidth_tree
 
 c LesHouches info
       integer maxflow
@@ -128,10 +137,36 @@ c to determine possible intermediate s-channel resonances. Note that the
 c set_itree subroutine does not properly set the t-channel info.
 c
       if (firsttime) then
-         call set_itree(iconfig,Hevents,itree,sprop_tree,pmass_tree
-     &        ,pwidth_tree)
+c For the S-events
+         call set_itree(iconfig,.false.,itree_S,sprop_tree_S
+     &        ,pmass_tree_S,pwidth_tree_S)
+c For the H-events
+         call set_itree(iconfig,.true.,itree_H,sprop_tree_H,pmass_tree_H
+     &        ,pwidth_tree_H)
          firsttime=.false.
       endif
+c Copy the saved information to the arrays actually used
+      if (Hevents) then
+         do j=-(nexternal-4),-1
+            do i=1,2
+               itree(i,j)=itree_H(i,j)
+            enddo
+            sprop_tree(j)=sprop_tree_H(j)
+            pmass_tree(j)=pmass_tree_H(j)
+            pwidth_tree(j)=pwidth_tree_H(j)
+         enddo
+      else
+         do j=-(nexternal-3),-1
+            do i=1,2
+               itree(i,j)=itree_S(i,j)
+            enddo
+            sprop_tree(j)=sprop_tree_S(j)
+            pmass_tree(j)=pmass_tree_S(j)
+            pwidth_tree(j)=pwidth_tree_S(j)
+         enddo
+      endif
+
+
 c Set the shower scale
       if (Hevents) then
          shower_scale=SCALUP(nFKSprocess*2)
@@ -420,8 +455,10 @@ c     Fist set "safe" color info
             icolalt(2,i) = icolalt(2,ida(1))+icolalt(2,ida(2))
          else
 c     Erraneous color assignment for propagator
-            write(*,*) 'ERROR: Safe color assignment wrong!'//
-     &           ' This should never happen !'
+            write(*,*) 'ERROR: Safe color assignment wrong!'/
+     &           /' This should never happen !',i,icolalt(1,ida(1))
+     &           ,icolalt(1,ida(2)),icolalt(2,ida(1)),icolalt(2,ida(2))
+     &           ,ida(1),ida(2)
             stop
          endif
 c     Set initial state as tentative mothers
