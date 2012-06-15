@@ -16,7 +16,6 @@ all_parameters = parameters.all_parameters
 all_orders = coupling_orders.all_orders
 all_functions = function_library.all_functions
 
-
 __author__ = "Benjamin Fuks"
-__version__ = "1.0.6"
-__email__ = "fuks@cern.ch"
+__date__ = "08.06.12"
+__version__= "1.0.7"

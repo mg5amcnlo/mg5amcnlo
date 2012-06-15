@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules 1.7.20
+# This file was automatically created by FeynRules 1.7.35
 # Mathematica version: 8.0 for Linux x86 (64-bit) (February 23, 2011)
-# Date: Mon 28 May 2012 11:00:01
+# Date: Thu 14 Jun 2012 12:33:51
 
 
 from __future__ import division
@@ -213,7 +213,7 @@ a01 = Particle(pdg_code = 36,
                antiname = 'a01',
                spin = 1,
                color = 1,
-               mass = Param.MA01,
+               mass = Param.MxA01,
                width = Param.WA01,
                texname = 'a01',
                antitexname = 'a01',
@@ -226,7 +226,7 @@ a02 = Particle(pdg_code = 46,
                antiname = 'a02',
                spin = 1,
                color = 1,
-               mass = Param.MA02,
+               mass = Param.MxA02,
                width = Param.WA02,
                texname = 'a02',
                antitexname = 'a02',
