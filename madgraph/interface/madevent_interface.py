@@ -3447,6 +3447,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     
     def clean_pointless_card(self, mode):
         """ Clean the pointless card """
+
         if mode == 'parton':
             if os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
                 os.remove(pjoin(self.me_dir,'Cards','pythia_card.dat'))
@@ -3505,9 +3506,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     mode = 'delphes'
                 else: 
                     mode = 'pythia'
+            else:
+                self.clean_pointless_card(mode)                
         logger.info('Will run in mode %s' % mode)
                                                                      
-        self.clean_pointless_card(mode)
+
         # Now that we know in which mode we are check that all the card
         #exists (copy default if needed)
 
