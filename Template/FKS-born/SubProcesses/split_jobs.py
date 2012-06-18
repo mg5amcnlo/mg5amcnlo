@@ -12,6 +12,7 @@ nevents_file = open('nevents_unweighted')
 nevents_lines = nevents_file.read().split('\n')
 nevents_file.close()
 jobs = []
+tot_events = 0
 for line in nevents_lines:
     if line:
         channel = os.path.dirname(line.split()[0])
@@ -21,13 +22,15 @@ for line in nevents_lines:
         xsec = float(line.split()[2])
         jobs.append({'dir': dir, 'channel': chann, 'type': ev_type, \
                 'nevts': nevts, 'xsec': xsec})
+        tot_events += nevts 
         try:
             max_events[ev_type] = max(max_events[ev_type], nevts)
         except KeyError:
             raise SplitJobsError('Unknown run_mode, %s, %s, %s' \
                     %(dir, chann, ev_type))
 
-print 'nevents_unweighted read, found %d jobs' % len(jobs)
+
+print 'nevents_unweighted read, found %d jobs with a total of %d events' % (len(jobs), tot_events)
 
 max_dict = {}
 
@@ -65,27 +68,33 @@ while True:
 
 
 splitted_lines = []
+tot_events = 0
 for job in jobs:
     dir = os.path.join(job['dir'], job['channel'])
+    job_events = 0
     for i in range(job['nsplit']):
         filename = os.path.join(dir,'events_%d.lhe' % (i+1))
         if i != (job['nsplit']-1):
             split_nevts = job['nevts']/job['nsplit']
             split_xsec = job['xsec']*float(split_nevts)/float(job['nevts'])
         else:
-            split_nevts = job['nevts'] - (job['nsplit'] - 1) * job['nevts']/job['nsplit']
+            #split_nevts = long(job['nevts']) - long((job['nsplit'] - 1) * job['nevts']/job['nsplit'])
+            split_nevts = job['nevts']/job['nsplit'] + job['nevts'] % job['nsplit']
             split_xsec = job['xsec']*float(split_nevts)/float(job['nevts'])
+        tot_events += split_nevts
+        job_events += split_nevts
         splitted_lines.append('%s     %d     %9e' % (filename.ljust(40), split_nevts, split_xsec))
         nevts_filename = os.path.join(dir,'nevts__%d' % (i+1))
         nevts_file = open(nevts_filename, 'w')
         nevts_file.write('%d' % split_nevts)
         nevts_file.close()
+    print '%s, %s, Original %d, after splitting %d' % (job['dir'], job['channel'], job['nevts'], job_events)
 
 new_nevents_file = open('nevents_unweighted_splitted', 'w')
 new_nevents_file.write('\n'.join(splitted_lines))
 new_nevents_file.close()
         
-print 'Done'
+print 'Done, total %d events' %  tot_events
 
 
     
