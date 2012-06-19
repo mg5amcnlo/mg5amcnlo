@@ -93,7 +93,7 @@ class CmdExtended(cmd.Cmd):
                                    'display particles', 'display interactions'],
         'define': ['define MULTIPART PART1 PART2 ...', 'generate PROCESS', 
                                                     'display multiparticles'],
-        'generate': ['add process PROCESS','output [OUTPUT_TYPE] [PATH]','draw .'],
+        'generate': ['add process PROCESS','output [OUTPUT_TYPE] [PATH]','display diagrams'],
         'add process':['output [OUTPUT_TYPE] [PATH]', 'display processes'],
         'output':['launch','open index.html','history PATH', 'exit'],
         'display': ['generate PROCESS', 'add process PROCESS', 'output [OUTPUT_TYPE] [PATH]'],
