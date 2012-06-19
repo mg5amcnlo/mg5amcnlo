@@ -2247,7 +2247,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                          self.run_name, self.run_tag],
                         cwd=self.me_dir)
         misc.call(['./bin/internal/clean'], cwd=self.me_dir)
-        misc.compile(['gridpack.tar.gz'], cwd=self.me_dir)
+        misc.call(['./bin/internal/make_gridpack'], cwd=self.me_dir)
         files.mv(pjoin(self.me_dir, 'gridpack.tar.gz'), 
                 pjoin(self.me_dir, '%s_gridpack.tar.gz' % self.run_name))
         os.system("sed -i.bak \"s/\s*.true.*=.*GridRun/  .false.  =  GridRun/g\" %s/Cards/grid_card.dat" \

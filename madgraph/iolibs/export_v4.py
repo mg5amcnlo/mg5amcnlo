@@ -1420,7 +1420,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         if os.path.exists(os.path.join('SubProcesses', 'subproc.mg')):
             if os.path.exists('madevent.tar.gz'):
                 os.remove('madevent.tar.gz')
-            misc.compile(mode='None')
+            subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'make_madevent_tar')],
+                        stdout = devnull)
 
         subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)
