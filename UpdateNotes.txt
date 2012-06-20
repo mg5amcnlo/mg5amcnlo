@@ -15,6 +15,11 @@ Update notes for MadGraph 5 (in reverse time order)
                       definitions are combined also when using the decay chain 
                       formalism (thanks to Zhen Liu for pointing this out).
                   BF+JA: Updated the NMSSM model to the latest FR version.
+                  JA: Fixed problem in matrix element combination which allowed
+                      non-identical matrix elements to be combined in certain
+                      complicated processes (such as p p > l vl l vl l vl),
+                      resulting in lines with Z > e+ mu- in the event file
+                      (bug #1015032, thanks Johannes E for reporting).
                   JA: Fixed minor typo in myamp.f.
                   OM: fixed minor behavior restriction of multi_run (Thanks to
                       Joachim Kopp)
@@ -22,6 +27,10 @@ Update notes for MadGraph 5 (in reverse time order)
                       unresponsive (should avoid some crashes)
                   JA: Fixed support for color sextets in addmothers.f
                       (thanks Nicolas Deutschmann for reporting).          
+                  JA: Make sure that also the SubProcesses directories are 
+                      cleaned when running bin/compile in a gridpack.
+                  JA: Removed the confusing makefile in Template and replace it
+                      with scripts to create madevent.tar.gz and gridpack.tar.gz.
                   
 1.4.6 (16/05/12)  JA: Added cuts on lepton pt for each of the 4 hardest leptons
                   OM: allow bin/madevent script to be run with a single line command:
