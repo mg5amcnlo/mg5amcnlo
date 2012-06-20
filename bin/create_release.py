@@ -43,6 +43,7 @@ import time
 
 import os
 import os.path as path
+import re
 import shutil
 import subprocess
 
@@ -70,12 +71,12 @@ if len(args) == 0:
 logging.basicConfig(level=vars(logging)[options.logging],
                     format="%(message)s")
 
-# 0. check that all modification are commited in this directory
+# 0. check that all modification are committed in this directory
 #    and that the date/UpdateNote are up-to-date
 diff_result = subprocess.Popen(["bzr", "diff"], stdout=subprocess.PIPE).communicate()[0] 
 
 if diff_result:
-    logging.warning("Directory is not up-to-date. The release follow the last commited version.")
+    logging.warning("Directory is not up-to-date. The release follow the last committed version.")
     answer = raw_input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
@@ -100,6 +101,24 @@ if version not in Update_note:
     if answer != 'y':
         exit()
 
+# 1. Adding the file .revision used for future auto-update.
+# Provide this only if version is not beta/tmp/...
+pattern = re.compile(r'''\d+.\d+.\d+$''')
+if pattern.match(version):
+    #valid version format
+    # Get current revision number:
+    p = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE)
+    rev_nb = p.stdout.read().strip()
+    logging.info('find %s for the revision number -> starting point for the auto-update' % rev_nb)  
+else:
+    logging.warning("WARNING: version number %s is not in format A.B.C,\n" % version +\
+         "in consequence the automatic update of the code will be deactivated" )
+    answer = raw_input('Do you want to continue anyway? (y/n)')
+    if answer != 'y':
+        exit()
+    rev_nb=None
+
+ 
 # 1. bzr branch the present directory to a new directory
 #    MadGraph5_vVERSION
 
@@ -124,6 +143,14 @@ for data in glob.glob(path.join(filepath, 'bin', '*')):
         os.remove(data)
 os.remove(path.join(filepath, 'README.developer'))
 shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
+
+
+# 1. Add information for the auto-update
+if rev_nb:
+    fsock = open(os.path.join('input','.autoupdate'))
+    fsock.write("version_nb   %s\n" % rev_nb)
+    fsock.write("last_check   %s\n" % time.gmtime())
+    fsock.close()
 
 # 2. Create the automatic documentation in the apidoc directory
 
