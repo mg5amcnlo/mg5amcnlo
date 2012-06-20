@@ -1914,7 +1914,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if self.run_card['iseed'] != 0:
                 seed = self.random + 1
                 text = open(pjoin(self.me_dir, 'Cards','run_card.dat')).read()
-                (t,n) = re.subn(r'\s\d+\s*= iseed','   %s       = iseed' % seed,text)
+                (t,n) = re.subn(r'(?<=\D)\d+\s*=\s*iseed','%s = iseed' % seed,text)
                 open(pjoin(self.me_dir, 'Cards','run_card.dat'),'w').write(t)
         
         self.run_name = main_name

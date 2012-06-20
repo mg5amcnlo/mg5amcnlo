@@ -1,9 +1,16 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+
+Web Fix Only (Will be include in 1.4.7):
+                  OM: Change EW_dim6 to remove all interactions which doesn't 
+                      impact three boson scatering
+                  OM: Fix the problem on multi-run which fails in 1.4.6
+                      after a given number of run.
+
 1.4.6 (XX/04/12)  JA: Added cuts on lepton pt for each of the 4 hardest leptons
                   OM: allow bin/madevent script to be feeded by a single line command:
-		      example ./bin/madevent multi_run 10 
-		  OM: Adding the 4 higgs interactions in the standard model UFO model
+                      example ./bin/madevent multi_run 10 
+                  OM: Adding the 4 higgs interactions in the standard model UFO model
                   JA: Added new restriction card for the sm model with massive
                       muon and electron, and non-zero tau decay width
                   JA: Ensure assignment of colors to intermediate propagators
