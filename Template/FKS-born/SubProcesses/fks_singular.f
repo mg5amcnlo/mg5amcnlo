@@ -4759,7 +4759,7 @@ c      include "fks.inc"
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include 'coupl.inc'
       include 'q_es.inc'
-      double precision p(0:3,nexternal),m1l_finite_CDR,born
+      double precision p(0:3,nexternal-1),m1l_finite_CDR,born
       double precision CF,pi,aso2pi,shat,dot,xlgq2os
       parameter (CF=4d0/3d0)
       parameter (pi=3.1415926535897932385d0)
@@ -4786,7 +4786,7 @@ c      include "fks.inc"
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include 'coupl.inc'
       include 'q_es.inc'
-      double precision p(0:3,nexternal),m1l_W_finite_CDR,born
+      double precision p(0:3,nexternal-1),m1l_W_finite_CDR,born
       double precision CF,pi,aso2pi,shat,dot,xlgq2os
       parameter (CF=4d0/3d0)
       parameter (pi=3.1415926535897932385d0)
