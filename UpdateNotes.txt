@@ -5,6 +5,8 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Allow MG5 to run in feynman Gauge
 		              (mg5> set gauge Feynman)
 		          OM: Support now UFO model with spin 3/2
+		          OM: Add auto-detection if MG5 is up-to-date and propose to 
+		              apply the various patch if not.
 		          OM: Aloha modifications: faster to create routine and those 
 		              ones are more optimized and therefore can be evaluated up
 		              to 30% faster than previous version.

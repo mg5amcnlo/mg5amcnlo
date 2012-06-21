@@ -62,6 +62,75 @@ import logging
 import logging.config
 import madgraph.interface.coloring_logging
 
+
+#
+# Check if MG5 is up-to-date
+#
+if os.path.exists(os.path.join(root_path,'input','.autoupdate')):
+    import signal
+    import time
+    import urllib
+    data = {}
+    for line in open(os.path.join(root_path,'input','.autoupdate')):
+        sline = line.split()
+        data[sline[0]] = int(sline[1])
+    if time.time() - data['last_check'] > 7 * 24 *3600:
+        print 'Checking if MG5 is up-to-date...'
+        class TimeOutError(Exception): pass
+        
+        def handle_alarm(signum, frame): 
+            raise TimeOutError
+        
+        signal.signal(signal.SIGALRM, handle_alarm)
+        signal.alarm(2)
+        to_update = 0
+        try:
+            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_build_nb')
+            signal.alarm(0)
+            web_version = int(filetext.read())            
+        except (TimeOutError, ValueError):
+            print 'failed to connect server'
+        else:
+            if web_version == data['version_nb']:
+                print 'up-to-dated'
+                fsock = open(os.path.join(root_path,'input','.autoupdate'),'w')
+                fsock.write("version_nb   %s\n" % data['version_nb'])
+                fsock.write("last_check   %s\n" % int(time.time()))
+                fsock.close()
+            elif data['version_nb'] > web_version:
+                print 'impossible to update'
+            else:
+                out = raw_input('New Version of MG5 available! Do you want to update your current version? (y/n)')
+                if out == 'y': 
+                    to_update = True
+        
+        if to_update:
+            print 'start updating code'
+            fail = 0
+            for i in range(data['version_nb'], web_version):
+                try:
+                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch/.patch')
+                except:
+                    print 'fail to load patch to build #%s' % (i+1)
+                    fail = i
+                    break
+                subprocess.call(['patch', '-b' '-p1'], stdin=filetext, 
+                                                                  cwd=root_path)
+            if fail != data['version_nb']:
+                print 'checking current version. (type ctrl-c to bypass the check)'
+                subprocess.call([os.path.join('tests','test_manager.py'],
+                                                                  cwd=root_path)
+            
+            fsock = open(os.path.join(root_path,'input','.autoupdate'),'w')
+            if not fail:
+                fsock.write("version_nb   %s\n" % web_version)
+            else:
+                fsock.write("version_nb   %s\n" % fail)
+            fsock.write("last_check   %s\n" % int(time.time()))
+            fsock.close()        
+        
+        
+        
 try: 
     import readline
 except ImportError:

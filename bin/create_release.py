@@ -147,9 +147,9 @@ shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README')
 
 # 1. Add information for the auto-update
 if rev_nb:
-    fsock = open(os.path.join('input','.autoupdate'))
+    fsock = open(os.path.join(filepath,'input','.autoupdate'),'w')
     fsock.write("version_nb   %s\n" % rev_nb)
-    fsock.write("last_check   %s\n" % time.gmtime())
+    fsock.write("last_check   %s\n" % int(time.time()))
     fsock.close()
 
 # 2. Create the automatic documentation in the apidoc directory
