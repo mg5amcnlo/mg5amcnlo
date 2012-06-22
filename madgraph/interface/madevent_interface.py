@@ -1931,6 +1931,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def update_width_in_param_card(self, decay_info, initial=None, output=None):
         # Open the param_card.dat and insert the calculated decays and BRs
         
+        print decay_info 
         if not initial:
             initial = pjoin(self.me_dir,'Cards','param_card.dat')
         if not output:
@@ -2259,11 +2260,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
            os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
                 if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
                     os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
-                self.create_root_file(output='%s/unweighted_events.root' % self.run_name)
+                self.create_root_file(output='%s/unweighted_events.root' % \
+                                                                  self.run_name)
     
     ############################################################################                                                                                                           
     def do_compute_widths(self, line):
-        """Require MG5 directory: Compute automatically the widths of a set of particles"""
+        """Require MG5 directory: Compute automatically the widths of a set 
+        of particles"""
 
         args = self.split_arg(line)
         # check the argument and return those in a dictionary format
@@ -2276,24 +2279,28 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         model = args['model']
         
-        data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 'param_card.dat'))
+        data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 
+                                                              'param_card.dat'))
         
         # find UFO particles linked to the require names. 
         decay_info = {}        
         for pid in args['particles']:
             particle = model.get_particle(pid)
             decay_info[pid] = []
+            mass = abs(eval(str(particle.get('mass')), data).real)
+            data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 
+                                            'param_card.dat'), scale= mass)
             for mode, expr in particle.partial_widths.items():
-                mass = eval(str(particle.get('mass')), data).real
+                tmp_mass = mass    
                 for p in mode:
-                    mass -= eval(str(p.mass), data).real
-                if mass <=0:
+                    tmp_mass -= abs(eval(str(p.mass), data))
+                if tmp_mass <=0:
                     continue
                 
                 decay_to = [p.get('pdg_code') for p in mode]
                 value = eval(expr,{'cmath':cmath},data).real
                 decay_info[particle.get('pdg_code')].append([decay_to, value])
-                           
+                          
         self.update_width_in_param_card(decay_info, args['input'], args['output'])
         
     ############################################################################ 
@@ -3959,9 +3966,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """Check that all the width are define in the param_card.
         If some width are set on 'Auto', call the computation tools."""
         
+        print 'CHECK PARAM'
         pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto''',re.I)
         text = open(path).read()
         pdg = pattern.findall(text)
+        print pdg
         if pdg:
             logger.info('Computing the width set on auto in the param_card.dat')
             self.do_compute_widths('%s %s' % (' '.join(pdg), path))

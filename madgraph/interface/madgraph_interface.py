@@ -2730,6 +2730,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 logger_stderr.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
         if defined_multiparticles:
+            if 'all' in defined_multiparticles:
+                defined_multiparticles.remove('all')
             logger.info("Kept definitions of multiparticles %s unchanged" % \
                                          " / ".join(defined_multiparticles))
 
@@ -2740,6 +2742,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if removed_multiparticles:
             logger.info("Removed obsolete multiparticles %s" % \
                                          " / ".join(removed_multiparticles))
+        
+        # add all tag
+        line = []
+        for part in self._curr_model.get('particles'):
+            line.append('%s %s' % (part.get('name'), part.get('antiname')))
+        line = 'all =' + ' '.join(line)
+        self.do_define(line)
 
     def do_install(self, line):
         """Install optional package from the MG suite."""
