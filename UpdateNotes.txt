@@ -7,6 +7,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       while the seed in the run_card is set to 0.
                       This way, the seed for a multi_run is automatically
                       updated in the same way as for individual runs.
+                  TS + JA: Fix problem with duplicate random seeds above 64000.
+                      Now, random seeds up to 30081*30081 can safely be used.
                   JA: Turn off automatic checking for minimal coupling
                       hierarchy in decay processes A > B C ...
                   JA: Optimize phase space integration and event generation

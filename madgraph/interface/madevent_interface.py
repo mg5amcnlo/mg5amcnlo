@@ -3264,7 +3264,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """ change random number"""
         
         self.random += 3
-        assert self.random < 31328*30081 # cann't use too big random number
+        if self.random > 30081*30081: # can't use too big random number
+            raise MadGraph5Error,\
+                  'Random seed too large ' + str(self.random) + ' > 30081*30081'
 
     ############################################################################
     def save_random(self):

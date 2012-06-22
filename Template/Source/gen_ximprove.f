@@ -40,7 +40,8 @@ c
       logical parallel, gen_events
       character*20 param(maxpara),value(maxpara)
       integer npara, nreq, ngran, nhel_refine
-      integer ij, kl, iseed, ioffset
+      integer ij, kl, ioffset, gseed
+      integer*8 iseed     !tjs 20/6/2012 to avoid integer overflow
       logical Gridpack,gridrun
       logical split_channels
       common /to_split/split_channels
@@ -83,7 +84,8 @@ c        Allow all the way down to a single iteration for gridruns
          min_iter=1
          call get_integer(npara,param,value," gevents "  ,nreq  ,2000   )
          err_goal = 1.2*nreq ! extra factor to ensure works
-         call get_integer(npara,param,value," gseed "  ,iseed  ,4321   )
+         call get_integer(npara,param,value," gseed "  ,gseed  ,4321   )
+         iseed = gseed
          call get_integer(npara,param,value," ngran "  ,ngran  , -1)
          if (ngran.eq.-1) ngran = 1
          write(*,*) "Running on Grid to generate ",nreq," additional events"
@@ -94,11 +96,12 @@ c     Modified to allow for more sequences
 c     iseed can be between 0 and 31328*30081
 c     before patern repeats
 c     JA 11/2/2011: Check for ioffset, as in ntuple (ranmar.f)
+c     TJS  20/6/2012 changed mod value to 30081 to avoid duplicate sequences
 c
          call get_offset(ioffset)
          iseed = iseed * 31300       
-         ij=1802 + mod(iseed,30081)
-         kl=9373 + (iseed/31328) + ioffset
+         ij=1802 + mod(iseed,30081)      
+         kl=9373 + (iseed/30081) + ioffset
 c         write(*,'($a,i6,a3,i6)') 'Using random seed offsets',jconfig," : ",ioffset
 c         write(*,*) ' with seed', iseed
          do while (ij .gt. 31328)
