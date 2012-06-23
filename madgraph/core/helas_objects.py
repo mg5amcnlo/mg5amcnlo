@@ -4289,8 +4289,8 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                         if proc not in me_procs:
                             me_procs.append(proc)
                         else:
-                            logger.warning("Ignoring duplicate process %s." % \
-                                   proc.nice_string().replace('Process: ', ''))
+                            raise InvalidCmd, "Duplicate process %s found. Please check your processes." % \
+                                proc.nice_string().replace('Process: ', '')
                     continue
 
                 # Otherwise, add this matrix element to list

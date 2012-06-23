@@ -1764,9 +1764,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if amp not in self._curr_amps:
                     self._curr_amps.append(amp)
                 else:
-                    warning = "Warning: Already in processes:\n%s" % \
+                    raise self.InvalidCmd, "Duplicate process %s found. Please check your processes." % \
                                                 amp.nice_string_processes()
-                    logger.warning(warning)
 
 
             # Reset _done_export, since we have new process
