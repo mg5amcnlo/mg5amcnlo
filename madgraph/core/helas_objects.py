@@ -4285,11 +4285,11 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                                  replace('Process: ', ''),
                              me.get('processes')[0].nice_string().\
                                  replace('Process: ', '')))
-                    for proc in  matrix_element.get('processes'):
+                    for proc in matrix_element.get('processes'):
                         if proc not in me_procs:
                             me_procs.append(proc)
                         else:
-                            logger.warning("Found duplicate process %s" % \
+                            logger.warning("Ignoring duplicate process %s." % \
                                    proc.nice_string().replace('Process: ', ''))
                     continue
 
