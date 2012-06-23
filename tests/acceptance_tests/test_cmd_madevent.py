@@ -298,6 +298,6 @@ class TestMEfromPdirectory(unittest.TestCase):
             output = None
         id = subprocess.call(['./bin/madevent','cmd.cmd'], stdout=output, stderr=output)
         self.assertEqual(id, 0)
-        self.check_parton_output(cross=946.49, error=1e-2)
+        self.check_parton_output(cross=946.58, error=1e-2)
         os.chdir(cmd)
         
