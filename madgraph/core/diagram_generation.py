@@ -1478,9 +1478,12 @@ class MultiProcess(base_objects.PhysicsObject):
         fsids = [leg['ids'] for leg in \
                  filter(lambda leg: leg['state'] == True, process_definition['legs'])]
 
+        max_WEIGHTED_order = \
+                        (len(fsids + isids) - 2)*int(model.get_max_WEIGHTED())
+
         # Run diagram generation with increasing max_order_now until
         # we manage to get diagrams
-        while max_order_now < len(fsids)*max(hierarchy):
+        while max_order_now < max_WEIGHTED_order:
 
             logger.info("Trying coupling order WEIGHTED=%d" % max_order_now)
 
@@ -1577,7 +1580,7 @@ class MultiProcess(base_objects.PhysicsObject):
             logger.setLevel(oldloglevel)
 
         # If no valid processes found with nfinal-1 couplings, return maximal
-        return {coupling: len(fsids)*max(hierarchy)}
+        return {coupling: max_order_now}
 
     @staticmethod
     def cross_amplitude(amplitude, process, org_perm, new_perm):
