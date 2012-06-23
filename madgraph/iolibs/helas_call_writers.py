@@ -1273,6 +1273,8 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                   'amp_number':lamp.get('amplitudes')[0].get('number'),
                   'LoopSymmetryFactor':lamp.get('loopsymmetryfactor')})
         
+        coef_merge=[]
+        
         if group_loops and matrix_element.get('processes')[0].get('has_born'):
             for (denoms, lamps) in matrix_element.get('loop_groups'):
                 # Only necessary if they are more than one loop with this kind of
@@ -1282,12 +1284,12 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                     merge_coef=['CALL ADD_COEFS(LOOPCOEFS(0,%(ref_number)d)',
                                 '%(ref_rank)d','LOOPCOEFS(0,%(new_number)d)',
                                 '%(new_rank)d)']
-                    res.append(','.join(merge_coef)%{\
+                    coef_merge.append(','.join(merge_coef)%{\
                       'ref_number':refamp.get('number'),
                       'ref_rank':refamp.get_rank(),
                       'new_number':lamp.get('number'),
                       'new_rank':lamp.get_rank()})
-        return res
+        return res, coef_merge
 
     def get_loop_CT_calls(self, matrix_element, group_loops=False):
         """ Return the calls to CutTools interface routines to launch the

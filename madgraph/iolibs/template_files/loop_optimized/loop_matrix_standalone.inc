@@ -341,6 +341,8 @@ DO H=1,NCOMB
   ENDIF
 ENDDO
 
+%(coef_merging)s
+
 BUFFR_BIS(1)=ANS(1)
 BUFFR_BIS(2)=ANS(2)
 BUFFR_BIS(3)=ANS(3)

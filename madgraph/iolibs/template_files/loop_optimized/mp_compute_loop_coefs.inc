@@ -119,4 +119,6 @@ DO H=1,NCOMB
   ENDIF
 ENDDO
 
+%(mp_coef_merging)s
+
 END

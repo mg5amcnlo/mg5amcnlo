@@ -447,9 +447,11 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         return self.get_final_loop_wavefunction().get('rank')
 
     def calculate_fermionfactor(self):
-        """ Overloading of the function of the mother class as it might be necessary
-        to modify it for fermion loops."""
-        super(LoopHelasAmplitude,self).calculate_fermionfactor()
+        """ The fermion factor is not implemented for this object but in the
+        subamplitude"""
+        self['fermion_factor']=0
+        for amp in self.get('amplitudes'):
+            amp.get('fermionfactor')
 
     def calculate_loopsymmetryfactor(self):
         """ Calculate the loop symmetry factor. For now it is hard-coded function valid
@@ -572,6 +574,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                      ldiag.get_loop_amplitudes()]:
             denom_structure=lamp.get_denominators()
             try:
+                raise ValueError
                 denom_index=identified_denom_structures.index(denom_structure)
                 self['loop_groups'][denom_index][1].append(lamp)
             except ValueError:

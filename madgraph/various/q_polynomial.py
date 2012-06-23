@@ -248,7 +248,7 @@ class FortranPolynomialRoutines(PolynomialRoutines):
                                                     range(0,self.max_rank+1)])})                     
      
         # Now scan them all progressively
-        lines.append("DO I=1,NCOEF_R(RB)-1")
+        lines.append("DO I=0,NCOEF_R(RB)-1")
         lines.append("  A(I)=A(I)+B(I)")               
         lines.append("ENDDO")
         lines.append("END")

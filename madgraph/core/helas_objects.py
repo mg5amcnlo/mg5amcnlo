@@ -546,6 +546,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def is_fermion(self):
         return self.get('spin') % 2 == 0
 
+    def is_anticommutating(self):
+        return self.is_fermion() or abs(self.get_pdg_code())==666
+
     def is_boson(self):
         return not self.is_fermion()
 
@@ -1005,7 +1008,21 @@ class HelasWavefunction(base_objects.PhysicsObject):
             output['vertex_rank']=self.get_interaction_q_power()
             output['lcut_size']=self.get('lcut_size')
             output['out_size']=self.spin_to_size(self.get('spin'))
-        for i, mother in enumerate(self.get('mothers')):
+        
+        loop_mother_found=False
+        for ind, mother in enumerate(self.get('mothers')):
+            # temporary START
+            if OptimizedOutput and self.get('is_loop'):
+                if mother.get('is_loop'):
+                    i=0
+                else:
+                    if loop_mother_found:
+                        i=ind
+                    else:
+                        i=ind+1
+            else:
+                i=ind
+            # temporary END
             nb = mother.get('number') - flip
             output[str(i)] = nb
             if not OptimizedOutput:
@@ -1019,6 +1036,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     output['loop_mother_rank']=mother.get('rank')
                     output['in_size']=self.spin_to_size(mother.get('spin'))
                     output['WF%d'%i] = 'PL(0,%d)'%nb
+                    loop_mother_found=True
                 else:
                     output['WF%d'%i] = 'W(1,%d'%nb
             if not mother.get('is_loop'):
@@ -2098,8 +2116,16 @@ class HelasAmplitude(base_objects.PhysicsObject):
             # Bosons return a list [n1,n2,...]
             fermion_number_list.extend(boson.get_fermion_order())
 
-        self['fermionfactor'] = \
-                         HelasAmplitude.sign_flips_to_order(fermion_number_list)
+        fermion_factor = HelasAmplitude.sign_flips_to_order(fermion_number_list)
+        self['fermionfactor'] = fermion_factor
+        # Apply the right sign correction for anti-commutating ghost loops
+        #if self.get('type')=='loop':
+        #    lcuf_wf_2=[m for m in self.get('mothers') if m['is_loop'] and \
+        #                                                not m.get('mothers')][0]
+        #    self['fermionfactor'] = -fermion_factor if \
+        #                       lcuf_wf_2.get_pdg_code()==666 else fermion_factor
+        #else:
+        #    self['fermionfactor'] = fermion_factor
 
     @staticmethod
     def sign_flips_to_order(fermions):

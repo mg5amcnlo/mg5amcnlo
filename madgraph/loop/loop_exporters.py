@@ -1186,9 +1186,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
                                                             matrix_element)
         self.turn_to_mp_calls(born_ct_helas_calls)
-        coef_construction = fortran_model.get_coef_construction_calls(\
+        coef_construction, coef_merging = fortran_model.get_coef_construction_calls(\
                                     matrix_element,group_loops=self.group_loops)
         self.turn_to_mp_calls(coef_construction)
+        self.turn_to_mp_calls(coef_merging)        
                                          
         file = open(os.path.join(self.template_dir,\
                                            'mp_compute_loop_coefs.inc')).read()
@@ -1205,6 +1206,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         else:
             replace_dict['mp_born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict['mp_coef_construction']='\n'.join(coef_construction)
+        
+        replace_dict['mp_coef_merging']='\n'.join(coef_merging)
         
         file = file % replace_dict
  
@@ -1284,7 +1287,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # Extract helas calls
         born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
                                                             matrix_element)
-        coef_construction = fortran_model.get_coef_construction_calls(\
+        coef_construction, coef_merging = fortran_model.get_coef_construction_calls(\
                                     matrix_element,group_loops=self.group_loops)
         loop_CT_calls = fortran_model.get_loop_CT_calls(\
                                     matrix_element,group_loops=self.group_loops)
@@ -1308,6 +1311,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict['coef_construction']='\n'.join(coef_construction)
             replace_dict['loop_CT_calls']='\n'.join(loop_CT_calls)
+        
+        replace_dict['coef_merging']='\n'.join(coef_merging)
         
         file = file % replace_dict
         number_of_calls = len(filter(lambda call: call.find('CALL LOOP') != 0, \
