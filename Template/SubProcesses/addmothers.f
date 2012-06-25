@@ -33,11 +33,11 @@ c     Variables for combination of color indices (including multipart. vert)
 
       double precision ZERO
       parameter (ZERO=0d0)
-      double precision pmass(-nexternal:0,lmaxconfigs)
-      double precision pwidth(-nexternal:0,lmaxconfigs)
+      double precision prmass(-nexternal:0,lmaxconfigs)
+      double precision prwidth(-nexternal:0,lmaxconfigs)
       integer pow(-nexternal:0,lmaxconfigs)
       logical first_time,tchannel
-      save pmass,pwidth,pow
+      save prmass,prwidth,pow
       data first_time /.true./
 
       Double Precision amp2(maxamps), jamp2(0:maxflow)
@@ -249,7 +249,7 @@ c       Calculate momentum (p1+p2 for s-channel, p2-p1 for t-channel)
           enddo
           pb(4,i)=sqrt(max(0d0,pb(0,i)**2-pb(1,i)**2-pb(2,i)**2-pb(3,i)**2))
 c          if(jpart(6,i).eq.2.and.
-c     $       abs(pb(4,i)-pmass(i,iconfig)).gt.5d0*pwidth(i,iconfig)) then
+c     $       abs(pb(4,i)-prmass(i,iconfig)).gt.5d0*prwidth(i,iconfig)) then
 c            jpart(6,i)=3
 c            nres=nres-1
 c          endif
@@ -443,7 +443,9 @@ c     Arguments
       integer maxcolmp
       parameter(maxcolmp=20)
       integer set1colmp
-      integer ncolmp,icolmp(2,*),icol1,icol2
+      integer ncolmp,icolmp(2,*),icol1,icol2,i,j
+
+c      print *,'icol1,icol2: ',icol1,icol2
 
       ncolmp=ncolmp+1
       icolmp(1,ncolmp)=icol1
@@ -460,6 +462,7 @@ c     Avoid color sextet-type negative indices
          icolmp(2,ncolmp-1)=0
          icolmp(2,ncolmp)=0
       endif
+c      print *,'icolmp: ',((icolmp(i,j),i=1,2),j=1,ncolmp)
       if(ncolmp.gt.maxcolmp)
      $     call write_error(1000,ncolmp,maxcolmp)
       set1colmp=ncolmp
@@ -671,8 +674,11 @@ c     indices remain
          endif
       enddo
 
-      if(n3.eq.0) icol(1,ires)=0
-      if(n3bar.eq.0) icol(2,ires)=0
+c      print *,'i3,n3,i3bar,n3bar: ',i3,n3,i3bar,n3bar
+c      print *,'icol(1,ires),icol(2,ires): ',icol(1,ires),icol(2,ires)
+
+      if(n3bar.le.1.and.n3.eq.0) icol(1,ires)=0
+      if(n3.le.1.and.n3bar.eq.0) icol(2,ires)=0
 
       if(i3.ne.n3.or.i3bar.ne.n3bar) then
          if(n3.gt.0.and.n3bar.eq.0.and.mod(i3bar+n3,3).eq.0)then

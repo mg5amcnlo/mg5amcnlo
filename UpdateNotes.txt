@@ -1,16 +1,48 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-
-Web Fix Only (Will be include in 1.4.7):
-                  OM: Change EW_dim6 to remove all interactions which doesn't 
-                      impact three boson scatering
-                  OM: Fix the problem on multi-run which fails in 1.4.6
-                      after a given number of run.
-
-1.4.6 (XX/04/12)  JA: Added cuts on lepton pt for each of the 4 hardest leptons
-                  OM: allow bin/madevent script to be feeded by a single line command:
-                      example ./bin/madevent multi_run 10 
-                  OM: Adding the 4 higgs interactions in the standard model UFO model
+1.4.7 (25/06/12)  JA: Change the random seed treatment to ensure that the original 
+                      seed is stored in the banner (this was broken in v. 1.4.0).
+                      If a non-zero seed is given in the run_card, this seed
+                      is used as starting value for the SubProcesses/randinit file,
+                      while the seed in the run_card is set to 0.
+                      This way, the seed for a multi_run is automatically
+                      updated in the same way as for individual runs.
+                  TS + JA: Fix problem with duplicate random seeds above 64000.
+                      Now, random seeds up to 30081*30081 can safely be used.
+                  JA: Turn off automatic checking for minimal coupling orders
+                      in decay processes A > B C ...
+                  JA: Ensure that automatic coupling order determination works
+                      also for effective theories with multiple orders in an
+                      interaction (thanks Claude and Gizem Ozturk).
+                  JA: Optimize phase space integration and event generation
+                      for decay processes with very squeezed mass spectrum.
+                  JA: Ensure that identical matrix elements in different process 
+                      definitions are combined also when using the decay chain 
+                      formalism (thanks to Zhen Liu for pointing this out).
+                  BF+JA: Updated the NMSSM model to the latest FR version.
+                  OM: Change EW_dim6 to remove all interactions which don't 
+                      impact three boson scattering.
+                  JA: Fixed problem in matrix element combination which allowed
+                      non-identical matrix elements to be combined in certain
+                      complicated processes (such as p p > l vl l vl l vl),
+                      resulting in lines with Z > e+ mu- in the event file
+                      (bug #1015032, thanks Johannes E for reporting).
+                  JA: Fixed minor typo in myamp.f.
+                  OM: fixed minor behavior restriction of multi_run (Thanks to
+                      Joachim Kopp).
+                  OM: Improved condor cluster support when the cluster is 
+                      unresponsive (should avoid some crashes on the web).
+                  JA: Fixed support for color sextets in addmothers.f
+                      (thanks Nicolas Deutschmann for reporting).          
+                  JA: Make sure that also the SubProcesses directories are 
+                      cleaned when running bin/compile in a gridpack.
+                  JA: Removed the confusing makefile in Template and replace it
+                      with scripts to create madevent.tar.gz and gridpack.tar.gz.
+                  
+1.4.6 (16/05/12)  JA: Added cuts on lepton pt for each of the 4 hardest leptons
+                  OM: allow bin/madevent script to be run with a single line command:
+		              example ./bin/madevent multi_run 10 
+		          OM: Adding the 4 higgs interactions in the standard model UFO model
                   JA: Added new restriction card for the sm model with massive
                       muon and electron, and non-zero tau decay width
                   JA: Ensure assignment of colors to intermediate propagators

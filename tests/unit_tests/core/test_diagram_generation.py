@@ -3169,8 +3169,8 @@ class MultiProcessTest(unittest.TestCase):
 
         self.assertEqual(legs_mirror, goal_legs_mirror)
 
-    def test_find_maximal_non_qcd_order(self):
-        """Test find_maximal_non_qcd_order for different configurations
+    def test_find_optimal_order(self):
+        """Test find_optimal_process_orders for different configurations
         """
 
         # First try p p > e+ e- + nj
@@ -3262,6 +3262,35 @@ class MultiProcessTest(unittest.TestCase):
                          {'WEIGHTED': orders[nfs-2]})
         
         self.mymodel.set('interactions', myoldinterlist)
+
+        # Now check decay process p > p (a|g)
+        max_fs = 3
+        orders = [1, 2]
+
+        ag = [21, 22]
+        my_ag_leg = base_objects.MultiLeg({'ids': ag, 'state': True});
+
+        for nfs in range(2, max_fs + 1):
+            # Define the multiprocess
+            my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for \
+                                               leg in [my_multi_leg] * 2])
+            
+            my_multi_leglist.extend([copy.copy(leg) for \
+                                               leg in [my_ag_leg] * (nfs-1)])
+            my_multi_leglist[0].set('state', False)
+            my_process_definition = base_objects.ProcessDefinition({\
+                                             'legs':my_multi_leglist,
+                                             'model':self.mymodel})
+
+            self.assertEqual(diagram_generation.MultiProcess.\
+                             find_optimal_process_orders(my_process_definition),
+                             {})
+        
+            my_process_definition.set('is_decay_chain', True)
+            self.assertEqual(diagram_generation.MultiProcess.\
+                             find_optimal_process_orders(my_process_definition),
+                             {'WEIGHTED': orders[nfs-2]})
+        
 
     def test_multiparticle_pp_nj_with_required_s_channel(self):
         """Setting up and testing pp > nj with required photon s-channel

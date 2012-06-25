@@ -223,11 +223,11 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
 
       double precision ZERO
       parameter (ZERO=0d0)
-      double precision pmass(-nexternal:0,lmaxconfigs)
-      double precision pwidth(-nexternal:0,lmaxconfigs)
+      double precision prmass(-nexternal:0,lmaxconfigs)
+      double precision prwidth(-nexternal:0,lmaxconfigs)
       integer pow(-nexternal:0,lmaxconfigs)
       logical first_time
-      save pmass,pwidth,pow
+      save prmass,prwidth,pow
       INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
       INCLUDE 'config_subproc_map.inc'
       data first_time /.true./
@@ -289,7 +289,7 @@ c                       If this is radiation off heavy FS particle, set heavyrad
      $                    ', pdg: ',ipdgcl(icmp(l),ignum,iproc)
                      call filprp(iproc,ignum,icmp(l))
 c               Insert graph in list of propagators
-                     if(pwidth(k,ignum).gt.ZERO) then
+                     if(prwidth(k,ignum).gt.ZERO) then
                      if(btest(mlevel,4))
      $                       write(*,*)'Adding resonance ',ignum,icmp(l)
                         resmap(icmp(l),ignum)=.true.

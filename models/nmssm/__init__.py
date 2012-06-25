@@ -16,7 +16,6 @@ all_parameters = parameters.all_parameters
 all_orders = coupling_orders.all_orders
 all_functions = function_library.all_functions
 
-
-__author__ = "N. Christensen, C. Duhr"
-__version__ = "1.3"
-__email__ = "neil@pa.msu.edu, claude.duhr@uclouvain.be"
+__author__ = "Benjamin Fuks"
+__date__ = "08.06.12"
+__version__= "1.0.7"
