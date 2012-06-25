@@ -195,6 +195,17 @@
  1d5 = ptj4max ! maximum pt for the fourth jet in pt
  0   = cutuse  ! reject event if fails any (0) / all (1) jet pt cuts
 #*********************************************************************
+# Control the pt's of leptons sorted by pt                           *
+#*********************************************************************
+ 0   = ptl1min ! minimum pt for the leading lepton in pt
+ 0   = ptl2min ! minimum pt for the second lepton in pt
+ 0   = ptl3min ! minimum pt for the third lepton in pt
+ 0   = ptl4min ! minimum pt for the fourth lepton in pt
+ 1d5 = ptl1max ! maximum pt for the leading lepton in pt 
+ 1d5 = ptl2max ! maximum pt for the second lepton in pt
+ 1d5 = ptl3max ! maximum pt for the third lepton in pt
+ 1d5 = ptl4max ! maximum pt for the fourth lepton in pt
+#*********************************************************************
 # Control the Ht(k)=Sum of k leading jets                            *
 #*********************************************************************
  0   = htjmin ! minimum jet HT=Sum(jet pt)

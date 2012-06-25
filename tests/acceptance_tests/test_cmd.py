@@ -1001,18 +1001,19 @@ P1_qq_wp_wp_lvl
         
         self.do('import model sm')
         self.assertEqual(len(self.cmd._curr_model.get('particles')), 17)
-        self.assertEqual(len(self.cmd._curr_model.get('interactions')), 55)
+        self.assertEqual(len(self.cmd._curr_model.get('interactions')), 56)
         self.do('save model /tmp/model.pkl')
         self.do('import model mssm-full')
         self.do('load model /tmp/model.pkl')
         self.assertEqual(len(self.cmd._curr_model.get('particles')), 17)
-        self.assertEqual(len(self.cmd._curr_model.get('interactions')), 55)
+        self.assertEqual(len(self.cmd._curr_model.get('interactions')), 56)
         self.do('generate mu+ mu- > ta+ ta-') 
         self.assertEqual(len(self.cmd._curr_amps), 1)
         nicestring = """Process: mu+ mu- > ta+ ta- WEIGHTED=4
 2 diagrams:
-1  ((1(13),2(-13)>1(22),id:18),(3(-15),4(15),1(22),id:19)) (QCD=0,QED=2,WEIGHTED=4)
-2  ((1(13),2(-13)>1(23),id:57),(3(-15),4(15),1(23),id:58)) (QCD=0,QED=2,WEIGHTED=4)"""
+1  ((1(13),2(-13)>1(22),id:35),(3(-15),4(15),1(22),id:36)) (QCD=0,QED=2,WEIGHTED=4)
+2  ((1(13),2(-13)>1(23),id:41),(3(-15),4(15),1(23),id:42)) (QCD=0,QED=2,WEIGHTED=4)"""
+       
         self.assertEqual(self.cmd._curr_amps[0].nice_string().split('\n'), nicestring.split('\n'))
         self.do('save processes /tmp/model.pkl')
         self.do('generate e+ e- > e+ e-')
@@ -1112,6 +1113,9 @@ P1_qq_wp_wp_lvl
         
     def test_import_banner_command(self):
         """check that the import banner command works"""
+        
+        cwd = os.getcwd()
+        os.chdir(MG5DIR)
         self.do('import banner %s --no_launch' % pjoin(MG5DIR, 'tests', 'input_files', 'tt_banner.txt'))
         
         # check that the output exists:
@@ -1121,5 +1125,5 @@ P1_qq_wp_wp_lvl
         run_card = open(pjoin(self.out_dir,'Cards','run_card.dat')).read()
         self.assertTrue("'tt'     = run_tag" in run_card)
         self.assertTrue("200       = nevents" in run_card)
-        
+        os.chdir(cwd)
         

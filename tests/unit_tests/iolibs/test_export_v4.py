@@ -899,6 +899,7 @@ C     ----------
               NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
               IGOOD(NGOOD(IMIRROR),IMIRROR) = I
               PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS
+     $         ,' in event ',NTRY(IMIRROR)
             ENDIF
           ENDDO
         ENDIF
@@ -1716,7 +1717,8 @@ C       Flip x values (to get boost right)
             'decay_chains': decays})
 
         dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
-                          group_amplitudes(decay_chains)
+              group_amplitudes(\
+                 diagram_generation.DecayChainAmplitudeList([decay_chains]))
 
         subproc_groups = \
                        dc_subproc_group.generate_helas_decay_chain_subproc_groups()
@@ -2103,9 +2105,20 @@ mirror  d~ d > d d~ g d d~ g"""
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
 
-        # Gluon couplings to gluino
         myinterlist.append(base_objects.Interaction({
                       'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antid, \
+                                             d, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        # Gluon couplings to gluino
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
                       'particles': base_objects.ParticleList(\
                                             [go, \
                                              go, \
@@ -2207,12 +2220,13 @@ mirror  d~ d > d d~ g d d~ g"""
 
         mymodel.set('interactions', myinterlist)
 
-        procs = [[2,-2,1000021,1000021]]
+        procs = [[2,-2,1000021,1000021], [1,-1,1000021,1000021]]
         decays = [[1000021,1,-1,1000022],[1000021,2,-2,1000022]]
-        coreamplitudes = diagram_generation.AmplitudeList()
+        coreamplitudes = []
+        coreamplitude2 = diagram_generation.AmplitudeList()
         decayamplitudes = diagram_generation.AmplitudeList()
         decayprocs = base_objects.ProcessList()
-        proc_diags = [1]
+        proc_diags = [1,1]
         decay_diags = [2,2]
         
         for iproc, proc in enumerate(procs):
@@ -2227,7 +2241,7 @@ mirror  d~ d > d d~ g d d~ g"""
                                                'model':mymodel,
                                                'required_s_channels':[[21]]})
             my_amplitude = diagram_generation.Amplitude(my_process)
-            coreamplitudes.append(my_amplitude)
+            coreamplitudes.append(diagram_generation.AmplitudeList([my_amplitude]))
             self.assertEqual(len(my_amplitude.get('diagrams')), proc_diags[iproc])
 
         for iproc, proc in enumerate(decays):
@@ -2246,16 +2260,25 @@ mirror  d~ d > d d~ g d d~ g"""
             decayprocs.append(my_process)
             self.assertEqual(len(my_amplitude.get('diagrams')), decay_diags[iproc])
 
-        decays = diagram_generation.DecayChainAmplitudeList([\
+        decays1 = diagram_generation.DecayChainAmplitudeList([\
                          diagram_generation.DecayChainAmplitude({\
-                                            'amplitudes': decayamplitudes})])
+                                            'amplitudes': copy.copy(decayamplitudes)})])
+        decays2 = diagram_generation.DecayChainAmplitudeList([\
+                         diagram_generation.DecayChainAmplitude({\
+                                            'amplitudes': copy.copy(decayamplitudes)})])
 
-        decay_chains = diagram_generation.DecayChainAmplitude({\
-            'amplitudes': coreamplitudes,
-            'decay_chains': decays})
+        decay_chains1 = diagram_generation.DecayChainAmplitude({\
+            'amplitudes': coreamplitudes[0],
+            'decay_chains': decays1})
+
+        decay_chains2 = diagram_generation.DecayChainAmplitude({\
+            'amplitudes': coreamplitudes[1],
+            'decay_chains': decays2})
 
         dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
-                          group_amplitudes(decay_chains)
+              group_amplitudes(\
+                 diagram_generation.DecayChainAmplitudeList([decay_chains1,
+                                                             decay_chains2]))
 
         subproc_groups = \
                        dc_subproc_group.generate_helas_decay_chain_subproc_groups()
@@ -2269,6 +2292,8 @@ mirror  d~ d > d d~ g d d~ g"""
         self.assertEqual(subprocess_group.get('name'),
                          group_name)
         self.assertEqual(len(subprocess_group.get('matrix_elements')), me_len)
+
+        self.assertEqual(len(subprocess_group.get('matrix_elements')[0].get('processes')), 2)
 
         # Exporter
         exporter = export_v4.ProcessExporterFortranMEGroup()
@@ -4774,6 +4799,259 @@ CALL JW3WNX(W(1,3),W(1,5),W(1,1),MGVX7,DUM0,MZ,WZ,W(1,24))
 # Amplitude(s) for diagram number 28
 CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
 
+    def test_helas_diagrams_gg_gogo_go_tt1x_t_wpb(self):
+        """Testing g g > go go, (go > t t1~, t > w+ b)
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon and gluino
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        g = mypartlist[-1]
+
+        mypartlist.append(base_objects.Particle({'name':'go',
+                      'antiname':'go',
+                      'spin':2,
+                      'color':8,
+                      'mass':'MGO',
+                      'width':'WGO',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':1000021,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        go = mypartlist[-1]
+
+        # A top quark and stop squark
+        mypartlist.append(base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'MT',
+                      'width':'WT',
+                      'texname':'t',
+                      'antitexname':'\bar t',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t = mypartlist[len(mypartlist) - 1]
+        antit = copy.copy(t)
+        antit.set('is_part', False)
+
+        mypartlist.append(base_objects.Particle({'name':'t1',
+                      'antiname':'t1~',
+                      'spin':0,
+                      'color':3,
+                      'mass':'MT1',
+                      'width':'WT1',
+                      'texname':'t1',
+                      'antitexname':'\bar t1',
+                      'line':'dashed',
+                      'charge':2. / 3.,
+                      'pdg_code':1000006,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t1 = mypartlist[len(mypartlist) - 1]
+        antit1 = copy.copy(t1)
+        antit1.set('is_part', False)
+
+        # A W
+        mypartlist.append(base_objects.Particle({'name':'W+',
+                      'antiname':'W-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MW',
+                      'width':'WW',
+                      'texname':'W^+',
+                      'antitexname':'W^-',
+                     'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        Wplus = mypartlist[len(mypartlist) - 1]
+        Wminus = copy.copy(Wplus)
+        Wminus.set('is_part', False)
+
+        # b quark
+        mypartlist.append(base_objects.Particle({'name':'b',
+                      'antiname':'b~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'b',
+                      'antitexname':'\bar b',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':5,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        b = mypartlist[len(mypartlist) - 1]
+        antib = copy.copy(b)
+        antib.set('is_part', False)
+
+        # top-w-b coupling
+        myinterlist.append(base_objects.Interaction({
+            'id': 1,
+            'particles': base_objects.ParticleList([antib, t, Wminus]),
+            'color': [color.ColorString([color.T(1,0)])],
+            'lorentz': ['FFV2'],
+            'couplings': {(0, 0): 'GC_108'},
+            'orders': {'QED': 1}
+            }))
+        myinterlist.append(base_objects.Interaction({
+            'id': 2,
+            'particles': base_objects.ParticleList([antit, b, Wplus]),
+            'color': [color.ColorString([color.T(1,0)])],
+            'lorentz': ['FFV2'],
+            'couplings': {(0, 0): 'GC_108'},
+            'orders': {'QED': 1}
+            }))
+
+        # Gluon couplings to gluino
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [go, \
+                                             go, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        # Gluino couplings to top and stop
+        myinterlist.append(base_objects.Interaction({
+                      'id': 11,
+                      'particles': base_objects.ParticleList(\
+                                            [go, \
+                                             t, \
+                                             antit1]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 12,
+                      'particles': base_objects.ParticleList(\
+                                            [antit, \
+                                             go, \
+                                             t1]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1000021}))
+        myleglist.append(base_objects.Leg({'id':1000021}))
+
+        core_proc = base_objects.Process({'legs':myleglist,
+                                          'model':mybasemodel})
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1000021,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':6}))
+        myleglist.append(base_objects.Leg({'id':-1000006}))
+
+        decay1_process = base_objects.Process({'legs':myleglist,
+                                               'model':mybasemodel,
+                                               'is_decay_chain': True})
+
+        core_proc.get('decay_chains').append(decay1_process)
+        
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':5}))
+        myleglist.append(base_objects.Leg({'id':24}))
+
+        decay2_process = base_objects.Process({'legs':myleglist,
+                                               'model':mybasemodel,
+                                               'is_decay_chain': True})
+
+        decay1_process.get('decay_chains').append(decay2_process)
+
+        amplitude = diagram_generation.DecayChainAmplitude(core_proc)
+
+        self.assertEqual(len(amplitude.get('amplitudes')),1)
+
+        matrix_elements = helas_objects.HelasDecayChainProcess(amplitude)
+
+        matrix_element = matrix_elements.combine_decay_chain_processes()[0]
+
+        #print "\n".join(helas_call_writers.FortranUFOHelasCallWriter().\
+        #                get_matrix_element_calls(matrix_element))
+
+        self.assertEqual("\n".join(helas_call_writers.FortranUFOHelasCallWriter().\
+                                   get_matrix_element_calls(matrix_element)),
+                         """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
+CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
+CALL VXXXXX(P(0,4),MW,NHEL(4),+1*IC(4),W(1,4))
+CALL FFV2_1(W(1,3),W(1,4),GC_108,MT, WT, W(1,5))
+CALL SXXXXX(P(0,5),+1*IC(5),W(1,6))
+CALL L1_1(W(1,5),W(1,6),GQQ,MGO, WGO, W(1,7))
+CALL IXXXXX(P(0,6),zero,NHEL(6),-1*IC(6),W(1,8))
+CALL VXXXXX(P(0,7),MW,NHEL(7),+1*IC(7),W(1,9))
+CALL FFV2C1_2(W(1,8),W(1,9),GC_108,MT, WT, W(1,10))
+CALL SXXXXX(P(0,8),+1*IC(8),W(1,11))
+CALL L1C1_2(W(1,10),W(1,11),GQQ,MGO, WGO, W(1,12))
+CALL L1_1(W(1,7),W(1,1),GQQ,MGO, WGO, W(1,13))
+# Amplitude(s) for diagram number 1
+CALL L1_0(W(1,12),W(1,13),W(1,2),GQQ,AMP(1))
+CALL L1_2(W(1,12),W(1,1),-GQQ,MGO, WGO, W(1,14))
+# Amplitude(s) for diagram number 2
+CALL L1_0(W(1,14),W(1,7),W(1,2),GQQ,AMP(2))""")
+
+        # Test get_used_lorentz
+        goal_lorentz_list = [(('FFV2',), (), 1), (('L1',), (), 1), 
+                             (('FFV2',), (1,), 2), (('L1',), (1,), 2), 
+                             (('L1',), (), 1), (('L1',), (), 2), 
+                             (('L1',), (), 0), (('L1',), (), 0)]
+
+        self.assertEqual(matrix_element.get_used_lorentz(),
+                         goal_lorentz_list)
+
     def test_multiple_lorentz_structures(self):
         """Testing multiple Lorentz structures for one diagram.
         """
@@ -5302,29 +5580,29 @@ C     Number of configs
         writer.close()
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test',
-"""      PMASS(-1,1)  = ZERO
-      PWIDTH(-1,1) = ZERO
+"""      PRMASS(-1,1)  = ZERO
+      PRWIDTH(-1,1) = ZERO
       POW(-1,1) = 0
-      PMASS(-2,1)  = ZERO
-      PWIDTH(-2,1) = ZERO
+      PRMASS(-2,1)  = ZERO
+      PRWIDTH(-2,1) = ZERO
       POW(-2,1) = 1
-      PMASS(-1,2)  = ABS(MT)
-      PWIDTH(-1,2) = ABS(WT)
+      PRMASS(-1,2)  = ABS(MT)
+      PRWIDTH(-1,2) = ABS(WT)
       POW(-1,2) = 1
-      PMASS(-2,2)  = ZERO
-      PWIDTH(-2,2) = ZERO
+      PRMASS(-2,2)  = ZERO
+      PRWIDTH(-2,2) = ZERO
       POW(-2,2) = 0
-      PMASS(-1,3)  = ABS(MT)
-      PWIDTH(-1,3) = ABS(WT)
+      PRMASS(-1,3)  = ABS(MT)
+      PRWIDTH(-1,3) = ABS(WT)
       POW(-1,3) = 1
-      PMASS(-2,3)  = ZERO
-      PWIDTH(-2,3) = ZERO
+      PRMASS(-2,3)  = ZERO
+      PRWIDTH(-2,3) = ZERO
       POW(-2,3) = 0
-      PMASS(-1,4)  = ZERO
-      PWIDTH(-1,4) = ZERO
+      PRMASS(-1,4)  = ZERO
+      PRWIDTH(-1,4) = ZERO
       POW(-1,4) = 0
-      PMASS(-2,4)  = ZERO
-      PWIDTH(-2,4) = ZERO
+      PRMASS(-2,4)  = ZERO
+      PRWIDTH(-2,4) = ZERO
       POW(-2,4) = 1
 """)
 
@@ -7267,125 +7545,125 @@ C     Number of configs
         writer.close()
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test',
-                         """      PMASS(-1,1)  = ZERO
-      PWIDTH(-1,1) = ZERO
+                         """      PRMASS(-1,1)  = ZERO
+      PRWIDTH(-1,1) = ZERO
       POW(-1,1) = 1
-      PMASS(-2,1)  = ABS(MNEU1)
-      PWIDTH(-2,1) = ABS(WNEU1)
+      PRMASS(-2,1)  = ABS(MNEU1)
+      PRWIDTH(-2,1) = ABS(WNEU1)
       POW(-2,1) = 1
-      PMASS(-3,1)  = ZERO
-      PWIDTH(-3,1) = ZERO
+      PRMASS(-3,1)  = ZERO
+      PRWIDTH(-3,1) = ZERO
       POW(-3,1) = 1
-      PMASS(-4,1)  = ABS(MNEU1)
-      PWIDTH(-4,1) = ABS(WNEU1)
+      PRMASS(-4,1)  = ABS(MNEU1)
+      PRWIDTH(-4,1) = ABS(WNEU1)
       POW(-4,1) = 1
-      PMASS(-5,1)  = ABS(MSL2)
-      PWIDTH(-5,1) = ABS(WSL2)
+      PRMASS(-5,1)  = ABS(MSL2)
+      PRWIDTH(-5,1) = ABS(WSL2)
       POW(-5,1) = 2
-      PMASS(-1,2)  = ABS(MSL2)
-      PWIDTH(-1,2) = ABS(WSL2)
+      PRMASS(-1,2)  = ABS(MSL2)
+      PRWIDTH(-1,2) = ABS(WSL2)
       POW(-1,2) = 2
-      PMASS(-2,2)  = ABS(MNEU1)
-      PWIDTH(-2,2) = ABS(WNEU1)
+      PRMASS(-2,2)  = ABS(MNEU1)
+      PRWIDTH(-2,2) = ABS(WNEU1)
       POW(-2,2) = 1
-      PMASS(-3,2)  = ZERO
-      PWIDTH(-3,2) = ZERO
+      PRMASS(-3,2)  = ZERO
+      PRWIDTH(-3,2) = ZERO
       POW(-3,2) = 1
-      PMASS(-4,2)  = ABS(MNEU1)
-      PWIDTH(-4,2) = ABS(WNEU1)
+      PRMASS(-4,2)  = ABS(MNEU1)
+      PRWIDTH(-4,2) = ABS(WNEU1)
       POW(-4,2) = 1
-      PMASS(-5,2)  = ABS(MSL2)
-      PWIDTH(-5,2) = ABS(WSL2)
+      PRMASS(-5,2)  = ABS(MSL2)
+      PRWIDTH(-5,2) = ABS(WSL2)
       POW(-5,2) = 2
-      PMASS(-1,3)  = ZERO
-      PWIDTH(-1,3) = ZERO
+      PRMASS(-1,3)  = ZERO
+      PRWIDTH(-1,3) = ZERO
       POW(-1,3) = 1
-      PMASS(-2,3)  = ABS(MNEU1)
-      PWIDTH(-2,3) = ABS(WNEU1)
+      PRMASS(-2,3)  = ABS(MNEU1)
+      PRWIDTH(-2,3) = ABS(WNEU1)
       POW(-2,3) = 1
-      PMASS(-3,3)  = ABS(MSL2)
-      PWIDTH(-3,3) = ABS(WSL2)
+      PRMASS(-3,3)  = ABS(MSL2)
+      PRWIDTH(-3,3) = ABS(WSL2)
       POW(-3,3) = 2
-      PMASS(-4,3)  = ABS(MNEU1)
-      PWIDTH(-4,3) = ABS(WNEU1)
+      PRMASS(-4,3)  = ABS(MNEU1)
+      PRWIDTH(-4,3) = ABS(WNEU1)
       POW(-4,3) = 1
-      PMASS(-5,3)  = ABS(MSL2)
-      PWIDTH(-5,3) = ABS(WSL2)
+      PRMASS(-5,3)  = ABS(MSL2)
+      PRWIDTH(-5,3) = ABS(WSL2)
       POW(-5,3) = 2
-      PMASS(-1,4)  = ABS(MSL2)
-      PWIDTH(-1,4) = ABS(WSL2)
+      PRMASS(-1,4)  = ABS(MSL2)
+      PRWIDTH(-1,4) = ABS(WSL2)
       POW(-1,4) = 2
-      PMASS(-2,4)  = ABS(MNEU1)
-      PWIDTH(-2,4) = ABS(WNEU1)
+      PRMASS(-2,4)  = ABS(MNEU1)
+      PRWIDTH(-2,4) = ABS(WNEU1)
       POW(-2,4) = 1
-      PMASS(-3,4)  = ABS(MSL2)
-      PWIDTH(-3,4) = ABS(WSL2)
+      PRMASS(-3,4)  = ABS(MSL2)
+      PRWIDTH(-3,4) = ABS(WSL2)
       POW(-3,4) = 2
-      PMASS(-4,4)  = ABS(MNEU1)
-      PWIDTH(-4,4) = ABS(WNEU1)
+      PRMASS(-4,4)  = ABS(MNEU1)
+      PRWIDTH(-4,4) = ABS(WNEU1)
       POW(-4,4) = 1
-      PMASS(-5,4)  = ABS(MSL2)
-      PWIDTH(-5,4) = ABS(WSL2)
+      PRMASS(-5,4)  = ABS(MSL2)
+      PRWIDTH(-5,4) = ABS(WSL2)
       POW(-5,4) = 2
-      PMASS(-1,5)  = ZERO
-      PWIDTH(-1,5) = ZERO
+      PRMASS(-1,5)  = ZERO
+      PRWIDTH(-1,5) = ZERO
       POW(-1,5) = 1
-      PMASS(-2,5)  = ABS(MNEU1)
-      PWIDTH(-2,5) = ABS(WNEU1)
+      PRMASS(-2,5)  = ABS(MNEU1)
+      PRWIDTH(-2,5) = ABS(WNEU1)
       POW(-2,5) = 1
-      PMASS(-3,5)  = ZERO
-      PWIDTH(-3,5) = ZERO
+      PRMASS(-3,5)  = ZERO
+      PRWIDTH(-3,5) = ZERO
       POW(-3,5) = 1
-      PMASS(-4,5)  = ABS(MNEU1)
-      PWIDTH(-4,5) = ABS(WNEU1)
+      PRMASS(-4,5)  = ABS(MNEU1)
+      PRWIDTH(-4,5) = ABS(WNEU1)
       POW(-4,5) = 1
-      PMASS(-5,5)  = ABS(MSL2)
-      PWIDTH(-5,5) = ABS(WSL2)
+      PRMASS(-5,5)  = ABS(MSL2)
+      PRWIDTH(-5,5) = ABS(WSL2)
       POW(-5,5) = 2
-      PMASS(-1,6)  = ABS(MSL2)
-      PWIDTH(-1,6) = ABS(WSL2)
+      PRMASS(-1,6)  = ABS(MSL2)
+      PRWIDTH(-1,6) = ABS(WSL2)
       POW(-1,6) = 2
-      PMASS(-2,6)  = ABS(MNEU1)
-      PWIDTH(-2,6) = ABS(WNEU1)
+      PRMASS(-2,6)  = ABS(MNEU1)
+      PRWIDTH(-2,6) = ABS(WNEU1)
       POW(-2,6) = 1
-      PMASS(-3,6)  = ZERO
-      PWIDTH(-3,6) = ZERO
+      PRMASS(-3,6)  = ZERO
+      PRWIDTH(-3,6) = ZERO
       POW(-3,6) = 1
-      PMASS(-4,6)  = ABS(MNEU1)
-      PWIDTH(-4,6) = ABS(WNEU1)
+      PRMASS(-4,6)  = ABS(MNEU1)
+      PRWIDTH(-4,6) = ABS(WNEU1)
       POW(-4,6) = 1
-      PMASS(-5,6)  = ABS(MSL2)
-      PWIDTH(-5,6) = ABS(WSL2)
+      PRMASS(-5,6)  = ABS(MSL2)
+      PRWIDTH(-5,6) = ABS(WSL2)
       POW(-5,6) = 2
-      PMASS(-1,7)  = ZERO
-      PWIDTH(-1,7) = ZERO
+      PRMASS(-1,7)  = ZERO
+      PRWIDTH(-1,7) = ZERO
       POW(-1,7) = 1
-      PMASS(-2,7)  = ABS(MNEU1)
-      PWIDTH(-2,7) = ABS(WNEU1)
+      PRMASS(-2,7)  = ABS(MNEU1)
+      PRWIDTH(-2,7) = ABS(WNEU1)
       POW(-2,7) = 1
-      PMASS(-3,7)  = ABS(MSL2)
-      PWIDTH(-3,7) = ABS(WSL2)
+      PRMASS(-3,7)  = ABS(MSL2)
+      PRWIDTH(-3,7) = ABS(WSL2)
       POW(-3,7) = 2
-      PMASS(-4,7)  = ABS(MNEU1)
-      PWIDTH(-4,7) = ABS(WNEU1)
+      PRMASS(-4,7)  = ABS(MNEU1)
+      PRWIDTH(-4,7) = ABS(WNEU1)
       POW(-4,7) = 1
-      PMASS(-5,7)  = ABS(MSL2)
-      PWIDTH(-5,7) = ABS(WSL2)
+      PRMASS(-5,7)  = ABS(MSL2)
+      PRWIDTH(-5,7) = ABS(WSL2)
       POW(-5,7) = 2
-      PMASS(-1,8)  = ABS(MSL2)
-      PWIDTH(-1,8) = ABS(WSL2)
+      PRMASS(-1,8)  = ABS(MSL2)
+      PRWIDTH(-1,8) = ABS(WSL2)
       POW(-1,8) = 2
-      PMASS(-2,8)  = ABS(MNEU1)
-      PWIDTH(-2,8) = ABS(WNEU1)
+      PRMASS(-2,8)  = ABS(MNEU1)
+      PRWIDTH(-2,8) = ABS(WNEU1)
       POW(-2,8) = 1
-      PMASS(-3,8)  = ABS(MSL2)
-      PWIDTH(-3,8) = ABS(WSL2)
+      PRMASS(-3,8)  = ABS(MSL2)
+      PRWIDTH(-3,8) = ABS(WSL2)
       POW(-3,8) = 2
-      PMASS(-4,8)  = ABS(MNEU1)
-      PWIDTH(-4,8) = ABS(WNEU1)
+      PRMASS(-4,8)  = ABS(MNEU1)
+      PRWIDTH(-4,8) = ABS(WNEU1)
       POW(-4,8) = 1
-      PMASS(-5,8)  = ABS(MSL2)
-      PWIDTH(-5,8) = ABS(WSL2)
+      PRMASS(-5,8)  = ABS(MSL2)
+      PRWIDTH(-5,8) = ABS(WSL2)
       POW(-5,8) = 2
 """)
 
@@ -9317,8 +9595,7 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         
         # couplings
         self.assertEqual(len(mg4_model.coups_dep), 3)
-        sol= ['GC_1', 'GC_2', 'GC_3', 'GC_7', 'GC_8', 'GC_9', 'GC_10', 'GC_16', 'GC_21', 'GC_22', 'GC_23', 'GC_24', 'GC_25', 'GC_26', 'GC_27', 'GC_28', 'GC_29', 'GC_30', 'GC_31', 'GC_32', 'GC_33', 'GC_37', 'GC_38']
-        
+        sol = ['GC_1', 'GC_2', 'GC_3', 'GC_7', 'GC_8', 'GC_9', 'GC_10', 'GC_11', 'GC_17', 'GC_22', 'GC_23', 'GC_24', 'GC_25', 'GC_26', 'GC_27', 'GC_28', 'GC_29', 'GC_30', 'GC_31', 'GC_32', 'GC_33', 'GC_34', 'GC_38', 'GC_39']
         self.assertEqual(sol, [ p.name for p in mg4_model.coups_indep])
 
         

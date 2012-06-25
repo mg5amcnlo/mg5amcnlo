@@ -24,6 +24,7 @@ import pydoc
 import re
 import subprocess
 import sys
+import shutil
 import traceback
 import time
 
@@ -92,7 +93,7 @@ class CmdExtended(cmd.Cmd):
                                    'display particles', 'display interactions'],
         'define': ['define MULTIPART PART1 PART2 ...', 'generate PROCESS', 
                                                     'display multiparticles'],
-        'generate': ['add process PROCESS','output [OUTPUT_TYPE] [PATH]','draw .'],
+        'generate': ['add process PROCESS','output [OUTPUT_TYPE] [PATH]','display diagrams'],
         'add process':['output [OUTPUT_TYPE] [PATH]', 'display processes'],
         'output':['launch','open index.html','history PATH', 'exit'],
         'display': ['generate PROCESS', 'add process PROCESS', 'output [OUTPUT_TYPE] [PATH]'],
@@ -643,6 +644,8 @@ please follow information on http://root.cern.ch/drupal/content/downloading-root
 You can set it by adding the following lines in your .bashrc [.bash_profile for mac]:
 export ROOTSYS=%s
 export PATH=$PATH:$ROOTSYS/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOTSYS/lib
+export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$ROOTSYS/lib
 This will take effect only in a NEW terminal
 ''' % os.path.realpath(pjoin(misc.which('root'), \
                                                os.path.pardir, os.path.pardir)))
@@ -1373,7 +1376,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         
         
         # options
-        options = ['--format=Fortran', '--format=Python','--format=Cpp','--output=']
+        options = ['--format=Fortran', '--format=Python','--format=CPP','--output=']
         options = self.list_completion(text, options)
         if options:
             completion_categories['options'] = options
@@ -1763,9 +1766,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if amp not in self._curr_amps:
                     self._curr_amps.append(amp)
                 else:
-                    warning = "Warning: Already in processes:\n%s" % \
+                    raise self.InvalidCmd, "Duplicate process %s found. Please check your processes." % \
                                                 amp.nice_string_processes()
-                    logger.warning(warning)
 
 
             # Reset _done_export, since we have new process
@@ -1896,7 +1898,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 # check if a particle is asked more than once
                 if len(request_part) > len(set(request_part)):
                     for p in request_part:
-                        print p, request_part.count(p),present_part.count(p)
                         if request_part.count(p) > present_part.count(p):
                             continue
                         
@@ -2780,7 +2781,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         name = name[args[0]]
         
         try:
-            os.system('rm -rf %s' % name)
+            os.system('rm -rf %s' % pjoin(MG5DIR, name))
         except:
             pass
         
@@ -2829,14 +2830,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
                 text = open(path).read()
                 text = text.replace('FC=g77','FC=gfortran')
-                open(path, 'w').writelines(text)            
+                open(path, 'w').writelines(text)    
             elif compiler == 'gfortran' and args[0] == 'MadAnalysis':
                 path = os.path.join(MG5DIR, 'MadAnalysis', 'makefile')
                 text = open(path).read()
-                text = text.replace('F77 = g77','F77 = gfortran')
-                open(path, 'w').writelines(text)            
-        if logger.level <= logging.INFO: 
-            misc.call(['make', 'clean'], )
+                text = text.replace('FC=g77','FC=gfortran')
+                open(path, 'w').writelines(text)
+                            
+        if logger.level <= logging.INFO:
+            devnull = open(os.devnull,'w') 
+            misc.call(['make', 'clean'], stdout=devnull, stderr=-2)
             status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
             misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
@@ -3217,7 +3220,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         ################
         if self._export_format == 'aloha':
             # catch format
-            format = [d[11:] for d in args if d.startswith('--language=')]
+            format = [d[9:] for d in args if d.startswith('--format=')]
             if not format:
                 format = 'Fortran'
             else:
@@ -3253,10 +3256,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                and self._export_format in ['madevent', 'standalone']:
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
-            logger.info('If you continue this directory will be cleaned')
+            logger.info('If you continue this directory will be deleted and replaced.')
             answer = self.ask('Do you want to continue?', 'y', ['y','n'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
+            else:
+                shutil.rmtree(self._export_dir)
 
         #check if we need to group processes
         group_subprocesses = False
@@ -3333,8 +3338,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if not self._curr_matrix_elements.get_matrix_elements():
                 if group:
                     cpu_time1 = time.time()
-                    dc_amps = [amp for amp in self._curr_amps if isinstance(amp, \
-                                        diagram_generation.DecayChainAmplitude)]
+                    dc_amps = diagram_generation.DecayChainAmplitudeList(\
+                        [amp for amp in self._curr_amps if isinstance(amp, \
+                                        diagram_generation.DecayChainAmplitude)])
                     non_dc_amps = diagram_generation.AmplitudeList(\
                              [amp for amp in self._curr_amps if not \
                               isinstance(amp, \
@@ -3344,10 +3350,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         subproc_groups.extend(\
                                    group_subprocs.SubProcessGroup.group_amplitudes(\
                                                                        non_dc_amps))
-                    for dc_amp in dc_amps:
+                    if dc_amps:
                         dc_subproc_group = \
                                  group_subprocs.DecayChainSubProcessGroup.\
-                                                           group_amplitudes(dc_amp)
+                                                           group_amplitudes(dc_amps)
                         subproc_groups.extend(\
                                   dc_subproc_group.\
                                         generate_helas_decay_chain_subproc_groups())

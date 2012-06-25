@@ -40,7 +40,8 @@ c
       logical parallel, gen_events
       character*20 param(maxpara),value(maxpara)
       integer npara, nreq, ngran, nhel_refine
-      integer ij, kl, iseed, ioffset
+      integer ij, kl, ioffset
+      integer*8 iseed     !tjs 20/6/2012 to avoid integer overflow
       logical Gridpack,gridrun
       logical split_channels
       common /to_split/split_channels
@@ -83,7 +84,7 @@ c        Allow all the way down to a single iteration for gridruns
          min_iter=1
          call get_integer(npara,param,value," gevents "  ,nreq  ,2000   )
          err_goal = 1.2*nreq ! extra factor to ensure works
-         call get_integer(npara,param,value," gseed "  ,iseed  ,4321   )
+         call get_int8(npara,param,value," gseed "  ,iseed  ,4321   )
          call get_integer(npara,param,value," ngran "  ,ngran  , -1)
          if (ngran.eq.-1) ngran = 1
          write(*,*) "Running on Grid to generate ",nreq," additional events"
@@ -91,14 +92,15 @@ c        Allow all the way down to a single iteration for gridruns
 c
 c     TJS 3/13/2008
 c     Modified to allow for more sequences
-c     iseed can be between 0 and 31328*30081
+c     iseed can be between 0 and 30081*30081
 c     before patern repeats
 c     JA 11/2/2011: Check for ioffset, as in ntuple (ranmar.f)
+c     TJS  20/6/2012 changed mod value to 30081 to avoid duplicate sequences
 c
          call get_offset(ioffset)
          iseed = iseed * 31300       
-         ij=1802 + mod(iseed,30081)
-         kl=9373 + (iseed/31328) + ioffset
+         ij=1802 + mod(iseed,30081)      
+         kl=9373 + (iseed/30081) + ioffset
 c         write(*,'($a,i6,a3,i6)') 'Using random seed offsets',jconfig," : ",ioffset
 c         write(*,*) ' with seed', iseed
          do while (ij .gt. 31328)
@@ -397,9 +399,9 @@ c     Write ic with correct number of digits
 c      write(26,15) '#PBS -q ' // PBS_QUE
 c      write(26,15) '#PBS -o /dev/null'
 c      write(26,15) '#PBS -e /dev/null'
-      write(26,15) 'if [[ "$PBS_O_WORKDIR" != "" ]]; then' 
-      write(26,15) '    cd $PBS_O_WORKDIR'
-      write(26,15) 'fi'
+c      write(26,15) 'if [[ "$PBS_O_WORKDIR" != "" ]]; then' 
+c      write(26,15) '    cd $PBS_O_WORKDIR'
+c      write(26,15) 'fi'
       write(26,15) 'k=run1_app.log'
       write(lun,15) 'script=' // fname
 c      write(lun,15) 'rm -f wait.$script >& /dev/null'

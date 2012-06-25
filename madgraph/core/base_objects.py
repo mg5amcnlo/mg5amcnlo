@@ -583,6 +583,14 @@ class Interaction(PhysicsObject):
             else:
                 ref_dict_to1[pdg_tuple] = [(pdg_part, self['id'])]
 
+    def get_WEIGHTED_order(self, model):
+        """Get the WEIGHTED order for this interaction, for equivalent
+        3-particle vertex. Note that it can be fractional."""
+
+        return float(sum([model.get('order_hierarchy')[key]*self.get('orders')[key]\
+                          for key in self.get('orders')]))/ \
+               max((len(self.get('particles'))-2), 1)
+
     def __str__(self):
         """String representation of an interaction. Outputs valid Python 
         with improved format. Overrides the PhysicsObject __str__ to only
@@ -901,6 +909,14 @@ class Model(PhysicsObject):
                                       for inter in interactions[-1]], [])))
 
         return particles, hierarchy
+
+    def get_max_WEIGHTED(self):
+        """Return the maximum WEIGHTED order for any interaction in the model,
+        for equivalent 3-particle vertices. Note that it can be fractional."""
+
+        return max([inter.get_WEIGHTED_order(self) for inter in \
+                        self.get('interactions')])
+            
 
     def check_majoranas(self):
         """Return True if there is fermion flow violation, False otherwise"""
@@ -2004,7 +2020,11 @@ class Process(PhysicsObject):
         tmp = [(k,v) for (k,v) in expansion_orders.items() if 0 < v < 99]
         for (k,v) in tmp:  
             if k in orders:
-                orders[k] = min(orders[k], v)
+                if v < orders[k]:
+                    logger.warning('''The coupling order (%s=%s) specified is larger than the one allowed 
+             by the model builder. The maximal value allowed is %s. 
+             We set the %s order to this value''' % (k,orders[k],v,k))
+                    orders[k] = v
             else:
                 orders[k] = v
 

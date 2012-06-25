@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 634 $
+# This file was automatically created by FeynRules $Revision: 1105 $
 # Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Wed 6 Jul 2011 14:07:37
+# Date: Tue 3 Apr 2012 09:10:20
 
 
 
@@ -225,59 +225,59 @@ WTau = Parameter(name = 'WTau',
                  lhablock = 'DECAY',
                  lhacode = [ 15 ])
 
-CKM11 = Parameter(name = 'CKM11',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = '1 - lamWS**2/2.',
-                  texname = '\\text{CKM11}')
+CKM1x1 = Parameter(name = 'CKM1x1',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = '1 - lamWS**2/2.',
+                   texname = '\\text{CKM1x1}')
 
-CKM12 = Parameter(name = 'CKM12',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'lamWS',
-                  texname = '\\text{CKM12}')
+CKM1x2 = Parameter(name = 'CKM1x2',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'lamWS',
+                   texname = '\\text{CKM1x2}')
 
-CKM13 = Parameter(name = 'CKM13',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'AWS*lamWS**3*(-(etaWS*complex(0,1)) + rhoWS)',
-                  texname = '\\text{CKM13}')
+CKM1x3 = Parameter(name = 'CKM1x3',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'AWS*lamWS**3*(-(etaWS*complex(0,1)) + rhoWS)',
+                   texname = '\\text{CKM1x3}')
 
-CKM21 = Parameter(name = 'CKM21',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = '-lamWS',
-                  texname = '\\text{CKM21}')
+CKM2x1 = Parameter(name = 'CKM2x1',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = '-lamWS',
+                   texname = '\\text{CKM2x1}')
 
-CKM22 = Parameter(name = 'CKM22',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = '1 - lamWS**2/2.',
-                  texname = '\\text{CKM22}')
+CKM2x2 = Parameter(name = 'CKM2x2',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = '1 - lamWS**2/2.',
+                   texname = '\\text{CKM2x2}')
 
-CKM23 = Parameter(name = 'CKM23',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'AWS*lamWS**2',
-                  texname = '\\text{CKM23}')
+CKM2x3 = Parameter(name = 'CKM2x3',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'AWS*lamWS**2',
+                   texname = '\\text{CKM2x3}')
 
-CKM31 = Parameter(name = 'CKM31',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'AWS*lamWS**3*(1 - etaWS*complex(0,1) - rhoWS)',
-                  texname = '\\text{CKM31}')
+CKM3x1 = Parameter(name = 'CKM3x1',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'AWS*lamWS**3*(1 - etaWS*complex(0,1) - rhoWS)',
+                   texname = '\\text{CKM3x1}')
 
-CKM32 = Parameter(name = 'CKM32',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = '-(AWS*lamWS**2)',
-                  texname = '\\text{CKM32}')
+CKM3x2 = Parameter(name = 'CKM3x2',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = '-(AWS*lamWS**2)',
+                   texname = '\\text{CKM3x2}')
 
-CKM33 = Parameter(name = 'CKM33',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = '1',
-                  texname = '\\text{CKM33}')
+CKM3x3 = Parameter(name = 'CKM3x3',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = '1',
+                   texname = '\\text{CKM3x3}')
 
 aEW = Parameter(name = 'aEW',
                 nature = 'internal',

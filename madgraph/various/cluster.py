@@ -31,7 +31,7 @@ class ClusterManagmentError(MadGraph5Error):
 class NotImplemented(MadGraph5Error):
     pass
 
-def multiple_try(nb_try=5, sleep=1):
+def multiple_try(nb_try=5, sleep=20):
 
     def deco_retry(f):
         def deco_f_retry(*args, **opt):
@@ -41,7 +41,7 @@ def multiple_try(nb_try=5, sleep=1):
                 except KeyboardInterrupt:
                     raise
                 except:
-                    time.sleep(sleep)
+                    time.sleep(sleep * (i+1))
             raise
         return deco_f_retry
     return deco_retry
@@ -118,6 +118,12 @@ class Cluster(object):
     def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
                                                          stderr=None, log=None):
         """launch one job on the cluster and wait for it"""
+        
+        special_output = False # tag for concatanate the error with the output.
+        if stderr == -2 and stdout: 
+            #We are suppose to send the output to stdout
+            special_output = True
+            stderr = stdout + '.err'
         id = self.submit(prog, argument, cwd, stdout, stderr, log)
         while 1:        
             status = self.control_one_job(id)
@@ -125,7 +131,25 @@ class Cluster(object):
                 time.sleep(20) #security to ensure that the file are really written on the disk
                 break
             time.sleep(30)
-            
+        
+        if special_output:
+            # combine the stdout and the stderr
+            #wait up to 50 s to see if those files exists
+            for i in range(5):
+                if os.path.exists(stdout):
+                    if not os.path.exists(stderr):
+                        time.sleep(5)
+                    if os.path.exists(stderr):
+                        err_text = open(stderr).read()
+                        if not err_text:
+                            return
+                        logger.warning(err_text)                        
+                        text = open(stdout).read()
+                        open(stdout,'w').write(text + err_text)
+                    else:
+                        return
+                time.sleep(10)
+                        
     def remove(self, *args):
         """ """
         logger.warning("""This cluster didn't support job removal, 
@@ -194,15 +218,21 @@ class CondorCluster(Cluster):
         self.submitted_ids.append(id)
         return id
     
-    @multiple_try()
+    @multiple_try(nb_try=10, sleep=10)
     def control_one_job(self, id):
         """ control the status of a single job with it's cluster id """
         cmd = 'condor_q '+str(id)+" -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
-        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE, 
+                                                         stderr=subprocess.PIPE)
+        
+        error = status.stderr.read()
+        if status.returncode or error:
+            raise ClusterManagmentError, 'condor_q returns error: %s' % error
+
         return status.stdout.readline().strip()
     
     @check_interupt()
-    @multiple_try()
+    @multiple_try(nb_try=10, sleep=10)
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
         
@@ -210,16 +240,21 @@ class CondorCluster(Cluster):
             return 0, 0, 0, 0
         
         cmd = "condor_q " + ' '.join(self.submitted_ids) + " -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
-        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
-
+        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE, 
+                                                         stderr=subprocess.PIPE)
+        error = status.stderr.read()
+        if status.returncode or error:
+            raise ClusterManagmentError, 'condor_q returns error: %s' % error
+            
+            
         idle, run, fail = 0, 0, 0
         for line in status.stdout:
             status = line.strip()
-            if status == 'I':
+            if status in ['I','U']:
                 idle += 1
             elif status == 'R':
                 run += 1
-            else:
+            elif status != 'C':
                 fail += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail
@@ -240,6 +275,7 @@ class PBSCluster(Cluster):
     name = 'pbs'
     idle_tag = ['Q']
     running_tag = ['T','E','R']
+    complete_tag = ['C']
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
@@ -268,13 +304,17 @@ class PBSCluster(Cluster):
         if argument:
             text += ' ' + ' '.join(argument)
 
-        a = subprocess.Popen(['qsub','-o', stdout,
-                                     '-N', me_dir, 
-                                     '-e', stderr,
-                                     '-q', self.cluster_queue,
-                                     '-V'], stdout=subprocess.PIPE, 
-                                     stderr=subprocess.STDOUT,
-                                     stdin=subprocess.PIPE, cwd=cwd)
+        command = ['qsub','-o', stdout,
+                   '-N', me_dir, 
+                   '-e', stderr,
+                   '-V']
+
+        if self.cluster_queue and self.cluster_queue != 'None':
+            command.extend(['-q', self.cluster_queue])
+
+        a = subprocess.Popen(command, stdout=subprocess.PIPE, 
+                                      stderr=subprocess.STDOUT,
+                                      stdin=subprocess.PIPE, cwd=cwd)
             
         output = a.communicate(text)[0]
         id = output.split('.')[0]
@@ -324,6 +364,8 @@ class PBSCluster(Cluster):
                     idle += 1
                 elif status in self.running_tag:
                     run += 1
+                elif status in self.complete_tag:
+                    continue
                 else:
                     fail += 1
 
@@ -401,13 +443,17 @@ class SGECluster(Cluster):
         logger.debug("!=== error  %s" % stderr)
         logger.debug("!=== logs   %s" % log)
 
-        a = subprocess.Popen(['qsub','-o', stdout,
-                                    '-N', me_dir, 
-                                    '-e', stderr,
-                                    '-q', self.cluster_queue,
-                                    '-V'], stdout=subprocess.PIPE, 
-                                    stderr=subprocess.STDOUT,
-                                    stdin=subprocess.PIPE, cwd=cwd)
+        command = ['qsub','-o', stdout,
+                   '-N', me_dir, 
+                   '-e', stderr,
+                   '-V']
+
+        if self.cluster_queue and self.cluster_queue != 'None':
+            command.extend(['-q', self.cluster_queue])
+
+        a = subprocess.Popen(command, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             stdin=subprocess.PIPE, cwd=cwd)
 
         output = a.communicate(text)[0]
         id = output.split(' ')[2]
@@ -512,13 +558,16 @@ class LSFCluster(Cluster):
         if argument:
             text += ' ' + ' '.join(argument)
 
-        a = subprocess.Popen(['bsub','-o', stdout,
-                                     '-J', me_dir, 
-                                     '-e', stderr,
-                                     '-q', self.cluster_queue],
-                                     stdout=subprocess.PIPE, 
-                                     stderr=subprocess.STDOUT,
-                                     stdin=subprocess.PIPE, cwd=cwd)
+        command = ['bsub','-o', stdout,
+                   '-J', me_dir, 
+                   '-e', stderr]
+
+        if self.cluster_queue and self.cluster_queue != 'None':
+            command.extend(['-q', self.cluster_queue])
+
+        a = subprocess.Popen(command, stdout=subprocess.PIPE, 
+                                      stderr=subprocess.STDOUT,
+                                      stdin=subprocess.PIPE, cwd=cwd)
             
         output = a.communicate(text)[0]
         #Job <nnnn> is submitted to default queue <normal>.

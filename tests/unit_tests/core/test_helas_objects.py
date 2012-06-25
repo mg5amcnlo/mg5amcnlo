@@ -2866,6 +2866,281 @@ class HelasMultiProcessTest(unittest.TestCase):
                 self.assertEqual(len(helas_multi_proc.get('matrix_elements')),
                                      goal_number_matrix_elements[nfs - 2])
 
+    def test_non_combine_processes(self):
+        """Test that the processes uc>w+uusu~ and uc>w+usss~ are not
+           combined (they have identical diagrams but with different
+           relative particle order in different diagrams)"""
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[-1]
+
+        # A quark U and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[-1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A quark D and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        d = mypartlist[-1]
+        antid = copy.copy(d)
+        antid.set('is_part', False)
+
+        # A quark C and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'c',
+                      'antiname':'c~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'c',
+                      'antitexname':'\bar c',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':4,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        c = mypartlist[-1]
+        antic = copy.copy(c)
+        antic.set('is_part', False)
+
+        # A quark S and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'s',
+                      'antiname':'s~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'s',
+                      'antitexname':'\bar s',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':3,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        s = mypartlist[-1]
+        antis = copy.copy(s)
+        antis.set('is_part', False)
+
+        # W+/-
+        mypartlist.append(base_objects.Particle({'name':'w+',
+                      'antiname':'w-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'WMASS',
+                      'width':'WWIDTH',
+                      'texname':'w+',
+                      'antitexname':'w-',
+                      'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        wplus = mypartlist[len(mypartlist) - 1]
+        wminus = copy.copy(wplus)
+        wminus.set('is_part', False)
+
+        # Gluon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [u, \
+                                             antiu, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 0, 1)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [d, \
+                                             antid, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 0, 1)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+        myinterlist.append(base_objects.Interaction({
+                      'id': 5,
+                      'particles': base_objects.ParticleList(\
+                                            [c, \
+                                             antic, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 0, 1)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 6,
+                      'particles': base_objects.ParticleList(\
+                                            [s, \
+                                             antis, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 0, 1)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        # 3-Gluon coupling
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [g, \
+                                             g, \
+                                             g]),
+                      'color': [color.ColorString([color.f(0, 1, 2)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        # u d w couplings
+        myinterlist.append(base_objects.Interaction({
+                      'id': 8,
+                      'particles': base_objects.ParticleList(\
+                                            [u, \
+                                             antid, \
+                                             wminus]),
+                      'color': [color.ColorString([color.T(0, 1)])],
+                      'lorentz':['L1'],
+                      'couplings':{(0,0):'GC_23'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 9,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             d, \
+                                             wplus]),
+                      'color': [color.ColorString([color.T(0, 1)])],
+                      'lorentz':['L1'],
+                      'couplings':{(0,0):'GC_23'},
+                      'orders':{'QED':1}}))
+
+        # c s w couplings
+        myinterlist.append(base_objects.Interaction({
+                      'id': 10,
+                      'particles': base_objects.ParticleList(\
+                                            [c, \
+                                             antis, \
+                                             wminus]),
+                      'color': [color.ColorString([color.T(0, 1)])],
+                      'lorentz':['L1'],
+                      'couplings':{(0,0):'GC_23'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 11,
+                      'particles': base_objects.ParticleList(\
+                                            [antic, \
+                                             s, \
+                                             wplus]),
+                      'color': [color.ColorString([color.T(0, 1)])],
+                      'lorentz':['L1'],
+                      'couplings':{(0,0):'GC_23'},
+                      'orders':{'QED':1}}))
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        # u c > w+ u u s u~ 
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':4,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':24}))
+        myleglist.append(base_objects.Leg({'id':2}))
+        myleglist.append(base_objects.Leg({'id':2}))
+        myleglist.append(base_objects.Leg({'id':3}))
+        myleglist.append(base_objects.Leg({'id':-2}))
+
+        myproc1 = base_objects.Process({'legs':myleglist,
+                                        'orders':{'QED':1},
+                                        'model':mymodel})
+
+        myamplitude1 = diagram_generation.Amplitude(myproc1)
+
+        amplitude_tag1 = helas_objects.IdentifyMETag.create_tag(myamplitude1)
+
+        # u c > w+ u s s s~
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':4,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':24}))
+        myleglist.append(base_objects.Leg({'id':2}))
+        myleglist.append(base_objects.Leg({'id':3}))
+        myleglist.append(base_objects.Leg({'id':3}))
+        myleglist.append(base_objects.Leg({'id':-3}))
+
+        myproc2 = base_objects.Process({'legs':myleglist,
+                                        'orders':{'QED':1},
+                                        'model':mymodel})
+
+        myamplitude2 = diagram_generation.Amplitude(myproc2)
+        
+        amplitude_tag2 = helas_objects.IdentifyMETag.create_tag(myamplitude2)
+                         
+        self.assertFalse(amplitude_tag1 == amplitude_tag2)
+
 
     def test_complete_decay_chain_process(self):
         """Test a complete decay chain process gp>jg,j>jjj,j>jjj
@@ -2917,12 +3192,12 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         matrix_elements = my_dc_process.combine_decay_chain_processes()
 
-        self.assertEqual(len(matrix_elements), 8)
+        self.assertEqual(len(matrix_elements), 11)
 
-        num_processes = [4, 2, 4, 2, 4, 2, 2, 1]
-        num_amps = [9, 9, 9, 9, 9, 9, 9, 9]
-        num_wfs = [19, 19, 19, 19, 19, 19, 19, 19]
-        iden_factors = [1, 6, 1, 6, 1, 6, 2, 12]
+        num_processes =  [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1]
+        num_amps =  [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9]
+        num_wfs =  [19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19]
+        iden_factors =  [1, 1, 6, 1, 1, 6, 1, 1, 6, 2, 12]
 
         for i, me in enumerate(matrix_elements):
             self.assertEqual(len(me.get('processes')), num_processes[i])

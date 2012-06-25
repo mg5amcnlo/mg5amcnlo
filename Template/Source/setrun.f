@@ -68,7 +68,7 @@ c
 c
 c
       logical gridrun,gridpack
-      integer          iseed
+      integer*8          iseed
       common /to_seed/ iseed
 c
 c----------
@@ -264,6 +264,19 @@ c*********************************************************************
 	call get_real   (npara,param,value,"cutuse",cutuse,0d0)
 
 c*********************************************************************
+c Check   the pt's of leptons sorted by pt                           *
+c*********************************************************************
+
+ 	call get_real   (npara,param,value,"ptl1min",ptl1min,0d0)
+ 	call get_real   (npara,param,value,"ptl1max",ptl1max,1d5)
+ 	call get_real   (npara,param,value,"ptl2min",ptl2min,0d0)
+ 	call get_real   (npara,param,value,"ptl2max",ptl2max,1d5)
+ 	call get_real   (npara,param,value,"ptl3min",ptl3min,0d0)
+ 	call get_real   (npara,param,value,"ptl3max",ptl3max,1d5)
+ 	call get_real   (npara,param,value,"ptl4min",ptl4min,0d0)
+ 	call get_real   (npara,param,value,"ptl4max",ptl4max,1d5)
+
+c*********************************************************************
 c Check  Ht                                                          *
 c*********************************************************************
 
@@ -287,9 +300,9 @@ c*********************************************************************
       call get_logical   (npara,param,value," gridrun ",gridrun,.false.)
       call get_logical   (npara,param,value," gridpack ",gridpack,.false.)
       if (gridrun.and.gridpack)then
-         call get_integer   (npara,param,value," gseed ",iseed,0)
+         call get_int8   (npara,param,value," gseed ",iseed,0)
       else 
-         call get_integer (npara,param,value," iseed ",iseed,0)
+         call get_int8   (npara,param,value," iseed ",iseed,0)
       endif
 
 c************************************************************************     

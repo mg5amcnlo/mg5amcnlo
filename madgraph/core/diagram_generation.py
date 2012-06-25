@@ -1457,6 +1457,11 @@ class MultiProcess(base_objects.PhysicsObject):
                process_definition.get('overall_orders'):
             return process_definition.get('orders')
 
+        # If this is a decay process (and not a decay chain), return
+        if process_definition.get_ninitial() == 1 and not \
+                process_definition.get('is_decay_chain'):
+            return process_definition.get('orders')
+
         logger.info("Checking for minimal orders which gives processes.")
         logger.info("Please specify coupling orders to bypass this step.")
 
@@ -1473,9 +1478,12 @@ class MultiProcess(base_objects.PhysicsObject):
         fsids = [leg['ids'] for leg in \
                  filter(lambda leg: leg['state'] == True, process_definition['legs'])]
 
+        max_WEIGHTED_order = \
+                        (len(fsids + isids) - 2)*int(model.get_max_WEIGHTED())
+
         # Run diagram generation with increasing max_order_now until
         # we manage to get diagrams
-        while max_order_now < len(fsids)*max(hierarchy):
+        while max_order_now < max_WEIGHTED_order:
 
             logger.info("Trying coupling order WEIGHTED=%d" % max_order_now)
 
@@ -1572,7 +1580,7 @@ class MultiProcess(base_objects.PhysicsObject):
             logger.setLevel(oldloglevel)
 
         # If no valid processes found with nfinal-1 couplings, return maximal
-        return {coupling: len(fsids)*max(hierarchy)}
+        return {coupling: max_order_now}
 
     @staticmethod
     def cross_amplitude(amplitude, process, org_perm, new_perm):

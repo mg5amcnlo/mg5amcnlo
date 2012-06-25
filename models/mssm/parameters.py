@@ -215,7 +215,7 @@ mHu2 = Parameter(name = 'mHu2',
                  value = 32337.4943,
                  texname = 'm_{H_u}^2',
                  lhablock = 'MSOFT',
-                 lhacode = [ 21 ])
+                 lhacode = [ 22 ])
 
 mHd2 = Parameter(name = 'mHd2',
                  nature = 'external',
@@ -223,7 +223,7 @@ mHd2 = Parameter(name = 'mHd2',
                  value = -128800.134,
                  texname = 'm_{H_d}^2',
                  lhablock = 'MSOFT',
-                 lhacode = [ 22 ])
+                 lhacode = [ 21 ])
 
 RmQ211 = Parameter(name = 'RmQ211',
                    nature = 'external',
