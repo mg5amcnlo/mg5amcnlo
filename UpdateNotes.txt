@@ -40,9 +40,9 @@ Update notes for MadGraph 5 (in reverse time order)
                       with scripts to create madevent.tar.gz and gridpack.tar.gz.
                   
 1.4.6 (16/05/12)  JA: Added cuts on lepton pt for each of the 4 hardest leptons
-                  OM: allow bin/madevent script to be run with a single line command:
-		              example ./bin/madevent multi_run 10 
-		          OM: Adding the 4 higgs interactions in the standard model UFO model
+                  OM: allow bin/madevent script to be run with a single line command
+                      example ./bin/madevent multi_run 10 
+		  OM: Adding the 4 higgs interactions in the standard model UFO model
                   JA: Added new restriction card for the sm model with massive
                       muon and electron, and non-zero tau decay width
                   JA: Ensure assignment of colors to intermediate propagators

@@ -644,6 +644,8 @@ please follow information on http://root.cern.ch/drupal/content/downloading-root
 You can set it by adding the following lines in your .bashrc [.bash_profile for mac]:
 export ROOTSYS=%s
 export PATH=$PATH:$ROOTSYS/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOTSYS/lib
+export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$ROOTSYS/lib
 This will take effect only in a NEW terminal
 ''' % os.path.realpath(pjoin(misc.which('root'), \
                                                os.path.pardir, os.path.pardir)))
@@ -2770,7 +2772,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         name = name[args[0]]
         
         try:
-            os.system('rm -rf %s' % name)
+            os.system('rm -rf %s' % pjoin(MG5DIR, name))
         except:
             pass
         
