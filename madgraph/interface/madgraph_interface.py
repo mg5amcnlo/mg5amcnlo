@@ -3800,6 +3800,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text = '\n'.join(fj_lhapdf_lines) + '\n'
             fj_lhapdf_file.write(text)
             fj_lhapdf_file.close()
+            self._curr_exporter.finalize_fks_directory( \
+                                           self._curr_matrix_elements,
+                                           [self.history_header] + \
+                                           self.history,
+                                           not nojpeg,
+                                           online,
+                                           self.options['fortran_compiler'])
 
         elif self._export_format == 'madevent':          
             # Create configuration file [path to executable] for madevent

@@ -334,6 +334,90 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         return calls
 
 
+    def finalize_fks_directory(self, matrix_elements, history, makejpg = False,
+                              online = False, compiler='gfortran'):
+        """Finalize FKS directory by creating jpeg diagrams, html
+        pages,proc_card_mg5.dat and madevent.tar.gz."""
+        
+#        modelname = self.model.get('name')
+#        if modelname == 'mssm' or modelname.startswith('mssm-'):
+#            param_card = os.path.join(self.dir_path, 'Cards','param_card.dat')
+#            mg5_param = os.path.join(self.dir_path, 'Source', 'MODEL', 'MG5_param.dat')
+#            check_param_card.convert_to_mg5card(param_card, mg5_param)
+#            check_param_card.check_valid_param_card(mg5_param)
+
+
+#        # Write maxconfigs.inc based on max of ME's/subprocess groups
+#        filename = os.path.join(self.dir_path,'Source','maxconfigs.inc')
+#        self.write_maxconfigs_file(writers.FortranWriter(filename),
+#                                   matrix_elements)
+        
+#        # Write maxparticles.inc based on max of ME's/subprocess groups
+#        filename = os.path.join(self.dir_path,'Source','maxparticles.inc')
+#        self.write_maxparticles_file(writers.FortranWriter(filename),
+#                                     matrix_elements)
+        
+        # Touch "done" file
+        os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
+
+        # Check for compiler
+        self.set_compiler(compiler)
+
+        old_pos = os.getcwd()
+        os.chdir(os.path.join(self.dir_path, 'SubProcesses'))
+        P_dir_list = [proc for proc in os.listdir('.') if os.path.isdir(proc) and \
+                                                                    proc[0] == 'P']
+
+        devnull = os.open(os.devnull, os.O_RDWR)
+#        # Convert the poscript in jpg files (if authorize)
+#        if makejpg:
+#            logger.info("Generate jpeg diagrams")
+#            for Pdir in P_dir_list:
+#                os.chdir(Pdir)
+#                subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+#                                stdout = devnull)
+#                os.chdir(os.path.pardir)
+#
+#        logger.info("Generate web pages")
+#        # Create the WebPage using perl script
+#
+#        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')], \
+#                                                                stdout = devnull)
+
+        os.chdir(os.path.pardir)
+#
+#        obj = gen_infohtml.make_info_html(self.dir_path)
+#        [mv(name, './HTML/') for name in os.listdir('.') if \
+#                            (name.endswith('.html') or name.endswith('.jpg')) and \
+#                            name != 'index.html']               
+#        if online:
+#            nb_channel = obj.rep_rule['nb_gen_diag']
+#            open(os.path.join('./Online'),'w').write(str(nb_channel))
+        
+        # Write command history as proc_card_mg5
+        if os.path.isdir('Cards'):
+            output_file = os.path.join('Cards', 'proc_card_mg5.dat')
+            output_file = open(output_file, 'w')
+            text = ('\n'.join(history) + '\n') % misc.get_time_info()
+            output_file.write(text)
+            output_file.close()
+
+#        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
+#                        stdout = devnull)
+
+#        # Run "make" to generate madevent.tar.gz file
+#        if os.path.exists(os.path.join('SubProcesses', 'subproc.mg')):
+#            if os.path.exists('madevent.tar.gz'):
+#                os.remove('madevent.tar.gz')
+#            misc.compile(mode='None')
+#
+#        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
+#                        stdout = devnull)
+
+        #return to the initial dir
+        os.chdir(old_pos)               
+
+
     def write_leshouche_info_file(self, writer, matrix_element, fortran_model):
         """writes the leshouche_info.inc file which contains the LHA informations
         for all the real emission processes"""
