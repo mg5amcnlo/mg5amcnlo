@@ -78,14 +78,61 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             IdentifyMETag.dec_number += 1
         if not identical_particle_factor:
             identical_particle_factor = process.identical_particle_factor()
+        sorted_tags = sorted([IdentifyMETag(d, model, ninitial) for d in \
+                                  amplitude.get('diagrams')])
+        if sorted_tags:
+            # Need to keep track of relative permutations for all diagrams,
+            # to make sure we indeed have different matrix elements,
+            # and not just identical diagrams disregarding particle order.
+            # However, identical particles should be treated symmetrically.
+            comp_dict = IdentifyMETag.prepare_comp_dict(process,
+                                         sorted_tags[0].get_external_numbers())
+            perms = [array.array('H',
+                     sum([comp_dict[n] for n in p.get_external_numbers()], []))
+                     for p in sorted_tags[1:]]
+        else:
+            perms = []
+
         return [amplitude.get('has_mirror_process'),
                 process.get('id'),
                 process.get('is_decay_chain'),
                 identical_particle_factor,
                 dc,
-                sorted([IdentifyMETag(d, model, ninitial) for d in \
-                        amplitude.get('diagrams')])]        
-        
+                perms,
+                sorted_tags]
+
+    @staticmethod
+    def prepare_comp_dict(process, numbers):
+        """Prepare a dictionary from leg number to [positions] in such
+           a way that identical particles are treated in a symmetric way"""
+
+        # Crate dictionary from leg number to position
+        start_perm_dict = dict([(n,i) for (i,n) in enumerate(numbers)])
+
+        # Ids for process legs            
+        legs = [l.get('id') for l in sorted(process.get_legs_with_decays())]
+        if process.get('is_decay_chain'):
+            legs.insert(0,process.get('legs')[0].get('id'))
+        ninitial = len([l for l in process.get('legs') if \
+                                not l.get('state')])
+        # Dictionary from leg id to position for final-state legs
+        id_num_dict = {}
+        for n in start_perm_dict.keys():
+            if n > ninitial:
+                id_num_dict.setdefault(legs[n-1], []).append(\
+                    start_perm_dict[n])
+        # Make each entry in start_perm_dict independent of position of
+        # identical particles by including all positions
+        for n in start_perm_dict.keys():
+            if n <= ninitial:
+                # Just turn it into a list
+                start_perm_dict[n] = [start_perm_dict[n]]
+            else:
+                # Turn into list of positions for identical particles
+                start_perm_dict[n] = sorted(id_num_dict[legs[n-1]])
+
+        return start_perm_dict
+
     @staticmethod
     def link_from_leg(leg, model):
         """Returns the end link for a leg needed to identify matrix
@@ -4206,7 +4253,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         matrix element is identical."""
 
         assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
-                  "%s is not valid AmplitudeList" % repr(amplitudes)
+                  "%s is not valid AmplitudeList" % type(amplitudes)
 
         # Keep track of already generated color objects, to reuse as
         # much as possible
@@ -4233,9 +4280,6 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 matrix_element_list = HelasDecayChainProcess(amplitude).\
                                       combine_decay_chain_processes()
             else:
-                logger.info("Generating Helas calls for %s" % \
-                            amplitude.get('process').nice_string().\
-                                           replace('Process', 'process'))
                 # Create tag identifying the matrix element using
                 # IdentifyMETag. If two amplitudes have the same tag,
                 # they have the same matrix element
@@ -4244,6 +4288,9 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     me_index = amplitude_tags.index(amplitude_tag)
                 except ValueError:
                     # Create matrix element for this amplitude
+                    logger.info("Generating Helas calls for %s" % \
+                            amplitude.get('process').nice_string().\
+                                           replace('Process', 'process'))
                     matrix_element_list = [cls.matrix_element_class(amplitude,
                                                           decay_ids=decay_ids,
                                                           gen_color=False)]
@@ -4259,16 +4306,19 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     # Identical matrix element found
                     other_processes = identified_matrix_elements[me_index].\
                                       get('processes')
-                    logger.info("Combining process with %s" % \
-                                other_processes[0].nice_string().\
-                                replace('Process: ', ''))
                     other_processes.append(cls.reorder_process(\
                         amplitude.get('process'),
                         permutations[me_index],
                         amplitude_tag[-1][0].get_external_numbers()))
+                    logger.info("Combined %s with %s" % \
+                                (other_processes[-1].nice_string().\
+                                 replace('Process: ', 'process '),
+                                 other_processes[0].nice_string().\
+                                 replace('Process: ', 'process ')))
                     # Go on to next amplitude
                     continue
-            # Deal with newly generated matrix element
+
+            # Deal with newly generated matrix elements
             for matrix_element in copy.copy(matrix_element_list):
                 assert isinstance(matrix_element, HelasMatrixElement), \
                           "Not a HelasMatrixElement: %s" % matrix_element
@@ -4278,6 +4328,24 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 if not matrix_element.get('processes') or \
                        not matrix_element.get('diagrams'):
                     continue
+
+                # Check if identical matrix element already present
+                if matrix_element in matrix_elements:
+                    me = matrix_elements[matrix_elements.index(matrix_element)]
+                    me_procs = me.get('processes')
+                    logger.info("Combining process %s with %s" % \
+                            (matrix_element.get('processes')[0].nice_string().\
+                                 replace('Process: ', ''),
+                             me.get('processes')[0].nice_string().\
+                                 replace('Process: ', '')))
+                    for proc in matrix_element.get('processes'):
+                        if proc not in me_procs:
+                            me_procs.append(proc)
+                        else:
+                            raise InvalidCmd, "Duplicate process %s found. Please check your processes." % \
+                                proc.nice_string().replace('Process: ', '')
+                    continue
+
                 # Otherwise, add this matrix element to list
                 matrix_elements.append(matrix_element)
 

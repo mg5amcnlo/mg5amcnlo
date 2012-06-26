@@ -260,6 +260,47 @@ c         if (found) write (*,*) name,var
 
       end
 c
+      subroutine get_int8(npara,param,value,name,var,def_value)
+c----------------------------------------------------------------------------------
+c     finds the parameter named "name" in param and associate to "value" in value 
+c----------------------------------------------------------------------------------
+      implicit none
+c
+c     arguments
+c
+      integer npara
+      character*20 param(*),value(*)
+      character*(*)  name
+      integer def_value
+      integer*8 var
+      character*20 c_param,c_name
+c
+c     local
+c
+      logical found
+      integer i
+c
+c     start
+c
+      i=1
+      found=.false.
+      do while(.not.found.and.i.le.npara)
+         call firststring(c_param,param(i))
+          call firststring(c_name,name)
+         found = (c_param .eq. c_name)
+         if (found) read(value(i),*) var
+c         if (found) write (*,*) name,var
+         i=i+1
+      enddo
+      if (.not.found) then
+         write (*,*) "Warning: parameter ",name," not found"
+         write (*,*) "         setting it to default value ",def_value
+         var=def_value
+      endif
+      return
+
+      end
+c
       subroutine get_string(npara,param,value,name,var,def_value)
 c----------------------------------------------------------------------------------
 c     finds the parameter named "name" in param and associate to "value" in value 

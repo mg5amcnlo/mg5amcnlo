@@ -752,7 +752,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         """ """
         
         args = self.split_arg(self.lastcmd)
-        if args[0] in ['quit','exit']:
+        if args and args[0] in ['quit','exit']:
             if 'all' in args:
                 return True
             if len(args) >1 and args[1].isdigit():

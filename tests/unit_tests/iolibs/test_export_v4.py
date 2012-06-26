@@ -1717,7 +1717,8 @@ C       Flip x values (to get boost right)
             'decay_chains': decays})
 
         dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
-                          group_amplitudes(decay_chains)
+              group_amplitudes(\
+                 diagram_generation.DecayChainAmplitudeList([decay_chains]))
 
         subproc_groups = \
                        dc_subproc_group.generate_helas_decay_chain_subproc_groups()
@@ -2095,9 +2096,20 @@ mirror  d~ d > d d~ g d d~ g"""
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
 
-        # Gluon couplings to gluino
         myinterlist.append(base_objects.Interaction({
                       'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antid, \
+                                             d, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        # Gluon couplings to gluino
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
                       'particles': base_objects.ParticleList(\
                                             [go, \
                                              go, \
@@ -2199,12 +2211,13 @@ mirror  d~ d > d d~ g d d~ g"""
 
         mymodel.set('interactions', myinterlist)
 
-        procs = [[2,-2,1000021,1000021]]
+        procs = [[2,-2,1000021,1000021], [1,-1,1000021,1000021]]
         decays = [[1000021,1,-1,1000022],[1000021,2,-2,1000022]]
-        coreamplitudes = diagram_generation.AmplitudeList()
+        coreamplitudes = []
+        coreamplitude2 = diagram_generation.AmplitudeList()
         decayamplitudes = diagram_generation.AmplitudeList()
         decayprocs = base_objects.ProcessList()
-        proc_diags = [1]
+        proc_diags = [1,1]
         decay_diags = [2,2]
         
         for iproc, proc in enumerate(procs):
@@ -2219,7 +2232,7 @@ mirror  d~ d > d d~ g d d~ g"""
                                                'model':mymodel,
                                                'required_s_channels':[[21]]})
             my_amplitude = diagram_generation.Amplitude(my_process)
-            coreamplitudes.append(my_amplitude)
+            coreamplitudes.append(diagram_generation.AmplitudeList([my_amplitude]))
             self.assertEqual(len(my_amplitude.get('diagrams')), proc_diags[iproc])
 
         for iproc, proc in enumerate(decays):
@@ -2238,16 +2251,25 @@ mirror  d~ d > d d~ g d d~ g"""
             decayprocs.append(my_process)
             self.assertEqual(len(my_amplitude.get('diagrams')), decay_diags[iproc])
 
-        decays = diagram_generation.DecayChainAmplitudeList([\
+        decays1 = diagram_generation.DecayChainAmplitudeList([\
                          diagram_generation.DecayChainAmplitude({\
-                                            'amplitudes': decayamplitudes})])
+                                            'amplitudes': copy.copy(decayamplitudes)})])
+        decays2 = diagram_generation.DecayChainAmplitudeList([\
+                         diagram_generation.DecayChainAmplitude({\
+                                            'amplitudes': copy.copy(decayamplitudes)})])
 
-        decay_chains = diagram_generation.DecayChainAmplitude({\
-            'amplitudes': coreamplitudes,
-            'decay_chains': decays})
+        decay_chains1 = diagram_generation.DecayChainAmplitude({\
+            'amplitudes': coreamplitudes[0],
+            'decay_chains': decays1})
+
+        decay_chains2 = diagram_generation.DecayChainAmplitude({\
+            'amplitudes': coreamplitudes[1],
+            'decay_chains': decays2})
 
         dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
-                          group_amplitudes(decay_chains)
+              group_amplitudes(\
+                 diagram_generation.DecayChainAmplitudeList([decay_chains1,
+                                                             decay_chains2]))
 
         subproc_groups = \
                        dc_subproc_group.generate_helas_decay_chain_subproc_groups()
@@ -2261,6 +2283,8 @@ mirror  d~ d > d d~ g d d~ g"""
         self.assertEqual(subprocess_group.get('name'),
                          group_name)
         self.assertEqual(len(subprocess_group.get('matrix_elements')), me_len)
+
+        self.assertEqual(len(subprocess_group.get('matrix_elements')[0].get('processes')), 2)
 
         # Exporter
         exporter = export_v4.ProcessExporterFortranMEGroup()
@@ -5547,29 +5571,29 @@ C     Number of configs
         writer.close()
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test',
-"""      PMASS(-1,1)  = ZERO
-      PWIDTH(-1,1) = ZERO
+"""      PRMASS(-1,1)  = ZERO
+      PRWIDTH(-1,1) = ZERO
       POW(-1,1) = 0
-      PMASS(-2,1)  = ZERO
-      PWIDTH(-2,1) = ZERO
+      PRMASS(-2,1)  = ZERO
+      PRWIDTH(-2,1) = ZERO
       POW(-2,1) = 1
-      PMASS(-1,2)  = ABS(MT)
-      PWIDTH(-1,2) = ABS(WT)
+      PRMASS(-1,2)  = ABS(MT)
+      PRWIDTH(-1,2) = ABS(WT)
       POW(-1,2) = 1
-      PMASS(-2,2)  = ZERO
-      PWIDTH(-2,2) = ZERO
+      PRMASS(-2,2)  = ZERO
+      PRWIDTH(-2,2) = ZERO
       POW(-2,2) = 0
-      PMASS(-1,3)  = ABS(MT)
-      PWIDTH(-1,3) = ABS(WT)
+      PRMASS(-1,3)  = ABS(MT)
+      PRWIDTH(-1,3) = ABS(WT)
       POW(-1,3) = 1
-      PMASS(-2,3)  = ZERO
-      PWIDTH(-2,3) = ZERO
+      PRMASS(-2,3)  = ZERO
+      PRWIDTH(-2,3) = ZERO
       POW(-2,3) = 0
-      PMASS(-1,4)  = ZERO
-      PWIDTH(-1,4) = ZERO
+      PRMASS(-1,4)  = ZERO
+      PRWIDTH(-1,4) = ZERO
       POW(-1,4) = 0
-      PMASS(-2,4)  = ZERO
-      PWIDTH(-2,4) = ZERO
+      PRMASS(-2,4)  = ZERO
+      PRWIDTH(-2,4) = ZERO
       POW(-2,4) = 1
 """)
 
@@ -7503,125 +7527,125 @@ C     Number of configs
         writer.close()
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test',
-                         """      PMASS(-1,1)  = ZERO
-      PWIDTH(-1,1) = ZERO
+                         """      PRMASS(-1,1)  = ZERO
+      PRWIDTH(-1,1) = ZERO
       POW(-1,1) = 1
-      PMASS(-2,1)  = ABS(MNEU1)
-      PWIDTH(-2,1) = ABS(WNEU1)
+      PRMASS(-2,1)  = ABS(MNEU1)
+      PRWIDTH(-2,1) = ABS(WNEU1)
       POW(-2,1) = 1
-      PMASS(-3,1)  = ZERO
-      PWIDTH(-3,1) = ZERO
+      PRMASS(-3,1)  = ZERO
+      PRWIDTH(-3,1) = ZERO
       POW(-3,1) = 1
-      PMASS(-4,1)  = ABS(MNEU1)
-      PWIDTH(-4,1) = ABS(WNEU1)
+      PRMASS(-4,1)  = ABS(MNEU1)
+      PRWIDTH(-4,1) = ABS(WNEU1)
       POW(-4,1) = 1
-      PMASS(-5,1)  = ABS(MSL2)
-      PWIDTH(-5,1) = ABS(WSL2)
+      PRMASS(-5,1)  = ABS(MSL2)
+      PRWIDTH(-5,1) = ABS(WSL2)
       POW(-5,1) = 2
-      PMASS(-1,2)  = ABS(MSL2)
-      PWIDTH(-1,2) = ABS(WSL2)
+      PRMASS(-1,2)  = ABS(MSL2)
+      PRWIDTH(-1,2) = ABS(WSL2)
       POW(-1,2) = 2
-      PMASS(-2,2)  = ABS(MNEU1)
-      PWIDTH(-2,2) = ABS(WNEU1)
+      PRMASS(-2,2)  = ABS(MNEU1)
+      PRWIDTH(-2,2) = ABS(WNEU1)
       POW(-2,2) = 1
-      PMASS(-3,2)  = ZERO
-      PWIDTH(-3,2) = ZERO
+      PRMASS(-3,2)  = ZERO
+      PRWIDTH(-3,2) = ZERO
       POW(-3,2) = 1
-      PMASS(-4,2)  = ABS(MNEU1)
-      PWIDTH(-4,2) = ABS(WNEU1)
+      PRMASS(-4,2)  = ABS(MNEU1)
+      PRWIDTH(-4,2) = ABS(WNEU1)
       POW(-4,2) = 1
-      PMASS(-5,2)  = ABS(MSL2)
-      PWIDTH(-5,2) = ABS(WSL2)
+      PRMASS(-5,2)  = ABS(MSL2)
+      PRWIDTH(-5,2) = ABS(WSL2)
       POW(-5,2) = 2
-      PMASS(-1,3)  = ZERO
-      PWIDTH(-1,3) = ZERO
+      PRMASS(-1,3)  = ZERO
+      PRWIDTH(-1,3) = ZERO
       POW(-1,3) = 1
-      PMASS(-2,3)  = ABS(MNEU1)
-      PWIDTH(-2,3) = ABS(WNEU1)
+      PRMASS(-2,3)  = ABS(MNEU1)
+      PRWIDTH(-2,3) = ABS(WNEU1)
       POW(-2,3) = 1
-      PMASS(-3,3)  = ABS(MSL2)
-      PWIDTH(-3,3) = ABS(WSL2)
+      PRMASS(-3,3)  = ABS(MSL2)
+      PRWIDTH(-3,3) = ABS(WSL2)
       POW(-3,3) = 2
-      PMASS(-4,3)  = ABS(MNEU1)
-      PWIDTH(-4,3) = ABS(WNEU1)
+      PRMASS(-4,3)  = ABS(MNEU1)
+      PRWIDTH(-4,3) = ABS(WNEU1)
       POW(-4,3) = 1
-      PMASS(-5,3)  = ABS(MSL2)
-      PWIDTH(-5,3) = ABS(WSL2)
+      PRMASS(-5,3)  = ABS(MSL2)
+      PRWIDTH(-5,3) = ABS(WSL2)
       POW(-5,3) = 2
-      PMASS(-1,4)  = ABS(MSL2)
-      PWIDTH(-1,4) = ABS(WSL2)
+      PRMASS(-1,4)  = ABS(MSL2)
+      PRWIDTH(-1,4) = ABS(WSL2)
       POW(-1,4) = 2
-      PMASS(-2,4)  = ABS(MNEU1)
-      PWIDTH(-2,4) = ABS(WNEU1)
+      PRMASS(-2,4)  = ABS(MNEU1)
+      PRWIDTH(-2,4) = ABS(WNEU1)
       POW(-2,4) = 1
-      PMASS(-3,4)  = ABS(MSL2)
-      PWIDTH(-3,4) = ABS(WSL2)
+      PRMASS(-3,4)  = ABS(MSL2)
+      PRWIDTH(-3,4) = ABS(WSL2)
       POW(-3,4) = 2
-      PMASS(-4,4)  = ABS(MNEU1)
-      PWIDTH(-4,4) = ABS(WNEU1)
+      PRMASS(-4,4)  = ABS(MNEU1)
+      PRWIDTH(-4,4) = ABS(WNEU1)
       POW(-4,4) = 1
-      PMASS(-5,4)  = ABS(MSL2)
-      PWIDTH(-5,4) = ABS(WSL2)
+      PRMASS(-5,4)  = ABS(MSL2)
+      PRWIDTH(-5,4) = ABS(WSL2)
       POW(-5,4) = 2
-      PMASS(-1,5)  = ZERO
-      PWIDTH(-1,5) = ZERO
+      PRMASS(-1,5)  = ZERO
+      PRWIDTH(-1,5) = ZERO
       POW(-1,5) = 1
-      PMASS(-2,5)  = ABS(MNEU1)
-      PWIDTH(-2,5) = ABS(WNEU1)
+      PRMASS(-2,5)  = ABS(MNEU1)
+      PRWIDTH(-2,5) = ABS(WNEU1)
       POW(-2,5) = 1
-      PMASS(-3,5)  = ZERO
-      PWIDTH(-3,5) = ZERO
+      PRMASS(-3,5)  = ZERO
+      PRWIDTH(-3,5) = ZERO
       POW(-3,5) = 1
-      PMASS(-4,5)  = ABS(MNEU1)
-      PWIDTH(-4,5) = ABS(WNEU1)
+      PRMASS(-4,5)  = ABS(MNEU1)
+      PRWIDTH(-4,5) = ABS(WNEU1)
       POW(-4,5) = 1
-      PMASS(-5,5)  = ABS(MSL2)
-      PWIDTH(-5,5) = ABS(WSL2)
+      PRMASS(-5,5)  = ABS(MSL2)
+      PRWIDTH(-5,5) = ABS(WSL2)
       POW(-5,5) = 2
-      PMASS(-1,6)  = ABS(MSL2)
-      PWIDTH(-1,6) = ABS(WSL2)
+      PRMASS(-1,6)  = ABS(MSL2)
+      PRWIDTH(-1,6) = ABS(WSL2)
       POW(-1,6) = 2
-      PMASS(-2,6)  = ABS(MNEU1)
-      PWIDTH(-2,6) = ABS(WNEU1)
+      PRMASS(-2,6)  = ABS(MNEU1)
+      PRWIDTH(-2,6) = ABS(WNEU1)
       POW(-2,6) = 1
-      PMASS(-3,6)  = ZERO
-      PWIDTH(-3,6) = ZERO
+      PRMASS(-3,6)  = ZERO
+      PRWIDTH(-3,6) = ZERO
       POW(-3,6) = 1
-      PMASS(-4,6)  = ABS(MNEU1)
-      PWIDTH(-4,6) = ABS(WNEU1)
+      PRMASS(-4,6)  = ABS(MNEU1)
+      PRWIDTH(-4,6) = ABS(WNEU1)
       POW(-4,6) = 1
-      PMASS(-5,6)  = ABS(MSL2)
-      PWIDTH(-5,6) = ABS(WSL2)
+      PRMASS(-5,6)  = ABS(MSL2)
+      PRWIDTH(-5,6) = ABS(WSL2)
       POW(-5,6) = 2
-      PMASS(-1,7)  = ZERO
-      PWIDTH(-1,7) = ZERO
+      PRMASS(-1,7)  = ZERO
+      PRWIDTH(-1,7) = ZERO
       POW(-1,7) = 1
-      PMASS(-2,7)  = ABS(MNEU1)
-      PWIDTH(-2,7) = ABS(WNEU1)
+      PRMASS(-2,7)  = ABS(MNEU1)
+      PRWIDTH(-2,7) = ABS(WNEU1)
       POW(-2,7) = 1
-      PMASS(-3,7)  = ABS(MSL2)
-      PWIDTH(-3,7) = ABS(WSL2)
+      PRMASS(-3,7)  = ABS(MSL2)
+      PRWIDTH(-3,7) = ABS(WSL2)
       POW(-3,7) = 2
-      PMASS(-4,7)  = ABS(MNEU1)
-      PWIDTH(-4,7) = ABS(WNEU1)
+      PRMASS(-4,7)  = ABS(MNEU1)
+      PRWIDTH(-4,7) = ABS(WNEU1)
       POW(-4,7) = 1
-      PMASS(-5,7)  = ABS(MSL2)
-      PWIDTH(-5,7) = ABS(WSL2)
+      PRMASS(-5,7)  = ABS(MSL2)
+      PRWIDTH(-5,7) = ABS(WSL2)
       POW(-5,7) = 2
-      PMASS(-1,8)  = ABS(MSL2)
-      PWIDTH(-1,8) = ABS(WSL2)
+      PRMASS(-1,8)  = ABS(MSL2)
+      PRWIDTH(-1,8) = ABS(WSL2)
       POW(-1,8) = 2
-      PMASS(-2,8)  = ABS(MNEU1)
-      PWIDTH(-2,8) = ABS(WNEU1)
+      PRMASS(-2,8)  = ABS(MNEU1)
+      PRWIDTH(-2,8) = ABS(WNEU1)
       POW(-2,8) = 1
-      PMASS(-3,8)  = ABS(MSL2)
-      PWIDTH(-3,8) = ABS(WSL2)
+      PRMASS(-3,8)  = ABS(MSL2)
+      PRWIDTH(-3,8) = ABS(WSL2)
       POW(-3,8) = 2
-      PMASS(-4,8)  = ABS(MNEU1)
-      PWIDTH(-4,8) = ABS(WNEU1)
+      PRMASS(-4,8)  = ABS(MNEU1)
+      PRWIDTH(-4,8) = ABS(WNEU1)
       POW(-4,8) = 1
-      PMASS(-5,8)  = ABS(MSL2)
-      PWIDTH(-5,8) = ABS(WSL2)
+      PRMASS(-5,8)  = ABS(MSL2)
+      PRWIDTH(-5,8) = ABS(WSL2)
       POW(-5,8) = 2
 """)
 

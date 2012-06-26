@@ -68,7 +68,7 @@ c
 c
 c
       logical gridrun,gridpack
-      integer          iseed
+      integer*8          iseed
       common /to_seed/ iseed
 c
 c----------
@@ -300,9 +300,9 @@ c*********************************************************************
       call get_logical   (npara,param,value," gridrun ",gridrun,.false.)
       call get_logical   (npara,param,value," gridpack ",gridpack,.false.)
       if (gridrun.and.gridpack)then
-         call get_integer   (npara,param,value," gseed ",iseed,0)
+         call get_int8   (npara,param,value," gseed ",iseed,0)
       else 
-         call get_integer (npara,param,value," iseed ",iseed,0)
+         call get_int8   (npara,param,value," iseed ",iseed,0)
       endif
 
 c************************************************************************     

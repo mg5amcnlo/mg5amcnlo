@@ -242,4 +242,18 @@ class CouplingOrder(object):
         self.hierarchy = hierarchy
 
 
+all_decays = []
+
+class Decay(object):
+
+    def __init__(self, name, particle, partial_widths):
+        
+        global all_decays
+        all_decays.append(self)
+
+        self.name = name
+        self.particle = particle
+        self.partial_width = partial_widths
+
+
         

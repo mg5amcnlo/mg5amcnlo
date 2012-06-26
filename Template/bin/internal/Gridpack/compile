@@ -48,7 +48,15 @@ fi
 # Clean the previous compilation
 cd Source
 make clean
-cd -
+cd ..
+cd SubProcesses
+for i in `cat subproc.mg` ; do
+    cd $i
+    make clean
+    cd ..
+done
+cd ..
+
 #
 #  Now let shell know where to find important executables
 #
