@@ -1095,7 +1095,7 @@ c arguments, 1st argument: nFKSproces; 2nd argument: S or H events; 3rd
 c argument: IPROC (from parton luminosities))
 c
       double precision unwgt_table(0:fks_configs,2,maxproc)
-      common/c_uwgt_table/unwgt_table
+      common/c_unwgt_table/unwgt_table
       INTEGER              IPROC
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC

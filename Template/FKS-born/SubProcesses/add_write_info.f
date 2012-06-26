@@ -115,7 +115,11 @@ c cFKSprocess
      &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
-
+c
+c Set the leshouche info and fks info
+c
+      call fks_inc_chooser()
+      call leshouche_inc_chooser()
 c
 c Set the number of external particles and overwrite the iSorH_lhe value
 c

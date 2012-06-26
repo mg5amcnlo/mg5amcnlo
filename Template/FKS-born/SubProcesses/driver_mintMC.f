@@ -690,10 +690,10 @@ c From dsample_fks
       common/fks_indices/i_fks,j_fks
       logical firsttime
       integer sum
-      parameter (sum=0)
+      parameter (sum=3)
       data firsttime /.true./
       logical foundB(2),j_fks_initial(fks_configs),found_ini1,found_ini2
-     $     ,found_fnl
+     $     ,found_fnl,j_fks_initial_found,j_fks_final_found
       integer nFKSprocessBorn(2)
       save nFKSprocessBorn,foundB
       double precision vol,sigintR,res,f_tot,rfract
@@ -707,7 +707,7 @@ c From dsample_fks
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
       double precision unwgt_table(0:fks_configs,2,maxproc)
-      common/c_uwgt_table/unwgt_table
+      common/c_unwgt_table/unwgt_table
       integer maxproc_save
       save maxproc_save
 c
@@ -744,18 +744,21 @@ c Set Bjorken x's to some random value before calling the dlum() function
      &        nFKSprocessBorn
 c For sum over identical FKS pairs, need to find the identical structures
          if (sum.eq.0) then
+c MC over FKS directories (1 FKS directory per nbody PS point)
             proc_map(0,0)=fks_configs
             do i=1,fks_configs
                proc_map(i,0)=1
                proc_map(i,1)=i
             enddo
          elseif (sum.eq.1) then
+c Sum over FKS directories (all FKS directories per nbody PS point)
             proc_map(0,0)=1
             proc_map(1,0)=fks_configs
             do i=1,fks_configs
                proc_map(1,i)=i
             enddo
          elseif (sum.eq.2) then
+c Sum over all FKS pairs that have the same i_fks and j_fks
             proc_map(0,0)=0
             do i=1,fks_configs
                proc_map(i,0)=0
@@ -780,12 +783,8 @@ c For sum over identical FKS pairs, need to find the identical structures
                   j_fks_proc(proc_map(0,0))=j_fks
                endif
             enddo
-            write (*,*) 'FKS process map:'
-            do i=1,proc_map(0,0)
-               write (*,*) i,'-->',proc_map(i,0),':',
-     &              (proc_map(i,j),j=1,proc_map(i,0))
-            enddo
          elseif (sum.eq.3) then
+c MC over FKS pairs that have soft singularity
             proc_map(0,0)=0
             do i=1,fks_configs
                proc_map(i,0)=0
@@ -900,12 +899,34 @@ c gluons splitting
                   endif
                endif
             enddo
-            write (*,*) 'FKS process map:'
-            do i=1,proc_map(0,0)
-               write (*,*) i,'-->',proc_map(i,0),':',
-     &              (proc_map(i,j),j=1,proc_map(i,0))
+         elseif(sum.eq.4) then
+c Sum over all j_fks initial (final) state
+            proc_map(0,0)=0
+            do i=1,2
+               proc_map(i,0)=0
             enddo
+            j_fks_initial_found=.false.
+            j_fks_final_found=.false.
+            do nFKSprocess=1,fks_configs
+               call fks_inc_chooser()
+               if (j_fks.gt.nincoming) then
+                  proc_map(1,0)=proc_map(1,0)+1
+                  proc_map(1,proc_map(1,0))=nFKSprocess
+               else
+                  proc_map(2,0)=proc_map(2,0)+1
+                  proc_map(2,proc_map(2,0))=nFKSprocess
+               endif
+            enddo
+            if (proc_map(1,0).ne.0) proc_map(0,0)=proc_map(0,0)+1
+            if (proc_map(2,0).ne.0) proc_map(0,0)=proc_map(0,0)+1
+         else
+            write (*,*) 'sum not know in driver_mintMC.f',sum
          endif
+         write (*,*) 'FKS process map (sum=',sum,') :'
+         do i=1,proc_map(0,0)
+            write (*,*) i,'-->',proc_map(i,0),':',
+     &           (proc_map(i,j),j=1,proc_map(i,0))
+         enddo
       endif
 
       fold=ifl
@@ -1370,57 +1391,8 @@ c Add the Born and the S-events
             do k=1,proc_map(proc_map(0,1),0)
                nFKSprocess=proc_map(proc_map(0,1),k)
                if (proc_map(proc_map(0,1),0).gt.1) then
-c We should check that we can combine them. Do a couple of simple tests
-c for the first step in the do-loop: (Note that this is only correct for
-c sum=3)
                   if (k.eq.1) then
                      do kk=2,proc_map(proc_map(0,1),0)
-                        if (AddInfoLHE) then
-                           if ( ifks_lhe(proc_map(proc_map(0,1),kk))
-     &                          .ne.ifks_lhe(nFKSprocess)) then
-                              write (*,*) 'In process combination'/
-     &                        /' (unwgt_table), i_fks not identical'
-                              stop
-                           endif
-                           if ( jfks_lhe(proc_map(proc_map(0,1),kk))
-     &                          .ne.jfks_lhe(nFKSprocess)) then
-                              write (*,*) 'In process combination'/
-     &                        /' (unwgt_table), j_fks not identical'
-                              stop
-                           endif
-                           if ( fksfather_lhe(proc_map(proc_map(0,1)
-     &                          ,kk)) .ne.fksfather_lhe(nFKSprocess))
-     &                          then
-                              write (*,*) 'In process combination'/
-     &                    /' (unwgt_table), fksfarther not identical'
-                              stop
-                           endif
-                           if ( scale1_lhe(proc_map(proc_map(0,1),kk))
-     &                          .ne.scale1_lhe(nFKSprocess)) then
-                              write (*,*) 'In process combination'/
-     &                      /' (unwgt_table), scale1_lhe not identical',
-     &                          scale1_lhe(proc_map(proc_map(0,1),kk)),
-     &                          scale1_lhe(nFKSprocess)
-                              stop
-                           endif
-                           if ( scale2_lhe(proc_map(proc_map(0,1),kk))
-     &                          .ne.scale2_lhe(nFKSprocess)) then
-                              write (*,*) 'In process combination'/
-     &                      /' (unwgt_table), scale2_lhe not identical',
-     &                          scale2_lhe(proc_map(proc_map(0,1),kk)),
-     &                          scale2_lhe(nFKSprocess)
-                              stop
-                           endif
-                        endif
-                        if (doreweight) then
-                           if (iwgtnumpartn_all(
-     &                          proc_map(proc_map(0,1),kk)*2-1 ) .ne.
-     &                          iwgtnumpartn_all(nFKSprocess*2-1)) then
-                              write (*,*) 'In process combination'/
-     &                    /' (unwgt_table), iwgtnumpartn not identical'
-                              stop
-                           endif
-                        endif
 c Find the process with the soft singularity and treat that as the
 c basic one to which we sum everything
                         call fks_inc_chooser()
@@ -1525,6 +1497,7 @@ c Pick one of the nFKSprocesses and one of the IPROC's
                   if (doreweight) then
                      nFKSprocess_reweight(1)=nFKSprocess
                   endif
+                  nFKSprocess_used=nFKSprocess
                else
                   Hevents=.false.
 c Pick one of the nFKSprocesses and IPROC's of the Born
