@@ -195,7 +195,7 @@ c
      &          ,scale2_lhe(nFKSprocess),izero,izero,izero,zero,zero
      &          ,zero,zero,zero
         else
-          if(iwgtinfo.lt.1.or.iwgtinfo.gt.4)then
+          if(iwgtinfo.lt.1.or.iwgtinfo.gt.5)then
             write(*,*)'Error in write_events_lhe'
             write(*,*)'  Inconsistency in reweight parameters'
             write(*,*)doreweight,iwgtinfo

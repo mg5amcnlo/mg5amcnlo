@@ -710,7 +710,6 @@ c From dsample_fks
       common/c_uwgt_table/unwgt_table
       integer maxproc_save
       save maxproc_save
-      double precision rfrac
 c
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -950,7 +949,7 @@ c gluons splitting
 c
 c Compute the Born-like contributions with nbody=.true.
 c     
-         call get_MC_integer(proc_map(0,0),proc_map(0,1),vol)
+         call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol)
          nFKSprocess=proc_map(proc_map(0,1),1) ! just pick the first
                                                ! because it only matters
                                                ! which parton is j_fks
@@ -1005,6 +1004,9 @@ c
             do i=1,proc_map(proc_map(0,1),0)
                nFKSprocess=proc_map(proc_map(0,1),i)
                nFKSprocess_used=nFKSprocess
+
+c               write (*,*) 'nFKSprocess',i,nFKSprocess,vol,proc_map(0,1),w
+
                call fks_inc_chooser()
                call leshouche_inc_chooser()
 c THIS CAN BE OPTIMIZED
@@ -1017,7 +1019,7 @@ c small. This should save some time, without degrading the uncertainty
 c much. Do this by overwrite the 'wgt' variable
                if (sum.eq.3 .and. PDG_type(i_fks).ne.21) then
                   rnd=ran2()
-                  rfrac=0.25d0  ! fraction of PS points to include
+                  rfract=1.0d0  ! fraction of PS points to include
                                 ! them. This could be determined
                                 ! dynamically, based on the relative
                                 ! importance of this contribution.
@@ -1035,7 +1037,7 @@ c much. Do this by overwrite the 'wgt' variable
                f(1) = f(1)+result(nFKSprocess,1)
                f(2) = f(2)+result(nFKSprocess,2)
             enddo
-            call fill_MC_integer(proc_map(0,1),sigintR)
+            call fill_MC_integer(1,proc_map(0,1),sigintR)
          endif
          sigintF=f(1)+f(2)
          unwgt=.false.
@@ -1048,7 +1050,7 @@ c much. Do this by overwrite the 'wgt' variable
      $              ,sigintF,f_check
                stop
             elseif (abs(sigintF-f_check)/max(abs(f_check),abs(sigintF))
-     $           .gt.1d-6) then
+     $           .gt.1d-8) then
                write (*,*) 'Warning inaccuracy in unweight table 1'
      $              ,sigintF,f_check
             endif
@@ -1072,115 +1074,22 @@ c reweighting
 
      
       function sigintS(xx,w,ifl,f_abs)
-c From dsample_fks
       implicit none
-      integer ndim,ipole
-      common/tosigint/ndim,ipole
-      integer           iconfig
-      common/to_configs/iconfig
-      integer i
-      integer ifl
-      integer fold
-      common /cfl/fold
       include 'mint.inc'
-      real*8 sigintS,xx(ndimmax),w
-      integer ione
-      parameter (ione=1)
-      double precision wgt,dsigS,f_abs
-      include 'nexternal.inc'
-      double precision x(99),p(0:3,nexternal)
-      logical unwgt
-      double precision evtsgn
-      common /c_unwgt/evtsgn,unwgt
-      double precision result
-      save result
-c
-      write (*,*) 'Generation of S-events no longer supported'
+      integer ifl
+      double precision xx(ndimmax),w,f_abs,sigintS
+      write (*,*) 'Generation of separate S-events no longer supported'
       stop
-c
-      do i=1,99
-        if(i.le.ndim)then
-          x(i)=xx(i)
-        else
-          x(i)=-9d99
-        endif
-      enddo
-      wgt=1.d0
-      fold=ifl
-      if (ifl.eq.0)then
-         call generate_momenta(ndim,iconfig,wgt,x,p)
-         result = w*dsigS(p,wgt,w)
-         sigintS = result
-         f_abs=abs(sigintS)
-      elseif(ifl.eq.1) then
-         call generate_momenta(ndim,iconfig,wgt,x,p)
-         result = result+w*dsigS(p,wgt,w)
-         sigintS = result
-         f_abs=abs(sigintS)
-      elseif(ifl.eq.2) then
-         sigintS = result
-         f_abs=abs(sigintS)
-         evtsgn=sign(1d0,result)
-      endif
-      return
       end
 
-     
       function sigintH(xx,w,ifl,f_abs)
-c From dsample_fks
       implicit none
-      integer ndim,ipole
-      common/tosigint/ndim,ipole
-      integer           iconfig
-      common/to_configs/iconfig
-      integer i
-      integer ifl
-      integer fold
-      common /cfl/fold
       include 'mint.inc'
-      real*8 sigintH,xx(ndimmax),w
-      integer ione
-      parameter (ione=1)
-      double precision wgt,dsigH,f_abs
-      include 'nexternal.inc'
-      double precision x(99),p(0:3,nexternal)
-      logical unwgt
-      double precision evtsgn
-      common /c_unwgt/evtsgn,unwgt
-      double precision result
-      save result
-c
-      write (*,*) 'Generation of H-events no longer supported'
+      integer ifl
+      double precision xx(ndimmax),w,f_abs,sigintH
+      write (*,*) 'Generation of separate H-events no longer supported'
       stop
-c
-      do i=1,99
-        if(i.le.ndim)then
-          x(i)=xx(i)
-        else
-          x(i)=-9d99
-        endif
-      enddo
-      wgt=1.d0
-      fold=ifl
-      if (ifl.eq.0)then
-         call generate_momenta(ndim,iconfig,wgt,x,p)
-         result = w*dsigH(p,wgt,w)
-         sigintH = result
-         f_abs=abs(sigintH)
-      elseif(ifl.eq.1) then
-         call generate_momenta(ndim,iconfig,wgt,x,p)
-         result = result+w*dsigH(p,wgt,w)
-         sigintH = result
-         f_abs=abs(sigintH)
-      elseif(ifl.eq.2) then
-         sigintH = result
-         f_abs=abs(sigintH)
-         evtsgn=sign(1d0,result)
-      endif
-      return
       end
-
-
 
 
       subroutine update_unwgt_table(unwgt_table,proc_map,unweight,f
@@ -1189,10 +1098,11 @@ c
       include 'nexternal.inc'
       include 'genps.inc'
       include 'nFKSconfigs.inc'
-      include 'reweight.inc'
+      include 'reweight_all.inc'
+      include 'madfks_mcatnlo.inc'
       double precision unwgt_table(0:fks_configs,2,maxproc),f,f_abs
      $     ,dummy,dlum,f_abs_H,f_abs_S,rnd,ran2,current,f_abs_S_un
-     $     ,f_unwgt(fks_configs,maxproc)
+     $     ,f_unwgt(fks_configs,maxproc),sum,tot_sum,temp_shower_scale
       external ran2
       external dlum
       integer maxproc_found,maxproc_found_first,iproc_save(fks_configs)
@@ -1200,7 +1110,7 @@ c
       save maxproc_found
       logical unweight,firsttime
       data firsttime /.true./
-      integer nFKSprocess_save,ifound
+      integer nFKSprocess_save,ifound,nFKSprocess_soft
       integer id_current(nexternal,maxproc),id_first(nexternal,maxproc)
      &     ,nequal,equal_to(maxproc,fks_configs),eto(maxproc
      &     ,fks_configs),equal_to_inverse(maxproc,fks_configs)
@@ -1231,6 +1141,14 @@ c
       common /c_unwgt/evtsgn,unwgt
       character*4 abrv
       common /to_abrv/ abrv
+      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
+     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
+      double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
+      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
+     #                fksfather_lhe,ipartner_lhe
+      common/cto_LHE2/scale1_lhe,scale2_lhe
+      double precision SCALUP(fks_configs*2)
+      common /cshowerscale/SCALUP
 
 c For the S-events, we can combine processes when they give identical
 c processes at the Born. Make sure we check that we get indeed identical
@@ -1406,6 +1324,9 @@ c Trivial check on the Born contribution
             stop
          endif
       enddo
+      if (doreweight) then
+         nScontributions=proc_map(proc_map(0,1),0)
+      endif
 c
 c Compute the total rate. This is simply the sum of all
 c
@@ -1445,24 +1366,92 @@ c Nothing to combine for H-events, so need to sum them independently
             enddo
          enddo
 c Add the Born and the S-events
-         do k=1,proc_map(proc_map(0,1),0)
-            nFKSprocess=proc_map(proc_map(0,1),k)
-            do i=1,maxproc_found
+         do i=1,maxproc_found
+            do k=1,proc_map(proc_map(0,1),0)
+               nFKSprocess=proc_map(proc_map(0,1),k)
                if (proc_map(proc_map(0,1),0).gt.1) then
-c if there are more than one nFKSprocesses compute (i.e. sum.eq.3) we
-c should add the Born only the one with the soft singularity
-                  call fks_inc_chooser()
-                  if (PDG_type(i_fks).eq.21) then
-                     f_unwgt(nFKSprocess,i)=
+c We should check that we can combine them. Do a couple of simple tests
+c for the first step in the do-loop: (Note that this is only correct for
+c sum=3)
+                  if (k.eq.1) then
+                     do kk=2,proc_map(proc_map(0,1),0)
+                        if (AddInfoLHE) then
+                           if ( ifks_lhe(proc_map(proc_map(0,1),kk))
+     &                          .ne.ifks_lhe(nFKSprocess)) then
+                              write (*,*) 'In process combination'/
+     &                        /' (unwgt_table), i_fks not identical'
+                              stop
+                           endif
+                           if ( jfks_lhe(proc_map(proc_map(0,1),kk))
+     &                          .ne.jfks_lhe(nFKSprocess)) then
+                              write (*,*) 'In process combination'/
+     &                        /' (unwgt_table), j_fks not identical'
+                              stop
+                           endif
+                           if ( fksfather_lhe(proc_map(proc_map(0,1)
+     &                          ,kk)) .ne.fksfather_lhe(nFKSprocess))
+     &                          then
+                              write (*,*) 'In process combination'/
+     &                    /' (unwgt_table), fksfarther not identical'
+                              stop
+                           endif
+                           if ( scale1_lhe(proc_map(proc_map(0,1),kk))
+     &                          .ne.scale1_lhe(nFKSprocess)) then
+                              write (*,*) 'In process combination'/
+     &                      /' (unwgt_table), scale1_lhe not identical',
+     &                          scale1_lhe(proc_map(proc_map(0,1),kk)),
+     &                          scale1_lhe(nFKSprocess)
+                              stop
+                           endif
+                           if ( scale2_lhe(proc_map(proc_map(0,1),kk))
+     &                          .ne.scale2_lhe(nFKSprocess)) then
+                              write (*,*) 'In process combination'/
+     &                      /' (unwgt_table), scale2_lhe not identical',
+     &                          scale2_lhe(proc_map(proc_map(0,1),kk)),
+     &                          scale2_lhe(nFKSprocess)
+                              stop
+                           endif
+                        endif
+                        if (doreweight) then
+                           if (iwgtnumpartn_all(
+     &                          proc_map(proc_map(0,1),kk)*2-1 ) .ne.
+     &                          iwgtnumpartn_all(nFKSprocess*2-1)) then
+                              write (*,*) 'In process combination'/
+     &                    /' (unwgt_table), iwgtnumpartn not identical'
+                              stop
+                           endif
+                        endif
+c Find the process with the soft singularity and treat that as the
+c basic one to which we sum everything
+                        call fks_inc_chooser()
+                        if (PDG_type(i_fks).eq.21) then
+                           nFKSprocess_soft=nFKSprocess
+                        else
+                           nFKSprocess=proc_map(proc_map(0,1),kk)
+                           call fks_inc_chooser()
+                           if (PDG_type(i_fks).eq.21) then
+                              nFKSprocess_soft=nFKSprocess
+                           endif
+                        endif
+                     enddo
+                  endif
+                  nFKSprocess=proc_map(proc_map(0,1),k)
+c Add the n-body only once
+                  if (nFKSprocess.eq.nFKSprocess_soft) then
+                     f_unwgt(nFKSprocess_soft,i) =
+     &                    f_unwgt(nFKSprocess_soft,i) +
      &                    unwgt_table(0,1,i)+unwgt_table(0,2,i)
                   endif
+c Add everything else
                   do j=1,iproc_save(nFKSprocess)
                      if (eto(j,nFKSprocess).eq.i) then
-                        f_unwgt(nFKSprocess,i)=f_unwgt(nFKSprocess,i)
-     $                       +unwgt_table(nFKSprocess,1,j)
+                        f_unwgt(nFKSprocess_soft,i)
+     &                       =f_unwgt(nFKSprocess_soft,i)
+     &                       +unwgt_table(nFKSprocess,1,j)
                      endif
                   enddo
                else
+c Only one n+1-body configuration. Add it to the n-body
                   f_unwgt(nFKSprocess,i)=
      &                 unwgt_table(0,1,i)+unwgt_table(0,2,i)
                   do j=1,iproc_save(nFKSprocess)
@@ -1472,9 +1461,34 @@ c should add the Born only the one with the soft singularity
                      endif
                   enddo
                endif
-               f_abs_S=f_abs_S+abs(f_unwgt(nFKSprocess,i))
             enddo
+            if (proc_map(proc_map(0,1),0).gt.1)
+     &                           nFKSprocess=nFKSprocess_soft
+            f_abs_S=f_abs_S+abs(f_unwgt(nFKSprocess,i))
          enddo
+c Assign shower starting scale for S-events when combining FKS
+c directories (take the weighted average):
+         if (proc_map(proc_map(0,1),0).gt.1) then
+            temp_shower_scale=0d0
+            tot_sum=0d0
+            do k=1,proc_map(proc_map(0,1),0)
+               nFKSprocess=proc_map(proc_map(0,1),k)
+               sum=0d0
+               do i=1,iproc_save(nFKSprocess)
+                  sum=sum+abs(unwgt_table(nFKSprocess,1,i))
+               enddo
+               tot_sum=tot_sum+sum
+               temp_shower_scale=temp_shower_scale+
+     &              SCALUP(nFKSprocess*2-1)*sum
+               if (tot_sum.ne.0d0) then
+                  SCALUP(nFKSprocess_soft*2-1) = temp_shower_scale
+     &                 /tot_sum
+               else
+                  SCALUP(nFKSprocess_soft*2-1) = 
+     &                 SCALUP(nFKSprocess_used_born*2-1)
+               endif
+            enddo
+         endif
          if (.not.unweight)then
 c just return the (correct) absolute value
             f_abs=f_abs_H+f_abs_S
@@ -1508,6 +1522,9 @@ c Pick one of the nFKSprocesses and one of the IPROC's
                      stop
                   endif
                   evtsgn=sign(1d0,unwgt_table(nFKSprocess,2,i_process))
+                  if (doreweight) then
+                     nFKSprocess_reweight(1)=nFKSprocess
+                  endif
                else
                   Hevents=.false.
 c Pick one of the nFKSprocesses and IPROC's of the Born
@@ -1535,32 +1552,30 @@ c Pick one of the nFKSprocesses and IPROC's of the Born
 c Set the i_process to one of the (n+1)-body configurations that leads
 c to this Born configuration. Needed for add_write_info to work properly
                   i_process=etoi(i_process,nFKSprocess)
+                  if (doreweight) then
+c for the reweight info, do not write the ones that gave a zero
+c contribution
+                     j=0
+                     do i=1,nScontributions
+                        sum=0d0
+                        do ii=1,iproc_save(proc_map(proc_map(0,1),i))
+                           sum=sum+unwgt_table(proc_map(proc_map(0,1),i)
+     &                          ,1,ii)
+                        enddo
+                        if (sum.ne.0d0) then
+                           j=j+1
+                           nFKSprocess_reweight(j)=
+     &                          proc_map(proc_map(0,1),i)
+                        endif
+                        nScontributions=j
+                     enddo
+                  endif
                endif
-            endif
-c Now update the reweight information
-            if(doreweight) then
-               call fks_inc_chooser()
-               call leshouche_inc_chooser()
-               if (Hevents) then
-                  call fill_reweight0inc(nFKSprocess*2)
-               else
-                  call fill_reweight0inc(nFKSprocess*2-1)
-               endif
-c Set the n-body contributions to zero for H-events, or for S-events
-c with more than one nFKSprocess contribution and not nFKSprocess with
-c soft singularity
-               if (Hevents.or.(PDG_type(i_fks).ne.21.and.
-     &              proc_map(proc_map(0,1),0).gt.1)) then
-                  wgtwborn(2)=0d0
-                  wgtwns(2)=0d0
-                  wgtwnsmuf(2)=0d0
-                  wgtwnsmur(2)=0d0
-               endif
-               call reweight_fill_extra()
             endif
          endif
       else  ! abrv='born' or 'grid' or 'vi*' (ie. doing only the nbody)
          f=0d0
+         nScontributions=0
 c and the n-body contributions
          do j=1,iproc_save(nFKSprocess_used_born)
             if (unwgt_table(0,2,j).ne.0d0) then
@@ -1606,14 +1621,6 @@ c Set the i_process to one of the (n+1)-body configurations that leads
 c to this Born configuration. Needed for add_write_info to work properly
                i_process=etoi(i_process
      &              ,nFKSprocess_used_born)
-            endif
-c Now update the reweight information
-            if(doreweight) then
-               nFKSprocess=nFKSprocess_used_born
-               call fks_inc_chooser()
-               call leshouche_inc_chooser()
-               call fill_reweight0inc(nFKSprocess_used_born*2-1)
-               call reweight_fill_extra()
             endif
          endif
       endif

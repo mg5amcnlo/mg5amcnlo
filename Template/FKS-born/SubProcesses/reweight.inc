@@ -20,9 +20,10 @@ c  iwgtinfo=2 --> store muR and muF for the kinematic configuration already
 c                 in <event>, and the other kinematic configuration
 c  iwgtinfo=3 --> store the two kinematic configurations
 c  iwgtinfo=4 (default) --> same as 3, but also wgtbpower is included
+c  iwgtinfo=5 (new default) --> needed when combining nFKSprocesses
 c If computing parton-level NLO, iwgtinfo=2 must not be used
       integer iwgtinfo
-      parameter (iwgtinfo=4)
+      parameter (iwgtinfo=5)
 
 c
 c Auxiliary quantities

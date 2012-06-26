@@ -8,8 +8,9 @@ c Compile with makefile_rwgt
       implicit none
       include "nexternal.inc"
       include "genps.inc"
-      include "reweight.inc"
-      integer maxevt,ifile,ofile,i,isave,imu,ipdf
+      include "nFKSconfigs.inc"
+      include "reweight_all.inc"
+      integer maxevt,ifile,ofile,i,isave,imu,ipdf,ii
       double precision saved_weight
       logical unweighted
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
@@ -27,7 +28,8 @@ c Compile with makefile_rwgt
       double precision xmuR_over_ref,xmuF1_over_ref,xmuF2_over_ref,
      # xQES_over_ref,pr_muR_over_ref,pr_muF1_over_ref,pr_muF2_over_ref,
      # tmp,yfactR(maxscales),yfactF(maxscales),xsecPDFr(0:maxPDFs)
-      double precision compute_rwgt_wgt_Sev,compute_rwgt_wgt_Hev
+      double precision compute_rwgt_wgt_Sev,compute_rwgt_wgt_Sev_nbody
+     &     ,compute_rwgt_wgt_Hev
       integer kr,kf,n,nng,nps,npairs,nsets,izero,itmp,idpdf(0:maxPDFs)
       parameter (izero=0)
       integer lef
@@ -38,7 +40,8 @@ c Compile with makefile_rwgt
       character*20 parm(20)
       double precision value(20)
       logical AddInfoLHE
-      external compute_rwgt_wgt_Sev,compute_rwgt_wgt_Hev
+      external compute_rwgt_wgt_Sev,compute_rwgt_wgt_Sev_nbody
+     &     ,compute_rwgt_wgt_Hev
 c
       call setrun                !Sets up run parameters
 
@@ -148,7 +151,7 @@ c$$$      call fk88strcat(event_file,'.rwgt',fname1)
      #                    scale1_lhe,scale2_lhe,
      #                    kwgtinfo,kexternal,jwgtnumpartn,
      #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-        if(kwgtinfo.lt.1.or.kwgtinfo.gt.4)then
+        if(kwgtinfo.lt.1.or.kwgtinfo.gt.5)then
           write(*,*)'This event file cannot be reweighted [2]',i
           write(*,*)kwgtinfo
           stop
@@ -160,7 +163,6 @@ c$$$      call fk88strcat(event_file,'.rwgt',fname1)
      #               abs(1.d0-abs(XWGTUP)/saved_weight).lt.1.d-5
         endif
       enddo
-      close(34)
 
       write(*,*)'  '
       if(unweighted)then
@@ -172,7 +174,8 @@ c$$$      call fk88strcat(event_file,'.rwgt',fname1)
         write(*,*)' Will store recomputed weights'
       endif
 
-      open (unit=ifile,file=event_file,status='old')
+      rewind(34)
+
       ofile=35
       open(unit=ofile,file=fname1,status='unknown')
 
@@ -185,9 +188,9 @@ c$$$      call fk88strcat(event_file,'.rwgt',fname1)
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
 
+      nScontributions=1
 
       do i=1,maxevt
-
         call read_lhef_event(ifile,
      &       NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &       IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
@@ -202,7 +205,7 @@ c$$$      call fk88strcat(event_file,'.rwgt',fname1)
      #                    scale1_lhe,scale2_lhe,
      #                    kwgtinfo,kexternal,jwgtnumpartn,
      #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-        if(kwgtinfo.lt.1.or.kwgtinfo.gt.4)then
+        if(kwgtinfo.lt.1.or.kwgtinfo.gt.5)then
           write(*,*)'This event file cannot be reweighted [4]',i
           write(*,*)kwgtinfo
           stop
@@ -215,6 +218,8 @@ c$$$      call fk88strcat(event_file,'.rwgt',fname1)
           stop
         endif
 
+        if (kwgtinfo.eq.5) call reweight_settozero()
+
         if(imu.ne.0)then
 
           wgtmumin=1.d40
@@ -222,22 +227,38 @@ c$$$      call fk88strcat(event_file,'.rwgt',fname1)
 
           do kr=1,3
             do kf=1,3
+              wgtref=0d0
               pr_muR_over_ref=xmuR_over_ref*yfactR(kr)
               pr_muF1_over_ref=xmuF1_over_ref*yfactF(kf)
               pr_muF2_over_ref=pr_muF1_over_ref
+              wgtxsecmu(kr,kf)=0d0
               if(iSorH_lhe.eq.1)then
-                wgtxsecmu(kr,kf)=
-     #   compute_rwgt_wgt_Sev(pr_muR_over_ref,pr_muF1_over_ref,
-     #                        pr_muF2_over_ref,xQES_over_ref,
-     #                        kwgtinfo)
+c The nbody contributions
+                 if (kwgtinfo.eq.5) wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)
+     &                +compute_rwgt_wgt_Sev_nbody(pr_muR_over_ref
+     &                ,pr_muF1_over_ref, pr_muF2_over_ref
+     &                ,xQES_over_ref, kwgtinfo)
+                 do ii=1,nScontributions
+                    nFKSprocess_used=nFKSprocess_reweight(ii)
+                    if (kwgtinfo.eq.5)
+     &                   call fill_reweight0inc(nFKSprocess_used*2-1)
+                    wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)+
+     &                   compute_rwgt_wgt_Sev(pr_muR_over_ref
+     &                   ,pr_muF1_over_ref, pr_muF2_over_ref
+     &                   ,xQES_over_ref, kwgtinfo)
+                    if (kwgtinfo.eq.5) call reweight_settozero()
+                 enddo
               elseif(iSorH_lhe.eq.2)then
-                wgtxsecmu(kr,kf)=
-     #   compute_rwgt_wgt_Hev(pr_muR_over_ref,pr_muF1_over_ref,
-     #                        pr_muF2_over_ref,xQES_over_ref,
-     #                        kwgtinfo)
+                 if (kwgtinfo.eq.5)
+     &                call fill_reweight0inc(nFKSprocess_used*2)
+                 wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)+
+     &                compute_rwgt_wgt_Hev(pr_muR_over_ref
+     &                ,pr_muF1_over_ref, pr_muF2_over_ref
+     &                ,xQES_over_ref, kwgtinfo)
+                 if (kwgtinfo.eq.5) call reweight_settozero()
               else
-                write(*,*)'Invalid value of iSorH_lhe',iSorH_lhe
-                stop
+                 write(*,*)'Invalid value of iSorH_lhe',iSorH_lhe
+                 stop
               endif
 c
               tmp=wgtxsecmu(kr,kf)
@@ -245,6 +266,17 @@ c
               if(tmp.gt.wgtmumax)wgtmumax=tmp
             enddo
           enddo
+
+          if (kwgtinfo.eq.5) then
+             if (iSorH_lhe.eq.1) then
+                wgtref=wgtref_nbody
+                do ii=1,nScontributions
+                   wgtref=wgtref+wgtref_all(nFKSprocess_reweight(ii)*2-1)
+                enddo
+             else
+                wgtref=wgtref_all(nFKSprocess_used*2)
+             endif
+          endif
 
           if(unweighted)then
             wgtcentral=wgtxsecmu(1,1)/wgtref
@@ -259,28 +291,54 @@ c
         if(ipdf.ne.0)then
 
           do n=0,nsets
-            call InitPDF(n)
+             wgtref=0d0
+             call InitPDF(n)
+             wgtxsecPDF(n)=0d0
 
-            if(iSorH_lhe.eq.1)then
-              wgtxsecPDF(n)=
-     #   compute_rwgt_wgt_Sev(xmuR_over_ref,xmuF1_over_ref,
-     #                        xmuF2_over_ref,xQES_over_ref,
-     #                        kwgtinfo)
-            elseif(iSorH_lhe.eq.2)then
-              wgtxsecPDF(n)=
-     #   compute_rwgt_wgt_Hev(xmuR_over_ref,xmuF1_over_ref,
-     #                        xmuF2_over_ref,xQES_over_ref,
-     #                        kwgtinfo)
-            else
-              write(*,*)'Invalid value of iSorH_lhe',iSorH_lhe
-              stop
-            endif
+             if(iSorH_lhe.eq.1)then
+c The nbody contributions
+                if (kwgtinfo.eq.5) wgtxsecPDF(n)=wgtxsecPDF(n)
+     &               +compute_rwgt_wgt_Sev_nbody(xmuR_over_ref
+     &               ,xmuF1_over_ref, xmuF2_over_ref ,xQES_over_ref,
+     &               kwgtinfo)
+                do ii=1,nScontributions
+                   nFKSprocess_used=nFKSprocess_reweight(ii)
+                   if (kwgtinfo.eq.5)
+     &                  call fill_reweight0inc(nFKSprocess_used*2-1)
+                   wgtxsecPDF(n)=wgtxsecPDF(n)+
+     &                  compute_rwgt_wgt_Sev(xmuR_over_ref
+     &                  ,xmuF1_over_ref, xmuF2_over_ref ,xQES_over_ref,
+     &                  kwgtinfo)
+                   if (kwgtinfo.eq.5) call reweight_settozero()
+                enddo
+             elseif(iSorH_lhe.eq.2)then
+                if (kwgtinfo.eq.5)
+     &               call fill_reweight0inc(nFKSprocess_used*2)
+                wgtxsecPDF(n)=wgtxsecPDF(n)+
+     &               compute_rwgt_wgt_Hev(xmuR_over_ref ,xmuF1_over_ref,
+     &               xmuF2_over_ref ,xQES_over_ref, kwgtinfo)
+                if (kwgtinfo.eq.5) call reweight_settozero()
+             else
+                write(*,*)'Invalid value of iSorH_lhe',iSorH_lhe
+                stop
+             endif
 c
-            if(unweighted)then
-              xsecPDFr(n)=wgtxsecPDF(n)/wgtref
-            else
-              xsecPDFr(n)=wgtxsecPDF(n)
-            endif
+             if (kwgtinfo.eq.5) then
+                if (iSorH_lhe.eq.1) then
+                   wgtref=wgtref_nbody
+                   do ii=1,nScontributions
+                      wgtref=wgtref+wgtref_all(nFKSprocess_reweight(ii)*2-1)
+                   enddo
+                else
+                   wgtref=wgtref_all(nFKSprocess_used*2)
+                endif
+             endif
+             
+             if(unweighted)then
+                xsecPDFr(n)=wgtxsecPDF(n)/wgtref
+             else
+                xsecPDFr(n)=wgtxsecPDF(n)
+             endif
           enddo
 
           if(imu.ne.0)then

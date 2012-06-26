@@ -5,8 +5,8 @@ c   ==>  i = icountevts+2 for counterevents
 
 c The following is introduced since this file may be included in codes
 c that need not know nexternal. Make sure that maxparticles>=nexternal
-      integer maxparticles
-      parameter (maxparticles=20)
+      integer maxparticles,maxFKSconfigs
+      parameter (maxparticles=20,maxFKSconfigs=120)
 
 c Reference weight and Ellis-Sexton scales
       double precision wgtref,wgtqes2(4)

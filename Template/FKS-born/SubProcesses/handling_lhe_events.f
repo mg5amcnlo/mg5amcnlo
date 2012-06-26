@@ -137,9 +137,9 @@ c
       character*1 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
-      integer ii,j,nps,nng
+      integer ii,j,nps,nng,iFKS
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-      include 'reweight0.inc'
+      include 'reweight_all.inc'
 c
       write(ifile,'(a)')
      # '  <event>'
@@ -197,6 +197,76 @@ c
      &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
           write(ifile,'(a)')
      # '  </rwgt>'
+         elseif(jwgtinfo.eq.5) then
+           write(ifile,'(a)')'  <rwgt>'
+           if (iSorH_lhe.eq.1) then ! S-event
+              write(ifile,'(1x,d14.8,i4)') wgtbpower,nScontributions
+              write(ifile,'(1x,i4,1x,d14.8)') nFKSprocess_used_born
+     &             ,wgtref_nbody
+              do i=1,mexternal
+                 write(ifile,405)(wgtkin_all(j,i,2,0),j=0,3)
+              enddo
+              write(ifile,402) wgtxbj_all(1,2,0),wgtxbj_all(2,2,0)
+              write(ifile,'(1x,d14.8)') wgtqes2_all(2,0)
+              write(ifile,405)wgtwborn_all,wgtwns_all,
+     &             wgtwnsmuf_all,wgtwnsmur_all
+              
+              do ii=1,nScontributions
+                 write(ifile,'(1x,i4)') nFKSprocess_reweight(ii)
+                 iFKS=nFKSprocess_reweight(ii)*2-1
+                 write(ifile,'(1x,d14.8,1x,i4)')
+     &                wgtref_all(iFKS),iwgtnumpartn_all(iFKS)
+                 do i=1,mexternal
+                    write(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
+                 enddo
+c$$$                 do i=1,mexternal
+c$$$                    write(ifile,405)(wgtkin_all(j,i,2,iFKS),j=0,3)
+c$$$                 enddo
+                 write(ifile,402)
+     &                wgtxbj_all(1,1,iFKS),wgtxbj_all(2,1,iFKS),
+     &                wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
+     &                wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
+     &                wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
+                 write(ifile,'(1x,d14.8)') wgtqes2_all(2,iFKS)
+                 write(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
+     &                ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
+                 write(ifile,441)wgtwdeg_all(3,iFKS),wgtwdeg_all(4,iFKS)
+     &                ,wgtwdegmuf_all(3,iFKS),wgtwdegmuf_all(4,iFKS)
+                 do i=1,iwgtnumpartn_all(iFKS)
+                    write(ifile,442)wgtwmcxsec_all(i,iFKS),
+     &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
+                 enddo
+                 
+              enddo
+           elseif (iSorH_lhe.eq.2) then ! H-event
+              write(ifile,'(1x,d14.8)') wgtbpower
+              iFKS=nFKSprocess_used*2
+              write(ifile,'(1x,i4)') nFKSprocess_used
+              write(ifile,'(1x,d14.8,1x,i4)') wgtref_all(iFKS)
+     &             ,iwgtnumpartn_all(iFKS)
+              do i=1,mexternal
+                 write(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
+              enddo
+              do i=1,mexternal
+                 write(ifile,405)(wgtkin_all(j,i,2,iFKS),j=0,3)
+              enddo
+              write(ifile,402)
+     &                wgtxbj_all(1,1,iFKS),wgtxbj_all(2,1,iFKS),
+     &                wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
+     &                wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
+     &                wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
+                 write(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
+     &                ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
+                 do i=1,iwgtnumpartn_all(iFKS)
+                    write(ifile,442)wgtwmcxsec_all(i,iFKS),
+     &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
+                 enddo
+           else
+              write (*,*) 'Not an S- or H-event in write_lhef_event'
+              stop
+           endif
+           write(ifile,'(a)')'  </rwgt>'
+
         elseif(jwgtinfo.eq.8)then
           write(ifile,'(a)')
      # '  <rwgt>'
@@ -244,9 +314,9 @@ c
       character*1 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
-      integer ii,j,nps,nng
+      integer ii,j,nps,nng,iFKS
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-      include 'reweight0.inc'
+      include 'reweight_all.inc'
 c
       read(ifile,'(a)')string
       read(ifile,*)NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP
@@ -301,6 +371,78 @@ c
           if(jwgtinfo.eq.4) read(ifile,'(1x,d14.8,1x,i4,1x,i4)')
      &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
           read(ifile,'(a)')string
+        elseif(jwgtinfo.eq.5) then
+           read(ifile,'(a)')string
+           if (iSorH_lhe.eq.1) then ! S-event
+              read(ifile,'(1x,d14.8,i4)') wgtbpower,nScontributions
+              read(ifile,'(1x,i4,1x,d14.8)') nFKSprocess_used_born
+     &             ,wgtref_nbody
+              do i=1,mexternal
+                 read(ifile,405)(wgtkin_all(j,i,2,0),j=0,3)
+              enddo
+              read(ifile,402) wgtxbj_all(1,2,0),wgtxbj_all(2,2,0)
+              read(ifile,'(1x,d14.8)') wgtqes2_all(2,0)
+              read(ifile,405)wgtwborn_all,wgtwns_all,
+     &             wgtwnsmuf_all,wgtwnsmur_all
+              
+              do ii=1,nScontributions
+                 read(ifile,'(1x,i4)') nFKSprocess_reweight(ii)
+                 iFKS=nFKSprocess_reweight(ii)*2-1
+                 read(ifile,'(1x,d14.8,1x,i4)') wgtref_all(iFKS)
+     &                ,iwgtnumpartn_all(iFKS)
+                 do i=1,mexternal
+                    read(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
+                 enddo
+                 do i=1,mexternal
+                    do j=0,3
+                       wgtkin_all(j,i,2,iFKS)=wgtkin_all(j,i,2,0)
+                    enddo
+                 enddo
+                 read(ifile,402)
+     &                wgtxbj_all(1,1,iFKS),wgtxbj_all(2,1,iFKS),
+     &                wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
+     &                wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
+     &                wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
+                 read(ifile,'(1x,d14.8)') wgtqes2_all(2,iFKS)
+                 read(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
+     &                ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
+                 read(ifile,441)wgtwdeg_all(3,iFKS),wgtwdeg_all(4,iFKS)
+     &                ,wgtwdegmuf_all(3,iFKS),wgtwdegmuf_all(4,iFKS)
+                 do i=1,iwgtnumpartn_all(iFKS)
+                    read(ifile,442)wgtwmcxsec_all(i,iFKS),
+     &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
+                 enddo
+              
+              enddo
+           elseif (iSorH_lhe.eq.2) then ! H-event
+              read(ifile,'(1x,d14.8)') wgtbpower
+              read(ifile,'(1x,i4)') nFKSprocess_used
+              iFKS=nFKSprocess_used*2
+              read(ifile,'(1x,d14.8,1x,i4)') wgtref_all(iFKS)
+     &             ,iwgtnumpartn_all(iFKS)
+              do i=1,mexternal
+                 read(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
+              enddo
+              do i=1,mexternal
+                 read(ifile,405)(wgtkin_all(j,i,2,iFKS),j=0,3)
+              enddo
+              read(ifile,402)
+     &                wgtxbj_all(1,1,iFKS),wgtxbj_all(2,1,iFKS),
+     &                wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
+     &                wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
+     &                wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
+                 read(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
+     &                ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
+                 do i=1,iwgtnumpartn_all(iFKS)
+                    read(ifile,442)wgtwmcxsec_all(i,iFKS),
+     &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
+                 enddo
+           else
+              write (*,*) 'Not an S- or H-event in write_lhef_event'
+              stop
+           endif
+           read(ifile,'(a)')string
+
         elseif(jwgtinfo.eq.8)then
           read(ifile,'(a)')string
           read(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFpairs
@@ -349,9 +491,9 @@ c Same as read_lhef_event, except for the end-of-file catch
       character*1 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
-      integer ii,j,nps,nng
+      integer ii,j,nps,nng,iFKS
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-      include 'reweight0.inc'
+      include 'reweight_all.inc'
 c
       read(ifile,'(a)')string
       if(index(string,'<event>').eq.0)then
@@ -416,6 +558,78 @@ c
           if(jwgtinfo.eq.4) read(ifile,'(1x,d14.8,1x,i4,1x,i4)')
      &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
           read(ifile,'(a)')string
+        elseif(jwgtinfo.eq.5) then
+           read(ifile,'(a)')string
+           if (iSorH_lhe.eq.1) then ! S-event
+              read(ifile,'(1x,d14.8,i4)') wgtbpower,nScontributions
+              read(ifile,'(1x,i4,1x,d14.8)') nFKSprocess_used_born
+     &             ,wgtref_nbody
+              do i=1,mexternal
+                 read(ifile,405)(wgtkin_all(j,i,2,0),j=0,3)
+              enddo
+              read(ifile,402) wgtxbj_all(1,2,0),wgtxbj_all(2,2,0)
+              read(ifile,'(1x,d14.8)') wgtqes2_all(2,0)
+              read(ifile,405)wgtwborn_all,wgtwns_all,
+     &             wgtwnsmuf_all,wgtwnsmur_all
+              
+              do ii=1,nScontributions
+                 read(ifile,'(1x,i4)') nFKSprocess_reweight(ii)
+                 iFKS=nFKSprocess_reweight(ii)*2-1
+                 read(ifile,'(1x,d14.8,1x,i4)') wgtref_all(iFKS)
+     &                ,iwgtnumpartn_all(iFKS)
+                 do i=1,mexternal
+                    read(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
+                 enddo
+                 do i=1,mexternal
+                    do j=0,3
+                       wgtkin_all(j,i,2,iFKS)=wgtkin_all(j,i,2,0)
+                    enddo
+                 enddo
+                 read(ifile,402)
+     &                wgtxbj_all(1,1,iFKS),wgtxbj_all(2,1,iFKS),
+     &                wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
+     &                wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
+     &                wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
+                 read(ifile,'(1x,d14.8)') wgtqes2_all(2,iFKS)
+                 read(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
+     &                ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
+                 read(ifile,441)wgtwdeg_all(3,iFKS),wgtwdeg_all(4,iFKS)
+     &                ,wgtwdegmuf_all(3,iFKS),wgtwdegmuf_all(4,iFKS)
+                 do i=1,iwgtnumpartn_all(iFKS)
+                    read(ifile,442)wgtwmcxsec_all(i,iFKS),
+     &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
+                 enddo
+                 
+              enddo
+           elseif (iSorH_lhe.eq.2) then ! H-event
+              read(ifile,'(1x,d14.8)') wgtbpower
+              read(ifile,'(1x,i4)') nFKSprocess_used
+              iFKS=nFKSprocess_used*2
+              read(ifile,'(1x,d14.8,1x,i4)') wgtref_all(iFKS)
+     &             ,iwgtnumpartn_all(iFKS)
+              do i=1,mexternal
+                 read(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
+              enddo
+              do i=1,mexternal
+                 read(ifile,405)(wgtkin_all(j,i,2,iFKS),j=0,3)
+              enddo
+              read(ifile,402)
+     &                wgtxbj_all(1,1,iFKS),wgtxbj_all(2,1,iFKS),
+     &                wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
+     &                wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
+     &                wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
+                 read(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
+     &                ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
+                 do i=1,iwgtnumpartn_all(iFKS)
+                    read(ifile,442)wgtwmcxsec_all(i,iFKS),
+     &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
+                 enddo
+           else
+              write (*,*) 'Not an S- or H-event in write_lhef_event'
+              stop
+           endif
+           read(ifile,'(a)')string
+
         elseif(jwgtinfo.eq.8)then
           read(ifile,'(a)')string
           read(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFpairs

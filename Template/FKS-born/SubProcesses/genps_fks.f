@@ -68,10 +68,6 @@ c
       include 'genps.inc'
       include 'nexternal.inc'
       include 'run.inc'
-c      include 'fks.inc'
-      integer fks_j_from_i(nexternal,0:nexternal)
-     &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
 c arguments
       integer ndim
       double precision jac,x(99),p(0:3,nexternal)

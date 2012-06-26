@@ -365,18 +365,18 @@ c
         if (debug) write (*,*) 'wgtwdegmuF',k,iFKS,wgtwdegmuf(k)
      &       ,wgtwdegmuf_all(k,iFKS)
         call reweight_overwrite(wgtwdegmuf(k),wgtwdegmuf_all(k,iFKS),0)
-        if(k.eq.2)then
-           if (debug) write (*,*) 'wgtwborn',k,wgtwborn(k),wgtwborn_all
-           call reweight_overwrite(wgtwborn(k),wgtwborn_all,0)
-           if (debug) write (*,*) 'wgtwns',k,wgtwns(k),wgtwns_all
-           call reweight_overwrite(wgtwns(k),wgtwns_all,0)
-           if (debug) write (*,*) 'wgtwnsmuf',k,wgtwnsmuf(k)
-     &          ,wgtwnsmuf_all
-           call reweight_overwrite(wgtwnsmuf(k),wgtwnsmuf_all,0)
-           if (debug) write (*,*) 'wgtwnsmur',k,wgtwnsmur(k)
-     &          ,wgtwnsmur_all
-          call reweight_overwrite(wgtwnsmur(k),wgtwnsmur_all,0)
-        endif
+c$$$        if(k.eq.2)then
+c$$$           if (debug) write (*,*) 'wgtwborn',k,wgtwborn(k),wgtwborn_all
+c$$$           call reweight_overwrite(wgtwborn(k),wgtwborn_all,0)
+c$$$           if (debug) write (*,*) 'wgtwns',k,wgtwns(k),wgtwns_all
+c$$$           call reweight_overwrite(wgtwns(k),wgtwns_all,0)
+c$$$           if (debug) write (*,*) 'wgtwnsmuf',k,wgtwnsmuf(k)
+c$$$     &          ,wgtwnsmuf_all
+c$$$           call reweight_overwrite(wgtwnsmuf(k),wgtwnsmuf_all,0)
+c$$$           if (debug) write (*,*) 'wgtwnsmur',k,wgtwnsmur(k)
+c$$$     &          ,wgtwnsmur_all
+c$$$          call reweight_overwrite(wgtwnsmur(k),wgtwnsmur_all,0)
+c$$$        endif
       enddo
       do k=1,nexternal
          if (debug) write (*,*) 'wgtwmcxsec',k,iFKS,wgtwmcxsec(k)
@@ -444,6 +444,148 @@ c     i=2: overwrite 'a' by 'b'
       end
 
 
+      subroutine sum_reweight(iFKS_s,iFKS)
+c Set all reweight variables equal to zero
+      implicit none
+      include "genps.inc"
+      include "nexternal.inc"
+      include "nFKSconfigs.inc"
+      include "reweight_all.inc"
+      integer i,j,k,iFKS_s,iFKS
+      logical debug
+      parameter (debug=.false.)
+c
+      if (debug) write (*,*) 'wgtref',iFKS_s,iFKS,wgtref_all(iFKS_s)
+     &     ,wgtref_all(iFKS)
+      call reweight_sum(wgtref_all(iFKS_s),wgtref_all(iFKS))
+      do k=1,4
+         if (debug) write (*,*) 'wgtqes2',k,iFKS_s,iFKS,wgtqes2_all(k
+     &        ,iFKS_s),wgtqes2_all(k,iFKS)
+         call reweight_check_equal(wgtqes2_all(k,iFKS_s),wgtqes2_all(k
+     &        ,iFKS))
+         if (debug) write (*,*) 'wgtxbj1',k,iFKS_s,iFKS,wgtxbj_all(1,k
+     &        ,iFKS_s),wgtxbj_all(1,k,iFKS)
+         if (k.eq.1.or.k.eq.2) then
+            call reweight_check_equal(wgtxbj_all(1,k,iFKS_s)
+     &           ,wgtxbj_all(1,k,iFKS))
+         else
+            call reweight_overwrite(wgtxbj_all(1,k,iFKS_s)
+     &           ,wgtxbj_all(1,k,iFKS),2)
+         endif
+         if (debug) write (*,*) 'wgtxbj2',k,iFKS_s,iFKS,wgtxbj_all(2,k
+     &        ,iFKS_s),wgtxbj_all(2,k,iFKS)
+         if (k.eq.1.or.k.eq.2) then
+            call reweight_check_equal(wgtxbj_all(2,k,iFKS_s)
+     &           ,wgtxbj_all(2,k,iFKS))
+         else
+            call reweight_overwrite(wgtxbj_all(2,k,iFKS_s)
+     &           ,wgtxbj_all(2,k,iFKS),2)
+         endif
+        do i=1,nexternal
+          do j=0,3
+             if (debug) write (*,*) 'wgtkin',j,i,k,iFKS_s,iFKS
+     &            ,wgtkin_all(j,i,k,iFKS_s),wgtkin_all(j,i,k,iFKS)
+             if (k.eq.1.or.k.eq.2) then
+                call reweight_check_equal(wgtkin_all(j,i,k,iFKS_s)
+     &               ,wgtkin_all(j,i,k,iFKS))
+             else
+                call reweight_overwrite(wgtkin_all(j,i,k,iFKS_s)
+     &               ,wgtkin_all(j,i,k,iFKS),2)
+             endif
+          enddo
+        enddo
+        if (debug) write (*,*) 'wgtmuR2',k,iFKS_s,iFKS,wgtmuR2_all(k
+     &       ,iFKS_s),wgtmuR2_all(k,iFKS)
+        call reweight_check_equal(wgtmuR2_all(k,iFKS_s),wgtmuR2_all(k
+     &       ,iFKS))
+        if (debug) write (*,*) 'wgtmuF12',k,iFKS_s,iFKS,wgtmuF12_all(k
+     &       ,iFKS_s),wgtmuF12_all(k,iFKS)
+        call reweight_check_equal(wgtmuF12_all(k,iFKS_s),wgtmuF12_all(k
+     &       ,iFKS))
+        if (debug) write (*,*) 'wgtmuF22',k,iFKS_s,iFKS,wgtmuF22_all(k
+     &       ,iFKS_s),wgtmuF22_all(k,iFKS)
+        call reweight_check_equal(wgtmuF22_all(k,iFKS_s),wgtmuF22_all(k
+     &       ,iFKS))
+        if (debug) write (*,*) 'wgtwreal',k,iFKS_s,iFKS,wgtwreal_all(k
+     &       ,iFKS_s),wgtwreal_all(k,iFKS)
+        call reweight_sum(wgtwreal_all(k,iFKS_s),wgtwreal_all(k,iFKS))
+        if (debug) write (*,*) 'wgtwdeg',k,iFKS_s,iFKS,wgtwdeg_all(k
+     &       ,iFKS_s),wgtwdeg_all(k,iFKS)
+        call reweight_sum(wgtwdeg_all(k,iFKS),wgtwdeg_all(k,iFKS))
+        if (debug) write (*,*) 'wgtwdegmuF',k,iFKS_s,iFKS
+     &       ,wgtwdegmuf_all(k,iFKS_s),wgtwdegmuf_all(k,iFKS)
+        call reweight_sum(wgtwdegmuf_all(k,iFKS),wgtwdegmuf_all(k,iFKS))
+c$$$        if(k.eq.2)then
+c$$$           if (debug) write (*,*) 'wgtwborn',k,wgtwborn(k),wgtwborn_all
+c$$$           call reweight_overwrite(wgtwborn(k),wgtwborn_all,0)
+c$$$           if (debug) write (*,*) 'wgtwns',k,wgtwns(k),wgtwns_all
+c$$$           call reweight_overwrite(wgtwns(k),wgtwns_all,0)
+c$$$           if (debug) write (*,*) 'wgtwnsmuf',k,wgtwnsmuf(k)
+c$$$     &          ,wgtwnsmuf_all
+c$$$           call reweight_overwrite(wgtwnsmuf(k),wgtwnsmuf_all,0)
+c$$$           if (debug) write (*,*) 'wgtwnsmur',k,wgtwnsmur(k)
+c$$$     &          ,wgtwnsmur_all
+c$$$          call reweight_overwrite(wgtwnsmur(k),wgtwnsmur_all,0)
+c$$$        endif
+      enddo
+      do k=1,nexternal
+         if (debug) write (*,*) 'wgtwmcxsec',k,iFKS_s,iFKS
+     &        ,wgtwmcxsec_all(k,iFKS_s),wgtwmcxsec_all(k,iFKS)
+         call reweight_sum(wgtwmcxsec_all(k,iFKS_s),wgtwmcxsec_all(k
+     &        ,iFKS))
+         if (debug) write (*,*) 'wgtwmcxbj1',k,iFKS_s,iFKS
+     &        ,wgtmcxbj_all(1,k,iFKS_s),wgtmcxbj_all(1,k,iFKS)
+         call reweight_check_equal(wgtmcxbj_all(1,k,iFKS_s)
+     &        ,wgtmcxbj_all(1,k,iFKS))
+         if (debug) write (*,*) 'wgtwmcxbj2',k,iFKS_s,iFKS
+     &        ,wgtmcxbj_all(2,k,iFKS_s),wgtmcxbj_all(2,k,iFKS)
+         call reweight_check_equal(wgtmcxbj_all(2,k,iFKS_s)
+     &        ,wgtmcxbj_all(2,k,iFKS))
+      enddo
+      if (debug) write (*,*) 'iwgtnumpartn',iFKS
+     &     ,iwgtnumpartn_all(iFKS_s),iwgtnumpartn_all(iFKS)
+      call reweight_check_equal_int(iwgtnumpartn_all(iFKS_s)
+     &     ,iwgtnumpartn_all(iFKS))
+      return
+      end
+
+      subroutine reweight_check_equal_int(a,b)
+      implicit none
+      integer a,b
+      if (a.ne.b) then
+         write (*,*) 'Error #1 in reweight_check_equal_int',a,b
+         stop
+      endif
+      return
+      end
+
+      subroutine reweight_check_equal(a,b)
+      implicit none
+      double precision a,b
+      double precision vtiny
+      parameter (vtiny=1d-10)
+      if (a.ne.0) then
+         if (abs(a-b)/abs(a).gt.vtiny) then
+            write (*,*) 'Error #1 in reweight_check_equal',a,b
+            stop
+         endif
+      elseif (b.ne.0) then
+         if (abs(a-b)/abs(b).gt.vtiny) then
+            write (*,*) 'Error #2 in reweight_check_equal',a,b
+            stop
+         endif
+      endif
+      return
+      end
+
+      subroutine reweight_sum(a,b)
+      implicit none
+      double precision a,b
+      a=a+b
+      return
+      end
+
+
       function compute_rwgt_wgt_NLO(xmuR_over_ref,xmuF1_over_ref,
      #                              xmuF2_over_ref,xQES_over_ref,
      #                              kwgtinfo)
@@ -488,7 +630,7 @@ c
       muF2_over_ref=xmuF2_over_ref
       QES_over_ref=xQES_over_ref 
 c
-      if(kwgtinfo.ne.4) wgtbpower=rwgtbpower
+      if(kwgtinfo.ne.4.and.kwgtinfo.ne.5) wgtbpower=rwgtbpower
 c
       xsec=0.d0
       xsec11=0.d0
@@ -496,7 +638,7 @@ c
       xsec20=0.d0
       call set_cms_stuff(mohdr)
       if( (kwgtinfo.eq.1.and.wgtmuR2(1).ne.0.d0) .or.
-     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.
+     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
      #     passcuts(wgtkin(0,1,1),rwgt)) )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
@@ -505,7 +647,7 @@ c
           q2fact(2)=wgtmuF22(1) * muF2_over_ref**2
 c Should cause the code to crash if used
           QES2=0.d0
-        elseif(kwgtinfo.eq.3.or.kwgtinfo.eq.4)then
+        elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
           call set_alphaS(wgtkin(0,1,1))
         else
           write(*,*)'Error #0a in compute_rwgt_wgt_NLO',kwgtinfo
@@ -529,7 +671,7 @@ c Should cause the code to crash if used
 c
       call set_cms_stuff(izero)
       if( (kwgtinfo.eq.1.and.wgtmuR2(2).ne.0.d0) .or.
-     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.
+     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
      #     passcuts(wgtkin(0,1,2),rwgt)) )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(2))
@@ -538,7 +680,7 @@ c
           q2fact(2)=wgtmuF22(2) * muF2_over_ref**2
 c Should cause the code to crash if used
           QES2=0.d0
-        elseif(kwgtinfo.eq.3.or.kwgtinfo.eq.4)then
+        elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
           call set_alphaS(wgtkin(0,1,2))
         else
           write(*,*)'Error #0b in compute_rwgt_wgt_NLO',kwgtinfo
@@ -546,7 +688,7 @@ c Should cause the code to crash if used
         endif
         QES2_local=wgtqes2(2)
         if(abs(QES2/QES2_local-1.d0).gt.tiny.and.
-     &       (kwgtinfo.eq.3.or.kwgtinfo.eq.4))then
+     &       (kwgtinfo.ge.3.or.kwgtinfo.le.5))then
           write(*,*)'Error in compute_rwgt_wgt_NLO'
           write(*,*)' Mismatch in ES scale',QES2,QES2_local
           stop
@@ -669,12 +811,12 @@ c
       muF2_over_ref=xmuF2_over_ref
       QES_over_ref=xQES_over_ref 
 c
-      if(kwgtinfo.ne.4) wgtbpower=rwgtbpower
+      if(kwgtinfo.ne.4.and.kwgtinfo.ne.5) wgtbpower=rwgtbpower
 c
       xsec=0.d0
       call set_cms_stuff(izero)
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(1).ne.0.d0) .or.
-     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.
+     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
      #     passcuts(wgtkin(0,1,2),rwgt).and.
      #     wgtkin(0,1,1).gt.0.d0) )then
         if(kwgtinfo.eq.1.or.kwgtinfo.eq.2)then
@@ -684,7 +826,7 @@ c
           q2fact(2)=wgtmuF22(1) * muF2_over_ref**2
 c Should cause the code to crash if used
           QES2=0.d0
-        elseif(kwgtinfo.eq.3.or.kwgtinfo.eq.4)then
+        elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
           call set_cms_stuff(mohdr)
           call set_alphaS(wgtkin(0,1,1))
         else
@@ -711,7 +853,7 @@ c Should cause the code to crash if used
 c
       call set_cms_stuff(izero)
       if( (kwgtinfo.eq.1.and.wgtmuR2(2).ne.0.d0) .or.
-     #    ((kwgtinfo.eq.2.or.kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.
+     #    ((kwgtinfo.ge.2.or.kwgtinfo.le.5).and.
      #     passcuts(wgtkin(0,1,2),rwgt)) )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(2))
@@ -720,7 +862,7 @@ c
           q2fact(2)=wgtmuF22(2) * muF2_over_ref**2
 c Should cause the code to crash if used
           QES2=0.d0
-        elseif(kwgtinfo.eq.2.or.kwgtinfo.eq.3.or.kwgtinfo.eq.4)then
+        elseif(kwgtinfo.ge.2.or.kwgtinfo.le.5)then
           call set_alphaS(wgtkin(0,1,2))
         else
           write(*,*)'Error #0b in compute_rwgt_wgt_Hev',kwgtinfo
@@ -746,7 +888,7 @@ c Should cause the code to crash if used
 c
       call set_cms_stuff(mohdr)
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(1).ne.0.d0) .or.
-     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.
+     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
      #     passcuts(wgtkin(0,1,1),rwgt)) )then
         if(kwgtinfo.eq.1.or.kwgtinfo.eq.2)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
@@ -755,7 +897,7 @@ c
           q2fact(2)=wgtmuF22(1) * muF2_over_ref**2
 c Should cause the code to crash if used
           QES2=0.d0
-        elseif(kwgtinfo.eq.3.or.kwgtinfo.eq.4)then
+        elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
           call set_alphaS(wgtkin(0,1,1))
         else
           write(*,*)'Error #0c in compute_rwgt_wgt_Hev',kwgtinfo
@@ -832,14 +974,14 @@ c
       muF2_over_ref=xmuF2_over_ref
       QES_over_ref=xQES_over_ref 
 c
-      if(kwgtinfo.ne.4) wgtbpower=rwgtbpower
+      if(kwgtinfo.ne.4.and.kwgtinfo.ne.5) wgtbpower=rwgtbpower
 c
       xsec=0.d0
       call set_cms_stuff(izero)
 
       if( (kwgtinfo.eq.1.and.wgtmuR2(1).ne.0.d0) .or.
      #    (kwgtinfo.eq.2.and.wgtkin(0,1,1).gt.0.d0) .or.
-     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.
+     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
      #     passcuts(wgtkin(0,1,2),rwgt).and.
      #     wgtkin(0,1,1).gt.0.d0) )then
         if(kwgtinfo.eq.1)then
@@ -849,7 +991,7 @@ c
           q2fact(2)=wgtmuF22(1) * muF2_over_ref**2
 c Should cause the code to crash if used
           QES2=0.d0
-        elseif(kwgtinfo.eq.2.or.kwgtinfo.eq.3.or.kwgtinfo.eq.4)then
+        elseif(kwgtinfo.ge.2.or.kwgtinfo.le.5)then
           call set_cms_stuff(mohdr)
           call set_alphaS(wgtkin(0,1,1))
         else
@@ -877,7 +1019,7 @@ c
       call set_cms_stuff(izero)
 
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(2).ne.0.d0) .or.
-     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.
+     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
      #     passcuts(wgtkin(0,1,2),rwgt)) )then
         if(kwgtinfo.eq.1.or.kwgtinfo.eq.2)then
           scale=muR_over_ref*sqrt(wgtmuR2(2))
@@ -886,7 +1028,7 @@ c
           q2fact(2)=wgtmuF22(2) * muF2_over_ref**2
 c Should cause the code to crash if used
           QES2=0.d0
-        elseif(kwgtinfo.eq.3.or.kwgtinfo.eq.4)then
+        elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
           call set_alphaS(wgtkin(0,1,2))
         else
           write(*,*)'Error #0b in compute_rwgt_wgt_Sev',kwgtinfo
@@ -894,7 +1036,7 @@ c Should cause the code to crash if used
         endif
         QES2_local=wgtqes2(2)
         if(abs(QES2/QES2_local-1.d0).gt.tiny.and.
-     &       (kwgtinfo.eq.3.or.kwgtinfo.eq.4))then
+     &       (kwgtinfo.ge.3.or.kwgtinfo.le.5))then
           write(*,*)'Error in compute_rwgt_wgt_Sev'
           write(*,*)' Mismatch in ES scale',QES2,QES2_local
           stop
@@ -961,7 +1103,7 @@ c
       call set_cms_stuff(mohdr)
 
       if( (kwgtinfo.eq.1.and.wgtmuR2(1).ne.0.d0) .or.
-     #    ((kwgtinfo.eq.2.or.kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.
+     #    ((kwgtinfo.ge.2.or.kwgtinfo.ge.5).and.
      #     passcuts(wgtkin(0,1,1),rwgt)) )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
@@ -970,7 +1112,7 @@ c
           q2fact(2)=wgtmuF22(1) * muF2_over_ref**2
 c Should cause the code to crash if used
           QES2=0.d0
-        elseif(kwgtinfo.eq.2.or.kwgtinfo.eq.3.or.kwgtinfo.eq.4)then
+        elseif(kwgtinfo.ge.2.or.kwgtinfo.le.5)then
           call set_alphaS(wgtkin(0,1,1))
         else
           write(*,*)'Error #0b in compute_rwgt_wgt_Sev',kwgtinfo
@@ -1004,6 +1146,95 @@ c
       end
 
 
+      function compute_rwgt_wgt_Sev_nbody(xmuR_over_ref,xmuF1_over_ref,
+     &     xmuF2_over_ref,xQES_over_ref, kwgtinfo)
+c Recomputes the S-event cross section using the weights saved, and compares
+c with the reference weight
+      implicit none
+      include "genps.inc"
+      include "nexternal.inc"
+      include 'coupl.inc'
+      include 'q_es.inc'
+      include 'run.inc'
+      include 'nFKSconfigs.inc'
+      include "reweight_all.inc"
+
+      logical passcuts
+      double precision compute_rwgt_wgt_Sev_nbody
+      double precision xmuR_over_ref,xmuF1_over_ref,
+     #                 xmuF2_over_ref,xQES_over_ref
+      integer kwgtinfo
+      double precision rwgt,xsec,xlum,dlum,xlgmuf,xlgmur,alphas
+      double precision QES2_local
+      double precision save_murrat,save_muf1rat,save_muf2rat,save_qesrat
+      double precision tiny,pi
+      parameter (tiny=1.d-4)
+      parameter (pi=3.14159265358979323846d0)
+
+      integer i,k,izero,mohdr
+      parameter (izero=0)
+      parameter (mohdr=-100)
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer save_nFKSprocess
+c
+      save_murrat=muR_over_ref
+      save_muf1rat=muF1_over_ref
+      save_muf2rat=muF2_over_ref
+      save_qesrat=QES_over_ref
+      save_nFKSprocess=nFKSprocess
+c
+      muR_over_ref=xmuR_over_ref 
+      muF1_over_ref=xmuF1_over_ref
+      muF2_over_ref=xmuF2_over_ref
+      QES_over_ref=xQES_over_ref 
+c
+      if (kwgtinfo.ne.5) then
+         write (*,*) 'nbody-reweighting only with kwgtinfo.eq.5'
+     &        ,kwgtinfo
+      endif
+c
+      xsec=0.d0
+
+      call set_cms_stuff(izero)
+
+      if( passcuts(wgtkin_all(0,1,2,0),rwgt) )then
+         call set_alphaS(wgtkin_all(0,1,2,0))
+         QES2_local=wgtqes2_all(2,0)
+         if(abs(QES2/QES2_local-1.d0).gt.tiny)then
+            write(*,*)'Error in compute_rwgt_wgt_Sev_nbody'
+            write(*,*)' Mismatch in ES scale',QES2,QES2_local
+            stop
+         endif
+         xlgmuf=log(q2fact(1)/QES2_local)
+         xlgmur=log(scale**2/QES2_local)
+         xbk(1) = wgtxbj_all(1,2,0)
+         xbk(2) = wgtxbj_all(2,2,0)
+         nFKSprocess=nFKSprocess_used_Born
+         xlum = dlum()
+         if(wgtbpower.gt.0)then
+            xsec=xsec+xlum*wgtwborn_all*g**(2*wgtbpower)
+         else
+            xsec=xsec+xlum*wgtwborn_all
+         endif
+         xsec=xsec+xlum*( wgtwns_all+
+     &        wgtwnsmuf_all*xlgmuf+
+     &        wgtwnsmur_all*xlgmur )*
+     &        g**(2*wgtbpower+2.d0)
+      endif
+c
+      muR_over_ref=save_murrat
+      muF1_over_ref=save_muf1rat
+      muF2_over_ref=save_muf2rat
+      QES_over_ref=save_qesrat
+      nFKSprocess=save_nFKSprocess
+c
+      compute_rwgt_wgt_Sev_nbody=xsec
+c
+      return
+      end
+
+
       subroutine check_rwgt_wgt(idstring)
       implicit none
       include "genps.inc"
@@ -1012,7 +1243,7 @@ c
       include "reweight.inc"
       character*3 idstring
       double precision compute_rwgt_wgt_NLO,compute_rwgt_wgt_Hev,
-     #                 compute_rwgt_wgt_Sev
+     #                 compute_rwgt_wgt_Sev,compute_rwgt_wgt_Sev_nbody
       double precision wgtnew,tiny
       parameter (tiny=1.d-3)
 c
@@ -1035,18 +1266,33 @@ c
         wgtnew=compute_rwgt_wgt_Sev(muR_over_ref,muF1_over_ref,
      #                              muF2_over_ref,QES_over_ref,
      #                              iwgtinfo)
+      elseif(idstring.eq."nbd")then
+        wgtnew=compute_rwgt_wgt_Sev_nbody(muR_over_ref,muF1_over_ref,
+     #                              muF2_over_ref,QES_over_ref,
+     #                              iwgtinfo)
       else
         write(*,*)'Error in check_rwgt_wgt'
         write(*,*)' Unknown function: ',idstring
         stop
       endif
 c
+      if (idstring.eq."nbd") then
+      if( (abs(wgtref_nbody).ge.1.d0 .and.
+     #     abs(1.d0-wgtnew/wgtref_nbody).gt.tiny) .or.
+     #    (abs(wgtref_nbody).lt.1.d0 .and.
+     #     abs(wgtnew-wgtref_nbody).gt.tiny) )then
+         write(*,*)'Error in check_rwgt_wgt: ',idstring,wgtref_nbody
+     &        ,wgtnew
+        stop
+      endif
+      else
       if( (abs(wgtref).ge.1.d0 .and.
      #     abs(1.d0-wgtnew/wgtref).gt.tiny) .or.
      #    (abs(wgtref).lt.1.d0 .and.
      #     abs(wgtnew-wgtref).gt.tiny) )then
         write(*,*)'Error in check_rwgt_wgt: ',idstring,wgtref,wgtnew
         stop
+      endif
       endif
       iproc=iproc_save
 c

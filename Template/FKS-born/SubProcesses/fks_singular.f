@@ -512,7 +512,7 @@ c Set the ybst_til_tolab before applying the cuts.
              wgtmuF12(1)=muF12_current/muF1_over_ref**2
              wgtmuF22(1)=muF22_current/muF2_over_ref**2
              call reweight_fillkin(pp,ione)
-             wgtwreal(1)=xsec/g**(2*wgtbpower+2.d0)
+             wgtwreal(1)=xsec/g**(nint(2*wgtbpower+2.d0))
            endif
         endif
       endif
@@ -568,14 +568,14 @@ c Collinear subtraction term:
             if(doNLOreweight)then
               call reweight_fillkin(pp,ithree)
               ifill3=1
-              wgtwreal(3)=-xsec/g**(2*wgtbpower+2.d0)
+              wgtwreal(3)=-xsec/g**(nint(2*wgtbpower+2.d0))
               wgtwdeg(3)=
      #              ( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(ione)) )*
      #                      jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
-     #              g**(2*wgtbpower+2.d0)
+     #              g**(nint(2*wgtbpower+2.d0))
               wgtwdegmuf(3)=wgtdegrem_muF *
      #                      jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
-     #              g**(2*wgtbpower+2.d0)
+     #              g**(nint(2*wgtbpower+2.d0))
             endif
          endif
       endif
@@ -605,7 +605,7 @@ c Soft subtraction term:
               cnt_swgt_s=cnt_swgt_s-cnt_s*prefact_cnt_ssc*rwgt
               if(doNLOreweight)
      #          wgtwreal(2)=-xsec*(prefact+prefact_cnt_ssc)*rwgt/
-     #                      g**(2*wgtbpower+2.d0)
+     #                      g**(nint(2*wgtbpower+2.d0))
             endif
  546        continue
             if (abrv.eq.'real' .or. .not.nbody) goto 548
@@ -617,13 +617,15 @@ c Soft subtraction term:
               call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,born_wgt)
               if(doNLOreweight)then
                 if(wgtbpower.gt.0)then
-                  wgtwborn(2)=born_wgt*xsec/g**(2*wgtbpower)
+                  wgtwborn(2)=born_wgt*xsec/g**(nint(2*wgtbpower))
                 else
                   wgtwborn(2)=born_wgt*xsec
                 endif
-                wgtwns(2)=wgtnstmp*xsec/g**(2*wgtbpower+2.d0)
-                wgtwnsmuf(2)=wgtwnstmpmuf*xsec/g**(2*wgtbpower+2.d0)
-                wgtwnsmur(2)=wgtwnstmpmur*xsec/g**(2*wgtbpower+2.d0)
+                wgtwns(2)=wgtnstmp*xsec/g**(nint(2*wgtbpower+2.d0))
+                wgtwnsmuf(2)=wgtwnstmpmuf*xsec/g**(nint(2*wgtbpower
+     &               +2.d0))
+                wgtwnsmur(2)=wgtwnstmpmur*xsec/g**(nint(2*wgtbpower
+     &               +2.d0))
               endif
               bsv_wgt=bsv_wgt*xnormsv
               born_wgt=born_wgt*xnormsv
@@ -671,16 +673,16 @@ c Soft-Collinear subtraction term:
               ifill4=1
               wgtwreal(4)=xsec*(prefact_c+prefact_coll+
      #                          prefact_cnt_ssc_c+prefact_coll_c)*rwgt/
-     #                    g**(2*wgtbpower+2.d0)
+     #                    g**(nint(2*wgtbpower+2.d0))
               wgtwdeg(4)=(
      # -( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(ione)) )*prefact_deg
      # -( wgtdegrem_xi*prefact_deg_sxi+wgtdegrem_lxi*prefact_deg_slxi ) )*
      #                     jac_cnt(2)*rwgt/(shat/(32*pi**2))/
-     #              g**(2*wgtbpower+2.d0)
+     #              g**(nint(2*wgtbpower+2.d0))
               wgtwdegmuf(4)=
      #          -wgtdegrem_muF*( prefact_deg+prefact_deg_sxi )*
      #                     jac_cnt(2)*rwgt/(shat/(32*pi**2))/
-     #              g**(2*wgtbpower+2.d0)
+     #              g**(nint(2*wgtbpower+2.d0))
             endif
          endif
       endif
@@ -1146,7 +1148,7 @@ c
           write(*,*)'  AddInfoLHE must be true when unweighting'
           stop
         endif
-        if (nbody) call reweight_settozero()
+        call reweight_settozero()
         call reweight_settozero_all(nFKSprocess*2,nbody)
         call reweight_settozero_all(nFKSprocess*2-1,nbody)
         ifill1H=0
@@ -1312,11 +1314,11 @@ c for the collinear, soft and/or soft-collinear subtraction terms
             enddo
             if(doreweight)then
                wgtwmcxsec_all(i,nFKSprocess*2)=-xsec*xlum_mc_fact
-     &              *xmcxsec(i)/g**(2*wgtbpower+2.d0)
+     &              *xmcxsec(i)/g**(nint(2*wgtbpower+2.d0))
                wgtmcxbj_all(1,i,nFKSprocess*2)=xbk(1)
                wgtmcxbj_all(2,i,nFKSprocess*2)=xbk(2)
                wgtwmcxsec_all(i,nFKSprocess*2-1)=xsec*xlum_mc_fact
-     &              *xmcxsec(i)/g**(2*wgtbpower+2.d0)
+     &              *xmcxsec(i)/g**(nint(2*wgtbpower+2.d0))
                wgtmcxbj_all(1,i,nFKSprocess*2-1)=xbk(1)
                wgtmcxbj_all(2,i,nFKSprocess*2-1)=xbk(2)
             endif
@@ -1402,9 +1404,9 @@ c Collinear subtraction term:
                if(gfactsf.lt.1.d0.and.probne.gt.0.d0.and.gfactcl.lt.1.d0
      &              .and.pmass(j_fks).eq.0.d0)
      &              wgtwreal_all(3,nFKSprocess*2)=
-     &              xsec/g**(2*wgtbpower+2.d0)
+     &              xsec/g**(nint(2*wgtbpower+2.d0))
                wgtwreal_all(3,nFKSprocess*2-1)=xsec*(1-gfactsf)*probne/
-     &              g**(2*wgtbpower+2.d0)
+     &              g**(nint(2*wgtbpower+2.d0))
             endif
 
 
@@ -1436,14 +1438,15 @@ c Collinear subtraction term:
                enddo
                if(doreweight)then
                   wgtwreal_all(3,nFKSprocess*2-1)=wgtwreal_all(3
-     &                 ,nFKSprocess*2-1)-xsec/g**(2*wgtbpower+2.d0)
+     &                 ,nFKSprocess*2-1)-xsec/g**(nint(2*wgtbpower
+     &                 +2.d0))
                   wgtwdeg_all(3,nFKSprocess*2-1)=( wgtdegrem_xi+
      &                 wgtdegrem_lxi*log(xi_i_fks_cnt(ione)) )*
      &                 jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
-     &                 g**(2*wgtbpower+2.d0)
+     &                 g**(nint(2*wgtbpower+2.d0))
                   wgtwdegmuf_all(3,nFKSprocess*2-1)=wgtdegrem_muF *
      &                 jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
-     &                 g**(2*wgtbpower+2.d0)
+     &                 g**(nint(2*wgtbpower+2.d0))
                endif
             endif
          endif
@@ -1499,7 +1502,7 @@ c Soft subtraction term:
             enddo
             if(doreweight)then
                wgtwreal_all(2,nFKSprocess*2-1)=xsec*(1-gfactsf)*probne/
-     &              g**(2*wgtbpower+2.d0)
+     &              g**(nint(2*wgtbpower+2.d0))
              endif
             if (gfactsf.lt.1.d0.and.probne.gt.0.d0) then
                HxmcME=HxmcME+xlum_s*xsec
@@ -1508,7 +1511,7 @@ c Soft subtraction term:
      &                 ,2,j)-xsec*PD(j)*(1-gfactsf)*probne*CONV
                enddo
                if(doreweight)wgtwreal_all(2,nFKSprocess*2)=
-     &              xsec/g**(2*wgtbpower+2.d0)
+     &              xsec/g**(nint(2*wgtbpower+2.d0))
             endif
             if (xi_i_fks_ev .lt. xiScut_used) then
               xsec=fx_s*s_s*jac_cnt(0)
@@ -1522,7 +1525,7 @@ c Soft subtraction term:
               enddo
               if(doreweight)wgtwreal_all(2,nFKSprocess*2-1)
      &             =wgtwreal_all(2,nFKSprocess*2-1)-xsec*(prefact
-     &             +prefact_cnt_ssc)*rwgt/g**(2*wgtbpower+2.d0)
+     &             +prefact_cnt_ssc)*rwgt/g**(nint(2*wgtbpower+2.d0))
             endif
  546        continue
             if (abrv.eq.'real' .or. .not.nbody) goto 548
@@ -1534,13 +1537,15 @@ c Soft subtraction term:
               call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,born_wgt)
               if(doreweight)then
                  if(wgtbpower.gt.0)then
-                    wgtwborn_all=born_wgt*xsec/g**(2 *wgtbpower)
+                    wgtwborn_all=born_wgt*xsec/g**(nint(2*wgtbpower))
                  else
                     wgtwborn_all=born_wgt*xsec
                  endif
-                 wgtwns_all=wgtnstmp*xsec/g**(2*wgtbpower+2.d0)
-                 wgtwnsmuf_all=wgtwnstmpmuf*xsec/g**(2*wgtbpower+2.d0)
-                 wgtwnsmur_all=wgtwnstmpmur*xsec/g**(2*wgtbpower+2.d0)
+                 wgtwns_all=wgtnstmp*xsec/g**(nint(2*wgtbpower+2.d0))
+                 wgtwnsmuf_all=wgtwnstmpmuf*xsec/g**(nint(2*wgtbpower
+     &                +2.d0))
+                 wgtwnsmur_all=wgtwnstmpmur*xsec/g**(nint(2*wgtbpower
+     &                +2.d0))
               endif
               do j=1,IPROC
                  unwgt_table(0,1,j)=unwgt_table(0,1,j)+PD(j)*bsv_wgt
@@ -1592,7 +1597,7 @@ c Soft-Collinear subtraction term:
             enddo
             if(doreweight)then
                wgtwreal_all(4,nFKSprocess*2-1)=-xsec*(1-gfactsf)*probne/
-     &              g**(2*wgtbpower+2.d0)
+     &              g**(nint(2*wgtbpower+2.d0))
             endif
             if ((gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
      &           probne.gt.0.d0) .and. pmass(j_fks).eq.0.d0)then
@@ -1602,7 +1607,7 @@ c Soft-Collinear subtraction term:
      &                 ,2,j)+PD(j)*xsec*(1-gfactsf)*probne*CONV
                enddo
                if(doreweight)wgtwreal_all(4,nFKSprocess*2)=
-     &              -xsec/g**(2*wgtbpower+2.d0)
+     &              -xsec/g**(nint(2*wgtbpower+2.d0))
             endif
 
             if(xi_i_fks_cnt(ione) .lt. xiScut_used .and.
@@ -1635,16 +1640,17 @@ c Soft-Collinear subtraction term:
               if(doreweight)then
                  wgtwreal_all(4,nFKSprocess*2-1)=wgtwreal_all(4
      &                ,nFKSprocess*2-1)+xsec*(prefact_c+prefact_coll
-     &                +prefact_cnt_ssc_c+prefact_coll_c)*rwgt/g**(2
-     &                *wgtbpower+2.d0)
+     &                +prefact_cnt_ssc_c+prefact_coll_c)*rwgt/g**(nint(2
+     &                *wgtbpower+2.d0))
                  wgtwdeg_all(4,nFKSprocess*2-1)=(-( wgtdegrem_xi
      &                +wgtdegrem_lxi*log(xi_i_fks_cnt(ione)) )
      &                *prefact_deg -( wgtdegrem_xi*prefact_deg_sxi
      &                +wgtdegrem_lxi*prefact_deg_slxi ) )* jac_cnt(2)
-     &                *rwgt/(shat/(32*pi**2))/ g**(2*wgtbpower+2.d0)
+     &                *rwgt/(shat/(32*pi**2))/ g**(nint(2*wgtbpower
+     &                +2.d0))
                  wgtwdegmuf_all(4,nFKSprocess*2-1)= -wgtdegrem_muF*(
      &                prefact_deg+prefact_deg_sxi )* jac_cnt(2)*rwgt
-     &                /(shat/(32*pi**2))/ g**(2*wgtbpower+2.d0)
+     &                /(shat/(32*pi**2))/ g**(nint(2*wgtbpower+2.d0))
               endif
            endif
         endif
@@ -1707,7 +1713,7 @@ c Set the ybst_til_tolab before applying the cuts.
                 ifill1H=1
              endif
              wgtwreal_all(1,nFKSprocess*2)=
-     &            xsec/g**(2*wgtbpower+2.d0)*probne
+     &            xsec/g**(nint(2*wgtbpower+2.d0))*probne
              if(ifill1S.eq.0)then
                 wgtmuR2_all(1,nFKSprocess*2-1)=
      &               muR2_current/muR_over_ref**2
@@ -1719,7 +1725,7 @@ c Set the ybst_til_tolab before applying the cuts.
                 ifill1S=1
              endif
              wgtwreal_all(1,nFKSprocess*2-1)=
-     &            xsec/g**(2*wgtbpower+2.d0)*(1-probne)
+     &            xsec/g**(nint(2*wgtbpower+2.d0))*(1-probne)
           endif
         endif
         if(AddInfoLHE)scale2_lhe(nFKSprocess)=get_ptrel(pp,i_fks,j_fks)
@@ -1744,10 +1750,11 @@ c
 c Enhance the one channel for multi-channel integration
 c
       enhance=1.d0
-      if ((Sxmc_wgt.ne.0d0.or.Hxmc_wgt.ne.0d0.or.cnt_wgt_c.ne.0d0.or.cnt_wgt_s.
-     &     ne.0d0.or.cnt_wgt_sc.ne.0d0.or.bsv_wgt.ne.0d0.or.deg_wgt.ne.0d0.
-     &     or.deg_swgt.ne.0d0.or.cnt_swgt_s.ne.0d0.or.cnt_swgt_sc.ne.0d0.or.
-     &     Sev_wgt.ne.0d0.or.Hev_wgt.ne.0d0) .and. multi_channel) then
+      if ((Sxmc_wgt.ne.0d0 .or. Hxmc_wgt.ne.0d0 .or. cnt_wgt_c.ne.0d0
+     &     .or. cnt_wgt_s.ne.0d0 .or. cnt_wgt_sc.ne.0d0 .or.
+     &     bsv_wgt.ne.0d0 .or. deg_wgt.ne.0d0.or.deg_swgt.ne.0d0 .or.
+     &     cnt_swgt_s.ne.0d0 .or. cnt_swgt_sc.ne.0d0 .or.Sev_wgt.ne.0d0
+     &     .or. Hev_wgt.ne.0d0) .and. multi_channel) then
          if (bsv_wgt.eq.0d0.and.deg_wgt.eq.0d0.and.deg_swgt.eq.0d0.and.
      &       cnt_wgt_c.eq.0d0 ) CalculatedBorn=.false.
 
@@ -1882,10 +1889,8 @@ c
 
             if (nbody) then
                wgtref_nbody = dsigS
-               wgtref_all(nFKSprocess*2-1) = dsigS
-            else 
-               wgtref_all(nFKSprocess*2-1) = wgtref_nbody+dsigS
             endif
+            wgtref_all(nFKSprocess*2-1) = dsigS
             xsec = enhance*unwgtfun
             do i=1,4
                if (.not.nbody) then
@@ -1910,8 +1915,12 @@ c
                enddo
             endif
             if(check_reweight.and.doreweight) then
-               call fill_reweight0inc(nFKSprocess*2-1)
-               call check_rwgt_wgt("Sev")
+               if (nbody) then
+                  call check_rwgt_wgt("nbd")
+               else
+                  call fill_reweight0inc(nFKSprocess*2-1)
+                  call check_rwgt_wgt("Sev")
+               endif
                call reweight_settozero()
             endif
 c Example of reweighted cross section (scale changed)
@@ -1981,10 +1990,6 @@ c Plot observables for counterevents and Born
                enddo
                if(check_reweight.and.doreweight) then
                   call fill_reweight0inc(nFKSprocess*2)
-                  wgtwborn(2)=0d0
-                  wgtwns(2)=0d0
-                  wgtwnsmuf(2)=0d0
-                  wgtwnsmur(2)=0d0
                   call check_rwgt_wgt("Hev")
                   call reweight_settozero()
                endif

@@ -374,8 +374,8 @@ c
 
 
 
-      subroutine xmcsubt_HW6(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
-     #                   wgt,nofpartners,lzone,flagmc,z,xmcxsec)
+      subroutine xmcsubt_HW6(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne
+     &     ,wgt,nofpartners,lzone,flagmc,z,xmcxsec)
 c Main routine for MC counterterms
       implicit none
       include "nexternal.inc"
@@ -4042,6 +4042,7 @@ c
 c BORN
       call sborn(p_born,wgt1)
       born=dble(wgt1(1))
+
 c born is the total born amplitude squared
       sumborn=0.d0
       do i=1,max_bcol
