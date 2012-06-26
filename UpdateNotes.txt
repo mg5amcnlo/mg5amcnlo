@@ -4,8 +4,13 @@ Update notes for MadGraph 5 (in reverse time order)
                       when different process flags @N are given to different
                       decays of the same core process (sorry, this was missed
                       in v. 1.4.7).
-                  JA: Speed up running of channels where the BW structure makes
-                      it impossible to get any events.
+                  JA: Cancel running of integration channels where the BW
+                      structure makes it impossible to get any events, which
+                      might significantly speed up event generation for 
+                      processes with conflicting BWs.
+                  JA: Fixed crash for process p p > w+ w+ j j t t~ when all 
+                      w and t/t~ are decayed (bug #1017912, thanks to Nicolas
+                      Deutschmann).
 
 1.4.7 (25/06/12)  JA: Change the random seed treatment to ensure that the original 
                       seed is stored in the banner (this was broken in v. 1.4.0).
