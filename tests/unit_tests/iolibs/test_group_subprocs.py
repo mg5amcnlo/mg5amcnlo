@@ -1135,3 +1135,108 @@ Decay groups:
             self.assertEqual(me.get('processes')[0].nice_string(),
                              me_strings[i])
             
+
+        # Now test also for different process ids
+
+        ds = [1,-1]
+        qs = [1,3,2,4,-1,-3,-2,-4]
+
+        # First process
+        my_leglist = base_objects.MultiLegList()
+        my_leglist.append(base_objects.MultiLeg({'ids': ds,
+                                                 'state': False}))
+        my_leglist.append(base_objects.MultiLeg({'ids': ds,
+                                                 'state': False}))
+        my_leglist.append(base_objects.MultiLeg({'ids': [n1.get('pdg_code')]}))
+        my_leglist.append(base_objects.MultiLeg({'ids': [n1.get('pdg_code')]}))
+
+        core_process1 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                       'model':mymodel,
+                                                       'id': 1})
+
+        decay1proc1 = [[n1.get('pdg_code')], 
+                      [11], [24]]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay1proc1])
+        my_leglist[0].set('state', False)
+        decay1process1 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                        'model':mymodel})
+        decay1process2 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                        'model':mymodel})
+
+        decay2proc1 = [[24], qs, qs]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay2proc1])
+        my_leglist[0].set('state', False)
+        decay2process1 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                         'model':mymodel})
+        decay2proc2 = [[24], [6], [-5]]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay2proc2])
+        my_leglist[0].set('state', False)
+        decay2process2 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                         'model':mymodel})
+
+        decay1process1.get('decay_chains').append(decay2process1)
+        decay1process2.get('decay_chains').append(decay2process2)
+        core_process1.get('decay_chains').append(decay1process1)
+        core_process1.get('decay_chains').append(decay1process2)
+
+        my_amplitude1 = diagram_generation.DecayChainAmplitude(core_process1)
+
+        # Second process
+
+        my_leglist = base_objects.MultiLegList()
+        my_leglist.append(base_objects.MultiLeg({'ids': ds,
+                                                 'state': False}))
+        my_leglist.append(base_objects.MultiLeg({'ids': ds,
+                                                 'state': False}))
+        my_leglist.append(base_objects.MultiLeg({'ids': [n1.get('pdg_code')]}))
+        my_leglist.append(base_objects.MultiLeg({'ids': [n1.get('pdg_code')]}))
+
+        core_process2 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                       'model':mymodel,
+                                                       'id': 2})
+
+        decay1proc1 = [[n1.get('pdg_code')], 
+                      [11], [24]]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay1proc1])
+        my_leglist[0].set('state', False)
+        decay1process1 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                        'model':mymodel})
+        decay1process2 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                        'model':mymodel})
+
+        decay2proc1 = [[24], [6], [-5]]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay2proc1])
+        my_leglist[0].set('state', False)
+        decay2process1 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                         'model':mymodel})
+        decay2proc2 = [[24], [6], [-5]]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay2proc2])
+        my_leglist[0].set('state', False)
+        decay2process2 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                         'model':mymodel})
+
+        decay1process1.get('decay_chains').append(decay2process1)
+        decay1process2.get('decay_chains').append(decay2process2)
+        core_process2.get('decay_chains').append(decay1process1)
+        core_process2.get('decay_chains').append(decay1process2)
+
+        my_amplitude2 = diagram_generation.DecayChainAmplitude(core_process2)
+
+        dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
+              group_amplitudes(\
+                 diagram_generation.DecayChainAmplitudeList([my_amplitude1,
+                                                             my_amplitude2]))
+
+        subproc_groups = \
+                       dc_subproc_group.generate_helas_decay_chain_subproc_groups()
+
+        self.assertEqual(len(subproc_groups), 2)
+
+        self.assertEqual(len(subproc_groups[0].get('matrix_elements')),2)
+        self.assertEqual(len(subproc_groups[1].get('matrix_elements')),2)

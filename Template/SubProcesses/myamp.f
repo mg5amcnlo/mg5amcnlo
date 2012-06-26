@@ -453,9 +453,24 @@ c              JA 6/8/2011 Set xe(i) for resonances
                endif
             endif
             xe(i)=max(xe(i),xm(i))
+c     Check for impossible onshell configurations
+c     Either: required onshell and daughter masses too large
+c     Or: forced and daughter masses too large
+c     Or: required offshell and forced, with bwcutoff.le.5
+            if(prwidth(i,iconfig) .gt. 0.and.
+     $         (lbw(nbw).eq.1.and.
+     $          (prmass(i,iconfig)+5d0*prwidth(i,iconfig).lt.xm(i)
+     $           .or.prmass(i,iconfig)-5d0*prwidth(i,iconfig).gt.stot)
+     $          .or.gforcebw(i,iconfig).eq.1.and.
+     $              prmass(i,iconfig)+bwcutoff*prwidth(i,iconfig).lt.xm(i)
+     $          .or.lbw(nbw).eq.2.and.gforcebw(i,iconfig).eq.1 .and.
+     $              bwcutoff.le.5d0))
+     $        then
+c     Write results.dat and quit
+               call write_null_results()
+               stop
+            endif
             if (prwidth(i,iconfig) .gt. 0 .and. lbw(nbw) .le. 1) then         !B.W.
-c               nbw = nbw +1
-
                if (i .eq. -(nexternal-(nincoming+1))) then  !This is s-hat
                   j = 3*(nexternal-2)-4+1    !set i to ndim+1
 c-----
@@ -468,14 +483,12 @@ c----
                      write(*,*) 'Setting PDF BW',j,nbw,prmass(i,iconfig)
                      spole(j)=prmass(i,iconfig)*prmass(i,iconfig)/stot
                      swidth(j) = prwidth(i,iconfig)*prmass(i,iconfig)/stot
-                     xm(i) = prmass(i,iconfig)
                   endif
                   continue
                else if(iden_part(i).eq.0 .or. lbw(nbw).eq.1) then
                   write(*,*) 'Setting BW',i,nbw,prmass(i,iconfig)
                   spole(-i)=prmass(i,iconfig)*prmass(i,iconfig)/stot
                   swidth(-i) = prwidth(i,iconfig)*prmass(i,iconfig)/stot
-                  xm(i) = prmass(i,iconfig)
                endif
 c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
                if (swidth(-i) .eq. 0d0 .and.
@@ -602,3 +615,12 @@ c      if (xo .gt. 0) call setgrid(-i,xo,a,1)
 
       end
 
+      subroutine write_null_results()
+      implicit none
+
+      write(*,*),'Impossible BW configuration'
+      open(unit=66,file='results.dat',status='unknown')
+      write(66,'(3e12.5,2i9,i5,i9,e10.3)')0.,0.,0.,0,0,1,0,0.
+      write(66,'(i4,4e15.5)') 1,0.,0.,0.,0.
+      close(66)
+      end

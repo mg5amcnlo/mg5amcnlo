@@ -393,11 +393,12 @@ class SubProcessGroup(base_objects.PhysicsObject):
         amplitude_classes = {}
 
         for iamp, amplitude in enumerate(amplitudes):
+            process = amplitude.get('process')
             is_parts = [model.get_particle(l.get('id')) for l in \
-                        amplitude.get('process').get('legs') if not \
+                        process.get('legs') if not \
                         l.get('state')]
             fs_parts = [model.get_particle(l.get('id')) for l in \
-                        amplitude.get('process').get('legs') if l.get('state')]
+                        process.get('legs') if l.get('state')]
             diagrams = amplitude.get('diagrams')
 
             # This is where the requirements for which particles to
@@ -410,7 +411,8 @@ class SubProcessGroup(base_objects.PhysicsObject):
                            [(p.get('mass'), p.get('spin'),
                              p.get('color') != 1) for p in \
                             is_parts + fs_parts],
-                           amplitude.get('process').get('id')]
+                           amplitude.get('process').get('id'),
+                           process.get('id')]
             try:
                 amplitude_classes[iamp] = proc_classes.index(proc_class)
             except ValueError:
@@ -452,14 +454,14 @@ class SubProcessGroupList(base_objects.PhysicsObjectList):
 #===============================================================================
 
 class DecayChainSubProcessGroup(SubProcessGroup):
-    """Class to keep track of subprocess groups from a decay chain"""
+    """Class to keep track of subprocess groups from a list of decay chains"""
 
     def default_setup(self):
         """Define object and give default values"""
 
         self['core_groups'] = SubProcessGroupList()
         self['decay_groups'] = DecayChainSubProcessGroupList()
-        # decay_chain_amplitude is the original DecayChainAmplitude
+        # decay_chain_amplitudes is the original DecayChainAmplitudeList
         self['decay_chain_amplitudes'] = diagram_generation.DecayChainAmplitudeList()
         
     def filter(self, name, value):
@@ -579,18 +581,19 @@ class DecayChainSubProcessGroup(SubProcessGroup):
 
         # Find core process group
         ids = [l.get('id') for l in process.get('legs')]
-        core_group = [(i, group) for (i, group) in \
+        core_groups = [(i, group) for (i, group) in \
                       enumerate(self.get('core_groups')) \
                       if ids in [[l.get('id') for l in \
                                   a.get('process').get('legs')] \
-                                 for a in group.get('amplitudes')]]
+                                 for a in group.get('amplitudes')] \
+                       and process.get('id') == group.get('number')]
 
-        if not core_group:
+        if not core_groups:
             return None
 
-        assert len(core_group) == 1
+        assert len(core_groups) == 1
         
-        core_group = core_group[0]
+        core_group = core_groups[0]
         # This is the first return argument - the chain of group indices
         group_assignment = (core_group[0],
                             tuple([g for g in group_assignments]))
