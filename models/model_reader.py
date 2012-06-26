@@ -100,9 +100,7 @@ class ModelReader(base_objects.Model):
                             value = '0.0' 
                         if scale and parameter_dict[block][id].name == 'aS':
                             runner = Alphas_Runner(value, nloop=2)
-                            print 'as old:', value, 'new', 
                             value = runner(scale)
-                            print value
                         exec("locals()[\'%s\'] = %s" % (parameter_dict[block][id].name,
                                           value))
                         parameter_dict[block][id].value = float(value)
@@ -112,9 +110,7 @@ class ModelReader(base_objects.Model):
             for param in external_parameters:
                 if scale and parameter_dict[block][id].name == 'aS':
                     runner = Alphas_Runner(value, nloop=3)
-                    print 'as old:', value, 'new', 
                     value = runner(scale)
-                    print value
                 exec("locals()[\'%s\'] = %s" % (param.name, param.value))
                     
         # Define all functions used
@@ -239,7 +235,6 @@ class Alphas_Runner(object):
         Evolution is performed using Newton's method,
         with a precision given by tol."""        
         
-        print 'input new1',t, alphas, nf
         nloop = self.nloop
         tol = 5e-4
         arg = nf-3
@@ -251,12 +246,10 @@ class Alphas_Runner(object):
             f = lambda AS: 1.0/AS+0.5*c1*math.log((c2*AS**2)/(1+c1*AS+c2*AS**2)) \
                  -(c1**2-2*c2)/d*math.atan((2*c2*AS+c1)/d)
         
-        print b0,t,alphas
         a_out = alphas / (1 + alphas * b0 * t)
         if nloop == 1:
             return a_out
         
-        print alphas, b0, t, alphas*b0*t
         a_out = alphas/(1+b0*alphas*t+c1*alphas*math.log(1+alphas*b0*t))
         if a_out < 0:
             a_out = 0.3

@@ -324,6 +324,12 @@ class HelpToCmd(object):
                                ('--laststep=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
 
     def help_calculate_decay_widths(self):
+        
+        if self.ninitial != 1:
+            logger.warning("This command is only valid for prcesses of type A > B C.")
+            logger.warning("This command can not be run in current context.")
+            logger.warning("")
+        
         logger.info("syntax: calculate_decay_widths [run_name] [options])")
         logger.info("-- Calculate decay widths and enter widths and BRs in param_card")
         logger.info("   for a series of processes of type A > B C ...")
@@ -755,7 +761,7 @@ class CheckValidForCmd(object):
             elif arg in particles_name:
                 # should be a particles
                 output['particles'].add(particles_name[arg])
-            elif int(arg) in particles_name.values():
+            elif arg.isdigit() and int(arg) in particles_name.values():
                 output['particles'].add(eval(arg))
             else:
                 self.help_compute_widths()
@@ -1403,7 +1409,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             raise MadEventAlreadyRunning, message
         else:
             os.system('touch %s' % pjoin(me_dir,'RunWeb'))
-            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
+            misc.Popen([pjoin('bin', 'internal', 'gen_cardhtml-pl')], cwd=me_dir)
       
         self.to_store = []
         self.run_name = None
@@ -1897,7 +1903,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def update_width_in_param_card(self, decay_info, initial=None, output=None):
         # Open the param_card.dat and insert the calculated decays and BRs
         
-        print decay_info 
         if not initial:
             initial = pjoin(self.me_dir,'Cards','param_card.dat')
         if not output:
@@ -3731,7 +3736,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                 break
                     else:
                         clean_pointless_card(mode)
-                    self.check_param_card(pjoin(self.me_dir, 'Cards', 'param_card.dat')) 
 
     ############################################################################
     def ask_pythia_run_configuration(self, mode=None):
@@ -3970,11 +3974,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """Check that all the width are define in the param_card.
         If some width are set on 'Auto', call the computation tools."""
         
-        print 'CHECK PARAM'
         pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto''',re.I)
         text = open(path).read()
         pdg = pattern.findall(text)
-        print pdg
         if pdg:
             logger.info('Computing the width set on auto in the param_card.dat')
             self.do_compute_widths('%s %s' % (' '.join(pdg), path))
