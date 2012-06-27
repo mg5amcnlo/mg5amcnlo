@@ -8,6 +8,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       structure makes it impossible to get any events, which
                       might significantly speed up event generation for 
                       processes with conflicting BWs.
+                  JA: Minor modification of integration grid presetting in
+                      myamp.f, due to the above point.
                   JA: Fixed crash for process p p > w+ w+ j j t t~ when all 
                       w and t/t~ are decayed (bug #1017912, thanks to Nicolas
                       Deutschmann).

@@ -523,7 +523,7 @@ c
 c-fax
 c-JA 1/2009: Set grid also based on xqcut
             if (l2 .gt. 0) x1 = max(etmin(l2),max(xqfact*xqcuti(l2),0d0))
-            x1 = max(x1, xm(l2)/1d0)
+            x1 = max(x1, xe(l2)/1d0)
             if (nt .gt. 1) x1 = max(x1,xk(nt-1))
             xk(nt)=x1
 c            write(*,*) 'Using 1',l2,x1
@@ -537,7 +537,7 @@ c
 c-JA 1/2009: Set grid also based on xqcut
             if (l2 .gt. 0) x2 = max(etmin(l2),max(xqfact*xqcuti(l2),0d0))
 c            if (l2 .gt. 0) x2 = max(etmin(l2),0d0)
-            x2 = max(x2, xm(l2)/1d0)
+            x2 = max(x2, xe(l2)/1d0)
 c            if (nt .gt. 1) x2 = max(x2,xk(nt-1))
             
 c            write(*,*) 'Using 2',l2,x2
