@@ -2015,7 +2015,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     self.monitor(html=True)
                     raise MadEventError, 'Error detected Stop running: %s' % \
                                          open(pjoin(self.me_dir,'error')).read()
+        
+        
         self.monitor(run_type='All jobs submitted for survey', html=True)
+        cross, error = sum_html.make_all_html_results(self)
+        self.results.add_detail('cross', cross)
+        self.results.add_detail('error', error) 
         self.update_status('End survey', 'parton', makehtml=False)
 
     ############################################################################      
@@ -2077,7 +2082,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                              run_type='Refine number %s on %s (%s/%s)' % 
                              (self.nb_refine, subdir, nb_proc+1, len(subproc)))
         self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine, 
-                     html=False)
+                     html=True)
         
         self.update_status("Combining runs", level='parton')
         try:
@@ -3006,16 +3011,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 try:
                     del self.next_update
                 except:
-                    pass
-        if not html:
-            return
-
-        #######################################################################
-        cross, error = sum_html.make_all_html_results(self)
-        self.results.add_detail('cross', cross)
-        self.results.add_detail('error', error)   
-        
-        
+                    pass        
         
         
     @staticmethod
