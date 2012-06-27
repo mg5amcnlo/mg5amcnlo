@@ -42,15 +42,21 @@ c Jamp amplitudes of the Born (to be filled with a call the sborn())
       common/to_amps/  amp2,       jamp2
 
 C iforest and other configuration info. Read once and saved.
-      integer itree_S(2,-max_branch:-1),sprop_tree_S(-max_branch:-1)
-      integer itree_H(2,-max_branch:-1),sprop_tree_H(-max_branch:-1)
+      integer itree_S_t(2,-max_branch:-1),sprop_tree_S_t(-max_branch:-1)
+     $     ,itree_H_t(2,-max_branch:-1),sprop_tree_H_t(-max_branch:-1)
+      integer itree_S(2,-max_branch:-1,fks_configs),sprop_tree_S(
+     $     -max_branch:-1,fks_configs),itree_H(2,-max_branch:-1
+     $     ,fks_configs),sprop_tree_H(-max_branch:-1,fks_configs)
       save itree_S,sprop_tree_S,itree_H,sprop_tree_H
 
 c Masses and widths of the (internal) propagators. Read once and saved.
-      double precision pmass_tree_S(-nexternal:0)
-      double precision pwidth_tree_S(-nexternal:0)
-      double precision pmass_tree_H(-nexternal:0)
-      double precision pwidth_tree_H(-nexternal:0)
+      double precision pmass_tree_S_t(-nexternal:0) ,pwidth_tree_S_t(
+     $     -nexternal:0),pmass_tree_H_t(-nexternal:0),pwidth_tree_H_t(
+     $     -nexternal:0)
+      double precision pmass_tree_S(-nexternal:0,fks_configs)
+     $     ,pwidth_tree_S(-nexternal:0,fks_configs),pmass_tree_H(
+     $     -nexternal:0,fks_configs),pwidth_tree_H(-nexternal:0
+     $     ,fks_configs)
       save pmass_tree_S,pwidth_tree_S,pmass_tree_H,pwidth_tree_H
 
 c tree, s-channel props, masses and widths, copied from the save values
@@ -120,6 +126,7 @@ c Set the leshouche info and fks info
 c
       call fks_inc_chooser()
       call leshouche_inc_chooser()
+
 c
 c Set the number of external particles and overwrite the iSorH_lhe value
 c
@@ -141,36 +148,52 @@ c to determine possible intermediate s-channel resonances. Note that the
 c set_itree subroutine does not properly set the t-channel info.
 c
       if (firsttime) then
+         save_nFKSprocess=nFKSprocess
+         do nFKSprocess=1,FKS_configs
+            call fks_inc_chooser()
 c For the S-events
-         call set_itree(iconfig,.false.,itree_S,sprop_tree_S
-     &        ,pmass_tree_S,pwidth_tree_S)
+            call set_itree(iconfig,.false.,itree_S_t,sprop_tree_S_t
+     $           ,pmass_tree_S_t,pwidth_tree_S_t)
 c For the H-events
-         call set_itree(iconfig,.true.,itree_H,sprop_tree_H,pmass_tree_H
-     &        ,pwidth_tree_H)
+            call set_itree(iconfig,.true.,itree_H_t,sprop_tree_H_t
+     $           ,pmass_tree_H_t,pwidth_tree_H_t)
+            do j=-max_branch,-1
+               itree_H(1,j,nFKSprocess)=itree_H_t(1,j)
+               itree_H(2,j,nFKSprocess)=itree_H_t(2,j)
+               sprop_tree_H(j,nFKSprocess)=sprop_tree_H_t(j)
+               pmass_tree_H(j,nFKSprocess)=pmass_tree_H_t(j)
+               pwidth_tree_H(j,nFKSprocess)=pwidth_tree_H_t(j)
+               itree_S(1,j,nFKSprocess)=itree_S_T(1,j)
+               itree_S(2,j,nFKSprocess)=itree_S_t(2,j)
+               sprop_tree_S(j,nFKSprocess)=sprop_tree_S_t(j)
+               pmass_tree_S(j,nFKSprocess)=pmass_tree_S_t(j)
+               pwidth_tree_S(j,nFKSprocess)=pwidth_tree_S_t(j)
+            enddo
+         enddo
          firsttime=.false.
+         nFKSprocess=save_nFKSprocess
+         call fks_inc_chooser()
       endif
 c Copy the saved information to the arrays actually used
       if (Hevents) then
-         do j=-(nexternal-4),-1
-            do i=1,2
-               itree(i,j)=itree_H(i,j)
-            enddo
-            sprop_tree(j)=sprop_tree_H(j)
-            pmass_tree(j)=pmass_tree_H(j)
-            pwidth_tree(j)=pwidth_tree_H(j)
-         enddo
-      else
          do j=-(nexternal-3),-1
             do i=1,2
-               itree(i,j)=itree_S(i,j)
+               itree(i,j)=itree_H(i,j,nFKSprocess)
             enddo
-            sprop_tree(j)=sprop_tree_S(j)
-            pmass_tree(j)=pmass_tree_S(j)
-            pwidth_tree(j)=pwidth_tree_S(j)
+            sprop_tree(j)=sprop_tree_H(j,nFKSprocess)
+            pmass_tree(j)=pmass_tree_H(j,nFKSprocess)
+            pwidth_tree(j)=pwidth_tree_H(j,nFKSprocess)
+         enddo
+      else
+         do j=-(nexternal-4),-1
+            do i=1,2
+               itree(i,j)=itree_S(i,j,nFKSprocess)
+            enddo
+            sprop_tree(j)=sprop_tree_S(j,nFKSprocess)
+            pmass_tree(j)=pmass_tree_S(j,nFKSprocess)
+            pwidth_tree(j)=pwidth_tree_S(j,nFKSprocess)
          enddo
       endif
-
-
 c Set the shower scale
       if (Hevents) then
          shower_scale=SCALUP(nFKSprocess*2)
@@ -624,7 +647,7 @@ c
 
          else
 c j_fks is initial state
-            jj=-nexternal-3     ! Just add it at the end
+            jj=-(nexternal-3)     ! Just add it at the end
 c setting itree to 1 (or 2) makes sure that the loops over s-channel
 c propagators will exit
             itree(1,jj)=1
