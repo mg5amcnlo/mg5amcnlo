@@ -57,6 +57,66 @@ c
 
 
 
+      subroutine write_lhef_header_banner(ifile,nevents,MonteCarlo,path)
+      implicit none 
+      integer ifile,nevents
+      character*10 MonteCarlo
+      character*100 path
+      character*72 buffer
+c
+      write(ifile,'(a)') '<LesHouchesEvents version="1.0">'
+      write(ifile,'(a)') '  <!--'
+      write(ifile,'(a)') MonteCarlo
+      write(ifile,'(a)') '  -->'
+      write(ifile,'(a)') '  <header>'
+      write(ifile,250) nevents
+      write(ifile,'(a)') '  <MG5ProcCard>'
+      open (unit=71,file=path(1:index(path," ")-1)//'proc_card_mg5.dat'
+     &     ,err=99)
+      do
+         read(71,'(a)',err=89,end=89) buffer
+         write(ifile,'(a)') buffer
+      enddo
+ 89   close(71)
+      write(ifile,'(a)') '  </MG5ProcCard>'
+      write(ifile,'(a)') '  <slha>'
+      open (unit=71,file=path(1:index(path," ")-1)//'param_card.dat'
+     &     ,err=98)
+      do
+         read(71,'(a)',err=88,end=88) buffer
+         write(ifile,'(a)') buffer
+      enddo
+ 88   close(71)
+      write(ifile,'(a)') '  </slha>'
+      write(ifile,'(a)') '  <MG5RunCard>'
+      open (unit=71,file=path(1:index(path," ")-1)//'run_card.dat'
+     &     ,err=97)
+      do
+         read(71,'(a)',err=87,end=87) buffer
+         write(ifile,'(a)') buffer
+      enddo
+ 87   close(71)
+      write(ifile,'(a)') '  </MG5RunCard>'
+      write(ifile,250) nevents
+      write(ifile,'(a)') '  </header>'
+ 250  format(1x,i8)
+      return
+ 99   write (*,*) 'ERROR in write_lhef_header_banner: '/
+     &     /' proc_card_mg5.dat not found   :',path(1:index(path," ")-1)
+     &     //'proc_card_mg5.dat'
+      stop
+ 98   write (*,*) 'ERROR in write_lhef_header_banner: '/
+     &     /' param_card.dat not found   :',path(1:index(path," ")-1)
+     &     //'param_card.dat'
+      stop
+ 97   write (*,*) 'ERROR in write_lhef_header_banner: '/
+     &     /' run_card.dat not found   :',path(1:index(path," ")-1)
+     &     //'run_card.dat'
+      stop
+      end
+
+
+
       subroutine read_lhef_header(ifile,nevents,MonteCarlo)
       implicit none 
       integer ifile,nevents
