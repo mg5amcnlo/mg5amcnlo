@@ -54,7 +54,7 @@ from datetime import date
 root_path = path.split(path.dirname(path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 
-import madgraph.iolibs.misc as misc
+import madgraph.various.misc as misc
 from madgraph import MG5DIR
 
 # Write out nice usage message if called with -h or --help
@@ -71,7 +71,7 @@ logging.basicConfig(level=vars(logging)[options.logging],
                     format="%(message)s")
 
 # 0. check that all modification are commited in this directory
-#    and that the date is up-to-date
+#    and that the date/UpdateNote are up-to-date
 diff_result = subprocess.Popen(["bzr", "diff"], stdout=subprocess.PIPE).communicate()[0] 
 
 if diff_result:
@@ -79,10 +79,12 @@ if diff_result:
     answer = raw_input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
+
 release_date = date.fromtimestamp(time.time())
 for line in file(os.path.join(MG5DIR,'VERSION')):
     if 'version' in line:
         logging.info(line)
+        version = line.rsplit('=')[1].strip()
     if 'date' in line:
         if not str(release_date.year) in line or not str(release_date.month) in line or \
                                                            not str(release_date.day) in line:
@@ -90,6 +92,13 @@ for line in file(os.path.join(MG5DIR,'VERSION')):
             answer = raw_input('Do you want to continue anyway? (y/n)')
             if answer != 'y':
                 exit()
+
+Update_note = file(os.path.join(MG5DIR,'UpdateNotes.txt')).read()
+if version not in Update_note:
+    logging.warning("WARNING: version number %s is not found in \'UpdateNotes.txt\'" % version)
+    answer = raw_input('Do you want to continue anyway? (y/n)')
+    if answer != 'y':
+        exit()
 
 # 1. bzr branch the present directory to a new directory
 #    MadGraph5_vVERSION
@@ -160,10 +169,10 @@ import tests.test_manager as test_manager
 #mixes the path for the tests
 import madgraph
 reload(madgraph)
-import madgraph.iolibs
-reload(madgraph.iolibs)
-import madgraph.iolibs.misc
-reload(madgraph.iolibs.misc)
+import madgraph.various
+reload(madgraph.various)
+import madgraph.various.misc
+reload(madgraph.various.misc)
 
 
 test_results = test_manager.run(package=os.path.join('tests',
@@ -189,6 +198,24 @@ if a_test_results.errors or test_results.errors:
     logging.error("Removing %s and quitting..." % filename)
     os.remove(filename)
     exit()
+
+p_test_results = test_manager.run(['test_short_.*'],
+                                  re_opt=0,
+                                  package=os.path.join('tests',
+                                                       'parallel_tests')
+                                  )
+
+if not p_test_results.wasSuccessful():
+    logging.error("Failed %d parallel tests, please check!" % \
+                  (len(p_test_results.errors) + len(p_test_results.failures)))
+
+if p_test_results.errors or p_test_results.failures:
+    logging.error("Removing %s and quitting..." % filename)
+    os.remove(filename)
+    exit()
+
+
+
 
 try:
     os.remove("%s.asc" % filename)

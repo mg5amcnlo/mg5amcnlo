@@ -38,12 +38,11 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 # TestModelReader
 #===============================================================================
 class TestDiagramSymmetry(unittest.TestCase):
-    """Test class for the MatrixElementChecker and get_momenta"""
+    """Test class for the DiagramSymmetry class"""
 
 
     def setUp(self):
         self.base_model = import_ufo.import_model('sm')
-        self.evaluator = process_checks.MatrixElementEvaluator(self.base_model)
     
     def test_find_symmetry_epem_aaa(self):
         """Test the find_symmetry function"""
@@ -68,9 +67,7 @@ class TestDiagramSymmetry(unittest.TestCase):
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude)
 
-        symmetry, perms, ident_perms = \
-                                diagram_symmetry.find_symmetry(matrix_element,
-                                                               self.evaluator)
+        symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(matrix_element)
 
         self.assertEqual(symmetry, [6,-1,-1,-1,-1,-1])
 
@@ -93,7 +90,6 @@ class TestDiagramSymmetry(unittest.TestCase):
                                                                new_p)
             self.assertAlmostEqual(amp2[isym], amp2_org[-sym-1])
         
-
     def test_find_symmetry_qq_qqg_with_subprocess_group(self):
         """Test the find_symmetry function for subprocess groups"""
 
@@ -117,12 +113,20 @@ class TestDiagramSymmetry(unittest.TestCase):
                   group_subprocs.SubProcessGroup.group_amplitudes(amplitudes)[0]
 
         symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
-                                                subproc_group, self.evaluator)
+                                                subproc_group)
 
-        self.assertEqual(len([s for s in symmetry if s > 0]), 26)
+        self.assertEqual(len([s for s in symmetry if s > 0]), 23)
 
         self.assertEqual(symmetry,
-                         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -34, -35, -36, 1, 1, 1, -37, -38, -39, 1, 1, 1, -8, -9, -10, -11, -12, -13, -14, 1, 1, 1, 1, 1, 1])
+                         [1, 1, 1, 1, -2, -3, -4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                          1, 1, 1, 1, 1, 1, 1, 1, 1, -8, -9, -10, -11, -12, -13,
+                          -14, -15, -16, -17, -21, -22, -23])
+
+        return
+
+        # The test below doesn't apply with the new way of determining
+        # config symmetry for subprocess groups, since we don't demand
+        # that symmetric diagrams have identical particles.
 
         # Check that the momentum assignments work
         matrix_element = \
@@ -146,6 +150,57 @@ class TestDiagramSymmetry(unittest.TestCase):
                                               matrix_element, new_p)
             self.assertAlmostEqual(amp2[iamp], amp2_org[isymamp])
         
+    def test_find_symmetry_decay_chain_with_subprocess_group(self):
+        """Test the find_symmetry function for subprocess groups"""
+
+        procs = [[2,-1,24,21,21], [-3,4,24,21,21]]
+        decays = [[24,-11,12],[24,-13,14]]
+        amplitudes = diagram_generation.AmplitudeList()
+        decay_amps = diagram_generation.DecayChainAmplitudeList()
+
+        for proc, decay in zip(procs, decays):
+            # Define the multiprocess
+            my_leglist = base_objects.LegList([\
+                base_objects.Leg({'id': id, 'state': True}) for id in proc])
+
+            my_leglist[0].set('state', False)
+            my_leglist[1].set('state', False)
+
+            my_decaylegs = base_objects.LegList([\
+                base_objects.Leg({'id': id, 'state': True}) for id in decay])
+
+            my_decaylegs[0].set('state', False)
+            my_process = base_objects.Process({'legs':my_leglist,
+                                               'model':self.base_model})
+            my_decay_proc = base_objects.Process({'legs':my_decaylegs,
+                                                  'model':self.base_model,
+                                                  'is_decay_chain': True})
+            my_amplitude = diagram_generation.Amplitude(my_process)
+            my_decay = diagram_generation.DecayChainAmplitude(my_decay_proc)
+            amplitudes.append(my_amplitude)
+            decay_amps.append(my_decay)
+
+        amplitudes = diagram_generation.DecayChainAmplitudeList([\
+                diagram_generation.DecayChainAmplitude({\
+                        'amplitudes': amplitudes,
+                        'decay_chains': decay_amps})])
+
+        subproc_groups = \
+                  group_subprocs.DecayChainSubProcessGroup.group_amplitudes(\
+                         amplitudes).generate_helas_decay_chain_subproc_groups()
+        self.assertEqual(len(subproc_groups), 1)
+
+        subproc_group = subproc_groups[0]
+        self.assertEqual(len(subproc_group.get('matrix_elements')), 2)
+
+        symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
+                                                subproc_group)
+
+        self.assertEqual(len([s for s in symmetry if s > 0]), 5)
+
+        self.assertEqual(symmetry,
+                         [1, -1, 1, 1, 1, -4, -5, 1])
+
     def test_rotate_momenta(self):
         """Test that matrix element and amp2 identical for rotated momenta"""
 

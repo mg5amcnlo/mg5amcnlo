@@ -1,0 +1,20 @@
+import model mssm
+set automatic_html_opening False
+generate p p > go go
+output /tmp/MGPROCESS/
+launch -i
+set madanalysis_path None
+set exrootanalysis_path None
+generate_events
+pythia
+/tmp/MGPROCESS/Cards/pythia_card_default.dat
+./tests/input_files/run_card_matching.dat
+done
+quit
+history /tmp/MGPROCESS/history
+launch -i
+set madanalysis_path None
+set exrootanalysis_path None
+generate_events
+parton
+done

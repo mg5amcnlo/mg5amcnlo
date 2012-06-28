@@ -34,7 +34,6 @@ import aloha.create_aloha as create_aloha
 import madgraph.iolibs.export_python as export_python
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.import_ufo as import_ufo
-import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.core.base_objects as base_objects
@@ -44,8 +43,10 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 
 import madgraph.various.rambo as rambo
+import madgraph.various.misc as misc
 
-from madgraph import MG5DIR, MadGraph5Error, InvalidCmd
+
+from madgraph import MG5DIR, InvalidCmd
 
 import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
@@ -90,12 +91,11 @@ class MatrixElementEvaluator(object):
     #===============================================================================
     # Helper function evaluate_matrix_element
     #===============================================================================
-    def evaluate_matrix_element(self, matrix_element, p = None, full_model = None, 
-                                gauge_check = False, auth_skipping = None, output='m2'):
+    def evaluate_matrix_element(self, matrix_element, p=None, full_model=None, 
+                                gauge_check=False, auth_skipping=None, output='m2'):
         """Calculate the matrix element and evaluate it for a phase space point
            output is either m2, amp, jamp
         """
-
         if full_model:
             self.full_model = full_model
 
@@ -256,7 +256,7 @@ class MatrixElementEvaluator(object):
         masses = rambo.FortranList(nfinal)
         for i in range(nfinal):
             masses[i+1] = mass[nincoming + i]
-
+        
         if nincoming == 1:
 
             # Momenta for the incoming particle
@@ -422,10 +422,10 @@ def check_processes(processes, param_card = None, quick = []):
     elif isinstance(processes, base_objects.ProcessList):
         pass
     else:
-        raise MadGraph5Error("processes is of non-supported format")
+        raise InvalidCmd("processes is of non-supported format")
 
     if not processes:
-        raise MadGraph5Error("No processes given")
+        raise InvalidCmd("No processes given")
 
     model = processes[0].get('model')
 
@@ -669,9 +669,9 @@ def check_gauge(processes, param_card = None):
                                            auth_skipping = True, reuse = False)
 
         # Set all widths to zero for gauge check
-        for particle in full_model.get('particles'):
+        for particle in evaluator.full_model.get('particles'):
             if particle.get('width') != 'ZERO':
-                full_model.get('parameter_dict')[particle.get('width')] = 0.
+                evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
 
         return run_multiprocs_no_crossings(check_gauge_process,
                                            multiprocess,
@@ -682,7 +682,7 @@ def check_gauge(processes, param_card = None):
     elif isinstance(processes, base_objects.ProcessList):
         pass
     else:
-        raise MadGraph5Error("processes is of non-supported format")
+        raise InvalidCmd("processes is of non-supported format")
 
     assert processes, "No processes given"
 
@@ -885,7 +885,7 @@ def check_lorentz(processes, param_card = None):
     elif isinstance(processes, base_objects.ProcessList):
         pass
     else:
-        raise MadGraph5Error("processes is of non-supported format")
+        raise InvalidCmd("processes is of non-supported format")
 
     assert processes, "No processes given"
 

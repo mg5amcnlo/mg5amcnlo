@@ -14,8 +14,8 @@ void oxxxxx(double p[4],double fmass,int nhel,int nsf, complex<double> fo[6]){
     if (pp == 0.000){
       sqm[0] = pow(abs(fmass),0.5);
       sqm[1] = Sgn(sqm[0],fmass); 
-      ip = -((1+nh)/2);
-      im = (1-nh)/2;
+      ip = -((1-nh)/2) * nhel ;
+      im = (1+nh)/2 * nhel;
       fo[0] = im *sqm[im];
       fo[1] = ip*nsf*sqm[im];
       fo[2] = im*nsf*sqm[-ip];
@@ -27,8 +27,8 @@ void oxxxxx(double p[4],double fmass,int nhel,int nsf, complex<double> fo[6]){
       sf[1] = double(1+nsf-(1-nsf)*nh)*0.5;
       omega[0] = pow(p[0]+pp,0.5);
       omega[1] = fmass/omega[0];
-      ip = (1+nh)/2;
-      im = (1-nh)/2;
+      ip = (1+nh)/2 ;
+      im = (1-nh)/2 ;
       sfomeg[0] = sf[0]*omega[ip];
       sfomeg[1] = sf[1]*omega[im];
       pp3 = max(pp+p[3],0.00);

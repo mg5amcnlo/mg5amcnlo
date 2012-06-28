@@ -61,30 +61,6 @@ class ColorBasis(dict):
         repl_dict = {}
 
         for i, vertex in enumerate(diagram.get('vertices')):
-
-        # SPECIAL VERTEX JUST BEFORE ID = 0 ------------------------------------
-
-            if i == len(diagram.get('vertices')) - 2 and \
-                diagram.get('vertices')[i + 1]['id'] == 0:
-
-                # Tag the numbers in id=0 
-                num1 = diagram.get('vertices')[i + 1].get('legs')[0].get('number')
-                num2 = diagram.get('vertices')[i + 1].get('legs')[1].get('number')
-
-                # call the ad_vertex routine with a special replacement request
-                min_index, res_dict = self.add_vertex(vertex, diagram, model,
-                            repl_dict, res_dict, min_index,
-                            id0_rep=[num1, num2])
-
-                # Return an empty list if all entries are empty
-                if all([cs == color_algebra.ColorString() \
-                        for cs in res_dict.values()]):
-                    res_dict = {}
-                # Return since this must be the last vertex
-
-                return res_dict
-
-        # NORMAL VERTICES WITH ID != 0 -----------------------------------------
             min_index, res_dict = self.add_vertex(vertex, diagram, model,
                             repl_dict, res_dict, min_index)
 
@@ -253,6 +229,10 @@ class ColorBasis(dict):
                 col_fact = color_algebra.ColorFactor([col_str])
                 col_fact = col_fact.full_simplify()
 
+                # Here we need to force a specific order for the summed indices
+                # in case we have K6 or K6bar Clebsch Gordan coefficients
+                for colstr in col_fact: colstr.order_summation()
+
                 # Save the result for further use
                 canonical_col_fact = col_fact.create_copy()
                 canonical_col_fact.replace_indices(rep_dict)
@@ -273,6 +253,10 @@ class ColorBasis(dict):
                     cs.coeff = cs.coeff * col_str.coeff
                 # Must simplify once to put traces in a canonical ordering
                 col_fact = col_fact.simplify()
+
+                # Here we need to force a specific order for the summed indices
+                # in case we have K6 or K6bar Clebsch Gordan coefficients
+                for colstr in col_fact: colstr.order_summation()
 
             # loop over color strings in the resulting color factor
             for col_str in col_fact:

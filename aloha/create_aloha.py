@@ -57,6 +57,8 @@ class AbstractRoutine(object):
         self.infostr = infostr
         self.symmetries = []
         self.combined = []
+        self.tag = []
+
         
     def add_symmetry(self, outgoing):
         """ add an outgoing """
@@ -151,13 +153,15 @@ class AbstractRoutineBuilder(object):
         if self.routine_kernel is None:
             self.kernel_tag = set()
             self.routine_kernel = eval(self.lorentz_expr)
-           
+        
+        # We need to compute C Gamma^T C^-1 = C_ab G_cb (-1) C_cd 
+        #                  = C_ac G_bc (-1) C_bd = C_ac G_bc C_db
         self.routine_kernel = \
              C(new_id, old_id + 1) * self.routine_kernel * C(new_id + 1, old_id)
-        self.name += 'C'
 
-        if pair:
-            self.name += str(pair)
+#        self.name += 'C'
+#        if pair:
+#            self.name += str(pair)
         self.conjg.append(pair)
 
     
@@ -166,9 +170,12 @@ class AbstractRoutineBuilder(object):
         """ define a simple output for this AbstractRoutine """
     
         infostr = str(self.lorentz_expr)        
-        return AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
+        output = AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
                                                                         infostr)
-        
+
+        output.tag += ['C%s' % pair for pair in self.conjg]
+        return output
+
     def change_sign_for_outcoming_fermion(self):
         """change the sign of P for outcoming fermion in order to 
         correct the mismatch convention between HELAS and FR"""
@@ -183,8 +190,7 @@ class AbstractRoutineBuilder(object):
         momentum_pattern = re.compile(r'\bP\(([\+\-\d]+),(%s)\)' % '|'.join(flip_sign))
         lorentz_expr = momentum_pattern.sub(r'P(\1,\2, -1)', self.lorentz_expr)
         return lorentz_expr
-        
-        
+                
     def compute_aloha_high_kernel(self, mode, factorize=True):
         """compute the abstract routine associate to this mode """
         
@@ -192,6 +198,11 @@ class AbstractRoutineBuilder(object):
         aloha_lib.USE_TAG=set()
         #multiply by the wave functions
         nb_spinor = 0
+        outgoing = self.outgoing
+        if (outgoing + 1) // 2 in self.conjg:
+            #flip the outgoing tag if in conjugate
+            outgoing = outgoing + outgoing % 2 - (outgoing +1) % 2
+        
         if not self.routine_kernel:
             AbstractRoutineBuilder.counter += 1
             logger.info('aloha creates %s routines' % self.name)
@@ -207,21 +218,25 @@ class AbstractRoutineBuilder(object):
         else:
             lorentz = self.routine_kernel
             aloha_lib.USE_TAG = set(self.kernel_tag) 
-        for (i, spin ) in enumerate(self.spins):
+            
+            
+        for (i, spin ) in enumerate(self.spins):   
             id = i + 1
+                     
             #Check if this is the outgoing particle
-            if id == self.outgoing:
+            if id == outgoing:
                 if spin == 1: 
                     lorentz *= complex(0,1)
                 elif spin == 2:
-                    # shift the tag if we multiply by C matrices
-                    if (id+1) // 2 in self.conjg: 
-                        id += _conjugate_gap
-                    nb_spinor += 1
-                    if nb_spinor %2:
-                        lorentz *= SpinorPropagator(id, 'I2', self.outgoing)
+                    # shift and flip the tag if we multiply by C matrices
+                    if (id + 1) // 2 in self.conjg:
+                        id += _conjugate_gap + id % 2 - (id +1) % 2
+                    if id % 2:
+                        #propagator outcoming
+                        lorentz *= SpinorPropagator(id, 'I2', outgoing)
                     else:
-                        lorentz *= SpinorPropagator('I2', id, self.outgoing) 
+                        #propagator incoming
+                        lorentz *= SpinorPropagator('I2', id, outgoing)
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)
                 elif spin == 5 :
@@ -242,10 +257,9 @@ class AbstractRoutineBuilder(object):
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices
                     if (id+1) // 2 in self.conjg:
-                        spin_id = id + _conjugate_gap
+                        spin_id = id + _conjugate_gap + id % 2 - (id +1) % 2
                     else:
                         spin_id = id
-                    nb_spinor += 1
                     lorentz *= Spinor(spin_id, id)
                 elif spin == 3:        
                     lorentz *= Vector(id, id)
@@ -256,8 +270,8 @@ class AbstractRoutineBuilder(object):
                                 'The spin value %s is not supported yet' % spin)                    
 
         # If no particle OffShell
-        if self.outgoing:
-            lorentz /= DenominatorPropagator(self.outgoing)
+        if outgoing:
+            lorentz /= DenominatorPropagator(outgoing)
             #lorentz.tag.add('OM%s' % self.outgoing )  
             #lorentz.tag.add('P%s' % self.outgoing)  
         else:
@@ -267,7 +281,7 @@ class AbstractRoutineBuilder(object):
         lorentz = lorentz.simplify()
 
         lorentz = lorentz.expand()
-        if self.outgoing and self.spins[self.outgoing-1] == 5:
+        if outgoing and self.spins[outgoing-1] == 5:
             if not self.aloha_lib:
                 AbstractRoutineBuilder.load_library()
             if self.spin2_massless:
@@ -438,17 +452,20 @@ class AbstractALOHAModel(dict):
     def compute_all(self, save=True, wanted_lorentz = []):
         """ define all the AbstractRoutine linked to a model """
 
+
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
         self.look_for_symmetries()
         conjugate_list = self.look_for_conjugate()
         self.look_for_multiple_lorentz_interactions()
+        
         if not wanted_lorentz:
             wanted_lorentz = [l.name for l in self.model.all_lorentz]
         for lorentz in self.model.all_lorentz:
             if not lorentz.name in wanted_lorentz:
                 # Only include the routines we ask for
                 continue
+            
             if -1 in lorentz.spins:
                 # No Ghost in ALOHA
                 continue 
@@ -460,14 +477,17 @@ class AbstractALOHAModel(dict):
             builder = AbstractRoutineBuilder(lorentz)
             # add information for spin2mass
             if 5 in lorentz.spins and self.massless_spin2 is not None:
-                builder.spin2_massless = self.massless_spin2 
+                builder.spin2_massless = self.massless_spin2
             self.compute_aloha(builder)
-            
+
             if lorentz.name in self.multiple_lor:
                 for m in self.multiple_lor[lorentz.name]:
                     for outgoing in range(len(lorentz.spins)+1):
-                        self[(lorentz.name, outgoing)].add_combine(m)
-                        
+                        try:
+                            self[(lorentz.name, outgoing)].add_combine(m)
+                        except:
+                            pass # this routine is a symmetric one, so it 
+                                 # already has the combination.
                     
             if lorentz.name in conjugate_list:
                 conjg_builder_list= builder.define_all_conjugate_builder(\
@@ -479,8 +499,11 @@ class AbstractALOHAModel(dict):
                     if lorentz.name in self.multiple_lor:
                         for m in self.multiple_lor[lorentz.name]:
                             for outgoing in range(len(lorentz.spins)+1):
-                                self[(conjg_builder.name, outgoing)].add_combine(m)
-                                                
+                                realname = conjg_builder.name + ''.join(['C%s' % pair for pair in conjg_builder.conjg])
+                                try:
+                                    self[(realname, outgoing)].add_combine(m)
+                                except Exception,error:
+                                    self[(realname, self.symmetries[lorentz.name][outgoing])].add_combine(m)          
                     
                     
         if save:
@@ -489,9 +512,9 @@ class AbstractALOHAModel(dict):
 
     def compute_subset(self, data):
         """ create the requested ALOHA routine. 
-        data should be a list of tuple (lorentz, conjugate, outgoing)
-        conjugate should be a tuple with the pair number to conjugate.
-        outgoing a tuple of the requested routines."""
+        data should be a list of tuple (lorentz, tag, outgoing)
+        tag should be the list of special tag (like conjugation on pair)
+        to apply on the object """
         
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
@@ -500,15 +523,15 @@ class AbstractALOHAModel(dict):
         # reorganize the data (in order to use optimization for a given lorentz
         #structure
         request = {}
-        for list_l_name, conjugate, outgoing in data:
+        for list_l_name, tag, outgoing in data:
             for l_name in list_l_name:
                 try:
-                    request[l_name][conjugate].append(outgoing)
+                    request[l_name][tag].append(outgoing)
                 except:
                     try:
-                        request[l_name][conjugate] = [outgoing]
+                        request[l_name][tag] = [outgoing]
                     except:
-                        request[l_name] = {conjugate: [outgoing]}
+                        request[l_name] = {tag: [outgoing]}
                         
         # Loop on the structure to build exactly what is request
         for l_name in request:
@@ -554,7 +577,7 @@ class AbstractALOHAModel(dict):
             symmetry = name
         if not routines:
             routines = range(len(builder.spins) + 1)
-  
+
         # Create the routines
         for outgoing in routines:
             symmetric = self.has_symmetries(symmetry, outgoing, valid_output=routines)
@@ -563,7 +586,9 @@ class AbstractALOHAModel(dict):
             else:
                 wavefunction = builder.compute_routine(outgoing)
                 #Store the information
-                self.set(name, outgoing, wavefunction)
+                realname = name + ''.join(wavefunction.tag)
+                self.set(realname, outgoing, wavefunction)
+            
 
     def compute_aloha_without_kernel(self, builder, symmetry=None, routines=None):
         """define all the AbstractRoutine linked to a given lorentz structure
@@ -628,7 +653,7 @@ class AbstractALOHAModel(dict):
             for i, part1 in enumerate(vertex.particles):
                 for j in range(i-1,-1,-1):
                     part2 = vertex.particles[j]
-                    if part1.pdg_code == part2.pdg_code:
+                    if part1.pdg_code == part2.pdg_code and part1.color == 1:
                         if part1.spin == 2 and (i % 2 != j % 2 ):
                             continue 
                         for lorentz in vertex.lorentz:

@@ -51,9 +51,9 @@ C     LOCAL
 C
       LOGICAL FIRSTTIME,FIRSTTIME2,pass_bw,notgood,good,foundheavy
       LOGICAL DEBUG
-      integer i,j,njets,hardj1,hardj2
-      REAL*8 XVAR,ptmax1,ptmax2,htj,tmp
-      real*8 ptemp(0:3)
+      integer i,j,njets,nheavyjets,nleptons,hardj1,hardj2
+      REAL*8 XVAR,ptmax1,ptmax2,htj,tmp,inclht
+      real*8 ptemp(0:3), ptemp2(0:3)
       character*20 formstr
 C
 C     PARAMETERS
@@ -73,6 +73,8 @@ C
       include 'cuts.inc'
 
       double precision ptjet(nexternal)
+      double precision ptheavyjet(nexternal)
+      double precision ptlepton(nexternal)
       double precision temp
 
       double precision etmin(nincoming+1:nexternal),etamax(nincoming+1:nexternal)
@@ -84,12 +86,16 @@ C
       double precision r2max(nincoming+1:nexternal,nincoming+1:nexternal)
       double precision s_max(nexternal,nexternal)
       double precision ptll_min(nexternal,nexternal),ptll_max(nexternal,nexternal)
+      double precision inclHtmin,inclHtmax
       common/to_cuts/  etmin, emin, etamax, r2min, s_min,
-     $     etmax, emax, etamin, r2max, s_max,ptll_min,ptll_max
+     $     etmax, emax, etamin, r2max, s_max, ptll_min, ptll_max, inclHtmin,inclHtmax
 
       double precision ptjmin4(4),ptjmax4(4),htjmin4(2:4),htjmax4(2:4)
       logical jetor
       common/to_jet_cuts/ ptjmin4,ptjmax4,htjmin4,htjmax4,jetor
+
+      double precision ptlmin4(4),ptlmax4(4)
+      common/to_lepton_cuts/ ptlmin4,ptlmax4
 
 c
 c     Special cuts
@@ -205,7 +211,7 @@ c         endif
 
          if(fixed_ren_scale) then
             G = SQRT(4d0*PI*ALPHAS(scale))
-            call setpara('param_card.dat',.false.)
+            call update_as_param()
          endif
 
 c     Put momenta in the common block to zero to start
@@ -260,12 +266,13 @@ c
          endif
       enddo
 c
-c    missing ET min & max cut 
-c    nb: missing et simply defined as the sum over the neutrino's 4 momenta
+c    missing ET min & max cut + Invariant mass of leptons and neutrino 
+c    nb: missing Et defined as the vector sum over the neutrino's pt
 c
 c-- reset ptemp(0:3)
       do j=0,3
-         ptemp(j)=0
+         ptemp(j)=0 ! for the neutrino
+         ptemp2(j)=0 ! for the leptons
       enddo
 c-  sum over the momenta
       do i=nincoming+1,nexternal
@@ -274,16 +281,31 @@ c-  sum over the momenta
             do j=0,3
                ptemp(j)=ptemp(j)+p(j,i)
             enddo
+         elseif(is_a_l(i)) then            
+         if(debug) write (*,*) i,' -> lepton '
+            do j=0,3
+               ptemp2(j)=ptemp2(j)+p(j,i)
+            enddo
          endif
+
       enddo
 c-  check the et
       if(debug.and.ptemp(0).eq.0d0) write (*,*) 'No et miss in event'
       if(debug.and.ptemp(0).gt.0d0) write (*,*) 'Et miss =',pt(ptemp(0)),'   ',misset,':',missetmax
+      if(debug.and.ptemp2(0).eq.0d0) write (*,*) 'No leptons in event'
+      if(debug.and.ptemp(0).gt.0d0) write (*,*) 'Energy of leptons =',pt(ptemp2(0))
       if(ptemp(0).gt.0d0) then
          notgood=(pt(ptemp(0)) .lt. misset).or.
      &        (pt(ptemp(0)) .gt. missetmax)
          if (notgood) then
             if(debug) write (*,*) ' missing et cut -> fails'
+            passcuts=.false.
+            return
+         endif
+      endif
+      if (mmnl.gt.0d0.or.mmnlmax.lt.1d5)then
+         if(dsqrt(SumDot(ptemp,ptemp2,1d0)).lt.mmnl.or.dsqrt(SumDot(ptemp, ptemp2,1d0)).gt.mmnlmax) then
+            if(debug) write (*,*) 'lepton invariant mass -> fails'
             passcuts=.false.
             return
          endif
@@ -386,11 +408,20 @@ c
             if(debug) write (*,*) dsqrt(s_min(j,i)),dsqrt(s_max(j,i))
             if(s_min(j,i).gt.0.or.s_max(j,i).lt.1d5) then
                tmp=SumDot(p(0,i),p(0,j),+1d0)
-               notgood=(tmp .lt. s_min(j,i).or.tmp .gt. s_max(j,i)) 
-               if (notgood) then
-                  if(debug) write (*,*) i,j,' -> fails'
-                  passcuts=.false.
-                  return
+               if(s_min(j,i).le.s_max(j,i))then
+                  notgood=(tmp .lt. s_min(j,i).or.tmp .gt. s_max(j,i)) 
+                  if (notgood) then
+                     if(debug) write (*,*) i,j,' -> fails'
+                     passcuts=.false.
+                     return
+                  endif
+               else
+                  notgood=(tmp .lt. s_min(j,i).and.tmp .gt. s_max(j,i)) 
+                  if (notgood) then
+                     if(debug) write (*,*) i,j,' -> fails'
+                     passcuts=.false.
+                     return
+                  endif
                endif
             endif
          enddo
@@ -400,11 +431,10 @@ c
 c     B.W. phase space cuts
 c     
       pass_bw=cut_bw(p)
-      if (lbw(0) .eq. 1) then
-         if ( pass_bw ) then
-            passcuts=.false.
-            return
-         endif
+c     JA 4/8/11 always check pass_bw
+      if ( pass_bw ) then
+         passcuts=.false.
+         return
       endif
 C     $E$DESACTIVATE_BW_CUT$E$ This is a Tag for MadWeight
 
@@ -412,6 +442,7 @@ C
 C     maximal and minimal pt of the jets sorted by pt
 c     
       njets=0
+      nheavyjets=0
 
 c- fill ptjet with the pt's of the jets.
       do i=nincoming+1,nexternal
@@ -419,6 +450,11 @@ c- fill ptjet with the pt's of the jets.
             njets=njets+1
             ptjet(njets)=pt(p(0,i))
          endif
+         if(is_a_b(i)) then
+            nheavyjets=nheavyjets+1
+            ptheavyjet(nheavyjets)=pt(p(0,i))
+         endif
+
       enddo
       if(debug) write (*,*) 'not yet ordered ',njets,'   ',ptjet
 
@@ -446,6 +482,8 @@ c - sort jet pts
 c
 c     Use "and" or "or" prescriptions 
 c     
+      inclht=0
+
       if(njets.gt.0) then
 
        notgood=.not.jetor
@@ -477,8 +515,8 @@ c---  all cuts must fail to reject the event
 c---------------------------
 c      Ht cuts
 C---------------------------
-      
       htj=ptjet(1)
+
       do i=2,njets
          htj=htj+ptjet(i)
          if(debug) write (*,*) i, 'htj ',htj
@@ -490,15 +528,87 @@ C---------------------------
          endif
       enddo
 
-
       if(htj.lt.htjmin.or.htj.gt.htjmax)then
          if(debug) write (*,*) i, ' htj -> fails'
          passcuts=.false.
          return
       endif
 
+      inclht=htj
+
       endif !if there are jets 
-      
+
+      if(nheavyjets.gt.0) then
+         do i=1,nheavyjets
+            inclht=inclht+ptheavyjet(i)
+         enddo
+      endif !if there are heavyjets
+
+      if(inclht.lt.inclHtmin.or.inclht.gt.inclHtmax)then
+         if(debug) write (*,*) ' inclhtmin=',inclHtmin,' -> fails'
+         passcuts=.false.
+         return
+      endif
+
+C     
+C     maximal and minimal pt of the leptons sorted by pt
+c     
+      nleptons=0
+
+      if(ptl1min.gt.0.or.ptl2min.gt.0.or.ptl3min.gt.0.or.ptl4min.gt.0.or.
+     $     ptl1max.lt.1d5.or.ptl2max.lt.1d5.or.
+     $     ptl3max.lt.1d5.or.ptl4max.lt.1d5) then
+
+c     - fill ptlepton with the pt's of the leptons.
+         do i=nincoming+1,nexternal
+            if(is_a_l(i)) then
+               nleptons=nleptons+1
+               ptlepton(nleptons)=pt(p(0,i))
+            endif
+         enddo
+         if(debug) write (*,*) 'not yet ordered ',njets,'   ',ptjet
+
+c     - check existance of leptons if lepton cuts are on
+         if(nleptons.lt.1.and.ptl1min.gt.0.or.
+     $        nleptons.lt.2.and.ptl2min.gt.0.or.
+     $        nleptons.lt.3.and.ptl3min.gt.0.or.
+     $        nleptons.lt.4.and.ptl4min.gt.0)then
+            if(debug) write (*,*) i, ' too few leptons -> fails'
+            passcuts=.false.
+            return
+         endif
+
+c     - sort lepton pts
+         do i=1,nleptons-1
+            do j=i+1,nleptons
+               if(ptlepton(j).gt.ptlepton(i)) then
+                  temp=ptlepton(i)
+                  ptlepton(i)=ptlepton(j)
+                  ptlepton(j)=temp
+               endif
+            enddo
+         enddo
+         if(debug) write (*,*) 'ordered ',nleptons,'   ',ptlepton
+
+         if(nleptons.gt.0) then
+
+            notgood = .false.
+            do i=1,nleptons 
+               if(debug) write (*,*) i,ptlepton(i), '   ',ptlmin4(min(i,4)),':',ptlmax4(min(i,4))
+c---  if one of the leptons does not pass, the event is rejected
+               notgood=notgood.or.(ptlepton(i).gt.ptlmax4(min(i,4))).or.
+     $              (ptlepton(i).lt.ptlmin4(min(i,4)))
+               if(debug) write (*,*) i,' notgood total:', notgood   
+            enddo
+
+
+            if (notgood) then
+               if(debug) write (*,*) i, ' multiple pt -> fails'
+               passcuts=.false.
+               return
+            endif
+         endif
+      endif
 C>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>     
 C     SPECIAL CUTS
 C<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -649,7 +759,7 @@ c     Set couplings in model files
                enddo
             enddo
          endif
-         call setpara('param_card.dat',.false.)
+         call update_as_param()
       endif
 
       IF (FIRSTTIME2) THEN

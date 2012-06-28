@@ -71,7 +71,6 @@ def RAMBO(N,ET,XM):
     *    P  = PARTICLE MOMENTA ( DIM=(4,NEXTERNAL-nincoming) )            *
     *    WT = WEIGHT OF THE EVENT                                         *
     ***********************************************************************"""
-
     # RUN PARAMETER
     acc = 1e-14
     itmax = 6
@@ -229,6 +228,11 @@ def random_nb(value):
         output= random.uniform(0,1)
     return output
           
+
+
+            
+
+
 
 
 

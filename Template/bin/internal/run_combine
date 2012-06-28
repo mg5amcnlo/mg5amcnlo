@@ -1,0 +1,4 @@
+#!/bin/bash
+
+../bin/internal/combine_events 
+rm -f scratch

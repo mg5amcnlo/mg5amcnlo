@@ -1,5 +1,556 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+addon: FR team: add a file decays.py in the UFO format, this files contains the analytical expression for one to two decays
+       OM: implement a function for computing the 1 to 2 width on the fly. (requires that MG5 install on the computer not only the output directory)
+
+1.4.7 (25/06/12)  JA: Change the random seed treatment to ensure that the original 
+                      seed is stored in the banner (this was broken in v. 1.4.0).
+                      If a non-zero seed is given in the run_card, this seed
+                      is used as starting value for the SubProcesses/randinit file,
+                      while the seed in the run_card is set to 0.
+                      This way, the seed for a multi_run is automatically
+                      updated in the same way as for individual runs.
+                  TS + JA: Fix problem with duplicate random seeds above 64000.
+                      Now, random seeds up to 30081*30081 can safely be used.
+                  JA: Turn off automatic checking for minimal coupling orders
+                      in decay processes A > B C ...
+                  JA: Ensure that automatic coupling order determination works
+                      also for effective theories with multiple orders in an
+                      interaction (thanks Claude and Gizem Ozturk).
+                  JA: Optimize phase space integration and event generation
+                      for decay processes with very squeezed mass spectrum.
+                  JA: Ensure that identical matrix elements in different process 
+                      definitions are combined also when using the decay chain 
+                      formalism (thanks to Zhen Liu for pointing this out).
+                  BF+JA: Updated the NMSSM model to the latest FR version.
+                  OM: Change EW_dim6 to remove all interactions which don't 
+                      impact three boson scattering.
+                  JA: Fixed problem in matrix element combination which allowed
+                      non-identical matrix elements to be combined in certain
+                      complicated processes (such as p p > l vl l vl l vl),
+                      resulting in lines with Z > e+ mu- in the event file
+                      (bug #1015032, thanks Johannes E for reporting).
+                  JA: Fixed minor typo in myamp.f.
+                  OM: fixed minor behavior restriction of multi_run (Thanks to
+                      Joachim Kopp).
+                  OM: Improved condor cluster support when the cluster is 
+                      unresponsive (should avoid some crashes on the web).
+                  JA: Fixed support for color sextets in addmothers.f
+                      (thanks Nicolas Deutschmann for reporting).          
+                  JA: Make sure that also the SubProcesses directories are 
+                      cleaned when running bin/compile in a gridpack.
+                  JA: Removed the confusing makefile in Template and replace it
+                      with scripts to create madevent.tar.gz and gridpack.tar.gz.
+                  
+1.4.6 (16/05/12)  JA: Added cuts on lepton pt for each of the 4 hardest leptons
+                  OM: allow bin/madevent script to be run with a single line command
+                      example ./bin/madevent multi_run 10 
+		  OM: Adding the 4 higgs interactions in the standard model UFO model
+                  JA: Added new restriction card for the sm model with massive
+                      muon and electron, and non-zero tau decay width
+                  JA: Ensure assignment of colors to intermediate propagators
+                      works also in fermion flow- and color flow-violating 
+                      RPV processes (thanks Brock Tweedie for finding this).
+                  JA: Fix crash for certain fermion flow violating decay chains
+                      (introduced in v. 1.3.27) (again thanks to Brock Tweedie).
+                  JA: Fix crash for decay chains with multiple decays involving 
+                      the same particles (thanks Steve Blanchet for reporting)
+                  JA+OM: Fix crash for Pythia8 output with multiparticle vertices
+                      (thanks to Moritz Huck for reporting this.)
+                  OM: Fixing ALOHA output for C++/python.
+                  OM: Fix a crash occuring when trying to create an output on 
+                      an existing directory (thanks Celine)
+
+1.4.5 (11/04/12)  OM: Change the seed automatically in multi_run. (Even if the seed
+                      was set to a non automatic value in the card.)
+                  OM: correct a minor bug #975647 (SLAH convention problem) 
+                      Thanks to Sho Iwamoto
+                  OM: Improve cluster support (more secure and complete version)
+                  JA: Increased the number of events tested for non-zero helicity
+                      configurations (needed for goldstino processes).
+                  OM: Add a command to remove the file RunWeb which were not always
+                      deleted correctly
+                  OM+JA: Correct the display of number of events and error for Pythia 
+                     in the html files.
+                  OM: Changed the way the stdout/stderr are treated on the cluster
+                      since some cluster cann't support to have the same output file
+                      for both. (thanks abhishek)
+
+1.4.4 (29/03/12)  OM: Added a command: "output aloha" which allows to creates a 
+                      subset (or all) of the aloha routines linked to the
+                      current model
+                  OM: allow to choose the duration of the timer for the questions.
+                      (via ./input/mg5_configuration.txt)
+                  OM: Allow UFO model where G is not defined.
+                  OM: allow to use ~,~user, ${var} in the path. Improve support
+                      for path containing spaces.
+                  JA: Fixed LHAPDF functionality which was broken in v. 1.4.0
+                  JA: Allow non-equal mixing angles in mssm restrict cards
+                      (as needed for cards from some spectrum generators)
+                  JA: Fixed script addmasses.py for complicated events such as
+                      p p > t t~ + jets with decays of t and t~.
+                  JA: Added GE cluster to the list in cluster.py.
+                  JA: Allow up to 1M events in a single run. Note that the 
+                      unweighting (combine events) step gets quite slow with
+                      so many events. Also note that if Pythia is run, still
+                      maximum 50k events is recommended in a single run. 
+                  OM: Fix problem linked to filesystem which makes new files
+                      non executables by default. (bug #958616)
+                  JA: Fixed buffer overflow in gen_ximprove when number of
+                      configs > number of diagrams due to competing resonances
+                      (introduced in v. 1.4.3).
+
+1.4.3 (08/03/12)  JA: Reintroduced the possibility to completely forbid
+                      s-channel diagrams, using the $$ notation. Note that
+                      this should be used with great care, since the result
+                      is in general not gauge-invariant. It is in general
+                      better to use the $ notation, forbidding only onshell
+                      s-channel particles (the inverse of decay chains).
+                  JA: Automatically ensure that ptj and mmjj are below xqcut
+                      when xqcut > 0, since ptj or mmjj > xqcut ruins matching.
+                  OM: Add LSF to the list of supported cluster (thanks to Alexis).
+                  OM: change the param_card reader for the restrict file.
+                      This allow to restrict model with 3 lha id (or more)
+                      (thanks to Eduardo Ponton).
+                  OM: forbids to run 'generate events' with python 2.4.
+                  OM: Include the configuration file in the .tar.gz created on 
+                      the web (thanks to Simon) .
+                  OM: Fix a Mac specific problem for edition of Delphes card.
+                      (thanks to Sho Iwamoto).
+                  OM: ALOHA modifications:
+                       - Change sign convention for Epsilon (matching FR choices)
+                       - For Fermion vertex forces that _1 always returns the  
+                         incoming fermion and _2 returns the outcoming fermion. 
+                         (This modifies conjugate routine output)
+                       - Change the order of argument for conjugate routine
+                         to expect IO order of fermion in all cases.
+                       Note that the two last modifications matches MG5 conventions
+                       and that those modifications correct bugs for interactions
+                       a) subject to conjugate routine (i.e. if the model has 
+                          majorana)                       
+                       b) containing fermion momentum dependencies in the Lorentz
+                          structure  
+                       All model included by default in MG5 (in particular sm/mssm)
+                       were not affected by those mismatch of conventions.
+                       (Thanks to Benjamin fuks) 
+                  OM: make acceptance test more silent.  
+                  OM: return the correct error message when a compilation occur. 
+                  OM: some code re-factoring.
+
+1.4.2 (16/02/12) JA: Ensure that matching works properly with > 9 final state
+                      particles (by increasing a buffer size in event output)
+                 OM: add a command "import banner" in order to run a full run
+                      from a given banner.
+                 OM: Fix the Bug #921487, fixing a problem with home made model
+                      In the definition of Particle/Anti-Particle. (Thanks Ben)
+                 OM: Fix a formatting problem in me5_configuration.txt 
+                      (Bug #930101) Thanks to Arian
+                 OM: allow to run ./bin/mg5 BANNER_PATH and
+                      ./bin/mg5 PROC_CARD_V4_PATH
+                 OM: Various small fixes concerning the stability of the html 
+                      output.
+                 OM: Changes the server to download td since cp3wks05 has an 
+                      harddisk failures.
+
+1.4.1 (06/02/12) OM: Fix the fermion flow check which was wrongly failing on 
+                      some model  (Thanks to Benjamin)
+                 OM: Improve run organization efficiency (which speeds up the 
+                      code on cluster) (Thanks to Johan)
+                 OM: More secure html output (Thanks to Simon)
+
+1.4.0 (04/02/12) OM: New user interface for the madevent run. Type:
+                      1) (from madevent output) ./bin/madevent
+                      2) (from MG5 command line) launch [MADEVENT_PATH] -i
+                      This interface replaces various script like refine, 
+                      survey, combine, run_..., rm_run, ...
+                      The script generate_events still exists but now calls
+                       ./bin/madevent. 
+                 OM: For MSSM model, convert param_card to SLAH1. This card is
+                      converted to SLAH2 during the MadEvent run since the UFO 
+                      model uses SLAH2. This allows to use Pythia 6,
+                      as well as having a coherent definition for the flavor.
+                 JA+OM: For decay width computations, the launch command in 
+                      addition to compute the width, creates a new param_card 
+                      with the width set to the associated values, and with the 
+                      Branching ratio associated (usefull for pythia). 
+                 NOTE: This param_card makes sense for future run ONLY if all 
+                      relevant decay are generated.
+                 EXAMPLE: (after launch bin/mg5):
+                       import model sm-full
+                       generate t > b w+
+                       define all = p b b~ l+ l- ta+ ta- vl vl~
+                       add process w+ > all all
+                       add process z > all all
+                       define v = z w+ w-
+                       add process h > all all
+                       add process h > v v, v > all all
+                       output
+                       launch
+                 OM: change output pythia8 syntax: If a path is specified this 
+                      is considered as the output directory.
+                 OM: Change the path of the madevent output files. This allows 
+                      to run pythia/pgs/delphes mulitple times for the same set 
+                      of events (with different pythia/... parameters).
+                 OM: Madevent output is now insensitive to the relative path
+                      to pythia-pgs, delphes, ... In consequence you don't need
+                      anymore to have your directory at the same level as 
+                      Template directory. 
+                 OM: MadEvent checks that the param_card is coherent with the 
+                      restriction used during the model generation. 
+                 OM: Model restrictions will now also force opposite number to 
+                      match (helpfull for constraining to rotation matrix).  
+                 OM: Change the import command. It's now allowed to omit the 
+                      type of import. The type is guessed automaticaly. 
+                      This is NOT allowed on the web.
+                 OM: Add a check that the fermion flow is coherent with the 
+                      Lorentz structure associates to the vertex.
+                 OM: Add a check that the color representation is coherent. 
+                      This allow to detect/fix various problem linked
+                      to some new models created by FR and SARAH.
+                 OM: Change the default fortran compiler to gfortran.
+                 OM: Add the possibility to force which fortran compiler will
+                      be used, either via the configuration file or via the set 
+                      command.
+                 OM: Add the possibility to bypass the automatic opening of 
+                      the web browser (via the configuration file: 
+                      ./input/mg5_configuration.txt )
+                 OM: add 'save options' command to save the current configuration 
+                      in the configuration file. 
+                 OM: Change the scheme of questions when running madevent and 
+                      allow to specify in the command interface if you
+                      want to run pythia/pgs/...
+                      Allow to put the answers to the questions in the 
+                      proc_card.dat.
+                 OM: Add options for the display command:
+                      a) display options: return the current option value. 
+                        i.e. those set via the set command and/or via the 
+                        configuration file
+                      b) display variable NAME: return the current string 
+                        representation of NAME and/or self.NAME .
+                      c) display coupling_order: return the coupling orders with
+                        their associated weight (for automatic order restriction)
+                      d) display couplings now returns the list of all couplings
+                        with the associated expression
+                      e) display interactions [PART1] [PART2] [PART3] ...
+                         display all interactions containing the particles set
+                         in arguments 
+                 OM: New Python script for the creation of the various html pages.
+                      This Requires less disk access for the generation of the files.
+                 OM: Modify error treatment, especially for Invalid commands
+                      and Configuration problems.
+                 JA: Ensure that we get zero cross section if we have
+                      non-parton initial states with proton/antiproton beams
+                 OM: Improve cluster support. MadEvent now supports PBS/Condor/SGE
+                      Thanks to Arian Abrahantes for the SGE implementation.
+                 OM: Improve auto-completion (better output/dealing with multi line/...)
+                 OM: Improve the parallel suite and change the release script to run
+                      some of the parallel tests. This ensures even higher stability 
+                      of the  code for the future releases.
+                 JA: Changed the way gridpacks work: Set granularity to 1
+                      (so randomly select channels only if they should generate 
+                      less than 1 event), but allowing channels to run down to a single
+                      iteration. This removes all old problems with increased
+                      variance for small channels in the gridpacks, while giving 
+                      even faster event generation.
+
+                 Thanks to Johan Alwall, Sho Iwamoto for all the important 
+                 testing/bug reports.
+
+
+1.3.33 (01/01/12) JA: Revisited colors for propagators in addmothers.f
+                      to ensure that propagators in color flow
+                      violating processes get the correct color
+                      from initial state particles (thanks to
+                      Michele Gabusi for forcing me to do this).
+
+1.3.32 (21/12/11) JA: Fixed a bug in the PDF reweighting routine,
+                      which caused skewed eta distributions for
+                      matched samples with pdfwgt=T. Thanks to Giulio
+                      Lenzi for finding this.
+ 
+1.3.31 (29/11/11) OM: Fix a bug an overflow in RAMBO (affects standalone 
+                     output only)
+                  PdA (via OM): Change RS model (add a width to the spin2)
+                  OM: Fix a bug in the cuts associate to  allowed mass of all 
+                      neutrinos+leptons (thanks to Brock Tweedie for finding it)
+                  OM: Remove some limitation in the name for the particles
+
+
+1.3.30 (18/11/11) OM: Fix a bug for the instalation of pythia-pgs on a 64 bit
+                      UNIX machine.
+                  OM: If ROOTSYS is define but root in the PATH, add it 
+                      automatically in create_matching_plots.sh
+                     This is require for the UIUC cluster.
+
+1.3.29 (16/11/11) OM: Fixed particle identities in the Feynman diagram drawing
+                  JA: Fixed bug in pdf reweighting when external LHAPDF is used.
+                  OM+JA: Simplify the compilation of pythia-pgs package.
+
+
+1.3.28 (14/11/11) OM+JA: Fix special case when Lorentz structure combining
+                      two different Majorana particles depends on the
+                      incoming/outgoing status of the Majorana particles
+                      (needed for MSSM with Goldstino).
+                  JA: Fixed problem with colors in addmothers.f for complicated
+                      multiparticle vertices and simplified color treatment 
+                      (thanks to Gauthier Durieux for pointing this out).
+                  JA: Further improved gridpack parameters
+                  OM: Update the parallel test (now testing against MG5 1.3.3)
+                  OM: Include some parallel test in the release script.
+
+
+1.3.27 (05/11/11) JA: Fix bug in mirrored amplitudes (sometimes
+                      amplitudes that should not be flagged as
+                      mirrored were flagged as mirrored). Thanks
+                      Marco Zaro for reporting this!
+                  JA: Fix another problem getting enough events in
+                      gridpack mode (it was not completely fixed in
+                      v. 1.3.24). Thanks Alexis!
+                  JA: Added "!" comments for all parameters in the default
+                      run_card, since apparently this is still needed
+                      for g77 to correctly read the parameters.
+ 
+1.3.26 (31/10/11) JA: Fix color setting in MadEvent event file for
+                      multiparticle vertices, which was not taken into
+                      account in the upgrade in v. 1.3.18
+                  OM: Fixed mmnl cut (inv. mass of all leptons and neutrinos)
+                      which was never active.
+                  OM: Fix td install in Linux were a chmod was missing
+
+1.3.25 (27/10/11) JA: Ensure that the correct intermediate resonance
+                      is always written in the event file, even when we
+                      have resonances with identical properties.
+                  OM: Fix the bug forcing to quit the web browser in order to
+                      have MG5 continuing to run.
+                  OM: Change the tutorial in order to allow open index.html
+                      after the output command. 
+
+1.3.24 (22/10/11) JA: Fix problem with getting enough events in gridpack
+                      mode (this was broken in v. 1.3.11 when we moved
+                      from events to luminocity in refine). Thanks to
+                      Alexis Kalogeropoulos.
+
+1.3.23 (19/10/11) JA: Allow user to set scales using setscales.f again 
+                      (this was broken in v. 1.3.18). Thanks to Arindam Das.
+                  JA: Ensure that the error message is displayed if the
+                     "make" command is not installed on the system.
+ 
+1.3.22 (12/10/11) JA: Fixed another bug (also introduced in 1.3.18), which 
+                      could give the wrong ordering between the s-channel 
+                      propagators for certain multiprocess cases (this
+                      also lead to a hard stop, so don't worry, if you get 
+                      your events, the bug doesn't affect you). Sorry about
+                      that, this is what happens when you add a lot of
+                      new functionality...
+
+1.3.21 (12/10/11) OM: Add a new command: install.
+                      This allow to install quite easily different package
+                      devellop for Madgraph/MadEvent. The list of available
+                      package are pythia-pgs/MadAnalysis/ExRootAnalysis/Delphes
+                  OM: Adding TopEffth Model
+                  OM: Improve display particles and autocompletion in
+                      presence of nonpropagating particles
+                  OM: Fix Aloha bug linked to four fermion operator
+                  PA: fix the problem of degenerate color basis in the
+                      diquark sextet model
+                  JA: Fixed bug in cluster.f that created a hard stop,
+                      introduced in 1.3.18.
+
+1.3.20 (09/10/11) JA: Fixed bug in myamp.f that created a hard stop
+                      error for certain cases with many processes with
+                      different propagators in the same subprocess dir.
+
+1.3.19 (06/10/11) JA: Fixed problem with SubProcesses makefile on Linux,
+                      introduced in 1.3.18.
+
+1.3.18 (04/10/11) JA: Use model information to determine color of particles
+                      for reweighting and propagator color info.
+                  JA: Changed the definition of "forbidden s-channels"
+                      denoted by "$" to exclude on-shell s-channels while
+                      keeping all diagrams (i.e., complemetary to the decay
+                      chain formalism). This reduces the problems with 
+                      gauge invariance compared to previously.
+                      "Onshell" is as usual defined by the "bwcutoff" flag 
+                      in the run_card.dat.
+                  JA: Enable proper 4-flavor matching (such as gg>hbb~+jets)
+                      Note that you need the Pythia/PGS package v. 2.1.9 or 
+                      later to use with 4F matching.
+                      Changes include: alpha_s reweighting also for b vertices,
+                      new scale treatment (mu_F for pp>hbb~ is (pT_b^max*m_Th)),
+                      no clustering of gluons to final-state massive particles
+                      in MadEvent.
+                  JA: Ensure that factorization scale settings and matching works
+                      also in singlet t-channel exchange processes like
+                      single top and VBF. The dynamic factorization
+                      scale is given by the pT of the scattered quark
+                      (on each side of the event).
+                Note: You need the Pythia/PGS package v. 2.1.10 or later
+                      to use with VBF matching, to ensure that both radiated
+                      and scattered partons are treated correctly
+                      - scattered partons need to be excluded from the matching,
+                      since their pT can be below QCUT. An even better
+                      treatment would require to individually shower and match
+                      the two sides in Pythia, which is not presently possible.
+                Note: In the matched 4-flavor process p p > t b~ j $ w+ w- t~ +
+                      p p > t b~ j j $ w+ w- t~, there is an admixture
+                      of t-channel single top (with up to 1 radiated jet) 
+                      and s-channel single top (with up to 2 radiated jets). 
+                      In this case, the automatic determination of maximum 
+                      multiplicity sample doesn't work (since max in the file 
+                      will be 2 jets, but for t-channel max is 1 jet).
+                      So MAXJETS=1 must be specified in the pythia_card.dat.
+                  JA: Fixed pdf reweighting for matching, which due to a mistake
+                      had never been activated.
+                  JA: Improved phase space integration presetting further by 
+                      taking into account special cuts like xpt, ht etc.
+                  JA: Introduce new convention for invariant mass cuts
+                      - if max < min, exclude intermediate range
+                      (allows to exclude W/Z dijet resonances in VBF processes)
+
+1.3.17 (30/09/11) OM: Fix a crash created by ALOHA when it tries to create the full
+                      set of ALOHA routines (pythia8 output only).
+
+1.3.16 (11/09/11) JA: Fixed the problem from 1.3.12.
+
+1.3.15 (09/09/11) OM: remove the fix of 1.3.12
+                      (No events in output for some given processes)
+
+1.3.14 (08/09/11) OM: Fix a bug in the RS model introduced in 1.3.8
+
+1.3.13 (05/09/11) JA: Fixed bug with cut_decays=F which removed cuts also for
+                      non-decay products in certain channels if there is
+                      a forced decay present. Note that this does not affect
+                      xqcut, only pt, minv and eta cuts.
+                  JA: If non-zero phase space cutoff, don't use minimum of
+                      1 GeV (this allows to go to e.g. 2m_e invariant mass for
+                      \gamma* > e+ e-).
+
+1.3.12 (01/09/11) JA: Fixed problem with decay chains when different decays
+                      result in identical final states, such as
+                      p p > go go, (go > b1/b1~ b/b~, b1/b1~ > b/b~ n1)
+                      (only one of the decay chains was chosen, instead of
+                      all 3 combinations (b1,b1), (b1,b1~), (b1~,b1~))
+                  JA: Allow for overall orders also with grouped subprocesses
+                  JA: Ensure that only leading color flows are included in event
+                      output (so no singlet flows from color octets).
+                  JA: Fixed small bug in fermion flow determination for multifermion
+                      vertices.
+
+1.3.11 (26/08/11) JA: Improved precision of "survey" by allowing 4th and 5th 
+                      iteration if accuracy after 3 iterations < 10%.
+                  JA: Subdivide BW in phase space integration for conflicting BWs 
+                      also for forced decays, to improve generation with large
+                      bwcutoff in e.g. W+ W- production with decays.
+                  JA: Do refine using luminocity instead of number of events,
+                      to work with badly determined channels.
+                  JA: Don't use BW for shat if mass > sqrt(s).
+                  JA: Fixed insertion of colors for octet resonances decaying to 
+                      octet+singlet (thanks Bogdan for finding this)
+
+1.3.10 (23/08/11) OM: Update ALOHA version
+                  OM: increase waiting time for jobs to write physically the results on
+                      the disks (in ordre to reduce trouble on the cluster).
+
+1.3.9 (01/08/11)  OM: Add a new model DY_SM (arXiv:1107.5830). Thanks to Neil 
+                      for the generation of the model 
+
+1.3.8 (25/07/11)  JA: Replace the SM and HEFT models with latest versions using
+                      the Wolfenstein parameterization for the CKM matrix.
+                  JA: Implemented reading of the new UFO information about
+                      coupling orders (order hierarchy and expansion_order).
+                  JA: New "coupling order" specification WEIGHTED which checks
+                      for  sum of coupling orders weighted by their hierarchy.
+                  JA: Implemented optimal coupling orders for processes from any
+                      model if no coupling orders specified.
+
+1.3.7 (21/07/11)  JA: Fix makefiles for some v4 models that were forgotten
+                      in v. 1.3.5
+
+1.3.6 (18/07/11)  OM: Ensure that the new makefiles work on the web
+
+1.3.5 (14/07/11): JA: New organization of make files, ensure that compilation works 
+                      for all modes (with/without LHAPDF, static/dynamic, 
+                      regular/gridpack) for both Linux and Mac OS X (be careful with 
+                      dynamic libraries on Mac OS X though, since it seems that 
+                      common blocks might not work properly)
+                  JA: Fixed proper error messages and clean stop for compilation 
+                      errors during MadEvent run.
+
+1.3.4 (05/07/11): OM: More informative error message when a compilation error occurs
+
+1.3.3 (29/06/11): JA: Fixed diagram symmetry for case when there are
+                      no 3-vertex-only diagrams
+                  JA (by OM): More informative error when trying to generate invalid 
+                      pythia8 process
+
+1.3.2 (14/06/11): OM: Fix fortran output when a model is case sensitive 
+                        (Bug if a coupling was depending of a case sensitive parameter)
+                  SdV: Remove a annoying print in the new cuts (added in 1.3.0)
+                  OM: Fix a compilation problem in the standalone cpp output
+
+1.3.1 (02/06/11): JA: Fixed missing file bug with the introduction of
+                      inclusive HT cut
+
+1.3.0 (02/06/11): JA: Allow for grouped subprocesses also for MG4 models
+                  JA: Improved multiprocess diagram generation to reuse
+                      diagrams for crossed processes
+                  JA: Automatic optimization of order of particles in
+                      multiparticle labels for optimal multiprocess generation
+                  JA: Improved efficiency of identification of identical
+                      matrix elements
+                  JA: Improved identification of diagrams with identical
+                      divergency structure for grouped subprocesses
+                  JA: Included more fine-grained run options in the
+                      run_card, including helicity summation options,
+                      whether or not to set ptj and mjj automatically
+                      based on xqcut, etc.
+                  JA: Fixed some minor array limit and arithmetics warnings
+                      for extreme decay and decay chain processes.
+                  SdV: Added cuts on H_T(all jets, light and b)
+                  OM: Fixed minor bug related to cluster option in launch
+
+1.2.4 (15/05/11): JA: Fixed long-standing bug in DECAY relating to
+                      the cross section info in <init> block, and
+                      fixed parameter reading for MG5 SM model.
+
+1.2.3 (11/05/11): JA: Fixed problem with scale choice in processes with mixed 
+                      QED/QCD orders, e.g. p p > t t~ QED=2. Note that this fix
+                      doesn't work for p p > t t~ j j QED=4 which should still
+                      be avoided.
+                  JA: Added the ptllmin/max options in the default run_card.dat
+
+1.2.2 (09/05/11): OM: fix ALOHA symmetries creating not gauge invariant result 
+                      for scalar octet
+
+1.2.1 (08/05/11): OM: reduce the quantity of RAM use by matrix.f
+                  OM: support speed of psyco if this python module is installed
+                  OM: fix a minor bug in the model parsing
+                  OM: add the check of valid model.pkl also for v4 model
+                  OM: add a check that UpdatesNotes is up-to-date when
+                      making a release
+                  JA: Fixed problem in phase space generation for
+                      s-channel mass > s_tot
+
+1.2.0 (05/05/11): OM: minor fixes on check charge conjugation
+                  OM: add a check on the path for the validity of the model.pkl
+                  JA: Fixed problem with combine_runs on certain compilers
+
+1.1.2 (03/05/11): OM+JA: Fixed problem for models with multiple
+                      interactions for the same set of particles,
+                      introduced in v. 1.1.1
+ 
+1.1.1 (02/05/11): JA: Replaced (slow) diagram symmetry determination by
+                      evaluation with fast identification based on diagram tags.
+                  JA: Replacing the "p=-p" id=0 vertex produced by diagram 
+                      generation algorithm already in the diagram generation,
+                      simplifying drawing, helas objects and color.
+                  JA: Fixed compiler warnings for unary operator.
+                  JA: Always set all coupling orders for diagrams
+                      (needed for NLO implementations).
+                  OM: Improved and more elegant "open" implementation for
+                      the user interface.
+                  OM: minor fixes related to checking the gauge
+
 1.1.0 (21/04/11): JA: Removed hard limit on number of external particles in 
                       MadEvent, allowing for unlimited length decay chains there
                       (up to 14 final state particles successfully integrated).

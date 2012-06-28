@@ -8,9 +8,9 @@ c vector-Higgs-Higgs effective coupling.
 c
       implicit none
 c--   dimension of the current set to arbitrary length
-c      INTEGER DIM
-c      PARAMETER(DIM=18)
-      include "dimension.inc"
+      INTEGER DIM
+      PARAMETER(DIM=18)
+c      include "dimension.inc"
       double complex vc(DIM),sc1(DIM),sc2(DIM),jvs(DIM)
       double complex jvs1(DIM),jvs2(DIM),dg,qvc
       double precision qp1,p12,p13,p14,p23,p24,p34

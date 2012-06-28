@@ -17,7 +17,7 @@
 
 import tests.unit_tests as unittest
 
-import madgraph.iolibs.misc as misc
+import madgraph.various.misc as misc
 
 #===============================================================================
 # IOMiscTest
@@ -45,4 +45,5 @@ class IOMiscTest(unittest.TestCase):
         mystr = "param1 : value1"
 
         self.assertRaises(IOError, misc.get_pkg_info, mystr)
+        
 

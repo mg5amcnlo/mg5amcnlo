@@ -32,12 +32,13 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.helas_call_writers as helas_call_writers
-import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
-from madgraph import MadGraph5Error, MG5DIR
+from madgraph import MadGraph5Error, InvalidCmd, MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
+
+import madgraph.various.misc as misc
 
 import aloha.create_aloha as create_aloha
 import aloha.aloha_writers as aloha_writers
@@ -173,8 +174,7 @@ def make_model_cpp(dir_path):
     source_dir = os.path.join(dir_path, "src")
     # Run standalone
     logger.info("Running make for src")
-    subprocess.call(['make'],
-                    stdout = open(os.devnull, 'w'), cwd=source_dir)
+    misc.compile(cwd=source_dir)
 
 #===============================================================================
 # ProcessExporterCPP
@@ -958,10 +958,19 @@ class ProcessExporterPythia8(ProcessExporterCPP):
     process_definition_template = 'pythia8_process_function_definitions.inc'
     process_wavefunction_template = 'pythia8_process_wavefunctions.inc'
     process_sigmaKin_function_template = 'pythia8_process_sigmaKin_function.inc'
+
     def __init__(self, *args, **opts):
         """Set process class name"""
 
         super(ProcessExporterPythia8, self).__init__(*args, **opts)
+
+        # Check if any processes are not 2->1,2,3
+        for me in self.matrix_elements:
+            if me.get_nexternal_ninitial() not in [(3,2),(4,2),(5,2)]:
+                nex,nin = me.get_nexternal_ninitial()
+                raise InvalidCmd,\
+                      "Pythia 8 can only handle 2->1,2,3 processes, not %d->%d" % \
+                      (nin,nex-nin)
 
         self.process_class = self.process_name
         
@@ -1126,7 +1135,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             if beams.issubset(set_tuple[0]):
                 return set_tuple[1]
 
-        raise MadGraph5Error('Pythia 8 cannot handle incoming flavors %s' %\
+        raise InvalidCmd('Pythia 8 cannot handle incoming flavors %s' %\
                              repr(beams))
 
         return 
@@ -1176,19 +1185,21 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         """Return the PIDs for any resonances in 2->2 and 2->3 processes."""
 
         resonances = []
-
+        model = self.matrix_elements[0].get('processes')[0].get('model')
+        new_pdg = model.get_first_non_pdg()
         # Get a list of all resonant s-channel contributions
         diagrams = sum([me.get('diagrams') for me in self.matrix_elements], [])
         for diagram in diagrams:
             schannels, tchannels = diagram.get('amplitudes')[0].\
-                                   get_s_and_t_channels(self.ninitial)
+                                   get_s_and_t_channels(self.ninitial, new_pdg)
 
             for schannel in schannels:
                 sid = schannel.get('legs')[-1].get('id')
-                width = self.model.get_particle(sid).get('width')
-                if width.lower() != 'zero':
-                    resonances.append(sid)
-
+                part = self.model.get_particle(sid)
+                if part:
+                    width = self.model.get_particle(sid).get('width')
+                    if width.lower() != 'zero':
+                        resonances.append(sid)
         resonance_set = set(resonances)
 
         singleres = 0
@@ -1202,7 +1213,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         # schannel is True if all diagrams are s-channel and there are
         # no QCD vertices
         schannel = not any([\
-            len(d.get('amplitudes')[0].get_s_and_t_channels(self.ninitial)[0])\
+            len(d.get('amplitudes')[0].get_s_and_t_channels(self.ninitial, new_pdg)[0])\
                  == 0 for d in diagrams]) and \
                    not any(['QCD' in d.calculate_orders() for d in diagrams])
 

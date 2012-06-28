@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 535 $
-# Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
-# Date: Fri 18 Mar 2011 18:40:51
+# This file was automatically created by FeynRules $Revision: 1105 $
+# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
+# Date: Tue 3 Apr 2012 09:10:20
 
 
 from __future__ import division
@@ -15,10 +15,10 @@ ve = Particle(pdg_code = 12,
               mass = Param.ZERO,
               width = Param.ZERO,
               texname = 've',
-              antitexname = 've',
+              antitexname = 've~',
               charge = 0,
-              LeptonNumber = 1,
-              GhostNumber = 0)
+              GhostNumber = 0,
+              LeptonNumber = 1)
 
 ve__tilde__ = ve.anti()
 
@@ -30,10 +30,10 @@ vm = Particle(pdg_code = 14,
               mass = Param.ZERO,
               width = Param.ZERO,
               texname = 'vm',
-              antitexname = 'vm',
+              antitexname = 'vm~',
               charge = 0,
-              LeptonNumber = 1,
-              GhostNumber = 0)
+              GhostNumber = 0,
+              LeptonNumber = 1)
 
 vm__tilde__ = vm.anti()
 
@@ -45,70 +45,25 @@ vt = Particle(pdg_code = 16,
               mass = Param.ZERO,
               width = Param.ZERO,
               texname = 'vt',
-              antitexname = 'vt',
+              antitexname = 'vt~',
               charge = 0,
-              LeptonNumber = 1,
-              GhostNumber = 0)
+              GhostNumber = 0,
+              LeptonNumber = 1)
 
 vt__tilde__ = vt.anti()
-
-e__minus__ = Particle(pdg_code = 11,
-                      name = 'e-',
-                      antiname = 'e+',
-                      spin = 2,
-                      color = 1,
-                      mass = Param.Me,
-                      width = Param.ZERO,
-                      texname = 'e-',
-                      antitexname = 'e-',
-                      charge = -1,
-                      LeptonNumber = 1,
-                      GhostNumber = 0)
-
-e__plus__ = e__minus__.anti()
-
-m__minus__ = Particle(pdg_code = 13,
-                      name = 'm-',
-                      antiname = 'm+',
-                      spin = 2,
-                      color = 1,
-                      mass = Param.MM,
-                      width = Param.ZERO,
-                      texname = 'm-',
-                      antitexname = 'm-',
-                      charge = -1,
-                      LeptonNumber = 1,
-                      GhostNumber = 0)
-
-m__plus__ = m__minus__.anti()
-
-tt__minus__ = Particle(pdg_code = 15,
-                       name = 'tt-',
-                       antiname = 'tt+',
-                       spin = 2,
-                       color = 1,
-                       mass = Param.MTA,
-                       width = Param.WTA,
-                       texname = 'tt-',
-                       antitexname = 'tt-',
-                       charge = -1,
-                       LeptonNumber = 1,
-                       GhostNumber = 0)
-
-tt__plus__ = tt__minus__.anti()
 
 u = Particle(pdg_code = 2,
              name = 'u',
              antiname = 'u~',
              spin = 2,
              color = 3,
-             mass = Param.MU,
+             mass = Param.ZERO,
              width = Param.ZERO,
              texname = 'u',
-             antitexname = 'u',
+             antitexname = 'u~',
              charge = 2/3,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 u__tilde__ = u.anti()
 
@@ -120,10 +75,10 @@ c = Particle(pdg_code = 4,
              mass = Param.MC,
              width = Param.ZERO,
              texname = 'c',
-             antitexname = 'c',
+             antitexname = 'c~',
              charge = 2/3,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 c__tilde__ = c.anti()
 
@@ -135,10 +90,10 @@ t = Particle(pdg_code = 6,
              mass = Param.MT,
              width = Param.WT,
              texname = 't',
-             antitexname = 't',
+             antitexname = 't~',
              charge = 2/3,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 t__tilde__ = t.anti()
 
@@ -147,13 +102,13 @@ d = Particle(pdg_code = 1,
              antiname = 'd~',
              spin = 2,
              color = 3,
-             mass = Param.MD,
+             mass = Param.ZERO,
              width = Param.ZERO,
              texname = 'd',
-             antitexname = 'd',
+             antitexname = 'd~',
              charge = -1/3,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 d__tilde__ = d.anti()
 
@@ -162,13 +117,13 @@ s = Particle(pdg_code = 3,
              antiname = 's~',
              spin = 2,
              color = 3,
-             mass = Param.MS,
+             mass = Param.ZERO,
              width = Param.ZERO,
              texname = 's',
-             antitexname = 's',
+             antitexname = 's~',
              charge = -1/3,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 s__tilde__ = s.anti()
 
@@ -180,10 +135,10 @@ b = Particle(pdg_code = 5,
              mass = Param.MB,
              width = Param.ZERO,
              texname = 'b',
-             antitexname = 'b',
+             antitexname = 'b~',
              charge = -1/3,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 b__tilde__ = b.anti()
 
@@ -195,10 +150,10 @@ ghA = Particle(pdg_code = 9000001,
                mass = Param.ZERO,
                width = Param.ZERO,
                texname = 'ghA',
-               antitexname = 'ghA',
+               antitexname = 'ghA~',
                charge = 0,
-               LeptonNumber = 0,
-               GhostNumber = 1)
+               GhostNumber = 1,
+               LeptonNumber = 0)
 
 ghA__tilde__ = ghA.anti()
 
@@ -208,12 +163,12 @@ ghZ = Particle(pdg_code = 9000002,
                spin = -1,
                color = 1,
                mass = Param.MZ,
-               width = Param.ZERO,
+               width = Param.WZ,
                texname = 'ghZ',
-               antitexname = 'ghZ',
+               antitexname = 'ghZ~',
                charge = 0,
-               LeptonNumber = 0,
-               GhostNumber = 1)
+               GhostNumber = 1,
+               LeptonNumber = 0)
 
 ghZ__tilde__ = ghZ.anti()
 
@@ -223,12 +178,12 @@ ghWp = Particle(pdg_code = 9000003,
                 spin = -1,
                 color = 1,
                 mass = Param.MW,
-                width = Param.ZERO,
+                width = Param.WW,
                 texname = 'ghWp',
-                antitexname = 'ghWp',
+                antitexname = 'ghWp~',
                 charge = 1,
-                LeptonNumber = 0,
-                GhostNumber = 1)
+                GhostNumber = 1,
+                LeptonNumber = 0)
 
 ghWp__tilde__ = ghWp.anti()
 
@@ -238,12 +193,12 @@ ghWm = Particle(pdg_code = 9000004,
                 spin = -1,
                 color = 1,
                 mass = Param.MW,
-                width = Param.ZERO,
+                width = Param.WW,
                 texname = 'ghWm',
-                antitexname = 'ghWm',
+                antitexname = 'ghWm~',
                 charge = -1,
-                LeptonNumber = 0,
-                GhostNumber = 1)
+                GhostNumber = 1,
+                LeptonNumber = 0)
 
 ghWm__tilde__ = ghWm.anti()
 
@@ -255,10 +210,10 @@ ghG = Particle(pdg_code = 9000005,
                mass = Param.ZERO,
                width = Param.ZERO,
                texname = 'ghG',
-               antitexname = 'ghG',
+               antitexname = 'ghG~',
                charge = 0,
-               LeptonNumber = 0,
-               GhostNumber = 1)
+               GhostNumber = 1,
+               LeptonNumber = 0)
 
 ghG__tilde__ = ghG.anti()
 
@@ -272,8 +227,8 @@ A = Particle(pdg_code = 22,
              texname = 'A',
              antitexname = 'A',
              charge = 0,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 Z = Particle(pdg_code = 23,
              name = 'Z',
@@ -285,8 +240,8 @@ Z = Particle(pdg_code = 23,
              texname = 'Z',
              antitexname = 'Z',
              charge = 0,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 W__plus__ = Particle(pdg_code = 24,
                      name = 'W+',
@@ -296,10 +251,10 @@ W__plus__ = Particle(pdg_code = 24,
                      mass = Param.MW,
                      width = Param.WW,
                      texname = 'W+',
-                     antitexname = 'W+',
+                     antitexname = 'W-',
                      charge = 1,
-                     LeptonNumber = 0,
-                     GhostNumber = 0)
+                     GhostNumber = 0,
+                     LeptonNumber = 0)
 
 W__minus__ = W__plus__.anti()
 
@@ -313,8 +268,8 @@ G = Particle(pdg_code = 21,
              texname = 'G',
              antitexname = 'G',
              charge = 0,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 H = Particle(pdg_code = 25,
              name = 'H',
@@ -326,8 +281,8 @@ H = Particle(pdg_code = 25,
              texname = '\\phi',
              antitexname = '\\phi',
              charge = 0,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 phi0 = Particle(pdg_code = 250,
                 name = 'phi0',
@@ -340,8 +295,8 @@ phi0 = Particle(pdg_code = 250,
                 antitexname = 'phi0',
                 GoldstoneBoson = True,
                 charge = 0,
-                LeptonNumber = 0,
-                GhostNumber = 0)
+                GhostNumber = 0,
+                LeptonNumber = 0)
 
 phi__plus__ = Particle(pdg_code = 251,
                        name = 'phi+',
@@ -351,11 +306,56 @@ phi__plus__ = Particle(pdg_code = 251,
                        mass = Param.MW,
                        width = Param.ZERO,
                        texname = '\\phi^+',
-                       antitexname = '\\phi^+',
+                       antitexname = '\\phi^-',
                        GoldstoneBoson = True,
                        charge = 1,
-                       LeptonNumber = 0,
-                       GhostNumber = 0)
+                       GhostNumber = 0,
+                       LeptonNumber = 0)
 
 phi__minus__ = phi__plus__.anti()
+
+e__minus__ = Particle(pdg_code = 11,
+                      name = 'e-',
+                      antiname = 'e+',
+                      spin = 2,
+                      color = 1,
+                      mass = Param.Me,
+                      width = Param.ZERO,
+                      texname = 'e-',
+                      antitexname = 'e+',
+                      charge = -1,
+                      GhostNumber = 0,
+                      LeptonNumber = 1)
+
+e__plus__ = e__minus__.anti()
+
+m__minus__ = Particle(pdg_code = 13,
+                      name = 'm-',
+                      antiname = 'm+',
+                      spin = 2,
+                      color = 1,
+                      mass = Param.MM,
+                      width = Param.ZERO,
+                      texname = 'm-',
+                      antitexname = 'm+',
+                      charge = -1,
+                      GhostNumber = 0,
+                      LeptonNumber = 1)
+
+m__plus__ = m__minus__.anti()
+
+tt__minus__ = Particle(pdg_code = 15,
+                       name = 'tt-',
+                       antiname = 'tt+',
+                       spin = 2,
+                       color = 1,
+                       mass = Param.MTA,
+                       width = Param.WTau,
+                       texname = 'tt-',
+                       antitexname = 'tt+',
+                       charge = -1,
+                       GhostNumber = 0,
+                       LeptonNumber = 1)
+
+tt__plus__ = tt__minus__.anti()
 

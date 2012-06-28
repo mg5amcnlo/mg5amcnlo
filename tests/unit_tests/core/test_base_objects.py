@@ -105,8 +105,8 @@ class ParticleTest(unittest.TestCase):
                        {'prop':'name',
                         'right_list':['h', 'e+', 'e-', 'u~',
                                       'k++', 'k--', 'T', 'u+~'],
-                        'wrong_list':['', 'x ', 'e?', '{}', '9x', 'd~3', 'd+g',
-                                      'u~+', 'u~~']},
+                        'wrong_list':['', 'x ', 'e?', '{}', '$', 's/', '>', 
+                                      '[]']},
                        {'prop':'spin',
                         'right_list':[1, 2, 3, 4, 5],
                         'wrong_list':[-1, 0, 'a', 6]},
@@ -142,7 +142,7 @@ class ParticleTest(unittest.TestCase):
             for x in test['right_list']:
                 self.assert_(temp_part.set(test['prop'], x))
             for x in test['wrong_list']:
-                self.assertFalse(temp_part.set(test['prop'], x))
+                self.assertFalse(temp_part.set(test['prop'], x), '%s not allowd for %s ' %(x, test['prop']))
 
     def test_representation(self):
         """Test particle object string representation."""
@@ -218,13 +218,13 @@ class ParticleTest(unittest.TestCase):
                           not_a_part)
         # test particle search
         self.assertEqual(self.mypart,
-                         mypartlist.find_name(self.mypart['name']))
+                         mypartlist.get_copy(self.mypart['name']))
         anti_part = copy.copy(self.mypart)
         anti_part.set('is_part', False)
         self.assertEqual(anti_part,
-                         mypartlist.find_name(self.mypart['antiname']))
+                         mypartlist.get_copy(self.mypart['antiname']))
         self.assertEqual(None,
-                         mypartlist.find_name('none'))
+                         mypartlist.get_copy('none'))
 
         mydict = {6:self.mypart, -6:anti_part}
 
@@ -548,6 +548,7 @@ class ModelTest(unittest.TestCase):
 
         self.mymodel.set('interactions', self.myinterlist)
         self.mymodel.set('particles', self.mypartlist)
+        self.mymodel.set('order_hierarchy', {'QCD': 1, 'QED': 2})
 
     def test_model_initialization(self):
         """Test the default Model class initialization"""
@@ -887,6 +888,28 @@ class ModelTest(unittest.TestCase):
 
         self.assertRaises(madgraph.MadGraph5Error, \
                                        model2.pass_particles_name_in_mg_default)
+
+
+    def test_get_max_WEIGHTED(self):
+        """Test get_max_WEIGHTED"""
+
+        self.mymodel.get('interactions').append(\
+            base_objects.Interaction({
+                      'id':10,
+                      'particles': base_objects.ParticleList(\
+                                         [self.mymodel.get_particle(6), \
+                                          self.mymodel.get_particle(-6), \
+                                          self.mymodel.get_particle(21), \
+                                          self.mymodel.get_particle(21), \
+                                          self.mymodel.get_particle(21)]),
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1, 'QED':5}}))
+
+
+        self.assertEqual(self.mymodel.get_max_WEIGHTED(), 11./3)
+
+        self.mymodel.get('interactions').pop(-1)
+
 #===============================================================================
 # LegTest
 #===============================================================================
@@ -901,7 +924,8 @@ class LegTest(unittest.TestCase):
         self.mydict = {'id':3,
                       'number':5,
                       'state':True,
-                      'from_group':False}
+                      'from_group':False,
+                      'onshell':None}
 
         self.myleg = base_objects.Leg(self.mydict)
 
@@ -980,7 +1004,8 @@ class LegTest(unittest.TestCase):
         goal = goal + "    \'id\': 3,\n"
         goal = goal + "    \'number\': 5,\n"
         goal = goal + "    \'state\': True,\n"
-        goal = goal + "    \'from_group\': False\n}"
+        goal = goal + "    \'from_group\': False,\n"
+        goal = goal + "    \'onshell\': None\n}"
 
         self.assertEqual(goal, str(self.myleg))
 
@@ -1408,6 +1433,7 @@ class ProcessTest(unittest.TestCase):
                        'uid':0,
                        'required_s_channels':[],
                        'forbidden_s_channels':[],
+                       'forbidden_onsh_s_channels':[],
                        'forbidden_particles':[],
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
@@ -1487,6 +1513,7 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'model\': %s,\n" % repr(self.myprocess['model'])
         goal = goal + "    \'id\': 1,\n"
         goal = goal + "    \'required_s_channels\': [],\n"
+        goal = goal + "    \'forbidden_onsh_s_channels\': [],\n"
         goal = goal + "    \'forbidden_s_channels\': [],\n"
         goal = goal + "    \'forbidden_particles\': [],\n"
         goal = goal + "    \'is_decay_chain\': False,\n"
@@ -1497,14 +1524,14 @@ class ProcessTest(unittest.TestCase):
     def test_nice_string(self):
         """Test Process nice_string representation"""
 
-        goal_str = "Process: c c > c c c QED=1 QCD=5 @1"
+        goal_str = "Process: c c > c c c QCD=5 QED=1 @1"
 
         self.assertEqual(goal_str, self.myprocess.nice_string())
 
     def test_input_string(self):
         """Test Process nice_string representation"""
 
-        goal_str = "c c > c c c QED=1 QCD=5, (c > c c c c, c > c c c c)"
+        goal_str = "c c > c c c QCD=5 QED=1, (c > c c c c, c > c c c c)"
 
         decay = copy.copy(self.myprocess)
         decay.set('legs', copy.deepcopy(decay.get('legs')))
@@ -1587,6 +1614,7 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'uid':0,
                        'required_s_channels':[],
                        'forbidden_s_channels':[],
+                       'forbidden_onsh_s_channels':[],
                        'forbidden_particles':[],
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
@@ -1665,6 +1693,7 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'model\': %s,\n" % repr(self.my_process_definition['model'])
         goal = goal + "    \'id\': %s,\n" % repr(self.my_process_definition['id'])
         goal = goal + "    \'required_s_channels\': [],\n"
+        goal = goal + "    \'forbidden_onsh_s_channels\': [],\n"
         goal = goal + "    \'forbidden_s_channels\': [],\n"
         goal = goal + "    \'forbidden_particles\': [],\n"
         goal = goal + "    \'is_decay_chain\': False,\n"

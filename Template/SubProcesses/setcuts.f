@@ -51,12 +51,16 @@ c--cuts
       double precision r2max(nincoming+1:nexternal,nincoming+1:nexternal)
       double precision s_max(nexternal,nexternal)
       double precision ptll_min(nexternal,nexternal),ptll_max(nexternal,nexternal)
+      double precision inclHtmin,inclHtmax
       common/to_cuts/  etmin, emin, etamax, r2min, s_min,
-     $     etmax, emax, etamin, r2max, s_max, ptll_min, ptll_max
+     $     etmax, emax, etamin, r2max, s_max, ptll_min, ptll_max, inclHtmin,inclHtmax
 
       double precision ptjmin4(4),ptjmax4(4),htjmin4(2:4),htjmax4(2:4)
       logical jetor
       common/to_jet_cuts/ ptjmin4,ptjmax4,htjmin4,htjmax4,jetor
+
+      double precision ptlmin4(4),ptlmax4(4)
+      common/to_lepton_cuts/ ptlmin4,ptlmax4
 
       double precision xqcutij(nexternal,nexternal),xqcuti(nexternal)
       common/to_xqcuts/xqcutij,xqcuti
@@ -77,8 +81,7 @@ C
 c
 c
 c     reading parameters
-      integer maxpara
-      parameter (maxpara=100)
+      include '../../Source/run_config.inc'
       character*20 param(maxpara),value(maxpara)
       integer npara
 c
@@ -112,19 +115,37 @@ c
 c     set ptj and s_min if xqcut and ktscheme = 1, to improve
 c     integration speed, and set drjj and drjl to 0.
 c
-        if(xqcut.gt.0.and.ktscheme.eq.1) then
-           if(ptj.ge.0d0) ptj=max(ptj, xqcut)
-        endif
         if(xqcut.gt.0) then
-           if(mmjj.ge.0d0) mmjj=max(mmjj, xqcut)
-           if(drjj.gt.0d0) then
-              write(*,*) 'Warning! drjj > 0 with xqcut > 0, set to 0'
-              drjj = 0d0
-           endif
-           if(drjl.gt.0d0) then
-              write(*,*) 'Warning! drjl > 0 with xqcut > 0, set to 0'
-              drjl = 0d0
-           endif
+           if(auto_ptj_mjj.and.ptj.ge.0d0.and.ktscheme.eq.1)then
+            ptj=xqcut
+            write(*,*) 'Warning! ptj set to xqcut=',xqcut,
+     $            ' to improve integration efficiency'
+            write(*,*) 'Note that this might affect non-radiated jets,'
+            write(*,*) 'e.g. from decays. Use cut_decays=F in run_card.'
+          else if(ptj.gt.xqcut)then
+            ptj=0d0
+            write(*,*) 'Warning! ptj set to 0 since xqcut > 0 and'
+            write(*,*) '         auto_ptj_mjj = F or ktscheme > 1'
+          endif
+          if(auto_ptj_mjj.and.mmjj.ge.0d0)then
+            mmjj=xqcut
+            write(*,*) 'Warning! mmjj set to xqcut=',xqcut,
+     $            ' to improve integration efficiency'
+            write(*,*) 'Note that this might affect non-radiated jets,'
+            write(*,*) 'e.g. from decays. Use cut_decays=F in run_card.'
+          else if(mmjj.gt.xqcut)then
+            mmjj=0d0
+            write(*,*) 'Warning! mmjj set to 0 since xqcut > 0 and'
+            write(*,*) '         auto_ptj_mjj = F'
+          endif
+          if(drjj.gt.0d0) then
+            write(*,*) 'Warning! drjj > 0 with xqcut > 0, set to 0'
+            drjj = 0d0
+          endif
+          if(drjl.gt.0d0) then
+            write(*,*) 'Warning! drjl > 0 with xqcut > 0, set to 0'
+            drjl = 0d0
+          endif
         endif
 
 c     Check which particles come from decays
@@ -390,8 +411,25 @@ c
       htjmax4(2)=ht2max
       htjmax4(3)=ht3max
       htjmax4(4)=ht4max
+   
+      inclHtmin=ihtmin
+      inclHtmax=ihtmax
 
       jetor = cutuse.eq.0d0
+
+c
+c   EXTRA LEPTON CUTS
+c
+      ptlmin4(1)=ptl1min
+      ptlmin4(2)=ptl2min
+      ptlmin4(3)=ptl3min
+      ptlmin4(4)=ptl4min
+
+      ptlmax4(1)=ptl1max
+      ptlmax4(2)=ptl2max
+      ptlmax4(3)=ptl3max
+      ptlmax4(4)=ptl4max
+
 c
 c    ERROR TRAPS 
 c
@@ -538,6 +576,7 @@ c************************************************************************
       include 'nexternal.inc'
       include 'maxconfigs.inc'
       include 'genps.inc'
+      include 'maxamps.inc'
 c
 c    Arguments
 c
@@ -547,10 +586,10 @@ c     Global
 c
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       common/to_forest/ iforest
-      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       common/to_sprop/sprop,tprid
-      logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
+      integer gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'decayBW.inc'
 
 c
@@ -564,13 +603,11 @@ c
 
 c     Set who comes from decay based on forced BW
       do i=-(nexternal-3),-1
-         if(tprid(i,1).eq.0.and.gForceBW(i,1).or.
+         if(tprid(i,1).eq.0.and.gForceBW(i,1).eq.1.or.
      $        from_decay(i)) then
-            do j=i,-1
-               from_decay(j)=.true.
-               from_decay(iforest(1,j,1))=.true.
-               from_decay(iforest(2,j,1))=.true.
-            enddo
+            from_decay(i)=.true.
+            from_decay(iforest(1,i,1))=.true.
+            from_decay(iforest(2,i,1))=.true.
          endif
       enddo
 

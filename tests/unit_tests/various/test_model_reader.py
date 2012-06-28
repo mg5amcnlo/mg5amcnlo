@@ -49,9 +49,9 @@ class TestModelReader(unittest.TestCase):
         for param in sum([self.base_model.get('parameters')[key] for key \
                               in self.base_model.get('parameters')], []):
             value = param.value
-            self.assertTrue(isinstance(value, complex)) 
+            self.assertTrue(isinstance(value, (complex, float, int)))
             self.assertTrue(isinstance(self.model_reader.get('parameter_dict')[\
-                param.name], complex))
+                param.name], (complex, float, int)))
 
             
         for coupl in sum([self.base_model.get('couplings')[key] for key \

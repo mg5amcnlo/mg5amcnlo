@@ -26,10 +26,6 @@ C
     PARAMETER (NDIAGS=%(ndiags)d) 
     INTEGER    THEL
     PARAMETER (THEL=2*NCOMB)
-    REAL*8 LIMHEL
-    PARAMETER(LIMHEL=1e-6)
-    INTEGER MAXTRIES
-    PARAMETER(MAXTRIES=10)
 C  
 C ARGUMENTS 
 C  
@@ -121,23 +117,14 @@ C ----------
                GOODHEL(I,IMIRROR)=.TRUE.
                NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
                IGOOD(NGOOD(IMIRROR),IMIRROR) = I
-               PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS
+               PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS,' in event ',NTRY(IMIRROR)
             ENDIF
          ENDDO
-         ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
       ENDIF
-        IF(NTRY(IMIRROR).EQ.MAXTRIES.AND.ISHEL(IMIRROR).GT.0)THEN
-c       Check if we have stable helicities in this event
-           DO I=1,NGOOD(IMIRROR)
-              IF(TS(IGOOD(I,IMIRROR)) .lt. 0.1*ANS/NGOOD(IMIRROR))THEN
-                 write(*,*) 'Not stable helicity distribution, fraction ', TS(IGOOD(I,IMIRROR))/ANS*NGOOD(IMIRROR)
-                 write(*,*) 'Explicit sum over all non-zero helicities.'
-                 ISHEL(IMIRROR)=0
-                 EXIT
-              ENDIF
-           ENDDO
+        IF(NTRY(IMIRROR).EQ.MAXTRIES)THEN
+           ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
         ENDIF
-    ELSE              !RANDOM HELICITY
+    ELSE              !LOOP OVER GOOD HELICITIES
         DO J=1,ISHEL(IMIRROR)
             JHEL(IMIRROR)=JHEL(IMIRROR)+1
             IF (JHEL(IMIRROR) .GT. NGOOD(IMIRROR)) JHEL(IMIRROR)=1
@@ -221,7 +208,7 @@ C
     COMPLEX*16 ZTEMP
     REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
     COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
-    COMPLEX*16 W(18,NWAVEFUNCS)
+    COMPLEX*16 W(%(wavefunctionsize)d,NWAVEFUNCS)
 C  
 C GLOBAL VARIABLES
 C  

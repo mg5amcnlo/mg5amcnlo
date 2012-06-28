@@ -14,7 +14,7 @@
 ################################################################################
 
 """Module for calculation of symmetries between diagrams, by
-evaluating amp2 values for permutations of modementa."""
+evaluating amp2 values for permutations of momenta."""
 
 from __future__ import division
 
@@ -35,7 +35,6 @@ import madgraph.iolibs.export_python as export_python
 import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.iolibs.helas_call_writers as helas_call_writer
 import models.import_ufo as import_ufo
-import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.core.base_objects as base_objects
@@ -45,6 +44,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 
 import madgraph.various.process_checks as process_checks
+import madgraph.various.misc as misc
 
 from madgraph import MG5DIR
 
@@ -63,7 +63,98 @@ logger = logging.getLogger('madgraph.various.diagram_symmetry')
 # find_symmetry
 #===============================================================================
 
-def find_symmetry(matrix_element, evaluator, max_time = 600):
+def find_symmetry(matrix_element):
+    """Find symmetries between amplitudes by comparing diagram tags
+    for all the diagrams in the process. Identical diagram tags
+    correspond to different external particle permutations of the same
+    diagram.
+    
+    Return list of positive number corresponding to number of
+    symmetric diagrams and negative numbers corresponding to the
+    equivalent diagram (for e+e->3a, get [6, -1, -1, -1, -1, -1]),
+    list of the corresponding permutations needed, and list of all
+    permutations of identical particles."""
+
+    if isinstance(matrix_element, group_subprocs.SubProcessGroup):
+        return find_symmetry_subproc_group(matrix_element)
+
+    nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+
+    # diagram_numbers is a list of all relevant diagram numbers
+    diagram_numbers = []
+    # Prepare the symmetry vector with non-used amp2s (due to
+    # multiparticle vertices)
+    symmetry = []
+    permutations = []
+    ident_perms = []
+    process = matrix_element.get('processes')[0]
+    base_model = process.get('model')
+    diagrams = matrix_element.get('diagrams')
+    base_diagrams = matrix_element.get_base_amplitude().get('diagrams')
+    min_vert = min([max(diag.get_vertex_leg_numbers()) for diag in diagrams])
+    for diag in matrix_element.get('diagrams'):
+        diagram_numbers.append(diag.get('number'))
+        permutations.append(range(nexternal))
+        if max(diag.get_vertex_leg_numbers()) > min_vert:
+            # Ignore any diagrams with 4-particle vertices
+            symmetry.append(0)
+        else:
+            symmetry.append(1)
+
+    # Check for matrix elements with no identical particles
+    if matrix_element.get("identical_particle_factor") == 1:
+        return symmetry, \
+               permutations,\
+               [range(nexternal)]
+
+    logger.info("Finding symmetric diagrams for process %s" % \
+                 matrix_element.get('processes')[0].nice_string().\
+                 replace("Process: ", ""))
+
+    # diagram_tags is a list of unique tags
+    diagram_tags = []
+    # diagram_classes is a list of lists of diagram numbers belonging
+    # to the different classes
+    diagram_classes = []
+    perms = []
+    for diag, base_diagram in zip(diagrams, base_diagrams):
+        if any([vert > min_vert for vert in
+                diag.get_vertex_leg_numbers()]):
+            # Only 3-vertices allowed in configs.inc
+            continue
+        tag = diagram_generation.DiagramTag(base_diagram)
+        try:
+            ind = diagram_tags.index(tag)
+        except ValueError:
+            diagram_classes.append([diag.get('number')])
+            perms.append([tag.get_external_numbers()])
+            diagram_tags.append(tag)
+        else:
+            diagram_classes[ind].append(diag.get('number'))
+            perms[ind].append(tag.get_external_numbers())
+
+    for inum, diag_number in enumerate(diagram_numbers):
+        if symmetry[inum] == 0:
+            continue
+        idx1 = [i for i, d in enumerate(diagram_classes) if \
+                diag_number in d][0]
+        idx2 = diagram_classes[idx1].index(diag_number)
+        if idx2 == 0:
+            symmetry[inum] = len(diagram_classes[idx1])
+        else:
+            symmetry[inum] = -diagram_classes[idx1][0]
+        # Order permutations according to how to reach the first perm
+        permutations[inum] = diagram_generation.DiagramTag.reorder_permutation(perms[idx1][idx2],
+                                                            perms[idx1][0])
+        # ident_perms ordered according to order of external momenta
+        perm = diagram_generation.DiagramTag.reorder_permutation(perms[idx1][0],
+                                                           perms[idx1][idx2])
+        if not perm in ident_perms:
+            ident_perms.append(perm)
+
+    return (symmetry, permutations, ident_perms)
+
+def find_symmetry_by_evaluation(matrix_element, evaluator, max_time = 600):
     """Find symmetries between amplitudes by comparing the squared
     amplitudes for all permutations of identical particles.
     
@@ -72,12 +163,12 @@ def find_symmetry(matrix_element, evaluator, max_time = 600):
     equivalent diagram (for e+e->3a, get [6, -1, -1, -1, -1, -1]),
     list of the corresponding permutations needed, and list of all
     permutations of identical particles.
-    For amp2s which are 0 (e.g. multiparticle vertices), return 0 in
-    symmetry list.
     max_time gives a cutoff time for finding symmetries (in s)."""
 
-    if isinstance(matrix_element, group_subprocs.SubProcessGroup):
-        return find_symmetry_subproc_group(matrix_element, evaluator, max_time)
+    #if isinstance(matrix_element, group_subprocs.SubProcessGroup):
+    #    return find_symmetry_subproc_group(matrix_element, evaluator, max_time)
+
+    assert isinstance(matrix_element, helas_objects.HelasMatrixElement)
 
     # Exception class and routine to handle timeout
     class TimeOutError(Exception):
@@ -191,7 +282,134 @@ def find_symmetry(matrix_element, evaluator, max_time = 600):
 
     return (symmetry, perms, ident_perms)
 
-def find_symmetry_subproc_group(subproc_group, evaluator, max_time = 600):
+#===============================================================================
+# DiagramTag class to identify matrix elements
+#===============================================================================
+
+class IdentifySGConfigTag(diagram_generation.DiagramTag):
+    """DiagramTag daughter class to identify configs giving the same
+    config. Need to compare state, spin, mass, width, and color."""
+
+    @staticmethod
+    def link_from_leg(leg, model):
+        """Returns the end link for a leg needed to identify matrix
+        elements: ((leg numer, state, spin, self_antipart, mass,
+        width, color, decay and is_part), number)."""
+
+        part = model.get_particle(leg.get('id'))
+
+        state = 0
+        if not leg.get('state'):
+            # Distinguish identical initial state particles
+            state = leg.get('number')
+
+        return [((state, part.get('spin'), part.get('color'),
+                  part.get('mass'), part.get('width')),
+                 leg.get('number'))]
+        
+    @staticmethod
+    def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
+        """Returns the info needed to identify matrix elements:
+        interaction color, lorentz, coupling, and wavefunction
+        spin, self_antipart, mass, width, color, decay and
+        is_part. Note that is_part needs to be flipped if we move the
+        final vertex around."""
+
+        inter = model.get_interaction(vertex.get('id'))
+        ret_list = 0
+                   
+        if last_vertex:
+            return (ret_list,)
+        else:
+            part = model.get_particle(vertex.get('legs')[-1].get('id'))
+            return ((part.get('color'),
+                     part.get('mass'), part.get('width')),
+                    ret_list)
+
+    @staticmethod
+    def flip_vertex(new_vertex, old_vertex):
+        """Move the wavefunction part of vertex id appropriately"""
+
+        if len(new_vertex) == 1 and len(old_vertex) == 2:
+            # We go from a last link to next-to-last link - add propagator info
+            return (old_vertex[0],new_vertex[0])
+        elif len(new_vertex) == 2 and len(old_vertex) == 1:
+            # We go from next-to-last link to last link - remove propagator info
+            return (new_vertex[1],)
+        # We should not get here
+        raise diagram_generation.DiagramTag.DiagramTagError, \
+              "Error in IdentifyConfigTag, wrong setup of vertices in link."
+        
+def find_symmetry_subproc_group(subproc_group):
+    """Find symmetric configs by directly comparing the configurations
+    using IdentifySGConfigTag."""
+
+    assert isinstance(subproc_group, group_subprocs.SubProcessGroup),\
+           "Argument to find_symmetry_subproc_group has to be SubProcessGroup"
+
+    # diagram_numbers is a list of all relevant diagram numbers
+    diagram_numbers = []
+    # Prepare the symmetry vector with non-used amp2s (due to
+    # multiparticle vertices)
+    symmetry = []
+    permutations = []
+    diagrams = subproc_group.get('mapping_diagrams')
+    nexternal, ninitial = \
+               subproc_group.get('matrix_elements')[0].get_nexternal_ninitial()
+    model = subproc_group.get('matrix_elements')[0].get('processes')[0].\
+            get('model')
+    min_vert = min([max(diag.get_vertex_leg_numbers()) for diag in diagrams])
+
+    for idiag,diag in enumerate(diagrams):
+        diagram_numbers.append(idiag+1)
+        permutations.append(range(nexternal))
+        if max(diag.get_vertex_leg_numbers()) > min_vert:
+            # Ignore any diagrams with 4-particle vertices
+            symmetry.append(0)
+        else:
+            symmetry.append(1)
+
+    logger.info("Finding symmetric diagrams for subprocess group %s" % \
+                subproc_group.get('name'))
+
+    # diagram_tags is a list of unique tags
+    diagram_tags = []
+    # diagram_classes is a list of lists of diagram numbers belonging
+    # to the different classes
+    diagram_classes = []
+    perms = []
+    for idiag, diag in enumerate(diagrams):
+        if any([vert > min_vert for vert in
+                diag.get_vertex_leg_numbers()]):
+            # Only include vertices up to min_vert
+            continue
+        tag = IdentifySGConfigTag(diag, model)
+        try:
+            ind = diagram_tags.index(tag)
+        except ValueError:
+            diagram_classes.append([idiag + 1])
+            perms.append([tag.get_external_numbers()])
+            diagram_tags.append(tag)
+        else:
+            diagram_classes[ind].append(idiag + 1)
+            perms[ind].append(tag.get_external_numbers())
+
+    for inum, diag_number in enumerate(diagram_numbers):
+        if symmetry[inum] == 0:
+            continue
+        idx1 = [i for i, d in enumerate(diagram_classes) if \
+                diag_number in d][0]
+        idx2 = diagram_classes[idx1].index(diag_number)
+        # Note that for subproc groups, we want symfact to be 1
+        if idx2 > 0:
+            symmetry[inum] = -diagram_classes[idx1][0]
+        # Order permutations according to how to reach the first perm
+        permutations[inum] = diagram_generation.DiagramTag.reorder_permutation(perms[idx1][idx2],
+                                                            perms[idx1][0])
+    return (symmetry, permutations, [permutations[0]])
+    
+
+def old_find_symmetry_subproc_group(subproc_group):
     """Find symmetries between the configs in the subprocess group.
     For each config, find all matrix elements with maximum identical
     particle factor. Then take minimal set of these matrix elements,
@@ -214,8 +432,7 @@ def find_symmetry_subproc_group(subproc_group, evaluator, max_time = 600):
         diagram_config_map = dict([(i,n) for i,n in \
                        enumerate(subproc_group.get('diagram_maps')[me_number]) \
                                    if n > 0])
-        symmetry, perms, ident_perms = find_symmetry(matrix_elements[me_number],
-                                                     evaluator, max_time)
+        symmetry, perms, ident_perms = find_symmetry(matrix_elements[me_number])
 
         # Go through symmetries and remove those for any diagrams
         # where this ME is not supposed to contribute

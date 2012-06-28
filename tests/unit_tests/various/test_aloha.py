@@ -16,6 +16,7 @@
 the output of the Feynman Rules."""
 from __future__ import division
 
+import math
 import os
 import time
 import aloha.aloha_object as aloha_obj
@@ -24,6 +25,7 @@ import aloha.create_aloha as create_aloha
 import aloha.aloha_writers as aloha_writers
 import models.sm.object_library as object_library
 import tests.unit_tests as unittest
+
 
 class TestVariable(unittest.TestCase):
 
@@ -474,7 +476,6 @@ class TestAddVariable(unittest.TestCase):
         sum = p1 * p2 + p1 * p3 + 2 * p1 + 2 *p1 * p2 * p4
         sum = sum.factorize()
         #Should return p1*(p2(2*p4 + 1) + p3 + 2)
-    
         self.assertEqual(sum.__class__,aloha_lib.MultVariable)
         self.assertEqual(len(sum),2)
         for fact in sum:
@@ -578,6 +579,32 @@ class TestAddVariable(unittest.TestCase):
         
         expr1 = expr1.factorize()
         self.assertEqual(eval(str(expr1)), value)
+
+
+    def test_factorization5(self):
+        """check that P [gamma + P/M] == (/p+M) [Onshell]"""
+
+        P1_0 = aloha_lib.ScalarVariable('p1')
+        P1_1 = aloha_lib.ScalarVariable('p2')
+        P1_2 = aloha_lib.ScalarVariable('p3')
+        P1_3 = aloha_lib.ScalarVariable('p4')        
+        M1  = aloha_lib.ScalarVariable('m1') 
+    
+        p1, p2, p3, p4, m1 = 1,2,3,4,5
+    
+        data = (P1_0**2 * M1 - P1_1**2 * M1 + M1)
+        value = eval(str(data))
+        data2 = data.factorize()
+        self.assertEqual(eval(str(data2)), value)
+        
+        #check that original object is still un-touched
+        self.assertEqual(eval(str(data)), value)
+
+
+
+    
+
+
 
 
     
@@ -1245,7 +1272,96 @@ class testLorentzObject(unittest.TestCase):
             self.assertEqual(low_level.get_rep(ind).__class__, aloha_lib.MultVariable)
             self.assertEqual(low_level.get_rep(ind), aloha_lib.ScalarVariable('M3') 
                                 * aloha_lib.ScalarVariable('P2_%s' % ind[0]))
-            
+    
+    
+    def test_spin32propagator(self):
+        """check various property of the spin3/2 propagator"""
+        
+        Metric = aloha_obj.Metric
+        P = aloha_obj.P
+        OM = aloha_obj.OverMass2
+        Gamma = aloha_obj.Gamma
+        Identity = aloha_obj.Identity
+        t = 1
+        mu, nu, s0, s1, s2 = 2,3,4,5,6
+        
+        zero = P(mu,t) * aloha_obj.Spin3halfPropagator(mu,nu,s1,s2, t)
+        zero = zero.expand()
+        P1_0, P1_1, P1_2, P1_3 = 2,0,0,0
+        OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)    
+     
+    def test_mass_overmass(self):
+        """check various property of the spin3/2 propagator"""
+        
+        Metric = aloha_obj.Metric
+        P = aloha_obj.P
+        OM = aloha_obj.OverMass2
+        Gamma = aloha_obj.Gamma
+        Identity = aloha_obj.Identity
+        Gamma = aloha_obj.Gamma
+        PSlash = aloha_obj.PSlash
+        Mass = aloha_obj.Mass
+        OverMass2 = aloha_obj.OverMass2
+        Identity = aloha_obj.Identity
+        t = 1
+        mu, nu, s0, s1, s2 = 2,3,4,5,6
+        Spin3halfPropagator =  lambda nu, s1, s2, part: (P(-1,part)**2 - Mass(part)*Mass(part)) * \
+                             (Mass(part) * Identity(-3, s2) )  
+        
+        #- 1/3 * (PSlash(s1,-2,part) + Identity(s1, -2) * Mass(part))* \
+        #                     (PSlash(-2,-3, part) - Identity(-2,-3) * Mass(part)) * \
+        #                     (P(-1,part)**2 - Mass(part)*Mass(part))
+        #                     (Mass(part) * Identity(-3, s2) )
+                                     
+        zero = Spin3halfPropagator(nu,s1,s2, t)
+        zero = zero.expand()
+        P1_0, P1_1, P1_2, P1_3 = 2,0,0,0
+        OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        M99 = M1
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)     
+ 
+ 
+        
+
+    def test_part_spin32propagator(self):
+        P = aloha_obj.P
+        OM = aloha_obj.OverMass2
+        Gamma = aloha_obj.Gamma
+        Identity = aloha_obj.Identity
+        Mass = aloha_obj.Mass
+        Pslash = aloha_obj.PSlash
+        part = 1
+        mu, nu, s0, s1, s2,s3 = 2,3,4,5,6,7
+        
+        
+        paranthesis = (Gamma(mu,s1,s2) + Identity(s1, s2) *  P(mu, part) * Mass(part) * OM(part)) * Gamma(nu,s2,s3)
+        paranthesis = Gamma(mu,s1,s2) * Gamma(nu,s2,s3) + Identity(s1, s2) *  P(mu, part) * Mass(part) * OM(part) * Gamma(nu,s2,s3)
+        #paranthesis =  Gamma(mu,s1,s2) * Gamma(nu,s2,s3)
+        goal = (Pslash(s1,s2,part) + Mass(part) * Identity(s1,s2)  ) * Gamma(nu, s2, s3)
+        #goal = Pslash(s1,s2,part) * Gamma(nu, s2, s3)
+        goal2= P(mu,part) * paranthesis 
+        goal2 =  P(mu,part) * Gamma(mu,s1,s2) * Gamma(nu,s2,s3) + Identity(s1, s2) *  P(mu,part) * P(mu, part) * Mass(part) * OM(part) * Gamma(nu,s2,s3)
+        zero = goal2 - goal
+        
+        #zero = zero.simplify()
+        zero=zero.expand()
+        P1_0, P1_1, P1_2, P1_3 = 20,3,4,5
+        OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertEqual(eval(str(data)),0)
+
+
+    
+    
     def test_spin2propagator(self):
         """Check that the two definition are coherent"""
         
@@ -2189,18 +2305,18 @@ class TestSomeObjectProperty(unittest.TestCase):
         prod_gam2 = Gamma(2,1,2) * Gamma(1,2,3)
         self.assertNotEqual(prod_gam, prod_gam2)
     
-        # Sigma_mu_nu * Sigma_mu_nu = 12* Id
+        # Sigma_mu_nu * Sigma_mu_nu = 3* Id
         sigma_cont  = Sigma(1,2,1,2) * Sigma(1,2,2,1) 
         sigma_cont = sigma_cont.expand().simplify()
-        self.assertEqual(sigma_cont.get_rep((0,)), 48)
+        self.assertEqual(sigma_cont.get_rep((0,)), 12)
 
-        # Sigma_mu_nu * Gamma_nu = 3i * Gamma_nu # Trace
+        # Sigma_mu_nu * Gamma_nu = 3/2i * Gamma_nu # Trace
         prod = Sigma(1,2,'a','b') * Gamma(2,'b','a')
         prod = prod.expand().simplify()
         self.assertEqual(prod.get_rep((0,)), 0)
 
-        # Sigma_mu_nu * Gamma_nu = 3i * Gamma_nu # Full
-        zero = Sigma(1,2,'a','b') * Gamma(2,'b','c') - complex(0,3) * Gamma(1,'a','c')
+        # Sigma_mu_nu * Gamma_nu = 3/2i * Gamma_nu # Full
+        zero = Sigma(1,2,'a','b') * Gamma(2,'b','c') - complex(0,3/2) * Gamma(1,'a','c')
         zero = zero.expand().simplify()
         for ind in zero.listindices():
             self.assertEqual(zero.get_rep(ind), 0, '%s != 0.0for %s' % \
@@ -2231,7 +2347,44 @@ class TestSomeObjectProperty(unittest.TestCase):
             self.assertEqual(zero.get_rep(ind), 0, '%s != 0.0for %s' % \
                              (zero.get_rep(ind), ind))  
     
+    
+    def test_Pslashproperty(self):
+        """Test Pslash"""
+    
+        Gamma = aloha_obj.Gamma
+        P = aloha_obj.P
+        M = aloha_obj.Mass
+        PSlash = aloha_obj.PSlash
+        Identity = aloha_obj.Identity
         
+        
+        ps1 = PSlash(1,2,3).simplify().expand().simplify()
+        
+        ps2 = Gamma(-1,1,2) * P(-1,3)
+        ps2 = ps2.simplify().expand().simplify()
+        zero = ps1 - ps2
+        zero = zero.simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, '%s != 0.0for %s' % \
+                             (zero.get_rep(ind), ind)) 
+            
+        
+        #checking that (/p + m)(/p-m)=0 (for onshell)
+        expr = (PSlash(1,2,1)+ M(1))*(PSlash(2,3,1)-M(1))
+        P1_0, P1_1, P1_2, P1_3 = 7,2,3,5
+        M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str(data)), 0)  
+         
+        #checking that (/p + m)(/p-m)(P)=0 (for onshell)
+        expr = (PSlash(1,2,1)+ M(1))*(PSlash(2,3,1)-M(1))*(Gamma(4,3,4)*Identity(3,4) * P(4,1))
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str(data)), 0)  
+
+    
     def testGammaAlgebraDefinition(self):
         """Test the coherence between gamma/gamma5/sigma/projector"""
         Gamma = aloha_obj.Gamma
@@ -2322,34 +2475,67 @@ class TestSomeObjectProperty(unittest.TestCase):
         self.assertEqual(metric, metric2)
 
        
-        #Sigma_mu_nu = i/2 * [Gamma_mu, Gamma_nu]
-        sigma = complex(0, 1/2) * (Gamma(1,1,2)*Gamma(2,2,3) - Gamma(2,1,2)*Gamma(1,2,3))
 
-        #handly build
-        sigma_2 = aloha_lib.LorentzObjectRepresentation({},[2,1],[3,1])
-        prod_gam = Gamma(1,1,2) * Gamma(2,2,3)
-        prod_gam = prod_gam.expand().simplify()
-        for ind in prod_gam.listindices():
-            if ind[0] == ind[1]:
-                sigma_2.set_rep(ind, 0)
-            else:
-                value = complex(0, 1)* (prod_gam.get_rep(ind))
-                sigma_2.set_rep(ind, value)
-     
-        sigma_3 = Sigma(1,2,1,3)
-        diff1 = sigma - sigma_3
-        diff1 = diff1.simplify()
-        diff1 = diff1.expand()
-        diff1 = diff1.simplify()
+        sigma = complex(0, 1/4) * (Gamma(1,3,2)*Gamma(2,2,1) - Gamma(2,3,2)*Gamma(1,2,1))
+        sigma2 = sigma.expand()
         
-        for ind in diff1.listindices():
-            self.assertEqual(diff1.get_rep(ind), 0)
+        zero = Sigma(1,2,3,1) - sigma
+        zero = zero.expand()
+        for ind in zero.listindices(): 
+            self.assertEqual(zero.get_rep(ind), 0)        
         
-        diff1 = sigma.expand() + -1 * sigma_2
-        diff1 = diff1.simplify()
-        for ind in diff1.listindices():
-            self.assertEqual(diff1.get_rep(ind), 0, 'not zero %s for %s' 
-                             % (diff1.get_rep(ind),ind ))
+        mu, nu, rho, sigma = 1,2,3,4
+        commutator = Sigma(mu,nu,1,2) * Sigma(rho, sigma,2,3) - Sigma(rho,sigma,1,2) * Sigma(mu, nu,2,3) 
+        algebra = -1j * Metric(mu,rho) * Sigma(nu,sigma,1,3) + \
+                  1j * Metric(nu,rho) * Sigma(mu,sigma,1,3) + \
+                  -1j * Metric(nu,sigma) * Sigma(mu,rho,1,3) + \
+                  1j * Metric(mu,sigma) * Sigma(nu,rho,1,3)
+        
+        zero = commutator - algebra
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices(): 
+            self.assertEqual(zero.get_rep(ind), 0)         
+        
+        
+    def test_complex_equality(self):
+        """Is this really equal?"""
+        Gamma = aloha_obj.Gamma
+        Gamma5 = aloha_obj.Gamma5
+        Sigma = aloha_obj.Sigma
+        ProjM = aloha_obj.ProjM
+        ProjP = aloha_obj.ProjP
+        Identity = aloha_obj.Identity
+        Metric = aloha_obj.Metric        
+        Epsilon = aloha_obj.Epsilon
+        P = aloha_obj.P
+        
+        object2_paper = P(-1,2) * P(-1,3) * Gamma(3,2,1) - P(3,2) * P(-1,3) * Gamma(-1,2,1) \
+                  - complex(0,1) * Epsilon(3,-1,-2,-3) * P(-2,2)*P(-1,3)*Gamma(-3,2,-4)*Gamma5(-4,1)
+        object2 = Epsilon(3,-1,-2,-3)*P(-2,2)*P(-1,3)*Gamma(-3,2,-4)*ProjM(-4,1) + complex(0,1)*P(-1,3)*P(3,2)*Gamma(-1,2,-2)*ProjM(-2,1) - complex(0,1)*P(-1,2)*P(-1,3)*Gamma(3,2,-2)*ProjM(-2,1) - Epsilon(3,-1,-2,-3)*P(-2,2)*P(-1,3)*Gamma(-3,2,-4)*ProjP(-4,1) + complex(0,1)*P(-1,3)*P(3,2)*Gamma(-1,2,-2)*ProjP(-2,1) - complex(0,1)*P(-1,2)*P(-1,3)*Gamma(3,2,-2)*ProjP(-2,1)        
+        
+        zero = - complex(0,1) * object2_paper - object2
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices(): 
+            self.assertEqual(zero.get_rep(ind), 0)  
+
+        
+        object1_paper = 2 * P(-1,2) * P(-1, 3) * Gamma(3,2,1) - P(3,3) * P(-1,2) * Gamma(-1,2,1)\
+                        - P(-2,3) * Gamma(3,2,-3)* P(-4,2)*Gamma(-4,-3,-5)*Gamma(-2,-5,1)
+        
+        object1 = P(-1,2)*P(3,3)*Gamma(-1,2,1) - (P(-2,2)*P(-1,3)*Gamma(-2,-3,1)*Gamma(-1,-4,-3)*Gamma(3,2,-4))/2. + (P(-2,2)*P(-1,3)*Gamma(-2,-4,-3)*Gamma(-1,-3,1)*Gamma(3,2,-4))/2. - P(-1,2)*P(-1,3)*Gamma(3,2,1)
+              
+        zero = - 1 * object1_paper - object1
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices(): 
+            self.assertEqual(zero.get_rep(ind), 0) 
+        
+        zero =   object1_paper - object2_paper
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices(): 
+            self.assertEqual(zero.get_rep(ind), 0)         
+        
+        
+
             
 #    def test_Spin2Contraction(self): 
 #        """check spin2 contraction"""
@@ -2380,7 +2566,7 @@ class TestSomeObjectProperty(unittest.TestCase):
                                  for l3 in range(4) if l3 not in [l1,l2])
         for index in indices:
             val1 = eps.give_parity(index)
-            val2 = aloha_obj.give_sign_perm([0,1,2,3], index)
+            val2 = -1 * aloha_obj.give_sign_perm([0,1,2,3], index)
         
             self.assertEqual(val1, val2, 'not same parity for perm %s' % (index,))
 
@@ -2393,14 +2579,14 @@ class TestSomeObjectProperty(unittest.TestCase):
         # test some value
         eps = Epsilon(1,2,3,4)
         eps = eps.expand().simplify()
-        self.assertEqual(eps.get_rep([0,1,2,3]), 1)
+        self.assertEqual(eps.get_rep([0,1,2,3]), -1)
         self.assertEqual(eps.get_rep([0,1,2,2]), 0) 
-        self.assertEqual(eps.get_rep([0,1,3,2]), -1) 
+        self.assertEqual(eps.get_rep([0,1,3,2]), 1) 
         self.assertEqual(eps.get_rep([0,1,1,2]), 0) 
         self.assertEqual(eps.get_rep([0,0,2,2]), 0) 
-        self.assertEqual(eps.get_rep([1,2,3,0]), -1) 
-        self.assertEqual(eps.get_rep([1,2,0,3]), 1) 
-        self.assertEqual(eps.get_rep([1,0,2,3]), -1) 
+        self.assertEqual(eps.get_rep([1,2,3,0]), 1) 
+        self.assertEqual(eps.get_rep([1,2,0,3]), -1) 
+        self.assertEqual(eps.get_rep([1,0,2,3]), 1) 
 
         # Test the full contraction of two Epsilon
         contraction = Epsilon(1,2,3,4) * Epsilon(1,2,3,4)
@@ -2519,8 +2705,74 @@ class TestSomeObjectProperty(unittest.TestCase):
             self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
                              % (zero.get_rep(ind),ind ))
                     
-        
 
+    def testConjugateOperator(self):
+        Gamma = aloha_obj.Gamma
+        Gamma5 = aloha_obj.Gamma5
+        Sigma = aloha_obj.Sigma
+        ProjM = aloha_obj.ProjM
+        ProjP = aloha_obj.ProjP
+        Identity = aloha_obj.Identity
+        Metric = aloha_obj.Metric
+        P = aloha_obj.P
+        C = aloha_obj.C    
+        
+        # Check the sign given in Denner
+        
+        def conjugate(A):
+            # contract on 1,2 return on indices 51 52
+            return C(51, 2) * A * C(52,1)
+        
+        
+        # check C * 1 * C^ -1 = 1
+        A = Identity(1,2)
+        AC = conjugate(A)
+        A2 = Identity(51,52) 
+        zero = AC - A2 
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (zero.get_rep(ind),ind ))        
+        
+        # check C * Gamma_mu^T * C^ -1 = - Gamma_mu
+        A = Gamma('mu',1,2)
+        AC = conjugate(A)
+        A2 = -1 * Gamma('mu',51,52) 
+        zero = AC - A2 
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (zero.get_rep(ind),ind ))         
+        
+        # check C * (Gamma_mu * Gamma5)^T * C^ -1 =  Gamma_mu * Gamma5
+        A = Gamma('mu',1,21) * Gamma5(21,2)
+        AC = conjugate(A)
+        A2 = Gamma('mu',51,22) * Gamma5(22,52) 
+        zero = AC - A2 
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (zero.get_rep(ind),ind ))           
+
+        # check goldstino interaction
+        A = -(P(-1,3)*Gamma(-1,-2,1)*Gamma(3,2,-2)) + P(3,3)*Identity(2,1)
+        AC = conjugate(A)
+        A2 = -(P(-1,3)*Gamma(-1,-2,51)*Gamma(3,52,-2)) + P(3,3)*Identity(52,51) 
+        zero = AC + A2 
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (zero.get_rep(ind),ind ))         
+    
+        # check goldstino interaction
+        A = -(Gamma('nu',-2,1)*Gamma('mu',2,-2)) + Metric('mu','nu') * Identity(2,1)
+        AC = conjugate(A)
+        A2 = -(Gamma('nu',-2,51)*Gamma('mu',52,-2)) + Metric('mu','nu') * Identity(52,51) 
+        zero = AC + A2 
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (zero.get_rep(ind),ind ))    
     
     def testemptyisFalse(self):
 
@@ -2660,7 +2912,7 @@ class test_aloha_creation(unittest.TestCase):
         P3_0,P3_1,P3_2,P3_3 = 1001, 1106, 1240, 1320
 
         for ind in expr.listindices():
-            self.assertEqual(eval(str(expr.get_rep(ind))), -178727040j)
+            self.assertEqual(eval(str(expr.get_rep(ind))), 178727040j)
 
 
     def test_use_of_library_spin2(self):
@@ -2799,7 +3051,8 @@ class test_aloha_creation(unittest.TestCase):
         # Check that full identification symmetry works
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         helas_suite.look_for_symmetries()
-        solution = {'SSSS1': {2: 1, 3: 2, 4: 3}, 'VVVV4': {2: 1, 3: 2, 4: 3}, 'VVV1': {2: 1, 3: 2}, 'VVVV1': {2: 1, 3: 2, 4: 3}, 'VVVV3': {2: 1, 3: 2, 4: 3}, 'VVVV2': {2: 1, 4: 3}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVS1': {2: 1}}  
+        solution = {'VVVV2': {2: 1 ,4: 3}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 
+                    'VVS1': {2: 1},'SSSS1': {2: 1, 3: 2, 4:3}}  
         self.assertEqual(solution, helas_suite.symmetries)
         
     def test_has_symmetries(self):
@@ -2831,7 +3084,7 @@ class test_aloha_creation(unittest.TestCase):
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         helas_suite.look_for_multiple_lorentz_interactions()
-        solution = {'FFV2': [('FFV3',), ('FFV4',), ('FFV5',)], 'FFS3': [('FFS4',)]}
+        solution = {'FFV2': [('FFV3',), ('FFV4',), ('FFV5',)]}
         self.assertEqual(solution, helas_suite.multiple_lor)
         
 
@@ -2854,9 +3107,9 @@ class test_aloha_creation(unittest.TestCase):
 
         goal =""" subroutine VVS1_1(V2, S3, COUP, M1, W1, V1)
 implicit none 
-double complex V1(6)
-double complex V2(6)
-double complex S3(3)
+double complex V1(*)
+double complex V2(*)
+double complex S3(*)
 double complex COUP
 double complex denom
 double precision M1, W1
@@ -2883,9 +3136,9 @@ end
 
  subroutine VVS1_2(V2, S3, COUP, M1, W1, V1)
 implicit none 
-double complex V1(6)
-double complex V2(6)
-double complex S3(3)
+double complex V1(*)
+double complex V2(*)
+double complex S3(*)
 double complex COUP
 double complex denom
 double precision M1, W1
@@ -2897,9 +3150,9 @@ end
 
  subroutine VVS1_2_1(V2, S3, COUP1,COUP2, M1, W1, V1)
 implicit none 
-double complex V1(6)
-double complex V2(6)
-double complex S3(3)
+double complex V1(*)
+double complex V2(*)
+double complex S3(*)
 double complex COUP1,COUP2
 double complex denom
 double precision M1, W1
@@ -2917,9 +3170,9 @@ end
 
  subroutine VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1, V1)
 implicit none 
-double complex V1(6)
-double complex V2(6)
-double complex S3(3)
+double complex V1(*)
+double complex V2(*)
+double complex S3(*)
 double complex COUP1,COUP2
 double complex denom
 double precision M1, W1
@@ -3028,10 +3281,10 @@ def VVS1_1(V2, S3, COUP, M1, W1):
     V1 = wavefunctions.WaveFunction(size=6)
     V1[4] = V2[4]+S3[1]
     V1[5] = V2[5]+S3[2]
-    P1 = [-complex(V1[4]).real, \\
-            - complex(V1[5]).real, \\
-            - complex(V1[5]).imag, \\
-            - complex(V1[4]).imag]
+    P1 = [- complex(V1[4]).real, \\
+             - complex(V1[5]).real, \\
+             - complex(V1[5]).imag, \\
+             - complex(V1[4]).imag]
     OM1 = 0.0
     if (M1): OM1=1.0/M1**2
     denom =1.0/(( (M1*( -M1+1j*W1))+( (P1[0]**2)-(P1[1]**2)-(P1[2]**2)-(P1[3]**2))))
@@ -3098,20 +3351,17 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
         """test if we create the correct set of routine/files for multiple lorentz"""
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
-        requested_routines=[(('FFS1','FFS2') , (), 0), 
-                            (('FFV1',) , (), 0), 
+        requested_routines=[(('FFV1',) , (), 0), 
                             (('FFV1','FFV2') , (1,), 0)]
         
         helas_suite.compute_subset(requested_routines)
 
-        # Check that the 5 base routines are created
-        # FFS1, FFS2, FFV1, FFV1C1, FFV2C1
-        self.assertEqual(len(helas_suite), 5)
+        # Check that the 3 base routines are created
+        # FFV1, FFV1C1, FFV2C1
+        self.assertEqual(len(helas_suite), 3)
         
-        # Check that FFS1 and FFV1C1 are correctly connected to the associate
-        #lorentz
-        linked = helas_suite[('FFS1',0)].combined
-        self.assertEqual(linked, [('FFS2',)])
+        # Check that FFV1C1 are correctly connected to the associate
+        # lorentz
         linked = helas_suite[('FFV1C1',0)].combined
         self.assertEqual(linked, [('FFV2',)])        
         linked = helas_suite[('FFV1',0)].combined
@@ -3122,26 +3372,26 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
         helas_suite.write('/tmp/mg5', 'Fortran')
         
         content = set(os.listdir('/tmp/mg5'))
-        self.assertEqual(content, set(['FFS1_0.f', 'FFS2_0.f', 'FFV1_0.f',
-                                       'FFV1C1_0.f','FFV2C1_0.f', 'FFS1_2_0.f',
+        self.assertEqual(content, set(['FFV1_0.f',
+                                       'FFV1C1_0.f','FFV2C1_0.f',
                                        'FFV1C1_2_0.f']))
         
         # Check the content of FFV1__FFV2C1_0.f
         fsock = open('/tmp/mg5/FFV1C1_2_0.f')
         goal = """C     This File is Automatically generated by ALOHA 
 C     
-      SUBROUTINE FFV1C1_2_0(F1,F2,V3,COUP1,COUP2,VERTEX)
+      SUBROUTINE FFV1C1_2_0(F2,F1,V3,COUP1,COUP2,VERTEX)
       IMPLICIT NONE
-      DOUBLE COMPLEX F1(6)
-      DOUBLE COMPLEX F2(6)
-      DOUBLE COMPLEX V3(6)
+      DOUBLE COMPLEX F1(*)
+      DOUBLE COMPLEX F2(*)
+      DOUBLE COMPLEX V3(*)
       DOUBLE COMPLEX COUP1,COUP2
       DOUBLE COMPLEX VERTEX
       DOUBLE COMPLEX TMP
 
 
-      CALL FFV1C1_0(F1, F2, V3, COUP1, VERTEX)
-      CALL FFV2C1_0(F1, F2, V3, COUP2, TMP)
+      CALL FFV1C1_0(F2, F1, V3, COUP1, VERTEX)
+      CALL FFV2C1_0(F2, F1, V3, COUP2, TMP)
       VERTEX = VERTEX + TMP
       END
 
@@ -3208,11 +3458,12 @@ C
       
         # Check expr are different
         self.assertNotEqual(str(amp.expr), str(conjg_amp.expr))
-        self.assertNotEqual(amp.name, conjg_amp.name)
-        
+        self.assertEqual(amp.name, conjg_amp.name)
+        self.assertEqual(amp.tag + ['C1'], conjg_amp.tag)
         
     def test_aloha_expr_FFV2C1(self):
         """Test analytical expression for fermion clash routine"""
+        
         from models.mssm.object_library import Lorentz
         FFV = Lorentz(name = 'FFV2',
                  spins = [ 2, 2, 3 ],
@@ -3230,10 +3481,16 @@ C
 
         ufo_value = eval(str(amp.expr.get_rep([0])))
     
-        v4_value = ( (F2_1*F1_3+F2_2*F1_4)*V3_1 \
-                    -(F2_1*F1_4+F2_2*F1_3)*V3_2 \
-                    +(F2_1*F1_4-F2_2*F1_3)*V3_3*cImag \
-                    -(F2_1*F1_3-F2_2*F1_4)*V3_4       )
+        #v4_value = ( (F2_1*F1_3+F2_2*F1_4)*V3_1 \
+        #            -(F2_1*F1_4+F2_2*F1_3)*V3_2 \
+        #            +(F2_1*F1_4-F2_2*F1_3)*V3_3*cImag \
+        #            -(F2_1*F1_3-F2_2*F1_4)*V3_4       )
+        v4_value = ( (F1_1*F2_3+F1_2*F2_4)*V3_1 \
+                    -(F1_1*F2_4+F1_2*F2_3)*V3_2 \
+                    +(F1_1*F2_4-F1_2*F2_3)*V3_3*cImag \
+                    -(F1_1*F2_3-F1_2*F2_4)*V3_4       )
+
+
 
         self.assertEqual(complex(0,-1)*ufo_value, v4_value)
 
@@ -3246,10 +3503,10 @@ C
         
         ufo_value = eval(str(amp.expr.get_rep([0])))
         self.assertNotEqual(complex(0,1)*ufo_value, v4_value)
-        v4_value = (F2_3*F1_1+F2_4*F1_2)*V3_1 \
-                          +(F2_3*F1_2+F2_4*F1_1)*V3_2 \
-                          -(F2_3*F1_2-F2_4*F1_1)*V3_3*cImag \
-                          +(F2_3*F1_1-F2_4*F1_2)*V3_4
+        v4_value = (F1_3*F2_1+F1_4*F2_2)*V3_1 \
+                          +(F1_3*F2_2+F1_4*F2_1)*V3_2 \
+                          -(F1_3*F2_2-F1_4*F2_1)*V3_3*cImag \
+                          +(F1_3*F2_1-F1_4*F2_2)*V3_4
                
         self.assertEqual(complex(0,-1)*ufo_value, v4_value)
         
@@ -3449,10 +3706,10 @@ def SSS1_1(S2, S3, COUP, M1, W1):
     S1 = wavefunctions.WaveFunction(size=3)
     S1[1] = S2[1]+S3[1]
     S1[2] = S2[2]+S3[2]
-    P1 = [-complex(S1[1]).real, \\
-            - complex(S1[2]).real, \\
-            - complex(S1[2]).imag, \\
-            - complex(S1[1]).imag]
+    P1 = [- complex(S1[1]).real, \\
+             - complex(S1[2]).real, \\
+             - complex(S1[2]).imag, \\
+             - complex(S1[1]).imag]
     denom =1.0/(( (M1*( -M1+1j*W1))+( (P1[0]**2)-(P1[1]**2)-(P1[2]**2)-(P1[3]**2))))
     S1[0]= COUP*denom*1j*(S3[0]*S2[0])
     return S1
@@ -3480,6 +3737,443 @@ def SSS1_3(S2, S3, COUP, M1, W1):
         split_routine = routine.split('\n')
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
+
+
+    def test_pythonwriter_C(self):
+        """ test that python writer works """
+        
+        solution ="""import wavefunctions
+def FFV1C1_1(F1, V3, COUP, M2, W2):
+    F2 = wavefunctions.WaveFunction(size=6)
+    F2[4] = F1[4]+V3[4]
+    F2[5] = F1[5]+V3[5]
+    P2 = [complex(F2[4]).real, \\
+             complex(F2[5]).real, \\
+             complex(F2[5]).imag, \\
+             complex(F2[4]).imag]
+    denom =1.0/(( (M2*( -M2+1j*W2))+( (P2[0]**2)-(P2[1]**2)-(P2[2]**2)-(P2[3]**2))))
+    F2[0]= COUP*denom*( (F1[1]*( (P2[0]*( 1j*V3[1]-V3[2]))+( (P2[1]*( -1j*V3[0]-1j*V3[3]))+( (P2[2]*( V3[0]+V3[3]))+(P2[3]*( 1j*V3[1]-V3[2]))))))+( (F1[0]*( (P2[0]*( -1j*V3[0]+1j*V3[3]))+( (P2[1]*( 1j*V3[1]+V3[2]))+( (P2[2]*( -V3[1]+1j*V3[2]))+(P2[3]*( -1j*V3[0]+1j*V3[3]))))))+(M2*( (F1[3]*( -1j*V3[1]+V3[2]))+(F1[2]*( -1j*V3[0]-1j*V3[3]))))))
+    F2[1]= COUP*denom*( (F1[1]*( (P2[0]*( -1j*V3[0]-1j*V3[3]))+( (P2[1]*( 1j*V3[1]-V3[2]))+( (P2[2]*( V3[1]+1j*V3[2]))+(P2[3]*( 1j*V3[0]+1j*V3[3]))))))+( (F1[0]*( (P2[0]*( 1j*V3[1]+V3[2]))+( (P2[1]*( -1j*V3[0]+1j*V3[3]))+( (P2[2]*( -V3[0]+V3[3]))+(P2[3]*( -1j*V3[1]-V3[2]))))))+(M2*( (F1[3]*( -1j*V3[0]+1j*V3[3]))+(F1[2]*( -1j*V3[1]-V3[2]))))))
+    F2[2]= COUP*denom*( (F1[3]*( (P2[0]*( -1j*V3[1]+V3[2]))+( (P2[1]*( 1j*V3[0]-1j*V3[3]))+( (P2[2]*( -V3[0]+V3[3]))+(P2[3]*( 1j*V3[1]-V3[2]))))))+( (F1[2]*( (P2[0]*( -1j*V3[0]-1j*V3[3]))+( (P2[1]*( 1j*V3[1]+V3[2]))+( (P2[2]*( -V3[1]+1j*V3[2]))+(P2[3]*( 1j*V3[0]+1j*V3[3]))))))+(M2*( (F1[1]*( 1j*V3[1]-V3[2]))+(F1[0]*( -1j*V3[0]+1j*V3[3]))))))
+    F2[3]= COUP*denom*( (F1[3]*( (P2[0]*( -1j*V3[0]+1j*V3[3]))+( (P2[1]*( 1j*V3[1]-V3[2]))+( (P2[2]*( V3[1]+1j*V3[2]))+(P2[3]*( -1j*V3[0]+1j*V3[3]))))))+( (F1[2]*( (P2[0]*( -1j*V3[1]-V3[2]))+( (P2[1]*( 1j*V3[0]+1j*V3[3]))+( (P2[2]*( V3[0]+V3[3]))+(P2[3]*( -1j*V3[1]-V3[2]))))))+(M2*( (F1[1]*( -1j*V3[0]-1j*V3[3]))+(F1[0]*( 1j*V3[1]+V3[2]))))))
+    return F2
+    
+    
+"""
+        
+        FFV = UFOLorentz(name = 'FFV1',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,2,1)')        
+        builder = create_aloha.AbstractRoutineBuilder(FFV)
+        builder.apply_conjugation()
+        amp = builder.compute_routine(1)
+        routine = amp.write(output_dir=None, language='Python')
+        
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+        solution ="""import wavefunctions
+def FFV1C1_2(F2, V3, COUP, M1, W1):
+    F1 = wavefunctions.WaveFunction(size=6)
+    F1[4] = F2[4]-V3[4]
+    F1[5] = F2[5]-V3[5]
+    P1 = [complex(F1[4]).real, \\
+             complex(F1[5]).real, \\
+             complex(F1[5]).imag, \\
+             complex(F1[4]).imag]
+    denom =1.0/(( (M1*( -M1+1j*W1))+( (P1[0]**2)-(P1[1]**2)-(P1[2]**2)-(P1[3]**2))))
+    F1[0]= COUP*denom*( (F2[0]*( (V3[1]*( 1j*P1[1]+P1[2]))+( (V3[2]*( -P1[1]+1j*P1[2]))+( (V3[0]*( -1j*P1[0]+1j*P1[3]))+(V3[3]*( -1j*P1[0]+1j*P1[3]))))))+( (F2[1]*( (V3[0]*( 1j*P1[1]+P1[2]))+( (V3[3]*( -1j*P1[1]-P1[2]))+( (V3[1]*( -1j*P1[0]+1j*P1[3]))+(V3[2]*( -P1[0]+P1[3]))))))+(M1*( (F2[2]*( -1j*V3[0]+1j*V3[3]))+(F2[3]*( 1j*V3[1]+V3[2]))))))
+    F1[1]= COUP*denom*( (F2[0]*( (V3[1]*( -1j*P1[0]-1j*P1[3]))+( (V3[2]*( P1[0]+P1[3]))+( (V3[0]*( 1j*P1[1]-P1[2]))+(V3[3]*( 1j*P1[1]-P1[2]))))))+( (F2[1]*( (V3[0]*( -1j*P1[0]-1j*P1[3]))+( (V3[3]*( 1j*P1[0]+1j*P1[3]))+( (V3[1]*( 1j*P1[1]-P1[2]))+(V3[2]*( P1[1]+1j*P1[2]))))))+(M1*( (F2[2]*( 1j*V3[1]-V3[2]))+(F2[3]*( -1j*V3[0]-1j*V3[3]))))))
+    F1[2]= COUP*denom*( (F2[2]*( (V3[1]*( 1j*P1[1]+P1[2]))+( (V3[2]*( -P1[1]+1j*P1[2]))+( (V3[0]*( -1j*P1[0]-1j*P1[3]))+(V3[3]*( 1j*P1[0]+1j*P1[3]))))))+( (F2[3]*( (V3[0]*( -1j*P1[1]-P1[2]))+( (V3[3]*( -1j*P1[1]-P1[2]))+( (V3[1]*( 1j*P1[0]+1j*P1[3]))+(V3[2]*( P1[0]+P1[3]))))))+(M1*( (F2[0]*( -1j*V3[0]-1j*V3[3]))+(F2[1]*( -1j*V3[1]-V3[2]))))))
+    F1[3]= COUP*denom*( (F2[2]*( (V3[1]*( 1j*P1[0]-1j*P1[3]))+( (V3[2]*( -P1[0]+P1[3]))+( (V3[0]*( -1j*P1[1]+P1[2]))+(V3[3]*( 1j*P1[1]-P1[2]))))))+( (F2[3]*( (V3[0]*( -1j*P1[0]+1j*P1[3]))+( (V3[3]*( -1j*P1[0]+1j*P1[3]))+( (V3[1]*( 1j*P1[1]-P1[2]))+(V3[2]*( P1[1]+1j*P1[2]))))))+(M1*( (F2[0]*( -1j*V3[1]+V3[2]))+(F2[1]*( -1j*V3[0]+1j*V3[3]))))))
+    return F1
+    
+    
+"""
+
+        amp = builder.compute_routine(2)
+        
+        routine = amp.write(output_dir=None, language='Python')
+        
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+        solution = """import wavefunctions
+def FFV1C1_1(F1, V3, COUP, M2, W2):
+    F2 = wavefunctions.WaveFunction(size=6)
+    F2[4] = F1[4]+V3[4]
+    F2[5] = F1[5]+V3[5]
+    P2 = [complex(F2[4]).real, \\
+             complex(F2[5]).real, \\
+             complex(F2[5]).imag, \\
+             complex(F2[4]).imag]
+    denom =1.0/(( (M2*( -M2+1j*W2))+( (P2[0]**2)-(P2[1]**2)-(P2[2]**2)-(P2[3]**2))))
+    F2[0]= COUP*denom*( (F1[1]*( (P2[0]*( 1j*V3[1]-V3[2]))+( (P2[1]*( -1j*V3[0]-1j*V3[3]))+( (P2[2]*( V3[0]+V3[3]))+(P2[3]*( 1j*V3[1]-V3[2]))))))+( (F1[0]*( (P2[0]*( -1j*V3[0]+1j*V3[3]))+( (P2[1]*( 1j*V3[1]+V3[2]))+( (P2[2]*( -V3[1]+1j*V3[2]))+(P2[3]*( -1j*V3[0]+1j*V3[3]))))))+(M2*( (F1[3]*( -1j*V3[1]+V3[2]))+(F1[2]*( -1j*V3[0]-1j*V3[3]))))))
+    F2[1]= COUP*denom*( (F1[1]*( (P2[0]*( -1j*V3[0]-1j*V3[3]))+( (P2[1]*( 1j*V3[1]-V3[2]))+( (P2[2]*( V3[1]+1j*V3[2]))+(P2[3]*( 1j*V3[0]+1j*V3[3]))))))+( (F1[0]*( (P2[0]*( 1j*V3[1]+V3[2]))+( (P2[1]*( -1j*V3[0]+1j*V3[3]))+( (P2[2]*( -V3[0]+V3[3]))+(P2[3]*( -1j*V3[1]-V3[2]))))))+(M2*( (F1[3]*( -1j*V3[0]+1j*V3[3]))+(F1[2]*( -1j*V3[1]-V3[2]))))))
+    F2[2]= COUP*denom*( (F1[3]*( (P2[0]*( -1j*V3[1]+V3[2]))+( (P2[1]*( 1j*V3[0]-1j*V3[3]))+( (P2[2]*( -V3[0]+V3[3]))+(P2[3]*( 1j*V3[1]-V3[2]))))))+( (F1[2]*( (P2[0]*( -1j*V3[0]-1j*V3[3]))+( (P2[1]*( 1j*V3[1]+V3[2]))+( (P2[2]*( -V3[1]+1j*V3[2]))+(P2[3]*( 1j*V3[0]+1j*V3[3]))))))+(M2*( (F1[1]*( 1j*V3[1]-V3[2]))+(F1[0]*( -1j*V3[0]+1j*V3[3]))))))
+    F2[3]= COUP*denom*( (F1[3]*( (P2[0]*( -1j*V3[0]+1j*V3[3]))+( (P2[1]*( 1j*V3[1]-V3[2]))+( (P2[2]*( V3[1]+1j*V3[2]))+(P2[3]*( -1j*V3[0]+1j*V3[3]))))))+( (F1[2]*( (P2[0]*( -1j*V3[1]-V3[2]))+( (P2[1]*( 1j*V3[0]+1j*V3[3]))+( (P2[2]*( V3[0]+V3[3]))+(P2[3]*( -1j*V3[1]-V3[2]))))))+(M2*( (F1[1]*( -1j*V3[0]-1j*V3[3]))+(F1[0]*( 1j*V3[1]+V3[2]))))))
+    return F2
+    
+    
+def FFV1C1_2_1(F1, V3, COUP1,COUP2, M2, W2):
+
+
+    F2 = FFV1C1_1(F1, V3, COUP1, M2, W2)
+    tmp = FFV2C1_1(F1, V3, COUP2, M2, W2)
+    for i in range(4):
+        F2[i] += tmp[i]
+    return F2
+
+"""
+
+
+
+        FFV = UFOLorentz(name = 'FFV1',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,2,1)')        
+        builder = create_aloha.AbstractRoutineBuilder(FFV) 
+        builder.apply_conjugation()
+        amp = builder.compute_routine(1)
+        amp.add_combine(['FFV2'])
+        routine = amp.write(output_dir=None, language='Python')
+
+
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+       
+    def test_pythonwriter_4_fermion(self):
+        """ test that python writer works """
+        
+        solution ="""import wavefunctions
+def FFFF1_1(F2, F3, F4, COUP, M1, W1):
+    F1 = wavefunctions.WaveFunction(size=6)
+    F1[4] = F2[4]-F3[4]+F4[4]
+    F1[5] = F2[5]-F3[5]+F4[5]
+    P1 = [complex(F1[4]).real, \\
+             complex(F1[5]).real, \\
+             complex(F1[5]).imag, \\
+             complex(F1[4]).imag]
+    denom =1.0/(( (M1*( -M1+1j*W1))+( (P1[0]**2)-(P1[1]**2)-(P1[2]**2)-(P1[3]**2))))
+    F1[0]= COUP*denom*( (F2[3]*( (P1[1]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P1[2]*( -(F4[0]*F3[0])-(F4[1]*F3[1])-(F4[2]*F3[2])-(F4[3]*F3[3])))))+( (F2[2]*( (P1[0]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P1[3]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))))+(M1*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3]))*F2[0])))
+    F1[1]= COUP*denom*( (F2[2]*( (P1[1]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P1[2]*( (F4[0]*F3[0])+(F4[1]*F3[1])+(F4[2]*F3[2])+(F4[3]*F3[3])))))+( (F2[3]*( (P1[0]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P1[3]*( -1j*(F4[0]*F3[0])-1j*(F4[1]*F3[1])-1j*(F4[2]*F3[2])-1j*(F4[3]*F3[3])))))+(M1*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3]))*F2[1])))
+    F1[2]= COUP*denom*( (F2[1]*( (P1[1]*( -1j*(F4[0]*F3[0])-1j*(F4[1]*F3[1])-1j*(F4[2]*F3[2])-1j*(F4[3]*F3[3])))+(P1[2]*( (F4[0]*F3[0])+(F4[1]*F3[1])+(F4[2]*F3[2])+(F4[3]*F3[3])))))+( (F2[0]*( (P1[0]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P1[3]*( -1j*(F4[0]*F3[0])-1j*(F4[1]*F3[1])-1j*(F4[2]*F3[2])-1j*(F4[3]*F3[3])))))+(M1*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3]))*F2[2])))
+    F1[3]= COUP*denom*( (F2[0]*( (P1[1]*( -1j*(F4[0]*F3[0])-1j*(F4[1]*F3[1])-1j*(F4[2]*F3[2])-1j*(F4[3]*F3[3])))+(P1[2]*( -(F4[0]*F3[0])-(F4[1]*F3[1])-(F4[2]*F3[2])-(F4[3]*F3[3])))))+( (F2[1]*( (P1[0]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P1[3]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))))+(M1*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3]))*F2[3])))
+    return F1
+    
+    
+"""
+        
+        FFFF = UFOLorentz(name = 'FFFF1',
+                spins = [ 2, 2, 2, 2 ],
+                structure = 'Identity(1,2)*Identity(4,3)')       
+        builder = create_aloha.AbstractRoutineBuilder(FFFF)
+        amp = builder.compute_routine(1)
+        
+        routine = amp.write(output_dir=None, language='Python')
+        
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+        
+        
+        solution ="""import wavefunctions
+def FFFF1C1_1(F1, F3, F4, COUP, M2, W2):
+    F2 = wavefunctions.WaveFunction(size=6)
+    F2[4] = F1[4]-F3[4]+F4[4]
+    F2[5] = F1[5]-F3[5]+F4[5]
+    P2 = [complex(F2[4]).real, \\
+             complex(F2[5]).real, \\
+             complex(F2[5]).imag, \\
+             complex(F2[4]).imag]
+    denom =1.0/(( (M2*( -M2+1j*W2))+( (P2[0]**2)-(P2[1]**2)-(P2[2]**2)-(P2[3]**2))))
+    F2[0]= COUP*denom*( (F1[3]*( (P2[1]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P2[2]*( -(F4[0]*F3[0])-(F4[1]*F3[1])-(F4[2]*F3[2])-(F4[3]*F3[3])))))+( (F1[2]*( (P2[0]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P2[3]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))))+(M2*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3]))*F1[0])))
+    F2[1]= COUP*denom*( (F1[2]*( (P2[1]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P2[2]*( (F4[0]*F3[0])+(F4[1]*F3[1])+(F4[2]*F3[2])+(F4[3]*F3[3])))))+( (F1[3]*( (P2[0]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P2[3]*( -1j*(F4[0]*F3[0])-1j*(F4[1]*F3[1])-1j*(F4[2]*F3[2])-1j*(F4[3]*F3[3])))))+(M2*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3]))*F1[1])))
+    F2[2]= COUP*denom*( (F1[1]*( (P2[1]*( -1j*(F4[0]*F3[0])-1j*(F4[1]*F3[1])-1j*(F4[2]*F3[2])-1j*(F4[3]*F3[3])))+(P2[2]*( (F4[0]*F3[0])+(F4[1]*F3[1])+(F4[2]*F3[2])+(F4[3]*F3[3])))))+( (F1[0]*( (P2[0]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P2[3]*( -1j*(F4[0]*F3[0])-1j*(F4[1]*F3[1])-1j*(F4[2]*F3[2])-1j*(F4[3]*F3[3])))))+(M2*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3]))*F1[2])))
+    F2[3]= COUP*denom*( (F1[0]*( (P2[1]*( -1j*(F4[0]*F3[0])-1j*(F4[1]*F3[1])-1j*(F4[2]*F3[2])-1j*(F4[3]*F3[3])))+(P2[2]*( -(F4[0]*F3[0])-(F4[1]*F3[1])-(F4[2]*F3[2])-(F4[3]*F3[3])))))+( (F1[1]*( (P2[0]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P2[3]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))))+(M2*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3]))*F1[3])))
+    return F2
+    
+    
+"""
+        
+        FFFF = UFOLorentz(name = 'FFFF1',
+                spins = [ 2, 2, 2, 2 ],
+                structure = 'Identity(1,2)*Identity(4,3)')       
+        builder = create_aloha.AbstractRoutineBuilder(FFFF)
+        builder.apply_conjugation(1)
+        amp = builder.compute_routine(1)
+        
+        routine = amp.write(output_dir=None, language='Python')
+        
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+       
+        solution ="""import wavefunctions
+def FFFF1C2_1(F2, F4, F3, COUP, M1, W1):
+    F1 = wavefunctions.WaveFunction(size=6)
+    F1[4] = F2[4]+F3[4]-F4[4]
+    F1[5] = F2[5]+F3[5]-F4[5]
+    P1 = [complex(F1[4]).real, \\
+             complex(F1[5]).real, \\
+             complex(F1[5]).imag, \\
+             complex(F1[4]).imag]
+    denom =1.0/(( (M1*( -M1+1j*W1))+( (P1[0]**2)-(P1[1]**2)-(P1[2]**2)-(P1[3]**2))))
+    F1[0]= COUP*denom*( (F2[3]*( (P1[1]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P1[2]*( -(F4[0]*F3[0])-(F4[1]*F3[1])-(F4[2]*F3[2])-(F4[3]*F3[3])))))+( (F2[2]*( (P1[0]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P1[3]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))))+(M1*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3]))*F2[0])))
+    F1[1]= COUP*denom*( (F2[2]*( (P1[1]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P1[2]*( (F4[0]*F3[0])+(F4[1]*F3[1])+(F4[2]*F3[2])+(F4[3]*F3[3])))))+( (F2[3]*( (P1[0]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P1[3]*( -1j*(F4[0]*F3[0])-1j*(F4[1]*F3[1])-1j*(F4[2]*F3[2])-1j*(F4[3]*F3[3])))))+(M1*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3]))*F2[1])))
+    F1[2]= COUP*denom*( (F2[1]*( (P1[1]*( -1j*(F4[0]*F3[0])-1j*(F4[1]*F3[1])-1j*(F4[2]*F3[2])-1j*(F4[3]*F3[3])))+(P1[2]*( (F4[0]*F3[0])+(F4[1]*F3[1])+(F4[2]*F3[2])+(F4[3]*F3[3])))))+( (F2[0]*( (P1[0]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P1[3]*( -1j*(F4[0]*F3[0])-1j*(F4[1]*F3[1])-1j*(F4[2]*F3[2])-1j*(F4[3]*F3[3])))))+(M1*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3]))*F2[2])))
+    F1[3]= COUP*denom*( (F2[0]*( (P1[1]*( -1j*(F4[0]*F3[0])-1j*(F4[1]*F3[1])-1j*(F4[2]*F3[2])-1j*(F4[3]*F3[3])))+(P1[2]*( -(F4[0]*F3[0])-(F4[1]*F3[1])-(F4[2]*F3[2])-(F4[3]*F3[3])))))+( (F2[1]*( (P1[0]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))+(P1[3]*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3])))))+(M1*( 1j*(F4[0]*F3[0])+1j*(F4[1]*F3[1])+1j*(F4[2]*F3[2])+1j*(F4[3]*F3[3]))*F2[3])))
+    return F1
+    
+    
+"""
+        
+        FFFF = UFOLorentz(name = 'FFFF1',
+                spins = [ 2, 2, 2, 2 ],
+                structure = 'Identity(1,2)*Identity(4,3)')       
+        builder = create_aloha.AbstractRoutineBuilder(FFFF)
+        builder.apply_conjugation(2)
+        amp = builder.compute_routine(1)
+        
+        routine = amp.write(output_dir=None, language='Python')
+        
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))       
+
+    def test_pythonwriter_Plorentz(self):
+        """ test that python writer works """
+        
+        solution ="""import wavefunctions
+def FFV13C1_0(F2,F1,V3,COUP):
+    P2 = [- complex(F2[4]).real, \\
+             - complex(F2[5]).real, \\
+             - complex(F2[5]).imag, \\
+             - complex(F2[4]).imag]
+    P3 = [complex(V3[4]).real, \\
+             complex(V3[5]).real, \\
+             complex(V3[5]).imag, \\
+             complex(V3[4]).imag]
+    vertex = COUP*( (F2[1]*( (F1[3]*( (P2[1]*( (P3[1]*( -V3[0]+V3[3]))+( (V3[1]*( P3[0]-P3[3]))+( (P3[2]*( -1j*V3[3]+1j*V3[0]))+(V3[2]*( -1j*P3[0]+1j*P3[3]))))))+( (P2[2]*( (P3[2]*( -V3[0]+V3[3]))+( (V3[2]*( P3[0]-P3[3]))+( (P3[1]*( 1j*V3[3]-1j*V3[0]))+(V3[1]*( 1j*P3[0]-1j*P3[3]))))))+( (P2[3]*( -(P3[3]*V3[0])+(P3[0]*V3[3])-1j*(V3[2]*P3[1])+1j*(V3[1]*P3[2])))+(P2[0]*( -(P3[0]*V3[3])+(P3[3]*V3[0])+1j*(V3[2]*P3[1])-1j*(V3[1]*P3[2])))))))+(F1[2]*( (P2[3]*( (P3[3]*( -V3[1]+1j*V3[2]))+( (V3[3]*( P3[1]-1j*P3[2]))+( (P3[0]*( -1j*V3[2]+V3[1]))+(V3[0]*( -P3[1]+1j*P3[2]))))))+( (P2[0]*( (P3[0]*( V3[1]-1j*V3[2]))+( (V3[0]*( -P3[1]+1j*P3[2]))+( (V3[3]*( P3[1]-1j*P3[2]))+(P3[3]*( 1j*V3[2]-V3[1]))))))+( (P2[2]*( -(P3[2]*V3[1])+(P3[1]*V3[2])+1j*(V3[3]*P3[0])-1j*(V3[0]*P3[3])))+(P2[1]*( 1j*(P3[1]*V3[2])-1j*(P3[2]*V3[1])-(V3[3]*P3[0])+(V3[0]*P3[3])))))))))+( (F2[0]*( (F1[2]*( (P2[1]*( (P3[1]*( -V3[0]-V3[3]))+( (V3[1]*( P3[0]+P3[3]))+( (P3[2]*( -1j*V3[3]-1j*V3[0]))+(V3[2]*( 1j*P3[0]+1j*P3[3]))))))+( (P2[2]*( (P3[2]*( -V3[0]-V3[3]))+( (V3[2]*( P3[0]+P3[3]))+( (P3[1]*( 1j*V3[3]+1j*V3[0]))+(V3[1]*( -1j*P3[0]-1j*P3[3]))))))+( (P2[3]*( -(P3[3]*V3[0])+(P3[0]*V3[3])-1j*(V3[2]*P3[1])+1j*(V3[1]*P3[2])))+(P2[0]*( (P3[0]*V3[3])-(P3[3]*V3[0])-1j*(V3[2]*P3[1])+1j*(V3[1]*P3[2])))))))+(F1[3]*( (P2[3]*( (P3[3]*( -V3[1]-1j*V3[2]))+( (V3[3]*( P3[1]+1j*P3[2]))+( (P3[0]*( -1j*V3[2]-V3[1]))+(V3[0]*( P3[1]+1j*P3[2]))))))+( (P2[0]*( (P3[0]*( V3[1]+1j*V3[2]))+( (V3[0]*( -P3[1]-1j*P3[2]))+( (V3[3]*( -P3[1]-1j*P3[2]))+(P3[3]*( 1j*V3[2]+V3[1]))))))+( (P2[2]*( -(P3[2]*V3[1])+(P3[1]*V3[2])+1j*(V3[3]*P3[0])-1j*(V3[0]*P3[3])))+(P2[1]*( -1j*(P3[1]*V3[2])+1j*(P3[2]*V3[1])+(V3[3]*P3[0])-(V3[0]*P3[3])))))))))+( (F2[3]*( (F1[1]*( (P2[1]*( (P3[1]*( -V3[0]-V3[3]))+( (V3[1]*( P3[0]+P3[3]))+( (P3[2]*( 1j*V3[3]+1j*V3[0]))+(V3[2]*( -1j*P3[0]-1j*P3[3]))))))+( (P2[2]*( (P3[2]*( -V3[0]-V3[3]))+( (V3[2]*( P3[0]+P3[3]))+( (P3[1]*( -1j*V3[3]-1j*V3[0]))+(V3[1]*( 1j*P3[0]+1j*P3[3]))))))+( (P2[3]*( -(P3[3]*V3[0])+(P3[0]*V3[3])+1j*(V3[2]*P3[1])-1j*(V3[1]*P3[2])))+(P2[0]*( (P3[0]*V3[3])-(P3[3]*V3[0])+1j*(V3[2]*P3[1])-1j*(V3[1]*P3[2])))))))+(F1[0]*( (P2[3]*( (P3[3]*( V3[1]-1j*V3[2]))+( (V3[3]*( -P3[1]+1j*P3[2]))+( (P3[0]*( -1j*V3[2]+V3[1]))+(V3[0]*( -P3[1]+1j*P3[2]))))))+( (P2[0]*( (P3[0]*( -V3[1]+1j*V3[2]))+( (V3[0]*( P3[1]-1j*P3[2]))+( (V3[3]*( P3[1]-1j*P3[2]))+(P3[3]*( 1j*V3[2]-V3[1]))))))+( (P2[2]*( (P3[2]*V3[1])-(P3[1]*V3[2])+1j*(V3[3]*P3[0])-1j*(V3[0]*P3[3])))+(P2[1]*( -1j*(P3[1]*V3[2])+1j*(P3[2]*V3[1])-(V3[3]*P3[0])+(V3[0]*P3[3])))))))))+(F2[2]*( (F1[0]*( (P2[1]*( (P3[1]*( -V3[0]+V3[3]))+( (V3[1]*( P3[0]-P3[3]))+( (P3[2]*( 1j*V3[3]-1j*V3[0]))+(V3[2]*( 1j*P3[0]-1j*P3[3]))))))+( (P2[2]*( (P3[2]*( -V3[0]+V3[3]))+( (V3[2]*( P3[0]-P3[3]))+( (P3[1]*( -1j*V3[3]+1j*V3[0]))+(V3[1]*( -1j*P3[0]+1j*P3[3]))))))+( (P2[3]*( -(P3[3]*V3[0])+(P3[0]*V3[3])+1j*(V3[2]*P3[1])-1j*(V3[1]*P3[2])))+(P2[0]*( -(P3[0]*V3[3])+(P3[3]*V3[0])-1j*(V3[2]*P3[1])+1j*(V3[1]*P3[2])))))))+(F1[1]*( (P2[3]*( (P3[3]*( V3[1]+1j*V3[2]))+( (V3[3]*( -P3[1]-1j*P3[2]))+( (P3[0]*( -1j*V3[2]-V3[1]))+(V3[0]*( P3[1]+1j*P3[2]))))))+( (P2[0]*( (P3[0]*( -V3[1]-1j*V3[2]))+( (V3[0]*( P3[1]+1j*P3[2]))+( (V3[3]*( -P3[1]-1j*P3[2]))+(P3[3]*( 1j*V3[2]+V3[1]))))))+( (P2[2]*( (P3[2]*V3[1])-(P3[1]*V3[2])+1j*(V3[3]*P3[0])-1j*(V3[0]*P3[3])))+(P2[1]*( 1j*(P3[1]*V3[2])-1j*(P3[2]*V3[1])+(V3[3]*P3[0])-(V3[0]*P3[3]))))))))))))
+    return vertex
+    
+    
+"""
+        
+        FFV = UFOLorentz(name = 'FFV13',
+                spins = [ 2, 2, 3 ],
+        structure = 'Epsilon(3,-1,-2,-3)*P(-2,2)*P(-1,3)*Gamma(-3,2,-4)*ProjM(-4,1) + complex(0,1)*P(-1,3)*P(3,2)*Gamma(-1,2,-2)*ProjM(-2,1) - complex(0,1)*P(-1\
+,2)*P(-1,3)*Gamma(3,2,-2)*ProjM(-2,1) - Epsilon(3,-1,-2,-3)*P(-2,2)*P(-1,3)*Gamma(-3,2,-4)*ProjP(-4,1) + complex(0,1)*P(-1,3)*P(3,2)*Gamma(-1,2,-2)*ProjP(-2,1) - comple\
+x(0,1)*P(-1,2)*P(-1,3)*Gamma(3,2,-2)*ProjP(-2,1)')
+      
+        builder = create_aloha.AbstractRoutineBuilder(FFV)
+        builder.apply_conjugation()
+        amp = builder.compute_routine(0)
+        
+        routine = amp.write(output_dir=None, language='Python')
+        
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        self.assertEqual(len(split_routine), len(split_solution))
+        self.assertEqual(split_solution, split_routine)
+        #for i in range(len(split_routine)):
+        #    if len(split_routine[i]) > 77:
+        #        to_split = min(len(split_routine[i]), len(split_solution[i]))
+        #        print to_split
+        #        for j in range(0, to_split // 77):
+        #            self.assertEqual(split_routine[i][j*77:(j+1)*77], split_solution[i][j*77:(j+1)*77])
+        #            print split_routine[i][j*77:(j+1)*77]
+            
+        
+
+
+
+    def test_fortranwriter_C(self):
+        """ test that python writer works """
+
+        solution = """ subroutine FFV1C1_1(F1, V3, COUP, M2, W2, F2)
+implicit none 
+double complex F1(*)
+double complex F2(*)
+double complex V3(*)
+double complex COUP
+double complex denom
+double precision M2, W2
+double precision P2(0:3)
+
+F2(5)= F1(5)+V3(5)
+F2(6)= F1(6)+V3(6)
+P2(0) =  dble(F2(5))
+P2(1) =  dble(F2(6))
+P2(2) =  dimag(F2(6))
+P2(3) =  dimag(F2(5))
+
+denom =1d0/(( (M2*( -M2+(0, 1)*W2))+( (P2(0)**2)-(P2(1)**2)-(P2(2)**2)-(P2(3)**2))))
+F2(1)= COUP*denom*( (F1(2)*( (P2(0)*( (0, 1)*V3(2)-V3(3)))+( (P2(1)*( (0, -1)*V3(1)+(0, -1)*V3(4)))+( (P2(2)*( V3(1)+V3(4)))+(P2(3)*( (0, 1)*V3(2)-V3(3)))))))+( (F1(1)*( (P2(0)*( (0, -1)*V3(1)+(0, 1)*V3(4)))+( (P2(1)*( (0, 1)*V3(2)+V3(3)))+( (P2(2)*( -V3(2)+(0, 1)*V3(3)))+(P2(3)*( (0, -1)*V3(1)+(0, 1)*V3(4)))))))+(M2*( (F1(4)*( (0, -1)*V3(2)+V3(3)))+(F1(3)*( (0, -1)*V3(1)+(0, -1)*V3(4)))))))
+F2(2)= COUP*denom*( (F1(2)*( (P2(0)*( (0, -1)*V3(1)+(0, -1)*V3(4)))+( (P2(1)*( (0, 1)*V3(2)-V3(3)))+( (P2(2)*( V3(2)+(0, 1)*V3(3)))+(P2(3)*( (0, 1)*V3(1)+(0, 1)*V3(4)))))))+( (F1(1)*( (P2(0)*( (0, 1)*V3(2)+V3(3)))+( (P2(1)*( (0, -1)*V3(1)+(0, 1)*V3(4)))+( (P2(2)*( -V3(1)+V3(4)))+(P2(3)*( (0, -1)*V3(2)-V3(3)))))))+(M2*( (F1(4)*( (0, -1)*V3(1)+(0, 1)*V3(4)))+(F1(3)*( (0, -1)*V3(2)-V3(3)))))))
+F2(3)= COUP*denom*( (F1(4)*( (P2(0)*( (0, -1)*V3(2)+V3(3)))+( (P2(1)*( (0, 1)*V3(1)+(0, -1)*V3(4)))+( (P2(2)*( -V3(1)+V3(4)))+(P2(3)*( (0, 1)*V3(2)-V3(3)))))))+( (F1(3)*( (P2(0)*( (0, -1)*V3(1)+(0, -1)*V3(4)))+( (P2(1)*( (0, 1)*V3(2)+V3(3)))+( (P2(2)*( -V3(2)+(0, 1)*V3(3)))+(P2(3)*( (0, 1)*V3(1)+(0, 1)*V3(4)))))))+(M2*( (F1(2)*( (0, 1)*V3(2)-V3(3)))+(F1(1)*( (0, -1)*V3(1)+(0, 1)*V3(4)))))))
+F2(4)= COUP*denom*( (F1(4)*( (P2(0)*( (0, -1)*V3(1)+(0, 1)*V3(4)))+( (P2(1)*( (0, 1)*V3(2)-V3(3)))+( (P2(2)*( V3(2)+(0, 1)*V3(3)))+(P2(3)*( (0, -1)*V3(1)+(0, 1)*V3(4)))))))+( (F1(3)*( (P2(0)*( (0, -1)*V3(2)-V3(3)))+( (P2(1)*( (0, 1)*V3(1)+(0, 1)*V3(4)))+( (P2(2)*( V3(1)+V3(4)))+(P2(3)*( (0, -1)*V3(2)-V3(3)))))))+(M2*( (F1(2)*( (0, -1)*V3(1)+(0, -1)*V3(4)))+(F1(1)*( (0, 1)*V3(2)+V3(3)))))))
+end
+
+
+"""        
+        FFV = UFOLorentz(name = 'FFV1',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,2,1)')        
+        builder = create_aloha.AbstractRoutineBuilder(FFV)
+        builder.apply_conjugation()
+        amp = builder.compute_routine(1)
+        routine = amp.write(output_dir=None, language='Fortran')
+        
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+        solution=""" subroutine FFV1C1_2(F2, V3, COUP, M1, W1, F1)
+implicit none 
+double complex F1(*)
+double complex F2(*)
+double complex V3(*)
+double complex COUP
+double complex denom
+double precision M1, W1
+double precision P1(0:3)
+
+F1(5)= F2(5)-V3(5)
+F1(6)= F2(6)-V3(6)
+P1(0) =  dble(F1(5))
+P1(1) =  dble(F1(6))
+P1(2) =  dimag(F1(6))
+P1(3) =  dimag(F1(5))
+
+denom =1d0/(( (M1*( -M1+(0, 1)*W1))+( (P1(0)**2)-(P1(1)**2)-(P1(2)**2)-(P1(3)**2))))
+F1(1)= COUP*denom*( (F2(1)*( (V3(2)*( (0, 1)*P1(1)+P1(2)))+( (V3(3)*( -P1(1)+(0, 1)*P1(2)))+( (V3(1)*( (0, -1)*P1(0)+(0, 1)*P1(3)))+(V3(4)*( (0, -1)*P1(0)+(0, 1)*P1(3)))))))+( (F2(2)*( (V3(1)*( (0, 1)*P1(1)+P1(2)))+( (V3(4)*( (0, -1)*P1(1)-P1(2)))+( (V3(2)*( (0, -1)*P1(0)+(0, 1)*P1(3)))+(V3(3)*( -P1(0)+P1(3)))))))+(M1*( (F2(3)*( (0, -1)*V3(1)+(0, 1)*V3(4)))+(F2(4)*( (0, 1)*V3(2)+V3(3)))))))
+F1(2)= COUP*denom*( (F2(1)*( (V3(2)*( (0, -1)*P1(0)+(0, -1)*P1(3)))+( (V3(3)*( P1(0)+P1(3)))+( (V3(1)*( (0, 1)*P1(1)-P1(2)))+(V3(4)*( (0, 1)*P1(1)-P1(2)))))))+( (F2(2)*( (V3(1)*( (0, -1)*P1(0)+(0, -1)*P1(3)))+( (V3(4)*( (0, 1)*P1(0)+(0, 1)*P1(3)))+( (V3(2)*( (0, 1)*P1(1)-P1(2)))+(V3(3)*( P1(1)+(0, 1)*P1(2)))))))+(M1*( (F2(3)*( (0, 1)*V3(2)-V3(3)))+(F2(4)*( (0, -1)*V3(1)+(0, -1)*V3(4)))))))
+F1(3)= COUP*denom*( (F2(3)*( (V3(2)*( (0, 1)*P1(1)+P1(2)))+( (V3(3)*( -P1(1)+(0, 1)*P1(2)))+( (V3(1)*( (0, -1)*P1(0)+(0, -1)*P1(3)))+(V3(4)*( (0, 1)*P1(0)+(0, 1)*P1(3)))))))+( (F2(4)*( (V3(1)*( (0, -1)*P1(1)-P1(2)))+( (V3(4)*( (0, -1)*P1(1)-P1(2)))+( (V3(2)*( (0, 1)*P1(0)+(0, 1)*P1(3)))+(V3(3)*( P1(0)+P1(3)))))))+(M1*( (F2(1)*( (0, -1)*V3(1)+(0, -1)*V3(4)))+(F2(2)*( (0, -1)*V3(2)-V3(3)))))))
+F1(4)= COUP*denom*( (F2(3)*( (V3(2)*( (0, 1)*P1(0)+(0, -1)*P1(3)))+( (V3(3)*( -P1(0)+P1(3)))+( (V3(1)*( (0, -1)*P1(1)+P1(2)))+(V3(4)*( (0, 1)*P1(1)-P1(2)))))))+( (F2(4)*( (V3(1)*( (0, -1)*P1(0)+(0, 1)*P1(3)))+( (V3(4)*( (0, -1)*P1(0)+(0, 1)*P1(3)))+( (V3(2)*( (0, 1)*P1(1)-P1(2)))+(V3(3)*( P1(1)+(0, 1)*P1(2)))))))+(M1*( (F2(1)*( (0, -1)*V3(2)+V3(3)))+(F2(2)*( (0, -1)*V3(1)+(0, 1)*V3(4)))))))
+end
+
+
+"""
+        amp = builder.compute_routine(2)
+        
+        routine = amp.write(output_dir=None, language='Fortran')
+        
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+    def test_Cppwriter_C(self):
+        """ test that python writer works """
+
+ 
+        solution_h = """#ifndef FFV1C1_1_guard
+#define FFV1C1_1_guard
+#include <complex>
+using namespace std;
+
+void FFV1C1_1(complex<double> F1[],complex<double> V3[],complex<double> COUP, double M2, double W2, complex<double>F2[]);
+
+#endif
+
+"""
+        solution_c = """#include "FFV1C1_1.h"
+
+void FFV1C1_1(complex<double> F1[],complex<double> V3[],complex<double> COUP, double M2, double W2, complex<double>F2[]){
+complex<double> denom;
+double P2[4];
+F2[4]= F1[4]+V3[4];
+F2[5]= F1[5]+V3[5];
+P2[0] = F2[4].real();
+P2[1] = F2[5].real();
+P2[2] = F2[5].imag();
+P2[3] = F2[4].imag();
+denom =1./(( (M2*( -M2+complex<double>(0., 1.)*W2))+( (pow(P2[0],2))-(pow(P2[1],2))-(pow(P2[2],2))-(pow(P2[3],2)))));
+F2[0]= COUP*denom*( (F1[1]*( (P2[0]*( complex<double>(0., 1.)*V3[1]-V3[2]))+( (P2[1]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., -1.)*V3[3]))+( (P2[2]*( V3[0]+V3[3]))+(P2[3]*( complex<double>(0., 1.)*V3[1]-V3[2]))))))+( (F1[0]*( (P2[0]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))+( (P2[1]*( complex<double>(0., 1.)*V3[1]+V3[2]))+( (P2[2]*( -V3[1]+complex<double>(0., 1.)*V3[2]))+(P2[3]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))))))+(M2*( (F1[3]*( complex<double>(0., -1.)*V3[1]+V3[2]))+(F1[2]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., -1.)*V3[3]))))));
+F2[1]= COUP*denom*( (F1[1]*( (P2[0]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., -1.)*V3[3]))+( (P2[1]*( complex<double>(0., 1.)*V3[1]-V3[2]))+( (P2[2]*( V3[1]+complex<double>(0., 1.)*V3[2]))+(P2[3]*( complex<double>(0., 1.)*V3[0]+complex<double>(0., 1.)*V3[3]))))))+( (F1[0]*( (P2[0]*( complex<double>(0., 1.)*V3[1]+V3[2]))+( (P2[1]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))+( (P2[2]*( -V3[0]+V3[3]))+(P2[3]*( complex<double>(0., -1.)*V3[1]-V3[2]))))))+(M2*( (F1[3]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))+(F1[2]*( complex<double>(0., -1.)*V3[1]-V3[2]))))));
+F2[2]= COUP*denom*( (F1[3]*( (P2[0]*( complex<double>(0., -1.)*V3[1]+V3[2]))+( (P2[1]*( complex<double>(0., 1.)*V3[0]+complex<double>(0., -1.)*V3[3]))+( (P2[2]*( -V3[0]+V3[3]))+(P2[3]*( complex<double>(0., 1.)*V3[1]-V3[2]))))))+( (F1[2]*( (P2[0]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., -1.)*V3[3]))+( (P2[1]*( complex<double>(0., 1.)*V3[1]+V3[2]))+( (P2[2]*( -V3[1]+complex<double>(0., 1.)*V3[2]))+(P2[3]*( complex<double>(0., 1.)*V3[0]+complex<double>(0., 1.)*V3[3]))))))+(M2*( (F1[1]*( complex<double>(0., 1.)*V3[1]-V3[2]))+(F1[0]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))))));
+F2[3]= COUP*denom*( (F1[3]*( (P2[0]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))+( (P2[1]*( complex<double>(0., 1.)*V3[1]-V3[2]))+( (P2[2]*( V3[1]+complex<double>(0., 1.)*V3[2]))+(P2[3]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))))))+( (F1[2]*( (P2[0]*( complex<double>(0., -1.)*V3[1]-V3[2]))+( (P2[1]*( complex<double>(0., 1.)*V3[0]+complex<double>(0., 1.)*V3[3]))+( (P2[2]*( V3[0]+V3[3]))+(P2[3]*( complex<double>(0., -1.)*V3[1]-V3[2]))))))+(M2*( (F1[1]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., -1.)*V3[3]))+(F1[0]*( complex<double>(0., 1.)*V3[1]+V3[2]))))));
+}
+
+"""
+        
+        FFV = UFOLorentz(name = 'FFV1',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,2,1)')        
+        builder = create_aloha.AbstractRoutineBuilder(FFV)
+        builder.apply_conjugation()
+        amp = builder.compute_routine(1)
+        routine = amp.write(output_dir=None, language='CPP')
+        
+        split_solution = solution_h.split('\n')
+        split_routine = routine[0].split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+        split_solution = solution_c.split('\n')
+        split_routine = routine[1].split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+        solution_h = """#ifndef FFV1C1_2_guard
+#define FFV1C1_2_guard
+#include <complex>
+using namespace std;
+
+void FFV1C1_2(complex<double> F2[],complex<double> V3[],complex<double> COUP, double M1, double W1, complex<double>F1[]);
+
+#endif
+
+"""
+
+        solution_c = """#include "FFV1C1_2.h"
+
+void FFV1C1_2(complex<double> F2[],complex<double> V3[],complex<double> COUP, double M1, double W1, complex<double>F1[]){
+complex<double> denom;
+double P1[4];
+F1[4]= F2[4]-V3[4];
+F1[5]= F2[5]-V3[5];
+P1[0] = F1[4].real();
+P1[1] = F1[5].real();
+P1[2] = F1[5].imag();
+P1[3] = F1[4].imag();
+denom =1./(( (M1*( -M1+complex<double>(0., 1.)*W1))+( (pow(P1[0],2))-(pow(P1[1],2))-(pow(P1[2],2))-(pow(P1[3],2)))));
+F1[0]= COUP*denom*( (F2[0]*( (V3[1]*( complex<double>(0., 1.)*P1[1]+P1[2]))+( (V3[2]*( -P1[1]+complex<double>(0., 1.)*P1[2]))+( (V3[0]*( complex<double>(0., -1.)*P1[0]+complex<double>(0., 1.)*P1[3]))+(V3[3]*( complex<double>(0., -1.)*P1[0]+complex<double>(0., 1.)*P1[3]))))))+( (F2[1]*( (V3[0]*( complex<double>(0., 1.)*P1[1]+P1[2]))+( (V3[3]*( complex<double>(0., -1.)*P1[1]-P1[2]))+( (V3[1]*( complex<double>(0., -1.)*P1[0]+complex<double>(0., 1.)*P1[3]))+(V3[2]*( -P1[0]+P1[3]))))))+(M1*( (F2[2]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))+(F2[3]*( complex<double>(0., 1.)*V3[1]+V3[2]))))));
+F1[1]= COUP*denom*( (F2[0]*( (V3[1]*( complex<double>(0., -1.)*P1[0]+complex<double>(0., -1.)*P1[3]))+( (V3[2]*( P1[0]+P1[3]))+( (V3[0]*( complex<double>(0., 1.)*P1[1]-P1[2]))+(V3[3]*( complex<double>(0., 1.)*P1[1]-P1[2]))))))+( (F2[1]*( (V3[0]*( complex<double>(0., -1.)*P1[0]+complex<double>(0., -1.)*P1[3]))+( (V3[3]*( complex<double>(0., 1.)*P1[0]+complex<double>(0., 1.)*P1[3]))+( (V3[1]*( complex<double>(0., 1.)*P1[1]-P1[2]))+(V3[2]*( P1[1]+complex<double>(0., 1.)*P1[2]))))))+(M1*( (F2[2]*( complex<double>(0., 1.)*V3[1]-V3[2]))+(F2[3]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., -1.)*V3[3]))))));
+F1[2]= COUP*denom*( (F2[2]*( (V3[1]*( complex<double>(0., 1.)*P1[1]+P1[2]))+( (V3[2]*( -P1[1]+complex<double>(0., 1.)*P1[2]))+( (V3[0]*( complex<double>(0., -1.)*P1[0]+complex<double>(0., -1.)*P1[3]))+(V3[3]*( complex<double>(0., 1.)*P1[0]+complex<double>(0., 1.)*P1[3]))))))+( (F2[3]*( (V3[0]*( complex<double>(0., -1.)*P1[1]-P1[2]))+( (V3[3]*( complex<double>(0., -1.)*P1[1]-P1[2]))+( (V3[1]*( complex<double>(0., 1.)*P1[0]+complex<double>(0., 1.)*P1[3]))+(V3[2]*( P1[0]+P1[3]))))))+(M1*( (F2[0]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., -1.)*V3[3]))+(F2[1]*( complex<double>(0., -1.)*V3[1]-V3[2]))))));
+F1[3]= COUP*denom*( (F2[2]*( (V3[1]*( complex<double>(0., 1.)*P1[0]+complex<double>(0., -1.)*P1[3]))+( (V3[2]*( -P1[0]+P1[3]))+( (V3[0]*( complex<double>(0., -1.)*P1[1]+P1[2]))+(V3[3]*( complex<double>(0., 1.)*P1[1]-P1[2]))))))+( (F2[3]*( (V3[0]*( complex<double>(0., -1.)*P1[0]+complex<double>(0., 1.)*P1[3]))+( (V3[3]*( complex<double>(0., -1.)*P1[0]+complex<double>(0., 1.)*P1[3]))+( (V3[1]*( complex<double>(0., 1.)*P1[1]-P1[2]))+(V3[2]*( P1[1]+complex<double>(0., 1.)*P1[2]))))))+(M1*( (F2[0]*( complex<double>(0., -1.)*V3[1]+V3[2]))+(F2[1]*( complex<double>(0., -1.)*V3[0]+complex<double>(0., 1.)*V3[3]))))));
+}
+
+"""
+
+        amp = builder.compute_routine(2)
+        
+        routine = amp.write(output_dir=None, language='CPP')
+        
+        split_solution = solution_h.split('\n')
+        split_routine = routine[0].split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+        split_solution = solution_c.split('\n')
+        split_routine = routine[1].split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+        
+
+        
+        
         
         
     def test_python_routine_are_exec(self):
@@ -3496,8 +4190,8 @@ def SSS1_3(S2, S3, COUP, M1, W1):
 
         
         solution = """import wavefunctions
-def FFV2C1_0(F1,F2,V3,COUP):
-    vertex = COUP*( (F1[3]*( (F2[0]*( -1j*V3[1]-V3[2]))+(F2[1]*( 1j*V3[0]+1j*V3[3]))))+(F1[2]*( (F2[0]*( 1j*V3[0]-1j*V3[3]))+(F2[1]*( -1j*V3[1]+V3[2])))))
+def FFV2C1_0(F2,F1,V3,COUP):
+    vertex = COUP*( (F2[3]*( (F1[0]*( -1j*V3[1]-V3[2]))+(F1[1]*( 1j*V3[0]+1j*V3[3]))))+(F2[2]*( (F1[0]*( 1j*V3[0]-1j*V3[3]))+(F1[1]*( -1j*V3[1]+V3[2])))))
     return vertex
     
     
@@ -3507,5 +4201,5 @@ def FFV2C1_0(F1,F2,V3,COUP):
         split_routine = routine.split('\n')
         self.assertEqual(split_solution,split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
-            
+                 
             

@@ -200,6 +200,7 @@ class TestMatrixElementChecker(unittest.TestCase):
 
         # Change 4g interaction so color and lorentz don't agree
         gggg = self.base_model.get_interaction(4)
+        assert [p['pdg_code'] for p in gggg['particles']] == [21,21,21,21]
         gggg.set('lorentz', ['VVVV1', 'VVVV4', 'VVVV3'])
 
         myleglist = base_objects.LegList()

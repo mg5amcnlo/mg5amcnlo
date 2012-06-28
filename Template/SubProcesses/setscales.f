@@ -132,6 +132,7 @@ c----------
       
       
       q2fact(1)=0d0             !factorization scale**2 for pdf1
+      q2fact(2)=0d0             !factorization scale**2 for pdf2
 
 c      call set_ren_scale(P,q2fact(1))
 c
