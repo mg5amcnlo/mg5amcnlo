@@ -1972,8 +1972,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 param_card.append("#  BR             NDA  ID1    ID2   ...")
                 brs = [[(val[1]/width).real, val[0]] for val in decay_info[key] if val[1]]
                 for val in sorted(brs, reverse=True):
-                    param_card.append("   %e   %i    %s" % (val[0].real, len(val[1]),
-                                           "  ".join([str(v) for v in val[1]])))
+                    param_card.append("   %e   %i    %s # %s" % 
+                                      (val[0].real, len(val[1]),
+                                       "  ".join([str(v) for v in val[1]]),
+                                       val[0] * width
+                                       ))
         decay_table = open(output, 'w')
         decay_table.write("\n".join(param_card) + "\n")
         logger.info("Results written to %s" %  output)
