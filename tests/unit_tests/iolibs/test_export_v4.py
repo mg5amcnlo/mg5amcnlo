@@ -259,7 +259,7 @@ C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=5)
       INTEGER    NWAVEFUNCS, NCOLOR
-      PARAMETER (NWAVEFUNCS=11, NCOLOR=1)
+      PARAMETER (NWAVEFUNCS=9, NCOLOR=1)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       COMPLEX*16 IMAG1
@@ -303,17 +303,17 @@ C     Amplitude(s) for diagram number 1
       CALL FVIXXX(W(1,2),W(1,5),MGVX12,ZERO,ZERO,W(1,8))
 C     Amplitude(s) for diagram number 2
       CALL IOVXXX(W(1,8),W(1,6),W(1,4),MGVX12,AMP(2))
-      CALL FVOXXX(W(1,1),W(1,4),MGVX12,ZERO,ZERO,W(1,9))
-      CALL FVIXXX(W(1,2),W(1,3),MGVX12,ZERO,ZERO,W(1,10))
+      CALL FVOXXX(W(1,1),W(1,4),MGVX12,ZERO,ZERO,W(1,6))
+      CALL FVIXXX(W(1,2),W(1,3),MGVX12,ZERO,ZERO,W(1,9))
 C     Amplitude(s) for diagram number 3
-      CALL IOVXXX(W(1,10),W(1,9),W(1,5),MGVX12,AMP(3))
+      CALL IOVXXX(W(1,9),W(1,6),W(1,5),MGVX12,AMP(3))
 C     Amplitude(s) for diagram number 4
-      CALL IOVXXX(W(1,8),W(1,9),W(1,3),MGVX12,AMP(4))
-      CALL FVOXXX(W(1,1),W(1,5),MGVX12,ZERO,ZERO,W(1,11))
+      CALL IOVXXX(W(1,8),W(1,6),W(1,3),MGVX12,AMP(4))
+      CALL FVOXXX(W(1,1),W(1,5),MGVX12,ZERO,ZERO,W(1,6))
 C     Amplitude(s) for diagram number 5
-      CALL IOVXXX(W(1,10),W(1,11),W(1,4),MGVX12,AMP(5))
+      CALL IOVXXX(W(1,9),W(1,6),W(1,4),MGVX12,AMP(5))
 C     Amplitude(s) for diagram number 6
-      CALL IOVXXX(W(1,7),W(1,11),W(1,3),MGVX12,AMP(6))
+      CALL IOVXXX(W(1,7),W(1,6),W(1,3),MGVX12,AMP(6))
       JAMP(1)=-AMP(1)-AMP(2)-AMP(3)-AMP(4)-AMP(5)-AMP(6)
 
       MATRIX = 0.D0
@@ -976,7 +976,7 @@ C
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
       INTEGER    NWAVEFUNCS,     NCOLOR
-      PARAMETER (NWAVEFUNCS=10, NCOLOR=2)
+      PARAMETER (NWAVEFUNCS=5, NCOLOR=2)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       COMPLEX*16 IMAG1
@@ -1019,21 +1019,21 @@ C     ----------
       CALL FFV1_3(W(1,1),W(1,2),GQQ,ZERO,ZERO,W(1,5))
 C     Amplitude(s) for diagram number 1
       CALL FFV1_0(W(1,4),W(1,3),W(1,5),GQQ,AMP(1))
-      CALL FFV1_3(W(1,1),W(1,2),GQED,ZERO,ZERO,W(1,6))
+      CALL FFV1_3(W(1,1),W(1,2),GQED,ZERO,ZERO,W(1,5))
 C     Amplitude(s) for diagram number 2
-      CALL FFV1_0(W(1,4),W(1,3),W(1,6),GQED,AMP(2))
-      CALL FFV1_2_3(W(1,1),W(1,2),GUZ1,GUZ2,MZ,WZ,W(1,7))
+      CALL FFV1_0(W(1,4),W(1,3),W(1,5),GQED,AMP(2))
+      CALL FFV1_2_3(W(1,1),W(1,2),GUZ1,GUZ2,MZ,WZ,W(1,5))
 C     Amplitude(s) for diagram number 3
-      CALL FFV1_2_0(W(1,4),W(1,3),W(1,7),GUZ1,GUZ2,AMP(3))
-      CALL FFV1_3(W(1,1),W(1,3),GQQ,ZERO,ZERO,W(1,8))
+      CALL FFV1_2_0(W(1,4),W(1,3),W(1,5),GUZ1,GUZ2,AMP(3))
+      CALL FFV1_3(W(1,1),W(1,3),GQQ,ZERO,ZERO,W(1,5))
 C     Amplitude(s) for diagram number 4
-      CALL FFV1_0(W(1,4),W(1,2),W(1,8),GQQ,AMP(4))
-      CALL FFV1_3(W(1,1),W(1,3),GQED,ZERO,ZERO,W(1,9))
+      CALL FFV1_0(W(1,4),W(1,2),W(1,5),GQQ,AMP(4))
+      CALL FFV1_3(W(1,1),W(1,3),GQED,ZERO,ZERO,W(1,5))
 C     Amplitude(s) for diagram number 5
-      CALL FFV1_0(W(1,4),W(1,2),W(1,9),GQED,AMP(5))
-      CALL FFV1_2_3(W(1,1),W(1,3),GUZ1,GUZ2,MZ,WZ,W(1,10))
+      CALL FFV1_0(W(1,4),W(1,2),W(1,5),GQED,AMP(5))
+      CALL FFV1_2_3(W(1,1),W(1,3),GUZ1,GUZ2,MZ,WZ,W(1,5))
 C     Amplitude(s) for diagram number 6
-      CALL FFV1_2_0(W(1,4),W(1,2),W(1,10),GUZ1,GUZ2,AMP(6))
+      CALL FFV1_2_0(W(1,4),W(1,2),W(1,5),GUZ1,GUZ2,AMP(6))
       JAMP(1)=+1./6.*AMP(1)-AMP(2)-AMP(3)+1./2.*AMP(4)
       JAMP(2)=-1./2.*AMP(1)-1./6.*AMP(4)+AMP(5)+AMP(6)
       MATRIX1 = 0.D0
@@ -5320,17 +5320,17 @@ CALL FFV2_3_0(W(1,7),W(1,5),W(1,6),GC_422,GC_628,AMP(1))
 CALL FFV2_3_1(W(1,5),W(1,2),GC_422,GC_628,Mneu1,Wneu1,W(1,8))
 # Amplitude(s) for diagram number 2
 CALL FFV2_3C1_0(W(1,4),W(1,8),W(1,6),GC_422,GC_628,AMP(2))
-CALL FFV2_3C1_2(W(1,4),W(1,1),GC_422,GC_628,Mneu1,Wneu1,W(1,9))
-CALL VVV1_2(W(1,2),W(1,3),GC_214,MW,WW,W(1,10))
+CALL FFV2_3C1_2(W(1,4),W(1,1),GC_422,GC_628,Mneu1,Wneu1,W(1,6))
+CALL VVV1_2(W(1,2),W(1,3),GC_214,MW,WW,W(1,9))
 # Amplitude(s) for diagram number 3
-CALL FFV2_3_0(W(1,9),W(1,5),W(1,10),GC_422,GC_628,AMP(3))
+CALL FFV2_3_0(W(1,6),W(1,5),W(1,9),GC_422,GC_628,AMP(3))
 # Amplitude(s) for diagram number 4
-CALL FFV5_0(W(1,9),W(1,8),W(1,3),GC_418,AMP(4))
-CALL FFV2_3_1(W(1,5),W(1,1),GC_422,GC_628,Mneu1,Wneu1,W(1,11))
+CALL FFV5_0(W(1,6),W(1,8),W(1,3),GC_418,AMP(4))
+CALL FFV2_3_1(W(1,5),W(1,1),GC_422,GC_628,Mneu1,Wneu1,W(1,6))
 # Amplitude(s) for diagram number 5
-CALL FFV2_3C1_0(W(1,4),W(1,11),W(1,10),GC_422,GC_628,AMP(5))
+CALL FFV2_3C1_0(W(1,4),W(1,6),W(1,9),GC_422,GC_628,AMP(5))
 # Amplitude(s) for diagram number 6
-CALL FFV5_0(W(1,7),W(1,11),W(1,3),GC_418,AMP(6))""".split('\n')
+CALL FFV5_0(W(1,7),W(1,6),W(1,3),GC_418,AMP(6))""".split('\n') #end 7, 11,3
 
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
@@ -6047,7 +6047,6 @@ CALL FFS3_4C1_3(W(1,3),W(1,2),GC_108,GC_111,Msix1,Wsix1,W(1,4))
         matrix_elements = matrix_element.combine_decay_chain_processes()
 
         matrix_element = matrix_elements[0]
-
         result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element)
 
@@ -6903,9 +6902,9 @@ CALL OXXXXX(P(0,4),MN1,NHEL(4),+1*IC(4),W(1,4))
 CALL FVICXX(W(1,3),W(1,1),GWN1X1,MX1,WX1,W(1,5))
 # Amplitude(s) for diagram number 1
 CALL IOVCXX(W(1,5),W(1,4),W(1,2),GWX1N1,AMP(1))
-CALL FVOXXX(W(1,4),W(1,1),GWN1X1,MX1,WX1,W(1,6))
+CALL FVOXXX(W(1,4),W(1,1),GWN1X1,MX1,WX1,W(1,5))
 # Amplitude(s) for diagram number 2
-CALL IOVXXX(W(1,3),W(1,6),W(1,2),GWX1N1,AMP(2))""")
+CALL IOVXXX(W(1,3),W(1,5),W(1,2),GWX1N1,AMP(2))""")
 
 
     def test_export_majorana_decay_chain(self):
