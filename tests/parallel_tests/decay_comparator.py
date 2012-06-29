@@ -75,8 +75,9 @@ class DecayComparator(object):
         self.cmd.exec_cmd('output %s -f' % dir_name)
         
         
-        files.cp(pjoin(_file_path, '../input_files/run_card_decay.dat'),
-                 '%s/Cards' % dir_name)
+        files.cp(pjoin(_file_path, 'input_files/run_card_decay.dat'),
+                 '%s/Cards/run_card.dat' % dir_name, log=True)
+
         self.cmd.exec_cmd('launch -f')
         
         mg5_info = card_reader.ParamCard(pjoin(dir_name,'Events','run_01','param_card.dat'))
