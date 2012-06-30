@@ -2,7 +2,7 @@ import copy
 import os
 import math
 import madgraph.core.base_objects as base_objects
-import decay.decay_objects as decay_objects
+import mg5decay.decay_objects as decay_objects
 import madgraph.iolibs.save_model as save_model
 from madgraph import  MG5DIR
 
