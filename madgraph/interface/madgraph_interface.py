@@ -406,9 +406,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   fortran_compiler NAME")
         logger.info("      (default None) Force a specific fortran compiler.")
         logger.info("      If None, it tries first g77 and if not present gfortran.")
-        logger.info("   fks_mode real/born")
-        logger.info("      (default real) Build the real-emission contributions")
+        logger.info("   fks_mode real|born")
+        logger.info("      (default born) Build the real-emission contributions")
         logger.info("      from the real or born topologies.")
+        logger.info("      Please note that the \"real\" mode may be used only for testing")
+        logger.info("      parton level computations. Matching to the shower is not supported")
+        logger.info("      in this mode.")
         logger.info("   loop_optimized_output True|False")
         logger.info("      Abandon the JAMP structure in order to bring considerable")
         logger.info("      improvement in running time.")
@@ -3440,6 +3443,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if args[1] != 'None':
                 if log:
                     logger.info('set FKS mode to %s' % args[1])
+                if args[1] == 'real':
+                    logger.info('Please note that the \"real\" mode may be used ' + \
+                        'only for testing parton level computations. Matching to ' + \
+                        'the shower is not supported in this mode.')
                 logger.info('Note that you need to regenerate all processes')
                 self.options[args[0]] = args[1]
             else:
