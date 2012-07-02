@@ -729,7 +729,7 @@ class Test_DecayModel(unittest.TestCase):
                                 self.my_testmodel.get('particles')]))
 
         # Test for the CP conjugation dict
-        for key, conj_key in self.my_testmodel['cp_conj_dict'].items():
+        for key, conj_key in self.my_testmodel['conj_int_dict'].items():
             pids_1 = [p.get_pdg_code() \
                           for p in self.my_testmodel.get_interaction(key)['particles']]
             pids_2 = [p.get_anti_pdg_code() \
@@ -1238,6 +1238,9 @@ class Test_Channel(unittest.TestCase):
         self.my_testmodel.set('name', 'my_smallsm')
         self.my_testmodel.set('particles', particles)
         self.my_testmodel.set('interactions', interactions)
+        
+        # Set up vertexlist for my_testmodel
+        self.my_testmodel.find_vertexlist()
 
         #Setup the vertexlist for my_testmodel and save this model (optional)
         import_vertexlist.make_vertexlist(self.my_testmodel)
@@ -1257,29 +1260,32 @@ class Test_Channel(unittest.TestCase):
         vert_1['legs'][0]['number'] = 2
         vert_1['legs'][1]['number'] = 3
         vert_1['legs'][2]['number'] = 2
-        # t~ > b~ w-
+        # t~ > b~ w- (decay of antiparticle)
         vert_2 = copy.deepcopy(full_vertexlist[(33, 6)])
-        vert_2['id'] = -vert_2['id']
         vert_2['legs'][0]['number'] = 2
-        vert_2['legs'][0]['id'] = -vert_2['legs'][0]['id']
         vert_2['legs'][1]['number'] = 4
-        vert_2['legs'][1]['id'] = -vert_2['legs'][1]['id']
         vert_2['legs'][2]['number'] = 2
+        vert_2['legs'][0]['id'] = -vert_2['legs'][0]['id']
+        vert_2['legs'][1]['id'] = -vert_2['legs'][1]['id']
         vert_2['legs'][2]['id'] = -vert_2['legs'][2]['id']
+        vert_2['id'] = self.my_testmodel['conj_int_dict'][33]
+
         # t > b w+
         vert_3 = copy.deepcopy(full_vertexlist[(33, 6)])
         vert_3['legs'][0]['number'] = 3
         vert_3['legs'][1]['number'] = 5
         vert_3['legs'][2]['number'] = 3
-        # w- > e- v~
+
+        # w- > e- v~ (decay of antiparticle)
         vert_4 = copy.deepcopy(full_vertexlist[(66, 24)])
-        vert_4['id'] = -vert_4['id']
         vert_4['legs'][0]['number'] = 4
-        vert_4['legs'][0]['id'] = -vert_4['legs'][0]['id']
         vert_4['legs'][1]['number'] = 6
-        vert_4['legs'][1]['id'] = -vert_4['legs'][1]['id']
         vert_4['legs'][2]['number'] = 4
+        vert_4['legs'][0]['id'] = -vert_4['legs'][0]['id']
+        vert_4['legs'][1]['id'] = -vert_4['legs'][1]['id']
         vert_4['legs'][2]['id'] = -vert_4['legs'][2]['id']
+        vert_4['id'] = self.my_testmodel['conj_int_dict'][66]
+
         # w+ > e+ v
         vert_5 = copy.deepcopy(full_vertexlist[(66, 24)])
         vert_5['legs'][0]['number'] = 5
@@ -1331,45 +1337,45 @@ class Test_Channel(unittest.TestCase):
             Also the test for some helper function for find_channels."""
 
         higgs = self.my_testmodel.get_particle(25)
-        
+        t = self.my_testmodel.get_particle(6)
+
         vertexlist = self.h_tt_bbmmvv.get('vertices')
         h_tt_bbww = decay_objects.Channel({'vertices': \
                                            base_objects.VertexList(\
                                            vertexlist[2:])})
         h_tt_bbww.calculate_orders(self.my_testmodel)
         self.my_testmodel.find_vertexlist()
-        # Artificially add 4 body decay vertex to w boson
-        self.my_testmodel.get_particle(24)['decay_vertexlist'][(4, True)] =\
-            vertexlist[2]        
-        # The two middle are for wboson (see h_tt_bbww.get_final_legs()).
-        """goal_configlist = set([(2, 4, 1, 2), (2, 4, 2, 1), (2, 3, 1, 3),
-                               (2, 3, 2, 2), (2, 2, 1, 4), (2, 2, 2, 3),
-                               (2, 1, 2, 4), (1, 4, 2, 2), (1, 4, 1, 3),
-                               (1, 3, 1, 4), (1, 3, 2, 3), (1, 2, 2, 4),])
-        self.assertEqual(set([tuple(i) \
-                              for i in higgs.generate_configlist(h_tt_bbww,
-                                                                 9, 
-                                                           self.my_testmodel)]),
-                         goal_configlist)"""
-        # Reset the decay_vertexlist of w boson.
-        self.my_testmodel.get_particle(24)['decay_vertexlist'].pop((4, True))
-
 
         # Test the connect_channel_vertex
+        # 1. connect the w- in h_tt_bbww with w_muvm to get h_tt_bwbmuvm
+        #    the interaction id should change from w+ decay into w- decay
+        # 2. connect the w+ in h_tt_bwbmuvm with w_muvm to get h_tt_bbmmvv
         h_tt_bwbmuvm = decay_objects.Channel({'vertices': \
                                               base_objects.VertexList(\
                                               vertexlist[1:])})
-        #int_leg = h_tt_bbww.get_final_legs()[-1]
-        #print int_leg, h_tt_bbww.get_final_legs()
+        # get onshell for channels created not by hands
+        h_tt_bwbmuvm.get_onshell(self.my_testmodel)
+        self.h_tt_bbmmvv.get_onshell(self.my_testmodel)
+
+        #print [l['id'] for l in h_tt_bbww.get_final_legs()]
+        # decay of w+ > mu+ vm
         w_muvm = self.my_testmodel.get_particle(24).get_vertexlist(2, True)[0]
-        #print w_muvm
+
+        # Connect h > w+ w- b b~ with w+ > mu+ vm 
         new_channel = higgs.connect_channel_vertex(h_tt_bbww, 3, w_muvm,
                                                    self.my_testmodel)
-        #print 'c1:', new_channel.nice_string(), '\nc2:', h_tt_bwbmuvm.nice_string(), '\n'
+        #print 'c1:', new_channel.nice_string(), 
+        #      '\nc2:', h_tt_bwbmuvm.nice_string(), '\n'
         #print self.h_tt_bbmmvv.nice_string()
-        h_tt_bwbmuvm.get_onshell(self.my_testmodel)
-        #h_tt_bwbmuvm.calculate_orders(self.my_testmodel)
         self.assertEqual(new_channel, h_tt_bwbmuvm)
+        
+        #print [l['id'] for l in h_tt_bwbmuvm.get_final_legs()]
+        new_channel = higgs.connect_channel_vertex(h_tt_bwbmuvm, 3, w_muvm,
+                                                   self.my_testmodel)
+        #print new_channel.nice_string(), self.h_tt_bbmmvv.nice_string()
+        self.assertEqual(new_channel, self.h_tt_bbmmvv)
+        
+
 
         # Test of check_idlegs
         temp_vert = copy.deepcopy(vertexlist[2])
@@ -1396,8 +1402,9 @@ class Test_Channel(unittest.TestCase):
                           (0, temp_vert['id'], 5):  [0,3,4]})
         self.assertTrue(idpart_c.get('has_idpart'))
 
+
         # Test of generate_configs
-        test_list = {21: [1,4,6], 25: [2, 3, 7, 9]}
+        """test_list = {21: [1,4,6], 25: [2, 3, 7, 9]}
         goal_configs = {21: [[1,4,6], [1,6,4], [4,1,6], [4,6,1], 
                              [6,1,4], [6,4,1]],
                         25: [[2,3,7,9], [2,3,9,7], [2,7,3,9], [2,7,9,3],
@@ -1409,10 +1416,12 @@ class Test_Channel(unittest.TestCase):
                              [9,2,3,7], [9,2,7,3], [9,3,2,7], [9,3,7,2],
                              [9,7,2,3], [9,7,3,2]]}
         self.assertEqual(decay_objects.Channel.generate_configs(test_list),
-                         goal_configs)
+                         goal_configs)"""
+
+
 
         # Test of check_channels_equiv
-        # Create several non-realistic vertex
+        # Create several fake vertices for test
         vert_1_id = copy.deepcopy(vertexlist[4])
         vert_1_id.set('id', 80)
         vert_1_id.get('legs').insert(2, copy.copy(vert_1_id.get('legs')[1]))
@@ -1439,23 +1448,26 @@ class Test_Channel(unittest.TestCase):
         self.my_testmodel.get('interactions').append(\
             base_objects.Interaction({'id':100}))
         self.my_testmodel.reset_dictionaries()
+        self.my_testmodel['conj_int_dict'][80] = 81
+        self.my_testmodel['conj_int_dict'][90] = 91
+        self.my_testmodel['conj_int_dict'][100] = 101
 
         # Nice string for channel_a:
-        # ((8(13),12(-14)>8(-24),id:-100), (7(11),11(-12)>7(-24),id:-44),
-        #  (5(-5),10(-24)>5(-6),id:-35),(4(5),9(24)>4(6),id:35),
-        #  (2(-5),7(-24),8(-24)>2(-6),id:-90),
+        # ((8(13),12(-14)>8(-24),id:101), (7(11),11(-12)>7(-24),id:43),
+        #  (5(-5),10(-24)>5(-6),id:54),(4(5),9(24)>4(6),id:33),
+        #  (2(-5),7(-24),8(-24)>2(-6),id:91),
         #  (2(-6),3(6),4(6),5(-6),6(6)>2(25),id:80),(2(25),1(25),id:0)) ()
         
         # Nice string of channel_b:
-        #((10(11),12(-12)>10(-24),id:-44),(9(13),11(-14)>9(-24),id:-100),
-        # (6(-5),9(-24),10(-24)>6(-6),id:-90),(3(5),8(24)>3(6),id:35),
-        # (2(-5),7(-24)>2(-6),id:-35),
+        #((10(11),12(-12)>10(-24),id:43),(9(13),11(-14)>9(-24),id:101),
+        # (6(-5),9(-24),10(-24)>6(-6),id:91),(3(5),8(24)>3(6),id:33),
+        # (2(-5),7(-24)>2(-6),id:54),
         # (2(-6),3(6),4(6),5(-6),6(-6)>2(25),id:80),(2(25),1(25),id:0)) ()
 
         # Nice string of channel_c:
-        #((10(13),12(-14)>10(-24),id:-100),(9(13),11(-14)>9(-24),id:-100),
-        # (6(-5),9(-24),10(-24)>6(-6),id:-90),(3(5),8(24)>3(6),id:35),
-        # (2(-5),7(-24)>2(-6),id:-35),
+        #((10(13),12(-14)>10(-24),id:101),(9(13),11(-14)>9(-24),id:101),
+        # (6(-5),9(-24),10(-24)>6(-6),id:91),(3(5),8(24)>3(6),id:33),
+        # (2(-5),7(-24)>2(-6),id:54),
         # (2(-6),3(6),4(6),5(-6),6(-6)>2(25),id:80),(2(25),1(25),id:0)) ()
 
         # Initiate channel_a
@@ -1488,6 +1500,7 @@ class Test_Channel(unittest.TestCase):
                                                  self.my_testmodel)
         #print 'Channel_a:\n', channel_a.nice_string()
         
+
         # Initiate channel_b
         # h > t~ t t t~ t~
         channel_b = decay_objects.Channel({'vertices': base_objects.VertexList(\
@@ -1556,7 +1569,7 @@ class Test_Channel(unittest.TestCase):
         channel_c = higgs.connect_channel_vertex(channel_c, 3,
                                                  w_muvmu,
                                                  self.my_testmodel)
-        #print 'Channel_c:\n', channel_c.nice_string()
+        #Print 'Channel_c:\n', channel_c.nice_string()
         self.assertTrue(decay_objects.Channel.check_channels_equiv_rec(channel_a, 4, channel_b, 2))                        
         self.assertTrue(decay_objects.Channel.check_channels_equiv_rec(channel_a, -1, channel_b, -1))
         self.assertFalse(decay_objects.Channel.check_channels_equiv_rec(channel_a, -1, channel_c, -1))
@@ -1565,10 +1578,14 @@ class Test_Channel(unittest.TestCase):
                                                                    channel_b))
         self.assertFalse(decay_objects.Channel.check_channels_equiv(channel_a,
                                                                     channel_c))
+
     def test_findchannels(self):
         """ Test of the find_channels functions."""
 
         higgs = self.my_testmodel.get_particle(25)
+        t = self.my_testmodel.get_particle(6)
+        t.find_channels(2, self.my_testmodel)
+        #print t.get_channels(2, True).nice_string()
         # Test exceptions of find_channels
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
                           higgs.find_channels,
@@ -1631,8 +1648,7 @@ class Test_Channel(unittest.TestCase):
         channel_d.calculate_orders(self.my_testmodel)
         
         # Test of find_channels
-        # Without running find_vertexlist before, but the program should run it
-        # automatically. Also for find_stable_particles
+        # The program should run find_stable_particles automatically.
         self.my_testmodel.find_channels(self.my_testmodel.get_particle(5), 3)
         self.assertFalse(self.my_testmodel.get_particle(5).get_channels(3, True))
         self.assertTrue(self.my_testmodel['stable_particles'])
@@ -1641,14 +1657,16 @@ class Test_Channel(unittest.TestCase):
         higgs.find_channels_nextlevel(self.my_testmodel)
         result1 = higgs.get_channels(3, True)
         #print result1.nice_string()
-        # Test if the equivalent channels appear only once.
 
+
+        # Test if the equivalent channels appear only once.
         # For both has_idpart and not has_idpart channels
         self.assertEqual((result1.count(channel_b)+ result1.count(channel_a)),1)
 
         # Test if the 2bodymassdiff calculated during
         # find_channels_nextlevel is right.
         self.assertAlmostEqual(higgs.get('2body_massdiff'), decay_objects.MH-2*decay_objects.MB)
+
 
         # Set MH < MW to get the desire channels.
         decay_objects.MH = 50
@@ -2601,12 +2619,12 @@ class Test_AbstractModel(unittest.TestCase):
 
             # Test anti interaction
             _has_anti = False
-            if inter['id'] in normal_sm['cp_conj_dict'].keys():
+            if inter['id'] in normal_sm['conj_int_dict'].keys():
                 _has_anti = True
             if _has_anti:
-                self.assertEqual(ab_model['interaction_type_dict'][normal_sm['cp_conj_dict'][inter['id']]],
+                self.assertEqual(ab_model['interaction_type_dict'][normal_sm['conj_int_dict'][inter['id']]],
                                  ab_model['interaction_type_dict'][-inter['id']])
-                self.assertEqual(ab_model['interaction_coupling_dict'][normal_sm['cp_conj_dict'][inter['id']]], 
+                self.assertEqual(ab_model['interaction_coupling_dict'][normal_sm['conj_int_dict'][inter['id']]], 
                                  ab_model['interaction_coupling_dict'][-inter['id']])
 
         # Test for non-repeated interaction id

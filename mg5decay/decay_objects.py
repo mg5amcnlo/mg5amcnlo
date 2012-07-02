@@ -963,11 +963,10 @@ class DecayParticle(base_objects.Particle):
         # Setup the final leg number that is used in the channel.
         leg_num = max([l['number'] for l in sub_channel.get_final_legs()])
 
-        # Add minus sign to the vertex id and leg id if the leg in sub_channel
-        # is for anti-particle
-        is_anti_leg = sub_channel.get_final_legs()[index]['id'] < 0
-        if is_anti_leg:
-            new_vertex['id'] = -new_vertex['id']
+        # Find the correct vertex id for decays of antiparticles
+        # Using dict in model.conj_int_dict
+        if sub_channel.get_final_legs()[index]['id'] < 0:
+            new_vertex['id'] = model['conj_int_dict'][new_vertex['id']]
             for leg in new_vertex['legs']:
                 leg['id']  = model.get_particle(leg['id']).get_anti_pdg_code()
 
@@ -1206,7 +1205,7 @@ class DecayModel(base_objects.Model):
         # Other properties
         self['vertexlist_found'] = False
         self['max_vertexorder'] = 0
-        self['cp_conj_dict'] = {}
+        self['conj_int_dict'] = {}
         self['decay_groups'] = []
         self['reduced_interactions'] = []
         self['stable_particles'] = []
@@ -1347,7 +1346,7 @@ class DecayModel(base_objects.Model):
         # Add interactions, except ones with all stable particles or ones
         # with radiation process.
         self['ab_model'].setup_interactions(self.get('interactions'), 
-                                            self['cp_conj_dict'],
+                                            self['conj_int_dict'],
                                             force)
 
     def generate_abstract_amplitudes(self, part, clevel):
@@ -1467,7 +1466,7 @@ class DecayModel(base_objects.Model):
         for part in self['particles']:
             part['vertexlist_found'] = True
 
-        # Setup the cp_conj_dict for interaction id to the id of 
+        # Setup the conj_int_dict for interaction id to the id of 
         # its cp-conjugate.
         interlist = [(i['id'], [p.get_anti_pdg_code() for p in i['particles']])\
                          for i in self['interactions']]
@@ -1479,7 +1478,7 @@ class DecayModel(base_objects.Model):
                 if sorted(item[1]) == sorted(pids) and \
                         inter['id'] != item[0]:
 
-                    self['cp_conj_dict'][inter['id']] = item[0]
+                    self['conj_int_dict'][inter['id']] = item[0]
                     found = True
                     break
             if not found:
@@ -3156,7 +3155,7 @@ class Channel(base_objects.Diagram):
                 if vert['id'] > 0:
                     inter = model.get_interaction(vert['id'])
                 else:
-                    inter = model.get_interaction(model['cp_conj_dict'][vert['id']])
+                    inter = model.get_interaction(model['conj_int_dict'][vert['id']])
                 pdg_codes = [p.get_pdg_code() for p in inter['particles']]
                 ini_index = pdg_codes.index(ini_part.get_anti_pdg_code())
                 # part_index is the index of partner in vertex['legs']
@@ -3184,7 +3183,7 @@ class Channel(base_objects.Diagram):
         if vert['id'] > 0:
             inter = model.get_interaction(vert['id'])
         else:
-            inter = model.get_interaction(model['cp_conj_dict'][vert['id']])
+            inter = model.get_interaction(model['conj_int_dict'][vert['id']])
         pdg_codes = [p.get_pdg_code() for p in inter['particles']]
         
         # Construct helper_vertex with 
