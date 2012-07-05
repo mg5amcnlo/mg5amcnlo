@@ -590,12 +590,8 @@ class FortranHelasCallWriterTest(HelasModelTestSetup):
 
         fortran_model = helas_call_writers.FortranHelasCallWriter()
 
-        goal_counter = 0
-
-        for wf in wfs:
-            self.assertEqual(fortran_model.get_wavefunction_call(wf),
-                             goal[goal_counter])
-            goal_counter = goal_counter + 1
+        result = [fortran_model.get_wavefunction_call(wf) for wf in wfs]
+        self.assertEqual(result, goal)
 
         for wf in wfs:
             mothers = copy.copy(wfs)
@@ -893,9 +889,9 @@ class UFOHELASCallWriterTest(unittest.TestCase):
                    'CALL VVVV1_4(W(1,1),W(1,3),W(1,2),GC_51,wmas,wwid,W(1,6))',
                    '# Amplitude(s) for diagram number 1',
                    'CALL VVV1_0(W(1,6),W(1,4),W(1,5),GC_12,AMP(1))',
-                   'CALL VVVV1_3(W(1,1),W(1,3),W(1,4),GC_51,wmas,wwid,W(1,7))',
+                   'CALL VVVV1_3(W(1,1),W(1,3),W(1,4),GC_51,wmas,wwid,W(1,6))',
                    '# Amplitude(s) for diagram number 2',
-                   'CALL VVV1_0(W(1,2),W(1,7),W(1,5),GC_12,AMP(2))']
+                   'CALL VVV1_0(W(1,2),W(1,6),W(1,5),GC_12,AMP(2))']
 
         
         for i, line in enumerate(solution):
@@ -917,9 +913,9 @@ class UFOHELASCallWriterTest(unittest.TestCase):
                    'VVVV1_4(w[0],w[2],w[1],pars->GC_51,pars->wmas,pars->wwid,w[5]);',
                    '# Amplitude(s) for diagram number 1',
                    'VVV1_0(w[5],w[3],w[4],pars->GC_12,amp[0]);',
-                   'VVVV1_3(w[0],w[2],w[3],pars->GC_51,pars->wmas,pars->wwid,w[6]);',
+                   'VVVV1_3(w[0],w[2],w[3],pars->GC_51,pars->wmas,pars->wwid,w[5]);',
                    '# Amplitude(s) for diagram number 2',
-                   'VVV1_0(w[1],w[6],w[4],pars->GC_12,amp[1]);']
+                   'VVV1_0(w[1],w[5],w[4],pars->GC_12,amp[1]);']
         
         for i, line in enumerate(solution):
             self.assertEqual(line, result[i])
@@ -940,9 +936,9 @@ class UFOHELASCallWriterTest(unittest.TestCase):
                    'w[5]= VVVV1_4(w[0],w[2],w[1],GC_51,wmas,wwid)',
                    '# Amplitude(s) for diagram number 1',
                    'amp[0]= VVV1_0(w[5],w[3],w[4],GC_12)',
-                   'w[6]= VVVV1_3(w[0],w[2],w[3],GC_51,wmas,wwid)',
+                   'w[5]= VVVV1_3(w[0],w[2],w[3],GC_51,wmas,wwid)',
                    '# Amplitude(s) for diagram number 2',
-                   'amp[1]= VVV1_0(w[1],w[6],w[4],GC_12)']
+                   'amp[1]= VVV1_0(w[1],w[5],w[4],GC_12)']
         
         
         for i, line in enumerate(solution):
@@ -1003,34 +999,34 @@ CALL VVV1_1(W(1,4),W(1,5),GC_37,DCMPLX(CMASS_MW),W(1,8))
 CALL VVV1_0(W(1,3),W(1,6),W(1,8),GC_49,AMP(2))
 # Amplitude(s) for diagram number 3
 CALL VVVV5_0(W(1,3),W(1,6),W(1,4),W(1,5),GC_50,AMP(3))
-CALL VVV1_2(W(1,1),W(1,4),GC_49,DCMPLX(CMASS_MW),W(1,9))
-CALL VVV1_3(W(1,3),W(1,2),GC_49,DCMPLX(CMASS_MW),W(1,10))
+CALL VVV1_2(W(1,1),W(1,4),GC_49,DCMPLX(CMASS_MW),W(1,6))
+CALL VVV1_3(W(1,3),W(1,2),GC_49,DCMPLX(CMASS_MW),W(1,9))
 # Amplitude(s) for diagram number 4
-CALL VVV1_0(W(1,10),W(1,9),W(1,5),GC_37,AMP(4))
-CALL VVV1_2(W(1,2),W(1,5),GC_37,DCMPLX(CMASS_MW),W(1,11))
+CALL VVV1_0(W(1,9),W(1,6),W(1,5),GC_37,AMP(4))
+CALL VVV1_2(W(1,2),W(1,5),GC_37,DCMPLX(CMASS_MW),W(1,10))
 # Amplitude(s) for diagram number 5
-CALL VVV1_0(W(1,3),W(1,11),W(1,9),GC_49,AMP(5))
+CALL VVV1_0(W(1,3),W(1,10),W(1,6),GC_49,AMP(5))
 # Amplitude(s) for diagram number 6
-CALL VVVV5_0(W(1,3),W(1,2),W(1,9),W(1,5),GC_50,AMP(6))
+CALL VVVV5_0(W(1,3),W(1,2),W(1,6),W(1,5),GC_50,AMP(6))
 # Amplitude(s) for diagram number 7
-CALL VVV1_0(W(1,1),W(1,10),W(1,8),GC_49,AMP(7))
+CALL VVV1_0(W(1,1),W(1,9),W(1,8),GC_49,AMP(7))
 # Amplitude(s) for diagram number 8
-CALL VVV1_0(W(1,1),W(1,11),W(1,7),GC_49,AMP(8))
-CALL VVVV2_4(W(1,1),W(1,3),W(1,2),GC_51,DCMPLX(CMASS_MW),W(1,12))
+CALL VVV1_0(W(1,1),W(1,10),W(1,7),GC_49,AMP(8))
+CALL VVVV2_4(W(1,1),W(1,3),W(1,2),GC_51,DCMPLX(CMASS_MW),W(1,10))
 # Amplitude(s) for diagram number 9
-CALL VVV1_0(W(1,12),W(1,4),W(1,5),GC_37,AMP(9))
-CALL VVVV5_3(W(1,1),W(1,2),W(1,5),GC_50,DCMPLX(CMASS_MW),W(1,13))
+CALL VVV1_0(W(1,10),W(1,4),W(1,5),GC_37,AMP(9))
+CALL VVVV5_3(W(1,1),W(1,2),W(1,5),GC_50,DCMPLX(CMASS_MW),W(1,10))
 # Amplitude(s) for diagram number 10
-CALL VVV1_0(W(1,3),W(1,13),W(1,4),GC_49,AMP(10))
-CALL VVVV2_3(W(1,1),W(1,3),W(1,4),GC_51,DCMPLX(CMASS_MW),W(1,14))
+CALL VVV1_0(W(1,3),W(1,10),W(1,4),GC_49,AMP(10))
+CALL VVVV2_3(W(1,1),W(1,3),W(1,4),GC_51,DCMPLX(CMASS_MW),W(1,10))
 # Amplitude(s) for diagram number 11
-CALL VVV1_0(W(1,2),W(1,14),W(1,5),GC_37,AMP(11))
-CALL VVVV5_2(W(1,1),W(1,4),W(1,5),GC_50,DCMPLX(CMASS_MW),W(1,15))
+CALL VVV1_0(W(1,2),W(1,10),W(1,5),GC_37,AMP(11))
+CALL VVVV5_2(W(1,1),W(1,4),W(1,5),GC_50,DCMPLX(CMASS_MW),W(1,10))
 # Amplitude(s) for diagram number 12
-CALL VVV1_0(W(1,3),W(1,2),W(1,15),GC_49,AMP(12))"""
+CALL VVV1_0(W(1,3),W(1,2),W(1,10),GC_49,AMP(12))"""
                 
-        for i, line in enumerate(solution.split('\n')):
-            self.assertEqual(line, result[i])
+
+        self.assertEqual(solution.split('\n'), result)
 
         
     def test_UFO_CPP_helas_call_writer(self):
@@ -1054,35 +1050,35 @@ VVV1_1(w[3],w[4],pars->GC_37,pars->CMASS_MW,w[7]);
 VVV1_0(w[2],w[5],w[7],pars->GC_49,amp[1]);
 # Amplitude(s) for diagram number 3
 VVVV5_0(w[2],w[5],w[3],w[4],pars->GC_50,amp[2]);
-VVV1_2(w[0],w[3],pars->GC_49,pars->CMASS_MW,w[8]);
-VVV1_3(w[2],w[1],pars->GC_49,pars->CMASS_MW,w[9]);
+VVV1_2(w[0],w[3],pars->GC_49,pars->CMASS_MW,w[5]);
+VVV1_3(w[2],w[1],pars->GC_49,pars->CMASS_MW,w[8]);
 # Amplitude(s) for diagram number 4
-VVV1_0(w[9],w[8],w[4],pars->GC_37,amp[3]);
-VVV1_2(w[1],w[4],pars->GC_37,pars->CMASS_MW,w[10]);
+VVV1_0(w[8],w[5],w[4],pars->GC_37,amp[3]);
+VVV1_2(w[1],w[4],pars->GC_37,pars->CMASS_MW,w[9]);
 # Amplitude(s) for diagram number 5
-VVV1_0(w[2],w[10],w[8],pars->GC_49,amp[4]);
+VVV1_0(w[2],w[9],w[5],pars->GC_49,amp[4]);
 # Amplitude(s) for diagram number 6
-VVVV5_0(w[2],w[1],w[8],w[4],pars->GC_50,amp[5]);
+VVVV5_0(w[2],w[1],w[5],w[4],pars->GC_50,amp[5]);
 # Amplitude(s) for diagram number 7
-VVV1_0(w[0],w[9],w[7],pars->GC_49,amp[6]);
+VVV1_0(w[0],w[8],w[7],pars->GC_49,amp[6]);
 # Amplitude(s) for diagram number 8
-VVV1_0(w[0],w[10],w[6],pars->GC_49,amp[7]);
-VVVV2_4(w[0],w[2],w[1],pars->GC_51,pars->CMASS_MW,w[11]);
+VVV1_0(w[0],w[9],w[6],pars->GC_49,amp[7]);
+VVVV2_4(w[0],w[2],w[1],pars->GC_51,pars->CMASS_MW,w[9]);
 # Amplitude(s) for diagram number 9
-VVV1_0(w[11],w[3],w[4],pars->GC_37,amp[8]);
-VVVV5_3(w[0],w[1],w[4],pars->GC_50,pars->CMASS_MW,w[12]);
+VVV1_0(w[9],w[3],w[4],pars->GC_37,amp[8]);
+VVVV5_3(w[0],w[1],w[4],pars->GC_50,pars->CMASS_MW,w[9]);
 # Amplitude(s) for diagram number 10
-VVV1_0(w[2],w[12],w[3],pars->GC_49,amp[9]);
-VVVV2_3(w[0],w[2],w[3],pars->GC_51,pars->CMASS_MW,w[13]);
+VVV1_0(w[2],w[9],w[3],pars->GC_49,amp[9]);
+VVVV2_3(w[0],w[2],w[3],pars->GC_51,pars->CMASS_MW,w[9]);
 # Amplitude(s) for diagram number 11
-VVV1_0(w[1],w[13],w[4],pars->GC_37,amp[10]);
-VVVV5_2(w[0],w[3],w[4],pars->GC_50,pars->CMASS_MW,w[14]);
+VVV1_0(w[1],w[9],w[4],pars->GC_37,amp[10]);
+VVVV5_2(w[0],w[3],w[4],pars->GC_50,pars->CMASS_MW,w[9]);
 # Amplitude(s) for diagram number 12
-VVV1_0(w[2],w[1],w[14],pars->GC_49,amp[11]);"""
+VVV1_0(w[2],w[1],w[9],pars->GC_49,amp[11]);"""
 
 
-        for i, line in enumerate(solution.split('\n')):
-            self.assertEqual(line, result[i])
+
+        self.assertEqual(solution.split('\n'), result)
         
 
     def test_UFO_Python_helas_call_writer(self):
@@ -1106,33 +1102,33 @@ w[7]= VVV1_1(w[3],w[4],GC_37,CMASS_MW)
 amp[1]= VVV1_0(w[2],w[5],w[7],GC_49)
 # Amplitude(s) for diagram number 3
 amp[2]= VVVV5_0(w[2],w[5],w[3],w[4],GC_50)
-w[8]= VVV1_2(w[0],w[3],GC_49,CMASS_MW)
-w[9]= VVV1_3(w[2],w[1],GC_49,CMASS_MW)
+w[5]= VVV1_2(w[0],w[3],GC_49,CMASS_MW)
+w[8]= VVV1_3(w[2],w[1],GC_49,CMASS_MW)
 # Amplitude(s) for diagram number 4
-amp[3]= VVV1_0(w[9],w[8],w[4],GC_37)
-w[10]= VVV1_2(w[1],w[4],GC_37,CMASS_MW)
+amp[3]= VVV1_0(w[8],w[5],w[4],GC_37)
+w[9]= VVV1_2(w[1],w[4],GC_37,CMASS_MW)
 # Amplitude(s) for diagram number 5
-amp[4]= VVV1_0(w[2],w[10],w[8],GC_49)
+amp[4]= VVV1_0(w[2],w[9],w[5],GC_49)
 # Amplitude(s) for diagram number 6
-amp[5]= VVVV5_0(w[2],w[1],w[8],w[4],GC_50)
+amp[5]= VVVV5_0(w[2],w[1],w[5],w[4],GC_50)
 # Amplitude(s) for diagram number 7
-amp[6]= VVV1_0(w[0],w[9],w[7],GC_49)
+amp[6]= VVV1_0(w[0],w[8],w[7],GC_49)
 # Amplitude(s) for diagram number 8
-amp[7]= VVV1_0(w[0],w[10],w[6],GC_49)
-w[11]= VVVV2_4(w[0],w[2],w[1],GC_51,CMASS_MW)
+amp[7]= VVV1_0(w[0],w[9],w[6],GC_49)
+w[9]= VVVV2_4(w[0],w[2],w[1],GC_51,CMASS_MW)
 # Amplitude(s) for diagram number 9
-amp[8]= VVV1_0(w[11],w[3],w[4],GC_37)
-w[12]= VVVV5_3(w[0],w[1],w[4],GC_50,CMASS_MW)
+amp[8]= VVV1_0(w[9],w[3],w[4],GC_37)
+w[9]= VVVV5_3(w[0],w[1],w[4],GC_50,CMASS_MW)
 # Amplitude(s) for diagram number 10
-amp[9]= VVV1_0(w[2],w[12],w[3],GC_49)
-w[13]= VVVV2_3(w[0],w[2],w[3],GC_51,CMASS_MW)
+amp[9]= VVV1_0(w[2],w[9],w[3],GC_49)
+w[9]= VVVV2_3(w[0],w[2],w[3],GC_51,CMASS_MW)
 # Amplitude(s) for diagram number 11
-amp[10]= VVV1_0(w[1],w[13],w[4],GC_37)
-w[14]= VVVV5_2(w[0],w[3],w[4],GC_50,CMASS_MW)
+amp[10]= VVV1_0(w[1],w[9],w[4],GC_37)
+w[9]= VVVV5_2(w[0],w[3],w[4],GC_50,CMASS_MW)
 # Amplitude(s) for diagram number 12
-amp[11]= VVV1_0(w[2],w[1],w[14],GC_49)"""
+amp[11]= VVV1_0(w[2],w[1],w[9],GC_49)"""
         
     
-        for i, line in enumerate(solution.split('\n')):
-            self.assertEqual(line, result[i])        
+
+        self.assertEqual(solution.split('\n'), result)        
 

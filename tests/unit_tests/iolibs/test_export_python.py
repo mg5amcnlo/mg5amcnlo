@@ -303,7 +303,7 @@ class IOExportPythonTest(unittest.TestCase):
         #  
         ngraphs = 4
         nexternal = 4
-        nwavefuncs = 8
+        nwavefuncs = 5
         ncolor = 2
         ZERO = 0.
         #  
@@ -332,15 +332,15 @@ class IOExportPythonTest(unittest.TestCase):
         w[4]= FFV1_3(w[0],w[1],GC_10,ZERO,ZERO)
         # Amplitude(s) for diagram number 1
         amp[0]= FFV1_0(w[3],w[2],w[4],GC_10)
-        w[5]= FFV2_5_3(w[0],w[1],GC_35,GC_47,MZ,WZ)
+        w[4]= FFV2_5_3(w[0],w[1],GC_35,GC_47,MZ,WZ)
         # Amplitude(s) for diagram number 2
-        amp[1]= FFV2_5_0(w[3],w[2],w[5],GC_35,GC_47)
-        w[6]= FFV1_3(w[0],w[2],GC_10,ZERO,ZERO)
+        amp[1]= FFV2_5_0(w[3],w[2],w[4],GC_35,GC_47)
+        w[4]= FFV1_3(w[0],w[2],GC_10,ZERO,ZERO)
         # Amplitude(s) for diagram number 3
-        amp[2]= FFV1_0(w[3],w[1],w[6],GC_10)
-        w[7]= FFV2_5_3(w[0],w[2],GC_35,GC_47,MZ,WZ)
+        amp[2]= FFV1_0(w[3],w[1],w[4],GC_10)
+        w[4]= FFV2_5_3(w[0],w[2],GC_35,GC_47,MZ,WZ)
         # Amplitude(s) for diagram number 4
-        amp[3]= FFV2_5_0(w[3],w[1],w[7],GC_35,GC_47)
+        amp[3]= FFV2_5_0(w[3],w[1],w[4],GC_35,GC_47)
 
         jamp = [None] * ncolor
         jamp[0] = +1./6.*amp[0]-amp[1]+1./2.*amp[2]

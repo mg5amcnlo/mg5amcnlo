@@ -2478,7 +2478,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     "Missing or erraneous arguments for generate_helas_diagrams"
         assert isinstance(optimization, int), \
                     "Missing or erraneous arguments for generate_helas_diagrams"
-
+        self.optimization = optimization
 
         diagram_list = amplitude.get('diagrams')
         process = amplitude.get('process')
@@ -2740,6 +2740,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """change the wavefunctions id used in the writer to minimize the 
            memory used by the wavefunctions."""
         
+        if not self.optimization:
+            for diag in helas_diagrams:
+                for wf in diag['wavefunctions']:
+                    wf.set('me_id',wf.get('number'))
+            return helas_diagrams
+
         # First compute the first/last appearance of each wavefunctions
         # first takes the line number and return the id of the created wf
         # last_lign takes the id of the wf and return the line number
@@ -2751,6 +2757,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 pos+=1
                 for wfin in wf.get('mothers'):
                     last_lign[wfin.get('number')] = pos
+                    assert wfin.get('number') in first.values()
                 first[pos] = wf.get('number')
             for amp in diag['amplitudes']:
                 pos+=1
@@ -2932,11 +2939,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # this matrix element
         self.identical_decay_chain_factor(decay_dict.values())
         
-        # Optimize the output to reuse id of wavefunctions which are not use 
-        # anymore. If this optimization is on in generate_helas_diagrams, this
-        # SHOULD be kept activate here (otherwise the output will be wrong)
-        matrix_element = self.get('diagrams')
-        self.reuse_outdated_wavefunctions(matrix_element)
 
     def insert_decay(self, old_wfs, decay, numbers, got_majoranas):
         """Insert a decay chain matrix element into the matrix element.
@@ -4191,7 +4193,8 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                                         replace('Process: ', '') \
                                         for d in decay_dict.values()])))
 
-                matrix_element.insert_decay_chains(decay_dict)
+                matrix_element.insert_decay_chains(decay_dict)    
+                
                 me_tag = IdentifyMETag.create_tag(\
                             matrix_element.get_base_amplitude(),
                             matrix_element.get('identical_particle_factor'))
@@ -4212,6 +4215,14 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                            matrix_element.get('diagrams'):
                         matrix_elements.append(matrix_element)
                         me_tags.append(me_tag)
+
+        # Optimize the output to reuse id of wavefunctions which are not use 
+        # anymore. If this optimization is on in generate_helas_diagrams, this
+        # SHOULD be kept activate here (otherwise the output will be wrong)
+        for me in matrix_elements:
+            matrix_element = me.get('diagrams')
+            me.reuse_outdated_wavefunctions(matrix_element)
+
 
         return matrix_elements
 

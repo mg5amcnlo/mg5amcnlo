@@ -3196,7 +3196,7 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         num_processes =  [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1]
         num_amps =  [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9]
-        num_wfs =  [19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19]
+        num_wfs =  [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
         iden_factors =  [1, 1, 6, 1, 1, 6, 1, 1, 6, 2, 12]
 
         for i, me in enumerate(matrix_elements):
