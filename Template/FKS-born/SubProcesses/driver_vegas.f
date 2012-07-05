@@ -357,7 +357,7 @@ c
 c Compute the Born-like contributions with nbody=.true.
 c THIS CAN BE OPTIMIZED
 c
-      call get_MC_integer(fks_configs,nFKSprocess,vol)
+      call get_MC_integer(1,fks_configs,nFKSprocess,vol)
       nFKSprocess_all=nFKSprocess
       call fks_inc_chooser()
       if (j_fks.le.nincoming) then
@@ -386,6 +386,7 @@ c
       call setcuts
       call setfksfactor(iconfig)
       wgt=1d0
+
       call generate_momenta(ndim,iconfig,wgt,x,p)
       sigint = sigint+dsig(p,wgt,peso)
 c
@@ -421,7 +422,7 @@ c     account this Jacobian
             wgt=1d0/vol
             call generate_momenta(ndim,iconfig,wgt,x,p)
             sigintR = dsig(p,wgt,peso)
-            call fill_MC_integer(nFKSprocess,abs(sigintR)*peso*vol)
+            call fill_MC_integer(1,nFKSprocess,abs(sigintR)*peso*vol)
             sigint = sigint+ sigintR
          endif
       endif

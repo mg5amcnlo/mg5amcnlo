@@ -348,7 +348,7 @@ c FKS stuff:
       integer ngluons,nquarks(-6:6)
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg,ngluons,nquarks
-      integer diagramsymmetryfactor
+      double precision diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
 
       logical multi_chan(lmaxconfigs)
@@ -380,10 +380,6 @@ c Random numbers to be used in the plotting routine
 c For tests
       real*8 fksmaxwgt,xisave,ysave
       common/cfksmaxwgt/fksmaxwgt,xisave,ysave
-      integer icou_calls,icou_kinev,icou_sev,icou_meev,icou_kincnt,
-     #  icou_scnt,icou_mecnt
-      common/counters/icou_calls,icou_kinev,icou_sev,icou_meev,
-     #                           icou_kincnt,icou_scnt,icou_mecnt
 
       logical ExceptPSpoint
       integer iminmax
@@ -805,18 +801,6 @@ c For tests
             xisave=xi_i_fks_ev
             ysave=y_ij_fks_ev
          endif
-         icou_calls=icou_calls+1
-         if(pp(0,1).gt.0.d0)icou_kinev=icou_kinev+1
-         if(s_ev.gt.0.d0)icou_sev=icou_sev+1
-         if(s_ev.gt.0.d0.and.abs(ev_wgt).gt.0.d0)icou_meev=icou_meev+1
-         if( p1_cnt(0,1,0).gt.0.d0 .or.
-     &        p1_cnt(0,1,1).gt.0.d0 .or.
-     &        p1_cnt(0,1,2).gt.0.d0 )icou_kincnt=icou_kincnt+1
-         if( s_s.gt.0.d0.or.s_c.gt.0.d0.or.
-     &        s_sc.gt.0.d0 )icou_scnt=icou_scnt+1
-         if( (s_s.gt.0.d0.or.s_c.gt.0.d0.or.
-     &        s_sc.gt.0.d0).and.abs(cnt_wgt).gt.0.d0)
-     &        icou_mecnt=icou_mecnt+1
 
 c Plot observables for event
          plot_wgt=ev_wgt*fkssymmetryfactor*vegaswgt
@@ -828,21 +812,27 @@ c Plot observables for counterevents and Born
      &              bsv_wgt*fkssymmetryfactorBorn +
      &              deg_wgt*fkssymmetryfactorDeg +
      &              deg_swgt*fkssymmetryfactorDeg )*vegaswgt
-         if(abs(plot_wgt).gt.1.d-20.and.p1_cnt(0,1,iplot).ne.-99d0)then
+         if(abs(plot_wgt).gt.1.d-20) then
             if(iplot.eq.-3)then
                write(*,*)'Error #1 in dsig'
                stop
+            elseif (p1_cnt(0,1,iplot).ne.-99d0)then
+               call outfun(p1_cnt(0,1,iplot),ybst_til_tolab,plot_wgt,
+     &              iplot_cnt)
             endif
-            call outfun(p1_cnt(0,1,iplot),ybst_til_tolab,plot_wgt,
-     &                  iplot_cnt)
          endif
 c Plot observables for Born; pass cnt momenta assuming they are
 c identical to Born ones
          plot_wgt=born_wgt*fkssymmetryfactorBorn*vegaswgt
-         if(abs(plot_wgt).gt.1.d-20.and.p1_cnt(0,1,iplot).ne.-99d0)
-     &        call outfun(p1_cnt(0,1,iplot),ybst_til_tolab,plot_wgt,
-     &                    iplot_born)
-
+         if(abs(plot_wgt).gt.1.d-20) then
+            if(iplot.eq.-3)then
+               write(*,*)'Error #1 in dsig'
+               stop
+            elseif (p1_cnt(0,1,iplot).ne.-99d0)then
+               call outfun(p1_cnt(0,1,iplot),ybst_til_tolab,plot_wgt,
+     &              iplot_born)
+            endif
+         endif
       elseif (iminmax.eq.1 .and. ExceptPSpoint) then
 c for except PS points, this is the maximal approx for the virtual         
          call unweight_function(p_born,unwgtfun)
@@ -1009,7 +999,7 @@ c FKS stuff:
       integer ngluons,nquarks(-6:6)
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg,ngluons,nquarks
-      integer diagramsymmetryfactor
+      double precision diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
 
       logical multi_chan(lmaxconfigs)
@@ -1061,11 +1051,6 @@ c For plots
 c For tests
       real*8 fksmaxwgt,xisave,ysave
       common/cfksmaxwgt/fksmaxwgt,xisave,ysave
-      integer icou_calls,icou_kinev,icou_sev,icou_meev,icou_kincnt,
-     #  icou_scnt,icou_mecnt
-      common/counters/icou_calls,icou_kinev,icou_sev,icou_meev,
-     #                           icou_kincnt,icou_scnt,icou_mecnt
-
       logical ExceptPSpoint
       integer iminmax
       common/cExceptPSpoint/iminmax,ExceptPSpoint
@@ -4869,7 +4854,7 @@ c      include 'fks.inc'
       common /toxexternal/ xexternal
       logical rotategranny
       common/crotategranny/rotategranny
-      integer diagramsymmetryfactor
+      double precision diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
 
       integer           isum_hel

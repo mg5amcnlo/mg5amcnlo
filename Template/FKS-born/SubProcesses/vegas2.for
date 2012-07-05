@@ -816,11 +816,6 @@ c
       common/bveg2/xi(50,58),si,si2,swgt,schi,ndo,it
       common/cwww/w1max,w1vgs,w1evt
       common/ciweight/iweight
-c For tests
-      integer icou_calls,icou_kinev,icou_sev,icou_meev,icou_kincnt,
-     #  icou_scnt,icou_mecnt
-      common/counters/icou_calls,icou_kinev,icou_sev,icou_meev,
-     #                           icou_kincnt,icou_scnt,icou_mecnt
       external sig
 c
       do j=1,58
@@ -834,26 +829,11 @@ c Set nprn equal to zero to print nothing
       ncall=incalls
       itmx=1
       do j=1,initn
-        icou_calls=0
-        icou_kinev=0
-        icou_sev=0
-        icou_meev=0
-        icou_kincnt=0
-        icou_scnt=0
-        icou_mecnt=0
         if(j.eq.1)then
           call vegas(sig,avgi,sd,chi2a)
         else
           call vegas3(sig,avgi,sd,chi2a)
         endif
-        write(*,*)'  '
-        write(*,*)'In iteration #',j
-        write(*,*)'ev eff: ',icou_kinev/dfloat(icou_calls),
-     #                       icou_sev/dfloat(icou_calls),
-     #                       icou_meev/dfloat(icou_calls)
-        write(*,*)'cnt eff:',icou_kincnt/dfloat(icou_calls),
-     #                       icou_scnt/dfloat(icou_calls),
-     #                       icou_mecnt/dfloat(icou_calls)
       enddo
       avg=avgi
       stddev=sd
