@@ -729,8 +729,6 @@ c
         endif
         if(nprn.ne.0)then
            write(6,201)it,0.d0,0.d0,avgi,sd,chi2a
-cRF: also update the grids for the integer sum
-           call regrid_MC_integer
         endif
         return
         end
