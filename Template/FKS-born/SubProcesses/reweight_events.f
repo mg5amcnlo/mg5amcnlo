@@ -42,10 +42,8 @@ c
       data iseed/1/
       double precision rnd,ran2
       external ran2
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
       character*1 proceed
 
       write (*,*) 'Give Les Houches event file with unweighted'//
@@ -259,7 +257,10 @@ c Do the unweighting
       subroutine fill_common_blocks()
       implicit none
       include "nexternal.inc"
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       integer i,config_fks
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
      &     fkssymmetryfactorDeg
@@ -274,10 +275,8 @@ c Do the unweighting
       integer i_type,j_type,m_type
       common/cparticle_types/i_type,j_type,m_type
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
 
       get_hel=0

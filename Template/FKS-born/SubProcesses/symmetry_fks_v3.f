@@ -8,15 +8,13 @@ c
 c     Constants
 c
       include 'genps.inc'      
-      include "nexternal.inc"
-      include '../../../Source/run_config.inc'
+      include 'nexternal.inc'
+      include '../../Source/run_config.inc'
       
       double precision ZERO
       parameter       (ZERO = 0d0)
       integer   maxswitch
       parameter(maxswitch=99)
-      integer lun
-      parameter (lun=28)
 c
 c     Local
 c
@@ -34,21 +32,27 @@ c
 
       integer biforest(2,-max_branch:-1,lmaxconfigs)
       integer fksmother,fksgrandmother,fksaunt
-      integer fksconfiguration!,mapbconf(0:lmaxconfigs)
+      integer fksconfiguration
       logical searchforgranny,is_beta_cms,is_granny_sch,topdown
       integer nbranch,ns_channel,nt_channel
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
 c
 c     Local for generating amps
 c
       double complex wgt1(2)
-      double precision p(0:3,99), wgt, x(99), fx
-      double precision p1(0:3,99)
-      double precision p1_cnt1(0:3,nexternal,-2:2),p_born1(0:3,nexternal-1),p_ev_red_save(0:3,nexternal-1)
-      double precision p1_cnt_save(0:3,nexternal,-2:2),p_born_save(0:3,nexternal-1),p_ev_red1(0:3,nexternal-1)
+      double precision p(0:3,nexternal), wgt, x(99), fx
+      double precision p1(0:3,nexternal)
+      double precision p1_cnt1(0:3,nexternal,-2:2),p_born1(0:3,nexternal
+     &     -1),p_ev_red_save(0:3,nexternal-1)
+      double precision p1_cnt_save(0:3,nexternal,-2:2),p_born_save(0:3
+     &     ,nexternal-1),p_ev_red1(0:3,nexternal-1)
       integer ninvar, ndim, iconfig, minconfig, maxconfig
       integer ncall,itmax,nconfigs,ntry, ngraphs
-      integer ic(nexternal,maxswitch), icb(nexternal-1,maxswitch),jc(12),nswitch
+      integer ic(nexternal,maxswitch), icb(nexternal-1,maxswitch),jc(12)
+     &     ,nswitch
       double precision saveamp(maxamps)
       integer nmatch, ibase
       logical mtc, even
@@ -100,18 +104,26 @@ c
 c     DATA
 c
       integer tprid(-max_branch:-1,lmaxconfigs)
-      include 'configs.inc'
-      integer mapbconf(0:lmaxconfigs)
-      integer b_from_r(lmaxconfigs)
-      integer r_from_b(lmaxconfigs)
-      include 'bornfromreal.inc'
+      include 'born_conf.inc'
+c$$$      integer mapbconf(0:lmaxconfigs)
+c$$$      integer b_from_r(lmaxconfigs)
+c$$$      integer r_from_b(lmaxconfigs)
+c$$$      include 'bornfromreal.inc'
       include 'fks_powers.inc'
 
+      include 'nFKSconfigs.inc'
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+
+      logical calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
 
 c helicity stuff
       integer          isum_hel
       logical                    multi_channel
       common/to_matrix/isum_hel, multi_channel
+      logical nbody
+      common/cnbody/nbody
 
 c-----
 c  Begin Code
@@ -146,16 +158,30 @@ c      if (icomp .gt. 3 .or. icomp .lt. 0) icomp=0
       endif
       isum_hel=0
       multi_channel=.true.
-      
+
+
+      if (.not.onlyBorn) then
+         write (*,*) 'error in symmetry_fks_v3: onlyBorn should be true'
+         stop
+         nbody=.false.
+      else
+         nbody=.true.
+      endif
+c Pick a process that is BORN+1GLUON (where the gluon is i_fks).
+      do nFKSprocess=1,fks_configs
+         call fks_inc_chooser()
+         if (particle_type(i_fks).eq.8) exit
+      enddo
+      call leshouche_inc_chooser()
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts 
       call printout
       call run_printout
-      iconfig=r_from_b(mapbconf(1))
+      iconfig=1
       call setfksfactor(iconfig)
 c
-      ndim = 22
+      ndim = 55
       ncall = 10000
       itmax = 10
       ninvar = 35
@@ -163,28 +189,12 @@ c
 c      write (*,*) mapconfig(0)
 
       use_config(0)=0
-c Read FKS configuration from file
-      open (unit=61,file='config.fks',status='old')
-      read(61,'(I2)',err=99,end=99) fksconfiguration
- 99   close(61)
-c Use the fks.inc include file to set i_fks and j_fks
-      i_fks=fks_i(fksconfiguration)
-      j_fks=fks_j(fksconfiguration)
-      write (*,*) 'FKS configuration number is ',fksconfiguration
-      write (*,*) 'FKS partons are: i=',i_fks,'  j=',j_fks
 c
 c     Start using all (Born) configurations
 c
-      do i=1,mapbconf(0)
+      do i=1,mapconfig(0)
          use_config(i)=1
       enddo
-
-
-      include 'props.inc'
-      call sample_init(ndim,ncall,itmax,ninvar,nconfigs)
-
-      open(unit=lun,file='symswap.inc',status='unknown')
-
 c     
 c     Get momentum configuration
 c
@@ -201,35 +211,28 @@ c Set-up helicities
       do j=1,ndim
          x(j)=ran2()
       enddo
-      call x_to_f_arg(ndim,iconfig,minconfig,maxconfig,ninvar,wgt,x,p)
-      do while ((.not.passcuts(p,rwgt) .or. wgt .lt. 0 .or. p(0,1) .le. 0d0
-     &           .or. p_born(0,1) .le. 0d0) .and. ntry .lt. 10000)
-         call x_to_f_arg(ndim,iconfig,minconfig,maxconfig,ninvar,wgt,x,p)
+      call generate_momenta(ndim,iconfig,wgt,x,p)
+      do while ((.not.passcuts(p,rwgt) .or. wgt.lt.0 .or. p(0,1).le.0d0
+     &           .or. p_born(0,1).le.0d0) .and. ntry.lt.10000)
+         do j=1,ndim
+            x(j)=ran2()
+         enddo
+         call generate_momenta(ndim,iconfig,wgt,x,p)
          ntry=ntry+1
       enddo
       enddo
-      call set_alphaS(p)
       write(*,*) 'ntry',ntry
-
-c      return
-
-c      xexternal=.true.
-c      do j=2,mapbconf(j)
-c      iconfig=r_from_b(mapbconf(j))
-c      write (*,*)j,iconfig
-c      call x_to_f_arg(ndim,iconfig,minconfig,maxconfig,ninvar,wgt,x,p)
-c      write (*,*) p
-c      enddo
-      
+      call set_alphaS(p)
 c
 c     Get and save base amplitudes
 c
+      calculatedBorn=.false.
       if (onlyBorn) then
          call sborn(p_born,wgt1)
       else
-         fx=dsig(p,wgt,1d0)/amp2(b_from_r(mapconfig(iconfig)))
+         fx=dsig(p,wgt,1d0)/amp2(mapconfig(iconfig))
       endif
-      do j = 1 , mapbconf(0)
+      do j = 1 , mapconfig(0)
          if (onlyBorn) then
             saveamp(j) = amp2(j)
          else
@@ -267,14 +270,6 @@ c nexternal is the number for the real configuration. Subtract 1 for the Born.
       nmatch = 0
       mtc=.false.
       nsym = 1
-      write(lun,'(a,i3,a$)') 
-     &     '       data (isym(i,',nsym,'),i=1,nexternal) /1 '
-      do i=2,nexternal
-         write(lun,'(a,i2$)') ",",ic(i,1)
-c         write(*,'(a,i2$)') ",",ic(i,1)
-      enddo
-c      write(*,*)
-      write(lun,'(a)') "/"
       if (.not.onlyBorn) then
          call nexper(nexternal-2,ic(3,1),mtc,even)
       else
@@ -306,14 +301,16 @@ c
          if (check_swap(ic(1,1))) then
             CALL SWITCHMOM(P,P1,IC(1,1),JC,NEXTERNAL)
             do i=-2,2
-               CALL SWITCHMOM(P1_cnt_save(0,1,i),P1_cnt1(0,1,i),IC(1,1),JC,NEXTERNAL)
+               CALL SWITCHMOM(P1_cnt_save(0,1,i),P1_cnt1(0,1,i),IC(1,1)
+     &              ,JC,NEXTERNAL)
                do j=1,nexternal
                   do k=0,3
                      p1_cnt(k,j,i)=p1_cnt1(k,j,i)
                   enddo
                enddo
             enddo
-            CALL SWITCHMOM(P_ev_red_save,P_ev_red1,ICB(1,1),JC,NEXTERNAL-1)
+            CALL SWITCHMOM(P_ev_red_save,P_ev_red1,ICB(1,1)
+     &           ,JC,NEXTERNAL-1)
             CALL SWITCHMOM(P_born_save,P_born1,ICB(1,1),JC,NEXTERNAL-1)
             do j=1,nexternal-1
                do k=0,3
@@ -325,40 +322,27 @@ c
             write(*,*) 'Good swap', (ic(i,1),i=1,nexternal)
             write(*,*) '         ', (icb(i,1),i=1,nexternal-1)
             nsym=nsym+1
-            write(lun,'(a,i3,a$)') 
-     &           '       data (isym(i,',nsym,'),i=1,nexternal) /1 '
-            do i=2,nexternal
-               write(lun,'(a,i2$)') ",",ic(i,1)
-            enddo
-            write(lun,'(a)') "/"
 
+            calculatedBorn=.false.
             if (onlyBorn) then
                call sborn(p_born,wgt1)
             else
-               fx = dsig(p1,wgt,1d0)/amp2(b_from_r(mapconfig(iconfig)))
+               fx = dsig(p1,wgt,1d0)/amp2(mapconfig(iconfig))
             endif
-            
-            
-c$$$            do j=1,nexternal-1
-c$$$               write(*,'(i4,4e15.5)') j,(p_born(i,j),i=0,3)
-c$$$            enddo
-c$$$            write (*,*) (amp2(i),i=1,mapbconf(0))
-c$$$            write (*,*) (saveamp(i),i=1,mapbconf(0))
-
 c
 c        Look for matches, but only for diagrams < current diagram
 c     
-         do j=2,mapbconf(0)
+         do j=2,mapconfig(0)
             do k=1,j-1
                if (onlyBorn) then
-                  diff = abs((amp2(mapbconf(j)) - saveamp(mapbconf(k)))/
-     $                 (amp2(mapbconf(j))+1d-99))
+                  diff=abs((amp2(mapconfig(j))-saveamp(mapconfig(k)))
+     &                 /(amp2(mapconfig(j))+1d-99))
                else
-                  diff = abs((amp2(mapbconf(j))*fx - saveamp(mapbconf(k)))/
-     $                 (amp2(mapbconf(j))*fx+1d-99))
+                  diff=abs((amp2(mapconfig(j))*fx-saveamp(mapconfig(k)))
+     &                 /(amp2(mapconfig(j))*fx+1d-99))
                endif
                if (diff .lt. 1d-8 ) then
-c$$$                  write(*,*) "Found match graph",mapbconf(j),mapbconf(k),diff
+c$$$                  write(*,*) "Found match graph",mapconfig(j),mapconfig(k),diff
                   if (use_config(j) .gt. 0 ) then  !Not found yet
                      nmatch=nmatch+1
                      if (use_config(k) .gt. 0) then !Match is real config
@@ -366,7 +350,8 @@ c$$$                  write(*,*) "Found match graph",mapbconf(j),mapbconf(k),dif
                         use_config(j)=-k
                      else
                         ibase = -use_config(k)
-                        use_config(ibase) = use_config(ibase)+use_config(j)
+                        use_config(ibase) = use_config(ibase)
+     &                       +use_config(j)
                         use_config(j) = -ibase
                      endif
                   endif
@@ -375,7 +360,6 @@ c$$$                  write(*,*) "Found match graph",mapbconf(j),mapbconf(k),dif
          enddo
          else
             write(*,*) 'Bad swap', (ic(i,1),i=1,nexternal)
-c$$$            write(*,*) '         ', (icb(i,1),i=1,nexternal-1)
          endif   !Good Swap
          endif   !Real Swap
          do j=3,nexternal
@@ -384,13 +368,10 @@ c$$$            write(*,*) '         ', (icb(i,1),i=1,nexternal-1)
       enddo
 
 
-      write(lun,*) '      data nsym /',nsym,'/'
-      close(lun)
-      write(*,*) 'Found ',nmatch, ' matches. ',mapbconf(0)-nmatch,
+      write(*,*) 'Found ',nmatch, ' matches. ',mapconfig(0)-nmatch,
      $     ' channels remain for integration.'
-      call write_bash(mapbconf,mapconfig,r_from_b,
-     &                use_config,pwidth,icomp,biforest)
-      call write_input(j)
+      call write_bash(mapconfig,use_config,pwidth,icomp,iforest)
+
       end
 
       subroutine store_events()
@@ -425,9 +406,7 @@ c
 c     Constants
 c
       include 'genps.inc'
-      include "nexternal.inc"
-      integer    maxflow
-      parameter (maxflow=999)
+      include 'nexternal.inc'
 c
 c     Arguments
 c
@@ -436,13 +415,15 @@ c
 c     local
 c
       integer i
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
 c
 c     Process info
 c
-      include 'leshouche.inc'
+      integer maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow)
+c      include 'leshouche.inc'
+      common /c_leshouche_inc/idup,mothup,icolup
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -453,10 +434,11 @@ c------
 c Begin Code
 c-----
       check_swap=.true.
+      do i=1,nexternal
+         if (onlyBorn.and.i.eq.nexternal) cycle
+         if (idup(i,1) .ne. idup(ic(i),1)) check_swap=.false.
+      enddo
       if (.not.onlyBorn) then
-         do i=1,nexternal
-            if (idup(i,1) .ne. idup(ic(i),1)) check_swap=.false.
-         enddo
          if (i_fks .ne. ic(i_fks)) check_swap=.false.
          if (j_fks .ne. ic(j_fks)) check_swap=.false.
       endif
@@ -536,7 +518,7 @@ c
 c     Constants
 c
       include 'genps.inc'
-      include '../../../Source/run_config.inc'
+      include '../../Source/run_config.inc'
       integer    maxpara
       parameter (maxpara=1000)
 c      integer   npoint_tot,         npoint_min
@@ -556,7 +538,6 @@ c-----
 c  Begin Code
 c-----
       call load_para(npara,param,value)
-c$$$      call get_logical(npara,param,value," gridpack ",gridpack,.false.)
       gridpack=.false.
 
       npoints = min_events_subprocess/nconfigs
@@ -582,8 +563,8 @@ c$$$      call get_logical(npara,param,value," gridpack ",gridpack,.false.)
       write(*,*) 'Error opening input_app.txt'
       end
 
-      subroutine write_bash(mapconfig,mapRconfig,r_from_b,
-     &                      use_config, pwidth, jcomp,iforest)
+      subroutine write_bash(mapconfig, use_config, pwidth, jcomp
+     &     ,iforest)
 c***************************************************************************
 c     Writes out bash commands to run integration over all of the various
 c     configurations, but only for "non-identical" configurations.
@@ -594,19 +575,18 @@ c
 c     Constants
 c
       include 'genps.inc'
-      include "nexternal.inc"
-      include '../../../Source/run_config.inc'
+      include 'nexternal.inc'
+      include '../../Source/run_config.inc'
       integer    imax,   ibase
       parameter (imax=max_branch-1, ibase=3)
 c
 c     Arguments
 c
-      integer mapconfig(0:lmaxconfigs),mapRconfig(0:lmaxconfigs)
+      integer mapconfig(0:lmaxconfigs)
       integer use_config(0:lmaxconfigs)
       double precision pwidth(-max_branch:-1,lmaxconfigs)  !Propagotor width
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       integer jcomp
-      integer r_from_b(lmaxconfigs)
 
 c
 c     local
@@ -633,26 +613,23 @@ c-----
          if (use_config(i) .gt. 0) then
             call bw_conflict(i,iforest(1,-max_branch,i),lconflict)
             nbw=0               !Look for B.W. resonances
-            if (jcomp .eq. 0 .or. jcomp .eq. 1 .or. .true.) then
-               do j=1,imax
-                  iarray(j)=0   !Assume no cuts on BW
-               enddo
-               do j=1,nexternal-3
-c                  write(*,*) 'Width',pwidth(-j,i),j,i
-                  if (pwidth(-j,i) .gt. 1d-20) then
-                     nbw=nbw+1
-                     write(*,*) 'Got bw',-nbw,j
-                     if(lconflict(-j).or.gForceBW(-j,i)) then
-                        if(lconflict(-j)) write(*,*) 'Got conflict ',-nbw,j
-                        if(gForceBW(-j,i)) write(*,*) 'Got forced BW ',-nbw,j
-                        iarray(nbw)=1 !Cuts on BW
-                        if (nbw .gt. imax) then
-                           write(*,*) 'Too many BW w conflicts',nbw,imax
-                        endif
+            do j=1,imax
+               iarray(j)=0      !Assume no cuts on BW
+            enddo
+            do j=1,nexternal-3
+               if (pwidth(-j,i) .gt. 1d-20) then
+                  nbw=nbw+1
+                  write(*,*) 'Got bw',-nbw,j
+                  if(lconflict(-j).or.gForceBW(-j,i)) then
+                     if(lconflict(-j)) write(*,*) 'Got conflict ',-nbw,j
+                     if(gForceBW(-j,i)) write(*,*) 'Got forced BW ',-nbw,j
+                     iarray(nbw)=1 !Cuts on BW
+                     if (nbw .gt. imax) then
+                        write(*,*) 'Too many BW w conflicts',nbw,imax
                      endif
                   endif
-               enddo
-            endif
+               endif
+            enddo
 c            do j=1,2**nbw
             done = .false.
             do while (.not. done)
@@ -667,14 +644,22 @@ c            do j=1,2**nbw
                   ic = 1
                endif
 c               write(*,*) 'mapping',ic,mapconfig(i)
-               if (r_from_b(mapconfig(i)) .lt. 10) then
-                  write(26,'(i1$)') r_from_b(mapconfig(i))
-               elseif (r_from_b(mapconfig(i)) .lt. 100) then
-                  write(26,'(i2$)') r_from_b(mapconfig(i))
-               elseif (r_from_b(mapconfig(i)) .lt. 1000) then
-                  write(26,'(i3$)') r_from_b(mapconfig(i))
-               elseif (r_from_b(mapconfig(i)) .lt. 10000) then
-                  write(26,'(i4$)') r_from_b(mapconfig(i))
+c$$$               if (r_from_b(mapconfig(i)) .lt. 10) then
+c$$$                  write(26,'(i1$)') r_from_b(mapconfig(i))
+c$$$               elseif (r_from_b(mapconfig(i)) .lt. 100) then
+c$$$                  write(26,'(i2$)') r_from_b(mapconfig(i))
+c$$$               elseif (r_from_b(mapconfig(i)) .lt. 1000) then
+c$$$                  write(26,'(i3$)') r_from_b(mapconfig(i))
+c$$$               elseif (r_from_b(mapconfig(i)) .lt. 10000) then
+c$$$                  write(26,'(i4$)') r_from_b(mapconfig(i))
+               if (mapconfig(i) .lt. 10) then
+                  write(26,'(i1$)') mapconfig(i)
+               elseif (mapconfig(i) .lt. 100) then
+                  write(26,'(i2$)') mapconfig(i)
+               elseif (mapconfig(i) .lt. 1000) then
+                  write(26,'(i3$)') mapconfig(i)
+               elseif (mapconfig(i) .lt. 10000) then
+                  write(26,'(i4$)') mapconfig(i)
                endif
                if (icode .eq. 0) then
 c                 write(26,'($a)') '.000'
@@ -753,10 +738,10 @@ c
 c     Constants
 c
       include 'genps.inc'
-      include "nexternal.inc"
+      include 'nexternal.inc'
       double precision zero
       parameter       (zero=0d0)
-c      include '../../../Source/run_config.inc'
+c      include '../../Source/run_config.inc'
 c
 c     Arguments
 c
@@ -783,7 +768,7 @@ c-----
 c
 c     Reset variables
 c      
-      do i=1,nexternal
+      do i=1,nexternal-1
          xmass(i) = 0d0
          lconflict(-i) = .false.
       enddo
@@ -792,7 +777,7 @@ c     Start by determining which propagators are part of the same
 c     chain, or could potentially conflict
 c
       i=1
-      do while (i .lt. nexternal-2 .and. itree(1,-i) .ne. 1)
+      do while (i .lt. nexternal-3 .and. itree(1,-i) .ne. 1)
          xmass(-i) = xmass(itree(1,-i))+xmass(itree(2,-i))
          if (pwidth(-i,iconfig) .gt. 0d0) then
             if (xmass(-i) .gt. pmass(-i,iconfig)) then  !Can't be on shell
@@ -801,7 +786,8 @@ c
      $              pmass(-i,iconfig),xmass(-i)
             endif
          endif
-         xmass(-i) = max(xmass(-i),pmass(-i,iconfig)+3d0*pwidth(-i,iconfig))        
+         xmass(-i) = max(xmass(-i),pmass(-i,iconfig)+
+     &                                 3d0*pwidth(-i,iconfig))        
          i=i+1
       enddo
 c
@@ -882,16 +868,20 @@ c
 c
       subroutine outfun(pp,www,iplot)
       end
+
       logical function pass_point(p)
       pass_point = .true.
       end
+
       LOGICAL FUNCTION PASSCUTS(P,rwgt)
       real*8 rwgt
-      real*8 p(0:3,99)
+      include 'nexternal.inc'
+      real*8 p(0:3,nexternal)
       rwgt=1d0
       passcuts=.true.
       RETURN
       END
+
       subroutine unweight_function(p_born,unwgtfun)
 c Dummy function. Should always retrun 1.
       implicit none

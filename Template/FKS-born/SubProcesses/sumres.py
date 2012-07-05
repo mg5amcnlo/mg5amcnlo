@@ -42,10 +42,9 @@ for line in lines:
     if list:
         proc={}
         proc['folder'] = list[0].split('/')[0]
-        proc['real'] = list[0].split('/')[1]
         proc['subproc'] = proc['folder'][0:proc['folder'].rfind('_')]
-        proc['channel'] = list[0].split('/')[2]
-        dirs.remove(os.path.join(proc['folder'],proc['real'], proc['channel']))
+        proc['channel'] = list[0].split('/')[1]
+        dirs.remove(os.path.join(proc['folder'], proc['channel']))
         if list[3] != '[ABS]:':
             proc['result'] = float(list[3])
             proc['error'] = float(list[5])
@@ -61,7 +60,7 @@ if dirs:
     print "%d jobs did not terminate correctly " % len(dirs)
     print '\n'.join(dirs)
 
-processes.sort(key = lambda proc: -proc['result'])
+processes.sort(key = lambda proc: -proc['error'])
 
 correct = len(processes) == nexpected
 print "Found %d correctly terminated jobs " %len(processes) 
@@ -75,7 +74,7 @@ subprocs_string=set(subprocs_string)
 
 content+='\n\nCross-section per integration channel:\n'
 for proc in processes:
-    content+='%(folder)20s %(real)20s  %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4f%%  \n' %  proc
+    content+='%(folder)20s  %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4f%%  \n' %  proc
 
 content+='\n\nCross-section per subprocess:\n'
 #for subpr in sorted(set(subprocs)):
@@ -132,9 +131,9 @@ if nevents>0:
     totrest=0.
     for proc in processes:
         proc['lhefile'] = os.path.join(proc['folder'], proc['channel'], 'events.lhe')
-        proc['nevents'] = math.trunc(proc['result']/tot * nevents)
+        proc['nevents'] = math.floor(proc['result']/tot * nevents)
         totevts += proc['nevents']
-        proc['rest'] = proc['result']/tot * nevents - math.trunc(proc['result']/tot * nevents)
+        proc['rest'] = proc['result']/tot * nevents - math.floor(proc['result']/tot * nevents)
         totrest += totrest + math.sqrt(proc['rest'] + proc['nevents'])
 
 
@@ -170,7 +169,7 @@ if nevents>0:
 
     content_evts = ''
     for proc in processes:
-        content_evts+= '%(lhefile)50s %(nevents)10d   %(result)10.8e \n' %  proc
+        content_evts+= ' '+proc['lhefile']+'              %(nevents)10d            %(result)10.8e \n' %  proc
         nevts_file = open(os.path.join(proc['folder'], proc['channel'], 'nevts'),'w')
         nevts_file.write('%10d\n' % proc['nevents'])
         nevts_file.close()

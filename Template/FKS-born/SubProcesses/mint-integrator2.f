@@ -44,7 +44,7 @@ c with ifirst=2.
 c 
 
       subroutine mint(fun,ndim,ncalls0,nitmax,imode,
-     #     xgrid,xint,ymax,ans_abs,err_abs,ans_sgn,err_sgn)
+     #     xgrid,xint,ymax,ans_abs,err_abs,ans_sgn,err_sgn,chi2)
 c imode=0: integrate and adapt the grid
 c imode=1: frozen grid, compute the integral and the upper bounds
 c others: same as 1 (for now)
@@ -60,9 +60,10 @@ c others: same as 1 (for now)
       common/cifold/ifold
       integer nhits(1:nintervals,ndimmax)
       real * 8 rand(ndimmax)
-      real * 8 dx(ndimmax),f,f_sgn,vtot_abs,etot_abs,vtot_sgn,etot_sgn,
-     &     prod,f1
+      real * 8 dx(ndimmax),f_abs,f_sgn,vtot_abs,etot_abs,vtot_sgn
+     &     ,etot_sgn,prod,f1,chi2,efrac_abs
       integer kdim,kint,kpoint,nit,ncalls,ibin,iret,nintcurr,ifirst
+     &     ,nit_included
       real * 8 ran3
       external ran3,fun
 c Set to true to use more evenly distributed random numbers (imode=0
@@ -107,6 +108,7 @@ c number of calls
          write (*,*) 'Update ncalls: ',ncalls0,' --> ',ncalls
       endif
       nit=0
+      nit_included=0
       ans_abs=0
       err_abs=0
       ans_sgn=0
@@ -118,8 +120,15 @@ c number of calls
       endif
       if(nit.gt.nitmax) then
          if(imode.eq.0) xint=ans_abs
+         if (nit_included.ge.2) then
+            chi2=chi2/dble(nit_included-1)
+         else
+            chi2=0d0
+         endif
+         write (*,*) '-------'
          return
       endif
+      write (*,*) '------- iteration',nit
       if(imode.eq.0) then
          do kdim=1,ndim
             do kint=0,nintervals
@@ -152,7 +161,7 @@ c$$$            ncell(kdim)=nintervals/ifold(kdim)*ran3(even))+1
                rand(kdim)=ran3(even)
             endif
          enddo
-         f=0
+         f_abs=0
          f_sgn=0
          ifirst=0
  1       continue
@@ -168,27 +177,23 @@ c$$$            ncell(kdim)=nintervals/ifold(kdim)*ran3(even))+1
          enddo
 c contribution to integral
          if(imode.eq.0) then
-            f1=fun(x,vol,ifirst)
-            f=abs(f1)+f
-            f_sgn=f1+f_sgn
+            f_sgn=f_sgn+fun(x,vol,ifirst,f1)
+            f_abs=f_abs+f1
          else
 c this accumulated value will not be used
-            f1=fun(x,vol,ifirst)
-            f=abs(f1)+f
-            f_sgn=f1+f_sgn
+            f_sgn=f_sgn+fun(x,vol,ifirst,f1)
+            f_abs=f_abs+f1
             ifirst=1
             call nextlexi(ndim,ifold,kfold,iret)
             if(iret.eq.0) goto 1
 c closing call: accumulated value with correct sign
-            f1=fun(x,vol,2)
-            f=abs(f1)
-            f_sgn=f1
+            f_sgn=fun(x,vol,2,f_abs)
          endif
 c
          if(imode.eq.0) then
 c accumulate the function in xacc(icell(kdim),kdim) to adjust the grid later
             do kdim=1,ndim
-               xacc(icell(kdim),kdim)=xacc(icell(kdim),kdim)+f
+               xacc(icell(kdim),kdim)=xacc(icell(kdim),kdim)+f_abs
             enddo
          else
 c update the upper bounding envelope
@@ -196,7 +201,7 @@ c update the upper bounding envelope
             do kdim=1,ndim
                prod=prod*ymax(ncell(kdim),kdim)
             enddo
-            prod=(f/prod)
+            prod=(f_abs/prod)
             if(prod.gt.1) then
 c This guarantees a 10% increase of the upper bound in this cell
                prod=1+0.1d0/ndim
@@ -206,28 +211,33 @@ c This guarantees a 10% increase of the upper bound in this cell
                enddo
             endif
          endif
-         vtot_abs=vtot_abs+f/ncalls
-         etot_abs=etot_abs+f**2/ncalls
+         vtot_abs=vtot_abs+f_abs/ncalls
+         etot_abs=etot_abs+f_abs**2/ncalls
          vtot_sgn=vtot_sgn+f_sgn/ncalls
          etot_sgn=etot_abs
       enddo
-      if(imode.eq.0) then
-c iteration is finished; now rearrange the grid
-         do kdim=1,ndim
-            call regrid(xacc(0,kdim),xgrid(0,kdim),
-     #           nhits(1,kdim),nintervals,nit)
-         enddo
-      endif
 c the abs is to avoid tiny negative values
       etot_abs=sqrt(abs(etot_abs-vtot_abs**2)/ncalls)
       etot_sgn=sqrt(abs(etot_sgn-vtot_sgn**2)/ncalls)
-      write(*,*) '|int|=',vtot_abs,etot_abs
-      write(*,*) ' int =',vtot_sgn,etot_sgn
+      if (vtot_abs.ne.0d0) then
+         efrac_abs=etot_abs/vtot_abs
+      else
+         efrac_abs=0d0
+      endif
+      write(*,*) '|int|=',vtot_abs,' +/- ',etot_abs,
+     &     ' (',efrac_abs*100d0,'%)'
+      write(*,*) ' int =',vtot_sgn,' +/- ',etot_sgn
+      if (efrac_abs.gt.0.3d0.and.nit.gt.3) then
+         write (*,*) 'Large fluctuation ( >30 % ). '/
+     &        /'Not including iteration in results.'
+         goto 10
+      endif
       if(nit.eq.1) then
          ans_abs=vtot_abs
          err_abs=etot_abs
          ans_sgn=vtot_sgn
          err_sgn=etot_sgn
+         write (*,*) 'Chi^2 per d.o.f.',0d0
       else
 c prevent annoying division by zero for nearly zero
 c integrands
@@ -247,10 +257,37 @@ c integrands
             err_abs=etot_abs
             err_sgn=err_abs
          endif
-         ans_abs=(ans_abs/err_abs+vtot_abs/etot_abs)/(1/err_abs+1/etot_abs)
+         ans_abs=(ans_abs/err_abs+vtot_abs/etot_abs)/
+     &        (1/err_abs+1/etot_abs)
          err_abs=1/sqrt(1/err_abs**2+1/etot_abs**2)
-         ans_sgn=(ans_sgn/err_sgn+vtot_sgn/etot_sgn)/(1/err_sgn+1/etot_sgn)
-         err_sgn=err_abs
+         ans_sgn=(ans_sgn/err_sgn+vtot_sgn/etot_sgn)/
+     &        (1/err_sgn+1/etot_sgn)
+         err_sgn=1/sqrt(1/err_sgn**2+1/etot_sgn**2)
+         chi2=chi2+(vtot_abs-ans_abs)**2/etot_abs**2
+         write (*,*) 'Chi^2=',(vtot_abs-ans_abs)**2/etot_abs**2
+      endif
+      nit_included=nit_included+1
+      if (vtot_abs.ne.0d0) then
+         write(*,*) 'accumulated result |int|=',ans_abs,' +/- ',err_abs,
+     &        ' (',err_abs/ans_abs*100d0,'%)'
+      else
+         write(*,*) 'accumulated result |int|=',ans_abs,' +/- ',err_abs,
+     &        ' ( ---- %)'
+      endif
+      write(*,*) 'accumulated result  int =',ans_sgn,' +/- ',err_sgn
+      if (nit_included.le.1) then
+         write (*,*) 'accumulated result Chi^2 per DoF =',0d0
+      else
+         write (*,*) 'accumulated result Chi^2 per DoF =',
+     &        chi2/dble(nit_included-1)
+      endif
+      if(imode.eq.0) then
+c iteration is finished; now rearrange the grid
+         do kdim=1,ndim
+            call regrid(xacc(0,kdim),xgrid(0,kdim),
+     #           nhits(1,kdim),nintervals)
+         enddo
+         call regrid_MC_integer
       endif
 c Also improve stats in plots
       call accum
@@ -258,15 +295,28 @@ c Do next iteration
       goto 10
       end
 
-      subroutine regrid(xacc,xgrid,nhits,nint,nit)
+      subroutine regrid(xacc,xgrid,nhits,nint)
       implicit none
-      integer  nint,nhits(nint),nit
+      integer  nint,nhits(nint)
       real * 8 xacc(0:nint),xgrid(0:nint)
-      real * 8 xn(nint),r,tiny
+      real * 8 xn(nint),r,tiny,xl,xu
       parameter ( tiny=1d-8 )
       integer kint,jint
       logical plot_grid
       parameter (plot_grid=.false.)
+c Use the same smoothing as in VEGAS uses for the grids (i.e. use the
+c average of the central and the two neighbouring grid points):
+      xl=xacc(1)
+      xu=xacc(2)
+      xacc(1)=(xl+xu)/2d0
+      do kint=2,nint-1
+         xacc(kint)=xl+xu
+         xl=xu
+         xu=xacc(kint+1)
+         xacc(kint)=(xacc(kint)+xu)/3d0
+      enddo
+      xacc(nint)=(xu+xl)/2d0
+c
       do kint=1,nint
 c xacc (xerr) already containe a factor equal to the interval size
 c Thus the integral of rho is performed by summing up
@@ -283,22 +333,22 @@ c Thus the integral of rho is performed by summing up
 cRF: Check that we have a reasonable result and update the accumulated
 c results if need be
       do kint=1,nint
-         if (xacc(kint).le.(xacc(kint-1)+tiny)) then
-            write (*,*) 'Accumulated results need adaptation #1:'
-            write (*,*) xacc(kint),xacc(kint-1),' become'
+         if (xacc(kint).lt.(xacc(kint-1)+tiny)) then
+c            write (*,*) 'Accumulated results need adaptation #1:'
+c            write (*,*) xacc(kint),xacc(kint-1),' become'
             xacc(kint)=xacc(kint-1)+tiny
-            write (*,*) xacc(kint),xacc(kint-1)
+c            write (*,*) xacc(kint),xacc(kint-1)
          endif
       enddo
 c it could happen that the change above yielded xacc() values greater
 c than 1; should be fixed once more.
       xacc(nint)=1d0
       do kint=1,nint
-         if (xacc(nint-kint).ge.(xacc(nint-kint+1)-tiny)) then
-            write (*,*) 'Accumulated results need adaptation #2:'
-            write (*,*) xacc(nint-kint),xacc(nint-kint+1),' become'
+         if (xacc(nint-kint).gt.(xacc(nint-kint+1)-tiny)) then
+c            write (*,*) 'Accumulated results need adaptation #2:'
+c            write (*,*) xacc(nint-kint),xacc(nint-kint+1),' become'
             xacc(nint-kint)=1d0-dble(kint)*tiny
-            write (*,*) xacc(nint-kint),xacc(nint-kint+1)
+c            write (*,*) xacc(nint-kint),xacc(nint-kint+1)
          else
             exit
          endif
@@ -339,9 +389,6 @@ cend RF
       enddo
       do kint=1,nint
          xgrid(kint)=xn(kint)
-c         xgrid(kint)=(xn(kint)+2*xgrid(kint))/3
-c         xgrid(kint)=(xn(kint)+xgrid(kint)*log(dble(nit)))
-c     #        /(log(dble(nit))+1)
          if (plot_grid) then
             write(11,*) xgrid(kint), 0
             write(11,*) xgrid(kint), 1
@@ -404,7 +451,7 @@ c imode=3 store generation efficiency in x(1)
       integer icell(ndimmax),ncell(ndimmax)
       integer ifold(ndimmax),kfold(ndimmax)
       common/cifold/ifold
-      real * 8 r,f,ubound,vol,ran3,xmmm(nintervals,ndimmax)
+      real * 8 r,f_sgn,f_abs,f1,ubound,vol,ran3,xmmm(nintervals,ndimmax)
       real * 8 rand(ndimmax)
       external fun,ran3
       integer icalls,mcalls,kdim,kint,nintcurr,iret,ifirst
@@ -454,7 +501,8 @@ c imode=3 store generation efficiency in x(1)
       do kdim=1,ndim
          kfold(kdim)=1
       enddo
-      f=0
+      f_sgn=0
+      f_abs=0
       ifirst=0
  5    continue
       vol=1
@@ -465,25 +513,26 @@ c imode=3 store generation efficiency in x(1)
          vol=vol*dx(kdim)*nintervals/ifold(kdim)
          x(kdim)=xgrid(icell(kdim)-1,kdim)+rand(kdim)*dx(kdim)
       enddo
-      f=f+fun(x,vol,ifirst)
+      f_sgn=f_sgn+fun(x,vol,ifirst,f1)
+      f_abs=f_abs+f1
       ifirst=1
       call nextlexi(ndim,ifold,kfold,iret)
       if(iret.eq.0) goto 5
 c get final value (x and vol not used in this call)
-      f=fun(x,vol,2)
+      f_sgn=fun(x,vol,2,f_abs)
       call increasecnt('another call to the function',imode)
-      if (f.eq.0d0) call increasecnt('failed generation cuts',imode)
-      if(f.lt.0) then
+      if (f_abs.eq.0d0) call increasecnt('failed generation cuts',imode)
+      if(f_abs.lt.0) then
          write(*,*) 'gen: non positive function'
          stop
       endif
-      if(f.gt.ubound) then
+      if(f_abs.gt.ubound) then
          call increasecnt
      &        ('upper bound failure in inclusive cross section',imode)
       endif
       ubound=ubound*ran3(.false.)
       icalls=icalls+1
-      if(ubound.gt.f) then
+      if(ubound.gt.f_abs) then
          call increasecnt
      &        ('vetoed calls in inclusive cross section',imode)
          goto 10
@@ -548,7 +597,7 @@ c long for this subroutine to work properly
 
       double precision function ran3(even)
       implicit none
-      double precision ran2,ran3,get_ran
+      double precision ran2,get_ran
       logical even
       external get_ran
       if (even) then
@@ -578,7 +627,7 @@ c Recompute the number of calls. Uses the algorithm from VEGAS
 
       double precision function get_ran()
       implicit none
-      double precision get_ran,ran2,dng
+      double precision ran2,dng
       external ran2
       logical firsttime
       data firsttime/.true./

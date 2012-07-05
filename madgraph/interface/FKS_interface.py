@@ -240,14 +240,13 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                         % ', '.join(myprocdef['perturbation_couplings']))
 
         if self.options['fks_mode'] == 'born':
-            self._fks_multi_proc = fks_born.FKSMultiProcessFromBorn(myprocdef,
+            self._fks_multi_proc.add(fks_born.FKSMultiProcessFromBorn(myprocdef,
                                        collect_mirror_procs,
-                                       ignore_six_quark_processes)
+                                       ignore_six_quark_processes))
         elif self.options['fks_mode'] == 'real':
-            self._fks_multi_proc = fks_real.FKSMultiProcessFromReals(myprocdef,
+            self._fks_multi_proc.add(fks_real.FKSMultiProcessFromReals(myprocdef,
                                        collect_mirror_procs,
-                                       ignore_six_quark_processes)
-            # this is for testing, to be removed
+                                       ignore_six_quark_processes))
         else: 
             raise MadGraph5Error, 'Unknown FKS mode: %s' % self.options['fks_mode']
 
@@ -284,13 +283,24 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                                           os.path.join(self._mgme_dir, 'loop_material'),
                                           self._cuttools_dir)
     
-            if self.options['fks_mode'] == 'born':
+            if self.options['fks_mode'] == 'born' \
+              and not self.options['loop_optimized_output']:
                 logger.info("Exporting in MadFKS format, starting from born process")
                 self._curr_exporter = export_fks_born.ProcessExporterFortranFKS_born(\
                                           self._mgme_dir, self._export_dir,
                                           not noclean, 
-                                          self.options['complex_mass_scheme'], False,
+                                          self.options['complex_mass_scheme'], True,
                                           os.path.join(self._mgme_dir, 'loop_material'),
+                                          self._cuttools_dir)
+            
+            if self.options['fks_mode'] == 'born' \
+              and self.options['loop_optimized_output']:
+                logger.info("Exporting in MadFKS format, starting from born process using Optimized Loops")
+                self._curr_exporter = export_fks_born.ProcessOptimizedExporterFortranFKS_born(\
+                                          self._mgme_dir, self._export_dir,
+                                          not noclean, 
+                                          self.options['complex_mass_scheme'], True,
+                                          os.path.join(self._mgme_dir,'Template/loop_material'),
                                           self._cuttools_dir)
             
         # check if a dir with the same name already exists
@@ -394,7 +404,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 enumerate(self._curr_matrix_elements.get_matrix_elements()):
                 #me is a FKSHelasProcessFromReals
                 calls = calls + \
-                        self._curr_exporter.generate_born_directories_fks(\
+                        self._curr_exporter.generate_directories_fks(\
                             me, self._curr_fortran_model, ime, path)
                 self._fks_directories.extend(self._curr_exporter.fksdirs)
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
@@ -417,7 +427,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
                 #me is a FKSHelasProcessFromReals
                 calls = calls + \
-                        self._curr_exporter.generate_real_directories_fks(\
+                        self._curr_exporter.generate_directories_fks(\
                             me, self._curr_fortran_model, ime, path)
                 self._fks_directories.extend(self._curr_exporter.fksdirs)
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \

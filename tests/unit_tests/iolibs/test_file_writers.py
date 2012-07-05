@@ -40,7 +40,8 @@ class CheckFileCreate():
         list_sol=solution.split('\n')
         for a, b in zip(list_sol, list_cur):
             self.assertEqual(a,b)
-        self.assertEqual(current_value.split('\n'), solution.split('\n'))
+        for a, b in zip(current_value.split('\n'), solution.split('\n')):
+            self.assertEqual(a,b)
         self.assertEqual(len(list_sol), len(list_cur))
 
     def give_pos(self, filename):

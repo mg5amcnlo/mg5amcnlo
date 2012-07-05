@@ -417,27 +417,81 @@ class TestFKSProcess(unittest.TestCase):
             for reals in born.reals:
                 totreals += len(reals)
         self.assertEqual(totreals, 44)
-    
+
+    def test_FKSProcessFromBonr_gggg(self):
+        """tests that for g g > g g all the relevant splittings are there"""
+        glu = MG.Leg({'id': 21, 'state':True})
+        leglist = MG.LegList([MG.Leg({'id': 21, 'state':False}),
+                              MG.Leg({'id': 21, 'state':False}),
+                              MG.Leg({'id': 21, 'state':True}),
+                              MG.Leg({'id': 21, 'state':True})])
+        
+
+        dict = {'legs' : leglist, 'orders':{'QCD':2, 'QED':0},
+                   'model': self.mymodel,
+                   'id': 1,
+                   'required_s_channels':[],
+                   'forbidden_s_channels':[],
+                   'forbidden_particles':[],
+                   'is_decay_chain': False,
+                   'perturbation_couplings':['QCD'],
+                   'decay_chains': MG.ProcessList(),
+                   'overall_orders': {}}
+
+        myfks = fks_born.FKSProcessFromBorn(MG.Process(dict))
+
+        target_fks_infos = [ \
+                # real config 1: g g > g g g
+                [{'i':5, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':True},
+                 {'i':5, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':True},
+                 {'i':5, 'j':4, 'ij':4, 'ij_glu':4, 'need_color_links':True}],
+                # real config 2: u g > u g g
+                [{'i':3, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False}],
+                # real config 3: ux g > ux g g
+                [{'i':3, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False}],
+                # real config 4: d g > d g g
+                [{'i':3, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False}],
+                # real config 5: dx g > dx g g
+                [{'i':3, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False}],
+                # real config 6: g u > u g g
+                [{'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}],
+                # real config 7: g ux > ux g g
+                [{'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}],
+                # real config 8: g d > d g g
+                [{'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}],
+                # real config 9: g dx > dx g g
+                [{'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}],
+                # real config 10: g g > u ux g
+                [{'i':4, 'j':3, 'ij':3, 'ij_glu':3, 'need_color_links':False}],
+                # real config 11: g g > d dx g
+                [{'i':4, 'j':3, 'ij':3, 'ij_glu':3, 'need_color_links':False}]]
+
+        myfks.generate_reals([],[])
+        self.assertEqual(len(myfks.real_amps),11)
+        for real, fks_info in zip(myfks.real_amps, target_fks_infos):
+            self.assertEqual(real.fks_infos, fks_info)
+
+
+
 
     def test_FKSRealProcess_init(self):
         """tests the correct initialization of the FKSRealProcess class. 
         In particular checks that
-        --i /j fks
-        --amplitude
+        --fks_info
+        --amplitude (also the generate_real_amplitude function is tested)
         --leg_permutation <<REMOVED
         are set to the correct values"""
-        amplist = []
-        amp_id_list = []
         #u g > u g
         fksproc = fks_born.FKSProcessFromBorn(self.myproc)
         #take the first real for this process 2j 21 >2 21 21i
         leglist = fksproc.reals[0][0]
-        realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist, 1,0, amplist, amp_id_list)
+        realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist, 1,0)
 
-        self.assertEqual(realproc.i_fks, 5)
-        self.assertEqual(realproc.j_fks, 1)
-        self.assertEqual(realproc.ij, 1)
-        self.assertEqual(realproc.ijglu, 0)
+        self.assertEqual(realproc.fks_infos, [{'i' : 5,
+                                               'j' : 1,
+                                               'ij' : 1,
+                                               'ij_glu' : 0,
+                                               'need_color_links': True}])
 
         sorted_legs = fks_common.to_fks_legs([
                                         fks_common.FKSLeg(
@@ -470,6 +524,12 @@ class TestFKSProcess(unittest.TestCase):
 
         sorted_real_proc = MG.Process({'legs':sorted_legs, 'model':self.mymodel,
             'orders':{'QCD':3, 'QED':0, 'WEIGHTED': 3}, 'id':1})
+## an emplty amplitude is generted so far...
+        self.assertEqual(diagram_generation.Amplitude(), realproc.amplitude)
+
+## now generate the amplitude
+        realproc.generate_real_amplitude()
+
         self.assertEqual(sorted_real_proc, realproc.amplitude.get('process'))
         amp = diagram_generation.Amplitude(sorted_real_proc)
         self.assertEqual(amp,realproc.amplitude)
@@ -485,67 +545,65 @@ class TestFKSProcess(unittest.TestCase):
         fksproc = fks_born.FKSProcessFromBorn(self.myproc)
         #take the first real for this process 2j 21 >2 21 21i
         leglist = fksproc.reals[0][0]
-        realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist, 1,0, [], [])
-        target = {1:[], 2:[], 3:[1,2], 4:[1,2,3,5], 5:[1,2,3,4] }
-        self.assertEqual(target, realproc.find_fks_j_from_i())
+        realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist, 1,0)
+        target_full = {1:[], 2:[], 3:[1,2], 4:[1,2,3,5], 5:[1,2,3,4] }
+        borns = [[2,21,2,21], [21,21,21,21], [2,-2,21,21]]
+        self.assertEqual(target_full, realproc.find_fks_j_from_i(borns))
+        #now the fks_j from_i corresponding onluy to u g > u g born
+        target_born = {1:[], 2:[], 3:[], 4:[1,2,3,5], 5:[1,2,3,4]}
+        borns = [[2,21,2,21]]
+        self.assertEqual(target_born, realproc.find_fks_j_from_i(borns))
 
 
     def test_fks_real_process_get_leg_i_j(self):
         """test the correct output of the FKSRealProcess.get_leg_i/j() function"""
-        amplist = []
-        amp_id_list = []
         #u g > u g
         fksproc = fks_born.FKSProcessFromBorn(self.myproc)
         #take the first real for this process 2j 21 > 2 21 21i
         leglist = fksproc.reals[0][0]
-        realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist,1,0, amplist, amp_id_list)
+        realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist,1,0)
         self.assertEqual(realproc.get_leg_i(), leglist[4])
         self.assertEqual(realproc.get_leg_j(), leglist[0])
     
-    def test_generate_reals(self):
+    def test_generate_reals_no_combine(self):
         """tests the generate_reals function, if all the needed lists
         -- amplitudes
-        -- id_list
         -- real amps
         have the correct number of elements
         checks also the find_reals_to_integrate, find_real_nbodyonly functions
         that are called by generate_reals"""
         
-        amplist = []
-        amp_id_list = []
         #process u g > u g 
         fksproc = fks_born.FKSProcessFromBorn(self.myproc)
-        fksproc.generate_reals(amplist, amp_id_list)
+        fksproc.generate_reals([],[],False)
         
         #there should be 11 real processes for this born
         self.assertEqual(len(fksproc.real_amps), 11)
-        
-        #nbodyonly contribution should be included in real_amps[8]
-        for n, real in enumerate(fksproc.real_amps):
-            if n == 8:
-                self.assertEqual(real.is_nbody_only, True)
-            else:
-                self.assertEqual(real.is_nbody_only, False)
 
-    def test_is_to_integrate(self):
-        """tests that the is_to_integrate flag is correctly set in processes
-        with symmetric configurations"""
-        self.base_model = import_ufo.import_model('sm')
-        # born process e+ e- > t t~ g
-        myleglist = MG.LegList()
-        myleglist.append(MG.Leg({'id':-11, 'state':False}))
-        myleglist.append(MG.Leg({'id':11, 'state':False}))
-        myleglist.append(MG.Leg({'id':6, 'state':True}))
-        myleglist.append(MG.Leg({'id':-6, 'state':True}))
-        myleglist.append(MG.Leg({'id':21, 'state':True}))
-        amp = diagram_generation.Amplitude(MG.Process({'legs':myleglist,
-                                       'model':self.base_model,
-                                       'perturbation_couplings':['QCD'],
-                                       'orders':{'QCD':1, 'QED':2}}))
-        ttg_fks_norem = fks_born.FKSProcessFromBorn(amp, False)
-        ttg_fks_norem.generate_reals([], [])
-        res = [{'i': real.i_fks, 'j': real.j_fks, 'to_int': real.is_to_integrate} \
-                for real in ttg_fks_norem.real_amps]
+
+    def test_generate_reals_no_combine(self):
+        """tests the generate_reals function, if all the needed lists
+        -- amplitudes
+        -- real amps
+        have the correct number of elements. 
+        Check also that real emissions with the same m.e. are combined together"""
+        
+        #process u g > u g 
+        fksproc = fks_born.FKSProcessFromBorn(self.myproc)
+        fksproc.generate_reals([],[])
+        
+        #there should be 8 real processes for this born
+        self.assertEqual(len(fksproc.real_amps), 8)
+        # the process u g > u g g should correspond to 4 possible fks_confs:
+        amp_ugugg = [amp for amp in fksproc.real_amps \
+                if amp.pdgs == array.array('i', [2, 21, 2, 21, 21])]
+        self.assertEqual(len(amp_ugugg), 1)
+        self.assertEqual(len(amp_ugugg[0].fks_infos), 4)
+        self.assertEqual(amp_ugugg[0].fks_infos,
+                [{'i':5, 'j':1, 'ij':1, 'ij_glu':0, 'need_color_links':True},
+                 {'i':5, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':True},
+                 {'i':5, 'j':3, 'ij':3, 'ij_glu':0, 'need_color_links':True},
+                 {'i':5, 'j':4, 'ij':4, 'ij_glu':4, 'need_color_links':True}])
 
         
     def test_find_reals(self):
@@ -594,15 +652,15 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :False,
                                          'fks' : 'n'}),
                                          fks_common.FKSLeg(
-                                         {'id' :-2,
+                                         {'id' :2,
                                          'number' :3,
                                          'state' :True,
-                                         'fks' : 'i'}),
+                                         'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :2,
+                                         {'id' :-2,
                                          'number' :4,
                                          'state' :True,
-                                         'fks' : 'n'}),
+                                         'fks' : 'i'}),
                                         fks_common.FKSLeg( 
                                          {'id' :21,
                                          'number' :5,
@@ -654,15 +712,15 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :False,
                                          'fks' : 'j'}),
                                         fks_common.FKSLeg(
-                                         {'id' :1,
+                                         {'id' :2,
                                          'number' :3,
                                          'state' :True,
-                                         'fks' : 'i'}),
+                                         'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :2,
+                                         {'id' :1,
                                          'number' :4,
                                          'state' :True,
-                                         'fks' : 'n'}),
+                                         'fks' : 'i'}),
                                         fks_common.FKSLeg( 
                                          {'id' :21,
                                          'number' :5,
@@ -681,15 +739,15 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :False,
                                          'fks' : 'j'}),
                                         fks_common.FKSLeg(
-                                         {'id' :-1,
+                                         {'id' :2,
                                          'number' :3,
                                          'state' :True,
-                                         'fks' : 'i'}),
+                                         'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :2,
+                                         {'id' :-1,
                                          'number' :4,
                                          'state' :True,
-                                         'fks' : 'n'}),
+                                         'fks' : 'i'}),
                                         fks_common.FKSLeg( 
                                          {'id' :21,
                                          'number' :5,
@@ -735,15 +793,15 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :False,
                                          'fks' : 'j'}),
                                         fks_common.FKSLeg(
-                                         {'id' :-2,
+                                         {'id' :2,
                                          'number' :3,
                                          'state' :True,
-                                         'fks' : 'i'}),
+                                         'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :2,
+                                         {'id' :-2,
                                          'number' :4,
                                          'state' :True,
-                                         'fks' : 'n'}),
+                                         'fks' : 'i'}),
                                         fks_common.FKSLeg( 
                                          {'id' :21,
                                          'number' :5,
@@ -915,20 +973,20 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :False,
                                          'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :-1,
-                                         'number' :3,
-                                         'state' :True,
-                                         'fks' : 'i'}),
-                                        fks_common.FKSLeg(
                                          {'id' :2,
-                                         'number' :4,
+                                         'number' :3,
                                          'state' :True,
                                          'fks' : 'n'}),
                                         fks_common.FKSLeg( 
                                          {'id' :-2,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
                                          'number' :5,
                                          'state' :True,
-                                         'fks' : 'n'})
+                                         'fks' : 'i'})
                                         ], self.mymodel)]
                                         )
         
@@ -972,15 +1030,15 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :False,
                                          'fks' : 'j'}),
                                         fks_common.FKSLeg(
-                                         {'id' : 1,
+                                         {'id' :2,
                                          'number' :3,
                                          'state' :True,
-                                         'fks' : 'i'}),
+                                         'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :2,
+                                         {'id' : 1,
                                          'number' :4,
                                          'state' :True,
-                                         'fks' : 'n'}),
+                                         'fks' : 'i'}),
                                         fks_common.FKSLeg( 
                                          {'id' :-2,
                                          'number' :5,

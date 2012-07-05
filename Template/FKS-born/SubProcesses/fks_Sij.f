@@ -30,7 +30,10 @@ c
       implicit none
 
       include "nexternal.inc"
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include "fks_powers.inc"
       include "coupl.inc"
 
@@ -134,7 +137,7 @@ c entering this function
       endif
       
       if (firsttime) then
-         firsttime=.false.
+c         firsttime=.false.
          do k = 1,nexternal
            do l = 1,nexternal
              ijskip(k,l) = 0
@@ -152,6 +155,9 @@ c entering this function
                if(particle_type(kk).ne.8.or.particle_type(ll).ne.8)then
                  write(*,*)'Error #1 in fks_Sij',kk,ll,
      #             particle_type(kk),particle_type(ll)
+                 do k=1,nexternal
+                    write (*,*) k,(ijskip(k,l),l=1,nexternal)
+                 enddo
                  stop
                endif
             else
@@ -430,8 +436,8 @@ c
         beta2=sqrt(1-(xm2/E2)**2)
         tmp=(1-dot(p1,p2)/(E1*E2))/(beta1*beta2)
         if((abs(tmp)-1.d0).gt.tiny)then
-          write(*,*)'Error in get_cms_costh_fks',tmp
-          stop
+          write(*,*)'Warning in get_cms_costh_fks',tmp
+          tmp=sign(1.d0,tmp)
         elseif( (abs(tmp)-1.d0).le.tiny .and.
      #          (abs(tmp)-1.d0).ge.0.d0 )then
           tmp=sign(1.d0,tmp)
@@ -534,7 +540,10 @@ c
       implicit none
 
       include "nexternal.inc"
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
 
       real*8 p(0:3,nexternal),z
       integer ii_fks,jj_fks

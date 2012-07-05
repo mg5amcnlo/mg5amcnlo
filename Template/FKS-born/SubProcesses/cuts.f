@@ -155,9 +155,6 @@ c jet cluster algorithm
 C-----
 C  BEGIN CODE
 C-----
-
-
-
       PASSCUTS=.TRUE.             !EVENT IS OK UNLESS OTHERWISE CHANGED
       IF (FIRSTTIME) THEN
          FIRSTTIME=.FALSE.
@@ -200,37 +197,37 @@ c     Also make sure there's no INF or NAN
 
       rwgt=1d0
 
+c Boost the particles to the lab frame
+c$$$      chybst=cosh(ybst_til_tolab)
+c$$$      shybst=sinh(ybst_til_tolab)
+c$$$      chybstmo=chybst-1.d0
+c$$$      do i=3,nexternal
+c$$$        call boostwdir2(chybst,shybst,chybstmo,xd,
+c$$$     #                  p(0,i),pplab(0,i))
+c$$$      enddo
+
+
+
+c Uncomment for bypassing jet algo and cuts.
+c$$$      goto 123
+
+
 c Put all (light) QCD partons in momentum array for jet clustering.
 c From the run_card.dat, maxjetflavor defines if b quark should
 c be considered here (via the logical variable 'is_a_jet').
 
-      chybst=cosh(ybst_til_tolab)
-      shybst=sinh(ybst_til_tolab)
-      chybstmo=chybst-1.d0
-      do i=3,nexternal
-        call boostwdir2(chybst,shybst,chybstmo,xd,
-     #                  p(0,i),pplab(0,i))
-      enddo
-
       NN=0
-      NNQCD=0
-      totpt=0d0
-      !prepare boosted momenta to be clustered by jet algo, 
-      ! if totpt is large enough
       do j=nincoming+1,nexternal
          if (is_a_j(j)) then
             NN=NN+1
-            if (pplab(0,j) .gt.1d-8) then
-             NNQCD=NNQCD+1
-             totpt = totpt + dsqrt(pplab(1,j)**2 + pplab(2,j)**2)
-             do i=0,3
-               pQCD(i,NNQCD)=pplab(i,j)
-             enddo
-            endif
+            do i=0,3
+c$$$               pQCD(i,NN)=pplab(i,j) ! Use lab-frame momenta
+               pQCD(i,NN)=p(i,j) ! Use C.o.M. frame momenta
+            enddo
          endif
       enddo
 
-c Cut some peculiar momentum configurations, i.e. two partons very soft
+c Cut some peculiar momentum configurations, i.e. two partons very soft.
 c This is needed to get rid of numerical instabilities in the Real emission
 c matrix elements when the Born has a massless final-state parton, but
 c no possible divergence related to it (e.g. t-channel single top)
@@ -243,22 +240,10 @@ c no possible divergence related to it (e.g. t-channel single top)
          return
       endif
 
-c     uncomment for bypassing jet algo and cuts.
-c$$$      goto 123
-
-
 c Define jet clustering parameters
-      palg=1.d0               ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
+      palg=1.d0                 ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
       rfj=0.4d0                 ! the radius parameter
       sycut=60d0
-
-c uncomment the following lines to apply a cut on the sum of the light
-c   jet tranverse energies       
-ccc      if (totpt .lt. sycut) then
-ccc          passcuts =  .false.
-ccc          return
-ccc      endif
-
 
 c******************************************************************************
 c     call FASTJET to get all the jets
@@ -277,20 +262,14 @@ c     the jet for a given particle 'i':        jet(i),   note that this is
 c     the particle in pQCD, which doesn't necessarily correspond to the particle
 c     label in the process
 c
-ccc----FOR FJ v < 3.0
-c      call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
-ccc----
-
-
-ccc----FOR FJ v > 3.0
-      call fastjetppgenkt(pQCD,NNQCD,rfj,sycut,palg,pjet,njet)
-
+      call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
+c
+c******************************************************************************
 
       if (NJET .ne. NN .and. NJET .ne. NN-1) then
          passcuts=.false.
          return
       endif
-
 
  123  continue
 
@@ -301,11 +280,23 @@ ccc----FOR FJ v > 3.0
 
 
       subroutine unweight_function(p_born,unwgtfun)
-c Dummy function. Should always retrun 1.
+c This is a user-defined function to which to unweight the events
+c A non-flat distribution will generate events with a certain
+c weight. This is particularly useful to generate more events
+c (with smaller weight) in tails of distributions.
+c It computes the unwgt factor from the momenta and multiplies
+c the weight that goes into MINT (or vegas) with this factor.
+c Before writing out the events (or making the plots), this factor
+c is again divided out.
+c This function should be called with the Born momenta to be sure
+c that it stays the same for the events, counter-events, etc.
+c A value different from 1 makes that MINT (or vegas) does not list
+c the correct cross section.
       implicit none
       include 'nexternal.inc'
       double precision unwgtfun,p_born(0:3,nexternal-1)
+
       unwgtfun=1d0
+
       return
       end
-

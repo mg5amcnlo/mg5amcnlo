@@ -21,12 +21,13 @@ c g77 -o select_events select_events.f mcatnlo_str.f handling_lhe_events.f
       character*140 buff
       character*10 MonteCarlo,string
       character*1 ch1
-      logical AddInfoLHE
+      logical AddInfoLHE,condition
+      integer numev
 
       include "genps.inc"
+      include 'nexternal.inc'
       integer j,k,itype,istep,ievts_ok
-      real*8 ecm,xmass(nexternal),xmasstmp(nexternal),
-     &xmom(0:3,nexternal)
+      real*8 ecm,xmass(nexternal),xmom(0:3,nexternal)
 c
       write(*,*)'Enter event file name'
       read(*,*)event_file
@@ -76,98 +77,58 @@ c
       ievts_ok=0
       sum_wgt=0d0
 
-      if(itype.le.2)then
-        do while(i.le.maxevt)
-          call read_lhef_event(ifile,
+      if(itype.le.2)numev=maxevt
+      if(itype.eq.3)numev=min(maxevt,nevmax)
+      do while(i.le.numev)
+         call read_lhef_event(ifile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-          sum_wgt=sum_wgt+XWGTUP
+         sum_wgt=sum_wgt+XWGTUP
 
-          if(i.eq.1.and.buff(1:1).eq.'#')AddInfoLHE=.true.
-          if(AddInfoLHE)then
+         if(i.eq.1.and.buff(1:1).eq.'#')AddInfoLHE=.true.
+         if(AddInfoLHE)then
             if(buff(1:1).ne.'#')then
-              write(*,*)'Inconsistency in event file',i,' ',buff
-              stop
+               write(*,*)'Inconsistency in event file',i,' ',buff
+               stop
             endif
             read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                        fksfather_lhe,ipartner_lhe,
      #                        scale1_lhe,scale2_lhe,
      #                        jwgtinfo,mexternal,iwgtnumpartn,
      #             wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-          endif
+         endif
 
-          npart=0
-          do k=1,nup
+         npart=0
+         do k=1,nup
             if(abs(ISTUP(k)).eq.1)then
-              npart=npart+1
-              xmasstmp(npart)=pup(5,k)
-              xmass(npart)=0d0
-              xmass(npart)=xmasstmp(npart)
-              do j=1,4
-                xmom(mod(j,4),npart)=pup(j,k)
-              enddo
+               npart=npart+1
+               xmass(npart)=pup(5,k)
+               do j=1,4
+                  xmom(mod(j,4),npart)=pup(j,k)
+               enddo
             endif
-          enddo
-          call phspncheck_nocms2(i,npart,xmass,xmom)
+         enddo
+         call phspncheck_nocms2(i,npart,xmass,xmom)
 
-          if(itype.eq.iSorH_lhe)then
+         if(itype.le.2)condition=itype.eq.iSorH_lhe
+         if(itype.eq.3)condition=i.ge.nevmin.and.i.le.nevmax
+
+         if(condition)then
             ievts_ok=ievts_ok+1
             call write_lhef_event(ofile,
-     &         NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &         IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-          endif
+     &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
+     &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+         endif
 
-          istep=maxevt/10
-          if(istep.eq.0)istep=1
-          percentage=i*100.d0/maxevt
-          if(mod(i,istep).eq.0.or.i.eq.maxevt)
-     &      write(*,*)'Read',int(percentage),'% of event file'
-
-          i=i+1
-        enddo
-      else
-        do while(i.le.min(maxevt,nevmax))
-          call read_lhef_event(ifile,
-     &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-          sum_wgt=sum_wgt+XWGTUP
-
-          if(i.eq.1.and.buff(1:1).eq.'#')AddInfoLHE=.true.
-          if(AddInfoLHE)then
-            if(buff(1:1).ne.'#')then
-              write(*,*)'Inconsistency in event file',i,' ',buff
-              stop
-            endif
-            read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                        fksfather_lhe,ipartner_lhe,
-     #                        scale1_lhe,scale2_lhe,
-     #                        jwgtinfo,mexternal,iwgtnumpartn,
-     #             wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-          endif
-
-          npart=0
-          do k=1,nup
-            if(abs(ISTUP(k)).eq.1)then
-              npart=npart+1
-              do j=1,4
-                xmom(mod(j,4),npart)=pup(j,k)
-              enddo
-              xmasstmp(npart)=pup(5,k)
-              xmass(npart)=0d0
-              xmass(npart)=xmasstmp(npart)
-            endif
-          enddo
-          call phspncheck_nocms2(i,npart,xmass,xmom)
-
-          if(i.ge.nevmin.and.i.le.nevmax)then
-            ievts_ok=ievts_ok+1
-            call write_lhef_event(ofile,
-     &         NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &         IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+         if(itype.le.2)then
+            istep=maxevt/10
+            if(istep.eq.0)istep=1
+            percentage=i*100.d0/maxevt
+            if(mod(i,istep).eq.0.or.i.eq.maxevt)
+     &           write(*,*)'Read',int(percentage),'% of event file'
          endif
          i=i+1
-        enddo
-      endif
+      enddo
 
       write(ofile,*)'</LesHouchesEvents>'
 
@@ -200,6 +161,7 @@ c works in any frame
       implicit none
       integer nev,npart,maxmom
       include "genps.inc"
+      include 'nexternal.inc'
       real*8 xmass(nexternal),xmom(0:3,nexternal)
       real*8 tiny,vtiny,xm,xlen4,den,xsum(0:3),xsuma(0:3),
      # xrat(0:3),ptmp(0:3)

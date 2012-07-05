@@ -46,7 +46,7 @@ c negative number of events
       character*1 ch1
       logical AddInfoLHE,rwgtinfo,unweighted,keepevent,shower
 
-      include "genps.inc"
+      include "nexternal.inc"
       integer j,k
       real*8 ecm,xmass(nexternal),xmom(0:3,nexternal)
 
@@ -849,7 +849,7 @@ c Checks four-momentum conservation. Derived from phspncheck;
 c works in any frame
       implicit none
       integer nev,npart,maxmom
-      include "genps.inc"
+      include "nexternal.inc"
       real*8 xmass(nexternal),xmom(0:3,nexternal)
       real*8 tiny,vtiny,xm,xlen4,den,xsum(0:3),xsuma(0:3),
      # xrat(0:3),ptmp(0:3)

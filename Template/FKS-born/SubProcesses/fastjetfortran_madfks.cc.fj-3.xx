@@ -57,7 +57,7 @@ namespace fwrapper {
          mom[(j+3) % 4] = *(p++);
       }
       PseudoJet psjet(mom);
-///      cout<<" transfer f77->c++ xyze "<< mom[0]<< " "<<mom[1]<<" "<<mom[2]<<" "<<mom[3]<<endl;
+      psjet.set_user_index(i);
       input_particles.push_back(psjet);    
     }
   }
@@ -72,7 +72,6 @@ namespace fwrapper {
         *f77jets = jets[i][(j+3) % 4];
         f77jets++;
       } 
-///      cout <<"c++ jets after cluster xyze "<<jets[i][0]<< " " <<jets[i][1]<< " "<<jets[i][2]<< " "<<jets[i][3]<<endl;
     }
   }
   
@@ -81,7 +80,7 @@ namespace fwrapper {
   void transfer_cluster_transfer(const double * p, const int & npart, 
                                  const JetDefinition & jet_def,
                                  const double & ptmin,
-				 double * f77jets, int & njets,
+				 double * f77jets, int & njets, int * whichjet,
 				 const double & ghost_maxrap = 0.0,  
 				 const int & nrepeat = 0, const double & ghost_area = 0.0) {
 
@@ -100,10 +99,21 @@ namespace fwrapper {
     }
     // extract jets (pt-ordered)
     jets = sorted_by_pt(cs->inclusive_jets(ptmin));
-    
+
     // transfer jets -> f77jets[4*ijet+0..3]
     transfer_jets(f77jets, njets);
  
+    // Determine which parton/particle ended-up in which jet
+    // set all jet entrie to zero first
+    for(unsigned int ii=0; ii<npart; ++ii) whichjet[ii]=0;       
+
+    // Loop over jets and find constituents
+    for (unsigned int kk=0; kk<njets; ++kk) {   
+      vector<PseudoJet> constit = cs->constituents(jets[kk]);
+      for(unsigned int ll=0; ll<constit.size(); ++ll)
+             whichjet[constit[ll].user_index()]=kk+1;
+    }
+    
   }
 
 }
@@ -120,9 +130,9 @@ extern "C" {
 // Corresponds to the following Fortran subroutine
 // interface structure:
 //
-//   SUBROUTINE FASTJETSISCONE(P,NPART,R,F,F77JETS,NJETS)
+//   SUBROUTINE FASTJETSISCONE(P,NPART,R,F,F77JETS,NJETS,WHICHJET)
 //   DOUBLE PRECISION P(4,*), R, F, F77JETS(4,*)
-//   INTEGER          NPART, NJETS
+//   INTEGER          NPART, NJETS, WHICHJET(*)
 // 
 // where on input
 //
@@ -136,6 +146,7 @@ extern "C" {
 //   F77JETS  the output jet momenta (whose second dim should be >= NPART)
 //            sorted in order of decreasing p_t.
 //   NJETS    the number of output jets 
+//   WHICHJET(i) the jet of parton/particle 'i'
 //
 // NOTE: if you are interfacing fastjet to Pythia 6, Pythia stores its
 // momenta as a matrix of the form P(4000,5), whereas this fortran
@@ -145,14 +156,14 @@ extern "C" {
 //
 void fastjetsiscone_(const double * p, const int & npart,                   
                      const double & R, const double & f,                   
-                     double * f77jets, int & njets) {
+                     double * f77jets, int & njets, int * whichjet) {
     
     // prepare jet def
     plugin.reset(new SISConePlugin(R,f));
     jet_def = plugin.get();
 
     // do everything
-//    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets);
+//    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets,whichjet);
 }
 
 
@@ -165,9 +176,9 @@ void fastjetsiscone_(const double * p, const int & npart,
 // Corresponds to the following Fortran subroutine
 // interface structure:
 //
-//   SUBROUTINE FASTJETSISCONEWITHAREA(P,NPART,R,F,GHMAXRAP,NREP,GHAREA,F77JETS,NJETS)
+//   SUBROUTINE FASTJETSISCONEWITHAREA(P,NPART,R,F,GHMAXRAP,NREP,GHAREA,F77JETS,NJETS,WHICHJET)
 //   DOUBLE PRECISION P(4,*), R, F, F77JETS(4,*), GHMAXRAP, GHAREA
-//   INTEGER          NPART, NJETS, NREP
+//   INTEGER          NPART, NJETS, NREP, WHICHJET(*)
 // 
 // where on input
 //
@@ -184,6 +195,7 @@ void fastjetsiscone_(const double * p, const int & npart,
 //   F77JETS  the output jet momenta (whose second dim should be >= NPART)
 //            sorted in order of decreasing p_t.
 //   NJETS    the number of output jets 
+//   WHICHJET(i) the jet of parton/particle 'i'
 //
 // NOTE: if you are interfacing fastjet to Pythia 6, Pythia stores its
 // momenta as a matrix of the form P(4000,5), whereas this fortran
@@ -194,14 +206,14 @@ void fastjetsiscone_(const double * p, const int & npart,
 void fastjetsisconewitharea_(const double * p, const int & npart,                   
                      const double & R, const double & f,                   
                      const double & ghost_rapmax, const int & nrepeat, const double & ghost_area,
-                     double * f77jets, int & njets) {
+                     double * f77jets, int & njets, int * whichjet) {
     
     // prepare jet def
     plugin.reset(new SISConePlugin(R,f));
     jet_def = plugin.get();
 
     // do everything
-//    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets,ghost_rapmax,nrepeat,ghost_area);
+//    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets,whichjet,ghost_rapmax,nrepeat,ghost_area);
 }
 
 
@@ -213,9 +225,9 @@ void fastjetsisconewitharea_(const double * p, const int & npart,
 // Corresponds to the following Fortran subroutine
 // interface structure:
 //
-//   SUBROUTINE FASTJETPPGENKT(P,NPART,R,PALG,F77JETS,NJETS)
+//   SUBROUTINE FASTJETPPGENKT(P,NPART,R,PALG,F77JETS,NJETS,WHICHJET)
 //   DOUBLE PRECISION P(4,*), R, PALG, F, F77JETS(4,*)
-//   INTEGER          NPART, NJETS
+//   INTEGER          NPART, NJETS, WHICHJET(*)
 // 
 // where on input
 //
@@ -230,6 +242,7 @@ void fastjetsisconewitharea_(const double * p, const int & npart,
 //   F77JETS  the output jet momenta (whose second dim should be >= NPART)
 //            sorted in order of decreasing p_t.
 //   NJETS    the number of output jets 
+//   WHICHJET(i) the jet of parton/particle 'i'
 //
 // For the values of PALG that correspond to "standard" cases (1.0=kt,
 // 0.0=C/A, -1.0 = anti-kt) this routine actually calls the direct
@@ -245,7 +258,7 @@ void fastjetsisconewitharea_(const double * p, const int & npart,
 void fastjetppgenkt_(const double * p, const int & npart,                   
                      const double & R, const double & ptjetmin,
                      const double & palg,
-                     double * f77jets, int & njets) {
+                     double * f77jets, int & njets, int * whichjet) {
 
     // prepare jet def
     if (palg == 1.0) {
@@ -259,7 +272,7 @@ void fastjetppgenkt_(const double * p, const int & npart,
     }
 
     // do everything
-    transfer_cluster_transfer(p,npart,jet_def,ptjetmin,f77jets,njets);
+    transfer_cluster_transfer(p,npart,jet_def,ptjetmin,f77jets,njets,whichjet);
 }
 
 
@@ -272,9 +285,9 @@ void fastjetppgenkt_(const double * p, const int & npart,
 // Corresponds to the following Fortran subroutine
 // interface structure:
 //
-//   SUBROUTINE FASTJETPPGENKTWITHAREA(P,NPART,R,PALG,GHMAXRAP,NREP,GHAREA,F77JETS,NJETS)
+//   SUBROUTINE FASTJETPPGENKTWITHAREA(P,NPART,R,PALG,GHMAXRAP,NREP,GHAREA,F77JETS,NJETS,WHICHJET)
 //   DOUBLE PRECISION P(4,*), R, PALG, GHMAXRAP, GHAREA,  F77JETS(4,*)
-//   INTEGER          NPART, NREP, NJETS
+//   INTEGER          NPART, NREP, NJETS, WHICHJET(*)
 // 
 // where on input
 //
@@ -292,6 +305,7 @@ void fastjetppgenkt_(const double * p, const int & npart,
 //   F77JETS  the output jet momenta (whose second dim should be >= NPART)
 //            sorted in order of decreasing p_t.
 //   NJETS    the number of output jets 
+//   WHICHJET(i) the jet of parton/particle 'i'
 //
 // For the values of PALG that correspond to "standard" cases (1.0=kt,
 // 0.0=C/A, -1.0 = anti-kt) this routine actually calls the direct
@@ -307,7 +321,7 @@ void fastjetppgenkt_(const double * p, const int & npart,
 void fastjetppgenktwitharea_(const double * p, const int & npart,                   
                              const double & R, const double & palg,
                              const double & ghost_rapmax, const int & nrepeat, const double & ghost_area,
-                             double * f77jets, int & njets) {
+                             double * f77jets, int & njets, int * whichjet) {
     
     // prepare jet def
     if (palg == 1.0) {
@@ -321,7 +335,7 @@ void fastjetppgenktwitharea_(const double * p, const int & npart,
     }
         
     // do everything
-//    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets,ghost_rapmax,nrepeat,ghost_area);
+//    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets,whichjet,ghost_rapmax,nrepeat,ghost_area);
 }
 
 

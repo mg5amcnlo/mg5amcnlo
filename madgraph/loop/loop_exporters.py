@@ -290,7 +290,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         if writer:
             file1 = self.write_loop_num(None,matrix_element,fortran_model)
             file2 = self.write_CT_interface(None,matrix_element)
-            calls, file3 = self.write_loopmatrix(None,matrix_element,fortran_model)               
+            calls, file3 = self.write_loopmatrix(None,matrix_element,fortran_model)
             file = "\n".join([file1,file2,file3])
             writer.writelines(file)
             return calls

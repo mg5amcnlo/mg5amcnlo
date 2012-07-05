@@ -272,6 +272,21 @@ class TestFKSCommon(unittest.TestCase):
 
             TestFKSCommon.expected_qcd_inter = expected_qcd_inter
             TestFKSCommon.model = model
+
+    def test_sort_fksleglist(self):
+        """tests the correct sorting of a fks_leglist"""
+        input_pdgs = [ [1,1,21,1,1], [21,1,-1,1,1], [1,21,-1,1,1], [1,2,21,2,1],
+                       [1,-2,-2,21,1], [2,21,21,2,21] ]
+        sorted_pdgs = [ [1,1,1,1,21], [21,1,1,1,-1], [1,21,1,1,-1], [1,2,1,2,21],
+                       [1,-2,1,-2,21], [2,21,2,21,21]]
+        for input,goal in zip(input_pdgs, sorted_pdgs):
+            leglist = fks_common.to_fks_legs(
+                    MG.LegList([MG.Leg({'id': id, 'state': i not in [0,1]})\
+                            for i, id in enumerate(input)]), self.model)
+            leglist.sort()
+            self.assertEqual([l['id'] for l in leglist], goal)
+            self.assertEqual([l['state'] for l in leglist], [False, False, True, True, True])
+
     
     def test_split_leg(self):
         """tests the correct splitting of a leg into two partons"""
@@ -700,7 +715,7 @@ class TestFKSCommon(unittest.TestCase):
                                     'state': True,
                                     'color': 8,
                                     'spin': 3,
-                                    'massless': True
+                                    'massless': True,
                                     }),\
                                 fks_common.FKSLeg({
                                     'id': 21,

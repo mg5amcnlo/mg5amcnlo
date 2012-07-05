@@ -1,21 +1,21 @@
-      subroutine finalize_event(xx,res_abs,lunlhe,plotEv,putonshell)
+      subroutine finalize_event(xx,weight,lunlhe,plotEv,putonshell)
       implicit none
+      include 'nexternal.inc'
       include "genps.inc"
-      integer            mapconfig(0:lmaxconfigs), this_config
-      common/to_mconfigs/mapconfig, this_config
       integer ndim,ipole
       common/tosigint/ndim,ipole
-      integer           mincfig, maxcfig
-      common/to_configs/mincfig, maxcfig
+      integer           iconfig
+      common/to_configs/iconfig
       integer itmax,ncall
       common/citmax/itmax,ncall
       logical Hevents
       common/SHevents/Hevents
       integer i,j,lunlhe
-      real*8 xx(ndim),res_abs,plot_wgt,evnt_wgt
+      include 'mint.inc'
+      real*8 xx(ndimmax),weight,plot_wgt,evnt_wgt
       logical plotEv, putonshell
       double precision wgt,unwgtfun
-      double precision x(99),p(0:3,99),pp(0:3,nexternal)
+      double precision x(99),p(0:3,nexternal)
       integer jpart(7,-nexternal+3:2*nexternal-3)
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
       logical unwgt
@@ -35,10 +35,10 @@
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
 
       integer np,npart
-
-      double precision jampsum,sumborn
+      double precision jampsum,sumborn,shower_scale
       double complex wgt1(2)
-
+      character*4 abrv
+      common /to_abrv/ abrv
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
@@ -46,22 +46,16 @@
         if(i.le.ndim)then
           x(i)=xx(i)
         else
-          x(i)=0.d0
+          x(i)=-9d99
         endif
       enddo
       
       wgt=1d0
 c Normalization to the number of requested events is done in subroutine
-c topout (madfks_plot_mint.f), so multiply here to get # of events.
-      plot_wgt=evtsgn*itmax*ncall
-      evnt_wgt=evtsgn*res_abs/(itmax*ncall)
-      call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ndim,wgt,x,p)
-      do i=1,nexternal
-         do j=0,3
-            pp(j,i)=p(j,i)
-         enddo
-      enddo
-
+c topout (madfks_plot.f), so multiply here to get # of events.
+      evnt_wgt=evtsgn*weight
+      plot_wgt=evnt_wgt*itmax*ncall
+      call generate_momenta(ndim,iconfig,wgt,x,p)
 c
 c Get all the info we need for writing the events.
 c      
@@ -71,13 +65,13 @@ c
          call set_cms_stuff(0)
       endif
 
-      call add_write_info(p_born,pp,ybst_til_tolab,mincfig,Hevents,
-     &     putonshell,ndim,ipole,x,jpart,npart,pb)
+      call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
+     &     putonshell,ndim,ipole,x,jpart,npart,pb,shower_scale)
 
 c Plot the events also on the fly
       if(plotEv) then
          if (Hevents) then
-            call outfun(pp,ybst_til_tolab,plot_wgt,iplot_ev)
+            call outfun(p,ybst_til_tolab,plot_wgt,iplot_ev)
          else
             call outfun(p1_cnt(0,1,0),ybst_til_tolab,plot_wgt,iplot_cnt)
          endif
@@ -90,115 +84,19 @@ c Plot the events also on the fly
          write (*,*) 'ERROR in finalize_event, unwgtfun=0',unwgtfun
          stop
       endif
-c Write-out the events
-      call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe)
+
+      if (abrv.ne.'grid') then
+c  Write-out the events
+         call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe
+     &        ,shower_scale)
+      else
+         call write_random_numbers(lunlhe)
+      endif
       
       return
       end
 
-
-      function sigintS(xx,w,ifl)
-c From dsample_fks
-      implicit none
-      integer ndim,ipole
-      common/tosigint/ndim,ipole
-      integer           mincfig, maxcfig
-      common/to_configs/mincfig, maxcfig
-      integer i
-      integer ifl
-      integer fold
-      common /cfl/fold
-      real*8 sigintS,xx(ndim),w
-      integer ione
-      parameter (ione=1)
-      double precision wgt,dsigS
-      double precision x(99),p(0:3,99)
-      logical unwgt
-      double precision evtsgn
-      common /c_unwgt/evtsgn,unwgt
-      double precision result
-      save result
-c
-      do i=1,99
-        if(i.le.ndim)then
-          x(i)=xx(i)
-        else
-          x(i)=0.d0
-        endif
-      enddo
-      wgt=1.d0
-      fold=ifl
-      if (ifl.eq.0)then
-         call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ndim,wgt,x,p)
-         result = w*dsigS(p,wgt,w)
-         sigintS = result
-      elseif(ifl.eq.1) then
-         call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ndim,wgt,x,p)
-         result = result+w*dsigS(p,wgt,w)
-         sigintS = result
-      elseif(ifl.eq.2) then
-         if (unwgt) then
-            evtsgn=sign(1d0,result)
-            sigintS = abs(result)
-         else
-            sigintS = result
-         endif
-      endif
-      return
-      end
-
-     
-      function sigintH(xx,w,ifl)
-c From dsample_fks
-      implicit none
-      integer ndim,ipole
-      common/tosigint/ndim,ipole
-      integer           mincfig, maxcfig
-      common/to_configs/mincfig, maxcfig
-      integer i
-      integer ifl
-      integer fold
-      common /cfl/fold
-      real*8 sigintH,xx(ndim),w
-      integer ione
-      parameter (ione=1)
-      double precision wgt,dsigH
-      double precision x(99),p(0:3,99)
-      logical unwgt
-      double precision evtsgn
-      common /c_unwgt/evtsgn,unwgt
-      double precision result
-      save result
-c
-      do i=1,99
-        if(i.le.ndim)then
-          x(i)=xx(i)
-        else
-          x(i)=0.d0
-        endif
-      enddo
-      wgt=1.d0
-      fold=ifl
-      if (ifl.eq.0)then
-         call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ndim,wgt,x,p)
-         result = w*dsigH(p,wgt,w)
-         sigintH = result
-      elseif(ifl.eq.1) then
-         call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ndim,wgt,x,p)
-         result = result+w*dsigH(p,wgt,w)
-         sigintH = result
-      elseif(ifl.eq.2) then
-         if (unwgt) then
-            evtsgn=sign(1d0,result)
-            sigintH = abs(result)
-         else
-            sigintH = result
-         endif
-      endif
-      return
-      end
-
-      subroutine write_header_init(lunlhe,nevents,res,err)
+      subroutine write_header_init(lunlhe,nevents,res,res_abs,err)
       implicit none
       integer lunlhe,nevents
       double precision res,err,res_abs
@@ -218,10 +116,10 @@ c Les Houches init block (for the <init> info)
      &     xmaxup(maxpup),lprup(maxpup)
 
 
-      open(unit=58,file='res_1',status='old')
-      read(58,'(a)')string
-      read(string(index(string,':')+1:index(string,'+/-')-1),*) res_abs
-      close(58)
+c      open(unit=58,file='res_1',status='old')
+c      read(58,'(a)')string
+c      read(string(index(string,':')+1:index(string,'+/-')-1),*) res_abs
+c      close(58)
 
 c get info on beam and PDFs
       call setrun
@@ -252,7 +150,7 @@ c get info on beam and PDFs
       return
       end
 
-      subroutine write_events_lhe(p,wgt,ic,npart,lunlhe)
+      subroutine write_events_lhe(p,wgt,ic,npart,lunlhe,shower_scale)
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -260,56 +158,54 @@ c get info on beam and PDFs
       include 'reweight.inc'
       double precision p(0:4,2*nexternal-3),wgt
       integer ic(7,2*nexternal-3),npart,lunlhe
-
       double precision pi,zero
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0.d0)
       integer ievent,izero
       parameter (izero=0)
       double precision aqcd,aqed,scale
-
       character*140 buff
-
-      double precision SCALUP
-      common /cshowerscale/SCALUP
-
+      double precision shower_scale
       INTEGER MAXNUP,i
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
      # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,AQEDUP,AQCDUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
-
-      integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
-      double precision scale1_lhe,scale2_lhe
+      include 'nFKSconfigs.inc'
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
+     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
+      double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
 c
       ievent=66
-      scale = SCALUP
+      scale = shower_scale
       aqcd=g**2/(4d0*pi)
       aqed=gal(1)**2/(4d0*pi)
 
       if(AddInfoLHE)then
         if(.not.doreweight)then
-          write(buff,200)'#',iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                       fksfather_lhe,ipartner_lhe,
-     #                       scale1_lhe,scale2_lhe,
-     #                       izero,izero,izero,
-     #                       zero,zero,zero,zero,zero
+           write(buff,200)'#',iSorH_lhe,ifks_lhe(nFKSprocess)
+     &          ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
+     &          ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)
+     &          ,scale2_lhe(nFKSprocess),izero,izero,izero,zero,zero
+     &          ,zero,zero,zero
         else
-          if(iwgtinfo.lt.1.or.iwgtinfo.gt.4)then
+          if(iwgtinfo.lt.1.or.iwgtinfo.gt.5)then
             write(*,*)'Error in write_events_lhe'
             write(*,*)'  Inconsistency in reweight parameters'
             write(*,*)doreweight,iwgtinfo
             stop
           endif
-          write(buff,200)'#',iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                       fksfather_lhe,ipartner_lhe,
-     #                       scale1_lhe,scale2_lhe,
-     #                       iwgtinfo,nexternal,iwgtnumpartn,
-     #                       zero,zero,zero,zero,zero
+          write(buff,200)'#',iSorH_lhe,ifks_lhe(nFKSprocess)
+     &         ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
+     &         ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)
+     &         ,scale2_lhe(nFKSprocess),iwgtinfo,nexternal,iwgtnumpartn
+     &         ,zero,zero,zero,zero,zero
         endif
       else
         buff=' '
@@ -354,3 +250,16 @@ c********************************************************************
       return
       end
 
+      subroutine write_random_numbers(lunlhe)
+      implicit none
+      integer lunlhe,i
+      double precision x(99),sigintF_save,f_abs_save
+      common /c_sigint/ x,sigintF_save,f_abs_save
+      integer ndim,ipole
+      common/tosigint/ndim,ipole
+      write (lunlhe,'(a)')'  <event>'
+      write (lunlhe,*) ndim,sigintF_save,f_abs_save
+      write (lunlhe,*) (x(i),i=1,ndim)
+      write (lunlhe,'(a)')'  </event>'
+      return
+      end

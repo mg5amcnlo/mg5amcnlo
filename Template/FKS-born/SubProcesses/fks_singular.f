@@ -1,164 +1,3 @@
-      subroutine grandmother_fks(iconfig,nbranch,ns_channel,nt_channel,
-     #                           i_fks,j_fks,searchforgranny,
-     #                           fksmother,fksgrandmother,fksaunt,
-     #                           is_beta_cms,is_granny_sch,topdown)
-c
-c Given iconfig, nbranch, ns_channel, nt_channel, i_fks, j_fks and
-c searchforgranny (if .false., finds the mother and exits)
-c this routine returns
-c
-c  fksmother: the mother of i_fks and j_fks
-c  fksgrandmother: the mother of fksmother and fksaunt
-c  fksaunt: the sister of fksmother
-c  is_beta_cms: true if the 1->2 (for s-channel) or 2->2 (for t-channel)
-c    scattering which results into the mother is the partonic c.m., 
-c    false otherwise
-c  is_granny_sch: true if grandmother is an s-channel, false otherwise
-c  topdown: if true the fixed vector (p_a) in the iterative construction of
-c    t-channel scattering is p_2; if false, p_a=p_1
-c
-c For initial-state singularities, fksgrandmother and fksaunt are
-c undefined (set to zero), and fksmother=1 or 2. For final-state
-c singularities, fksmother<0; fksgrandmother<0 in all cases except when the 
-c mother is attached to parton 1 and 2, in which case fksgrandmother=1 or 2.
-c fksaunt can have either sign, being positive when it is a single particle, 
-c and negative when it is a set of particles
-c
-      implicit none
-      integer iconfig,nbranch,ns_channel,nt_channel
-      integer i_fks,j_fks
-      integer fksmother, fksgrandmother,fksaunt
-      logical searchforgranny,is_beta_cms,is_granny_sch,topdown
-
-      integer i,itmp
-
-      include "genps.inc"
-      include 'nexternal.inc'
-      integer            mapconfig(0:lmaxconfigs), this_config
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-
-      include "configs.inc"
-
-      topdown=.false.
-
-c This function need be called before the redefinition of ns_channel,
-c which takes place if no t-channels are present
-      if((ns_channel+nt_channel).ne.(nbranch-1))then
-        write(*,*)'Error #1 in grandmother_fks',
-     #    nbranch,ns_channel,nt_channel
-        stop
-      endif
-      if( i_fks.lt.3.or.i_fks.gt.nexternal .or.
-     #    j_fks.lt.1.or.j_fks.gt.nexternal )then
-        write(*,*)'Error #2 in grandmother_fks',i_fks,j_fks
-        stop
-      endif
-c
-      fksmother=0
-      fksgrandmother=0
-      fksaunt=0
-c Initial-state singularity
-      if(j_fks.eq.1)then
-        fksmother=1
-        if( iforest(1,-ns_channel-1,iconfig).ne.1 .or.
-     #      iforest(2,-ns_channel-1,iconfig).ne.i_fks .or.
-     #      nt_channel.eq.0 )then
-c This diagram has no singularities associated with the (i_fks,j_fks) pair
-           fksmother=0
-           return
-        endif
-c Initial-state singularity
-      elseif(j_fks.eq.2)then
-        fksmother=2
-        topdown=.true.
-        if(((iforest(1,-nbranch,iconfig).gt.0 .or.
-     &       iforest(2,-nbranch,iconfig).ne.i_fks).and.
-     &      (iforest(1,-ns_channel-1,iconfig).ne.2 .or. !This is needed, because of inverted t-channel
-     &       iforest(2,-ns_channel-1,iconfig).ne.i_fks)) .or.
-     &      nt_channel.eq.0 )then
-c This diagram has no singularities associated with the (i_fks,j_fks) pair
-           fksmother=0
-           return
-        endif
-c Final-state singularity
-      elseif(j_fks.ge.3)then
-c Mother must be an s-channel
-        do i=-1,-ns_channel,-1
-          if( (iforest(1,i,iconfig).eq.i_fks.and.
-     #         iforest(2,i,iconfig).eq.j_fks) .or.
-     #        (iforest(2,i,iconfig).eq.i_fks.and.
-     #         iforest(1,i,iconfig).eq.j_fks) )then
-            fksmother=i
-          endif
-        enddo
-        if(fksmother.eq.0)then
-c No mother found: this diagram has no singularities associated with
-c the (i_fks,j_fks) pair
-          return
-        elseif(fksmother.gt.0)then
-          write(*,*)'Error #5 in grandmother_fks',fksmother
-          stop
-        endif
-        if(.not.searchforgranny)return
-c Look for grandmother and aunt; s-channels first
-        do i=-1,-ns_channel,-1
-          if(iforest(1,i,iconfig).eq.fksmother)then
-            fksgrandmother=i
-            fksaunt=iforest(2,i,iconfig)
-          elseif(iforest(2,i,iconfig).eq.fksmother)then
-            fksgrandmother=i
-            fksaunt=iforest(1,i,iconfig)
-          endif
-        enddo
-c s-channel grandmother found
-        if(fksgrandmother.ne.0.and.fksaunt.ne.0)then
-          if(fksgrandmother.gt.0)then
-            write(*,*)'Error #6 in grandmother_fks',
-     #        fksgrandmother,fksaunt
-            stop
-          endif
-          is_granny_sch=.true.
-          is_beta_cms=(fksgrandmother.eq.-ns_channel)
-c s-channel grandmother not found; search t-channels
-        else
-          is_granny_sch=.false.
-          do i=-ns_channel-1,-nbranch,-1
-            if(iforest(2,i,iconfig).eq.fksmother)then
-              fksgrandmother=iforest(1,i,iconfig)
-              fksaunt=i
-            endif
-          enddo
-          if(fksgrandmother.eq.0.or.fksaunt.eq.0)then
-            write(*,*)'Error #7 in grandmother_fks',
-     #        fksgrandmother,fksaunt
-            stop
-          endif
-          if(fksgrandmother.le.0.or.fksaunt.eq.0)then
-            write(*,*)'Error #8 in grandmother_fks',
-     #        fksgrandmother,fksaunt
-            stop
-          endif
-          if(fksaunt.eq.-nbranch)fksaunt=2
-c Grandmother must be closer than aunt to one of the incoming partons
-          if( fksaunt.eq.2.or. (fksgrandmother.ne.1.and.
-     #          (-fksgrandmother-ns_channel).gt.int(nt_channel/2)))then
-            itmp=fksgrandmother
-            fksgrandmother=fksaunt
-            fksaunt=itmp
-            topdown=.false.
-          else
-            topdown=.true.
-          endif
-          is_beta_cms=( (fksgrandmother.eq.1) .or.
-     #                  (fksgrandmother.eq.2) )
-        endif
-      endif
-      return
-      end
-
-
       subroutine rotate_invar(pin,pout,cth,sth,cphi,sphi)
 c Given the four momentum pin, returns the four momentum pout (in the same
 c Lorentz frame) by performing a three-rotation of an angle theta 
@@ -225,74 +64,9 @@ c
       return
       end
 
-
-      subroutine phspncheck(npart,ecm,xmass,xmom)
+      subroutine phspncheck_born(ecm,xmass,xmom,pass)
 c Checks four-momentum conservation.
 c WARNING: works only in the partonic c.m. frame
-      implicit none
-      integer npart,maxmom
-      include "genps.inc"
-      real*8 ecm,xmass(-max_branch:max_particles),
-     # xmom(0:3,-max_branch:max_particles)
-      real*8 tiny,xm,xlen4,den,xsum(0:3),xsuma(0:3),xrat(0:3),ptmp(0:3)
-      parameter (tiny=5.d-3)
-      integer jflag,i,j,jj
-c
-      jflag=0
-      do i=0,3
-        xsum(i)=0.d0
-        xsuma(i)=0.d0
-        do j=3,npart
-          xsum(i)=xsum(i)+xmom(i,j)
-          xsuma(i)=xsuma(i)+abs(xmom(i,j))
-        enddo
-        if(i.eq.0)xsum(i)=xsum(i)-ecm
-        if(xsuma(i).lt.1.d0)then
-          xrat(i)=abs(xsum(i))
-        else
-          xrat(i)=abs(xsum(i))/xsuma(i)
-        endif
-        if(xrat(i).gt.tiny.and.jflag.eq.0)then
-          write(*,*)'Momentum is not conserved'
-          write(*,*)'i=',i
-          do j=1,npart
-            write(*,'(4(d14.8,1x))') (xmom(jj,j),jj=0,3)
-          enddo
-          jflag=1
-        endif
-      enddo
-      if(jflag.eq.1)then
-        write(*,'(4(d14.8,1x))') (xsum(jj),jj=0,3)
-        write(*,'(4(d14.8,1x))') (xrat(jj),jj=0,3)
-        stop
-      endif
-c
-      do j=1,npart
-        do i=0,3
-          ptmp(i)=xmom(i,j)
-        enddo
-        xm=xlen4(ptmp)
-        if(ptmp(0).ge.1.d0)then
-          den=ptmp(0)
-        else
-          den=1.d0
-        endif
-        if(abs(xm-xmass(j))/den.gt.tiny .and.
-     &       abs(xm-xmass(j)).gt.tiny)then
-          write(*,*)'Mass shell violation'
-          write(*,*)'j=',j
-          write(*,*)'mass=',xmass(j)
-          write(*,*)'mass computed=',xm
-          write(*,'(4(d14.8,1x))') (xmom(jj,j),jj=0,3)
-          stop
-        endif
-      enddo
-      return
-      end
-
-
-      subroutine phspncheck_born(ecm,xmass,xmom,pass)
-c Identical to phspncheck
       implicit none
       include 'nexternal.inc'
       real*8 ecm,xmass(nexternal-1),xmom(0:3,nexternal-1)
@@ -359,8 +133,9 @@ c works in any frame
       implicit none
       integer npart,maxmom
       include "genps.inc"
+      include "nexternal.inc"
       real*8 ecm,xmass(-max_branch:max_particles),
-     # xmom(0:3,-max_branch:max_particles)
+     # xmom(0:3,nexternal)
       real*8 tiny,vtiny,xm,xlen4,den,ecmtmp,xsum(0:3),xsuma(0:3),
      # xrat(0:3),ptmp(0:3)
       parameter (tiny=5.d-3)
@@ -447,869 +222,23 @@ c
       end
 
 
-      subroutine get_emother_range(int_nlo,i_fks,j_fks,nbranch,
-     #                       xi_i_fks,y_ij_fks,s,m,
-     #                       xi_mother_min_evpc,xi_mother_max_evpc,
-     #                       xi_mother_min_ev,xi_mother_max_ev,
-     #                       xi_mother_min_cnt,xi_mother_max_cnt,
-     #                       got_emother_range)
-      implicit none
-      include 'genps.inc'
-      logical int_nlo,got_emother_range,test
-      integer i_fks,j_fks,nbranch,maxcnt,i
-      double precision xi_i_fks,y_ij_fks
-      double precision xi_mother_min_evpc,xi_mother_max_evpc
-      double precision xi_mother_min_ev,xi_mother_max_ev
-      double precision xi_mother_min_cnt(-2:4),xi_mother_max_cnt(-2:4)
-      double precision M(-max_branch:max_particles)
-      double precision S(-max_branch:0)
-      double precision zero,one
-      parameter (zero=0.d0)
-      parameter (one=1.d0)
-c
-      xi_mother_min_ev=3.d0
-      xi_mother_max_ev=-1.d0
-      xi_mother_min_cnt(4)=3.d0
-      xi_mother_max_cnt(4)=-1.d0
-      if(m(j_fks).eq.0.d0)then
-        maxcnt=2
-        call get_emother_j0(i_fks,j_fks,nbranch,xi_i_fks,y_ij_fks,s,m,
-     #                      xi_mother_min_ev,xi_mother_max_ev)
-        if(int_nlo)then
-          call get_emother_j0(i_fks,j_fks,nbranch,zero,y_ij_fks,s,m,
-     #                        xi_mother_min_cnt(0),xi_mother_max_cnt(0))
-          call get_emother_j0(i_fks,j_fks,nbranch,xi_i_fks,one,s,m,
-     #                        xi_mother_min_cnt(1),xi_mother_max_cnt(1))
-          call get_emother_j0(i_fks,j_fks,nbranch,zero,one,s,m,
-     #                        xi_mother_min_cnt(2),xi_mother_max_cnt(2))
-        else
-          xi_mother_min_cnt(0)=3.d0
-          xi_mother_max_cnt(0)=-1.d0
-          xi_mother_min_cnt(1)=3.d0
-          xi_mother_max_cnt(1)=-1.d0
-          xi_mother_min_cnt(2)=3.d0
-          xi_mother_max_cnt(2)=-1.d0
-        endif
-        xi_mother_min_cnt(4)=min(xi_mother_min_cnt(0),
-     #                           xi_mother_min_cnt(1),
-     #                           xi_mother_min_cnt(2))
-        xi_mother_max_cnt(4)=max(xi_mother_max_cnt(0),
-     #                           xi_mother_max_cnt(1),
-     #                           xi_mother_max_cnt(2))
-      else
-        maxcnt=0
-        call get_emother_jm(i_fks,j_fks,nbranch,xi_i_fks,y_ij_fks,s,m,
-     #                      xi_mother_min_ev,xi_mother_max_ev)
-        if(int_nlo)then
-          call get_emother_jm(i_fks,j_fks,nbranch,zero,y_ij_fks,s,m,
-     #                        xi_mother_min_cnt(0),xi_mother_max_cnt(0))
-        else
-          xi_mother_min_cnt(0)=3.d0
-          xi_mother_max_cnt(0)=-1.d0
-        endif
-        xi_mother_min_cnt(4)=xi_mother_min_cnt(0)
-        xi_mother_max_cnt(4)=xi_mother_max_cnt(0)
-      endif
-      got_emother_range=xi_mother_min_ev.ne.3.d0 .and.
-     #                  xi_mother_max_ev.ne.-1.d0
-      if(int_nlo)got_emother_range=got_emother_range .or.
-     #                  ( xi_mother_min_cnt(4).ne.3.d0 .and.
-     #                    xi_mother_max_cnt(4).ne.-1.d0 )
-      if(int_nlo)then
-        test=.true.
-c test will remain true if all cnts have the same (meaningful) minimum
-        do i=0,maxcnt
-          test=test.and.
-     #         ( xi_mother_min_cnt(i).eq.3.d0 .or.
-     #           xi_mother_min_cnt(i).eq.xi_mother_min_cnt(4) )
-        enddo
-        if(.not.test)then
-          xi_mother_min_evpc=min(xi_mother_min_ev,xi_mother_min_cnt(4))
-          xi_mother_min_cnt(4)=xi_mother_min_evpc
-        else
-          xi_mother_min_evpc=xi_mother_min_ev
-        endif
-c Now do the same for the maxima
-        test=.true.
-        do i=0,maxcnt
-          test=test.and.
-     #         ( xi_mother_max_cnt(i).eq.-1.d0 .or.
-     #           xi_mother_max_cnt(i).eq.xi_mother_max_cnt(4) )
-        enddo
-        if(.not.test)then
-          xi_mother_max_evpc=max(xi_mother_max_ev,xi_mother_max_cnt(4))
-          xi_mother_max_cnt(4)=xi_mother_max_evpc
-        else
-          xi_mother_max_evpc=xi_mother_max_ev
-        endif
-      else
-        xi_mother_min_evpc=xi_mother_min_ev
-        xi_mother_max_evpc=xi_mother_max_ev
-      endif
-      return
-      end
-
-
-      subroutine get_emother_j0(i_fks,j_fks,nbranch,xi_i_fks,y_ij_fks,s,m,
-     #                          xi_mother_min,xi_mother_max)
-      implicit none
-      include 'genps.inc'
-      include 'nexternal.inc'
-      integer i_fks,j_fks,nbranch
-      double precision xi_i_fks,y_ij_fks,xi_mother_min,xi_mother_max
-      double precision M(-max_branch:max_particles)
-      double precision S(-max_branch:0)
-      double precision xii,yij,scm,sigm2
-      integer i
-c
-      xii=xi_i_fks
-      yij=y_ij_fks
-      scm=s(-nbranch)
-      sigm2=0.d0
-      do i=3,nexternal
-        if(i.ne.i_fks.and.i.ne.j_fks)sigm2=sigm2+m(i)
-      enddo
-      sigm2=sigm2**2
-      xi_mother_min=xii
-      xi_mother_max=(2-xii**2*(1-yij)-2*sigm2/scm)/(2-xii*(1-yij))
-      return
-      end
-
-
-      subroutine get_emother_jm(i_fks,j_fks,nbranch,xi_i_fks,y_ij_fks,s,m,
-     #                          xi_mother_min,xi_mother_max)
-      implicit none
-      include 'genps.inc'
-      include 'nexternal.inc'
-      integer i_fks,j_fks,nbranch
-      double precision xi_i_fks,y_ij_fks,xi_mother_min,xi_mother_max
-      double precision M(-max_branch:max_particles)
-      double precision S(-max_branch:0)
-      double precision xii,yij,scm,sigm2,xmassj,pfact,xiamaxbar,
-     # xfact,sarg,xia1,xia2,xiamax,xiamin
-      integer i
-c
-      xii=xi_i_fks
-      yij=y_ij_fks
-      scm=s(-nbranch)
-      sigm2=0.d0
-      do i=3,nexternal
-        if(i.ne.i_fks.and.i.ne.j_fks)sigm2=sigm2+m(i)
-      enddo
-      sigm2=sigm2**2
-      xmassj=m(j_fks)
-      pfact=2-xii**2-2*(sigm2-xmassj**2)/scm
-      if(pfact.lt.0.d0)then
-        write(*,*)'Fatal error #1 in get_emother_jm'
-        write(*,*)xii,sigm2,xmassj,scm
-        stop
-      endif
-      xiamaxbar=pfact/(2-xii)
-      xfact=4-4*xii+xii**2*(1-yij**2)
-      sarg=(pfact-xii*(2-xii))**2-4*xmassj**2/scm*xfact
-      if(sarg.gt.0.d0)then
-        xia1=( (2-xii)*pfact-xii*yij*(xii**2*yij+
-     #         sign(1.d0,yij)*sqrt(sarg)) )/xfact
-        xia2=( (2-xii)*pfact-xii*yij*(xii**2*yij-
-     #         sign(1.d0,yij)*sqrt(sarg)) )/xfact
-        if(xia2.lt.xia1)then
-          write(*,*)'Fatal error #2 in get_emother_jm'
-          write(*,*)xia1,xia2
-          stop
-        endif
-      endif
-      if(sarg.le.0.d0)then
-        xiamax=xiamaxbar
-      else
-        if(yij.ge.0.d0)then
-          if(xia2.gt.xiamaxbar)then
-            xiamax=min(xiamaxbar,xia1)
-          else
-            xiamax=xiamaxbar
-          endif
-        else
-          if(xia2.lt.xiamaxbar)then
-            xiamax=xiamaxbar
-          elseif(xia2.ge.xiamaxbar.and.xia1.lt.xiamaxbar)then
-            xiamax=xia2
-          elseif(xia1.ge.xiamaxbar)then
-            xiamax=xia2
-          else
-            write(*,*)'Fatal error #3 in get_emother_jm'
-            write(*,*)xia1,xia2,xiamaxbar
-            stop
-          endif
-        endif
-        if( xmassj.eq.0.d0 .and.
-     #      ( yij.gt.0.d0.and.xiamax.ne.xia1 .or.
-     #        yij.lt.0.d0.and.xiamax.ne.xia2 ) )then
-          write(*,*)'Fatal error #4 in get_emother_jm'
-          write(*,*)xia1,xia2,xiamax,yij
-          stop
-        endif
-      endif
-      xiamin=xii+2*xmassj/sqrt(scm)
-      xi_mother_min=xiamin
-      xi_mother_max=xiamax
-      return
-      end
-
-
-      subroutine get_smother(E_i_fks,y_ij_fks,sgrandmother,xmaunt,xmassj,
-     #  smother,dsmotherody)
-      implicit none
-      double precision E_i_fks,y_ij_fks,sgrandmother,xmaunt,xmassj,
-     # smother,dsmotherody,ei,yij,xkbe2,sxkbe2,xmassk2,xmassj2,solden,
-     # solnuma,argofsqrtred,xkal2,sqxkal2,dxkal2dy0
-      double precision pi
-      parameter (pi=3.1415926535897932385d0)
-c
-      ei=E_i_fks
-      yij=y_ij_fks
-      xkbe2=sgrandmother
-      sxkbe2=sqrt(xkbe2)
-      xmassk2=xmaunt**2
-      xmassj2=xmassj**2
-c
-      solden=-(sxkbe2-ei*(1-yij))*(sxkbe2-ei*(1+yij))
-      solnuma=-( ei*(xkbe2-2*ei*sxkbe2-xmassk2)*
-     #           (sxkbe2-ei*(1-yij**2))+
-     #           xmassj2*sxkbe2*(sxkbe2-ei) )
-      argofsqrtred=xkbe2*( (xkbe2-2*ei*sxkbe2-xmassk2)**2 -
-     #      2*xmassj2*(xkbe2-2*ei*(sxkbe2-ei*(1-yij**2))-
-     #      xmassj2/2.d0+xmassk2) )
-      if(argofsqrtred.lt.0.d0)then
-        smother=-1.d0
-      else
-        smother=( solnuma+ei*yij*sqrt(argofsqrtred) )/
-     #          solden
-        xkal2=smother
-        sqxkal2=sqrt(smother)
-        dxkal2dy0=2*ei*(xkbe2-2*ei*sxkbe2-xmassk2)*yij/solden-
-     #   xkbe2*( ( (xkbe2-2*ei*sxkbe2-xmassk2)**2 -
-     #     2*xmassj2*(xkbe2-2*ei*(sxkbe2-ei*(1-yij**2))-
-     #     xmassj2/2.d0+xmassk2) )+
-     #   4*ei**2*yij**2*xmassj2 )/
-     #   ( sqrt(xkbe2*( (xkbe2-2*ei*sxkbe2-xmassk2)**2 -
-     #          2*xmassj2*(xkbe2-2*ei*(sxkbe2-ei*(1-yij**2))-
-     #          xmassj2/2.d0+xmassk2) ))*solden) +
-     #   2*ei*yij/solden*xkal2
-        dsmotherody=dxkal2dy0
-      endif
-      return
-      end
-
-
-
-      subroutine link_to_born2(itree,spropR,tpridR,iconfig,i_fks,j_fks,
-     &                        mother,nbranchin,ns_channelin,
-     &                        nt_channelin,mapbconf,bconf,biforest)
-c Given a real configuration in itree and FKS partons i_fks, j_fks and their
-c mother, returns the Born configuration corresponding to that real
-c configuration bconf, read from the include file born_conf.inc.
-c mapbconf and biforest are the mapconfig and iforest for the Born.
-c (iconfig is only used to write the error messages.)
-      implicit none
-      include 'genps.inc'      
-      include 'nexternal.inc'
-      integer itree(2,-max_branch:-1),BornFromRealTree(2,-max_branch:-1)
-      integer i_fks,j_fks,iconfig,bconf,mapbconf(0:lmaxconfigs)
-      integer biforest(2,-max_branch:-1,lmaxconfigs)
-      integer spropR(-max_branch:-1),ns_channelin,nt_channelin
-      integer tpridR(-max_branch:-1),ns_channel,nt_channel
-     
-      integer i,j,k,l,mother,nbranch,nbranchin,bbranch,surrogate
-      integer bup(-max_branch:nexternal),jb,found
-      logical done,bornfound(lmaxconfigs),firsttime
-      data firsttime/.true./
-
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      integer spropBfR(-max_branch:-1)
-      integer tpridBfR(-max_branch:-1)
-      integer mapconfig(0:lmaxconfigs)
-      include 'born_conf.inc'
-
-      save bornfound
-
-      nbranch=nbranchin-1
-      surrogate=0
-
-      if (mother.eq.1) then
-         do i=-1,-nbranch,-1
-            if (itree(1,i).eq.j_fks.and.itree(2,i).eq.i_fks) then
-               surrogate=i
-               nt_channel=nt_channelin-1
-               ns_channel=ns_channelin
-               if (.not.(surrogate.lt.0))then
-                  write (*,*) 'Error in link_to_Born',itree(j_fks,i_fks)
-                  stop
-               endif
-            endif
-         enddo
-      elseif (mother.eq.2) then
-         do i=-1,-nbranch,-1
-            if (itree(1,i).eq.j_fks.and.itree(2,i).eq.i_fks) then
-               surrogate=i
-            endif
-         enddo
-         if (surrogate.eq.0) then
-            surrogate=-nbranch 
-         endif
-         nt_channel=nt_channelin-1
-         ns_channel=ns_channelin
-      else
-        surrogate=mother
-        nt_channel=nt_channelin
-        ns_channel=ns_channelin-1 
-      endif
-
-c Map the itree to the default form of born tree
-      do j=-1,-nbranch,-1
-         do i=1,2
-            if (j.gt.surrogate)then
-               if (itree(i,j).lt.surrogate) then
-                  BornFromRealTree(i,j)=itree(i,j)+1
-               elseif(itree(i,j).eq.surrogate) then
-                  BornFromRealTree(i,j)=min(i_fks,j_fks)
-               elseif(itree(i,j).gt.surrogate .and. itree(i,j).lt.0) then
-                  BornFromRealTree(i,j)=itree(i,j)
-               elseif(itree(i,j).lt.max(i_fks,j_fks) .and.
-     &                 itree(i,j).gt.0) then
-                  BornFromRealTree(i,j)=itree(i,j)
-               elseif(itree(i,j).gt.max(i_fks,j_fks)) then
-                  BornFromRealTree(i,j)=itree(i,j)-1
-               endif
-               if (-j.le.ns_channel) then
-                  spropBfR(j)=spropR(j)
-               else
-                  tpridBfR(j)=tpridR(j)
-               endif
-            elseif(j.lt.surrogate)then
-               if (itree(i,j).lt.surrogate) then
-                  BornFromRealTree(i,j+1)=itree(i,j)+1
-               elseif(itree(i,j).eq.surrogate) then
-                  BornFromRealTree(i,j+1)=min(i_fks,j_fks)
-               elseif(itree(i,j).gt.surrogate .and. itree(i,j).lt.0) then
-                  BornFromRealTree(i,j+1)=itree(i,j)
-               elseif(itree(i,j).lt.max(i_fks,j_fks) .and.
-     &                 itree(i,j).gt.0 ) then
-                  BornFromRealTree(i,j+1)=itree(i,j)
-               elseif(itree(i,j).gt.max(i_fks,j_fks)) then
-                  BornFromRealTree(i,j+1)=itree(i,j)-1
-               endif
-               if (-j-1.le.ns_channel) then
-                  spropBfR(j+1)=spropR(j)
-               else
-                  tpridBfR(j+1)=tpridR(j)
-               endif
-            endif
-         enddo
-      enddo
-
-      bbranch=nbranch-1  ! Might need to be changed for t channels
-
-c labels for the external particles should be the same between
-c the BornFromReal and the Born
-      do jb=1,nexternal-1
-         bup(jb)=jb
-      enddo
-
-c compare the default born tree with the born_conf.inc trees.
-      if (firsttime)then
-         mapbconf(0)=mapconfig(0)
-         do k=1,mapconfig(0)
-            bornfound(k)=.false.
-            mapbconf(k)=mapconfig(k)
-            do i=1,2
-               do j=-1,-bbranch,-1
-                  biforest(i,j,k) = iforest(i,j,k)
-               enddo
-            enddo
-         enddo
-         firsttime=.false.
-      endif
-      k=1
-      done=.false.
-      l=1
-      do while (.not.done)
-         do while (bornfound(k)) ! Always try a new Born
-            k=k+1
-         enddo
-         found=0
-         jb=-1
-         j=-1
-         do while (j.ge.-bbranch .and. jb .ge.-bbranch)
-            if ( (bup(BornFromRealTree(1,jb)).eq.iforest(1,j,k).and.
-     &            bup(BornFromRealTree(2,jb)).eq.iforest(2,j,k)  ).or.
-     &           (bup(BornFromRealTree(1,jb)).eq.iforest(2,j,k).and.
-     &            bup(BornFromRealTree(2,jb)).eq.iforest(1,j,k)   ))then
-               bup(jb)=j        ! jb in BornFromReal corresponds to j in Borns
-c Also check that the intermediate propagators agree
-               if (-j.le.ns_channel) then
-                  if(sprop(j,k).eq.spropBfR(jb)) then
-                     found=found+1
-                  else
-                     write (*,*) 'skip due to sprop'
-                  endif
-               else
-c For t-channel: particle vs anti-particle is ambiguous. Better use absolute ID for checking
-                  if(abs(tprid(j,k)).eq.abs(tpridBfR(jb))) then 
-                     found=found+1
-                  else
-                     write (*,*) 'skip due to tprid'
-                  endif
-               endif
-               if (found.ne.-jb) jb=-bbranch-1 ! goto next Born confi.
-               jb=jb-1          ! go to next line in BornFromRealTree
-               j=0              ! reset the line in iforest
-            endif
-            j=j-1
-         enddo
-         if (found.eq.bbranch)then
-            write (*,*) 'found Born conf',k,' for Real conf',iconfig
-            bornfound(k)=.true.
-            done=.true.
-            bconf=k
-         endif
- 132     continue
-         if (k.gt.mapconfig(0))then
-            write (*,*) 'FATAL ERROR 1 in link_to_born:'
-     &                //' no Born found for config',iconfig
-            stop
-         endif
-         k=k+1
-      enddo
-
-
-      return
-      end
-
-
-
-
-
-
-    
-
-      subroutine invert_order_iforest_REAL(nbranch,ns_channel,
-     &     nt_channel,iconfig)
-c This routine inverts the order of the t-channel (from 'top->bottom'
-c to 'bottom->top', ie now starting from particle 2) for configuration
-c iconfig in configs.inc and props.inc
-c It's assumed that the final state branch connecting to particle 2
-c is a single particle, ie with a positive id.
-c Note that this routine OVERWRITES the existing configs.inc and props.inc
-c files, which can be dangerous if this routine is
-c called more than once in successive runs.
-      implicit none
-      include 'genps.inc'
-      include "nexternal.inc"
-      integer nbranch,nt_channel,ns_channel,iconfig
-      character*76 buff,printout(1000000)
-      character*60 buff60
-      character*38 buff38
-      character*37 buff37
-      character*33 buff33
-      character*32 buff32
-      character*23 buff23
-      character*16 buff16,file
-      character*9 dummy9
-      character*13 dummy13
-      character*16 empty60
-      parameter (empty60='                ')
-      character*38 empty38
-      parameter (empty38='                                      ')
-      character*39 empty37
-      parameter (empty37='                                       ')
-      character*43 empty33
-      parameter (empty33='                                           ')
-      character*44 empty32
-      parameter (empty32='                                            ')
-      character*53 empty23
-      parameter (
-     &  empty23='                                                     ')
-      character*60 empty16
-      parameter (empty16='                        '//
-     &     '                                    ')
-      integer number1,number2,curgraph,i,l
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer mapconfig(0:lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      include 'configs.inc'
-      logical done
-      write(*,*) "--inverting real configs"
-
-      if (nt_channel.gt.0) then
-      open (unit=88,file='configs.inc',status='old')
-      rewind (88)
-      done=.false.
-      l=0
-      do while (.not.done)
-         read(88,'(a76)',end=192) buff
-         l=l+1
-         write(printout(l),'(a76)'),buff
-         if (buff(1:13).eq.'C     Diagram') then
-         write(*,*) "diagrem found in configs.inc"
-c found a new graph           
-            read(buff,'(a13,i4)') dummy13, curgraph
-            if ( curgraph.eq.mapconfig(iconfig) ) then
-c this is the graph we are looking for               
-               read(88,'(a33)') buff33
-               l=l+1
-               write(printout(l),'(a76)'),buff33//empty33
-c s-channels always come first -> do nothing
-               do i=1,ns_channel*2
-                  read(88,'(a76)') buff
-                  l=l+1
-                  write(printout(l),'(a76)'),buff
-               enddo
-c then the t-channel, for which we have to reverse the order
-               do i=1,nt_channel*2+1
-                  if (i.eq.1) then
-                     read(88,'(a76)') buff
-                     number1=2
-                     number2=max(iforest(1,-nbranch,iconfig),
-     &                    iforest(2,-nbranch,iconfig))
-                     write(buff(40:46),'(i3,a1,i3)') number1,',',number2
-                     l=l+1
-                     write(printout(l),'(a76)'),buff
-                  elseif (i.eq.nt_channel*2+1) then
-                     read(88,'(a60)') buff60
-                     number1=-ns_channel-(i-1)/2
-                     number2=iforest(1,-nbranch+(i-1)/2,iconfig)
-                     if (number2.eq.1) then
-                        number2=iforest(2,-nbranch+(i-1)/2,iconfig)
-                     endif
-                     write(buff60(40:46),'(i3,a1,i3)')
-     &                    number1,',',number2
-                     l=l+1
-                     write(printout(l),'(a76)'),buff60//empty60
-                  elseif(mod(i,2).eq.1) then
-                     read(88,'(a76)') buff
-                     number1=-ns_channel-(i-1)/2
-                     number2=max(iforest(1,-nbranch+(i-1)/2,iconfig),
-     &                    iforest(2,-nbranch+(i-1)/2,iconfig))
-                     if (number2.eq.1) then
-                        number2=min(iforest(1,-nbranch+(i-1)/2,iconfig),
-     &                       iforest(2,-nbranch+(i-1)/2,iconfig))
-                     endif
-                     write(buff(40:46),'(i3,a1,i3)') number1,',',number2
-                     l=l+1
-                     write(printout(l),'(a76)'),buff
-                  elseif(mod(i,2).eq.0) then
-                     read(88,'(a38)') buff38
-                     write(buff38(30:36),'(i6)')
-     &                    tprid(-nbranch+i/2,iconfig)
-                     l=l+1
-                     write(printout(l),'(a76)'),buff38//empty38
-                  endif
-               enddo
-            endif
-         endif
-      enddo
- 192  continue
-      rewind(88)
-      if (l.gt.1000000) then
-         write (*,*)
-     &        'too many lines in configs.inc for t-channel inversion'
-         stop
-      endif
-      do i=1,l
-         write(88,'(a76)') printout(i)
-      enddo
-      close(unit=88)
-      endif
-      
-
-      l=0
-c Order of t-channel propagators has changed.
-c Also rewrite props.inc
-      if (nt_channel.gt.1) then
-         done=.false.
-         open (unit=88,file='props.inc',status='old')
-         rewind(88)
-         do while (.not. done)
-            read (88,'(a76)',end=193) buff
-            l=l+1
-            write(printout(l),'(a76)'),buff
-            if (buff(1:12).eq.'      PMASS(') then
-              write(*,*)"propagator found in props.inc"
-               read (buff(17:20),'(i4)') curgraph
-               if (curgraph.eq.mapconfig(iconfig)) then
-                  l=l-1
-                  backspace(88)
-c s-channels always come first               
-                  do i=1,ns_channel*3
-                     read (88,'(a76)') buff
-                     l=l+1
-                     write(printout(l),'(a76)'),buff
-                  enddo
-c then the t-channel
-                  do i=1,nt_channel
-                     read(88,'(a37)') buff37
-                     write(buff37(13:15),'(i3)') -nbranch+i
-                     if (index(buff37,'ABS').gt.0) then
-                        l=l+1
-                        write(printout(l),'(a76)'),buff37//empty37
-                     else
-                        l=l+1
-                        write(printout(l),'(a76)'),buff37(1:32)//empty32
-                     endif
-                     read(88,'(a38)') buff38
-                     write(buff38(14:16),'(i3)') -nbranch+i
-                     if (index(buff38,'ABS').gt.0) then
-                        l=l+1
-                        write(printout(l),'(a76)'),buff38//empty38
-                     else
-                        l=l+1
-                        write(printout(l),'(a76)'),buff38(1:33)//empty33
-                     endif
-                     read(88,'(a23)') buff23
-                     write(buff23(11:13),'(i3)') -nbranch+i
-                     l=l+1
-                     write(printout(l),'(a76)'),buff23//empty23
-                  enddo
-               endif
-            endif
-         enddo
- 193     continue
-         rewind(88)
-         if (l.gt.1000000) then
-            write (*,*)
-     &           'too many lines in props.inc for t-channel inversion'
-            stop
-         endif
-         do i=1,l
-            write(88,'(a76)') printout(i)
-         enddo
-         close(unit=88)
-      endif
-
-
-      return
-      end
-
-
-      subroutine invert_order_iforest_BORN(nbranch,ns_channel,
-     &     nt_channel,iconfig)
-c This routine inverts the order of the t-channel (from 'top->bottom'
-c to 'bottom->top', ie now starting from particle 2) for Born configuration
-c borngraph in born_props.inc and born_conf.inc.
-c It's assumed that the final state branch connecting to particle 2
-c is a single particle, ie with a positive id.
-c Note that this routine OVERWRITES the existing born_conf.inc
-c and born_props.inc files, which can be dangerous if this routine is
-c called more than once in successive runs.
-      implicit none
-      include 'genps.inc'
-      include "nexternal.inc"
-      integer nbranch,nt_channel,ns_channel,iconfig
-      character*76 buff,printout(1000000)
-      character*60 buff60
-      character*38 buff38
-      character*37 buff37
-      character*33 buff33
-      character*32 buff32
-      character*23 buff23
-      character*16 buff16,file
-      character*9 dummy9
-      character*13 dummy13
-      character*16 empty60
-      parameter (empty60='                ')
-      character*38 empty38
-      parameter (empty38='                                      ')
-      character*39 empty37
-      parameter (empty37='                                       ')
-      character*43 empty33
-      parameter (empty33='                                           ')
-      character*44 empty32
-      parameter (empty32='                                            ')
-      character*53 empty23
-      parameter (
-     &  empty23='                                                     ')
-      character*60 empty16
-      parameter (empty16='                        '//
-     &     '                                    ')
-      integer number1,number2,curgraph,i,l
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer mapconfig(0:lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      include 'born_conf.inc'
-      logical done
-      write(*,*) "--inverting born configs"
-
-
-      if (nt_channel.gt.0) then
-      open (unit=88,file='born_conf.inc',status='old')
-      rewind (88)
-      done=.false.
-      l=0
-      do while (.not.done)
-         read(88,'(a76)',end=192) buff
-         l=l+1
-         write(printout(l),'(a76)'),buff
-         if (buff(1:13).eq.'C     Diagram') then
-         write(*,*) "diagrem found in born_conf.inc"
-c found a new graph           
-            read(buff,'(a13,i4)') dummy13, curgraph
-               if (curgraph.eq.mapconfig(iconfig)) then
-c this is the graph we are looking for               
-               read(88,'(a33)') buff33
-               l=l+1
-               write(printout(l),'(a76)'),buff33//empty33
-c s-channels always come first -> do nothing
-               do i=1,ns_channel*2
-                  read(88,'(a76)') buff
-                  l=l+1
-                  write(printout(l),'(a76)'),buff
-               enddo
-c then the t-channel, for which we have to reverse the order
-               do i=1,nt_channel*2+1
-                  if (i.eq.1) then
-                     read(88,'(a76)') buff
-                     number1=2
-                     number2=max(iforest(1,-nbranch,iconfig),
-     &                    iforest(2,-nbranch,iconfig))
-                     write(buff(40:46),'(i3,a1,i3)') number1,',',number2
-                     l=l+1
-                     write(printout(l),'(a76)'),buff
-                  elseif (i.eq.nt_channel*2+1) then
-                     read(88,'(a60)') buff60
-                     number1=-ns_channel-(i-1)/2
-                     number2=iforest(1,-nbranch+(i-1)/2,iconfig)
-                     if (number2.eq.1) then
-                        number2=iforest(2,-nbranch+(i-1)/2,iconfig)
-                     endif
-                     write(buff60(40:46),'(i3,a1,i3)')
-     &                    number1,',',number2
-                     l=l+1
-                     write(printout(l),'(a76)'),buff60//empty60
-                  elseif(mod(i,2).eq.1) then
-                     read(88,'(a76)') buff
-                     number1=-ns_channel-(i-1)/2
-                     number2=max(iforest(1,-nbranch+(i-1)/2,iconfig),
-     &                    iforest(2,-nbranch+(i-1)/2,iconfig))
-                     if (number2.eq.1) then
-                        number2=min(iforest(1,-nbranch+(i-1)/2,iconfig),
-     &                       iforest(2,-nbranch+(i-1)/2,iconfig))
-                     endif
-                     write(buff(40:46),'(i3,a1,i3)') number1,',',number2
-                     l=l+1
-                     write(printout(l),'(a76)'),buff
-                  elseif(mod(i,2).eq.0) then
-                     read(88,'(a38)') buff38
-                     write(buff38(30:36),'(i6)')
-     &                    tprid(-nbranch+i/2,iconfig)
-                     l=l+1
-                     write(printout(l),'(a76)'),buff38//empty38
-                  endif
-               enddo
-            endif
-         endif
-      enddo
- 192  continue
-      rewind(88)
-      if (l.gt.1000000) then
-         write (*,*)
-     &        'too many lines in born_conf.inc for t-channel inversion'
-         stop
-      endif
-      do i=1,l
-         write(88,'(a76)') printout(i)
-      enddo
-      close(unit=88)
-      endif
-      
-      l=0
-c Order of t-channel propagators has changed.
-c Also rewrite props.inc
-      if (nt_channel.gt.1) then
-         done=.false.
-         open (unit=88,file='born_props.inc',status='old')
-         rewind(88)
-         do while (.not. done)
-            read (88,'(a76)',end=193) buff
-            l=l+1
-            write(printout(l),'(a76)'),buff
-            if (buff(1:12).eq.'      PMASS(') then
-              write(*,*)"propagator found in born_props.inc"
-               read (buff(17:20),'(i4)') curgraph
-               if (curgraph.eq.mapconfig(iconfig)) then
-                  l=l-1
-                  backspace(88)
-c s-channels always come first               
-                  do i=1,ns_channel*3
-                     read (88,'(a76)') buff
-                     l=l+1
-                     write(printout(l),'(a76)'),buff
-                  enddo
-c then the t-channel
-                  do i=1,nt_channel
-                     read(88,'(a37)') buff37
-                     write(buff37(13:15),'(i3)') -nbranch+i
-                     if (index(buff37,'ABS').gt.0) then
-                        l=l+1
-                        write(printout(l),'(a76)'),buff37//empty37
-                     else
-                        l=l+1
-                        write(printout(l),'(a76)'),buff37(1:32)//empty32
-                     endif
-                     read(88,'(a38)') buff38
-                     write(buff38(14:16),'(i3)') -nbranch+i
-                     if (index(buff38,'ABS').gt.0) then
-                        l=l+1
-                        write(printout(l),'(a76)'),buff38//empty38
-                     else
-                        l=l+1
-                        write(printout(l),'(a76)'),buff38(1:33)//empty33
-                     endif
-                     read(88,'(a23)') buff23
-                     write(buff23(11:13),'(i3)') -nbranch+i
-                     l=l+1
-                     write(printout(l),'(a76)'),buff23//empty23
-                  enddo
-               endif
-            endif
-         enddo
- 193     continue
-         rewind(88)
-         if (l.gt.1000000) then
-            write (*,*)
-     &           'too many lines in born_props.inc '
-     &           //'for t-channel inversion'
-            stop
-         endif
-         do i=1,l
-            write(88,'(a76)') printout(i)
-         enddo
-         close(unit=88)
-      endif
-
-
-      return
-      end
-
-
-
-
-
       double precision function dsig(pp,wgt,vegaswgt)
 c Here are the subtraction terms, the Sij function, 
 c the f-damping function, and the single diagram
 c enhanced multi-channel factor included
       implicit none
       include "genps.inc"
-      include "nexternal.inc"
-      include "fks.inc"
+      include 'nexternal.inc'
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include "fks_powers.inc"
       include 'coupl.inc'
       include 'q_es.inc'
       include 'run.inc'
       include 'reweight.inc'
+      include 'reweightNLO.inc'
 
       double precision pp(0:3,nexternal),wgt,vegaswgt
 
@@ -1325,7 +254,7 @@ c enhanced multi-channel factor included
      #                 deg_xi_c,deg_lxi_c,deg_xi_sc,deg_lxi_sc,
      #                 cnt_swgt,cnt_wgt,xlum_ev,xlum_c,xlum_s,xlum_sc,xsec,
      #                 bpower
-      integer i,iplot
+      integer i,j,iplot
 
       integer izero,ione,itwo,mohdr,iplot_ev,iplot_cnt,iplot_born
       integer ithree,ifour,ifill2,ifill3,ifill4
@@ -1363,19 +292,12 @@ c Multi channel stuff:
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       common/to_mconfigs/mapconfig, iconfig
 
-      integer mapbconf(0:lmaxconfigs)
-      integer b_from_r(lmaxconfigs)
-      integer r_from_b(lmaxconfigs)
-      include "bornfromreal.inc"
-
       double complex wgt1(2)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
       double precision ev_enh,enhance,rwgt,unwgtfun
       logical firsttime,passcuts
@@ -1426,7 +348,7 @@ c FKS stuff:
       integer ngluons,nquarks(-6:6)
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg,ngluons,nquarks
-      integer diagramsymmetryfactor
+      double precision diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
 
       logical multi_chan(lmaxconfigs)
@@ -1435,8 +357,8 @@ c FKS stuff:
       character*4 abrv
       common /to_abrv/ abrv
 
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
 
       double precision vegas_weight
       common/cvegas_weight/vegas_weight
@@ -1458,12 +380,6 @@ c Random numbers to be used in the plotting routine
 c For tests
       real*8 fksmaxwgt,xisave,ysave
       common/cfksmaxwgt/fksmaxwgt,xisave,ysave
-      integer icou_calls,icou_kinev,icou_sev,icou_meev,icou_kincnt,
-     #  icou_scnt,icou_mecnt
-      common/counters/icou_calls,icou_kinev,icou_sev,icou_meev,
-     #                           icou_kincnt,icou_scnt,icou_mecnt
-      integer itotalpoints
-      common/ctotalpoints/itotalpoints
 
       logical ExceptPSpoint
       integer iminmax
@@ -1478,13 +394,8 @@ c For tests
       common/csum_of_wgts/total_wgt_sum,total_wgt_sum_max,
      &                 total_wgt_sum_min
 
-      integer imirror
-      common /cmirror/imirror
-
       double precision pmass(nexternal)
       include "pmass.inc"
-
-      imirror=1
 
       vegas_weight=vegaswgt
 
@@ -1501,22 +412,15 @@ c For tests
          fksmaxwgt=0.d0
 c Put here call to compute bpower
          call compute_bpower(p_born,bpower)
-c Check consistency with value used in reweighting
-c$$$         if( (doreweight.or.doNLOreweight) .and.
-c$$$     &        abs(bpower-wgtbpower).gt.tiny )then
-c$$$            write(*,*)'Error in dsig'
-c$$$            write(*,*)'bpower(s) are:',bpower,wgtbpower
-c$$$            stop
-c$$$         endif
          wgtbpower=bpower
          firsttime=.false.
       endif
 
       prefact=xinorm_ev/xi_i_fks_ev*
      #        1/(1-y_ij_fks_ev)
-
-      if( (.not.nocntevents) .and.
-     #    (.not.(abrv.eq.'born' .or. abrv(1:2).eq.'vi')) )then
+      if( (.not.nocntevents) .and. (.not.(abrv.eq.'born' .or. abrv.eq
+     &     .'grid' .or. abrv(1:2).eq.'vi' .or. nbody))
+     &     )then
         prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
      #                  log(xicut_used/min(xiimax_ev,xiScut_used))*
      #                  1/(1-y_ij_fks_ev)
@@ -1580,8 +484,8 @@ c points)
         ifill3=0
         ifill4=0
       endif
-
-      if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 540
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
+     &     nbody)goto 540
 c Real contribution:
 c Set the ybst_til_tolab before applying the cuts. 
       call set_cms_stuff(mohdr)
@@ -1604,7 +508,7 @@ c Set the ybst_til_tolab before applying the cuts.
              wgtmuF12(1)=muF12_current/muF1_over_ref**2
              wgtmuF22(1)=muF22_current/muF2_over_ref**2
              call reweight_fillkin(pp,ione)
-             wgtwreal(1)=xsec/g**(2*wgtbpower+2.d0)
+             wgtwreal(1)=xsec/g**(nint(2*wgtbpower+2.d0))
            endif
         endif
       endif
@@ -1612,12 +516,12 @@ c
 c All counterevent have the same final-state kinematics. Check that
 c one of them passes the hard cuts, and they exist at all
  540  continue
-
 c Set the ybst_til_tolab before applying the cuts. Update below
 c for the collinear, soft and/or soft-collinear subtraction terms
       call set_cms_stuff(izero)
       if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
      #     nocntevents ) goto 547
+
       call set_alphaS(p1_cnt(0,1,0))
       if(doNLOreweight)then
         wgtqes2(2)=QES2
@@ -1630,7 +534,8 @@ c for the collinear, soft and/or soft-collinear subtraction terms
         ifill2=1
       endif
 
-      if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 545
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
+     &     nbody)goto 545
 c
 c Collinear subtraction term:
       if( y_ij_fks_ev.gt.1d0-deltaS .and.
@@ -1659,14 +564,14 @@ c Collinear subtraction term:
             if(doNLOreweight)then
               call reweight_fillkin(pp,ithree)
               ifill3=1
-              wgtwreal(3)=-xsec/g**(2*wgtbpower+2.d0)
+              wgtwreal(3)=-xsec/g**(nint(2*wgtbpower+2.d0))
               wgtwdeg(3)=
      #              ( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(ione)) )*
      #                      jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
-     #              g**(2*wgtbpower+2.d0)
+     #              g**(nint(2*wgtbpower+2.d0))
               wgtwdegmuf(3)=wgtdegrem_muF *
      #                      jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
-     #              g**(2*wgtbpower+2.d0)
+     #              g**(nint(2*wgtbpower+2.d0))
             endif
          endif
       endif
@@ -1683,10 +588,11 @@ c Soft subtraction term:
            endif
          endif
          s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
-         if(nbodyonly)s_s=1.d0
+         if(nbody)s_s=1.d0
          if(s_s.gt.0.d0)then
             xlum_s = dlum()
-            if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 546
+            if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &           abrv(1:2).eq.'vi' .or. nbody) goto 546
             if (xi_i_fks_ev .lt. xiScut_used) then
               call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
               xsec=fx_s*s_s*jac_cnt(0)
@@ -1695,10 +601,10 @@ c Soft subtraction term:
               cnt_swgt_s=cnt_swgt_s-cnt_s*prefact_cnt_ssc*rwgt
               if(doNLOreweight)
      #          wgtwreal(2)=-xsec*(prefact+prefact_cnt_ssc)*rwgt/
-     #                      g**(2*wgtbpower+2.d0)
+     #                      g**(nint(2*wgtbpower+2.d0))
             endif
  546        continue
-            if (abrv.eq.'real') goto 548
+            if (abrv.eq.'real' .or. .not.nbody) goto 548
             if (xi_i_fks_ev .lt. xiBSVcut_used) then
               xsec=s_s*jac_cnt(0)*xinorm_ev/
      #             (min(xiimax_ev,xiBSVcut_used)*shat/(16*pi**2))*
@@ -1707,13 +613,15 @@ c Soft subtraction term:
               call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,born_wgt)
               if(doNLOreweight)then
                 if(wgtbpower.gt.0)then
-                  wgtwborn(2)=born_wgt*xsec/g**(2*wgtbpower)
+                  wgtwborn(2)=born_wgt*xsec/g**(nint(2*wgtbpower))
                 else
                   wgtwborn(2)=born_wgt*xsec
                 endif
-                wgtwns(2)=wgtnstmp*xsec/g**(2*wgtbpower+2.d0)
-                wgtwnsmuf(2)=wgtwnstmpmuf*xsec/g**(2*wgtbpower+2.d0)
-                wgtwnsmur(2)=wgtwnstmpmur*xsec/g**(2*wgtbpower+2.d0)
+                wgtwns(2)=wgtnstmp*xsec/g**(nint(2*wgtbpower+2.d0))
+                wgtwnsmuf(2)=wgtwnstmpmuf*xsec/g**(nint(2*wgtbpower
+     &               +2.d0))
+                wgtwnsmur(2)=wgtwnstmpmur*xsec/g**(nint(2*wgtbpower
+     &               +2.d0))
               endif
               bsv_wgt=bsv_wgt*xnormsv
               born_wgt=born_wgt*xnormsv
@@ -1723,7 +631,8 @@ c Soft subtraction term:
          endif
       endif
 c Soft-Collinear subtraction term:
-      if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 547
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
+     &     nbody)goto 547
       if (xi_i_fks_cnt(ione) .lt. xiScut_used .and.
      #    y_ij_fks_ev .gt. 1d0-deltaS .and.
      #    pmass(j_fks).eq.0.d0 )then
@@ -1760,16 +669,16 @@ c Soft-Collinear subtraction term:
               ifill4=1
               wgtwreal(4)=xsec*(prefact_c+prefact_coll+
      #                          prefact_cnt_ssc_c+prefact_coll_c)*rwgt/
-     #                    g**(2*wgtbpower+2.d0)
+     #                    g**(nint(2*wgtbpower+2.d0))
               wgtwdeg(4)=(
      # -( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(ione)) )*prefact_deg
      # -( wgtdegrem_xi*prefact_deg_sxi+wgtdegrem_lxi*prefact_deg_slxi ) )*
      #                     jac_cnt(2)*rwgt/(shat/(32*pi**2))/
-     #              g**(2*wgtbpower+2.d0)
+     #              g**(nint(2*wgtbpower+2.d0))
               wgtwdegmuf(4)=
      #          -wgtdegrem_muF*( prefact_deg+prefact_deg_sxi )*
      #                     jac_cnt(2)*rwgt/(shat/(32*pi**2))/
-     #              g**(2*wgtbpower+2.d0)
+     #              g**(nint(2*wgtbpower+2.d0))
             endif
          endif
       endif
@@ -1802,25 +711,25 @@ c
             endif
          else
             xtot=0d0
-            if (mapbconf(0).eq.0) then
+            if (mapconfig(0).eq.0) then
                write (*,*) 'Fatal error in dsig, no Born diagrams '
-     &           ,mapbconf,'. Check bornfromreal.inc'
+     &           ,mapconfig,'. Check bornfromreal.inc'
                write (*,*) 'Is fks_singular compiled correctly?'
                stop
             endif
             if (onlyBorn) then
-               do i=1, mapbconf(0)
-                  if (multi_chan(mapbconf(i))) then
-                     xtot=xtot+amp2(mapbconf(i))
+               do i=1, mapconfig(0)
+                  if (multi_chan(mapconfig(i))) then
+                     xtot=xtot+amp2(mapconfig(i))
                   endif
                enddo
             else
-               do i=1,mapbconf(0)
-                  xtot=xtot+amp2(mapbconf(i))
+               do i=1,mapconfig(0)
+                  xtot=xtot+amp2(mapconfig(i))
                enddo
             endif
             if (xtot.ne.0d0) then
-               enhance=amp2(b_from_r(mapconfig(iconfig)))/xtot
+               enhance=amp2(mapconfig(iconfig))/xtot
                enhance=enhance*diagramsymmetryfactor
             else
                enhance=0d0
@@ -1879,6 +788,7 @@ c
            call reweight_fill_extra()
            if(check_reweight.and.doNLOreweight)
      #       call check_rwgt_wgt("NLO")
+           if(doNLOscaleunc.or.doNLOPDFunc)call fill_rwgt_NLOplot()
 c Example of reweighted cross section (scale changed)
 c           dsig_new=compute_rwgt_wgt_NLO(new_muR_fact,new_muF1_fact,
 c     #                                   new_muF2_fact,new_QES_fact,
@@ -1891,19 +801,6 @@ c For tests
             xisave=xi_i_fks_ev
             ysave=y_ij_fks_ev
          endif
-         if (dsig.ne.0d0) itotalpoints=itotalpoints+1
-         icou_calls=icou_calls+1
-         if(pp(0,1).gt.0.d0)icou_kinev=icou_kinev+1
-         if(s_ev.gt.0.d0)icou_sev=icou_sev+1
-         if(s_ev.gt.0.d0.and.abs(ev_wgt).gt.0.d0)icou_meev=icou_meev+1
-         if( p1_cnt(0,1,0).gt.0.d0 .or.
-     &        p1_cnt(0,1,1).gt.0.d0 .or.
-     &        p1_cnt(0,1,2).gt.0.d0 )icou_kincnt=icou_kincnt+1
-         if( s_s.gt.0.d0.or.s_c.gt.0.d0.or.
-     &        s_sc.gt.0.d0 )icou_scnt=icou_scnt+1
-         if( (s_s.gt.0.d0.or.s_c.gt.0.d0.or.
-     &        s_sc.gt.0.d0).and.abs(cnt_wgt).gt.0.d0)
-     &        icou_mecnt=icou_mecnt+1
 
 c Plot observables for event
          plot_wgt=ev_wgt*fkssymmetryfactor*vegaswgt
@@ -1915,21 +812,27 @@ c Plot observables for counterevents and Born
      &              bsv_wgt*fkssymmetryfactorBorn +
      &              deg_wgt*fkssymmetryfactorDeg +
      &              deg_swgt*fkssymmetryfactorDeg )*vegaswgt
-         if(abs(plot_wgt).gt.1.d-20.and.p1_cnt(0,1,iplot).ne.-99d0)then
+         if(abs(plot_wgt).gt.1.d-20) then
             if(iplot.eq.-3)then
                write(*,*)'Error #1 in dsig'
                stop
+            elseif (p1_cnt(0,1,iplot).ne.-99d0)then
+               call outfun(p1_cnt(0,1,iplot),ybst_til_tolab,plot_wgt,
+     &              iplot_cnt)
             endif
-            call outfun(p1_cnt(0,1,iplot),ybst_til_tolab,plot_wgt,
-     &                  iplot_cnt)
          endif
 c Plot observables for Born; pass cnt momenta assuming they are
 c identical to Born ones
          plot_wgt=born_wgt*fkssymmetryfactorBorn*vegaswgt
-         if(abs(plot_wgt).gt.1.d-20.and.p1_cnt(0,1,iplot).ne.-99d0)
-     &        call outfun(p1_cnt(0,1,iplot),ybst_til_tolab,plot_wgt,
-     &                    iplot_born)
-
+         if(abs(plot_wgt).gt.1.d-20) then
+            if(iplot.eq.-3)then
+               write(*,*)'Error #1 in dsig'
+               stop
+            elseif (p1_cnt(0,1,iplot).ne.-99d0)then
+               call outfun(p1_cnt(0,1,iplot),ybst_til_tolab,plot_wgt,
+     &              iplot_born)
+            endif
+         endif
       elseif (iminmax.eq.1 .and. ExceptPSpoint) then
 c for except PS points, this is the maximal approx for the virtual         
          call unweight_function(p_born,unwgtfun)
@@ -1965,562 +868,50 @@ c based on previous PS points (done in LesHouches.f)
       end
 
 
-      double precision function dsigH(pp,wgt,vegaswgt)
-c Here are the subtraction terms, the Sij function, 
-c the f-damping function, and the single diagram
-c enhanced multi-channel factor included
-      implicit none
-      include "genps.inc"
-      include "nexternal.inc"
-      include "fks.inc"
-      include "fks_powers.inc"
-      include "madfks_mcatnlo.inc"
-      include 'coupl.inc'
-      include 'run.inc'
-      include 'reweight.inc'
-
-      double precision pp(0:3,nexternal),wgt,vegaswgt
-
-      double precision fks_Sij,fks_Hij,f_damp,dot,dlum
-      external fks_Sij,fks_Hij,f_damp,dot,dlum
-
-      double precision prefact,ev_wgt,xmc_wgt,plot_wgt,x,
-     # ffact,s_ev,fx_ev,gfactsf,gfactcl,xmcMC,xmcME,xmc,totH_wgt,
-     # xtot,xlum_ev,xlum_mc,xlum_mc_save,dummy,fx_c,fx_s,
-     # fx_sc,s_c,s_s,s_sc,xlum_c,xlum_s,xlum_sc,prefact_c,
-     # bpower
-      double precision probne,sevmc,get_ptrel,xlum_mc_fact,xsec
-      integer i,ifill1,ifill2,ifill3,ifill4
-
-      integer mohdr,iplot_ev
-      parameter (mohdr=-100)
-      parameter (iplot_ev=11)
-
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-
-      double precision p1_cnt(0:3,nexternal,-2:2)
-      double precision wgt_cnt(-2:2)
-      double precision pswgt_cnt(-2:2)
-      double precision jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-
-      integer izero,ione,itwo,ithree,ifour
-      parameter (izero=0)
-      parameter (ione=1)
-      parameter (itwo=2)
-      parameter (ithree=3)
-      parameter (ifour=4)
-
-c Multi channel stuff:
-      Double Precision amp2(maxamps), jamp2(0:maxamps)
-      common/to_amps/  amp2,       jamp2
-
-      integer          isum_hel
-      logical                    multi_channel
-      common/to_matrix/isum_hel, multi_channel
-      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
-      common/to_mconfigs/mapconfig, iconfig
-
-      integer mapbconf(0:lmaxconfigs)
-      integer b_from_r(lmaxconfigs)
-      integer r_from_b(lmaxconfigs)
-      include "bornfromreal.inc"
-
-      double complex wgt1(2)
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
-
-      double precision hel_fac
-      logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
-
-      double precision enhance,rwgt,unwgtfun
-      logical firsttime,passcuts
-      data firsttime /.true./
-      integer inoborn_ev,inoborn_cnt
-      double precision xnoborn_ev,xnoborn_cnt
-
-c FKS stuff:
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-
-      double precision xi_i_fks_cnt(-2:2)
-      common /cxiifkscnt/xi_i_fks_cnt
-
-      double precision xinorm_ev
-      common /cxinormev/xinorm_ev
-      double precision xinorm_cnt(-2:2)
-      common /cxinormcnt/xinorm_cnt
-
-      double precision zero,one
-      parameter (zero=0d0,one=1d0)
-      double precision tiny
-      parameter (tiny=1d-6)
-
-      double precision fkssymmetryfactor,fkssymmetryfactorBorn,
-     &     fkssymmetryfactorDeg
-      integer ngluons,nquarks(-6:6)
-      common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                         fkssymmetryfactorDeg,ngluons,nquarks
-      integer diagramsymmetryfactor
-      common /dsymfactor/diagramsymmetryfactor
-
-      logical multi_chan(lmaxconfigs)
-      common /to_multi_chan/multi_chan
-
-      character*4 abrv
-      common /to_abrv/ abrv
-
-      double precision vegas_weight
-      common/cvegas_weight/vegas_weight
-
-      double precision zhw_used
-c MC stuff
-      double precision zhw(nexternal),xmcxsec(nexternal)
-      integer nofpartners
-      logical lzone(nexternal),flagmc
-
-c Stuff to be written (depending on AddInfoLHE) onto the LHE file
-      integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
-      double precision scale1_lhe,scale2_lhe
-      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                fksfather_lhe,ipartner_lhe
-      common/cto_LHE2/scale1_lhe,scale2_lhe
-
-c CKWW scale, from cuts.f
-      double precision scale_CKKW
-      common/cscale_CKKW/scale_CKKW
-
-c For the MINT folding
-      integer fold
-      common /cfl/fold
-
-      logical unwgt
-      double precision evtsgn
-      common /c_unwgt/evtsgn,unwgt
-
-c For plots
-      logical plotEv,plotKin
-      common/cEvKinplot/plotEv,plotKin
-
-c For tests
-      real*8 fksmaxwgt,xisave,ysave
-      common/cfksmaxwgt/fksmaxwgt,xisave,ysave
-
-      integer itotalpoints
-      common/ctotalpoints/itotalpoints
-
-      character*10 MonteCarlo
-      common/cMonteCarloType/MonteCarlo
-
-      integer ileg
-      common/cileg/ileg
-
-      double precision ximin
-      parameter(ximin=0.05d0)
-
-      double precision pmass(nexternal)
-      include "pmass.inc"
-
-      vegas_weight=vegaswgt
-
-      if (fold.eq.0) then
-         call get_helicity(i_fks,j_fks)
-         calculatedBorn=.false.
-      endif
-
-      if (firsttime)then
-         inoborn_ev=0
-         xnoborn_ev=0.d0
-         inoborn_cnt=0
-         xnoborn_cnt=0.d0
-         fksmaxwgt=0.d0
-c Put here call to compute bpower
-         call compute_bpower(p_born,bpower)
-c Check consistency with value used in reweighting
-c$$$         if( (doreweight.or.doNLOreweight) .and.
-c$$$     &        abs(bpower-wgtbpower).gt.tiny )then
-c$$$            write(*,*)'Error in dsigH'
-c$$$            write(*,*)'bpower(s) are:',bpower,wgtbpower
-c$$$            stop
-c$$$         endif
-         wgtbpower=bpower
-         firsttime=.false.
-      endif
-
-      prefact=xinorm_ev/xi_i_fks_ev*
-     #        1/(1-y_ij_fks_ev)
-      if(pmass(j_fks).eq.0.d0)then
-        prefact_c=xinorm_cnt(ione)/xi_i_fks_cnt(ione)*
-     #            1/(1-y_ij_fks_ev)
-      endif
-
-      ev_wgt=0.d0
-      xmc_wgt=0.d0
-      plot_wgt=0.d0
-
-      if(doreweight)then
-        if(.not.AddInfoLHE)then
-          write(*,*)'Error in dsigH'
-          write(*,*)'  AddInfoLHE must be true when unweighting'
-          stop
-        endif
-        call reweight_settozero()
-        ifill1=0
-        ifill2=0
-        ifill3=0
-        ifill4=0
-      endif
-
-      if(AddInfoLHE)then
-        iSorH_lhe=2
-        ifks_lhe=i_fks
-        jfks_lhe=j_fks
-        fksfather_lhe=0
-        ipartner_lhe=0
-        scale1_lhe=0.d0
-        scale2_lhe=0.d0
-      endif
-
-      if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') then
-         write (*,*) 'No need to generate Hevents when doing: ',abrv
-         stop
-      endif
-
-      probne=1.d0
-c MC counterterms. Cuts should be with the Born-type momenta. Rest is
-c with the event momenta.
-      call set_cms_stuff(izero)
-      if (passcuts(p1_cnt(0,1,0),rwgt)) then
-        gfactsf=1.d0
-        gfactcl=1.d0
-        sevmc=1.d0
-        xmcMC=0.d0
-        xmcME=0.d0
-        call set_cms_stuff(mohdr)
-        call set_alphaS(pp)
-        if(doreweight)then
-          wgtmuR2(1)=muR2_current/muR_over_ref**2
-          wgtmuF12(1)=muF12_current/muF1_over_ref**2
-          wgtmuF22(1)=muF22_current/muF2_over_ref**2
-          call reweight_fillkin(pp,ione)
-          ifill1=1
-          call reweight_fillkin(pp,itwo)
-          ifill2=1
-        endif
-        if(UseSfun)then
-           x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
-           ffact = f_damp(x)
-           sevmc = fks_Sij(pp,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
-           sevmc = sevmc*ffact
-        else
-           x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
-           ffact = f_damp(x)
-           sevmc = fks_Hij(pp,i_fks,j_fks)
-           sevmc = sevmc*ffact
-        endif
-        call xmcsubt(pp,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
-     #               dummy,nofpartners,lzone,flagmc,zhw,xmcxsec)
-
-        if(ileg.gt.4.or.ileg.lt.1)then
-           write(*,*)'Error: unrecognized ileg in dsigH', ileg
-           stop
-        endif
-
-        if(sevmc.gt.0.d0.and.flagmc)then
-          if(doreweight)then
-            iwgtnumpartn=nofpartners
-            xsec=-sevmc*wgt*prefact*rwgt
-          endif
-          xlum_mc_save=-1.d8
-          do i=1,nofpartners
-            if(lzone(i))then
-              zhw_used=zhw(i)
-              call get_mc_lum(j_fks,zhw_used,xi_i_fks_ev,
-     #                        xlum_mc_save,xlum_mc,xlum_mc_fact)
-              xmcMC=xmcMC+xmcxsec(i)*xlum_mc
-              if(doreweight)then
-                wgtwmcxsec(i)=xsec*xlum_mc_fact*xmcxsec(i)/
-     #                        g**(2*wgtbpower+2.d0)
-                wgtmcxbj(1,i)=xbk(1)
-                wgtmcxbj(2,i)=xbk(2)
-              endif
-            endif
-          enddo
-          xmcMC=-xmcMC*sevmc*wgt*prefact*rwgt
-        endif
-c
-        if( (.not.flagmc).and.gfactsf.eq.1.d0 .and.
-     #      xi_i_fks_ev.lt.0.02d0 .and. particle_type(i_fks).eq.8)then
-          write(*,*)'Error in dsigH: will diverge'
-          stop
-        endif
-c
-        if(gfactsf.lt.1.d0.and.probne.gt.0.d0)then
-          call set_cms_stuff(izero)
-          call set_alphaS(p1_cnt(0,1,0))
-          if(doreweight)then
-            wgtxbj(1,2)=xbk(1)
-            wgtxbj(2,2)=xbk(2)
-            wgtmuR2(2)=muR2_current/muR_over_ref**2
-            wgtmuF12(2)=muF12_current/muF1_over_ref**2
-            wgtmuF22(2)=muF22_current/muF2_over_ref**2
-            if(ifill2.ne.1)then
-              write(*,*)'Error #1[wg] in dsigH',ifill2
-              stop
-            endif
-          endif
-          s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
-          if(s_s.gt.0.d0)then
-            call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
-            xlum_s = dlum()
-            xsec = fx_s*s_s*jac_cnt(0)*prefact*rwgt
-            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
-            xmcME=xlum_s*xsec
-            if(doreweight)wgtwreal(2)=xsec/g**(2*wgtbpower+2.d0)
-          endif
-          if(gfactcl.lt.1.d0.and.pmass(j_fks).eq.0.d0)then
-            call set_cms_stuff(ione)
-            if(doreweight)then
-              wgtxbj(1,3)=xbk(1)
-              wgtxbj(2,3)=xbk(2)
-              call reweight_fillkin(pp,ithree)
-              ifill3=1
-            endif
-            s_c = fks_Sij(p1_cnt(0,1,1),i_fks,j_fks,xi_i_fks_cnt(ione),one)
-            if(s_c.gt.0.d0)then
-              if(abs(s_c-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
-                write(*,*)'Wrong S function in dsigH[c]',s_c
-                stop
-              endif
-              call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,fx_c)
-              xlum_c = dlum()
-              xsec = fx_c*s_c*jac_cnt(1)*prefact_c*rwgt*(1-gfactcl)
-              xmcME=xmcME+xlum_c*xsec
-            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
-              if(doreweight)wgtwreal(3)=xsec/g**(2*wgtbpower+2.d0)
-            endif
-            call set_cms_stuff(itwo)
-            if(doreweight)then
-              wgtxbj(1,4)=xbk(1)
-              wgtxbj(2,4)=xbk(2)
-              call reweight_fillkin(pp,ifour)
-              ifill4=1
-            endif
-            s_sc = fks_Sij(p1_cnt(0,1,2),i_fks,j_fks,zero,one)
-            if(s_sc.gt.0.d0)then
-              if(abs(s_sc-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
-                write(*,*)'Wrong S function in dsigH[sc]',s_sc
-                stop
-              endif
-              call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
-              xlum_sc = dlum()
-              xsec = fx_sc*s_sc*jac_cnt(2)*prefact_c*rwgt*(1-gfactcl)
-            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
-              xmcME=xmcME-xlum_sc*xsec
-              if(doreweight)wgtwreal(4)=-xsec/g**(2*wgtbpower+2.d0)
-            endif
-          endif
-          xmcME=-xmcME*(1-gfactsf)*probne
-          if(doreweight)then
-            xsec=(1-gfactsf)*probne
-            wgtwreal(2)=-wgtwreal(2)*xsec
-            wgtwreal(3)=-wgtwreal(3)*xsec
-            wgtwreal(4)=-wgtwreal(4)*xsec
-          endif
-        endif
-c
-        xmc_wgt=xmcMC+xmcME
-      endif
-
-c Real contribution
-c
-c Set the ybst_til_tolab before applying the cuts. 
-      call set_cms_stuff(mohdr)
-      if(doreweight)then
-        wgtxbj(1,1)=xbk(1)
-        wgtxbj(2,1)=xbk(2)
-      endif
-      if (passcuts(pp,rwgt).and.probne.gt.0.d0) then
-        call set_alphaS(pp)
-        x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
-        ffact = f_damp(x)
-        s_ev = fks_Sij(pp,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
-        if(s_ev.gt.0.d0)then
-          call sreal(pp,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
-          xlum_ev = dlum()
-          xsec = fx_ev*s_ev*ffact*wgt*prefact*rwgt*probne
-          ev_wgt = xlum_ev*xsec
-          if(doreweight)then
-            if(ifill1.eq.0)then
-              wgtmuR2(1)=muR2_current/muR_over_ref**2
-              wgtmuF12(1)=muF12_current/muF1_over_ref**2
-              wgtmuF22(1)=muF22_current/muF2_over_ref**2
-              call reweight_fillkin(pp,ione)
-              ifill1=1
-            endif
-            wgtwreal(1)=xsec/g**(2*wgtbpower+2.d0)
-          endif
-        endif
-        if(AddInfoLHE)scale2_lhe=get_ptrel(pp,i_fks,j_fks)
-      endif
-
-      if(AddInfoLHE.and.UseCKKW)then
-        if(scale1_lhe.eq.0.d0)scale1_lhe=scale2_lhe
-        scale2_lhe=scale_CKKW
-      endif
-
-      totH_wgt = ev_wgt+xmc_wgt
-c
-c Enhance the one channel for multi-channel integration
-c
-      enhance=1.d0
-      if (totH_wgt.ne.0d0 .and. multi_channel) then
-         if (xmc.eq.0d0) CalculatedBorn=.false.
-         if (.not.calculatedBorn .and. p_born(0,1).gt.0d0)then
-            call sborn(p_born,wgt1)
-         elseif(p_born(0,1).lt.0d0)then
-            enhance=0d0
-         endif
-
-         if (enhance.eq.0d0)then
-            xnoborn_cnt=xnoborn_cnt+1.d0
-            if(log10(xnoborn_cnt).gt.inoborn_cnt)then
-               write (*,*) 
-     #           'Function dsigH: no Born momenta more than 10**',
-     #           inoborn_cnt,'times'
-               inoborn_cnt=inoborn_cnt+1
-            endif
-         else
-            xtot=0d0
-            if (mapbconf(0).eq.0) then
-               write (*,*) 'Fatal error in dsigH, no Born diagrams '
-     &           ,mapbconf,'. Check bornfromreal.inc'
-               write (*,*) 'Is fks_singular compiled correctly?'
-               stop
-            endif
-            if (onlyBorn) then
-               do i=1, mapbconf(0)
-                  if (multi_chan(mapbconf(i))) then
-                     xtot=xtot+amp2(mapbconf(i))
-                  endif
-               enddo
-            else
-               do i=1,mapbconf(0)
-                  xtot=xtot+amp2(mapbconf(i))
-               enddo
-            endif
-            if (xtot.ne.0d0) then
-               enhance=amp2(b_from_r(mapconfig(iconfig)))/xtot
-               enhance=enhance*diagramsymmetryfactor
-            else
-               enhance=0d0
-            endif
-         endif
-      endif
-
-      totH_wgt = totH_wgt * enhance
-
-      dsigH = totH_wgt*fkssymmetryfactor
-      call unweight_function(p_born,unwgtfun)
-      dsigH=dsigH*unwgtfun
-
-      if(doreweight)then
-        if(ifill2.eq.0.and.(ifill3.ne.0.or.ifill4.ne.0))then
-          write(*,*)'Error #2[wg] in dsigH',ifill2,ifill3,ifill4
-          stop
-        endif
-        wgtref = dsigH
-        xsec = enhance*unwgtfun*fkssymmetryfactor
-        do i=1,4
-          wgtwreal(i)=wgtwreal(i) * xsec
-        enddo
-        do i=1,iwgtnumpartn
-          wgtwmcxsec(i)=wgtwmcxsec(i) * xsec
-        enddo
-        call reweight_fill_extra()
-        if(check_reweight.and.doreweight)
-     #    call check_rwgt_wgt("Hev")
-c Example of reweighted cross section (scale changed)
-c           dsigH_new=compute_rwgt_wgt_Hev(new_muR_fact,new_muF1_fact,
-c     #                                    new_muF2_fact,new_QES_fact,
-c     #                                    iwgtinfo)
-      endif      
-
-      if (dsigH.ne.dsigH) then
-         write (*,*) 'ERROR, ',dsigH,
-     &        ' found for dsigH, setting dsigH to 0 for this event'
-         dsigH=0
-      endif
-
-      if(dsigH.ne.0.d0)
-     #  call set_shower_scale(pp,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
-
-      if (dsigH.ne.0d0) itotalpoints=itotalpoints+1
-
-c For tests
-      if(abs(dsigH).gt.fksmaxwgt)then
-        fksmaxwgt=abs(dsigH)
-        xisave=xi_i_fks_ev
-        ysave=y_ij_fks_ev
-      endif
-
-c Plot observables for event
-      if (.not.unwgt) then
-         plot_wgt=totH_wgt*fkssymmetryfactor*vegaswgt 
-         if( abs(plot_wgt).gt.1.d-20.and.pp(0,1).ne.-99d0. and.
-     &       (plotEv.or.plotKin) )
-     &      call outfun(pp,ybst_til_tolab,plot_wgt,iplot_ev)
-      endif
-      return
-      end
-
-
-      double precision function dsigS(pp,wgt,vegaswgt)
+      subroutine dsigF(pp,wgt,vegaswgt,dsigS,dsigH)
 c Here are the subtraction terms, the Sij function, 
 c the f-damping function, and the single diagram
 c enhanced multi-channel factor included
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include "fks_powers.inc"
       include "madfks_mcatnlo.inc"
       include 'coupl.inc'
-      include 'q_es.inc'
       include 'run.inc'
-      include 'reweight.inc'
+      include 'q_es.inc'
+      include 'nFKSconfigs.inc'
+      include 'reweight_all.inc'
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
 
       double precision pp(0:3,nexternal),wgt,vegaswgt
 
       double precision fks_Sij,fks_Hij,f_damp,dot,dlum
       external fks_Sij,fks_Hij,f_damp,dot,dlum
 
-      double precision x,xtot,s_ev,s_c,s_s,s_sc,ffact,fx_c,
-     #                 fx_s,fx_sc,xmc_wgt,cnt_wgt_c,cnt_wgt_s,cnt_wgt_sc,
-     #                 bsv_wgt,plot_wgt,cnt_swgt_s,cnt_swgt_sc,cnt_sc,cnt_s,
-     #                 prefact_cnt_ssc,prefact_cnt_ssc_c,prefact_coll,
-     #                 prefact_coll_c,born_wgt,prefact_deg,prefact,prefact_c,
-     #                 prefact_deg_sxi,prefact_deg_slxi,deg_wgt,deg_swgt,
-     #                 deg_xi_c,deg_lxi_c,deg_xi_sc,deg_lxi_sc,
-     #                 cnt_swgt,cnt_wgt,gfactsf,gfactcl,xmcMC,xmcME,
-     #                 xlum_c,xlum_s,xlum_sc,xlum_mc,xlum_mc_save,
-     #                 dummy,ev_wgt,fx_ev,probne,sevmc,xlum_ev,get_ptrel,
-     #                 xlum_mc_fact,xnormsv,xsec,bpower
+      double precision x,xtot,s_ev,s_c,s_s,s_sc,ffact,fx_c, fx_s,fx_sc
+     &     ,Sxmc_wgt,Hxmc_wgt,cnt_wgt_c,cnt_wgt_s,cnt_wgt_sc, bsv_wgt
+     &     ,plot_wgt ,cnt_swgt_s,cnt_swgt_sc,cnt_sc,cnt_s,
+     &     prefact_cnt_ssc ,prefact_cnt_ssc_c,prefact_coll,
+     &     prefact_coll_c,born_wgt ,prefact_deg,prefact,prefact_c,
+     &     prefact_deg_sxi ,prefact_deg_slxi,deg_wgt,deg_swgt, deg_xi_c
+     &     ,deg_lxi_c ,deg_xi_sc,deg_lxi_sc, cnt_swgt,cnt_wgt,gfactsf
+     &     ,gfactcl,xmcMC ,xmcME,SxmcMC,SxmcME,HxmcMC,HxmcME, xlum_c
+     &     ,xlum_s,xlum_sc ,xlum_mc,xlum_mc_save, dummy,Sev_wgt,Hev_wgt
+     &     ,fx_ev,probne ,sevmc ,xlum_ev,get_ptrel, xlum_mc_fact,xnormsv
+     &     ,xsec,bpower ,dsigS ,dsigH,totH_wgt
       integer i,j
 
       integer izero,ione,itwo,mohdr,iplot_ev,iplot_cnt,iplot_born
-      integer ithree,ifour,ifill1,ifill2,ifill3,ifill4
+      integer ithree,ifour
+      integer ifill1H,ifill2H,ifill3H,ifill4H,ifill1S,ifill2S,ifill3S
+     &     ,ifill4S,ifill2S_born
+      save ifill2S_born
       parameter (izero=0)
       parameter (ione=1)
       parameter (itwo=2)
@@ -2552,19 +943,12 @@ c Multi channel stuff:
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       common/to_mconfigs/mapconfig, iconfig
 
-      integer mapbconf(0:lmaxconfigs)
-      integer b_from_r(lmaxconfigs)
-      integer r_from_b(lmaxconfigs)
-      include "bornfromreal.inc"
-
       double complex wgt1(2)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
       double precision ev_enh,enhance,rwgt,unwgtfun
       logical firsttime,passcuts
@@ -2615,14 +999,14 @@ c FKS stuff:
       integer ngluons,nquarks(-6:6)
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg,ngluons,nquarks
-      integer diagramsymmetryfactor
+      double precision diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
 
       logical multi_chan(lmaxconfigs)
       common /to_multi_chan/multi_chan
 
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
 
       character*4 abrv
       common /to_abrv/ abrv
@@ -2635,10 +1019,15 @@ c MC stuff
       double precision zhw(nexternal),xmcxsec(nexternal)
       integer nofpartners
       logical lzone(nexternal),flagmc
+      logical MCcntcalled
+
+      double precision emsca,scalemax
+      common/cemsca/emsca,scalemax
 
 c Stuff to be written (depending on AddInfoLHE) onto the LHE file
-      integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
-      double precision scale1_lhe,scale2_lhe
+      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
+     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
+      double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
@@ -2662,13 +1051,6 @@ c For plots
 c For tests
       real*8 fksmaxwgt,xisave,ysave
       common/cfksmaxwgt/fksmaxwgt,xisave,ysave
-      integer icou_calls,icou_kinev,icou_sev,icou_meev,icou_kincnt,
-     #  icou_scnt,icou_mecnt
-      common/counters/icou_calls,icou_kinev,icou_sev,icou_meev,
-     #                           icou_kincnt,icou_scnt,icou_mecnt
-      integer itotalpoints
-      common/ctotalpoints/itotalpoints
-
       logical ExceptPSpoint
       integer iminmax
       common/cExceptPSpoint/iminmax,ExceptPSpoint
@@ -2692,16 +1074,105 @@ c For tests
       double precision ximin
       parameter(ximin=0.05d0)
 
+c
+c This is the table that will be used to unweight. (It contains for
+c arguments, 1st argument: nFKSproces; 2nd argument: S or H events; 3rd
+c argument: IPROC (from parton luminosities))
+c
+      double precision unwgt_table(0:fks_configs,2,maxproc)
+      common/c_unwgt_table/unwgt_table
+      INTEGER              IPROC
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
+      DOUBLE PRECISION       CONV
+      PARAMETER (CONV=389379660d0)  !CONV TO PICOBARNS
+
       double precision pmass(nexternal)
       include "pmass.inc"
 
       vegas_weight=vegaswgt
 
+c If there was an exceptional phase-space point found for the 
+c virtual corrections, at the end of this subroutine, goto 44
+c and compute also the "possible" minimal and maximal weight
+c these points could have gotton (based upon previous PS
+c points)
+      ExceptPSpoint=.false.
+      iminmax=-1
+ 44   continue
+      iminmax=iminmax+1
+
+      emsca=0.d0
+      scalemax=0.d0
+
+      Sev_wgt=0.d0
+      Sxmc_wgt=0.d0
+      cnt_wgt=0.d0
+      cnt_wgt_s=0.d0
+      cnt_wgt_c=0.d0
+      cnt_wgt_sc=0.d0
+      bsv_wgt=0.d0
+      born_wgt=0.d0
+      cnt_swgt=0.d0
+      cnt_swgt_s=0.d0
+      cnt_swgt_sc=0.d0
+      deg_wgt=0.d0
+      deg_swgt=0.d0
+      plot_wgt=0.d0
+c
+      Hev_wgt=0.d0
+      Hxmc_wgt=0.d0
+c
+      dsigS=0d0
+      dsigH=0d0
+      MCcntcalled=.false.
+c
+      if(doreweight)then
+        if(.not.AddInfoLHE)then
+          write(*,*)'Error in dsigF'
+          write(*,*)'  AddInfoLHE must be true when unweighting'
+          stop
+        endif
+        call reweight_settozero()
+        call reweight_settozero_all(nFKSprocess*2,nbody)
+        call reweight_settozero_all(nFKSprocess*2-1,nbody)
+        ifill1H=0
+        ifill2H=0
+        ifill3H=0
+        ifill4H=0
+        ifill1S=0
+        ifill2S=0
+        ifill3S=0
+        ifill4S=0
+        if (nbody) ifill2S_Born=0
+      endif
+      if(AddInfoLHE)then
+c$$$        iSorH_lhe=1+2 ! filled elsewhere
+        ifks_lhe(nFKSprocess)=i_fks
+        jfks_lhe(nFKSprocess)=j_fks
+        fksfather_lhe(nFKSprocess)=0
+        ipartner_lhe(nFKSprocess)=0
+        scale1_lhe(nFKSprocess)=0.d0
+        scale2_lhe(nFKSprocess)=0.d0
+      endif
+c Set the upper value of the shower scale for the H and S events,
+c respectively
+      call set_cms_stuff(mohdr)
+      call set_shower_scale_noshape(pp,nFKSprocess*2)
+      call set_cms_stuff(izero)
+      call set_shower_scale_noshape(pp,nFKSprocess*2-1)
+c
+c Make sure that the result can be non-zero. If the jacobian from the
+c PS-setup or vegas are zero, we can skip this PS point and 'return'.
+c
+      if ( (wgt.eq.0d0 .and. jac_cnt(0).eq.0d0 .and. jac_cnt(1).eq.0d0
+     &     .and. jac_cnt(2).eq.0d0) .or. vegaswgt.eq.0d0) return
+c
       if (fold.eq.0) then
          calculatedBorn=.false.
          call get_helicity(i_fks,j_fks)
       endif
-
+c
       if (firsttime)then
          inoborn_ev=0
          xnoborn_ev=0.d0
@@ -2711,21 +1182,15 @@ c For tests
          firsttime=.false.
 c Put here call to compute bpower
          call compute_bpower(p_born,bpower)
-c Check consistency with value used in reweighting
-c$$$         if( (doreweight.or.doNLOreweight) .and.
-c$$$     &        abs(bpower-wgtbpower).gt.tiny )then
-c$$$            write(*,*)'Error in dsigS'
-c$$$            write(*,*)'bpower(s) are:',bpower,wgtbpower
-c$$$            stop
-c$$$         endif
          wgtbpower=bpower
       endif
-
+c
       prefact=xinorm_ev/xi_i_fks_ev*
      #        1/(1-y_ij_fks_ev)
-
-      if( (.not.nocntevents) .and.
-     #    (.not.(abrv.eq.'born' .or. abrv(1:2).eq.'vi')) )then
+c
+      if( (.not.nocntevents) .and. (.not.(abrv.eq.'born' .or. abrv.eq
+     &     .'grid' .or. abrv(1:2).eq.'vi' .or. nbody))
+     &     )then
         prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
      #                  log(xicut_used/min(xiimax_ev,xiScut_used))*
      #                  1/(1-y_ij_fks_ev)
@@ -2751,57 +1216,8 @@ c$$$         endif
      #                     1/(2.d0*deltaS)
         endif
       endif
-
-c If there was an exceptional phase-space point found for the 
-c virtual corrections, at the end of this subroutine, goto 44
-c and compute also the "possible" minimal and maximal weight
-c these points could have gotton (based upon previous PS
-c points)
-      ExceptPSpoint=.false.
-      iminmax=-1
- 44   continue
-      iminmax=iminmax+1
-
-      ev_wgt=0.d0
-      xmc_wgt=0.d0
-      cnt_wgt=0.d0
-      cnt_wgt_s=0.d0
-      cnt_wgt_c=0.d0
-      cnt_wgt_sc=0.d0
-      bsv_wgt=0.d0
-      born_wgt=0.d0
-      cnt_swgt=0.d0
-      cnt_swgt_s=0.d0
-      cnt_swgt_sc=0.d0
-      deg_wgt=0.d0
-      deg_swgt=0.d0
-      plot_wgt=0.d0
-c
-      if(doreweight)then
-        if(.not.AddInfoLHE)then
-          write(*,*)'Error in dsigS'
-          write(*,*)'  AddInfoLHE must be true when unweighting'
-          stop
-        endif
-        call reweight_settozero()
-        ifill1=0
-        ifill2=0
-        ifill3=0
-        ifill4=0
-      endif
-c
-      if(AddInfoLHE)then
-        iSorH_lhe=1
-        ifks_lhe=i_fks
-        jfks_lhe=j_fks
-        fksfather_lhe=0
-        ipartner_lhe=0
-        scale1_lhe=0.d0
-        scale2_lhe=0.d0
-      endif
 c
       probne=1.d0
-c
 c All counterevent have the same final-state kinematics. Check that
 c one of them passes the hard cuts, and they exist at all
 c
@@ -2816,23 +1232,29 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       sevmc=1.d0
       xmcMC=0.d0
       xmcME=0.d0
+      SxmcMC=0.d0
+      SxmcME=0.d0
+      HxmcMC=0.d0
+      HxmcME=0.d0
 
-      if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') then
-        if(abrv(1:2).eq.'vi')then
-          call set_cms_stuff(mohdr)
-          call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
-        endif
-        goto 540
-      endif
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &     abrv(1:2).eq.'vi' .or. nbody) goto 540
 
       call set_cms_stuff(mohdr)
       call set_alphaS(pp)
       if(doreweight)then
-        wgtmuR2(1)=muR2_current/muR_over_ref**2
-        wgtmuF12(1)=muF12_current/muF1_over_ref**2
-        wgtmuF22(1)=muF22_current/muF2_over_ref**2
-        call reweight_fillkin(pp,ione)
-        ifill1=1
+         wgtmuR2_all(1,nFKSprocess*2)=muR2_current/muR_over_ref**2
+         wgtmuF12_all(1,nFKSprocess*2)=muF12_current/muF1_over_ref**2
+         wgtmuF22_all(1,nFKSprocess*2)=muF22_current/muF2_over_ref**2
+         call reweight_fillkin_all(pp,ione,nFKSprocess*2)
+         ifill1H=1
+         call reweight_fillkin_all(pp,itwo,nFKSprocess*2)
+         ifill2H=1
+         wgtmuR2_all(1,nFKSprocess*2-1)=muR2_current/muR_over_ref**2
+         wgtmuF12_all(1,nFKSprocess*2-1)=muF12_current/muF1_over_ref**2
+         wgtmuF22_all(1,nFKSprocess*2-1)=muF22_current/muF2_over_ref**2
+         call reweight_fillkin_all(pp,ione,nFKSprocess*2-1)
+         ifill1S=1
       endif
       if(UseSfun)then
          x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
@@ -2847,17 +1269,19 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       endif
       call xmcsubt(pp,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
      #             dummy,nofpartners,lzone,flagmc,zhw,xmcxsec)
+      MCcntcalled=.true.
 
       if(ileg.gt.4.or.ileg.lt.1)then
-         write(*,*)'Error: unrecognized ileg in dsigS', ileg
+         write(*,*)'Error: unrecognized ileg in dsigF', ileg
          stop
       endif
 
       if(sevmc.gt.0.d0.and.flagmc)then
-        if(doreweight)then
-          iwgtnumpartn=nofpartners
-          xsec=sevmc*wgt*prefact*rwgt
-        endif
+         if(doreweight)then
+            iwgtnumpartn_all(nFKSprocess*2)=nofpartners
+            iwgtnumpartn_all(nFKSprocess*2-1)=nofpartners
+            xsec=sevmc*wgt*prefact*rwgt
+         endif
         xlum_mc_save=-1.d8
         do i=1,nofpartners
           if(lzone(i))then
@@ -2865,20 +1289,33 @@ c for the collinear, soft and/or soft-collinear subtraction terms
             call get_mc_lum(j_fks,zhw_used,xi_i_fks_ev,
      #                      xlum_mc_save,xlum_mc,xlum_mc_fact)
             xmcMC=xmcMC+xmcxsec(i)*xlum_mc
+            do j=1,IPROC
+               unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
+     &              ,j)+xmcxsec(i)*PD(j)*xlum_mc_fact*sevmc*wgt*prefact
+     &              *rwgt*CONV
+               unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess,2
+     &              ,j)-xmcxsec(i)*PD(j)*xlum_mc_fact*sevmc*wgt*prefact
+     &              *rwgt*CONV
+            enddo
             if(doreweight)then
-              wgtwmcxsec(i)=xsec*xlum_mc_fact*xmcxsec(i)/
-     #                      g**(2*wgtbpower+2.d0)
-              wgtmcxbj(1,i)=xbk(1)
-              wgtmcxbj(2,i)=xbk(2)
+               wgtwmcxsec_all(i,nFKSprocess*2)=-xsec*xlum_mc_fact
+     &              *xmcxsec(i)/g**(nint(2*wgtbpower+2.d0))
+               wgtmcxbj_all(1,i,nFKSprocess*2)=xbk(1)
+               wgtmcxbj_all(2,i,nFKSprocess*2)=xbk(2)
+               wgtwmcxsec_all(i,nFKSprocess*2-1)=xsec*xlum_mc_fact
+     &              *xmcxsec(i)/g**(nint(2*wgtbpower+2.d0))
+               wgtmcxbj_all(1,i,nFKSprocess*2-1)=xbk(1)
+               wgtmcxbj_all(2,i,nFKSprocess*2-1)=xbk(2)
             endif
           endif
         enddo
-        xmcMC=xmcMC*sevmc*wgt*prefact*rwgt
+        SxmcMC=xmcMC*sevmc*wgt*prefact*rwgt
+        HxmcMC=-xmcMC*sevmc*wgt*prefact*rwgt
       endif
 c
       if( (.not.flagmc).and.gfactsf.eq.1.d0 .and.
      #   xi_i_fks_ev.lt.0.02d0  .and. particle_type(i_fks).eq.8)then
-        write(*,*)'Error in dsigS: will diverge'
+        write(*,*)'Error in dsigF: will diverge'
         stop
       endif
 
@@ -2888,17 +1325,29 @@ c Set scales for all counterevents, using soft kinematics as done
 c in the case of parton-level NLO computations
       call set_alphaS(p1_cnt(0,1,0))
       if(doreweight)then
-        wgtqes2(2)=QES2
-        wgtqes2(3)=QES2
-        wgtqes2(4)=QES2
-        wgtmuR2(2)=muR2_current/muR_over_ref**2
-        wgtmuF12(2)=muF12_current/muF1_over_ref**2
-        wgtmuF22(2)=muF22_current/muF2_over_ref**2
-        call reweight_fillkin(pp,itwo)
-        ifill2=1
+         if (nbody) then
+            wgtqes2_all(2,0)=QES2
+            wgtqes2_all(3,0)=QES2
+            wgtqes2_all(4,0)=QES2
+            wgtmuR2_all(2,0)=muR2_current/muR_over_ref**2
+            wgtmuF12_all(2,0)=muF12_current/muF1_over_ref**2
+            wgtmuF22_all(2,0)=muF22_current/muF2_over_ref**2
+            call reweight_fillkin_all(pp,itwo,0)
+            ifill2S_born=1
+         else
+            wgtqes2_all(2,nFKSprocess*2-1)=QES2
+            wgtqes2_all(3,nFKSprocess*2-1)=QES2
+            wgtqes2_all(4,nFKSprocess*2-1)=QES2
+            wgtmuR2_all(2,nFKSprocess*2-1)=muR2_current/muR_over_ref**2
+            wgtmuF12_all(2,nFKSprocess*2-1)=muF12_current/muF1_over_ref**2
+            wgtmuF22_all(2,nFKSprocess*2-1)=muF22_current/muF2_over_ref**2
+            call reweight_fillkin_all(pp,itwo,nFKSprocess*2-1)
+            ifill2S=1
+         endif
       endif
 
-      if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 545
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
+     &     nbody)goto 545
 c
 c Collinear subtraction term:
       if( ( y_ij_fks_ev.gt.1d0-deltaS .or. 
@@ -2906,16 +1355,24 @@ c Collinear subtraction term:
      #      probne.gt.0.d0) ) .and.
      #    pmass(j_fks).eq.0.d0 )then
          call set_cms_stuff(ione)
+
          if(doreweight)then
-           wgtxbj(1,3)=xbk(1)
-           wgtxbj(2,3)=xbk(2)
-           call reweight_fillkin(pp,ithree)
-           ifill3=1
+            if(gfactsf.lt.1.d0.and.probne.gt.0.d0.and.gfactcl.lt.1.d0
+     &           .and.pmass(j_fks).eq.0.d0)then
+               wgtxbj_all(1,3,nFKSprocess*2)=xbk(1)
+               wgtxbj_all(2,3,nFKSprocess*2)=xbk(2)
+               call reweight_fillkin_all(pp,ithree,nFKSprocess*2)
+               ifill3H=1
+            endif
+            wgtxbj_all(1,3,nFKSprocess*2-1)=xbk(1)
+            wgtxbj_all(2,3,nFKSprocess*2-1)=xbk(2)
+            call reweight_fillkin_all(pp,ithree,nFKSprocess*2-1)
+            ifill3S=1
          endif
          s_c = fks_Sij(p1_cnt(0,1,1),i_fks,j_fks,xi_i_fks_cnt(ione),one)
          if(s_c.gt.0.d0)then
             if(abs(s_c-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
-               write(*,*)'Wrong S function in dsigS[c]',s_c
+               write(*,*)'Wrong S function in dsigF[c]',s_c
                stop
             endif
             call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,fx_c)
@@ -2923,26 +1380,58 @@ c Collinear subtraction term:
             xsec = fx_c*s_c*jac_cnt(1)*prefact_c*rwgt*(1-gfactcl)
             if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
      &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
-            xmcME=xmcME+xlum_c*xsec
-            if(doreweight)wgtwreal(3)=xsec*(1-gfactsf)*probne/
-     #                                g**(2*wgtbpower+2.d0)
+            SxmcME=SxmcME+xlum_c*xsec
+            do j=1,IPROC
+               unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
+     &              ,j)+xsec*PD(j)*(1-gfactsf)*probne*CONV
+            enddo
+            if(doreweight) then
+               if(gfactsf.lt.1.d0.and.probne.gt.0.d0.and.gfactcl.lt.1.d0
+     &              .and.pmass(j_fks).eq.0.d0)
+     &              wgtwreal_all(3,nFKSprocess*2)=
+     &              xsec/g**(nint(2*wgtbpower+2.d0))
+               wgtwreal_all(3,nFKSprocess*2-1)=xsec*(1-gfactsf)*probne/
+     &              g**(nint(2*wgtbpower+2.d0))
+            endif
+
+
+            if ((gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
+     &           probne.gt.0.d0) .and. pmass(j_fks).eq.0.d0) then
+               HxmcME=HxmcME+xlum_c*xsec
+               do j=1,IPROC
+                  unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess
+     &                 ,2,j)-xsec*PD(j)*(1-gfactsf)*probne*CONV
+               enddo
+            endif
             if( y_ij_fks_ev.gt.1d0-deltaS )then
                xsec = fx_c*s_c*jac_cnt(1)*(prefact_c+prefact_coll)*rwgt
                cnt_wgt_c=cnt_wgt_c-xlum_c*xsec
+               do j=1,IPROC
+                  unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess
+     &                 ,1,j)-xsec*PD(j)*CONV
+               enddo
                call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,
      #                        deg_xi_c,deg_lxi_c)
                deg_wgt=deg_wgt+( deg_xi_c+deg_lxi_c*log(xi_i_fks_cnt(ione)) )*
      #                         jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))*
      #                         xlum_c
+               do j=1,IPROC
+                  unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess
+     &                 ,1,j)+PD(j)*( deg_xi_c+deg_lxi_c
+     &                 *log(xi_i_fks_cnt(ione)) )* jac_cnt(1)
+     &                 *prefact_deg*rwgt/(shat/(32*pi**2))*CONV
+               enddo
                if(doreweight)then
-                 wgtwreal(3)=wgtwreal(3)-xsec/g**(2*wgtbpower+2.d0)
-                 wgtwdeg(3)=
-     #              ( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(ione)) )*
-     #                      jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
-     #              g**(2*wgtbpower+2.d0)
-                 wgtwdegmuf(3)=wgtdegrem_muF *
-     #                      jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
-     #              g**(2*wgtbpower+2.d0)
+                  wgtwreal_all(3,nFKSprocess*2-1)=wgtwreal_all(3
+     &                 ,nFKSprocess*2-1)-xsec/g**(nint(2*wgtbpower
+     &                 +2.d0))
+                  wgtwdeg_all(3,nFKSprocess*2-1)=( wgtdegrem_xi+
+     &                 wgtdegrem_lxi*log(xi_i_fks_cnt(ione)) )*
+     &                 jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
+     &                 g**(nint(2*wgtbpower+2.d0))
+                  wgtwdegmuf_all(3,nFKSprocess*2-1)=wgtdegrem_muF *
+     &                 jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
+     &                 g**(nint(2*wgtbpower+2.d0))
                endif
             endif
          endif
@@ -2953,36 +1442,78 @@ c Soft subtraction term:
      &     (gfactsf.lt.1.d0.and.probne.gt.0.d0) ) then
          call set_cms_stuff(izero)
          if(doreweight)then
-           wgtxbj(1,2)=xbk(1)
-           wgtxbj(2,2)=xbk(2)
-           if(ifill2.ne.1)then
-             write(*,*)'Error #1[wg] in dsigS',ifill2
-             stop
-           endif
+            if(gfactsf.lt.1.d0.and.probne.gt.0.d0)then
+               wgtxbj_all(1,2,nFKSprocess*2)=xbk(1)
+               wgtxbj_all(2,2,nFKSprocess*2)=xbk(2)
+               wgtmuR2_all(2,nFKSprocess*2)=muR2_current/muR_over_ref**2
+               wgtmuF12_all(2,nFKSprocess*2)=muF12_current/muF1_over_ref**2
+               wgtmuF22_all(2,nFKSprocess*2)=muF22_current/muF2_over_ref**2
+               if(ifill2H.ne.1)then
+                  write(*,*)'Error #1a[wg] in dsigF',ifill2H
+                  stop
+               endif
+            endif
+            if (nbody) then
+               wgtxbj_all(1,2,0)=xbk(1)
+               wgtxbj_all(2,2,0)=xbk(2)
+               if(ifill2S_born.ne.1)then
+                  write(*,*)'Error #1b[wg] in dsigF',ifill2S
+                  stop
+               endif
+            else
+               wgtxbj_all(1,2,nFKSprocess*2-1)=xbk(1)
+               wgtxbj_all(2,2,nFKSprocess*2-1)=xbk(2)
+               if(ifill2S.ne.1)then
+                  write(*,*)'Error #1c[wg] in dsigF',ifill2S
+                  stop
+               endif
+            endif
          endif
+
          s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
-         if(nbodyonly)s_s=1.d0
+         if(nbody)s_s=1.d0
          if(s_s.gt.0.d0)then
             xlum_s = dlum()
-            if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 546
+            if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &           abrv(1:2).eq.'vi' .or. nbody) goto 546
             call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
             xsec=fx_s*s_s*jac_cnt(0)*prefact*rwgt
             if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
      &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
-            xmcME=xmcME+xlum_s*xsec
-            if(doreweight)wgtwreal(2)=xsec*(1-gfactsf)*probne/
-     #                                g**(2*wgtbpower+2.d0)
+            SxmcME=SxmcME+xlum_s*xsec
+            do j=1,IPROC
+               unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
+     &              ,j)+xsec*PD(j)*(1-gfactsf)*probne*CONV
+            enddo
+            if(doreweight)then
+               wgtwreal_all(2,nFKSprocess*2-1)=xsec*(1-gfactsf)*probne/
+     &              g**(nint(2*wgtbpower+2.d0))
+             endif
+            if (gfactsf.lt.1.d0.and.probne.gt.0.d0) then
+               HxmcME=HxmcME+xlum_s*xsec
+               do j=1,IPROC
+                  unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess
+     &                 ,2,j)-xsec*PD(j)*(1-gfactsf)*probne*CONV
+               enddo
+               if(doreweight)wgtwreal_all(2,nFKSprocess*2)=
+     &              xsec/g**(nint(2*wgtbpower+2.d0))
+            endif
             if (xi_i_fks_ev .lt. xiScut_used) then
               xsec=fx_s*s_s*jac_cnt(0)
               cnt_s=xlum_s*xsec
               cnt_wgt_s=cnt_wgt_s-cnt_s*prefact*rwgt
               cnt_swgt_s=cnt_swgt_s-cnt_s*prefact_cnt_ssc*rwgt
-              if(doreweight)wgtwreal(2)=wgtwreal(2)-
-     #                        xsec*(prefact+prefact_cnt_ssc)*rwgt/
-     #                        g**(2*wgtbpower+2.d0)
+              do j=1,IPROC
+                 unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
+     $                ,j)-PD(j)*xsec*(prefact+prefact_cnt_ssc)*rwgt
+     $                *CONV
+              enddo
+              if(doreweight)wgtwreal_all(2,nFKSprocess*2-1)
+     &             =wgtwreal_all(2,nFKSprocess*2-1)-xsec*(prefact
+     &             +prefact_cnt_ssc)*rwgt/g**(nint(2*wgtbpower+2.d0))
             endif
  546        continue
-            if (abrv.eq.'real') goto 548
+            if (abrv.eq.'real' .or. .not.nbody) goto 548
             if (xi_i_fks_ev .lt. xiBSVcut_used) then
               xsec=s_s*jac_cnt(0)*xinorm_ev/
      #             (min(xiimax_ev,xiBSVcut_used)*shat/(16*pi**2))*
@@ -2990,15 +1521,21 @@ c Soft subtraction term:
               xnormsv=xlum_s*xsec
               call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,born_wgt)
               if(doreweight)then
-                if(wgtbpower.gt.0)then
-                  wgtwborn(2)=born_wgt*xsec/g**(2*wgtbpower)
-                else
-                  wgtwborn(2)=born_wgt*xsec
-                endif
-                wgtwns(2)=wgtnstmp*xsec/g**(2*wgtbpower+2.d0)
-                wgtwnsmuf(2)=wgtwnstmpmuf*xsec/g**(2*wgtbpower+2.d0)
-                wgtwnsmur(2)=wgtwnstmpmur*xsec/g**(2*wgtbpower+2.d0)
+                 if(wgtbpower.gt.0)then
+                    wgtwborn_all=born_wgt*xsec/g**(nint(2*wgtbpower))
+                 else
+                    wgtwborn_all=born_wgt*xsec
+                 endif
+                 wgtwns_all=wgtnstmp*xsec/g**(nint(2*wgtbpower+2.d0))
+                 wgtwnsmuf_all=wgtwnstmpmuf*xsec/g**(nint(2*wgtbpower
+     &                +2.d0))
+                 wgtwnsmur_all=wgtwnstmpmur*xsec/g**(nint(2*wgtbpower
+     &                +2.d0))
               endif
+              do j=1,IPROC
+                 unwgt_table(0,1,j)=unwgt_table(0,1,j)+PD(j)*bsv_wgt
+     &                *xsec*CONV
+              enddo
               bsv_wgt=bsv_wgt*xnormsv
               born_wgt=born_wgt*xnormsv
             endif
@@ -3006,7 +1543,8 @@ c Soft subtraction term:
          endif
       endif
 c Soft-Collinear subtraction term:
-      if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 550
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
+     &     nbody)goto 547
       if ( ( (xi_i_fks_cnt(ione) .lt. xiScut_used .and.
      #        y_ij_fks_ev .gt. 1d0-deltaS) .or.
      #        (gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
@@ -3014,25 +1552,49 @@ c Soft-Collinear subtraction term:
      #        pmass(j_fks).eq.0.d0 )then
          call set_cms_stuff(itwo)
          if(doreweight)then
-           wgtxbj(1,4)=xbk(1)
-           wgtxbj(2,4)=xbk(2)
-           call reweight_fillkin(pp,ifour)
-           ifill4=1
+            if ((gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
+     &           probne.gt.0.d0) .and. pmass(j_fks).eq.0.d0) then
+               wgtxbj_all(1,4,nFKSprocess*2)=xbk(1)
+               wgtxbj_all(2,4,nFKSprocess*2)=xbk(2)
+               call reweight_fillkin_all(pp,ifour,nFKSprocess*2)
+               ifill4H=1
+            endif
+            wgtxbj_all(1,4,nFKSprocess*2-1)=xbk(1)
+            wgtxbj_all(2,4,nFKSprocess*2-1)=xbk(2)
+            call reweight_fillkin_all(pp,ifour,nFKSprocess*2-1)
+            ifill4S=1
          endif
          s_sc = fks_Sij(p1_cnt(0,1,2),i_fks,j_fks,zero,one)
          if(s_sc.gt.0.d0)then
             if(abs(s_sc-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
-              write(*,*)'Wrong S function in dsigS[sc]',s_sc
-              stop
+               write(*,*)'Wrong S function in dsigF[sc]',s_sc
+               stop
             endif
             call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
             xlum_sc = dlum()
             xsec = fx_sc*s_sc*jac_cnt(2)*prefact_c*rwgt*(1-gfactcl)
             if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
-            xmcME=xmcME-xlum_sc*xsec
-            if(doreweight)wgtwreal(4)=-xsec*(1-gfactsf)*probne/
-     #                                g**(2*wgtbpower+2.d0)
+     &           .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
+            SxmcME=SxmcME-xlum_sc*xsec
+            do j=1,IPROC
+               unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
+     &              ,j)-PD(j)*xsec*(1-gfactsf)*probne*CONV
+            enddo
+            if(doreweight)then
+               wgtwreal_all(4,nFKSprocess*2-1)=-xsec*(1-gfactsf)*probne/
+     &              g**(nint(2*wgtbpower+2.d0))
+            endif
+            if ((gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
+     &           probne.gt.0.d0) .and. pmass(j_fks).eq.0.d0)then
+               HxmcME=HxmcME-xlum_sc*xsec
+               do j=1,IPROC
+                  unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess
+     &                 ,2,j)+PD(j)*xsec*(1-gfactsf)*probne*CONV
+               enddo
+               if(doreweight)wgtwreal_all(4,nFKSprocess*2)=
+     &              -xsec/g**(nint(2*wgtbpower+2.d0))
+            endif
+
             if(xi_i_fks_cnt(ione) .lt. xiScut_used .and.
      #          y_ij_fks_ev .gt. 1d0-deltaS)then
               xsec=fx_sc*s_sc*jac_cnt(2)
@@ -3050,38 +1612,64 @@ c Soft-Collinear subtraction term:
      #                       deg_lxi_sc*prefact_deg_slxi )*
      #                       jac_cnt(2)*rwgt/(shat/(32*pi**2))*
      #                       xlum_sc
+              do j=1,IPROC
+                 unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
+     &                ,j)+PD(j)*(xsec*(prefact_c+prefact_coll
+     &                +prefact_cnt_ssc_c+prefact_coll_c)*rwgt-
+     &                (deg_xi_sc+deg_lxi_sc*log(xi_i_fks_cnt(ione)) )*
+     &                jac_cnt(2)*prefact_deg*rwgt/(shat/(32*pi**2))
+     &                -(deg_xi_sc*prefact_deg_sxi + deg_lxi_sc
+     &                *prefact_deg_slxi )* jac_cnt(2)*rwgt/(shat/(32*pi
+     &                **2)))*CONV
+              enddo
               if(doreweight)then
-                wgtwreal(4)=wgtwreal(4)+
-     #                    xsec*(prefact_c+prefact_coll+
-     #                          prefact_cnt_ssc_c+prefact_coll_c)*rwgt/
-     #                    g**(2*wgtbpower+2.d0)
-                wgtwdeg(4)=(
-     # -( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(ione)) )*prefact_deg
-     # -( wgtdegrem_xi*prefact_deg_sxi+wgtdegrem_lxi*prefact_deg_slxi ) )*
-     #                     jac_cnt(2)*rwgt/(shat/(32*pi**2))/
-     #              g**(2*wgtbpower+2.d0)
-                wgtwdegmuf(4)=
-     #          -wgtdegrem_muF*( prefact_deg+prefact_deg_sxi )*
-     #                     jac_cnt(2)*rwgt/(shat/(32*pi**2))/
-     #              g**(2*wgtbpower+2.d0)
+                 wgtwreal_all(4,nFKSprocess*2-1)=wgtwreal_all(4
+     &                ,nFKSprocess*2-1)+xsec*(prefact_c+prefact_coll
+     &                +prefact_cnt_ssc_c+prefact_coll_c)*rwgt/g**(nint(2
+     &                *wgtbpower+2.d0))
+                 wgtwdeg_all(4,nFKSprocess*2-1)=(-( wgtdegrem_xi
+     &                +wgtdegrem_lxi*log(xi_i_fks_cnt(ione)) )
+     &                *prefact_deg -( wgtdegrem_xi*prefact_deg_sxi
+     &                +wgtdegrem_lxi*prefact_deg_slxi ) )* jac_cnt(2)
+     &                *rwgt/(shat/(32*pi**2))/ g**(nint(2*wgtbpower
+     &                +2.d0))
+                 wgtwdegmuf_all(4,nFKSprocess*2-1)= -wgtdegrem_muF*(
+     &                prefact_deg+prefact_deg_sxi )* jac_cnt(2)*rwgt
+     &                /(shat/(32*pi**2))/ g**(nint(2*wgtbpower+2.d0))
               endif
-            endif
-         endif
+           endif
+        endif
       endif
-      xmcME=xmcME*(1-gfactsf)*probne
-      xmc_wgt=xmc_wgt+xmcMC+xmcME
+      SxmcME=SxmcME*(1-gfactsf)*probne
+      HxmcME=-HxmcME*(1-gfactsf)*probne
+      if(doreweight)then
+         xsec=(1-gfactsf)*probne
+         wgtwreal_all(2,nFKSprocess*2)=
+     &        -wgtwreal_all(2,nFKSprocess*2)*xsec
+         wgtwreal_all(3,nFKSprocess*2)=
+     &        -wgtwreal_all(3,nFKSprocess*2)*xsec
+         wgtwreal_all(4,nFKSprocess*2)=
+     &        -wgtwreal_all(4,nFKSprocess*2)*xsec
+      endif
+
+      Sxmc_wgt=Sxmc_wgt+SxmcMC+SxmcME
+      Hxmc_wgt=Hxmc_wgt+HxmcMC+HxmcME
 
  547  continue
 
 c Real contribution
 c
 c Set the ybst_til_tolab before applying the cuts. 
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
+     &     nbody)goto 550
       call set_cms_stuff(mohdr)
       if(doreweight)then
-        wgtxbj(1,1)=xbk(1)
-        wgtxbj(2,1)=xbk(2)
+         wgtxbj_all(1,1,nFKSprocess*2)=xbk(1)
+         wgtxbj_all(2,1,nFKSprocess*2)=xbk(2)
+         wgtxbj_all(1,1,nFKSprocess*2-1)=xbk(1)
+         wgtxbj_all(2,1,nFKSprocess*2-1)=xbk(2)
       endif
-      if (passcuts(pp,rwgt).and.probne.lt.1.d0) then
+      if (passcuts(pp,rwgt)) then
         call set_alphaS(pp)
         x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
         ffact = f_damp(x)
@@ -3089,37 +1677,69 @@ c Set the ybst_til_tolab before applying the cuts.
         if(s_ev.gt.0.d0)then
           call sreal(pp,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
           xlum_ev = dlum()
-          xsec = fx_ev*s_ev*ffact*wgt*prefact*rwgt*(1-probne)
-          ev_wgt = xlum_ev*xsec
+          xsec = fx_ev*s_ev*ffact*wgt*prefact*rwgt
+          Sev_wgt = xlum_ev*xsec*(1-probne)
+          Hev_wgt = xlum_ev*xsec*probne
+          do j=1,IPROC
+             unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1,j)
+     &            +PD(j)*xsec*(1-probne)*CONV
+             unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess,2,j)
+     &            +PD(j)*xsec*probne*CONV
+          enddo
           if(doreweight)then
-            if(ifill1.eq.0)then
-              wgtmuR2(1)=muR2_current/muR_over_ref**2
-              wgtmuF12(1)=muF12_current/muF1_over_ref**2
-              wgtmuF22(1)=muF22_current/muF2_over_ref**2
-              call reweight_fillkin(pp,ione)
-              ifill1=1
-            endif
-            wgtwreal(1)=xsec/g**(2*wgtbpower+2.d0)
+             if(ifill1H.eq.0)then
+                wgtmuR2_all(1,nFKSprocess*2)=
+     &               muR2_current/muR_over_ref**2
+                wgtmuF12_all(1,nFKSprocess*2)=
+     &               muF12_current/muF1_over_ref**2
+                wgtmuF22_all(1,nFKSprocess*2)=
+     &               muF22_current/muF2_over_ref**2
+                call reweight_fillkin_all(pp,ione,nFKSprocess*2)
+                ifill1H=1
+             endif
+             wgtwreal_all(1,nFKSprocess*2)=
+     &            xsec/g**(nint(2*wgtbpower+2.d0))*probne
+             if(ifill1S.eq.0)then
+                wgtmuR2_all(1,nFKSprocess*2-1)=
+     &               muR2_current/muR_over_ref**2
+                wgtmuF12_all(1,nFKSprocess*2-1)=
+     &               muF12_current/muF1_over_ref**2
+                wgtmuF22_all(1,nFKSprocess*2-1)=
+     &               muF22_current/muF2_over_ref**2
+                call reweight_fillkin_all(pp,ione,nFKSprocess*2-1)
+                ifill1S=1
+             endif
+             wgtwreal_all(1,nFKSprocess*2-1)=
+     &            xsec/g**(nint(2*wgtbpower+2.d0))*(1-probne)
           endif
         endif
-        if(AddInfoLHE)scale2_lhe=get_ptrel(pp,i_fks,j_fks)
+        if(AddInfoLHE)scale2_lhe(nFKSprocess)=get_ptrel(pp,i_fks,j_fks)
       endif
-
  550  continue
 
+      if( (.not.MCcntcalled) .and.
+     &     abrv.ne.'born'.and. abrv.ne.'grid' )then
+         if(pp(0,1).ne.-99d0)then
+            call set_cms_stuff(mohdr)
+            call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
+         endif
+      endif
+
       if(AddInfoLHE.and.UseCKKW)then
-        if(scale1_lhe.eq.0.d0)scale1_lhe=scale2_lhe
-        scale2_lhe=scale_CKKW
+         if(scale1_lhe(nFKSprocess).eq.0.d0)
+     &        scale1_lhe(nFKSprocess)=scale2_lhe(nFKSprocess)
+         scale2_lhe(nFKSprocess)=scale_CKKW
       endif
 
 c
 c Enhance the one channel for multi-channel integration
 c
       enhance=1.d0
-      if ((xmc_wgt.ne.0d0.or.cnt_wgt_c.ne.0d0.or.cnt_wgt_s.ne.0d0.or.
-     &     cnt_wgt_sc.ne.0d0.or.bsv_wgt.ne.0d0.or.deg_wgt.ne.0d0.or.
-     &     deg_swgt.ne.0d0.or.cnt_swgt_s.ne.0d0.or.cnt_swgt_sc.ne.0d0.or.
-     &     ev_wgt.ne.0d0) .and. multi_channel) then
+      if ((Sxmc_wgt.ne.0d0 .or. Hxmc_wgt.ne.0d0 .or. cnt_wgt_c.ne.0d0
+     &     .or. cnt_wgt_s.ne.0d0 .or. cnt_wgt_sc.ne.0d0 .or.
+     &     bsv_wgt.ne.0d0 .or. deg_wgt.ne.0d0.or.deg_swgt.ne.0d0 .or.
+     &     cnt_swgt_s.ne.0d0 .or. cnt_swgt_sc.ne.0d0 .or.Sev_wgt.ne.0d0
+     &     .or. Hev_wgt.ne.0d0) .and. multi_channel) then
          if (bsv_wgt.eq.0d0.and.deg_wgt.eq.0d0.and.deg_swgt.eq.0d0.and.
      &       cnt_wgt_c.eq.0d0 ) CalculatedBorn=.false.
 
@@ -3133,31 +1753,31 @@ c
             xnoborn_cnt=xnoborn_cnt+1.d0
             if(log10(xnoborn_cnt).gt.inoborn_cnt)then
                write (*,*) 
-     #           'Function dsigS: no Born momenta more than 10**',
+     #           'Function dsigF: no Born momenta more than 10**',
      #           inoborn_cnt,'times'
                inoborn_cnt=inoborn_cnt+1
             endif
          else
             xtot=0d0
-            if (mapbconf(0).eq.0) then
-               write (*,*) 'Fatal error in dsigS, no Born diagrams '
-     &           ,mapbconf,'. Check bornfromreal.inc'
+            if (mapconfig(0).eq.0) then
+               write (*,*) 'Fatal error in dsigF, no Born diagrams '
+     &           ,mapconfig,'. Check bornfromreal.inc'
                write (*,*) 'Is fks_singular compiled correctly?'
                stop
             endif
             if (onlyBorn) then
-               do i=1, mapbconf(0)
-                  if (multi_chan(mapbconf(i))) then
-                     xtot=xtot+amp2(mapbconf(i))
+               do i=1, mapconfig(0)
+                  if (multi_chan(mapconfig(i))) then
+                     xtot=xtot+amp2(mapconfig(i))
                   endif
                enddo
             else
-               do i=1,mapbconf(0)
-                  xtot=xtot+amp2(mapbconf(i))
+               do i=1,mapconfig(0)
+                  xtot=xtot+amp2(mapconfig(i))
                enddo
             endif
             if (xtot.ne.0d0) then
-               enhance=amp2(b_from_r(mapconfig(iconfig)))/xtot
+               enhance=amp2(mapconfig(iconfig))/xtot
                enhance=enhance*diagramsymmetryfactor
             else
                enhance=0d0
@@ -3168,8 +1788,11 @@ c
       cnt_wgt = cnt_wgt_c + cnt_wgt_s + cnt_wgt_sc
       cnt_swgt = cnt_swgt_s + cnt_swgt_sc
 
-      ev_wgt = ev_wgt * enhance
-      xmc_wgt = xmc_wgt * enhance
+      totH_wgt = Hev_wgt+Hxmc_wgt
+      totH_wgt = totH_wgt * enhance
+
+      Sev_wgt = Sev_wgt * enhance
+      Sxmc_wgt = Sxmc_wgt * enhance
       cnt_wgt = cnt_wgt * enhance
       cnt_swgt = cnt_swgt * enhance
       bsv_wgt = bsv_wgt * enhance
@@ -3177,60 +1800,122 @@ c
       deg_wgt = deg_wgt * enhance
       deg_swgt = deg_swgt * enhance
 
+c Update the shower starting scale with the shape from montecarlocounter
+      if (.not.nbody) then
+         call set_cms_stuff(mohdr)
+         call set_shower_scale(nFKSprocess*2,.true.)
+      endif
+      call set_cms_stuff(izero)
+      call set_shower_scale(nFKSprocess*2-1,.false.)
       if(iminmax.eq.0) then
-         dsigS = (ev_wgt+xmc_wgt+cnt_wgt)*fkssymmetryfactor +
+         dsigS = (Sev_wgt+Sxmc_wgt+cnt_wgt)*fkssymmetryfactor +
      &        cnt_swgt*fkssymmetryfactor +
      &        bsv_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
      &        deg_swgt*fkssymmetryfactorDeg
+
+         call unweight_function(p_born,unwgtfun)
+         dsigS=dsigS*unwgtfun
 
          if (dsigS.ne.dsigS) then
             write (*,*) 'ERROR, ',dsigS,
      &           ' found for dsigS, setting dsigS to 0 for this event'
             dsigS=0
          endif
-
-         call unweight_function(p_born,unwgtfun)
-         dsigS=dsigS*unwgtfun
-
+         
+         if (fkssymmetryfactorDeg.ne.fkssymmetryfactor) then
+            write (*,*) 'FKS symmetry factors should be identical'
+     $           ,fkssymmetryfactorDeg,fkssymmetryfactor
+            stop
+         endif
+         do j=1,IPROC
+            if (.not.nbody) then
+               unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1,j)
+     $              *enhance*fkssymmetryfactor*unwgtfun*vegaswgt
+            else
+               unwgt_table(0,1,j)=unwgt_table(0,1,j)
+     $              *enhance*fkssymmetryfactorBorn*unwgtfun*vegaswgt
+            endif
+         enddo
          if(doreweight)then
-           if(ifill2.eq.0.and.(ifill3.ne.0.or.ifill4.ne.0))then
-             write(*,*)'Error #2[wg] in dsigS',ifill2,ifill3,ifill4
-             stop
-           endif
-           wgtref = dsigS
-           xsec = enhance*unwgtfun
-           do i=1,4
-             wgtwreal(i)=wgtwreal(i) * xsec*fkssymmetryfactor
-             wgtwdeg(i)=wgtwdeg(i) * xsec*fkssymmetryfactorDeg
-             wgtwdegmuf(i)=wgtwdegmuf(i) * xsec*fkssymmetryfactorDeg
-             if(i.eq.2)then
-               wgtwborn(i)=wgtwborn(i) * xsec*fkssymmetryfactorBorn
-               wgtwns(i)=wgtwns(i) * xsec*fkssymmetryfactorBorn
-               wgtwnsmuf(i)=wgtwnsmuf(i) * xsec*fkssymmetryfactorBorn
-               wgtwnsmur(i)=wgtwnsmur(i) * xsec*fkssymmetryfactorBorn
-             endif
-           enddo
-           do i=1,iwgtnumpartn
-             wgtwmcxsec(i)=wgtwmcxsec(i) * xsec*fkssymmetryfactor
-           enddo
-           call reweight_fill_extra()
-           if(check_reweight.and.doreweight)
-     #       call check_rwgt_wgt("Sev")
+            if(ifill2S.eq.0.and.(ifill3S.ne.0.or.ifill4S.ne.0))then
+               write(*,*)'Error #2[wg] in dsigF S',ifill2S ,ifill3S
+     &              ,ifill4S
+               stop
+            endif
+            if ((nbody.and.ifill2S_born.eq.1).or.
+     &           (.not.nbody.and.ifill2S.eq.0.and.ifill2S_born.eq.1))
+     &           then
+c
+c Copy the values for the nbody configuration over the nFKSprocess*2-1
+c
+c In some rare cases with massive j_fks the counterevents need to be
+c skipped, while the Born momenta are there. So, we need to fill the
+c common blocks accordingly.
+c
+               wgtqes2_all(2,nFKSprocess*2-1)=wgtqes2_all(2,0)
+               wgtqes2_all(3,nFKSprocess*2-1)=wgtqes2_all(3,0)
+               wgtqes2_all(4,nFKSprocess*2-1)=wgtqes2_all(4,0)
+               wgtmuR2_all(2,nFKSprocess*2-1)=wgtmuR2_all(2,0)
+               wgtmuF12_all(2,nFKSprocess*2-1)=wgtmuF12_all(2,0)
+               wgtmuF22_all(2,nFKSprocess*2-1)=wgtmuF22_all(2,0)
+               do i=1,nexternal
+                  do j=0,3
+                     if (i.lt.nexternal) then
+                        wgtkin_all(j,i,2,nFKSprocess*2-1)=p_born(j,i)
+                     else
+                        wgtkin_all(j,i,2,nFKSprocess*2-1)=0d0
+                     endif
+                  enddo
+               enddo
+               wgtxbj_all(1,2,nFKSprocess*2-1)=wgtxbj_all(1,2,0)
+               wgtxbj_all(2,2,nFKSprocess*2-1)=wgtxbj_all(2,2,0)
+            endif
+
+            if (nbody) then
+               wgtref_nbody = dsigS
+            endif
+            wgtref_all(nFKSprocess*2-1) = dsigS
+            xsec = enhance*unwgtfun
+            do i=1,4
+               if (.not.nbody) then
+                  wgtwreal_all(i,nFKSprocess*2-1)=wgtwreal_all(i
+     &                 ,nFKSprocess*2-1) * xsec*fkssymmetryfactor
+                  wgtwdeg_all(i,nFKSprocess*2-1)=wgtwdeg_all(i
+     &                 ,nFKSprocess*2-1) * xsec*fkssymmetryfactorDeg
+                  wgtwdegmuf_all(i,nFKSprocess*2-1)=wgtwdegmuf_all(i
+     &                 ,nFKSprocess*2-1) * xsec*fkssymmetryfactorDeg
+               endif
+            enddo
+            if (nbody) then
+               wgtwborn_all=wgtwborn_all * xsec*fkssymmetryfactorBorn
+               wgtwns_all=wgtwns_all * xsec*fkssymmetryfactorBorn
+               wgtwnsmuf_all=wgtwnsmuf_all * xsec*fkssymmetryfactorBorn
+               wgtwnsmur_all=wgtwnsmur_all * xsec*fkssymmetryfactorBorn
+            endif
+            if (.not.nbody) then
+               do i=1,iwgtnumpartn_all(nFKSprocess*2-1)
+                  wgtwmcxsec_all(i,nFKSprocess*2-1)=wgtwmcxsec_all(i
+     &                 ,nFKSprocess*2-1) * xsec*fkssymmetryfactor
+               enddo
+            endif
+            if(check_reweight.and.doreweight) then
+               if (nbody) then
+                  call check_rwgt_wgt("nbd")
+               else
+                  call fill_reweight0inc(nFKSprocess*2-1)
+                  call check_rwgt_wgt("Sev")
+               endif
+               call reweight_settozero()
+            endif
 c Example of reweighted cross section (scale changed)
 c           dsigS_new=compute_rwgt_wgt_Sev(new_muR_fact,new_muF1_fact,
-c     #                                    new_muF2_fact,new_QES_fact,
-c     #                                    iwgtinfo)
-         endif      
+c     &                                    new_muF2_fact,new_QES_fact,
+c     &                                    iwgtinfo)
+         endif
 
          total_wgt_sum=total_wgt_sum+dsigS*vegaswgt
          central_wgt_saved=dsigS
-
-         if(dsigS.ne.0.d0)
-     &        call set_shower_scale(p1_cnt(0,1,0),i_fks,j_fks,
-     &        xi_i_fks_ev,y_ij_fks_ev)
-         if (dsigS.ne.0d0) itotalpoints=itotalpoints+1
-
 c For tests
          if(abs(dsigS).gt.fksmaxwgt)then
             fksmaxwgt=abs(dsigS)
@@ -3239,7 +1924,7 @@ c For tests
          endif
 c Plot observables for counterevents and Born
          if (.not.unwgt) then
-            plot_wgt=( (ev_wgt+xmc_wgt+cnt_wgt)*fkssymmetryfactor +
+            plot_wgt=( (Sev_wgt+Sxmc_wgt+cnt_wgt)*fkssymmetryfactor +
      &           cnt_swgt*fkssymmetryfactor +
      &           bsv_wgt*fkssymmetryfactorBorn +
      &           deg_wgt*fkssymmetryfactorDeg +
@@ -3249,10 +1934,97 @@ c Plot observables for counterevents and Born
      &           call outfun(p1_cnt(0,1,0),ybst_til_tolab,plot_wgt,iplot_cnt)
          endif
 
+         dsigH = totH_wgt*fkssymmetryfactor
+         call unweight_function(p_born,unwgtfun)
+         dsigH=dsigH*unwgtfun
+
+         if (dsigH.ne.dsigH) then
+            write (*,*) 'ERROR, ',dsigH,
+     &           ' found for dsigH, setting dsigH to 0 for this event'
+            dsigH=0
+         endif
+
+         if (nbody.and.dsigH.ne.0d0) then
+            write (*,*) 'When doing nbody, contribution '/
+     &           /'from H-events should be zero',dsigH
+            stop
+         endif
+
+         if (.not.nbody) then
+            do j=1,IPROC
+               unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess,2,j)
+     $              *enhance*fkssymmetryfactor*unwgtfun*vegaswgt
+            enddo
+         endif
+         if(doreweight)then
+            if(ifill2H.eq.0.and.(ifill3H.ne.0.or.ifill4H.ne.0))then
+               write(*,*)'Error #2[wg] in dsigF H',ifill2H,ifill3H
+     &              ,ifill4H
+               stop
+            endif
+            if (.not.nbody) then
+               wgtref_all(nFKSprocess*2) = dsigH
+               xsec = enhance*unwgtfun*fkssymmetryfactor
+               do i=1,4
+                  wgtwreal_all(i,nFKSprocess*2)=wgtwreal_all(i
+     &                 ,nFKSprocess*2) * xsec
+               enddo
+               do i=1,iwgtnumpartn_all(nFKSprocess*2)
+                  wgtwmcxsec_all(i,nFKSprocess*2)=wgtwmcxsec_all(i
+     &                 ,nFKSprocess*2) * xsec
+               enddo
+               if(check_reweight.and.doreweight) then
+                  call fill_reweight0inc(nFKSprocess*2)
+                  call check_rwgt_wgt("Hev")
+                  call reweight_settozero()
+               endif
+            else
+               if (wgtref_all(nFKSprocess*2).ne.0d0) then
+                  write (*,*) 'wgtref not zero',
+     &                 wgtref_all(nFKSprocess*2)
+                  stop
+               endif
+               do i=1,4
+                  if (wgtwreal_all(i,nFKSprocess*2).ne.0d0) then
+                     write (*,*) 'wgtwreal not zero',i,
+     &                    wgtwreal_all(i,nFKSprocess*2)
+                     stop
+                  endif
+               enddo
+               do i=1,iwgtnumpartn_all(nFKSprocess*2)
+                  if (wgtwmcxsec_all(i,nFKSprocess*2).ne.0d0) then
+                     write (*,*) 'wgtwmcxsec not zero',i,
+     &                    wgtwmcxsec_all(i,nFKSprocess*2)
+                     stop
+                  endif
+               enddo
+            endif
+c Example of reweighted cross section (scale changed)
+c           dsigH_new=compute_rwgt_wgt_Hev(new_muR_fact,new_muF1_fact,
+c     &                                    new_muF2_fact,new_QES_fact,
+c     &                                    iwgtinfo)
+         endif      
+
+c For tests
+         if(abs(dsigH).gt.fksmaxwgt)then
+            fksmaxwgt=abs(dsigH)
+            xisave=xi_i_fks_ev
+            ysave=y_ij_fks_ev
+         endif
+
+c Plot observables for event
+         if (.not.unwgt) then
+            plot_wgt=totH_wgt*fkssymmetryfactor*vegaswgt 
+            if( abs(plot_wgt).gt.1.d-20.and.pp(0,1).ne.-99d0. and.
+     &           (plotEv.or.plotKin) )
+     &           call outfun(pp,ybst_til_tolab,plot_wgt,iplot_ev)
+         endif
+
+
       elseif (iminmax.eq.1 .and. ExceptPSpoint) then
 c for except PS points, this is the maximal approx for the virtual         
          call unweight_function(p_born,unwgtfun)
-         dsigS_max = ((ev_wgt+xmc_wgt+cnt_wgt)*fkssymmetryfactor +
+         dsigS_max = ((Sev_wgt+Sxmc_wgt+cnt_wgt)*fkssymmetryfactor +
      &        cnt_swgt*fkssymmetryfactor +
      &        bsv_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
@@ -3263,7 +2035,7 @@ c for except PS points, this is the maximal approx for the virtual
       elseif (iminmax.eq.2 .and. ExceptPSpoint) then
 c for except PS points, this is the minimal approx for the virtual         
          call unweight_function(p_born,unwgtfun)
-         dsigS_min = ((ev_wgt+cnt_wgt)*fkssymmetryfactor +
+         dsigS_min = ((Sev_wgt+Sxmc_wgt+cnt_wgt)*fkssymmetryfactor +
      &        cnt_swgt*fkssymmetryfactor +
      &        bsv_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
@@ -3279,95 +2051,215 @@ c If exceptional PS point found, go back to beginning recompute
 c the weight for this PS point using an approximation
 c based on previous PS points (done in LesHouches.f)
       if (ExceptPSpoint .and. iminmax.le.1) goto 44
-
       return
       end
 
 
-      subroutine set_shower_scale(pp,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
+      subroutine set_shower_scale(iFKS,Hevents)
       implicit none
       include "nexternal.inc"
       include "madfks_mcatnlo.inc"
-      double precision pp(0:3,nexternal)
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision shat,dot,tmp
-      external dot
-      integer i_fks,j_fks
       logical Hevents
-      common/SHevents/Hevents
-      double precision emsca
-      common/cemsca/emsca
-
-      double precision etot
-      common/cetot/etot
-
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision dot,tmp
+      external dot
+      double precision sqrtshat_ev,shat_ev
+      common/parton_cms_ev/sqrtshat_ev,shat_ev
+      double precision emsca,scalemax
+      common/cemsca/emsca,scalemax
       character*4 abrv
       common /to_abrv/ abrv
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
-
-c MC shower scale
-      double precision SCALUP
+      include 'nFKSconfigs.inc'
+      integer iFKS
+      double precision SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
+     &     ,pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
+     &     ,pt_hardness
+      double precision xscalemax,xxscalemax
+      logical condition
 
-      double precision upper_scale,up_scale
-      common/cupscale/upper_scale
+      xscalemax = scalemax
 
-      double precision one
-      parameter(one=1.d0)
+      if(MonteCarlo(1:6).eq.'HERWIG')condition=.not.Hevents
+      if(MonteCarlo(1:6).eq.'PYTHIA')condition=.true.
 
-      double precision tiny
-      parameter(tiny=1.d-4)
-c
-      if(pp(0,1).lt.0.d0)then
-        write(*,*)'Error #0 in set_shower_scale, for events:',Hevents
-        stop
-      endif
-      shat=2d0*dot(pp(0,1),pp(0,2))
-
-c assign SCALUP for HERWIG6 and HERWIGPP
-      if(MonteCarlo(1:6).eq.'HERWIG')then
-         if(Hevents)then
-            SCALUP=sqrt(shat)
+      if(condition)then
+         if(dampMCsubt .and. abrv.ne.'born' .and. abrv.ne.'grid' .and.
+     &        emsca.ne.0d0)then
+            SCALUP(iFKS)=min(emsca,xscalemax)
          else
-            if(dampMCsubt.and.abrv(1:4).ne.'born')then
-               SCALUP=min( emsca,sqrt(shat) )
-            else
-               SCALUP=sqrt(shat)
-            endif
+            call assign_scalemax(shat_ev,xi_i_fks_ev,xxscalemax)
+            SCALUP(iFKS)=xxscalemax
          endif
-
-c assign SCALUP for PYTHIA     
-      elseif(MonteCarlo(1:6).eq.'PYTHIA')then
-         up_scale=0.d0
-         if(dampMCsubt.and.abrv(1:4).ne.'born')then
-            SCALUP=emsca
-            if(abs(etot/emsca-1.d0).le.tiny)SCALUP=min( emsca,sqrt(shat) )
+      else
+         if (emsca.ne.0d0) then
+            SCALUP(iFKS)=xscalemax
          else
-            up_scale=upper_scale
-c change here the abrv stuff??
-            if(abrv(1:4).eq.'born'.or.abrv(1:2).eq.'vi')then
-               tmp=1.d0-xi_i_fks_ev
-               if(.not.Hevents.and.j_fks.le.2)tmp=1.d0
-c recall that upper_scale = x*s (up to fff rescaling); here shat = s
-c for H events and shat = sbar for S events
-c
-c  ISR, H events   sbar = x*s,  shat = s  , upper_scale = x*s ==> tmp = x
-c  ISR, S events   sbar = x*s,  shat = x*s, upper_scale = x*s ==> tmp = 1
-c  FSR, H events   sbar = s  ,  shat = s  , upper_scale = x*s ==> tmp = x
-c  FSR, S events   sbar = s  ,  shat = s  , upper_scale = x*s ==> tmp = x
-c check once more
-               call assign_upper_scale(one,tmp,shat,up_scale)
-            endif
-            SCALUP=up_scale
+            call assign_scalemax(shat_ev,xi_i_fks_ev,xxscalemax)
+            SCALUP(iFKS)=xxscalemax
          endif
       endif
 
-      if(SCALUP.le.0.d0)then
-        write(*,*)'Scale too small in set_shower_scale:',SCALUP
-        stop
+      if (Hevents) then
+c$$$         SCALUP(iFKS)=min(SCALUP(iFKS),shower_H_scale(iFKS))
+         SCALUP(iFKS)=max(shower_H_scale(iFKS),ref_H_scale(iFKS)
+     &        -min(emsca,scalemax))
+      else
+         SCALUP(iFKS)=min(SCALUP(iFKS),shower_S_scale(iFKS))
+      endif
+
+      if(SCALUP(iFKS).le.0.d0)then
+         write(*,*)'Scale too small in set_shower_scale:',iFKS
+     &        ,SCALUP(iFKS),emsca,xscalemax,sqrt(shat_ev)
+     &        ,shower_S_scale(iFKS) ,shower_H_scale(iFKS),Hevents
+         write(*,*)
+         stop
       endif
 c
+      return
+      end
+
+
+      subroutine set_shower_scale_noshape(pp,iFKS)
+      implicit none
+      integer iFKS,j,i
+      double precision sqrt2,pfrac
+      parameter (sqrt2=1.414213562373095d0)
+      parameter (pfrac=0.9d0)
+      include "nexternal.inc"
+      include "madfks_mcatnlo.inc"
+      include 'nFKSconfigs.inc'
+      LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
+      LOGICAL  IS_A_B(NEXTERNAL),IS_A_A(NEXTERNAL)
+      LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY
+      double precision sqrtshat_ev,shat_ev
+      common/parton_cms_ev/sqrtshat_ev,shat_ev
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
+      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
+      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
+      double precision p1_cnt(0:3,nexternal,-2:2)
+      double precision wgt_cnt(-2:2)
+      double precision pswgt_cnt(-2:2)
+      double precision jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
+     &     ,pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
+     &     ,pt_hardness
+      double precision ptparton,pt,pp(0:3,nexternal)
+      external pt
+c jet cluster algorithm
+      integer NN,NJET,JET(nexternal)
+      double precision pQCD(0:3,nexternal),PJET(0:3,nexternal),rfj,sycut
+     &     ,palg,fastjetdmergemax,di_ev(nexternal),di_cnt(nexternal)
+      external fastjetdmergemax
+c
+      NN=0
+      do j=nincoming+1,nexternal
+         if (is_a_j(j)) then
+            NN=NN+1
+            ptparton=pt(pp(0,j))
+         endif
+      enddo
+      if (NN.le.0) then
+         write (*,*) 'Error in set_shower_scale_noshape '/
+     &        /'not enough QCD partons in process',NN
+         stop
+      elseif (NN.eq.1) then
+c
+c For processes without jets at the Born
+c
+         pt_hardness=0d0
+         shower_S_scale(iFKS)=sqrtshat_cnt(0)
+         shower_H_scale(iFKS)=sqrtshat_ev-ptparton
+      else
+         pt_hardness=0d0        ! updated below if event exists
+c     
+c For processes with jets at the Born
+c Assign shower_S_scale:
+c
+         if (p_born(0,1).gt.0d0) then
+c Put all (light) QCD partons in momentum array for jet clustering.
+c Use here the Born momenta
+            NN=0
+            do j=nincoming+1,nexternal-1
+               if (is_a_j(j))then
+                  NN=NN+1
+                  do i=0,3
+                     pQCD(i,NN)=p_born(i,j)
+                  enddo
+               endif
+            enddo
+c one MUST use kt, and no lower pt cut. The radius parameter
+c can be changed
+            palg=1.d0           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
+            sycut=0.d0          ! minimum jet pt
+            rfj=0.4d0           ! the radius parameter
+            call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
+            do i=1,NN
+               di_cnt(i)=sqrt(fastjetdmergemax(i-1))
+               if(i.gt.1.and.di_cnt(i).gt.di_cnt(i-1))then
+                  write (*,*) 'Error in set_shower_scale_noshape '/
+     &                 /'-- di_cnt(i) not ordered'
+                  write (*,*) NN,i,di_cnt(i),di_cnt(i-1)
+                  stop
+               endif
+            enddo
+            shower_S_scale(iFKS)=di_cnt(NN)
+         else
+            shower_S_scale(iFKS)=sqrtshat_cnt(0)
+         endif
+c
+c Assign shower_H_scale:
+c
+         if (pp(0,1).gt.0d0) then
+c Put all (light) QCD partons in momentum array for jet clustering.
+c Use here the real-emission momenta
+            NN=0
+            do j=nincoming+1,nexternal
+               if (is_a_j(j))then
+                  NN=NN+1
+                  do i=0,3
+                     pQCD(i,NN)=pp(i,j)
+                  enddo
+               endif
+            enddo
+c One MUST use kt, and no lower pt cut. The radius parameter
+c can be changed
+            palg=1.d0           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
+            sycut=0.d0          ! minimum jet pt
+            rfj=0.4d0           ! the radius parameter
+            call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
+            do i=1,NN
+               di_ev(i)=sqrt(fastjetdmergemax(i-1))
+               if(i.gt.1.and.di_ev(i).gt.di_ev(i-1))then
+                  write (*,*) 'Error in set_shower_scale_noshape '/
+     &                 /'-- di_ev(i) not ordered'
+                  write (*,*) NN,i,di_ev(i),di_ev(i-1)
+                  stop
+               endif
+            enddo
+            ref_H_scale(iFKS)=di_ev(NN-1)
+            pt_hardness=di_ev(NN)
+            shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness
+         else
+            ref_H_scale(iFKS)=shower_S_scale(iFKS)
+            shower_H_scale(iFKS)=ref_H_scale(iFKS)
+         endif
+      endif
       return
       end
 
@@ -3449,7 +2341,7 @@ c i_fks is (anti-)quark
             stop
          endif
       else
-         call smatrix(pp,wgt)
+         call smatrix_real(pp,wgt)
          wgt=wgt*xi_i_fks**2*(1d0-y_ij_fks)
       endif
 
@@ -3497,10 +2389,8 @@ C
 
       double precision p_born_rot(0:3,nexternal-1)
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
       integer i,imother_fks
       double precision t,z,ap,E_j_fks,E_i_fks,Q,cphi_mother,
@@ -3537,6 +2427,7 @@ c might flip when rotating the momenta.
           call trp_rotate_invar(p_born(0,i),p_born_rot(0,i),
      #                          cthbe,sthbe,cphibe,sphibe)
         enddo
+        CalculatedBorn=.false.
         call sborn(p_born_rot,wgt1)
         CalculatedBorn=.false.
       else
@@ -3616,10 +2507,8 @@ C
       double complex xij_aor
       common/cxij_aor/xij_aor
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
@@ -3662,6 +2551,7 @@ c might flip when rotating the momenta.
           p_born_rot(2,i)=p_born(2,i)
           p_born_rot(3,i)=-p_born(3,i)
         enddo
+        CalculatedBorn=.false.
         call sborn(p_born_rot,wgt1)
         CalculatedBorn=.false.
       else
@@ -3973,12 +2863,17 @@ c q->gq splitting
       implicit none
 
       include "nexternal.inc"
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include "coupl.inc"
 
       integer m,n
 
-      double precision softcontr,pp(0:3,nexternal),wgt,eik,xi_i_fks,y_ij_fks
+      double precision softcontr,pp(0:3,nexternal),wgt,eik,xi_i_fks
+     &     ,y_ij_fks
+      double complex wgt1(2)
       integer i,j
 
       double precision p_born(0:3,nexternal-1)
@@ -3990,9 +2885,14 @@ c q->gq splitting
       double precision zero,pmass(nexternal)
       parameter(zero=0d0)
       include "pmass.inc"
-
+c
+c Call the Born to be sure that 'CalculatedBorn' is done correctly. This
+c should always be done before calling the color-correlated Borns,
+c because of the caching of the diagrams.
+c
+      call sborn(p_born(0,1),wgt1)
+c
       softcontr=0d0
-
       do i=1,fks_j_from_i(i_fks,0)
          do j=1,i
             m=fks_j_from_i(i_fks,i)
@@ -4288,8 +3188,6 @@ c do the same as above for the counterevents
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
-      logical Hevents
-      common/SHevents/Hevents
 
       if(zhw_used.lt.0.d0.or.zhw_used.gt.1.d0)then
         write(*,*)'Error #1 in get_mc_lum',zhw_used
@@ -4459,15 +3357,15 @@ c
             call xprintout(iunit,xnum,xden)
           else
             if(ipart.ne.i_fks.and.ipart.ne.j_fks)then
-              if(xden.gt.vtiny) then
+              if(xden.ne.0.d0)then
                 xrat=abs(1-xnum/xden)
               else
-                if (xnum.gt.vtiny) then
-                  xrat=abs(xnum)
-                else
-                  xrat=0d0
-                endif
+                xrat=abs(xnum)
               endif
+              if(abs(xnum).eq.0d0.and.abs(xden).le.vtiny)xrat=0d0
+c The following line solves some problem as well, but before putting
+c it as the standard, one should think a bit about it
+c              if(abs(xnum).le.vtiny.and.abs(xden).le.vtiny)xrat=0d0
               if(xrat.gt.tiny .and.
      &          (pmass(ipart).eq.0d0.or.xnum/pmass(ipart).gt.vtiny))then
                  write(*,*)'Kinematics of counterevents'
@@ -4995,10 +3893,13 @@ c
       subroutine bornsoftvirtual(p,bsv_wgt,born_wgt)
       implicit none
       include "genps.inc"
-      include "nexternal.inc"
+      include 'nexternal.inc'
       include "coupl.inc"
-      include "q_es.inc"
-      include "fks.inc"
+      include 'q_es.inc'
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include "run.inc"
       include "fks_powers.inc"
       include 'reweight.inc'
@@ -5031,16 +3932,11 @@ c
       parameter (ComputePoles=.false.)
       parameter (fksprefact=.true.)
 
-      logical firsttime
-      data firsttime/.true./
-
       double precision beta0
       common/cbeta0/beta0
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
 c For tests of virtuals
       double precision vobmax,vobmin
@@ -5077,7 +3973,7 @@ c For the MINT folding
 
       ao2pi=g**2/(8d0*PI**2)
 
-      if (particle_type(i_fks).eq.8 .or. abrv.eq.'born') then
+      if (particle_type(i_fks).eq.8 .or. abrv.eq.'grid') then
 
 c Consistency check -- call to set_cms_stuff() must be done prior to
 c entering this function
@@ -5094,7 +3990,7 @@ c Born contribution:
          bsv_wgt=dble(wgt1(1))
          born_wgt=dble(wgt1(1))
 
-         if (abrv.eq.'born') goto 549
+         if (abrv.eq.'born' .or. abrv.eq.'grid') goto 549
          if (abrv.eq.'virt' .or. abrv.eq.'viSC' .or.
      #       abrv.eq.'viLC') goto 547
 
@@ -5191,7 +4087,7 @@ c        helicity contributions for the Q-terms of collinear limit.
  547     continue
          if (abrv.eq.'virt' .or. abrv.eq.'viSC' .or.
      #       abrv.eq.'viLC') goto 548
-
+c
 c I(reg) terms, eq 5.5 of FKS
          contr=0d0
          do i=1,fks_j_from_i(i_fks,0)
@@ -5200,6 +4096,9 @@ c I(reg) terms, eq 5.5 of FKS
                n=fks_j_from_i(i_fks,j)
                if ((m.ne.n .or. (m.eq.n .and. pmass(m).ne.ZERO)).and.
      &              n.ne.i_fks.and.m.ne.i_fks) then
+c To be sure that color-correlated Borns work well, we need to have
+c *always* a call to sborn(p_born,wgt) just before. This is okay,
+c because there is a call above in this subroutine
                   call sborn_sf(p_born,m,n,wgt)
                   if (wgt.ne.0d0) then
                      call eikonal_Ireg(p,m,n,xicut_used,eikIreg)
@@ -5256,7 +4155,7 @@ c eq.(MadFKS.C.14)
 
          if(doNLOreweight.or.doreweight)then
            wgtwnstmpmuf=0.d0
-           if(abrv.ne.'born')then
+           if(abrv.ne.'born' .and. abrv.ne.'grid')then
              if(abrv(1:2).eq.'vi')then
                wgtwnstmpmur=0.d0
              else
@@ -5344,7 +4243,6 @@ c            stop
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
-      include 'reweight.inc'
 
       double precision p_born(0:3,nexternal-1)
       double precision bpower,born_wgt
@@ -5357,10 +4255,8 @@ c            stop
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
       double precision tiny
       parameter (tiny=1d-6)
@@ -5406,14 +4302,6 @@ c Compute bpower
 c set it to the integer exactly
          bpower=dble(nint(bpower))
          write(*,*)'bpower is', bpower
-
-c Check consistency with value used in reweighting
-c         if( (doreweight.or.doNLOreweight) .and.
-c     &        abs(bpower-wgtbpower).gt.tiny )then
-c            write(*,*)'Error in compute_bpower'
-c            write(*,*)'bpower(s) are:',bpower,wgtbpower
-c            stop
-c         endif
       endif
 
 c Change couplings back and recompute the Born to make sure that 
@@ -5760,8 +4648,11 @@ c the prefactor (mu2/Q2)^ep in eq.(B.1) is expanded, and giving an
 c extra contribution to the single pole
       implicit none
       include "genps.inc"
-      include "nexternal.inc"
-      include "fks.inc"
+      include 'nexternal.inc'
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include 'coupl.inc'
       include 'q_es.inc'
       double precision p(0:3,nexternal),xmu2,double,single
@@ -5852,10 +4743,13 @@ c the factor as/(2*pi)
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include 'coupl.inc'
       include 'q_es.inc'
-      double precision p(0:3,nexternal),m1l_finite_CDR,born
+      double precision p(0:3,nexternal-1),m1l_finite_CDR,born
       double precision CF,pi,aso2pi,shat,dot,xlgq2os
       parameter (CF=4d0/3d0)
       parameter (pi=3.1415926535897932385d0)
@@ -5876,10 +4770,13 @@ c the factor as/(2*pi)
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include 'coupl.inc'
       include 'q_es.inc'
-      double precision p(0:3,nexternal),m1l_W_finite_CDR,born
+      double precision p(0:3,nexternal-1),m1l_W_finite_CDR,born
       double precision CF,pi,aso2pi,shat,dot,xlgq2os
       parameter (CF=4d0/3d0)
       parameter (pi=3.1415926535897932385d0)
@@ -5931,17 +4828,21 @@ c$$$      parameter (CA=3d0,CF=4d0/3d0,Nf=0d0)
       include 'genps.inc'
       include 'nexternal.inc'
       include 'fks_powers.inc'
-      include 'fks.inc'
+c      include 'fks.inc'
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      include 'reweight0.inc'
+      include 'reweightNLO.inc'
 
-      integer mapbconf(0:lmaxconfigs)
-      integer b_from_r(lmaxconfigs)
-      integer r_from_b(lmaxconfigs)
-      include "bornfromreal.inc"
-      integer            mapconfig(0:lmaxconfigs), this_config
+      integer mapconfig(0:lmaxconfigs), this_config
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       integer sprop(-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
-      include "configs.inc"
+      include "born_conf.inc"
+
+      logical firsttime
+      data firsttime/.true./
 
       double precision xicut_used
       common /cxicut_used/xicut_used
@@ -5953,7 +4854,7 @@ c$$$      parameter (CA=3d0,CF=4d0/3d0,Nf=0d0)
       common /toxexternal/ xexternal
       logical rotategranny
       common/crotategranny/rotategranny
-      integer diagramsymmetryfactor
+      double precision diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
 
       integer           isum_hel
@@ -5973,8 +4874,8 @@ c$$$      parameter (CA=3d0,CF=4d0/3d0,Nf=0d0)
       character*4 abrv
       common /to_abrv/ abrv
 
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
 
       integer fold
       common /cfl/fold
@@ -5982,49 +4883,13 @@ c$$$      parameter (CA=3d0,CF=4d0/3d0,Nf=0d0)
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
       common/cparticle_types/i_type,j_type,m_type
-
-
-c First check if we need to integrate this directory
-c The file "integrate.fks" should have been created by genint_fks
-      open(unit=19,file="integrate.fks",status="old",err=99)
-      read(19,'(a)') integrate
-      if (integrate.eq.'N') then
-         read(19,'(I2)') config_fks
-         write (*,*) 'No need to integrate this directory...'
-         write (*,*) 'Integrate directory number ',config_fks,' instead'
-         stop
-      elseif (integrate.eq.'Y') then
-         write (*,*)
-     &        'This directory should be included for symmetry reasons'
-      else
-         write (*,*) "Don't know what to do: ", integrate
-         stop
-      endif
-      close(19)
-c When doing nbodyonly, we should check that we need this dir or not
-c The file "nbodyonly.fks" should have been created by genint_fks
-      if (nbodyonly) then
-         open(unit=19,file="nbodyonly.fks",status="old",err=99)
-         read(19,'(a)') integrate
-         if (integrate.eq.'N') then
-            write (*,*) 'No need to integrate this directory when'//
-     &           ' doing only the n-body integration'
-            stop
-         elseif (integrate.eq.'Y') then
-            write (*,*) 'This directory should be included for n-body'
-         else
-            write (*,*) "Don't know what to do: ", integrate
-            stop
-         endif
-         close(19)
-      endif
-
+c
 c Check to see if this channel needs to be included in the multi-channeling
       diagramsymmetryfactor=0d0
       if (multi_channel) then
          if (onlyBorn) then
             open (unit=19,file="symfact.dat",status="old",err=12)
-            do i=1,mapbconf(0)
+            do i=1,mapconfig(0)
                read (19,*,err=23) fac1,fac2
                if (fac2.gt.0) then
                   multi_chan(fac1)=.true.
@@ -6032,7 +4897,7 @@ c Check to see if this channel needs to be included in the multi-channeling
                   multi_chan(fac1)=.false.
                endif
             enddo
-            if (multi_chan(b_from_r(iconfig))) then
+            if (multi_chan(mapconfig(iconfig))) then
                diagramsymmetryfactor=1d0
             else
                write (*,*) 'No need to integrate this channel'
@@ -6041,9 +4906,9 @@ c Check to see if this channel needs to be included in the multi-channeling
             close(19)
          else                   ! not onlyBorn
             open (unit=19,file="symfact.dat",status="old",err=12)
-            do i=1,mapbconf(0)
+            do i=1,mapconfig(0)
                read (19,*,err=23) fac1,fac2
-               if (fac1.eq.b_from_r(iconfig)) then
+               if (fac1.eq.mapconfig(iconfig)) then
                   if (fac2.gt.0) then
                      write (*,*) 'diagram symmetry factor',fac2
                      diagramsymmetryfactor=dble(fac2)
@@ -6067,11 +4932,11 @@ c Check to see if this channel needs to be included in the multi-channeling
          endif
       
       else                      ! no multi_channel
-         write (*,*) 'Setting diagram symmetry factor to 1,'//
-     &        ' because no suppression.'
+c$$$         write (*,*) 'Setting diagram symmetry factor to 1,'//
+c$$$     &        ' because no suppression.'
          diagramsymmetryfactor=1d0
       endif
- 14    continue
+ 14   continue
 
 c Set xexternal to true to use the x's from external vegas in the
 c x_to_f_arg subroutine
@@ -6084,10 +4949,8 @@ c parametrization allows it
       softtest=.false.
       colltest=.false.
       fold=0
-      open (unit=19,file="config.fks",status="old")
-      read (19,*) config_fks
-      close (19)
-      if (fks_j(config_fks).gt.nincoming)then
+
+      if (j_fks.gt.nincoming)then
          delta_used=deltaO
       else
          delta_used=deltaI
@@ -6095,8 +4958,8 @@ c parametrization allows it
       
       xicut_used=xicut
       xiScut_used=xiScut
-      if( nbodyonly .or.
-     #    (abrv.eq.'born' .or. abrv(1:2).eq.'vi') )then
+      if( nbody .or. (abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &     abrv(1:2).eq.'vi') )then
         xiBSVcut_used=1.d0
       else
         xiBSVcut_used=xiBSVcut
@@ -6151,13 +5014,6 @@ c
       fkssymmetryfactorDeg=0d0
       fkssymmetryfactorBorn=0d0
 
-      i_fks=fks_i(config_fks)
-      j_fks=fks_j(config_fks)
-      if (i_fks.le.j_fks) then
-         write (*,*) 'ERROR in setfksfactor, i_fks.le.j_fks: '//
-     &        'terrible things might happen',i_fks,j_fks
-         stop
-      endif
       i_fks_pdg=pdg_type(i_fks)
       j_fks_pdg=pdg_type(j_fks)
       
@@ -6201,7 +5057,7 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
          if (pdg_type(i).eq.21) ngluons=ngluons+1
       enddo
 
-      if (nbodyonly.and.i_fks_pdg.eq.21) then
+      if (nbody.and.i_fks_pdg.eq.21) then
          if (ngluons.le.0) then
             write (*,*)
      &           'ERROR, number of gluons should be larger than 1',
@@ -6211,10 +5067,6 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
          fkssymmetryfactor=dble(ngluons)
          fkssymmetryfactorDeg=dble(ngluons)
          fkssymmetryfactorBorn=dble(ngluons)
-         write (*,*) 'nbodyonly: fks symmetry factor has been put to ',
-     &        fkssymmetryfactor
-         write (*,*) 'nbodyonly, fks symmetry factor for Born has'//
-     &        ' been put to ', fkssymmetryfactorBorn
       else
          fkssymmetryfactor=dble(fac_i*fac_j)
          fkssymmetryfactorDeg=dble(fac_i*fac_j)
@@ -6224,21 +5076,17 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
             fkssymmetryfactorBorn=0d0
          endif
          if (abrv.eq.'grid') then
-            write (*,*) 'Setting grids using Born'
             fkssymmetryfactorBorn=1d0
             fkssymmetryfactor=0d0
             fkssymmetryfactorDeg=0d0
-            abrv='born'
          endif
-         write (*,*) 'fks symmetry factor is ', fkssymmetryfactor
-         write (*,*) 'fks symmetry factor for Born is ',
-     &        fkssymmetryfactorBorn
       endif
 
-      if ((abrv.eq.'born' .or. abrv(1:2).eq.'vi') .and.
-     &     fkssymmetryfactorBorn.eq.0d0) then
+      if ((abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')
+     &     .and.fkssymmetryfactorBorn.eq.0d0) then
          write (*,*) 'Not needed to run this subprocess '//
      &        'because doing only Born or virtual'
+         stop
       endif
 
 c Set color types of i_fks, j_fks and fks_mother.
@@ -6279,6 +5127,12 @@ c Set color types of i_fks, j_fks and fks_mother.
 c Set matrices used by MC counterterms
       call set_mc_matrices
 
+c Setup for parton-level NLO reweighting
+      if(firsttime.and.(doNLOscaleunc.or.doNLOPDFunc)) then
+         call setup_fill_rwgt_NLOplot()
+         firsttime=.false.
+      endif
+
       return
 
  99   continue
@@ -6301,10 +5155,12 @@ c Set matrices used by MC counterterms
       include "madfks_mcatnlo.inc"
       integer NHEL(nexternal,max_bhel*2),IHEL
 chel  include "helicities.inc"
+      include 'nFKSconfigs.inc'
       double precision hel_fac
+      integer get_hel,skip(fks_configs)
+      common/cBorn/hel_fac,get_hel,skip
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
       integer hel_wgt,hel_wgt_born,hel_wgt_real
       integer nhelreal(nexternal,4),goodhelreal(4)
       integer nhelrealall(nexternal,max_bhel*2)
@@ -6351,17 +5207,19 @@ c************
       if (isum_hel.ne.0) then ! MC over helicities
 c First, set the goodhelr and goodhelb to their starting values
       if (firsttime) then
-         if ((mint .and. (.not.Hevents) .and. (abrv(1:2).eq.'vi'
-     &             .or. abrv.eq.'born' .or. (.not.UseSudakov))) .or.
-     &        (.not.mint .and.
-     &                    (abrv.eq.'born' .or. abrv(1:2).eq.'vi'))) then
+         if ((mint .and. (.not.Hevents) .and. (abrv(1:2).eq.'vi' .or.
+     &        abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &        (.not.UseSudakov))) .or. (.not.mint .and. (abrv.eq.'born'
+     &        .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi'))) then
 c           if computing only the Born diagrams, should not
 c           consider real emission helicities            
             chckr=.false.
          else
             chckr=.true.
          endif
-         skip=1
+         do i=1,fks_configs
+            skip(i)=1
+         enddo
 c read from file if possible
          open(unit=65,file='goodhel.dat',status='old',err=532)
          all_set=.true.

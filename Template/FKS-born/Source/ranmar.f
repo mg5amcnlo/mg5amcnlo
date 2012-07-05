@@ -12,7 +12,7 @@ c
 c     Local
 c
       real*8 x
-      integer init,ioffset,iconfig
+      integer init,ioffset
       integer ij,kl,iseed1,iseed2
 
 c
@@ -21,8 +21,8 @@ c
       integer         iseed
       common /to_seed/iseed
 
-      integer           mincfig, maxcfig
-      common/to_configs/mincfig, maxcfig
+      integer           iconfig
+      common/to_configs/iconfig
 c
 c     Data
 c
@@ -33,12 +33,6 @@ c  Begin Code
 c-----
       if (init .eq. 1) then
          init = 0
-         if (mincfig.ne.maxcfig) then
-            write (*,*)'ERROR in initialization of random seed',
-     &           mincfig,maxcfig
-            stop
-         endif
-         iconfig=mincfig
          call get_offset(ioffset)
          if (iseed .eq. 0) call get_base(iseed)
 c

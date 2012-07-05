@@ -75,23 +75,21 @@ vegas_mint="2"
 
 cd SubProcesses
 
-for dir in P*_[1-9]* ; do
+for dir in P*_* ; do
     cd $dir
     echo $dir
     if [[ -e madevent_mintMC ]]; then
 	chmod +x ajob*
-	if [[ ( "$(head -n 1 nbodyonly.fks)" == "Y" && ( $run_mode == 'V' || $run_mode == 'B' )) || $run_mode == 'H' || $run_mode == 'S' ]] ; then
-	    if [[ $run_cluster == 1 ]] ; then
-		for job in mg*.cmd ; do
-		    sed -i "7s/.*/Arguments = $vegas_mint $run_mode $use_preset/" $job
-		    condor_submit $job
-		done
-	    elif [[ $run_cluster == 0 ]] ; then
-		echo "Doing "$run_mode"-events in this dir"
-		for job in ajob* ; do
-		    ./$job $vegas_mint $run_mode $use_preset
-		done
-	    fi
+	if [[ $run_cluster == 1 ]] ; then
+	    for job in mg*.cmd ; do
+		sed -i "7s/.*/Arguments = $vegas_mint $run_mode $use_preset/" $job
+		condor_submit $job
+	    done
+	elif [[ $run_cluster == 0 ]] ; then
+	    echo "Doing "$run_mode"-events in this dir"
+	    for job in ajob* ; do
+		./$job $vegas_mint $run_mode $use_preset
+	    done
 	fi
     else
 	echo 'madevent_mintMC does not exist. Skipping directory'
