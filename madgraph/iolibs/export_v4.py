@@ -3060,6 +3060,9 @@ class UFO_model_to_mg4(object):
                 common/rscale/ MU_R
 
                 """
+        header = header+"""double precision Nf
+                parameter(Nf=%d)
+                """ % self.model.get_nflav()
                 
         fsock.writelines(header)
         

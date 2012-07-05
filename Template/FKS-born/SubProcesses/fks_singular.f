@@ -4800,11 +4800,8 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       subroutine setfksfactor(iconfig)
       implicit none
 
-      double precision CA,CF,Nf,PI
-      parameter (CA=3d0,CF=4d0/3d0,Nf=5d0)
-c$$$      parameter (CA=3d0,CF=4d0/3d0,Nf=4d0)
-C SET NF=0 WHEN NOT CONSIDERING G->QQ SPLITTINGS. FOR TESTS ONLY
-c$$$      parameter (CA=3d0,CF=4d0/3d0,Nf=0d0)
+      double precision CA,CF, PI
+      parameter (CA=3d0,CF=4d0/3d0)
       parameter (pi=3.1415926535897932385d0)
 
       double precision c(0:1),gamma(0:1),gammap(0:1)

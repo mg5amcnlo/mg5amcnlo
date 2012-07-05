@@ -106,6 +106,18 @@ c
 c     check if I have to apply cuts on the particles
 c
 C $B$ IDENTIFY_TYPE $B$
+c-check consistency of maxjetflavor in the run_card and with Nf
+c specified in coupl.inc
+      if (maxjetflavor.gt.int(Nf)) then
+          write(*,*) "WARNING: the value of maxjetflavor specified in"//
+     1   " the run_card is inconsistent with the number of light"//
+     1   " flavours in the model."
+          write(*,*)"Hence it will be set to ", int(Nf)
+          maxjetflavor = int(Nf)
+      endif
+      
+
+
       do i=nincoming+1,nexternal
          do_cuts(i)=.true.
          if(nincoming.eq.1) do_cuts(i)=.false.
@@ -121,6 +133,7 @@ c-do not apply cuts to these
          if (abs(idup(i,1)).eq.12) do_cuts(i)=.false.  ! no cuts on ve ve~
          if (abs(idup(i,1)).eq.14) do_cuts(i)=.false.  ! no cuts on vm vm~
          if (abs(idup(i,1)).eq.16) do_cuts(i)=.false.  ! no cuts on vt vt~
+
 c-flavor-jets
          if (abs(idup(i,1)).le.min(maxjetflavor,5)) then
               is_a_j(i)=.true.

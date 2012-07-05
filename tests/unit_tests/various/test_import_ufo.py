@@ -51,6 +51,29 @@ class TestImportUFO(unittest.TestCase):
         self.assertEqual(self.base_model.get('expansion_order'),
                          {'QCD': 99, 'QED': 99, 'HIG':1, 'HIW': 1})
 
+class TestNFlav(unittest.TestCase):
+    """Test class for the get_nflav function"""
+
+    def test_get_nflav_sm(self):
+        """Tests the get_nflav_function for the full SM.
+        Here b and c quark are massive"""
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_full_model(sm_path)
+        self.assertEqual(model.get_nflav(), 3)
+
+    def test_get_nflav_sm_nobmass(self):
+        """Tests the get_nflav_function for the SM, with the no-b-mass restriction"""
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_model(sm_path + '-no_b_mass')
+        self.assertEqual(model.get_nflav(), 5)
+
+
+    def test_get_nflav_sm_nomasses(self):
+        """Tests the get_nflav_function for the SM, with the no_masses restriction"""
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_model(sm_path + '-no_masses')
+        self.assertEqual(model.get_nflav(), 5)
+
 #===============================================================================
 # TestRestrictModel
 #===============================================================================
