@@ -360,6 +360,8 @@ class UFOMG5Converter(object):
                     # MG5 internally treats ghost with positive spin for loop models and 
                     # ignore them otherwise
                     particle.set(key,abs(value))
+                    if value<0:
+                        particle.set('ghost',True)
                 else:
                     particle.set(key, value)    
             elif key == 'loop_particles':

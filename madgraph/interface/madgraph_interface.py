@@ -1736,6 +1736,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._export_dir = None
         self._export_format = 'madevent'
         self._mgme_dir = MG4DIR
+        self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
         self._comparisons = None
 
 
@@ -1761,7 +1762,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()    
-        
+
         self._v4_export_formats = ['madevent', 'standalone', 'matrix'] 
         self._export_formats = self._v4_export_formats + ['standalone_cpp', 'pythia8']
     
@@ -2242,10 +2243,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if not myprocdef:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
 
+        if args[0]=='gauge' and myprocdef.get('perturbation_couplings'):
+            raise self.InvalidCmd("Processes involving loops can only be"+
+                                                 " evaluated in Feynman gauge.")
+
         # Disable some loggers
         loggers = [logging.getLogger('madgraph.diagram_generation'),
                    logging.getLogger('madgraph.loop_diagram_generation'),
                    logging.getLogger('ALOHA'),
+                   logging.getLogger('madgraph.helas_objects'),
                    logging.getLogger('madgraph.loop_exporter'),
                    logging.getLogger('madgraph.export_v4')]
         old_levels = [logger.getEffectiveLevel() for logger in loggers]
@@ -2256,6 +2262,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         cpu_time1 = time.time()
         # Run matrix element generation check on processes
         mass_scheme = self.options['complex_mass_scheme']
+        loop_optimization = self.options['loop_optimized_output']
 
         comparisons = []
         gauge_result = []
@@ -2270,38 +2277,45 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
-                                                param_card = param_card,
-                                                quick = True,
-                                                mg_root=self._mgme_dir,
-                                                cuttools=CT_dir)
+                                            param_card = param_card,
+                                            quick = True,
+                                            mg_root=self._mgme_dir,
+                                            cuttools=CT_dir,
+                                            cmass_scheme = mass_scheme,
+                                            loop_optimization=loop_optimization)
             nb_processes += len(comparisons[0])
 
         if args[0] in ['lorentz', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
-                                                      param_card = param_card,
-                                                      mg_root=self._mgme_dir,
-                                                      cuttools=CT_dir,
-                                                      cmass_scheme = mass_scheme)
+                                          param_card = param_card,
+                                          mg_root=self._mgme_dir,
+                                          cuttools=CT_dir,
+                                          cmass_scheme = mass_scheme,
+                                          loop_optimization=loop_optimization)
             nb_processes += len(lorentz_result)
             
         if args[0] in  ['brs', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
-                                                      param_card = param_card,
-                                                      mg_root=self._mgme_dir,
-                                                      cuttools=CT_dir,
-                                                      cmass_scheme = mass_scheme)
+                                          param_card = param_card,
+                                          mg_root=self._mgme_dir,
+                                          cuttools=CT_dir,
+                                          cmass_scheme = mass_scheme,
+                                          loop_optimization=loop_optimization)
             nb_processes += len(gauge_result)
 
             
-        if args[0] in ['lorentz_invariance', 'full']:
-            lorentz_result = process_checks.check_lorentz(myprocdef,
-                                                      param_card = param_card,
-                                                      mg_root=self._mgme_dir,
-                                                      cuttools=CT_dir,
-                                                      cmass_scheme=mass_scheme)
-            nb_processes += len(lorentz_result)
+#        if args[0] in ['lorentz_invariance', 'full']:
+#            lorentz_result = process_checks.check_lorentz(myprocdef,
+#                                          param_card = param_card,
+#                                          mg_root=self._mgme_dir,
+#                                          cuttools=CT_dir,
+#                                          cmass_scheme=mass_scheme,
+#                                          loop_optimization=loop_optimization)
+#            nb_processes += len(lorentz_result)
 
-        if args[0] in  ['gauge', 'full'] and len(self._curr_model.get('gauge')) == 2:            
+        if args[0] in  ['gauge', 'full'] and \
+          len(self._curr_model.get('gauge')) == 2 and \
+          not myprocdef.get('perturbation_couplings'):            
             gauge = str(self.options['gauge'])
             line = " ".join(args[1:])
             myprocdef = self.extract_process(line)

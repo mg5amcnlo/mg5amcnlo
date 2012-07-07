@@ -100,6 +100,7 @@ class MatrixElementEvaluator(object):
 
         self.auth_skipping = auth_skipping
         self.reuse = reuse
+        self.cmass_scheme = cmass_scheme
         self.store_aloha = []
         self.stored_quantities = {}
         
@@ -330,13 +331,15 @@ class MatrixElementEvaluator(object):
 class LoopMatrixElementEvaluator(MatrixElementEvaluator):
     """Class taking care of matrix element evaluation for loop processes."""
 
-    def __init__(self, mg_root=None, cuttools_dir=None, *args, **kwargs):
+    def __init__(self, mg_root=None, cuttools_dir=None, loop_opt = False,
+                *args, **kwargs):
         """Allow for initializing the MG5 root where the temporary fortran
         output for checks is placed."""
         
         super(LoopMatrixElementEvaluator,self).__init__(*args, **kwargs)
         
         self.mg_root=mg_root
+        self.loop_opt=loop_opt
         self.cuttools_dir=cuttools_dir
         # Set proliferate to true if you want to keep the produced directories
         # and eventually reuse them if possible
@@ -401,39 +404,59 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 self.stored_quantities['matrix_elements'].append(\
                                                     (matrix_element,export_dir))
 
-            # I do the import here because there is some cyclyc import of export_v4
+            # I do the import here because there is some cyclic import of export_v4
             # otherwise
             import madgraph.loop.loop_exporters as loop_exporters
-            FortranExporter = loop_exporters.LoopProcessExporterFortranSA(\
-                            self.mg_root, export_dir, True,\
-                            os.path.join(self.mg_root, 'Template/loop_material'),\
-                            self.cuttools_dir)
+            if self.loop_opt:
+                exporter=loop_exporters.LoopProcessOptimizedExporterFortranSA
+            else:
+                exporter=loop_exporters.LoopProcessExporterFortranSA
+
+            FortranExporter = exporter(\
+                self.mg_root, export_dir, clean=True,
+                complex_mass_scheme = self.cmass_scheme, mp=True,
+                loop_dir=os.path.join(self.mg_root, 'Template/loop_material'),\
+                cuttools_dir=self.cuttools_dir)
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
             FortranExporter.copy_v4template(modelname=model.get('name'))
             FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
             wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
             wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
-                                        for c in l]))
+                                                                   for c in l]))
             FortranExporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
             FortranExporter.finalize_v4_directory(helas_objects.HelasMatrixElementList([\
                                     matrix_element]),"",False,False,'gfortran')
 
-        self.fix_PSPoint_in_check(export_dir)
+        self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'))
+        self.fix_MadLoopParamCard(os.path.join(export_dir,'SubProcesses'),
+                                                              mp = gauge_check)
         if gauge_check:
             file_path, orig_file_content, new_file_content = \
-                                            self.setup_ward_check(export_dir)
+              self.setup_ward_check(os.path.join(export_dir,'SubProcesses'), 
+                                       ['loop_matrix.f','helas_calls_ampb_1.f'])
             file = open(file_path,'w')
             file.write(new_file_content)
             file.close()
+            if self.loop_opt:
+                mp_file_path, mp_orig_file_content, mp_new_file_content = \
+                  self.setup_ward_check(os.path.join(export_dir,'SubProcesses'), 
+                  ['mp_compute_loop_coefs.f','mp_helas_calls_ampb_1.f'],mp=True)
+                mp_file = open(file_path,'w')
+                mp_file.write(mp_new_file_content)
+                mp_file.close()
         
         finite_m2 = self.get_me_value(process.shell_string_v4(), 0,\
                                                export_dir, p,verbose=False)[0][0]
-        
+
         # Restore the original loop_matrix.f code so that it could be reused
         if gauge_check:
             file = open(file_path,'w')
             file.write(orig_file_content)
             file.close()
+            if self.loop_opt:
+                mp_file = open(mp_file_path,'w')
+                mp_file.write(mp_orig_file_content)
+                mp_file.close()
     
         # Now erase the output directory
         if not self.proliferate:
@@ -447,15 +470,32 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         else:
             return {'m2': finite_m2, output:[]}
 
-    def fix_PSPoint_in_check(self,dir_name):
+    def fix_MadLoopParamCard(self,dir_name,mp=False):
+        """ Set parameters in MadLoopParams.dat suited for these checks."""
+
+        file = open(os.path.join(dir_name,'MadLoopParams.dat'), 'r')
+        MLParams = file.read()
+        file.close()
+        mode = 4 if mp else 1
+        file = open(os.path.join(dir_name,'MadLoopParams.dat'), 'w')
+        MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%mode, MLParams)
+        MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%mode, MLParams)
+        MLParams = re.sub(r"#UseLoopFilter\n\S+","#UseLoopFilter\n.FALSE.", 
+                                                                       MLParams)                
+        file.write(MLParams)
+        file.close()
+
+    def fix_PSPoint_in_check(self, dir_name):
         """Set check_sa.f to be reading PS.input assuming a working dir dir_name"""
 
-        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.f'), 'r')
+        file = open(os.path.join(dir_name,'check_sa.f'), 'r')
         check_sa = file.read()
         file.close()
 
-        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.f'), 'w')
-        file.write(re.sub("READPS = .FALSE.", "READPS = .TRUE.", check_sa))
+        file = open(os.path.join(dir_name,'check_sa.f'), 'w')
+        check_sa = re.sub(r"READPS = \S+\)","READPS = .TRUE.)", check_sa)
+        check_sa = re.sub(r"NPSPOINTS = \d+","NPSPOINTS = 1", check_sa)        
+        file.write(check_sa)
         file.close()
 
     def get_me_value(self, proc, proc_id, working_dir, PSpoint=[], verbose=True):
@@ -540,31 +580,34 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
         return ((value[0],value[1],value[2],value[3],gev_pow), res_p)
     
-    def setup_ward_check(self, working_dir):
+    def setup_ward_check(self, working_dir, file_names, mp = False):
         """ Modify loop_matrix.f so to have one external massless gauge boson
         polarization vector turned into its momentum. It is not a pretty and 
         flexible solution but it works for this particular case."""
         
         shell_name = None
-        directories = glob.glob(os.path.join(working_dir, 'SubProcesses',
-                                  'P0_*'))
+        directories = glob.glob(os.path.join(working_dir,'P0_*'))
         if directories and os.path.isdir(directories[0]):
             shell_name = os.path.basename(directories[0])
         
-        dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
+        dir_name = os.path.join(working_dir, shell_name)
         
-        if os.path.isfile(os.path.join(dir_name,'helas_calls_1.f')):
-            helas_file_name='helas_calls_1.f'
-        elif os.path.isfile(os.path.join(dir_name,'loop_matrix.f')):
-            helas_file_name='loop_matrix.f'
-        else:
-            raise Exception, "No helas calls output"        
+        # Look, in order, for all the possible file names provided.
+        ind=0
+        while ind<len(file_names) and not os.path.isfile(os.path.join(dir_name,
+                                                              file_names[ind])):
+            ind += 1
+        if ind==len(file_names):
+            raise Exception, "No helas calls output file found."
+        
+        helas_file_name=os.path.join(dir_name,file_names[ind])  
         file = open(os.path.join(dir_name,helas_file_name), 'r')
         
         helas_calls_out=""
         original_file=""
         gaugeVectorRegExp=re.compile(\
-         r"CALL VXXXXX\(P\(0,(?P<p_id>\d+)\),(DCMPLX\()?ZERO(\))?,NHEL\(\d+\),[\+\-]1\*IC\(\d+\),W\(1,(?P<wf_id>\d+)\)\)")
+         r"CALL (MP\_)?VXXXXX\(P\(0,(?P<p_id>\d+)\),((D)?CMPLX\()?ZERO((,KIND\=16)?\))?,"+
+         r"NHEL\(\d+\),[\+\-]1\*IC\(\d+\),W\(1,(?P<wf_id>\d+(,H)?)\)\)")
         foundGauge=False
         # Now we modify the first massless gauge vector wavefunction
         for line in file:
@@ -577,8 +620,13 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 if res!=None:
                     foundGauge=True
                     helas_calls_out+="      DO WARDINT=1,4\n"
-                    helas_calls_out+="        W(WARDINT,"+res.group('wf_id')+")="
-                    helas_calls_out+="DCMPLX(P(WARDINT-1,"+res.group('p_id')+"),0.0D0)\n"
+                    helas_calls_out+="        W(WARDINT+4,"+res.group('wf_id')+")="
+                    if not mp:
+                        helas_calls_out+=\
+                            "DCMPLX(P(WARDINT-1,"+res.group('p_id')+"),0.0D0)\n"
+                    else:
+                        helas_calls_out+="CMPLX(P(WARDINT-1,"+\
+                                       res.group('p_id')+"),0.0E0_16,KIND=16)\n"
                     helas_calls_out+="      ENDDO\n"
         file.close()
         
@@ -691,7 +739,8 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
 #===============================================================================
 
 def check_processes(processes, param_card = None, quick = [],
-                    mg_root="",cuttools=""):
+                    mg_root="",cuttools="",cmass_scheme = False,
+                    loop_optimization=False):
     """Check processes by generating them with all possible orderings
     of particles (which means different diagram building and Helas
     calls), and comparing the resulting matrix element values."""
@@ -706,11 +755,12 @@ def check_processes(processes, param_card = None, quick = [],
         # Initialize matrix element evaluation
         if multiprocess.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model,
-                                           auth_skipping = True, reuse = False)
+               auth_skipping = True, reuse = False, cmass_scheme = cmass_scheme)
         else:
             evaluator = LoopMatrixElementEvaluator(mg_root=mg_root,
                             cuttools_dir=cuttools, model=model, auth_skipping = True,
-                            reuse = False,)
+                            reuse = False, loop_opt = loop_optimization,
+                            cmass_scheme = cmass_scheme)
        
         results = run_multiprocs_no_crossings(check_process,
                                               multiprocess,
@@ -741,12 +791,14 @@ def check_processes(processes, param_card = None, quick = [],
     # Initialize matrix element evaluation
     if processes[0].get('perturbation_couplings')==[]:
         evaluator = MatrixElementEvaluator(model, param_card,
-                                       auth_skipping = True, reuse = False)
+               auth_skipping = True, reuse = False, cmass_scheme = cmass_scheme)
     else:
         evaluator = LoopMatrixElementEvaluator(mg_root=mg_root, 
                                            cuttools_dir=cuttools, model=model,
                                            param_card=param_card,
-                                           auth_skipping = True, reuse = False)
+                                           auth_skipping = True, reuse = False,
+                                           loop_opt = loop_optimization,
+                                           cmass_scheme = cmass_scheme)
 
     # Keep track of tested processes, matrix elements, color and already
     # initiated Lorentz routines, to reuse as much as possible
@@ -914,8 +966,8 @@ def clean_up(mg_root):
     the LoopMatrixEvaluator (when its argument proliferate is set to true). """
 
     directories = glob.glob(os.path.join(mg_root, 'TMP_DIR_FOR_THE_CHECK_CMD*'))
-    for dir in directories:
-        shutil.rmtree(dir)
+#    for dir in directories:
+#        shutil.rmtree(dir)
 
 def output_comparisons(comparison_results):
     """Present the results of a comparison in a nice list format
@@ -999,7 +1051,8 @@ def fixed_string_length(mystr, length):
 #===============================================================================
 # check_gauge
 #===============================================================================
-def check_gauge(processes, param_card = None, mg_root="",cuttools="",cmass_scheme=False):
+def check_gauge(processes, param_card = None, mg_root="",cuttools="",
+                cmass_scheme=False,loop_optimization=False):
     """Check gauge invariance of the processes by using the BRS check.
     For one of the massless external bosons (e.g. gluon or photon), 
     replace the polarization vector (epsilon_mu) with its momentum (p_mu)
@@ -1021,7 +1074,8 @@ def check_gauge(processes, param_card = None, mg_root="",cuttools="",cmass_schem
             evaluator = LoopMatrixElementEvaluator(mg_root=mg_root, cuttools_dir=cuttools,
                                            cmass_scheme= cmass_scheme,
                                            model=model, param_card=param_card,
-                                           auth_skipping = False, reuse = False)
+                                           auth_skipping = False, reuse = False,
+                                           loop_opt = loop_optimization)
 
         if not cmass_scheme:
             # Set all widths to zero for gauge check
@@ -1058,7 +1112,8 @@ def check_gauge(processes, param_card = None, mg_root="",cuttools="",cmass_schem
     else:
         evaluator = LoopMatrixElementEvaluator(mg_root=mg_root, cuttools_dir=cuttools,
                                            model=model, param_card=param_card,
-                                           auth_skipping = False, reuse = False)
+                                           auth_skipping = False, reuse = False,
+                                           loop_opt = loop_optimization)
     comparison_results = []
     comparison_explicit_flip = []
 
@@ -1247,7 +1302,8 @@ def output_gauge(comparison_results, output='text'):
 #===============================================================================
 # check_lorentz
 #===============================================================================
-def check_lorentz(processes, param_card = None, mg_root="",cuttools="",cmass_scheme=False):
+def check_lorentz(processes, param_card = None, mg_root="",cuttools="",
+                  cmass_scheme=False,loop_optimization=False):
     """ Check if the square matrix element (sum over helicity) is lorentz 
         invariant by boosting the momenta with different value."""
     
@@ -1267,7 +1323,8 @@ def check_lorentz(processes, param_card = None, mg_root="",cuttools="",cmass_sch
             evaluator = LoopMatrixElementEvaluator(mg_root=mg_root,
                                            cmass_scheme= cmass_scheme,
                                            cuttools_dir=cuttools, model=model,
-                                           auth_skipping = False, reuse = True)
+                                           auth_skipping = False, reuse = True,
+                                           loop_opt = loop_optimization)
 
         if not cmass_scheme:
             # Set all widths to zero for lorentz check
@@ -1307,7 +1364,8 @@ def check_lorentz(processes, param_card = None, mg_root="",cuttools="",cmass_sch
                                            cuttools_dir=cuttools, model=model,
                                            param_card=param_card,
                                            cmass_scheme= cmass_scheme,
-                                           auth_skipping = False, reuse = True)
+                                           auth_skipping = False, reuse = True,
+                                           loop_opt = loop_optimization)
 
     comparison_results = []
 

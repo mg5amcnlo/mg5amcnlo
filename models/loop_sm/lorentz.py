@@ -33,7 +33,7 @@ R2_QQ_2 = Lorentz(name = 'R2_QQ_2',
 
 GHGHG = Lorentz(name = 'GHGHG',
                  spins = [ 1, 1, 3 ],
-                structure = 'P(3,1)')
+                structure = 'P(3,2)')
 
 #=============================================================================================
 #  4-gluon R2 vertex

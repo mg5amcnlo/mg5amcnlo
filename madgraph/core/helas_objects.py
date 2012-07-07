@@ -543,11 +543,26 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self.set('particle', self.get('antiparticle'))
         self.set('antiparticle', part)
 
-    def is_fermion(self):
-        return self.get('spin') % 2 == 0
+    def is_anticommutating_ghost(self):
+        """ Return True if the particle of this wavefunction is a ghost charged
+        under SU(3)"""
+        return self.get('particle').get('ghost') and self.get('color')!=1
 
     def is_anticommutating(self):
-        return self.is_fermion() or abs(self.get_pdg_code())==666
+        """ Return if this wavefunction comes from a particle whose creation and
+        annihilation operators are anticommutating. 
+        One might think to put QCD ghosts here. (but ghost relative signs
+        proved to be correct without ghost flow tracking so far, assuming the
+        function calculate_fermion_flow is modified accordingly.)"""
+        return self.is_fermion()
+        
+    def is_commutating(self):
+        """ Return if this wavefunction comes from a particle whose creation and
+        annihilation operators are commutating. """
+        return not self.is_anticommutating()
+
+    def is_fermion(self):
+        return self.get('spin') % 2 == 0
 
     def is_boson(self):
         return not self.is_fermion()
@@ -905,25 +920,25 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         # End recursion if external wavefunction
         if not self.get('mothers'):
-            if self.is_fermion():
+            if self.is_anticommutating():
                 return [self.get('number_external'), []]
             else:
                 return []
 
         # Pick out fermion mother
         fermion_mother = None
-        if self.is_fermion():
+        if self.is_anticommutating():
             fermion_mother = self.find_mother_fermion()
 
         other_fermions = [wf for wf in self.get('mothers') if \
-                          wf.is_fermion() and wf != fermion_mother]
+                          wf.is_anticommutating() and wf != fermion_mother]
 
         # Pick out bosons
-        bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
+        bosons = filter(lambda wf: wf.is_commutating(), self.get('mothers'))
 
         fermion_number_list = []
 
-        if self.is_fermion():
+        if self.is_anticommutating():
             # Fermions return the result N from their mother
             # and the list from bosons, so [N,[n1,n2,...]]
             mother_list = fermion_mother.get_fermion_order()
@@ -942,7 +957,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             # Bosons return a list [n1,n2,...]
             fermion_number_list.extend(boson.get_fermion_order())
 
-        if self.is_fermion():
+        if self.is_anticommutating():
             return [mother_list[0], fermion_number_list]
 
         return fermion_number_list
@@ -1077,7 +1092,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         """Return the fermion mother which is fermion flow connected to
         this fermion"""
 
-        if not self.is_fermion():
+        if not self.is_anticommutating():
             return None
 
         part_number = self.find_outgoing_number()
@@ -1095,23 +1110,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return self.find_leg_index(self.get_anti_pdg_code(),\
                                                    self.get_spin_state_number())
         
-    def find_leg_index(self, pdg_code, spin_state, reverse=False):
+    def find_leg_index(self, pdg_code, spin_state):
         """ Find the place in the interaction list of the given particle with
-        pdg 'pdg_code' and spin 'spin_stat'. If reverse is True, it will pick
-        the last occurence of the given pdg_code instead of the first one. This
-        is relevant for interactions with several identical particles (or 
-        fermion pairs) and allows for differentiating the incoming loop index
-        (always last occurrence) with the outgoing index (always first occurence)
+        pdg 'pdg_code' and spin 'spin_stat'. For interactions with several identical particles (or 
+        fermion pairs) the outgoing index is always the first occurence.
         """
         wf_indices = self.get('pdg_codes')
-        if not reverse:
-            wf_index = wf_indices.index(pdg_code)
-        else:
-            rev_wf_indices=copy.copy(wf_indices)
-            rev_wf_indices.reverse()
-            wf_index = rev_wf_indices.index(pdg_code)
-            # Convert the obtained index to the original order of the wf_indices
-            wf_index = len(wf_indices)-1-wf_index
+        wf_index = wf_indices.index(pdg_code)
+
         # If fermion, then we need to correct for I/O status
         if spin_state % 2 == 0:
             if wf_index % 2 == 0 and spin_state < 0:
@@ -1138,6 +1144,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
 #        else:
         if self['is_loop']:
             res.append(self.get_loop_index())
+            if not self.get('mothers'):
+                res.append(self.get('is_part'))
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
@@ -1252,7 +1260,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
         
         if self['is_loop'] and not self.get('mothers'):
             if self.get('spin') == 1:
-                return 'S'
+                if self.get('particle').get('is_part'):
+                    return 'S'
+                else:
+                    return 'AS'
             if self.get('spin') == 2:
                 if self.get('particle').get('is_part'):
                     return 'F'
@@ -1425,17 +1436,27 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def get_loop_index(self):
         """Return the index of the wavefunction in the mothers which is the 
         loop one"""
+        
         if not self.get('mothers'):
             return 0
         
-        loop_wfs=[wf for wf in self.get('mothers') if wf['is_loop']]
-                
-        assert len(loop_wfs)==1, "The loop wavefunctions should have exactly"+\
-              " one loop wavefunction mother, but here it has %d."%len(loop_wfs)
+        try:
+            loop_wf_index=\
+                       [wf['is_loop'] for wf in self.get('mothers')].index(True)
+        except ValueError:
+            raise MadGraph5Error, "The loop wavefunctions should have exactly"+\
+                                                " one loop wavefunction mother."
 
-        return self.find_leg_index(loop_wfs[0].get_pdg_code(),\
-                    loop_wfs[0].get_spin_state_number(flip=True), reverse=True)
-        
+        if self.find_outgoing_number()-1<=loop_wf_index:
+            # If the incoming loop leg is placed after the outgoing one we
+            # need to increment once more its index in the interaction list (
+            # because the outgoing loop leg is not part of the mother wf list)
+            return loop_wf_index+2
+        else:
+            # Basic increment of +1 because aloha counts particles in the 
+            # interaction starting at 1.
+            return loop_wf_index+1
+
     def get_lcut_size(self):
         """ Return the size (i.e number of elements) of the L-Cut wavefunction
         this loop wavefunction originates from. """
@@ -2095,11 +2116,11 @@ class HelasAmplitude(base_objects.PhysicsObject):
         to this amplitude"""
 
         # Pick out fermion mothers
-        fermions = [wf for wf in self.get('mothers') if wf.is_fermion()]
+        fermions = [wf for wf in self.get('mothers') if wf.is_anticommutating()]
         assert len(fermions) % 2 == 0
 
         # Pick out bosons
-        bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
+        bosons = filter(lambda wf: wf.is_commutating(), self.get('mothers'))
 
         fermion_number_list = []
 
@@ -2117,15 +2138,14 @@ class HelasAmplitude(base_objects.PhysicsObject):
             fermion_number_list.extend(boson.get_fermion_order())
 
         fermion_factor = HelasAmplitude.sign_flips_to_order(fermion_number_list)
-        self['fermionfactor'] = fermion_factor
         # Apply the right sign correction for anti-commutating ghost loops
-        #if self.get('type')=='loop':
-        #    lcuf_wf_2=[m for m in self.get('mothers') if m['is_loop'] and \
-        #                                                not m.get('mothers')][0]
-        #    self['fermionfactor'] = -fermion_factor if \
-        #                       lcuf_wf_2.get_pdg_code()==666 else fermion_factor
-        #else:
-        #    self['fermionfactor'] = fermion_factor
+        if self.get('type')=='loop':
+            lcuf_wf_2=[m for m in self.get('mothers') if m['is_loop'] and \
+                                                        not m.get('mothers')][0]
+            self['fermionfactor'] = -fermion_factor if \
+                        lcuf_wf_2.is_anticommutating_ghost() else fermion_factor
+        else:
+            self['fermionfactor'] = fermion_factor
 
     @staticmethod
     def sign_flips_to_order(fermions):
@@ -4143,7 +4163,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         # If fermion, partner is the corresponding fermion flow partner
         partner = None
-        if isinstance(arg, HelasWavefunction) and arg.is_fermion():
+        if isinstance(arg, HelasWavefunction) and arg.is_anticommutating():
             # Fermion case, just pick out the fermion flow partner
             if my_index % 2 == 0:
                 # partner is after arg
@@ -4160,7 +4180,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         # Reorder fermions pairwise according to incoming/outgoing
         for i in range(0, len(sorted_mothers), 2):
-            if sorted_mothers[i].is_fermion():
+            if sorted_mothers[i].is_anticommutating():
                 # This is a fermion, order between this fermion and its brother
                 if sorted_mothers[i].get_spin_state_number() > 0 and \
                    sorted_mothers[i + 1].get_spin_state_number() < 0:

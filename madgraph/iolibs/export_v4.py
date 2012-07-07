@@ -341,6 +341,10 @@ class ProcessExporterFortran(object):
                              wanted_couplings = []):
         """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
 
+        # Make sure aloha is in quadruple precision if needed
+        old_aloha_mp=aloha.mp_precision
+        aloha.mp_precision=self.mp
+
         # create the MODEL
         write_dir=os.path.join(self.dir_path, 'Source', 'MODEL')
         model_builder = UFO_model_to_mg4(model, write_dir, \
@@ -367,6 +371,9 @@ class ProcessExporterFortran(object):
 
         # Make final link in the Process
         self.make_model_symbolic_link()
+        
+        # Re-establish original aloha mode
+        aloha.mp_precision=old_aloha_mp
 
     #===========================================================================
     # Helper functions

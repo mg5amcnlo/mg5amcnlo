@@ -27,6 +27,11 @@ C
       %(real_dp_format)s P(0:3,NEXTERNAL)
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
 	  INTEGER H
+C
+C LOCAL VARIABLES
+C
+      INTEGER I,J,K
+	  %(complex_dp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
 C  
 C GLOBAL VARIABLES
 C  
@@ -41,9 +46,9 @@ C
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
 	  common/W/W
 
-	  %(complex_dp_format)s WL(MAXLWFSIZE,0:LOOP_MAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
+	  %(complex_dp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_dp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
-	  common/W/WL,PL
+	  common/WL/WL,PL
 
 	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPS)
 	  common/LCOEFS/LOOPCOEFS

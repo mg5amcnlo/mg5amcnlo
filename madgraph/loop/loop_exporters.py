@@ -88,7 +88,9 @@ class LoopExporterFortran(object):
 
         if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
             logger.info('Compiling CutTools')
+            print "I have os.path.join(self.cuttools_dir,'includects','libcts.a')=",os.path.join(self.cuttools_dir,'includects','libcts.a')
             misc.compile(cwd=self.cuttools_dir)
+            print "yeo"
 
         if os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):            
             linkfiles = ['libcts.a', 'mpmodule.mod']
@@ -613,15 +615,15 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             replace_dict['dp_squaring']='RES=BUFF'
             replace_dict['mp_squaring']='QPRES=BUFF'                       
        
-        # Now stuff for the multiple precision numerator function
+        # Setup here the details for the phase-space point four-momentum
+        # conservation improvement
         (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
         replace_dict['n_initial']=ninitial
         # The last momenta is fixed by the others and the last two particles
         # are the L-cut ones, so -3.
         mass_list=matrix_element.get_external_masses()[:-3]
-        replace_dict['force_onshell']='\n'.join([\
-        'P(3,%(i)d)=SIGN(SQRT(P(0,%(i)d)**2-P(1,%(i)d)**2-P(2,%(i)d)**2-%(m)s**2),P(3,%(i)d))'%\
-         {'i':i+1,'m':m} for i, m in enumerate(mass_list)])
+        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
+                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
         # Prepend MP_ to all helas calls.
         self.turn_to_mp_calls(loop_helas_calls)
         replace_dict['mp_loop_helas_calls'] = "\n".join(loop_helas_calls)
@@ -882,6 +884,16 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         else:
             toBeRepaced='loop_induced_helas_calls'            
 
+        # Setup here the details for the phase-space point four-momentum
+        # conservation improvement
+        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
+        replace_dict['n_initial']=ninitial
+        # The last momenta is fixed by the others and the last two particles
+        # are the L-cut ones, so -3.
+        mass_list=matrix_element.get_external_masses()[:-3]
+        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
+                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
+
         # Decide here wether we need to split the loop_matrix.f file or not.
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>1000)):
             file=self.split_HELASCALLS(writer,replace_dict,\
@@ -1094,9 +1106,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # The last momenta is fixed by the others and the last two particles
         # are the L-cut ones, so -3.
         mass_list=matrix_element.get_external_masses()[:-3]
-        replace_dict['force_onshell']='\n'.join([\
-        'P(3,%(i)d)=SIGN(SQRT(P(0,%(i)d)**2-P(1,%(i)d)**2-P(2,%(i)d)**2-%(m)s**2),P(3,%(i)d))'%\
-         {'i':i+1,'m':m} for i, m in enumerate(mass_list)])
+        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
+                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
+#        replace_dict['force_onshell']='\n'.join([\
+#        'P(3,%(i)d)=SIGN(SQRT(P(0,%(i)d)**2-P(1,%(i)d)**2-P(2,%(i)d)**2-%(m)s**2),P(3,%(i)d))'%\
+#         {'i':i+1,'m':m} for i, m in enumerate(mass_list)])
 
         file = open(os.path.join(self.template_dir,'loop_num.inc')).read()  
         file = file % replace_dict
@@ -1294,6 +1308,16 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         file = open(os.path.join(self.template_dir,\
                                            'loop_matrix_standalone.inc')).read()
+
+        # Setup here the details for the phase-space point four-momentum
+        # conservation improvement
+        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
+        replace_dict['n_initial']=ninitial
+        # The last momenta is fixed by the others and the last two particles
+        # are the L-cut ones, so -3.
+        mass_list=matrix_element.get_external_masses()[:-3]
+        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
+                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
 
         # Decide here wether we need to split the loop_matrix.f file or not.
         # 200 is reasonable but feel free to change it.

@@ -1258,8 +1258,6 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                        %ldiag.get('number'))
             for lwf in ldiag.get('loop_wavefunctions'):
                     res.append(self.get_wavefunction_call(lwf))
-        res.append("# Now create the loop coefficients")
-        for ldiag in matrix_element.get_loop_diagrams():
             for lamp in ldiag.get_loop_amplitudes():
                 create_coef=['CALL CREATE_LOOP_COEFS(WL(1,0,1,%(number)d)',
                              '%(loop_rank)d','%(lcut_size)d',
@@ -1304,20 +1302,20 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         # amplitude for each group (for which the coefficients are the sum of
         # all others)
         if group_loops and matrix_element.get('processes')[0].get('has_born'):
-            for ldiag in matrix_element.get_loop_diagrams():
-                res.append("# Loop ID %d has amps numbers %s"%(\
-                  ldiag.get('number'),','.join(['%d'%lamp.get('number') for 
-                                         lamp in ldiag.get_loop_amplitudes()])))
-            # sort them by their amplitude number
-            loop_group_refs=[lamps[1][0] for lamps in \
+            # Reformat the loop group list in a convenient form
+            loop_group_refs=[(lamps[1][0],lamps[1][1:]) for lamps in \
                                               matrix_element.get('loop_groups')]
-            loop_group_refs=sorted(loop_group_refs,\
-                                            key=lambda lamp: lamp.get('number'))
-            for lamp in loop_group_refs:
-                res.append(self.get_amplitude_call(lamp))
+            # sort them by their amplitude number
+            #loop_group_refs=sorted(loop_group_refs,\
+            #                             key=lambda lamp: lamp[0].get('number'))
+            for (lamp_ref, lamps) in loop_group_refs:
+                res.append("# CutTools call for loop numbers %s"%\
+                   ','.join(['%d'%lamp_ref.get('number'),]+\
+                                   ['%d'%lamp.get('number') for lamp in lamps]))
+                res.append(self.get_amplitude_call(lamp_ref))
         else:
             for ldiag in matrix_element.get_loop_diagrams():
-                res.append("# CutTools call for loop ID %d"%ldiag.get('number'))
+                res.append("# CutTools call for loop # %d"%ldiag.get('number'))
                 for lamp in ldiag.get_loop_amplitudes():
                     res.append(self.get_amplitude_call(lamp))
 

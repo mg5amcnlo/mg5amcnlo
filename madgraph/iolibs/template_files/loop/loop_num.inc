@@ -201,7 +201,7 @@ C ----------
 		  ENDDO
 		ENDDO
 		CALL MP_UPDATE_AS_PARAM()
-		CALL IMPROVE_PS_POINT_PRECISION(QPP)
+		CALL MP_IMPROVE_PS_POINT_PRECISION(QPP)
 	    CALL MP_BORN_AMPS_AND_WFS(QPP)
 	    MP_DONE=.TRUE.
 	  ENDIF
@@ -217,7 +217,7 @@ C ----------
 	  RES=QPRES
       END
 
-	  SUBROUTINE IMPROVE_PS_POINT_PRECISION(P)
+	  SUBROUTINE MP_IMPROVE_PS_POINT_PRECISION(P)
 C  
 C CONSTANTS 
 C 
@@ -233,13 +233,40 @@ C
 C LOCAL VARIABLES 
 C
       INTEGER I,J
-	  %(real_mp_format)s BUFF
+	  %(real_mp_format)s BUFF,REF
+	  %(real_dp_format)s MASSES(NEXTERNAL-1)	  
 C  
 C GLOBAL VARIABLES
 C 
       include 'mp_coupl_same_name.inc'
 
-      %(force_onshell)s
+	  %(masses_def)s
+
+	  DO I=0,3
+	    REF=ZERO
+		BUFF=ZERO
+		DO J=1,NEXTERNAL
+		  REF=REF+ABS(P(I,J))
+		ENDDO
+        DO J=1,%(n_initial)d		
+		  BUFF=BUFF-P(I,J)
+		ENDDO
+        DO J=%(n_initial)d+1,NEXTERNAL	
+		  BUFF=BUFF+P(I,J)
+		ENDDO
+		IF ((BUFF/REF).GT.1.0E-9_16) THEN
+		  STOP 'Four-momentum conservation is not accurate enough.'		  
+		ENDIF
+	  ENDDO
+
+	  DO I=1,NEXTERNAL-1
+	    REF=ABS(P(0,I))+ABS(P(1,I))+ABS(P(2,I))+ABS(P(3,I))
+		IF ((SQRT(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2)/REF).GT.1.0E-4_16) THEN
+		  STOP 'Four-momentum conservation is not accurate enough.'
+		ELSE
+	      P(3,I)=SIGN(SQRT(P(0,I)**2-P(1,I)**2-P(2,I)**2-MASSES(I)**2),P(3,I))
+		ENDIF
+	  ENDDO
 
 	  DO I=0,3
 	    BUFF=0.0E0_16 

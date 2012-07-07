@@ -1650,6 +1650,21 @@ C===============================================================================
 
       END
 
+      SUBROUTINE LCUT_AS(Q,CFIG,W)
+
+      COMPLEX*16 Q(0:3)
+      INTEGER CFIG
+      COMPLEX*16 W(20)
+
+      W(5)=(1.D0,0.D0)
+
+      W(1)=Q(0)
+      W(2)=Q(1)
+      W(3)=Q(2)
+      W(4)=Q(3)
+
+      END
+
       SUBROUTINE MP_LCUT_F(Q,CFIG,W)
 
       COMPLEX*32 Q(0:3)
@@ -1682,6 +1697,23 @@ C===============================================================================
       W(7)=IZERO
       W(8)=IZERO
       W(CFIG+4)=IONE
+
+      W(1)=Q(0)
+      W(2)=Q(1)
+      W(3)=Q(2)
+      W(4)=Q(3)
+
+      END
+
+      SUBROUTINE MP_LCUT_AS(Q,CFIG,W)
+
+      COMPLEX*32 Q(0:3)
+      INTEGER CFIG
+      COMPLEX*32 W(20)
+      COMPLEX*32 IONE
+      PARAMETER (IONE=(1.0e0_16,0.0e0_16))
+
+      W(5)=IONE
 
       W(1)=Q(0)
       W(2)=Q(1)
@@ -1725,9 +1757,7 @@ C===============================================================================
       COMPLEX*16 RES
       COMPLEX*16 AMPS
 
-c     Need to check for the reason of this - sign.
-c     Only for QCD-Ghost like particles?
-      RES=-AMPS
+      RES=AMPS
 
       END
 
