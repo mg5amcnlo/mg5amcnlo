@@ -1499,7 +1499,7 @@ class Diagram(PhysicsObject):
         num_props = len([i for i in s_channels if i != 0 and \
                          model.get_particle(i).get('width').lower() != 'zero'])
         
-        if num_props <= 1:
+        if num_props < 1:
             return 1
         else:
             return 2**num_props
