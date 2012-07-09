@@ -132,7 +132,7 @@ class Banner(dict):
             
             ff.write(open(pjoin(MEDIR, 'Source', 'banner_header.txt')).read())
         else:
-            ff.write(open(pjoin(MG5DIR,'Template', 'Source', 'banner_header.txt')).read())
+            ff.write(open(pjoin(MG5DIR,'Template', 'LO', 'Source', 'banner_header.txt')).read())
         for tag, text in self.items():
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
                      {'tag':tag, 'text':text})
