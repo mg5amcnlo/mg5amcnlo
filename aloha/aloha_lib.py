@@ -92,7 +92,7 @@ class Computation(dict):
             try:
                 id = self[var]
             except KeyError:
-                id = DVariable(var).get_id()
+                id = Variable(var).get_id()
             out.append(id)
         return out
         

@@ -78,84 +78,13 @@ C ----------
 	  QRES=(0.0e0_16,0.0e0_16)
 
       IF (.NOT.MP_DONE) THEN
-	    DO I=1,NEXTERNAL
-		  DO J=0,3
-		    QPP(J,I)=PS(J,I)
-		  ENDDO
-		ENDDO
-		CALL MP_UPDATE_AS_PARAM()
-		CALL MP_IMPROVE_PS_POINT_PRECISION(QPP)
-	    CALL MP_COMPUTE_LOOP_COEFS(QPP,DUMMY)
+	    CALL MP_COMPUTE_LOOP_COEFS(PS,DUMMY)
 	    MP_DONE=.TRUE.
 	  ENDIF
 
 	  CALL MP_EVAL_POLY(LOOPCOEFS(0,ID),RANK,-QQ,QRES)
 
 	  RES=QRES
-
-	  END
-
-	  SUBROUTINE MP_IMPROVE_PS_POINT_PRECISION(P)
-C  
-C CONSTANTS 
-C 
-	  INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
-	  %(real_mp_format)s     ZERO
-	  PARAMETER (ZERO=0E0_16)
-C  
-C ARGUMENTS 
-C
-      %(real_mp_format)s P(0:3,NEXTERNAL)
-C
-C LOCAL VARIABLES 
-C
-      INTEGER I,J
-	  %(real_mp_format)s BUFF,REF
-	  %(real_dp_format)s MASSES(NEXTERNAL-1)	  
-C  
-C GLOBAL VARIABLES
-C 
-      include 'mp_coupl_same_name.inc'
-
-	  %(masses_def)s
-
-	  DO I=0,3
-	    REF=ZERO
-		BUFF=ZERO
-		DO J=1,NEXTERNAL
-		  REF=REF+ABS(P(I,J))
-		ENDDO
-        DO J=1,%(n_initial)d		
-		  BUFF=BUFF-P(I,J)
-		ENDDO
-        DO J=%(n_initial)d+1,NEXTERNAL	
-		  BUFF=BUFF+P(I,J)
-		ENDDO
-		IF ((BUFF/REF).GT.1.0E-9_16) THEN
-		  STOP 'Four-momentum conservation is not accurate enough.'		  
-		ENDIF
-	  ENDDO
-
-	  DO I=1,NEXTERNAL-1
-	    REF=ABS(P(0,I))+ABS(P(1,I))+ABS(P(2,I))+ABS(P(3,I))
-		IF ((SQRT(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2)/REF).GT.1.0E-4_16) THEN
-		  STOP 'Four-momentum conservation is not accurate enough.'
-		ELSE
-	      P(3,I)=SIGN(SQRT(P(0,I)**2-P(1,I)**2-P(2,I)**2-MASSES(I)**2),P(3,I))
-		ENDIF
-	  ENDDO
-
-	  DO I=0,3
-	    BUFF=0.0E0_16 
-        DO J=1,%(n_initial)d
-		  BUFF=BUFF+P(I,J)
-		ENDDO
-		DO J=%(n_initial)d+1,NEXTERNAL-1
-		  BUFF=BUFF-P(I,J)		
-		ENDDO
-		P(I,NEXTERNAL)=BUFF
-	  ENDDO
 
 	  END
 

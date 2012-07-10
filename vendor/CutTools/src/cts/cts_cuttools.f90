@@ -49,6 +49,10 @@
    use scale
    use countdigits
    use avh_olo
+!  Edit VH:  module used for set_unit to switch on/off error messages
+!  in OneLoop
+!   use avh_olo_units
+!  END edit VH
    include 'cts_mprec.h'
    implicit none 
    integer, intent(in) :: scaloopin
@@ -85,6 +89,10 @@
     write (*,*) '  '
    endif
 !
+!  VH edit, temporary mute of OneLoop error message because of over-sensitivity
+!  of the message  ERROR in OneLOop dilog2_c
+!   call set_unit('error',0)
+!  end VH edit
    call load_combinatorics
 !
 !  Allocate all the needed variables

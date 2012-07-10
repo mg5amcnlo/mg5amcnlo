@@ -2262,7 +2262,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         cpu_time1 = time.time()
         # Run matrix element generation check on processes
         mass_scheme = self.options['complex_mass_scheme']
-        loop_optimization = self.options['loop_optimized_output']
+        # The loop optimization output flag is passed as a global to 
+        # process_checks because I am fed up with passing it through each single
+        # damn little function of process_checks.
+        # We really need to put the MasterInterface as a global of the madgraph
+        # module to stop this annoying gimmicks we are now playing with the 
+        # user options... damn.
+        old_process_checks_loop_opt = process_checks.loop_optimized_output
+        
+        process_checks.loop_optimized_output = self.options['loop_optimized_output']
 
         comparisons = []
         gauge_result = []
@@ -2281,8 +2289,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                             quick = True,
                                             mg_root=self._mgme_dir,
                                             cuttools=CT_dir,
-                                            cmass_scheme = mass_scheme,
-                                            loop_optimization=loop_optimization)
+                                            cmass_scheme = mass_scheme)
             nb_processes += len(comparisons[0])
 
         if args[0] in ['lorentz', 'full']:
@@ -2290,8 +2297,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                           param_card = param_card,
                                           mg_root=self._mgme_dir,
                                           cuttools=CT_dir,
-                                          cmass_scheme = mass_scheme,
-                                          loop_optimization=loop_optimization)
+                                          cmass_scheme = mass_scheme)
             nb_processes += len(lorentz_result)
             
         if args[0] in  ['brs', 'full']:
@@ -2299,8 +2305,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                           param_card = param_card,
                                           mg_root=self._mgme_dir,
                                           cuttools=CT_dir,
-                                          cmass_scheme = mass_scheme,
-                                          loop_optimization=loop_optimization)
+                                          cmass_scheme = mass_scheme)
             nb_processes += len(gauge_result)
 
             
@@ -2378,6 +2383,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Restore diagram logger
         for i, logger in enumerate(loggers):
             logger.setLevel(old_levels[i])
+
+        # Restore the default global for checks
+        process_checks.loop_optimized_output = old_process_checks_loop_opt
 
         # clean the globals created.
         process_checks.clean_added_globals(process_checks.ADDED_GLOBAL)

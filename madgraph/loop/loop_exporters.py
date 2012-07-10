@@ -312,8 +312,8 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                         imag_num=imag_num-buff_num
                     else:
                         imag_num=imag_num+buff_num
-                assert(not (real_num!=0 and imag_num!=0), "MadGraph5 found a "+\
-                  "color matrix element which has both a real and imaginary part.")
+                assert not (real_num!=0 and imag_num!=0), "MadGraph5 found a "+\
+                  "color matrix element which has both a real and imaginary part."
                 if imag_num!=0:
                     res=fractions.Fraction(imag_num,common_denom)
                     line_num.append(res.numerator)
@@ -1099,18 +1099,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         which contains the Helas calls building the loop"""
 
         replace_dict=copy.copy(self.general_replace_dict)
-        
-        # Now stuff for the multiple precision numerator function
-        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
-        replace_dict['n_initial']=ninitial
-        # The last momenta is fixed by the others and the last two particles
-        # are the L-cut ones, so -3.
-        mass_list=matrix_element.get_external_masses()[:-3]
-        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
-                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
-#        replace_dict['force_onshell']='\n'.join([\
-#        'P(3,%(i)d)=SIGN(SQRT(P(0,%(i)d)**2-P(1,%(i)d)**2-P(2,%(i)d)**2-%(m)s**2),P(3,%(i)d))'%\
-#         {'i':i+1,'m':m} for i, m in enumerate(mass_list)])
 
         file = open(os.path.join(self.template_dir,'loop_num.inc')).read()  
         file = file % replace_dict
@@ -1194,7 +1182,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
             replace_dict['mp_squaring']='\n'.join(['DO K=1,3',
                 'ANS(K)=ANS(K)+2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J))'+\
-                ',KIND=16)','ENDDO'])
+                                                           ',KIND=16)','ENDDO'])
         
         # Extract helas calls
         born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
@@ -1222,6 +1210,15 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['mp_coef_construction']='\n'.join(coef_construction)
         
         replace_dict['mp_coef_merging']='\n'.join(coef_merging)
+        
+        # Now stuff for the multiple precision ps point improver
+        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
+        replace_dict['n_initial']=ninitial
+        # The last momenta is fixed by the others and the last two particles
+        # are the L-cut ones, so -3.
+        mass_list=matrix_element.get_external_masses()[:-3]
+        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
+                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
         
         file = file % replace_dict
  

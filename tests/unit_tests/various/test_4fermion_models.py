@@ -179,7 +179,7 @@ class TestSchannelModels(Models4FermionTest):
                   group_subprocs.SubProcessGroup.group_amplitudes(amplitudes)[0]
 
         symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
-                                                subproc_group)
+                                                                  subproc_group)
 
         self.assertEqual(len([s for s in symmetry if s > 0]), 1)
 

@@ -109,7 +109,6 @@ c RESCT STORES THE RESULT OBTAINED FROM ANY OF THE 7 POSSIBLE CT MODES.
 	  DATA NATTEMPTS/0/
 	  DATA IC/NEXTERNAL*1/
 	  %(real_dp_format)s BUFFR(3),BUFFR_BIS(3),TEMP1,TEMP2
-      %(real_mp_format)s QPP(0:3,NEXTERNAL)	  
 	  %(complex_dp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       %(complex_dp_format)s CFTOT
 	  LOGICAL FOUNDHELFILTER,FOUNDLOOPFILTER
@@ -164,6 +163,9 @@ C
 	  %(dp_born_amps_decl)s	  
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
 	  common/W/W  
+
+      %(complex_mp_format)s MPW(20,NWAVEFUNCS)
+	  common/MP_W/MPW
 
 	  %(complex_dp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_dp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
@@ -314,7 +316,20 @@ ENDDO
 
 199 CONTINUE
 
-MP_DONE=.FALSE.
+C Check if we directly go to multiple precision
+IF (CTMODE.GE.4) THEN
+  CALL MP_COMPUTE_LOOP_COEFS(P,BUFFR_BIS)
+  MP_DONE=.TRUE.
+c Copy the qp wfs to the dp ones as they are used to setup the CT calls.
+  DO I=1,NWAVEFUNCS
+    DO J=1,MAXLWFSIZE+4
+      W(J,I)=MPW(J,I)
+    ENDDO
+  ENDDO
+  goto 300 
+ELSE
+  MP_DONE=.FALSE.
+ENDIF
 
 200 CONTINUE
 
@@ -436,6 +451,10 @@ IF(.NOT.CHECKPHASE.AND.(CTMODERUN.EQ.-1)) THEN
 	  ANS(2)=0.5d0*(RESCT(2,1)+RESCT(2,2))
 	  ANS(3)=0.5d0*(RESCT(3,1)+RESCT(3,2))			  
 	ELSE
+	  IF (.NOT.MP_DONE) THEN
+        CALL MP_COMPUTE_LOOP_COEFS(P,BUFFR_BIS)
+        MP_DONE=.TRUE.	    
+	  ENDIF
 	  CTMODE=4
 	  goto 300
 	ENDIF

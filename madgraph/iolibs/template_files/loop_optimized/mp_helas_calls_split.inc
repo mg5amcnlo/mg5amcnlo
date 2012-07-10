@@ -52,7 +52,7 @@ C
 	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPS)
 	  common/MP_LCOEFS/LOOPCOEFS
 
-      %(complex_dp_format)s AMPL(3,NCTAMPS)
+      %(complex_mp_format)s AMPL(3,NCTAMPS)
 	  common/MP_AMPL/AMPL
 
       %(complex_dp_format)s LOOPRES(3,NLOOPGROUPS)
@@ -62,26 +62,6 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-
-      DO I=0,3
-        PL(I,0)=IZERO
-      ENDDO
-      DO I=1,MAXLWFSIZE
-        DO J=0,LOOPMAXCOEFS-1
-          DO K=1,MAXLWFSIZE
-            IF(I.EQ.K.AND.J.EQ.0) THEN
-              WL(I,J,K,0)=CMPLX(1.0e0_16,ZERO,KIND=16)
-            ELSE
-              WL(I,J,K,0)=IZERO
-            ENDIF
-          ENDDO
-        ENDDO
-      ENDDO
-	  DO I=1,NLOOPS
-  	    DO J=0,LOOPMAXCOEFS-1
-    	  LOOPCOEFS(J,I)=IZERO
-        ENDDO
-      ENDDO
 
 %(helas_calls)s
 

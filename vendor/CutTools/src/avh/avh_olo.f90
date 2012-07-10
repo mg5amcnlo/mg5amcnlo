@@ -1756,8 +1756,8 @@ contains
 !
   if (j1.ne.j2) then
     if (r1.eq.r2) then
-      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
+!Val      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+!Val        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_c j1=/=j2,r1=r2' !DEBUG
       return
@@ -1770,8 +1770,8 @@ contains
 !
   if (a1.lt.eps) then
     if (a2.lt.eps) then
-      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
+!Val      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+!Val        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_c r1<eps,r2<eps' !DEBUG
       return
@@ -1890,8 +1890,8 @@ contains
 !
   if (j1.ne.j2) then
     if (r1.eq.r2) then
-      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
+!Val      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+!Val        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_r j1=/=j2,r1=r2' !DEBUG
       return
@@ -1904,8 +1904,8 @@ contains
 !
   if (r1.lt.eps) then
     if (r2.lt.eps) then
-      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
+!Val      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+!Val        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_r r1<eps,r2<eps' !DEBUG
       return
@@ -11281,8 +11281,8 @@ contains
 !
   if (j1.ne.j2) then
     if (r1.eq.r2) then
-      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
+!Val      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+!Val        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_c j1=/=j2,r1=r2' !DEBUG
       return
@@ -11295,8 +11295,8 @@ contains
 !
   if (a1.lt.eps) then
     if (a2.lt.eps) then
-      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
+!Val      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+!Val        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_c r1<eps,r2<eps' !DEBUG
       return
@@ -11415,8 +11415,8 @@ contains
 !
   if (j1.ne.j2) then
     if (r1.eq.r2) then
-      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
+!Val      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+!Val        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_r j1=/=j2,r1=r2' !DEBUG
       return
@@ -11429,8 +11429,8 @@ contains
 !
   if (r1.lt.eps) then
     if (r2.lt.eps) then
-      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
+!Val      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+!Val        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_r r1<eps,r2<eps' !DEBUG
       return

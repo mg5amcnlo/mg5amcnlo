@@ -1406,7 +1406,7 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         l8=myleglist[7]
         l9=myleglist[8]
         lfinal=copy.copy(l9)
-        lfinal.set('number',8)
+        lfinal.set('number',9)
 
         self.myproc.set('legs',myleglist)
 

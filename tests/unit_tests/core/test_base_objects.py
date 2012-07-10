@@ -47,6 +47,7 @@ class ParticleTest(unittest.TestCase):
                       'pdg_code':6,
                       'propagating':True,
                       'is_part':True,
+                      'ghost':False,
                       'self_antipart':False,
                       'counterterm':{('QCD',((1,2),(3,4))):{0:'GC_0',-1:'GC_1'}}}
 
@@ -163,7 +164,8 @@ class ParticleTest(unittest.TestCase):
         goal = goal + "    \'line\': \'straight\',\n"
         goal = goal + "    \'propagating\': True,\n"
         goal = goal + "    \'is_part\': True,\n"
-        goal = goal + "    \'self_antipart\': False,\n"
+        goal = goal + "    \'self_antipart\': False,\n"        
+        goal = goal + "    \'ghost\': False,\n"
         goal = goal + "    \'counterterm\': {('QCD', ((1, 2), (3, 4))): {0: 'GC_0', -1: 'GC_1'}}\n}"
 
         self.assertEqual(goal, str(self.mypart))
