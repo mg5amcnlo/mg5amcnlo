@@ -32,7 +32,7 @@ import madgraph.various.misc as misc
 import tests.unit_tests as unittest
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
-
+import tests.unit_tests.various.test_aloha as test_aloha
 
 
 #===============================================================================
@@ -952,17 +952,16 @@ class UFOHELASCallWriterTest(unittest.TestCase):
 class UFOHELASCALLWriterComplexMass(unittest.TestCase):
     """testing the writting in case of complex mass scheme"""
 
-
+    @test_aloha.set_global(cms=True) 
     def setUp(self):
         """load the model"""
 
         import madgraph.interface.master_interface as interface
         cmd = interface.MasterCmd()
-        cmd.do_load('model %s' % os.path.join(MG5DIR,'tests','input_files','sm.pkl'))
+        cmd.do_import('model sm')
         
         self.mybasemodel = cmd._curr_model
         self.mybasemodel.change_mass_to_complex_scheme()
-        aloha.complex_mass = True
 
         leg1 = base_objects.Leg({'id':22,'state':False})
         leg2 = base_objects.Leg({'id':24,'state':False})
@@ -979,9 +978,7 @@ class UFOHELASCALLWriterComplexMass(unittest.TestCase):
         
         self.mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
 
-    def tearDown(self):
-        aloha.complex_mass = False
-        
+    @test_aloha.set_global(cms=True)        
     def test_UFO_fortran_helas_call_writer(self):
         """Test automatic generation of UFO helas calls in Fortran"""
         
@@ -1028,11 +1025,12 @@ CALL VVV1_0(W(1,2),W(1,14),W(1,5),GC_37,AMP(11))
 CALL VVVV5_2(W(1,1),W(1,4),W(1,5),GC_50,DCMPLX(CMASS_MW),W(1,15))
 # Amplitude(s) for diagram number 12
 CALL VVV1_0(W(1,3),W(1,2),W(1,15),GC_49,AMP(12))"""
-                
+
+
         for i, line in enumerate(solution.split('\n')):
             self.assertEqual(line, result[i])
 
-        
+    @test_aloha.set_global(cms=True)   
     def test_UFO_CPP_helas_call_writer(self):
         """Test automatic generation of UFO helas calls in C++"""
         
@@ -1040,6 +1038,7 @@ CALL VVV1_0(W(1,3),W(1,2),W(1,15),GC_49,AMP(12))"""
             self.mybasemodel)
         
         result = cpp_model.get_matrix_element_calls(self.mymatrixelement)
+        
         solution = """vxxxxx(p[perm[0]],mME[0],hel[0],-1,w[0]);
 vxxxxx(p[perm[1]],mME[1],hel[1],-1,w[1]);
 vxxxxx(p[perm[2]],mME[2],hel[2],+1,w[2]);
@@ -1080,11 +1079,11 @@ VVVV5_2(w[0],w[3],w[4],pars->GC_50,pars->CMASS_MW,w[14]);
 # Amplitude(s) for diagram number 12
 VVV1_0(w[2],w[1],w[14],pars->GC_49,amp[11]);"""
 
-
+        self.assertEqual(solution.split('\n'), result)
         for i, line in enumerate(solution.split('\n')):
             self.assertEqual(line, result[i])
         
-
+    @test_aloha.set_global(cms=True) 
     def test_UFO_Python_helas_call_writer(self):
         """Test automatic generation of UFO helas calls in Python"""
         
@@ -1132,7 +1131,6 @@ w[14]= VVVV5_2(w[0],w[3],w[4],GC_50,CMASS_MW)
 # Amplitude(s) for diagram number 12
 amp[11]= VVV1_0(w[2],w[1],w[14],GC_49)"""
         
-    
         for i, line in enumerate(solution.split('\n')):
             self.assertEqual(line, result[i])        
 

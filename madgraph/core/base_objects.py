@@ -201,7 +201,7 @@ class Particle(PhysicsObject):
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
                    'texname', 'antitexname', 'line', 'propagating',
-                   'is_part', 'self_antipart', 'counterterm']
+                   'is_part', 'self_antipart', 'ghost', 'counterterm']
 
     def default_setup(self):
         """Default values for all properties"""
@@ -220,6 +220,8 @@ class Particle(PhysicsObject):
         self['propagating'] = True
         self['is_part'] = True
         self['self_antipart'] = False
+        # True if ghost, False otherwise
+        self['ghost'] = False
         # Counterterm defined as a dictionary with format:
         # ('ORDER_OF_COUNTERTERM',((Particle_list_PDG))):{laurent_order:CTCouplingName}
         self['counterterm'] = {}
@@ -234,6 +236,11 @@ class Particle(PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid particle name" % value
 
+        if name is 'ghost':
+            if not isinstance(value,bool):
+                raise self.PhysicsObjectError, \
+                 "%s is not a valid bool for the 'ghost' attribute" % str(value)
+    
         if name is 'counterterm':
             if not isinstance(value,dict):
                 raise self.PhysicsObjectError, \
@@ -400,6 +407,13 @@ class Particle(PhysicsObject):
         elif spin == 3:
             # Massive vector
             return [ -1, 0, 1 ]
+        elif spin == 4 and self.get('mass').lower() == 'zero':
+            # Massless tensor
+            return [-3, 3]
+        elif spin == 4:
+            # Massive tensor
+            return [-3, -1, 1, 3]
+        
         elif spin == 5 and self.get('mass').lower() == 'zero':
             # Massless tensor
             return [-2, -1, 1, 2]
@@ -1051,8 +1065,12 @@ class Model(PhysicsObject):
         
         # If information is saved
         if hasattr(self, 'parameters_dict') and self.parameters_dict:
-            return self.parameters_dict[name]
-        
+            try:
+                return self.parameters_dict[name]
+            except:
+                # try to reload it before crashing 
+                pass
+            
         # Else first build the dictionary
         self.parameters_dict = {}
         for data in self['parameters'].values():
@@ -1250,16 +1268,20 @@ class Model(PhysicsObject):
         #   -> Both need to be fixed with a real() /Imag()
         # 3) Find All width fixed by the model
         #   -> Need to be fixed with a real()
-        # 4) Loop through all expression and modify those accordingly
+        # 4) Fix the Yukawa mass to the value of the complex mass/ real mass
+        # 5) Loop through all expression and modify those accordingly
         #    Including all parameter expression as complex
-        
+
         to_change = {}
         mass_widths = [] # parameter which should stay real
         for particle in self.get('particles'):
+            m = particle.get('width')
+            if m in mass_widths:
+                continue
             mass_widths.append(particle.get('width'))
             mass_widths.append(particle.get('mass'))
             if particle.get('width') == 'ZERO':
-                #everything is fine when the width is zero
+                #everything is fine since the width is zero
                 continue
             width = self.get_parameter(particle.get('width'))
             if not isinstance(width, ParamCardVariable):
@@ -1275,7 +1297,7 @@ class Model(PhysicsObject):
                 depend = tuple(depend)
                 if depend == ('external',):
                     depend = ()
-                    
+                
                 # Create the new parameter
                 if isinstance(mass, ParamCardVariable):
                     New_param = ModelVariable('CMASS_'+mass.name,
@@ -1302,7 +1324,36 @@ class Model(PhysicsObject):
                     mass.expr = 're(%s)' % mass.expr                
                 self.add_param(New_param, (mass, width))
                 to_change[mass.name] = New_param.name
-                                                    
+        
+        # Remove the Yukawa and fix those accordingly to the mass/complex mass
+        yukawas = [p for p in self.get('parameters')[('external',)] 
+                                              if p.lhablock.lower() == 'yukawa']
+        for yukawa in yukawas:
+            # clean the pevious parameter
+            self.get('parameters')[('external',)].remove(yukawa)
+            
+            particle = self.get_particle(yukawa.lhacode[0])
+            mass = self.get_parameter(particle.get('mass'))
+            
+            # add the new parameter in the correct category
+            if mass.depend == ('external',):
+                depend = ()
+            else:
+                depend = mass.depend
+                
+            New_param = ModelVariable(yukawa.name, mass.name, 'real', depend)
+            
+            # Add it in the model at the correct place (for the dependences)
+            if mass.name in to_change:
+                expr = 'CMASS_%s' % mass.name
+            else:
+                expr = mass.name
+            param_depend = self.get_parameter(expr)
+            self.add_param(New_param, [param_depend])
+            
+            
+            
+            
         # So at this stage we still need to modify all parameters depending of
         # particle's mass. In addition all parameter (but mass/width/external 
         # parameter) should be pass in complex mode.
@@ -1860,7 +1911,20 @@ class Diagram(PhysicsObject):
         this diagram"""
 
         return [len(v.get('legs')) for v in self.get('vertices')]
+
+    def get_num_configs(self, model, ninitial):
+        """Return the maximum number of configs from this diagram,
+        given by 2^(number of non-zero width s-channel propagators)"""
+
+        s_channels = [v.get_s_channel_id(model,ninitial) for v in \
+                              self.get('vertices')[:-1]]
+        num_props = len([i for i in s_channels if i != 0 and \
+                         model.get_particle(i).get('width').lower() != 'zero'])
         
+        if num_props <= 1:
+            return 1
+        else:
+            return 2**num_props
 #===============================================================================
 # DiagramList
 #===============================================================================
@@ -2467,7 +2531,11 @@ class Process(PhysicsObject):
         tmp = [(k,v) for (k,v) in expansion_orders.items() if 0 < v < 99]
         for (k,v) in tmp:  
             if k in orders:
-                orders[k] = min(orders[k], v)
+                if v < orders[k]:
+                    logger.warning('''The coupling order (%s=%s) specified is larger than the one allowed 
+             by the model builder. The maximal value allowed is %s. 
+             We set the %s order to this value''' % (k,orders[k],v,k))
+                    orders[k] = v
             else:
                 orders[k] = v
 

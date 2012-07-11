@@ -63,7 +63,7 @@ V_51 = Vertex(name = 'V_51',
 # QCD ghost
 V_Ggh = Vertex(name = 'V_Ggh',
                particles = [ P.gh__tilde__, P.gh, P.G ],
-               color = [ 'f(1,3,2)' ],
+               color = [ 'f(2,3,1)' ],
                lorentz = [ L.GHGHG ],
                couplings = {(0,0):C.GC_4})
 

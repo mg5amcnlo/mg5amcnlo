@@ -397,6 +397,7 @@ class EpsilonBar(ColorObject):
 #===============================================================================
 # Color sextet objects: K6, K6Bar, T6
 #                       Note that delta3 = T, delta6 = T6, delta8 = 2 Tr
+# This 2 Tr is weird and should be check why it is not the expected 1/2.
 #===============================================================================
 
 class K6(ColorObject):
@@ -893,7 +894,7 @@ class ColorFactor(list):
     They can be simplified by simplifying all their elements."""
 
     def __str__(self):
-        """Returns a nice string for print"""
+        """Returns a nice string for printing"""
 
         return '+'.join(['(%s)' % str(col_str) for col_str in self])
 

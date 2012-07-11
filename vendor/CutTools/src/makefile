@@ -10,7 +10,7 @@ CTS = cts_type.o cts_tensors.o cts_constants.o cts_combinatorics.o \
   cts_loopfunctions.o cts_cuttools.o \
   cts_cutroutines.o
 
-AVH =   avh_olo.o avh_olo_mp.o
+AVH =   avh_olo.o 
 
 QCDLOOP = aaxbx.o aaxcx.o aaxdx.o aaxex.o aaxinv.o aacbc.o \
           aaccc.o aacinv.o spence.o \

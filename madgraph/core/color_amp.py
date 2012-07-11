@@ -113,7 +113,7 @@ class ColorBasis(dict):
                     vertex == diagram.get('vertices')[-2]):
                         repl_dict[curr_num] = min_index
                         min_index = min_index - 1
-                    else:
+                    else:                  
                         repl_dict[curr_num] = \
                           max(l.get('number') for l in \
                                         diagram.get('vertices')[-1].get('legs'))
@@ -142,7 +142,6 @@ class ColorBasis(dict):
                                 get('particles')]
         else:
             interaction_pdgs = [l.get('id') for l in vertex.get('legs')]
-            
 
         sorted_color_num_pairs = []
         #print "interactions_pdg=",interaction_pdgs
@@ -322,7 +321,7 @@ class ColorBasis(dict):
         or 1 arguments). If one arguments is given, it's interpreted as 
         an amplitude."""
 
-        assert len(args) < 3, "Object ColorBasis must be initialized with 0 or 1 arguments"
+        assert len(args) < 2, "Object ColorBasis must be initialized with 0 or 1 arguments"
 
 
         dict.__init__(self)

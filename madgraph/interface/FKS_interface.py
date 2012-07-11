@@ -24,6 +24,7 @@ import time
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 import madgraph.interface.madgraph_interface as mg_interface
+import madgraph.interface.Loop_interface as Loop_interface
 import madgraph.fks.fks_real as fks_real
 import madgraph.fks.fks_real_helas_objects as fks_real_helas
 import madgraph.fks.fks_born as fks_born
@@ -137,7 +138,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
         mg_interface.MadGraphCmd.__init__(self, mgme_dir = '', *completekey, **stdin)
         self.setup()
-    
+
     def setup(self):
         """ Special tasks when switching to this interface """
 
@@ -153,7 +154,11 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._v4_export_formats = []
         self._export_formats = [ 'madevent' ]
-
+        if self.options['loop_optimized_output'] and \
+                                           not self.options['gauge']=='Feynman':
+            # In the open loops method, in order to have a maximum loop numerator
+            # rank of 1, one must work in the Feynman gauge
+            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
         # Set where to look for CutTools installation.
         # In further versions, it will be set in the same manner as _mgme_dir so that
         # the user can chose its own CutTools distribution.
@@ -163,7 +168,21 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                            'Using default CutTools instead.') % \
                              self._cuttools_dir)
             self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
-    
+
+    def do_set(self, line, log=True):
+        """Set the loop optimized output while correctly switching to the
+        Feynman gauge if necessary.
+        """
+
+        mg_interface.MadGraphCmd.do_set(self,line,log)
+        
+        args = self.split_arg(line)
+        self.check_set(args)
+
+        if args[0] == 'loop_optimized_output' and eval(args[1]) and \
+                                           not self.options['gauge']=='Feynman':
+            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
+
     def do_display(self, line, output=sys.stdout):
         # if we arrive here it means that a _fks_display_opts has been chosen
         args = self.split_arg(line)

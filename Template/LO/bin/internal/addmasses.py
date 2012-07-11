@@ -174,7 +174,6 @@ for ref in reflist:
             event.append(Particle(nup,t))
         counter=counter+1
 
-
 #default is to skip this
     if motherFlag:
 
@@ -223,41 +222,20 @@ for ref in reflist:
                 mySub = re.compile(s1)
                 event_description = mySub.sub(str(nup),event_description)
 
-
     if nAdded>0:
-        totalLength = len(event)+1
-        newPosition = []
-        iPos=0
-        while iPos<totalLength:           
-            for p in event:
-                if p.mo1==iPos:
-                    newPosition.append(p.no)
-            iPos=iPos+1
-
-        iUp=1
-        event0=[]
-        for ip in newPosition:
-            event0.append(event[ip-1])
-
-        iUp=0
-        for p in event0:
-            iUp=iUp+1
-            if p.no != iUp:
-                ip=iUp                
-                while ip<totalLength-1:
-                    pp=event0[ip]
-                    if pp.mo1==p.no and pp.mo1>pp.no:
-                        pp.mo1=pp.mo2=iUp
-                    ip=ip+1
-            p.no=iUp
-
-        iUp=0
-        for p in event0:
-            event[iUp]=event0[iUp]
-            iUp=iUp+1
-
-
-
+        for ip in range(len(event)):
+            l=event[ip]
+            if l.mo1 > ip + 1:
+                nmo=l.mo1
+                event.insert(ip, event.pop(l.mo1-1))
+                event[ip].no = ip + 1
+                for l2 in event[ip + 1:]:
+                    if l2.no > ip and l2.no < nmo + 1:
+                        l2.no += 1
+                    if l2.mo1 == nmo:
+                        l2.mo1 = l2.mo2 = ip + 1
+                    elif l2.mo1 > ip and l2.mo1 < nmo:
+                        l2.mo1 = l2.mo2 = l2.mo1 + 1
 
 # identify mothers
     particleDict={}
@@ -268,14 +246,15 @@ for ref in reflist:
                 pass
             else:
                 if p.mo1 in particleDict:
-                    l=[particleDict[p.mo1]]
+                    l=particleDict[p.mo1]
                     l.append(p.no)
                 else:
-                    l=p.no
+                    l=[p.no]
                 particleDict[p.mo1]=l
 
 # repair kinematics
     for k in particleDict:
+        if len(particleDict[k]) != 2: continue
         t=particleDict[k]
         p1=event[t[0]-1]
         p1.mom.boost(event[k-1].mom,-1)

@@ -38,18 +38,14 @@ import madgraph.iolibs.files as files
 import tests.unit_tests as unittest
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
-# First define a valid model for Standard Model
-_model = base_objects.Model()
-# Import Particles information
-_input_path = os.path.join(_file_path, '../input_files/v4_sm_particles.dat')
-_model.set('particles', files.read_from_file(_input_path,
-                                            import_v4.read_particles_v4))
-# Import Interaction information
-_input_path = os.path.join(_file_path , '../input_files/v4_sm_interactions.dat')
-_model.set('interactions', files.read_from_file(_input_path, \
-                                               import_v4.read_interactions_v4, \
-                                               _model.get('particles')))
-
+def define_model():
+    global _model
+    
+    if hasattr(test_drawing,'_model'):
+        _model = test_drawing._model
+    else:
+        test_drawing.define_model()
+        _model = test_drawing._model
 
 #===============================================================================
 # TestDrawingEPS
@@ -59,8 +55,18 @@ class TestDrawingOption(unittest.TestCase):
     of diagram that no line have zero lenght and that we don't have any line 
     crossing for any combination of option."""
 
-    # Made a set of diagram available here
-    store_diagram = test_drawing.TestFeynmanDiagram.store_diagram
+    def setUp(self):
+        """Basic building of the object needed to build the test"""
+        
+        if not hasattr(self, 'store_diagram'):
+            filehandler = open(os.path.join(_file_path, \
+                                '../input_files/test_draw.obj'), 'r')
+            TestDrawingOption.store_diagram = pickle.load(filehandler)
+        try:
+            _model
+        except:
+            define_model()
+            
     
     def schedular(self, diagram):
         """Test that the DrawingEPS returns valid result"""
@@ -116,12 +122,18 @@ class TestDrawingS_EPS(unittest.TestCase):
     2) can we convert him in pdf? (Imagemagick is needed for this)
         checking that the file is valid."""
 
-    # Made a set of diagram available here
-    store_diagram = test_drawing.TestFeynmanDiagram.store_diagram
-
-
+    
     def setUp(self):
         """Charge a diagram to draw"""
+        
+        if not hasattr(self, 'store_diagram'):
+            filehandler = open(os.path.join(_file_path, \
+                                '../input_files/test_draw.obj'), 'r')
+            TestDrawingS_EPS.store_diagram = pickle.load(filehandler)
+        try:
+            _model
+        except:
+            define_model()
 
         self.diagram = base_objects.DiagramList()
         for i in range(7):

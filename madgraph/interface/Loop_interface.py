@@ -32,7 +32,7 @@ import madgraph.iolibs.export_v4 as export_v4
 import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
-
+import aloha
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint')
@@ -113,6 +113,11 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._v4_export_formats = []
         self._export_formats = [ 'matrix', 'standalone' ]
+        if self.options['loop_optimized_output'] and \
+                                           not self.options['gauge']=='Feynman':
+            # In the open loops method, in order to have a maximum loop numerator
+            # rank of 1, one must work in the Feynman gauge
+            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
         # Set where to look for CutTools installation.
         # In further versions, it will be set in the same manner as _mgme_dir so that
         # the user can chose its own CutTools distribution.
@@ -122,6 +127,20 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
                            'Using default CutTools instead.') % \
                              self._cuttools_dir)
             self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
+    
+    def do_set(self, line, log=True):
+        """Set the loop optimized output while correctly switching to the
+        Feynman gauge if necessary.
+        """
+
+        mg_interface.MadGraphCmd.do_set(self,line,log)
+        
+        args = self.split_arg(line)
+        self.check_set(args)
+
+        if args[0] == 'loop_optimized_output' and eval(args[1]) and \
+                                           not self.options['gauge']=='Feynman':
+            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
     
     def do_generate(self, line, *args,**opt):
 
@@ -173,6 +192,11 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         except:
             pass
 
+        # Whatever the format we always output the quadruple precision routines
+        # to allow for curing possible unstable points.
+        aloha_original_quad_mode = aloha.mp_precision
+        aloha.mp_precision = True
+
         if self._export_format not in ['standalone','matrix']:
             raise self.InvalidCmd('ML5 only support standalone and matrix as export format.')
 
@@ -186,8 +210,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
             logger.info('If you continue this directory will be cleaned')
-            answer = self.ask('Do you want to continue?', 'y', ['y','n'], 
-                                                           timeout=self.timeout)
+            answer = self.ask('Do you want to continue?', 'y', ['y','n'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
 
@@ -231,14 +254,16 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         # Reset _export_dir, so we don't overwrite by mistake later
         self._export_dir = None
 
+        # Put aloha back in its original mode.
+        aloha.mp_precision = aloha_original_quad_mode
+
     # Export a matrix element
     
     def ML5export(self, nojpeg = False, main_file_name = ""):
         """Export a generated amplitude to file"""
 
         def generate_matrix_elements(self):
-            """Helper function to generate the matrix elements before
-            exporting"""
+            """Helper function to generate the matrix elements before exporting"""
 
             # Sort amplitudes according to number of diagrams,
             # to get most efficient multichannel output
@@ -249,7 +274,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
             ndiags = 0
             if not self._curr_matrix_elements.get_matrix_elements():
                 self._curr_matrix_elements = \
-                    helas_objects.HelasMultiProcess(self._curr_amps)
+                    helas_objects.HelasMultiProcess(self._curr_amps,
+                    optimized_output = self.options['loop_optimized_output'])
                 ndiags = sum([len(me.get('diagrams')) for \
                               me in self._curr_matrix_elements.\
                               get_matrix_elements()])
@@ -263,7 +289,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
             return ndiags, cpu_time2 - cpu_time1
 
         # Start of the actual routine
-
         ndiags, cpu_time = generate_matrix_elements(self)
 
         calls = 0

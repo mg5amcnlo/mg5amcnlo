@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------
 ------------------------------------------------------------------------
  
-              CutTools V1.6.9 (Dec 16 2011)
+              CutTools V1.7.4 (June 09 2012)
 
               contact author: pittau@ugr.es
 
@@ -444,6 +444,14 @@ compiling and running example0.f in the directory "examples"
 - Bug corrected in OneLOop-2.2:In "subroutine box16"
   sm1 = cmplx(abs(rmu)) -> cmplx(abs(rmu),kind=kindc2)
 
+- May 15 2012:
+
+- OneLOop-3.1 implemented
+
+- June 9 2012:
+
+- OneLOop-3.1.1 implemented
+
 ---------------------------------------------------------------------------
-Last modification of this document: Jan 17 2012
+Last modification of this document: June 9 2012
 ---------------------------------------------------------------------------

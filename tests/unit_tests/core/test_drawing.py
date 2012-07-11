@@ -34,17 +34,22 @@ import madgraph.iolibs.files as files
 import tests.unit_tests as unittest
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
-# First define a valid model for Standard Model
-_model = base_objects.Model()
-# Import Particles information
-_input_path = os.path.join(_file_path, '../input_files/v4_sm_particles.dat')
-_model.set('particles', files.read_from_file(_input_path,
-                                            import_v4.read_particles_v4))
-# Import Interaction information
-_input_path = os.path.join(_file_path , '../input_files/v4_sm_interactions.dat')
-_model.set('interactions', files.read_from_file(_input_path, \
-                                               import_v4.read_interactions_v4, \
-                                               _model.get('particles')))
+
+def define_model():
+    global _model
+    
+    # First define a valid model for Standard Model
+    _model = base_objects.Model()
+    # Import Particles information
+    _input_path = os.path.join(_file_path, '../input_files/v4_sm_particles.dat')
+    _model.set('particles', files.read_from_file(_input_path,
+                                                import_v4.read_particles_v4))
+    # Import Interaction information
+    _input_path = os.path.join(_file_path , '../input_files/v4_sm_interactions.dat')
+    _model.set('interactions', files.read_from_file(_input_path, \
+                                                   import_v4.read_interactions_v4, \
+                                                   _model.get('particles')))
+
 
 
 #===============================================================================
@@ -713,75 +718,84 @@ class TestFeynmanDiagram(unittest.TestCase):
     """Test the object which compute the position of the vertex/line 
         for a given Diagram object
     """
-
-    #test diagram gg>gg via a T-channel
-    leg1 = base_objects.Leg({'id':22, 'number':1, 'state':False,
-                            'from_group':False})
-    leg2 = base_objects.Leg({'id':22, 'number':2, 'state':False,
-                            'from_group':False})
-    leg3 = base_objects.Leg({'id':22, 'number':3, 'state':True,
-                            'from_group':False})
-    leg4 = base_objects.Leg({'id':22, 'number':4, 'state':True,
-                            'from_group':False})
-
-    #intermediate particle +vertex associate
-    leg_t1 = base_objects.Leg({'id':22, 'number':1, 'state':False,
-                        'from_group':True})
-    vertex1 = base_objects.Vertex({'id':1, \
-                        'legs':base_objects.LegList([leg1, leg3, leg_t1])})
-
-    leg_t2 = base_objects.Leg({'id':22, 'number':2, 'state':False,
-                        'from_group':True})
-    vertex2 = base_objects.Vertex({'id':2, \
-                        'legs':base_objects.LegList([leg2, leg4, leg_t2])})
-
-    vertex3 = base_objects.Vertex({'id':0, \
-                        'legs':base_objects.LegList([leg_t1, leg_t2])})
-
-    vertexlist = base_objects.VertexList([vertex1, vertex2, vertex3])
-    t_diagram_dict = {'vertices':vertexlist}
-
-    #test diagram gg>gg via a S-channel
-    leg1 = base_objects.Leg({'id':22, 'number':1, 'state':False,
-                            'from_group':False})
-    leg2 = base_objects.Leg({'id':22, 'number':2, 'state':False,
-                            'from_group':False})
-    leg3 = base_objects.Leg({'id':22, 'number':3, 'state':True,
-                            'from_group':False})
-    leg4 = base_objects.Leg({'id':22, 'number':4, 'state':True,
-                            'from_group':False})
-
-    #intermediate particle +vertex associate
-    leg_s = base_objects.Leg({'id':22, 'number':1, 'state':True,
-                        'from_group':True})
-    vertex1 = base_objects.Vertex({'id':1, \
-                        'legs':base_objects.LegList([leg1, leg2, leg_s])})
-
-    leg_temp = base_objects.Leg({'id':22, 'number':1, 'state':True,
-                            'from_group':False})
-
-    vertex2 = base_objects.Vertex({'id':2, \
-                        'legs':base_objects.LegList([leg_s, leg3, leg_temp])})
-
-    vertex3 = base_objects.Vertex({'id':0, \
-                        'legs':base_objects.LegList([leg_temp, leg4])})
-
-    vertexlist = base_objects.VertexList([vertex1, vertex2, vertex3])
-    s_diagram_dict = {'vertices':vertexlist}
-
-
-    # Recover some diagram causing crashes or having some interesting feature
-    #in order to ensure that those problem will not appear again. 
-    #Those diagrams were keep in a pickle format"""
-    filehandler = open(os.path.join(_file_path, \
-                                    '../input_files/test_draw.obj'), 'r')
-    store_diagram = pickle.load(filehandler)
-
-
+    
+    @classmethod
+    def class_init(cls):
+        try:
+            _model
+        except:
+            define_model()
+        
+        
+        #test diagram gg>gg via a T-channel
+        leg1 = base_objects.Leg({'id':22, 'number':1, 'state':False,
+                                'from_group':False})
+        leg2 = base_objects.Leg({'id':22, 'number':2, 'state':False,
+                                'from_group':False})
+        leg3 = base_objects.Leg({'id':22, 'number':3, 'state':True,
+                                'from_group':False})
+        leg4 = base_objects.Leg({'id':22, 'number':4, 'state':True,
+                                'from_group':False})
+    
+        #intermediate particle +vertex associate
+        leg_t1 = base_objects.Leg({'id':22, 'number':1, 'state':False,
+                            'from_group':True})
+        vertex1 = base_objects.Vertex({'id':1, \
+                            'legs':base_objects.LegList([leg1, leg3, leg_t1])})
+    
+        leg_t2 = base_objects.Leg({'id':22, 'number':2, 'state':False,
+                            'from_group':True})
+        vertex2 = base_objects.Vertex({'id':2, \
+                            'legs':base_objects.LegList([leg2, leg4, leg_t2])})
+    
+        vertex3 = base_objects.Vertex({'id':0, \
+                            'legs':base_objects.LegList([leg_t1, leg_t2])})
+    
+        vertexlist = base_objects.VertexList([vertex1, vertex2, vertex3])
+        cls.t_diagram_dict = {'vertices':vertexlist}
+    
+        #test diagram gg>gg via a S-channel
+        leg1 = base_objects.Leg({'id':22, 'number':1, 'state':False,
+                                'from_group':False})
+        leg2 = base_objects.Leg({'id':22, 'number':2, 'state':False,
+                                'from_group':False})
+        leg3 = base_objects.Leg({'id':22, 'number':3, 'state':True,
+                                'from_group':False})
+        leg4 = base_objects.Leg({'id':22, 'number':4, 'state':True,
+                                'from_group':False})
+    
+        #intermediate particle +vertex associate
+        leg_s = base_objects.Leg({'id':22, 'number':1, 'state':True,
+                            'from_group':True})
+        vertex1 = base_objects.Vertex({'id':1, \
+                            'legs':base_objects.LegList([leg1, leg2, leg_s])})
+    
+        leg_temp = base_objects.Leg({'id':22, 'number':1, 'state':True,
+                                'from_group':False})
+    
+        vertex2 = base_objects.Vertex({'id':2, \
+                            'legs':base_objects.LegList([leg_s, leg3, leg_temp])})
+    
+        vertex3 = base_objects.Vertex({'id':0, \
+                            'legs':base_objects.LegList([leg_temp, leg4])})
+    
+        vertexlist = base_objects.VertexList([vertex1, vertex2, vertex3])
+        cls.s_diagram_dict = {'vertices':vertexlist}
+        # Recover some diagram causing crashes or having some interesting feature
+        #in order to ensure that those problem will not appear again. 
+        #Those diagrams were keep in a pickle format"""
+        filehandler = open(os.path.join(_file_path, \
+                                '../input_files/test_draw.obj'), 'r')
+        cls.store_diagram = pickle.load(filehandler)
 
     def setUp(self):
         """Basic building of the object needed to build the test"""
-
+        
+        if not hasattr(self, 'store_diagram'):
+            self.class_init()
+        
+            
+            
         opt = drawing.DrawOption({'external':1, 'horizontal':1, 'max_size':0})
         # gg>g(g>uux)g (via a T channel)  
         mix_diagram = self.store_diagram['g g > g g u u~'][18]

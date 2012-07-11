@@ -48,6 +48,11 @@
    use combinatorics
    use scale
    use countdigits
+   use avh_olo
+!  Edit VH:  module used for set_unit to switch on/off error messages
+!  in OneLoop
+!   use avh_olo_units
+!  END edit VH
    include 'cts_mprec.h'
    implicit none 
    integer, intent(in) :: scaloopin
@@ -66,7 +71,7 @@
    call ctscountdigits(ncountd)
    write (*,*) ' '
    write (*,'(a72)') '------------------------------------------------------------------------'
-   write (*,'(a72)') '|              You are using CutTools - Version 1.7.0                  |'  
+   write (*,'(a72)') '|              You are using CutTools - Version 1.7.4                  |'  
    write (*,'(a72)') '|              Authors: G. Ossola, C. Papadopoulos, R. Pittau          |' 
    write (*,'(a72)') '|              Published in JHEP 0803:042,2008                         |'
    write (*,'(a72)') '|              http://www.ugr.es/~pittau/CutTools                      |'
@@ -84,6 +89,10 @@
     write (*,*) '  '
    endif
 !
+!  VH edit, temporary mute of OneLoop error message because of over-sensitivity
+!  of the message  ERROR in OneLOop dilog2_c
+!   call set_unit('error',0)
+!  end VH edit
    call load_combinatorics
 !
 !  Allocate all the needed variables
@@ -102,8 +111,9 @@
 !    avh initialization:
 !
      thrsin= 1.d-6 
-     call avh_olo_onshell(thrsin) 
-     call avh_olo_mp_onshell(thrsin) 
+     call olo_onshell(thrsin) 
+!     call olo_unit(6,'printall') !DEBUG
+     call olo_precision(ncountd)
    elseif(scaloop.eq.3) then
 !                               
 !    qcdloop initialization:
@@ -113,7 +123,7 @@
 !    also OneLOop is used for rank 1 and 2 2-point functions:
 !
      thrsin= 1.d-6 
-     call avh_olo_onshell(thrsin) 
+     call olo_onshell(thrsin) 
    else
     stop 'value of scaloop not allowed'
    endif

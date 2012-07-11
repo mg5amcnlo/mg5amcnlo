@@ -47,6 +47,7 @@ class ParticleTest(unittest.TestCase):
                       'pdg_code':6,
                       'propagating':True,
                       'is_part':True,
+                      'ghost':False,
                       'self_antipart':False,
                       'counterterm':{('QCD',((1,2),(3,4))):{0:'GC_0',-1:'GC_1'}}}
 
@@ -163,7 +164,8 @@ class ParticleTest(unittest.TestCase):
         goal = goal + "    \'line\': \'straight\',\n"
         goal = goal + "    \'propagating\': True,\n"
         goal = goal + "    \'is_part\': True,\n"
-        goal = goal + "    \'self_antipart\': False,\n"
+        goal = goal + "    \'self_antipart\': False,\n"        
+        goal = goal + "    \'ghost\': False,\n"
         goal = goal + "    \'counterterm\': {('QCD', ((1, 2), (3, 4))): {0: 'GC_0', -1: 'GC_1'}}\n}"
 
         self.assertEqual(goal, str(self.mypart))
@@ -908,8 +910,7 @@ class ModelTest2(unittest.TestCase):
         """ """
         import madgraph.interface.master_interface as Cmd
         cmd = Cmd.MasterCmd() 
-        cmd.do_load('model %s' % os.path.join(madgraph.MG5DIR, 'tests',
-                                                        'input_files','sm.pkl'))
+        cmd.do_import('model sm')
         self.model = cmd._curr_model
         
     def test_change_to_complex_mass_scheme(self):
@@ -919,7 +920,8 @@ class ModelTest2(unittest.TestCase):
         model.change_mass_to_complex_scheme()
         
         # Check that the Width of the W is not anymore in the external parameter
-        self.assertEqual(len(self.model['parameters'][('external',)]) -1,
+        # and the yukawa
+        self.assertEqual(len(self.model['parameters'][('external',)]) -4,
                          len(model['parameters'][('external',)]) )
         
         
@@ -935,7 +937,7 @@ class ModelTest2(unittest.TestCase):
                 self.assertFalse(WW)
             elif param.name == 'WW':
                 WW = param
-            else:
+            elif param.name == 'MW': 
                 MW = param
                 self.assertFalse(WW)
                 self.assertFalse(WComplex)
@@ -944,7 +946,7 @@ class ModelTest2(unittest.TestCase):
         self.assertTrue(WComplex)
         # Check that WW and MW are the real/imaginary part
         self.assertEqual(WW.expr, '-1 * im(CMASS_MW**2) / MW')
-        self.assertEqual('cmath.sqrt(re(%s**2))' % WComplex.expr, MW.expr)
+        self.assertEqual(['cmath.sqrt(re(%s**2))' % WComplex.expr], [MW.expr])
         
         # Check that MZ has a complex_mass definition
         # and that the width and the mass are external

@@ -4,145 +4,44 @@ C THE CORE SUBROUTINE CALLED BY CUTTOOLS WHICH CONTAINS THE HELAS CALLS BUILDING
 C  
 C CONSTANTS 
 C 
-	  INTEGER    NCOMB
-      PARAMETER (NCOMB=%(ncomb)d)
-	  INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
-      INTEGER    NBORNAMPS, NLOOPAMPS
-      PARAMETER (NBORNAMPS=%(nbornamps)d, NLOOPAMPS=%(nloopamps)d)
-	  INTEGER    NWAVEFUNCS
-      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d)
-	  INTEGER    MAXLCOUPLINGS
-      PARAMETER (MAXLCOUPLINGS=%(maxlcouplings)d)
-	  %(complex_dp_format)s IMAG1
-      PARAMETER (IMAG1=(0D0,1D0))
+	  INTEGER    NLOOPS
+      PARAMETER (NLOOPS=%(nloops)d)
+	  INTEGER LOOPMAXCOEFS
+	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
 C  
 C ARGUMENTS 
 C  
       %(complex_dp_format)s Q(0:3)
       %(complex_dp_format)s RES
-C  
-C LOCAL VARIABLES 
-C
-      %(complex_dp_format)s CFTOT
-      %(complex_dp_format)s BUFF
-      INTEGER I,H
 C
 C GLOBAL VARIABLES
 C
-      INTEGER WE(NEXTERNAL)	  
-      INTEGER ID, SYMFACT,AMPLNUM
-      COMMON/LOOP/WE,ID,SYMFACT,AMPLNUM
+      INTEGER ID,RANK
+      COMMON/LOOP/ID,RANK
 
-	  LOGICAL GOODHEL(NCOMB)
-	  LOGICAL GOODAMP(NLOOPAMPS,NCOMB)
-	  common/Filters/GOODAMP,GOODHEL
-
-	  INTEGER NTRY
-	  LOGICAL CHECKPHASE
-	  %(real_dp_format)s REF
-      common/INIT/NTRY,CHECKPHASE,REF
-
-	  INTEGER CF_D(NLOOPAMPS,NBORNAMPS)
-	  INTEGER CF_N(NLOOPAMPS,NBORNAMPS)
-	  common/CF/CF_D,CF_N
-
-      %(complex_dp_format)s AMP(NBORNAMPS,NCOMB)
-	  %(complex_dp_format)s W(20,NWAVEFUNCS,NCOMB)
-	  INTEGER VALIDH
-	  common/OPTIMIZATION/W,AMP,VALIDH
-
-	  INTEGER HELPICKED
-	  common/HELCHOICE/HELPICKED
+	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPS)
+	  common/LCOEFS/LOOPCOEFS
 
 	  RES=(0.0d0,0.0d0)
 
-  DO H=1,NCOMB
-  IF (((HELPICKED.EQ.-1).OR.(HELPICKED.EQ.H)).AND.(CHECKPHASE.OR.(GOODHEL(H).AND.GOODAMP(AMPLNUM,H)))) THEN
-    CALL LOOPNUMHEL(-Q,BUFF,H)
-	DO I=1,NBORNAMPS
-	  CFTOT=DCMPLX(CF_N(AMPLNUM,I)/DBLE(ABS(CF_D(AMPLNUM,I))),0.0d0)
-	  IF(CF_D(AMPLNUM,I).LT.0) CFTOT=CFTOT*IMAG1
-	  RES=RES+CFTOT*BUFF*DCONJG(AMP(I,H))
-	ENDDO
-  ENDIF
-  ENDDO
-	  RES=RES/SYMFACT
+	  CALL EVAL_POLY(LOOPCOEFS(0,ID),RANK,-Q,RES)
 
 	  END
 
-      SUBROUTINE LOOPNUMHEL(Q,RES,H)
-C  
-C CONSTANTS 
-C  
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
-	  INTEGER    MAXLCOUPLINGS
-      PARAMETER (MAXLCOUPLINGS=%(maxlcouplings)d)
-	  INTEGER    NMAXLOOPWFS
-      PARAMETER (NMAXLOOPWFS=(NEXTERNAL+2))
-	  %(real_dp_format)s     ZERO
-	  PARAMETER (ZERO=0.D0)
-	  INTEGER    NWAVEFUNCS
-      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d)
-      INTEGER    NLOOPAMPS, NBORNAMPS
-      PARAMETER (NLOOPAMPS=%(nloopamps)d, NBORNAMPS=%(nbornamps)d)
-	  INTEGER    NCOMB
-      PARAMETER (NCOMB=%(ncomb)d)
-C  
-C ARGUMENTS 
-C  
-      %(complex_dp_format)s Q(0:3)
-      %(complex_dp_format)s RES
-	  INTEGER H
-C  
-C LOCAL VARIABLES 
-C
-      %(complex_dp_format)s BUFF(4)
-      %(complex_dp_format)s WL(20,NMAXLOOPWFS)
-      INTEGER I
-C
-C GLOBAL VARIABLES
-C
-	  %(complex_dp_format)s LC(MAXLCOUPLINGS)
-	  %(mass_dp_format)s ML(NEXTERNAL+2)
-      COMMON/DP_LOOP/LC,ML
-
-      INTEGER WE(NEXTERNAL)  
-      INTEGER ID, SYMFACT,AMPLNUM
-      COMMON/LOOP/WE,ID,SYMFACT,AMPLNUM
-
-      %(complex_dp_format)s AMP(NBORNAMPS,NCOMB)
-	  %(complex_dp_format)s W(20,NWAVEFUNCS,NCOMB)
-	  INTEGER VALIDH
-	  common/OPTIMIZATION/W,AMP,VALIDH
-
-C ----------
-C BEGIN CODE
-C ----------
-      RES=(0.D0,0.D0)
-      %(loop_helas_calls)s
-      END
-
       SUBROUTINE MPLOOPNUM(Q,RES)
-	  
+C
+C MODULE
+C
       INCLUDE 'cts_mprec.h'
-	  IMPLICIT NONE	  
 C  
 C CONSTANTS 
 C 
-	  INTEGER    NCOMB
-      PARAMETER (NCOMB=%(ncomb)d)
+	  INTEGER    NLOOPS
+      PARAMETER (NLOOPS=%(nloops)d)
 	  INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
-      INTEGER    NBORNAMPS, NLOOPAMPS
-      PARAMETER (NBORNAMPS=%(nbornamps)d, NLOOPAMPS=%(nloopamps)d)
-	  INTEGER    NWAVEFUNCS
-      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d)
-	  INTEGER    MAXLCOUPLINGS
-      PARAMETER (MAXLCOUPLINGS=%(maxlcouplings)d)
-	  %(complex_mp_format)s IMAG1
-      PARAMETER (IMAG1=(0E0_16,1E0_16))
+	  INTEGER LOOPMAXCOEFS
+	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
 C  
 C ARGUMENTS 
 C  
@@ -151,179 +50,59 @@ C
 C  
 C LOCAL VARIABLES 
 C
-      %(complex_mp_format)s QPRES
-      %(complex_mp_format)s QPQ(0:3)
+      %(complex_mp_format)s QRES
+	  %(real_dp_format)s DUMMY(3)
       %(real_mp_format)s QPP(0:3,NEXTERNAL)
-      INTEGER I,J,H
-	  %(complex_mp_format)s CFTOT
-      %(complex_mp_format)s BUFF
-C  
+      %(complex_mp_format)s QQ(0:3)
+      INTEGER I,J
+C
 C GLOBAL VARIABLES
-C 
+C
 	  LOGICAL MP_DONE
 	  common/MP_DONE/MP_DONE
 
+      INTEGER ID,RANK
+	  COMMON/LOOP/ID,RANK
+
+	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPS)
+	  common/MP_LCOEFS/LOOPCOEFS
+
 	  %(real_dp_format)s PS(0:3,NEXTERNAL)
 	  common/PSPOINT/PS
-
-      INTEGER WE(NEXTERNAL)  
-      INTEGER ID, SYMFACT,AMPLNUM
-      COMMON/LOOP/WE,ID,SYMFACT,AMPLNUM
-
-	  LOGICAL GOODHEL(NCOMB)
-	  LOGICAL GOODAMP(NLOOPAMPS,NCOMB)
-	  common/Filters/GOODAMP,GOODHEL
-
-	  INTEGER NTRY
-	  LOGICAL CHECKPHASE
-	  %(real_dp_format)s REF
-      common/INIT/NTRY,CHECKPHASE,REF
-
-	  INTEGER CF_D(NLOOPAMPS,NBORNAMPS)
-	  INTEGER CF_N(NLOOPAMPS,NBORNAMPS)
-	  common/CF/CF_D,CF_N
-
-      %(complex_mp_format)s AMP(NBORNAMPS,NCOMB)
-	  %(complex_mp_format)s W(20,NWAVEFUNCS,NCOMB)
-	  common/MP_WFS/W,AMP	
-
-	  INTEGER HELPICKED
-	  common/HELCHOICE/HELPICKED
 C ----------
 C BEGIN CODE
 C ----------
       DO I=0,3
-        QPQ(I) = Q(I)
+        QQ(I) = Q(I)
       ENDDO
-	  QPRES=(0.0E0_16,0.0E0_16)	  
+	  QRES=(0.0e0_16,0.0e0_16)
 
-      IF(.NOT.MP_DONE) THEN
-	    DO I=1,NEXTERNAL
-		  DO J=0,3
-		    QPP(J,I)=PS(J,I)
-		  ENDDO
-		ENDDO
-		CALL MP_UPDATE_AS_PARAM()
-		CALL IMPROVE_PS_POINT_PRECISION(QPP)
-	    CALL MP_BORN_AMPS_AND_WFS(QPP)
+      IF (.NOT.MP_DONE) THEN
+	    CALL MP_COMPUTE_LOOP_COEFS(PS,DUMMY)
 	    MP_DONE=.TRUE.
 	  ENDIF
 
-  DO H=1,NCOMB
-  IF (((HELPICKED.EQ.-1).OR.(HELPICKED.EQ.H)).AND.(CHECKPHASE.OR.(GOODHEL(H).AND.GOODAMP(AMPLNUM,H)))) THEN
-    CALL MPLOOPNUMHEL(-QPQ,BUFF,H)
-	DO I=1,NBORNAMPS
-	  CFTOT=CMPLX(CF_N(AMPLNUM,I)/(1.0E0_16*ABS(CF_D(AMPLNUM,I))),0.0E0_16,KIND=16)
-	  IF(CF_D(AMPLNUM,I).LT.0) CFTOT=CFTOT*IMAG1
-	  QPRES=QPRES+CFTOT*BUFF*CONJG(AMP(I,H))
-	ENDDO
-  ENDIF
-  ENDDO
-	  QPRES=QPRES/SYMFACT
+	  CALL MP_EVAL_POLY(LOOPCOEFS(0,ID),RANK,-QQ,QRES)
 
-	  RES=QPRES
-      END
-
-	  SUBROUTINE IMPROVE_PS_POINT_PRECISION(P)
-C  
-C CONSTANTS 
-C 
-	  INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
-	  %(real_mp_format)s     ZERO
-	  PARAMETER (ZERO=0E0_16)
-C  
-C ARGUMENTS 
-C
-      %(real_mp_format)s P(0:3,NEXTERNAL)
-C
-C LOCAL VARIABLES 
-C
-      INTEGER I,J
-	  %(real_mp_format)s BUFF
-C  
-C GLOBAL VARIABLES
-C 
-      include 'mp_coupl_same_name.inc'
-
-      %(force_onshell)s
-
-	  DO I=0,3
-	    BUFF=0.0E0_16 
-        DO J=1,%(n_initial)d
-		  BUFF=BUFF+P(I,J)
-		ENDDO
-		DO J=%(n_initial)d+1,NEXTERNAL-1
-		  BUFF=BUFF-P(I,J)		
-		ENDDO
-		P(I,NEXTERNAL)=BUFF
-	  ENDDO
+	  RES=QRES
 
 	  END
 
-      SUBROUTINE MPLOOPNUMHEL(Q,RES,H)
-C  
-C CONSTANTS 
-C  
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
-	  INTEGER    MAXLCOUPLINGS
-      PARAMETER (MAXLCOUPLINGS=%(maxlcouplings)d)
-	  INTEGER    NMAXLOOPWFS
-      PARAMETER (NMAXLOOPWFS=(NEXTERNAL+2))
-	  %(real_mp_format)s     ZERO
-	  PARAMETER (ZERO=0E0_16)
-	  INTEGER    NWAVEFUNCS
-      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d)
-      INTEGER    NLOOPAMPS, NBORNAMPS
-      PARAMETER (NLOOPAMPS=%(nloopamps)d, NBORNAMPS=%(nbornamps)d)
-	  INTEGER    NCOMB
-      PARAMETER (NCOMB=%(ncomb)d)
-C  
-C ARGUMENTS 
-C  
-      %(complex_mp_format)s Q(0:3)
-      %(complex_mp_format)s RES
-	  INTEGER H
-C  
-C LOCAL VARIABLES 
-C
-      %(complex_mp_format)s BUFF(4)
-      %(complex_mp_format)s WL(20,NMAXLOOPWFS)
-      INTEGER I
-C
-C GLOBAL VARIABLES
-C
-	  %(complex_mp_format)s LC(MAXLCOUPLINGS)
-	  %(mass_mp_format)s ML(NEXTERNAL+2)
-      COMMON/MP_LOOP/LC,ML
-
-      INTEGER WE(NEXTERNAL)
-      INTEGER ID, SYMFACT,AMPLNUM
-      COMMON/LOOP/WE,ID,SYMFACT,AMPLNUM
-
-      %(complex_mp_format)s AMP(NBORNAMPS,NCOMB)
-	  %(complex_mp_format)s W(20,NWAVEFUNCS,NCOMB)
-	  common/MP_WFS/W,AMP
-C ----------
-C BEGIN CODE
-C ----------
-      RES=(0E0_16,0E0_16)
-      %(mp_loop_helas_calls)s
-      END
-
       SUBROUTINE MPLOOPNUM_DUMMY(Q,RES)
+C
+C MODULE
+C
+      INCLUDE 'cts_mprec.h'
 C  
 C ARGUMENTS 
 C  
-      INCLUDE 'cts_mprec.h'
       INCLUDE 'cts_mpc.h'                                             , INTENT(IN), DIMENSION(0:3) :: Q
       INCLUDE 'cts_mpc.h'                                             , INTENT(OUT) :: RES
 C  
 C LOCAL VARIABLES 
 C
-      COMPLEX*16 DRES
-      COMPLEX*16 DQ(0:3)
+      %(complex_dp_format)s DRES
+      %(complex_dp_format)s DQ(0:3)
       INTEGER I
 C ----------
 C BEGIN CODE

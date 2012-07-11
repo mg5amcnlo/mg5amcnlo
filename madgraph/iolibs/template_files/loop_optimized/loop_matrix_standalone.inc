@@ -19,25 +19,25 @@ C ----------
       CALL SLOOPMATRIX(P,ANS)
 	  END
 
-	  logical function IsZero(toTest, reference_value, ampLn, helN)
+	  logical function IsZero(toTest, reference_value, loop)
       IMPLICIT NONE
 C  
 C CONSTANTS
 C
-      INTEGER    NLOOPAMPS
-	  PARAMETER (NLOOPAMPS=%(nloopamps)d)
+      INTEGER    NLOOPGROUPS
+	  PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
 C  
 C ARGUMENTS 
 C  
 	  %(real_dp_format)s toTest, reference_value
-	  integer ampLn,heln
+	  integer loop
 C  
 C GLOBAL 
 C
-      %(complex_dp_format)s AMPL(3,NLOOPAMPS)
-	  LOGICAL S(NLOOPAMPS)
-	  common/SPLITHELAS/AMPL,S
-	  include 'MadLoopParams.inc'	  
+      INCLUDE 'MadLoopParams.inc'
+      %(complex_dp_format)s LOOPRES(3,NLOOPGROUPS)
+	  LOGICAL S(NLOOPGROUPS)
+      common/LOOPRES/LOOPRES,S
 C ----------
 C BEGIN CODE
 C ----------
@@ -46,16 +46,16 @@ C ----------
 		write(*,*) '##E02 ERRROR Reference value for comparison is zero.'
 		STOP
 	  else
-	    IsZero=((abs(toTest)/abs(reference_value)).le.ZEROTHRES)
+	    IsZero=((abs(toTest)/abs(reference_value)).lt.ZEROTHRES)
 	  endif
 
-	  IF((.NOT.ISZERO).AND.(AMPLN.NE.-1).AND.(.NOT.S(AMPLN))) THEN
-	    write(*,*) '##W01 WARNING Contribution ',ampLn,' for hel ',helN,' is detected as contributing with CR=',(abs(toTest)/abs(reference_value)),' but is unstable.' 
+	  IF((.NOT.ISZERO).AND.(loop.NE.-1).AND.(.NOT.S(loop))) THEN
+	    write(*,*) '##W01 WARNING Contribution ',loop,' is detected as contributing with CR=',(abs(toTest)/abs(reference_value)),' but is unstable.' 
 	  ENDIF
 
 	  end
 
-      SUBROUTINE SLOOPMATRIX(P,ANS)
+      SUBROUTINE SLOOPMATRIX(P_IN,ANS)
 C  
 %(info_lines)s
 C
@@ -71,12 +71,19 @@ C CONSTANTS
 C
       CHARACTER*64 paramFileName
       PARAMETER ( paramFileName='MadLoopParams.dat')
-      INTEGER    NLOOPAMPS, NBORNAMPS, NCTAMPS
-      PARAMETER (NLOOPAMPS=%(nloopamps)d, NBORNAMPS=%(nbornamps)d, NCTAMPS=%(nctamps)d) 
-      INTEGER    NEXTERNAL
+	  %(nbornamps_decl)s
+      INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
+      PARAMETER (NLOOPS=%(nloops)d, NLOOPGROUPS=%(nloop_groups)d, NCTAMPS=%(nctamps)d) 
+      INTEGER    NCOLORROWS
+	  PARAMETER (NCOLORROWS=%(nloopamps)d)
+	  INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
-      INTEGER    NWAVEFUNCS
-      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d)
+      INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
+      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d,NLOOPWAVEFUNCS=%(nloopwavefuncs)d)
+	  INTEGER MAXLWFSIZE
+	  PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
+	  INTEGER LOOPMAXCOEFS, VERTEXMAXCOEFS
+	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d, VERTEXMAXCOEFS=%(vertex_max_coefs)d)
 	  INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
       %(real_dp_format)s     ZERO
@@ -88,23 +95,27 @@ C
 C  
 C ARGUMENTS 
 C  
-      %(real_dp_format)s P(0:3,NEXTERNAL)
+      %(real_dp_format)s P_IN(0:3,NEXTERNAL)
       %(real_dp_format)s ANS(3)
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I,J,K,H
+      INTEGER I,J,K,H,DUMMY
+      %(real_dp_format)s P(0:3,NEXTERNAL)	  
 c RESCT STORES THE RESULT OBTAINED FROM ANY OF THE 7 POSSIBLE CT MODES.
 	  %(real_dp_format)s RESCT(3,0:6)
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
 	  INTEGER NATTEMPTS
 	  DATA NATTEMPTS/0/
 	  DATA IC/NEXTERNAL*1/
-	  %(real_dp_format)s BUFFR(3),TEMP1,TEMP2
+	  %(real_dp_format)s BUFFR(3),BUFFR_BIS(3),TEMP1,TEMP2
+	  %(complex_dp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       %(complex_dp_format)s CFTOT
 	  LOGICAL FOUNDHELFILTER,FOUNDLOOPFILTER
 	  DATA FOUNDHELFILTER/.TRUE./
 	  DATA FOUNDLOOPFILTER/.TRUE./
+      LOGICAL LOOPFILTERBUFF(NLOOPGROUPS)
+	  DATA (LOOPFILTERBUFF(I),I=1,NLOOPGROUPS)/NLOOPGROUPS*.FALSE./
 	  INTEGER IDEN
       %(den_factor_line)s
 
@@ -119,13 +130,13 @@ C
 	  include 'mp_coupl.inc'
 	  include 'MadLoopParams.inc'
 
-	  INTEGER NTRY
-      DATA NTRY/0/
 	  LOGICAL CHECKPHASE
 	  DATA CHECKPHASE/.TRUE./
+      common/INIT/CHECKPHASE
+	  INTEGER NTRY
+      DATA NTRY/0/
 	  %(real_dp_format)s REF
 	  DATA REF/0.0d0/
-      common/INIT/NTRY,CHECKPHASE,REF
 
 	  LOGICAL MP_DONE
 	  DATA MP_DONE/.FALSE./
@@ -139,7 +150,7 @@ C
       common/CT/LSCALE,CTMODE
 
 	  LOGICAL GOODHEL(NCOMB)
-	  LOGICAL GOODAMP(NLOOPAMPS,NCOMB)
+	  LOGICAL GOODAMP(NLOOPGROUPS)
 	  common/Filters/GOODAMP,GOODHEL
 
 	  INTEGER HELPICKED
@@ -149,17 +160,29 @@ C
 	  DATA USERHEL/-1/
 	  common/USERCHOICE/USERHEL
 
-      %(complex_dp_format)s AMP(NBORNAMPS,NCOMB)
-	  %(complex_dp_format)s W(20,NWAVEFUNCS,NCOMB)
-	  INTEGER VALIDH
-	  common/OPTIMIZATION/W,AMP,VALIDH
+	  %(dp_born_amps_decl)s	  
+	  %(complex_dp_format)s W(20,NWAVEFUNCS)
+	  common/W/W  
 
-      %(complex_dp_format)s AMPL(3,NLOOPAMPS)
-	  LOGICAL S(NLOOPAMPS)
-	  common/SPLITHELAS/AMPL,S
+      %(complex_mp_format)s MPW(20,NWAVEFUNCS)
+	  common/MP_W/MPW
 
-	  INTEGER CF_D(NLOOPAMPS,NBORNAMPS)
-	  INTEGER CF_N(NLOOPAMPS,NBORNAMPS)
+	  %(complex_dp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
+	  %(complex_dp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
+	  common/WL/WL,PL
+
+	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPS)
+	  common/LCOEFS/LOOPCOEFS
+
+      %(complex_dp_format)s AMPL(3,NCTAMPS)
+	  common/AMPL/AMPL
+
+      %(complex_dp_format)s LOOPRES(3,NLOOPGROUPS)
+	  LOGICAL S(NLOOPGROUPS)
+	  common/LOOPRES/LOOPRES,S
+
+	  INTEGER CF_D(NCOLORROWS,%(color_matrix_size)s)
+	  INTEGER CF_N(NCOLORROWS,%(color_matrix_size)s)
 	  common/CF/CF_D,CF_N
 
 	  INTEGER HELC(NEXTERNAL,NCOMB)
@@ -171,22 +194,15 @@ C ----------
 
 IF(NTRY.EQ.0) THEN
   CALL MADLOOPPARAMREADER(paramFileName,.TRUE.)
-  DO J=1,NCOMB
-    DO I=1,NCTAMPS
-	  GOODAMP(I,J)=.TRUE.
-	ENDDO
-  ENDDO
 OPEN(1, FILE="LoopFilter.dat", err=100, status='OLD',           action='READ')
-  DO J=1,NCOMB
-    READ(1,*,END=101) (GOODAMP(I,J),I=NCTAMPS+1,NLOOPAMPS)
+  DO J=1,NLOOPGROUPS
+    READ(1,*,END=101) GOODAMP(J)
   ENDDO
   GOTO 101
 100  CONTINUE
   FOUNDLOOPFILTER=.FALSE.
-  DO J=1,NCOMB
-    DO I=NCTAMPS+1,NLOOPAMPS
-	  GOODAMP(I,J)=(.NOT.USELOOPFILTER)
-	ENDDO
+  DO J=1,NLOOPGROUPS
+	GOODAMP(J)=(.NOT.USELOOPFILTER)
   ENDDO
 101  CONTINUE
 CLOSE(1)
@@ -201,8 +217,8 @@ OPEN(1, FILE="HelFilter.dat", err=102, status='OLD',           action='READ')
 103  CONTINUE
 CLOSE(1)
 OPEN(1, FILE="ColorNumFactors.dat", err=104, status='OLD',           action='READ')
-  DO I=1,NLOOPAMPS
-    READ(1,*,END=105) (CF_N(I,J),J=1,NBORNAMPS)
+  DO I=1,NCOLORROWS
+    READ(1,*,END=105) (CF_N(I,J),J=1,%(color_matrix_size)s)
   ENDDO
   GOTO 105
 104  CONTINUE
@@ -210,8 +226,8 @@ OPEN(1, FILE="ColorNumFactors.dat", err=104, status='OLD',           action='REA
 105  CONTINUE
 CLOSE(1)
 OPEN(1, FILE="ColorDenomFactors.dat", err=106, status='OLD',           action='READ')
-  DO I=1,NLOOPAMPS
-    READ(1,*,END=107) (CF_D(I,J),J=1,NBORNAMPS)
+  DO I=1,NCOLORROWS
+    READ(1,*,END=107) (CF_D(I,J),J=1,%(color_matrix_size)s)
   ENDDO
   GOTO 107
 106  CONTINUE
@@ -227,18 +243,39 @@ OPEN(1, FILE="HelConfigs.dat", err=108, status='OLD',                  action='R
   STOP 'Color helictiy configurations could not be initialized from file HelConfigs.dat. File not found' 
 109  CONTINUE
 CLOSE(1)
+C SETUP OF THE COMMON STARTING EXTERNAL LOOP WAVEFUNCTION
+C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
+  DO I=0,3
+    PL(I,0)=(0.0d0,0.0d0)
+  ENDDO
+  DO I=1,MAXLWFSIZE
+    DO J=0,LOOPMAXCOEFS-1
+	  DO K=1,MAXLWFSIZE
+	    IF(I.EQ.K.AND.J.EQ.0) then
+        	WL(I,J,K,0)=(1.0d0,0.0d0)
+		ELSE
+        	WL(I,J,K,0)=(0.0d0,0.0d0)
+		ENDIF
+	  ENDDO
+	ENDDO
+  ENDDO 
 ENDIF
-
-LSCALE=DSQRT((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1)+P(3,2))**2)
-
-NTRY=NTRY+1
-CHECKPHASE=(NTRY.LE.CHECKCYCLE).AND.(((.NOT.FOUNDLOOPFILTER).AND.USELOOPFILTER).OR.(.NOT.FOUNDHELFILTER))
 
 DO I=1,NEXTERNAL
   DO J=0,3
-    PS(J,I)=P(J,I)
+    P(J,I)=P_IN(J,I)
+    PS(J,I)=P_IN(J,I)
   ENDDO
 ENDDO
+
+CALL IMPROVE_PS_POINT_PRECISION(P)
+
+LSCALE=DSQRT((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1)+P(3,2))**2)
+
+%(set_reference)s
+
+NTRY=NTRY+1
+CHECKPHASE=(NTRY.LE.CHECKCYCLE).AND.(((.NOT.FOUNDLOOPFILTER).AND.USELOOPFILTER).OR.(.NOT.FOUNDHELFILTER))
 
 IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDHELFILTER)) THEN
 OPEN(1, FILE="HelFilter.dat", err=110, status='NEW',       action='WRITE')
@@ -250,8 +287,8 @@ ENDIF
 
 IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDLOOPFILTER).AND.USELOOPFILTER) THEN
 OPEN(1, FILE="LoopFilter.dat", err=111, status='NEW',       action='WRITE')
-  DO J=1,NCOMB
-    WRITE(1,*) (GOODAMP(I,J),I=NCTAMPS+1,NLOOPAMPS)
+  DO J=1,NLOOPGROUPS
+    WRITE(1,*) GOODAMP(J)
   ENDDO
 111  CONTINUE
   CLOSE(1)
@@ -259,7 +296,6 @@ FOUNDLOOPFILTER=.TRUE.
 ENDIF
 
 IF(CHECKPHASE) THEN
-  CALL SMATRIX(P,REF)
   HELPICKED=1
   CTMODE=CTMODEINIT
 ELSE
@@ -273,51 +309,70 @@ ENDIF
 
 DO K=1, 3
   BUFFR(K)=0.0d0
-  DO I=1,NLOOPAMPS
+  DO I=1,NCTAMPS
     AMPL(K,I)=(0.0d0,0.0d0)
   ENDDO
 ENDDO
 
 199 CONTINUE
 
-MP_DONE=.FALSE.
+C Check if we directly go to multiple precision
+IF (CTMODE.GE.4) THEN
+  CALL MP_COMPUTE_LOOP_COEFS(P,BUFFR_BIS)
+  MP_DONE=.TRUE.
+c Copy the qp wfs to the dp ones as they are used to setup the CT calls.
+  DO I=1,NWAVEFUNCS
+    DO J=1,MAXLWFSIZE+4
+      W(J,I)=MPW(J,I)
+    ENDDO
+  ENDDO
+  goto 300 
+ELSE
+  MP_DONE=.FALSE.
+ENDIF
 
 200 CONTINUE
+
+DO I=1,NLOOPS
+  DO J=0,LOOPMAXCOEFS-1
+    LOOPCOEFS(J,I)=(0.0d0,0.0d0)
+  ENDDO
+ENDDO
 
 DO K=1,3
   ANS(K)=0.0d0
 ENDDO
 
-VALIDH=-1
 DO H=1,NCOMB
   IF (((HELPICKED.EQ.-1).OR.(HELPICKED.EQ.H)).AND.(CHECKPHASE.OR.GOODHEL(H))) THEN
-  IF (VALIDH.EQ.-1) VALIDH=H
   DO I=1,NEXTERNAL
     NHEL(I)=HELC(I,H)
   ENDDO
-%(born_ct_helas_calls)s
-  DO I=1,NCTAMPS
-    DO J=1,NBORNAMPS
+  %(born_ct_helas_calls)s
+  DO I=1,%(nctamps_or_nloopamps)s
+    DO J=1,%(nbornamps_or_nloopamps)s
 	  CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0d0)
       IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
-	  DO K=1,3
-	    ANS(K)=ANS(K)+2.0d0*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J,H)))
-	  ENDDO
+	  %(squaring)s
     ENDDO
   ENDDO
+  %(coef_construction)s  
   ENDIF
 ENDDO
 
-%(loop_helas_calls)s
+%(coef_merging)s
 
-DO I=NCTAMPS+1,NLOOPAMPS
-  ANS(1)=ANS(1)+AMPL(1,I)
-  ANS(2)=ANS(2)+AMPL(2,I)
-  ANS(3)=ANS(3)+AMPL(3,I)
-  IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.S(I))) THEN
-    WRITE(*,*) '##W03 WARNING Contribution ',I,' is unstable.'
-  ENDIF
-ENDDO
+BUFFR_BIS(1)=ANS(1)
+BUFFR_BIS(2)=ANS(2)
+BUFFR_BIS(3)=ANS(3)
+300 CONTINUE
+ANS(1)=BUFFR_BIS(1)
+ANS(2)=BUFFR_BIS(2)
+ANS(3)=BUFFR_BIS(3)
+
+%(loop_CT_calls)s
+
+%(actualize_ans)s
 
 IF (CHECKPHASE) THEN
   IF((USERHEL.EQ.-1).OR.(USERHEL.EQ.HELPICKED)) THEN
@@ -328,7 +383,7 @@ IF (CHECKPHASE) THEN
 
 C SET THE HELICITY FILTER
   IF(.NOT.FOUNDHELFILTER) THEN
-  IF(ISZERO(ABS(ANS(1)+ANS(2)+ANS(3)),REF/DBLE(NCOMB),-1,HELPICKED)) THEN
+  IF(ISZERO(ABS(ANS(1)+ANS(2)+ANS(3)),REF/DBLE(NCOMB),-1)) THEN
     IF(NTRY.EQ.1) THEN
 	  GOODHEL(HELPICKED)=.FALSE.
 	ELSEIF(GOODHEL(HELPICKED)) THEN
@@ -340,17 +395,18 @@ C SET THE HELICITY FILTER
 
 C SET THE LOOP FILTER
   IF(.NOT.FOUNDLOOPFILTER.AND.USELOOPFILTER) THEN
-  	DO I=NCTAMPS+1,NLOOPAMPS
-      IF(.NOT.ISZERO(ABS(AMPL(1,I))+ABS(AMPL(2,I))+ABS(AMPL(3,I)),(REF*1.0d-4),I,HELPICKED)) THEN
+  	DO I=1,NLOOPGROUPS
+      IF(.NOT.ISZERO(ABS(LOOPRES(1,I))+ABS(LOOPRES(2,I))+ABS(LOOPRES(3,I)),(REF*1.0d-4),I)) THEN
         IF(NTRY.EQ.1) THEN
-	      GOODAMP(I,HELPICKED)=.TRUE.
-	    ELSEIF(.NOT.GOODAMP(I,HELPICKED)) THEN
-	      WRITE(*,*) '##W02 WARNING Inconsistent loop amp ',I,' for helicity ',HELPICKED,'.'
+	      GOODAMP(I)=.TRUE.
+		  LOOPFILTERBUFF(I)=.TRUE.
+	    ELSEIF(.NOT.LOOPFILTERBUFF(I)) THEN
+	      WRITE(*,*) '##W02 WARNING Inconsistent loop amp ',I,'.'
 		  IF(LOOPINITSTARTOVER) THEN
 		    WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the loop filter setup.'
 	        NTRY=0
 		  ELSE
-		    GOODAMP(I,HELPICKED)=.TRUE.
+		    GOODAMP(I)=.TRUE.
 		  ENDIF
 	    ENDIF
       ENDIF
@@ -386,7 +442,7 @@ IF(.NOT.CHECKPHASE.AND.(CTMODERUN.EQ.-1)) THEN
   RESCT(3,CTMODE)=ANS(3)
   IF(CTMODE.EQ.1) THEN
     CTMODE=2
-	goto 200
+	goto 300
   ELSEIF(CTMODE.EQ.2) THEN
     TEMP1=ABS(RESCT(1,1))+ABS(RESCT(2,1))+ABS(RESCT(3,1))
     TEMP2=ABS(RESCT(1,2))+ABS(RESCT(2,2))+ABS(RESCT(3,2))
@@ -395,12 +451,16 @@ IF(.NOT.CHECKPHASE.AND.(CTMODERUN.EQ.-1)) THEN
 	  ANS(2)=0.5d0*(RESCT(2,1)+RESCT(2,2))
 	  ANS(3)=0.5d0*(RESCT(3,1)+RESCT(3,2))			  
 	ELSE
+	  IF (.NOT.MP_DONE) THEN
+        CALL MP_COMPUTE_LOOP_COEFS(P,BUFFR_BIS)
+        MP_DONE=.TRUE.	    
+	  ENDIF
 	  CTMODE=4
-	  goto 200
+	  goto 300
 	ENDIF
   ELSEIF(CTMODE.EQ.4) THEN
     CTMODE=5
-	goto 200
+	goto 300
   ELSEIF(CTMODE.EQ.5) THEN
 	ANS(1)=0.5d0*(RESCT(1,4)+RESCT(1,5))
 	ANS(2)=0.5d0*(RESCT(2,4)+RESCT(2,5))
@@ -414,3 +474,67 @@ IF(.NOT.CHECKPHASE.AND.(CTMODERUN.EQ.-1)) THEN
 ENDIF
 
       END
+
+	  SUBROUTINE IMPROVE_PS_POINT_PRECISION(P)
+C  
+C CONSTANTS 
+C 
+	  INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+	  %(real_dp_format)s     ZERO
+	  PARAMETER (ZERO=0.0d0)
+C  
+C ARGUMENTS 
+C
+      %(real_dp_format)s P(0:3,NEXTERNAL)
+C
+C LOCAL VARIABLES 
+C
+      INTEGER I,J
+	  %(real_dp_format)s BUFF,REF
+	  %(real_dp_format)s MASSES(NEXTERNAL-1)	  
+C  
+C GLOBAL VARIABLES
+C 
+      include 'coupl.inc'
+
+	  %(masses_def)s
+
+	  DO I=0,3
+	    REF=ZERO
+		BUFF=ZERO
+		DO J=1,NEXTERNAL
+		  REF=REF+ABS(P(I,J))
+		ENDDO
+        DO J=1,%(n_initial)d		
+		  BUFF=BUFF-P(I,J)
+		ENDDO
+        DO J=%(n_initial)d+1,NEXTERNAL	
+		  BUFF=BUFF+P(I,J)
+		ENDDO
+		IF ((BUFF/REF).GT.1.0d-9) THEN
+		  STOP 'Four-momentum conservation is not accurate enough.'		  
+		ENDIF
+	  ENDDO
+
+	  DO I=1,NEXTERNAL-1
+	    REF=ABS(P(0,I))+ABS(P(1,I))+ABS(P(2,I))+ABS(P(3,I))
+		IF ((SQRT(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2)/REF).GT.1.0d-4) THEN
+		  STOP 'Four-momentum conservation is not accurate enough.'
+		ELSE
+	      P(3,I)=SIGN(SQRT(P(0,I)**2-P(1,I)**2-P(2,I)**2-MASSES(I)**2),P(3,I))
+		ENDIF
+	  ENDDO
+
+	  DO I=0,3
+	    BUFF=0.0d0 
+        DO J=1,%(n_initial)d
+		  BUFF=BUFF+P(I,J)
+		ENDDO
+		DO J=%(n_initial)d+1,NEXTERNAL-1
+		  BUFF=BUFF-P(I,J)		
+		ENDDO
+		P(I,NEXTERNAL)=BUFF
+	  ENDDO
+
+	  END

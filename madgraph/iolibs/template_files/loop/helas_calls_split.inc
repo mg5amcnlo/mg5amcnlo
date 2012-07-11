@@ -1,37 +1,42 @@
-      SUBROUTINE HELASCALLS_%(bunch_number)d(P,NHEL,H,IC)
+      SUBROUTINE %(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
 C  
       IMPLICIT NONE
 C  
 C CONSTANTS
 C  
-      INTEGER    NLOOPAMPS, NBORNAMPS
-      PARAMETER (NLOOPAMPS=%(nloopamps)d, NBORNAMPS=%(nbornamps)d) 
+      INTEGER    NLOOPAMPS
+      PARAMETER (NLOOPAMPS=%(nloopamps)d)
+	  %(nbornamps_decl)s
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d)
 	  INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
-	  INTEGER    NCOMBAMP
-      PARAMETER (NCOMBAMP=NCOMB*NLOOPAMPS)
-      REAL*8     ZERO
+      %(real_dp_format)s     ZERO
       PARAMETER (ZERO=0D0)
-      COMPLEX*16 IMAG1
+	  %(real_mp_format)s     MP__ZERO
+      PARAMETER (MP__ZERO=0.0e0_16)
+      %(complex_dp_format)s IMAG1
       PARAMETER (IMAG1=(0D0,1D0))
 C  
 C ARGUMENTS
 C
-      REAL*8 P(0:3,NEXTERNAL)
+      %(real_dp_format)s P(0:3,NEXTERNAL)
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
 	  INTEGER H
 C  
 C GLOBAL VARIABLES
 C  
       include 'coupl.inc'
-      COMPLEX*16 AMPL(3,NLOOPAMPS), AMP(NBORNAMPS)
-      COMPLEX*16 W(20,NWAVEFUNCS)
-	  LOGICAL GOODAMP(NLOOPAMPS,NCOMB)	
-	  common/SPLITHELAS/W,AMPL,AMP,GOODAMP	  
+	  include 'mp_coupl.inc'
+      %(dp_born_amps_decl)s
+	  %(complex_dp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  common/WFCTS/W  
+
+	  LOGICAL S(NLOOPAMPS)
+      %(complex_dp_format)s AMPL(3,NLOOPAMPS)
+	  common/AMPL/AMPL,S
 C
 C ----------
 C BEGIN CODE
