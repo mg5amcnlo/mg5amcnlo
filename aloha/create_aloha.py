@@ -80,21 +80,20 @@ class AbstractRoutine(object):
         
     def write(self, output_dir, language='Fortran', mode='self', combine=True,**opt):
         """ write the content of the object """
-        
+
         writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag)
         text = writer.write(mode=mode, **opt)
         if combine:
             for grouped in self.combined:
                 if isinstance(text, tuple):
                     text = tuple([old.__add__(new)  for old, new in zip(text, 
-                             writer.write_combined(grouped, mode=mode, **opt))])
+                             writer.write_combined(grouped, mode=mode+'no_include', **opt))])
                 else:
-                    text += writer.write_combined(grouped, mode=mode, **opt)
+                    text += writer.write_combined(grouped, mode=mode+'no_include', **opt)
                 
         if aloha.mp_precision and 'MP' not in self.tag:
             self.tag.append('MP')
             text += self.write(output_dir, language, mode, **opt)
-            
         return text
 
 class AbstractRoutineBuilder(object):
@@ -233,7 +232,7 @@ class AbstractRoutineBuilder(object):
                 lorentz = self.change_sign_for_outcoming_fermion()  
                 self.routine_kernel = lorentz
                 lorentz = eval(lorentz)
-            except NameError, error:
+            except NameError as error:
                 logger.error('unknow type in Lorentz Evaluation:%s'%str(error))
                 raise ALOHAERROR, 'unknow type in Lorentz Evaluation: %s ' % str(error) 
             else:
@@ -263,7 +262,17 @@ class AbstractRoutineBuilder(object):
                         lorentz *= SpinorPropagatorin('I2', id, outgoing)
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)
-                    
+                elif spin == 4:
+                    # shift and flip the tag if we multiply by C matrices
+                    if (id + 1) // 2 in self.conjg:
+                        spin_id = id + _conjugate_gap + id % 2 - (id +1) % 2
+                    else:
+                        spin_id = id
+                    nb_spinor += 1
+                    if id %2:
+                        lorentz *= Spin3halfPropagatorout(id, 'I2', spin_id,'I3', outgoing)
+                    else:
+                        lorentz *= Spin3halfPropagatorin('I2', id, 'I3', spin_id, outgoing)                      
                 elif spin == 5 :
                     #lorentz *= 1 # delayed evaluation (fastenize the code)
                     if self.spin2_massless:
@@ -288,6 +297,14 @@ class AbstractRoutineBuilder(object):
                     lorentz *= Spinor(spin_id, id)
                 elif spin == 3:        
                     lorentz *= Vector(id, id)
+                elif spin == 4:
+                    # shift the tag if we multiply by C matrices
+                    if (id+1) // 2 in self.conjg:
+                        spin_id = id + _conjugate_gap + id % 2 - (id +1) % 2
+                    else:
+                        spin_id = id
+                    nb_spinor += 1
+                    lorentz *= Spin3Half(id, spin_id, id)
                 elif spin == 5:
                     lorentz *= Spin2(1 * _spin2_mult + id, 2 * _spin2_mult + id, id)
                 else:
@@ -318,12 +335,13 @@ class AbstractRoutineBuilder(object):
         
                     
         l_in = [int(tag[1:]) for tag in self.tag][0]
+        assert l_in != outgoing, 'incoming Open Loop can not be the outcoming one'
         
         # modify the expression for the momenta
         # P_i -> P_i + P_L and P_o -> -P_o - P_L
-        Pdep = [aloha_lib.KERNEL.get(P) for P in aloha_lib.KERNEL.use_tag 
+        Pdep = [aloha_lib.KERNEL.get(P) for P in lorentz.get_all_var_names()
                                                       if P.startswith('_P')]
-        
+
         Pdep = [P for P in Pdep if P.particle in [outgoing, l_in]]
         for P in Pdep:
             if P.particle == l_in:
@@ -346,6 +364,7 @@ class AbstractRoutineBuilder(object):
         veto_ids = aloha_lib.KERNEL.get_ids(var_veto)
         
         lorentz = lorentz.expand(veto = veto_ids)
+        lorentz = lorentz.simplify()
         coeff_expr = lorentz.split(veto_ids)
         
         for key, expr in coeff_expr.items():
@@ -431,6 +450,7 @@ class AbstractALOHAModel(dict):
                  explicit_combine=False):
         """ load the UFO model and init the dictionary """
         
+        aloha_lib.KERNEL.clean()
         # Option
         self.explicit_combine = explicit_combine
         
@@ -703,8 +723,7 @@ class AbstractALOHAModel(dict):
                         # Compute routines
                         self.compute_aloha(conjg_builder, symmetry=lorentz.name,
                                         routines=routines)
-
-                
+        #
                       
   
                 

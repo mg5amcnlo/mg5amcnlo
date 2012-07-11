@@ -1,4 +1,4 @@
-      SUBROUTINE MP_COMPUTE_LOOP_COEFS(P,ANS)
+      SUBROUTINE MP_COMPUTE_LOOP_COEFS(PS,ANSDP)
 C  
 %(info_lines)s
 C
@@ -36,14 +36,16 @@ C
 C  
 C ARGUMENTS 
 C  
-      %(real_mp_format)s P(0:3,NEXTERNAL)
-      %(real_dp_format)s ANS(3)
+      %(real_dp_format)s PS(0:3,NEXTERNAL)
+      %(real_dp_format)s ANSDP(3)
 C  
 C LOCAL VARIABLES 
 C  
       INTEGER I,J,K,H
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+      %(real_mp_format)s P(0:3,NEXTERNAL)
 	  DATA IC/NEXTERNAL*1/
+	  %(real_mp_format)s ANS(3)
 	  %(complex_mp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       %(complex_mp_format)s CFTOT
 C  
@@ -86,6 +88,30 @@ C ----------
 C BEGIN CODE
 C ----------
 
+CALL MP_UPDATE_AS_PARAM()
+
+DO I=1,NEXTERNAL
+  DO J=0,3
+    P(J,I)=PS(J,I)
+  ENDDO
+ENDDO
+CALL MP_IMPROVE_PS_POINT_PRECISION(P)
+
+DO I=0,3
+  PL(I,0)=(ZERO,ZERO)
+ENDDO
+DO I=1,MAXLWFSIZE
+  DO J=0,LOOPMAXCOEFS-1
+    DO K=1,MAXLWFSIZE
+      IF(I.EQ.K.AND.J.EQ.0) THEN
+        WL(I,J,K,0)=(1.0e0_16,ZERO)
+      ELSE
+        WL(I,J,K,0)=(ZERO,ZERO)
+      ENDIF
+    ENDDO
+  ENDDO
+ENDDO
+
 DO K=1, 3
   DO I=1,NCTAMPS
     AMPL(K,I)=(ZERO,ZERO)
@@ -99,7 +125,8 @@ DO I=1,NLOOPS
 ENDDO
 
 DO K=1,3
-  ANS(K)=0.0d0
+  ANSDP(K)=0.0d0
+  ANS(K)=ZERO
 ENDDO
 
 DO H=1,NCOMB
@@ -110,13 +137,83 @@ DO H=1,NCOMB
   %(mp_born_ct_helas_calls)s
   DO I=1,%(nctamps_or_nloopamps)s
     DO J=1,%(nbornamps_or_nloopamps)s
-	  CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0d0)
+	  CFTOT=CMPLX(CF_N(I,J)/REAL(ABS(CF_D(I,J)),KIND=16),0.0e0_16,KIND=16)
       IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
 	  %(mp_squaring)s
     ENDDO
-  ENDDO
+  ENDDO 
   %(mp_coef_construction)s  
   ENDIF
 ENDDO
 
+DO I=1,3
+  ANSDP(I)=ANS(I)
+ENDDO
+
+%(mp_coef_merging)s
+
 END
+
+	  SUBROUTINE MP_IMPROVE_PS_POINT_PRECISION(P)
+C  
+C CONSTANTS 
+C 
+	  INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+	  %(real_mp_format)s     ZERO
+	  PARAMETER (ZERO=0E0_16)
+C  
+C ARGUMENTS 
+C
+      %(real_mp_format)s P(0:3,NEXTERNAL)
+C
+C LOCAL VARIABLES 
+C
+      INTEGER I,J
+	  %(real_mp_format)s BUFF,REF
+	  %(real_dp_format)s MASSES(NEXTERNAL-1)	  
+C  
+C GLOBAL VARIABLES
+C 
+      include 'mp_coupl_same_name.inc'
+
+	  %(masses_def)s
+
+	  DO I=0,3
+	    REF=ZERO
+		BUFF=ZERO
+		DO J=1,NEXTERNAL
+		  REF=REF+ABS(P(I,J))
+		ENDDO
+        DO J=1,%(n_initial)d		
+		  BUFF=BUFF-P(I,J)
+		ENDDO
+        DO J=%(n_initial)d+1,NEXTERNAL	
+		  BUFF=BUFF+P(I,J)
+		ENDDO
+		IF ((BUFF/REF).GT.1.0E-9_16) THEN
+		  STOP 'Four-momentum conservation is not accurate enough.'		  
+		ENDIF
+	  ENDDO
+
+	  DO I=1,NEXTERNAL-1
+	    REF=ABS(P(0,I))+ABS(P(1,I))+ABS(P(2,I))+ABS(P(3,I))
+		IF ((SQRT(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2)/REF).GT.1.0E-4_16) THEN
+		  STOP 'Four-momentum conservation is not accurate enough.'
+		ELSE
+	      P(3,I)=SIGN(SQRT(P(0,I)**2-P(1,I)**2-P(2,I)**2-MASSES(I)**2),P(3,I))
+		ENDIF
+	  ENDDO
+
+	  DO I=0,3
+	    BUFF=0.0E0_16 
+        DO J=1,%(n_initial)d
+		  BUFF=BUFF+P(I,J)
+		ENDDO
+		DO J=%(n_initial)d+1,NEXTERNAL-1
+		  BUFF=BUFF-P(I,J)		
+		ENDDO
+		P(I,NEXTERNAL)=BUFF
+	  ENDDO
+
+	  END

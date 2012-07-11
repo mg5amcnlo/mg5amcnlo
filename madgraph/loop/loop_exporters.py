@@ -22,6 +22,7 @@ import os
 import re
 import shutil
 import subprocess
+import itertools
 
 import aloha
 
@@ -221,9 +222,9 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
 
     def get_amp_to_jamp_map(self, col_amps, n_amps):
         """ Returns a list with element 'i' being a list of tuples corresponding
-        to all appearance of amplitude number 'i' in the jamp number 'j'
-        with coeff 'coeff_j'. The format of each tuple describing an appearance 
-        is (j, coeff_j)."""
+        to all apparition of amplitude number 'i' in the jamp number 'j'
+        with coeff 'coeff_j'. The format of each tuple describing an apparition 
+        is (j, coeff_j). where coeff_j is of the form (Fraction, is_imag)."""
 
         if(isinstance(col_amps,list)):
             if(col_amps and isinstance(col_amps[0],list)):
@@ -237,7 +238,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         res_list = [[] for i in range(n_amps)]
         
         for i, coeff_list in enumerate(color_amplitudes):
-                for (coefficient, amp_number) in coeff_list: 
+                for (coefficient, amp_number) in coeff_list:
                     res_list[amp_number-1].append((i,self.cat_coeff(\
                       coefficient[0],coefficient[1],coefficient[2],coefficient[3])))
 
@@ -248,9 +249,11 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         NLOOPAMPSxNBORNAMPS and allows for squaring individually each Loop and Born
         amplitude."""
 
+        logger.info('Computing diagram color coefficients')
+
         # The two lists have a list of tuples at element 'i' which correspond
-        # to all appearance of loop amplitude number 'i' in the jampl number 'j'
-        # with coeff 'coeffj'. The format of each tuple describing an appearance 
+        # to all apparitions of loop amplitude number 'i' in the jampl number 'j'
+        # with coeff 'coeffj'. The format of each tuple describing an apparition 
         # is (j, coeffj).
         ampl_to_jampl=self.get_amp_to_jamp_map(\
           matrix_element.get_loop_color_amplitudes(),
@@ -260,7 +263,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
           matrix_element.get_born_color_amplitudes(),
           matrix_element.get_number_of_born_amplitudes())
         else:
-            ampb_to_jampb=ampl_to_jampl
+            ampb_to_jampb=ampl_to_jamp
         # Below is the original color matrix multiplying the JAMPS
         if matrix_element.get('color_matrix'):
             ColorMatrixDenom = \
@@ -279,46 +282,50 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         # Now we construct the color factors between each born and loop amplitude
         # by scanning their contributions to the different jamps.
         for jampl_list in ampl_to_jampl:
-            line=[]
+            line_num=[]
             line_denom=[]
             for jampb_list in ampb_to_jampb:
-                coeff_real=fractions.Fraction(0,1)
-                coeff_imag=fractions.Fraction(0,1)
-                for (jampl, ampl_coeff) in jampl_list:
-                    for (jampb, ampb_coeff) in jampb_list:
-                        buff=ampl_coeff[0]*ampb_coeff[0]*\
-                          fractions.Fraction(ColorMatrixNum[jampl][jampb],\
-                            ColorMatrixDenom[jampl])
-                        # Remember that we must take the complex conjugate of
-                        # the born jamp color coefficient because we will compute
-                        # the square with 2 Re(LoopAmp x BornAmp*)
-                        if ampl_coeff[1] and ampb_coeff[1]:
-                            coeff_real=coeff_real+buff
-                        elif not ampl_coeff[1] and not ampb_coeff[1]:
-                            coeff_real=coeff_real+buff
-                        elif not ampl_coeff[1] and ampb_coeff[1]:
-                            coeff_imag=coeff_imag-buff
-                        else:
-                            coeff_imag=coeff_imag+buff
-                if coeff_real!=0 and coeff_imag!=0:
-                    raise MadGraph5Error,"MadGraph5 found a color matrix element"+\
-                      " which has both a real and imaginary part."
-                elif coeff_imag!=0:
-                    line.append(coeff_imag)
-                    # Negative denominator means imaginary color coef of the final color matrix
-                    line_denom.append(-1)
+                real_num=0
+                imag_num=0
+                common_denom=color_amp.ColorMatrix.lcmm(*[abs(ColorMatrixDenom[jampl]*
+                    ampl_coeff[0].denominator*ampb_coeff[0].denominator) for 
+                    ((jampl, ampl_coeff),(jampb,ampb_coeff)) in 
+                    itertools.product(jampl_list,jampb_list)])
+                for ((jampl, ampl_coeff),(jampb, ampb_coeff)) in \
+                                       itertools.product(jampl_list,jampb_list):
+                    # take the numerator and multiply by lcm/denominator
+                    # as we will later divide by the lcm.
+                    buff_num=ampl_coeff[0].numerator*\
+                        ampb_coeff[0].numerator*ColorMatrixNum[jampl][jampb]*\
+                        abs(common_denom)/(ampl_coeff[0].denominator*\
+                        ampb_coeff[0].denominator*ColorMatrixDenom[jampl])
+                    # Remember that we must take the complex conjugate of
+                    # the born jamp color coefficient because we will compute
+                    # the square with 2 Re(LoopAmp x BornAmp*)
+                    if ampl_coeff[1] and ampb_coeff[1]:
+                        real_num=real_num+buff_num
+                    elif not ampl_coeff[1] and not ampb_coeff[1]:
+                        real_num=real_num+buff_num
+                    elif not ampl_coeff[1] and ampb_coeff[1]:
+                        imag_num=imag_num-buff_num
+                    else:
+                        imag_num=imag_num+buff_num
+                assert not (real_num!=0 and imag_num!=0), "MadGraph5 found a "+\
+                  "color matrix element which has both a real and imaginary part."
+                if imag_num!=0:
+                    res=fractions.Fraction(imag_num,common_denom)
+                    line_num.append(res.numerator)
+                    # Negative denominator means imaginary color coef of the
+                    # final color matrix
+                    line_denom.append(res.denominator*-1)
                 else:
-                    line.append(coeff_real)
+                    res=fractions.Fraction(real_num,common_denom)
+                    line_num.append(res.numerator)
                     # Positive denominator means real color coef of the final color matrix
-                    line_denom.append(1)
-              
-            lcmm = color_amp.ColorMatrix.lcmm(*[coeff.denominator \
-                                      for coeff in line])
-            # The sign of the denom is already provided, we only set the absolute value here
-            line_denom = [denom*lcmm for denom in line_denom]
+                    line_denom.append(res.denominator)
+
+            ColorMatrixNumOutput.append(line_num)
             ColorMatrixDenomOutput.append(line_denom)
-            ColorMatrixNumOutput.append([\
-              (coeff.numerator*abs(line_denom[0])/coeff.denominator) for coeff in line])
 
         return (ColorMatrixNumOutput,ColorMatrixDenomOutput)
 
@@ -436,11 +443,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
 
         for file in linkfiles:
             ln('../../lib/%s' % file)
-            
-        # Link the coef_specs.inc for aloha to define the coefficient
-        # general properties (of course necessary in the optimized mode only)
-        ln(os.path.join(self.dir_path, 'SubProcesses', "P%s" % proc_name,
-                 'coef_specs.inc'),os.path.join(self.dir_path,'Source/DHELAS/'))
 
     def generate_general_replace_dict(self,matrix_element):
         """Generates the entries for the general replacement dictionary used
@@ -550,11 +552,10 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             return calls
         
         else:
-                        
             filename = 'loop_matrix.f'
             calls = self.write_loopmatrix(writers.FortranWriter(filename),
                                           matrix_element,
-                                          LoopFortranModel)             
+                                          LoopFortranModel) 
             filename = 'CT_interface.f'
             self.write_CT_interface(writers.FortranWriter(filename),\
                                     matrix_element)
@@ -612,15 +613,15 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             replace_dict['dp_squaring']='RES=BUFF'
             replace_dict['mp_squaring']='QPRES=BUFF'                       
        
-        # Now stuff for the multiple precision numerator function
+        # Setup here the details for the phase-space point four-momentum
+        # conservation improvement
         (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
         replace_dict['n_initial']=ninitial
         # The last momenta is fixed by the others and the last two particles
         # are the L-cut ones, so -3.
         mass_list=matrix_element.get_external_masses()[:-3]
-        replace_dict['force_onshell']='\n'.join([\
-        'P(3,%(i)d)=SIGN(SQRT(P(0,%(i)d)**2-P(1,%(i)d)**2-P(2,%(i)d)**2-%(m)s**2),P(3,%(i)d))'%\
-         {'i':i+1,'m':m} for i, m in enumerate(mass_list)])
+        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
+                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
         # Prepend MP_ to all helas calls.
         self.turn_to_mp_calls(loop_helas_calls)
         replace_dict['mp_loop_helas_calls'] = "\n".join(loop_helas_calls)
@@ -683,7 +684,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                 replace_dict['cplset']=cplset
             
             replace_dict['nloopline']=callkey[0]
-            wfsargs="".join([("W%d, MP%d, "%(i,i)) for i in range(1,callkey[1]+1)])
+            wfsargs="".join(["W%d, "%i for i in range(1,callkey[1]+1)])
             replace_dict['wfsargs']=wfsargs
             # We don't pass the multiple precision mass in the optimized_output
             if not optimized_output:
@@ -693,8 +694,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             replace_dict['margs']=margs                
             wfsargsdecl="".join([("W%d, "%i) for i in range(1,callkey[1]+1)])[:-2]
             replace_dict['wfsargsdecl']=wfsargsdecl
-            momposdecl="".join([("MP%d, "%i) for i in range(1,callkey[1]+1)])[:-2]
-            replace_dict['momposdecl']=momposdecl
             margsdecl="".join(["M%d, "%i for i in range(1,callkey[0]+1)])[:-2]
             replace_dict['margsdecl']=margsdecl
             mp_margsdecl="".join(["MP_M%d, "%i for i in range(1,callkey[0]+1)])[:-2]
@@ -702,9 +701,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             weset="\n".join([("WE("+str(i)+")=W"+str(i)) for \
                              i in range(1,callkey[1]+1)])
             replace_dict['weset']=weset
-            momposset="\n".join([("MOMPOS(%d)=MP%d"%(i,i)) for \
-                             i in range(1,callkey[1]+1)])
-            replace_dict['momposset']=momposset
             weset="\n".join([("WE(%d)=W%d"%(i,i)) for i in range(1,callkey[1]+1)])
             replace_dict['weset']=weset
             msetlines=["M2L(1)=M%d**2"%(callkey[0]),]
@@ -886,6 +882,16 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         else:
             toBeRepaced='loop_induced_helas_calls'            
 
+        # Setup here the details for the phase-space point four-momentum
+        # conservation improvement
+        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
+        replace_dict['n_initial']=ninitial
+        # The last momenta is fixed by the others and the last two particles
+        # are the L-cut ones, so -3.
+        mass_list=matrix_element.get_external_masses()[:-3]
+        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
+                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
+
         # Decide here wether we need to split the loop_matrix.f file or not.
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>1000)):
             file=self.split_HELASCALLS(writer,replace_dict,\
@@ -989,7 +995,18 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     # The option below controls wether one wants to group together in one single
     # CutTools call the loops with same denominator structure
     group_loops=True
-    
+
+    def link_files_from_Subprocesses(self,proc_name=""):
+        """ Does the same as the mother routine except that it also links
+        coef_specs.inc in the HELAS folder."""
+
+        LoopProcessExporterFortranSA.link_files_from_Subprocesses(self,proc_name)
+        
+        # Link the coef_specs.inc for aloha to define the coefficient
+        # general properties (of course necessary in the optimized mode only)
+        ln(os.path.join(self.dir_path, 'SubProcesses', "P%s" % proc_name,
+                 'coef_specs.inc'),os.path.join(self.dir_path,'Source/DHELAS/'))
+
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                                 proc_id = "", config_map = []):
         """ Writes loop_matrix.f, CT_interface.f and loop_num.f only but with
@@ -1080,16 +1097,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         which contains the Helas calls building the loop"""
 
         replace_dict=copy.copy(self.general_replace_dict)
-        
-        # Now stuff for the multiple precision numerator function
-        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
-        replace_dict['n_initial']=ninitial
-        # The last momenta is fixed by the others and the last two particles
-        # are the L-cut ones, so -3.
-        mass_list=matrix_element.get_external_masses()[:-3]
-        replace_dict['force_onshell']='\n'.join([\
-        'P(3,%(i)d)=SIGN(SQRT(P(0,%(i)d)**2-P(1,%(i)d)**2-P(2,%(i)d)**2-%(m)s**2),P(3,%(i)d))'%\
-         {'i':i+1,'m':m} for i, m in enumerate(mass_list)])
 
         file = open(os.path.join(self.template_dir,'loop_num.inc')).read()  
         file = file % replace_dict
@@ -1173,15 +1180,16 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
             replace_dict['mp_squaring']='\n'.join(['DO K=1,3',
                 'ANS(K)=ANS(K)+2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J))'+\
-                ',KIND=16)','ENDDO'])
+                                                           ',KIND=16)','ENDDO'])
         
         # Extract helas calls
         born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
                                                             matrix_element)
         self.turn_to_mp_calls(born_ct_helas_calls)
-        coef_construction = fortran_model.get_coef_construction_calls(\
+        coef_construction, coef_merging = fortran_model.get_coef_construction_calls(\
                                     matrix_element,group_loops=self.group_loops)
         self.turn_to_mp_calls(coef_construction)
+        self.turn_to_mp_calls(coef_merging)        
                                          
         file = open(os.path.join(self.template_dir,\
                                            'mp_compute_loop_coefs.inc')).read()
@@ -1198,6 +1206,17 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         else:
             replace_dict['mp_born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict['mp_coef_construction']='\n'.join(coef_construction)
+        
+        replace_dict['mp_coef_merging']='\n'.join(coef_merging)
+        
+        # Now stuff for the multiple precision ps point improver
+        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
+        replace_dict['n_initial']=ninitial
+        # The last momenta is fixed by the others and the last two particles
+        # are the L-cut ones, so -3.
+        mass_list=matrix_element.get_external_masses()[:-3]
+        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
+                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
         
         file = file % replace_dict
  
@@ -1277,13 +1296,23 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # Extract helas calls
         born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
                                                             matrix_element)
-        coef_construction = fortran_model.get_coef_construction_calls(\
+        coef_construction, coef_merging = fortran_model.get_coef_construction_calls(\
                                     matrix_element,group_loops=self.group_loops)
         loop_CT_calls = fortran_model.get_loop_CT_calls(\
                                     matrix_element,group_loops=self.group_loops)
         
         file = open(os.path.join(self.template_dir,\
                                            'loop_matrix_standalone.inc')).read()
+
+        # Setup here the details for the phase-space point four-momentum
+        # conservation improvement
+        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
+        replace_dict['n_initial']=ninitial
+        # The last momenta is fixed by the others and the last two particles
+        # are the L-cut ones, so -3.
+        mass_list=matrix_element.get_external_masses()[:-3]
+        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
+                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
 
         # Decide here wether we need to split the loop_matrix.f file or not.
         # 200 is reasonable but feel free to change it.
@@ -1301,6 +1330,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict['coef_construction']='\n'.join(coef_construction)
             replace_dict['loop_CT_calls']='\n'.join(loop_CT_calls)
+        
+        replace_dict['coef_merging']='\n'.join(coef_merging)
         
         file = file % replace_dict
         number_of_calls = len(filter(lambda call: call.find('CALL LOOP') != 0, \

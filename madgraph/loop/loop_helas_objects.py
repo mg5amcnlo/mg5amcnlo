@@ -198,11 +198,15 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
             return False
         
         wfArgsToCheck = ['fermionflow','lorentz','state','onshell','spin',\
-                         'self_antipart','color']
+                         'is_part','self_antipart','color']
         for arg in wfArgsToCheck:
             if [wf.get(arg) for wf in self.get('wavefunctions')]!=\
                [wf.get(arg) for wf in other.get('wavefunctions')]:
                 return False
+
+        if [wf.find_outgoing_number() for wf in self.get('wavefunctions')]!=\
+           [wf.find_outgoing_number() for wf in other.get('wavefunctions')]:
+            return False
 
         ampArgsToCheck = ['lorentz',]
         for arg in ampArgsToCheck:
@@ -405,7 +409,7 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         output['numLoopLines']='_%d'%(len(self.get('wavefunctions'))-2)
         output['loop_group_id']=self.get('loop_group_id')
         output['ampNumber']=self.get('amplitudes')[0].get('number')
-        if len(self.get('mothers'))!=len(self.get('coupling')):
+        if len(self.get('mothers'))!=len(self.get('pairing')):
             output['numMotherWfs']='_%d'%len(self.get('mothers'))
         else:
             output['numMotherWfs']=''            
@@ -414,15 +418,14 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         output['numCouplings']='_%d'%len(self.get('coupling'))
         output['numeratorNumber']=self.get('number')
         if OptimizedOutput:
-            if self.get('loop_group_id')!=-1:
+            if self.get('loop_group_id')==-1:
                 output['loopNumber']=self.get('number')
             else:
-                output['loopNumber']=self.get('loop_group_id')               
+                output['loopNumber']=self.get('loop_group_id')+1               
         else:
             output['loopNumber']=self.get('amplitudes')[0].get('number')
         for i , wf in enumerate(self.get('mothers')):
             output["MotherID%d"%(i+1)]=wf.get('number')
-            output["MotherStatus%d"%(i+1)]=wf.get_momentum_place()
         for i , mass in enumerate(self.get_masses()):
             output["LoopMass%d"%(i+1)]=mass
         for i , coupling in enumerate(self.get('coupling')):
@@ -448,9 +451,11 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         return self.get_final_loop_wavefunction().get('rank')
 
     def calculate_fermionfactor(self):
-        """ Overloading of the function of the mother class as it might be necessary
-        to modify it for fermion loops."""
-        super(LoopHelasAmplitude,self).calculate_fermionfactor()
+        """ The fermion factor is not implemented for this object but in the
+        subamplitude"""
+        self['fermion_factor']=0
+        for amp in self.get('amplitudes'):
+            amp.get('fermionfactor')
 
     def calculate_loopsymmetryfactor(self):
         """ Calculate the loop symmetry factor. For now it is hard-coded function valid
@@ -584,9 +589,22 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         # Now make sure that the loop amplitudes lists in values of the
         # dictionary are ordering in decreasing ranks, so that the first one
         # (later to be the reference amplitude) has the highest rank
-        self['loop_groups']=[(d[0],helas_objects.HelasAmplitudeList(
-                    sorted(d[1],key=lambda lamp: lamp.get_rank(),reverse=True)))
-                                                   for d in self['loop_groups']]
+        self['loop_groups']=[(group[0],helas_objects.HelasAmplitudeList(
+                sorted(group[1],key=lambda lamp: lamp.get_rank(),reverse=True)))
+                                               for group in self['loop_groups']]
+        # Also, order them so to put first the groups with the smallest
+        # reference amplitude number
+        self['loop_groups']=sorted(self['loop_groups'],key=lambda group: \
+                                                      group[1][0].get('number'))
+        self.update_loop_group_ids()
+
+    def update_loop_group_ids(self):
+        """ Make sure that the attribute 'loop_group_id' of all loop amplitudes
+        in the 'loop_groups' list is correct given the order of 'loop_groups'"""
+        
+        for i, group in enumerate(self['loop_groups']):
+            for lamp in group[1]:
+                lamp.set('loop_group_id',i)
 
     def process_color(self):
         """ Perform the simple color processing from a single matrix element 
@@ -1271,8 +1289,9 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                                     # Since we reuse the old wavefunction, reset
                                     # wfNumber
                                     wfNumber = wfNumber - 1
-                                    # For developper purposes
-                                    #self.lwf_reused += 1
+                                    # To keep track of the number of loop 
+                                    # wfs reused
+                                    self.lwf_reused += 1
                                 except ValueError:
                                     diagram_wavefunctions.append(wf)
 
@@ -1502,7 +1521,6 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             diagram_number = diagram_number + 1
             loopHelDiag.set('number', diagram_number)
             helas_diagrams.append(loopHelDiag)
-        #print "I have been reusing ",self.lwf_reused
 
         # We finally turn to the UVCT diagrams
         for diagram in amplitude.get('loop_UVCT_diagrams'):
@@ -1514,9 +1532,11 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             helas_diagrams.append(loopHelDiag)
  
         self.set('diagrams', helas_diagrams)
-        #print "Total # of loop wfs ",\
-        #                        sum([len(ldiag.get('loop_wavefunctions')) for \
-        #                                    ldiag in self.get_loop_diagrams()])
+        # Inform how many loop wavefunctions have been reused.
+        if self.optimized_output:
+            logger.debug('%d loop wavefunctions have been reused'%self.lwf_reused+
+            ', for a total of %d ones'%sum([len(ldiag.get('loop_wavefunctions'))
+             for ldiag in self.get_loop_diagrams()]))
  
         # Sort all mothers according to the order wanted in Helas calls
         for wf in self.get_all_wavefunctions():

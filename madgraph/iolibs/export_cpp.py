@@ -1195,12 +1195,11 @@ class ProcessExporterPythia8(ProcessExporterCPP):
 
             for schannel in schannels:
                 sid = schannel.get('legs')[-1].get('id')
-                try:
+                part = self.model.get_particle(sid)
+                if part:
                     width = self.model.get_particle(sid).get('width')
                     if width.lower() != 'zero':
                         resonances.append(sid)
-                except KeyError:
-                    pass
         resonance_set = set(resonances)
 
         singleres = 0
@@ -1899,7 +1898,7 @@ class UFOModelConverterCPP(object):
             
         for abstracthelas in dict(aloha_model).values():
             h_rout, cc_rout = abstracthelas.write(output_dir=None, language='CPP', 
-                                                              compiler_cmd=False)
+                                                              mode='no_include')
 
             template_h_files.append(h_rout)
             template_cc_files.append(cc_rout)

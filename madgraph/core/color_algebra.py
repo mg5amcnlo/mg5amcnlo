@@ -397,6 +397,7 @@ class EpsilonBar(ColorObject):
 #===============================================================================
 # Color sextet objects: K6, K6Bar, T6
 #                       Note that delta3 = T, delta6 = T6, delta8 = 2 Tr
+# This 2 Tr is weird and should be check why it is not the expected 1/2.
 #===============================================================================
 
 class K6(ColorObject):
@@ -586,6 +587,8 @@ class ColorString(list):
         of coeff, is_imaginary and Nc_power"""
 
         if init_list:
+            for obj in init_list:
+                assert type(obj) != array.array
             self.extend(init_list)
         self.coeff = coeff
         self.is_imaginary = is_imaginary
@@ -729,6 +732,7 @@ class ColorString(list):
 
         res = ColorString()
         for col_obj in self:
+            assert type(col_obj) != array.array
             res.append(col_obj.create_copy())
         res.coeff = self.coeff
         res.is_imaginary = self.is_imaginary
@@ -890,7 +894,7 @@ class ColorFactor(list):
     They can be simplified by simplifying all their elements."""
 
     def __str__(self):
-        """Returns a nice string for print"""
+        """Returns a nice string for printing"""
 
         return '+'.join(['(%s)' % str(col_str) for col_str in self])
 

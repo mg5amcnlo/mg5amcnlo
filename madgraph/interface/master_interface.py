@@ -43,6 +43,8 @@ import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madgraph_interface as MGcmd
 import madgraph.interface.Loop_interface as LoopCmd
 import madgraph.interface.FKS_interface as FKSCmd
+import madgraph.fks.fks_born as fks_born
+import madgraph.fks.fks_real as fks_real
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
@@ -234,9 +236,11 @@ class Switcher(object):
                 if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCmd( \
                     'The NLO mode %s is not valid. Please chose one among: %s' \
                     % (nlo_mode, ' '.join(self._valid_nlo_modes)))
-                elif nlo_mode == 'all':
-                    self.change_principal_cmd('FKS')
-                elif nlo_mode == 'real':
+                elif nlo_mode == 'all' or nlo_mode == 'real':
+                    if self.options['fks_mode'] == 'born':
+                        self._fks_multi_proc = fks_born.FKSMultiProcessFromBorn()
+                    if self.options['fks_mode'] == 'real':
+                        self._fks_multi_proc = fks_real.FKSMultiProcessFromReal()
                     self.change_principal_cmd('FKS')
                 elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
                     self.change_principal_cmd('Loop')
@@ -533,9 +537,7 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, FKSCmd.FKSInterface, cmd.CmdShe
             self.debug_link_to_command() 
      
 class MasterCmdWeb(Switcher, LoopCmd.LoopInterfaceWeb):
- 
-    timeout = 1 # time authorize to answer question [0 is no time limit]
-    
+   
     def __init__(self, *arg, **opt):
     
         if os.environ.has_key('_CONDOR_SCRATCH_DIR'):
@@ -548,6 +550,8 @@ class MasterCmdWeb(Switcher, LoopCmd.LoopInterfaceWeb):
         
         #standard initialization
         Switcher.__init__(self, mgme_dir = '', *arg, **opt)
+        
+        self.options['timeout'] = 1 # time authorize to answer question [0 is no time limit]
         
     def change_principal_cmd(self, name):
         if name == 'MadGraph':

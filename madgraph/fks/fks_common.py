@@ -21,6 +21,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
+from operator import itemgetter
 import copy
 import logging
 import array
@@ -272,25 +273,50 @@ def ij_final(pair):
 
 def insert_legs(leglist_orig, leg, split):
     """Returns a new leglist with leg splitted into split.
+    The convention is to remove leg ij, replace it with leg j, and put
+    i at the end of the group of legs with the same color representation
     """
-    leglist = copy.deepcopy(leglist_orig)         
+    # the deepcopy statement is crucial
+    leglist = FKSLegList(copy.deepcopy(leglist_orig))         
     #find the position of the first final state leg
     for i in range(len(leglist)):
         if leglist[-i - 1].get('state'):
             firstfinal = len(leglist) - i - 1
-    i = leglist.index(leg)
-    leglist.remove(leg)
+    # replace leg with leg_j  (split[0])
+    leglist[leglist.index(leg)] = split[0]
+    # and find where to insert i  (split[1])
+    col_maxindex = {}
+    mass_col_maxindex = {}
+    for col in set([l['color'] for l in leglist[firstfinal:] if l['massless']]):
+        col_maxindex[col] = max([0] + [leglist.index(l) for l in leglist[firstfinal:] if l['color'] == col and l['massless']])
+    for col in set([abs(l['color']) for l in leglist[firstfinal:] if not l['massless']]):
+        mass_col_maxindex[col] = max([0] + [leglist.index(l) for l in leglist[firstfinal:] if abs(l['color']) == col and not l['massless']])
+    #no need to keep info on particles with color > i
+    for col in copy.copy(col_maxindex.keys()):
+        if abs(col) > abs(split[1]['color']):
+            del col_maxindex[col]
+    for col in copy.copy(mass_col_maxindex.keys()):
+        if abs(col) > abs(split[1]['color']):
+            del mass_col_maxindex[col]
+    #also remove antiquarks if i is a quark
+    if split[1]['color'] > 0:
+        try:
+            del col_maxindex[-split[1]['color']]
+        except KeyError:
+            pass
+    #so now the maximum of the max_col entries should be the position to insert leg i
 
-    for sleg in split:            
-        leglist.insert(i, sleg)
-        #keep track of the number for initial state legs
-        #if not sleg.get('state') and not leg.get('state'):
-        leglist[i]['number'] = leg['number']
-        i += 1
-        if i < firstfinal:
-            i = firstfinal
-            
-    leglist.sort()
+    leglist.insert(max(col_maxindex.values() + mass_col_maxindex.values() + [firstfinal - 1] ) + 1, split[1])
+#    for sleg in split:            
+#        leglist.insert(i, sleg)
+#        #keep track of the number for initial state legs
+#        #if not sleg.get('state') and not leg.get('state'):
+#        leglist[i]['number'] = leg['number']
+#        i += 1
+#        if i < firstfinal:
+#            i = firstfinal
+#            
+#    leglist.sort()
     for i, leg in enumerate(leglist):
         leg['number'] = i + 1        
     return leglist 
@@ -574,6 +600,63 @@ class FKSLegList(MG.LegList):
         """Test if object obj is a valid FKSLeg for the list."""
         return isinstance(obj, FKSLeg)
 
+    def sort(self):
+        """Sorting routine, sorting chosen to be optimal for madfks"""
+        sorted_leglist = FKSLegList()
+        #find initial state legs
+        initial_legs = FKSLegList([l for l in copy.copy(self) if not l['state']])
+        #find final state legs
+        final_legs = FKSLegList([l for l in copy.copy(self) if l['state']])
+        if len(initial_legs) == 1:
+            sorted_leglist.extend(initial_legs)
+        elif len(initial_legs) == 2:
+            if initial_legs[0]['number'] > initial_legs[1]['number']:
+                initial_legs.reverse()
+            sorted_leglist.extend(initial_legs)
+        else: 
+            raise FKSProcessError('Too many initial legs')
+        #find color representations
+        colors = sorted(set([abs(l['color']) for l in final_legs]))
+        for col in colors:
+            col_legs = FKSLegList([l for l in final_legs if abs(l['color']) == col])
+            #find massive and massless legs in this color repr
+            massive_legs = [l for l in col_legs if not l['massless']]
+            massless_legs = [l for l in col_legs if l['massless']]
+            # sorting may be different for massive and massless particles
+            # for color singlets, do not change order
+            if col == 1:
+                keys = [itemgetter('number'), itemgetter('number')]
+                reversing = False
+            else:
+                keys = [itemgetter('id'), itemgetter('id')]
+                reversing = True
+
+            for i, list in enumerate([massive_legs, massless_legs]):
+                init_pdg_legs = []
+                if len(initial_legs) == 2:
+                #put first legs which have the same abs(pdg) of the initial ones
+                    for i in range(len(set([ abs(l['id']) for l in initial_legs]))):
+                        pdg = abs(initial_legs[i]['id'])
+                        init_pdg_legs = [l for l in list if abs(l['id']) == pdg]
+                        if init_pdg_legs:
+                            # sort in order to put first quarks then antiparticles,
+                            #  and to put fks partons as n j i
+                            init_pdg_legs.sort(key = keys[i], reverse=reversing)
+                            sorted_leglist.extend(FKSLegList(init_pdg_legs))
+
+                    init_pdgs = [ abs(l['id']) for l in initial_legs]
+                    other_legs = [l for l in list if not abs(l['id']) in init_pdgs]
+                    other_legs.sort(key = keys[i], reverse=reversing)
+                    sorted_leglist.extend(FKSLegList(other_legs))
+                else:
+                    list.sort(key = keys[i], reverse=reversing)
+                    soerted_leglist.extend(FKSLegList(list))
+
+        for i, l in enumerate(sorted_leglist):
+            self[i] = l
+
+
+
 
 class FKSLeg(MG.Leg):
     """a class for FKS legs: it inherits from the ususal leg class, with two
@@ -621,32 +704,3 @@ class FKSLeg(MG.Leg):
         return super(FKSLeg,self).filter(name, value)
     
      
-    def __lt__(self, other):
-        #two initial state legs are sorted by their number:
-        if (not self.get('state') and not other.get('state')):
-            return self.get('number') < other.get('number')
-        
-        #an initial state leg comes before a final state leg
-        if (self.get('state') or other.get('state')) and \
-          not (self.get('state') and other.get('state')):
-            return other.get('state')
-        #two final state legs with the same pdg are sorted so that
-        # i_fks is put after
-        if self.get('state') == other.get('state') and \
-           self.get('id') == other.get('id'):
-               return self.get('fks') > other.get('fks')
-        
-        #two final state particles are ordered by increasing color
-        elif self.get('state') and other.get('state'):
-            if abs(self.get('color')) != abs(other.get('color')):
-                return abs(self.get('color')) < abs(other.get('color'))
-            else:
-        #if same color, put massive particles first
-                if (self.get('massless') or other.get('massless')) and \
-                  not (self.get('massless') and other.get('massless')):
-                    return other.get('massless')
-                else:
-                   return self.get('number') < other.get('number')
-        return False
-         
-

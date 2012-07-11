@@ -32,6 +32,7 @@
 from __future__ import division
 import aloha.aloha_lib as aloha_lib
 import aloha
+import cmath
 
 #===============================================================================
 # P (Momenta)
@@ -334,15 +335,14 @@ class Vector(aloha_lib.FactoryLorentz):
 #===============================================================================
 # Spin3/2
 #===============================================================================
-class Spin2(aloha_lib.LorentzObject):
+class L_Spin3Half(aloha_lib.LorentzObject):
     """ Helas Object for a Spin2"""
     
-    def __init__(self, lorentz, spin, particle, prefactor=1):
+    def __init__(self, name, lorentz, spin, particle):
         
         self.particle = particle
-            
-        aloha_lib.LorentzObject.__init__(self, [lorentz], [spin], \
-                                 prefactor=prefactor)
+        aloha_lib.LorentzObject.__init__(self, name, [lorentz], [spin])
+
     
     def create_representation(self):
 
@@ -375,6 +375,13 @@ class Spin2(aloha_lib.LorentzObject):
         self.representation= aloha_lib.LorentzObjectRepresentation( rep, \
                                     self.lorentz_ind, self.spin_ind)
 
+class Spin3Half(aloha_lib.FactoryLorentz):
+    
+    object_class = L_Spin3Half
+
+    @classmethod
+    def get_unique_name(self, lor, spin, part):
+        return 'Spin3Half%s^%s_%s' % (part, lor, spin)
 
 #===============================================================================
 # Spin2
@@ -953,7 +960,7 @@ SpinorPropagatorin = lambda spin1, spin2, particle: complex(0,+1) * (Gamma('mu',
 
 def VectorPropagator(l1,l2,part):
     """Define numerator of vector propagator"""
-    
+
     if aloha.unitary_gauge:
         return complex(0,1) * (-1 * Metric(l1, l2) + OverMass2(part) * \
                                     Metric(l1,'I3')* P('I3', part) * P(l2, part))
@@ -968,14 +975,15 @@ def VectorPropagator(l1,l2,part):
 #                             * (Gamma(nu, -3, s2) + Identity(-3, s2) * P(nu, part) * Mass(part) * OverMass2(part) ) \
 #            -1*( Gamma(-1,s1,s2)*P(-1,part) + Identity(s1,s2)*Mass(part)) * (Metric(mu,nu)-Metric(mu,'I3')*P('I3',part)*P(nu,part)*OverMass2(part)) \
 
-Spin3halfPropagator =  lambda mu, nu, s1, s2, part:  - 1/3 * (Gamma(mu,s1,-2) + Identity(s1, -2) *  P(mu, part) * Mass(part) * OverMass2(part))* \
+
+
+Spin3halfPropagatorout =  lambda mu, nu, s1, s2, part:  - 1/3 * (Gamma(mu,s1,-2) + Identity(s1, -2) *  P(mu, part) * Mass(part) * OverMass2(part))* \
                              (PSlash(-2,-3, part) - Identity(-2,-3) * Mass(part)) * \
                              ( Gamma(nu, -3, s2)+ Mass(part) * OverMass2(part) * Identity(-3, s2) * P(nu, part) )
 
-Spin3halfPropagator =  lambda mu, nu, s1, s2, part:  - 1/3 * (Gamma(mu,s1,-2) + Identity(s1, -2) *  P(mu, part) * Mass(part) * OverMass2(part))* \
-                             (PSlash(-2,-3, part) - Identity(-2,-3) * Mass(part)) * \
-                             ( Gamma(nu, -3, s2)+ Mass(part) * OverMass2(part) * Identity(-3, s2) * P(nu, part) )
-                             
+Spin3halfPropagatorin =  lambda mu, nu, s1, s2, part:  + 1/3 * (Gamma(mu,s1,-2) - Identity(s1, -2) *  P(mu, part) * Mass(part) * OverMass2(part))* \
+                             (PSlash(-2,-3, part) + Identity(-2,-3) * Mass(part)) * \
+                             ( Gamma(nu, -3, s2)- Mass(part) * OverMass2(part) * Identity(-3, s2) * P(nu, part) )                             
 
 Spin2masslessPropagator = lambda mu, nu, alpha, beta: complex(0,1/2)*( Metric(mu, alpha)* Metric(nu, beta) +\
                      Metric(mu, beta) * Metric(nu, alpha) - Metric(mu, nu) * Metric(alpha, beta))

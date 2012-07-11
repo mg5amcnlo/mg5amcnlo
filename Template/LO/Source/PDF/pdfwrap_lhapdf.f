@@ -54,7 +54,7 @@ c     first try in the current directory
          if(exists)return
       enddo
       print*,'Could not find PDFsets directory, quitting'
-      stop
+      stop 1
       
       return
       end

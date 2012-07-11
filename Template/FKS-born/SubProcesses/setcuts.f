@@ -6,8 +6,8 @@ C**************************************************************************
 c
 c     INCLUDE
 c
-      include 'nexternal.inc'
       include 'genps.inc'
+      include 'nexternal.inc'
       include 'coupl.inc'
       include 'run.inc'
       include 'cuts.inc'
@@ -57,12 +57,12 @@ c--cuts
 c
 c     les houches accord stuff to identify neutrinos
 c
-      integer    maxflow
+      integer maxflow
       parameter (maxflow=999)
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
-      include 'leshouche.inc'
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow)
+c      include 'leshouche.inc'
+      common /c_leshouche_inc/idup,mothup,icolup
 C
 C $B$ TO_SPECISA $B$ !this is a tag
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
@@ -78,7 +78,7 @@ c     reading parameters
       character*20 param(maxpara),value(maxpara)
       integer npara
 c
-c     setup masses for the final-state particles
+c     setup masses for the final-state particles (fills the /to_mass/ common block)
 c
       include 'pmass.inc'
 
@@ -106,6 +106,18 @@ c
 c     check if I have to apply cuts on the particles
 c
 C $B$ IDENTIFY_TYPE $B$
+c-check consistency of maxjetflavor in the run_card and with Nf
+c specified in coupl.inc
+      if (maxjetflavor.gt.int(Nf)) then
+          write(*,*) "WARNING: the value of maxjetflavor specified in"//
+     1   " the run_card is inconsistent with the number of light"//
+     1   " flavours in the model."
+          write(*,*)"Hence it will be set to ", int(Nf)
+          maxjetflavor = int(Nf)
+      endif
+      
+
+
       do i=nincoming+1,nexternal
          do_cuts(i)=.true.
          if(nincoming.eq.1) do_cuts(i)=.false.
@@ -121,6 +133,7 @@ c-do not apply cuts to these
          if (abs(idup(i,1)).eq.12) do_cuts(i)=.false.  ! no cuts on ve ve~
          if (abs(idup(i,1)).eq.14) do_cuts(i)=.false.  ! no cuts on vm vm~
          if (abs(idup(i,1)).eq.16) do_cuts(i)=.false.  ! no cuts on vt vt~
+
 c-flavor-jets
          if (abs(idup(i,1)).le.min(maxjetflavor,5)) then
               is_a_j(i)=.true.
@@ -295,14 +308,14 @@ c
 c
 c    ERROR TRAPS 
 c
-        do i=nincoming+1,nexternal
-           if(is_a_j(i).and.etmin(i).eq.0.and.emin(i).eq.0) then
-              write (*,*) "Warning: pt or E min of a jet should in general be >0"
-           endif
-           if(is_a_a(i).and.etmin(i).eq.0.and.emin(i).eq.0) then
-              write (*,*) "Warning: pt or E min of a gamma should in general be >0"
-           endif
-        enddo
+c$$$        do i=nincoming+1,nexternal
+c$$$           if(is_a_j(i).and.etmin(i).eq.0.and.emin(i).eq.0) then
+c$$$              write (*,*) "Warning: pt or E min of a jet should in general be >0"
+c$$$           endif
+c$$$           if(is_a_a(i).and.etmin(i).eq.0.and.emin(i).eq.0) then
+c$$$              write (*,*) "Warning: pt or E min of a gamma should in general be >0"
+c$$$           endif
+c$$$        enddo
 
 c    count number of jets to see if special cuts are applicable or not
 
@@ -357,11 +370,6 @@ c    count number of leptons to see if special cuts are applicable or not
            write (*,*) "Warning: cuts on the lepton will be ignored"
            xptl = 0d0
         endif
-c
-c Set minimum tau, to be used in one_tree
-      call set_tau_min()
-
-c      call write_cuts()
       RETURN
 
       END
@@ -376,10 +384,11 @@ c variable ptj
       parameter (zero=0.d0,vtiny=1d-8)
       include 'cuts.inc'
       include 'run.inc'
-      include 'nexternal.inc'
       include 'genps.inc'
+      include 'nexternal.inc'
       include 'coupl.inc'
-      include 'fks.inc'
+      include 'nFKSconfigs.inc'
+      include "fks_info.inc"
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
       LOGICAL  IS_A_B(NEXTERNAL),IS_A_A(NEXTERNAL)
       LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
@@ -388,28 +397,26 @@ c
       double precision pmass(-nexternal:0,lmaxconfigs)
       double precision pwidth(-nexternal:0,lmaxconfigs)
       integer pow(-nexternal:0,lmaxconfigs)
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      common/to_forest/ iforest
-      integer            mapconfig(0:lmaxconfigs), this_config
-      common/to_mconfigs/mapconfig, this_config
-
-      double precision taumin,stot,taumin_s
-      integer i,d1,d2,j_fks,config_fks
+      integer itree(2,-max_branch:-1),iconfig
+      common /to_itree/itree,iconfig
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      double precision taumin(fks_configs),taumin_s(fks_configs)
+     &     ,taumin_j(fks_configs),stot
+      save  taumin,taumin_s,taumin_j,stot
+      integer i,d1,d2,iFKS
       double precision xm(-nexternal:nexternal),xm1,xm2,xmi
-      integer tsign,iconfig
-      double precision tau_lower_bound,tau_lower_bound_soft
-      common/ctau_lower_bound/tau_lower_bound,tau_lower_bound_soft
+      integer tsign,j_fks
+      double precision tau_Born_lower_bound,tau_lower_bound_resonance
+     &     ,tau_lower_bound
+      common/ctau_lower_bound/tau_Born_lower_bound
+     &     ,tau_lower_bound_resonance,tau_lower_bound
 c
       real*8         emass(nexternal)
       common/to_mass/emass
-c      double precision pmass(nexternal)
-c      include "pmass.inc"
-      include "props.inc"
-c
-      open (unit=19,file="config.fks",status="old")
-      read (19,*) config_fks
-      close (19)
-      j_fks=fks_j(config_fks)
+      logical firsttime
+      data firsttime /.true./
+      include "born_props.inc"
 
       if(.not.IS_A_J(NEXTERNAL))then
         write(*,*)'Fatal error in set_tau_min'
@@ -425,92 +432,118 @@ c bound' if j_fks is initial state: the real-emission i_fks parton is
 c not necessarily the softest.  Therefore, it could be that even though
 c the Born does not have enough energy to pass the cuts set by ptj, the
 c event could.
-      taumin=0.d0
-      taumin_s=0.d0
-      do i=nincoming+1,nexternal-1
-         if(IS_A_J(i))then
-            if (abs(emass(i)).gt.vtiny) then
-               write (*,*) 'Error in set_tau_min in setcuts.f:'
-               write (*,*) 'mass of a jet should be zero',i,emass(i)
-               stop
-            endif
-            if  (j_fks.gt.nincoming .and. j_fks.lt.nexternal) then
-               taumin=taumin+ptj
-               taumin_s=taumin_s+ptj
-            elseif (j_fks.ge.1 .and. j_fks.le.nincoming) then
-               taumin_s=taumin_s+ptj
-            elseif (j_fks.eq.nexternal) then
-               write (*,*)
-     &              'ERROR, j_fks cannot be the final parton',j_fks
-               stop
-            else
-               write (*,*) 'ERROR, j_fks not correctly defined',j_fks
-               stop
-            endif
-         else
-            taumin=taumin+emass(i)
-            taumin_s=taumin_s+emass(i)
-         endif
-         xm(i)=emass(i)
-      enddo
-      xm(nexternal)=emass(nexternal)
-      stot = 4d0*ebeam(1)*ebeam(2)
-      tau_lower_bound=taumin**2/stot
-
+      if (firsttime) then
+         firsttime=.false.
+         do iFKS=1,fks_configs
+            j_fks=FKS_J_D(iFKS)
+            taumin(iFKS)=0.d0
+            taumin_s(iFKS)=0.d0
+            taumin_j(iFKS)=0.d0
+            do i=nincoming+1,nexternal-1
+               if(IS_A_J(i))then
+                  if (abs(emass(i)).gt.vtiny) then
+                     write (*,*) 'Error in set_tau_min in setcuts.f:'
+                     write (*,*) 'mass of a jet should be zero',i
+     &                    ,emass(i)
+                     stop
+                  endif
+                  if  (j_fks.gt.nincoming .and. j_fks.lt.nexternal) then
+                     taumin(iFKS)=taumin(iFKS)+ptj
+                     taumin_s(iFKS)=taumin_s(iFKS)+ptj
+                     taumin_j(iFKS)=taumin_j(iFKS)+ptj
+                  elseif (j_fks.ge.1 .and. j_fks.le.nincoming) then
+                     taumin_s(iFKS)=taumin_s(iFKS)+ptj
+                     taumin_j(iFKS)=taumin_j(iFKS)+ptj
+                  elseif (j_fks.eq.nexternal) then
+                     write (*,*)
+     &                    'ERROR, j_fks cannot be the final parton'
+     &                    ,j_fks
+                     stop
+                  else
+                     write (*,*) 'ERROR, j_fks not correctly defined'
+     &                    ,j_fks
+                     stop
+                  endif
+               else
+                  taumin(iFKS)=taumin(iFKS)+emass(i)
+                  taumin_s(iFKS)=taumin_s(iFKS)+emass(i)
+                  taumin_j(iFKS)=taumin_j(iFKS)+emass(i)
+               endif
+               xm(i)=emass(i)
+            enddo
+            xm(nexternal)=emass(nexternal)
+            stot = 4d0*ebeam(1)*ebeam(2)
+            tau_Born_lower_bound=taumin(iFKS)**2/stot
+            tau_lower_bound=taumin_j(iFKS)**2/stot
+c         
 c Also find the minimum lower bound if all internal s-channel particles
 c were on-shell
-      tsign=-1
-      iconfig=this_config
-      if (iconfig.eq.0) then
-         write (*,*) 'Warning iconfig is still zero; '//
-     &        'set temporarily to 1 in "set_tau_min"'
-         iconfig=1
-      endif
-      do i=-1,-(nexternal-3),-1                ! All propagators
-         if ( iforest(1,i,iconfig) .eq. 1 .or.
-     &        iforest(1,i,iconfig) .eq. 2 ) tsign=1
-         if (tsign.eq.-1) then   ! Only s-channels
-            d1=iforest(1,i,iconfig)
-            d2=iforest(2,i,iconfig)
+            tsign=-1
+            do i=-1,-(nexternal-3),-1 ! All propagators
+               if ( itree(1,i) .eq. 1 .or. itree(1,i) .eq. 2 ) tsign=1
+               if (tsign.eq.-1) then ! Only s-channels
+                  d1=itree(1,i)
+                  d2=itree(2,i)
 c If daughter is a jet, we should treat the ptj as a mass. Except if
 c d1=nexternal, because we check the Born, so final parton should be
 c skipped.
-            if (d1.gt.0 .and. is_a_j(d1) .and. d1.ne.nexternal) then
-               xm1=ptj
-            else
-               xm1=xm(d1)
-            endif
-            if (d2.gt.0 .and. is_a_j(d2) .and. d2.ne.nexternal) then
-               xm2=ptj
-            else
-               xm2=xm(d2)
-            endif
+                  if (d1.gt.0) then
+                     if (is_a_j(d1) .and. d1.ne.nexternal) then
+                        xm1=ptj
+                     else
+                        xm1=xm(d1)
+                     endif
+                  else
+                     xm1=xm(d1)
+                  endif
+                  if (d2.gt.0) then
+                     if(is_a_j(d2) .and. d2.ne.nexternal) then
+                        xm2=ptj
+                     else
+                        xm2=xm(d2)
+                     endif
+                  else
+                     xm2=xm(d2)
+                  endif
 c On-shell mass of the intermediate resonance
-            xmi=pmass(i,iconfig)
+                  xmi=pmass(i,iconfig)
 c Set the intermediate mass equal to the max of its actual mass and
 c the sum of the masses of the two daugters.
-            xm(i)=max(xmi,xm1+xm2)
+                  xm(i)=max(xmi,xm1+xm2)
 c Add the new mass to the bound. To avoid double counting, we should
 c subtract the daughters, because they are already included above or in
 c the previous iteration of the loop
-            taumin_s=taumin_s+xm(i)-xm1-xm2
-         else
-            xm(i)=0d0
-         endif
-      enddo
-
-c For the bound, we have to square and divide by stot.
-      tau_lower_bound_soft=taumin_s**2/stot
-
+                  taumin_s(iFKS)=taumin_s(iFKS)+xm(i)-xm1 -xm2
+               else
+                  xm(i)=0d0
+               endif
+            enddo
+c
 c If the lower bound found here is smaller than the hard bound,
 c simply set the soft bound equal to the hard bound.
-      tau_lower_bound_soft=max(tau_lower_bound,tau_lower_bound_soft)
-
-      write (*,*) 'lower bound for tau is ',
-     &     tau_lower_bound,taumin,dsqrt(stot)
-      write (*,*) 'soft lower bound for tau is ',
-     &     tau_lower_bound_soft,taumin_s,dsqrt(stot)
-
+            taumin_s(iFKS)=
+     &           max(taumin_j(iFKS),taumin_s(iFKS))
+c
+c For the bound, we have to square and divide by stot.
+            tau_lower_bound_resonance=taumin_s(iFKS)**2/stot
+c
+            write (*,'(a,i3,a,3(e12.5,x))') 'nFKSprocess:',iFKS
+     &           ,'. Absolute lower bound for tau at the Born is'
+     &           ,tau_Born_lower_bound,taumin(iFKS),dsqrt(stot) 
+            if (j_fks.le.nincoming) then
+               write (*,'(a,i3,a,3(e12.5,x))') 'nFKSprocess:',iFKS
+     &              ,'. Lower bound for tau is',tau_lower_bound
+     &              ,taumin_j(iFKS),dsqrt(stot)
+            endif
+            write (*,'(a,i3,a,3(e12.5,x))') 'nFKSprocess:',iFKS
+     &           ,'. Lower bound for tau is (taking resonances'/
+     &           /' into account)' ,tau_lower_bound_resonance
+     &           ,taumin_s(iFKS) ,dsqrt(stot)
+         enddo
+      endif
+      tau_Born_lower_bound=taumin(nFKSprocess)**2/stot
+      tau_lower_bound=taumin_j(nFKSprocess)**2/stot
+      tau_lower_bound_resonance=taumin_s(nFKSprocess)**2/stot
       return
       end
 

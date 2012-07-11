@@ -227,8 +227,13 @@ class AllResults(dict):
         if makehtml:
             self.output()
 
-    def resetall(self):
-        """check the output status of all run"""
+    def resetall(self, main_path=None):
+        """check the output status of all run
+           main_path redefines the path associated to the run (allowing to move 
+           the directory)
+        """
+        
+        self.path = main_path
         
         for key,run in self.items():
             if key == 'web':
@@ -236,6 +241,7 @@ class AllResults(dict):
             for i,subrun in enumerate(run):
                 self.def_current(subrun)
                 self.clean()
+                self.current.event_path = pjoin(main_path,'Events') 
                 if i==0:
                     self.current.update_status()
                 else:
@@ -278,7 +284,12 @@ class AllResults(dict):
 
     def add_detail(self, name, value, run=None, tag=None):
         """ add information to current run (cross/error/event)"""
-        assert name in ['cross', 'error', 'nb_event', 'cross_pythia']
+        assert name in ['cross', 'error', 'nb_event', 'cross_pythia',
+                        'nb_event_pythia','error_pythia']
+
+        if not run and not self.current:
+            return
+
         if not run:
             run = self.current
         else:
@@ -287,6 +298,8 @@ class AllResults(dict):
         if name == 'cross_pythia':
             run['cross_pythia'] = float(value)
         elif name == 'nb_event':
+            run[name] = int(value)
+        elif name == 'nb_event_pythia':
             run[name] = int(value)
         else:    
             run[name] = float(value)    
@@ -407,6 +420,13 @@ class RunResults(list):
         except:
             self.web = False
 
+        # check if more than one parton output
+        parton = [r for r in self if r.parton]
+        # clean wrong previous run link
+        if len(parton)>1:
+            for p in parton[:-1]:
+                p.parton = []
+
         dico = self.info
         dico['run_span'] = sum([tag.get_nb_line() for tag in self], 1) -1
         dico['tag_data'] = '\n'.join([tag.get_html(self) for tag in self])
@@ -461,11 +481,10 @@ class RunResults(list):
             output['cross'] = self[-2]['cross']
             output['error'] = self[-2]['error']
         elif (current.pgs or current.delphes) and not current['nb_event'] and len(self) > 1:
-            if self[-2]['cross_pythia']:
+            if self[-2]['cross_pythia'] and self[-2]['nb_event_pythia']:
                 output['cross'] = self[-2]['cross_pythia']
-                output['nb_event'] = int(0.5+(self[-2]['nb_event'] * current['cross'] /self[-2]['cross']))                           
-                output['error'] = current.get_pythia_error(self[-2]['cross'], 
-                       self[-2]['error'], current['cross'], current['nb_event'])
+                output['nb_event'] = self[-2]['nb_event_pythia']
+                output['error'] = self[-2]['error_pythia']
             else:
                 output['nb_event'] = self[-2]['nb_event']
                 output['cross'] = self[-2]['cross']
@@ -510,6 +529,7 @@ class OneTagResults(dict):
         self['nb_event'] = 0
         self['cross'] = 0
         self['cross_pythia'] = ''
+        self['nb_event_pythia'] = 0
         self['error'] = 0
         self.parton = [] 
         self.pythia = []
@@ -634,20 +654,7 @@ class OneTagResults(dict):
         
          return " <a  id='%(id)s' href='%(link1)s' onClick=\"check_link('%(link1)s','%(link2)s','%(id)s')\">%(name)s</a>" \
               % {'link1': link1, 'link2':link2, 'id': id, 'name':name}       
-    
-    def get_pythia_error(self, cross, error, pythia_cross, nb_event):
-        """compute the error associate to pythie"""
-        # pythia_cross = cross * n_acc / n_gen
-        # error_pythia = error * n_acc /n_gen + cross * sqrt(n_acc) / n_gen
         
-        if cross and nb_event: 
-            n_acc = int(0.5 + pythia_cross / cross * nb_event)
-            error_pythia = error * n_acc / nb_event 
-            error_pythia += cross * math.sqrt(n_acc) / nb_event
-        else:
-            error_pythia = 0
-        return error_pythia
-    
     def get_links(self, level):
         """ Get the links for a given level"""
         
@@ -770,11 +777,10 @@ class OneTagResults(dict):
                 pass
                 
         elif (self.pgs or self.delphes) and not self['nb_event']:
-            if runresults[-2]['cross_pythia']:
+            if runresults[-2]['cross_pythia'] and runresults[-2]['cross']:
                 self['cross'] = runresults[-2]['cross_pythia']
-                self['nb_event'] = int(0.5+(runresults[-2]['nb_event'] * self['cross'] /runresults[-2]['cross']))                           
-                self['error'] = self.get_pythia_error(runresults[-2]['cross'], 
-                       runresults[-2]['error'], self['cross'], self['nb_event'])
+                self['error'] = runresults[-2]['error_pythia']
+                self['nb_event'] = runresults[-2]['nb_event_pythia']                           
             else:
                 self['nb_event'] = runresults[-2]['nb_event']
                 self['cross'] = runresults[-2]['cross']
@@ -803,13 +809,12 @@ class OneTagResults(dict):
                         local_dico['cross_span'] = nb_line -1
                     else:
                         local_dico['cross_span'] = nb_line
-                    if self['cross']:
-                        local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self['cross']))
+                    if self['nb_event_pythia']:
+                        local_dico['nb_event'] = self['nb_event_pythia']
                     else:
                         local_dico['nb_event'] = 0
                     local_dico['cross'] = self['cross_pythia']
-                    local_dico['err'] = self.get_pythia_error(self['cross'],
-                           self['error'],self['cross_pythia'], self['nb_event']) 
+                    local_dico['err'] = self['error_pythia']
                 else:
                     local_dico['cross_span'] = nb_line
                     local_dico['cross'] = self['cross']
@@ -820,16 +825,15 @@ class OneTagResults(dict):
                 template = sub_part_template_parton
                 if self.parton:           
                     local_dico['cross_span'] = nb_line - 1
-                    if self['cross']:
-                        local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self['cross']))
+                    if self['nb_event_pythia']:
+                        local_dico['nb_event'] = self['nb_event_pythia']
                     else:
                         local_dico['nb_event'] = 0
                 else:
                     local_dico['cross_span'] = nb_line
                     local_dico['nb_event'] = self['nb_event']
                 local_dico['cross'] = self['cross_pythia']
-                local_dico['err'] = self.get_pythia_error(self['cross'],
-                           self['error'],self['cross_pythia'], self['nb_event'])
+                local_dico['err'] = self['error_pythia']
             else:
                template = sub_part_template_pgs             
             

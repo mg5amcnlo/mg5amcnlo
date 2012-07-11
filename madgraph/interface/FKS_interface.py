@@ -24,6 +24,7 @@ import time
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 import madgraph.interface.madgraph_interface as mg_interface
+import madgraph.interface.Loop_interface as Loop_interface
 import madgraph.fks.fks_real as fks_real
 import madgraph.fks.fks_real_helas_objects as fks_real_helas
 import madgraph.fks.fks_born as fks_born
@@ -60,10 +61,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
     def check_output(self, args):
         """ check the validity of the line"""
           
-        if args and args[0] in self._nlo_export_formats:
-            self._export_format = args.pop(0)
-        else:
-            self._export_format = 'NLO'
+        self._export_format = 'NLO'
 
         if not self._fks_multi_proc:
             text = 'No processes generated. Please generate a process first.'
@@ -77,8 +75,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             # This is a path
             path = args.pop(0)
             # Check for special directory treatment
-            if path == 'auto' and self._export_format in \
-                     self._nlo_export_formats:
+            if path == 'auto':
                 self.get_default_path()
             elif path != 'auto':
                 self._export_dir = path
@@ -141,7 +138,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
         mg_interface.MadGraphCmd.__init__(self, mgme_dir = '', *completekey, **stdin)
         self.setup()
-    
+
     def setup(self):
         """ Special tasks when switching to this interface """
 
@@ -157,7 +154,11 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._v4_export_formats = []
         self._export_formats = [ 'madevent' ]
-
+        if self.options['loop_optimized_output'] and \
+                                           not self.options['gauge']=='Feynman':
+            # In the open loops method, in order to have a maximum loop numerator
+            # rank of 1, one must work in the Feynman gauge
+            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
         # Set where to look for CutTools installation.
         # In further versions, it will be set in the same manner as _mgme_dir so that
         # the user can chose its own CutTools distribution.
@@ -167,7 +168,21 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                            'Using default CutTools instead.') % \
                              self._cuttools_dir)
             self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
-    
+
+    def do_set(self, line, log=True):
+        """Set the loop optimized output while correctly switching to the
+        Feynman gauge if necessary.
+        """
+
+        mg_interface.MadGraphCmd.do_set(self,line,log)
+        
+        args = self.split_arg(line)
+        self.check_set(args)
+
+        if args[0] == 'loop_optimized_output' and eval(args[1]) and \
+                                           not self.options['gauge']=='Feynman':
+            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
+
     def do_display(self, line, output=sys.stdout):
         # if we arrive here it means that a _fks_display_opts has been chosen
         args = self.split_arg(line)
@@ -244,14 +259,13 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                         % ', '.join(myprocdef['perturbation_couplings']))
 
         if self.options['fks_mode'] == 'born':
-            self._fks_multi_proc = fks_born.FKSMultiProcessFromBorn(myprocdef,
+            self._fks_multi_proc.add(fks_born.FKSMultiProcessFromBorn(myprocdef,
                                        collect_mirror_procs,
-                                       ignore_six_quark_processes)
+                                       ignore_six_quark_processes))
         elif self.options['fks_mode'] == 'real':
-            self._fks_multi_proc = fks_real.FKSMultiProcessFromReals(myprocdef,
+            self._fks_multi_proc.add(fks_real.FKSMultiProcessFromReals(myprocdef,
                                        collect_mirror_procs,
-                                       ignore_six_quark_processes)
-            # this is for testing, to be removed
+                                       ignore_six_quark_processes))
         else: 
             raise MadGraph5Error, 'Unknown FKS mode: %s' % self.options['fks_mode']
 
@@ -278,26 +292,39 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
         self.options['group_subprocesses'] = False
         # initialize the writer
-        if self._export_format in self._nlo_export_formats:
+        if self._export_format in ['NLO']:
             if self.options['fks_mode'] == 'real':
                 logger.info("Exporting in MadFKS format, starting from real emission process")
                 self._curr_exporter = export_fks_real.ProcessExporterFortranFKS_real(\
                                           self._mgme_dir, self._export_dir,
                                           not noclean, 
+                                          self.options['complex_mass_scheme'], False,
                                           os.path.join(self._mgme_dir, 'loop_material'),
                                           self._cuttools_dir)
     
-            if self.options['fks_mode'] == 'born':
+            if self.options['fks_mode'] == 'born' \
+              and not self.options['loop_optimized_output']:
                 logger.info("Exporting in MadFKS format, starting from born process")
                 self._curr_exporter = export_fks_born.ProcessExporterFortranFKS_born(\
                                           self._mgme_dir, self._export_dir,
                                           not noclean, 
+                                          self.options['complex_mass_scheme'], True,
                                           os.path.join(self._mgme_dir, 'loop_material'),
+                                          self._cuttools_dir)
+            
+            if self.options['fks_mode'] == 'born' \
+              and self.options['loop_optimized_output']:
+                logger.info("Exporting in MadFKS format, starting from born process using Optimized Loops")
+                self._curr_exporter = export_fks_born.ProcessOptimizedExporterFortranFKS_born(\
+                                          self._mgme_dir, self._export_dir,
+                                          not noclean, 
+                                          self.options['complex_mass_scheme'], True,
+                                          os.path.join(self._mgme_dir,'Template/loop_material'),
                                           self._cuttools_dir)
             
         # check if a dir with the same name already exists
         if not force and not noclean and os.path.isdir(self._export_dir)\
-               and self._export_format in self._nlo_export_formats:
+               and self._export_format in ['NLO']:
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
             logger.info('If you continue this directory will be cleaned')
@@ -307,7 +334,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 raise self.InvalidCmd('Stopped by user request')
     
         # Make a Template Copy
-        if self._export_format in self._nlo_export_formats:
+        if self._export_format in ['NLO']:
             self._curr_exporter.copy_fkstemplate()
 
         # Reset _done_export, since we have new directory
@@ -396,7 +423,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 enumerate(self._curr_matrix_elements.get_matrix_elements()):
                 #me is a FKSHelasProcessFromReals
                 calls = calls + \
-                        self._curr_exporter.generate_born_directories_fks(\
+                        self._curr_exporter.generate_directories_fks(\
                             me, self._curr_fortran_model, ime, path)
                 self._fks_directories.extend(self._curr_exporter.fksdirs)
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
@@ -419,7 +446,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
                 #me is a FKSHelasProcessFromReals
                 calls = calls + \
-                        self._curr_exporter.generate_real_directories_fks(\
+                        self._curr_exporter.generate_directories_fks(\
                             me, self._curr_fortran_model, ime, path)
                 self._fks_directories.extend(self._curr_exporter.fksdirs)
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \

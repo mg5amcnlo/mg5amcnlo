@@ -38,7 +38,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
     # Dictionaries used for automatic generation of Helas calls
     # Dictionaries from spin states to letters in Helas call
-    mother_dict = {1: 'S', 2: 'O', -2: 'I', 3: 'V', 5: 'T'}
+    mother_dict = {1: 'S', 2: 'O', -2: 'I', 3: 'V', 5: 'T', 4:'OR', -4:'IR'}
 
     def default_setup(self):
 
@@ -962,7 +962,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         else:
             call += "%(numCouplings)s(%(numeratorNumber)d,"            
         for i in range(len(loopamp.get('mothers'))):
-            call = call + "%(MotherID{0})d,%(MotherStatus{0})d,".format(i+1)
+            call = call + "%(MotherID{0})d,".format(i+1)
         for i in range(len(loopamp.get('wavefunctions'))-2):
             call = call + \
             "DCMPLX(%(LoopMass{0})s),CMPLX(MP__%(LoopMass{0})s,KIND=16),".format(i+1)
@@ -1064,6 +1064,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         if argument.needs_hermitian_conjugate():
             flag = ['C%d' % i for i in \
                                   argument.get_conjugate_index()]
+
         if (isinstance(argument, helas_objects.HelasWavefunction) and \
            argument.get('is_loop') or \
            (isinstance(argument, helas_objects.HelasAmplitude) and \
@@ -1201,7 +1202,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                     if lwf.get('mothers'):
                         last_lwf_number=lwf.get('number')
                         break
-                res.append('BUFF(I)=WL(I,%d)'%last_lwf_number)
+                res.append('BUFF(I)=WL(I+4,%d)'%last_lwf_number)
                 # And re-establish the original numbering
                 indexMothers=0
                 indexWfs=0
@@ -1257,8 +1258,6 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                        %ldiag.get('number'))
             for lwf in ldiag.get('loop_wavefunctions'):
                     res.append(self.get_wavefunction_call(lwf))
-        res.append("# Now create the loop coefficients")
-        for ldiag in matrix_element.get_loop_diagrams():
             for lamp in ldiag.get_loop_amplitudes():
                 create_coef=['CALL CREATE_LOOP_COEFS(WL(1,0,1,%(number)d)',
                              '%(loop_rank)d','%(lcut_size)d',
@@ -1272,6 +1271,8 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                   'amp_number':lamp.get('amplitudes')[0].get('number'),
                   'LoopSymmetryFactor':lamp.get('loopsymmetryfactor')})
         
+        coef_merge=[]
+        
         if group_loops and matrix_element.get('processes')[0].get('has_born'):
             for (denoms, lamps) in matrix_element.get('loop_groups'):
                 # Only necessary if they are more than one loop with this kind of
@@ -1281,12 +1282,12 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                     merge_coef=['CALL ADD_COEFS(LOOPCOEFS(0,%(ref_number)d)',
                                 '%(ref_rank)d','LOOPCOEFS(0,%(new_number)d)',
                                 '%(new_rank)d)']
-                    res.append(','.join(merge_coef)%{\
+                    coef_merge.append(','.join(merge_coef)%{\
                       'ref_number':refamp.get('number'),
                       'ref_rank':refamp.get_rank(),
                       'new_number':lamp.get('number'),
                       'new_rank':lamp.get_rank()})
-        return res
+        return res, coef_merge
 
     def get_loop_CT_calls(self, matrix_element, group_loops=False):
         """ Return the calls to CutTools interface routines to launch the
@@ -1301,20 +1302,20 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         # amplitude for each group (for which the coefficients are the sum of
         # all others)
         if group_loops and matrix_element.get('processes')[0].get('has_born'):
-            for ldiag in matrix_element.get_loop_diagrams():
-                res.append("# Loop ID %d has amps numbers %s"%(\
-                  ldiag.get('number'),','.join(['%d'%lamp.get('number') for 
-                                         lamp in ldiag.get_loop_amplitudes()])))
-            # sort them by their amplitude number
-            loop_group_refs=[lamps[1][0] for lamps in \
+            # Reformat the loop group list in a convenient form
+            loop_group_refs=[(lamps[1][0],lamps[1][1:]) for lamps in \
                                               matrix_element.get('loop_groups')]
-            loop_group_refs=sorted(loop_group_refs,\
-                                            key=lambda lamp: lamp.get('number'))
-            for lamp in loop_group_refs:
-                res.append(self.get_amplitude_call(lamp))
+            # sort them by their amplitude number
+            #loop_group_refs=sorted(loop_group_refs,\
+            #                             key=lambda lamp: lamp[0].get('number'))
+            for (lamp_ref, lamps) in loop_group_refs:
+                res.append("# CutTools call for loop numbers %s"%\
+                   ','.join(['%d'%lamp_ref.get('number'),]+\
+                                   ['%d'%lamp.get('number') for lamp in lamps]))
+                res.append(self.get_amplitude_call(lamp_ref))
         else:
             for ldiag in matrix_element.get_loop_diagrams():
-                res.append("# CutTools call for loop ID %d"%ldiag.get('number'))
+                res.append("# CutTools call for loop # %d"%ldiag.get('number'))
                 for lamp in ldiag.get_loop_amplitudes():
                     res.append(self.get_amplitude_call(lamp))
 
@@ -1346,7 +1347,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         else:
             call += "(%(numeratorNumber)d,"            
         for i in range(len(loopamp.get('mothers'))):
-            call = call + "%(MotherID{0})d,%(MotherStatus{0})d,".format(i+1)
+            call = call + "%(MotherID{0})d,".format(i+1)
         for i in range(len(loopamp.get('wavefunctions'))-2):
             call = call + \
             "DCMPLX(%(LoopMass{0})s),".format(i+1)
@@ -1557,8 +1558,8 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
                                       tuple(range(len(argument.get('mothers')))),
                     'coup': ("pars->%%(coup%d)s," * len(argument.get('coupling'))) % \
                                      tuple(range(len(argument.get('coupling'))))           
-                   }
-            
+                   } 
+
             if isinstance(argument, helas_objects.HelasWavefunction):
                 arg['out'] = 'w[%(out)d]'
                 if aloha.complex_mass:
@@ -1736,8 +1737,6 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
             call = call % arg
             # Now we have a line correctly formatted
             call_function = lambda wf: call % wf.get_helas_call_dict(index=0)
-                
-                
                 
             routine_name = aloha_writers.combine_name(
                                         '%s' % l[0], l[1:], outgoing, flag)

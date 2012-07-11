@@ -152,6 +152,7 @@ c
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
       character*140 buff
       character*10 MonteCarlo,MonteCarlo1
+      character*100 path
       integer iseed
       data iseed/1/
       double precision rnd,fk88random
@@ -211,7 +212,8 @@ c
         stop
       endif
       xerrup=sqrt(xerrup)
-      call write_lhef_header(ioutput,maxevt,MonteCarlo)
+      path="../Cards/"
+      call write_lhef_header_banner(ioutput,maxevt,MonteCarlo,path)
       call write_lhef_init(ioutput,
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      #  XSECUP,XERRUP,XMAXUP,LPRUP)

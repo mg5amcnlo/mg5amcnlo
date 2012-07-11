@@ -73,6 +73,8 @@ class test_wavefunctions(unittest.TestCase):
         NST = 1
         
         solution = [ 
+             complex(  624.99999999999989     , -149.66469744815910     ),
+             complex(  83.193213332874592     ,  333.62309211609107     ),
              complex(  0.0000000000000000     ,  0.0000000000000000     ),
              complex(  0.0000000000000000     ,  0.0000000000000000     ),
              complex(  0.0000000000000000     ,  0.0000000000000000     ),
@@ -88,9 +90,7 @@ class test_wavefunctions(unittest.TestCase):
              complex(  0.0000000000000000     ,  0.0000000000000000     ),
              complex( 4.42705319225060942E-002,-0.44483078948812155     ),
              complex( 0.17753457473164128     , 0.11092428444383282     ),
-             complex( 0.42035725631200371     ,  0.0000000000000000     ),
-             complex(  624.99999999999989     , -149.66469744815910     ),
-             complex(  83.193213332874592     ,  333.62309211609107     )]
+             complex( 0.42035725631200371     ,  0.0000000000000000     )]
 
         values = wavefunctions.txxxxx(P, M, NHEL, NST)
         self.assertEqual(len(values), len(solution))
@@ -100,6 +100,8 @@ class test_wavefunctions(unittest.TestCase):
         # NEXT
         NHEL = 1
         solution = [ 
+                    complex(  624.99999999999989     , -149.66469744815910     ),
+                    complex(  83.193213332874592     ,  333.62309211609107     ),
                     complex(  0.0000000000000000     ,  0.0000000000000000     ),
                     complex( 3.62119349359586659E-002,-0.36385791873139811     ),
                     complex( 0.14521782752280418     , 9.07326566152192315E-002),
@@ -115,9 +117,7 @@ class test_wavefunctions(unittest.TestCase):
                     complex( 0.34383932052304755     ,  0.0000000000000000     ),
                     complex( 0.10304644292578606     , 0.24202971253800695     ),
                     complex( 0.41323891148317965     ,-6.03532248932644386E-002),
-                    complex(-0.45742762557211131     ,  0.0000000000000000     ),
-                    complex(  624.99999999999989     , -149.66469744815910     ),
-                    complex(  83.193213332874592     ,  333.62309211609107     )]
+                    complex(-0.45742762557211131     ,  0.0000000000000000     )]
 
         values = wavefunctions.txxxxx(P, M, NHEL, NST)
         self.assertEqual(len(values), len(solution))
@@ -127,6 +127,8 @@ class test_wavefunctions(unittest.TestCase):
         #NEXT
         NHEL = 0
         solution = [ 
+                    complex(  624.99999999999989     , -149.66469744815910     ),
+                    complex(  83.193213332874592     ,  333.62309211609107     ),
                     complex( 0.45927932677184580     ,  0.0000000000000000     ),
                     complex( 0.16981743560670751     ,  0.0000000000000000     ),
                     complex( 0.68100528507831026     ,  0.0000000000000000     ),
@@ -142,9 +144,7 @@ class test_wavefunctions(unittest.TestCase):
                     complex(-0.30550178438001113     ,  0.0000000000000000     ),
                     complex(-0.14910529404613407     ,  0.0000000000000000     ),
                     complex(-0.59794503971747703     ,  0.0000000000000000     ),
-                    complex(-0.14000767530643479     ,  0.0000000000000000     ),
-                    complex(  624.99999999999989     , -149.66469744815910     ),
-                    complex(  83.193213332874592     ,  333.62309211609107     )]
+                    complex(-0.14000767530643479     ,  0.0000000000000000     )]
         
         values = wavefunctions.txxxxx(P, M, NHEL, NST)
         self.assertEqual(len(values), len(solution))
@@ -153,6 +153,8 @@ class test_wavefunctions(unittest.TestCase):
         
         NHEL=-1
         solution = [ 
+                    complex(  624.99999999999989     , -149.66469744815910     ),
+                    complex(  83.193213332874592     ,  333.62309211609107     ),
                    complex(  0.0000000000000000     ,  0.0000000000000000     ),
                     complex(-3.62119349359586659E-002,-0.36385791873139811     ),
                     complex(-0.14521782752280418     , 9.07326566152192315E-002),
@@ -168,9 +170,7 @@ class test_wavefunctions(unittest.TestCase):
                     complex(-0.34383932052304755     ,  0.0000000000000000     ),
                     complex(-0.10304644292578606     , 0.24202971253800695     ),
                     complex(-0.41323891148317965     ,-6.03532248932644386E-002),
-                    complex( 0.45742762557211131     , -0.0000000000000000     ),
-                    complex(  624.99999999999989     , -149.66469744815910     ),
-                    complex(  83.193213332874592     ,  333.62309211609107     )]
+                    complex( 0.45742762557211131     , -0.0000000000000000     )]
         
         values = wavefunctions.txxxxx(P, M, NHEL, NST)
         self.assertEqual(len(values), len(solution))
@@ -179,6 +179,8 @@ class test_wavefunctions(unittest.TestCase):
 
         NHEL=-2        
         solution = [ 
+                    complex(  624.99999999999989     , -149.66469744815910     ),
+                    complex(  83.193213332874592     ,  333.62309211609107     ),
                    complex(  0.0000000000000000     ,  0.0000000000000000     ),
                     complex(  0.0000000000000000     , -0.0000000000000000     ),
                     complex( -0.0000000000000000     ,  0.0000000000000000     ),
@@ -194,9 +196,7 @@ class test_wavefunctions(unittest.TestCase):
                     complex( -0.0000000000000000     ,  0.0000000000000000     ),
                     complex( 4.42705319225060942E-002, 0.44483078948812155     ),
                     complex( 0.17753457473164128     ,-0.11092428444383282     ),
-                    complex( 0.42035725631200371     , -0.0000000000000000     ),
-                    complex(  624.99999999999989     , -149.66469744815910     ),
-                    complex(  83.193213332874592     ,  333.62309211609107     )]
+                    complex( 0.42035725631200371     , -0.0000000000000000     )]
 
         values = wavefunctions.txxxxx(P, M, NHEL, NST)
         self.assertEqual(len(values), len(solution))
@@ -208,6 +208,8 @@ class test_wavefunctions(unittest.TestCase):
         NHEL = 2
         NST = -1
         solution = [
+                    complex( -624.99999999999989     ,  149.66469744815910     ),
+                    complex( -83.193213332874592     , -333.62309211609107     ),
                     complex(  0.0000000000000000     ,  0.0000000000000000     ),
                     complex(  0.0000000000000000     ,  0.0000000000000000     ),
                     complex(  0.0000000000000000     ,  0.0000000000000000     ),
@@ -223,9 +225,7 @@ class test_wavefunctions(unittest.TestCase):
                     complex(  0.0000000000000000     ,  0.0000000000000000     ),
                     complex( 4.42705319225060942E-002, 0.44483078948812155     ),
                     complex( 0.17753457473164128     ,-0.11092428444383282     ),
-                    complex( 0.42035725631200371     ,  0.0000000000000000     ),
-                    complex( -624.99999999999989     ,  149.66469744815910     ),
-                    complex( -83.193213332874592     , -333.62309211609107     )]
+                    complex( 0.42035725631200371     ,  0.0000000000000000     )]
 
         values = wavefunctions.txxxxx(P, M, NHEL, NST)
         self.assertEqual(len(values), len(solution))
@@ -235,6 +235,8 @@ class test_wavefunctions(unittest.TestCase):
              # first
         NHEL = 1   
         solution = [
+                    complex( -624.99999999999989     ,  149.66469744815910     ),
+                    complex( -83.193213332874592     , -333.62309211609107     ),
                     complex(  0.0000000000000000     ,  0.0000000000000000     ),
                     complex( 3.62119349359586659E-002, 0.36385791873139811     ),
                     complex( 0.14521782752280418     ,-9.07326566152192315E-002),
@@ -250,9 +252,7 @@ class test_wavefunctions(unittest.TestCase):
                     complex( 0.34383932052304755     ,  0.0000000000000000     ),
                     complex( 0.10304644292578606     ,-0.24202971253800695     ),
                     complex( 0.41323891148317965     , 6.03532248932644386E-002),
-                    complex(-0.45742762557211131     ,  0.0000000000000000     ),
-                    complex( -624.99999999999989     ,  149.66469744815910     ),
-                    complex( -83.193213332874592     , -333.62309211609107     )]
+                    complex(-0.45742762557211131     ,  0.0000000000000000     )]
 
         values = wavefunctions.txxxxx(P, M, NHEL, NST)
         self.assertEqual(len(values), len(solution))
@@ -260,7 +260,8 @@ class test_wavefunctions(unittest.TestCase):
             self.assertAlmostEqual(values[i], solution[i])
 
         NHEL = 0  
-        solution = [
+        solution = [complex( -624.99999999999989     ,  149.66469744815910     ),
+                    complex( -83.193213332874592     , -333.62309211609107     ),
                    complex( 0.45927932677184580     ,  0.0000000000000000     ),
                     complex( 0.16981743560670751     ,  0.0000000000000000     ),
                     complex( 0.68100528507831026     ,  0.0000000000000000     ),
@@ -276,9 +277,7 @@ class test_wavefunctions(unittest.TestCase):
                     complex(-0.30550178438001113     ,  0.0000000000000000     ),
                     complex(-0.14910529404613407     ,  0.0000000000000000     ),
                     complex(-0.59794503971747703     ,  0.0000000000000000     ),
-                    complex(-0.14000767530643479     ,  0.0000000000000000     ),
-                    complex( -624.99999999999989     ,  149.66469744815910     ),
-                    complex( -83.193213332874592     , -333.62309211609107     )]
+                    complex(-0.14000767530643479     ,  0.0000000000000000     )]
 
         values = wavefunctions.txxxxx(P, M, NHEL, NST)
         self.assertEqual(len(values), len(solution))
@@ -286,7 +285,8 @@ class test_wavefunctions(unittest.TestCase):
             self.assertAlmostEqual(values[i], solution[i])
 
         NHEL = -1
-        solution = [
+        solution = [                    complex( -624.99999999999989     ,  149.66469744815910     ),
+                    complex( -83.193213332874592     , -333.62309211609107     ),
                    complex(  0.0000000000000000     ,  0.0000000000000000     ),
                    complex(-3.62119349359586659E-002, 0.36385791873139811     ),
                     complex(-0.14521782752280418     ,-9.07326566152192315E-002),
@@ -302,9 +302,7 @@ class test_wavefunctions(unittest.TestCase):
                     complex(-0.34383932052304755     ,  0.0000000000000000     ),
                     complex(-0.10304644292578606     ,-0.24202971253800695     ),
                     complex(-0.41323891148317965     , 6.03532248932644386E-002),
-                    complex( 0.45742762557211131     , -0.0000000000000000     ),
-                    complex( -624.99999999999989     ,  149.66469744815910     ),
-                    complex( -83.193213332874592     , -333.62309211609107     )]
+                    complex( 0.45742762557211131     , -0.0000000000000000     )]
 
 
         values = wavefunctions.txxxxx(P, M, NHEL, NST)
@@ -313,7 +311,8 @@ class test_wavefunctions(unittest.TestCase):
             self.assertAlmostEqual(values[i], solution[i])
  
         NHEL = -2
-        solution = [
+        solution = [                    complex( -624.99999999999989     ,  149.66469744815910     ),
+                    complex(-83.193213332874592     , -333.62309211609107),
                     complex(  0.0000000000000000     ,  0.0000000000000000     ),
                     complex( -0.0000000000000000     ,  0.0000000000000000     ),
                     complex(  0.0000000000000000     , -0.0000000000000000     ),
@@ -329,9 +328,7 @@ class test_wavefunctions(unittest.TestCase):
                     complex( -0.0000000000000000     ,  0.0000000000000000     ),
                     complex( 4.42705319225060942E-002,-0.44483078948812155     ),
                     complex( 0.17753457473164128     , 0.11092428444383282     ),
-                    complex( 0.42035725631200371     , -0.0000000000000000     ),
-                    complex( -624.99999999999989     ,  149.66469744815910     ),
-                    complex(-83.193213332874592     , -333.62309211609107)]     
+                    complex( 0.42035725631200371     , -0.0000000000000000     )]     
 
         values = wavefunctions.txxxxx(P, M, NHEL, NST)
         self.assertEqual(len(values), len(solution))
@@ -347,12 +344,13 @@ class test_wavefunctions(unittest.TestCase):
         NHEL=-1
         NRST=-1
         solution = [
+            complex( +2499.9999999999991     , -967.83657009607577     ),
+            complex( +537.98548101331721     , 2157.4401624693646     ),
             complex(  4.7465641991565066     ,  0.0000000000000000     ),
             complex(  1.7524192771692548     ,  7.0275869209877353     ),
             complex( -38.466940073898407     , -0.0000000000000000     ),
-            complex( -14.201895200573350     , -56.952724878721050     ),
-            complex( -2499.9999999999991     ,  967.83657009607577     ),
-            complex( -537.98548101331721     , -2157.4401624693646     )]
+            complex( -14.201895200573350     , -56.952724878721050     )
+            ]
 
 
         values = wavefunctions.ixxxxx(P, M, NHEL, NRST)
@@ -364,12 +362,12 @@ class test_wavefunctions(unittest.TestCase):
         NHEL=1
         NRST=-1
         solution = [
+            complex(  2499.9999999999991     , -967.83657009607577     ),
+            complex(  537.98548101331721     , 2157.4401624693646     ),
             complex(  14.201895200573350     , -56.952724878721050     ),
             complex( -38.466940073898407     , -0.0000000000000000     ),
             complex( -1.7524192771692548     ,  7.0275869209877353     ),
-            complex(  4.7465641991565066     ,  0.0000000000000000     ),
-            complex( -2499.9999999999991     ,  967.83657009607577     ),
-            complex( -537.98548101331721     , -2157.4401624693646     )]
+            complex(  4.7465641991565066     ,  0.0000000000000000     )]
 
         values = wavefunctions.ixxxxx(P, M, NHEL, NRST)
         self.assertEqual(len(values), len(solution))
@@ -378,13 +376,13 @@ class test_wavefunctions(unittest.TestCase):
 
         NHEL=1
         NRST=1
-        solution = [
+        solution = [            
+            complex(  -2499.9999999999991     , 967.83657009607577     ),
+            complex(  -537.98548101331721     , -2157.4401624693646     ),
             complex(  4.7465641991565066     ,  0.0000000000000000     ),
             complex(  1.7524192771692548     ,  7.0275869209877353     ),
             complex(  38.466940073898407     ,  0.0000000000000000     ),
-            complex(  14.201895200573350     ,  56.952724878721050     ),
-            complex(  2499.9999999999991     , -967.83657009607577     ),
-            complex(  537.98548101331721     ,  2157.4401624693646     )]
+            complex(  14.201895200573350     ,  56.952724878721050     )]
 
         values = wavefunctions.ixxxxx(P, M, NHEL, NRST)
         self.assertEqual(len(values), len(solution))
@@ -393,13 +391,13 @@ class test_wavefunctions(unittest.TestCase):
 
         NHEL=-1
         NRST=1
-        solution = [
+        solution = [            
+            complex(  -2499.9999999999991     , 967.83657009607577     ),
+            complex(  -537.98548101331721     , -2157.4401624693646     ),
             complex( -14.201895200573350     ,  56.952724878721050     ),
             complex(  38.466940073898407     ,  0.0000000000000000     ),
             complex( -1.7524192771692548     ,  7.0275869209877353     ),
-            complex(  4.7465641991565066     ,  0.0000000000000000     ),
-            complex(  2499.9999999999991     , -967.83657009607577     ),
-            complex(  537.98548101331721     ,  2157.4401624693646     )]
+            complex(  4.7465641991565066     ,  0.0000000000000000     )]
 
             
         
@@ -419,12 +417,12 @@ class test_wavefunctions(unittest.TestCase):
         NHEL=1
         NRST=1
         solution=[
+                        complex(  2499.9999999999991     , -967.83657009607577     ),
+            complex(  537.98548101331721     ,  2157.4401624693646     ),
             complex(  38.466940073898407     ,  0.0000000000000000     ),
             complex(  14.201895200573350     , -56.952724878721050     ),
             complex(  4.7465641991565066     ,  0.0000000000000000     ),
-            complex(  1.7524192771692548     , -7.0275869209877353     ),
-            complex(  2499.9999999999991     , -967.83657009607577     ),
-            complex(  537.98548101331721     ,  2157.4401624693646     )]
+            complex(  1.7524192771692548     , -7.0275869209877353     )]
  
         values = wavefunctions.oxxxxx(P, M, NHEL, NRST)
         self.assertEqual(len(values), len(solution))
@@ -435,12 +433,12 @@ class test_wavefunctions(unittest.TestCase):
         NHEL=1
         NRST=-1
         solution=[
+                        complex( -2499.9999999999991     ,  967.83657009607577     ),
+            complex( -537.98548101331721     , -2157.4401624693646     ),
             complex( -1.7524192771692548     , -7.0275869209877353     ),
             complex(  4.7465641991565066     ,  0.0000000000000000     ),
             complex(  14.201895200573350     ,  56.952724878721050     ),
-            complex( -38.466940073898407     , -0.0000000000000000     ),
-            complex( -2499.9999999999991     ,  967.83657009607577     ),
-            complex( -537.98548101331721     , -2157.4401624693646     )]
+            complex( -38.466940073898407     , -0.0000000000000000     )]
 
         values = wavefunctions.oxxxxx(P, M, NHEL, NRST)
         self.assertEqual(len(values), len(solution))
@@ -450,12 +448,13 @@ class test_wavefunctions(unittest.TestCase):
         NHEL=-1
         NRST=1
         solution=[
+            complex(  2499.9999999999991     , -967.83657009607577     ),
+            complex(  537.98548101331721     ,  2157.4401624693646     ),
             complex( -1.7524192771692548     , -7.0275869209877353     ),
             complex(  4.7465641991565066     ,  0.0000000000000000     ),
             complex( -14.201895200573350     , -56.952724878721050     ),
             complex(  38.466940073898407     ,  0.0000000000000000     ),
-            complex(  2499.9999999999991     , -967.83657009607577     ),
-            complex(  537.98548101331721     ,  2157.4401624693646     )]
+]
 
         values = wavefunctions.oxxxxx(P, M, NHEL, NRST)
         self.assertEqual(len(values), len(solution))
@@ -466,12 +465,13 @@ class test_wavefunctions(unittest.TestCase):
         NHEL=-1
         NRST=-1
         solution=[
+            complex( -2499.9999999999991     ,  967.83657009607577     ),
+            complex( -537.98548101331721     , -2157.4401624693646     ),
             complex( -38.466940073898407     , -0.0000000000000000     ),
             complex( -14.201895200573350     ,  56.952724878721050     ),
             complex(  4.7465641991565066     ,  0.0000000000000000     ),
             complex(  1.7524192771692548     , -7.0275869209877353     ),
-            complex( -2499.9999999999991     ,  967.83657009607577     ),
-            complex( -537.98548101331721     , -2157.4401624693646     )]
+]
 
         values = wavefunctions.oxxxxx(P, M, NHEL, NRST)
         self.assertEqual(len(values), len(solution))
@@ -487,12 +487,13 @@ class test_wavefunctions(unittest.TestCase):
         NHEL=1
         NRST=1
         solution=[
+            complex(  2500.0000000000000     ,  2500.0000000000000     ),
+            complex(  0.0000000000000000     ,  0.0000000000000000     ),
             complex(  0.0000000000000000     ,  0.0000000000000000     ),
             complex(-0.70710678118654757     ,  0.0000000000000000     ),
             complex(  0.0000000000000000     , 0.70710678118654757     ),
             complex(  0.0000000000000000     ,  0.0000000000000000     ),
-            complex(  2500.0000000000000     ,  2500.0000000000000     ),
-            complex(  0.0000000000000000     ,  0.0000000000000000     )]
+]
 
         values = wavefunctions.vxxxxx(P, M, NHEL, NRST)
         self.assertEqual(len(values), len(solution))
@@ -502,12 +503,13 @@ class test_wavefunctions(unittest.TestCase):
         NHEL=1
         NRST=-1
         solution=[
+            complex( -2500.0000000000000     , -2500.0000000000000     ),
+            complex( -0.0000000000000000     , -0.0000000000000000     ),
             complex(  0.0000000000000000     ,  0.0000000000000000     ),
             complex(-0.70710678118654757     ,  0.0000000000000000     ),
             complex(  0.0000000000000000     ,-0.70710678118654757     ),
             complex(  0.0000000000000000     ,  0.0000000000000000     ),
-            complex( -2500.0000000000000     , -2500.0000000000000     ),
-            complex( -0.0000000000000000     , -0.0000000000000000     )]
+]
 
         values = wavefunctions.vxxxxx(P, M, NHEL, NRST)
         self.assertEqual(len(values), len(solution))
@@ -517,12 +519,12 @@ class test_wavefunctions(unittest.TestCase):
         NHEL=-1
         NRST=-1
         solution=[
+            complex( -2500.0000000000000     , -2500.0000000000000     ),
+            complex( -0.0000000000000000     , -0.0000000000000000     ),
             complex(  0.0000000000000000     ,  0.0000000000000000     ),
             complex( 0.70710678118654757     ,  0.0000000000000000     ),
             complex(  0.0000000000000000     ,-0.70710678118654757     ),
-            complex( -0.0000000000000000     ,  0.0000000000000000     ),
-            complex( -2500.0000000000000     , -2500.0000000000000     ),
-            complex( -0.0000000000000000     , -0.0000000000000000     )]
+            complex( -0.0000000000000000     ,  0.0000000000000000     )]
 
         values = wavefunctions.vxxxxx(P, M, NHEL, NRST)
         self.assertEqual(len(values), len(solution))
@@ -532,12 +534,13 @@ class test_wavefunctions(unittest.TestCase):
         NHEL=-1
         NRST=1
         solution=[
+            complex(  2500.0000000000000     ,  2500.0000000000000     ),
+            complex(  0.0000000000000000     ,  0.0000000000000000     ),
             complex(  0.0000000000000000     ,  0.0000000000000000     ),
             complex( 0.70710678118654757     ,  0.0000000000000000     ),
             complex(  0.0000000000000000     , 0.70710678118654757     ),
             complex( -0.0000000000000000     ,  0.0000000000000000     ),
-            complex(  2500.0000000000000     ,  2500.0000000000000     ),
-            complex(  0.0000000000000000     ,  0.0000000000000000     )]
+]
         
         values = wavefunctions.vxxxxx(P, M, NHEL, NRST)
         self.assertEqual(len(values), len(solution))

@@ -21,6 +21,7 @@ import copy
 import fractions
 import operator
 import re
+import array
 
 import madgraph.core.color_algebra as color_algebra
 import madgraph.core.diagram_generation as diagram_generation
@@ -191,6 +192,7 @@ class ColorBasis(dict):
                 continue
             
             # Build the new element
+            assert type(col_str) == color_algebra.ColorString 
             mod_col_str = col_str.create_copy()
 
             # Replace summed (negative) internal indices

@@ -78,57 +78,13 @@ C ----------
 	  QRES=(0.0e0_16,0.0e0_16)
 
       IF (.NOT.MP_DONE) THEN
-	    DO I=1,NEXTERNAL
-		  DO J=0,3
-		    QPP(J,I)=PS(J,I)
-		  ENDDO
-		ENDDO
-		CALL MP_UPDATE_AS_PARAM()
-		CALL IMPROVE_PS_POINT_PRECISION(QPP)
-	    CALL MP_COMPUTE_LOOP_COEFS(QPP,DUMMY)
+	    CALL MP_COMPUTE_LOOP_COEFS(PS,DUMMY)
 	    MP_DONE=.TRUE.
 	  ENDIF
 
 	  CALL MP_EVAL_POLY(LOOPCOEFS(0,ID),RANK,-QQ,QRES)
 
 	  RES=QRES
-
-	  END
-
-	  SUBROUTINE IMPROVE_PS_POINT_PRECISION(P)
-C  
-C CONSTANTS 
-C 
-	  INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
-	  %(real_mp_format)s     ZERO
-	  PARAMETER (ZERO=0E0_16)
-C  
-C ARGUMENTS 
-C
-      %(real_mp_format)s P(0:3,NEXTERNAL)
-C
-C LOCAL VARIABLES 
-C
-      INTEGER I,J
-	  %(real_mp_format)s BUFF
-C  
-C GLOBAL VARIABLES
-C 
-      include 'mp_coupl_same_name.inc'
-
-      %(force_onshell)s
-
-	  DO I=0,3
-	    BUFF=0.0E0_16 
-        DO J=1,%(n_initial)d
-		  BUFF=BUFF+P(I,J)
-		ENDDO
-		DO J=%(n_initial)d+1,NEXTERNAL-1
-		  BUFF=BUFF-P(I,J)		
-		ENDDO
-		P(I,NEXTERNAL)=BUFF
-	  ENDDO
 
 	  END
 

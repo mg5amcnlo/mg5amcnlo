@@ -34,18 +34,37 @@ logger = logging.getLogger('madgraph.fks_born_helas_objects')
 
 class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
     """class to generate the helas calls for a FKSMultiProcess"""
+
+    def get_sorted_keys(self):
+        """Return particle property names as a nicely sorted list."""
+        keys = super(FKSMultiProcessFromBorn, self).get_sorted_keys()
+        keys += ['real_matrix_elements']
+        return keys
+
+    def filter(self, name, value):
+        """Filter for valid leg property values."""
+
+        if name == 'real_matrix_elements':
+            if not isinstance(value, helas_objetcs.HelasMultiProcess):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list for real_matrix_element " % str(value)                             
     
     def __init__(self, fksmulti, gen_color =True, decay_ids =[]):
         """Initialization from a FKSMultiProcess"""
 
         #swhich the other loggers off
-        loggers_off = [logging.getLogger('madgraph.diagram_generation') ]
+        loggers_off = [logging.getLogger('madgraph.diagram_generation'),
+                       logging.getLogger('madgraph.helas_objects')]
         old_levels = [logg.getEffectiveLevel() for logg in loggers_off]
         for logg in loggers_off:
             logg.setLevel(logging.WARNING)
 
+        logger.info('Generating real emission matrix-elements...')
+        self['real_matrix_elements'] = self.generate_matrix_elements(
+                copy.copy(fksmulti['real_amplitudes']), combine_matrix_elements = False)
+
         self['matrix_elements'] = self.generate_matrix_elements_fks(
-                                fksmulti['born_processes'], 
+                                fksmulti, 
                                 gen_color, decay_ids)
 
         for i, logg in enumerate(loggers_off):
@@ -72,7 +91,7 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
         return self.get('matrix_elements')        
         
 
-    def generate_matrix_elements_fks(self, fksprocs, gen_color = True,
+    def generate_matrix_elements_fks(self, fksmulti, gen_color = True,
                                  decay_ids = []):
         """Generate the HelasMatrixElements for the amplitudes,
         identifying processes with identical matrix elements, as
@@ -82,6 +101,7 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
         particle ids, since those should not be combined even if
         matrix element is identical."""
 
+        fksprocs = fksmulti['born_processes']
         assert isinstance(fksprocs, fks_born.FKSProcessFromBornList), \
                   "%s is not valid FKSProcessFromBornList" % \
                    repr(FKSProcessFromBornList)
@@ -100,15 +120,11 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
         while fksprocs:
             # Pop the amplitude to save memory space
             proc = fksprocs.pop(0)
-#            if isinstance(proc, diagram_generation.DecayChainAmplitude):
-#                matrix_element_list = HelasDecayChainProcess(amplitude).\
-#                                      combine_decay_chain_processes()
-#            else:
             logger.info("Generating Helas calls for FKS process %s" % \
                          proc.born_amp.get('process').nice_string().\
                                            replace('Process', 'process'))
-            matrix_element_list = [FKSHelasProcessFromBorn(proc, real_me_list,
-                                                           me_id_list,
+            matrix_element_list = [FKSHelasProcessFromBorn(proc, self['real_matrix_elements'],
+                                                           fksmulti['real_amplitudes'],
                                                           decay_ids=decay_ids,
                                                           gen_color=False)]
             for matrix_element in matrix_element_list:
@@ -121,9 +137,6 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
                     # processes for that matrix element
                     other = \
                           matrix_elements[matrix_elements.index(matrix_element)]
-                    other.add_process(matrix_element)
-                    logger.info("Combining process with %s" % \
-                      other.born_matrix_element.get('processes')[0].nice_string().replace('Process: ', ''))
                 except ValueError:
                     # Otherwise, if the matrix element has any diagrams,
                     # add this matrix element.
@@ -151,8 +164,6 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
                               "Reusing existing color information for %s" % \
                               matrix_element.born_matrix_element.get('processes')[0].nice_string().\
                                                  replace('Process', 'process'))
-                            
-                            
                         except ValueError:
                             # If not, create color basis and color
                             # matrix accordingly
@@ -167,6 +178,10 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
                               "Processing color information for %s" % \
                               matrix_element.born_matrix_element.get('processes')[0].nice_string().\
                                              replace('Process', 'process'))
+                else:
+                    # this is in order not to handle valueErrors coming from other plaeces,
+                    # e.g. from the add_process function
+                    other.add_process(matrix_element)
 
                 if gen_color:
                     matrix_element.born_matrix_element.set('color_basis',
@@ -190,9 +205,10 @@ class FKSHelasProcessFromBorn(object):
     -- list of FKSHelasRealProcesses
     -- color links"""
     
-    def __init__(self, fksproc=None, me_list =[], me_id_list=[], **opts):#test written
+    def __init__(self, fksproc=None, real_me_list =[], real_amp_list=[], **opts):#test written
         """ constructor, starts from a FKSProcessFromBorn, 
-        sets reals and color links"""
+        sets reals and color links. Real_me_list and real_amp_list are the lists of pre-genrated
+        matrix elements in 1-1 correspondence wiht the amplitudes"""
         
         if fksproc != None:
             self.born_matrix_element = helas_objects.HelasMatrixElement(
@@ -201,13 +217,11 @@ class FKSHelasProcessFromBorn(object):
             self.orders = fksproc.born_proc.get('orders')
             real_amps_new = []
             for proc in fksproc.real_amps:
-                fksreal_me = FKSHelasRealProcess(proc, me_list, me_id_list, **opts)
+                fksreal_me = FKSHelasRealProcess(proc, real_me_list, real_amp_list, **opts)
                 try:
                     other = self.real_processes[self.real_processes.index(fksreal_me)]
                     other.matrix_element.get('processes').extend(\
                             fksreal_me.matrix_element.get('processes') )
-#                    logger.info("Combining real process with %s" % \
-#                            other.matrix_element.get('processes')[0].nice_string().replace('Process: ', ''))
                 except ValueError:
                     if fksreal_me.matrix_element.get('processes') and \
                             fksreal_me.matrix_element.get('diagrams'):
@@ -220,39 +234,24 @@ class FKSHelasProcessFromBorn(object):
             else: 
                 self.virt_matrix_element = None
 
-################################################################################
-
-#            self.matrix_element = helas_objects.HelasMatrixElement(
-#                                    fksrealproc.amplitude, **opts)
-#
-#
-#                try:
-#                    # If an identical matrix element is already in the list,
-#                    # then simply add this process to the list of
-#                    # processes for that matrix element
-#                    other = \
-#                          matrix_elements[matrix_elements.index(matrix_element)]
-#                    other.add_process(matrix_element)
-#                    logger.info("Combining process with %s" % \
-#                      other.born_matrix_element.get('processes')[0].nice_string().replace('Process: ', ''))
-#                except ValueError:
-#                    # Otherwise, if the matrix element has any diagrams,
-#                    # add this matrix element.
-#                    if matrix_element.born_matrix_element.get('processes') and \
-#                           matrix_element.born_matrix_element.get('diagrams'):
-#                        matrix_elements.append(matrix_element)
-################################################################################
-
-
             col_basis = color_amp.ColorBasis()
             col_basis.build(fksproc.born_amp)
             self.color_links = fks_common.insert_color_links(col_basis,
                                 col_basis.create_color_dict_list(fksproc.born_amp),
                                 fksproc.find_color_links())    
 
-            for i, rb_link in enumerate(fksproc.link_rb_confs()):
-                self.real_processes[i].bornfromreal = rb_link
 
+    def get_fks_info_list(self):
+        """Returns the list of the fks infos for all processes in the format
+        {n_me, fks_info}, where n_me is the number of real_matrix_element the configuration
+        belongs to"""
+        info_list = []
+        for n, real in enumerate(self.real_processes):
+            pdgs = [l['id'] for l in real.matrix_element.get_base_amplitude()['process']['legs']]
+            for info in real.fks_infos:
+                info_list.append({'n_me' : n + 1,'pdgs' : pdgs, 'fks_info' : info})
+        return info_list
+        
 
     def get_lh_pdg_string(self):
         """Returns the pdgs of the legs in the form "i1 i2 -> f1 f2 ...", which may
@@ -310,12 +309,25 @@ class FKSHelasProcessFromBorn(object):
         return True
     
     def add_process(self, other): #test written
-        """adds processes from born and reals of other to itself"""
+        """adds processes from born and reals of other to itself. Note that 
+        corresponding real processes may not be in the same order. This is 
+        taken care of by constructing the list of self_reals."""
         self.born_matrix_element.get('processes').extend(
                 other.born_matrix_element.get('processes'))
-        for real1, real2 in zip(self.real_processes, other.real_processes):
-            real1.matrix_element.get('processes').extend(
-                real2.matrix_element.get('processes'))  
+        self_reals = [real.matrix_element for real in self.real_processes]
+        for oth_real in other.real_processes:
+            this_real = self.real_processes[self_reals.index(oth_real.matrix_element)]
+            #need to store pdg lists rather than processes in order to keep mirror processes different
+            this_pdgs = [[leg['id'] for leg in proc['legs']] \
+                    for proc in this_real.matrix_element['processes']]
+            for oth_proc in oth_real.matrix_element['processes']:
+                oth_pdgs = [leg['id'] for leg in oth_proc['legs']]
+                if oth_pdgs not in this_pdgs:
+                    this_real.matrix_element['processes'].append(oth_proc)
+                    this_pdgs.append(oth_pdgs)
+
+ #                       if p not in self.real_processes[\
+ #                       self_reals.index(oth_real.matrix_element)].matrix_element['processes']])
             
     
 class FKSHelasRealProcess(object): #test written
@@ -330,40 +342,41 @@ class FKSHelasRealProcess(object): #test written
     -- is_to_integrate
     -- leg permutation<<REMOVED"""
     
-    def __init__(self, fksrealproc=None, me_list = [], me_id_list =[], **opts):
+    def __init__(self, fksrealproc=None, real_me_list = [], real_amp_list =[], **opts):
         """constructor, starts from a fksrealproc and then calls the
         initialization for HelasMatrixElement.
-        Sets i/j fks and the permutation"""
+        Sets i/j fks and the permutation.
+        real_me_list and real_amp_list are the lists of pre-generated matrix elements in 1-1 
+        correspondance with the amplitudes"""
         
         if fksrealproc != None:
             self.isfinite = False
             self.colors = fksrealproc.colors
- ##           self.permutation= fksrealproc.permutation
-            self.i_fks = fksrealproc.i_fks
-            self.j_fks = fksrealproc.j_fks
-            self.ijglu = fksrealproc.ijglu
-            self.ij = fksrealproc.ij
-            self.need_color_links = fksrealproc.need_color_links
+            self.fks_infos = fksrealproc.fks_infos
             self.is_to_integrate = fksrealproc.is_to_integrate
-            self.is_nbody_only = fksrealproc.is_nbody_only
-            self.bornfromreal = {}
-       #     print "in FKSHelasRealProc  i ", self.i_fks, "   j ", self.j_fks
-            
-            #try:
-            #    matrix_element = copy.copy(me_list[me_id_list.index(pdgs)])
-            #    matrix_element.set('processes', 
-            #                       copy.copy(matrix_element.get('processes')))
-            #    self.matrix_element = matrix_element
-            #except ValueError:
-            self.matrix_element = helas_objects.HelasMatrixElement(
-                                    fksrealproc.amplitude, **opts)
-            #generate the color for the real
-            self.matrix_element.get('color_basis').build(
-                                self.matrix_element.get('base_amplitude'))
-            self.matrix_element.set('color_matrix',
-                             color_amp.ColorMatrix(
-                                self.matrix_element.get('color_basis')))
-            self.fks_j_from_i = fksrealproc.find_fks_j_from_i()
+
+            if len(real_me_list) != len(real_amp_list):
+                raise fks_common.FKSProcessError(
+                        'not same number of amplitudes and matrix elements: %d, %d' % \
+                                (len(real_amp_list), len(real_me_list)))
+            if real_me_list and real_amp_list:
+                self.matrix_element = real_me_list[real_amp_list.index(fksrealproc.amplitude)]
+            else:
+                logger.info('generating matrix element...')
+                self.matrix_element = helas_objects.HelasMatrixElement(
+                                        fksrealproc.amplitude, **opts)
+                #generate the color for the real
+                self.matrix_element.get('color_basis').build(
+                                    self.matrix_element.get('base_amplitude'))
+                self.matrix_element.set('color_matrix',
+                                 color_amp.ColorMatrix(
+                                    self.matrix_element.get('color_basis')))
+            #self.fks_j_from_i = fksrealproc.find_fks_j_from_i()
+            self.fks_j_from_i = fksrealproc.fks_j_from_i
+
+    def get_nexternal_ninitial(self):
+        """Refers to the matrix_element function"""
+        return self.matrix_element.get_nexternal_ninitial()
     
     def __eq__(self, other):
         """Equality operator:

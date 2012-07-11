@@ -1,23 +1,30 @@
 #!/bin/bash
 
-
-if [[ -e res.txt ]]; then
-    rm -r res.txt
+# find the correct directory
+if [[ ! -d ./SubProcesses ]]; then
+    cd ../
+fi
+if [[ -d ./SubProcesses ]]; then
+    cd SubProcesses
 fi
 
+
+if [[ -e res.txt ]]; then
+    rm -f res.txt
+fi
 if [[ -e dirs.txt ]]; then
-    rm -r dirs.txt
+    rm -f dirs.txt
 fi
 
 touch res.txt
 touch dirs.txt
 NTOT=0
 for dir in "$@" ; do
-    let NTOT=$NTOT+`ls -d P*/R*/$dir | wc -l`
-    ls -d P*/R*/$dir >> dirs.txt
-    grep -H 'Final result' P*/R*/$dir/log.txt >> res.txt
+    N=`ls -d P*/$dir | wc -l`
+    NTOT=`expr $NTOT + $N`
+    ls -d P0*/$dir >> dirs.txt
+    grep -H 'Final result:' P0*/$dir/log.txt >> res.txt
 done
-
 
 sed -i.bak s/"\+\/\-"/" \+\/\-"/ res.txt
 

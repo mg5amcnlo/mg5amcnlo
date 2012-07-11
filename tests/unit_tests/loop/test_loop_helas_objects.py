@@ -43,6 +43,7 @@ import madgraph.iolibs.save_load_object as save_load_object
 import models.import_ufo as models
 from madgraph import MadGraph5Error
 
+
 _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
@@ -57,7 +58,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
     
     def setUp(self):
         """load the NLO toy model"""
-        
+
 #        self.myloopmodel = models.import_full_model(os.path.join(\
 #            _input_file_path,'LoopModelTest'))
         self.myloopmodel = models.import_full_model(os.path.join(\
@@ -364,8 +365,10 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                 origStructListlength=len(loopAmplitude['structure_repository'])
                 if not isinstance(reconstructedDiags[0], loop_base_objects.LoopUVCTDiagram) \
                    and reconstructedDiags[0]['type']!=0:
+                    start_leg=reconstructedDiags[0].get_starting_loop_line()
+                    finish_leg=reconstructedDiags[0].get_finishing_loop_line()
                     reconstructedDiags[0].tag(loopAmplitude['structure_repository'],\
-                      len(process['legs'])+1,len(process['legs'])+2,process)
+                      start_leg.get('number'),finish_leg.get('number'),process)
                     # Then make sure it leads to the same canonical tag
                     self.assertEqual(diag['canonical_tag'],\
                                  reconstructedDiags[0]['canonical_tag'])

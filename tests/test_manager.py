@@ -40,7 +40,7 @@ import optparse
 import os
 import re
 import unittest
-
+import time
 
 #Add the ROOT dir to the current PYTHONPATH
 root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -113,8 +113,9 @@ class TestFinder(list):
             Uses to have smart __iter__ and __contain__ functions
         """
         if len(self) == 0:
+            start = time.time()
             self.collect_dir(self.package, checking=True)
-
+            print 'loading test takes %ss'  % (time.time()-start)
     def __iter__(self):
         """ Check that a collect was performed (do it if needed) """
         self._check_if_obj_build()
@@ -127,7 +128,7 @@ class TestFinder(list):
 
     def collect_dir(self, directory, checking=True):
         """ Find the file and the subpackage in this package """
-
+        
         #ensures that we are at root position
         move = False
         if self.launch_pos == '':
@@ -156,7 +157,8 @@ class TestFinder(list):
 
     def collect_file(self, filename, checking=True):
         """ Find the different class instance derivated of TestCase """
-
+        
+        start = time.time()
         pyname = self.passin_pyformat(filename)
         __import__(pyname)
         obj = sys.modules[pyname]
@@ -176,6 +178,10 @@ class TestFinder(list):
 
                 self.collect_function(class_, checking=check_inside, \
                                           base=pyname)
+                
+        time_to_load = time.time() - start
+        if time_to_load > 0.1:
+            logging.critical("file %s takes a long time to load (%.4fs)" % (pyname, time_to_load))
 
     def collect_function(self, class_, checking=True, base=''):
         """

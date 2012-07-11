@@ -15,7 +15,7 @@ C
 C
 C     LOCAL
 C
-      integer i,ninvar,nconfigs,j,l,l1,l2,ndim
+      integer i,j,l,l1,l2,ndim
       double precision dsig,tot,mean,sigma
       integer npoints
       double precision x,y,jac,s1,s2,xmin
@@ -38,17 +38,13 @@ cc
       include 'run.inc'
       include 'coupl.inc'
       
-      integer           mincfig, maxcfig
-      common/to_configs/mincfig, maxcfig
+      integer           iconfig
+      common/to_configs/iconfig
 
 
       double precision twgt, maxwgt,swgt(maxevents)
       integer                             lun, nw
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw
-
-c--masses
-      double precision pmass(nexternal)
-      common/to_mass/  pmass
 
 c Vegas stuff
       integer ipole
@@ -94,11 +90,6 @@ c For tests of virtuals
      &                 total_wgt_sum_min
 
       integer n_mp, n_disc
-c     $B$ new_def $E$  this is a tag for MadWeigth, Don't edit this line
-
-c      double precision xsec,xerr
-c      integer ncols,ncolflow(maxamps),ncolalt(maxamps),ic
-c      common/to_colstats/ncols,ncolflow,ncolalt,ic
 C-----
 C  BEGIN CODE
 C-----  
@@ -118,43 +109,25 @@ c
       open(unit=lun,status='scratch')
       nsteps=2
       call setrun                !Sets up run parameters
-c     $B$ setpara $B$ ! this is a tag for MadWeight. Don't edit this line
       call setpara('param_card.dat')   !Sets up couplings and masses
-c     $E$ setpara $E$ ! this is a tag for MadWeight. Don't edit this line
-      include 'pmass.inc'        !Sets up particle masses
-      call setcuts               !Sets up cuts 
+      call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
-      nconfigs = 1
 c     
 c     Get user input
 c
       write(*,*) "getting user params"
-      call get_user_params(ncall,itmax,mincfig,irestart,idstring,savegrid)
+      call get_user_params(ncall,itmax,iconfig,irestart,idstring
+     &     ,savegrid)
       if(irestart.eq.1)then
         flat_grid=.true.
       else
         flat_grid=.false.
       endif
-      call setfksfactor(mincfig)
-      maxcfig=mincfig
-      ipole=mincfig
-      minvar(1,1) = 0              !This tells it to map things invarients
-      write(*,*) 'Attempting mappinvarients',nconfigs,nexternal
-      call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
-      write(*,*) "Completed mapping",nexternal
+c$$$      call setfksfactor(iconfig)
       ndim = 3*(nexternal-2)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
-      ninvar = ndim
-      do j=mincfig,maxcfig
-         if (abs(lpp(1)) .ge. 1 .and. abs(lpp(1)) .ge. 1) then
-            minvar(ndim-1,j)=ninvar-1
-            minvar(ndim,j) = ninvar
-         elseif (abs(lpp(1)) .ge. 1 .or. abs(lpp(1)) .ge. 1) then
-            minvar(ndim,j) = ninvar
-         endif
-      enddo
 
 c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
@@ -167,7 +140,7 @@ c at the NLO)
         stop
       endif
 
-      write(*,*) "about to integrate ", ndim,ncall,itmax,ninvar,nconfigs
+      write(*,*) "about to integrate ", ndim,ncall,itmax,iconfig
 
       if(doVirtTest)then
         vobmax=-1.d8
@@ -191,13 +164,13 @@ c at the NLO)
       total_wgt_sum_min=0d0
 
       if(savegrid)then
-        call integrate(initplot,sigint,idstring,itmax,irestart,ndim,ncall,
-     #                 res,err,chi2a,savegrid)
-        usexinteg=.false.
+         call integrate(initplot,sigint,idstring,itmax,irestart,ndim
+     &        ,ncall,res,err,chi2a,savegrid)
+         usexinteg=.false.
       else
-        call initplot
-        call xinteg(sigint,ndim,itmax,ncall,res,err)
-        usexinteg=.true.
+         call initplot
+         call xinteg(sigint,ndim,itmax,ncall,res,err)
+         usexinteg=.true.
       endif
 
       write (*,*) ''
@@ -301,34 +274,162 @@ c$$$      write(*,*) 'n_mp  =',n_mp,'    n_disc=',n_disc
       function sigint(xx,peso)
 c From dsample_fks
       implicit none
+      include 'nexternal.inc'
       real*8 sigint,peso,xx(58)
       integer ione
       parameter (ione=1)
-      integer ndim,ipole
-      common/tosigint/ndim,ipole
-      integer           mincfig, maxcfig
-      common/to_configs/mincfig, maxcfig
+      integer ndim
+      common/tosigint/ndim
+      integer           iconfig
+      common/to_configs/iconfig
       integer i
-      double precision wgt,dsig
-      double precision x(99),p(0:3,99)
-      common/cxvegas/x
+      double precision wgt,dsig,ran2,rnd
+      external ran2
+      double precision x(99),p(0:3,nexternal)
+      include 'nFKSconfigs.inc'
+      include 'reweight_all.inc'
+      integer nfksprocess_all
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      character*4 abrv
+      common /to_abrv/ abrv
+      logical nbody
+      common/cnbody/nbody
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      logical sum,firsttime
+      parameter (sum=.false.)
+      data firsttime /.true./
+      logical foundB(2)
+      integer nFKSprocessBorn(2)
+      save nFKSprocessBorn,foundB
+      double precision vol,sigintR
+      integer itotalpoints
+      common/ctotalpoints/itotalpoints
 c
       do i=1,99
-        if(i.le.ndim)then
-         x(i)=xx(i)
-        else
-          x(i)=0.d0
-        endif
+         if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi')
+     &        then
+            if(i.le.ndim-3)then
+               x(i)=xx(i)
+            elseif(i.le.ndim) then
+               x(i)=ran2()      ! Choose them flat when not including real-emision
+            else
+               x(i)=0.d0
+            endif
+         else
+            if(i.le.ndim)then
+               x(i)=xx(i)
+            else
+               x(i)=0.d0
+            endif
+         endif
       enddo
-      wgt=1.d0
-      call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ndim,wgt,x,p)
-      sigint = dsig(p,wgt,peso)
+
+      sigint=0d0
+
+c Find the nFKSprocess for which we compute the Born-like contributions
+      if (firsttime) then
+         firsttime=.false.
+         foundB(1)=.false.
+         foundB(2)=.false.
+         do nFKSprocess=1,fks_configs
+            call fks_inc_chooser()
+            if (particle_type(i_fks).eq.8) then
+               if (j_fks.le.nincoming) then
+                  foundB(1)=.true.
+                  nFKSprocessBorn(1)=nFKSprocess
+               else
+                  foundB(2)=.true.
+                  nFKSprocessBorn(2)=nFKSprocess
+               endif
+            endif
+         enddo
+         write (*,*) 'Total number of FKS directories is', fks_configs
+         write (*,*) 'For the Born we use nFKSprocesses  #',
+     &        nFKSprocessBorn
+      endif
+         
+c
+c Compute the Born-like contributions with nbody=.true.
+c THIS CAN BE OPTIMIZED
+c
+      call get_MC_integer(1,fks_configs,nFKSprocess,vol)
+      nFKSprocess_all=nFKSprocess
+      call fks_inc_chooser()
+      if (j_fks.le.nincoming) then
+         if (.not.foundB(1)) then
+            write(*,*) 'Trying to generate Born momenta with '/
+     &           /'initial state j_fks, but there is no '/
+     &           /'configuration with i_fks a gluon and j_fks '/
+     &           /'initial state'
+            stop
+         endif
+         nFKSprocess=nFKSprocessBorn(1)
+      else
+         if (.not.foundB(2)) then
+            write(*,*) 'Trying to generate Born momenta with '/
+     &           /'final state j_fks, but there is no configuration'/
+     &           /' with i_fks a gluon and j_fks final state'
+            stop
+         endif
+         nFKSprocess=nFKSprocessBorn(2)
+      endif
+      nbody=.true.
+      nFKSprocess_used=nFKSprocess
+      nFKSprocess_used_Born=nFKSprocess
+      call fks_inc_chooser()
+      call leshouche_inc_chooser()
+      call setcuts
+      call setfksfactor(iconfig)
+      wgt=1d0
+
+      call generate_momenta(ndim,iconfig,wgt,x,p)
+      sigint = sigint+dsig(p,wgt,peso)
+c
+c Compute the subtracted real-emission corrections either as an explicit
+c sum or a Monte Carlo sum.
+c      
+      if (abrv.ne.'born' .and. abrv.ne.'grid' .and.
+     &     abrv(1:2).ne.'vi') then
+         nbody=.false.
+         if (sum) then
+c THIS CAN BE OPTIMIZED
+            do nFKSprocess=1,fks_configs
+               nFKSprocess_used=nFKSprocess
+               call fks_inc_chooser()
+               call leshouche_inc_chooser()
+               call setcuts
+               call setfksfactor(iconfig)
+               wgt=1d0
+               call generate_momenta(ndim,iconfig,wgt,x,p)
+               sigint = sigint+dsig(p,wgt,peso)
+            enddo
+         else                   ! Monte Carlo over nFKSprocess
+            nFKSprocess=nFKSprocess_all
+            nFKSprocess_used=nFKSprocess
+c THIS CAN BE OPTIMIZED
+            call fks_inc_chooser()
+            call leshouche_inc_chooser()
+            call setcuts
+            call setfksfactor(iconfig)
+c     The variable 'vol' is the size of the cell for the MC over
+c     nFKSprocess. Need to divide by it here to correctly take into
+c     account this Jacobian
+            wgt=1d0/vol
+            call generate_momenta(ndim,iconfig,wgt,x,p)
+            sigintR = dsig(p,wgt,peso)
+            call fill_MC_integer(1,nFKSprocess,abs(sigintR)*peso*vol)
+            sigint = sigint+ sigintR
+         endif
+      endif
+      if (sigint.ne.0d0)itotalpoints=itotalpoints+1
       return
       end
 
-     
-c     $B$ get_user_params $B$ ! tag for MadWeight
-c     change this routine to read the input in a file
 c
       subroutine get_user_params(ncall,itmax,iconfig,
      #                           irestart,idstring,savegrid)
@@ -339,6 +440,7 @@ c**********************************************************************
 c
 c     Constants
 c
+      include 'genps.inc'
       include 'nexternal.inc'
 c
 c     Arguments
@@ -367,12 +469,20 @@ c
       character*4 abrv
       common /to_abrv/ abrv
 
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
 
       integer nvtozero
       logical doVirtTest
       common/cvirt2test/nvtozero,doVirtTest
+c
+c To convert diagram number to configuration
+c
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      integer mapconfig(0:lmaxconfigs)
+      include 'born_conf.inc'
 c
 c Vegas stuff
 c
@@ -431,6 +541,12 @@ c-----
       write(*,10) 'Enter Configuration Number: '
       read(*,*) dconfig
       iconfig = int(dconfig)
+      do i=1,mapconfig(0)
+         if (iconfig.eq.mapconfig(i)) then
+            iconfig=i
+            exit
+         endif
+      enddo
       write(*,12) 'Running Configuration Number: ',iconfig
 c
 c Enter parameters that control Vegas grids
@@ -454,27 +570,27 @@ c
       write (*,*) " a pure n-body integration (no S functions)"
       read(5,*) abrvinput
       if(abrvinput(5:5).eq.'0')then
-        nbodyonly=.true.
+        nbody=.true.
       else
-        nbodyonly=.false.
+        nbody=.false.
       endif
       abrv=abrvinput(1:4)
 c Options are way too many: make sure we understand all of them
-      if(abrv.ne.'all '.and.abrv.ne.'born'.and.abrv.ne.'real'.and.
-     #   abrv.ne.'virt'.and.abrv.ne.'novi'.and.abrv.ne.'grid'.and.
-     #   abrv.ne.'viSC'.and.abrv.ne.'viLC'.and.abrv.ne.'novA'.and.
-     #   abrv.ne.'novB'.and.abrv.ne.'viSA'.and.abrv.ne.'viSB')then
+      if ( abrv.ne.'all '.and.abrv.ne.'born'.and.abrv.ne.'real'.and.
+     &     abrv.ne.'virt'.and.abrv.ne.'novi'.and.abrv.ne.'grid'.and.
+     &     abrv.ne.'viSC'.and.abrv.ne.'viLC'.and.abrv.ne.'novA'.and.
+     &     abrv.ne.'novB'.and.abrv.ne.'viSA'.and.abrv.ne.'viSB') then
         write(*,*)'Error in input: abrv is:',abrv
         stop
       endif
-      if(nbodyonly.and.abrv.ne.'born'.and.abrv(1:2).ne.'vi'
+      if(nbody.and.abrv.ne.'born'.and.abrv(1:2).ne.'vi'
      &     .and. abrv.ne.'grid')then
         write(*,*)'Error in driver: inconsistent input',abrvinput
         stop
       endif
 
       write (*,*) "doing the ",abrv," of this channel"
-      if(nbodyonly)then
+      if(nbody)then
         write (*,*) "integration Born/virtual with Sfunction=1"
       else
         write (*,*) "Normal integration (Sfunction != 1)"
@@ -495,19 +611,8 @@ c
          write(*,*) 'Using dconfig=',jconfig
          call DeCode(jconfig,lbw(1),3,nexternal)
          write(*,*) 'BW Setting ', (lbw(j),j=1,nexternal-2)
-c         do i=nexternal-3,0,-1
-c            if (jconfig .ge. 2**i) then
-c               lbw(i+1)=1
-c               jconfig=jconfig-2**i
-c            else
-c               lbw(i+1)=0
-c            endif 
-c            write(*,*) i+1, lbw(i+1)
-c         enddo
       endif
  10   format( a)
  12   format( a,i4)
       end
-c     $E$ get_user_params $E$ ! tag for MadWeight
-c     change this routine to read the input in a file
 c

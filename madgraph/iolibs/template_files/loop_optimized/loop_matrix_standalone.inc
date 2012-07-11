@@ -25,7 +25,7 @@ C
 C CONSTANTS
 C
       INTEGER    NLOOPGROUPS
-	  PARAMETER (NLOOPGROUPS=%(nloops)d)
+	  PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
 C  
 C ARGUMENTS 
 C  
@@ -55,7 +55,7 @@ C ----------
 
 	  end
 
-      SUBROUTINE SLOOPMATRIX(P,ANS)
+      SUBROUTINE SLOOPMATRIX(P_IN,ANS)
 C  
 %(info_lines)s
 C
@@ -95,12 +95,13 @@ C
 C  
 C ARGUMENTS 
 C  
-      %(real_dp_format)s P(0:3,NEXTERNAL)
+      %(real_dp_format)s P_IN(0:3,NEXTERNAL)
       %(real_dp_format)s ANS(3)
 C  
 C LOCAL VARIABLES 
 C  
       INTEGER I,J,K,H,DUMMY
+      %(real_dp_format)s P(0:3,NEXTERNAL)	  
 c RESCT STORES THE RESULT OBTAINED FROM ANY OF THE 7 POSSIBLE CT MODES.
 	  %(real_dp_format)s RESCT(3,0:6)
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
@@ -108,7 +109,6 @@ c RESCT STORES THE RESULT OBTAINED FROM ANY OF THE 7 POSSIBLE CT MODES.
 	  DATA NATTEMPTS/0/
 	  DATA IC/NEXTERNAL*1/
 	  %(real_dp_format)s BUFFR(3),BUFFR_BIS(3),TEMP1,TEMP2
-      %(real_mp_format)s QPP(0:3,NEXTERNAL)	  
 	  %(complex_dp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       %(complex_dp_format)s CFTOT
 	  LOGICAL FOUNDHELFILTER,FOUNDLOOPFILTER
@@ -163,6 +163,9 @@ C
 	  %(dp_born_amps_decl)s	  
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
 	  common/W/W  
+
+      %(complex_mp_format)s MPW(20,NWAVEFUNCS)
+	  common/MP_W/MPW
 
 	  %(complex_dp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_dp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
@@ -258,18 +261,21 @@ C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
   ENDDO 
 ENDIF
 
+DO I=1,NEXTERNAL
+  DO J=0,3
+    P(J,I)=P_IN(J,I)
+    PS(J,I)=P_IN(J,I)
+  ENDDO
+ENDDO
+
+CALL IMPROVE_PS_POINT_PRECISION(P)
+
 LSCALE=DSQRT((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1)+P(3,2))**2)
 
 %(set_reference)s
 
 NTRY=NTRY+1
 CHECKPHASE=(NTRY.LE.CHECKCYCLE).AND.(((.NOT.FOUNDLOOPFILTER).AND.USELOOPFILTER).OR.(.NOT.FOUNDHELFILTER))
-
-DO I=1,NEXTERNAL
-  DO J=0,3
-    PS(J,I)=P(J,I)
-  ENDDO
-ENDDO
 
 IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDHELFILTER)) THEN
 OPEN(1, FILE="HelFilter.dat", err=110, status='NEW',       action='WRITE')
@@ -310,7 +316,20 @@ ENDDO
 
 199 CONTINUE
 
-MP_DONE=.FALSE.
+C Check if we directly go to multiple precision
+IF (CTMODE.GE.4) THEN
+  CALL MP_COMPUTE_LOOP_COEFS(P,BUFFR_BIS)
+  MP_DONE=.TRUE.
+c Copy the qp wfs to the dp ones as they are used to setup the CT calls.
+  DO I=1,NWAVEFUNCS
+    DO J=1,MAXLWFSIZE+4
+      W(J,I)=MPW(J,I)
+    ENDDO
+  ENDDO
+  goto 300 
+ELSE
+  MP_DONE=.FALSE.
+ENDIF
 
 200 CONTINUE
 
@@ -340,6 +359,8 @@ DO H=1,NCOMB
   %(coef_construction)s  
   ENDIF
 ENDDO
+
+%(coef_merging)s
 
 BUFFR_BIS(1)=ANS(1)
 BUFFR_BIS(2)=ANS(2)
@@ -430,6 +451,10 @@ IF(.NOT.CHECKPHASE.AND.(CTMODERUN.EQ.-1)) THEN
 	  ANS(2)=0.5d0*(RESCT(2,1)+RESCT(2,2))
 	  ANS(3)=0.5d0*(RESCT(3,1)+RESCT(3,2))			  
 	ELSE
+	  IF (.NOT.MP_DONE) THEN
+        CALL MP_COMPUTE_LOOP_COEFS(P,BUFFR_BIS)
+        MP_DONE=.TRUE.	    
+	  ENDIF
 	  CTMODE=4
 	  goto 300
 	ENDIF
@@ -449,3 +474,67 @@ IF(.NOT.CHECKPHASE.AND.(CTMODERUN.EQ.-1)) THEN
 ENDIF
 
       END
+
+	  SUBROUTINE IMPROVE_PS_POINT_PRECISION(P)
+C  
+C CONSTANTS 
+C 
+	  INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+	  %(real_dp_format)s     ZERO
+	  PARAMETER (ZERO=0.0d0)
+C  
+C ARGUMENTS 
+C
+      %(real_dp_format)s P(0:3,NEXTERNAL)
+C
+C LOCAL VARIABLES 
+C
+      INTEGER I,J
+	  %(real_dp_format)s BUFF,REF
+	  %(real_dp_format)s MASSES(NEXTERNAL-1)	  
+C  
+C GLOBAL VARIABLES
+C 
+      include 'coupl.inc'
+
+	  %(masses_def)s
+
+	  DO I=0,3
+	    REF=ZERO
+		BUFF=ZERO
+		DO J=1,NEXTERNAL
+		  REF=REF+ABS(P(I,J))
+		ENDDO
+        DO J=1,%(n_initial)d		
+		  BUFF=BUFF-P(I,J)
+		ENDDO
+        DO J=%(n_initial)d+1,NEXTERNAL	
+		  BUFF=BUFF+P(I,J)
+		ENDDO
+		IF ((BUFF/REF).GT.1.0d-9) THEN
+		  STOP 'Four-momentum conservation is not accurate enough.'		  
+		ENDIF
+	  ENDDO
+
+	  DO I=1,NEXTERNAL-1
+	    REF=ABS(P(0,I))+ABS(P(1,I))+ABS(P(2,I))+ABS(P(3,I))
+		IF ((SQRT(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2)/REF).GT.1.0d-4) THEN
+		  STOP 'Four-momentum conservation is not accurate enough.'
+		ELSE
+	      P(3,I)=SIGN(SQRT(P(0,I)**2-P(1,I)**2-P(2,I)**2-MASSES(I)**2),P(3,I))
+		ENDIF
+	  ENDDO
+
+	  DO I=0,3
+	    BUFF=0.0d0 
+        DO J=1,%(n_initial)d
+		  BUFF=BUFF+P(I,J)
+		ENDDO
+		DO J=%(n_initial)d+1,NEXTERNAL-1
+		  BUFF=BUFF-P(I,J)		
+		ENDDO
+		P(I,NEXTERNAL)=BUFF
+	  ENDDO
+
+	  END
