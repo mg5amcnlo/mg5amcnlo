@@ -814,10 +814,8 @@ def loadLoopModel():
     myloopmodel.set('perturbation_couplings', ['QCD','QED'])
     myloopmodel.set('order_hierarchy', {'QCD':1,'QED':2})
 
-    return myloopmodel
+    return myloopmodel    
 
-    # Save this model so that it can be loaded by other loop tests
-    # save_load_object.save_to_file(os.path.join(_input_file_path, 'test_toyLoopModel.pkl'),self.myloopmodel)
 
 #===============================================================================
 # LoopDiagramGeneration Test
@@ -838,7 +836,6 @@ class LoopDiagramGenerationTest(unittest.TestCase):
     def setUp(self):
         """Load different objects for the tests."""
         
-
         #self.myloopmodel = models.import_full_model(os.path.join(\
         #    _model_file_path,'loop_sm'))
         #self.myloopmodel.actualize_dictionaries()
@@ -1408,6 +1405,8 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         l7=myleglist[6]
         l8=myleglist[7]
         l9=myleglist[8]
+        lfinal=copy.copy(l9)
+        lfinal.set('number',9)
 
         self.myproc.set('legs',myleglist)
 
@@ -1418,6 +1417,8 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         l28 = base_objects.Leg({'id':21,'number':2,'loop_line':True})
         l128 = base_objects.Leg({'id':21,'number':1,'loop_line':True})
         l19 = base_objects.Leg({'id':21,'number':1,'loop_line':True})
+        l18 = base_objects.Leg({'id':21,'number':1,'loop_line':True})
+        l12 = base_objects.Leg({'id':21,'number':1,'loop_line':True})
 
         vx19 = base_objects.Vertex({'legs':base_objects.LegList([l1, l9, l19]), 'id': 1})
         vx67 = base_objects.Vertex({'legs':base_objects.LegList([l6, l7, l67]), 'id': 1})
@@ -1443,11 +1444,11 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         myStruct.generate_vertices(self.myproc)
         self.assertEqual(myStruct['vertices'],goal_vxList)
 
-        goal_tag=[[21, [0], 1], [21, [1], 1]]
-        vx28_tag=base_objects.Vertex({'legs':base_objects.LegList([l235, l8, l28]), 'id': 1})
-        vx129_tag=base_objects.Vertex({'legs':base_objects.LegList([l1, l28, l128]), 'id': 1})
-        closing_vx=base_objects.Vertex({'legs':base_objects.LegList([l128, l9]), 'id': -1})
-        goal_vertices=base_objects.VertexList([vx28_tag,vx129_tag,closing_vx])
+        goal_tag=[[21, [1], 1], [21, [0], 1]]
+        vx18_tag=base_objects.Vertex({'legs':base_objects.LegList([l1, l8, l18]), 'id': 1})
+        vx12_tag=base_objects.Vertex({'legs':base_objects.LegList([l24, l18, l12]), 'id': 1})
+        closing_vx=base_objects.Vertex({'legs':base_objects.LegList([l12, lfinal]), 'id': -1})
+        goal_vertices=base_objects.VertexList([vx18_tag,vx12_tag,closing_vx])
         myBubbleDiag.tag(myStructRep,8,9,self.myproc)
         self.assertEqual(myBubbleDiag.get('canonical_tag'), goal_tag)
         self.assertEqual(myBubbleDiag.get('vertices'), goal_vertices)
@@ -1507,3 +1508,8 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         closing_vx=base_objects.Vertex({'legs':base_objects.LegList([l617, l8]), 'id': -1})              
         goal_vertices=base_objects.VertexList([vx17_tag,vx12_tag,vx13_tag,vx15_tag,vx168_tag,closing_vx])
         self.assertEqual(myPentaDiag1.get('vertices'), goal_vertices)
+
+if __name__ == '__main__':
+        # Save this model so that it can be loaded by other loop tests
+        save_load_object.save_to_file(os.path.join(_input_file_path, 'test_toyLoopModel.pkl'),loadLoopModel())
+        print "test_toyLoopModel.pkl created."

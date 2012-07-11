@@ -134,7 +134,7 @@
       CTModeRun=-1
       MLStabThres=1.0d-5
       CTStabThres=1.0d-2
-      CTLoopLibrary=3
+      CTLoopLibrary=2
       CheckCycle=3
       MaxAttempts=10
       UseLoopFilter=.True.

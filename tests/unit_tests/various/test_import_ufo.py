@@ -159,6 +159,7 @@ class TestRestrictModel(unittest.TestCase):
             self.assertEqual(self.model['coupling_dict'][name], 0)
         
         self.assertEqual(expected, result)        
+        
         # check what are the identical coupling
         expected = [['GC_101', 'GC_33', 'GC_29', 'GC_24', 'GC_25', 'GC_95', 'GC_110'], ['GC_19', 'GC_66'], ['GC_18', 'GC_65'], ['GC_37', 'GC_12'], ['GC_49', 'GC_4'], ['GC_46', 'GC_62']]
         expected.sort()
@@ -192,14 +193,14 @@ class TestRestrictModel(unittest.TestCase):
         target = ['GC_101', 'GC_33', 'GC_29', 'GC_24', 'GC_25', 'GC_95', 'GC_110']
 
         assert target in iden, 'test not up-to-date'
-        
         check_content = [['d', 'u', 'w+'], ['s', 'c', 'w+'], ['b', 't', 'w+'], ['u', 'd', 'w+'], ['c', 's', 'w+'], ['t', 'b', 'w+'], ['e-', 've', 'w+'], ['m-', 'vm', 'w+'], ['tt-', 'vt', 'w+'], ['ve', 'e-', 'w+'], ['vm', 'm-', 'w+'], ['vt', 'tt-', 'w+']]
         content =  [[p.get('name') for p in v.get('particles')] \
                for v in self.model.get('interactions') \
                if any([c in target for c in v['couplings'].values()])]
-        
-        self.assertEqual(len(check_content),len(content))#, 'test not up-to-date'      
-        
+        [a.sort() for a in check_content+content]
+        check_content.sort()
+        content.sort()
+        assert check_content == content, 'test not up-to-date'      
 
         vertex_id = [v.get('id') \
                for v in self.model.get('interactions') \
@@ -228,6 +229,13 @@ class TestRestrictModel(unittest.TestCase):
         
         # first test case where they are all deleted
         # check that we have the valid model
+#
+#        input = self.model['interactions'][3]  # four gluon
+#        input2 = self.model['interactions'][20] # b b~ h
+#        self.assertTrue('GC_6' in input['couplings'].values())
+#        self.assertTrue('GC_34' in input2['couplings'].values())
+#        found_gggg = 0
+#        found_bbh = 0
         input = self.model['interactions'][2]  # four gluon
         input2 = self.model['interactions'][19] # b b~ h
         self.assertTrue('GC_11' in input['couplings'].values())
@@ -255,6 +263,12 @@ class TestRestrictModel(unittest.TestCase):
         
         # first test case where they are all deleted
         # check that we have the valid model
+#        input = self.model['interactions'][3]  # four gluon
+#        input2 = self.model['interactions'][20] # b b~ h
+#        self.assertTrue('GC_6' in input['couplings'].values())
+#        self.assertTrue('GC_34' in input2['couplings'].values())
+#        found_6 = 0
+#        found_34 = 0
         input = self.model['interactions'][2]  # four gluon
         input2 = self.model['interactions'][19] # b b~ h
         self.assertTrue('GC_11' in input['couplings'].values())
@@ -263,6 +277,10 @@ class TestRestrictModel(unittest.TestCase):
         found_68 = 0
         for dep,data in self.model['couplings'].items():
             for param in data:
+#                if param.name == 'GC_6': found_6 +=1
+#                elif param.name == 'GC_34': found_34 +=1
+#        self.assertTrue(found_6>0)
+#        self.assertTrue(found_34>0)
                 if param.name == 'GC_11': found_11 +=1
                 elif param.name == 'GC_33': found_68 +=1
         self.assertTrue(found_11>0)

@@ -127,7 +127,7 @@ class ProcessExporterFortran(object):
             
         # add the makefile in Source directory 
         filename = os.path.join(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FortranWriter(filename))
+        self.write_source_makefile(writers.FileWriter(filename))
             
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
@@ -211,6 +211,10 @@ class ProcessExporterFortran(object):
         mv(model_path + '/param_card.dat', self.dir_path + '/Cards/param_card_default.dat')
         ln(model_path + '/coupl.inc', self.dir_path + '/Source')
         ln(model_path + '/coupl.inc', self.dir_path + '/SubProcesses')
+        self.make_source_links()
+        
+    def make_source_links(self):
+        """ Create the links from the files in sources """
         ln(self.dir_path + '/Source/run.inc', self.dir_path + '/SubProcesses', log=False)
         ln(self.dir_path + '/Source/genps.inc', self.dir_path + '/SubProcesses', log=False)
         ln(self.dir_path + '/Source/maxconfigs.inc', self.dir_path + '/SubProcesses', log=False)
@@ -337,6 +341,10 @@ class ProcessExporterFortran(object):
                              wanted_couplings = []):
         """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
 
+        # Make sure aloha is in quadruple precision if needed
+        old_aloha_mp=aloha.mp_precision
+        aloha.mp_precision=self.mp
+
         # create the MODEL
         write_dir=os.path.join(self.dir_path, 'Source', 'MODEL')
         model_builder = UFO_model_to_mg4(model, write_dir, \
@@ -354,14 +362,18 @@ class ProcessExporterFortran(object):
 
         #copy Helas Template
         cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
-        if any(['L' in d[1] for d in wanted_lorentz]):
+        if any([any(['L' in tag for tag in d[1]]) for d in wanted_lorentz]):
             cp(MG5DIR + '/aloha/template_files/aloha_functions_loop.f', write_dir+'/aloha_functions.f')
+            aloha_model.loop_mode = False
         else:
             cp(MG5DIR + '/aloha/template_files/aloha_functions.f', write_dir+'/aloha_functions.f')
         create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
 
         # Make final link in the Process
         self.make_model_symbolic_link()
+        
+        # Re-establish original aloha mode
+        aloha.mp_precision=old_aloha_mp
 
     #===========================================================================
     # Helper functions
@@ -900,7 +912,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     os.path.join(self.dir_path, 'Source'))        
         # add the makefile 
         filename = os.path.join(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FortranWriter(filename))            
+        self.write_source_makefile(writers.FileWriter(filename))            
         
     #===========================================================================
     # export model files
@@ -1149,7 +1161,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.model_name = modelname
         # Add the combine_events.f 
         filename = os.path.join(self.dir_path,'Source','combine_events.f')
-        self.write_combine_events(writers.FortranWriter(filename))
+        self.write_combine_events(writers.FortranWriter(filename)) # already formatted
         # Add the symmetry.f 
         filename = os.path.join(self.dir_path,'SubProcesses','symmetry.f')
         self.write_symmetry(writers.FortranWriter(filename))
@@ -1300,7 +1312,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                            s_and_t_channels)
 
         filename = 'dname.mg'
-        self.write_dname_file(writers.FortranWriter(filename),
+        self.write_dname_file(writers.FileWriter(filename),
                          "P"+matrix_element.get('processes')[0].shell_string())
 
         filename = 'iproc.dat'
@@ -1460,7 +1472,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             logger.info("Generate jpeg diagrams")
             for Pdir in P_dir_list:
                 os.chdir(Pdir)
-                subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+                try:
+                    subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+                                stdout = devnull)
+                except:
+                    os.system('chmod +x %s ' % os.path.join(old_pos, self.dir_path, 'bin', 'internal', '*'))
+                    subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
                                 stdout = devnull)
                 os.chdir(os.path.pardir)
 
@@ -2047,7 +2064,6 @@ c           This is dummy particle used in multiparticle vertices
         else:
             card = 'param_card.dat' 
         text = open(path).read() % {'param_card_name':card} 
-
         writer.write(text)
         
         return True
@@ -2419,7 +2435,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         path = os.path.join(self.dir_path, 'SubProcesses')
 
         os.chdir(path)
-
         pathdir = os.getcwd()
 
         # Create the directory PN in the specified path
@@ -2943,11 +2958,14 @@ class UFO_model_to_mg4(object):
                 
         # MG4 use G and not aS as it basic object for alphas related computation
         #Pass G in the  independant list
-        index = self.params_dep.index('G')
-        self.params_indep.insert(0, self.params_dep.pop(index))
-        index = self.params_dep.index('sqrt__aS')
-        self.params_indep.insert(0, self.params_dep.pop(index))
-        
+        if 'G' in self.params_dep:
+            index = self.params_dep.index('G')
+            G = self.params_dep.pop(index)
+        #    G.expr = '2*cmath.sqrt(as*pi)'
+        #    self.params_indep.insert(0, self.params_dep.pop(index))
+        # No need to add it if not defined   
+            
+            
     def build(self, wanted_couplings = [], full=True):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""
@@ -3235,7 +3253,10 @@ class UFO_model_to_mg4(object):
         fsock.write_comments(\
                 "Parameters that should not be recomputed event by event.\n")
         fsock.writelines("if(readlha) then\n")
-        
+        if dp:        
+            fsock.writelines("G = 2 * DSQRT(AS*PI) ! for the first init\n")
+        if mp:
+            fsock.writelines("MP__G = 2 * SQRT(MP__AS*MP__PI) ! for the first init\n")
         for param in self.params_indep:
             if param.name == 'ZERO':
                 continue
@@ -3249,6 +3270,10 @@ class UFO_model_to_mg4(object):
         fsock.writelines('endif')
         
         fsock.write_comments('\nParameters that should be recomputed at an event by even basis.\n')
+        if dp:        
+            fsock.writelines("aS = G**2/4/pi\n")
+        if mp:
+            fsock.writelines("MP__aS = MP__G**2/4/MP__PI\n")
         for param in self.params_dep:
             if dp:
                 fsock.writelines("%s = %s\n" % (param.name,

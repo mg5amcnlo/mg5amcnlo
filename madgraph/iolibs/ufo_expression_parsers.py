@@ -35,7 +35,7 @@ logger = logging.getLogger('madgraph.ufo_parsers')
 class ModelError(MadGraph5Error):
     """Appropriate Error for a wrong parsing"""
 
-class UFOExpressionParser:
+class UFOExpressionParser(object):
     """A base class for parsers for algebraic expressions coming from UFO."""
 
     parsed_string = ""
@@ -375,6 +375,7 @@ class UFOExpressionParserCPP(UFOExpressionParser):
     def p_expression_pi(self, p):
         '''expression : PI'''
         p[0] = 'M_PI'
+           
 
 
 # Main program, allows to interactively test the parser
@@ -389,6 +390,8 @@ if __name__ == '__main__':
         calc = UFOExpressionParserMPFortran()
     elif sys.argv[1] == "c++":
         calc = UFOExpressionParserCPP()
+    elif sys.argv[1] == "aloha":
+        calc = ALOHAParserCpp()
     else:
         print "Please specify a parser: fortran, mpfortran or c++"
         print "You gave", sys.argv[1]

@@ -51,7 +51,7 @@ C     LOCAL
 C
       LOGICAL FIRSTTIME,FIRSTTIME2,pass_bw,notgood,good,foundheavy
       LOGICAL DEBUG
-      integer i,j,njets,nheavyjets,hardj1,hardj2
+      integer i,j,njets,nheavyjets,nleptons,hardj1,hardj2
       REAL*8 XVAR,ptmax1,ptmax2,htj,tmp,inclht
       real*8 ptemp(0:3), ptemp2(0:3)
       character*20 formstr
@@ -74,6 +74,7 @@ C
 
       double precision ptjet(nexternal)
       double precision ptheavyjet(nexternal)
+      double precision ptlepton(nexternal)
       double precision temp
 
       double precision etmin(nincoming+1:nexternal),etamax(nincoming+1:nexternal)
@@ -92,6 +93,9 @@ C
       double precision ptjmin4(4),ptjmax4(4),htjmin4(2:4),htjmax4(2:4)
       logical jetor
       common/to_jet_cuts/ ptjmin4,ptjmax4,htjmin4,htjmax4,jetor
+
+      double precision ptlmin4(4),ptlmax4(4)
+      common/to_lepton_cuts/ ptlmin4,ptlmax4
 
 c
 c     Special cuts
@@ -545,7 +549,66 @@ C---------------------------
          passcuts=.false.
          return
       endif
- 
+
+C     
+C     maximal and minimal pt of the leptons sorted by pt
+c     
+      nleptons=0
+
+      if(ptl1min.gt.0.or.ptl2min.gt.0.or.ptl3min.gt.0.or.ptl4min.gt.0.or.
+     $     ptl1max.lt.1d5.or.ptl2max.lt.1d5.or.
+     $     ptl3max.lt.1d5.or.ptl4max.lt.1d5) then
+
+c     - fill ptlepton with the pt's of the leptons.
+         do i=nincoming+1,nexternal
+            if(is_a_l(i)) then
+               nleptons=nleptons+1
+               ptlepton(nleptons)=pt(p(0,i))
+            endif
+         enddo
+         if(debug) write (*,*) 'not yet ordered ',njets,'   ',ptjet
+
+c     - check existance of leptons if lepton cuts are on
+         if(nleptons.lt.1.and.ptl1min.gt.0.or.
+     $        nleptons.lt.2.and.ptl2min.gt.0.or.
+     $        nleptons.lt.3.and.ptl3min.gt.0.or.
+     $        nleptons.lt.4.and.ptl4min.gt.0)then
+            if(debug) write (*,*) i, ' too few leptons -> fails'
+            passcuts=.false.
+            return
+         endif
+
+c     - sort lepton pts
+         do i=1,nleptons-1
+            do j=i+1,nleptons
+               if(ptlepton(j).gt.ptlepton(i)) then
+                  temp=ptlepton(i)
+                  ptlepton(i)=ptlepton(j)
+                  ptlepton(j)=temp
+               endif
+            enddo
+         enddo
+         if(debug) write (*,*) 'ordered ',nleptons,'   ',ptlepton
+
+         if(nleptons.gt.0) then
+
+            notgood = .false.
+            do i=1,nleptons 
+               if(debug) write (*,*) i,ptlepton(i), '   ',ptlmin4(min(i,4)),':',ptlmax4(min(i,4))
+c---  if one of the leptons does not pass, the event is rejected
+               notgood=notgood.or.(ptlepton(i).gt.ptlmax4(min(i,4))).or.
+     $              (ptlepton(i).lt.ptlmin4(min(i,4)))
+               if(debug) write (*,*) i,' notgood total:', notgood   
+            enddo
+
+
+            if (notgood) then
+               if(debug) write (*,*) i, ' multiple pt -> fails'
+               passcuts=.false.
+               return
+            endif
+         endif
+      endif
 C>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>     
 C     SPECIAL CUTS
 C<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

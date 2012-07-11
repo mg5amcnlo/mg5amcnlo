@@ -21,7 +21,8 @@ import tests.test_manager as test_manager
 #===============================================================================
 # TestTestFinder
 #===============================================================================
-class TestTestFinder(unittest.TestCase):
+if 0:
+ class TestTestFinder(unittest.TestCase):
     """The TestCase class for the test module"""
 
     #This class test to find it's own property so it need some shortcut

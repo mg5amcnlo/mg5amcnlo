@@ -1,5 +1,70 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.5.0 (XX/XX/XX)  OM: Allow MG5 to run in complex mass scheme mode
+                      (mg5> set complex_mass True)
+                  OM: Allow MG5 to run in feynman Gauge
+		      (mg5> set gauge Feynman)
+		  OM: Support now UFO model with spin 3/2
+
+
+1.4.6 (16/05/12)  JA: Added cuts on lepton pt for each of the 4 hardest leptons
+                  OM: allow bin/madevent script to be feeded by a single line command:
+		      example ./bin/madevent multi_run 10 
+		  OM: Adding the 4 higgs interactions in the standard model UFO model
+                  JA: Added new restriction card for the sm model with massive
+                      muon and electron, and non-zero tau decay width
+                  JA: Ensure assignment of colors to intermediate propagators
+                      works also in fermion flow- and color flow-violating 
+                      RPV processes (thanks Brock Tweedie for finding this).
+                  JA: Fix crash for certain fermion flow violating decay chains
+                      (introduced in v. 1.3.27) (again thanks to Brock Tweedie).
+                  JA: Fix crash for decay chains with multiple decays involving 
+                      the same particles (thanks Steve Blanchet for reporting)
+                  JA+OM: Fix crash for Pythia8 output with multiparticle vertices
+                      (thanks to Moritz Huck for reporting this.)
+                  OM: Fixing ALOHA output for C++/python.
+                  OM: Fix a crash occuring when trying to create an output on 
+                      an existing directory (thanks Celine)
+
+1.4.5 (11/04/12)  OM: Change the seed automatically in multi_run. (Even if the seed
+                      was set to a non automatic value in the card.)
+                  OM: correct a minor bug #975647 (SLAH convention problem) 
+                      Thanks to Sho Iwamoto
+                  OM: Improve cluster support (more secure and complete version)
+                  JA: Increased the number of events tested for non-zero helicity
+                      configurations (needed for goldstino processes).
+                  OM: Add a command to remove the file RunWeb which were not always
+                      deleted correctly
+                  OM+JA: Correct the display of number of events and error for Pythia 
+                     in the html files.
+                  OM: Changed the way the stdout/stderr are treated on the cluster
+                      since some cluster cann't support to have the same output file
+                      for both. (thanks abhishek)
+
+1.4.4 (29/03/12)  OM: Added a command: "output aloha" which allows to creates a 
+                      subset (or all) of the aloha routines linked to the
+                      current model
+                  OM: allow to choose the duration of the timer for the questions.
+                      (via ./input/mg5_configuration.txt)
+                  OM: Allow UFO model where G is not defined.
+                  OM: allow to use ~,~user, ${var} in the path. Improve support
+                      for path containing spaces.
+                  JA: Fixed LHAPDF functionality which was broken in v. 1.4.0
+                  JA: Allow non-equal mixing angles in mssm restrict cards
+                      (as needed for cards from some spectrum generators)
+                  JA: Fixed script addmasses.py for complicated events such as
+                      p p > t t~ + jets with decays of t and t~.
+                  JA: Added GE cluster to the list in cluster.py.
+                  JA: Allow up to 1M events in a single run. Note that the 
+                      unweighting (combine events) step gets quite slow with
+                      so many events. Also note that if Pythia is run, still
+                      maximum 50k events is recommended in a single run. 
+                  OM: Fix problem linked to filesystem which makes new files
+                      non executables by default. (bug #958616)
+                  JA: Fixed buffer overflow in gen_ximprove when number of
+                      configs > number of diagrams due to competing resonances
+                      (introduced in v. 1.4.3).
+
 1.4.3 (08/03/12)  JA: Reintroduced the possibility to completely forbid
                       s-channel diagrams, using the $$ notation. Note that
                       this should be used with great care, since the result

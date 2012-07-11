@@ -24,6 +24,7 @@ import time
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 import madgraph.interface.madgraph_interface as mg_interface
+import madgraph.interface.Loop_interface as Loop_interface
 import madgraph.fks.fks_real as fks_real
 import madgraph.fks.fks_real_helas_objects as fks_real_helas
 import madgraph.fks.fks_born as fks_born

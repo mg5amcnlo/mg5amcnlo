@@ -38,7 +38,6 @@ import aloha.aloha_fct as aloha_fct
 import models as ufomodels
 import models.model_reader as model_reader
 logger = logging.getLogger('madgraph.model')
-#logger = logging.getLogger('models.import_ufo')
 logger_mod = logging.getLogger('madgraph.model')
 
 root_path = os.path.dirname(os.path.realpath( __file__ ))
@@ -113,11 +112,11 @@ def import_model(model_name):
             
         if logger_mod.getEffectiveLevel() > 10:
             logger.info('Run \"set stdout_level DEBUG\" before import for more information.')
-            
+
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
         model.restrict_model(restrict_file)
-        
+    
     return model
 
 _import_once = []
@@ -154,10 +153,10 @@ def import_full_model(model_path):
         else:
             # check path is correct 
             if model.has_key('version_tag') and model.get('version_tag') == os.path.realpath(model_path) + str(misc.get_pkg_info()):
-                _import_once.append(model_path)
+                _import_once.append((model_path, aloha.unitary_gauge))
                 return model
 
-    if model_path in _import_once:
+    if (model_path, aloha.unitary_gauge) in _import_once:
         raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch mg5' 
 
     # Load basic information
@@ -230,7 +229,7 @@ class UFOMG5Converter(object):
         for param in self.ufomodel.all_parameters:
             if param.nature == "external":
                 if len(param.lhablock.split())>1:
-                    raise UFOImportError, '''LHABlock should be single word which is not the case for
+                    raise InvalidModel, '''LHABlock should be single word which is not the case for
     \'%s\' parameter with lhablock \'%s\'''' % (param.name, param.lhablock)
          
 	if hasattr(self.ufomodel, 'gauge'):    
@@ -311,7 +310,7 @@ class UFOMG5Converter(object):
 
         #clean memory
         del self.checked_lor
-        
+                
         return self.model
         
     
@@ -361,6 +360,8 @@ class UFOMG5Converter(object):
                     # MG5 internally treats ghost with positive spin for loop models and 
                     # ignore them otherwise
                     particle.set(key,abs(value))
+                    if value<0:
+                        particle.set('ghost',True)
                 else:
                     particle.set(key, value)    
             elif key == 'loop_particles':
@@ -534,11 +535,13 @@ class UFOMG5Converter(object):
             # check if the interaction meet requirements:
             pdg = [p.pdg_code for p in interaction_info.particles if p.spin in [2,4]]
             if len(pdg) % 2:
-                raise UFOImportError, 'Odd number of fermion in vertex: %s' % [p.pdg_code for p in interaction_info.particles]
+                raise InvalidModel, 'Odd number of fermion in vertex: %s' % [p.pdg_code for p in interaction_info.particles]
             for i in range(0, len(pdg),2):
                 if pdg[i] == - pdg[i+1]:
                     if pdg[i] in self.outcoming:
-                        raise UFOImportError, 'Input output not coherent'
+                        raise InvalidModel, '%s has not coherent incoming/outcoming status between interactions' %\
+                            [p for p in interaction_info.particles if p.spin in [2,4]][i].name
+                            
                     elif not pdg[i] in self.incoming:
                         self.incoming.append(pdg[i])
                         self.outcoming.append(pdg[i+1])
@@ -580,6 +583,10 @@ class UFOMG5Converter(object):
                 couplings = [couplings]
             for coupling in couplings:
                 order = tuple(coupling.order.items())
+                if '1' in order:
+                    raise InvalidModel, '''Some couplings have \'1\' order. 
+                    This is not allowed in MG. 
+                    Please defines an additional coupling to your model''' 
                 if order in order_to_int:
                     order_to_int[order].get('couplings')[key] = coupling.name
                 else:
@@ -777,13 +784,12 @@ class OrganizeModelExpression:
         
         if coupling.name in self.all_expr.keys():
             return
-        
         self.all_expr[coupling.value] = coupling
         try:
             self.coupling[coupling.depend].append(coupling)
         except:
             self.coupling[coupling.depend] = [coupling]            
-                
+        
                 
 
     def analyze_couplings(self):
@@ -840,7 +846,6 @@ class OrganizeModelExpression:
             elif subexpr in self.all_expr.keys() and self.all_expr[subexpr].depend:
                 [depend_on.add(value) for value in self.all_expr[subexpr].depend 
                                 if  self.all_expr[subexpr].depend != ('external',)]
-
         if depend_on:
             return tuple(depend_on)
         else:

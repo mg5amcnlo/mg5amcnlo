@@ -22,6 +22,7 @@ import os
 import re
 import shutil
 import subprocess
+import itertools
 
 import aloha
 
@@ -32,6 +33,7 @@ import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.various.misc as misc
+import madgraph.various.q_polynomial as q_polynomial
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.gen_infohtml as gen_infohtml
 import madgraph.iolibs.template_files as template_files
@@ -86,7 +88,9 @@ class LoopExporterFortran(object):
 
         if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
             logger.info('Compiling CutTools')
+            print "I have os.path.join(self.cuttools_dir,'includects','libcts.a')=",os.path.join(self.cuttools_dir,'includects','libcts.a')
             misc.compile(cwd=self.cuttools_dir)
+            print "yeo"
 
         if os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):            
             linkfiles = ['libcts.a', 'mpmodule.mod']
@@ -120,16 +124,17 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                                    LoopExporterFortran):
     """Class to take care of exporting a set of loop matrix elements in the
        Fortran format."""
-
+       
+    template_dir=os.path.join(_file_path,'iolibs/template_files/loop')
+    
     # Init function to initialize both mother classes, depending on the nature
     # of the argument given
-    def __init__(self, *args, **kwargs):    
+    def __init__(self, *args, **kwargs):
        super(LoopProcessExporterFortranSA, self).__init__(*args, **kwargs)          
 
     def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """
-        
         super(LoopProcessExporterFortranSA, self).copy_v4template(modelname)
         
         # We must link the CutTools to the Library folder of the active Template
@@ -138,7 +143,9 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         
         # We must change some files to their version for NLO computations
         cpfiles= ["Source/makefile","SubProcesses/makefile",\
-                  "SubProcesses/check_sa.f"]
+                  "SubProcesses/check_sa.f","SubProcesses/MadLoopParamReader.f",
+                  "SubProcesses/MadLoopParams.dat",
+                  "SubProcesses/MadLoopParams.inc"]
         
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
@@ -162,6 +169,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
     #===========================================================================
     # Set the compiler to be gfortran for the loop processes.
     #===========================================================================
+    
     def compiler_choice(self, compiler):
         """ Different daughter classes might want different compilers.
         Here, the gfortran compiler is used throughout the compilation 
@@ -173,9 +181,160 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         else:
             self.set_compiler(compiler)
 
+    def turn_to_mp_calls(self, helas_calls_list):
+        # Prepend 'MP_' to all the helas calls in helas_calls_list.
+        # Might look like a brutal unsafe implementation, but it is not as 
+        # these calls are built from the properties of the HELAS objects and
+        # wether they are evaluated in double or quad precision is none of 
+        # their business but only relevant to the output algorithm.
+        # Also the cast to complex masses DCMPLX(*) must be replaced by
+        # CMPLX(*,KIND=16)
+        MP=re.compile(r"(?P<toSub>^.*CALL\s+)",re.IGNORECASE | re.MULTILINE)
+        
+        def replaceWith(match_obj):
+            return match_obj.group('toSub')+'MP_'
+
+        DCMPLX=re.compile(r"DCMPLX\((?P<toSub>([^\)]*))\)",\
+                                                   re.IGNORECASE | re.MULTILINE)
+        
+        for i, helas_call in enumerate(helas_calls_list):
+            new_helas_call=MP.sub(replaceWith,helas_call)
+            helas_calls_list[i]=DCMPLX.sub(r"CMPLX(\g<toSub>,KIND=16)",\
+                                                                 new_helas_call)
+
+    def make_source_links(self):
+        """ In the loop output, we don't need the files fromt he Source folder """
+        pass
+
+    def make_model_symbolic_link(self):
+        """ Add the linking of the additional model files for multiple precision
+        """
+        super(LoopProcessExporterFortranSA, self).make_model_symbolic_link()
+        model_path = self.dir_path + '/Source/MODEL/'
+        ln(model_path + '/mp_coupl.inc', self.dir_path + '/SubProcesses')
+        ln(model_path + '/mp_coupl_same_name.inc', self.dir_path + '/SubProcesses')
+    
+    def cat_coeff(self, ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
+        """Concatenate the coefficient information to reduce it to 
+        (fraction, is_imaginary) """
+
+        total_coeff = ff_number * frac * fractions.Fraction(Nc_value) ** Nc_power
+
+        return (total_coeff, is_imaginary)       
+
+    def get_amp_to_jamp_map(self, col_amps, n_amps):
+        """ Returns a list with element 'i' being a list of tuples corresponding
+        to all apparition of amplitude number 'i' in the jamp number 'j'
+        with coeff 'coeff_j'. The format of each tuple describing an apparition 
+        is (j, coeff_j). where coeff_j is of the form (Fraction, is_imag)."""
+
+        if(isinstance(col_amps,list)):
+            if(col_amps and isinstance(col_amps[0],list)):
+                color_amplitudes=col_amps
+            else:
+                raise MadGraph5Error, "Incorrect col_amps argument passed to get_amp_to_jamp_map"
+        else:
+            raise MadGraph5Error, "Incorrect col_amps argument passed to get_amp_to_jamp_map"
+        
+        # To store the result
+        res_list = [[] for i in range(n_amps)]
+        
+        for i, coeff_list in enumerate(color_amplitudes):
+                for (coefficient, amp_number) in coeff_list:
+                    res_list[amp_number-1].append((i,self.cat_coeff(\
+                      coefficient[0],coefficient[1],coefficient[2],coefficient[3])))
+
+        return res_list
+
+    def get_color_matrix(self, matrix_element):
+        """Return the color matrix definition lines. This color matrix is of size
+        NLOOPAMPSxNBORNAMPS and allows for squaring individually each Loop and Born
+        amplitude."""
+
+        logger.info('Computing diagram color coefficients')
+
+        # The two lists have a list of tuples at element 'i' which correspond
+        # to all apparitions of loop amplitude number 'i' in the jampl number 'j'
+        # with coeff 'coeffj'. The format of each tuple describing an apparition 
+        # is (j, coeffj).
+        ampl_to_jampl=self.get_amp_to_jamp_map(\
+          matrix_element.get_loop_color_amplitudes(),
+          matrix_element.get_number_of_loop_amplitudes())
+        if matrix_element.get('processes')[0].get('has_born'):
+            ampb_to_jampb=self.get_amp_to_jamp_map(\
+          matrix_element.get_born_color_amplitudes(),
+          matrix_element.get_number_of_born_amplitudes())
+        else:
+            ampb_to_jampb=ampl_to_jamp
+        # Below is the original color matrix multiplying the JAMPS
+        if matrix_element.get('color_matrix'):
+            ColorMatrixDenom = \
+              matrix_element.get('color_matrix').get_line_denominators()
+            ColorMatrixNum = [ matrix_element.get('color_matrix').\
+                               get_line_numerators(index, denominator) for
+                               (index, denominator) in enumerate(ColorMatrixDenom) ]
+        else:
+            ColorMatrixDenom= [1]
+            ColorMatrixNum = [[1]]
+            
+        # Below is the final color matrix output
+        ColorMatrixNumOutput=[]
+        ColorMatrixDenomOutput=[]
+        
+        # Now we construct the color factors between each born and loop amplitude
+        # by scanning their contributions to the different jamps.
+        for jampl_list in ampl_to_jampl:
+            line_num=[]
+            line_denom=[]
+            for jampb_list in ampb_to_jampb:
+                real_num=0
+                imag_num=0
+                common_denom=color_amp.ColorMatrix.lcmm(*[abs(ColorMatrixDenom[jampl]*
+                    ampl_coeff[0].denominator*ampb_coeff[0].denominator) for 
+                    ((jampl, ampl_coeff),(jampb,ampb_coeff)) in 
+                    itertools.product(jampl_list,jampb_list)])
+                for ((jampl, ampl_coeff),(jampb, ampb_coeff)) in \
+                                       itertools.product(jampl_list,jampb_list):
+                    # take the numerator and multiply by lcm/denominator
+                    # as we will later divide by the lcm.
+                    buff_num=ampl_coeff[0].numerator*\
+                        ampb_coeff[0].numerator*ColorMatrixNum[jampl][jampb]*\
+                        abs(common_denom)/(ampl_coeff[0].denominator*\
+                        ampb_coeff[0].denominator*ColorMatrixDenom[jampl])
+                    # Remember that we must take the complex conjugate of
+                    # the born jamp color coefficient because we will compute
+                    # the square with 2 Re(LoopAmp x BornAmp*)
+                    if ampl_coeff[1] and ampb_coeff[1]:
+                        real_num=real_num+buff_num
+                    elif not ampl_coeff[1] and not ampb_coeff[1]:
+                        real_num=real_num+buff_num
+                    elif not ampl_coeff[1] and ampb_coeff[1]:
+                        imag_num=imag_num-buff_num
+                    else:
+                        imag_num=imag_num+buff_num
+                assert not (real_num!=0 and imag_num!=0), "MadGraph5 found a "+\
+                  "color matrix element which has both a real and imaginary part."
+                if imag_num!=0:
+                    res=fractions.Fraction(imag_num,common_denom)
+                    line_num.append(res.numerator)
+                    # Negative denominator means imaginary color coef of the
+                    # final color matrix
+                    line_denom.append(res.denominator*-1)
+                else:
+                    res=fractions.Fraction(real_num,common_denom)
+                    line_num.append(res.numerator)
+                    # Positive denominator means real color coef of the final color matrix
+                    line_denom.append(res.denominator)
+
+            ColorMatrixNumOutput.append(line_num)
+            ColorMatrixDenomOutput.append(line_denom)
+
+        return (ColorMatrixNumOutput,ColorMatrixDenomOutput)
+
     #===========================================================================
     # generate_subprocess_directory_v4
     #===========================================================================
+    
     def generate_loop_subprocess(self, matrix_element, fortran_model):
         """Generate the Pxxxxx directory for a loop subprocess in MG4 standalone,
         including the necessary loop_matrix.f, born_matrix.f and include files.
@@ -259,7 +418,8 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                                      'check_sa_loop_induced.f'),
                         os.path.join(self.dir_path, 'Subprocesses','check_sa.f'))
 
-        self.link_files_from_Subprocesses()
+        self.link_files_from_Subprocesses(proc_name=\
+                              matrix_element.get('processes')[0].shell_string())
         
         # Return to original PWD
         os.chdir(cwd)
@@ -268,12 +428,16 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             calls = 0
         return calls
 
-    def link_files_from_Subprocesses(self):
+    def link_files_from_Subprocesses(self,proc_name=""):
         """ To link required files from the Subprocesses directory to the
         different P* ones"""
         
-        linkfiles = ['check_sa.f', 'coupl.inc', 'makefile', \
-                     'cts_mprec.h', 'cts_mpc.h']
+        linkfiles = ['check_sa.f', 'coupl.inc', 'makefile',
+                     'cts_mprec.h', 'cts_mpc.h', 'mp_coupl.inc', 
+                     'mp_coupl_same_name.inc',
+                     'MadLoopParamReader.f','MadLoopParams.dat',
+                     'MadLoopParams.inc']
+        
         for file in linkfiles:
             ln('../%s' % file)
 
@@ -282,36 +446,131 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         for file in linkfiles:
             ln('../../lib/%s' % file)
 
+    def generate_general_replace_dict(self,matrix_element):
+        """Generates the entries for the general replacement dictionary used
+        for the different output codes for this exporter"""
+        
+        dict={}
+        # Extract version number and date from VERSION file
+        info_lines = self.get_mg5_info_lines()
+        dict['info_lines'] = info_lines
+        # Extract process info lines
+        process_lines = self.get_process_info_lines(matrix_element)
+        dict['process_lines'] = process_lines
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        dict['nexternal'] = nexternal-2
+        # Extract ncomb
+        ncomb = matrix_element.get_helicity_combinations()
+        dict['ncomb'] = ncomb
+        # Extract nloopamps
+        nloopamps = matrix_element.get_number_of_loop_amplitudes()
+        dict['nloopamps'] = nloopamps
+        # Extract nctamps
+        nctamps = matrix_element.get_number_of_CT_amplitudes()
+        dict['nctamps'] = nctamps
+        # Extract nwavefuncs
+        nwavefuncs = matrix_element.get_number_of_external_wavefunctions()
+        dict['nwavefuncs'] = nwavefuncs
+        # Set format of the double precision
+        dict['real_dp_format']='real*8'
+        dict['real_mp_format']='real*16'
+        # Set format of the complex
+        dict['complex_dp_format']='complex*16'
+        dict['complex_mp_format']='complex*32'
+        # Set format of the masses
+        dict['mass_dp_format'] = dict['complex_dp_format']
+        dict['mass_mp_format'] = dict['complex_mp_format']
+        # Color matrix size
+        # For loop induced processes it is NLOOPAMPSxNLOOPAMPS and otherwise
+        # it is NLOOPAMPSxNBORNAMPS
+        if matrix_element.get('processes')[0].get('has_born'):
+            dict['color_matrix_size'] = 'nbornamps'
+        else:
+            dict['color_matrix_size'] = 'nloopamps'
+        # These placeholders help to have as many common templates for the
+        # output of the loop induced processes and those with a born 
+        # contribution.
+        if matrix_element.get('processes')[0].get('has_born'):
+            # Extract nbornamps
+            nbornamps = matrix_element.get_number_of_born_amplitudes()
+            dict['nbornamps'] = nbornamps
+            dict['ncomb_helas_objs'] = ',ncomb'
+            dict['nbornamps_decl'] = \
+              """INTEGER NBORNAMPS
+                 PARAMETER (NBORNAMPS=%d)"""%nbornamps
+        else:
+            dict['ncomb_helas_objs'] = ''  
+            dict['dp_born_amps_decl'] = ''
+            dict['mp_born_amps_decl'] = ''
+            dict['nbornamps_decl'] = ''
+        
+        return dict
+    
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                                 proc_id = "", config_map = []):
         """ Writes loop_matrix.f, CT_interface.f and loop_num.f only"""
+        
         # Create the necessary files for the loop matrix element subroutine
-                
+
+        if not isinstance(fortran_model,\
+          helas_call_writers.FortranUFOHelasCallWriter):
+            raise MadGraph5Error, 'The loop fortran output can only'+\
+              ' work with a UFO Fortran model'
+        
+        LoopFortranModel = helas_call_writers.FortranUFOHelasCallWriter(
+                     argument=fortran_model.get('model'),
+                     hel_sum=matrix_element.get('processes')[0].get('has_born'))
+
+        # Initialize a general replacement dictionary with entries common to 
+        # many files generated here.
+        self.general_replace_dict=\
+                              self.generate_general_replace_dict(matrix_element)
+        # Extract max number of loop couplings (specific to this output type)
+        self.general_replace_dict['maxlcouplings']= \
+                                         matrix_element.find_max_loop_coupling()
+        # The born amp declaration suited for also outputing the loop-induced
+        # processes as well.
+        if matrix_element.get('processes')[0].get('has_born'):
+            self.general_replace_dict['dp_born_amps_decl'] = \
+                  self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS,NCOMB)"+\
+                  "\n common/AMPS/AMP"
+            self.general_replace_dict['mp_born_amps_decl'] = \
+                  self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS,NCOMB)"+\
+                  "\n common/MP_AMPS/AMP"
+        
         if writer:
-            file1 = self.write_loop_num(None,matrix_element,fortran_model)
-            file2 = self.write_CT_interface(None,matrix_element)
-            calls, file3 = self.write_loopmatrix(None,matrix_element,fortran_model)
-            file = "\n".join([file1,file2,file3])
+            files=[]
+            files.append(self.write_loop_num(None,matrix_element,\
+                                                         LoopFortranModel))
+            files.append(self.write_CT_interface(None,matrix_element))
+            calls, loop_matrix = self.write_loopmatrix(None,matrix_element,\
+                                                          LoopFortranModel)
+            files.append(loop_matrix)
+            files.append(write_born_amps_and_wfs(None,matrix_element,\
+                                                        LoopFortranModel))
+            file = "\n".join(files)
             writer.writelines(file)
             return calls
         
         else:
-            
             filename = 'loop_matrix.f'
-            calls = self.write_loopmatrix(
-                                          writers.FortranWriter(filename),
+            calls = self.write_loopmatrix(writers.FortranWriter(filename),
                                           matrix_element,
-                                          fortran_model)             
+                                          LoopFortranModel) 
             filename = 'CT_interface.f'
             self.write_CT_interface(writers.FortranWriter(filename),\
                                     matrix_element)
             
             filename = 'loop_num.f'
             self.write_loop_num(writers.FortranWriter(filename),\
-                                    matrix_element,fortran_model)
-        
-            return calls
+                                    matrix_element,LoopFortranModel)
+            
+            filename = 'mp_born_amps_and_wfs.f'
+            self.write_born_amps_and_wfs(writers.FortranWriter(filename),\
+                                         matrix_element,LoopFortranModel)
 
+            return calls
 
     def generate_subprocess_directory_v4(self, matrix_element,
                                          fortran_model):
@@ -331,716 +590,40 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
         
-        file = open(os.path.join(_file_path, \
-                 'iolibs/template_files/loop/loop_num.inc')).read()
-        
-        replace_dict = {}
-        
-        replace_dict['mass_format']="complex*16"
-        replace_dict['nexternal']=(matrix_element.get_nexternal_ninitial()[0]-2)
-        loop_helas_calls=fortran_model.get_loop_amplitude_helas_calls(matrix_element)
-        replace_dict['maxlcouplings']=matrix_element.find_max_loop_coupling()
-        replace_dict['loop_helas_calls'] = "\n".join(loop_helas_calls)
-
-        file=file%replace_dict
-        
-        if writer:
-            writer.writelines(file)
-        else:
-            return file
-        
-    def write_CT_interface(self, writer, matrix_element):
-        """ Create the file loop_helas.f which contains the subroutine defining
-        the loop HELAS-like calls along with the general interfacing subroutine. """
-
-        files=[]
-
-        # Fill here what's common to all files read here.             
-        replace_dict_orig={}
-
-        # Extract the number of external legs
-        replace_dict_orig['nexternal']=\
-          (matrix_element.get_nexternal_ninitial()[0]-2)
-
-        # specify the format of the masses 
-        replace_dict_orig['mass_format'] = 'complex*16'
-
-        # First write CT_interface which interfaces MG5 with CutTools.
-        replace_dict=copy.copy(replace_dict_orig)
-        file = open(os.path.join(_file_path, \
-                 'iolibs/template_files/loop/CT_interface.inc')).read()
-        
-        replace_dict['mass_translation'] = 'M2L(I)'
-        # specify what scalar loop library must be used.
-        # For now we use AVH for both CMS and nonCMS outputs.
-        if aloha.complex_mass:
-            replace_dict['loop_lib'] = 2
-        else:
-            replace_dict['loop_lib'] = 2  
-        
-        # Extract version number and date from VERSION file
-        info_lines = self.get_mg5_info_lines()
-        replace_dict['info_lines'] = info_lines
-
-        # Extract process info lines
-        process_lines = self.get_process_info_lines(matrix_element)
-        replace_dict['process_lines'] = process_lines
-        
-        file = file % replace_dict
-        files.append(file)
-        
-        # Now collect the different kind of subroutines needed for the
-        # loop HELAS-like calls.
-        CallKeys=[]
-        for ldiag in matrix_element.get_loop_diagrams():
-            for lamp in ldiag.get_loop_amplitudes():
-                if lamp.get_call_key()[1:] not in CallKeys:
-                    CallKeys.append(lamp.get_call_key()[1:])
-                
-        for callkey in CallKeys:
-            replace_dict=copy.copy(replace_dict_orig)
-            # Add to this dictionary all other attribute common to all
-            # HELAS-like loop subroutines.
-            replace_dict['maxlcouplings']=matrix_element.find_max_loop_coupling()
-            replace_dict['nloopline']=callkey[0]
-            wfsargs="".join([("W%d, MP%d, "%(i,i)) for i in range(1,callkey[1]+1)])
-            replace_dict['ncplsargs']=callkey[2]
-            replace_dict['wfsargs']=wfsargs
-            margs="".join([("M"+str(i)+", ") for i in range(1,callkey[0]+1)])
-            replace_dict['margs']=margs
-            cplsargs="".join([("C"+str(i)+", ") for i in range(1,callkey[2]+1)])
-            replace_dict['cplsargs']=cplsargs
-            wfsargsdecl="".join([("W%d(20), "%i) for i in range(1,callkey[1]+1)])[:-2]
-            replace_dict['wfsargsdecl']=wfsargsdecl
-            momposdecl="".join([("MP%d, "%i) for i in range(1,callkey[1]+1)])[:-2]
-            replace_dict['momposdecl']=momposdecl
-            margsdecl="".join([("M"+str(i)+", ") for i in range(1,callkey[0]+1)])[:-2]
-            replace_dict['margsdecl']=margsdecl
-            cplsdecl="".join([("C"+str(i)+", ") for i in range(1,callkey[2]+1)])[:-2]
-            replace_dict['cplsdecl']=cplsdecl
-            weset="\n".join([("WE(I,"+str(i)+")=W"+str(i)+"(I)") for \
-                             i in range(1,callkey[1]+1)])
-            replace_dict['weset']=weset
-            momposset="\n".join([("MOMPOS(%d)=MP%d"%(i,i)) for \
-                             i in range(1,callkey[1]+1)])
-            replace_dict['momposset']=momposset
-            msetlines=["M2L(1)=M%d**2"%(callkey[0]),]
-            mset="\n".join(msetlines+[("M2L("+str(i)+")=M"+str(i-1)+"**2") for \
-                             i in range(2,callkey[0]+1)])
-            replace_dict['mset']=mset
-            cplset="\n".join([("LC("+str(i)+")=C"+str(i)) for \
-                             i in range(1,callkey[2]+1)])
-            replace_dict['cplset']=cplset            
-            mset2lines=["ML(1)=M%d"%(callkey[0]),"ML(2)=M%d"%(callkey[0])]
-            mset2="\n".join(mset2lines+[("ML("+str(i)+")=M"+str(i-2)) for \
-                             i in range(3,callkey[0]+3)])
-            replace_dict['mset2']=mset2           
-            replace_dict['nwfsargs'] = callkey[1]
-            if callkey[0]==callkey[1]:
-                file = open(os.path.join(_file_path, \
-                 'iolibs/template_files/loop/helas_loop_amplitude.inc')).read()                
-            else:
-                file = open(os.path.join(_file_path, \
-                 'iolibs/template_files/loop/helas_loop_amplitude_pairing.inc')).read() 
-                pairingargs="".join([("P"+str(i)+", ") for i in range(1,callkey[0]+1)])
-                replace_dict['pairingargs']=pairingargs
-                pairingdecl="".join([("P"+str(i)+", ") for i in range(1,callkey[0]+1)])[:-2]
-                replace_dict['pairingdecl']=pairingdecl
-                pairingset="\n".join([("PAIRING("+str(i)+")=P"+str(i)) for \
-                             i in range(1,callkey[0]+1)])
-                replace_dict['pairingset']=pairingset
-            file = file % replace_dict
-            files.append(file)   
-        
-        file="\n".join(files)
-        
-        if writer:
-            writer.writelines(file)
-        else:
-            return file
-        
-    def write_loopmatrix(self, writer, matrix_element, fortran_model, noSplit=False):
-        """Create the loop_matrix.f file."""
-        
-        if not matrix_element.get('processes') or \
-               not matrix_element.get('diagrams'):
-            return 0
-        
-        # Decide here wether we need to split the loop_matrix.f file or not.
-        needSplitting=(not noSplit and \
-                       (len(matrix_element.get_all_amplitudes())>1000))
-        # If splitting is necessary, one has two choices to treat color:
-        # A: splitColor=False
-        #       The color info is kept together in loop_matrix.f
-        # B: splitColor=True
-        #       The JAMP initialization is done as for the born, but they are
-        #       split in different jamp_calls_#.f subroutines. 
-        splitColor=True
-
-        # Helper function to define the JAMP and HELAS calls directly in the
-        # loop_matrix.f file or split in dedicated subroutines split in
-        # different files if the output is too large.
-        def normal_HELASJAMP():
-            """ Finish the loop_matrix.f generation without splitting """
-            replace_dict['helas_calls'] = "\n".join(helas_calls)
-            # Extract BORNJAMP lines
-            born_jamp_lines = self.get_JAMP_lines(matrix_element.get_born_color_amplitudes(),
-                                                  "JAMPB(","AMP(",15)
-            replace_dict['born_jamp_lines'] = '\n'.join(born_jamp_lines)
-            # Extract LOOPJAMP lines
-            loop_jamp_lines = self.get_JAMP_lines(matrix_element.get_loop_color_amplitudes(),
-                                                  "JAMPL(K,","AMPL(K,",15)
-            replace_dict['loop_jamp_lines'] = '\n'.join(loop_jamp_lines) 
-            
-        def split_HELASJAMP(masterfile):
-            """ Finish the loop_matrix.f generation with splitting """         
-            # Split the helas calls into bunches of size n_helas calls.
-            n_helas=2000
-            helascalls_replace_dict={}
-            for key in ['nloopamps','nbornamps','nexternal','nwavefuncs','ncomb']:
-                helascalls_replace_dict[key]=replace_dict[key]
-            helascalls_files=[]
-            for i, k in enumerate(range(0, len(helas_calls), n_helas)):
-                helascalls_replace_dict['bunch_number']=i+1                
-                helascalls_replace_dict['helas_calls']='\n'.join(helas_calls[k:k + n_helas])
-                new_helascalls_file = open(os.path.join(_file_path, \
-                     'iolibs/template_files/loop/helas_calls_split.inc')).read()
-                new_helascalls_file = new_helascalls_file % helascalls_replace_dict
-                helascalls_files.append(new_helascalls_file)
-            # Setup the call to these HELASCALLS subroutines in loop_matrix.f
-            helascalls_calls = [ "CALL HELASCALLS_%d(P,NHEL,H,IC)"%(a+1) for a in \
-                                  range(len(helascalls_files))]
-            replace_dict['helas_calls']='\n'.join(helascalls_calls)
-            if writer:
-                for i, helascalls_file in enumerate(helascalls_files):
-                    filename = 'helas_calls_%d.f'%(i+1)
-                    writers.FortranWriter(filename).writelines(helascalls_file)
-            else:
-                    masterfile='\n'.join([masterfile,]+helascalls_files)                
-            
-            if splitColor:
-                # Split the jamp definition into bunches of size n_jamp calls.
-                n_jamp=250
-                # Extract BORNJAMP lines
-                born_jamp_lines = self.get_JAMP_lines(matrix_element.get_born_color_amplitudes(),
-                                                  "JAMPB(","AMP(",7)
-                # Extract LOOPJAMP lines
-                loop_jamp_lines = self.get_JAMP_lines(matrix_element.get_loop_color_amplitudes(),
-                                                      "JAMPL(K,","AMPL(K,",7)
-                replace_dict['loop_jamp_lines'] = '\n'.join(loop_jamp_lines) 
-                jampcalls_replace_dict={}
-                for key in ['nloopamps','nbornamps','nwavefuncs','ncomb',\
-                            'ncolorloop','ncolorborn']:
-                    jampcalls_replace_dict[key]=replace_dict[key]
-                jampBcalls_files=[]                
-                jampLcalls_files=[]
-                jampcalls_replace_dict['argument']=""
-                jampcalls_replace_dict['tag_letter']="B"
-                for i, k in enumerate(range(0, len(born_jamp_lines), n_jamp)):
-                    jampcalls_replace_dict['bunch_number']=i+1                
-                    jampcalls_replace_dict['jamp_calls']='\n'.join(born_jamp_lines[k:k + n_jamp])
-                    new_jampcalls_file = open(os.path.join(_file_path, \
-                         'iolibs/template_files/loop/jamp_calls_split.inc')).read()
-                    new_jampcalls_file = new_jampcalls_file % jampcalls_replace_dict
-                    jampBcalls_files.append(new_jampcalls_file)
-                jampcalls_replace_dict['argument']="K"
-                jampcalls_replace_dict['tag_letter']="L"
-                for i, k in enumerate(range(0, len(loop_jamp_lines), n_jamp)):
-                    jampcalls_replace_dict['bunch_number']=i+1                
-                    jampcalls_replace_dict['jamp_calls']='\n'.join(loop_jamp_lines[k:k + n_jamp])
-                    new_jampcalls_file = open(os.path.join(_file_path, \
-                         'iolibs/template_files/loop/jamp_calls_split.inc')).read()
-                    new_jampcalls_file = new_jampcalls_file % jampcalls_replace_dict
-                    jampLcalls_files.append(new_jampcalls_file)                    
-                # Setup the call to these JAMPCALLS subroutines in loop_matrix.f
-                jampBcalls_calls = [ "CALL JAMPBCALLS_%d()"%(a+1) for a in \
-                                      range(len(jampBcalls_files))]
-                # Setup the call to these JAMPCALLS subroutines in loop_matrix.f
-                jampLcalls_calls = [ "CALL JAMPLCALLS_%d(K)"%(a+1) for a in \
-                                      range(len(jampLcalls_files))]
-                replace_dict['born_jamp_lines'] = '\n'.join(jampBcalls_calls)
-                replace_dict['loop_jamp_lines'] = '\n'.join(jampLcalls_calls)
-                if writer:
-                    for i, jampBcalls_file in enumerate(jampBcalls_files):
-                        filename = 'jampB_calls_%d.f'%(i+1)
-                        writers.FortranWriter(filename).writelines(jampBcalls_file)
-                    for i, jampLcalls_file in enumerate(jampLcalls_files):
-                        filename = 'jampL_calls_%d.f'%(i+1)
-                        writers.FortranWriter(filename).writelines(jampLcalls_file)
-                else:
-                    masterfile='\n'.join([masterfile,]+jampBcalls_files)
-                    masterfile='\n'.join([masterfile,]+jampLcalls_files)                    
-            else:
-                # Create the born_color.inc include
-                replace_dict2 = {}
-                born_color_amplitudes=matrix_element.get_born_color_amplitudes()
-                replace_dict2['max_ncontrib_born'] =  \
-                    max([len(coefs) for coefs in born_color_amplitudes])
-                born_jamp_factors = self.get_JAMP_coefs(born_color_amplitudes, \
-                   matrix_element.get('born_color_basis'), tag_letter="B")
-                replace_dict2['color_coefs_lines'] =  '\n'.join(born_jamp_factors)
-                file2 = open(os.path.join(_file_path, \
-                         'iolibs/template_files/loop/born_color.inc')).read()
-                file2 = file2 % replace_dict2
-                # Create the loop_color.inc include
-                replace_dict3 = {}
-                loop_color_amplitudes=matrix_element.get_loop_color_amplitudes()
-                replace_dict3['max_ncontrib_loop'] =  \
-                    max([len(coefs) for coefs in loop_color_amplitudes])
-                loop_jamp_factors = self.get_JAMP_coefs(loop_color_amplitudes, \
-                   matrix_element.get('loop_color_basis'), tag_letter="L")
-                replace_dict3['color_coefs_lines'] =  '\n'.join(loop_jamp_factors)
-                file3 = open(os.path.join(_file_path, \
-                         'iolibs/template_files/loop/loop_color.inc')).read()
-                file3 = file3 % replace_dict3
-                # Now write these color coefficients as include file only if the 
-                # user does not require for a self contained single loop_matrix.f file.
-                if writer:
-                    # Write the two color include files
-                    filename = 'born_color.inc'
-                    writers.FortranWriter(filename).writelines(file2)
-                    filename = 'loop_color.inc'
-                    writers.FortranWriter(filename).writelines(file3)
-                    # Write the loop_matrix.f driver file.
-                    replace_dict['born_jamps_coefs'] = "include 'born_color.inc'"
-                    replace_dict['loop_jamps_coefs'] = "include 'loop_color.inc'"  
-                else:
-                    # The user wants a unique self-contained loop_matrix.f
-                    replace_dict['born_jamps_coefs'] = file2
-                    replace_dict['loop_jamps_coefs'] = file3
-            return masterfile
-        
-        # Set lowercase/uppercase Fortran code
-        
-        writers.FortranWriter.downcase = False
-
-        replace_dict = {}
-
-        # Extract version number and date from VERSION file
-        info_lines = self.get_mg5_info_lines()
-        replace_dict['info_lines'] = info_lines
-
-        # Extract process info lines
-        process_lines = self.get_process_info_lines(matrix_element)
-        replace_dict['process_lines'] = process_lines
-
-        # Extract number of external particles
-        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-        replace_dict['nexternal'] = nexternal-2
-
-        # Extract ncomb
-        ncomb = matrix_element.get_helicity_combinations()
-        replace_dict['ncomb'] = ncomb
-
-        # Extract helicity lines
-        helicity_lines = self.get_helicity_lines(matrix_element)
-        replace_dict['helicity_lines'] = helicity_lines
-
-        # Extract overall denominator
-        # Averaging initial state color, spin, and identical FS particles
-        den_factor_line = self.get_den_factor_line(matrix_element)
-        replace_dict['den_factor_line'] = den_factor_line
-
-        # Extract nloopamps
-        nloopamps = matrix_element.get_number_of_loop_amplitudes()
-        replace_dict['nloopamps'] = nloopamps
-
-        # Extract nbronamps
-        nbornamps = matrix_element.get_number_of_born_amplitudes()
-        replace_dict['nbornamps'] = nbornamps
-
-        # Extract nwavefuncs
-        nwavefuncs = matrix_element.get_number_of_external_wavefunctions()
-        replace_dict['nwavefuncs'] = nwavefuncs
-
-        # Extract ncolorloop
-        ncolorloop = max(1, len(matrix_element.get('loop_color_basis')))
-        replace_dict['ncolorloop'] = ncolorloop
-
-        # Extract ncolorborn
-        ncolorborn = max(1, len(matrix_element.get('born_color_basis')))
-        if matrix_element.get('processes')[0].get('has_born'):
-            replace_dict['ncolorborn'] = ncolorborn
-        else:
-            replace_dict['ncolorborn'] = ncolorloop            
-
-        # Extract color data lines
-        color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
-
-        # Extract helas calls
-        helas_calls = fortran_model.get_matrix_element_calls(matrix_element)
-                       
-        # The summing is performed differently depending on wether
-        # the process is loop induced or not
-        if matrix_element.get('processes')[0].get('has_born'):
-            replace_dict['squaring']="""
-          DO K = 1, 3
-              DO I = 1, NCOLORLOOP
-                  ZTEMP = (0.D0,0.D0)          
-                  DO J = 1, NCOLORBORN
-                      ZTEMP = ZTEMP + CF(J,I)*JAMPB(J)
-                  ENDDO
-                  RES(K) = RES(K)+DBLE(ZTEMP*DCONJG(JAMPL(K,I))/DENOM(I)) 
-              ENDDO
-              DO J = 1, NCOLORBORN
-                  ZTEMP = (0.D0,0.D0)
-                  DO I = 1, NCOLORLOOP
-                      ZTEMP = ZTEMP + CF(J,I)*JAMPL(K,I)/DENOM(I)
-                  ENDDO
-                  RES(K) = RES(K)+DBLE(ZTEMP*DCONJG(JAMPB(J)))
-              ENDDO
-          ENDDO
-            """
-        else:
-            replace_dict['squaring']="""
-              DO I = 1, NCOLORLOOP
-                  ZTEMP = (0.D0,0.D0)          
-                  DO J = 1, NCOLORBORN
-                      ZTEMP = ZTEMP + CF(J,I)*JAMPL(1,J)
-                  ENDDO
-                  RES(1) = RES(1)+DBLE(ZTEMP*DCONJG(JAMPL(1,I))/DENOM(I)) 
-              ENDDO
-            """       
-
-        if not needSplitting:
-            file = open(os.path.join(_file_path, \
-                'iolibs/template_files/loop/loop_matrix_standalone.inc')).read()
-            normal_HELASJAMP()
-        else:     
-            file = open(os.path.join(_file_path, \
-              'iolibs/template_files/loop/loop_matrix_standalone_split.inc'\
-              if splitColor else \
-              'iolibs/template_files/loop/loop_matrix_standalone_split_helasCallsOnly.inc')).read()
-            file=split_HELASJAMP(file)
-                                                    
-        file = file % replace_dict
-        if writer:
-            # Write the file
-            writer.writelines(file)  
-            return len(filter(lambda call: call.find('CALL LOOP') != 0, helas_calls))
-        else:
-            return len(filter(lambda call: call.find('CALL LOOP') != 0, helas_calls)), file
-                  
-    def write_bornmatrix(self, writer, matrix_element, fortran_model):
-        """Create the born_matrix.f file for the born process as for a standard
-        tree-level computation."""
-        
-        if not matrix_element.get('processes') or \
-               not matrix_element.get('diagrams'):
-            return 0
-        
-        if not isinstance(writer, writers.FortranWriter):
-            raise writers.FortranWriter.FortranWriterError(\
-                "writer not FortranWriter")
-
-        # For now, we can use the exact same treatment as for tree-level
-        # computations by redefining here a regular HelasMatrixElementf or the
-        # born process.
-        
-        bornME = helas_objects.HelasMatrixElement()
-        for prop in bornME.keys():
-            bornME.set(prop,matrix_element.get(prop))
-        bornME.set('base_amplitude',None,force=True)
-        bornME.set('diagrams',matrix_element.get_born_diagrams())        
-        bornME.set('color_basis',matrix_element.get('born_color_basis'))
-        bornME.set('color_matrix',color_amp.ColorMatrix(bornME.get('color_basis')))
-        
-        return super(LoopProcessExporterFortranSA,self).\
-          write_matrix_element_v4(writer,bornME,fortran_model)
-
-#===============================================================================
-# LoopProcessOptimizedExporterFortranSA
-#===============================================================================
-class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
-    """Class to take care of exporting a set of loop matrix elements in the
-       Fortran format including many optimization like:
-           1. Calling CutTools for each loop amplitude squared against the born
-              amplitudes and already summed over the helicity configurations."""
-
-    template_dir=os.path.join(_file_path,\
-                      'iolibs/template_files/loop_optimized')
-
-    def turn_to_mp_calls(self, helas_calls_list):
-        # Prepend 'MP_' to all the helas calls in helas_calls_list.
-        # Might look like a brutal unsafe implementation, but it is not as 
-        # these calls are built from the properties of the HELAS objects and
-        # wether they are evaluated in double or quad precision is none of 
-        # their business but only relevant to the output algorithm.
-        # Also the cast to complex masses DCMPLX(*) must be replaced by
-        # CMPLX(*,KIND=16)
-        MP=re.compile(r"(?P<toSub>^.*CALL\s+)",re.IGNORECASE)
-        
-        def replaceWith(match_obj):
-            return match_obj.group('toSub')+'MP_'
-
-        DCMPLX=re.compile(r"DCMPLX\((?P<toSub>([^\)]*))\)",re.IGNORECASE)
-        
-        for i, helas_call in enumerate(helas_calls_list):
-            new_helas_call=MP.sub(replaceWith,helas_call)
-            helas_calls_list[i]=DCMPLX.sub(r"CMPLX(\g<toSub>,KIND=16)",\
-                                                                 new_helas_call)
-
-    def copy_v4template(self, modelname,*args, **opts):
-        """Additional actions for the optimized output needed for setup of 
-        Template
-        """
-        LoopProcessExporterFortranSA.copy_v4template(self, modelname,\
-                                                                 *args, **opts)
-        # We add here the user-friendly MadLoop option setter.
-        cpfiles= ["SubProcesses/MadLoopParamReader.f",
-                  "SubProcesses/MadLoopParams.dat",
-                  "SubProcesses/MadLoopParams.inc"]
-        
-        for file in cpfiles:
-            shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
-                        os.path.join(self.dir_path, file))
-
-    def link_files_from_Subprocesses(self):
-        """ Links the additional model files for multiples precision """
-        
-        LoopProcessExporterFortranSA.link_files_from_Subprocesses(self)
-        linkfiles = ['mp_coupl.inc', 'mp_coupl_same_name.inc',
-                     'MadLoopParamReader.f','MadLoopParams.dat',
-                     'MadLoopParams.inc']
-        
-        for file in linkfiles:
-            ln('../%s' % file)       
-
-    def make_model_symbolic_link(self):
-        """ Add the linking of the additional model files for multiple precision
-        """
-        LoopProcessExporterFortranSA.make_model_symbolic_link(self)
-        model_path = self.dir_path + '/Source/MODEL/'
-        ln(model_path + '/mp_coupl.inc', self.dir_path + '/SubProcesses')
-        ln(model_path + '/mp_coupl_same_name.inc', self.dir_path + '/SubProcesses')
-    
-    def cat_coeff(self, ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
-        """Concatenate the coefficient information to reduce it to 
-        (fraction, is_imaginary) """
-
-        total_coeff = ff_number * frac * fractions.Fraction(Nc_value) ** Nc_power
-
-        return (total_coeff, is_imaginary)       
-
-    def get_amp_to_jamp_map(self, col_amps, n_amps):
-        """ Returns a list with element 'i' being a list of tuples corresponding
-        to all appearance of amplitude number 'i' in the jamp number 'j'
-        with coeff 'coeff_j'. The format of each tuple describing an appearance 
-        is (j, coeff_j)."""
-
-        if(isinstance(col_amps,list)):
-            if(col_amps and isinstance(col_amps[0],list)):
-                color_amplitudes=col_amps
-            else:
-                raise MadGraph5Error, "Incorrect col_amps argument passed to get_amp_to_jamp_map"
-        else:
-            raise MadGraph5Error, "Incorrect col_amps argument passed to get_amp_to_jamp_map"
-        
-        # To store the result
-        res_list = [[] for i in range(n_amps)]
-        
-        for i, coeff_list in enumerate(color_amplitudes):
-                for (coefficient, amp_number) in coeff_list:                
-                    res_list[amp_number-1].append((i,self.cat_coeff(\
-                      coefficient[0],coefficient[1],coefficient[2],coefficient[3])))
-
-        return res_list
-
-    def get_color_matrix(self, matrix_element):
-        """Return the color matrix definition lines. This color matrix is of size
-        NLOOPAMPSxNBORNAMPS and allows for squaring individually each Loop and Born
-        amplitude."""
-
-        # The two lists have a list of tuples at element 'i' which correspond
-        # to all appearance of loop amplitude number 'i' in the jampl number 'j'
-        # with coeff 'coeffj'. The format of each tuple describing an appearance 
-        # is (j, coeffj).
-        ampl_to_jampl=self.get_amp_to_jamp_map(\
-          matrix_element.get_loop_color_amplitudes(),
-          matrix_element.get_number_of_loop_amplitudes())
-        ampb_to_jampb=self.get_amp_to_jamp_map(\
-          matrix_element.get_born_color_amplitudes(),
-          matrix_element.get_number_of_born_amplitudes())
-        # Below is the original color matrix multiplying the JAMPS
-        if matrix_element.get('color_matrix'):
-            ColorMatrixDenom = \
-              matrix_element.get('color_matrix').get_line_denominators()
-            ColorMatrixNum = [ matrix_element.get('color_matrix').\
-                               get_line_numerators(index, denominator) for
-                               (index, denominator) in enumerate(ColorMatrixDenom) ]
-        else:
-            ColorMatrixDenom= [1]
-            ColorMatrixNum = [[1]]
-            
-        # Below is the final color matrix output
-        ColorMatrixNumOutput=[]
-        ColorMatrixDenomOutput=[]
-        
-        # Now we construct the color factors between each born and loop amplitude
-        # by scanning their contributions to the different jamps.
-        for jampl_list in ampl_to_jampl:
-            line=[]
-            line_denom=[]
-            for jampb_list in ampb_to_jampb:
-                coeff_real=fractions.Fraction(0,1)
-                coeff_imag=fractions.Fraction(0,1)
-                for (jampl, ampl_coeff) in jampl_list:
-                    for (jampb, ampb_coeff) in jampb_list:
-                        buff=ampl_coeff[0]*ampb_coeff[0]*\
-                          fractions.Fraction(ColorMatrixNum[jampl][jampb],\
-                            ColorMatrixDenom[jampl])
-                        # Remember that we must take the complex conjugate of
-                        # the born jamp color coefficient because we will compute
-                        # the square with 2 Re(LoopAmp x BornAmp*)
-                        if ampl_coeff[1] and ampb_coeff[1]:
-                            coeff_real=coeff_real+buff
-                        elif not ampl_coeff[1] and not ampb_coeff[1]:
-                            coeff_real=coeff_real+buff
-                        elif not ampl_coeff[1] and ampb_coeff[1]:
-                            coeff_imag=coeff_imag-buff
-                        else:
-                            coeff_imag=coeff_imag+buff
-                if coeff_real!=0 and coeff_imag!=0:
-                    raise MadGraph5Error,"MadGraph5 found a color matrix element"+\
-                      " which has both a real and imaginary part."
-                elif coeff_imag!=0:
-                    line.append(coeff_imag)
-                    # Negative denominator means imaginary color coef of the final color matrix
-                    line_denom.append(-1)
-                else:
-                    line.append(coeff_real)
-                    # Positive denominator means real color coef of the final color matrix
-                    line_denom.append(1)
-              
-            lcmm = color_amp.ColorMatrix.lcmm(*[coeff.denominator \
-                                      for coeff in line])
-            # The sign of the denom is already provided, we only set the absolute value here
-            line_denom = [denom*lcmm for denom in line_denom]
-            ColorMatrixDenomOutput.append(line_denom)
-            ColorMatrixNumOutput.append([\
-              (coeff.numerator*abs(line_denom[0])/coeff.denominator) for coeff in line])
-
-        return (ColorMatrixNumOutput,ColorMatrixDenomOutput)
-
-    def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
-                                proc_id = "", config_map = []):
-        """ Writes loop_matrix.f, CT_interface.f and loop_num.f only but with
-        the optimized FortranModel"""
-        # Create the necessary files for the loop matrix element subroutine
-
-        if not isinstance(fortran_model,\
-          helas_call_writers.FortranUFOHelasCallWriter):
-            raise MadGraph5Error, 'The optimized loop fortran output can only'+\
-              ' work with a UFO Fortran model'
-        OptimizedFortranModel=\
-          helas_call_writers.FortranUFOHelasCallWriterOptimized(\
-          fortran_model.get('model'))
-
-        # Initialize a general replacement dictionary with entries common to 
-        # many files generated here.
-        self.general_replace_dict={}
-        # Extract version number and date from VERSION file
-        info_lines = self.get_mg5_info_lines()
-        self.general_replace_dict['info_lines'] = info_lines
-        # Extract process info lines
-        process_lines = self.get_process_info_lines(matrix_element)
-        self.general_replace_dict['process_lines'] = process_lines
-        # Extract number of external particles
-        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-        self.general_replace_dict['nexternal'] = nexternal-2
-        # Extract ncomb
-        ncomb = matrix_element.get_helicity_combinations()
-        self.general_replace_dict['ncomb'] = ncomb
-        # Extract nloopamps
-        nloopamps = matrix_element.get_number_of_loop_amplitudes()
-        self.general_replace_dict['nloopamps'] = nloopamps
-        # Extract nbornamps
-        nbornamps = matrix_element.get_number_of_born_amplitudes()
-        self.general_replace_dict['nbornamps'] = nbornamps
-        # Extract nctamps
-        nctamps = matrix_element.get_number_of_CT_amplitudes()
-        self.general_replace_dict['nctamps'] = nctamps
-        # Extract nwavefuncs
-        nwavefuncs = matrix_element.get_number_of_external_wavefunctions()
-        self.general_replace_dict['nwavefuncs'] = nwavefuncs
-        # Extract max number of couplings
-        self.general_replace_dict['maxlcouplings']=\
-           matrix_element.find_max_loop_coupling()
-        # Set format of the double precision
-        self.general_replace_dict['real_dp_format']='real*8'
-        self.general_replace_dict['real_mp_format']='real*16'
-        # Set format of the complex
-        self.general_replace_dict['complex_dp_format']='complex*16'
-        self.general_replace_dict['complex_mp_format']='complex*32'
-        # Set format of the masses
-        self.general_replace_dict['mass_dp_format'] = \
-                          self.general_replace_dict['complex_dp_format']
-        self.general_replace_dict['mass_mp_format'] = \
-                          self.general_replace_dict['complex_mp_format']
-        
-        if writer:
-            files=[]
-            files.append(self.write_loop_num(None,matrix_element,\
-                                                         OptimizedFortranModel))
-            files.append(self.write_CT_interface(None,matrix_element))
-            calls, loop_matrix = self.write_loopmatrix(None,matrix_element,\
-                                                          OptimizedFortranModel)
-            files.append(loop_matrix)
-            files.append(write_born_amps_and_wfs(None,matrix_element,\
-                                                        OptimizedFortranModel))
-            file = "\n".join(files)
-            writer.writelines(file)
-            return calls
-        
-        else:
-                        
-            filename = 'loop_matrix.f'
-            calls = self.write_loopmatrix(writers.FortranWriter(filename),
-                                          matrix_element,
-                                          OptimizedFortranModel)             
-            filename = 'CT_interface.f'
-            self.write_CT_interface(writers.FortranWriter(filename),\
-                                    matrix_element)
-            
-            filename = 'loop_num.f'
-            self.write_loop_num(writers.FortranWriter(filename),\
-                                    matrix_element,OptimizedFortranModel)
-            
-            filename = 'mp_born_amps_and_wfs.f'
-            self.write_born_amps_and_wfs(writers.FortranWriter(filename),\
-                                         matrix_element,OptimizedFortranModel)
-
-            return calls                
-
-    def write_loop_num(self, writer, matrix_element,fortran_model):
-        """ Create the file containing the core subroutine called by CutTools
-        which contains the Helas calls building the loop"""
-
-        if not matrix_element.get('processes') or \
-               not matrix_element.get('diagrams'):
-            return 0
-
-        # Set lowercase/uppercase Fortran code
-        writers.FortranWriter.downcase = False
-        
         file = open(os.path.join(self.template_dir,'loop_num.inc')).read()
         
         replace_dict = copy.copy(self.general_replace_dict)
         
         loop_helas_calls=fortran_model.get_loop_amplitude_helas_calls(matrix_element)
         replace_dict['maxlcouplings']=matrix_element.find_max_loop_coupling()
-        replace_dict['loop_helas_calls'] = "\n".join(loop_helas_calls)
-        
-        # Now stuff for the multiple precision numerator function
+        replace_dict['loop_helas_calls'] = "\n".join(loop_helas_calls) 
+       
+        # The squaring is only necessary for the processes with born where the 
+        # sum over helicities is done before sending the numerator to CT.
+        dp_squaring_lines=['DO I=1,NBORNAMPS',
+            'CFTOT=DCMPLX(CF_N(AMPLNUM,I)/DBLE(ABS(CF_D(AMPLNUM,I))),0.0d0)',
+            'IF(CF_D(AMPLNUM,I).LT.0) CFTOT=CFTOT*IMAG1',
+            'RES=RES+CFTOT*BUFF*DCONJG(AMP(I,H))','ENDDO']
+        mp_squaring_lines=['DO I=1,NBORNAMPS',
+'CFTOT=CMPLX(CF_N(AMPLNUM,I)/(1.0E0_16*ABS(CF_D(AMPLNUM,I))),0.0E0_16,KIND=16)',
+            'IF(CF_D(AMPLNUM,I).LT.0) CFTOT=CFTOT*IMAG1',
+            'QPRES=QPRES+CFTOT*BUFF*CONJG(AMP(I,H))','ENDDO']
+        if matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['dp_squaring']='\n'.join(dp_squaring_lines)
+            replace_dict['mp_squaring']='\n'.join(mp_squaring_lines)
+        else:
+            replace_dict['dp_squaring']='RES=BUFF'
+            replace_dict['mp_squaring']='QPRES=BUFF'                       
+       
+        # Setup here the details for the phase-space point four-momentum
+        # conservation improvement
         (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
         replace_dict['n_initial']=ninitial
         # The last momenta is fixed by the others and the last two particles
         # are the L-cut ones, so -3.
         mass_list=matrix_element.get_external_masses()[:-3]
-        replace_dict['force_onshell']='\n'.join([\
-        'P(3,%(i)d)=SIGN(SQRT(P(0,%(i)d)**2-P(1,%(i)d)**2-P(2,%(i)d)**2-%(m)s**2),P(3,%(i)d))'%\
-         {'i':i+1,'m':m} for i, m in enumerate(mass_list)])
+        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
+                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
         # Prepend MP_ to all helas calls.
         self.turn_to_mp_calls(loop_helas_calls)
         replace_dict['mp_loop_helas_calls'] = "\n".join(loop_helas_calls)
@@ -1051,17 +634,25 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             writer.writelines(file)
         else:
             return file
-        
-    def write_CT_interface(self, writer, matrix_element):
+
+    def write_CT_interface(self, writer, matrix_element, optimized_output=False):
         """ Create the file CT_interface.f which contains the subroutine defining
         the loop HELAS-like calls along with the general interfacing subroutine. """
 
         files=[]
-        
-        replace_dict_orig=copy.copy(self.general_replace_dict)
 
         # First write CT_interface which interfaces MG5 with CutTools.
-        replace_dict=copy.copy(replace_dict_orig)
+        replace_dict=copy.copy(self.general_replace_dict)
+        
+        # We finalize CT result differently wether we used the built-in 
+        # squaring against the born.
+        if matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['finalize_CT']='\n'.join([\
+         'RES(%d)=NORMALIZATION*2.0d0*DBLE(RES(%d))'%(i,i) for i in range(1,4)])
+        else:
+            replace_dict['finalize_CT']='\n'.join([\
+                     'RES(%d)=NORMALIZATION*RES(%d)'%(i,i) for i in range(1,4)])
+        
         file = open(os.path.join(self.template_dir,'CT_interface.inc')).read()  
 
         file = file % replace_dict
@@ -1069,50 +660,55 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         # Now collect the different kind of subroutines needed for the
         # loop HELAS-like calls.
-        CallKeys=[]
-        for ldiag in matrix_element.get_loop_diagrams():
-            for lamp in ldiag.get_loop_amplitudes():
-                if lamp.get_call_key()[1:] not in CallKeys:
-                    CallKeys.append(lamp.get_call_key()[1:])
-                
-        for callkey in CallKeys:
-            replace_dict=copy.copy(replace_dict_orig)
+        HelasLoopAmpsCallKeys=matrix_element.get_used_helas_loop_amps()
+
+        for callkey in HelasLoopAmpsCallKeys:
+            replace_dict=copy.copy(self.general_replace_dict)
             # Add to this dictionary all other attribute common to all
             # HELAS-like loop subroutines.
+            if matrix_element.get('processes')[0].get('has_born'):
+                replace_dict['validh_or_nothing']=',validh'
+            else:
+                replace_dict['validh_or_nothing']=''
+            # In the optimized output, the number of couplings in the loop is
+            # not specified so we only treat it here if necessary:
+            if len(callkey)>2:
+                replace_dict['ncplsargs']=callkey[2]
+                cplsargs="".join(["C%d,MP_C%d, "%(i,i) for i in range(1,callkey[2]+1)])
+                replace_dict['cplsargs']=cplsargs
+                cplsdecl="".join(["C%d, "%i for i in range(1,callkey[2]+1)])[:-2]
+                replace_dict['cplsdecl']=cplsdecl
+                mp_cplsdecl="".join(["MP_C%d, "%i for i in range(1,callkey[2]+1)])[:-2]
+                replace_dict['mp_cplsdecl']=mp_cplsdecl
+                cplset="\n".join(["\n".join(["LC(%d)=C%d"%(i,i),\
+                                         "MP_LC(%d)=MP_C%d"%(i,i)])\
+                              for i in range(1,callkey[2]+1)])
+                replace_dict['cplset']=cplset
+            
             replace_dict['nloopline']=callkey[0]
-            wfsargs="".join([("W%d, MP%d, "%(i,i)) for i in range(1,callkey[1]+1)])
-            replace_dict['ncplsargs']=callkey[2]
+            wfsargs="".join(["W%d, "%i for i in range(1,callkey[1]+1)])
             replace_dict['wfsargs']=wfsargs
-            margs="".join(["M%d,MP_M%d, "%(i,i) for i in range(1,callkey[0]+1)])
-            replace_dict['margs']=margs
-            cplsargs="".join(["C%d,MP_C%d, "%(i,i) for i in range(1,callkey[2]+1)])
-            replace_dict['cplsargs']=cplsargs
+            # We don't pass the multiple precision mass in the optimized_output
+            if not optimized_output:
+                margs="".join(["M%d,MP_M%d, "%(i,i) for i in range(1,callkey[0]+1)])
+            else:
+                margs="".join(["M%d, "%i for i in range(1,callkey[0]+1)])
+            replace_dict['margs']=margs                
             wfsargsdecl="".join([("W%d, "%i) for i in range(1,callkey[1]+1)])[:-2]
             replace_dict['wfsargsdecl']=wfsargsdecl
-            momposdecl="".join([("MP%d, "%i) for i in range(1,callkey[1]+1)])[:-2]
-            replace_dict['momposdecl']=momposdecl
             margsdecl="".join(["M%d, "%i for i in range(1,callkey[0]+1)])[:-2]
             replace_dict['margsdecl']=margsdecl
             mp_margsdecl="".join(["MP_M%d, "%i for i in range(1,callkey[0]+1)])[:-2]
             replace_dict['mp_margsdecl']=mp_margsdecl
-            cplsdecl="".join(["C%d, "%i for i in range(1,callkey[2]+1)])[:-2]
-            replace_dict['cplsdecl']=cplsdecl
-            mp_cplsdecl="".join(["MP_C%d, "%i for i in range(1,callkey[2]+1)])[:-2]
-            replace_dict['mp_cplsdecl']=mp_cplsdecl
             weset="\n".join([("WE("+str(i)+")=W"+str(i)) for \
                              i in range(1,callkey[1]+1)])
             replace_dict['weset']=weset
-            momposset="\n".join([("MOMPOS(%d)=MP%d"%(i,i)) for \
-                             i in range(1,callkey[1]+1)])
-            replace_dict['momposset']=momposset
+            weset="\n".join([("WE(%d)=W%d"%(i,i)) for i in range(1,callkey[1]+1)])
+            replace_dict['weset']=weset
             msetlines=["M2L(1)=M%d**2"%(callkey[0]),]
             mset="\n".join(msetlines+["M2L(%d)=M%d**2"%(i,i-1) for \
                              i in range(2,callkey[0]+1)])
-            replace_dict['mset']=mset
-            cplset="\n".join(["\n".join(["LC(%d)=C%d"%(i,i),\
-                                         "MP_LC(%d)=MP_C%d"%(i,i)])\
-                              for i in range(1,callkey[2]+1)])
-            replace_dict['cplset']=cplset            
+            replace_dict['mset']=mset            
             mset2lines=["ML(1)=M%d"%(callkey[0]),"ML(2)=M%d"%(callkey[0]),
                   "MP_ML(1)=MP_M%d"%(callkey[0]),"MP_ML(2)=MP_M%d"%(callkey[0])]
             mset2="\n".join(mset2lines+["\n".join(["ML(%d)=M%d"%(i,i-2),
@@ -1121,18 +717,28 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['mset2']=mset2           
             replace_dict['nwfsargs'] = callkey[1]
             if callkey[0]==callkey[1]:
-                file = open(os.path.join(self.template_dir,\
-                                             'helas_loop_amplitude.inc')).read()                
+                replace_dict['nwfsargs_header'] = ""
+                replace_dict['pairingargs']=""
+                replace_dict['pairingdecl']=""
+                pairingset="""DO I=1,NLOOPLINE
+                                PAIRING(I)=1
+                              ENDDO
+                           """
+                replace_dict['pairingset']=pairingset               
             else:
-                file = open(os.path.join(self.template_dir,\
-                                     'helas_loop_amplitude_pairing.inc')).read() 
-                pairingargs="".join([("P"+str(i)+", ") for i in range(1,callkey[0]+1)])
+                replace_dict['nwfsargs_header'] = '_%d'%callkey[1]
+                pairingargs="".join([("P"+str(i)+", ") for i in \
+                                                         range(1,callkey[0]+1)])
                 replace_dict['pairingargs']=pairingargs
-                pairingdecl="".join([("P"+str(i)+", ") for i in range(1,callkey[0]+1)])[:-2]
+                pairingdecl="integer "+"".join([("P"+str(i)+", ") for i in \
+                                                    range(1,callkey[0]+1)])[:-2]
                 replace_dict['pairingdecl']=pairingdecl
                 pairingset="\n".join([("PAIRING("+str(i)+")=P"+str(i)) for \
                              i in range(1,callkey[0]+1)])
                 replace_dict['pairingset']=pairingset
+            
+            file = open(os.path.join(self.template_dir,\
+                                             'helas_loop_amplitude.inc')).read()
             file = file % replace_dict
             files.append(file)   
         
@@ -1142,8 +748,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             writer.writelines(file)
         else:
             return file
-        
-    
+
     # Helper function to split HELAS CALLS in dedicated subroutines placed
     # in different files.
     def split_HELASCALLS(self, writer, replace_dict, template_name, masterfile, \
@@ -1176,7 +781,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 masterfile='\n'.join([masterfile,]+helascalls_files)                
 
         return masterfile
-    
+
     def write_loopmatrix(self, writer, matrix_element, fortran_model, \
                          noSplit=False):
         """Create the loop_matrix.f file."""
@@ -1194,8 +799,59 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # Extract overall denominator
         # Averaging initial state color, spin, and identical FS particles
         den_factor_line = self.get_den_factor_line(matrix_element)
-        replace_dict['den_factor_line'] = den_factor_line
+        replace_dict['den_factor_line'] = den_factor_line                  
 
+        # These entries are specific for the output for loop-induced processes
+        # Also sets here the details of the squaring of the loop ampltiudes
+        # with the born or the loop ones.
+        if not matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['set_reference']='\n'.join(['! ===',
+              '!  Please specify below the reference value you want to use for'+\
+              ' comparisons.','ref=LSCALE**(-2*NEXTERNAL+8)','! ==='])
+            replace_dict['loop_induced_setup'] = '\n'.join([
+                             'DUMMY=HELPICKED','HELPICKED=H','MP_DONE=.FALSE.'])
+            replace_dict['loop_induced_finalize'] = \
+            """HELPICKED=DUMMY
+               DO I=NCTAMPS+1,NLOOPAMPS
+               IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.S(I))) THEN
+                 WRITE(*,*) '##W03 WARNING Contribution ',I
+                 WRITE(*,*) ' is unstable for helicity ',H
+               ENDIF
+               IF(.NOT.ISZERO(ABS(AMPL(2,I))+ABS(AMPL(3,I)),REF,-1,H)) THEN
+                 WRITE(*,*) '##W04 WARNING Contribution ',I
+                 WRITE(*,*) ' for helicity ',H,' has a contribution to the poles'
+               ENDIF
+               ENDDO"""
+            replace_dict['loop_helas_calls']=""
+            replace_dict['nctamps_or_nloopamps']='nloopamps'
+            replace_dict['nbornamps_or_nloopamps']='nloopamps'
+            replace_dict['squaring']=\
+                    'ANS(1)=ANS(1)+DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))'        
+        else:
+            replace_dict['set_reference']='call smatrix(p,ref)'
+            replace_dict['loop_induced_helas_calls'] = ""
+            replace_dict['loop_induced_finalize'] = ""
+            replace_dict['loop_induced_setup'] = ""
+            replace_dict['nctamps_or_nloopamps']='nctamps'
+            replace_dict['nbornamps_or_nloopamps']='nbornamps'
+            replace_dict['squaring']='\n'.join(['DO K=1,3',
+                   'ANS(K)=ANS(K)+2.0d0*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J,H)))',
+                                                                       'ENDDO'])
+
+        # Actualize results from the loops computed. Only necessary for
+        # processes with a born.
+        actualize_ans=[]
+        if matrix_element.get('processes')[0].get('has_born'):
+            actualize_ans.append("DO I=NCTAMPS+1,NLOOPAMPS")
+            actualize_ans.extend("ANS(%d)=ANS(%d)+AMPL(%d,I)"%(i,i,i) for i \
+                                                                  in range(1,4)) 
+            actualize_ans.append(\
+               "IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.S(I))) THEN")
+            actualize_ans.append(\
+                   "WRITE(*,*) '##W03 WARNING Contribution ',I,' is unstable.'")            
+            actualize_ans.extend(["ENDIF","ENDDO"])            
+        replace_dict['actualize_ans']='\n'.join(actualize_ans)
+        
         # Write out the color matrix
         (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
         CMWriter=open('ColorNumFactors.dat','w')
@@ -1220,8 +876,24 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
                                                             matrix_element)
         file = open(os.path.join(self.template_dir,\
+        
                         'loop_matrix_standalone.inc')).read()
         
+        if matrix_element.get('processes')[0].get('has_born'):
+            toBeRepaced='loop_helas_calls'
+        else:
+            toBeRepaced='loop_induced_helas_calls'            
+
+        # Setup here the details for the phase-space point four-momentum
+        # conservation improvement
+        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
+        replace_dict['n_initial']=ninitial
+        # The last momenta is fixed by the others and the last two particles
+        # are the L-cut ones, so -3.
+        mass_list=matrix_element.get_external_masses()[:-3]
+        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
+                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
+
         # Decide here wether we need to split the loop_matrix.f file or not.
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>1000)):
             file=self.split_HELASCALLS(writer,replace_dict,\
@@ -1229,10 +901,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                             'born_ct_helas_calls','helas_calls_ampb')
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'helas_calls_split.inc',file,loop_amp_helas_calls,\
-                    'loop_helas_calls','helas_calls_ampl')
+                    toBeRepaced,'helas_calls_ampl')
         else:
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
-            replace_dict['loop_helas_calls']='\n'.join(loop_amp_helas_calls)
+            replace_dict[toBeRepaced]='\n'.join(loop_amp_helas_calls)
         
         file = file % replace_dict
         if writer:
@@ -1244,6 +916,33 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             # Return it to be written along with the others
             return len(filter(lambda call: call.find('CALL LOOP') != 0, \
                               loop_amp_helas_calls)), file
+                  
+    def write_bornmatrix(self, writer, matrix_element, fortran_model):
+        """Create the born_matrix.f file for the born process as for a standard
+        tree-level computation."""
+        
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+        
+        if not isinstance(writer, writers.FortranWriter):
+            raise writers.FortranWriter.FortranWriterError(\
+                "writer not FortranWriter")
+
+        # For now, we can use the exact same treatment as for tree-level
+        # computations by redefining here a regular HelasMatrixElementf or the
+        # born process.
+        
+        bornME = helas_objects.HelasMatrixElement()
+        for prop in bornME.keys():
+            bornME.set(prop,matrix_element.get(prop))
+        bornME.set('base_amplitude',None,force=True)
+        bornME.set('diagrams',matrix_element.get_born_diagrams())        
+        bornME.set('color_basis',matrix_element.get('born_color_basis'))
+        bornME.set('color_matrix',color_amp.ColorMatrix(bornME.get('color_basis')))
+        
+        return super(LoopProcessExporterFortranSA,self).\
+          write_matrix_element_v4(writer,bornME,fortran_model)
 
     def write_born_amps_and_wfs(self, writer, matrix_element, fortran_model,\
                                 noSplit=False): 
@@ -1284,3 +983,365 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         else:
             # Return it to be written along with the others
             return file
+
+#===============================================================================
+# LoopProcessOptimizedExporterFortranSA
+#===============================================================================
+
+class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
+    """Class to take care of exporting a set of loop matrix elements in the
+       Fortran format which exploits the Pozzorini method of representing
+       the loop numerators as polynomial to render its evaluations faster."""
+
+    template_dir=os.path.join(_file_path,'iolibs/template_files/loop_optimized')
+    # The option below controls wether one wants to group together in one single
+    # CutTools call the loops with same denominator structure
+    group_loops=True
+
+    def link_files_from_Subprocesses(self,proc_name=""):
+        """ Does the same as the mother routine except that it also links
+        coef_specs.inc in the HELAS folder."""
+
+        LoopProcessExporterFortranSA.link_files_from_Subprocesses(self,proc_name)
+        
+        # Link the coef_specs.inc for aloha to define the coefficient
+        # general properties (of course necessary in the optimized mode only)
+        ln(os.path.join(self.dir_path, 'SubProcesses', "P%s" % proc_name,
+                 'coef_specs.inc'),os.path.join(self.dir_path,'Source/DHELAS/'))
+
+    def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
+                                proc_id = "", config_map = []):
+        """ Writes loop_matrix.f, CT_interface.f and loop_num.f only but with
+        the optimized FortranModel"""
+        # Create the necessary files for the loop matrix element subroutine
+
+        if not isinstance(fortran_model,\
+          helas_call_writers.FortranUFOHelasCallWriter):
+            raise MadGraph5Error, 'The optimized loop fortran output can only'+\
+              ' work with a UFO Fortran model'
+        OptimizedFortranModel=\
+          helas_call_writers.FortranUFOHelasCallWriterOptimized(\
+          fortran_model.get('model'),False)
+
+        # Initialize a general replacement dictionary with entries common to 
+        # many files generated here.
+        self.general_replace_dict=LoopProcessExporterFortranSA.\
+                              generate_general_replace_dict(self,matrix_element)
+            
+        # Now some features specific to the optimized output        
+        max_loop_rank=matrix_element.get_max_loop_rank()
+        self.general_replace_dict['loop_max_coefs']=\
+                        q_polynomial.get_number_of_coefs_for_rank(max_loop_rank)
+        max_loop_vertex_rank=matrix_element.get_max_loop_vertex_rank()
+        if max_loop_vertex_rank > 1:
+            raise MadGraph5Error, 'The optimized loop fortran output can only'+\
+              ' handle renormalizable gauge theories for which the maximum loop'+\
+              ' power brought by any loop interaction is one.'
+        self.general_replace_dict['vertex_max_coefs']=\
+                 q_polynomial.get_number_of_coefs_for_rank(max_loop_vertex_rank)
+        self.general_replace_dict['nloopwavefuncs']=\
+                               matrix_element.get_number_of_loop_wavefunctions()
+        max_spin=matrix_element.get_max_loop_particle_spin()
+        if max_spin>3:
+            raise MadGraph5Error, "ML5 can only handle loop particles with"+\
+                                                               " spin 1 at most"
+        self.general_replace_dict['max_lwf_size']=4
+        self.general_replace_dict['nloops']=len(\
+                        [1 for ldiag in matrix_element.get_loop_diagrams() for \
+                                           lamp in ldiag.get_loop_amplitudes()])
+        if self.group_loops and \
+                             matrix_element.get('processes')[0].get('has_born'):
+            self.general_replace_dict['nloop_groups']=\
+                                          len(matrix_element.get('loop_groups'))
+        else:
+            self.general_replace_dict['nloop_groups']=\
+                                              self.general_replace_dict['nloops']
+        # The born amp declaration suited for also outputing the loop-induced
+        # processes as well.
+        if matrix_element.get('processes')[0].get('has_born'):
+            self.general_replace_dict['dp_born_amps_decl'] = \
+                  self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS)"+\
+                  "\n common/AMPS/AMP"
+            self.general_replace_dict['mp_born_amps_decl'] = \
+                  self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS)"+\
+                  "\n common/MP_AMPS/AMP"
+        
+        if writer:
+            raise MadGraph5Error, "The 'matrix' format output is disabled in "+\
+                                                           "the optimized mode."
+        else:
+                        
+            filename = 'loop_matrix.f'
+            calls = self.write_loopmatrix(writers.FortranWriter(filename),
+                                          matrix_element,
+                                          OptimizedFortranModel)
+            filename = 'polynomial.f'
+            calls = self.write_polynomial_subroutines(
+                                          writers.FortranWriter(filename),
+                                          matrix_element)
+            
+            filename = 'CT_interface.f'
+            self.write_CT_interface(writers.FortranWriter(filename),\
+                                    matrix_element)
+
+            filename = 'loop_num.f'
+            self.write_loop_num(writers.FortranWriter(filename),\
+                                    matrix_element,OptimizedFortranModel)
+            
+            filename = 'mp_compute_loop_coefs.f'
+            self.write_mp_compute_loop_coefs(writers.FortranWriter(filename),\
+                                         matrix_element,OptimizedFortranModel)
+
+            return calls
+
+    def write_loop_num(self, writer, matrix_element,fortran_model):
+        """ Create the file containing the core subroutine called by CutTools
+        which contains the Helas calls building the loop"""
+
+        replace_dict=copy.copy(self.general_replace_dict)
+
+        file = open(os.path.join(self.template_dir,'loop_num.inc')).read()  
+        file = file % replace_dict
+        writer.writelines(file)
+
+    def write_CT_interface(self, writer, matrix_element):
+        """ We can re-use the mother one for the loop optimized output."""
+        LoopProcessExporterFortranSA.write_CT_interface(\
+                            self, writer, matrix_element,optimized_output=True)
+
+    def write_polynomial_subroutines(self,writer,matrix_element):
+        """ Subroutine to create all the subroutines relevant for handling
+        the polynomials representing the loop numerator """
+        
+        # First create 'coef_specs.inc'
+        IncWriter=writers.FortranWriter('coef_specs.inc','w')
+        IncWriter.writelines("""INTEGER MAXLWFSIZE
+                           PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
+                           INTEGER LOOP_MAXCOEFS
+                           PARAMETER (LOOP_MAXCOEFS=%(loop_max_coefs)d)
+                           INTEGER VERTEXMAXCOEFS
+                           PARAMETER (VERTEXMAXCOEFS=%(vertex_max_coefs)d)"""\
+                           %self.general_replace_dict)
+        IncWriter.close()
+        
+        # List of all subroutines to place there
+        subroutines=[]
+        
+        # Start from the routine in the template
+        file = open(os.path.join(self.template_dir,'polynomial.inc')).read()  
+        file = file % self.general_replace_dict
+        subroutines.append(file)
+        
+        # Initialize the polynomial routine writer
+        poly_writer=q_polynomial.FortranPolynomialRoutines(
+                                             matrix_element.get_max_loop_rank())
+        mp_poly_writer=q_polynomial.FortranPolynomialRoutines(
+                    matrix_element.get_max_loop_rank(),coef_format='complex*32',
+                                                               sub_prefix='MP_')
+        # The eval subroutine
+        subroutines.append(poly_writer.write_polynomial_evaluator())
+        subroutines.append(mp_poly_writer.write_polynomial_evaluator())
+        # The add coefs subroutine
+        subroutines.append(poly_writer.write_add_coefs())
+        subroutines.append(mp_poly_writer.write_add_coefs())        
+        # The merging one for creating the loop coefficients
+        subroutines.append(poly_writer.write_wl_merger())
+        subroutines.append(mp_poly_writer.write_wl_merger())
+        # Now the udpate subroutines
+        for wl_update in matrix_element.get_used_wl_updates():
+            subroutines.append(poly_writer.write_wl_updater(\
+                                                     wl_update[0],wl_update[1]))
+            subroutines.append(mp_poly_writer.write_wl_updater(\
+                                                     wl_update[0],wl_update[1]))
+        writer.writelines('\n\n'.join(subroutines))
+
+    def write_mp_compute_loop_coefs(self, writer, matrix_element, fortran_model, \
+                                    noSplit=False):
+        """Create the write_mp_compute_loop_coefs.f file."""
+        
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+        
+        # Set lowercase/uppercase Fortran code
+        
+        writers.FortranWriter.downcase = False
+
+        replace_dict = copy.copy(self.general_replace_dict)                 
+
+        # These entries are specific for the output for loop-induced processes
+        # Also sets here the details of the squaring of the loop ampltiudes
+        # with the born or the loop ones.
+        if not matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['nctamps_or_nloopamps']='nctamps'
+            replace_dict['nbornamps_or_nloopamps']='nctamps'
+            replace_dict['mp_squaring']=\
+          'ANS(1)=ANS(1)+REAL(CFTOT*AMPL(1,I)*CONJG(AMPL(1,J),KIND=16),KIND=16)'        
+        else:
+            replace_dict['nctamps_or_nloopamps']='nctamps'
+            replace_dict['nbornamps_or_nloopamps']='nbornamps'
+            replace_dict['mp_squaring']='\n'.join(['DO K=1,3',
+                'ANS(K)=ANS(K)+2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J))'+\
+                                                           ',KIND=16)','ENDDO'])
+        
+        # Extract helas calls
+        born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
+                                                            matrix_element)
+        self.turn_to_mp_calls(born_ct_helas_calls)
+        coef_construction, coef_merging = fortran_model.get_coef_construction_calls(\
+                                    matrix_element,group_loops=self.group_loops)
+        self.turn_to_mp_calls(coef_construction)
+        self.turn_to_mp_calls(coef_merging)        
+                                         
+        file = open(os.path.join(self.template_dir,\
+                                           'mp_compute_loop_coefs.inc')).read()
+
+        # Decide here wether we need to split the loop_matrix.f file or not.
+        # 200 is reasonable but feel free to change it.
+        if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
+            file=self.split_HELASCALLS(writer,replace_dict,\
+                            'mp_helas_calls_split.inc',file,born_ct_helas_calls,\
+                            'mp_born_ct_helas_calls','mp_helas_calls_ampb')
+            file=self.split_HELASCALLS(writer,replace_dict,\
+                    'mp_helas_calls_split.inc',file,coef_construction,\
+                    'mp_coef_construction','mp_coef_construction')
+        else:
+            replace_dict['mp_born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
+            replace_dict['mp_coef_construction']='\n'.join(coef_construction)
+        
+        replace_dict['mp_coef_merging']='\n'.join(coef_merging)
+        
+        # Now stuff for the multiple precision ps point improver
+        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
+        replace_dict['n_initial']=ninitial
+        # The last momenta is fixed by the others and the last two particles
+        # are the L-cut ones, so -3.
+        mass_list=matrix_element.get_external_masses()[:-3]
+        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
+                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
+        
+        file = file % replace_dict
+ 
+        # Write the file
+        writer.writelines(file)  
+
+    def write_loopmatrix(self, writer, matrix_element, fortran_model, \
+                         noSplit=False):
+        """Create the loop_matrix.f file."""
+        
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+        
+        # Set lowercase/uppercase Fortran code
+        
+        writers.FortranWriter.downcase = False
+
+        replace_dict = copy.copy(self.general_replace_dict)
+
+        # Extract overall denominator
+        # Averaging initial state color, spin, and identical FS particles
+        den_factor_line = self.get_den_factor_line(matrix_element)
+        replace_dict['den_factor_line'] = den_factor_line                  
+
+        # These entries are specific for the output for loop-induced processes
+        # Also sets here the details of the squaring of the loop ampltiudes
+        # with the born or the loop ones.
+        if not matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['set_reference']='\n'.join(['! ===',
+              '!  Please specify below the reference value you want to use for'+\
+              ' comparisons.','ref=LSCALE**(-2*NEXTERNAL+8)','! ==='])
+            replace_dict['nctamps_or_nloopamps']='nctamps'
+            replace_dict['nbornamps_or_nloopamps']='nctamps'
+            replace_dict['squaring']=\
+                    'ANS(1)=ANS(1)+DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))'        
+        else:
+            replace_dict['set_reference']='call smatrix(p,ref)'
+            replace_dict['nctamps_or_nloopamps']='nctamps'
+            replace_dict['nbornamps_or_nloopamps']='nbornamps'
+            replace_dict['squaring']='\n'.join(['DO K=1,3',
+                   'ANS(K)=ANS(K)+2.0d0*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))',
+                                                                       'ENDDO'])
+
+        # Actualize results from the loops computed. Only necessary for
+        # processes with a born.
+        actualize_ans=[]
+        if matrix_element.get('processes')[0].get('has_born'):
+            actualize_ans.append("DO I=1,NLOOPGROUPS")
+            actualize_ans.extend("ANS(%d)=ANS(%d)+LOOPRES(%d,I)"%(i,i,i) for i \
+                                                                  in range(1,4)) 
+            actualize_ans.append(\
+               "IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.S(I))) THEN")
+            actualize_ans.append(\
+                   "WRITE(*,*) '##W03 WARNING Contribution ',I,' is unstable.'")            
+            actualize_ans.extend(["ENDIF","ENDDO"])            
+        replace_dict['actualize_ans']='\n'.join(actualize_ans)
+        
+        # Write out the color matrix
+        (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
+        CMWriter=open('ColorNumFactors.dat','w')
+        for ColorLine in CMNum:
+            CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
+        CMWriter.close()
+        CMWriter=open('ColorDenomFactors.dat','w')
+        for ColorLine in CMDenom:
+            CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
+        CMWriter.close()
+        
+        # Write out the helicity configurations
+        HelConfigs=matrix_element.get_helicity_matrix()
+        HelConfigWriter=open('HelConfigs.dat','w')
+        for HelConfig in HelConfigs:
+            HelConfigWriter.write(' '.join(['%d'%H for H in HelConfig])+'\n')
+        HelConfigWriter.close()
+        
+        # Extract helas calls
+        born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
+                                                            matrix_element)
+        coef_construction, coef_merging = fortran_model.get_coef_construction_calls(\
+                                    matrix_element,group_loops=self.group_loops)
+        loop_CT_calls = fortran_model.get_loop_CT_calls(\
+                                    matrix_element,group_loops=self.group_loops)
+        
+        file = open(os.path.join(self.template_dir,\
+                                           'loop_matrix_standalone.inc')).read()
+
+        # Setup here the details for the phase-space point four-momentum
+        # conservation improvement
+        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
+        replace_dict['n_initial']=ninitial
+        # The last momenta is fixed by the others and the last two particles
+        # are the L-cut ones, so -3.
+        mass_list=matrix_element.get_external_masses()[:-3]
+        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
+                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
+
+        # Decide here wether we need to split the loop_matrix.f file or not.
+        # 200 is reasonable but feel free to change it.
+        if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
+            file=self.split_HELASCALLS(writer,replace_dict,\
+                            'helas_calls_split.inc',file,born_ct_helas_calls,\
+                            'born_ct_helas_calls','helas_calls_ampb')
+            file=self.split_HELASCALLS(writer,replace_dict,\
+                    'helas_calls_split.inc',file,coef_construction,\
+                    'coef_construction','coef_construction')
+            file=self.split_HELASCALLS(writer,replace_dict,\
+                    'helas_calls_split.inc',file,loop_CT_calls,\
+                    'loop_CT_calls','loop_CT_calls')
+        else:
+            replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
+            replace_dict['coef_construction']='\n'.join(coef_construction)
+            replace_dict['loop_CT_calls']='\n'.join(loop_CT_calls)
+        
+        replace_dict['coef_merging']='\n'.join(coef_merging)
+        
+        file = file % replace_dict
+        number_of_calls = len(filter(lambda call: call.find('CALL LOOP') != 0, \
+                                                                 loop_CT_calls))   
+        if writer:
+            # Write the file
+            writer.writelines(file)  
+            return number_of_calls
+        else:
+            # Return it to be written along with the others
+            return number_of_calls, file

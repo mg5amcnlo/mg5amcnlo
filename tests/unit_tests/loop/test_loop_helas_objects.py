@@ -43,6 +43,7 @@ import madgraph.iolibs.save_load_object as save_load_object
 import models.import_ufo as models
 from madgraph import MadGraph5Error
 
+
 _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
@@ -57,7 +58,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
     
     def setUp(self):
         """load the NLO toy model"""
-        
+
 #        self.myloopmodel = models.import_full_model(os.path.join(\
 #            _input_file_path,'LoopModelTest'))
         self.myloopmodel = models.import_full_model(os.path.join(\
@@ -364,8 +365,10 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                 origStructListlength=len(loopAmplitude['structure_repository'])
                 if not isinstance(reconstructedDiags[0], loop_base_objects.LoopUVCTDiagram) \
                    and reconstructedDiags[0]['type']!=0:
+                    start_leg=reconstructedDiags[0].get_starting_loop_line()
+                    finish_leg=reconstructedDiags[0].get_finishing_loop_line()
                     reconstructedDiags[0].tag(loopAmplitude['structure_repository'],\
-                      len(process['legs'])+1,len(process['legs'])+2,process)
+                      start_leg.get('number'),finish_leg.get('number'),process)
                     # Then make sure it leads to the same canonical tag
                     self.assertEqual(diag['canonical_tag'],\
                                  reconstructedDiags[0]['canonical_tag'])
@@ -689,14 +692,15 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         myloopamplitude.generate_diagrams()
         
         ME=self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
-        target_lorentz=[(('VVVV1',), ('L',), 1), (('FFV1',), (), 1),
-                        (('R2_GG_1', 'R2_GG_3'), (), 0), 
-                        (('VVV1',), ('L',), 1), (('FFV1',), ('L',), 1),
-                        (('FFV1',), (), 0), (('GHGHG',), ('L',), 1),
-                        (('VVV1',), (), 0), (('FFV1',), (), 2), 
+        target_lorentz=[(('VVVV1',), ('L',), 1), (('FFV1',), (), 1), 
+                        (('R2_GG_1', 'R2_GG_3'), (), 0), (('VVV1',), ('L',), 1),
+                        (('FFV1',), ('L',), 1), (('FFV1',), (), 0),
+                        (('GHGHG',), ('L',), 1), (('VVV1',), (), 0), 
+                        (('R2_GG_1',), (), 0), (('FFV1',), (), 2), 
+                        (('GHGHG',), ('L',), 2), 
                         (('R2_GG_1', 'R2_GG_2'), (), 0), (('VVV1',), (), 1),
                         (('FFV1',), ('L',), 3), (('FFV1',), (), 3),
-                        (('R2_GG_1',), (), 0), (('VVVV4',), ('L',), 1), 
+                        (('FFV1',), ('L',), 2), (('VVVV4',), ('L',), 1), 
                         (('R2_QQ_1',), (), 0), (('VVVV3',), ('L',), 1)]
         self.assertEqual(set(target_lorentz),set(ME.get_used_lorentz()))
 

@@ -41,27 +41,31 @@ class LoopColorBasis(color_amp.ColorBasis):
         color charge carried by the L-cut particle whose number are given in
         the loop_numbers argument) to close the loop color trace """
                 
-        if lcut_charge==1:
+        # But for T3 and T6 for example, we must make sure to add a delta with 
+        # the first index in the fundamental representation.
+        if lcut_charge<0:
+            lcut_numbers.reverse()
+        if abs(lcut_charge)==1:
             # No color carried by the lcut particle, there is nothing to do.
             return
-        elif lcut_charge==3:
+        elif abs(lcut_charge)==3:
             closingCS=color_algebra.ColorString(\
               [color_algebra.T(lcut_numbers[1],lcut_numbers[0])])
-        elif lcut_charge==6:
+        elif abs(lcut_charge)==6:
             closingCS=color_algebra.ColorString(\
               [color_algebra.T6(lcut_numbers[1],lcut_numbers[0])])
-        elif lcut_charge==8:
+        elif abs(lcut_charge)==8:
             closingCS=color_algebra.ColorString(\
               [color_algebra.Tr(lcut_numbers[1],lcut_numbers[0])],
               fractions.Fraction(2, 1))
         else:
             raise ColorBasis.ColorBasisError, \
         "L-cut particle has an unsupported color representation %s" % lcut_charge
-        
+                
         # Append it to all color strings for this diagram.
         for CS in colorize_dict.values():
             CS.product(closingCS)
-            
+        
     def create_loop_color_dict_list(self, amplitude):
         """Returns a list of colorize dict for all loop diagrams in amplitude.
         Also update the _list_color_dict object accordingly """
@@ -71,22 +75,20 @@ class LoopColorBasis(color_amp.ColorBasis):
         if not isinstance(amplitude,loop_diagram_generation.LoopAmplitude):
             raise ColorBasis.ColorBasisError, \
               'LoopColorBasis is used with an amplitude which is not a LoopAmplitude'
-        
         for diagram in amplitude.get('loop_diagrams'):
+
             colorize_dict = self.colorize(diagram,
                                         amplitude.get('process').get('model'))
             if diagram['type']>0:
-
-                lcut_charge=\
-                  amplitude['process']['model']['particle_dict'][\
-                            diagram['type']].get('color')
                 # We close here the color loop for loop diagrams (R2 have
                 # negative 'type') by adding a delta in the two color indices of
-                # loop_leg_numbers. The first one if simply the total number of
-                # legs plus one and the second is obtained from the dummy 
-                # vertex with id=-1.
-                lcut_numbers=(len(amplitude['process']['legs'])+1,\
-                                            len(amplitude['process']['legs'])+2)
+                # loop_leg_numbers.
+                starting_leg=diagram.get_starting_loop_line()
+                finishing_leg=diagram.get_finishing_loop_line()
+                lcut_charge=amplitude['process']['model'].get_particle(\
+                                     starting_leg.get('id')).get_color()
+                lcut_numbers=[starting_leg.get('number'),\
+                                                    finishing_leg.get('number')]
                 self.closeColorLoop(colorize_dict,lcut_charge,lcut_numbers)
 
             list_color_dict.append(colorize_dict)
