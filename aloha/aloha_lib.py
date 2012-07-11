@@ -92,6 +92,7 @@ class Computation(dict):
             try:
                 id = self[var]
             except KeyError:
+                assert var not in ['M','W']
                 id = Variable(var).get_id()
             out.append(id)
         return out
@@ -706,8 +707,7 @@ class DVariable(FactoryVar):
             if name[0] in ['M','W'] or name.startswith('OM'):
                 return FactoryVar(name, C_Variable)
         if aloha.loop_mode and name.startswith('P'):
-            return FactoryVar(name, C_Variable)
-        
+            return FactoryVar(name, C_Variable)        
         #Normal case:
         return FactoryVar(name, R_Variable)
 
