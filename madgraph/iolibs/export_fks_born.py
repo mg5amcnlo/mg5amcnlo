@@ -126,6 +126,15 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         except os.error:
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
+
+        # We add here the user-friendly MadLoop option setter.
+        cpfiles= ["SubProcesses/MadLoopParamReader.f",
+                  "SubProcesses/MadLoopParams.dat",
+                  "SubProcesses/MadLoopParams.inc"]
+        
+        for file in cpfiles:
+            shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
+                        os.path.join(self.dir_path, file))
                                        
         # Write the cts_mpc.h and cts_mprec.h files imported from CutTools
         self.write_mp_files(writers.FortranWriter('cts_mprec.h'),\
@@ -662,7 +671,14 @@ end
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()
 
-        linkfiles = ['coupl.inc', 'cts_mprec.h', 'cts_mpc.h']
+        linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
+                     'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
+                     'MadLoopParams.dat', 'MadLoopParams.inc']
+
+        os.system("ln -s "+name+"/MadLoopParams.dat ../")
+        os.system("ln -s "+name+"/ColorDenomFactors.dat ../")
+        os.system("ln -s "+name+"/HelConfigs.dat ../")
+        os.system("ln -s "+name+"/ColorNumFactors.dat ../")
 
         for file in linkfiles:
             ln('../../%s' % file)

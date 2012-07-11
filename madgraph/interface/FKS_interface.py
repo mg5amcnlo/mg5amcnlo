@@ -299,7 +299,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                                           self._mgme_dir, self._export_dir,
                                           not noclean, 
                                           self.options['complex_mass_scheme'], False,
-                                          os.path.join(self._mgme_dir, 'loop_material'),
+                                          os.path.join(self._mgme_dir, 'Template', 'loop_material'),
                                           self._cuttools_dir)
     
             if self.options['fks_mode'] == 'born' \
@@ -309,7 +309,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                                           self._mgme_dir, self._export_dir,
                                           not noclean, 
                                           self.options['complex_mass_scheme'], True,
-                                          os.path.join(self._mgme_dir, 'loop_material'),
+                                          os.path.join(self._mgme_dir, 'Template', 'loop_material'),
                                           self._cuttools_dir)
             
             if self.options['fks_mode'] == 'born' \
@@ -329,7 +329,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             logger.info('INFO: directory %s already exists.' % self._export_dir)
             logger.info('If you continue this directory will be cleaned')
             answer = self.ask('Do you want to continue?', 'y', ['y','n'], 
-                                                           timeout=self.timeout)
+                                                timeout=self.options['timeout'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
     
