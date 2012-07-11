@@ -88,9 +88,7 @@ class LoopExporterFortran(object):
 
         if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
             logger.info('Compiling CutTools')
-            print "I have os.path.join(self.cuttools_dir,'includects','libcts.a')=",os.path.join(self.cuttools_dir,'includects','libcts.a')
             misc.compile(cwd=self.cuttools_dir)
-            print "yeo"
 
         if os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):            
             linkfiles = ['libcts.a', 'mpmodule.mod']

@@ -922,7 +922,6 @@ def check_process(process, evaluator, quick):
         # loop processes.
         if quick and process.get('perturbation_couplings') and number_checked >3:
             continue
-        number_checked += 1
 
         legs = base_objects.LegList(legs)
 
@@ -986,6 +985,7 @@ def check_process(process, evaluator, quick):
             break
 
         values.append(res[0])
+        number_checked += 1
 
         # Check if we failed badly (1% is already bad) - in that
         # case done for this process
