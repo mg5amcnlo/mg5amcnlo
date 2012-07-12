@@ -235,7 +235,7 @@ c
       integer i, lunw, ic(7,2*nexternal-3), n, j
       logical done
       double precision wgt,p(0:4,2*nexternal-3)
-      double precision xsec,xerr,xscale,xtot
+      double precision xsec,xsecabs,xerr,xscale,xtot
       double precision xsum, xover
       double precision target_wgt,orig_Wgt(maxevents)
       logical store_event(maxevents)
@@ -271,8 +271,8 @@ c
 c     First scale all of the events to the total cross section
 c
       if (nw .le. 0) return
-      call sample_result(xsec,xerr,itmin)
-      if (xsec .le. 0) return   !Fix by TS 12/3/2010
+      call sample_result(xsecabs,xsec,xerr,itmin)
+      if (xsecabs .le. 0) return   !Fix by TS 12/3/2010
       xtot=0
       call dsort(nw, swgt)
       do i=1,nw
@@ -310,7 +310,7 @@ c
             store_event(i) = .false.
          endif
       enddo
-      xscale = xsec/xsum
+      xscale = xsecabs/xsum
       target_wgt = target_wgt*xscale
       rewind(lun)
 c     JA 8/17/2011 Don't check for previously stored events
@@ -345,7 +345,8 @@ c      endif
       enddo
       write(*,*) 'Found ',nw,' events.'
       write(*,*) 'Wrote ',i ,' events.'
-      write(*,*) 'Correct xsec ',xsec
+      write(*,*) 'Actual xsec ',xsec
+      write(*,*) 'Correct abs xsec ',xsecabs
       write(*,*) 'Event xsec ', xtot
       write(*,*) 'Events wgts > 1: ', nover
       write(*,*) '% Cross section > 1: ',xover, xover/xtot*100.

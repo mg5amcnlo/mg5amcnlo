@@ -155,8 +155,8 @@ c
             minvar(ndim,j) = ninvar
          endif
       enddo
-      write(*,*) "about to integrate ", ndim,ncall,itmax,itmin
-      call sample_full(ndim,ncall,itmax,itmin,dsig)
+      write(*,*) "about to integrate ", ndim,ncall,itmax,itmin,ninvar,nconfigs
+      call sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs)
 c
 c     Now write out events to permanent file
 c
