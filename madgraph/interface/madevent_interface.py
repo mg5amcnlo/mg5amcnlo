@@ -644,7 +644,7 @@ class CheckValidForCmd(object):
             the number of times that it call generate_events command""")
             
         if args[-1].startswith('--laststep='):
-            run = args[-1][6:]
+            run = args[-1].split('=')[-1]
             if run not in ['parton', 'pythia', 'pgs', 'delphes']:
                 self.help_multi_run()
                 raise self.InvalidCmd('invalid %s argument'% args[-1])
@@ -1889,9 +1889,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         args = self.split_arg(line)
         # Check argument's validity
         mode = self.check_multi_run(args)
+        nb_run = args.pop(0)
+        if nb_run == 1:
+            logger.warn("'multi_run 1' command is not optimal. Think of using generate_events instead")
         self.ask_run_configuration(mode)
         main_name = self.run_name
-        nb_run = args.pop(0)
+
+
+        
+        
+        
         crossoversig = 0
         inv_sq_err = 0
         nb_event = 0
@@ -1906,14 +1913,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             inv_sq_err+=1.0/error**2
             self.results[main_name][-1]['cross'] = crossoversig/inv_sq_err
             self.results[main_name][-1]['error'] = math.sqrt(1.0/inv_sq_err)
-            if self.run_card['iseed'] != 0:
-                seed = self.random + 1
-                text = open(pjoin(self.me_dir, 'Cards','run_card.dat')).read()
-                (t,n) = re.subn(r'\s\d+\s*= iseed','   %s       = iseed' % seed,text)
-                open(pjoin(self.me_dir, 'Cards','run_card.dat'),'w').write(t)
-        
-        self.run_name = main_name
         self.results.def_current(main_name)
+        self.run_name = main_name
         self.update_status("Merging LHE files", level='parton')
         try:
             os.mkdir(pjoin(self.me_dir,'Events', self.run_name))
@@ -1957,7 +1958,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             os.remove(pjoin(self.me_dir,'error'))
                         
         self.configure_directory()
-        # treat random number
+        # Save original random number
+        self.random_orig = self.random
+        logger.info("Using random number seed offset = %s" % self.random)
+        # Update random number
         self.update_random()
         self.save_random()
         self.update_status('Running Survey', level=None)
@@ -2003,10 +2007,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.launch_job('./%s' % job, cwd=Pdir, remaining=(len(alljobs)-i-1), 
                                                     run_type='survey on %s (%s/%s)' % (subdir,nb_proc+1,len(subproc)))
                 if os.path.exists(pjoin(self.me_dir,'error')):
-                    self.monitor()
+                    self.monitor(html=True)
                     raise MadEventError, 'Error detected Stop running: %s' % \
                                          open(pjoin(self.me_dir,'error')).read()
-        self.monitor(run_type='All jobs submitted for survey')
+        self.monitor(run_type='All jobs submitted for survey', html=True)
         self.update_status('End survey', 'parton', makehtml=False)
 
     ############################################################################      
@@ -2028,10 +2032,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # initialize / remove lhapdf mode
         self.configure_directory()
 
+        # Update random number
+        self.update_random()
+        self.save_random()
+
         if self.cluster_mode:
             logger.info('Creating Jobs')
         self.update_status('Refine results to %s' % precision, level=None)
-        logger.info("Using random number seed offset = %s" % self.random)
         
         self.total_jobs = 0
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
@@ -2063,8 +2070,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 for i, job in enumerate(alljobs):
                     job = os.path.basename(job)
                     self.launch_job('./%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
-                             run_type='Refine number %s on %s (%s/%s)' % (self.nb_refine, subdir, nb_proc+1, len(subproc)))
-        self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine)
+                             run_type='Refine number %s on %s (%s/%s)' % 
+                             (self.nb_refine, subdir, nb_proc+1, len(subproc)))
+        self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine, 
+                     html=False)
         
         self.update_status("Combining runs", level='parton')
         try:
@@ -2077,6 +2086,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                           cwd=pjoin(self.me_dir,'SubProcesses'),
                                           stdout=devnull)
         
+        cross, error = sum_html.make_all_html_results(self)
+        self.results.add_detail('cross', cross)
+        self.results.add_detail('error', error)   
+
         self.update_status('finish refine', 'parton', makehtml=False)
         
     ############################################################################ 
@@ -2116,8 +2129,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.banner.load_basic(self.me_dir)
         # Add cross-section/event information
         self.banner.add_generation_info(self.results.current['cross'], nb_event)        
-        if not hasattr(self, 'random'): self.random = 0
-        self.banner.change_seed(self.random)
+        if not hasattr(self, 'random_orig'): self.random_orig = 0
+        self.banner.change_seed(self.random_orig)
         if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
@@ -2221,7 +2234,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                          self.run_name, self.run_tag],
                         cwd=self.me_dir)
         misc.call(['./bin/internal/clean'], cwd=self.me_dir)
-        misc.compile(['gridpack.tar.gz'], cwd=self.me_dir)
+        misc.call(['./bin/internal/make_gridpack'], cwd=self.me_dir)
         files.mv(pjoin(self.me_dir, 'gridpack.tar.gz'), 
                 pjoin(self.me_dir, '%s_gridpack.tar.gz' % self.run_name))
         os.system("sed -i.bak \"s/\s*.true.*=.*GridRun/  .false.  =  GridRun/g\" %s/Cards/grid_card.dat" \
@@ -2677,7 +2690,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('prepare PGS run', level=None)  
         # Wait that the gunzip of the files is finished (if any)
         if hasattr(self, 'control_thread') and self.control_thread[0]:
-            self.monitor(mode=2,html=False)
+            self.monitor(mode=2)
 
         pgsdir = pjoin(self.options['pythia-pgs_path'], 'src')
         eradir = self.options['exrootanalysis_path']
@@ -2793,7 +2806,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('Running Delphes', level=None)  
         # Wait that the gunzip of the files is finished (if any)
         if hasattr(self, 'control_thread') and self.control_thread[0]:
-            self.monitor(mode=2,html=False)        
+            self.monitor(mode=2)        
 
 
  
@@ -2926,7 +2939,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             return 'v4'
     
     ############################################################################
-    def monitor(self, run_type='monitor', mode=None, html=True):
+    def monitor(self, run_type='monitor', mode=None, html=False):
         """ monitor the progress of running job """
         
         if mode is None:
@@ -3042,14 +3055,20 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             del os.environ['lhapdf']
         
         # Compile
-        out = misc.call([pjoin(self.dirbin, 'compile_Source')],
-                              cwd = self.me_dir)
-        if out:
-            raise MadEventError, 'Unable to compile'
+        for name in ['../bin/internal/gen_ximprove', 'all', 
+                     '../bin/internal/combine_events', 
+                     '../bin/internal/combine_runs']:
+            misc.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
+        
         
         # set random number
         if self.run_card['iseed'] != '0':
             self.random = int(self.run_card['iseed'])
+            # Reset seed in run_card to 0, to ensure that following runs
+            # will be statistically independent
+            text = open(pjoin(self.me_dir, 'Cards','run_card.dat')).read()
+            (t,n) = re.subn(r'\d+\s*= iseed','0 = iseed',text)
+            open(pjoin(self.me_dir, 'Cards','run_card.dat'),'w').write(t)
         elif os.path.exists(pjoin(self.me_dir,'SubProcesses','randinit')):
             for line in open(pjoin(self.me_dir,'SubProcesses','randinit')):
                 data = line.split('=')
@@ -3232,8 +3251,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def update_random(self):
         """ change random number"""
         
-        self.random += 5
-        assert self.random < 31328*30081 # cann't use too big random number
+        self.random += 3
+        if self.random > 30081*30081: # can't use too big random number
+            raise MadGraph5Error,\
+                  'Random seed too large ' + str(self.random) + ' > 30081*30081'
 
     ############################################################################
     def save_random(self):
@@ -3416,6 +3437,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     
     def clean_pointless_card(self, mode):
         """ Clean the pointless card """
+
         if mode == 'parton':
             if os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
                 os.remove(pjoin(self.me_dir,'Cards','pythia_card.dat'))
@@ -3474,9 +3496,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     mode = 'delphes'
                 else: 
                     mode = 'pythia'
+            else:
+                self.clean_pointless_card(mode)                
         logger.info('Will run in mode %s' % mode)
                                                                      
-        self.clean_pointless_card(mode)
+
         # Now that we know in which mode we are check that all the card
         #exists (copy default if needed)
 
@@ -3983,9 +4007,10 @@ class GridPackCmd(MadEventCmd):
                 for i, job in enumerate(alljobs):
                     job = os.path.basename(job)
                     self.launch_job('./%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
-                                 run_type='Refine number %s on %s (%s/%s)' % (self.nb_refine, subdir, nb_proc+1, len(subproc)))
-        self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine,
-                     html=True)
+                             run_type='Refine number %s on %s (%s/%s)' %
+                             (self.nb_refine, subdir, nb_proc+1, len(subproc)))
+        self.monitor(run_type='All job submitted for refine number %s' % 
+                                                                 self.nb_refine)
         
         self.update_status("Combining runs", level='parton')
         try:
@@ -3998,9 +4023,11 @@ class GridPackCmd(MadEventCmd):
                                           cwd=pjoin(self.me_dir,'SubProcesses'),
                                           stdout=devnull)
         
-        #misc.call([pjoin(self.dirbin, 'sumall')], 
-        #                                 cwd=pjoin(self.me_dir,'SubProcesses'),
-        #                                 stdout=devnull)
+        #update html output
+        cross, error = sum_html.make_all_html_results(self)
+        self.results.add_detail('cross', cross)
+        self.results.add_detail('error', error)
+        
         
         self.update_status('finish refine', 'parton', makehtml=False)
 

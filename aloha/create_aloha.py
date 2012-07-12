@@ -80,21 +80,20 @@ class AbstractRoutine(object):
         
     def write(self, output_dir, language='Fortran', mode='self', combine=True,**opt):
         """ write the content of the object """
-        
+
         writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag)
         text = writer.write(mode=mode, **opt)
         if combine:
             for grouped in self.combined:
                 if isinstance(text, tuple):
                     text = tuple([old.__add__(new)  for old, new in zip(text, 
-                             writer.write_combined(grouped, mode=mode, **opt))])
+                             writer.write_combined(grouped, mode=mode+'no_include', **opt))])
                 else:
-                    text += writer.write_combined(grouped, mode=mode, **opt)
+                    text += writer.write_combined(grouped, mode=mode+'no_include', **opt)
                 
         if aloha.mp_precision and 'MP' not in self.tag:
             self.tag.append('MP')
             text += self.write(output_dir, language, mode, **opt)
-            
         return text
 
 class AbstractRoutineBuilder(object):
@@ -271,9 +270,9 @@ class AbstractRoutineBuilder(object):
                         spin_id = id
                     nb_spinor += 1
                     if id %2:
-                        lorentz *= Spin3halfPropagator(id, 'I2', spin_id,'I3', outgoing)
+                        lorentz *= Spin3halfPropagatorout(id, 'I2', spin_id,'I3', outgoing)
                     else:
-                        lorentz *= Spin3halfPropagator('I2', id, 'I3', spin_id, outgoing)                      
+                        lorentz *= Spin3halfPropagatorin('I2', id, 'I3', spin_id, outgoing)                      
                 elif spin == 5 :
                     #lorentz *= 1 # delayed evaluation (fastenize the code)
                     if self.spin2_massless:
@@ -786,22 +785,24 @@ class AbstractALOHAModel(dict):
                            'Fortran' : 'f',
                            'CPP': 'C'}
         ext = language_to_ext[language]
-         
-        if os.path.exists(os.path.join(self.model_pos, '%s.%s' % (name, ext))):
-            filepos = '%s/%s.%s' % (self.model_pos, name, ext)
+        paths = [os.path.join(self.model_pos, language), self.model_pos, 
+                           os.path.join(root_path, 'aloha', 'template_files', )]
 
-        elif os.path.exists(os.path.join(root_path, 'aloha', 'template_files', 
-                                                       '%s.%s' %(name, ext))):
-            filepos = '%s/aloha/template_files/%s.%s' % (root_path, name, ext)
-        else:
-            path1 = self.model_pos
-            path2 = os.path.join(root_path, 'aloha', 'template_files', )
-            raise ALOHAERROR, 'No external routine \"%s.%s\" in directories\n %s\n %s' % \
-                        (name, ext, path1, path2)
-        
+        ext_files  = []
+        for path in paths:
+            ext_files = glob.glob(os.path.join(path, '%s_*.%s' % (name, ext)))
+            if ext_files:
+                break
+        else: 
+
+            raise ALOHAERROR, 'No external routine \"%s.%s\" in directories\n %s' % \
+                        (name, ext, '\n'.join(paths))
+       
         if output_dir:
-            files.cp(filepos, output_dir)
-        return filepos
+            for filepath in ext_files:
+                
+                files.cp(filepath, output_dir)
+        return ext_files
                     
         
 

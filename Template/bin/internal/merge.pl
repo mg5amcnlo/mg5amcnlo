@@ -30,8 +30,8 @@ my $begin_init   = '<init>';
 my $end_init     = '</init>';
 
 # Parse the command line arguments
-if ( $#ARGV < 3 ) {
-  die "This script must be called with at least four filenames as arguments!\n";
+if ( $#ARGV < 2 ) {
+  die "This script must be called with at least three filenames as arguments!\n";
 }
 my $bannerfile = pop(@ARGV);
 my $outfile = pop(@ARGV);

@@ -1144,7 +1144,7 @@ class testLorentzObject(unittest.TestCase):
         t = 1
         mu, nu, s0, s1, s2 = 2,3,4,5,6
         
-        zero = P(mu,t) * aloha_obj.Spin3halfPropagator(mu,nu,s1,s2, t)
+        zero = P(mu,t) * aloha_obj.Spin3halfPropagatorout(mu,nu,s1,s2, t)
         zero = zero.expand(veto=range(100))
         P1_0, P1_1, P1_2, P1_3 = 2,0,0,0
         OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
@@ -1152,6 +1152,15 @@ class testLorentzObject(unittest.TestCase):
         for ind in zero.listindices():
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)    
+
+        zero = P(mu,t) * aloha_obj.Spin3halfPropagatorin(mu,nu,s1,s2, t)
+        zero = zero.expand(veto=range(100))
+        P1_0, P1_1, P1_2, P1_3 = 2,0,0,0
+        OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0) 
      
     def test_mass_overmass(self):
         """check various property of the spin3/2 propagator"""
@@ -3111,7 +3120,6 @@ end
 """
 
         self.assertEqual(text.split('\n'),goal.split('\n')) 
-   
         text_h, text_cpp =  abstract.write(None, 'CPP')
     
         goal_h = """#ifndef VVS1_1_guard
@@ -3137,7 +3145,7 @@ void VVS1_2_2(complex<double> V2[], complex<double> S3[], complex<double> COUP1,
 
 void VVS1_1(complex<double> V2[], complex<double> S3[], complex<double> COUP, double M1, double W1,complex<double> V1[])
 {
- complex<double> cI = (0.,1.);
+ complex<double> cI = complex<double>(0.,1.);
  double  P1[4];
  complex<double>  TMP0;
  complex<double>  denom;
@@ -3166,7 +3174,7 @@ void VVS1_2(complex<double> V2[], complex<double> S3[], complex<double> COUP, do
 }
 void VVS1_2_1(complex<double> V2[], complex<double> S3[], complex<double> COUP1, complex<double> COUP2, double M1, double W1,complex<double> V1[])
 {
- complex<double> cI = (0.,1.);
+ complex<double> cI = complex<double>(0.,1.);
  double  P1[4];
  complex<double>  denom;
  int i;
@@ -3183,7 +3191,7 @@ while (i < 6)
 }
 void VVS1_2_2(complex<double> V2[], complex<double> S3[], complex<double> COUP1, complex<double> COUP2, double M1, double W1,complex<double> V1[])
 {
- complex<double> cI = (0.,1.);
+ complex<double> cI = complex<double>(0.,1.);
  double  P1[4];
  complex<double>  denom;
  int i;
@@ -3667,17 +3675,22 @@ def SSS1_3(S2,S3,COUP,M1,W1):
 
 
         solution ="""import wavefunctions
-def RFSC1_1(R1, S3, COUP, M2, W2):
+def RFSC1_1(R1,S3,COUP,M2,W2):
     F2 = wavefunctions.WaveFunction(size=6)
-    F2[4] = R1[16]+S3[1]
-    F2[5] = R1[17]+S3[2]
-    P2 = [complex(F2[4]).real, \\
-             complex(F2[5]).real, \\
-             complex(F2[5]).imag, \\
-             complex(F2[4]).imag]
+    F2[0] = +R1[0]+S3[0]
+    F2[1] = +R1[1]+S3[1]
+    P2 = [-complex(F2[0]).real, -complex(F2[1]).real, -complex(F2[1]).imag, -complex(F2[0]).imag]
+    denom = COUP/(P2[0]**2-P2[1]**2-P2[2]**2-P2[3]**2 - M2 * (M2 -1j* W2))
+    F2[2]= denom*1j * S3[2]*(P2[0]*-1*(R1[7]+R1[14]+1j*(R1[11])-R1[2])+(P2[1]*(R1[3]+R1[15]+1j*(R1[10])-R1[6])+(P2[2]*(-1j*(R1[6])+1j*(R1[3]+R1[15])-R1[10])+P2[3]*-1*(R1[7]+R1[14]+1j*(R1[11])-R1[2]))))
+    F2[3]= denom*1j * S3[2]*(P2[0]*(R1[3]+R1[15]+1j*(R1[10])-R1[6])+(P2[1]*-1*(R1[7]+R1[14]+1j*(R1[11])-R1[2])+(P2[2]*(-1j*(R1[2])+1j*(R1[7]+R1[14])-R1[11])+P2[3]*-1.0*(R1[3]+R1[15]+1j*(R1[10])-R1[6]))))
+    F2[4]= denom*1j * M2*S3[2]*(R1[7]+R1[14]+1j*(R1[11])-R1[2])
+    F2[5]= denom*1j * M2*S3[2]*-1*(R1[3]+R1[15]+1j*(R1[10])-R1[6])
+    return F2
+
+
     denom =1.0/(( (M2*( -M2+1j*W2))+( (P2[0]**2)-(P2[1]**2)-(P2[2]**2)-(P2[3]**2))))
-    F2[0]= COUP*denom*(S3[0]*( (P2[0]*( -1j*R1[0]+1j*R1[5]-R1[9]+1j*R1[12]))+( (P2[3]*( -1j*R1[0]+1j*R1[5]-R1[9]+1j*R1[12]))+( (P2[1]*( -1j*R1[1]+1j*R1[4]+R1[8]-1j*R1[13]))+(P2[2]*( R1[1]-R1[4]+1j*R1[8]+R1[13]))))))
-    F2[1]= COUP*denom*(S3[0]*( (P2[1]*( -1j*R1[0]+1j*R1[5]-R1[9]+1j*R1[12]))+( (P2[2]*( -R1[0]+R1[5]+1j*R1[9]+R1[12]))+( (P2[0]*( -1j*R1[1]+1j*R1[4]+R1[8]-1j*R1[13]))+(P2[3]*( 1j*R1[1]-1j*R1[4]-R1[8]+1j*R1[13]))))))
+    F2[0]= COUP*denom*(S3[2]*( (P2[0]*( -1j*R1[0]+1j*R1[5]-R1[9]+1j*R1[12]))+( (P2[3]*( -1j*R1[0]+1j*R1[5]-R1[9]+1j*R1[12]))+( (P2[1]*( -1j*R1[1]+1j*R1[4]+R1[8]-1j*R1[13]))+(P2[2]*( R1[1]-R1[4]+1j*R1[8]+R1[13]))))))
+    F2[1]= COUP*denom*(S3[2]*( (P2[1]*( -1j*R1[0]+1j*R1[5]-R1[9]+1j*R1[12]))+( (P2[2]*( -R1[0]+R1[5]+1j*R1[9]+R1[12]))+( (P2[0]*( -1j*R1[1]+1j*R1[4]+R1[8]-1j*R1[13]))+(P2[3]*( 1j*R1[1]-1j*R1[4]-R1[8]+1j*R1[13]))))))
     F2[2]= COUP*denom*(M2*( 1j*R1[5]-R1[9]-1j*R1[0]+1j*R1[12])*S3[0])
     F2[3]= COUP*denom*(M2*( -1j*R1[1]-1j*R1[13]+1j*R1[4]+R1[8])*S3[0])
     return F2
@@ -3761,24 +3774,25 @@ def RFSC1_2(F2, S3, COUP, M1, W1):
         """ test that python writer works """
 
 
-        solution =""" subroutine RFSC1_1(R1, S3, COUP, M2, W2, F2)
-implicit none 
-double complex R1(*)
-double complex F2(*)
-double complex S3(*)
-double complex COUP
-double complex denom
-double precision M2, W2
-double precision P2(0:3)
-
-F2(5)= R1(17)+S3(2)
-F2(6)= R1(18)+S3(3)
-P2(0) =  dble(F2(5))
-P2(1) =  dble(F2(6))
-P2(2) =  dimag(F2(6))
-P2(3) =  dimag(F2(5))
-
-denom =1d0/(( (M2*( -M2+(0, 1)*W2))+( (P2(0)**2)-(P2(1)**2)-(P2(2)**2)-(P2(3)**2))))
+        solution ="""subroutine RFSC1_1(R1, S3, COUP, M2, W2,F2)
+implicit none
+ complex*16 CI
+ parameter (CI=(0d0,1d0))
+ complex*16 R1(*)
+ complex*16 S3(*)
+ complex*16 F2(6)
+ real*8 P2(0:3)
+ real*8 W2
+ real*8 M2
+ complex*16 denom
+ complex*16 COUP
+    F2(1) = +R1(1)+S3(1)
+    F2(2) = +R1(2)+S3(2)
+P2(0) = -dble(F2(1))
+P2(1) = -dble(F2(2))
+P2(2) = -dimag(F2(2))
+P2(3) = -dimag(F2(1))
+    denom = COUP/(P2(0)**2-P2(1)**2-P2(2)**2-P2(3)**2 - M2 * (M2 -CI* W2))
 F2(1)= COUP*denom*(S3(1)*( (P2(0)*( (0, -1)*R1(1)+(0, 1)*R1(6)-R1(10)+(0, 1)*R1(13)))+( (P2(3)*( (0, -1)*R1(1)+(0, 1)*R1(6)-R1(10)+(0, 1)*R1(13)))+( (P2(1)*( (0, -1)*R1(2)+(0, 1)*R1(5)+R1(9)+(0, -1)*R1(14)))+(P2(2)*( R1(2)-R1(5)+(0, 1)*R1(9)+R1(14)))))))
 F2(2)= COUP*denom*(S3(1)*( (P2(1)*( (0, -1)*R1(1)+(0, 1)*R1(6)-R1(10)+(0, 1)*R1(13)))+( (P2(2)*( -R1(1)+R1(6)+(0, 1)*R1(10)+R1(13)))+( (P2(0)*( (0, -1)*R1(2)+(0, 1)*R1(5)+R1(9)+(0, -1)*R1(14)))+(P2(3)*( (0, 1)*R1(2)+(0, -1)*R1(5)-R1(9)+(0, 1)*R1(14)))))))
 F2(3)= COUP*denom*(M2*( (0, 1)*R1(6)-R1(10)+(0, -1)*R1(1)+(0, 1)*R1(13))*S3(1))
@@ -3796,7 +3810,6 @@ end
         amp = builder.compute_routine(1)
         
         routine = amp.write(output_dir=None, language='Fortran')
-
         split_solution = solution.split('\n')
         split_routine = routine.split('\n')
         self.assertEqual(split_solution, split_routine)
@@ -4129,10 +4142,10 @@ implicit none
     V3(2) = +F1(2)+F2(2)
     V3(3) = +F1(3)+F2(3)
     V3(4) = +F1(4)+F2(4)
-    V3(3)= COUP*-CI*(F2(3)*F1(5)+F2(4)*F1(6))
-    V3(4)= COUP*-CI*(-F2(4)*F1(5)-F2(3)*F1(6))
-    V3(5)= COUP*-CI*(-CI*(F2(3)*F1(6))+CI*(F2(4)*F1(5)))
-    V3(6)= COUP*-CI*(F2(4)*F1(6)-F2(3)*F1(5))
+    V3(5)= COUP*-CI*(F2(5)*F1(7)+F2(6)*F1(8))
+    V3(6)= COUP*-CI*(-F2(6)*F1(7)-F2(5)*F1(8))
+    V3(7)= COUP*-CI*(-CI*(F2(5)*F1(8))+CI*(F2(6)*F1(7)))
+    V3(8)= COUP*-CI*(F2(6)*F1(8)-F2(5)*F1(7))
 end
 
 
@@ -4150,10 +4163,10 @@ implicit none
     V3(2) = +F1(2)+F2(2)
     V3(3) = +F1(3)+F2(3)
     V3(4) = +F1(4)+F2(4)
-    V3(3)= COUP*-CI*(F2(3)*F1(5)+F2(4)*F1(6))
-    V3(4)= COUP*-CI*(-F2(4)*F1(5)-F2(3)*F1(6))
-    V3(5)= COUP*-CI*(-CI*(F2(3)*F1(6))+CI*(F2(4)*F1(5)))
-    V3(6)= COUP*-CI*(F2(4)*F1(6)-F2(3)*F1(5))
+    V3(5)= COUP*-CI*(F2(5)*F1(7)+F2(6)*F1(8))
+    V3(6)= COUP*-CI*(-F2(6)*F1(7)-F2(5)*F1(8))
+    V3(7)= COUP*-CI*(-CI*(F2(5)*F1(8))+CI*(F2(6)*F1(7)))
+    V3(8)= COUP*-CI*(F2(6)*F1(8)-F2(5)*F1(7))
 end
 
 
@@ -4198,12 +4211,12 @@ P3(0) = -V3(1)
 P3(1) = -V3(2)
 P3(2) = -V3(3)
 P3(3) = -V3(4)
- TMP0 = (F1(5)*(F2(3)*(P3(0)+P3(3))+F2(4)*(P3(1)-CI*(P3(2))))+F1(6)*(F2(3)*(P3(1)+CI*(P3(2)))+F2(4)*(P3(0)-P3(3))))
+ TMP0 = (F1(7)*(F2(5)*(P3(0)+P3(3))+F2(6)*(P3(1)-CI*(P3(2))))+F1(8)*(F2(5)*(P3(1)+CI*(P3(2)))+F2(6)*(P3(0)-P3(3))))
     denom = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 -CI* W3))
-    V3(3)= denom*-CI*(F2(3)*F1(5)+F2(4)*F1(6)-P3(0)*OM3*TMP0)
-    V3(4)= denom*-CI*(-F2(4)*F1(5)-F2(3)*F1(6)-P3(1)*OM3*TMP0)
-    V3(5)= denom*-CI*(-CI*(F2(3)*F1(6))+CI*(F2(4)*F1(5))-P3(2)*OM3*TMP0)
-    V3(6)= denom*-CI*(F2(4)*F1(6)-F2(3)*F1(5)-P3(3)*OM3*TMP0)
+    V3(5)= denom*-CI*(F2(5)*F1(7)+F2(6)*F1(8)-P3(0)*OM3*TMP0)
+    V3(6)= denom*-CI*(-F2(6)*F1(7)-F2(5)*F1(8)-P3(1)*OM3*TMP0)
+    V3(7)= denom*-CI*(-CI*(F2(5)*F1(8))+CI*(F2(6)*F1(7))-P3(2)*OM3*TMP0)
+    V3(8)= denom*-CI*(F2(6)*F1(8)-F2(5)*F1(7)-P3(3)*OM3*TMP0)
 end
 
 
@@ -4231,12 +4244,12 @@ P3(0) = -V3(1)
 P3(1) = -V3(2)
 P3(2) = -V3(3)
 P3(3) = -V3(4)
- TMP0 = (F1(5)*(F2(3)*(P3(0)+P3(3))+F2(4)*(P3(1)-CI*(P3(2))))+F1(6)*(F2(3)*(P3(1)+CI*(P3(2)))+F2(4)*(P3(0)-P3(3))))
+ TMP0 = (F1(7)*(F2(5)*(P3(0)+P3(3))+F2(6)*(P3(1)-CI*(P3(2))))+F1(8)*(F2(5)*(P3(1)+CI*(P3(2)))+F2(6)*(P3(0)-P3(3))))
     denom = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 -CI* W3))
-    V3(3)= denom*-CI*(F2(3)*F1(5)+F2(4)*F1(6)-P3(0)*OM3*TMP0)
-    V3(4)= denom*-CI*(-F2(4)*F1(5)-F2(3)*F1(6)-P3(1)*OM3*TMP0)
-    V3(5)= denom*-CI*(-CI*(F2(3)*F1(6))+CI*(F2(4)*F1(5))-P3(2)*OM3*TMP0)
-    V3(6)= denom*-CI*(F2(4)*F1(6)-F2(3)*F1(5)-P3(3)*OM3*TMP0)
+    V3(5)= denom*-CI*(F2(5)*F1(7)+F2(6)*F1(8)-P3(0)*OM3*TMP0)
+    V3(6)= denom*-CI*(-F2(6)*F1(7)-F2(5)*F1(8)-P3(1)*OM3*TMP0)
+    V3(7)= denom*-CI*(-CI*(F2(5)*F1(8))+CI*(F2(6)*F1(7))-P3(2)*OM3*TMP0)
+    V3(8)= denom*-CI*(F2(6)*F1(8)-F2(5)*F1(7)-P3(3)*OM3*TMP0)
 end
 
 
@@ -4359,7 +4372,7 @@ P2[3] = -F2[0].imag();
 
 void FFV1C1_1(complex<double> F1[], complex<double> V3[], complex<double> COUP, double M2, double W2,complex<double> F2[])
 {
- complex<double> cI = (0.,1.);
+ complex<double> cI = complex<double>(0.,1.);
  double  P2[4];
  complex<double>  denom;
     F2[0] = +F1[0]+V3[0];
@@ -4414,7 +4427,7 @@ void FFV1C1_2(complex<double> F2[], complex<double> V3[], complex<double> COUP, 
 
 void FFV1C1_2(complex<double> F2[], complex<double> V3[], complex<double> COUP, double M1, double W1,complex<double> F1[])
 {
- complex<double> cI = (0.,1.);
+ complex<double> cI = complex<double>(0.,1.);
  double  P1[4];
  complex<double>  denom;
     F1[0] = +F2[0]+V3[0];
@@ -4435,7 +4448,7 @@ P1[3] = -F1[0].imag();
 
 void FFV1C1_2(complex<double> F2[], complex<double> V3[], complex<double> COUP, double M1, double W1,complex<double> F1[])
 {
- complex<double> cI = (0.,1.);
+ complex<double> cI = complex<double>(0.,1.);
  double  P1[4];
  complex<double>  denom;
     F1[0] = +F2[0]+V3[0];
@@ -4595,7 +4608,7 @@ void SSS1_3(complex<double> S2[], complex<double> S3[], complex<double> COUP, co
 
 void SSS1_1(complex<double> S2[], complex<double> S3[], complex<double> COUP, complex<double> M1,complex<double> S1[])
 {
- complex<double> cI = (0.,1.);
+ complex<double> cI = complex<double>(0.,1.);
  double  P1[4];
  complex<double>  denom;
     S1[0] = +S2[0]+S3[0];

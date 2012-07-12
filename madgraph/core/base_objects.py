@@ -576,6 +576,14 @@ class Interaction(PhysicsObject):
             else:
                 ref_dict_to1[pdg_tuple] = [(pdg_part, self['id'])]
 
+    def get_WEIGHTED_order(self, model):
+        """Get the WEIGHTED order for this interaction, for equivalent
+        3-particle vertex. Note that it can be fractional."""
+
+        return float(sum([model.get('order_hierarchy')[key]*self.get('orders')[key]\
+                          for key in self.get('orders')]))/ \
+               max((len(self.get('particles'))-2), 1)
+
     def __str__(self):
         """String representation of an interaction. Outputs valid Python 
         with improved format. Overrides the PhysicsObject __str__ to only
@@ -919,6 +927,14 @@ class Model(PhysicsObject):
 
         return particles, hierarchy
 
+    def get_max_WEIGHTED(self):
+        """Return the maximum WEIGHTED order for any interaction in the model,
+        for equivalent 3-particle vertices. Note that it can be fractional."""
+
+        return max([inter.get_WEIGHTED_order(self) for inter in \
+                        self.get('interactions')])
+            
+
     def check_majoranas(self):
         """Return True if there is fermion flow violation, False otherwise"""
 
@@ -1042,6 +1058,9 @@ class Model(PhysicsObject):
         to_change = {}
         mass_widths = [] # parameter which should stay real
         for particle in self.get('particles'):
+            m = particle.get('width')
+            if m in mass_widths:
+                continue
             mass_widths.append(particle.get('width'))
             mass_widths.append(particle.get('mass'))
             if particle.get('width') == 'ZERO':

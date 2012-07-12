@@ -696,7 +696,7 @@ def check_gauge(processes, param_card=None, cmass_scheme=False):
         
         if not cmass_scheme:
             # Set all widths to zero for gauge check
-            logger.info('Set All width to zero for non complex mass scheme cheks')
+            logger.info('Set All width to zero for non complex mass scheme checks')
             for particle in evaluator.full_model.get('particles'):
                 if particle.get('width') != 'ZERO':
                     evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
@@ -906,7 +906,7 @@ def check_lorentz(processes, param_card = None, cmass_scheme=False):
 
         if not cmass_scheme:
             # Set all widths to zero for lorentz check
-            logger.info('Set All width to zero for non complex mass scheme cheks')
+            logger.info('Set All width to zero for non complex mass scheme checks')
             for particle in evaluator.full_model.get('particles'):
                 if particle.get('width') != 'ZERO':
                     evaluator.full_model.get('parameter_dict')[\

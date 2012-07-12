@@ -463,7 +463,8 @@ class SubProcessGroupTest(unittest.TestCase):
             'decay_chains': decays})
 
         dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
-                          group_amplitudes(decay_chains)
+              group_amplitudes(\
+                 diagram_generation.DecayChainAmplitudeList([decay_chains]))
 
         #print dc_subproc_group.nice_string()
         
@@ -734,7 +735,8 @@ Decay groups:
         my_amplitude = diagram_generation.DecayChainAmplitude(process)
 
         dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
-                          group_amplitudes(my_amplitude)
+              group_amplitudes(\
+                 diagram_generation.DecayChainAmplitudeList([my_amplitude]))
 
         subproc_groups = \
                        dc_subproc_group.generate_helas_decay_chain_subproc_groups()
@@ -1107,7 +1109,8 @@ Decay groups:
         my_amplitude = diagram_generation.DecayChainAmplitude(core_process)
 
         dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
-                          group_amplitudes(my_amplitude)
+              group_amplitudes(\
+                 diagram_generation.DecayChainAmplitudeList([my_amplitude]))
 
         subproc_groups = \
                        dc_subproc_group.generate_helas_decay_chain_subproc_groups()

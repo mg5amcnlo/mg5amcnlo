@@ -776,3 +776,8 @@ class PythonWriter(FileWriter):
     def write_comments(self, text):
         text = '#%s\n' % text.replace('\n','\n#')
         file.write(self, text)
+    
+    def write_line(self, line):
+        """Write a line with proper indent and splitting of long lines
+        for the language in question."""
+        return [line]

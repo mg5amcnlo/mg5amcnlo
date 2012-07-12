@@ -93,7 +93,7 @@ class CmdExtended(cmd.Cmd):
                                    'display particles', 'display interactions'],
         'define': ['define MULTIPART PART1 PART2 ...', 'generate PROCESS', 
                                                     'display multiparticles'],
-        'generate': ['add process PROCESS','output [OUTPUT_TYPE] [PATH]','draw .'],
+        'generate': ['add process PROCESS','output [OUTPUT_TYPE] [PATH]','display diagrams'],
         'add process':['output [OUTPUT_TYPE] [PATH]', 'display processes'],
         'output':['launch','open index.html','history PATH', 'exit'],
         'display': ['generate PROCESS', 'add process PROCESS', 'output [OUTPUT_TYPE] [PATH]'],
@@ -648,6 +648,8 @@ please follow information on http://root.cern.ch/drupal/content/downloading-root
 You can set it by adding the following lines in your .bashrc [.bash_profile for mac]:
 export ROOTSYS=%s
 export PATH=$PATH:$ROOTSYS/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOTSYS/lib
+export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$ROOTSYS/lib
 This will take effect only in a NEW terminal
 ''' % os.path.realpath(pjoin(misc.which('root'), \
                                                os.path.pardir, os.path.pardir)))
@@ -1383,7 +1385,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         
         
         # options
-        options = ['--format=Fortran', '--format=Python','--format=CPP','--output=']
+        options = ['--format=Fortran', '--format=Python','--format=gpu','--format=CPP','--output=']
         options = self.list_completion(text, options)
         if options:
             completion_categories['options'] = options
@@ -1776,9 +1778,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if amp not in self._curr_amps:
                     self._curr_amps.append(amp)
                 else:
-                    warning = "Warning: Already in processes:\n%s" % \
+                    raise self.InvalidCmd, "Duplicate process %s found. Please check your processes." % \
                                                 amp.nice_string_processes()
-                    logger.warning(warning)
 
 
             # Reset _done_export, since we have new process
@@ -2857,7 +2858,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         name = name[args[0]]
         
         try:
-            os.system('rm -rf %s' % name)
+            os.system('rm -rf %s' % pjoin(MG5DIR, name))
         except:
             pass
         
@@ -3494,8 +3495,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if not self._curr_matrix_elements.get_matrix_elements():
                 if group:
                     cpu_time1 = time.time()
-                    dc_amps = [amp for amp in self._curr_amps if isinstance(amp, \
-                                        diagram_generation.DecayChainAmplitude)]
+                    dc_amps = diagram_generation.DecayChainAmplitudeList(\
+                        [amp for amp in self._curr_amps if isinstance(amp, \
+                                        diagram_generation.DecayChainAmplitude)])
                     non_dc_amps = diagram_generation.AmplitudeList(\
                              [amp for amp in self._curr_amps if not \
                               isinstance(amp, \
@@ -3505,10 +3507,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         subproc_groups.extend(\
                                    group_subprocs.SubProcessGroup.group_amplitudes(\
                                                                        non_dc_amps))
-                    for dc_amp in dc_amps:
+                    if dc_amps:
                         dc_subproc_group = \
                                  group_subprocs.DecayChainSubProcessGroup.\
-                                                           group_amplitudes(dc_amp)
+                                                           group_amplitudes(dc_amps)
                         subproc_groups.extend(\
                                   dc_subproc_group.\
                                         generate_helas_decay_chain_subproc_groups())
