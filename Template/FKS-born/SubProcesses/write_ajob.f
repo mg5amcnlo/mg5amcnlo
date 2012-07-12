@@ -82,6 +82,9 @@ c         write(lun,15) 'cd ./lib/PDFsets'
 c         write(lun,15) 'gunzip *.gz'
 c         write(lun,15) 'cd ../../'
 
+         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
+     &        'MadLoopParams.dat .'
+
          write(lun,15) "if [[ $1 == '0' ]]; then"
          write(lun,15) '    cp -a  $CONDOR_INITIAL_DIR/'//
      &           'madevent_vegas ./SubProcesses'
