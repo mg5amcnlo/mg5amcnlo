@@ -86,7 +86,7 @@ if '__main__' == __name__:
     #    initial=2, final_1=2, final_2 = 1)
 
     # Set the model we are working with
-    model = 'loop_sm-full'
+    model = 'loop_sm'
 
     # Create a MERunner object for MadLoop 4
     ML4 = loop_me_comparator.LoopMG4Runner()

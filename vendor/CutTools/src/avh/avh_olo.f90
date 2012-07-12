@@ -3871,18 +3871,18 @@ contains
   real(kindr2) &
      :: h1,h2
 !
-!   if (p12.eq.m3) then
+   if (p12.eq.m3) then
 !     if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop box13: ' &
 !       ,'p12=m3, returning 0'
-!     rslt(0)=0 ;rslt(1)=0 ;rslt(2)=0
-!     return
-!   endif
-!   if (p23.eq.m4) then
+     rslt(0)=0 ;rslt(1)=0 ;rslt(2)=0
+     return
+   endif
+   if (p23.eq.m4) then
 !     if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop box13: ' &
 !       ,'p23=m4, returning 0'
-!     rslt(0)=0 ;rslt(1)=0 ;rslt(2)=0
-!     return
-!   endif
+     rslt(0)=0 ;rslt(1)=0 ;rslt(2)=0
+     return
+   endif
 !
    h1 = abs((m3-p12)*(m4-p23))
    h2 = abs((m3-p2 )*(m4-p4 ))
@@ -13396,18 +13396,18 @@ contains
   include 'cts_mpr.h'
      :: h1,h2
 !
-!   if (p12.eq.m3) then
+   if (p12.eq.m3) then
 !     if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop box13: ' &
 !       ,'p12=m3, returning 0'
-!     rslt(0)=0 ;rslt(1)=0 ;rslt(2)=0
-!     return
-!   endif
-!   if (p23.eq.m4) then
+     rslt(0)=0 ;rslt(1)=0 ;rslt(2)=0
+     return
+   endif
+   if (p23.eq.m4) then
 !     if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop box13: ' &
 !       ,'p23=m4, returning 0'
-!     rslt(0)=0 ;rslt(1)=0 ;rslt(2)=0
-!     return
-!   endif
+     rslt(0)=0 ;rslt(1)=0 ;rslt(2)=0
+     return
+   endif
 !
    h1 = abs((m3-p12)*(m4-p23))
    h2 = abs((m3-p2 )*(m4-p4 ))

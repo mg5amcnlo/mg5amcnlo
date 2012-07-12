@@ -49,7 +49,7 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list for real_matrix_element " % str(value)                             
     
-    def __init__(self, fksmulti, gen_color =True, decay_ids =[]):
+    def __init__(self, fksmulti, loop_optimized = False, gen_color =True, decay_ids =[]):
         """Initialization from a FKSMultiProcess"""
 
         #swhich the other loggers off
@@ -58,6 +58,8 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
         old_levels = [logg.getEffectiveLevel() for logg in loggers_off]
         for logg in loggers_off:
             logg.setLevel(logging.WARNING)
+
+        self.loop_optimized = loop_optimized
 
         logger.info('Generating real emission matrix-elements...')
         self['real_matrix_elements'] = self.generate_matrix_elements(
@@ -89,6 +91,11 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
     def get_matrix_elements(self):
         """Extract the list of matrix elements"""
         return self.get('matrix_elements')        
+
+
+    def get_virt_matrix_elements(self):
+        """Extract the list of virtuals matrix elements"""
+        return [me.virt_matrix_element for me in self.get('matrix_elements')]        
         
 
     def generate_matrix_elements_fks(self, fksmulti, gen_color = True,
@@ -125,6 +132,7 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
                                            replace('Process', 'process'))
             matrix_element_list = [FKSHelasProcessFromBorn(proc, self['real_matrix_elements'],
                                                            fksmulti['real_amplitudes'],
+                                                          loop_optimized = self.loop_optimized,
                                                           decay_ids=decay_ids,
                                                           gen_color=False)]
             for matrix_element in matrix_element_list:
@@ -205,7 +213,8 @@ class FKSHelasProcessFromBorn(object):
     -- list of FKSHelasRealProcesses
     -- color links"""
     
-    def __init__(self, fksproc=None, real_me_list =[], real_amp_list=[], **opts):#test written
+    def __init__(self, fksproc=None, real_me_list =[], real_amp_list=[], 
+            loop_optimized = False, **opts):#test written
         """ constructor, starts from a FKSProcessFromBorn, 
         sets reals and color links. Real_me_list and real_amp_list are the lists of pre-genrated
         matrix elements in 1-1 correspondence wiht the amplitudes"""
@@ -230,7 +239,8 @@ class FKSHelasProcessFromBorn(object):
             fksproc.real_amps = real_amps_new
             if fksproc.virt_amp:
                 self.virt_matrix_element = \
-                  loop_helas_objects.LoopHelasMatrixElement(fksproc.virt_amp)
+                  loop_helas_objects.LoopHelasMatrixElement(fksproc.virt_amp, 
+                          optimized_output = loop_optimized)
             else: 
                 self.virt_matrix_element = None
 

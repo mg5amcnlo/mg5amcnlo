@@ -387,7 +387,8 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                     elif self.options['fks_mode'] == 'born':
                         self._curr_matrix_elements = \
                                  fks_born_helas.FKSHelasMultiProcessFromBorn(\
-                                    self._fks_multi_proc)
+                                    self._fks_multi_proc, 
+                                    loop_optimized= self.options['loop_optimized_output'])
                     else:
                         self._curr_matrix_elements = \
                                  helas_objects.HelasMultiProcess(\
@@ -451,6 +452,9 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 self._fks_directories.extend(self._curr_exporter.fksdirs)
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')
+            if self.options['loop_optimized_output']:
+                self._curr_exporter.write_coef_specs_file(\
+                        self._curr_matrix_elements.get_virt_matrix_elements())
             if self._generate_info:
                 self._curr_exporter.write_procdef_mg5(card_path, #
                                 self._curr_model['name'],

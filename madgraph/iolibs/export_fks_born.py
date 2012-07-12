@@ -35,6 +35,7 @@ import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.loop.loop_exporters as loop_exporters
+import madgraph.various.q_polynomial as q_polynomial
 
 import aloha.create_aloha as create_aloha
 
@@ -182,6 +183,16 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         ff = open(file_pos, 'w')
         ff.write(text)
         ff.close()
+
+
+    #===============================================================================
+    # write_coef_specs
+    #===============================================================================
+    def write_coef_specs_file(self, virt_me_list):
+        """writes the coef_specs.inc in the DHELAS folder. Should not be called in the 
+        non-optimized mode"""
+        raise fks_common.FKSProcessError(), \
+                "write_coef_specs should be called only in the loop-optimized mode"
         
         
     #===============================================================================
@@ -1944,6 +1955,31 @@ class ProcessOptimizedExporterFortranFKS_born(loop_exporters.LoopProcessOptimize
             calls = 0
         return calls
 
+
+    #===============================================================================
+    # write_coef_specs
+    #===============================================================================
+    def write_coef_specs_file(self, virt_me_list):
+        """ writes the coef_specs.inc in the DHELAS folder. Should not be called in the 
+        non-optimized mode"""
+        filename = os.path.join(self.dir_path, 'Source', 'DHELAS', 'coef_specs.inc')
+
+        general_replace_dict = {}
+        general_replace_dict['max_lwf_size'] = 4 
+
+        max_loop_vertex_ranks = [me.get_max_loop_vertex_rank() for me in virt_me_list]
+        general_replace_dict['vertex_max_coefs'] = max(\
+                [q_polynomial.get_number_of_coefs_for_rank(n) 
+                    for n in max_loop_vertex_ranks])
+
+        IncWriter=writers.FortranWriter(filename,'w')
+        IncWriter.writelines("""INTEGER MAXLWFSIZE
+                           PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
+                           INTEGER VERTEXMAXCOEFS
+                           PARAMETER (VERTEXMAXCOEFS=%(vertex_max_coefs)d)"""\
+                           % general_replace_dict)
+        IncWriter.close()
+    
 
 
             
