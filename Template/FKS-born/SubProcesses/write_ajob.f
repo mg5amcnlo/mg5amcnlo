@@ -84,6 +84,12 @@ c         write(lun,15) 'cd ../../'
 
          write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
      &        'MadLoopParams.dat .'
+         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
+     &        'ColorDenomFactors.dat .'
+         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
+     &        'ColorNumFactors.dat .'
+         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
+     &        'HelConfigs.dat .'
 
          write(lun,15) "if [[ $1 == '0' ]]; then"
          write(lun,15) '    cp -a  $CONDOR_INITIAL_DIR/'//
