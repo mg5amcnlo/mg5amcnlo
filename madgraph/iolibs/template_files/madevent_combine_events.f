@@ -29,6 +29,7 @@ c
       integer i,j,m,ns,nreq,ievent
       integer kevent,revent,iarray(cmax_events)
       double precision sum, xsec, xerr, goal_wgt,xarray(cmax_events)
+      double precision xdum,rxsec
       integer i4,r8,record_length
       integer iseed
       real xran1
@@ -81,8 +82,8 @@ c $B$ input_file $B$
 c $E$ input_file $E$
 
       open(unit=15,file=filename,status='old',err=21)
-      read(15,*,err=20) xsec,xerr
-      write(*,*) "Results.dat xsec = ",xsec
+      read(15,*,err=20) xsec,xerr,xdum,xdum,xdum,xdum,xdum,xdum,xdum,rxsec
+      write(*,*) "Results.dat xsec = ",rxsec," abs xsec = ",xsec
  20   close(15)
  21   if (nreq .gt. 0 .and. xsec .gt. 0) then
          goal_wgt = xsec/nreq/4d0   !Extra factor of 4 for weighted events
@@ -140,7 +141,7 @@ C $B$ output_file1 $B$ !this is tag for automatic modification by MW
 C $E$ output_file1 $E$ !this is tag for automatic modification by MW
 
       open(unit=15,file=filename,status='unknown',err=98)
-      call writebanner(15,kevent,sum,maxwgt,xerr)
+      call writebanner(15,kevent,rxsec,maxwgt,xsec/kevent,xerr)
       do i=1,kevent
          read(sfnum,rec=iarray(i)) wgt,n,
      &        ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
@@ -213,7 +214,7 @@ C $B$ output_file2 $B$ !this is tag for automatic modification by MW
 C $E$ output_file2 $E$ !this is tag for automatic modification by MW
 
       open(unit=15,file=filename,status='unknown',err=99)
-      call writebanner_u(15,nreq,xsec,xtrunc,xerr)
+      call writebanner_u(15,nreq,rxsec,xtrunc,xsec/nreq,xerr)
       ntry = 0
       do i=1,kevent
          if (keep(i) .and. ntry .lt. nreq) then
@@ -238,7 +239,7 @@ C $E$ output_file2 $E$ !this is tag for automatic modification by MW
       end
 
 
-      subroutine writebanner(lunw,nevent,sum,maxwgt,xerr)
+      subroutine writebanner(lunw,nevent,sum,maxwgt,wgt,xerr)
 c**************************************************************************************
 c     Writes out banner information at top of event file
 c**************************************************************************************
@@ -247,7 +248,7 @@ c
 c     Arguments
 c     
       integer lunw,nevent
-      double precision sum,maxwgt,xerr
+      double precision sum,maxwgt,wgt,xerr
 c
 c     Local
 c
@@ -315,7 +316,7 @@ c
       write(lunw,'(a30,i10)')   '#  Number of Events        :  ',nevent
       write(lunw,'(a30,e10.5)') '#  Integrated weight (pb)  :  ',sum
       write(lunw,'(a30,e10.5)') '#  Max wgt                 :  ',maxwgt
-      write(lunw,'(a30,e10.5)') '#  Average wgt             :  ',sum/nevent
+      write(lunw,'(a30,e10.5)') '#  Average wgt             :  ',wgt
       write(lunw,'(a)') '</MGGenerationInfo>'
    
     
@@ -334,7 +335,7 @@ C   Write out compulsory init info
       end
 
 
-      subroutine writebanner_u(lunw,nevent,sum,maxwgt,xerr)
+      subroutine writebanner_u(lunw,nevent,sum,maxwgt,wgt,xerr)
 c**************************************************************************************
 c     Writes out banner information at top of event file
 c**************************************************************************************
@@ -343,7 +344,7 @@ c
 c     Arguments
 c     
       integer lunw,nevent
-      double precision sum,maxwgt,xerr
+      double precision sum,maxwgt,wgt,xerr
 c
 c     Local
 c
@@ -406,22 +407,11 @@ c
 c     Now write out specific information on the event set
 c
 
-c     Reweight the different subprocess group xsecs according to
-c     xsec from results.dat
-      tmpsum=0d0
-      do i=1,nprup
-         tmpsum=tmpsum+xsecup(i)
-      enddo
-      do i=1,nprup
-         xsecup(i)=xsecup(i)*sum/tmpsum
-      enddo
-      
-
       write(lunw,'(a)') '<MGGenerationInfo>'
       write(lunw,'(a30,i10)')   '#  Number of Events        :  ',nevent
       write(lunw,'(a30,e10.5)') '#  Integrated weight (pb)  :  ',sum
       write(lunw,'(a30,e10.5)') '#  Truncated wgt (pb)      :  ',maxwgt
-      write(lunw,'(a30,e10.5)') '#  Unit wgt                :  ',sum/nevent
+      write(lunw,'(a30,e10.5)') '#  Unit wgt                :  ',wgt
       write(lunw,'(a)') '</MGGenerationInfo>'
 
 C   Write out compulsory init info
@@ -606,18 +596,18 @@ c
                found=.false.
                do i=1,nprup
                   if(ievent.eq.lprup(i))then
-                     xsecup(i)=xsecup(i)+dabs(wgt)
+                     xsecup(i)=xsecup(i)+wgt
                      found=.true.
                   endif
                enddo
                if(.not.found)then
                   nprup=nprup+1
                   lprup(nprup)=ievent
-                  xsecup(nprup)=dabs(wgt)
+                  xsecup(nprup)=wgt
                endif
                tmpsum=0d0
                do i=1,nprup
-                  tmpsum = tmpsum+xsecup(i)
+                  tmpsum = tmpsum+abs(xsecup(i))
                enddo
                if(abs(sum-tmpsum)/sum .gt. 1e-3)then
                   print *,'Warning! Sum and xsecup differ: ',sum,tmpsum
