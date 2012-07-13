@@ -1855,8 +1855,8 @@ c 23   close(22)
  222  format(a10,I3,3x,a6,e10.4,a16,e10.3,e12.3,3x,f5.1,a1)
 
       open(unit=66,file='results.dat',status='unknown')
-      write(66,*) 0,0,0,0,0,0,0,1
-         write(66,'(i4,4e15.5)') 1,0d0,0d0,0d0,0d0
+      write(66,*) 0,0,0,0,0,0,0,1,0,0
+         write(66,'(i4,5e15.5)') 1,0d0,0d0,0d0,0d0,0d0
       close(66)
 
 c     Remove file events.lhe (otherwise event combination gets screwed up)

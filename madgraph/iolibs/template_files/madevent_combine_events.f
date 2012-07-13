@@ -605,13 +605,6 @@ c
                   lprup(nprup)=ievent
                   xsecup(nprup)=wgt
                endif
-               tmpsum=0d0
-               do i=1,nprup
-                  tmpsum = tmpsum+abs(xsecup(i))
-               enddo
-               if(abs(sum-tmpsum)/sum .gt. 1e-3)then
-                  print *,'Warning! Sum and xsecup differ: ',sum,tmpsum
-               endif
             endif
          endif
          if (kevent .ge. max_read) then
