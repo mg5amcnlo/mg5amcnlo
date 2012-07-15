@@ -45,6 +45,48 @@ import me_comparator
 
 from madgraph import MadGraph5Error, MG5DIR
 
+class LoopPickleRunner(me_comparator.PickleRunner):
+    """Loop Pickle Runner with special features in run() for loops"""
+
+    # Simulate a run
+    def run(self, proc_list, model, energy=1000, PSpoints=[], **opts):
+        
+        # Make sure the comparison is valid            
+        if self.energy != energy or self.model!=model:
+            return [((0.0, 0.0, 0.0, 0.0, 0), [])] * len(proc_list)
+        
+        res=[]
+        # Order the processes as asked for
+        for proc in proc_list:
+            try:
+                ind=self.proc_list.index(proc)
+                # Make sure the PS point is the same
+                if PSpoints==[] or PSpoints[ind]==[] or \
+                                          self.res_list[ind][-1]==PSpoints[ind]:
+                    res.append(self.res_list[ind])
+                else:
+                    res.append(((0.0, 0.0, 0.0, 0.0, 0), []))
+            except ValueError:
+                res.append(((0.0, 0.0, 0.0, 0.0, 0), []))
+        return res
+
+    @staticmethod
+    def store_comparison(pickle_path, proc_list, model, name,
+                         orders={}, energy=1000):
+        """Store a comparison corresponding to the parameters given."""
+    
+        new_runner = LoopPickleRunner()
+        new_runner.proc_list = proc_list[0]
+        new_runner.res_list = proc_list[1]
+        new_runner.model = model
+        new_runner.name = "Stored " + name
+        new_runner.orders = orders
+        new_runner.energy = energy
+    
+        save_load_object.save_to_file(pickle_path, new_runner)
+    
+        logging.info("Stored comparison object in %s" % pickle_path)
+
 class LoopMG5RunnerError(Exception):
         """class for error in LoopMG5Runner"""
         pass
@@ -53,22 +95,27 @@ class LoopMG5Runner(me_comparator.MG5Runner):
     """Runner object for the MG5 Matrix Element generator for loop processes."""
 
     mg5_path = ""
+    optimized_output = True
 
-    name = 'MadLoop v5'
+    name = 'ML5 opt'
     type = 'MLv5'
     compilator ='gfortran'
 
-    def setup(self, mg5_path, temp_dir=None):
+    def setup(self, mg5_path, optimized_output=True, temp_dir=None):
         """Initialization of the temp directory"""
 
         self.mg5_path = os.path.abspath(mg5_path)
-
+        self.optimized_output = optimized_output
+        if not self.optimized_output:
+            self.name = 'ML5 default'
+        
         if not temp_dir:
             i=0
             while os.path.exists(os.path.join(mg5_path, 
                                               "ptest_%s_%s" % (self.type, i))):
                 i += 1
-            temp_dir = "ptest_%s_%s" % (self.type, i)         
+            temp_dir = "ptest_%s_%s_%s" % (self.type,'opt' if
+                                        self.optimized_output else 'default', i)         
 
         self.temp_dir_name = temp_dir
 
@@ -116,10 +163,10 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         # Remove the temporary proc_card
         os.remove(proc_card_location)
         if self.non_zero:
+            self.fix_PSPoint_in_check(dir_name,PSpoints!=[])
+            self.fix_MadLoopParamCard(dir_name)
             if PSpoints==[]:
-                self.fix_energy_in_check(dir_name, energy)
-            else:
-                self.fix_PSPoint_in_check(dir_name)          
+                self.fix_energy_in_check(dir_name, energy)          
 
             # Get the ME value
             for i, proc in enumerate(proc_list):
@@ -135,7 +182,9 @@ class LoopMG5Runner(me_comparator.MG5Runner):
     def format_mg5_proc_card(self, proc_list, model):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model %s\n" % os.path.join(self.model_dir, model)
+        v5_string = "set loop_optimized_output %s\n"%str(self.optimized_output) 
+
+        v5_string += "import model %s\n" % os.path.join(self.model_dir, model)
         
         for i, (proc, born_orders, perturbation_orders, squared_orders) in \
             enumerate(proc_list):      
@@ -253,7 +302,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
             pass
 
     @staticmethod
-    def fix_PSPoint_in_check(dir_name):
+    def fix_PSPoint_in_check(dir_name, read_ps = True):
         """Set check_sa.f to be reading PS.input assuming a working dir dir_name"""
 
         file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.f'), 'r')
@@ -261,7 +310,26 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         file.close()
 
         file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.f'), 'w')
-        file.write(re.sub("READPS = .FALSE.", "READPS = .TRUE.", check_sa))
+        check_sa = re.sub(r"READPS = \S+\)","READPS = %s)"%('.TRUE.' if read_ps \
+                                                      else '.FALSE.'), check_sa)
+        check_sa = re.sub(r"NPSPOINTS = \d+","NPSPOINTS = 1", check_sa)        
+        file.write(check_sa)
+        file.close()
+        
+    @staticmethod
+    def fix_MadLoopParamCard(dir_name,mp=False):
+        """ Set parameters in MadLoopParams.dat suited for these checks."""
+
+        file = open(os.path.join(dir_name,'SubProcesses','MadLoopParams.dat'), 'r')
+        MLParams = file.read()
+        file.close()
+        mode = 4 if mp else 1
+        file = open(os.path.join(dir_name,'SubProcesses','MadLoopParams.dat'), 'w')
+        MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%mode, MLParams)
+        MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%mode, MLParams)
+        MLParams = re.sub(r"#UseLoopFilter\n\S+","#UseLoopFilter\n.FALSE.", 
+                                                                       MLParams)                
+        file.write(MLParams)
         file.close()
 
 class LoopMG4RunnerError(Exception):
@@ -451,7 +519,7 @@ class LoopMG4Runner(me_comparator.MERunner):
         if PSpoint==[]:
             self.fix_energy_in_check(dir_name, energy)
         else:
-            self.fix_PSPoint_in_check(dir_name)  
+            self.fix_PSPoint_in_check(dir_name)
 
         # If a PS point is specified, write out the corresponding PS.input
         if PSpoint!=[]:
@@ -1290,31 +1358,24 @@ class LoopMEComparator(me_comparator.MEComparator):
         col_size = 17
         fail_proc = 0
         fail_str = "Failed for processes:"
-        for i, proc in enumerate(self.proc_list):
-            list_res = [res[i][0][0] for res in self.results]
-            if max(list_res) == 0.0 and min(list_res) == 0.0:
-                diff = 0.0
-            else:
-                diff = (max(list_res) - min(list_res)) / \
-                       abs((max(list_res) + min(list_res)))
+        failed_proc_list = []
 
-            if diff >= tolerance:
-                fail_str += self._fixed_string_length('\n' + proc, col_size) + \
-                            ''.join([self._fixed_string_length("%1.10e" % res,
-                                                               col_size) for \
-                                     res in list_res])
+        for index in range(0,4):        
+            for i, proc in enumerate(self.proc_list):
+                list_res = [res[i][0][index] for res in self.results]
+                if max(list_res) == 0.0 and min(list_res) == 0.0:
+                    diff = 0.0
+                else:
+                    diff = (max(list_res) - min(list_res)) / \
+                           abs((max(list_res) + min(list_res)))
+
+                if diff >= tolerance and proc not in failed_proc_list:
+                    failed_proc_list.append(proc)
+                    fail_str += self._fixed_string_length(proc, col_size) + \
+                                ''.join([self._fixed_string_length("%1.10e" % res,
+                                         col_size) for res in list_res])
                 
-                fail_str += self._fixed_string_length("%1.10e" % diff, col_size)
+                    fail_str += self._fixed_string_length("%1.10e" % diff, col_size)
 
         test_object.assertEqual(fail_str, "Failed for processes:")
-
-
-
-
-
-
-
-
-
-
 

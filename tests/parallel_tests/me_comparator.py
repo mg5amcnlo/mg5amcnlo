@@ -609,7 +609,7 @@ class PickleRunner(MERunner):
     energy = 1000
 
 #    def run(self, proc_list, model, orders, energy):
-    def run(self, **arg):
+    def run(self, *arg, **opt):
         """Simulate a run by simply returning res_list
         """
 
