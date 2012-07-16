@@ -1262,7 +1262,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                 create_coef=['CALL CREATE_LOOP_COEFS(WL(1,0,1,%(number)d)',
                              '%(loop_rank)d','%(lcut_size)d',
                              'LOOPCOEFS(0,%(loop_number)d)',
-                             '%(LoopSymmetryFactor)d','%(amp_number)d)']
+                             '%(LoopSymmetryFactor)d','%(amp_number)d,H)']
                 res.append(','.join(create_coef)%{\
                   'number':lamp.get_final_loop_wavefunction().get('number'),
                   'loop_rank':lamp.get_rank(),

@@ -19,42 +19,6 @@ C ----------
       CALL SLOOPMATRIX(P,ANS)
 	  END
 
-	  logical function IsZero(toTest, reference_value, loop)
-      IMPLICIT NONE
-C  
-C CONSTANTS
-C
-      INTEGER    NLOOPGROUPS
-	  PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
-C  
-C ARGUMENTS 
-C  
-	  %(real_dp_format)s toTest, reference_value
-	  integer loop
-C  
-C GLOBAL 
-C
-      INCLUDE 'MadLoopParams.inc'
-      %(complex_dp_format)s LOOPRES(3,NLOOPGROUPS)
-	  LOGICAL S(NLOOPGROUPS)
-      common/LOOPRES/LOOPRES,S
-C ----------
-C BEGIN CODE
-C ----------
-	  IF(abs(reference_value).eq.0.0d0) then
-	    IsZero=.FALSE.
-		write(*,*) '##E02 ERRROR Reference value for comparison is zero.'
-		STOP
-	  else
-	    IsZero=((abs(toTest)/abs(reference_value)).lt.ZEROTHRES)
-	  endif
-
-	  IF((.NOT.ISZERO).AND.(loop.NE.-1).AND.(.NOT.S(loop))) THEN
-	    write(*,*) '##W01 WARNING Contribution ',loop,' is detected as contributing with CR=',(abs(toTest)/abs(reference_value)),' but is unstable.' 
-	  ENDIF
-
-	  end
-
       SUBROUTINE SLOOPMATRIX(P_IN,ANS)
 C  
 %(info_lines)s
@@ -108,6 +72,7 @@ c RESCT STORES THE RESULT OBTAINED FROM ANY OF THE 7 POSSIBLE CT MODES.
 	  INTEGER NATTEMPTS
 	  DATA NATTEMPTS/0/
 	  DATA IC/NEXTERNAL*1/
+	  %(real_dp_format)s HELSAVED(3,NCOMB)	  
 	  %(real_dp_format)s BUFFR(3),BUFFR_BIS(3),TEMP1,TEMP2
 	  %(complex_dp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       %(complex_dp_format)s CFTOT
@@ -116,12 +81,13 @@ c RESCT STORES THE RESULT OBTAINED FROM ANY OF THE 7 POSSIBLE CT MODES.
 	  DATA FOUNDLOOPFILTER/.TRUE./
       LOGICAL LOOPFILTERBUFF(NLOOPGROUPS)
 	  DATA (LOOPFILTERBUFF(I),I=1,NLOOPGROUPS)/NLOOPGROUPS*.FALSE./
+
 	  INTEGER IDEN
       %(den_factor_line)s
-
 C
 C FUNCTIONS
 C
+      INTEGER ISSAME
       LOGICAL ISZERO
 C  
 C GLOBAL VARIABLES
@@ -132,7 +98,9 @@ C
 
 	  LOGICAL CHECKPHASE
 	  DATA CHECKPHASE/.TRUE./
-      common/INIT/CHECKPHASE
+	  LOGICAL HELDOUBLECHECKED
+	  DATA HELDOUBLECHECKED/.FALSE./
+      common/INIT/CHECKPHASE, HELDOUBLECHECKED
 	  INTEGER NTRY
       DATA NTRY/0/
 	  %(real_dp_format)s REF
@@ -149,9 +117,17 @@ C
 	  INTEGER CTMODE	  
       common/CT/LSCALE,CTMODE
 
-	  LOGICAL GOODHEL(NCOMB)
+C     The parameter below sets the convention for the helicity filter
+C     For a given helicity, the attached integer 'i' means
+C     'i' in ]-inf;-HELOFFSET[ -> Helicity is equal, up to a sign, to helicity number abs(i+HELOFFSET)
+C     'i' == -HELOFFSET        -> Helicity is analytically zero
+C     'i' in ]-HELOFFSET,inf[  -> Helicity is contributing with weight 'i'. If it is zero, it is skipped.
+C     Typically, the hel_offset is 10000
+	  INTEGER HELOFFSET
+	  DATA HELOFFSET/%(hel_offset)d/
+	  INTEGER GOODHEL(NCOMB)
 	  LOGICAL GOODAMP(NLOOPGROUPS)
-	  common/Filters/GOODAMP,GOODHEL
+	  common/Filters/GOODAMP,GOODHEL,HELOFFSET
 
 	  INTEGER HELPICKED
 	  DATA HELPICKED/-1/
@@ -194,6 +170,7 @@ C ----------
 
 IF(NTRY.EQ.0) THEN
   CALL MADLOOPPARAMREADER(paramFileName,.TRUE.)
+  HELDOUBLECHECKED=.NOT.DoubleCheckHelicityFilter
 OPEN(1, FILE="LoopFilter.dat", err=100, status='OLD',           action='READ')
   DO J=1,NLOOPGROUPS
     READ(1,*,END=101) GOODAMP(J)
@@ -207,12 +184,14 @@ OPEN(1, FILE="LoopFilter.dat", err=100, status='OLD',           action='READ')
 101  CONTINUE
 CLOSE(1)
 OPEN(1, FILE="HelFilter.dat", err=102, status='OLD',           action='READ')
-  READ(1,*,END=103) (GOODHEL(I),I=1,NCOMB)
+  DO I=1,NCOMB
+    READ(1,*,END=103) GOODHEL(I)
+  ENDDO
   GOTO 103
 102  CONTINUE
   FOUNDHELFILTER=.FALSE.
   DO J=1,NCOMB
-	GOODHEL(J)=.TRUE.
+	GOODHEL(J)=1
   ENDDO
 103  CONTINUE
 CLOSE(1)
@@ -279,7 +258,9 @@ CHECKPHASE=(NTRY.LE.CHECKCYCLE).AND.(((.NOT.FOUNDLOOPFILTER).AND.USELOOPFILTER).
 
 IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDHELFILTER)) THEN
 OPEN(1, FILE="HelFilter.dat", err=110, status='NEW',       action='WRITE')
-  WRITE(1,*) (GOODHEL(I),I=1,NCOMB)
+  DO I=1,NCOMB
+    WRITE(1,*) GOODHEL(I)  
+  ENDDO
 110  CONTINUE
   CLOSE(1)
 FOUNDHELFILTER=.TRUE.
@@ -295,7 +276,7 @@ OPEN(1, FILE="LoopFilter.dat", err=111, status='NEW',       action='WRITE')
 FOUNDLOOPFILTER=.TRUE.
 ENDIF
 
-IF(CHECKPHASE) THEN
+IF(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)) THEN
   HELPICKED=1
   CTMODE=CTMODEINIT
 ELSE
@@ -344,11 +325,16 @@ DO K=1,3
 ENDDO
 
 DO H=1,NCOMB
-  IF (((HELPICKED.EQ.-1).OR.(HELPICKED.EQ.H)).AND.(CHECKPHASE.OR.GOODHEL(H))) THEN
+  IF (((HELPICKED.EQ.-1).OR.(HELPICKED.EQ.H)).AND.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHEL(H).NE.0))) THEN
   DO I=1,NEXTERNAL
     NHEL(I)=HELC(I,H)
   ENDDO
   %(born_ct_helas_calls)s
+  IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED) THEN
+    DUMMY=GOODHEL(H)
+  ELSE
+    DUMMY=1
+  ENDIF
   DO I=1,%(nctamps_or_nloopamps)s
     DO J=1,%(nbornamps_or_nloopamps)s
 	  CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0d0)
@@ -374,43 +360,86 @@ ANS(3)=BUFFR_BIS(3)
 
 %(actualize_ans)s
 
-IF (CHECKPHASE) THEN
+IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)) THEN
   IF((USERHEL.EQ.-1).OR.(USERHEL.EQ.HELPICKED)) THEN
-  BUFFR(1)=BUFFR(1)+ANS(1)
-  BUFFR(2)=BUFFR(2)+ANS(2)
-  BUFFR(3)=BUFFR(3)+ANS(3)
+C   TO KEEP TRACK OF THE FINAL ANSWER TO BE RETURNED DURING CHECK PHASE
+    BUFFR(1)=BUFFR(1)+ANS(1)
+    BUFFR(2)=BUFFR(2)+ANS(2)
+    BUFFR(3)=BUFFR(3)+ANS(3)
   ENDIF
+C SAVE RESULT OF EACH INDEPENDENT HELICITY FOR COMPARISON DURING THE HELICITY FILTER SETUP
+  HELSAVED(1,HELPICKED)=ANS(1)
+  HELSAVED(2,HELPICKED)=ANS(2)
+  HELSAVED(3,HELPICKED)=ANS(3)
 
-C SET THE HELICITY FILTER
-  IF(.NOT.FOUNDHELFILTER) THEN
-  IF(ISZERO(ABS(ANS(1)+ANS(2)+ANS(3)),REF/DBLE(NCOMB),-1)) THEN
-    IF(NTRY.EQ.1) THEN
-	  GOODHEL(HELPICKED)=.FALSE.
-	ELSEIF(GOODHEL(HELPICKED)) THEN
-	  WRITE(*,*) '##W02 WARNING Inconsistent helicity ',HELPICKED,' filter setting, starting over.'
-	  NTRY=0
-	ENDIF
-  ENDIF
-  ENDIF
-
-C SET THE LOOP FILTER
-  IF(.NOT.FOUNDLOOPFILTER.AND.USELOOPFILTER) THEN
-  	DO I=1,NLOOPGROUPS
-      IF(.NOT.ISZERO(ABS(LOOPRES(1,I))+ABS(LOOPRES(2,I))+ABS(LOOPRES(3,I)),(REF*1.0d-4),I)) THEN
+  IF (CHECKPHASE) THEN
+C   SET THE HELICITY FILTER
+    IF(.NOT.FOUNDHELFILTER) THEN
+      IF(ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1)) THEN
         IF(NTRY.EQ.1) THEN
-	      GOODAMP(I)=.TRUE.
-		  LOOPFILTERBUFF(I)=.TRUE.
-	    ELSEIF(.NOT.LOOPFILTERBUFF(I)) THEN
-	      WRITE(*,*) '##W02 WARNING Inconsistent loop amp ',I,'.'
-		  IF(LOOPINITSTARTOVER) THEN
-		    WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the loop filter setup.'
-	        NTRY=0
-		  ELSE
-		    GOODAMP(I)=.TRUE.
-		  ENDIF
+	      GOODHEL(HELPICKED)=-HELOFFSET
+	    ELSEIF(GOODHEL(HELPICKED).NE.-HELOFFSET) THEN
+	      WRITE(*,*) '##W02 WARNING Inconsistent vanishing helicity ',HELPICKED,' filter setting, starting over.'
+	      NTRY=0
 	    ENDIF
-      ENDIF
-  	ENDDO
+      ELSE
+	    DO H=1,HELPICKED-1
+		  IF(GOODHEL(H).GT.-HELOFFSET) THEN
+		    DUMMY=ISSAME(ANS,HELSAVED(1,H),REF)
+		    IF(DUMMY.NE.0) THEN
+		      IF(NTRY.EQ.1) THEN
+C               Set the matching helicity to be contributing once more
+		        GOODHEL(H)=GOODHEL(H)+DUMMY
+C               Use an offset to clearly show it is linked to an other one and to avoid overlap
+			    GOODHEL(HELPICKED)=-H-HELOFFSET
+C             Make sure we have paired this hel config to the same one last PS point
+			  ELSEIF(GOODHEL(HELPICKED).NE.(-H-HELOFFSET)) THEN
+	      	    WRITE(*,*) '##W02 WARNING Inconsistent matching helicity ',HELPICKED,' filter setting, starting over.'
+	      	    NTRY=0
+			  ENDIF
+			  EXIT
+			ENDIF
+		  ENDIF
+		ENDDO
+	  ENDIF
+    ENDIF
+
+C   SET THE LOOP FILTER
+    IF(.NOT.FOUNDLOOPFILTER.AND.USELOOPFILTER) THEN
+  	  DO I=1,NLOOPGROUPS
+        IF(.NOT.ISZERO(ABS(LOOPRES(1,I))+ABS(LOOPRES(2,I))+ABS(LOOPRES(3,I)),(REF*1.0d-4),I)) THEN
+          IF(NTRY.EQ.1) THEN
+	        GOODAMP(I)=.TRUE.
+		    LOOPFILTERBUFF(I)=.TRUE.
+	      ELSEIF(.NOT.LOOPFILTERBUFF(I)) THEN
+	        WRITE(*,*) '##W02 WARNING Inconsistent loop amp ',I,'.'
+		    IF(LOOPINITSTARTOVER) THEN
+		      WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the loop filter setup.'
+	          NTRY=0
+		    ELSE
+		      GOODAMP(I)=.TRUE.
+		    ENDIF
+	      ENDIF
+        ENDIF
+  	  ENDDO
+    ENDIF
+  ELSEIF (.NOT.HELDOUBLECHECKED)THEN
+C   DOUBLE CHECK THE HELICITY FILTER
+    IF ((GOODHEL(HELPICKED).EQ.-HELOFFSET).AND.(.NOT.ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1))) THEN
+	  write(*,*) '##E03 Helicity filter could not be successfully double checked.'
+	  write(*,*) 'One reason for this is that you have changed sensible parameters which affected what are the zero helicity configurations.'
+	  write(*,*) 'Please regenerate the filter by removing HelFilter.dat and rerunning SLOOPMATRIX over a couple of PS points.'
+	  STOP
+	ELSEIF (GOODHEL(HELPICKED).LT.-HELOFFSET.AND.(ISSAME(ANS,HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF).EQ.0)) THEN
+	  write(*,*) '##E03 Helicity filter could not be successfully double checked.'
+	  write(*,*) 'One reason for this is that you have changed sensible parameters which affected the dependent helicity relationships.'
+	  write(*,*) 'Please regenerate the filter by removing HelFilter.dat and rerunning SLOOPMATRIX over a couple of PS points.'
+	  STOP
+	ENDIF
+C   SET HELDOUBLECHECKED TO .TRUE. WHEN DONE
+	IF (HELPICKED.EQ.NCOMB) THEN
+	  HELDOUBLECHECKED=.TRUE.
+	ENDIF
   ENDIF
 
 C GOTO NEXT HELICITY OR FINISH
@@ -418,6 +447,13 @@ C GOTO NEXT HELICITY OR FINISH
     HELPICKED=HELPICKED+1
     goto 199
   ELSE
+C   Useful printout
+c    do I=1,NCOMB
+c      write(*,*) 'HELSAVED(1,',I,')=',HELSAVED(1,I)
+c      write(*,*) 'HELSAVED(2,',I,')=',HELSAVED(2,I)
+c      write(*,*) 'HELSAVED(3,',I,')=',HELSAVED(3,I)
+c      write(*,*) '   GOODHEL(',I,')=',GOODHEL(I)
+c    ENDDO
     ANS(1)=BUFFR(1)
 	ANS(2)=BUFFR(2)
 	ANS(3)=BUFFR(3)
@@ -436,7 +472,7 @@ ANS(1)=ANS(1)/DBLE(IDEN)
 ANS(2)=ANS(2)/DBLE(IDEN)
 ANS(3)=ANS(3)/DBLE(IDEN)
 
-IF(.NOT.CHECKPHASE.AND.(CTMODERUN.EQ.-1)) THEN
+IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.(CTMODERUN.EQ.-1)) THEN
   RESCT(1,CTMODE)=ANS(1)
   RESCT(2,CTMODE)=ANS(2)
   RESCT(3,CTMODE)=ANS(3)
@@ -474,6 +510,86 @@ IF(.NOT.CHECKPHASE.AND.(CTMODERUN.EQ.-1)) THEN
 ENDIF
 
       END
+
+
+	  logical function IsZero(toTest, reference_value, loop)
+      IMPLICIT NONE
+C  
+C CONSTANTS
+C
+      INTEGER    NLOOPGROUPS
+	  PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
+C  
+C ARGUMENTS 
+C  
+	  %(real_dp_format)s toTest, reference_value
+	  integer loop
+C  
+C GLOBAL 
+C
+      INCLUDE 'MadLoopParams.inc'
+      %(complex_dp_format)s LOOPRES(3,NLOOPGROUPS)
+	  LOGICAL S(NLOOPGROUPS)
+      common/LOOPRES/LOOPRES,S
+C ----------
+C BEGIN CODE
+C ----------
+	  IF(abs(reference_value).eq.0.0d0) then
+	    IsZero=.FALSE.
+		write(*,*) '##E02 ERRROR Reference value for comparison is zero.'
+		STOP
+	  else
+	    IsZero=((abs(toTest)/abs(reference_value)).lt.ZEROTHRES)
+	  endif
+
+	  IF((.NOT.ISZERO).AND.(loop.NE.-1).AND.(.NOT.S(loop))) THEN
+	    write(*,*) '##W01 WARNING Contribution ',loop,' is detected as contributing with CR=',(abs(toTest)/abs(reference_value)),' but is unstable.' 
+	  ENDIF
+
+	  end
+
+      integer function ISSAME(resA,resB,ref)
+	  IMPLICIT NONE
+C     This function compares the result from two different helicity configuration A and B
+C     It returns 0 if they are not related and (+/-wgt) if A=(+/-wgt)*B.
+C     For now, the only wgt implemented is the integer 1.
+C  
+C CONSTANTS
+C
+      integer N_WGT_TO_TRY
+	  parameter (N_WGT_TO_TRY=2)
+C  
+C ARGUMENTS 
+C  
+	  %(real_dp_format)s resA(3), resB(3)
+	  %(real_dp_format)s ref
+C  
+C LOCAL VARIABLES
+C
+      LOGICAL ISZERO
+      integer I,J
+      integer WGT_TO_TRY(N_WGT_TO_TRY)
+	  data WGT_TO_TRY/1,-1/
+C ----------
+C BEGIN CODE
+C ----------
+      ISSAME=0
+
+	  DO I=1,N_WGT_TO_TRY
+	    DO J=1,3
+		  IF (IsZero(ABS(resB(J)),ref,-1)) THEN
+		    IF(.NOT.IsZero(ABS(resB(J))+ABS(resA(J)),ref,-1)) THEN
+		      GOTO 1231
+			ENDIF
+		  ELSEIF(.NOT.IsZero((resA(J)/resB(J))-DBLE(WGT_TO_TRY(I)),ref,-1)) THEN
+		    GOTO 1231		    
+		  ENDIF
+		ENDDO
+		ISSAME = WGT_TO_TRY(I)
+		RETURN
+ 1231   CONTINUE
+      ENDDO
+	  END
 
 	  SUBROUTINE IMPROVE_PS_POINT_PRECISION(P)
 C  

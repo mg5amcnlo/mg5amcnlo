@@ -483,6 +483,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%mode, MLParams)
         MLParams = re.sub(r"#UseLoopFilter\n\S+","#UseLoopFilter\n.FALSE.", 
                                                                        MLParams)                
+        MLParams = re.sub(r"#DoubleCheckHelicityFilter\n\S+",
+                                 "#DoubleCheckHelicityFilter\n.FALSE.",MLParams)
         file.write(MLParams)
         file.close()
 

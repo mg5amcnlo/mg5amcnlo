@@ -10,8 +10,9 @@
 
       real*8 MLStabThres,CTStabThres,ZeroThres
 
-      logical UseLoopFilter,LoopInitStartOver
+      logical UseLoopFilter,LoopInitStartOver,DoubleCheckHelicityFilter
 
       common /MADLOOP/CTModeInit,CTModeRun,CheckCycle,
      &MaxAttempts,UseLoopFilter,MLStabThres,CTStabThres,
-     &CTLoopLibrary,LoopInitStartOver,ZeroThres
+     &CTLoopLibrary,LoopInitStartOver,DoubleCheckHelicityFilter,
+     &ZeroThres

@@ -158,7 +158,7 @@ class ML5Test(unittest.TestCase):
           pickle_file = 'ml5_parallel_test.pkl',filename = 'long_ml5_vs_old_ml5_parallel_test.log')
     # In principle since previous version of ML5 has been validated against ML4, it is not 
     # necessary to test both against ML4 and the old ML5.
-    def notest_short_sm_vs_stored_ML4(self):
+    def test_short_sm_vs_stored_ML4(self):
         self.compare_processes(ML4_processes_short, model = 'loop_sm-no_twidth',
           pickle_file = 'ml4_parallel_test.pkl',filename = 'short_ml5_vs_ml4_parallel_test.log')
 

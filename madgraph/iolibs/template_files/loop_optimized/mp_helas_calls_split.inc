@@ -37,7 +37,7 @@ C GLOBAL VARIABLES
 C  
       include 'mp_coupl_same_name.inc'
 
-	  LOGICAL GOODHEL(NCOMB)
+	  INTEGER GOODHEL(NCOMB)
 	  LOGICAL GOODAMP(NLOOPGROUPS)
 	  common/Filters/GOODAMP,GOODHEL
 

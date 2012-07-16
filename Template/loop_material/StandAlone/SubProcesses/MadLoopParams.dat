@@ -99,6 +99,14 @@
 1.0d-9
 ! Default :: 1.0d-9
 
+!     The setting below is recommended to be on as it allows to systematically used the 
+!     first PS point thrown at ML5 to be used for making sure that the helicity filter
+!     read from HelFilter.dat is consistent as it might be no longer up to date with
+!     certain changes of the paramaters by the user.
+#DoubleCheckHelicityFilter
+.TRUE.
+! Default :: .TRUE.
+
 !     Some loop contributions my be zero for some helicities which are however
 !     contributing. In order to save their computing time, you can chose here to try
 !     to filter them out. As the gain is minimal, this option is turned off by default.

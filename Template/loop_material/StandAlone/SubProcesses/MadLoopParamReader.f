@@ -69,6 +69,9 @@
           else if (buff .eq. '#UseLoopFilter') then
              read(666,*,end=999) UseLoopFilter
 
+          else if (buff .eq. '#DoubleCheckHelicityFilter') then
+             read(666,*,end=999) DoubleCheckHelicityFilter
+
           else if (buff .eq. '#LoopInitStartOver') then
              read(666,*,end=999) LoopInitStartOver
 
@@ -113,6 +116,8 @@
       write(*,*) ' > CheckCycle                = ',CheckCycle
       write(*,*) ' > MaxAttempts               = ',MaxAttempts
       write(*,*) ' > UseLoopFilter             = ',UseLoopFilter
+      write(*,*) ' > DoubleCheckHelicityFilter = ',
+     &DoubleCheckHelicityFilter
       write(*,*) ' > LoopInitStartOver         = ',LoopInitStartOver
       write(*,*) ' > ZeroThres                 = ',ZeroThres
       write(*,*)
@@ -138,6 +143,7 @@
       CheckCycle=3
       MaxAttempts=10
       UseLoopFilter=.True.
+      DoubleCheckHelicityFilter=.True.
       LoopInitStartOver=.False.
       ZeroThres=1.0d-9
 

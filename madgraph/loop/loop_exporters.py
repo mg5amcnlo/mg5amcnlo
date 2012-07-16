@@ -793,7 +793,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         writers.FortranWriter.downcase = False
 
         replace_dict = copy.copy(self.general_replace_dict)
-
+        
         # Extract overall denominator
         # Averaging initial state color, spin, and identical FS particles
         den_factor_line = self.get_den_factor_line(matrix_element)
@@ -1174,12 +1174,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nctamps'
             replace_dict['mp_squaring']=\
-          'ANS(1)=ANS(1)+REAL(CFTOT*AMPL(1,I)*CONJG(AMPL(1,J),KIND=16),KIND=16)'        
+          'ANS(1)=ANS(1)+DUMMY*REAL(CFTOT*AMPL(1,I)*CONJG(AMPL(1,J),KIND=16),KIND=16)'        
         else:
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
             replace_dict['mp_squaring']='\n'.join(['DO K=1,3',
-                'ANS(K)=ANS(K)+2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J))'+\
+                'ANS(K)=ANS(K)+DUMMY*2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J))'+\
                                                            ',KIND=16)','ENDDO'])
         
         # Extract helas calls
@@ -1237,6 +1237,16 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         replace_dict = copy.copy(self.general_replace_dict)
 
+        # Helicity offset convention
+        # For a given helicity, the attached integer 'i' means
+        # 'i' in ]-inf;-HELOFFSET[ -> Helicity is equal, up to a sign, 
+        #                             to helicity number abs(i+HELOFFSET)
+        # 'i' == -HELOFFSET        -> Helicity is analytically zero
+        # 'i' in ]-HELOFFSET,inf[  -> Helicity is contributing with weight 'i'.
+        #                             If it is zero, it is skipped.
+        # Typically, the hel_offset is 10000
+        replace_dict['hel_offset'] = 10000
+
         # Extract overall denominator
         # Averaging initial state color, spin, and identical FS particles
         den_factor_line = self.get_den_factor_line(matrix_element)
@@ -1252,13 +1262,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nctamps'
             replace_dict['squaring']=\
-                    'ANS(1)=ANS(1)+DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))'        
+                    'ANS(1)=ANS(1)+DUMMY*DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))'        
         else:
             replace_dict['set_reference']='call smatrix(p,ref)'
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
             replace_dict['squaring']='\n'.join(['DO K=1,3',
-                   'ANS(K)=ANS(K)+2.0d0*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))',
+                   'ANS(K)=ANS(K)+2.0d0*DUMMY*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))',
                                                                        'ENDDO'])
 
         # Actualize results from the loops computed. Only necessary for

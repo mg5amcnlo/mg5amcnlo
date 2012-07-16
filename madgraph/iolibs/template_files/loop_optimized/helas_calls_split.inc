@@ -38,9 +38,10 @@ C
       include 'coupl.inc'
 	  include 'mp_coupl.inc'
 
-	  LOGICAL GOODHEL(NCOMB)
+	  INTEGER HELOFFSET	  
+	  INTEGER GOODHEL(NCOMB)
 	  LOGICAL GOODAMP(NLOOPGROUPS)
-	  common/Filters/GOODAMP,GOODHEL
+	  common/Filters/GOODAMP,GOODHEL,HELOFFSET
 
       %(dp_born_amps_decl)s
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
