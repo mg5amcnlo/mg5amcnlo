@@ -87,7 +87,10 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
         assert isinstance(matrix_element, helas_objects.HelasMatrixElement), \
                   "%s not valid argument for get_matrix_element_calls" % \
-                  repr(matrix_element)
+                  type(matrix_element)
+
+        me = matrix_element.get('diagrams')
+        matrix_element.reuse_outdated_wavefunctions(me)
 
         res = []
         for diagram in matrix_element.get('diagrams'):
@@ -1124,6 +1127,9 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
         assert isinstance(matrix_element, helas_objects.HelasMatrixElement), \
                   "%s not valid argument for get_matrix_element_calls" % \
                   repr(matrix_element)
+
+        me = matrix_element.get('diagrams')
+        matrix_element.reuse_outdated_wavefunctions(me)
 
         res = []
         for diagram in matrix_element.get('diagrams'):

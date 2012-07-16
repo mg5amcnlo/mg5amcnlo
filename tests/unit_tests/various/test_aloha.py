@@ -2441,6 +2441,7 @@ class TestSomeObjectProperty(unittest.TestCase):
         Metric = aloha_obj.Metric        
         Epsilon = aloha_obj.Epsilon
         P = aloha_obj.P
+        PSlash = aloha_obj.PSlash
         
         object2_paper = P(-1,2) * P(-1,3) * Gamma(3,2,1) - P(3,2) * P(-1,3) * Gamma(-1,2,1) \
                   - complex(0,1) * Epsilon(3,-1,-2,-3) * P(-2,2)*P(-1,3)*Gamma(-3,2,-4)*Gamma5(-4,1)
@@ -2502,7 +2503,27 @@ class TestSomeObjectProperty(unittest.TestCase):
         zero =   object1_paper - object2_paper
         zero = zero.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
         for ind in zero.listindices(): 
-            self.assertEqual(zero.get_rep(ind), 0)         
+            self.assertEqual(zero.get_rep(ind), 0)   
+            
+            
+        # Expression provided by FR compare to kentaru model
+        object_fr = complex(0,1)*Epsilon(3,4,-1,-2)*P(-1,2)*Gamma(-2,2,-3)*ProjM(-3,1) + P(4,2)*Gamma(3,2,-1)*ProjM(-1,1) - P(3,2)*Gamma(4,2,-1)*ProjM(-1,1) - complex(0,1)*Epsilon(3,4,-1,-2)*P(-1,2)*Gamma(-2,2,-3)*ProjP(-3,1) + P(4,2)*Gamma(3,2,-1)*ProjP(-1,1) - P(3,2)*Gamma(4,2,-1)*ProjP(-1,1)
+        object_kent = (Gamma(3,2,-1)*Gamma(4,-1,-10) - Identity(2,-10)*Metric(3,4)) * PSlash(-10,1,2)
+        
+        zero = object_fr - object_kent
+        zero = zero.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
+        for ind in zero.listindices(): 
+            self.assertEqual(zero.get_rep(ind), 0)  
+            
+        # Same for three point interactions
+        object_fr =Epsilon(3,-1,-2,-3)*P(-2,2)*P(-1,3)*Gamma(-3,2,-4)*ProjM(-4,1) + complex(0,1)*P(-1,3)*P(3,2)*Gamma(-1,2,-2)*ProjM(-2,1) - complex(0,1)*P(-1,2)*P(-1,3)*Gamma(3,2,-2)*ProjM(-2,1) - Epsilon(3,-1,-2,-3)*P(-2,2)*P(-1,3)*Gamma(-3,2,-4)*ProjP(-4,1) + complex(0,1)*P(-1,3)*P(3,2)*Gamma(-1,2,-2)*ProjP(-2,1) - complex(0,1)*P(-1,2)*P(-1,3)*Gamma(3,2,-2)*ProjP(-2,1) 
+        object_kent = P(-1,2)*P(3,3)*Gamma(-1,2,1) - (P(-2,2)*P(-1,3)*Gamma(-2,-3,1)*Gamma(-1,-4,-3)*Gamma(3,2,-4))/2. + (P(-2,2)*P(-1,3)*Gamma(-2,-4,-3)*Gamma(-1,-3,1)*Gamma(3,2,-4))/2. - P(-1,2)*P(-1,3)*Gamma(3,2,1)
+                 
+        zero = object_fr - complex(0,1)* object_kent
+        zero = zero.simplify().expand(veto=range(len(aloha_lib.KERNEL))).simplify()
+        
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0)              
         
         
         
@@ -4351,7 +4372,7 @@ void FFV1C1_1(complex<double> F1[], complex<double> V3[], complex<double> COUP, 
 
 void FFV1C1_1(complex<double> F1[], complex<double> V3[], complex<double> COUP, double M2, double W2,complex<double> F2[])
 {
- complex<double> cI = (0.,1.);
+ complex<double> cI = complex<double>(0.,1.);
  double  P2[4];
  complex<double>  denom;
     F2[0] = +F1[0]+V3[0];

@@ -34,6 +34,7 @@ import tests.unit_tests.core.test_drawing as test_drawing
 import madgraph.iolibs.drawing_eps as draw_eps
 import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.files as files
+import madgraph.various.misc as misc
 
 import tests.unit_tests as unittest
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -159,7 +160,7 @@ class TestDrawingS_EPS(unittest.TestCase):
         self.assertTrue(os.path.isfile(position))
 
         # Check if the file is valid
-        if pdf_check:
+        if pdf_check and misc.which('convert'):
             filename, ext = os.path.splitext('position')
             os.system('convert ' + position + ' ' + filename + '.pdf')
 

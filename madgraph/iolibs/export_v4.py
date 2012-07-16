@@ -990,6 +990,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         replace_dict = {}
 
+        # Extract helas calls
+        helas_calls = fortran_model.get_matrix_element_calls(\
+                    matrix_element)
+        replace_dict['helas_calls'] = "\n".join(helas_calls)
+
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()
         replace_dict['info_lines'] = info_lines
@@ -1031,10 +1036,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         color_data_lines = self.get_color_data_lines(matrix_element)
         replace_dict['color_data_lines'] = "\n".join(color_data_lines)
 
-        # Extract helas calls
-        helas_calls = fortran_model.get_matrix_element_calls(\
-                    matrix_element)
-        replace_dict['helas_calls'] = "\n".join(helas_calls)
 
         # Extract JAMP lines
         jamp_lines = self.get_JAMP_lines(matrix_element)
@@ -1452,6 +1453,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         replace_dict = {}
 
+        # Extract helas calls
+        helas_calls = fortran_model.get_matrix_element_calls(\
+                    matrix_element)
+        replace_dict['helas_calls'] = "\n".join(helas_calls)
+
+
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()
         replace_dict['info_lines'] = info_lines
@@ -1519,10 +1526,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         color_data_lines = self.get_color_data_lines(matrix_element)
         replace_dict['color_data_lines'] = "\n".join(color_data_lines)
 
-        # Extract helas calls
-        helas_calls = fortran_model.get_matrix_element_calls(\
-                    matrix_element)
-        replace_dict['helas_calls'] = "\n".join(helas_calls)
 
         # Set the size of Wavefunction
         if not self.model or any([p.get('spin')==5 for p in self.model.get('particles') if p]):

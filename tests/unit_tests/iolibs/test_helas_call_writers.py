@@ -590,8 +590,12 @@ class FortranHelasCallWriterTest(HelasModelTestSetup):
 
         fortran_model = helas_call_writers.FortranHelasCallWriter()
 
-        result = [fortran_model.get_wavefunction_call(wf) for wf in wfs]
-        self.assertEqual(result, goal)
+        goal_counter = 0
+
+        for wf in wfs:
+            self.assertEqual(fortran_model.get_wavefunction_call(wf),
+                             goal[goal_counter])
+            goal_counter = goal_counter + 1
 
         for wf in wfs:
             mothers = copy.copy(wfs)
@@ -653,6 +657,11 @@ class FortranHelasCallWriterTest(HelasModelTestSetup):
         self.assertEqual(fortran_model.get_amplitude_call(amplitude),
                          goal[goal_counter])
         goal_counter = goal_counter + 1
+
+
+
+
+
 
     def test_w_and_z_amplitudes(self):
         """Test wavefunction and amplitude calls for W and Z"""
