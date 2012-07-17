@@ -576,7 +576,8 @@ class AbstractALOHAModel(dict):
                 continue 
             
             if lorentz.structure == 'external':
-                self.external_routines.append(lorentz.name)
+                for i in range(len(lorent.spins)):
+                    self.external_routines.append('%s_%s' % (lorentz.name, i))
                 continue
             
             builder = AbstractRoutineBuilder(lorentz)
@@ -656,8 +657,12 @@ class AbstractALOHAModel(dict):
         for l_name in request:
             lorentz = eval('self.model.lorentz.%s' % l_name)
             if lorentz.structure == 'external':
-                if lorentz.name not in self.external_routines:
-                    self.external_routines.append(lorentz.name)
+                for tmp in request[l_name]:
+                    for outgoing, tag in request[l_name][tmp]:
+                        name = aloha_writers.get_routine_name(lorentz.name,outgoing=outgoing,tag=tag)
+                        if name not in self.external_routines:
+                            print name
+                            self.external_routines.append(name)
                 continue
             
             builder = AbstractRoutineBuilder(lorentz)
@@ -790,7 +795,7 @@ class AbstractALOHAModel(dict):
 
         ext_files  = []
         for path in paths:
-            ext_files = glob.glob(os.path.join(path, '%s_*.%s' % (name, ext)))
+            ext_files = glob.glob(os.path.join(path, '%s.%s' % (name, ext)))
             if ext_files:
                 break
         else: 

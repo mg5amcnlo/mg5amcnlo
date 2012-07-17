@@ -313,7 +313,7 @@ c
       parameter( rOne = 1.0d0, rTwo = 2.0d0 )
 
 
-      tc(18)=NHEL
+      tc(3)=NHEL
       tc(1) = dcmplx(p(0),p(3))*nst
       tc(2) = dcmplx(p(1),p(2))*nst
 

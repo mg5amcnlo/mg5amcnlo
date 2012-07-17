@@ -12,6 +12,8 @@ Update notes for MadGraph 5 (in reverse time order)
 		      to 30% faster than previous version.
                   OM: Aloha now supports lorentz expression with denominator.
 		  OM: Improve error message when Source didn't compile properly.    
+		  OM + PdA: Allow Large Extra Dimension Model (LED) to run in the
+		      MG5 framework.
 		            
 1.4.7 (25/06/12)  JA: Change the random seed treatment to ensure that the original 
                       seed is stored in the banner (this was broken in v. 1.4.0).

@@ -236,7 +236,7 @@ class Particle(PhysicsObject):
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                     "Spin %s is not an integer" % repr(value)
-            if value < 1 or value > 5:
+            if (value < 1 or value > 5) and value != 99:
                 raise self.PhysicsObjectError, \
                    "Spin %i not valid" % value
 
@@ -340,7 +340,7 @@ class Particle(PhysicsObject):
         """Return a list of the helicity states for the onshell particle"""
 
         spin = self.get('spin')
-        if spin == 1:
+        if spin ==1:
             # Scalar
             return [ 0 ]
         elif spin == 2:
@@ -362,7 +362,7 @@ class Particle(PhysicsObject):
         elif spin == 5 and self.get('mass').lower() == 'zero':
             # Massless tensor
             return [-2, -1, 1, 2]
-        elif spin == 5:
+        elif spin in [5, 99]:
             # Massive tensor
             return [-2, -1, 0, 1, 2]
         
