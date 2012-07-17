@@ -375,8 +375,8 @@ def irxxxx(p, mass, nhel, nsr):
     pt = min([pp,sqrt(pt2)])
     
     rc = {}
-    rc[(4,0)] = complex(p[0],p[3])*nsr
-    rc[(5,0)] = complex(p[1],p[2])*nsr
+    rc[(4,0)] = -1*complex(p[0],p[3])*nsr
+    rc[(5,0)] = -1*complex(p[1],p[2])*nsr
     
 
     nsv = -nsr # nsv=+1 for final, -1 for initial   
@@ -585,24 +585,24 @@ def irxxxx(p, mass, nhel, nsr):
             else:
                 rc[(i, j)] = em[i]*fim[j] *complex(p[1],nsr*p[2])/pt 
                 
-    ri[0] = rc[(0,0)]
-    ri[1] = rc[(0,1)]
-    ri[2] = rc[(0,2)]
-    ri[3] = rc[(0,3)]
-    ri[4] = rc[(1,0)]
-    ri[5] = rc[(1,1)]
-    ri[6] = rc[(1,2)]
-    ri[7] = rc[(1,3)]
-    ri[8] = rc[(2,0)]
-    ri[9] = rc[(2,1)]
-    ri[10] = rc[(2,2)]
-    ri[11] = rc[(2,3)]
-    ri[12] = rc[(3,0)]
-    ri[13] = rc[(3,1)]
-    ri[14] = rc[(3,2)]
-    ri[15] = rc[(3,3)]
-    ri[16] = rc[(4,0)]
-    ri[17] = rc[(5,0)]              
+    ri[2] = rc[(0,0)]
+    ri[3] = rc[(0,1)]
+    ri[4] = rc[(0,2)]
+    ri[5] = rc[(0,3)]
+    ri[6] = rc[(1,0)]
+    ri[7] = rc[(1,1)]
+    ri[8] = rc[(1,2)]
+    ri[9] = rc[(1,3)]
+    ri[10] = rc[(2,0)]
+    ri[11] = rc[(2,1)]
+    ri[12] = rc[(2,2)]
+    ri[13] = rc[(2,3)]
+    ri[14] = rc[(3,0)]
+    ri[15] = rc[(3,1)]
+    ri[16] = rc[(3,2)]
+    ri[17] = rc[(3,3)]
+    ri[0] = rc[(4,0)]
+    ri[1] = rc[(5,0)]              
 
     return ri
 
@@ -853,24 +853,24 @@ def orxxxx(p, mass, nhel, nsr):
 
 
 
-    ro[0] = rc[(0,0)]
-    ro[1] = rc[(0,1)]
-    ro[2] = rc[(0,2)]
-    ro[3] = rc[(0,3)]
-    ro[4] = rc[(1,0)]
-    ro[5] = rc[(1,1)]
-    ro[6] = rc[(1,2)]
-    ro[7] = rc[(1,3)]
-    ro[8] = rc[(2,0)]
-    ro[9] = rc[(2,1)]
-    ro[10] = rc[(2,2)]
-    ro[11] = rc[(2,3)]
-    ro[12] = rc[(3,0)]
-    ro[13] = rc[(3,1)]
-    ro[14] = rc[(3,2)]
-    ro[15] = rc[(3,3)]
-    ro[16] = rc[(4,0)]
-    ro[17] = rc[(5,0)]
+    ro[2] = rc[(0,0)]
+    ro[3] = rc[(0,1)]
+    ro[4] = rc[(0,2)]
+    ro[5] = rc[(0,3)]
+    ro[6] = rc[(1,0)]
+    ro[7] = rc[(1,1)]
+    ro[8] = rc[(1,2)]
+    ro[9] = rc[(1,3)]
+    ro[10] = rc[(2,0)]
+    ro[11] = rc[(2,1)]
+    ro[12] = rc[(2,2)]
+    ro[13] = rc[(2,3)]
+    ro[14] = rc[(3,0)]
+    ro[15] = rc[(3,1)]
+    ro[16] = rc[(3,2)]
+    ro[17] = rc[(3,3)]
+    ro[0] = rc[(4,0)]
+    ro[1] = rc[(5,0)]
     
     return ro
     

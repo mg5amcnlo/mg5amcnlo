@@ -9,9 +9,11 @@ Update notes for MadGraph 5 (in reverse time order)
                       apply the various patch if not.
 		  OM: Aloha modifications: faster to create routine and those 
 		      ones are more optimized and therefore can be evaluated up
-		      to 30% faster than previous version.
+		      to 40% faster than previous version.
                   OM: Aloha now supports lorentz expression with denominator.
 		  OM: Improve error message when Source didn't compile properly.    
+                  OM: The numerical evaluation of the matrix element requires now 
+		      less memory than before (madevent and standalone output)
 		  OM + PdA: Allow Large Extra Dimension Model (LED) to run in the
 		      MG5 framework.
 		            
