@@ -770,12 +770,22 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             logging.error("Failed at running the process %s."%shell_name)
             return None
         
+        def check_disk_usage(path):
+            return subprocess.check_output(["du -shc %s"%path],shell=True).\
+                                                                     split()[-2]
+        
+        res_timings['du_source']=check_disk_usage(os.path.join(\
+                                                 export_dir,'Source','*','*.f'))
+        res_timings['du_process']=check_disk_usage(os.path.join(dir_name,'*.f'))
+        res_timings['du_color']=check_disk_usage(os.path.join(dir_name,'*.dat'))
+        res_timings['du_exe']=check_disk_usage(os.path.join(dir_name,'check'))
+
         time_per_ps_estimate = (run_time/4.0)/2.0
         res_timings['Process_compilation'] = compile_time
         
         if not os.path.exists(os.path.join(dir_name,'HelFilter.dat')) or not \
                os.path.exists(os.path.join(dir_name,'LoopFilter.dat')):
-            logging.warning("Could not initialize the process %s"%shell_name+\
+            logger.warning("Could not initialize the process %s"%shell_name+\
                             " with 4 PS points. Now trying with 15 PS points.")
             self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
                                                   read_ps = False, npoints = 15)
@@ -783,7 +793,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             if compile_time == None: return None
             if not os.path.exists(os.path.join(dir_name,'HelFilter.dat')) or \
                not os.path.exists(os.path.join(dir_name,'LoopFilter.dat')):
-                logging.error("Could not initialize the process %s"%shell_name+\
+                logger.error("Could not initialize the process %s"%shell_name+\
                             " with 15 PS points.")
                 return None
         
@@ -801,7 +811,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                     n_contrib_hel += 1
                     
         if contributing_hel==0:
-            logging.error("Could not find a contributing helicity "+\
+            logger.error("Could not find a contributing helicity "+\
                                      "configuration for process %s."%shell_name)
             return None
         
@@ -811,7 +821,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         # We aim at a 5 sec run
         target_pspoints_number = int(5.0/time_per_ps_estimate)+1
 
-        logging.info("Checking timing for process %s "%shell_name+\
+        logger.info("Checking timing for process %s "%shell_name+\
                                     "with %d PS points."%target_pspoints_number)
         
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
@@ -1028,10 +1038,21 @@ def check_timing(process_definition, mg_root="",cuttools="",cmass_scheme = False
     start=time.time()
     amplitude = loop_diagram_generation.LoopAmplitude(process)
     timing1['Diagrams_generation']=time.time()-start
+    timing1['n_loops']=len(amplitude.get('loop_diagrams'))
     start=time.time()
     matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                         optimized_output = loop_optimized_output,gen_color=True)
     timing1['HelasDiagrams_generation']=time.time()-start
+    
+    if loop_optimized_output:
+        timing1['n_loop_groups']=len(matrix_element.get('loop_groups'))
+        lwfs=[l for ldiag in matrix_element.get_loop_diagrams() for l in \
+                                                ldiag.get('loop_wavefunctions')]
+        timing1['n_loop_wfs']=len(lwfs)
+        timing1['loop_wfs_ranks']=[]
+        for rank in range(0,max([l.get('rank') for l in lwfs])+1):
+            timing1['loop_wfs_ranks'].append(\
+                                  len([1 for l in lwfs if l.get('rank')==rank]))
     
     myTimer = LoopMatrixElementTimer(mg_root=mg_root, cuttools_dir=cuttools, 
                                        model=model, cmass_scheme = cmass_scheme)
@@ -1040,11 +1061,11 @@ def check_timing(process_definition, mg_root="",cuttools="",cmass_scheme = False
     if timing2 == None:
         return None
     else:
-        clean_up(mg_root)
+        pass
+#        clean_up(mg_root)
     
     # Return the merged two dictionaries
-    return dict( (n, timing1.get(n, 0)+timing2.get(n, 0)) for n in \
-                                                     set(timing1)|set(timing2) )
+    return dict(timing1.items()+timing2.items())
 
 #===============================================================================
 # check_processes
@@ -1293,14 +1314,14 @@ def clean_up(mg_root):
 def output_timings(process, timings, loop_optimized_output):
     """Present the result of a timings check in a nice format """
     
-    res_str = "Timings for process %s \n"%process.nice_string()
+    res_str = "%s \n"%process.nice_string()
     gen_total = timings['HELAS_MODEL_compilation']+\
                 timings['HelasDiagrams_generation']+\
                 timings['Process_output']+\
                 timings['Diagrams_generation']+\
                 timings['Process_compilation']+\
                 timings['Initialization']
-    res_str += "= Generation time total...... ========== %.3gs\n"%gen_total
+    res_str += "\n= Generation time total...... ========== %.3gs\n"%gen_total
     res_str += "|= Diagrams generation....... %.3gs\n"\
                                                  %timings['Diagrams_generation']
     res_str += "|= Helas Diagrams generation. %.3gs\n"\
@@ -1313,10 +1334,8 @@ def output_timings(process, timings, loop_optimized_output):
                                             %timings['Process_compilation']
     res_str += "|= Initialization............ %.3gs\n"\
                                             %timings['Initialization']
-    res_str += "= Unpolarized time / PSpoint. ========== %.3gms\n"\
+    res_str += "\n= Unpolarized time / PSpoint. ========== %.3gms\n"\
                                     %(timings['run_unpolarized_total']*1000.0)
-    res_str += "|= Number of hel. computed... %d/%d\n"\
-                                %(timings['n_contrib_hel'],timings['n_tot_hel'])
     if loop_optimized_output:
         coef_time=timings['run_unpolarized_coefs']*1000.0
         loop_time=(timings['run_unpolarized_total']-\
@@ -1327,7 +1346,7 @@ def output_timings(process, timings, loop_optimized_output):
         res_str += "|= Loop evaluation (OPP) time %.3gms (%d%%)\n"\
                                   %(loop_time,int(round(100.0*loop_time/total)))
 
-    res_str += "= Polarized time / PSpoint... ========== %.3gms\n"\
+    res_str += "\n= Polarized time / PSpoint... ========== %.3gms\n"\
                                     %(timings['run_polarized_total']*1000.0)
     if loop_optimized_output:
         coef_time=timings['run_polarized_coefs']*1000.0
@@ -1338,6 +1357,20 @@ def output_timings(process, timings, loop_optimized_output):
                                   %(coef_time,int(round(100.0*coef_time/total)))
         res_str += "|= Loop evaluation (OPP) time %.3gms (%d%%)\n"\
                                   %(loop_time,int(round(100.0*loop_time/total)))
+    res_str += "\n= Miscellaneous ========================\n"
+    res_str += "|= Number of hel. computed... %d/%d\n"\
+                                %(timings['n_contrib_hel'],timings['n_tot_hel'])
+    res_str += "|= Number of loop diagrams... %d\n"%timings['n_loops']
+    if loop_optimized_output:
+        res_str += "|= Number of loop groups..... %d\n"%timings['n_loop_groups']
+        res_str += "|= Number of loop wfs........ %d\n"%timings['n_loop_wfs']
+        for i, r in enumerate(timings['loop_wfs_ranks']):
+            res_str += "||= # of loop wfs of rank %d.. %d\n"%(i,r)
+    res_str += "\n= Output disk size =====================\n"
+    res_str += "|= Source directory sources.. %s\n"%timings['du_source']
+    res_str += "|= Process sources........... %s\n"%timings['du_process']    
+    res_str += "|= Color and helicity data... %s\n"%timings['du_color']  
+    res_str += "|= Executable size........... %s\n"%timings['du_exe'] 
     
     return res_str
 
