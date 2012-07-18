@@ -102,11 +102,11 @@ class ML5Test(unittest.TestCase):
 
         # Create a MERunner object for MadLoop 5 optimized
         ML5_opt = loop_me_comparator.LoopMG5Runner()
-        ML5_opt.setup(_mg5_path, optimized_output=True)
+        ML5_opt.setup(_mg5_path, optimized_output=True, temp_dir=filename)
     
         # Create a MERunner object for MadLoop 5 default
         ML5_default = loop_me_comparator.LoopMG5Runner()
-        ML5_default.setup(_mg5_path, optimized_output=False) 
+        ML5_default.setup(_mg5_path, optimized_output=False, temp_dir=filename) 
 
         # Create and setup a comparator
         my_comp = loop_me_comparator.LoopMEComparator()
@@ -123,7 +123,7 @@ class ML5Test(unittest.TestCase):
                            model=model,
                            energy=energy)
         # Print the output
-        my_comp.output_result(filename=filename)
+        my_comp.output_result(filename=filename+'.log')
 
         # Assert that all process comparisons passed the tolerance cut
         my_comp.assert_processes(self, tolerance)
@@ -150,18 +150,18 @@ class ML5Test(unittest.TestCase):
 
     def test_short_sm_vs_stored_ML5(self):
         self.compare_processes(ML5_processes_short, model = 'loop_sm-no_twidth',
-          pickle_file = 'ml5_parallel_test.pkl',filename = 'short_ml5_vs_old_ml5_parallel_test.log')
+          pickle_file = 'ml5_parallel_test.pkl',filename = 'ptest_short_ml5_vs_old_ml5')
 
     # The test below is a bit lengthy, so only run it when you want full proof check of ML5.
-    def notest_long_sm_vs_stored_ML5(self):
+    def test_long_sm_vs_stored_ML5(self):
         self.compare_processes(ML5_processes_long, model = 'loop_sm-no_twidth',
-          pickle_file = 'ml5_parallel_test.pkl',filename = 'long_ml5_vs_old_ml5_parallel_test.log')
+          pickle_file = 'ml5_parallel_test.pkl',filename = 'ptest_long_ml5_vs_old_ml5')
     # In principle since previous version of ML5 has been validated against ML4, it is not 
     # necessary to test both against ML4 and the old ML5.
     def test_short_sm_vs_stored_ML4(self):
         self.compare_processes(ML4_processes_short, model = 'loop_sm-no_twidth',
-          pickle_file = 'ml4_parallel_test.pkl',filename = 'short_ml5_vs_ml4_parallel_test.log')
+          pickle_file = 'ml4_parallel_test.pkl',filename = 'ptest_short_ml5_vs_ml4')
 
-    def notest_long_sm_vs_stored_ML4(self):
+    def test_long_sm_vs_stored_ML4(self):
         self.compare_processes(ML4_processes_long, model = 'loop_sm-no_twidth',
-          pickle_file = 'ml4_parallel_test.pkl',filename = 'long_ml5_vs_ml4_parallel_test.log')
+          pickle_file = 'ml4_parallel_test.pkl',filename = 'ptest_long_ml5_vs_ml4')

@@ -87,6 +87,9 @@ C
       PARAMETER (MP__ZERO=0E0_16)
       %(complex_dp_format)s IMAG1
       PARAMETER (IMAG1=(0D0,1D0))
+C     This parameter is designed for the check timing command of MG5
+      LOGICAL SKIPLOOPEVAL
+      PARAMETER (SKIPLOOPEVAL=.FALSE.)
 C  
 C ARGUMENTS 
 C  

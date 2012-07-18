@@ -1223,6 +1223,28 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # Write the file
         writer.writelines(file)  
 
+    def fix_coef_specs(self, overall_max_lwf_size, overall_max_loop_vert_rank):
+        """ If processes with different maximum loop wavefunction size or
+        different maximum loop vertex rank have to be output together, then
+        the file 'coef.inc' in the HELAS Source folder must contain the overall
+        maximum of these quantities. It is not safe though, and the user has 
+        been appropriatly warned at the output stage """
+        
+        # Remove the existing link
+        coef_specs_path=os.path.join(self.dir_path,'Source','DHELAS',\
+                                                               'coef_specs.inc')
+        os.remove(coef_specs_path)
+        
+        # Replace it by the appropriate value
+        IncWriter=writers.FortranWriter(coef_specs_path,'w')
+        IncWriter.writelines("""INTEGER MAXLWFSIZE
+                           PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
+                           INTEGER VERTEXMAXCOEFS
+                           PARAMETER (VERTEXMAXCOEFS=%(vertex_max_coefs)d)"""\
+                           %{'max_lwf_size':overall_max_lwf_size,
+                             'vertex_max_coefs':overall_max_loop_vert_rank})
+        IncWriter.close()
+
     def write_loopmatrix(self, writer, matrix_element, fortran_model, \
                          noSplit=False):
         """Create the loop_matrix.f file."""

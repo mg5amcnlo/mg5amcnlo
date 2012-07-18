@@ -98,7 +98,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
     optimized_output = True
 
     name = 'ML5 opt'
-    type = 'MLv5'
+    type = 'MLv5_opt'
     compilator ='gfortran'
 
     def setup(self, mg5_path, optimized_output=True, temp_dir=None):
@@ -108,14 +108,17 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         self.optimized_output = optimized_output
         if not self.optimized_output:
             self.name = 'ML5 default'
+            self.type = 'MLv5_default'
         
         if not temp_dir:
-            i=0
-            while os.path.exists(os.path.join(mg5_path, 
-                                              "ptest_%s_%s" % (self.type, i))):
-                i += 1
-            temp_dir = "ptest_%s_%s_%s" % (self.type,'opt' if
-                                        self.optimized_output else 'default', i)         
+            temp_dir = "ptest_%s"%self.type
+        else:
+            temp_dir = temp_dir+('_opt' if self.optimized_output else '_default')
+        base_dir = temp_dir
+        i=0
+        while os.path.exists(os.path.join(mg5_path,temp_dir)):
+            i += 1
+            temp_dir = base_dir + '_%d'%i
 
         self.temp_dir_name = temp_dir
 
@@ -1363,7 +1366,8 @@ class LoopMEComparator(me_comparator.MEComparator):
         failed_proc_list = []
 
         for index in range(0,4):        
-            for i, proc in enumerate(self.proc_list):
+            for i, (proc, born_orders, perturbation_orders, squared_orders) \
+                                                 in enumerate(self.proc_list):
                 list_res = [res[i][0][index] for res in self.results]
                 if max(list_res) == 0.0 and min(list_res) == 0.0:
                     diff = 0.0

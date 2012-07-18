@@ -56,6 +56,9 @@ C
       PARAMETER (MP__ZERO=0E0_16)
       %(complex_dp_format)s IMAG1
       PARAMETER (IMAG1=(0D0,1D0))
+C     This parameter is designed for the check timing command of MG5
+      LOGICAL SKIPLOOPEVAL
+      PARAMETER (SKIPLOOPEVAL=.FALSE.)
 C  
 C ARGUMENTS 
 C  
@@ -356,9 +359,15 @@ ANS(1)=BUFFR_BIS(1)
 ANS(2)=BUFFR_BIS(2)
 ANS(3)=BUFFR_BIS(3)
 
+IF(SKIPLOOPEVAL) THEN
+  GOTO 1226
+ENDIF
+
 %(loop_CT_calls)s
 
 %(actualize_ans)s
+
+1226 CONTINUE
 
 IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)) THEN
   IF((USERHEL.EQ.-1).OR.(USERHEL.EQ.HELPICKED)) THEN

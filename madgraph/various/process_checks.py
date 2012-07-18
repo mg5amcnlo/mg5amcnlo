@@ -31,6 +31,7 @@ import shutil
 import glob
 import re
 import subprocess
+import time
 
 import aloha
 import aloha.aloha_writers as aloha_writers
@@ -471,7 +472,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         else:
             return {'m2': finite_m2, output:[]}
 
-    def fix_MadLoopParamCard(self,dir_name,mp=False):
+    def fix_MadLoopParamCard(self,dir_name, mp=False, loop_filter=False):
         """ Set parameters in MadLoopParams.dat suited for these checks."""
 
         file = open(os.path.join(dir_name,'MadLoopParams.dat'), 'r')
@@ -481,23 +482,33 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         file = open(os.path.join(dir_name,'MadLoopParams.dat'), 'w')
         MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%mode, MLParams)
         MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%mode, MLParams)
-        MLParams = re.sub(r"#UseLoopFilter\n\S+","#UseLoopFilter\n.FALSE.", 
-                                                                       MLParams)                
+        MLParams = re.sub(r"#UseLoopFilter\n\S+","#UseLoopFilter\n%s"%(\
+                               '.TRUE.' if loop_filter else '.FALSE.'),MLParams)                
         MLParams = re.sub(r"#DoubleCheckHelicityFilter\n\S+",
                                  "#DoubleCheckHelicityFilter\n.FALSE.",MLParams)
         file.write(MLParams)
         file.close()
 
-    def fix_PSPoint_in_check(self, dir_name):
-        """Set check_sa.f to be reading PS.input assuming a working dir dir_name"""
+    def fix_PSPoint_in_check(self, dir_name, read_ps = True, npoints = 1,
+                             hel_config = -1):
+        """Set check_sa.f to be reading PS.input assuming a working dir dir_name.
+        if hel_config is different than -1 then check_sa.f is configured so to
+        evaluate only the specified helicity."""
 
         file = open(os.path.join(dir_name,'check_sa.f'), 'r')
         check_sa = file.read()
         file.close()
-
+        
         file = open(os.path.join(dir_name,'check_sa.f'), 'w')
-        check_sa = re.sub(r"READPS = \S+\)","READPS = .TRUE.)", check_sa)
-        check_sa = re.sub(r"NPSPOINTS = \d+","NPSPOINTS = 1", check_sa)        
+        check_sa = re.sub(r"READPS = \S+\)","READPS = %s)"%('.TRUE.' if read_ps \
+                                                      else '.FALSE.'), check_sa)
+        check_sa = re.sub(r"NPSPOINTS = \d+","NPSPOINTS = %d"%npoints, check_sa)
+        if hel_config != -1:
+            check_sa = re.sub(r"SLOOPMATRIX\S+\)","SLOOPMATRIXHEL(P,%d,MATELEM)"\
+                                                          %hel_config, check_sa)
+        else:
+            check_sa = re.sub(r"SLOOPMATRIX\S+\)","SLOOPMATRIX(P,MATELEM)",\
+                                                                       check_sa)
         file.write(check_sa)
         file.close()
 
@@ -638,6 +649,210 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         file.close()
         
         return os.path.join(dir_name,helas_file_name), original_file, helas_calls_out
+
+#===============================================================================
+# Helper class LoopMatrixElementEvaluator
+#===============================================================================
+class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
+    """Class taking care of matrix element evaluation and running timing for 
+       loop processes."""
+   
+    def __init__(self, *args, **kwargs):
+        """ Same as the mother for now """
+        LoopMatrixElementEvaluator.__init__(self,*args, **kwargs)
+
+    def make_and_run(self, dir_name):
+        """ Compile the check program in the directory dir_name.
+        Return the compilation and running time. """
+
+        # Make sure to recreate the executable
+        if os.path.isfile(os.path.join(dir_name,'check')):
+            os.remove(os.path.join(dir_name,'check'))
+        # Now run make
+        devnull = open(os.devnull, 'w')
+        start=time.time()
+        retcode = subprocess.call(['make','check'],
+                                   cwd=dir_name, stdout=devnull, stderr=devnull)
+        compilation_time = time.time()-start
+                     
+        if retcode != 0:
+            logging.info("Error while executing make in %s" % dir_name)
+            return None, None
+
+        start=time.time()
+        retcode = subprocess.call('./check',
+                                   cwd=dir_name, stdout=devnull, stderr=devnull)
+        run_time = time.time()-start
+        devnull.close()
+        
+        if retcode != 0:
+            logging.warning("Error while executing ./check in %s" % dir_name)
+            return None, None
+
+        return compilation_time, run_time
+        
+    def skip_loop_evaluation_setup(self, dir_name, skip=True):
+        """ Edit loop_matrix.f in order to skip the loop evaluation phase.
+        Notice this only affects the double precision evaluation which is
+        normally fine as we do not make the timing check on mp."""
+
+        file = open(os.path.join(dir_name,'loop_matrix.f'), 'r')
+        loop_matrix = file.read()
+        file.close()
+        
+        file = open(os.path.join(dir_name,'loop_matrix.f'), 'w')
+        loop_matrix = loop_matrix
+        
+        loop_matrix = re.sub(r"SKIPLOOPEVAL=\S+\)","SKIPLOOPEVAL=%s)"%('.TRUE.' 
+                                           if skip else '.FALSE.'), loop_matrix)
+        file.write(loop_matrix)
+        file.close()
+
+    def time_matrix_element(self, matrix_element, model):
+        """ Output the matrix_element in argument and give detail information
+        about the timing for its output and running"""
+        
+        res_timings = {}
+        
+        # For now, only accept the process if it has a born
+        if not matrix_element.get('processes')[0]['has_born']:
+            if output == "m2":
+                return 0.0, []
+            else:
+                return {'m2': 0.0, output:[]}
+      
+        export_dir=os.path.join(self.mg_root,'TMP_DIR_FOR_THE_CHECK_CMD')
+        if os.path.isdir(export_dir):
+            raise InvalidCmd(\
+            "The directory %s already exist. Please remove it."%str(export_dir))
+
+        # I do the import here because there is some cyclic import of export_v4
+        # otherwise
+        import madgraph.loop.loop_exporters as loop_exporters
+        if loop_optimized_output:
+            exporter=loop_exporters.LoopProcessOptimizedExporterFortranSA
+        else:
+            exporter=loop_exporters.LoopProcessExporterFortranSA
+            
+        start=time.time()
+        FortranExporter = exporter(\
+            self.mg_root, export_dir, clean=True,
+            complex_mass_scheme = self.cmass_scheme, mp=True,
+            loop_dir=os.path.join(self.mg_root, 'Template/loop_material'),\
+            cuttools_dir=self.cuttools_dir)
+        FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
+        FortranExporter.copy_v4template(modelname=model.get('name'))
+        FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
+        wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
+        wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
+                                                                for c in l]))
+        FortranExporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
+        res_timings['Process_output'] = time.time()-start
+        start=time.time()
+        FortranExporter.finalize_v4_directory(None,"",False,False,'gfortran')
+        res_timings['HELAS_MODEL_compilation'] = time.time()-start
+        
+        # First Initialize filters (in later versions where this will be done
+        # at generation time, it can be skipped)
+        self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
+                                                   read_ps = False, npoints = 4)
+        self.fix_MadLoopParamCard(os.path.join(export_dir,'SubProcesses'),
+                                                 mp = False, loop_filter = True)
+        
+        shell_name = None
+        directories = glob.glob(os.path.join(export_dir, 'SubProcesses','P0_*'))
+        if directories and os.path.isdir(directories[0]):
+            shell_name = os.path.basename(directories[0])
+        dir_name = os.path.join(export_dir, 'SubProcesses', shell_name)
+
+        compile_time, run_time = self.make_and_run(dir_name)
+        if compile_time==None:
+            logging.error("Failed at running the process %s."%shell_name)
+            return None
+        
+        time_per_ps_estimate = (run_time/4.0)/2.0
+        res_timings['Process_compilation'] = compile_time
+        
+        if not os.path.exists(os.path.join(dir_name,'HelFilter.dat')) or not \
+               os.path.exists(os.path.join(dir_name,'LoopFilter.dat')):
+            logging.warning("Could not initialize the process %s"%shell_name+\
+                            " with 4 PS points. Now trying with 15 PS points.")
+            self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
+                                                  read_ps = False, npoints = 15)
+            compile_time, run_time = self.make_and_run(dir_name)
+            if compile_time == None: return None
+            if not os.path.exists(os.path.join(dir_name,'HelFilter.dat')) or \
+               not os.path.exists(os.path.join(dir_name,'LoopFilter.dat')):
+                logging.error("Could not initialize the process %s"%shell_name+\
+                            " with 15 PS points.")
+                return None
+        
+        res_timings['Initialization'] = run_time
+
+        # Detect one contributing helicity
+        contributing_hel=0
+        n_contrib_hel=0
+        helicities = file(os.path.join(dir_name,'HelFilter.dat')).read().split()
+        for i, hel in enumerate(helicities):
+            if (loop_optimized_output and int(hel)>-10000) or hel=='T':
+                if contributing_hel==0:
+                    contributing_hel=i+1
+                else:
+                    n_contrib_hel += 1
+                    
+        if contributing_hel==0:
+            logging.error("Could not find a contributing helicity "+\
+                                     "configuration for process %s."%shell_name)
+            return None
+        
+        res_timings['n_contrib_hel']=n_contrib_hel
+        res_timings['n_tot_hel']=len(helicities)
+        
+        # We aim at a 5 sec run
+        target_pspoints_number = int(5.0/time_per_ps_estimate)+1
+
+        logging.info("Checking timing for process %s "%shell_name+\
+                                    "with %d PS points."%target_pspoints_number)
+        
+        self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
+             read_ps = False, npoints = target_pspoints_number*3, \
+                                                  hel_config = contributing_hel)
+        compile_time, run_time = self.make_and_run(dir_name)
+        if compile_time == None: return None
+        res_timings['run_polarized_total']=run_time/(target_pspoints_number*3)
+
+        self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
+             read_ps = False, npoints = target_pspoints_number, hel_config = -1)
+        compile_time, run_time = self.make_and_run(dir_name)
+        if compile_time == None: return None
+        res_timings['run_unpolarized_total']=run_time/target_pspoints_number
+        
+        if not loop_optimized_output:
+            return res_timings
+        
+        # For the loop optimized output, we also check the time spent in
+        # computing the coefficients of the loop numerator polynomials.
+        
+        # So we modify loop_matrix.f in order to skip the loop evaluation phase.
+        self.skip_loop_evaluation_setup(dir_name,skip=True)
+
+        self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
+             read_ps = False, npoints = target_pspoints_number, hel_config = -1)
+        compile_time, run_time = self.make_and_run(dir_name)
+        if compile_time == None: return None
+        res_timings['run_unpolarized_coefs']=run_time/target_pspoints_number
+        
+        self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
+             read_ps = False, npoints = target_pspoints_number*3, \
+                                                  hel_config = contributing_hel)
+        compile_time, run_time = self.make_and_run(dir_name)
+        if compile_time == None: return None
+        res_timings['run_polarized_coefs']=run_time/(target_pspoints_number*3)    
+
+        # Restitute the original file.
+        self.skip_loop_evaluation_setup(dir_name,skip=False)
+        
+        return res_timings
 
 #===============================================================================
 # Global helper function run_multiprocs
@@ -782,6 +997,54 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
 
     # Skip adding antiprocess below, since might be relevant too
     return False
+
+#===============================================================================
+# check_timing for loop processes
+#===============================================================================
+def check_timing(process_definition, mg_root="",cuttools="",cmass_scheme = False):
+    """For a single loop process, give a detailed summary of the generation and
+    execution timing."""
+    
+    assert isinstance(process_definition,base_objects.ProcessDefinition)
+    assert process_definition.get('perturbation_couplings')!=[]
+    
+    model=process_definition.get('model')
+    
+    if any(len(l.get('ids'))>1 for l in process_definition.get('legs')):
+        raise InvalidCmd("The timing check can only be performed on single "+
+                         " processes. (i.e. without multiparticle labels).")
+
+    isids = [leg.get('ids')[0] for leg in process_definition.get('legs') \
+              if not leg.get('state')]
+    fsids = [leg.get('ids')[0] for leg in process_definition.get('legs') \
+             if leg.get('state')]
+
+    # Now generate a process based on the ProcessDefinition given in argument.
+    process = process_definition.get_process(isids,fsids)
+    
+    logger.info("Generating p%s"%process_definition.nice_string()[1:])
+    
+    timing1 = {}
+    start=time.time()
+    amplitude = loop_diagram_generation.LoopAmplitude(process)
+    timing1['Diagrams_generation']=time.time()-start
+    start=time.time()
+    matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
+                        optimized_output = loop_optimized_output,gen_color=True)
+    timing1['HelasDiagrams_generation']=time.time()-start
+    
+    myTimer = LoopMatrixElementTimer(mg_root=mg_root, cuttools_dir=cuttools, 
+                                       model=model, cmass_scheme = cmass_scheme)
+    timing2 = myTimer.time_matrix_element(matrix_element, model)
+    
+    if timing2 == None:
+        return None
+    else:
+        clean_up(mg_root)
+    
+    # Return the merged two dictionaries
+    return dict( (n, timing1.get(n, 0)+timing2.get(n, 0)) for n in \
+                                                     set(timing1)|set(timing2) )
 
 #===============================================================================
 # check_processes
@@ -1026,6 +1289,57 @@ def clean_up(mg_root):
     directories = glob.glob(os.path.join(mg_root, 'TMP_DIR_FOR_THE_CHECK_CMD*'))
     for dir in directories:
         shutil.rmtree(dir)
+
+def output_timings(process, timings, loop_optimized_output):
+    """Present the result of a timings check in a nice format """
+    
+    res_str = "Timings for process %s \n"%process.nice_string()
+    gen_total = timings['HELAS_MODEL_compilation']+\
+                timings['HelasDiagrams_generation']+\
+                timings['Process_output']+\
+                timings['Diagrams_generation']+\
+                timings['Process_compilation']+\
+                timings['Initialization']
+    res_str += "= Generation time total...... ========== %.3gs\n"%gen_total
+    res_str += "|= Diagrams generation....... %.3gs\n"\
+                                                 %timings['Diagrams_generation']
+    res_str += "|= Helas Diagrams generation. %.3gs\n"\
+                                            %timings['HelasDiagrams_generation']
+    res_str += "|= Process output............ %.3gs\n"\
+                                            %timings['Process_output']
+    res_str += "|= HELAS+model compilation... %.3gs\n"\
+                                            %timings['HELAS_MODEL_compilation']
+    res_str += "|= Process compilation....... %.3gs\n"\
+                                            %timings['Process_compilation']
+    res_str += "|= Initialization............ %.3gs\n"\
+                                            %timings['Initialization']
+    res_str += "= Unpolarized time / PSpoint. ========== %.3gms\n"\
+                                    %(timings['run_unpolarized_total']*1000.0)
+    res_str += "|= Number of hel. computed... %d/%d\n"\
+                                %(timings['n_contrib_hel'],timings['n_tot_hel'])
+    if loop_optimized_output:
+        coef_time=timings['run_unpolarized_coefs']*1000.0
+        loop_time=(timings['run_unpolarized_total']-\
+                                        timings['run_unpolarized_coefs'])*1000.0
+        total=coef_time+loop_time
+        res_str += "|= Coefs. computation time... %.3gms (%d%%)\n"\
+                                  %(coef_time,int(round(100.0*coef_time/total)))
+        res_str += "|= Loop evaluation (OPP) time %.3gms (%d%%)\n"\
+                                  %(loop_time,int(round(100.0*loop_time/total)))
+
+    res_str += "= Polarized time / PSpoint... ========== %.3gms\n"\
+                                    %(timings['run_polarized_total']*1000.0)
+    if loop_optimized_output:
+        coef_time=timings['run_polarized_coefs']*1000.0
+        loop_time=(timings['run_polarized_total']-\
+                                        timings['run_polarized_coefs'])*1000.0
+        total=coef_time+loop_time        
+        res_str += "|= Coefs. computation time... %.3gms (%d%%)\n"\
+                                  %(coef_time,int(round(100.0*coef_time/total)))
+        res_str += "|= Loop evaluation (OPP) time %.3gms (%d%%)\n"\
+                                  %(loop_time,int(round(100.0*loop_time/total)))
+    
+    return res_str
 
 def output_comparisons(comparison_results):
     """Present the results of a comparison in a nice list format

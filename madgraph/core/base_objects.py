@@ -2770,6 +2770,35 @@ class ProcessDefinition(Process):
 
         return mystr
 
+    def get_process(self, initial_state_ids, final_state_ids):
+        """ Return a Process object which has the same properties of this 
+            ProcessDefinition but with the specified given leg ids. """
+        
+        # First make sure that the desired particle ids belong to those defined
+        # in this process definition.
+        my_isids = [leg.get('ids') for leg in self.get('legs') \
+              if not leg.get('state')]
+        my_fsids = [leg.get('ids') for leg in self.get('legs') \
+             if leg.get('state')]
+        for i, is_id in enumerate(initial_state_ids):
+            assert is_id in my_isids[i]
+        for i, fs_id in enumerate(final_state_ids):
+            assert fs_id in my_fsids[i]
+        
+        return Process({\
+            'legs': LegList(\
+               [Leg({'id': id, 'state':False}) for id in initial_state_ids] + \
+               [Leg({'id': id, 'state':True}) for id in final_state_ids]),
+            'model':self.get('model'),
+            'id': self.get('id'),
+            'orders': self.get('orders'),
+            'required_s_channels': self.get('required_s_channels'),
+            'forbidden_s_channels': self.get('forbidden_s_channels'),
+            'forbidden_particles': self.get('forbidden_particles'),
+            'perturbation_couplings': self.get('perturbation_couplings'),
+            'is_decay_chain': self.get('is_decay_chain'),
+            'overall_orders': self.get('overall_orders')})
+
     def __eq__(self, other):
         """Overloading the equality operator, so that only comparison
         of process id and legs is being done, using compare_for_sort."""
