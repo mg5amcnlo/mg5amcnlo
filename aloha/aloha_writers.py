@@ -1067,7 +1067,7 @@ class ALOHAWriterForFortranLoopQP(QP, ALOHAWriterForFortranLoop):
 def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     """ build the name of the aloha function """
     
-    assert (name and outgoing) or abstract
+    assert (name and outgoing is not None) or abstract
 
     if tag is None:
         tag = list(abstract.tag)
