@@ -1061,8 +1061,8 @@ def check_timing(process_definition, mg_root="",cuttools="",cmass_scheme = False
     if timing2 == None:
         return None
     else:
-        pass
-#        clean_up(mg_root)
+#        pass
+        clean_up(mg_root)
     
     # Return the merged two dictionaries
     return dict(timing1.items()+timing2.items())
