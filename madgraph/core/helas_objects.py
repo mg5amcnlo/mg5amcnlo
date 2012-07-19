@@ -3906,6 +3906,19 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                   wf.get('pdg_code')].get_helicity_states()\
                                   for wf in self.get_external_wavefunctions()])
 
+    def get_hel_avg_factor(self):
+        """ Calculate the denominator factor due to the average over initial
+        state spin only """
+        
+        model = self.get('processes')[0].get('model')
+        initial_legs = filter(lambda leg: leg.get('state') == False, \
+                              self.get('processes')[0].get('legs'))
+        
+        return reduce(lambda x, y: x * y,
+                      [ len(model.get('particle_dict')[leg.get('id')].\
+                                   get_helicity_states())\
+                        for leg in initial_legs ])
+        
     def get_denominator_factor(self):
         """Calculate the denominator factor due to:
         Averaging initial state color and spin, and

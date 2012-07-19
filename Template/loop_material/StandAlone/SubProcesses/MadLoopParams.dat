@@ -1,7 +1,6 @@
-/* This file is for the user to set the different parameters of MadLoop.
- * The name of the variable to define must start with the '#' sign and then
- * the value should be put immediately on the next line.
- */
+! This file is for the user to set the different parameters of MadLoop.
+! The name of the variable to define must start with the '#' sign and then
+! the value should be put immediately on the next line.
 
 !     =================================================================================
 !     The parameters below set the general behavior of MadLoop at run time
@@ -98,6 +97,14 @@
 #ZeroThres
 1.0d-9
 ! Default :: 1.0d-9
+
+!     The setting below is recommended to be on as it allows to systematically used the 
+!     first PS point thrown at ML5 to be used for making sure that the helicity filter
+!     read from HelFilter.dat is consistent as it might be no longer up to date with
+!     certain changes of the paramaters by the user.
+#DoubleCheckHelicityFilter
+.TRUE.
+! Default :: .TRUE.
 
 !     Some loop contributions my be zero for some helicities which are however
 !     contributing. In order to save their computing time, you can chose here to try

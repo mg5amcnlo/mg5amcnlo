@@ -1680,7 +1680,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _save_opts = ['model', 'processes', 'options']
     _tutorial_opts = ['start', 'stop']
     _switch_opts = ['mg5','aMC@NLO','ML5']
-    _check_opts = ['full', 'permutation', 'gauge', 'lorentz', 'brs']
+    _check_opts = ['full', 'timing', 'permutation', 'gauge', 'lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
@@ -2235,7 +2235,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # Perform checks
     def do_check(self, line):
         """Check a given process or set of processes"""
-
         args = self.split_arg(line)
         # Check args validity
         param_card = self.check_check(args)
@@ -2250,6 +2249,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             raise self.InvalidCmd("Processes involving loops can only be"+
                                                  " evaluated in Feynman gauge.")
 
+        if args[0]=='timing' and not myprocdef.get('perturbation_couplings'):
+            raise self.InvalidCmd("Only loop processes can have their timings checked.")
+        
         # Disable some loggers
         loggers = [logging.getLogger('madgraph.diagram_generation'),
                    logging.getLogger('madgraph.loop_diagram_generation'),
@@ -2286,6 +2288,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         else:
             CT_dir =""
         
+        if args[0] in ['timing']:
+            timings = process_checks.check_timing(myprocdef,
+                                                  mg_root=self._mgme_dir,
+                                                  cuttools=CT_dir,
+                                                  cmass_scheme = mass_scheme)        
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
                                             param_card = param_card,
@@ -2359,12 +2366,21 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     % (nb_processes,
                       (cpu_time2 - cpu_time1)))
 
-        if mass_scheme:
-            text = "Note that Complex mass scheme gives gauge/lorentz invariant\n"
-            text+= "results only for stable particles in final states.\n\n"
+        if args[0]!='timing':
+            if mass_scheme:
+                text = "Note that Complex mass scheme gives gauge/lorentz invariant\n"
+                text+= "results only for stable particles in final states.\n\n"
+            else:
+                text = "Note That all width have been set to zero for those checks\n\n"
         else:
-            text = "Note That all width have been set to zero for those checks\n\n"
-            
+            text =""
+        
+        if timings:
+            text += 'Timing result '+('optimized' if \
+                    self.options['loop_optimized_output'] else 'default')+':\n'
+                
+            text += process_checks.output_timings(myprocdef, timings,
+                                         self.options['loop_optimized_output'])
         if gauge_result:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'

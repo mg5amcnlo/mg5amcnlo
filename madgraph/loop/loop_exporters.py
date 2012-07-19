@@ -793,11 +793,15 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         writers.FortranWriter.downcase = False
 
         replace_dict = copy.copy(self.general_replace_dict)
-
+        
         # Extract overall denominator
         # Averaging initial state color, spin, and identical FS particles
         den_factor_line = self.get_den_factor_line(matrix_element)
-        replace_dict['den_factor_line'] = den_factor_line                  
+        replace_dict['den_factor_line'] = den_factor_line
+        # When the user asks for the polarized matrix element we must 
+        # multiply back by the helicity averaging factor
+        replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
+                      
 
         # These entries are specific for the output for loop-induced processes
         # Also sets here the details of the squaring of the loop ampltiudes
@@ -1174,12 +1178,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nctamps'
             replace_dict['mp_squaring']=\
-          'ANS(1)=ANS(1)+REAL(CFTOT*AMPL(1,I)*CONJG(AMPL(1,J),KIND=16),KIND=16)'        
+          'ANS(1)=ANS(1)+DUMMY*REAL(CFTOT*AMPL(1,I)*CONJG(AMPL(1,J),KIND=16),KIND=16)'        
         else:
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
             replace_dict['mp_squaring']='\n'.join(['DO K=1,3',
-                'ANS(K)=ANS(K)+2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J))'+\
+                'ANS(K)=ANS(K)+DUMMY*2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J))'+\
                                                            ',KIND=16)','ENDDO'])
         
         # Extract helas calls
@@ -1223,6 +1227,28 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # Write the file
         writer.writelines(file)  
 
+    def fix_coef_specs(self, overall_max_lwf_size, overall_max_loop_vert_rank):
+        """ If processes with different maximum loop wavefunction size or
+        different maximum loop vertex rank have to be output together, then
+        the file 'coef.inc' in the HELAS Source folder must contain the overall
+        maximum of these quantities. It is not safe though, and the user has 
+        been appropriatly warned at the output stage """
+        
+        # Remove the existing link
+        coef_specs_path=os.path.join(self.dir_path,'Source','DHELAS',\
+                                                               'coef_specs.inc')
+        os.remove(coef_specs_path)
+        
+        # Replace it by the appropriate value
+        IncWriter=writers.FortranWriter(coef_specs_path,'w')
+        IncWriter.writelines("""INTEGER MAXLWFSIZE
+                           PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
+                           INTEGER VERTEXMAXCOEFS
+                           PARAMETER (VERTEXMAXCOEFS=%(vertex_max_coefs)d)"""\
+                           %{'max_lwf_size':overall_max_lwf_size,
+                             'vertex_max_coefs':overall_max_loop_vert_rank})
+        IncWriter.close()
+
     def write_loopmatrix(self, writer, matrix_element, fortran_model, \
                          noSplit=False):
         """Create the loop_matrix.f file."""
@@ -1237,10 +1263,24 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         replace_dict = copy.copy(self.general_replace_dict)
 
+        # Helicity offset convention
+        # For a given helicity, the attached integer 'i' means
+        # 'i' in ]-inf;-HELOFFSET[ -> Helicity is equal, up to a sign, 
+        #                             to helicity number abs(i+HELOFFSET)
+        # 'i' == -HELOFFSET        -> Helicity is analytically zero
+        # 'i' in ]-HELOFFSET,inf[  -> Helicity is contributing with weight 'i'.
+        #                             If it is zero, it is skipped.
+        # Typically, the hel_offset is 10000
+        replace_dict['hel_offset'] = 10000
+
         # Extract overall denominator
         # Averaging initial state color, spin, and identical FS particles
         den_factor_line = self.get_den_factor_line(matrix_element)
         replace_dict['den_factor_line'] = den_factor_line                  
+
+        # When the user asks for the polarized matrix element we must 
+        # multiply back by the helicity averaging factor
+        replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
 
         # These entries are specific for the output for loop-induced processes
         # Also sets here the details of the squaring of the loop ampltiudes
@@ -1252,13 +1292,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nctamps'
             replace_dict['squaring']=\
-                    'ANS(1)=ANS(1)+DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))'        
+                    'ANS(1)=ANS(1)+DUMMY*DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))'        
         else:
             replace_dict['set_reference']='call smatrix(p,ref)'
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
             replace_dict['squaring']='\n'.join(['DO K=1,3',
-                   'ANS(K)=ANS(K)+2.0d0*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))',
+                   'ANS(K)=ANS(K)+2.0d0*DUMMY*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))',
                                                                        'ENDDO'])
 
         # Actualize results from the loops computed. Only necessary for

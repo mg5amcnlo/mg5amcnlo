@@ -87,6 +87,11 @@ C
       PARAMETER (MP__ZERO=0E0_16)
       %(complex_dp_format)s IMAG1
       PARAMETER (IMAG1=(0D0,1D0))
+C     This parameter is designed for the check timing command of MG5
+      LOGICAL SKIPLOOPEVAL
+      PARAMETER (SKIPLOOPEVAL=.FALSE.)
+	  LOGICAL BOOTANDSTOP
+      PARAMETER (BOOTANDSTOP=.FALSE.)
 C  
 C ARGUMENTS 
 C  
@@ -110,6 +115,8 @@ c RESCT STORES THE RESULT OBTAINED FROM ANY OF THE 7 POSSIBLE CT MODES.
 	  DATA FOUNDLOOPFILTER/.TRUE./
 	  INTEGER IDEN
       %(den_factor_line)s
+	  INTEGER HELAVGFACTOR
+	  DATA HELAVGFACTOR/%(hel_avg_factor)d/
 
 C
 C FUNCTIONS
@@ -126,9 +133,11 @@ C
       DATA NTRY/0/
 	  LOGICAL CHECKPHASE
 	  DATA CHECKPHASE/.TRUE./
+	  LOGICAL HELDOUBLECHECKED
+	  DATA HELDOUBLECHECKED/.FALSE./
 	  %(real_dp_format)s REF
 	  DATA REF/0.0d0/
-      common/INIT/NTRY,CHECKPHASE,REF
+      common/INIT/NTRY,CHECKPHASE,HELDOUBLECHECKED,REF
 
 	  LOGICAL MP_DONE
 	  DATA MP_DONE/.FALSE./
@@ -175,6 +184,7 @@ C ----------
 
 IF(NTRY.EQ.0) THEN
   CALL MADLOOPPARAMREADER(paramFileName,.TRUE.)
+  HELDOUBLECHECKED=.NOT.DoubleCheckHelicityFilter  
   DO J=1,NCOMB
     DO I=1,NCTAMPS
 	  GOODAMP(I,J)=.TRUE.
@@ -231,6 +241,10 @@ OPEN(1, FILE="HelConfigs.dat", err=108, status='OLD',                  action='R
   STOP 'Color helictiy configurations could not be initialized from file HelConfigs.dat. File not found' 
 109  CONTINUE
 CLOSE(1)
+IF(BOOTANDSTOP) THEN
+  WRITE(*,*) 'Stopped by user request.'
+  STOP
+ENDIF
 ENDIF
 
 DO I=1,NEXTERNAL
@@ -240,7 +254,11 @@ DO I=1,NEXTERNAL
   ENDDO
 ENDDO
 
-CALL IMPROVE_PS_POINT_PRECISION(P)
+C This improvement seems to yield problems for some PS point of d d~ > w+ w- g
+C So it is safer to remove it for double precision.
+C Instead of having n-1 particles exactly onshell and perfect energy-momentum
+c conservation, this subroutine should be written so to have n exactly onshell part.
+C CALL IMPROVE_PS_POINT_PRECISION(P)
 
 LSCALE=DSQRT((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1)+P(3,2))**2)
 
@@ -267,11 +285,18 @@ OPEN(1, FILE="LoopFilter.dat", err=111, status='NEW',       action='WRITE')
 FOUNDLOOPFILTER=.TRUE.
 ENDIF
 
-IF(CHECKPHASE) THEN
+IF(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)) THEN
   HELPICKED=1
   CTMODE=CTMODEINIT
 ELSE
-  HELPICKED=USERHEL
+  IF (USERHEL.ne.-1.and..NOT.GOODHEL(USERHEL)) THEN
+    ANS(1)=0.0d0
+    ANS(2)=0.0d0
+    ANS(3)=0.0d0
+    goto 9999
+  ELSE   
+    HELPICKED=USERHEL      
+  ENDIF
   IF (CTMODERUN.NE.-1) THEN
     CTMODE=CTMODERUN
   ELSE
@@ -298,7 +323,7 @@ ENDDO
 
 VALIDH=-1
 DO H=1,NCOMB
-  IF (((HELPICKED.EQ.-1).OR.(HELPICKED.EQ.H)).AND.(CHECKPHASE.OR.GOODHEL(H))) THEN
+  IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODHEL(H)))) THEN
   IF (VALIDH.EQ.-1) VALIDH=H
   DO I=1,NEXTERNAL
     NHEL(I)=HELC(I,H)
@@ -321,42 +346,55 @@ ENDDO
 
 %(actualize_ans)s
 
-IF (CHECKPHASE) THEN
+IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)) THEN
   IF((USERHEL.EQ.-1).OR.(USERHEL.EQ.HELPICKED)) THEN
   BUFFR(1)=BUFFR(1)+ANS(1)
   BUFFR(2)=BUFFR(2)+ANS(2)
   BUFFR(3)=BUFFR(3)+ANS(3)
   ENDIF
 
-C SET THE HELICITY FILTER
-  IF(.NOT.FOUNDHELFILTER) THEN
-  IF(ISZERO(ABS(ANS(1)+ANS(2)+ANS(3)),REF/DBLE(NCOMB),-1)) THEN
-    IF(NTRY.EQ.1) THEN
-	  GOODHEL(HELPICKED)=.FALSE.
-	ELSEIF(GOODHEL(HELPICKED)) THEN
-	  WRITE(*,*) '##W02 WARNING Inconsistent helicity ',HELPICKED,' filter setting, starting over.'
-	  NTRY=0
-	ENDIF
-  ENDIF
-  ENDIF
-
-C SET THE LOOP FILTER
-  IF(.NOT.FOUNDLOOPFILTER.AND.USELOOPFILTER) THEN
-  	DO I=NCTAMPS+1,NLOOPAMPS
-      IF(.NOT.ISZERO(ABS(AMPL(1,I))+ABS(AMPL(2,I))+ABS(AMPL(3,I)),(REF*1.0d-4),I)) THEN
+  IF (CHECKPHASE) THEN
+C   SET THE HELICITY FILTER
+    IF(.NOT.FOUNDHELFILTER) THEN
+      IF(ISZERO(ABS(ANS(1)+ANS(2)+ANS(3)),REF/DBLE(NCOMB),-1)) THEN
         IF(NTRY.EQ.1) THEN
-	      GOODAMP(I,HELPICKED)=.TRUE.
-	    ELSEIF(.NOT.GOODAMP(I,HELPICKED)) THEN
-	      WRITE(*,*) '##W02 WARNING Inconsistent loop amp ',I,' for helicity ',HELPICKED,'.'
-		  IF(LOOPINITSTARTOVER) THEN
-		    WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the loop filter setup.'
-	        NTRY=0
-		  ELSE
-		    GOODAMP(I,HELPICKED)=.TRUE.
-		  ENDIF
+	      GOODHEL(HELPICKED)=.FALSE.
+	    ELSEIF(GOODHEL(HELPICKED)) THEN
+	      WRITE(*,*) '##W02 WARNING Inconsistent helicity ',HELPICKED,' filter setting, starting over.'
+	      NTRY=0
 	    ENDIF
       ENDIF
-  	ENDDO
+    ENDIF
+
+C   SET THE LOOP FILTER
+    IF(.NOT.FOUNDLOOPFILTER.AND.USELOOPFILTER) THEN
+  	  DO I=NCTAMPS+1,NLOOPAMPS
+        IF(.NOT.ISZERO(ABS(AMPL(1,I))+ABS(AMPL(2,I))+ABS(AMPL(3,I)),(REF*1.0d-4),I)) THEN
+          IF(NTRY.EQ.1) THEN
+	        GOODAMP(I,HELPICKED)=.TRUE.
+	      ELSEIF(.NOT.GOODAMP(I,HELPICKED)) THEN
+	        WRITE(*,*) '##W02 WARNING Inconsistent loop amp ',I,' for helicity ',HELPICKED,'.'
+		    IF(LOOPINITSTARTOVER) THEN
+		      WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the loop filter setup.'
+	          NTRY=0
+		    ELSE
+		      GOODAMP(I,HELPICKED)=.TRUE.
+		    ENDIF
+	      ENDIF
+        ENDIF
+  	  ENDDO
+    ENDIF
+  ELSEIF (.NOT.HELDOUBLECHECKED)THEN
+    IF ((.NOT.GOODHEL(HELPICKED)).AND.(.NOT.ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1))) THEN
+	  write(*,*) '##E03 Helicity filter could not be successfully double checked.'
+	  write(*,*) 'One reason for this is that you have changed sensible parameters which affected what are the zero helicity configurations.'
+	  write(*,*) 'Please regenerate the filter by removing HelFilter.dat and rerunning SLOOPMATRIX over a couple of PS points.'
+	  STOP
+	ENDIF
+C   SET HELDOUBLECHECKED TO .TRUE. WHEN DONE
+	IF (HELPICKED.EQ.NCOMB) THEN
+	  HELDOUBLECHECKED=.TRUE.
+	ENDIF
   ENDIF
 
 C GOTO NEXT HELICITY OR FINISH
@@ -378,11 +416,14 @@ C GOTO NEXT HELICITY OR FINISH
 
 ENDIF
 
-ANS(1)=ANS(1)/DBLE(IDEN)
-ANS(2)=ANS(2)/DBLE(IDEN)
-ANS(3)=ANS(3)/DBLE(IDEN)
+DO K=1,3
+  ANS(K)=ANS(K)/DBLE(IDEN)
+  IF (USERHEL.NE.-1) THEN
+    ANS(K)=ANS(K)*HELAVGFACTOR
+  ENDIF
+ENDDO
 
-IF(.NOT.CHECKPHASE.AND.(CTMODERUN.EQ.-1)) THEN
+IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.(CTMODERUN.EQ.-1)) THEN
   RESCT(1,CTMODE)=ANS(1)
   RESCT(2,CTMODE)=ANS(2)
   RESCT(3,CTMODE)=ANS(3)
@@ -414,6 +455,8 @@ IF(.NOT.CHECKPHASE.AND.(CTMODERUN.EQ.-1)) THEN
 	ENDIF 
   ENDIF
 ENDIF
+
+ 9999 continue
 
       END
 
