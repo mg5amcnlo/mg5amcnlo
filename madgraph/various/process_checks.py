@@ -533,9 +533,14 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         if verbose: logging.debug("Working on process %s in dir %s" % (proc, shell_name))
         
         dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
-        # Make sure to recreate the executable
+        # Make sure to recreate the executable and modified sources
         if os.path.isfile(os.path.join(dir_name,'check')):
             os.remove(os.path.join(dir_name,'check'))
+            try:
+                os.remove(os.path.join(dir_name,'check_sa.o'))
+                os.remove(os.path.join(dir_name,'loop_matrix.o'))
+            except OSError:
+                pass
         # Now run make
         devnull = open(os.devnull, 'w')
         retcode = subprocess.call(['make','check'],
@@ -665,9 +670,12 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         """ Compile the check program in the directory dir_name.
         Return the compilation and running time. """
 
-        # Make sure to recreate the executable
+        # Make sure to recreate the executable and modified source
+        # (The time stamps are sometimes not actualized if it is too fast)
         if os.path.isfile(os.path.join(dir_name,'check')):
             os.remove(os.path.join(dir_name,'check'))
+            os.remove(os.path.join(dir_name,'check_sa.o'))
+            os.remove(os.path.join(dir_name,'loop_matrix.o'))            
         # Now run make
         devnull = open(os.devnull, 'w')
         start=time.time()
@@ -701,10 +709,22 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         file.close()
         
         file = open(os.path.join(dir_name,'loop_matrix.f'), 'w')
-        loop_matrix = loop_matrix
-        
         loop_matrix = re.sub(r"SKIPLOOPEVAL=\S+\)","SKIPLOOPEVAL=%s)"%('.TRUE.' 
                                            if skip else '.FALSE.'), loop_matrix)
+        file.write(loop_matrix)
+        file.close()
+
+    def boot_time_setup(self, dir_name, bootandstop=True):
+        """ Edit loop_matrix.f in order to set the flag which stops the
+        execution after booting the program (i.e. reading the color data)."""
+
+        file = open(os.path.join(dir_name,'loop_matrix.f'), 'r')
+        loop_matrix = file.read()
+        file.close()
+        
+        file = open(os.path.join(dir_name,'loop_matrix.f'), 'w')        
+        loop_matrix = re.sub(r"BOOTANDSTOP=\S+\)","BOOTANDSTOP=%s)"%('.TRUE.' 
+                                    if bootandstop else '.FALSE.'), loop_matrix)
         file.write(loop_matrix)
         file.close()
 
@@ -799,6 +819,11 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
         res_timings['Initialization'] = run_time
 
+        self.boot_time_setup(dir_name,bootandstop=True)
+        compile_time, run_time = self.make_and_run(dir_name)
+        res_timings['Booting_time'] = run_time
+        self.boot_time_setup(dir_name,bootandstop=False)
+
         # Detect one contributing helicity
         contributing_hel=0
         n_contrib_hel=0
@@ -807,8 +832,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             if (loop_optimized_output and int(hel)>-10000) or hel=='T':
                 if contributing_hel==0:
                     contributing_hel=i+1
-                else:
-                    n_contrib_hel += 1
+                n_contrib_hel += 1
                     
         if contributing_hel==0:
             logger.error("Could not find a contributing helicity "+\
@@ -818,24 +842,26 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         res_timings['n_contrib_hel']=n_contrib_hel
         res_timings['n_tot_hel']=len(helicities)
         
-        # We aim at a 5 sec run
-        target_pspoints_number = int(5.0/time_per_ps_estimate)+1
+        # We aim at a 15 sec run
+        target_pspoints_number = max(int(15.0/time_per_ps_estimate)+1,10)
 
         logger.info("Checking timing for process %s "%shell_name+\
                                     "with %d PS points."%target_pspoints_number)
         
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
-             read_ps = False, npoints = target_pspoints_number*3, \
+             read_ps = False, npoints = target_pspoints_number*2, \
                                                   hel_config = contributing_hel)
         compile_time, run_time = self.make_and_run(dir_name)
         if compile_time == None: return None
-        res_timings['run_polarized_total']=run_time/(target_pspoints_number*3)
+        res_timings['run_polarized_total']=\
+               (run_time-res_timings['Booting_time'])/(target_pspoints_number*2)
 
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
              read_ps = False, npoints = target_pspoints_number, hel_config = -1)
         compile_time, run_time = self.make_and_run(dir_name)
         if compile_time == None: return None
-        res_timings['run_unpolarized_total']=run_time/target_pspoints_number
+        res_timings['run_unpolarized_total']=\
+                   (run_time-res_timings['Booting_time'])/target_pspoints_number
         
         if not loop_optimized_output:
             return res_timings
@@ -850,14 +876,16 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
              read_ps = False, npoints = target_pspoints_number, hel_config = -1)
         compile_time, run_time = self.make_and_run(dir_name)
         if compile_time == None: return None
-        res_timings['run_unpolarized_coefs']=run_time/target_pspoints_number
+        res_timings['run_unpolarized_coefs']=\
+                   (run_time-res_timings['Booting_time'])/target_pspoints_number
         
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
-             read_ps = False, npoints = target_pspoints_number*3, \
+             read_ps = False, npoints = target_pspoints_number*2, \
                                                   hel_config = contributing_hel)
         compile_time, run_time = self.make_and_run(dir_name)
         if compile_time == None: return None
-        res_timings['run_polarized_coefs']=run_time/(target_pspoints_number*3)    
+        res_timings['run_polarized_coefs']=\
+               (run_time-res_timings['Booting_time'])/(target_pspoints_number*2)    
 
         # Restitute the original file.
         self.skip_loop_evaluation_setup(dir_name,skip=False)
@@ -1061,7 +1089,6 @@ def check_timing(process_definition, mg_root="",cuttools="",cmass_scheme = False
     if timing2 == None:
         return None
     else:
-#        pass
         clean_up(mg_root)
     
     # Return the merged two dictionaries
@@ -1358,6 +1385,8 @@ def output_timings(process, timings, loop_optimized_output):
         res_str += "|= Loop evaluation (OPP) time %.3gms (%d%%)\n"\
                                   %(loop_time,int(round(100.0*loop_time/total)))
     res_str += "\n= Miscellaneous ========================\n"
+    res_str += "|= Loading time (Color data). ~%.3gms\n"\
+                                               %(timings['Booting_time']*1000.0)
     res_str += "|= Number of hel. computed... %d/%d\n"\
                                 %(timings['n_contrib_hel'],timings['n_tot_hel'])
     res_str += "|= Number of loop diagrams... %d\n"%timings['n_loops']

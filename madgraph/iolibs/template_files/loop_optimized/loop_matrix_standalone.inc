@@ -59,6 +59,8 @@ C
 C     This parameter is designed for the check timing command of MG5
       LOGICAL SKIPLOOPEVAL
       PARAMETER (SKIPLOOPEVAL=.FALSE.)
+	  LOGICAL BOOTANDSTOP
+      PARAMETER (BOOTANDSTOP=.FALSE.)
 C  
 C ARGUMENTS 
 C  
@@ -87,6 +89,8 @@ c RESCT STORES THE RESULT OBTAINED FROM ANY OF THE 7 POSSIBLE CT MODES.
 
 	  INTEGER IDEN
       %(den_factor_line)s
+	  INTEGER HELAVGFACTOR
+	  DATA HELAVGFACTOR/%(hel_avg_factor)d/
 C
 C FUNCTIONS
 C
@@ -240,7 +244,11 @@ C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
 		ENDIF
 	  ENDDO
 	ENDDO
-  ENDDO 
+  ENDDO
+  IF(BOOTANDSTOP) THEN
+    WRITE(*,*) 'Stopped by user request.'
+    STOP
+  ENDIF
 ENDIF
 
 DO I=1,NEXTERNAL
@@ -250,7 +258,11 @@ DO I=1,NEXTERNAL
   ENDDO
 ENDDO
 
-CALL IMPROVE_PS_POINT_PRECISION(P)
+C This improvement seems to yield problems for some PS point of d d~ > w+ w- g
+C So it is safer to remove it for double precision.
+C Instead of having n-1 particles exactly onshell and perfect energy-momentum
+c conservation, this subroutine should be written so to have n exactly onshell part.
+C CALL IMPROVE_PS_POINT_PRECISION(P)
 
 LSCALE=DSQRT((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1)+P(3,2))**2)
 
@@ -401,6 +413,7 @@ C   SET THE HELICITY FILTER
       ELSE
 	    DO H=1,HELPICKED-1
 		  IF(GOODHEL(H).GT.-HELOFFSET) THEN
+C           Be looser for helicity check, bring a factor 100
 		    DUMMY=ISSAME(ANS,HELSAVED(1,H),REF)
 		    IF(DUMMY.NE.0) THEN
 		      IF(NTRY.EQ.1) THEN
@@ -484,9 +497,12 @@ c    ENDDO
 
 ENDIF
 
-ANS(1)=ANS(1)/DBLE(IDEN)
-ANS(2)=ANS(2)/DBLE(IDEN)
-ANS(3)=ANS(3)/DBLE(IDEN)
+DO K=1,3
+  ANS(K)=ANS(K)/DBLE(IDEN)
+  IF (USERHEL.NE.-1) THEN
+    ANS(K)=ANS(K)*HELAVGFACTOR
+  ENDIF
+ENDDO
 
 IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.(CTMODERUN.EQ.-1)) THEN
   RESCT(1,CTMODE)=ANS(1)
@@ -597,7 +613,8 @@ C ----------
 		    IF(.NOT.IsZero(ABS(resB(J))+ABS(resA(J)),ref,-1)) THEN
 		      GOTO 1231
 			ENDIF
-		  ELSEIF(.NOT.IsZero((resA(J)/resB(J))-DBLE(WGT_TO_TRY(I)),ref,-1)) THEN
+C         Be loser for helicity comparison, so bring a factor 100
+		  ELSEIF(.NOT.IsZero((resA(J)/resB(J))-DBLE(WGT_TO_TRY(I)),ref*100.0d0,-1)) THEN
 		    GOTO 1231		    
 		  ENDIF
 		ENDDO

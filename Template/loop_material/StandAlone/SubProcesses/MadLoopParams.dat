@@ -1,7 +1,6 @@
-/* This file is for the user to set the different parameters of MadLoop.
- * The name of the variable to define must start with the '#' sign and then
- * the value should be put immediately on the next line.
- */
+! This file is for the user to set the different parameters of MadLoop.
+! The name of the variable to define must start with the '#' sign and then
+! the value should be put immediately on the next line.
 
 !     =================================================================================
 !     The parameters below set the general behavior of MadLoop at run time

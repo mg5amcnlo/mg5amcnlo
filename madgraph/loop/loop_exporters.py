@@ -797,7 +797,11 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         # Extract overall denominator
         # Averaging initial state color, spin, and identical FS particles
         den_factor_line = self.get_den_factor_line(matrix_element)
-        replace_dict['den_factor_line'] = den_factor_line                  
+        replace_dict['den_factor_line'] = den_factor_line
+        # When the user asks for the polarized matrix element we must 
+        # multiply back by the helicity averaging factor
+        replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
+                      
 
         # These entries are specific for the output for loop-induced processes
         # Also sets here the details of the squaring of the loop ampltiudes
@@ -1273,6 +1277,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # Averaging initial state color, spin, and identical FS particles
         den_factor_line = self.get_den_factor_line(matrix_element)
         replace_dict['den_factor_line'] = den_factor_line                  
+
+        # When the user asks for the polarized matrix element we must 
+        # multiply back by the helicity averaging factor
+        replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
 
         # These entries are specific for the output for loop-induced processes
         # Also sets here the details of the squaring of the loop ampltiudes

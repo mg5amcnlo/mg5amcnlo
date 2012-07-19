@@ -90,6 +90,8 @@ C
 C     This parameter is designed for the check timing command of MG5
       LOGICAL SKIPLOOPEVAL
       PARAMETER (SKIPLOOPEVAL=.FALSE.)
+	  LOGICAL BOOTANDSTOP
+      PARAMETER (BOOTANDSTOP=.FALSE.)
 C  
 C ARGUMENTS 
 C  
@@ -113,6 +115,8 @@ c RESCT STORES THE RESULT OBTAINED FROM ANY OF THE 7 POSSIBLE CT MODES.
 	  DATA FOUNDLOOPFILTER/.TRUE./
 	  INTEGER IDEN
       %(den_factor_line)s
+	  INTEGER HELAVGFACTOR
+	  DATA HELAVGFACTOR/%(hel_avg_factor)d/
 
 C
 C FUNCTIONS
@@ -237,6 +241,10 @@ OPEN(1, FILE="HelConfigs.dat", err=108, status='OLD',                  action='R
   STOP 'Color helictiy configurations could not be initialized from file HelConfigs.dat. File not found' 
 109  CONTINUE
 CLOSE(1)
+IF(BOOTANDSTOP) THEN
+  WRITE(*,*) 'Stopped by user request.'
+  STOP
+ENDIF
 ENDIF
 
 DO I=1,NEXTERNAL
@@ -246,7 +254,11 @@ DO I=1,NEXTERNAL
   ENDDO
 ENDDO
 
-CALL IMPROVE_PS_POINT_PRECISION(P)
+C This improvement seems to yield problems for some PS point of d d~ > w+ w- g
+C So it is safer to remove it for double precision.
+C Instead of having n-1 particles exactly onshell and perfect energy-momentum
+c conservation, this subroutine should be written so to have n exactly onshell part.
+C CALL IMPROVE_PS_POINT_PRECISION(P)
 
 LSCALE=DSQRT((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1)+P(3,2))**2)
 
@@ -404,9 +416,12 @@ C GOTO NEXT HELICITY OR FINISH
 
 ENDIF
 
-ANS(1)=ANS(1)/DBLE(IDEN)
-ANS(2)=ANS(2)/DBLE(IDEN)
-ANS(3)=ANS(3)/DBLE(IDEN)
+DO K=1,3
+  ANS(K)=ANS(K)/DBLE(IDEN)
+  IF (USERHEL.NE.-1) THEN
+    ANS(K)=ANS(K)*HELAVGFACTOR
+  ENDIF
+ENDDO
 
 IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.(CTMODERUN.EQ.-1)) THEN
   RESCT(1,CTMODE)=ANS(1)

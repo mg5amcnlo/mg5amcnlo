@@ -2376,7 +2376,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text =""
         
         if timings:
-            text += 'Timing result:\n'
+            text += 'Timing result '+('optimized' if \
+                    self.options['loop_optimized_output'] else 'default')+':\n'
+                
             text += process_checks.output_timings(myprocdef, timings,
                                          self.options['loop_optimized_output'])
         if gauge_result:
