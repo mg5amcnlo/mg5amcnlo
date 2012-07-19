@@ -2841,7 +2841,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             logger.warning('Error detected during the compilation. Please check the compilation error and run make manually.')
 
 
-        # Special treatment for TD program (require by MadAnalysis)
+        # Special treatment for TD/Ghostscript program (require by MadAnalysis)
         if args[0] == 'MadAnalysis':
             try:
                 os.system('rm -rf td')
@@ -2866,6 +2866,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if sys.maxsize > 2**32:
                     logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer
                 Please follow instruction in http://cp3wks05.fynu.ucl.ac.be/twiki/bin/view/Software/TopDrawer.''')
+            
+            if not misc.which('gs'):
+                logger.warning('''gosthscript not install on your system. This is not required to run MA.
+                    but this prevent to create jpg files and therefore to have the plots in the html output.''')
+                if sys.platform == "darwin":
+                    logger.warning('''You can download this program at the following link: 
+                    http://www.macupdate.com/app/mac/9980/gpl-ghostscript''')
 
 
     

@@ -2955,7 +2955,7 @@ class test_aloha_creation(unittest.TestCase):
             data = one_exp.get_rep(ind) - two_exp.get_rep(ind)
             data.simplify()
             self.assertAlmostEqual(eval(str(one_exp.get_rep(ind))), eval(str(two_exp.get_rep(ind))))
-                
+
     def test_aloha_FFT2(self):
         """ test the FFT2 creation of vertex"""
 
