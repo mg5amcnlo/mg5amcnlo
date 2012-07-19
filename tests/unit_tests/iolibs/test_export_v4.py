@@ -8809,6 +8809,15 @@ C     Number of configs
       DATA MAPCONFIG(0)/10/
 """)
         
+        # Test maxconfigs.inc
+        writer = writers.FortranWriter(self.give_pos('test'))
+        exporter.write_maxconfigs_file(writer, [me])
+        writer.close()
+        self.assertFileContains('test',
+                                """      INTEGER LMAXCONFIGS
+      PARAMETER(LMAXCONFIGS=18)
+""")
+
     def test_configs_4f_decay(self):
         """Test configs.inc for 4f decay process that failed in v. 1.3.27
         """

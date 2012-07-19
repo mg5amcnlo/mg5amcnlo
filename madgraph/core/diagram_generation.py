@@ -932,6 +932,12 @@ class Amplitude(base_objects.PhysicsObject):
         legs = []
         vertices = []
 
+        # Flag decaying legs in the core process by onshell = True
+        process = self.get('process')
+        for leg in process.get('legs'):
+            if leg.get('state') and leg.get('id') in decay_ids:
+                leg.set('onshell', True)        
+                
         for diagram in self.get('diagrams'):
             # Keep track of external legs (leg numbers already used)
             leg_external = set()
@@ -1003,6 +1009,7 @@ class DecayChainAmplitude(Amplitude):
                 process = copy.copy(self.get('amplitudes')[0].get('process'))
                 process.set('decay_chains', base_objects.ProcessList())
                 self['amplitudes'][0].set('process', process)
+
             for process in argument.get('decay_chains'):
                 process.set('overall_orders', argument.get('overall_orders'))
                 if not process.get('is_decay_chain'):
@@ -1014,13 +1021,27 @@ class DecayChainAmplitude(Amplitude):
                 self['decay_chains'].append(\
                     DecayChainAmplitude(process, collect_mirror_procs,
                                         ignore_six_quark_processes))
-            # Flag decaying legs in the core process by onshell = True
+
+            # Flag decaying legs in the core diagrams by onshell = True
             decay_ids = sum([[a.get('process').get('legs')[0].get('id') \
                               for a in dec.get('amplitudes')] for dec in \
                              self['decay_chains']], [])
             decay_ids = set(decay_ids)
             for amp in self['amplitudes']:
-                amp.trim_diagrams(decay_ids)                             
+                amp.trim_diagrams(decay_ids)                    
+
+            # Finally, check that all decay ids are present in at
+            # least some process
+            for amp in self['amplitudes']:
+                for l in amp.get('process').get('legs'):
+                    if l.get('id') in decay_ids:
+                        decay_ids.remove(l.get('id'))
+            
+            if decay_ids:
+                raise InvalidCmd, \
+                 "Decay without corresponding particle in core process. " + \
+                 "Please check your process definition."
+
         elif argument != None:
             # call the mother routine
             super(DecayChainAmplitude, self).__init__(argument)

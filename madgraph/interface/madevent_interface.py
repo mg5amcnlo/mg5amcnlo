@@ -2010,7 +2010,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     self.monitor(html=True)
                     raise MadEventError, 'Error detected Stop running: %s' % \
                                          open(pjoin(self.me_dir,'error')).read()
+        
+        
         self.monitor(run_type='All jobs submitted for survey', html=True)
+        cross, error = sum_html.make_all_html_results(self)
+        self.results.add_detail('cross', cross)
+        self.results.add_detail('error', error) 
         self.update_status('End survey', 'parton', makehtml=False)
 
     ############################################################################      
@@ -2073,7 +2078,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                              run_type='Refine number %s on %s (%s/%s)' % 
                              (self.nb_refine, subdir, nb_proc+1, len(subproc)))
         self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine, 
-                     html=False)
+                     html=True)
         
         self.update_status("Combining runs", level='parton')
         try:
@@ -2371,26 +2376,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 misc.call([eradir+'/ExRootLHEFConverter', 
                              'pythia_events.lhe', 
                              pjoin(self.run_name, '%s_pythia_lhe_events.root' % tag)],
-                            cwd=pjoin(self.me_dir,'Events')) 
-            
+                            cwd=pjoin(self.me_dir,'Events'))              
 
         if int(self.run_card['ickkw']):
-            self.update_status('Create matching plots for Pythia', level='pythia')
-            misc.call([self.dirbin+'/create_matching_plots.sh', self.run_name, tag],
-                            stdout = os.open(os.devnull, os.O_RDWR),
-                            cwd=pjoin(self.me_dir,'Events'))
-            #Clean output
-            misc.call(['gzip','-f','events.tree'], 
-                                                cwd=pjoin(self.me_dir,'Events'))          
-            files.mv(pjoin(self.me_dir,'Events','events.tree.gz'), 
-                     pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_events.tree.gz'))
             misc.call(['gzip','-f','beforeveto.tree'], 
                                                 cwd=pjoin(self.me_dir,'Events'))
             files.mv(pjoin(self.me_dir,'Events','beforeveto.tree.gz'), 
                      pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))
-            files.mv(pjoin(self.me_dir,'Events','xsecs.tree'), 
-                     pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'))            
-             
 
         # Plot for pythia
         self.create_plot('Pythia')
@@ -2602,6 +2594,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 os.system('gzip -f %s' % filename)                
             else:
                 logger.info('No valid files for pythia plot')
+                
                     
         if any([arg in ['all','pgs'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 
@@ -2992,16 +2985,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 try:
                     del self.next_update
                 except:
-                    pass
-        if not html:
-            return
-
-        #######################################################################
-        cross, error = sum_html.make_all_html_results(self)
-        self.results.add_detail('cross', cross)
-        self.results.add_detail('error', error)   
-        
-        
+                    pass        
         
         
     @staticmethod
@@ -3362,12 +3346,43 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """create the plot""" 
 
         madir = self.options['madanalysis_path']
+        tag = self.run_card['run_tag']  
         td = self.options['td_path']
         if not madir or not  td or \
             not os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')):
             return False
+        
+        if int(self.run_card['ickkw']) and mode == 'Pythia':
+            self.update_status('Create matching plots for Pythia', level='pythia')
+            # recover old data if none newly created
+            if not os.path.exists(pjoin(self.me_dir,'Events','events.tree')):
+                misc.call(['gunzip', '-c', pjoin(self.me_dir,'Events', 
+                      self.run_name, '%s_pythia_events.tree.gz' % tag)],
+                      stdout=open(pjoin(self.me_dir,'Events','events.tree'),'w')
+                          )
+                files.mv(pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'),
+                     pjoin(self.me_dir,'Events','xsecs.tree'))
+                
+            # make the computation
+            misc.call([self.dirbin+'/create_matching_plots.sh', self.run_name, tag],
+                            stdout = os.open(os.devnull, os.O_RDWR),
+                            cwd=pjoin(self.me_dir,'Events'))
+  
 
-        tag = self.run_card['run_tag']    
+            #Clean output
+            misc.call(['gzip','-f','events.tree'], 
+                                                cwd=pjoin(self.me_dir,'Events'))          
+            files.mv(pjoin(self.me_dir,'Events','events.tree.gz'), 
+                     pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_events.tree.gz'))
+            files.mv(pjoin(self.me_dir,'Events','xsecs.tree'), 
+                     pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'))
+                        
+
+  
+        
+        
+
+          
         if not event_path:
             if mode == 'parton':
                 event_path = pjoin(self.me_dir, 'Events','unweighted_events.lhe')
@@ -3403,6 +3418,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             os.makedirs(plot_dir) 
         
         files.ln(pjoin(self.me_dir, 'Cards','plot_card.dat'), plot_dir, 'ma_card.dat')
+                
         try:
             proc = misc.Popen([os.path.join(madir, 'plot_events')],
                             stdout = open(pjoin(plot_dir, 'plot.log'),'w'),

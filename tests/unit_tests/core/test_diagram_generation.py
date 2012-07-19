@@ -1599,8 +1599,8 @@ class DiagramGenerationTest(unittest.TestCase):
             self.assertEqual(len(self.myamplitude.get('diagrams')),
                              goal_req_antid[nphotons])
 
-    def test_decay_chain_generation(self):
-        """Test the decay chain generation d > d g g and d > g g d
+    def test_decay_process_generation(self):
+        """Test the decay process generations d > d g g and d > g g d
         """
 
         myleglist = base_objects.LegList()
@@ -2370,6 +2370,39 @@ class DecayChainAmplitudeTest(unittest.TestCase):
                                         l.get('number') in external))
                         external.add(l.get('number'))
  
+    def test_failed_decay_chain_pp_jj(self):
+        """Test exception for decay chain qq > qq, j > jj
+        """
+
+        p = [1, -1, 2, -2, 21]
+        q = [1, -1, 2, -2]
+
+        my_multi_leg = base_objects.MultiLeg({'ids': q, 'state': True});
+
+        # Define the multiprocess
+        my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 4])
+        
+        my_multi_leglist[0].set('state', False)
+        my_multi_leglist[1].set('state', False)
+        
+        my_process_definition = base_objects.ProcessDefinition({'legs':my_multi_leglist,
+                                                                'model':self.mymodel})
+        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
+
+        my_decay_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 4])
+        my_decay_leglist[0].set('state', False)
+        my_decay_processes = base_objects.ProcessDefinition({\
+                               'legs':my_decay_leglist,
+                               'model':self.mymodel})
+
+        my_process_definition.set('decay_chains',
+                                  base_objects.ProcessDefinitionList(\
+                                    [my_decay_processes]))
+
+        self.assertRaises(InvalidCmd,
+                          diagram_generation.DecayChainAmplitude,
+                          my_process_definition)
+
     def test_forbidden_s_channel_decay_chain(self):
         """Test decay chains with forbidden s-channel particles.
         """

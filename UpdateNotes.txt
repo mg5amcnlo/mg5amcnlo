@@ -17,6 +17,29 @@ Update notes for MadGraph 5 (in reverse time order)
 		  OM + PdA: Allow Large Extra Dimension Model (LED) to run in the
 		      MG5 framework.
 		            
+1.4.8 (XX/06/12)  JA: Fixed subprocess group combination also for the case
+                      when different process flags @N are given to different
+                      decays of the same core process (sorry, this was missed
+                      in v. 1.4.7).
+                  JA: Cancel running of integration channels where the BW
+                      structure makes it impossible to get any events, which
+                      might significantly speed up event generation for 
+                      processes with conflicting BWs.
+                  JA: Minor modification of integration grid presetting in
+                      myamp.f, due to the above point.
+                  JA: Fixed crash for process p p > w+ w+ j j t t~ when all 
+                      w and t/t~ are decayed (bug #1017912, thanks to Nicolas
+                      Deutschmann).
+                  JA: Fixed array dimension for diagrams with a single s-channel
+                      propagator (caused crash for certain compilers, bug #1022415
+                      thanks Sho Iwamoto).
+                  JA: Fixed crash for identical decay chains for non-identical 
+                      particles, introduced in v. 1.4.7 (thanks John Lee).
+                  JA: Raise exception if a decay process has decaying particles
+                      that are not present in the corresponding core process
+                      (this might help avoid syntax mistakes).
+
+
 1.4.7 (25/06/12)  JA: Change the random seed treatment to ensure that the original 
                       seed is stored in the banner (this was broken in v. 1.4.0).
                       If a non-zero seed is given in the run_card, this seed
@@ -59,7 +82,7 @@ Update notes for MadGraph 5 (in reverse time order)
 1.4.6 (16/05/12)  JA: Added cuts on lepton pt for each of the 4 hardest leptons
                   OM: allow bin/madevent script to be run with a single line command
                       example ./bin/madevent multi_run 10 
-		  OM: Adding the 4 higgs interactions in the standard model UFO model
+                  OM: Adding the 4 higgs interactions in the standard model UFO model
                   JA: Added new restriction card for the sm model with massive
                       muon and electron, and non-zero tau decay width
                   JA: Ensure assignment of colors to intermediate propagators

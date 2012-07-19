@@ -1658,7 +1658,7 @@ class Diagram(PhysicsObject):
         num_props = len([i for i in s_channels if i != 0 and \
                          model.get_particle(i).get('width').lower() != 'zero'])
         
-        if num_props <= 1:
+        if num_props < 1:
             return 1
         else:
             return 2**num_props
@@ -2097,8 +2097,19 @@ class Process(PhysicsObject):
         legs = copy.deepcopy(self.get('legs'))
         if self.get('is_decay_chain'):
             legs.pop(0)
+        org_decay_chains = copy.copy(self.get('decay_chains'))
+        sorted_decay_chains = []
+        # Sort decay chains according to leg order
+        for leg in legs:
+            if not leg.get('state'): continue
+            org_ids = [l.get('legs')[0].get('id') for l in \
+                           org_decay_chains]
+            if leg.get('id') in org_ids:
+                sorted_decay_chains.append(org_decay_chains.pop(\
+                                        org_ids.index(leg.get('id'))))
+        assert not org_decay_chains
         ileg = 0
-        for decay in self.get('decay_chains'):
+        for decay in sorted_decay_chains:
             while legs[ileg].get('state') == False or \
                       legs[ileg].get('id') != decay.get('legs')[0].get('id'):
                 ileg = ileg + 1

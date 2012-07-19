@@ -3736,9 +3736,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Return a list with all couplings used by this
         HelasMatrixElement."""
 
-        return [wa.get('coupling') for wa in \
+        tmp = [wa.get('coupling') for wa in \
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
                 if wa.get('interaction_id') != 0]
+        #some coupling have a minus one associated -> need to remove those
+        return [ [t] if not t.startswith('-') else [t[1:]] for t2 in tmp for t in t2]
+    
 
     def get_mirror_processes(self):
         """Return a list of processes with initial states interchanged
@@ -4301,12 +4304,12 @@ class HelasMultiProcess(base_objects.PhysicsObject):
     def get_used_couplings(self):
         """Return a list with all couplings used by this
         HelasMatrixElement."""
-
+        
         coupling_list = []
 
         for me in self.get('matrix_elements'):
             coupling_list.extend([c for l in me.get_used_couplings() for c in l])
-
+        
         return list(set(coupling_list))
     
     def get_matrix_elements(self):
