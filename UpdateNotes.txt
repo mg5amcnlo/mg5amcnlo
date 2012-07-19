@@ -16,6 +16,12 @@ Update notes for MadGraph 5 (in reverse time order)
                   JA: Fixed array dimension for diagrams with a single s-channel
                       propagator (caused crash for certain compilers, bug #1022415
                       thanks Sho Iwamoto).
+                  JA: Fixed crash for identical decay chains for non-identical 
+                      particles, introduced in v. 1.4.7 (thanks John Lee).
+                  JA: Raise exception if a decay process has decaying particles
+                      that are not present in the corresponding core process
+                      (this might help avoid syntax mistakes).
+
 
 1.4.7 (25/06/12)  JA: Change the random seed treatment to ensure that the original 
                       seed is stored in the banner (this was broken in v. 1.4.0).

@@ -8835,7 +8835,7 @@ C     Number of configs
         writer.close()
         self.assertFileContains('test',
                                 """      INTEGER LMAXCONFIGS
-      PARAMETER(LMAXCONFIGS=10)
+      PARAMETER(LMAXCONFIGS=18)
 """)
 
     def test_configs_4f_decay(self):
