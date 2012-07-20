@@ -349,7 +349,7 @@ class Particles_file(Card):
         """
 
 
-        return {1: 'd', 2: 'u', 3: 's', 4: 'c', 5: 'b', 6: 't', 11: 'e', 12: 've', 13: 'mu', 14: 'vm', 15: 'ta', 16: 'vt', 21: '_', 22: 'A', 23: 'Z', 24: 'W', 25: 'h'}
+        return {1: 'd', 2: 'u', 3: 's', 4: 'c', 5: 'b', 6: 't', 11: 'e', 12: 've', 13: 'mu', 14: 'vm', 15: 'ta', 16: 'vt', 21: 'g', 22: 'A', 23: 'Z', 24: 'W', 25: 'h'}
 #        if not self.charged:
 #            self.read() #not automaticly read for the moment
 #        out={}
