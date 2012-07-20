@@ -806,7 +806,7 @@ class CheckValidForCmd(object):
         else:
             for arg in tmp_args[1:]:
                 if arg not in self._clean_mode:
-                    self.help_clean()
+                    self.help_remove()
                     raise self.InvalidCmd('%s is not a valid options for clean command'\
                                               % arg)
             return tmp_args[0], tag, tmp_args[1:]
@@ -3361,10 +3361,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         madir = self.options['madanalysis_path']
         tag = self.run_card['run_tag']  
         td = self.options['td_path']
-        if not madir or not  td or \
-            not os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')):
-            return False
-        
+
         if int(self.run_card['ickkw']) and mode == 'Pythia':
             self.update_status('Create matching plots for Pythia', level='pythia')
             # recover old data if none newly created
@@ -3376,11 +3373,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 files.mv(pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'),
                      pjoin(self.me_dir,'Events','xsecs.tree'))
                 
-            # make the computation
-            misc.call([self.dirbin+'/create_matching_plots.sh', self.run_name, tag],
+            # Generate the matching plots
+            misc.call([self.dirbin+'/create_matching_plots.sh', 
+                       self.run_name, tag, madir],
                             stdout = os.open(os.devnull, os.O_RDWR),
                             cwd=pjoin(self.me_dir,'Events'))
-  
 
             #Clean output
             misc.call(['gzip','-f','events.tree'], 
@@ -3391,10 +3388,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                      pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'))
                         
 
-  
-        
-        
-
+        if not madir or not td or \
+            not os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')):
+            return False
           
         if not event_path:
             if mode == 'parton':

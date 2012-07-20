@@ -1,15 +1,15 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.8 (XX/06/12)  JA: Fixed subprocess group combination also for the case
-                      when different process flags @N are given to different
-                      decays of the same core process (sorry, this was missed
-                      in v. 1.4.7).
-                  JA: Cancel running of integration channels where the BW
+1.4.8 (XX/06/12)  JA: Cancel running of integration channels where the BW
                       structure makes it impossible to get any events, which
                       might significantly speed up event generation for 
                       processes with conflicting BWs.
                   JA: Minor modification of integration grid presetting in
                       myamp.f, due to the above point.
+                  JA: Fixed subprocess group combination also for the case
+                      when different process flags @N are given to different
+                      decays of the same core process (sorry, this was missed
+                      in v. 1.4.7).
                   JA: Fixed crash for process p p > w+ w+ j j t t~ when all 
                       w and t/t~ are decayed (bug #1017912, thanks to Nicolas
                       Deutschmann).
