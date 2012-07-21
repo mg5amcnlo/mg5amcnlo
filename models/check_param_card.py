@@ -109,12 +109,19 @@ class Block(list):
         self.param_dict={}
         list.__init__(self)
 
-    def get(self, lhacode):
+    def get(self, lhacode, default=None):
         """return the parameter associate to the lhacode"""
         if not self.param_dict:
             self.create_param_dict()
-        return self.param_dict[tuple(lhacode)]
-
+        try:
+            return self.param_dict[tuple(lhacode)]
+        except KeyError:
+            if default is None:
+                raise
+            else:
+                return Parameter(block=self, lhacode=lhacode, value=default,
+                                                           comment='not define')
+        
     def remove(self, lhacode):
         """ remove a parameter """
         list.remove(self, self.get(lhacode))
@@ -932,25 +939,71 @@ def convert_to_mg5card(path, outputpath=None ):
     card.add_param('upmns', [3,3], 1.0)
 
     # Te
-    ye = card['ye'].get([3, 3]).value
-    ae = card['ae'].get([3, 3]).value
+    ye = card['ye'].get([1, 1], default=0).value
+    ae = card['ae'].get([1, 1], default=0).value
+    card.mod_param('ae', [1,1], 'te', [1,1], value= ae * ye, comment='T_tau(Q) DRbar')
+    if ae * ye:
+        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
+Parameter ae [1, 1] times ye [1,1] should be 0'''
+    card.remove_param('ae', [1,1])
+    #2
+    ye = card['ye'].get([2, 2], default=0).value
+    
+    ae = card['ae'].get([2, 2], default=0).value
+    card.mod_param('ae', [2,2], 'te', [2,2], value= ae * ye, comment='T_tau(Q) DRbar')
+    if ae * ye:
+        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
+Parameter ae [2, 2] times ye [2,2] should be 0'''
+    card.remove_param('ae', [2,2])
+    #3
+    ye = card['ye'].get([3, 3], default=0).value
+    ae = card['ae'].get([3, 3], default=0).value
     card.mod_param('ae', [3,3], 'te', [3,3], value= ae * ye, comment='T_tau(Q) DRbar')
-    card.check_and_remove('ae', [1,1], 0)
-    card.check_and_remove('ae', [2,2], 0)
     
     # Tu
+    yu = card['yu'].get([1, 1], default=0).value
+    au = card['au'].get([1, 1], default=0).value
+    card.mod_param('au', [1,1], 'tu', [1,1], value= au * yu, comment='T_tau(Q) DRbar')
+    if au * yu:
+        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
+Parameter au [1, 1] times yu [1,1] should be 0'''
+    card.remove_param('au', [1,1])
+    #2
+    ye = card['yu'].get([2, 2], default=0).value
+    
+    ae = card['au'].get([2, 2], default=0).value
+    card.mod_param('au', [2,2], 'tu', [2,2], value= au * yu, comment='T_tau(Q) DRbar')
+    if au * yu:
+        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
+Parameter au [2, 2] times yu [2,2] should be 0'''
+    card.remove_param('au', [2,2])
+    #3
     yu = card['yu'].get([3, 3]).value
     au = card['au'].get([3, 3]).value
     card.mod_param('au', [3,3], 'tu', [3,3], value= au * yu, comment='T_t(Q) DRbar')
-    card.check_and_remove('au', [1,1], 0)
-    card.check_and_remove('au', [2,2], 0)
     
     # Td
+    yd = card['yd'].get([1, 1], default=0).value
+    ad = card['ad'].get([1, 1], default=0).value
+    card.mod_param('ad', [1,1], 'td', [1,1], value= ad * yd, comment='T_tau(Q) DRbar')
+    if ad * yd:
+        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
+Parameter ad [1, 1] times yd [1,1] should be 0'''
+    card.remove_param('ad', [1,1])
+    #2
+    ye = card['yd'].get([2, 2], default=0).value
+    
+    ae = card['ad'].get([2, 2], default=0).value
+    card.mod_param('ad', [2,2], 'td', [2,2], value= ad * yd, comment='T_tau(Q) DRbar')
+    if ad * yd:
+        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
+Parameter ad [2, 2] times yd [2,2] should be 0'''
+    card.remove_param('ad', [2,2])
+    #3
     yd = card['yd'].get([3, 3]).value
     ad = card['ad'].get([3, 3]).value
     card.mod_param('ad', [3,3], 'td', [3,3], value= ad * yd, comment='T_b(Q) DRbar')
-    card.check_and_remove('ad', [1,1], 0)
-    card.check_and_remove('ad', [2,2], 0)
+
     
     # MSL2 
     value = card['msoft'].get([31]).value
