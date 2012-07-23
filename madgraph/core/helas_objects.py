@@ -619,7 +619,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                self.get_spin_state_number() == -2 and \
                self.get('self_antipart') and \
                [m.get('color') for m in self.get('mothers')] == [8, 8]:
-            self.set('coupling', ['-' + c for c in self.get('coupling')])
+            self.set('coupling', [ c if c.startswith('-') else '-%s' % c 
+                                              for c in self.get('coupling')])
         
     def set_state_and_particle(self, model):
         """Set incoming/outgoing state according to mother states and

@@ -202,9 +202,17 @@ class AllResults(dict):
         if name in self.order:
             #self.order.remove(name) # Reorder the run to put this one at the end 
             if  tag in self[name].tags:
-                self[name].remove(tag) # Remove previous tag if define
-            #add the new tag run    
-            self[name].add(OneTagResults(name, run_card, self.path))
+                print self[name].return_tag(tag).parton, len(self[name])
+                if self[name].return_tag(tag).parton and len(self[name]) > 1:
+                    #move the parton information before the removr
+                    self[name].return_tag(self[name][1]['tag']).parton = \
+                                               self[name].return_tag(tag).parton
+                if len(self[name]) > 1:        
+                    self[name].remove(tag) # Remove previous tag if define 
+                    self[name].add(OneTagResults(name, run_card, self.path))
+            else:
+                #add the new tag run    
+                self[name].add(OneTagResults(name, run_card, self.path))
             new = self[name] 
         else:
             new = RunResults(name, run_card, self.process, self.path)
@@ -384,7 +392,7 @@ class RunResults(list):
         """initialize the object"""
         
         self.info = {'run_name': run_name,'me_dir':path}
-        self.tags = []
+        self.tags = [run_card['run_tag']]
         # Set the collider information
         data = process.split('>',1)[0].split()
         if len(data) == 2:
