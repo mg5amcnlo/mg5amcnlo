@@ -251,6 +251,9 @@ class Switcher(object):
     def do_add(self, *args, **opts):
         return self.cmd.do_add(self, *args, **opts)
         
+    def do_calculate_width(self, *args, **opts):
+        return self.cmd.do_calculate_width(self, *args, **opts)
+
     def do_check(self, *args, **opts):
         return self.cmd.do_check(self, *args, **opts)
         

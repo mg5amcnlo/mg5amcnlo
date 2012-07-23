@@ -73,6 +73,8 @@ import models.import_ufo as import_ufo
 import aloha.aloha_fct as aloha_fct
 import aloha.create_aloha as create_aloha
 
+import mg5decay.decay_objects as decay_objects
+
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
 logger_stderr = logging.getLogger('fatalerror') # ->stderr
@@ -1651,6 +1653,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _curr_cpp_model = None
     _curr_exporter = None
     _done_export = False
+    _curr_decaymodel = None
 
     def preloop(self):
         """Initializing before starting the main loop"""
@@ -3591,7 +3594,77 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 last_action_2 = '%s %s' % (last_action, args[1])
             else: 
                 last_action_2 = 'none'
-                
+       
+    # Calculate decay width
+    def do_calculate_width(self, line):
+        """Generate amplitudes for decay width calculation, with fixed
+           number of final particles (called level)
+           syntax: calculate_width part_name level param_path           
+           args: part_name level param_path
+           part_name = name of the particle you want to calculate width
+           level = a.) when level is int,
+                       it means the max number of decay products
+                   b.) when level is float,
+                       it means the required precision for width.
+           param_path = path for param_card
+           (this is necessary to determine whether a channel is onshell or not)
+           e.g. calculate width for higgs up to 2-body decays:
+           calculate_width h 2 [path]
+           N.B. param_card must be given so that the program knows which channel
+           is on shell and which is not.
+        """
+
+        args = self.split_arg(line)
+        #print args
+        part_name = args[0]
+        level = eval(args[1])
+        param_card_path = args[2]
+
+
+        p_found = False
+        for p in self._curr_model['particles']:
+            if p['name'] == part_name:
+                pid = p.get_pdg_code()
+                p_found = True
+
+        if not p_found:
+            raise self.InvalidCmd('invalid particle name')
+            
+        # Reset amplitudes
+        self._curr_amps = diagram_generation.AmplitudeList()
+        # Reset Helas matrix elements
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+        # Reset _done_export, since we have new process
+        self._done_export = False
+        # Also reset _export_format and _export_dir
+        self._export_format = None
+
+        # Remove previous generations from history
+        self.clean_history(to_remove=['add process'], remove_bef_lb1='generate',
+                           to_keep=['add','import','set','load'])
+
+
+        # Setup before find_channels
+        self._curr_decaymodel = decay_objects.DecayModel(self._curr_model,
+                                                         True)        
+        self._curr_decaymodel.read_param_card(param_card_path)
+        part = self._curr_decaymodel.get_particle(pid)
+
+        # Find channels as requested
+        if isinstance(level, int):
+            self._curr_decaymodel.find_channels(part, level)
+            self._curr_amps = part.get_amplitudes(level)
+            print self._curr_amps.nice_string()
+
+        # Set _generate_info
+        if len(self._curr_amps) > 0:
+            process = self._curr_amps[0]['process'].nice_string()
+            print process
+            self._generate_info = process[9:]
+            print self._generate_info
+        else:
+            print "No decay is found"
+        
 
 class MadGraphCmdWeb(CheckValidForCmdWeb,MadGraphCmd):
     """Temporary parser"""
