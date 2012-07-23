@@ -196,8 +196,8 @@ class TestMEfromfile(unittest.TestCase):
 
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_mssm_generation')],
-                         cwd=pjoin(_file_path, os.path.pardir),
-                         stdout=devnull,stderr=devnull)
+                         cwd=pjoin(_file_path, os.path.pardir)
+                        ,stdout=devnull,stderr=devnull)
 
         
         self.check_parton_output(cross=4.541638, error=0.035)

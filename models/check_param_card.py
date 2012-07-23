@@ -941,7 +941,7 @@ def convert_to_mg5card(path, outputpath=None ):
     # Te
     ye = card['ye'].get([1, 1], default=0).value
     ae = card['ae'].get([1, 1], default=0).value
-    card.mod_param('ae', [1,1], 'te', [1,1], value= ae * ye, comment='T_tau(Q) DRbar')
+    card.mod_param('ae', [1,1], 'te', [1,1], value= ae * ye, comment='T_e(Q) DRbar')
     if ae * ye:
         raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
 Parameter ae [1, 1] times ye [1,1] should be 0'''
@@ -950,7 +950,7 @@ Parameter ae [1, 1] times ye [1,1] should be 0'''
     ye = card['ye'].get([2, 2], default=0).value
     
     ae = card['ae'].get([2, 2], default=0).value
-    card.mod_param('ae', [2,2], 'te', [2,2], value= ae * ye, comment='T_tau(Q) DRbar')
+    card.mod_param('ae', [2,2], 'te', [2,2], value= ae * ye, comment='T_mu(Q) DRbar')
     if ae * ye:
         raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
 Parameter ae [2, 2] times ye [2,2] should be 0'''
@@ -963,7 +963,7 @@ Parameter ae [2, 2] times ye [2,2] should be 0'''
     # Tu
     yu = card['yu'].get([1, 1], default=0).value
     au = card['au'].get([1, 1], default=0).value
-    card.mod_param('au', [1,1], 'tu', [1,1], value= au * yu, comment='T_tau(Q) DRbar')
+    card.mod_param('au', [1,1], 'tu', [1,1], value= au * yu, comment='T_u(Q) DRbar')
     if au * yu:
         raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
 Parameter au [1, 1] times yu [1,1] should be 0'''
@@ -972,7 +972,7 @@ Parameter au [1, 1] times yu [1,1] should be 0'''
     ye = card['yu'].get([2, 2], default=0).value
     
     ae = card['au'].get([2, 2], default=0).value
-    card.mod_param('au', [2,2], 'tu', [2,2], value= au * yu, comment='T_tau(Q) DRbar')
+    card.mod_param('au', [2,2], 'tu', [2,2], value= au * yu, comment='T_c(Q) DRbar')
     if au * yu:
         raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
 Parameter au [2, 2] times yu [2,2] should be 0'''
@@ -985,7 +985,7 @@ Parameter au [2, 2] times yu [2,2] should be 0'''
     # Td
     yd = card['yd'].get([1, 1], default=0).value
     ad = card['ad'].get([1, 1], default=0).value
-    card.mod_param('ad', [1,1], 'td', [1,1], value= ad * yd, comment='T_tau(Q) DRbar')
+    card.mod_param('ad', [1,1], 'td', [1,1], value= ad * yd, comment='T_d(Q) DRbar')
     if ad * yd:
         raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
 Parameter ad [1, 1] times yd [1,1] should be 0'''
@@ -994,7 +994,7 @@ Parameter ad [1, 1] times yd [1,1] should be 0'''
     ye = card['yd'].get([2, 2], default=0).value
     
     ae = card['ad'].get([2, 2], default=0).value
-    card.mod_param('ad', [2,2], 'td', [2,2], value= ad * yd, comment='T_tau(Q) DRbar')
+    card.mod_param('ad', [2,2], 'td', [2,2], value= ad * yd, comment='T_s(Q) DRbar')
     if ad * yd:
         raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
 Parameter ad [2, 2] times yd [2,2] should be 0'''

@@ -3362,6 +3362,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         tag = self.run_card['run_tag']  
         td = self.options['td_path']
 
+        if not madir or not td or \
+            not os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')):
+            return False
+
         if int(self.run_card['ickkw']) and mode == 'Pythia':
             self.update_status('Create matching plots for Pythia', level='pythia')
             # recover old data if none newly created
@@ -3388,9 +3392,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                      pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'))
                         
 
-        if not madir or not td or \
-            not os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')):
-            return False
+
           
         if not event_path:
             if mode == 'parton':

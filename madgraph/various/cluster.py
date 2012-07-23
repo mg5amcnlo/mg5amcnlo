@@ -119,7 +119,7 @@ class Cluster(object):
                                                          stderr=None, log=None):
         """launch one job on the cluster and wait for it"""
         
-        special_output = False # tag for concatanate the error with the output.
+        special_output = False # tag for concatenate the error with the output.
         if stderr == -2 and stdout: 
             #We are suppose to send the output to stdout
             special_output = True
@@ -329,7 +329,8 @@ class PBSCluster(Cluster):
     def control_one_job(self, id):
         """ control the status of a single job with it's cluster id """
         cmd = 'qstat '+str(id)
-        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE,
+                                  stderr=open(os.devnull,'w'))
         
         for line in status.stdout:
             line = line.strip()
