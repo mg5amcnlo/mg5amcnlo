@@ -1,5 +1,32 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.4.8 (24/07/12)  JA: Cancel running of integration channels where the BW
+                      structure makes it impossible to get any events. This
+                      can significantly speed up event generation for processes
+                      with conflicting BWs.
+                  JA: Minor modification of integration grid presetting in
+                      myamp.f, due to the above point.
+                  JA: Raise exception if a decay process has decaying particles
+                      that are not present in the corresponding core process
+                      (this might help avoid syntax mistakes).
+                  JA: Fixed subprocess group combination also for the case
+                      when different process flags @N are given to different
+                      decays of the same core process (sorry, this was missed
+                      in v. 1.4.7).
+                  JA: Fixed crash for process p p > w+ w+ j j t t~ when all 
+                      w and t/t~ are decayed (bug #1017912, thanks to Nicolas
+                      Deutschmann).
+                  JA: Fixed array dimension for diagrams with a single s-channel
+                      propagator (caused crash for certain compilers, bug #1022415
+                      thanks Sho Iwamoto).
+                  JA: Fixed crash for identical decay chains for particle-anti- 
+                      particle when only one of the two is decayed, introduced 
+                      in v. 1.4.7 (thanks John Lee).
+                  OM: Ensure that matching plots are replaced correctly when
+                      Pythia is run reusing a tag name.
+                  OM: Improved check for YE/AE, YU/AU, YD/AD for first two
+                      generations in SLHA1<->2 converter (thanks Abhishek).
+
 1.4.7 (25/06/12)  JA: Change the random seed treatment to ensure that the original 
                       seed is stored in the banner (this was broken in v. 1.4.0).
                       If a non-zero seed is given in the run_card, this seed
@@ -28,7 +55,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       resulting in lines with Z > e+ mu- in the event file
                       (bug #1015032, thanks Johannes E for reporting).
                   JA: Fixed minor typo in myamp.f.
-                  OM: fixed minor behavior restriction of multi_run (Thanks to
+                  OM: Fixed minor behavior restriction of multi_run (thanks to
                       Joachim Kopp).
                   OM: Improved condor cluster support when the cluster is 
                       unresponsive (should avoid some crashes on the web).
@@ -40,9 +67,9 @@ Update notes for MadGraph 5 (in reverse time order)
                       with scripts to create madevent.tar.gz and gridpack.tar.gz.
                   
 1.4.6 (16/05/12)  JA: Added cuts on lepton pt for each of the 4 hardest leptons
-                  OM: allow bin/madevent script to be run with a single line command
+                  OM: Allow bin/madevent script to be run with a single line command
                       example ./bin/madevent multi_run 10 
-		  OM: Adding the 4 higgs interactions in the standard model UFO model
+                  OM: Adding the 4 higgs interactions in the standard model UFO model
                   JA: Added new restriction card for the sm model with massive
                       muon and electron, and non-zero tau decay width
                   JA: Ensure assignment of colors to intermediate propagators

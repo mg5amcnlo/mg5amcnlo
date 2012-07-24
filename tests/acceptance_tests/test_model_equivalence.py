@@ -31,13 +31,23 @@ import madgraph.iolibs.ufo_expression_parsers as ufo_expression_parsers
 from madgraph.iolibs import save_load_object
 
 logger = logging.getLogger('madgraph.test.model')
-
+pjoin = os.path.join
 
 class CheckFileCreate():
     """Check that the files are correctly created"""
 
-    output_path = '/tmp/' # work only on LINUX but that's ok for the test routine
+    output_path = '/tmp/mg5_model_equivalence' # work only on LINUX but that's ok for the test routine
     created_files =[]
+
+    def setUp(self):
+        try:
+            os.system('rm -rf %s &> /dev/null' % self.output_path)
+        except:
+            pass
+        os.mkdir(self.output_path)
+        
+    def tearDown(self):
+        os.system('rm -rf %s ' % self.output_path)
 
     def assertFileContains(self, filename, solution):
         """ Check the content of a file """
@@ -53,7 +63,6 @@ class CheckFileCreate():
 
     def give_pos(self, filename):
         """ take a name and a change it in order to have a valid path in the output directory """
-        
         return os.path.join(self.output_path, filename)
 
     def clean_files(self):
@@ -268,6 +277,9 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
     # clean all the tested files before and after any test
     def setUp(self):
         """ creating the full model from scratch """
+        CheckFileCreate.setUp(self)
+        os.system('cp %s %s' % (pjoin(MG5DIR,'Template','Source','make_opts'), '/tmp'))
+        
         CheckFileCreate.clean_files(self)
         
         #picklefile = os.path.join(MG5DIR,'models','sm','model.pkl') 
