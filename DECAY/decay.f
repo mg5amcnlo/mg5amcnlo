@@ -1364,7 +1364,7 @@ c
       REAL*4 region(2*mxdim),fxn,tgral,chi2a,sd
       real*8 diff,eff,ave_wei
       LOGICAL WRITEOUT
-      DATA WRITEOUT /.TRUE./
+      DATA WRITEOUT /.FALSE./
 c
 c     EXTERNAL
 c

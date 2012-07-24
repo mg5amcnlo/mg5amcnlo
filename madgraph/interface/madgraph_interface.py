@@ -93,7 +93,7 @@ class CmdExtended(cmd.Cmd):
                                    'display particles', 'display interactions'],
         'define': ['define MULTIPART PART1 PART2 ...', 'generate PROCESS', 
                                                     'display multiparticles'],
-        'generate': ['add process PROCESS','output [OUTPUT_TYPE] [PATH]','draw .'],
+        'generate': ['add process PROCESS','output [OUTPUT_TYPE] [PATH]','display diagrams'],
         'add process':['output [OUTPUT_TYPE] [PATH]', 'display processes'],
         'output':['launch','open index.html','history PATH', 'exit'],
         'display': ['generate PROCESS', 'add process PROCESS', 'output [OUTPUT_TYPE] [PATH]'],
@@ -644,6 +644,8 @@ please follow information on http://root.cern.ch/drupal/content/downloading-root
 You can set it by adding the following lines in your .bashrc [.bash_profile for mac]:
 export ROOTSYS=%s
 export PATH=$PATH:$ROOTSYS/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOTSYS/lib
+export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$ROOTSYS/lib
 This will take effect only in a NEW terminal
 ''' % os.path.realpath(pjoin(misc.which('root'), \
                                                os.path.pardir, os.path.pardir)))
@@ -1764,9 +1766,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if amp not in self._curr_amps:
                     self._curr_amps.append(amp)
                 else:
-                    warning = "Warning: Already in processes:\n%s" % \
+                    raise self.InvalidCmd, "Duplicate process %s found. Please check your processes." % \
                                                 amp.nice_string_processes()
-                    logger.warning(warning)
 
 
             # Reset _done_export, since we have new process
@@ -2771,7 +2772,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         name = name[args[0]]
         
         try:
-            os.system('rm -rf %s' % name)
+            os.system('rm -rf %s' % pjoin(MG5DIR, name))
         except:
             pass
         
@@ -2840,7 +2841,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             logger.warning('Error detected during the compilation. Please check the compilation error and run make manually.')
 
 
-        # Special treatment for TD program (require by MadAnalysis)
+        # Special treatment for TD/Ghostscript program (require by MadAnalysis)
         if args[0] == 'MadAnalysis':
             try:
                 os.system('rm -rf td')
@@ -2865,6 +2866,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if sys.maxsize > 2**32:
                     logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer
                 Please follow instruction in http://cp3wks05.fynu.ucl.ac.be/twiki/bin/view/Software/TopDrawer.''')
+            
+            if not misc.which('gs'):
+                logger.warning('''gosthscript not install on your system. This is not required to run MA.
+                    but this prevent to create jpg files and therefore to have the plots in the html output.''')
+                if sys.platform == "darwin":
+                    logger.warning('''You can download this program at the following link: 
+                    http://www.macupdate.com/app/mac/9980/gpl-ghostscript''')
 
 
     
