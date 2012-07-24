@@ -1370,7 +1370,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         self.configured = 0 # time for reading the card
         self._options = {} # for compatibility with extended_cmd
-        
+    
+    
+    def pass_in_web_mode(self):
+        """configure web data"""
+        self.web = True
+        self.results.def_web_mode(True)
+        self.force = True
+    
     ############################################################################    
     def split_arg(self, line, error=True):
         """split argument and remove run_options"""
@@ -1399,10 +1406,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.cluster_mode = 2
                 self.nb_core = int(arg.split('=',1)[1])
             elif arg.startswith('--web'):
-                self.web = True
+                self.pass_in_web_mode()
                 self.cluster_mode = 1
-                self.results.def_web_mode(True)
-                self.force = True
             else:
                 continue
             args.remove(arg)
