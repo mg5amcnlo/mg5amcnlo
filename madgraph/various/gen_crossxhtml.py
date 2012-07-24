@@ -202,7 +202,6 @@ class AllResults(dict):
         if name in self.order:
             #self.order.remove(name) # Reorder the run to put this one at the end 
             if  tag in self[name].tags:
-                print self[name].return_tag(tag).parton, len(self[name])
                 if self[name].return_tag(tag).parton and len(self[name]) > 1:
                     #move the parton information before the removr
                     self[name].return_tag(self[name][1]['tag']).parton = \
