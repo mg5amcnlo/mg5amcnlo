@@ -1528,7 +1528,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
 
         # Set the size of Wavefunction
-        if not self.model or any([p.get('spin')==5 for p in self.model.get('particles') if p]):
+        if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
             replace_dict['wavefunctionsize'] = 18
         else:
             replace_dict['wavefunctionsize'] = 6
