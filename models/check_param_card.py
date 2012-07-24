@@ -351,7 +351,6 @@ class ParamCard(dict):
         
         parameter = Parameter(block=block, lhacode=lha, value=value, 
                               comment=comment)
-
         try:
             new_block = self[block]
         except KeyError:
@@ -365,8 +364,15 @@ class ParamCard(dict):
                                               value=None, comment=None):
         """ change a parameter to a new one. This is not a duplication."""
 
+        print old_block, old
         # Find the current block/parameter
-        old_block = self[old_block]
+        try:
+            old_block = self[old_block]
+        except:
+            if lhacode is not None:
+                lhacode=old_lha
+            self.add_param(block, lhacode, value, comment)
+            return
         parameter = old_block.get(old_lha)
 
         # Update the parameter
