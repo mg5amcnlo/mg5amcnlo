@@ -99,6 +99,7 @@ class Decay_info:
 #       here I use the criteria written by Olivier, so that "proc_list"="decay_list" later on in the code
 
         particles_from_HI=[]
+        list_external=[]
         for leg in range(-len(decay_item.keys()),0):
             #print "  "
             #print "leg "
@@ -108,7 +109,13 @@ class Decay_info:
             #print "mother"
             #print decay_item[leg].mother
             #print "channel"
-#            print topo[leg]['mass']
+            #print topo[leg]['mass']
+
+            if topo[leg]['daughters'][0]>2 and topo[leg]['daughters'][0] not in list_external:
+                list_external.append(topo[leg]['daughters'][0])
+            if topo[leg]['daughters'][1]>2 and topo[leg]['daughters'][1] not in list_external:
+                list_external.append(topo[leg]['daughters'][1])
+
             if  topo[leg]['mass']=='ZERO': 
                 decay_item[leg].mother=0  # off-shell gluons/photons/quarks should not be part of the decay chain
                 decay_item[leg].des[0].mother=0
@@ -134,7 +141,13 @@ class Decay_info:
                 if topo[decay_item[leg].mother]['channel']=='T' or decay_item[decay_item[leg].mother].pid[0]==21:
                    particles_from_HI.append(leg)
 
+        # now check if all external particles have been scanned:
+
+        for index in  mglabel2pid_dic.keys():
+          if index >2 and index not in list_external:
+            particles_from_HI.append(index) 
         print particles_from_HI
+        
 
         for leg in particles_from_HI:
           if leg<0:
