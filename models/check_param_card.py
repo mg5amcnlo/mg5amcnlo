@@ -364,7 +364,6 @@ class ParamCard(dict):
                                               value=None, comment=None):
         """ change a parameter to a new one. This is not a duplication."""
 
-        print old_block, old
         # Find the current block/parameter
         try:
             old_block = self[old_block]

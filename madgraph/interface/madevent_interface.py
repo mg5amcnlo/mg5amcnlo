@@ -193,7 +193,7 @@ class CmdExtended(cmd.Cmd):
         try:
             if hasattr(self, 'results'):
                 self.update_status('Stop by the user', level=None, makehtml=False, error=True)
-                self.add_error_log_in_html()
+                self.add_error_log_in_html(KeyboardInterrupt)
         except:
             pass
     
@@ -228,18 +228,22 @@ class CmdExtended(cmd.Cmd):
         except:
             pass
         
-    def add_error_log_in_html(self):
+    def add_error_log_in_html(self, errortype=None):
         """If a ME run is currently running add a link in the html output"""
 
         # Be very carefull to not raise any error here (the traceback 
-        #will modify in that case.
+        #will be modify in that case.)
         if hasattr(self, 'results') and hasattr(self.results, 'current') and\
                 self.results.current and 'run_name' in self.results.current and \
                 hasattr(self, 'me_dir'):
             name = self.results.current['run_name']
             tag = self.results.current['tag']
             self.debug_output = pjoin(self.me_dir, '%s_%s_debug.log' % (name,tag))
-            self.results.current.debug = self.debug_output
+            if errortype:
+                self.results.current.debug = errortype
+            else:
+                self.results.current.debug = self.debug_output
+            
         else:
             #Force class default
             self.debug_output = MadEventCmd.debug_output

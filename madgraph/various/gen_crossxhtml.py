@@ -948,9 +948,13 @@ class OneTagResults(dict):
                            'action': ''
                            }                                
                                   
-        if self.debug:
-            debug = '<br> <a href=\'./%s_%s_debug.log\'> <font color=red>ERROR</font></a>' \
-                                               % (self['run_name'], self['tag']) 
+        if self.debug is KeyboardInterrupt:
+            debug = '<br><font color=red>Interupted</font>'
+        elif isinstance(self.debug, basestring):
+            debug = '<br> <a href=\'./%s\'> <font color=red>ERROR</font></a>' \
+                                               % (self.debug)
+        elif self.debug:
+            debug = '<br><font color=red>%s</font>' %self.debug
         else:
             debug = ''                                       
         text = tag_template % {'tag_span': nb_line,
