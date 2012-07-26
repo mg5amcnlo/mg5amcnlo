@@ -40,7 +40,7 @@ c colorflow(i,j): the actual label (according to born_leshouche.inc)
 c   of the j^th colour flow in which the father and ipartners(i) are
 c   colour partners
 c
-c Example: in the process q(1) qbar(2) -> (g) -> g(3) g(4), the two color flows are
+c Example: in the process q(1) qbar(2) -> g(3) g(4), the two color flows are
 c
 c j=1    i    icolup(1)    icolup(2)       j=2    i    icolup(1)    icolup(2)
 c        1      500           0                   1      500           0
@@ -1432,11 +1432,7 @@ c g --> q qbar splitting (icode=2)
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
-cooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
-                    xma2=pmass(fksfather)**2
-                    call AP_reduced_massive(m_type,i_type,one,
-     #                             z(npartner),xi(npartner),xma2,ap)
-cooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+                    call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
                     xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
                     xkernazi=0.d0
@@ -1458,11 +1454,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
-cooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
-                  xma2=pmass(j_fks)**2
-                  call AP_reduced_massive(m_type,i_type,one,
-     #                           z(npartner),xi(npartner),xma2,ap)
-cooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+                  call AP_reduced(m_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
                   xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
                   call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
@@ -1521,8 +1513,7 @@ c           xm22 = squared recoil mass
                   kn0=xp0jfks
                   xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
-                  call AP_reduced_massive(j_type,i_type,one,
-     #                           z(npartner),xi(npartner),xm12,ap)
+                  call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
                   xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
                   xkernazi=0.d0
@@ -2650,6 +2641,7 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       common/cupscale/upper_scale,fff
 
 c
+      double precision ma2,mb2
       double precision pmass(nexternal)
       include "pmass.inc"
 c
@@ -2756,10 +2748,14 @@ c
       nofpartners=ipartners(0)
       flagmc=.false.
 c
-      ztmp=zPY6PT(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
-      xitmp=xiPY6PT(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
+cooooooooooooooooooooooooooooo
+      ma2=0d0
+      mb2=0d0
+cooooooooooooooooooooooooooooo
+      ztmp=zPY6PT(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q,ma2)
+      xitmp=xiPY6PT(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q,ma2,mb2)
       xjactmp=xjacPY6PT_xiztoxy(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,
-     &                       q1q,q2q)
+     &                       q1q,q2q,ma2)
 
       do npartner=1,ipartners(0)
 c This loop corresponds to the sum over colour lines l in the
