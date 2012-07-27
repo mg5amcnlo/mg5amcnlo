@@ -1613,6 +1613,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.info('set output information to level: %s' % args[1])
         elif args[0] == "fortran_compiler":
             self.options['fortran_compiler'] = args[1]
+            current = misc.detect_current_compiler(self.me_dir)
+            if current != args[1]:
+                self.mod_compilator(self.me_dir, args[1], current)
         elif args[0] == "run_mode":
             if not args[1] in [0,1,2,'0','1','2']:
                 raise self.InvalidCmd, 'run_mode should be 0, 1 or 2.'
