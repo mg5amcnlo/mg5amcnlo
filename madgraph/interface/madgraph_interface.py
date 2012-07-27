@@ -22,11 +22,14 @@ import optparse
 import os
 import pydoc
 import re
+import signal
 import subprocess
 import sys
 import shutil
 import traceback
 import time
+import urllib
+        
 
 #usefull shortcut
 pjoin = os.path.join
@@ -274,6 +277,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   localy in the current Madgraph version. In order to have")
         logger.info("   a sucessfull instalation, you will need to have up-to-date")
         logger.info("   F77 and/or C and Root compiler.")
+        logger.info(" ")
+        logger.info("   \"install update\" check if your MG5 installation is the latest one.")
+        logger.info("   If not it load the difference between your current version and the latest one,")
+        logger.info("   and apply it to the code. Two options are available for this command:")
+        logger.info("     -f: didn't ask for confirmation if it founds an update.")
+        logger.info("     --timeout=: Change the maximum time allowed to reach the server.")
         
     def help_display(self):
         logger.info("syntax: display " + "|".join(self._display_opts))
@@ -628,7 +637,7 @@ class CheckValidForCmd(cmd.CheckCmd):
     def check_install(self, args):
         """check that the install command is valid"""
         
-        if len(args) != 1:
+        if len(args) < 1:
             self.help_install()
             raise self.InvalidCmd('install command require at least one argument')
         
@@ -1626,7 +1635,9 @@ class CompleteForCmd(cmd.CompleteCmd):
         
         # Format
         if len(args) == 1:
-            return self.list_completion(text, self._install_opts)     
+            return self.list_completion(text, self._install_opts)
+        elif len(args) and args[0] == 'update':
+            return self.list_completion(text, ['-f','--timeout='])     
 
 #===============================================================================
 # MadGraphCmd
@@ -1645,7 +1656,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _tutorial_opts = ['start', 'stop']
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
-    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
+    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 
+                     'update']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
@@ -1668,6 +1680,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Initializing before starting the main loop"""
 
         self.prompt = 'mg5>'
+        
+        self.do_install('update --mode=mg5_start')
         
         # By default, load the UFO Standard Model
         logger.info("Loading default model: sm")
@@ -1715,7 +1729,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             os.remove(pjoin(self._done_export[0],'RunWeb'))
                 
         value = super(MadGraphCmd, self).do_quit(line)
+        self.do_install('update --mode=mg5_stop')
         print
+
         return value
         
     # Add a process to the existing multiprocess definition
@@ -2839,7 +2855,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             program = "curl"
         else:
             program = "wget"
-            
+        
+        # special command for auto-update
+        if args[0] == 'update':
+            self.install_update(args, wget=program)
+            return
+           
         # Load file with path of the different program:
         import urllib
         path = {}
@@ -2960,6 +2981,159 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     logger.warning('''You can download this program at the following link: 
                     http://www.macupdate.com/app/mac/9980/gpl-ghostscript''')
 
+    def install_update(self, args, wget):
+        """ check if the current version of mg5 is up-to-date. 
+        and allow user to install the latest version of MG5 """
+        
+        # load options
+        mode = [arg.split('=',1)[1] for arg in args if arg.startswith('--mode=')]
+        if mode:
+            mode = mode[-1]
+        else:
+            mode = "userrequest"
+        force = any([arg=='-f' for arg in args])
+        timeout = [arg.split('=',1)[1] for arg in args if arg.startswith('--timeout=')]
+        if timeout:
+            try:
+                timeout = int(timeout[-1])
+            except ValueError:
+                raise self.InvalidCmd('%s: invalid argument for timeout (integer expected)'%timeout[-1])
+        else:
+            timeout = self.options['timeout']
+        
+        options = ['y','n','on_exit']
+        if mode == 'mg5_start':
+            timeout = 2
+            default = 'n'
+            update_delay = self.options['auto_update'] * 24 * 3600
+            if update_delay == 0:
+                return
+        elif mode == 'mg5_end':
+            timeout = 5
+            default = 'n'
+            update_delay = self.options['auto_update'] * 24 * 3600
+            if update_delay == 0:
+                return
+            options.remove('on_exit')
+        elif mode == "userrequest":
+            default = 'y'
+            update_delay = 0
+        else:
+            raise self.InvalidCmd('Unknown mode for command install update')
+        
+        if not os.path.exists(os.path.join(MG5DIR,'input','.autoupdate')):
+            error_text = """This version of MG5 doesn\'t support auto-update. Common reasons are:
+            1) This version was loaded via bazaar (use bzr pull to update instead)
+            2) This version is a beta release of MG5."""
+            if mode == 'userrequest':
+                raise self.ConfigurationError(error_text)
+            logger
+            return 
+        
+        
+        # read the data present in .autoupdate
+        data = {}
+        for line in open(os.path.join(MG5DIR,'input','.autoupdate')):
+            if not line.strip():
+                continue
+            sline = line.split()
+            data[sline[0]] = int(sline[1])
+            
+        if time.time() - data['last_check'] < update_delay:
+            return
+        
+        logger.info('Checking if MG5 is up-to-date... (takes up to %ss)' % timeout)
+        class TimeOutError(Exception): pass
+        
+        def handle_alarm(signum, frame): 
+            raise TimeOutError
+        
+        signal.signal(signal.SIGALRM, handle_alarm)
+        signal.alarm(timeout)
+        to_update = 0
+        try:
+#            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_build_nb')
+            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_test_build_nb')
+            signal.alarm(0)
+            web_version = int(filetext.read())            
+        except (TimeOutError, ValueError):
+            print 'failed to connect server'
+            if mode == 'mg5_end':
+                # wait 24h before next check
+                fsock = open(os.path.join(root_path,'input','.autoupdate'),'w')
+                fsock.write("version_nb   %s\n" % data['version_nb'])
+                fsock.write("last_check   %s\n" % \
+                int(time.time()) - 3600 * 24 * (self.options['auto_update'] -1))
+                fsock.close()
+            return
+        
+        if web_version == data['version_nb']:
+            logger.info('No new version of MG5 available')
+            # update .autoupdate to prevent a too close check
+            fsock = open(os.path.join(root_path,'input','.autoupdate'),'w')
+            fsock.write("version_nb   %s\n" % data['version_nb'])
+            fsock.write("last_check   %s\n" % int(time.time()))
+            fsock.close()
+        elif data['version_nb'] > web_version:
+            logger_stderr('impossible to update: local %s web %s' % (data['version_nb'], web_version))
+            return
+        else:
+            if not force:
+                answer = self.ask('New Version of MG5 available! Do you want to update your current version?',
+                                  default, options)
+            else:
+                answer = default
+
+        
+        if answer == 'y':
+            logger.info('start updating code')
+            fail = 0
+            for i in range(data['version_nb'], web_version):
+                try:
+#                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch/build%s.patch' %(i+1))
+                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch_test/build%s.patch' %(i+1))
+                except:
+                    print 'fail to load patch to build #%s' % (i+1)
+                    fail = i
+                    break
+                print 'apply patch %s' % (i+1)
+                text = filetext.read()
+                p= subprocess.Popen(['patch', '-p1'], stdin=subprocess.PIPE, 
+                                                                  cwd=root_path)
+                p.communicate(text)
+                
+            logger.info('Checking current version. (type ctrl-c to bypass the check)')
+            subprocess.call([os.path.join('tests','test_manager.py')],
+                                                                  cwd=root_path)
+            
+            fsock = open(os.path.join(root_path,'input','.autoupdate'),'w')
+            if not fail:
+                fsock.write("version_nb   %s\n" % web_version)
+            else:
+                fsock.write("version_nb   %s\n" % fail)
+            fsock.write("last_check   %s\n" % int(time.time()))
+            fsock.close()
+            print 'new version installed, please relaunch mg5'
+            sys.exit(0)
+        elif answer == 'n':
+            # prevent for a future check
+            fsock = open(os.path.join(root_path,'input','.autoupdate'),'w')
+            fsock.write("version_nb   %s\n" % data['version_nb'])
+            fsock.write("last_check   %s\n" % int(time.time()))
+            fsock.close()
+            logger.info('Update bypassed.')
+            logger.info('The next check for a new version will be performed in %s days' \
+                        % self.options['auto_update'])
+            logger.info('In order to change this delay. Enter the command:')
+            logger.info('set auto_update X')
+            logger.info('Putting X to zero will prevent this check at anytime.')
+            logger.info('You can upgrade your version at any time by typing:')
+            logger.info('install update')
+        else: #answer is on_exit
+            #ensure that the test will be done on exit
+            #Do not use the set command here!!
+            self.options['auto_update'] = -1
+
 
     
     def set_configuration(self, config_path=None, test=False):
@@ -2976,7 +3150,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                               'group_subprocesses': 'Auto',
                               'ignore_six_quark_processes': False,
                               'complex_mass_scheme': False,
-                              'gauge':'unitary'}
+                              'gauge':'unitary',
+                              'auto_update':7}
                 
         if not config_path:
             try:
@@ -3334,7 +3509,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.options['fortran_compiler'] = args[1]
             else:
                 self.options['fortran_compiler'] = None
-        elif args[0] == 'timeout':
+        elif args[0] in ['timeout', 'auto_update']:
                 self.options[args[0]] = int(args[1]) 
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:

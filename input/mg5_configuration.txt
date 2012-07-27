@@ -47,6 +47,11 @@ timeout = 20
 # relative path start from mg5 directory
 pythia8_path = ./pythia8
 
+# Control when MG5 checks if he is up-to-date.
+# Enter the number of day between two check (0 means never)
+# A question is always asked before any update
+auto_update = 0
+
 ################################################################################
 #  INFO FOR MADEVENT 
 ################################################################################
