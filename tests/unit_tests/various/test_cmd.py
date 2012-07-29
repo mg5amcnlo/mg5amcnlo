@@ -30,8 +30,6 @@ class TestInstall(unittest.TestCase):
         has1, has2 = False, False
         for line in  open(os.path.join(MG5DIR,'madgraph','interface',
                                                       'madgraph_interface.py')):
-            if 'http' in line:
-                print [line]
             if line == check1:
                 has1 = True
             elif line ==check2:

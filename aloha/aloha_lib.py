@@ -459,6 +459,9 @@ class AddVariable(list):
         else:
             out = MultContainer([KERNEL.objs[maxvar], newadd])
             out.prefactor = self.prefactor
+            if newadd.prefactor != 1:
+                out.prefactor *= newadd.prefactor
+                newadd.prefactor = 1 
             return out
         out = AddVariable([MultContainer([KERNEL.objs[maxvar], newadd]), constant],
                           self.prefactor)

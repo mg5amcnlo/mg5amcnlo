@@ -710,11 +710,15 @@ class ALOHAWriterForFortran(WriteALOHA):
                     coeff = 'COUP*'
                 else:
                     coeff = ''
-                
+            to_order = {}  
             for ind in numerator.listindices():
-                out.write('    %s(%d)= %s%s\n' % (self.outname, 
-                                        self.pass_to_HELAS(ind)+1, coeff,
-                                        self.write_obj(numerator.get_rep(ind))))
+                to_order[self.pass_to_HELAS(ind)] = \
+                        '    %s(%d)= %s%s\n' % (self.outname, self.pass_to_HELAS(ind)+1, 
+                        coeff, self.write_obj(numerator.get_rep(ind)))
+            key = to_order.keys()
+            key.sort()
+            for i in key:
+                out.write(to_order[i])
         return out.getvalue()
 
     def define_symmetry(self, new_nb, couplings=None):

@@ -919,7 +919,7 @@ class ModelTest2(unittest.TestCase):
     def setUp(self):
         """ """
         import madgraph.interface.master_interface as Cmd
-        cmd = Cmd.MasterCmd() 
+        cmd = Cmd.MasterCmd()
         cmd.do_load('model %s' % os.path.join(madgraph.MG5DIR, 'tests',
                                                         'input_files','sm.pkl'))
         self.model = cmd._curr_model

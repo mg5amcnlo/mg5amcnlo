@@ -1666,6 +1666,34 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'fortran_compiler',
                     'gauge',
                     'complex_mass_scheme']
+    
+    # The three options categories are treated on a different footage when a 
+    # set/save configuration occur
+    options_default = {'pythia8_path': './pythia8',
+                       'madanalysis_path': './MadAnalysis',
+                       'pythia-pgs_path':'./pythia-pgs',
+                       'td_path':'./td',
+                       'delphes_path':'./Delphes',
+                       'exrootanalysis_path':'./ExRootAnalysis',
+                       'timeout': 20,
+                       'web_browser':None,
+                       'eps_viewer':None,
+                       'text_editor':None,
+                       'fortran_compiler':None,
+                       'auto_update':7,
+                       'cluster_type': 'condor'}
+    
+    options_default_mg = {'group_subprocesses': 'Auto',
+                          'ignore_six_quark_processes': False,
+                          'complex_mass_scheme': False,
+                          'gauge':'unitary',
+                          'stdout_level':None}
+    options_default_me = {'automatic_html_opening':True,
+                         'run_mode':2,
+                         'cluster_queue':'madgraph',
+                         'nb_core': None,
+                         }
+
 
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
@@ -1729,7 +1757,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             os.remove(pjoin(self._done_export[0],'RunWeb'))
                 
         value = super(MadGraphCmd, self).do_quit(line)
-        self.do_install('update --mode=mg5_stop')
+        self.do_install('update --mode=mg5_end')
         print
 
         return value
@@ -3136,31 +3164,28 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
 
     
-    def set_configuration(self, config_path=None, test=False):
+    def set_configuration(self, config_path=None, final=True):
         """ assign all configuration variable from file 
             ./input/mg5_configuration.txt. assign to default if not define """
 
-        self.options = {'pythia8_path': './pythia8',
-                              'timeout': 20,
-                              'web_browser':None,
-                              'eps_viewer':None,
-                              'text_editor':None,
-                              'fortran_compiler':None,
-                              'automatic_html_opening':True,
-                              'group_subprocesses': 'Auto',
-                              'ignore_six_quark_processes': False,
-                              'complex_mass_scheme': False,
-                              'gauge':'unitary',
-                              'auto_update':7}
-                
+        if not self.options:
+            self.options = dict(self.options_default_mg)
+            self.options.update(self.options_default_me)
+            self.options.update(self.options_default) 
+            
+
         if not config_path:
-            try:
-                config_file = open(pjoin(os.environ['HOME'],'.mg5', 'mg5_configuration.txt'))
-            except:
-                config_file = open(os.path.relpath(
-                          pjoin(MG5DIR,'input','mg5_configuration.txt')))
-        else:
-            config_file = open(config_path)
+            if 'HOME' in os.environ:
+                config_path = pjoin(os.environ['HOME'],'.mg5', 
+                                                        'mg5_configuration.txt')
+                if os.path.exists(config_path):
+                    self.set_configuration(config_path, final=False)
+            config_path = os.path.relpath(pjoin(MG5DIR,'input',
+                                                       'mg5_configuration.txt'))     
+            self.set_configuration(config_path, final)
+            return
+        
+        config_file = open(config_path)
 
         # read the file and extract information
         logger.info('load MG5 configuration from %s ' % config_file.name)
@@ -3179,8 +3204,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if value.lower() == "none":
                     self.options[name] = None
 
-        if test:
-            return self.options
+        if not final:
+            return self.options # the return is usefull for unittest
 
         # Treat each expected input
         # 1: Pythia8_path
@@ -3201,7 +3226,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 pass
             elif key in ['cluster_type', 'automatic_html_opening']:
                 pass
-            elif key not in ['text_editor','eps_viewer','web_browser']:
+            elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
                     self.do_set("%s %s" % (key, self.options[key]), log=False)
@@ -3209,6 +3234,17 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     print error
                     logger.warning("Option %s from config file not understood" \
                                    % key)
+            elif key == 'stdout_level':
+                if self.options[key] != None:
+                    # Default: try to set parameter
+                    try:
+                        self.do_set("%s %s" % (key, self.options[key]), log=False)
+                    except MadGraph5Error, error:
+                        print error
+                        logger.warning("Option %s from config file not understood" \
+                                       % key)
+                else:
+                    self.options[key] = logger.level                
         
         # Configure the way to open a file:
         launch_ext.open_file.configure(self.options)
@@ -3382,7 +3418,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 raise self.InvalidCmd('No processes to save!')
         
         elif args[0] == 'options':
-            CmdExtended.do_save(self, line)
+            CmdExtended.do_save(self, line, self.options_default,
+                                            self.options_default_me,
+                                            self.options_default_mg)
 
     
     # Set an option
