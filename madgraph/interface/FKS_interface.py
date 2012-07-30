@@ -308,7 +308,9 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 self._curr_exporter = export_fks_born.ProcessExporterFortranFKS_born(\
                                           self._mgme_dir, self._export_dir,
                                           not noclean, 
-                                          self.options['complex_mass_scheme'], True,
+                                          self.options['complex_mass_scheme'], 
+                                          #use MP for HELAS only if there are virtual amps 
+                                          len(self._fks_multi_proc.get_virt_amplitudes()) > 0, 
                                           os.path.join(self._mgme_dir, 'Template', 'loop_material'),
                                           self._cuttools_dir)
             
@@ -318,7 +320,9 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 self._curr_exporter = export_fks_born.ProcessOptimizedExporterFortranFKS_born(\
                                           self._mgme_dir, self._export_dir,
                                           not noclean, 
-                                          self.options['complex_mass_scheme'], True,
+                                          self.options['complex_mass_scheme'],
+                                          #use MP for HELAS only if there are virtual amps 
+                                          len(self._fks_multi_proc.get_virt_amplitudes()) > 0, 
                                           os.path.join(self._mgme_dir,'Template/loop_material'),
                                           self._cuttools_dir)
             
