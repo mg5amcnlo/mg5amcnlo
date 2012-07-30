@@ -300,6 +300,10 @@ class HelpToCmd(object):
         logger.info("   timeout VALUE")
         logger.info("      (default 20) Seconds allowed to answer questions.")
         logger.info("      Note that pressing tab always stops the timer.")        
+        logger.info("   temp_dir PATH")
+        logger.info("      (default None) Set temp_dir to cluster node temp")
+        logger.info("      dir to avoid using central disk for event generation")
+
 
     def run_options_help(self, data):
         if data:
@@ -1403,14 +1407,19 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             else:
                 continue
             args.remove(arg)
-        
+
+        if args and args[0] in ["run_mode", "cluster_mode", "cluster_queue", 
+                                "temp_dir", "nb_core"]:
+            return args
+
         if self.cluster_mode == 2 and not self.nb_core:
             import multiprocessing
             self.nb_core = multiprocessing.cpu_count()
             
         if self.cluster_mode == 1 and not hasattr(self, 'cluster'):
             cluster_name = self.options['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'])
+            self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'],
+                                                           self.options['temp_dir'])
         return args
     
     ############################################################################            
@@ -1442,6 +1451,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                               'automatic_html_opening':True,
                               'run_mode':0,
                               'cluster_queue':'madgraph',
+                              'temp_dir': None,
                               'nb_core':None,
                               'timeout':20}
         
@@ -1625,7 +1635,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.options['cluster_mode'] =  self.cluster_mode
         elif args[0] == 'cluster_type':
             self.options['cluster_mode'] = args[1]
-            self.cluster = cluster.from_name[args[1]](self.options['cluster_queue'])
+            self.cluster = cluster.from_name[args[1]](self.options['cluster_queue'],
+                                                      self.options['temp_dir'])
         elif args[0] == 'nb_core':
             if args[1] == 'None':
                 import multiprocessing
@@ -2869,6 +2880,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if mode is None:
             mode = self.cluster_mode
 
+        print "In launch_job: mode = ",mode
+
         def launch_in_thread(exe, argument, cwd, stdout, control_thread):
             """ way to launch for multicore"""
 
@@ -3023,7 +3036,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         time_mod = max([os.path.getctime(pjoin(self.me_dir,'Cards','run_card.dat')),
                         os.path.getctime(pjoin(self.me_dir,'Cards','param_card.dat'))])
         
-        if self.configured > time_mod:
+        if self.configured > time_mod and hasattr(self, 'random'):
             return
         else:
             self.configured = time.time()

@@ -1,5 +1,11 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.4.9 (XX/XX/12)  JA: Added set option "temp_dir" in madevent interface to
+                      allow running event generation without using central
+                      disk access for the integration channels. Still need
+                      access to central disk for copying, event combination,
+                      running Pythia/PGS/Delphes etc.
+
 1.4.8 (24/07/12)  JA: Cancel running of integration channels where the BW
                       structure makes it impossible to get any events. This
                       can significantly speed up event generation for processes
