@@ -3610,9 +3610,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 card_name = self.detect_card_type(answer)
                 if card_name == 'unknown':
                     card_name = self.ask('Fail to determine the type of the file. Please specify the format',
-                   ['param_card.dat', 'run_card.dat','pythia_card.dat','pgs_card.dat',
+                   'param_card.dat', choices=['param_card.dat', 'run_card.dat','pythia_card.dat','pgs_card.dat',
                     'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
-                elif card_name != 'banner':
+                if card_name != 'banner':
                     logger.info('copy %s as %s' % (answer, card_name))
                     files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
                 elif card_name == 'banner':
@@ -3722,7 +3722,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                  card_name = self.detect_card_type(answer)
                  if card_name == 'unknown':
                      card_name = self.ask('Fail to determine the type of the file. Please specify the format',
-                  ['pythia_card.dat','pgs_card.dat',
+                  'pythia_card.dat',choices=['pythia_card.dat','pgs_card.dat',
                    'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
         
                  logger.info('copy %s as %s' % (answer, card_name))
@@ -3781,7 +3781,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                  card_name = self.detect_card_type(answer)
                  if card_name == 'unknown':
                      card_name = self.ask('Fail to determine the type of the file. Please specify the format',
-                  ['pgs_card.dat', 'delphes_card.dat', 'delphes_trigger.dat'])
+                  'pgs_card.dat', choices=['pgs_card.dat', 'delphes_card.dat', 'delphes_trigger.dat'])
         
                  logger.info('copy %s as %s' % (answer, card_name))
                  files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))

@@ -360,7 +360,7 @@ class AllResults(dict):
 <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
 <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
 <INPUT TYPE=HIDDEN NAME=whattodo VALUE="stop_job">
-<INPUT TYPE=SUBMIT VALUE="Stop Current job">
+<INPUT TYPE=SUBMIT VALUE="Stop Current Job">
 </FORM></TD></TR>""" % {'me_dir': self.path, 'web': self.web}
             else:
                 status_dict['stop_form'] = ""
@@ -949,9 +949,11 @@ class OneTagResults(dict):
                            }                                
                                   
         if self.debug is KeyboardInterrupt:
-            debug = '<br><font color=red>Interupted</font>'
+            debug = '<br><font color=red>Interrupted</font>'
         elif isinstance(self.debug, basestring):
-            debug = '<br> <a href=\'./%s\'> <font color=red>ERROR</font></a>' \
+            if not os.path.isabs(self.debug) and not self.debug.startswith('./'):
+                self.debug = './' + self.debug
+            debug = '<br> <a href=\'%s\'> <font color=red>ERROR</font></a>' \
                                                % (self.debug)
         elif self.debug:
             debug = '<br><font color=red>%s</font>' %self.debug
