@@ -220,7 +220,7 @@ class CondorCluster(Cluster):
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
-        """Submit the """
+        """Submit a job prog to a Condor cluster"""
         
         if self.temp_dir:
             prog = self.prepare_submit(prog, cwd)
@@ -335,14 +335,18 @@ class PBSCluster(Cluster):
     """Basic class for dealing with cluster submission"""
     
     name = 'pbs'
+    job_id = 'PBS_JOBID'
     idle_tag = ['Q']
     running_tag = ['T','E','R']
     complete_tag = ['C']
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
-        """Submit the prog to the cluser"""
+        """Submit a job prog to a PBS cluster"""
         
+        if self.temp_dir:
+            prog = self.prepare_submit(prog, cwd)
+
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
         me_dir = hashlib.md5(me_dir).hexdigest()[-14:]
         if not me_dir[0].isalpha():
@@ -449,6 +453,7 @@ class SGECluster(Cluster):
     # Class written by Arian Abrahantes.
 
     name = 'sge'
+    job_id = 'JOB_ID'
     idle_tag = ['qw', 'hqw','hRqw','w']
     running_tag = ['r','t','Rr','Rt']
 
@@ -462,7 +467,10 @@ class SGECluster(Cluster):
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
-        """Submit the prog to the cluser"""
+        """Submit a job prog to an SGE cluster"""
+
+        if self.temp_dir:
+            prog = self.prepare_submit(prog, cwd)
 
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
         me_dir = hashlib.md5(me_dir).hexdigest()[-10:]
@@ -593,11 +601,15 @@ class LSFCluster(Cluster):
     """Basic class for dealing with cluster submission"""
     
     name = 'lsf'
+    job_id = 'LSB_JOBID'
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
-        """Submit the """
+        """Submit the job prog to an LSF cluster"""
         
+        if self.temp_dir:
+            prog = self.prepare_submit(prog, cwd)
+
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
         me_dir = hashlib.md5(me_dir).hexdigest()[-14:]
         if not me_dir[0].isalpha():
@@ -715,13 +727,17 @@ class GECluster(Cluster):
     """Class for dealing with cluster submission on a GE cluster"""
     
     name = 'ge'
+    job_id = 'JOB_ID'
     idle_tag = ['qw']
     running_tag = ['r']
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
-        """Submit the prog to the cluser"""
+        """Submit a job prog to a GE cluster"""
         
+        if self.temp_dir:
+            prog = self.prepare_submit(prog, cwd)
+
         text = ""
         if cwd is None:
             cwd = os.getcwd()

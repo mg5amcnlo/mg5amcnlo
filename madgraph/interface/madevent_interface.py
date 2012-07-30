@@ -2880,8 +2880,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if mode is None:
             mode = self.cluster_mode
 
-        print "In launch_job: mode = ",mode
-
         def launch_in_thread(exe, argument, cwd, stdout, control_thread):
             """ way to launch for multicore"""
 
