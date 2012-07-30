@@ -777,24 +777,46 @@ This will take effect only in a NEW terminal
         
     def check_save(self, args):
         """ check the validity of the line"""
+        
         if len(args) == 0:
             args.append('options')
         
         if args[0] not in self._save_opts:
             self.help_save()
             raise self.InvalidCmd('wrong \"save\" format')
+        
         if args[0] != 'options' and len(args) != 2:
             self.help_save()
             raise self.InvalidCmd('wrong \"save\" format')
-        
-        if len(args) == 2:
+        elif args[0] != 'options' and len(args) == 2:
             basename = os.path.dirname(args[1])
             if not os.path.exists(basename):
                 raise self.InvalidCmd('%s is not a valid path, please retry' % \
                                                                         args[1])
         
-        elif args[0] == 'options' and len(args) == 1:
-            args.append(pjoin(MG5DIR,'input','mg5_configuration.txt'))            
+        if args[0] == 'options':
+            has_path = None
+            for arg in args[1:]:
+                if arg in ['--auto', '--all']:
+                    continue
+                elif arg.startswith('--'):
+                    raise self.InvalidCmd('unknow command for \'save options\'')
+                else:
+                    basename = os.path.dirname(arg)
+                    if not os.path.exists(basename):
+                        raise self.InvalidCmd('%s is not a valid path, please retry' % \
+                                                                        arg)
+                    elif has_path:
+                        raise self.InvalidCmd('only one path is allowed')
+                    else:
+                        args.remove(arg)
+                        args.insert(1, arg)
+                        has_path = True
+            if not has_path:
+                args.insert(1, pjoin(MG5DIR,'input','mg5_configuration.txt'))     
+                
+
+           
     
     
     def check_set(self, args):
@@ -1668,8 +1690,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'complex_mass_scheme']
     
     # The three options categories are treated on a different footage when a 
-    # set/save configuration occur
-    options_default = {'pythia8_path': './pythia8',
+    # set/save configuration occur. current value are kept in self.options
+    options_configuration = {'pythia8_path': './pythia8',
                        'madanalysis_path': './MadAnalysis',
                        'pythia-pgs_path':'./pythia-pgs',
                        'td_path':'./td',
@@ -1683,12 +1705,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'auto_update':7,
                        'cluster_type': 'condor'}
     
-    options_default_mg = {'group_subprocesses': 'Auto',
+    options_madgraph= {'group_subprocesses': 'Auto',
                           'ignore_six_quark_processes': False,
                           'complex_mass_scheme': False,
                           'gauge':'unitary',
                           'stdout_level':None}
-    options_default_me = {'automatic_html_opening':True,
+    options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
                          'cluster_queue':'madgraph',
                          'nb_core': None,
@@ -2434,7 +2456,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           " which can be used only for required s-channels"
                 mylegids.extend(self._multiparticles[part_name])
             else:
-                mypart = self._curr_model['particles'].find_name(part_name)
+                mypart = self._curr_model['particles'].get_copy(part_name)
                 if mypart:
                     mylegids.append(mypart.get_pdg_code())
 
@@ -2504,7 +2526,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         all_ids = []
         ids=[]
         for part_name in args:
-            mypart = self._curr_model['particles'].find_name(part_name)
+            mypart = self._curr_model['particles'].get_copy(part_name)
             if mypart:
                 ids.append([mypart.get_pdg_code()])
             elif part_name in self._multiparticles:
@@ -2861,6 +2883,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 logger_stderr.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
         if defined_multiparticles:
+            if 'all' in defined_multiparticles:
+                defined_multiparticles.remove('all')
             logger.info("Kept definitions of multiparticles %s unchanged" % \
                                          " / ".join(defined_multiparticles))
 
@@ -2871,6 +2895,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if removed_multiparticles:
             logger.info("Removed obsolete multiparticles %s" % \
                                          " / ".join(removed_multiparticles))
+        
+        # add all tag
+        line = []
+        for part in self._curr_model.get('particles'):
+            line.append('%s %s' % (part.get('name'), part.get('antiname')))
+        line = 'all =' + ' '.join(line)
+        self.do_define(line)
 
     def do_install(self, line):
         """Install optional package from the MG suite."""
@@ -3169,12 +3200,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             ./input/mg5_configuration.txt. assign to default if not define """
 
         if not self.options:
-            self.options = dict(self.options_default_mg)
-            self.options.update(self.options_default_me)
-            self.options.update(self.options_default) 
-            
+            self.options = dict(self.options_configuration)
+            self.options.update(self.options_madgraph)
+            self.options.update(self.options_madevent) 
 
         if not config_path:
+            if os.environ.has_key('MADGRAPH_BASE'):
+                config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
+                self.set_configuration(config_path, final)
+                return
             if 'HOME' in os.environ:
                 config_path = pjoin(os.environ['HOME'],'.mg5', 
                                                         'mg5_configuration.txt')
@@ -3182,9 +3216,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     self.set_configuration(config_path, final=False)
             config_path = os.path.relpath(pjoin(MG5DIR,'input',
                                                        'mg5_configuration.txt'))     
-            self.set_configuration(config_path, final)
-            return
+            return self.set_configuration(config_path, final)
         
+        if not os.path.exists(config_path):
+            files.cp(pjoin(MG5DIR,'input','.mg5_configuration_default.txt'), config_path)
         config_file = open(config_path)
 
         # read the file and extract information
@@ -3224,7 +3259,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     
             elif key.endswith('path'):
                 pass
-            elif key in ['cluster_type', 'automatic_html_opening']:
+            elif key in ['run_mode', 'auto_update']:
+                self.options[key] = int(self.options[key])
+            elif key in ['cluster_type','automatic_html_opening']:
                 pass
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
@@ -3395,7 +3432,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             else:
                 raise self.RWError('Could not load processes from file %s' % args[1])
     
-    def do_save(self, line, check=True):
+    def do_save(self, line, check=True, to_keep={}):
         """Not in help: Save information to file"""
 
         args = self.split_arg(line)
@@ -3418,10 +3455,32 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 raise self.InvalidCmd('No processes to save!')
         
         elif args[0] == 'options':
-            CmdExtended.do_save(self, line, self.options_default,
-                                            self.options_default_me,
-                                            self.options_default_mg)
-
+            # First look at options which should be put in MG5DIR/input
+            to_define = {}
+            for key, default in self.options_configuration.items():
+                if self.options[key] != self.options_configuration[key]:
+                    to_define[key] = self.options[key]
+            
+            if not '--auto' in args:
+                for key, default in self.options_madevent.items():
+                    if self.options[key] != self.options_madevent[key]:
+                        to_define[key] = self.options[key]
+            
+            if '--all' in args:
+                for key, default in self.options_madgraph.items():
+                    if self.options[key] != self.options_madgraph[key]:
+                        to_define[key] = self.options[key]
+            
+            if len(args) >1 and not args[1].startswith('--'):
+                filepath = args[1]
+            else:
+                filepath = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
+            basefile = pjoin(MG5DIR, 'input', '.mg5_configuration_default.txt')
+            basedir = MG5DIR
+            
+            if to_keep:
+                to_define = to_keep
+            self.write_configuration(filepath, basefile, basedir, to_define)
     
     # Set an option
     def do_set(self, line, log=True):
@@ -3930,7 +3989,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         elif self._export_format == 'madevent':          
             # Create configuration file [path to executable] for madevent
             filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
-            self.do_save('options %s' % filename.replace(' ', '\ '), check=False)
+            self.do_save('options %s' % filename.replace(' ', '\ '), check=False, 
+                         to_keep={'mg5_path':MG5DIR})
 
         if self._export_format in ['madevent', 'standalone']:
             

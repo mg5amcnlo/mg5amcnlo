@@ -151,6 +151,10 @@ if rev_nb:
     fsock.write("version_nb   %s\n" % rev_nb)
     fsock.write("last_check   %s\n" % int(time.time()))
     fsock.close()
+    
+# 1. Copy the .mg5_configuration_default.txt to it's default path
+shutil.copy(path.join(filepath, 'input','.mg5_configuration_default.txt'), 
+            path.join(filepath, 'input','mg5_configuration.txt'))
 
 # 2. Create the automatic documentation in the apidoc directory
 

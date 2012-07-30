@@ -108,13 +108,15 @@ class TestCmdShell1(unittest.TestCase):
         
     def test_config(self):
         """check that configuration file is at default value"""
-        
-        config = self.cmd.set_configuration(MG5DIR+'/input/mg5_configuration.txt', test=True)
+        self.maxDiff=None
+        config = self.cmd.set_configuration(MG5DIR+'/input/.mg5_configuration_default.txt', final=False)
+        config =dict(config)
+        del config['stdout_level']
         expected = {'web_browser': None, 
                     'text_editor': None, 
                     'cluster_queue': 'madgraph',
                     'nb_core': None,
-                    'run_mode': '0',
+                    'run_mode': 2,
                     'pythia-pgs_path': './pythia-pgs', 
                     'td_path': './td', 
                     'delphes_path': './Delphes', 
@@ -123,13 +125,14 @@ class TestCmdShell1(unittest.TestCase):
                     'fortran_compiler': None, 
                     'exrootanalysis_path': './ExRootAnalysis', 
                     'eps_viewer': None, 
-                    'automatic_html_opening': 'True', 
-                    'pythia8_path': './pythia8',
+                    'automatic_html_opening': True, 
+                    'pythia8_path': None,
                     'group_subprocesses': 'Auto',
                     'ignore_six_quark_processes': False,
                     'complex_mass_scheme': False,
                     'gauge': 'unitary',
-                    'timeout': '20',
+                    'timeout': 20,
+                    'auto_update': 7
                     }
 
         self.assertEqual(config, expected)

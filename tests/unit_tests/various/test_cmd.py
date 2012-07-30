@@ -18,6 +18,8 @@ import os
 from madgraph import MG5DIR
 import tests.unit_tests as unittest
 
+pjoin = os.path.join
+
 class TestInstall(unittest.TestCase):
     """Check the class linked to a block of the param_card"""
     
@@ -36,3 +38,18 @@ class TestInstall(unittest.TestCase):
                 has2 = True
         self.assertTrue(has1, "The install update command point through the wrong path")
         self.assertTrue(has2, "The install update command point through the wrong path")
+        
+        
+    def test_configuration_file(self):
+        """Check that the configuration file is not modified, if he is present"""
+        
+        #perform this test only for .bzr repository
+        if not os.path.exists(pjoin(MG5DIR, '.bzr')):
+            return
+        if not os.path.exists(pjoin(MG5DIR, 'input','mg5_configuration.txt')):
+            return        
+        
+        text1 = file(pjoin(MG5DIR,'input','.mg5_configuration_default.txt')).read()
+        text2 = file(pjoin(MG5DIR,'input','mg5_configuration.txt')).read()
+        self.assertEqual(text1, text2)
+        

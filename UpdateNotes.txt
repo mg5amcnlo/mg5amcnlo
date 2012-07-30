@@ -1,10 +1,16 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+
 1.5.0 (XX/XX/XX)  OM: Allow MG5 to run in complex mass scheme mode
                       (mg5> set complex_mass True)
                   OM: Allow MG5 to run in feynman Gauge
                       (mg5> set gauge Feynman)
                   OM: Support UFO model with spin 3/2.
+		  FR team: add a file decays.py in the UFO format, this files 
+                      contains the analytical expression for one to two decays
+       		  OM: implement a function for computing the 1 to 2 width on 
+		      the fly. (requires that MG5 install on the computer 
+		      not only the output directory)
                   OM: Add auto-detection if MG5 is up-to-date and propose to
                       apply the various patch if not.
                   OM: MadEvent change automatically the compiler according to 

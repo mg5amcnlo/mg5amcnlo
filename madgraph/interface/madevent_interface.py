@@ -18,6 +18,7 @@
 from __future__ import division
 
 import atexit
+import cmath
 import glob
 import logging
 import math
@@ -31,6 +32,7 @@ import subprocess
 import sys
 import traceback
 import time
+
 
 try:
     import readline
@@ -77,8 +79,6 @@ except Exception, error:
     import internal.check_param_card as check_param_card
     import internal.sum_html as sum_html
     MADEVENT = True
-
-
 
 class MadEventError(Exception):
     pass
@@ -324,6 +324,12 @@ class HelpToCmd(object):
                                ('--laststep=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
 
     def help_calculate_decay_widths(self):
+        
+        if self.ninitial != 1:
+            logger.warning("This command is only valid for prcesses of type A > B C.")
+            logger.warning("This command can not be run in current context.")
+            logger.warning("")
+        
         logger.info("syntax: calculate_decay_widths [run_name] [options])")
         logger.info("-- Calculate decay widths and enter widths and BRs in param_card")
         logger.info("   for a series of processes of type A > B C ...")
@@ -361,6 +367,11 @@ class HelpToCmd(object):
         logger.info("-- Combine the last run in order to write the number of events")
         logger.info("   asked in the run_card.")
         self.run_options_help([])
+        
+    def help_compute_widths(self):
+        logger.info("syntax: compute_widths Particle [Particles] [Param_card] [--output=PATH]")
+        logger.info("-- Compute the widths (ONLY 1->2) for the particles specified.")
+        logger.info("   By default, this takes the current param_card and overwrites it.")       
 
     def help_store_events(self):
         """ """
@@ -697,6 +708,73 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd('refine arguments are suppose to be number')
             
         return True
+    
+    def check_compute_widths(self, args):
+        """check that the model is loadable and check that the format is of the
+        type: PART PATH --output=PATH -f
+        return the model.
+        """
+        
+        # Check that MG5 directory is present .
+        if MADEVENT and not self.options['mg5_path']:
+            raise self.InvalidCmd, '''The automatic computations of widths requires that MG5 is installed on the system.
+            You can install it and set his path in ./Cards/me5_configuration.txt'''
+        elif MADEVENT:
+            sys.path.append(self.options['mg5_path'])
+        try:
+            import models.model_reader as model_reader
+            import models.import_ufo as import_ufo
+        except:
+            raise self.ConfigurationError, '''Can\'t load MG5.
+            The variable mg5_path should not be correctly configure.'''
+            
+        # Import model
+        model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
+                                        decay=True)
+        if not hasattr(model.get('particles')[0], 'partial_widths'):
+            raise self.InvalidCmd, 'The UFO model does not include widths information. Impossible to compute widths automatically'
+            
+        # check if the name are passed to default MG5
+        if '-modelname' in open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')).read():
+            model.pass_particles_name_in_mg_default()        
+        model = model_reader.ModelReader(model)
+        particles_name = dict([(p.get('name'), p.get('pdg_code'))
+                                               for p in model.get('particles')])
+        
+        output = {'model': model, 'model':model, 'force': False, 'output': None, 
+                  'input':None, 'particles': set()}
+        for arg in args:
+            if arg.startswith('--output='):
+                output_path = arg.split('=',1)[1]
+                if not os.path.exists(output_path):
+                    raise self.InvalidCmd, 'Invalid Path for the output. Please retry.'
+                if not os.path.isfile(output_path):
+                    output_path = pjoin(output_path, 'param_card.dat')
+                output['output'] = output_path
+            elif arg == '-f':
+                output['force'] = True
+            elif os.path.isfile(arg):
+                type = self.detect_card_type(arg)
+                if type != 'param_card.dat':
+                    raise self.InvalidCmd , '%s is not a valid param_card.' % arg
+                output['input'] = arg
+            elif arg in particles_name:
+                # should be a particles
+                output['particles'].add(particles_name[arg])
+            elif arg.isdigit() and int(arg) in particles_name.values():
+                output['particles'].add(eval(arg))
+            else:
+                self.help_compute_widths()
+                raise self.InvalidCmd, '%s is not a valid argument for compute_widths' % arg
+
+        if not output['particles']:
+            raise self.InvalidCmd, '''This routines requires at least one particle in order to compute
+            the related width'''
+            
+        if output['output'] is None:
+            output['output'] = output['input']
+
+        return output
     
     def check_combine_events(self, arg):
         """ Check the argument for the combine events command """
@@ -1303,6 +1381,28 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         'delphes' : ['generate_events [OPTIONS]', 'multi_run [OPTIONS]']
     }
     
+    # The three options categories are treated on a different footage when a 
+    # set/save configuration occur. current value are kept in self.options
+    options_configuration = {'pythia8_path': './pythia8',
+                       'madanalysis_path': './MadAnalysis',
+                       'pythia-pgs_path':'./pythia-pgs',
+                       'td_path':'./td',
+                       'delphes_path':'./Delphes',
+                       'exrootanalysis_path':'./ExRootAnalysis',
+                       'timeout': 20,
+                       'web_browser':None,
+                       'eps_viewer':None,
+                       'text_editor':None,
+                       'fortran_compiler':None,
+                       'auto_update':7,
+                       'cluster_type': 'condor'}
+    
+    options_madgraph= {'stdout_level':None}
+    
+    options_madevent = {'automatic_html_opening':True,
+                         'run_mode':2,
+                         'cluster_queue':'madgraph',
+                         'nb_core': None}
     
     
     ############################################################################
@@ -1331,7 +1431,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             raise MadEventAlreadyRunning, message
         else:
             os.system('touch %s' % pjoin(me_dir,'RunWeb'))
-            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
+            misc.Popen([pjoin('bin', 'internal', 'gen_cardhtml-pl')], cwd=me_dir)
       
         self.to_store = []
         self.run_name = None
@@ -1419,47 +1519,35 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             return False
             
     ############################################################################
-    def set_configuration(self, config_path=None):
+    def set_configuration(self, config_path=None, final=True, initdir=None):
         """ assign all configuration variable from file 
             ./Cards/mg5_configuration.txt. assign to default if not define """
-            
-        self.options = {'pythia8_path': './pythia8',
-                              'pythia-pgs_path': '../pythia-pgs',
-                              'delphes_path': '../Delphes',
-                              'madanalysis_path': '../MadAnalysis',
-                              'exrootanalysis_path': '../ExRootAnalysis',
-                              'td_path': '../',
-                              'web_browser':None,
-                              'eps_viewer':None,
-                              'text_editor':None,
-                              'fortran_compiler':None,
-                              'cluster_mode':'pbs',
-                              'automatic_html_opening':True,
-                              'run_mode':0,
-                              'cluster_queue':'madgraph',
-                              'nb_core':None,
-                              'timeout':20}
         
-        if os.environ.has_key('MADGRAPH_BASE'):
-            config_file = open(os.path.join(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt'))
-        elif not config_path:
-            try:
-                config_file = open(os.path.join(os.environ['HOME'],'.mg5','mg5_configuration.txt'))
-            except:
-                if self.me_dir:
-                    config_file = open(os.path.relpath(
-                          os.path.join(self.me_dir, 'Cards', 'me5_configuration.txt')))
-                    main = self.me_dir
-                elif not MADEVENT:
-                    config_file = open(os.path.relpath(
-                          os.path.join(MG5DIR, 'input', 'mg5_configuration.txt')))                    
-                    main = MG5DIR
-        else:
-            config_file = open(config_path)
-            if self.me_dir:
-                main = self.me_dir
-            else:
-                main = MG5DIR
+        if not hasattr(self, 'options') or not self.options:   
+            self.options = dict(self.options_configuration)
+            self.options.update(self.options_madgraph)
+            self.options.update(self.options_madevent) 
+        
+        if not config_path:
+            if os.environ.has_key('MADGRAPH_BASE'):
+                config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
+                self.set_configuration(config_path, final)
+                return
+            if 'HOME' in os.environ:
+                config_path = pjoin(os.environ['HOME'],'.mg5', 
+                                                        'mg5_configuration.txt')
+                if os.path.exists(config_path):
+                    self.set_configuration(config_path, final=False)
+            me5_config = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
+            self.set_configuration(me5_config, final=False, initdir=self.me_dir)
+                
+            if self.options.has_key('mg5_path'):
+                MG5DIR = self.options['mg5_path']
+                config_file = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
+                self.set_configuration(config_file, final=False,initdir=MG5DIR)
+            return self.set_configuration(me5_config, final,initdir=self.me_dir)
+
+        config_file = open(config_path)
 
         # read the file and extract information
         logger.info('load configuration from %s ' % config_file.name)
@@ -1474,26 +1562,44 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             else:
                 name = name.strip()
                 value = value.strip()
-                self.options[name] = value
-                if value.lower() == "none":
-                    self.options[name] = None
+                if name.endswith('_path'):
+                    path = value
+                    if os.path.isdir(path):
+                        self.options[name] = os.path.realpath(path)
+                        continue
+                    if not initdir:
+                        continue
+                    path = pjoin(initdir, self.options[key])
+                    if os.path.isdir(path):
+                        self.options[name] = os.path.realpath(path)
+                        continue
+                else:
+                    self.options[name] = value
+                    if value.lower() == "none":
+                        self.options[name] = None
+
+        if not final:
+            return self.options # the return is usefull for unittest
+
 
         # Treat each expected input
         # delphes/pythia/... path
         for key in self.options:
+            # Final cross check for the path
             if key.endswith('path'):
-                if self.options[key] in ['None', None]:
-                    self.options[key] = ''
-                    continue
-                path = os.path.join(self.me_dir, self.options[key])
+                path = self.options[key]
                 if os.path.isdir(path):
                     self.options[key] = os.path.realpath(path)
                     continue
-                if os.path.isdir(self.options[key]):
-                    self.options[key] = os.path.realpath(self.options[key])
+                path = pjoin(self.me_dir, self.options[key])
+                if os.path.isdir(path):
+                    self.options[key] = os.path.realpath(path)
                     continue
-                elif not os.path.isdir(self.options[key]):
-                    self.options[key] = ''
+                elif self.options.has_key('mg5_path') and self.options['mg5_path']: 
+                    path = pjoin(self.options['mg5_path'], self.options[key])
+                    if os.path.isdir(path):
+                         self.options[key] = os.path.realpath(path)
+                         continue
             elif key.startswith('cluster'):
                 pass              
             elif key == 'automatic_html_opening':
@@ -1620,9 +1726,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if not args[1] in [0,1,2,'0','1','2']:
                 raise self.InvalidCmd, 'run_mode should be 0, 1 or 2.'
             self.cluster_mode = int(args[1])
-            self.options['cluster_mode'] =  self.cluster_mode
+            self.options['run_mode'] =  self.cluster_mode
         elif args[0] == 'cluster_type':
-            self.options['cluster_mode'] = args[1]
+            self.options['cluster_type'] = args[1]
             self.cluster = cluster.from_name[args[1]](self.options['cluster_queue'])
         elif args[0] == 'nb_core':
             if args[1] == 'None':
@@ -1679,6 +1785,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Check argument's validity
         mode = self.check_generate_events(args)
         self.ask_run_configuration(mode)
+        #check that the param_card doesn't have a auto for the width
+        self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat'))
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
@@ -1807,9 +1915,20 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     particle_dict[particles[0]].append([particles[1:], result/nb_output])
                 except KeyError:
                     particle_dict[particles[0]] = [[particles[1:], result/nb_output]]
-
+    
+        self.update_width_in_param_card(particle_dict,
+                        initial = pjoin(self.me_dir, 'Cards', 'param_card.dat'),
+                        output=pjoin(self.me_dir, 'Events', run_name, "param_card.dat"))
+    
+    def update_width_in_param_card(self, decay_info, initial=None, output=None):
         # Open the param_card.dat and insert the calculated decays and BRs
-        param_card_file = open(pjoin(self.me_dir, 'Cards', 'param_card.dat'))
+        
+        if not initial:
+            initial = pjoin(self.me_dir,'Cards','param_card.dat')
+        if not output:
+            output = initial
+        
+        param_card_file = open(initial)
         param_card = param_card_file.read().split('\n')
         param_card_file.close()
 
@@ -1819,12 +1938,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         while line_number < len(param_card):
             line = param_card[line_number]
             if line.lower().startswith('decay'):
-                # Read decay if particle in particle_dict 
+                # Read decay if particle in decay_info 
                 # DECAY  6   1.455100e+00                                    
                 line = param_card.pop(line_number)
                 line = line.split()
                 particle = 0
-                if int(line[1]) not in particle_dict:
+                if int(line[1]) not in decay_info:
                     try: # If formatting is wrong, don't want this particle
                         particle = int(line[1])
                         width = float(line[2])
@@ -1846,13 +1965,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                         line=param_card[line_number]
                         continue
                     try:
-                        particle_dict[particle].append([decay_products, partial_width])
+                        decay_info[particle].append([decay_products, partial_width])
                     except KeyError:
-                        particle_dict[particle] = [[decay_products, partial_width]]
+                        decay_info[particle] = [[decay_products, partial_width]]
                     line=param_card[line_number]
-                if particle and particle not in particle_dict:
+                if particle and particle not in decay_info:
                     # No decays given, only total width       
-                    particle_dict[particle] = [[[], width]]
+                    decay_info[particle] = [[[], width]]
             else: # Not decay                              
                 line_number += 1
         # Clean out possible remaining comments at the end of the card
@@ -1863,28 +1982,24 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         param_card.append("#\n#*************************")
         param_card.append("#      Decay widths      *")
         param_card.append("#*************************")
-        for key in sorted(particle_dict.keys()):
-            width = sum([r for p,r in particle_dict[key]])
+        for key in sorted(decay_info.keys()):
+            width = sum([r for p,r in decay_info[key]])
             param_card.append("#\n#      PDG        Width")
-            param_card.append("DECAY  %i   %e" % (key, width))
+            param_card.append("DECAY  %i   %e" % (key, width.real))
             if not width:
                 continue
-            if particle_dict[key][0][0]:
+            if decay_info[key][0][0]:
                 param_card.append("#  BR             NDA  ID1    ID2   ...")
-                brs = [[val[1]/width, val[0]] for val in particle_dict[key] if val[1]]
+                brs = [[(val[1]/width).real, val[0]] for val in decay_info[key] if val[1]]
                 for val in sorted(brs, reverse=True):
-                    param_card.append("   %e   %i    %s" % (val[0], len(val[1]),
-                                           "  ".join([str(v) for v in val[1]])))
-        output_name = pjoin(self.me_dir, 'Events', run_name, "param_card.dat")
-        decay_table = open(output_name, 'w')
+                    param_card.append("   %e   %i    %s # %s" % 
+                                      (val[0].real, len(val[1]),
+                                       "  ".join([str(v) for v in val[1]]),
+                                       val[0] * width
+                                       ))
+        decay_table = open(output, 'w')
         decay_table.write("\n".join(param_card) + "\n")
-        logger.info("Results written to %s" %  output_name)
-
-
-            
-
-
-
+        logger.info("Results written to %s" %  output)
 
     ############################################################################
     def do_multi_run(self, line):
@@ -2159,7 +2274,48 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
            os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
                 if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
                     os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
-                self.create_root_file(output='%s/unweighted_events.root' % self.run_name)
+                self.create_root_file(output='%s/unweighted_events.root' % \
+                                                                  self.run_name)
+    
+    ############################################################################                                                                                                           
+    def do_compute_widths(self, line):
+        """Require MG5 directory: Compute automatically the widths of a set 
+        of particles"""
+
+        args = self.split_arg(line)
+        # check the argument and return those in a dictionary format
+        args = self.check_compute_widths(args)
+                
+        if args['input']:
+            files.cp(args['input'], pjoin(self.me_dir, 'Cards'))
+        elif not args['force']: 
+            self.ask_edit_cards(['param'], [], plot=False)
+        
+        model = args['model']
+        
+        data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 
+                                                              'param_card.dat'))
+        
+        # find UFO particles linked to the require names. 
+        decay_info = {}        
+        for pid in args['particles']:
+            particle = model.get_particle(pid)
+            decay_info[pid] = []
+            mass = abs(eval(str(particle.get('mass')), data).real)
+            data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 
+                                            'param_card.dat'), scale= mass)
+            for mode, expr in particle.partial_widths.items():
+                tmp_mass = mass    
+                for p in mode:
+                    tmp_mass -= abs(eval(str(p.mass), data))
+                if tmp_mass <=0:
+                    continue
+                
+                decay_to = [p.get('pdg_code') for p in mode]
+                value = eval(expr,{'cmath':cmath},data).real
+                decay_info[particle.get('pdg_code')].append([decay_to, value])
+                          
+        self.update_width_in_param_card(decay_info, args['input'], args['output'])
         
     ############################################################################ 
     def do_store_events(self, line):
@@ -3582,7 +3738,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
                 else:
                     path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
-                self.exec_cmd('open %s' % path)                    
+                self.exec_cmd('open %s' % path)
+                if answer == 'param':
+                    self.check_param_card(path)                                    
             else:
                 # detect which card is provide
                 card_name = self.detect_card_type(answer)
@@ -3593,6 +3751,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 elif card_name != 'banner':
                     logger.info('copy %s as %s' % (answer, card_name))
                     files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
+                    if card_name == 'param_card.dat':
+                        self.check_param_card(pjoin(self.me_dir, 'Cards', card_name))                        
                 elif card_name == 'banner':
                     banner_mod.split_banner(answer, self.me_dir, proc_card=False)
                     logger.info('Splitting the banner in it\'s component')
@@ -3605,8 +3765,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                 break
                     else:
                         clean_pointless_card(mode)
-                    
-                    
+
     ############################################################################
     def ask_pythia_run_configuration(self, mode=None):
         """Ask the question when launching pythia"""
@@ -3714,15 +3873,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                  
         return mode
 
-    def ask_edit_cards(self, cards, fct_args):
-        """Question for cards editions (used for pgs/delphes)"""
+    def ask_edit_cards(self, cards, fct_args, plot=True):
+        """Question for cards editions (used for pgs/delphes/compute_widths)"""
 
         if self.force or '--no_default' in fct_args:
             return
         
         card_name = {'pgs': 'pgs_card.dat',
                      'delphes': 'delphes_card.dat',
-                     'trigger': 'delphes_trigger.dat'
+                     'trigger': 'delphes_trigger.dat',
+                     'param': 'param_card.dat'
                      }
 
         # Ask the user if he wants to edit any of the files
@@ -3737,7 +3897,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             question += '  %s / %-9s : %s\n' % (i+1, mode, card_name[mode])
             card[i+1] = mode
         
-        if self.options['madanalysis_path']:
+        if plot and self.options['madanalysis_path']:
              question += '  9 / %-9s : plot_card.dat\n' % 'plot'
              possible_answer.append(9)
              possible_answer.append('plot')
@@ -3758,8 +3918,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                  # detect which card is provide
                  card_name = self.detect_card_type(answer)
                  if card_name == 'unknown':
-                     card_name = self.ask('Fail to determine the type of the file. Please specify the format',
-                  ['pgs_card.dat', 'delphes_card.dat', 'delphes_trigger.dat'])
+                     logger.warning('Fail to determine the type of the file. Impossible to load it')
+                     continue
         
                  logger.info('copy %s as %s' % (answer, card_name))
                  files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
@@ -3839,6 +3999,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         else:
             return 'unknown'
 
+    def check_param_card(self, path):
+        """Check that all the width are define in the param_card.
+        If some width are set on 'Auto', call the computation tools."""
+        
+        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto''',re.I)
+        text = open(path).read()
+        pdg = pattern.findall(text)
+        if pdg:
+            logger.info('Computing the width set on auto in the param_card.dat')
+            self.do_compute_widths('%s %s' % (' '.join(pdg), path))
 
 #===============================================================================
 # MadEventCmd

@@ -63,7 +63,7 @@
 #! Enter the number of day between two check (0 means never)
 #! A question is always asked before any update
 #!
-#auto_update = 0
+#auto_update = 7
 
 #!###############################################################################
 #!  INFO FOR MADEVENT 
