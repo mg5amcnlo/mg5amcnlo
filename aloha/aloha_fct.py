@@ -19,7 +19,73 @@ class WrongFermionFlow(Exception):
 
 ################################################################################    
 ##  CHECK FLOW VALIDITY OF A LORENTZ STRUCTURE
-################################################################################    
+################################################################################
+def get_fermion_flow(expression, nb_fermion):
+    """Get the fermion flow follows the UFO convention
+        {I1:O1, I2:O2,...}"""
+        
+    assert nb_fermion != 0 and (nb_fermion % 2) == 0     
+    # Need to expand the expression in order to have a simple sum of expression
+    try:
+        expr = eval(expression)
+    except:
+        return
+    expr = expr.simplify()
+    
+    #expr is now a valid AddVariable object if they are a sum or
+    if expr.vartype != 1: # not AddVariable 
+        expr = [expr] # put in a list to allow comparison
+
+    out = {}
+    for term in expr:
+        if term.vartype == 0: # Single object
+            if not term.spin_ind in [[1,2], [2,1]]:
+                raise WrongFermionFlow, 'Fermion should be the first particles of any interactions'
+            if isinstance(term, (Gamma, Gamma5, Sigma)):
+                if term.spin_ind == [2,1]:
+                    out[1] = 2
+                else:
+                    out[2] = 1
+                    
+        elif term.vartype == 2: # product of object
+            link, rlink = {}, {}
+            for obj in term:
+                obj = aloha_lib.KERNEL.objs[obj]
+                if not obj.spin_ind:
+                    continue
+                ind1, ind2 = obj.spin_ind
+                #if isinstance(obj, (Gamma, Sigma)):
+                #    if (ind1 in range(1, nb_fermion+1) and ind1 % 2 == 1) or \
+                #       (ind2 in range(2, nb_fermion+1) and ind2 % 2 == 0 ):
+                #        raise WrongFermionFlow, 'Not coherent Incoming/outcoming fermion flow'
+                if ind1 not in link.keys():
+                    link[ind1] = ind2
+                else:
+                    rlink[ind1] = ind2
+                if ind2 not in link.keys():
+                    link[ind2] = ind1
+                else: 
+                    rlink[ind2] = ind1                    
+            for i in range(1, nb_fermion,2):
+                old = []
+                pos = i
+                while 1:
+                    old.append(pos)
+                    if pos in link.keys() and link[pos] not in old:
+                        pos = link[pos]
+                    elif pos in rlink.keys() and rlink[pos] not in old:
+                        pos = rlink[pos]
+                    else:
+                        out[pos] = i
+                        break
+    
+    if not len(out) == nb_fermion //2:
+        raise WrongFermionFlow, 'Not coherent Incoming/outcoming fermion flow'
+    
+    return out
+
+
+    
 def check_flow_validity(expression, nb_fermion):
     """Check that the fermion flow follows the UFO convention
        1) Only one flow is defined and is 1 -> 2, 3 -> 4, ...

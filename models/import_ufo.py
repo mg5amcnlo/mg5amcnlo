@@ -249,6 +249,8 @@ class UFOMG5Converter(object):
         # Find which particles is in the 3/3bar color states (retrun {id: 3/-3})
         color_info = self.find_color_anti_color_rep()
 
+        # load the lorentz structure
+        self.model.set('lorentz', self.ufomodel.all_lorentz)
 
         logger.info('load vertices')
         for interaction_info in self.ufomodel.all_vertices:
@@ -434,50 +436,78 @@ class UFOMG5Converter(object):
         
         particles = base_objects.ParticleList(particles)
         
+        # Import Lorentz content:
+        lorentz = [helas for helas in interaction_info.lorentz]
+        
         # Check the coherence of the Fermion Flow
-        nb_fermion = sum([p.is_fermion() and 1 or 0 for p in particles])
+        nb_fermion = sum([ 1 if p.is_fermion() else 0 for p in particles])
         try:
-            if nb_fermion:
+            if nb_fermion == 2:
+                # Fermion Flow is suppose to be dealt by UFO
                 [aloha_fct.check_flow_validity(helas.structure, nb_fermion) \
                                           for helas in interaction_info.lorentz
                                           if helas.name not in self.checked_lor]
                 self.checked_lor.update(set([helas.name for helas in interaction_info.lorentz]))
+                flows = [({}, lorentz)]
+            elif nb_fermion:
+                # MG5 needs to correct the particle order
+                fermion_flow = [aloha_fct.get_fermion_flow(helas.structure, nb_fermion) \
+                                          for helas in interaction_info.lorentz]
+                flows = [] # (flow, [structure])
+                for flow, structure in zip(fermion_flow, interaction_info.lorentz):
+                    for base, data in flows:
+                        if base == flow:
+                            data.append(structure)
+                            break
+                    else:
+                        flows.append((flow, [structure]))    
+            else:
+                flows = [({}, lorentz)]
         except aloha_fct.WrongFermionFlow, error:
             text = 'Fermion Flow error for interactions %s: %s: %s\n %s' % \
              (', '.join([p.name for p in interaction_info.particles]), 
                                              helas.name, helas.structure, error)
             raise InvalidModel, text
+        
+        
+        for flow, lorentz in flows:
             
-        # Import Lorentz content:
-        lorentz = [helas.name for helas in interaction_info.lorentz]
+            lorentz = [helas.name for helas in lorentz] 
+            # Import color information:
+            colors = [self.treat_color(color_obj, interaction_info, color_info) 
+                                        for color_obj in interaction_info.color]
+            
+            new_particles, new_lorentz = self.adapt_flow(flow, particles, lorentz, nb_fermion)
         
-        # Import color information:
-        colors = [self.treat_color(color_obj, interaction_info, color_info) for color_obj in \
-                                    interaction_info.color]
-        
-        order_to_int={}
-        for key, couplings in interaction_info.couplings.items():
-            if not isinstance(couplings, list):
-                couplings = [couplings]
-            for coupling in couplings:
-                order = tuple(coupling.order.items())
-                if '1' in order:
-                    raise InvalidModel, '''Some couplings have \'1\' order. 
-                    This is not allowed in MG. 
-                    Please defines an additional coupling to your model''' 
-                if order in order_to_int:
-                    order_to_int[order].get('couplings')[key] = coupling.name
-                else:
-                    # Initialize a new interaction with a new id tag
-                    interaction = base_objects.Interaction({'id':len(self.interactions)+1})                
-                    interaction.set('particles', particles)              
-                    interaction.set('lorentz', lorentz)
-                    interaction.set('couplings', {key: coupling.name})
-                    interaction.set('orders', coupling.order)            
-                    interaction.set('color', colors)
-                    order_to_int[order] = interaction
-                    # add to the interactions
-                    self.interactions.append(interaction)
+            order_to_int={}
+            for key, couplings in interaction_info.couplings.items():
+                if not isinstance(couplings, list):
+                    couplings = [couplings]
+                if interaction_info.lorentz[key[1]].name not in lorentz:
+                    continue 
+                #reset key
+                key = (key[0],[i for i,lor in enumerate(lorentz) \
+                            if lor == interaction_info.lorentz[key[1]].name][0])
+                
+                for coupling in couplings:
+                    order = tuple(coupling.order.items())
+                    if '1' in order:
+                        raise InvalidModel, '''Some couplings have \'1\' order. 
+                        This is not allowed in MG. 
+                        Please defines an additional coupling to your model''' 
+                    if order in order_to_int:
+                        order_to_int[order].get('couplings')[key] = coupling.name
+                    else:
+                        # Initialize a new interaction with a new id tag
+                        interaction = base_objects.Interaction({'id':len(self.interactions)+1})                
+                        interaction.set('particles', new_particles)              
+                        interaction.set('lorentz', new_lorentz)
+                        interaction.set('couplings', {key: coupling.name})
+                        interaction.set('orders', coupling.order)            
+                        interaction.set('color', colors)
+                        order_to_int[order] = interaction
+                        # add to the interactions
+                        self.interactions.append(interaction)
 
         # check if this interaction conserve the charge defined
         for charge in list(self.conservecharge): #duplicate to allow modification
@@ -490,6 +520,69 @@ class UFOMG5Converter(object):
             if abs(total) > 1e-12:
                 logger.info('The model has interaction violating the charge: %s' % charge)
                 self.conservecharge.discard(charge)
+        
+        
+    def adapt_flow(self, flow, particles, lorentz, nb_fermion):
+        """ensure that the flow of particles/lorentz are coherent with flow 
+           and return a correct version if needed"""
+           
+        if not flow:
+            return particles, lorentz
+           
+        expected = {}
+        for i in range(nb_fermion//2):
+            expected[i+1] = i+2
+        
+        if flow == expected:
+            return particles, lorentz
+
+        new_particles = []
+        switch = {}
+        for i in range(1,nb_fermion+1):
+            if not i in flow.keys():
+                continue
+
+            new_particles.append(particles[i-1])
+            switch[i] = len(new_particles)
+            new_particles.append(particles[flow[i]-1])
+            switch[flow[i]] = len(new_particles)
+
+        flipping_pat = re.compile('(?<=[\(,])\s*(\d)\s*(?=[\),])')
+        def replace(matched):
+            value = int(matched.groups()[0])
+            return str(switch[value])
+        
+        new_lorentz = []
+        for lorentz_name in lorentz:
+            lor = self.model.get_lorentz(lorentz_name)
+            expr = lor.structure
+            new_expr = flipping_pat.sub(replace, expr)
+            if new_expr in self.model.lorentz_expr2name:
+                new_lorentz.append(self.model.lorentz_expr2name[new_expr])
+            else:
+                raise Exception, '''The lorentz structure "%s" is not implemented 
+                in lorentz.py. As a temporary fix, please add it''' % new_expr
+
+
+        print '*************'
+        print flow
+        print switch
+        print [p.get('name') for p in particles]
+        print [p.get('name') for p in new_particles]
+        print lorentz
+        print new_lorentz
+        return particles, lorentz
+
+                
+                
+                
+        
+        
+        
+        
+           
+   
+   
     
     _pat_T = re.compile(r'T\((?P<first>\d*),(?P<second>\d*)\)')
     _pat_id = re.compile(r'Identity\((?P<first>\d*),(?P<second>\d*)\)')
