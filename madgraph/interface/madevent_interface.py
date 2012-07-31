@@ -1406,7 +1406,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     
     
     ############################################################################
-    def __init__(self, me_dir = None, *completekey, **stdin):
+    def __init__(self, me_dir = None, options={}, *completekey, **stdin):
         """ add information to the cmd """
 
         CmdExtended.__init__(self, *completekey, **stdin)
@@ -1416,7 +1416,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             me_dir = root_path
         
         self.me_dir = me_dir
-
+        self.options = options        
+        
         # usefull shortcut
         self.status = pjoin(self.me_dir, 'status')
         self.error =  pjoin(self.me_dir, 'error')
@@ -1462,7 +1463,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         self.configured = 0 # time for reading the card
         self._options = {} # for compatibility with extended_cmd
-        
+
     ############################################################################    
     def split_arg(self, line, error=True):
         """split argument and remove run_options"""
@@ -1522,12 +1523,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def set_configuration(self, config_path=None, final=True, initdir=None):
         """ assign all configuration variable from file 
             ./Cards/mg5_configuration.txt. assign to default if not define """
-        
-        if not hasattr(self, 'options') or not self.options:   
+
+        if not hasattr(self, 'options') or not self.options:  
             self.options = dict(self.options_configuration)
             self.options.update(self.options_madgraph)
             self.options.update(self.options_madevent) 
-        
         if not config_path:
             if os.environ.has_key('MADGRAPH_BASE'):
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
@@ -1588,6 +1588,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             # Final cross check for the path
             if key.endswith('path'):
                 path = self.options[key]
+                if path is None:
+                    continue
                 if os.path.isdir(path):
                     self.options[key] = os.path.realpath(path)
                     continue
@@ -3638,6 +3640,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """Ask the question when launching generate_events/multi_run"""
         
         available_mode = ['0', '1']
+
         if self.options['pythia-pgs_path']:
             available_mode.append('2')
             available_mode.append('3')

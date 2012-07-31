@@ -2697,13 +2697,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     if hasattr(self._curr_model, 'set_parameters_and_couplings'):
                         self._curr_model.set_parameters_and_couplings()
                 if self.options['gauge']=='unitary':
-                    if 1 not in self._curr_model.get('gauge') :
+                    if 0 not in self._curr_model.get('gauge') :
                         logger.warning('Change the gauge to Feynman since the model does not allow unitary gauge') 
                         self.do_set('gauge Feynman', log=False)
                         self.do_import(line)
                         return                        
                 else:
-                    if 0 not in self._curr_model.get('gauge') :
+                    if 1 not in self._curr_model.get('gauge') :
                         logger.warning('Change the gauge to unitary since the model does not allow Feynman gauge')
                         self._curr_model = None
                         self.do_set('gauge unitary', log= False)
@@ -3317,15 +3317,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self.check_launch(args, options)
         options = options.__dict__
         # args is now MODE PATH
-        
+
         if args[0].startswith('standalone'):
-            ext_program = launch_ext.SALauncher(self, args[1], **options)
+            ext_program = launch_ext.SALauncher(self, args[1], options=self.options, **options)
         elif args[0] == 'madevent':
             if options['interactive']:
                 if hasattr(self, 'do_shell'):
-                    ME = madevent_interface.MadEventCmdShell(me_dir=args[1])
+                    ME = madevent_interface.MadEventCmdShell(me_dir=args[1], options=self.options)
                 else:
-                     ME = madevent_interface.MadEventCmd(me_dir=args[1])
+                     ME = madevent_interface.MadEventCmd(me_dir=args[1],options=self.options)
                 # transfer interactive configuration
                 config_line = [l for l in self.history if l.strip().startswith('set')]
                 for line in config_line:
@@ -3346,12 +3346,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if len(generate_info.split('>')[0].strip().split())>1:
                 ext_program = launch_ext.MELauncher(args[1], self,
                                 shell = hasattr(self, 'do_shell'),
-                                **options)
+                                options=self.options,**options)
             else:
                 # This is a width computation
                 ext_program = launch_ext.MELauncher(args[1], self, unit='GeV',
                                 shell = hasattr(self, 'do_shell'),
-                                **options)
+                                options=self.options,**options)
 
         elif args[0] == 'pythia8':
             ext_program = launch_ext.Pythia8Launcher( args[1], self, **options)
