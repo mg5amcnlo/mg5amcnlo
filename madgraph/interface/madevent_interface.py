@@ -1602,6 +1602,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     if os.path.isdir(path):
                          self.options[key] = os.path.realpath(path)
                          continue
+                self.options[key] = None
             elif key.startswith('cluster'):
                 pass              
             elif key == 'automatic_html_opening':
