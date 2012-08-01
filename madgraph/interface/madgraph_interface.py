@@ -3080,13 +3080,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         else:
             raise self.InvalidCmd('Unknown mode for command install update')
         
-        if not os.path.exists(os.path.join(MG5DIR,'input','.autoupdate')):
+        if not os.path.exists(os.path.join(MG5DIR,'input','.autoupdate')) or \
+                os.path.exists(os.path.join(MG5DIR,'.bzr')):
             error_text = """This version of MG5 doesn\'t support auto-update. Common reasons are:
             1) This version was loaded via bazaar (use bzr pull to update instead)
             2) This version is a beta release of MG5."""
             if mode == 'userrequest':
                 raise self.ConfigurationError(error_text)
-            logger
             return 
         
         
