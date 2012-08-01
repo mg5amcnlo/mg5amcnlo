@@ -509,7 +509,7 @@ class CheckValidForCmd(object):
                 
     def check_set(self, args):
         """ check the validity of the line"""
-        
+
         if len(args) < 2:
             self.help_set()
             raise self.InvalidCmd('set needs an option and an argument')
@@ -520,7 +520,8 @@ class CheckValidForCmd(object):
                                   self._set_options)
         
         if args[0] in ['stdout_level']:
-            if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL']:
+            if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL'] \
+                                                       and not args[1].isdigit():
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')  
                 
@@ -1406,7 +1407,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     
     
     ############################################################################
-    def __init__(self, me_dir = None, *completekey, **stdin):
+    def __init__(self, me_dir = None, options={}, *completekey, **stdin):
         """ add information to the cmd """
 
         CmdExtended.__init__(self, *completekey, **stdin)
@@ -1416,7 +1417,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             me_dir = root_path
         
         self.me_dir = me_dir
-
+        self.options = options        
+        
         # usefull shortcut
         self.status = pjoin(self.me_dir, 'status')
         self.error =  pjoin(self.me_dir, 'error')
@@ -1462,7 +1464,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         self.configured = 0 # time for reading the card
         self._options = {} # for compatibility with extended_cmd
-        
+
     ############################################################################    
     def split_arg(self, line, error=True):
         """split argument and remove run_options"""
@@ -1522,12 +1524,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def set_configuration(self, config_path=None, final=True, initdir=None):
         """ assign all configuration variable from file 
             ./Cards/mg5_configuration.txt. assign to default if not define """
-        
-        if not hasattr(self, 'options') or not self.options:   
+
+        if not hasattr(self, 'options') or not self.options:  
             self.options = dict(self.options_configuration)
             self.options.update(self.options_madgraph)
             self.options.update(self.options_madevent) 
-        
         if not config_path:
             if os.environ.has_key('MADGRAPH_BASE'):
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
@@ -1588,6 +1589,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             # Final cross check for the path
             if key.endswith('path'):
                 path = self.options[key]
+                if path is None:
+                    continue
                 if os.path.isdir(path):
                     self.options[key] = os.path.realpath(path)
                     continue
@@ -1600,6 +1603,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     if os.path.isdir(path):
                          self.options[key] = os.path.realpath(path)
                          continue
+                self.options[key] = None
             elif key.startswith('cluster'):
                 pass              
             elif key == 'automatic_html_opening':
@@ -1608,7 +1612,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             elif key not in ['text_editor','eps_viewer','web_browser']:
                 # Default: try to set parameter
                 try:
-                    self.do_set("%s %s" % (key, self.options[key]))
+                    self.do_set("%s %s" % (key, self.options[key]), log=False)
                 except self.InvalidCmd:
                     logger.warning("Option %s from config file not understood" \
                                    % key)
@@ -1705,18 +1709,21 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         misc.open_file(file_path)
 
     ############################################################################
-    def do_set(self, line):
+    def do_set(self, line, log=True):
         """Set an option, which will be default for coming generations/outputs
         """
 
         args = self.split_arg(line) 
         # Check the validity of the arguments
         self.check_set(args)
-
         if args[0] == "stdout_level":
-            logging.root.setLevel(eval('logging.' + args[1]))
-            logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
-            logger.info('set output information to level: %s' % args[1])
+            if args[1].isdigit():
+                logging.root.setLevel(int(args[1]))
+                logging.getLogger('madgraph').setLevel(int(args[1]))
+            else:
+                logging.root.setLevel(eval('logging.' + args[1]))
+                logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
+            if log: logger.info('set output information to level: %s' % args[1])
         elif args[0] == "fortran_compiler":
             self.options['fortran_compiler'] = args[1]
             current = misc.detect_current_compiler(pjoin(self.me_dir,'Source','make_opts'))
@@ -2313,6 +2320,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 
                 decay_to = [p.get('pdg_code') for p in mode]
                 value = eval(expr,{'cmath':cmath},data).real
+                if -1e-10 < value < 0:
+                    value = 0
+                if -1e-5 < value < 0:
+                    logger.warning('Partial width for %s > %s negative: %s automatically set to zero' %
+                                   (particle.get('name'), ' '.join([p.get('name') for p in mode]), value))
+                    value = 0
+                elif value < 0:
+                    raise Exception, 'Partial width for %s > %s negative: %s automatically set to zero' % \
+                                   (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
                 decay_info[particle.get('pdg_code')].append([decay_to, value])
                           
         self.update_width_in_param_card(decay_info, args['input'], args['output'])
@@ -3629,6 +3645,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """Ask the question when launching generate_events/multi_run"""
         
         available_mode = ['0', '1']
+
         if self.options['pythia-pgs_path']:
             available_mode.append('2')
             available_mode.append('3')

@@ -142,10 +142,35 @@ class TestFRDecay(unittest.TestCase):
             self.assertEqual('True', decay_framework.has_same_decay(name))
             print 'done in %s s' % (time.time() - start)
         
-        
-        
-        
-        
+    def test_decay_nmssm1(self):
+        decay_framework = DecayComparator('NMSSM_UFO')
+
+        for name in decay_framework.particles_id.keys()[:17]:
+            import time
+            start = time.time()
+            print 'comparing decay for %s' % name
+            self.assertEqual('True', decay_framework.has_same_decay(name))
+            print 'done in %s s' % (time.time() - start)
+    
+    def test_decay_nmssm2(self):
+        decay_framework = DecayComparator('NMSSM_UFO')
+
+        for name in decay_framework.particles_id.keys()[17:34]:
+            import time
+            start = time.time()
+            print 'comparing decay for %s' % name
+            self.assertEqual('True', decay_framework.has_same_decay(name))
+            print 'done in %s s' % (time.time() - start)
+    
+    def test_decay_nmssm3(self):
+        decay_framework = DecayComparator('NMSSM_UFO')
+
+        for name in decay_framework.particles_id.keys()[34:]:
+            import time
+            start = time.time()
+            print 'comparing decay for %s' % name
+            self.assertEqual('True', decay_framework.has_same_decay(name))
+            print 'done in %s s' % (time.time() - start)
         
         
         

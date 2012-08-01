@@ -46,6 +46,8 @@ def get_fermion_flow(expression, nb_fermion):
                     out[1] = 2
                 else:
                     out[2] = 1
+            elif isinstance(term, Identity):
+                out[1] = 2
                     
         elif term.vartype == 2: # product of object
             link, rlink = {}, {}
@@ -54,18 +56,14 @@ def get_fermion_flow(expression, nb_fermion):
                 if not obj.spin_ind:
                     continue
                 ind1, ind2 = obj.spin_ind
-                #if isinstance(obj, (Gamma, Sigma)):
-                #    if (ind1 in range(1, nb_fermion+1) and ind1 % 2 == 1) or \
-                #       (ind2 in range(2, nb_fermion+1) and ind2 % 2 == 0 ):
-                #        raise WrongFermionFlow, 'Not coherent Incoming/outcoming fermion flow'
                 if ind1 not in link.keys():
                     link[ind1] = ind2
                 else:
-                    rlink[ind1] = ind2
-                if ind2 not in link.keys():
-                    link[ind2] = ind1
+                    raise WrongFermionFlow, 'a spin indices should appear only once on the left indices of an object: %s' % expr
+                if ind2 not in rlink.keys():
+                    rlink[ind2] = ind1
                 else: 
-                    rlink[ind2] = ind1                    
+                    raise WrongFermionFlow, 'a spin indices should appear only once on the left indices of an object: %s' % expr               
             for i in range(1, nb_fermion,2):
                 old = []
                 pos = i
@@ -76,12 +74,15 @@ def get_fermion_flow(expression, nb_fermion):
                     elif pos in rlink.keys() and rlink[pos] not in old:
                         pos = rlink[pos]
                     else:
-                        out[pos] = i
-                        break
-    
+                        if pos in link.keys() and i in rlink.keys():
+                            out[i] = pos
+                            break
+                        elif pos in rlink.keys() and i in link.keys():
+                            out[pos] = i
+                        else:
+                            raise WrongFermionFlow,  'incoherent IO state: %s' % expr
     if not len(out) == nb_fermion //2:
         raise WrongFermionFlow, 'Not coherent Incoming/outcoming fermion flow'
-    
     return out
 
 
