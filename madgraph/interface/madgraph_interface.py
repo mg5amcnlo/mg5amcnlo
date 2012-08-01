@@ -3114,12 +3114,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 #            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_build_nb')
             filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_test_build_nb')
             signal.alarm(0)
-            web_version = int(filetext.read())            
-        except (TimeOutError, ValueError):
+            web_version = int(filetext.read().strip())            
+        except (TimeOutError, ValueError, IOError):
+            signal.alarm(0)
             print 'failed to connect server'
             if mode == 'mg5_end':
                 # wait 24h before next check
-                fsock = open(os.path.join(root_path,'input','.autoupdate'),'w')
+                fsock = open(os.path.join(MG5DIR,'input','.autoupdate'),'w')
                 fsock.write("version_nb   %s\n" % data['version_nb'])
                 fsock.write("last_check   %s\n" % \
                 int(time.time()) - 3600 * 24 * (self.options['auto_update'] -1))
@@ -3129,12 +3130,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if web_version == data['version_nb']:
             logger.info('No new version of MG5 available')
             # update .autoupdate to prevent a too close check
-            fsock = open(os.path.join(root_path,'input','.autoupdate'),'w')
+            fsock = open(os.path.join(MG5DIR,'input','.autoupdate'),'w')
             fsock.write("version_nb   %s\n" % data['version_nb'])
             fsock.write("last_check   %s\n" % int(time.time()))
             fsock.close()
         elif data['version_nb'] > web_version:
-            logger_stderr('impossible to update: local %s web %s' % (data['version_nb'], web_version))
+            logger_stderr.info('impossible to update: local %s web %s' % (data['version_nb'], web_version))
             return
         else:
             if not force:
@@ -3158,14 +3159,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 print 'apply patch %s' % (i+1)
                 text = filetext.read()
                 p= subprocess.Popen(['patch', '-p1'], stdin=subprocess.PIPE, 
-                                                                  cwd=root_path)
+                                                                  cwd=MG5DIR)
                 p.communicate(text)
                 
             logger.info('Checking current version. (type ctrl-c to bypass the check)')
             subprocess.call([os.path.join('tests','test_manager.py')],
-                                                                  cwd=root_path)
+                                                                  cwd=MG5DIR)
             
-            fsock = open(os.path.join(root_path,'input','.autoupdate'),'w')
+            fsock = open(os.path.join(MG5DIR,'input','.autoupdate'),'w')
             if not fail:
                 fsock.write("version_nb   %s\n" % web_version)
             else:
@@ -3176,7 +3177,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             sys.exit(0)
         elif answer == 'n':
             # prevent for a future check
-            fsock = open(os.path.join(root_path,'input','.autoupdate'),'w')
+            fsock = open(os.path.join(MG5DIR,'input','.autoupdate'),'w')
             fsock.write("version_nb   %s\n" % data['version_nb'])
             fsock.write("last_check   %s\n" % int(time.time()))
             fsock.close()
