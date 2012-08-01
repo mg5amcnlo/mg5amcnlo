@@ -17,6 +17,19 @@ c	MET tag
 c
 	integer met_lhco,opt_lhco
 	common/LHCO_met_tag/met_lhco,opt_lhco
+
+c
+c LHCO input
+c
+      integer tag_init(3:max_particles),type(max_particles),run_number,trigger
+      double precision eta_init(max_particles),phi_init(max_particles),
+     &pt_init(max_particles),j_mass(max_particles),ntrk(max_particles),
+     &btag(max_particles),had_em(max_particles),dummy1(max_particles),
+     &dummy2(max_particles)
+      common/LHCO_input/eta_init,phi_init,pt_init,
+     &j_mass,ntrk,btag,had_em,dummy1,dummy2,tag_init,type,run_number,
+     &trigger
+
 c
 c	generated
 c

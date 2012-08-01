@@ -19,18 +19,6 @@ c     particle index mapping
  
       character*30 param_card_name
       common/to_param_card_name/param_card_name
-c
-c LHCO input
-c
-      integer tag_init(3:nexternal),type(nexternal),run_number,trigger
-      double precision eta_init(nexternal),phi_init(nexternal),
-     &pt_init(nexternal),j_mass(nexternal),ntrk(nexternal),
-     &btag(nexternal),had_em(nexternal),dummy1(nexternal),
-     &dummy2(nexternal)
-      common/LHCO_input/eta_init,phi_init,pt_init,
-     &j_mass,ntrk,btag,had_em,dummy1,dummy2,tag_init,type,run_number,
-     &trigger
-
 
 C     info on final state particles
       integer num_inv,num_jet,num_bjet,num_e,num_ae,num_mu,num_amu,

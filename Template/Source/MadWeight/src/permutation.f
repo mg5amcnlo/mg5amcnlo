@@ -387,11 +387,11 @@ C
 
       integer tag_lhco(3:nexternal)
       common/lhco_order/tag_lhco
-      integer tag_init(3:nexternal),type(nexternal),run_number,trigger
-      double precision eta_init(nexternal),phi_init(nexternal),
-     &pt_init(nexternal),j_mass(nexternal),ntrk(nexternal),
-     &btag(nexternal),had_em(nexternal),dummy1(nexternal),
-     &dummy2(nexternal)
+      integer tag_init(3:max_particles),type(max_particles),run_number,trigger
+      double precision eta_init(max_particles),phi_init(max_particles),
+     &pt_init(max_particles),j_mass(max_particles),ntrk(max_particles),
+     &btag(max_particles),had_em(max_particles),dummy1(max_particles),
+     &dummy2(max_particles)
       common/LHCO_input/eta_init,phi_init,pt_init,
      &j_mass,ntrk,btag,had_em,dummy1,dummy2,tag_init,type,run_number,
      &trigger
