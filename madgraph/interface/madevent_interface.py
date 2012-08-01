@@ -509,7 +509,7 @@ class CheckValidForCmd(object):
                 
     def check_set(self, args):
         """ check the validity of the line"""
-        
+
         if len(args) < 2:
             self.help_set()
             raise self.InvalidCmd('set needs an option and an argument')
@@ -520,7 +520,8 @@ class CheckValidForCmd(object):
                                   self._set_options)
         
         if args[0] in ['stdout_level']:
-            if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL']:
+            if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL'] \
+                                                       and not args[1].isdigit():
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')  
                 
@@ -1611,7 +1612,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             elif key not in ['text_editor','eps_viewer','web_browser']:
                 # Default: try to set parameter
                 try:
-                    self.do_set("%s %s" % (key, self.options[key]))
+                    self.do_set("%s %s" % (key, self.options[key]), log=False)
                 except self.InvalidCmd:
                     logger.warning("Option %s from config file not understood" \
                                    % key)
@@ -1708,18 +1709,21 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         misc.open_file(file_path)
 
     ############################################################################
-    def do_set(self, line):
+    def do_set(self, line, log=True):
         """Set an option, which will be default for coming generations/outputs
         """
 
         args = self.split_arg(line) 
         # Check the validity of the arguments
         self.check_set(args)
-
         if args[0] == "stdout_level":
-            logging.root.setLevel(eval('logging.' + args[1]))
-            logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
-            logger.info('set output information to level: %s' % args[1])
+            if args[1].isdigit():
+                logging.root.setLevel(int(args[1]))
+                logging.getLogger('madgraph').setLevel(int(args[1]))
+            else:
+                logging.root.setLevel(eval('logging.' + args[1]))
+                logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
+            if log: logger.info('set output information to level: %s' % args[1])
         elif args[0] == "fortran_compiler":
             self.options['fortran_compiler'] = args[1]
             current = misc.detect_current_compiler(pjoin(self.me_dir,'Source','make_opts'))
