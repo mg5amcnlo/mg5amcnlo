@@ -563,7 +563,7 @@ class UFOMG5Converter(object):
                 raise Exception, '''The lorentz structure "%s" is not implemented 
                 in lorentz.py. As a temporary fix, please add it''' % new_expr
 
-        return particles, lorentz
+        return new_particles, new_lorentz
 
                 
                 
