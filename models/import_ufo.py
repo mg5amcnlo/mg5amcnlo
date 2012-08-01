@@ -536,7 +536,7 @@ class UFOMG5Converter(object):
         if flow == expected:
             return particles, lorentz
 
-        new_particles = []
+        new_particles = base_objects.ParticleList()
         switch = {}
         for i in range(1,nb_fermion+1):
             if not i in flow.keys():
