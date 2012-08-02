@@ -31,7 +31,6 @@ def get_fermion_flow(expression, nb_fermion):
     except:
         return
     expr = expr.simplify()
-    
     #expr is now a valid AddVariable object if they are a sum or
     if expr.vartype != 1: # not AddVariable 
         expr = [expr] # put in a list to allow comparison
@@ -63,7 +62,8 @@ def get_fermion_flow(expression, nb_fermion):
                 if ind2 not in rlink.keys():
                     rlink[ind2] = ind1
                 else: 
-                    raise WrongFermionFlow, 'a spin indices should appear only once on the left indices of an object: %s' % expr               
+                    raise WrongFermionFlow, 'a spin indices should appear only once on the left indices of an object: %s' % expr             
+             
             for i in range(1, nb_fermion,2):
                 old = []
                 pos = i
@@ -79,6 +79,7 @@ def get_fermion_flow(expression, nb_fermion):
                             break
                         elif pos in rlink.keys() and i in link.keys():
                             out[pos] = i
+                            break
                         else:
                             raise WrongFermionFlow,  'incoherent IO state: %s' % expr
     if not len(out) == nb_fermion //2:

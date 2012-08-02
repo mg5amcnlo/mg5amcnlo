@@ -559,7 +559,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 self.do_quit('')
         except KeyboardInterrupt as error:
             self.stop_on_keyboard_stop()
-            #self.nice_error_handling(error, line)
+            if __debug__:
+                self.nice_config_error(error, line)
             logger.error(self.keyboard_stop_msg)
     
     def stop_on_keyboard_stop(self):
