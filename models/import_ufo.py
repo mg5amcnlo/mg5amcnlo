@@ -560,10 +560,37 @@ class UFOMG5Converter(object):
             if new_expr in self.model.lorentz_expr2name:
                 new_lorentz.append(self.model.lorentz_expr2name[new_expr])
             else:
-                raise Exception, '''The lorentz structure "%s" is not implemented 
-                in lorentz.py. As a temporary fix, please add it''' % new_expr
+                name = '%sMG5' % lorentz_name
+                spins = [p.get('spin') for p in particles]
+                new_lorentz.append(self.add_lorentz(name, spins, new_expr))
+                #raise Exception, '''The lorentz structure "%s" is not implemented 
+                #in lorentz.py. As a temporary fix, please add it''' % new_expr
 
         return new_particles, new_lorentz
+    
+    def add_lorentz(self, name, spins , expr):
+        """ Add a Lorentz expression which is not present in the UFO """
+        
+        new = self.model['lorentz'][0].__class__(name = name,
+                spins = spins,
+                structure = expr)
+        
+        self.model['lorentz'].append(new)
+        self.model.create_lorentz_dict()
+        return name
+
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
 
                 
                 

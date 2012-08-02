@@ -615,7 +615,14 @@ class AbstractALOHAModel(dict):
         if save:
             self.save()
     
-
+    
+    def add_Lorentz_object(self, lorentzlist):
+        """add a series of Lorentz structure created dynamically"""
+        
+        for lor in lorentzlist:
+            if not hasattr(self.model.lorentz, lor.name):
+                setattr(self.model.lorentz, lor.name, lor)
+    
     def compute_subset(self, data):
         """ create the requested ALOHA routine. 
         data should be a list of tuple (lorentz, tag, outgoing)
