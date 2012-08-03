@@ -604,7 +604,7 @@ class UFOMG5Converter(object):
                 for l in range(k+1,len(new_order)):
                     if new_order[l] < new_order[k]:
                         sign *= -1           
-        return new_particles, new_lorentz, '' if sign ==1 else '-'
+        return new_particles, lorentz, '' if sign ==1 else '-'
 
 
 
