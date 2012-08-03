@@ -87,7 +87,6 @@ def get_fermion_flow(expression, nb_fermion):
                             raise WrongFermionFlow,  'incoherent IO state: %s' % expr
     if not len(out) == nb_fermion //2:
         raise WrongFermionFlow, 'Not coherent Incoming/outcoming fermion flow'
-    print 'retrun flow', out
     return out
 
 

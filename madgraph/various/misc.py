@@ -147,7 +147,7 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
     """compile a given directory"""
 
     try:
-        p = subprocess.Popen(['make'] + arg, stdout=subprocess.PIPE, 
+        p = subprocess.Popen(['make','-j2'] + arg, stdout=subprocess.PIPE, 
                              stderr=subprocess.STDOUT, cwd=cwd, **opt)
         (out, err) = p.communicate()
     except OSError, error:

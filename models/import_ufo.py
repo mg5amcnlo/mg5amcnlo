@@ -448,6 +448,10 @@ class UFOMG5Converter(object):
                                           for helas in interaction_info.lorentz
                                           if helas.name not in self.checked_lor]
                 self.checked_lor.update(set([helas.name for helas in interaction_info.lorentz]))
+            elif nb_fermion:
+                if any(p.selfconjugate for p in interaction_info.particles):
+                    text = "Majorana can not be dealt in 4/6/... fermion interactions"
+                    raise InvalidModel, text
         except aloha_fct.WrongFermionFlow, error:
             text = 'Fermion Flow error for interactions %s: %s: %s\n %s' % \
              (', '.join([p.name for p in interaction_info.particles]), 
@@ -472,10 +476,8 @@ class UFOMG5Converter(object):
             if nb_fermion > 2:
                 flow = aloha_fct.get_fermion_flow(interaction_info.lorentz[key[1]].structure, 
                                                                      nb_fermion)
-                print  interaction_info.lorentz[key[1]].name, flow,
                 coupling_sign = self.get_sign_flow(flow, nb_fermion)
-                print coupling_sign
-            else:
+            else:                
                 coupling_sign = ''            
             for coupling in couplings:
                 order = tuple(coupling.order.items())
