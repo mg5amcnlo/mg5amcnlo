@@ -64,7 +64,9 @@ def get_fermion_flow(expression, nb_fermion):
                 else: 
                     raise WrongFermionFlow, 'a spin indices should appear only once on the left indices of an object: %s' % expr             
              
-            for i in range(1, nb_fermion,2):
+            for i in range(1, nb_fermion):
+                if i in out.keys() or i in out.value():
+                    continue
                 old = []
                 pos = i
                 while 1:

@@ -448,21 +448,6 @@ class UFOMG5Converter(object):
                                           for helas in interaction_info.lorentz
                                           if helas.name not in self.checked_lor]
                 self.checked_lor.update(set([helas.name for helas in interaction_info.lorentz]))
-                flows = [({}, lorentz)]
-            elif nb_fermion:
-                # MG5 needs to correct the particle order
-                fermion_flow = [aloha_fct.get_fermion_flow(helas.structure, nb_fermion) \
-                                          for helas in interaction_info.lorentz]
-                flows = [] # (flow, [structure])
-                for flow, structure in zip(fermion_flow, interaction_info.lorentz):
-                    for base, data in flows:
-                        if base == flow:
-                            data.append(structure)
-                            break
-                    else:
-                        flows.append((flow, [structure]))    
-            else:
-                flows = [({}, lorentz)]
         except aloha_fct.WrongFermionFlow, error:
             text = 'Fermion Flow error for interactions %s: %s: %s\n %s' % \
              (', '.join([p.name for p in interaction_info.particles]), 
@@ -470,48 +455,44 @@ class UFOMG5Converter(object):
             raise InvalidModel, text
         
         
-        for flow, lorentz in flows:
             
-            lorentz = [helas.name for helas in lorentz] 
-            # Import color information:
-            colors = [self.treat_color(color_obj, interaction_info, color_info) 
-                                        for color_obj in interaction_info.color]
-            
-            new_particles, new_lorentz, coupling_sign = \
-                           self.adapt_flow(flow, particles, lorentz, nb_fermion)
-                
+        lorentz = [helas.name for helas in lorentz] 
+        # Import color information:
+        colors = [self.treat_color(color_obj, interaction_info, color_info) 
+                                    for color_obj in interaction_info.color]
         
-            order_to_int={}
-            for key, couplings in interaction_info.couplings.items():
-                if not isinstance(couplings, list):
-                    couplings = [couplings]
-                if interaction_info.lorentz[key[1]].name not in lorentz:
-                    continue 
-                #reset key
-                key = (key[0],[i for i,lor in enumerate(lorentz) \
-                            if lor == interaction_info.lorentz[key[1]].name][0])
-                
-                for coupling in couplings:
-                    order = tuple(coupling.order.items())
-                    if '1' in order:
-                        raise InvalidModel, '''Some couplings have \'1\' order. 
-                        This is not allowed in MG. 
-                        Please defines an additional coupling to your model''' 
-                    if order in order_to_int:
-                        order_to_int[order].get('couplings')[key] = '%s%s' % \
-                                                   (coupling_sign,coupling.name)
-                    else:
-                        # Initialize a new interaction with a new id tag
-                        interaction = base_objects.Interaction({'id':len(self.interactions)+1})                
-                        interaction.set('particles', new_particles)              
-                        interaction.set('lorentz', new_lorentz)
-                        interaction.set('couplings', {key: 
-                                         '%s%s' %(coupling_sign,coupling.name)})
-                        interaction.set('orders', coupling.order)            
-                        interaction.set('color', colors)
-                        order_to_int[order] = interaction
-                        # add to the interactions
-                        self.interactions.append(interaction)
+        
+        order_to_int={}
+        for key, couplings in interaction_info.couplings.items():
+            if not isinstance(couplings, list):
+                couplings = [couplings]
+            if interaction_info.lorentz[key[1]].name not in lorentz:
+                continue 
+            # get the sign for the coupling (if we need to adapt the flow)
+            flow = aloha_fct.get_fermion_flow(interaction_info.lorentz[key[1]], 
+                                                                     nb_fermion) 
+            coupling_sign = self.get_sign_flow(flow, nb_fermion)            
+            for coupling in couplings:
+                order = tuple(coupling.order.items())
+                if '1' in order:
+                    raise InvalidModel, '''Some couplings have \'1\' order. 
+                    This is not allowed in MG. 
+                    Please defines an additional coupling to your model''' 
+                if order in order_to_int:
+                    order_to_int[order].get('couplings')[key] = '%s%s' % \
+                                               (coupling_sign,coupling.name)
+                else:
+                    # Initialize a new interaction with a new id tag
+                    interaction = base_objects.Interaction({'id':len(self.interactions)+1})                
+                    interaction.set('particles', new_particles)              
+                    interaction.set('lorentz', new_lorentz)
+                    interaction.set('couplings', {key: 
+                                     '%s%s' %(coupling_sign,coupling.name)})
+                    interaction.set('orders', coupling.order)            
+                    interaction.set('color', colors)
+                    order_to_int[order] = interaction
+                    # add to the interactions
+                    self.interactions.append(interaction)
 
         # check if this interaction conserve the charge defined
         for charge in list(self.conservecharge): #duplicate to allow modification
@@ -526,87 +507,46 @@ class UFOMG5Converter(object):
                 self.conservecharge.discard(charge)
         
         
-    def adapt_flow(self, flow, particles, lorentz, nb_fermion):
+    def get_sign_flow(self, flow, nb_fermion):
         """ensure that the flow of particles/lorentz are coherent with flow 
            and return a correct version if needed"""
            
-        if not flow:
-            return particles, lorentz, ''
+        if not flow or nb_fermion < 4:
+            return ''
            
         expected = {}
         for i in range(nb_fermion//2):
             expected[i+1] = i+2
         
         if flow == expected:
-            return particles, lorentz, ''
+            return ''
 
-        new_particles = base_objects.ParticleList()
         switch = {}
         for i in range(1,nb_fermion+1):
             if not i in flow.keys():
                 continue
-
-            new_particles.append(particles[i-1])
-            switch[i] = len(new_particles)
-            new_particles.append(particles[flow[i]-1])
-            switch[flow[i]] = len(new_particles)
-
-        flipping_pat = re.compile('(?<=[\(,])\s*(\d)\s*(?=[\),])')
-        def replace(matched):
-            value = int(matched.groups()[0])
-            return str(switch[value])
-        
-        new_lorentz = []
-        for lorentz_name in lorentz:
-            lor = self.model.get_lorentz(lorentz_name)
-            expr = lor.structure
-            new_expr = flipping_pat.sub(replace, expr)
-            if new_expr in self.model.lorentz_expr2name:
-                new_lorentz.append(self.model.lorentz_expr2name[new_expr])
-            else:
-                name = '%sMG5' % lorentz_name
-                spins = [p.get('spin') for p in particles]
-                new_lorentz.append(self.add_lorentz(name, spins, new_expr))
-                #raise Exception, '''The lorentz structure "%s" is not implemented 
-                #in lorentz.py. As a temporary fix, please add it''' % new_expr
+            switch[i] = len(switch)
+            switch[flow[i]] = len(switch)
 
         # compute the sign of the permutation
         sign = 1
         done = []
-        for i, part in enumerate(particles[:nb_fermion]):
-            if i in done:
-                continue # already treated
-
-            pdg = part.get_pdg_code()
-            nb = [j for j, p in enumerate(particles) 
-                                                      if p.get_pdg_code()==pdg]
-            nb = range(0, nb_fermion)
-            done += nb
-            nb2 = [j for j, p in enumerate(new_particles) 
-                                                      if p.get_pdg_code()==pdg]
-            nb2 = range(0, nb_fermion)
-            if len(nb) == 1:
-                continue
-            assert len(nb)
-            
-            # make a list of consecutive number which correspond to the new
-            # order of the particles in the new list.
-            new_order = []
-            for id in nb: # id is the position in the particles order (starts 0)
-                nid = switch[id+1]-1 # nid is the position in the new_particles 
-                                    #order (starts 0)
-                new_order.append(nb2.index(nid)) # get the position in nb2
-                                                 # ensure that new_order is 
-                                                 # a permutation of 0, 1, ...
-            assert set(new_order) == set(range(len(nb)))
-            # compute the sign:
-            
-            sign =1
-            for k in range(len(new_order)-1):
-                for l in range(k+1,len(new_order)):
-                    if new_order[l] < new_order[k]:
-                        sign *= -1           
-        return particles, lorentz, '' if sign ==1 else '-'
+   
+        # make a list of consecutive number which correspond to the new
+        # order of the particles in the new list.
+        new_order = []
+        for id in range(nb_fermion): # id is the position in the particles order (starts 0)
+            nid = switch[id+1]-1 # nid is the position in the new_particles 
+                                 #order (starts 0)
+            new_order.append(nid)
+             
+        # compute the sign:
+        sign =1
+        for k in range(len(new_order)-1):
+            for l in range(k+1,len(new_order)):
+                if new_order[l] < new_order[k]:
+                    sign *= -1           
+        return  '' if sign ==1 else '-'
 
 
 
