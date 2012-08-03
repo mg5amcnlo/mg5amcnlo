@@ -28,7 +28,8 @@ def get_fermion_flow(expression, nb_fermion):
     # Need to expand the expression in order to have a simple sum of expression
     try:
         expr = eval(expression)
-    except:
+    except Exception as error:
+        print error
         return
     expr = expr.simplify()
     #expr is now a valid AddVariable object if they are a sum or
@@ -65,7 +66,7 @@ def get_fermion_flow(expression, nb_fermion):
                     raise WrongFermionFlow, 'a spin indices should appear only once on the left indices of an object: %s' % expr             
              
             for i in range(1, nb_fermion):
-                if i in out.keys() or i in out.value():
+                if i in out.keys() or i in out.values():
                     continue
                 old = []
                 pos = i
@@ -86,6 +87,7 @@ def get_fermion_flow(expression, nb_fermion):
                             raise WrongFermionFlow,  'incoherent IO state: %s' % expr
     if not len(out) == nb_fermion //2:
         raise WrongFermionFlow, 'Not coherent Incoming/outcoming fermion flow'
+    print 'retrun flow', out
     return out
 
 

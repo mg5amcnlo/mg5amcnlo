@@ -469,9 +469,14 @@ class UFOMG5Converter(object):
             if interaction_info.lorentz[key[1]].name not in lorentz:
                 continue 
             # get the sign for the coupling (if we need to adapt the flow)
-            flow = aloha_fct.get_fermion_flow(interaction_info.lorentz[key[1]], 
-                                                                     nb_fermion) 
-            coupling_sign = self.get_sign_flow(flow, nb_fermion)            
+            if nb_fermion > 2:
+                flow = aloha_fct.get_fermion_flow(interaction_info.lorentz[key[1]].structure, 
+                                                                     nb_fermion)
+                print  interaction_info.lorentz[key[1]].name, flow,
+                coupling_sign = self.get_sign_flow(flow, nb_fermion)
+                print coupling_sign
+            else:
+                coupling_sign = ''            
             for coupling in couplings:
                 order = tuple(coupling.order.items())
                 if '1' in order:
@@ -484,8 +489,8 @@ class UFOMG5Converter(object):
                 else:
                     # Initialize a new interaction with a new id tag
                     interaction = base_objects.Interaction({'id':len(self.interactions)+1})                
-                    interaction.set('particles', new_particles)              
-                    interaction.set('lorentz', new_lorentz)
+                    interaction.set('particles', particles)              
+                    interaction.set('lorentz', lorentz)
                     interaction.set('couplings', {key: 
                                      '%s%s' %(coupling_sign,coupling.name)})
                     interaction.set('orders', coupling.order)            
