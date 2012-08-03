@@ -573,16 +573,18 @@ class UFOMG5Converter(object):
         # compute the sign of the permutation
         sign = 1
         done = []
-        for i, part in enumerate(particles):
+        for i, part in enumerate(particles[:nb_fermion]):
             if i in done:
                 continue # already treated
 
             pdg = part.get_pdg_code()
             nb = [j for j, p in enumerate(particles) 
                                                       if p.get_pdg_code()==pdg]
+            nb = range(0, nb_fermion)
             done += nb
             nb2 = [j for j, p in enumerate(new_particles) 
                                                       if p.get_pdg_code()==pdg]
+            nb2 = range(0, nb_fermion)
             if len(nb) == 1:
                 continue
             assert len(nb)
@@ -604,7 +606,7 @@ class UFOMG5Converter(object):
                 for l in range(k+1,len(new_order)):
                     if new_order[l] < new_order[k]:
                         sign *= -1           
-        return new_particles, lorentz, '' if sign ==1 else '-'
+        return particles, lorentz, '' if sign ==1 else '-'
 
 
 
