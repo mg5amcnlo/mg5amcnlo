@@ -1570,7 +1570,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                         continue
                     if not initdir:
                         continue
-                    path = pjoin(initdir, self.options[key])
+                    path = pjoin(initdir, self.options[name])
                     if os.path.isdir(path):
                         self.options[name] = os.path.realpath(path)
                         continue
