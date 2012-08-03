@@ -578,10 +578,10 @@ class UFOMG5Converter(object):
 
             pdg = part.get_pdg_code()
             nb = [j for j, p in enumerate(particles) 
-                                                      if p.get('pdg_code')==pdg]
+                                                      if p.get_pdg_code()==pdg]
             done += nb
             nb2 = [j for j, p in enumerate(new_particles) 
-                                                      if p.get('pdg_code')==pdg]
+                                                      if p.get_pdg_code()==pdg]
             if len(nb) == 1:
                 continue
             assert len(nb)
