@@ -576,7 +576,7 @@ class UFOMG5Converter(object):
             if i in done:
                 continue # already treated
 
-            pdg = part.get('pdg_code')
+            pdg = part.get_pdg_code()
             nb = [j for j, p in enumerate(particles) 
                                                       if p.get('pdg_code')==pdg]
             done += nb
