@@ -113,7 +113,7 @@ def check_for_help(opt):
                 try:
                     int(opt_pat.search(opt[i]).group('opt').lower())
                 except:
-                    os.system('cat ./Source/MadWeight/MWP_template/Readme.txt')
+                    os.system('cat ./Source/MadWeight/Readme.txt')
                     sys.exit()
             if opt_pat.search(opt[i]).group('opt').lower()=='version':
                 print 'MadWeight Version'
