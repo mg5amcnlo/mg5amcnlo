@@ -629,9 +629,9 @@ class TestCmdShell2(unittest.TestCase,
                 self.assertAlmostEqual(value, 1.951829785476705e-2)
 
     def test_load_feynman(self):
-        """ Test that the complex_mass compile in fortran """
+        """ Test that feynman gauge assignment works """
         
-        self.do('import model SM_Feyn')
+        self.do('import model sm')
         # check that the model is correctly loaded (has some goldstone)
         nb_goldstone = 0
         for part in self.cmd._curr_model['particles']:
@@ -639,7 +639,7 @@ class TestCmdShell2(unittest.TestCase,
                 nb_goldstone += 1
         self.assertEqual(nb_goldstone, 0)
         self.do('set gauge Feynman')
-        self.do('import model SM_Feyn')
+        self.do('import model sm')
         # check that the model is correctly loaded (has some goldstone)
         nb_goldstone = 0
         for part in self.cmd._curr_model['particles']:

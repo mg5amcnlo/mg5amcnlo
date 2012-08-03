@@ -477,7 +477,9 @@ class UFOMG5Converter(object):
             colors = [self.treat_color(color_obj, interaction_info, color_info) 
                                         for color_obj in interaction_info.color]
             
-            new_particles, new_lorentz = self.adapt_flow(flow, particles, lorentz, nb_fermion)
+            new_particles, new_lorentz, coupling_sign = \
+                           self.adapt_flow(flow, particles, lorentz, nb_fermion)
+                
         
             order_to_int={}
             for key, couplings in interaction_info.couplings.items():
@@ -502,7 +504,8 @@ class UFOMG5Converter(object):
                         interaction = base_objects.Interaction({'id':len(self.interactions)+1})                
                         interaction.set('particles', new_particles)              
                         interaction.set('lorentz', new_lorentz)
-                        interaction.set('couplings', {key: coupling.name})
+                        interaction.set('couplings', {key: 
+                                         '%s%s' %(coupling_sign,coupling.name)})
                         interaction.set('orders', coupling.order)            
                         interaction.set('color', colors)
                         order_to_int[order] = interaction
@@ -527,14 +530,14 @@ class UFOMG5Converter(object):
            and return a correct version if needed"""
            
         if not flow:
-            return particles, lorentz
+            return particles, lorentz, ''
            
         expected = {}
         for i in range(nb_fermion//2):
             expected[i+1] = i+2
         
         if flow == expected:
-            return particles, lorentz
+            return particles, lorentz, ''
 
         new_particles = base_objects.ParticleList()
         switch = {}
@@ -566,7 +569,44 @@ class UFOMG5Converter(object):
                 #raise Exception, '''The lorentz structure "%s" is not implemented 
                 #in lorentz.py. As a temporary fix, please add it''' % new_expr
 
-        return new_particles, new_lorentz
+        # compute the sign of the permutation
+        sign = 1
+        done = []
+        for i, part in enumerate(particles):
+            if i in done:
+                continue # already treated
+
+            pdg = part.get('pdg_code')
+            nb = [j for j, p in enumerate(particles) 
+                                                      if p.get('pdg_code')==pdg]
+            done += nb
+            nb2 = [j for j, p in enumerate(new_particles) 
+                                                      if p.get('pdg_code')==pdg]
+            if len(nb) == 1:
+                continue
+            assert len(nb)
+            
+            # make a list of consecutive number which correspond to the new
+            # order of the particles in the new list.
+            new_order = []
+            for id in nb: # id is the position in the particles order (starts 0)
+                nid = switch[id+1]-1 # nid is the position in the new_particles 
+                                    #order (starts 0)
+                new_order.append(nb2.index(nid)) # get the position in nb2
+                                                 # ensure that new_order is 
+                                                 # a permutation of 0, 1, ...
+            assert set(new_order) == set(range(len(nb)))
+            # compute the sign:
+            
+            sign =1
+            for k in range(len(new_order)-1):
+                for l in range(k+1,len(new_order)):
+                    if new_order[l] < new_order[k]:
+                        sign *= -1           
+        return new_particles, new_lorentz, '' if sign ==1 else '-'
+
+
+
     
     def add_lorentz(self, name, spins , expr):
         """ Add a Lorentz expression which is not present in the UFO """
