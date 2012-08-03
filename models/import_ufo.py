@@ -498,7 +498,8 @@ class UFOMG5Converter(object):
                         This is not allowed in MG. 
                         Please defines an additional coupling to your model''' 
                     if order in order_to_int:
-                        order_to_int[order].get('couplings')[key] = coupling.name
+                        order_to_int[order].get('couplings')[key] = '%s%s' % \
+                                                   (coupling_sign,coupling.name)
                     else:
                         # Initialize a new interaction with a new id tag
                         interaction = base_objects.Interaction({'id':len(self.interactions)+1})                
