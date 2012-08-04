@@ -4,8 +4,8 @@ c Set kinematic-dependent upper bound (veto) in MC subtraction terms
 
 c Define lower and upper veto range (see MC subtraction terms)
       double precision frac_low,frac_upp
-      parameter (frac_low=0.05d0)
-      parameter (frac_upp=0.5d0)
+      parameter (frac_low=0.1d0)
+      parameter (frac_upp=1.0d0)
 
 c Other control switches on veto (see MC subtraction terms)
       double precision scaleMClow,scaleMCdelta

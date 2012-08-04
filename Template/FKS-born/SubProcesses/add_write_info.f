@@ -140,7 +140,7 @@ c
 c
 c Determine which Born graph was used for multi-channeling
 c
-      iBornGraph=mapconfig(iconfig)
+      iBornGraph=iconfig
 
 c
 c Fill the itree, sprop, pmass and pwidth of this configuration. Needed
@@ -250,7 +250,10 @@ c
       if (sumborn.eq.0d0) then
          write (*,*) 'Error #1 in add_write_info:'
          write (*,*) 'in MadFKS, sumborn should always be larger'//
-     &        ' than zero, because always QCD partons around',sumborn
+     &        ' than zero, because always QCD partons around',sumborn,max_bcol
+         do i=1,max_bcol
+            write (*,*) i,iBornGraph,icolamp(i,iBornGraph,1),jamp2(i)
+         enddo
          stop
       endif
       xtarget=ran2()*sumborn
