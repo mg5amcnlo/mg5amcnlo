@@ -209,6 +209,12 @@ reload(madgraph.various.misc)
 test_results = test_manager.run(package=os.path.join('tests',
                                                      'unit_tests'))
 
+if test_results.errors:
+    logging.error("Removing %s and quitting..." % filename)
+    os.remove(filename)
+    exit()
+
+
 a_test_results = test_manager.run(package=os.path.join('tests',
                                                        'acceptance_tests'),
                                   )
@@ -217,15 +223,7 @@ logging.basicConfig(level=vars(logging)[options.logging],
                     format="%(message)s")
 logging.root.setLevel(vars(logging)[options.logging])
 
-if not test_results.wasSuccessful():
-    logging.error("Failed %d unit tests, please check!" % \
-                    (len(test_results.errors) + len(test_results.failures)))
-
-if not a_test_results.wasSuccessful():
-    logging.error("Failed %d acceptance tests, please check!" % \
-                  (len(a_test_results.errors) + len(a_test_results.failures)))
-
-if a_test_results.errors or test_results.errors:
+if a_test_results.errors:
     logging.error("Removing %s and quitting..." % filename)
     os.remove(filename)
     exit()
@@ -236,16 +234,22 @@ p_test_results = test_manager.run(['test_short_.*'],
                                                        'parallel_tests')
                                   )
 
+if not test_results.wasSuccessful():
+    logging.error("Failed %d unit tests, please check!" % \
+                    (len(test_results.errors) + len(test_results.failures)))
+
+if not a_test_results.wasSuccessful():
+    logging.error("Failed %d acceptance tests, please check!" % \
+                  (len(a_test_results.errors) + len(a_test_results.failures)))
+
 if not p_test_results.wasSuccessful():
     logging.error("Failed %d parallel tests, please check!" % \
                   (len(p_test_results.errors) + len(p_test_results.failures)))
 
-if p_test_results.errors or p_test_results.failures:
+if p_test_results.errors:
     logging.error("Removing %s and quitting..." % filename)
     os.remove(filename)
     exit()
-
-
 
 
 try:
@@ -264,10 +268,12 @@ except:
                     "gpg --armor --sign --detach-sig " + filename)
 
 
-if not a_test_results.failures and not test_results.failures:
+if not a_test_results.failures and not test_results.failures and not p_test_results.failures:
     logging.info("All good. Removing temporary %s directory." % filepath)
     shutil.rmtree(filepath)
 else:
     logging.error("Some failures - please check before using release file")
+    if p_test_results.failures:
+        logging.error('This include discrepancy in parallel test please be carefull')
 
 logging.info("Thanks for creating a release.")
