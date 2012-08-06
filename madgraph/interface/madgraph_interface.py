@@ -3135,8 +3135,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             fsock.write("version_nb   %s\n" % data['version_nb'])
             fsock.write("last_check   %s\n" % int(time.time()))
             fsock.close()
+            return
         elif data['version_nb'] > web_version:
             logger_stderr.info('impossible to update: local %s web %s' % (data['version_nb'], web_version))
+            fsock = open(os.path.join(MG5DIR,'input','.autoupdate'),'w')
+            fsock.write("version_nb   %s\n" % data['version_nb'])
+            fsock.write("last_check   %s\n" % int(time.time()))
+            fsock.close()
             return
         else:
             if not force:
