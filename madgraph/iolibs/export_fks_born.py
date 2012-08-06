@@ -877,11 +877,19 @@ NJetSymmetrizeFinal     %(symfin)s\n\
 
                 m, n = c_link['link']
                 
-                iflines += \
-                "c b_sf_%(iborn)3.3d links partons %(m)d and %(n)d \n\
-                    %(iff)s (m.eq.%(m)d .and. n.eq.%(n)d) then \n\
-                    call sb_sf_%(iborn)3.3d(p_born,wgt)\n\n" \
-                        %{'m':m, 'n': n, 'iff': iff, 'iborn': iborn}
+                if m != n:
+                    iflines += \
+                    "c b_sf_%(iborn)3.3d links partons %(m)d and %(n)d \n\
+                        %(iff)s ((m.eq.%(m)d .and. n.eq.%(n)d).or.(m.eq.%(n)d .and. n.eq.%(m)d)) then \n\
+                        call sb_sf_%(iborn)3.3d(p_born,wgt)\n\n" \
+                            %{'m':m, 'n': n, 'iff': iff, 'iborn': iborn}
+                else:
+                    iflines += \
+                    "c b_sf_%(iborn)3.3d links partons %(m)d and %(n)d \n\
+                        %(iff)s (m.eq.%(m)d .and. n.eq.%(n)d) then \n\
+                        call sb_sf_%(iborn)3.3d(p_born,wgt)\n\n" \
+                            %{'m':m, 'n': n, 'iff': iff, 'iborn': iborn}
+
             
             file += iflines + \
             """else

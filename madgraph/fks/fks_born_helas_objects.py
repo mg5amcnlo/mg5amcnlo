@@ -186,17 +186,16 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
                               "Processing color information for %s" % \
                               matrix_element.born_matrix_element.get('processes')[0].nice_string().\
                                              replace('Process', 'process'))
+                            matrix_element.born_matrix_element.set('color_basis',
+                                               list_color_basis[col_index])
+                            matrix_element.born_matrix_element.set('color_matrix',
+                                               list_color_matrices[col_index])                    
                 else:
                     # this is in order not to handle valueErrors coming from other plaeces,
                     # e.g. from the add_process function
                     other.add_process(matrix_element)
 
         for me in matrix_elements:
-            if gen_color:
-                matrix_element.born_matrix_element.set('color_basis',
-                                   list_color_basis[col_index])
-                matrix_element.born_matrix_element.set('color_matrix',
-                                   list_color_matrices[col_index])                    
 #                    matrix_element.set_color_links()
             me.set_color_links()
         return matrix_elements    
@@ -255,7 +254,8 @@ class FKSHelasProcessFromBorn(object):
         if not self.color_links:
             legs = self.born_matrix_element.get('base_amplitude').get('process').get('legs')
             model = self.born_matrix_element.get('base_amplitude').get('process').get('model')
-            color_links_info = fks_common.find_color_links(fks_common.to_fks_legs(legs, model))
+            color_links_info = fks_common.find_color_links(fks_common.to_fks_legs(legs, model),
+                        symm = True)
             col_basis = self.born_matrix_element.get('color_basis')
             self.color_links = fks_common.insert_color_links(col_basis,
                                 col_basis.create_color_dict_list(

@@ -318,7 +318,7 @@ class FKSProcessFromBorn(object):
         self.nlegs = 0
         self.fks_ipos = []
         self.fks_j_from_i = {}
-        self.color_links = []
+#        self.color_links = []
         self.real_amps = []
         self.remove_reals = remove_reals
         self.nincoming = 0
@@ -358,16 +358,16 @@ class FKSProcessFromBorn(object):
             self.ndirs = 0
             for order in self.born_proc.get('perturbation_couplings'):
                 self.find_reals(order)
-            self.find_color_links()
+#            self.find_color_links()
 
 
 
-    def find_color_links(self): #test written
-        """Finds all the possible color links between two legs of the born.
-        Uses the find_color_links function in fks_common.
-        """
-        self.color_links = fks_common.find_color_links(self.leglist)
-        return self.color_links
+#    def find_color_links(self): #test written
+#        """Finds all the possible color links between two legs of the born.
+#        Uses the find_color_links function in fks_common.
+#        """
+#        self.color_links = fks_common.find_color_links(self.leglist, symm=True)
+#        return self.color_links
 
 
     def generate_real_amplitudes(self, pdg_list, real_amp_list):

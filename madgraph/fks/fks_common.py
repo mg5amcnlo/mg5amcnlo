@@ -463,9 +463,11 @@ def insert_color_links(col_basis, col_obj, links): #test written
 
 
 
-def find_color_links(leglist): #test written
+def find_color_links(leglist, symm = False): #test written
     """Finds all the possible color links between any 
-    two legs of the born
+    two legs of the born.
+    If symm is true, only half of the color links are generated, those
+    for which leg1['number'] <= leg2['number']
     """
 
     color_links = []
@@ -474,11 +476,12 @@ def find_color_links(leglist): #test written
             #legs must be colored and different, unless massive
                 if (leg1.get('color') != 1 and leg2.get('color') != 1) \
                   and (leg1 != leg2 or not leg1.get('massless')):
-                    col_dict = legs_to_color_link_string(leg1,leg2)
-                    color_links.append({
-                        'legs': [leg1, leg2],
-                        'string': col_dict['string'],
-                        'replacements': col_dict['replacements']})
+                    if not symm or leg1['number'] <= leg2['number']:
+                        col_dict = legs_to_color_link_string(leg1,leg2)
+                        color_links.append({
+                            'legs': [leg1, leg2],
+                            'string': col_dict['string'],
+                            'replacements': col_dict['replacements']})
     return color_links
              
 
