@@ -3212,6 +3212,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             os.environ['lhapdf'] = 'True'
         elif 'lhapdf' in os.environ.keys():
             del os.environ['lhapdf']
+            
+        # create param_card.inc and run_card.inc
+        #self.write_run_card_inc()
+        #self.write_param_card_inc()       
         
         # Compile
         for name in ['../bin/internal/gen_ximprove', 'all', 
@@ -3255,6 +3259,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 continue
             output[line[1].strip()] = line[0].replace('\'','').strip()
         return output
+
+
+
 
     ############################################################################
     @staticmethod
