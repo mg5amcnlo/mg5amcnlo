@@ -1956,9 +1956,6 @@ class Declaration_list(set):
     def add(self,obj):
         if __debug__:
             type, name = obj
-            if name == 'M2' and type =='complex':
-                print type, name
-                raise Exception, 'not allow'
             samename = [t for t,n in self if n ==name]
             for type2 in samename:
                 assert type2 == type, '%s is defined with two different type "%s" and "%s"' % \
