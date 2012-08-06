@@ -150,7 +150,7 @@ c
 c     Read in integration data from run
 c
             open(unit=25,file=fname,status='old',err=95)
-            read(25,*) xsec(i),xerru(i),xerrc(i),nevents(i),nw(i),maxit,
+            read(25,*,err=95,end=95) xsec(i),xerru(i),xerrc(i),nevents(i),nw(i),maxit,
      &           nunwgt(i),xlum(i)
             if (xsec(i) .eq. 0d0) xlum(i)=1d99     !zero cross section
             xlum(i) = xlum(i)/1000   !convert to fb^-1 
