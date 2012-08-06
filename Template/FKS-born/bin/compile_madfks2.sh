@@ -119,6 +119,18 @@ fi
 echo 'Enter number of cores to use for compilation'
 read j
 
+# Source directory
+if [[  $gensym == '1' || $madevent_compile == '1' || $test == "1" ]]; then
+    # Source
+    cd Source
+    echo 'compiling Source...'
+    echo 'compiling Source' >>  $Maindir/compile_madfks.log
+    make -j$j >>  $Maindir/compile_madfks.log 2>&1
+    echo '...done'
+    cd ..
+
+fi
+
 if [[ $test == "1" ]] ; then
     echo 'Running the tests for' $points 'points'
 # input for the tests (test_ME & testMC)
@@ -154,17 +166,6 @@ fi
 echo 'compilation results' > $Maindir/compile_madfks.log
 echo 'compilation results for madloop' > $Maindir/compile_madloop.log
 
-# Source directory
-if [[  $gensym == '1' || $madevent_compile == '1' ]]; then
-    # Source
-    cd Source
-    echo 'compiling Source...'
-    echo 'compiling Source' >>  $Maindir/compile_madfks.log
-    make -j$j >>  $Maindir/compile_madfks.log 2>&1
-    echo '...done'
-    cd ..
-
-fi
 
 cd $Maindir/SubProcesses
 

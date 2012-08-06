@@ -191,11 +191,14 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
                     # e.g. from the add_process function
                     other.add_process(matrix_element)
 
-                if gen_color:
-                    matrix_element.born_matrix_element.set('color_basis',
-                                       list_color_basis[col_index])
-                    matrix_element.born_matrix_element.set('color_matrix',
-                                       list_color_matrices[col_index])                    
+        for me in matrix_elements:
+            if gen_color:
+                matrix_element.born_matrix_element.set('color_basis',
+                                   list_color_basis[col_index])
+                matrix_element.born_matrix_element.set('color_matrix',
+                                   list_color_matrices[col_index])                    
+#                    matrix_element.set_color_links()
+            me.set_color_links()
         return matrix_elements    
 
 
@@ -243,13 +246,21 @@ class FKSHelasProcessFromBorn(object):
                           optimized_output = loop_optimized)
             else: 
                 self.virt_matrix_element = None
+#            self.color_links_info = fksproc.find_color_links()
+            self.color_links = []
 
-            col_basis = color_amp.ColorBasis()
-            col_basis.build(fksproc.born_amp)
+    def set_color_links(self):
+        """this function computes and returns the color links, it should be called
+        after the initialization and the setting of the color basis"""
+        if not self.color_links:
+            legs = self.born_matrix_element.get('base_amplitude').get('process').get('legs')
+            model = self.born_matrix_element.get('base_amplitude').get('process').get('model')
+            color_links_info = fks_common.find_color_links(fks_common.to_fks_legs(legs, model))
+            col_basis = self.born_matrix_element.get('color_basis')
             self.color_links = fks_common.insert_color_links(col_basis,
-                                col_basis.create_color_dict_list(fksproc.born_amp),
-                                fksproc.find_color_links())    
-
+                                col_basis.create_color_dict_list(
+                                    self.born_matrix_element.get('base_amplitude')),
+                                color_links_info)    
 
     def get_fks_info_list(self):
         """Returns the list of the fks infos for all processes in the format
