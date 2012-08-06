@@ -23,7 +23,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 setcuts.o setscales.o born.o sborn_sf.o $(patsubst		\
 	 %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o		\
 	 fastjetfortran_madfks.o ktclusdble.o fks_singular.o		\
-	 montecarlocounter.o reweight_xsec.o
+	 montecarlocounter.o reweight_xsec.o boostwdir2.o
 
 # Files needed for vegas, mint & mintMC
 RUN= $(FILES) cuts.o add_write_info.o LesHouches.o madfks_dbook.o	\
@@ -58,7 +58,7 @@ INTEGRATE= genint_fks.o
 # Files for event reweighting to get e.g. scale and PDF uncertainties
 RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
-	cuts.o fastjetfortran_madfks.o					\
+	cuts.o fastjetfortran_madfks.o boostwdir2.o 			\
 	$(reweight_xsec_events_pdf_dummy)
 
 %.o : %.f

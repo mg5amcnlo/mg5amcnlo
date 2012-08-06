@@ -302,6 +302,7 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                      'leshouche_inc_chooser.f',
                      'genps.inc',
                      'genps_fks.f',
+                     'boostwdir2.f',
                      'ktclusdble.f',
                      'madfks_dbook.f',
                      'madfks_mcatnlo.inc',
