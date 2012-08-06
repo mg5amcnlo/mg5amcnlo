@@ -75,6 +75,7 @@ import models.import_ufo as import_ufo
 
 import aloha.aloha_fct as aloha_fct
 import aloha.create_aloha as create_aloha
+import aloha.aloha_lib as aloha_lib
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
@@ -3531,6 +3532,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             old = self.options[args[0]] 
             self.options[args[0]] = eval(args[1])
             aloha.complex_mass = eval(args[1])
+            aloha_lib.KERNEL.clean()
             if not self._curr_model:
                 pass
             elif self.options[args[0]]:
@@ -3560,6 +3562,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     aloha.unitary_gauge = True
                 else:
                     aloha.unitary_gauge = False
+                aloha_lib.KERNEL.clean()
                 self.options[args[0]] = args[1]
                 if log: logger.info('Pass to gauge %s.' % args[1])
                 return

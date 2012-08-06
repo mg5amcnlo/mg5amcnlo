@@ -211,7 +211,9 @@ class WriteALOHA:
                 self.declaration.add(('double','M%s' % self.outgoing))                
                 call_arg.append(('double','W%s' % self.outgoing))              
                 self.declaration.add(('double','W%s' % self.outgoing))
-            
+        
+        assert len(call_arg) == len(set([a[1] for a in call_arg]))
+        assert len(self.declaration) == len(set([a[1] for a in self.declaration])), self.declaration
         self.call_arg = call_arg
         return call_arg
 
