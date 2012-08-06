@@ -487,12 +487,16 @@ class create_dir:
         if not os.path.isdir(self.Sdir_pos+'/'+dir_name+'/card_'+str(card)):
             os.mkdir(self.Sdir_pos+'/'+dir_name+'/card_'+str(card))
             
-        if not os.path.isdir(pos):
-            os.mkdir(pos)
-        elif remove_old:
+#        if not os.path.isdir(pos):
+#            os.mkdir(pos)
+
+        try:
+          os.mkdir(pos)
+        except OSError:
+          if remove_old:
             os.system('rm '+pos+'/* >/dev/null')
-        else:
-            return
+#          else:
+#            return
             
             
         ff=open(pos+'/param.dat','w')
