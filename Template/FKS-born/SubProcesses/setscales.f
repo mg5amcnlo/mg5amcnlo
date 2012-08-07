@@ -251,7 +251,7 @@ c geometric mean (to reweight alphaS)
          tmp1=0d0
          tmp2=1d0
          iqcd=0
-         if (wgtbpower.eq.0) then
+         if (nint(wgtbpower).eq.0) then
             do i=nincoming+1,nexternal
                xm2=dot(pp(0,i),pp(0,i))
                if(xm2.le.0.d0)xm2=0.d0
@@ -272,21 +272,21 @@ c geometric mean (to reweight alphaS)
             rfj=0.4d0
             sycut=0d0
             call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
-            if (nn-1.gt.wgtbpower) then
+            if (nn-1.gt.nint(wgtbpower)) then
 c More Born QCD partons than QCD couplings
                write (*,*) 'More Born QCD partons than Born QCD '/
      &              /'couplings: cannot used this scale choice',imurtype
                stop
-            elseif (nn-1.eq.wgtbpower) then
+            elseif (nn-1.eq.nint(wgtbpower)) then
 c  Exactly equal number of QCD partons and QCD couplings. Use the d_ij
 c  clustering values of the jets compute the geometric mean for the
 c  scale. Don't include the softest d_ij, because that corresponds to
 c  the 'real-emission parton'
-               do i=1,wgtbpower
+               do i=1,nint(wgtbpower)
                   tmp2=tmp2*sqrt(fastjetdmergemax(nn-i-1))
                enddo
                tmp=tmp2**(1d0/wgtbpower)
-            elseif (nn-1.lt.wgtbpower) then
+            elseif (nn-1.lt.nint(wgtbpower)) then
 c  More QCD couplings than QCD partons (e.g. ttbar+jets of Higgs+jets).
 c  Use geometric mean, but take sum of transverse masses of non-is_a_j
 c  particles (e.g. top quarks or Higgs) into account.
@@ -300,7 +300,7 @@ c  particles (e.g. top quarks or Higgs) into account.
                      tmp2=tmp2*sqrt(fastjetdmergemax(nn-iqcd-1))
                   endif
                enddo
-               tmp=tmp2*tmp1**(wgtbpower-iqcd)
+               tmp=tmp2*tmp1**(nint(wgtbpower)-iqcd)
                tmp=tmp**(1d0/wgtbpower)
             endif
          endif
