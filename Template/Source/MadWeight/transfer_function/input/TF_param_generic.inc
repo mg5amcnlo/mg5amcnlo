@@ -39,6 +39,10 @@ c
       double precision momenta(0:3,-max_branches:2*max_particles)
       double precision mvir2(-max_branches:2*max_particles)    
       common /to_diagram_kin/ momenta, mvir2
+
+      double precision permutation_weight
+      common /to_permutation_weight/permutation_weight
+
 c
 c parameters to init in transfert_card.dat
 c	

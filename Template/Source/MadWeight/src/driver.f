@@ -37,6 +37,7 @@ C
       double precision temp_err, temp_val
       double precision order_value(max_channel)
       double precision order_error(max_channel)
+      double precision normalize_perm
 c
 c     variable for permutation, channel
 c
@@ -100,6 +101,8 @@ c
       double precision store
       common /to_storage/store
 
+      double precision permutation_weight
+      common /to_permutation_weight/permutation_weight
 
 
 C**************************************************************************
@@ -140,7 +143,8 @@ c     initialization of the variables in the loops
 C
 C     initialization of the permutation
 C
- 1    call init_perm()
+ 1    normalize_perm=0d0
+      call init_perm()
       do i=1,nexternal-2
          perm_id(i)=i
       enddo
@@ -154,14 +158,19 @@ C
          call assign_perm(perm_id)
          chan_val=0d0
          chan_err=0d0
+
+         permutation_weight=1d0
+         call initialize
+         normalize_perm =normalize_perm+permutation_weight
+
          do ll=1,nb_sol_config
             counter=counter+1
             config_pos=ll
             write(*,*) "Current channel of integration: ",config_pos
             write(*,*) "Current parton-jet assignement: ",perm_pos
+            write(*,*) "weight of this assignement:     ",permutation_weight
 
       iseed = iseed + 1 ! avoid to have the same seed
-      call initialize
       if (.not. NWA) then
         NDIM=Ndimens
       else
@@ -205,8 +214,8 @@ c
          write(32,*) perm_pos,chan_val, chan_err
       enddo
 
-      temp_val=temp_val/dble(num_per)
-      temp_err=temp_err/dble(num_per)
+      temp_val=temp_val/dble(normalize_perm)
+      temp_err=temp_err/dble(normalize_perm)
       check_value=temp_val/(nb_sol_config) * min_prec_cut1
       if (loop_index.eq.1) then
         NCALL = nevents
