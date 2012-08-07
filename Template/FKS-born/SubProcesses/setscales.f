@@ -219,13 +219,24 @@ c a scale to be used as a reference for renormalization scale
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'reweight0.inc'
       double precision muR_ref_dynamic,pp(0:3,nexternal)
-      double precision tmp,scale_global_reference,pt
-      external pt
+      double precision tmp,scale_global_reference,pt,et,dot,sumdot
+      external pt,et,dot,sumdot
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
       integer i,imurtype
       parameter (imurtype=1)
+c for 'geometric mean'
+      integer j
+      LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
+      LOGICAL  IS_A_B(NEXTERNAL),IS_A_A(NEXTERNAL)
+      LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY
+      integer NN,NJET,JET(nexternal),iqcd
+      double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
+      double precision rfj,sycut,palg,fastjetdmergemax
+     &     ,tmp1,tmp2,xm2
 c
       tmp=0
       if(imurtype.eq.1)then
@@ -235,6 +246,65 @@ c
           tmp=tmp+pt(pp(0,i))
         enddo
         temp_scale_id='sum_i pT(i), i=final state'
+      elseif(imurtype.eq.3)then
+c geometric mean (to reweight alphaS)
+         tmp1=0d0
+         tmp2=1d0
+         iqcd=0
+         if (wgtbpower.eq.0) then
+            do i=nincoming+1,nexternal
+               xm2=dot(pp(0,i),pp(0,i))
+               if(xm2.le.0.d0)xm2=0.d0
+               tmp1=tmp1+sqrt(pt(pp(0,i))**2+xm2)
+            enddo
+            tmp=tmp1
+         else
+            nn=0
+            do i=1,nexternal
+               if (is_a_j(i)) then
+                  nn=nn+1
+                  do j=0,3
+                     pQCD(j,nn)=pp(j,i)
+                  enddo
+               endif
+            enddo
+            palg=1.d0
+            rfj=0.4d0
+            sycut=0d0
+            call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
+            if (nn-1.gt.wgtbpower) then
+c More Born QCD partons than QCD couplings
+               write (*,*) 'More Born QCD partons than Born QCD '/
+     &              /'couplings: cannot used this scale choice',imurtype
+               stop
+            elseif (nn-1.eq.wgtbpower) then
+c  Exactly equal number of QCD partons and QCD couplings. Use the d_ij
+c  clustering values of the jets compute the geometric mean for the
+c  scale. Don't include the softest d_ij, because that corresponds to
+c  the 'real-emission parton'
+               do i=1,wgtbpower
+                  tmp2=tmp2*sqrt(fastjetdmergemax(nn-i-1))
+               enddo
+               tmp=tmp2**(1d0/wgtbpower)
+            elseif (nn-1.lt.wgtbpower) then
+c  More QCD couplings than QCD partons (e.g. ttbar+jets of Higgs+jets).
+c  Use geometric mean, but take sum of transverse masses of non-is_a_j
+c  particles (e.g. top quarks or Higgs) into account.
+               do i=nincoming+1,nexternal-1
+                  if (.not.is_a_j(i)) then
+                     xm2=dot(pp(0,i),pp(0,i))
+                     if(xm2.le.0.d0)xm2=0.d0
+                     tmp1=tmp1+sqrt(pt(pp(0,i))**2+xm2)
+                  else
+                     iqcd=iqcd+1
+                     tmp2=tmp2*sqrt(fastjetdmergemax(nn-iqcd-1))
+                  endif
+               enddo
+               tmp=tmp2*tmp1**(wgtbpower-iqcd)
+               tmp=tmp**(1d0/wgtbpower)
+            endif
+         endif
+         temp_scale_id='geometric mean #3'
       else
         write(*,*)'Unknown option in muR_ref_dynamic',imurtype
         stop
@@ -300,8 +370,8 @@ c a scale to be used as a reference for factorizations scales
       include 'genps.inc'
       include 'nexternal.inc'
       double precision muF_ref_dynamic,pp(0:3,nexternal)
-      double precision tmp,scale_global_reference,pt
-      external pt
+      double precision tmp,scale_global_reference,pt,et,dot,xm2,sumdot
+      external pt,et,dot,sumdot
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
       integer i,imuftype
@@ -406,8 +476,8 @@ c a scale to be used as a reference for renormalization scale
       include 'genps.inc'
       include 'nexternal.inc'
       double precision scale_global_reference,pp(0:3,nexternal)
-      double precision tmp,pt,et,dot,xm2
-      external pt,et,dot
+      double precision tmp,pt,et,dot,xm2,sumdot
+      external pt,et,dot,sumdot
       integer i,itype
       parameter (itype=2)
       character*80 temp_scale_id
