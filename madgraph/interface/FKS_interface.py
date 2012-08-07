@@ -456,7 +456,9 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 self._fks_directories.extend(self._curr_exporter.fksdirs)
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')
-            if self.options['loop_optimized_output']:
+            if self.options['loop_optimized_output'] and \
+                    len(self._curr_matrix_elements.get_virt_matrix_elements()) > 0:
+                print    len(self._curr_matrix_elements.get_virt_matrix_elements()) > 0
                 self._curr_exporter.write_coef_specs_file(\
                         self._curr_matrix_elements.get_virt_matrix_elements())
             if self._generate_info:

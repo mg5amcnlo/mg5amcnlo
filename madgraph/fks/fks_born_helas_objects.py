@@ -95,7 +95,8 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
 
     def get_virt_matrix_elements(self):
         """Extract the list of virtuals matrix elements"""
-        return [me.virt_matrix_element for me in self.get('matrix_elements')]        
+        return [me.virt_matrix_element for me in self.get('matrix_elements') \
+                if me.virt_matrix_element]        
         
 
     def generate_matrix_elements_fks(self, fksmulti, gen_color = True,
