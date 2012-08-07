@@ -224,6 +224,17 @@ def recover_banner(results_object, level):
 class RunCard(dict):
     """A class object for the run_card"""
 
+    def __init__(self, run_card):
+        """ """
+
+        for line in file(run_card,'r'):
+            line = line.split('#')[0]
+            line = line.split('!')[0]
+            line = line.split('=')
+            if len(line) != 2:
+                continue
+            self[line[1].strip()] = line[0].replace('\'','').strip()
+
     def get_default(self, name, default, log_level):
         """return self[name] if exist otherwise default. log control if we 
         put a warning or not if we use the default value"""
@@ -232,8 +243,9 @@ class RunCard(dict):
             return self[name]
         except KeyError:
             if log_level:
-                logger.log(log_level, 'run_card missed argument %s. Takes default %s'
+                logger.log(log_level, 'run_card missed argument %s. Takes default: %s'
                                    % (name, default))
+                self[name] = default
                 return default
         
     @staticmethod
@@ -242,30 +254,32 @@ class RunCard(dict):
         
         if format == 'bool':
             if str(value) in ['1','T','.true.','True']:
-                return '.true'
+                return '.true.'
             else:
-                return '.false'
+                return '.false.'
             
         elif format == 'int':
             return str(int(value))
         
         elif format == 'float':
+            if isinstance(value, str):
+               value = value.replace('d','e')
             return ('%.10e' % float(value)).replace('e','d')
         
         elif format == 'str':
             return "'%s'" % value
     
     def write_include_file(self, output_path):
-        """ """ 
+        """writing the run_card.inc file""" 
         
-        self.fsock = file_writers.FortranWriter(outpu_path)
+        self.fsock = file_writers.FortranWriter(output_path)
     
 ################################################################################
 #      Writing the lines corresponding to the cuts
 ################################################################################
     
         self.add_line('maxjetflavor', 'int', 4)
-        self.add_line('auto_pth_mjj', 'bool', True)
+        self.add_line('auto_ptj_mjj', 'bool', True)
         self.add_line('cut_decays', 'bool', True)
         # minimum pt
         self.add_line('ptj', 'float', 20)
@@ -273,6 +287,7 @@ class RunCard(dict):
         self.add_line('pta', 'float', 20)
         self.add_line('ptl', 'float', 20)
         self.add_line('misset', 'float', 0)
+        self.add_line('ptonium', 'float', 0.0)
         # maximal pt
         self.add_line('ptjmax', 'float', 1e5)
         self.add_line('ptbmax', 'float', 1e5)
@@ -280,15 +295,16 @@ class RunCard(dict):
         self.add_line('ptlmax', 'float', 1e5)
         self.add_line('missetmax', 'float', 1e5)
         # maximal rapidity (absolute value)
-        self.add_line('etatj', 'float', 4.0)
-        self.add_line('etatb', 'float', 4.0)
-        self.add_line('etata', 'float', 4.0)
-        self.add_line('etatl', 'float', 4.0)
+        self.add_line('etaj', 'float', 4.0)
+        self.add_line('etab', 'float', 4.0)
+        self.add_line('etaa', 'float', 4.0)
+        self.add_line('etal', 'float', 4.0)
         # minimal rapidity (absolute value)
-        self.add_line('etatjmin', 'float', 0.0)
-        self.add_line('etatbmin', 'float', 0.0)
-        self.add_line('etatamin', 'float', 0.0)
-        self.add_line('etatlmin', 'float', 0.0)
+        self.add_line('etajmin', 'float', 0.0)
+        self.add_line('etabmin', 'float', 0.0)
+        self.add_line('etaamin', 'float', 0.0)
+        self.add_line('etalmin', 'float', 0.0)
+        self.add_line('etaonium', 'float', 100.0)
         # Minimul E's
         self.add_line('ej', 'float', 0.0)
         self.add_line('eb', 'float', 0.0)
@@ -339,13 +355,13 @@ class RunCard(dict):
         self.add_line("xptb", 'float', 0.0)
         self.add_line("xpta", 'float', 0.0)
         self.add_line("xptl", 'float', 0.0)
-        self.add_line("xmtcentral", 'float', 0.0, fortran_name='xmtc')
+        self.add_line("xmtcentral", 'float', 0.0, fortran_name='xmtc', log=10)
         # WBT cuts
         self.add_line("xetamin", 'float', 0.0)
         self.add_line("deltaeta", 'float', 0.0)
         # Jet measure cuts 
         self.add_line("xqcut", 'float', 0.0)
-        self.add_line("d", 'float', 1.0)
+        self.add_line("d", 'float', 1.0, log=10)
         # Set min pt of one heavy particle 
         self.add_line("ptheavy", 'float', 0.0)
         # Pt of pairs of leptons (CHARGED AND NEUTRALS)
@@ -386,8 +402,8 @@ class RunCard(dict):
 #      Writing the lines corresponding to anything but cuts
 ################################################################################
         # seed
-        self.add_line("gridrun",'bool', False)
         self.add_line("gridpack","bool", False)
+        self.add_line("gridrun",'bool', False, log=10)
         if str(self['gridrun']) in ['1','T','.true','True'] and \
            str(self['gridpack']) in ['1','T','.true','True']:
             self.add_line('gseed', 'int', 0, fortran_name='iseed')
@@ -405,19 +421,19 @@ class RunCard(dict):
         self.add_line('chcluster', 'bool', False)
         self.add_line('ktscheme', 'int', 1)
         if int(self['ickkw'])>0:
-            self.add_line('alpsfct', 'float', 1.0)
+            self.add_line('alpsfact', 'float', 1.0)
             self.add_line('pdfwgt', 'bool', True)
         if int(self['ickkw'])==2:
             self.add_line('highestmult','int', 0, fortran_name='nhmult')
             self.add_line('issgridfile','str','issudgrid.dat')
         # Collider energy and type
-        self.add_line('lpp1', 'int', 1)
-        self.add_line('lpp2', 'int', 1)
-        self.add_line('ebeam1', 'float', 7000)
-        self.add_line('ebeam2', 'float', 7000)
+        self.add_line('lpp1', 'int', 1, fortran_name='lpp(1)')
+        self.add_line('lpp2', 'int', 1, fortran_name='lpp(2)')
+        self.add_line('ebeam1', 'float', 7000, fortran_name='ebeam(1)')
+        self.add_line('ebeam2', 'float', 7000, fortran_name='ebeam(2)')
         # Beam polarization
-        self.add_line('polbeam1', 'float', 0.0)
-        self.add_line('polbeam2', 'float', 0.0)
+        self.add_line('polbeam1', 'float', 0.0, fortran_name='pb1')
+        self.add_line('polbeam2', 'float', 0.0, fortran_name='pb2')
         # BW cutoff (M+/-bwcutoff*Gamma)
         self.add_line('bwcutoff', 'float', 15.0)
         #  Collider pdf
@@ -427,8 +443,7 @@ class RunCard(dict):
         else:
             self.add_line('lhaid', 'int', 10042, log=10)
         
-        
-            
+        self.fsock.close()
 
 
 
@@ -439,7 +454,7 @@ class RunCard(dict):
         value = self.get_default(card_name, default, log)
         if not fortran_name:
             fortran_name = card_name
-        self.fsock.write(' %s = %s \n' % (fortran_name, self.format(type, value)))
+        self.fsock.writelines(' %s = %s \n' % (fortran_name, self.format(type, value)))
 
 
 

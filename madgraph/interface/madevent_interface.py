@@ -347,6 +347,10 @@ class HelpToCmd(object):
         self.run_options_help([('-f', 'Use default for all questions.'),
                                ('--laststep=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
 
+    def help_treatcards(self):
+        logger.info("syntax: treatcards [param|run] [--output_dir=] [--param_card=] [--run_card=]")
+        logger.info("-- create the .inc files containing the cards information." )
+ 
     def help_survey(self):
         logger.info("syntax: survey [run_name] [--run_options])")
         logger.info("-- evaluate the different channel associate to the process")
@@ -566,6 +570,54 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd('No default path for this file')
         elif not os.path.isfile(args[0]):
             raise self.InvalidCmd('No default path for this file') 
+    
+    def check_treatcards(self, args):
+        """check that treatcards arguments are valid
+           [param|run|all] [--output_dir=] [--param_card=] [--run_card=]
+        """
+        
+        opt = {'output_dir':pjoin(self.me_dir,'Source'),
+               'param_card':pjoin(self.me_dir,'Cards','param_card.dat'),
+               'run_card':pjoin(self.me_dir,'Cards','run_card.dat')}
+        mode = 'all'
+        for arg in args:
+            if arg.startswith('--') and '=' in arg:
+                key,value =arg[2:].split('=',1)
+                if not key in opt:
+                    self.help_treatcards()
+                    raise self.InvalidCmd('Invalid option for treatcards command:%s ' \
+                                          % key)
+                if key in ['param_card', 'run_card']:
+                    if os.path.isfile(value):
+                        card_name = self.detect_card_type(value)
+                        if card_name != key:
+                            raise self.InvalidCmd('Format for input file detected as %s while expecting %s' 
+                                                  % (card_name, key))
+                        opt[key] = value
+                    elif os.path.isfile(pjoin(self.me_dir,value)):
+                        card_name = self.detect_card_type(pjoin(self.me_dir,value))
+                        if card_name != key:
+                            raise self.InvalidCmd('Format for input file detected as %s while expecting %s' 
+                                                  % (card_name, key))                        
+                        opt[key] = value
+                    else:
+                        raise self.InvalidCmd('No such file: %s ' % value)
+                elif key in ['output_dir']:
+                    if os.path.isdir(value):
+                        opt[key] = value
+                    elif os.path.isdir(pjoin(self.me_dir,value)):
+                        opt[key] = pjoin(self.me_dir, value)
+                    else:
+                        raise self.InvalidCmd('No such directory: %s' % value)
+            elif arg in ['param','run','all']:
+                mode = arg
+            else:
+                self.help_treatcards()
+                raise self.InvalidCmd('Unvalid argument %s' % arg)
+                        
+        return mode, opt 
+    
+    
     
     def check_survey(self, args, cmd='survey'):
         """check that the argument for survey are valid"""
@@ -2069,7 +2121,22 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('', level='parton')
         self.print_results_in_shell(self.results.current)   
         self.results.def_current(None)
-            
+
+    ############################################################################      
+    def do_treatcards(self, line):
+        """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
+
+        args = self.split_arg(line)
+        mode,  opt  = self.check_treatcards(args)
+
+        if mode in ['run', 'all']:
+            if not hasattr(self, 'run_card'):
+                run_card = banner_mod.RunCard(opt['run_card'])
+            else:
+                run_card = self.run_card
+            run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
+             
+
     ############################################################################      
     def do_survey(self, line):
         """Advanced commands: launch survey for the current process """
@@ -3214,8 +3281,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             del os.environ['lhapdf']
             
         # create param_card.inc and run_card.inc
-        #self.write_run_card_inc()
-        #self.write_param_card_inc()       
+        self.run_card.write_include_file(pjoin(self.me_dir, 'Source', 'run_card.inc'))
         
         # Compile
         for name in ['../bin/internal/gen_ximprove', 'all', 
@@ -3248,22 +3314,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     ############################################################################
     ##  HELPING ROUTINE
     ############################################################################
-    def read_run_card(self, run_card):
-        """ """
-        output={}
-        for line in file(run_card,'r'):
-            line = line.split('#')[0]
-            line = line.split('!')[0]
-            line = line.split('=')
-            if len(line) != 2:
-                continue
-            output[line[1].strip()] = line[0].replace('\'','').strip()
-        return output
-
-
-
-
-    ############################################################################
     @staticmethod
     def check_dir(path, default=''):
         """check if the directory exists. if so return the path otherwise the 
@@ -3290,7 +3340,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if name == self.run_name:        
             if reload_card:
                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-                self.run_card = self.read_run_card(run_card)
+                self.run_card = banner_mod.RunCard(run_card)
 
             #check if we need to change the tag
             if tag:
@@ -3315,7 +3365,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         # Read run_card
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-        self.run_card = self.read_run_card(run_card)
+        self.run_card = banner_mod.RunCard(run_card)
 
         new_tag = False
         # First call for this run -> set the banner

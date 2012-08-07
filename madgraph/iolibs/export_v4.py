@@ -1105,6 +1105,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
         cp(_file_path+'/iolibs/save_load_object.py', 
                               self.dir_path+'/bin/internal/save_load_object.py') 
+        cp(_file_path+'/iolibs/file_writers.py', 
+                              self.dir_path+'/bin/internal/file_writers.py')        
         cp(_file_path+'../models/check_param_card.py', 
                               self.dir_path+'/bin/internal/check_param_card.py')
         cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
