@@ -400,7 +400,7 @@ c
                   pb(j,i)=p_born(j,i)
                endif
             enddo
-            if (Hevents .or. i.le.max(i_fks,j_fks)) then
+            if (Hevents .or. i.lt.i_fks) then
                pb(4,i)=xmcmass(i)
             else
                pb(4,i)=xmcmass(i+1)
@@ -421,7 +421,7 @@ c
             do j=0,3
                pb(j,i)=p1(j,i)
             enddo
-            if (Hevents .or. i.le.max(i_fks,j_fks)) then
+            if (Hevents .or. i.lt.i_fks) then
                pb(4,i)=xmcmass(i)
             else
                pb(4,i)=xmcmass(i+1)
