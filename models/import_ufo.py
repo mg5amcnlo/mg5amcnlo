@@ -552,7 +552,8 @@ class UFOMG5Converter(object):
         for k in range(len(new_order)-1):
             for l in range(k+1,len(new_order)):
                 if new_order[l] < new_order[k]:
-                    sign *= -1           
+                    sign *= -1     
+                    
         return  '' if sign ==1 else '-'
 
 

@@ -3133,7 +3133,7 @@ entry VVS1_2_2(V2, S3, COUP1, COUP2, M1, W1,V1)
 
     call VVS1_1(V2,S3,COUP1,M1,W1,V1)
     call VVS2_1(V2,S3,COUP2,M1,W1,Vtmp)
- do i = 2, 6
+ do i = 3, 6
         V1(i) = V1(i) + Vtmp(i)
  enddo
 end
