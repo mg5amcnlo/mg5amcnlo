@@ -2062,7 +2062,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.total_jobs = 0
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
                                                                  'subproc.mg'))]
+        print subproc
         for nb_proc,subdir in enumerate(subproc):
+            print 'PASSSSSS'
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
             logger.info('    %s ' % subdir)
@@ -2093,13 +2095,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             alljobs = glob.glob(pjoin(Pdir,'ajob*'))
             self.total_jobs += len(alljobs)
             for i, job in enumerate(alljobs):
+                print i, job, 'oon', alljobs
                 job = os.path.basename(job)
                 self.launch_job('./%s' % job, cwd=Pdir, remaining=(len(alljobs)-i-1), 
                                                     run_type='survey on %s (%s/%s)' % (subdir,nb_proc+1,len(subproc)))
                 if os.path.exists(pjoin(self.me_dir,'error')):
-                    self.monitor(html=True)
+                    self.monitor(html=False)
                     raise MadEventError, 'Error detected Stop running: %s' % \
                                          open(pjoin(self.me_dir,'error')).read()
+            print subproc
+        print 'start monitoring'
         self.monitor(run_type='All jobs submitted for survey', html=True)
         self.update_status('End survey', 'parton', makehtml=False)
 
@@ -2265,11 +2270,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # find UFO particles linked to the require names. 
         decay_info = {}        
         for pid in args['particles']:
+            print type(model), 
             particle = model.get_particle(pid)
+            print type(particle)
             decay_info[pid] = []
             mass = abs(eval(str(particle.get('mass')), data).real)
             data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 
                                             'param_card.dat'), scale= mass)
+            total = 0
             for mode, expr in particle.partial_widths.items():
                 tmp_mass = mass    
                 for p in mode:
@@ -2280,7 +2288,30 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 decay_to = [p.get('pdg_code') for p in mode]
                 value = eval(expr,{'cmath':cmath},data).real
                 decay_info[particle.get('pdg_code')].append([decay_to, value])
-                          
+                total += value
+            print 'particle %s has decay (1->2 FR):' % pid,total
+                
+        #
+        # add info from decay module
+        #
+        import decay.decay_objects as decay_objects
+        new_model = decay_objects.DecayModel(model)
+        new_model.read_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
+        new_model.find_vertexlist()
+        new_model.find_all_channels(2)
+        for pid in args['particles']:
+            particle = new_model.get_particle(pid)
+            if particle.get('apx_decaywidth_err') > 0.001: 
+                print pid, particle.get('apx_decaywidth'),'+-',particle.get('apx_decaywidth_err')
+                print type(particle.get('apx_decaywidth_err'))
+                particle.find_channels_nextlevel(new_model)
+                particle.update_decay_attributes(False, True, True, new_model)
+                print particle.decaytable_string()
+            print pid, particle.get('apx_decaywidth'),'+-',particle.get('apx_decaywidth_err')
+               
+        #print new_model.find_all_channels_smart(0.0001)
+        #print new_model['decaywidth_list']
+        #print new_model.write_decay_table(pjoin(self.me_dir, 'Cards','param_card.dat'))             
         self.update_width_in_param_card(decay_info, args['input'], args['output'])
         
     ############################################################################ 
