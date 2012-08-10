@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 535 $
-# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Wed 23 Mar 2011 22:53:59
+# This file was automatically created by FeynRules 1.7.55
+# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (October 6, 2011)
+# Date: Wed 8 Aug 2012 14:29:46
 
 
 
@@ -17,261 +17,261 @@ ZERO = Parameter(name = 'ZERO',
                  texname = '0')
 
 # User-defined parameters.
-ICKM11 = Parameter(name = 'ICKM11',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{ICKM11}',
-                   lhablock = 'ICKM',
-                   lhacode = [ 1, 1 ])
+ICKM1x1 = Parameter(name = 'ICKM1x1',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{ICKM1x1}',
+                    lhablock = 'ICKM',
+                    lhacode = [ 1, 1 ])
 
-ICKM12 = Parameter(name = 'ICKM12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{ICKM12}',
-                   lhablock = 'ICKM',
-                   lhacode = [ 1, 2 ])
+ICKM1x2 = Parameter(name = 'ICKM1x2',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{ICKM1x2}',
+                    lhablock = 'ICKM',
+                    lhacode = [ 1, 2 ])
 
-ICKM13 = Parameter(name = 'ICKM13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{ICKM13}',
-                   lhablock = 'ICKM',
-                   lhacode = [ 1, 3 ])
+ICKM1x3 = Parameter(name = 'ICKM1x3',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{ICKM1x3}',
+                    lhablock = 'ICKM',
+                    lhacode = [ 1, 3 ])
 
-ICKM14 = Parameter(name = 'ICKM14',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{ICKM14}',
-                   lhablock = 'ICKM',
-                   lhacode = [ 1, 4 ])
+ICKM1x4 = Parameter(name = 'ICKM1x4',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{ICKM1x4}',
+                    lhablock = 'ICKM',
+                    lhacode = [ 1, 4 ])
 
-ICKM21 = Parameter(name = 'ICKM21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{ICKM21}',
-                   lhablock = 'ICKM',
-                   lhacode = [ 2, 1 ])
+ICKM2x1 = Parameter(name = 'ICKM2x1',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{ICKM2x1}',
+                    lhablock = 'ICKM',
+                    lhacode = [ 2, 1 ])
 
-ICKM22 = Parameter(name = 'ICKM22',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{ICKM22}',
-                   lhablock = 'ICKM',
-                   lhacode = [ 2, 2 ])
+ICKM2x2 = Parameter(name = 'ICKM2x2',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{ICKM2x2}',
+                    lhablock = 'ICKM',
+                    lhacode = [ 2, 2 ])
 
-ICKM23 = Parameter(name = 'ICKM23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{ICKM23}',
-                   lhablock = 'ICKM',
-                   lhacode = [ 2, 3 ])
+ICKM2x3 = Parameter(name = 'ICKM2x3',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{ICKM2x3}',
+                    lhablock = 'ICKM',
+                    lhacode = [ 2, 3 ])
 
-ICKM24 = Parameter(name = 'ICKM24',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{ICKM24}',
-                   lhablock = 'ICKM',
-                   lhacode = [ 2, 4 ])
+ICKM2x4 = Parameter(name = 'ICKM2x4',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{ICKM2x4}',
+                    lhablock = 'ICKM',
+                    lhacode = [ 2, 4 ])
 
-ICKM31 = Parameter(name = 'ICKM31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{ICKM31}',
-                   lhablock = 'ICKM',
-                   lhacode = [ 3, 1 ])
+ICKM3x1 = Parameter(name = 'ICKM3x1',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{ICKM3x1}',
+                    lhablock = 'ICKM',
+                    lhacode = [ 3, 1 ])
 
-ICKM32 = Parameter(name = 'ICKM32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{ICKM32}',
-                   lhablock = 'ICKM',
-                   lhacode = [ 3, 2 ])
+ICKM3x2 = Parameter(name = 'ICKM3x2',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{ICKM3x2}',
+                    lhablock = 'ICKM',
+                    lhacode = [ 3, 2 ])
 
-ICKM33 = Parameter(name = 'ICKM33',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{ICKM33}',
-                   lhablock = 'ICKM',
-                   lhacode = [ 3, 3 ])
+ICKM3x3 = Parameter(name = 'ICKM3x3',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{ICKM3x3}',
+                    lhablock = 'ICKM',
+                    lhacode = [ 3, 3 ])
 
-ICKM34 = Parameter(name = 'ICKM34',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{ICKM34}',
-                   lhablock = 'ICKM',
-                   lhacode = [ 3, 4 ])
+ICKM3x4 = Parameter(name = 'ICKM3x4',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{ICKM3x4}',
+                    lhablock = 'ICKM',
+                    lhacode = [ 3, 4 ])
 
-ICKM41 = Parameter(name = 'ICKM41',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{ICKM41}',
-                   lhablock = 'ICKM',
-                   lhacode = [ 4, 1 ])
+ICKM4x1 = Parameter(name = 'ICKM4x1',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{ICKM4x1}',
+                    lhablock = 'ICKM',
+                    lhacode = [ 4, 1 ])
 
-ICKM42 = Parameter(name = 'ICKM42',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{ICKM42}',
-                   lhablock = 'ICKM',
-                   lhacode = [ 4, 2 ])
+ICKM4x2 = Parameter(name = 'ICKM4x2',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{ICKM4x2}',
+                    lhablock = 'ICKM',
+                    lhacode = [ 4, 2 ])
 
-ICKM43 = Parameter(name = 'ICKM43',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{ICKM43}',
-                   lhablock = 'ICKM',
-                   lhacode = [ 4, 3 ])
+ICKM4x3 = Parameter(name = 'ICKM4x3',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{ICKM4x3}',
+                    lhablock = 'ICKM',
+                    lhacode = [ 4, 3 ])
 
-ICKM44 = Parameter(name = 'ICKM44',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{ICKM44}',
-                   lhablock = 'ICKM',
-                   lhacode = [ 4, 4 ])
+ICKM4x4 = Parameter(name = 'ICKM4x4',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{ICKM4x4}',
+                    lhablock = 'ICKM',
+                    lhacode = [ 4, 4 ])
 
-RCKM11 = Parameter(name = 'RCKM11',
-                   nature = 'external',
-                   type = 'real',
-                   value = 1,
-                   texname = '\\text{RCKM11}',
-                   lhablock = 'RCKM',
-                   lhacode = [ 1, 1 ])
+RCKM1x1 = Parameter(name = 'RCKM1x1',
+                    nature = 'external',
+                    type = 'real',
+                    value = 1,
+                    texname = '\\text{RCKM1x1}',
+                    lhablock = 'RCKM',
+                    lhacode = [ 1, 1 ])
 
-RCKM12 = Parameter(name = 'RCKM12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{RCKM12}',
-                   lhablock = 'RCKM',
-                   lhacode = [ 1, 2 ])
+RCKM1x2 = Parameter(name = 'RCKM1x2',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{RCKM1x2}',
+                    lhablock = 'RCKM',
+                    lhacode = [ 1, 2 ])
 
-RCKM13 = Parameter(name = 'RCKM13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{RCKM13}',
-                   lhablock = 'RCKM',
-                   lhacode = [ 1, 3 ])
+RCKM1x3 = Parameter(name = 'RCKM1x3',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{RCKM1x3}',
+                    lhablock = 'RCKM',
+                    lhacode = [ 1, 3 ])
 
-RCKM14 = Parameter(name = 'RCKM14',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{RCKM14}',
-                   lhablock = 'RCKM',
-                   lhacode = [ 1, 4 ])
+RCKM1x4 = Parameter(name = 'RCKM1x4',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{RCKM1x4}',
+                    lhablock = 'RCKM',
+                    lhacode = [ 1, 4 ])
 
-RCKM21 = Parameter(name = 'RCKM21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{RCKM21}',
-                   lhablock = 'RCKM',
-                   lhacode = [ 2, 1 ])
+RCKM2x1 = Parameter(name = 'RCKM2x1',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{RCKM2x1}',
+                    lhablock = 'RCKM',
+                    lhacode = [ 2, 1 ])
 
-RCKM22 = Parameter(name = 'RCKM22',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.99995,
-                   texname = '\\text{RCKM22}',
-                   lhablock = 'RCKM',
-                   lhacode = [ 2, 2 ])
+RCKM2x2 = Parameter(name = 'RCKM2x2',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.99995,
+                    texname = '\\text{RCKM2x2}',
+                    lhablock = 'RCKM',
+                    lhacode = [ 2, 2 ])
 
-RCKM23 = Parameter(name = 'RCKM23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{RCKM23}',
-                   lhablock = 'RCKM',
-                   lhacode = [ 2, 3 ])
+RCKM2x3 = Parameter(name = 'RCKM2x3',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{RCKM2x3}',
+                    lhablock = 'RCKM',
+                    lhacode = [ 2, 3 ])
 
-RCKM24 = Parameter(name = 'RCKM24',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.01,
-                   texname = '\\text{RCKM24}',
-                   lhablock = 'RCKM',
-                   lhacode = [ 2, 4 ])
+RCKM2x4 = Parameter(name = 'RCKM2x4',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.01,
+                    texname = '\\text{RCKM2x4}',
+                    lhablock = 'RCKM',
+                    lhacode = [ 2, 4 ])
 
-RCKM31 = Parameter(name = 'RCKM31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{RCKM31}',
-                   lhablock = 'RCKM',
-                   lhacode = [ 3, 1 ])
+RCKM3x1 = Parameter(name = 'RCKM3x1',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{RCKM3x1}',
+                    lhablock = 'RCKM',
+                    lhacode = [ 3, 1 ])
 
-RCKM32 = Parameter(name = 'RCKM32',
-                   nature = 'external',
-                   type = 'real',
-                   value = -0.001,
-                   texname = '\\text{RCKM32}',
-                   lhablock = 'RCKM',
-                   lhacode = [ 3, 2 ])
+RCKM3x2 = Parameter(name = 'RCKM3x2',
+                    nature = 'external',
+                    type = 'real',
+                    value = -0.001,
+                    texname = '\\text{RCKM3x2}',
+                    lhablock = 'RCKM',
+                    lhacode = [ 3, 2 ])
 
-RCKM33 = Parameter(name = 'RCKM33',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.995,
-                   texname = '\\text{RCKM33}',
-                   lhablock = 'RCKM',
-                   lhacode = [ 3, 3 ])
+RCKM3x3 = Parameter(name = 'RCKM3x3',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.995,
+                    texname = '\\text{RCKM3x3}',
+                    lhablock = 'RCKM',
+                    lhacode = [ 3, 3 ])
 
-RCKM34 = Parameter(name = 'RCKM34',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.1,
-                   texname = '\\text{RCKM34}',
-                   lhablock = 'RCKM',
-                   lhacode = [ 3, 4 ])
+RCKM3x4 = Parameter(name = 'RCKM3x4',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.1,
+                    texname = '\\text{RCKM3x4}',
+                    lhablock = 'RCKM',
+                    lhacode = [ 3, 4 ])
 
-RCKM41 = Parameter(name = 'RCKM41',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0,
-                   texname = '\\text{RCKM41}',
-                   lhablock = 'RCKM',
-                   lhacode = [ 4, 1 ])
+RCKM4x1 = Parameter(name = 'RCKM4x1',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0,
+                    texname = '\\text{RCKM4x1}',
+                    lhablock = 'RCKM',
+                    lhacode = [ 4, 1 ])
 
-RCKM42 = Parameter(name = 'RCKM42',
-                   nature = 'external',
-                   type = 'real',
-                   value = -0.01,
-                   texname = '\\text{RCKM42}',
-                   lhablock = 'RCKM',
-                   lhacode = [ 4, 2 ])
+RCKM4x2 = Parameter(name = 'RCKM4x2',
+                    nature = 'external',
+                    type = 'real',
+                    value = -0.01,
+                    texname = '\\text{RCKM4x2}',
+                    lhablock = 'RCKM',
+                    lhacode = [ 4, 2 ])
 
-RCKM43 = Parameter(name = 'RCKM43',
-                   nature = 'external',
-                   type = 'real',
-                   value = -0.1,
-                   texname = '\\text{RCKM43}',
-                   lhablock = 'RCKM',
-                   lhacode = [ 4, 3 ])
+RCKM4x3 = Parameter(name = 'RCKM4x3',
+                    nature = 'external',
+                    type = 'real',
+                    value = -0.1,
+                    texname = '\\text{RCKM4x3}',
+                    lhablock = 'RCKM',
+                    lhacode = [ 4, 3 ])
 
-RCKM44 = Parameter(name = 'RCKM44',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.99495,
-                   texname = '\\text{RCKM44}',
-                   lhablock = 'RCKM',
-                   lhacode = [ 4, 4 ])
+RCKM4x4 = Parameter(name = 'RCKM4x4',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.99495,
+                    texname = '\\text{RCKM4x4}',
+                    lhablock = 'RCKM',
+                    lhacode = [ 4, 4 ])
 
 aEWM1 = Parameter(name = 'aEWM1',
                   nature = 'external',
@@ -441,101 +441,101 @@ WH = Parameter(name = 'WH',
                lhablock = 'DECAY',
                lhacode = [ 25 ])
 
-CKM11 = Parameter(name = 'CKM11',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'complex(0,1)*ICKM11 + RCKM11',
-                  texname = '\\text{CKM11}')
+CKM1x1 = Parameter(name = 'CKM1x1',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'complex(0,1)*ICKM1x1 + RCKM1x1',
+                   texname = '\\text{CKM1x1}')
 
-CKM12 = Parameter(name = 'CKM12',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'complex(0,1)*ICKM12 + RCKM12',
-                  texname = '\\text{CKM12}')
+CKM1x2 = Parameter(name = 'CKM1x2',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'complex(0,1)*ICKM1x2 + RCKM1x2',
+                   texname = '\\text{CKM1x2}')
 
-CKM13 = Parameter(name = 'CKM13',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'complex(0,1)*ICKM13 + RCKM13',
-                  texname = '\\text{CKM13}')
+CKM1x3 = Parameter(name = 'CKM1x3',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'complex(0,1)*ICKM1x3 + RCKM1x3',
+                   texname = '\\text{CKM1x3}')
 
-CKM14 = Parameter(name = 'CKM14',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'complex(0,1)*ICKM14 + RCKM14',
-                  texname = '\\text{CKM14}')
+CKM1x4 = Parameter(name = 'CKM1x4',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'complex(0,1)*ICKM1x4 + RCKM1x4',
+                   texname = '\\text{CKM1x4}')
 
-CKM21 = Parameter(name = 'CKM21',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'complex(0,1)*ICKM21 + RCKM21',
-                  texname = '\\text{CKM21}')
+CKM2x1 = Parameter(name = 'CKM2x1',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'complex(0,1)*ICKM2x1 + RCKM2x1',
+                   texname = '\\text{CKM2x1}')
 
-CKM22 = Parameter(name = 'CKM22',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'complex(0,1)*ICKM22 + RCKM22',
-                  texname = '\\text{CKM22}')
+CKM2x2 = Parameter(name = 'CKM2x2',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'complex(0,1)*ICKM2x2 + RCKM2x2',
+                   texname = '\\text{CKM2x2}')
 
-CKM23 = Parameter(name = 'CKM23',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'complex(0,1)*ICKM23 + RCKM23',
-                  texname = '\\text{CKM23}')
+CKM2x3 = Parameter(name = 'CKM2x3',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'complex(0,1)*ICKM2x3 + RCKM2x3',
+                   texname = '\\text{CKM2x3}')
 
-CKM24 = Parameter(name = 'CKM24',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'complex(0,1)*ICKM24 + RCKM24',
-                  texname = '\\text{CKM24}')
+CKM2x4 = Parameter(name = 'CKM2x4',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'complex(0,1)*ICKM2x4 + RCKM2x4',
+                   texname = '\\text{CKM2x4}')
 
-CKM31 = Parameter(name = 'CKM31',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'complex(0,1)*ICKM31 + RCKM31',
-                  texname = '\\text{CKM31}')
+CKM3x1 = Parameter(name = 'CKM3x1',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'complex(0,1)*ICKM3x1 + RCKM3x1',
+                   texname = '\\text{CKM3x1}')
 
-CKM32 = Parameter(name = 'CKM32',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'complex(0,1)*ICKM32 + RCKM32',
-                  texname = '\\text{CKM32}')
+CKM3x2 = Parameter(name = 'CKM3x2',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'complex(0,1)*ICKM3x2 + RCKM3x2',
+                   texname = '\\text{CKM3x2}')
 
-CKM33 = Parameter(name = 'CKM33',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'complex(0,1)*ICKM33 + RCKM33',
-                  texname = '\\text{CKM33}')
+CKM3x3 = Parameter(name = 'CKM3x3',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'complex(0,1)*ICKM3x3 + RCKM3x3',
+                   texname = '\\text{CKM3x3}')
 
-CKM34 = Parameter(name = 'CKM34',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'complex(0,1)*ICKM34 + RCKM34',
-                  texname = '\\text{CKM34}')
+CKM3x4 = Parameter(name = 'CKM3x4',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'complex(0,1)*ICKM3x4 + RCKM3x4',
+                   texname = '\\text{CKM3x4}')
 
-CKM41 = Parameter(name = 'CKM41',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'complex(0,1)*ICKM41 + RCKM41',
-                  texname = '\\text{CKM41}')
+CKM4x1 = Parameter(name = 'CKM4x1',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'complex(0,1)*ICKM4x1 + RCKM4x1',
+                   texname = '\\text{CKM4x1}')
 
-CKM42 = Parameter(name = 'CKM42',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'complex(0,1)*ICKM42 + RCKM42',
-                  texname = '\\text{CKM42}')
+CKM4x2 = Parameter(name = 'CKM4x2',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'complex(0,1)*ICKM4x2 + RCKM4x2',
+                   texname = '\\text{CKM4x2}')
 
-CKM43 = Parameter(name = 'CKM43',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'complex(0,1)*ICKM43 + RCKM43',
-                  texname = '\\text{CKM43}')
+CKM4x3 = Parameter(name = 'CKM4x3',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'complex(0,1)*ICKM4x3 + RCKM4x3',
+                   texname = '\\text{CKM4x3}')
 
-CKM44 = Parameter(name = 'CKM44',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'complex(0,1)*ICKM44 + RCKM44',
-                  texname = '\\text{CKM44}')
+CKM4x4 = Parameter(name = 'CKM4x4',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'complex(0,1)*ICKM4x4 + RCKM4x4',
+                   texname = '\\text{CKM4x4}')
 
 aEW = Parameter(name = 'aEW',
                 nature = 'internal',

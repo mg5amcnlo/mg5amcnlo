@@ -1097,6 +1097,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     def copy_python_file(self):
         """copy the python file require for the Template"""
 
+        # madevent interface
         cp(_file_path+'/interface/madevent_interface.py',
                             self.dir_path+'/bin/internal/madevent_interface.py')
         cp(_file_path+'/interface/extended_cmd.py',
@@ -1106,9 +1107,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         cp(_file_path+'/iolibs/save_load_object.py', 
                               self.dir_path+'/bin/internal/save_load_object.py') 
         cp(_file_path+'/iolibs/file_writers.py', 
-                              self.dir_path+'/bin/internal/file_writers.py')        
+                              self.dir_path+'/bin/internal/file_writers.py')
+        #model file                        
         cp(_file_path+'../models/check_param_card.py', 
-                              self.dir_path+'/bin/internal/check_param_card.py')
+                              self.dir_path+'/bin/internal/check_param_card.py')   
+                
+        #madevent file
         cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
         cp(_file_path+'/various/gen_crossxhtml.py', 
                                 self.dir_path+'/bin/internal/gen_crossxhtml.py')                
@@ -1118,6 +1122,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                        self.dir_path+'/bin/internal/cluster.py') 
         cp(_file_path+'/various/sum_html.py', 
                                        self.dir_path+'/bin/internal/sum_html.py') 
+        # logging configuration
         cp(_file_path+'/interface/.mg5_logging.conf', 
                                  self.dir_path+'/bin/internal/me5_logging.conf') 
         cp(_file_path+'/interface/coloring_logging.py', 
@@ -3276,7 +3281,7 @@ class UFO_model_to_mg4(object):
                 
         
         fsock.writelines('\n'.join(res_strings))
-
+        
     def create_param_card(self):
         """ create the param_card.dat """
 

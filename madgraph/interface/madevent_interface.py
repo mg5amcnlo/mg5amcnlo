@@ -1622,7 +1622,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                         continue
                     if not initdir:
                         continue
-                    path = pjoin(initdir, self.options[name])
+                    path = pjoin(initdir, value)
                     if os.path.isdir(path):
                         self.options[name] = os.path.realpath(path)
                         continue
@@ -2135,6 +2135,21 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             else:
                 run_card = self.run_card
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
+        
+        if mode in ['param', 'all']: 
+            param_card = check_param_card.ParamCard(opt['param_card'])
+            outfile = pjoin(opt['output_dir'], 'param_card.inc')
+            ident_card = pjoin(self.me_dir,'Cards','ident_card.dat')
+            if os.path.isfile(pjoin(self.me_dir,'bin','internal','ufomodel','restrict_default.dat')):
+                default = pjoin(self.me_dir,'bin','internal','ufomodel','restrict_default.dat')
+            elif os.path.isfile(pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')):
+                default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
+            else:
+                subprocess.call(['python', 'write_param_card.py'], 
+                             cwd=pjoin(self.me_dir,'bin','internal','ufomodel'))
+                default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
+            param_card.write_inc_file(outfile, ident_card, default)
+         
              
 
     ############################################################################      
@@ -3281,7 +3296,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             del os.environ['lhapdf']
             
         # create param_card.inc and run_card.inc
-        self.run_card.write_include_file(pjoin(self.me_dir, 'Source', 'run_card.inc'))
+        self.do_treatcards('')
         
         # Compile
         for name in ['../bin/internal/gen_ximprove', 'all', 

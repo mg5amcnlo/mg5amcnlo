@@ -207,7 +207,11 @@ class Alphas_Runner(object):
     def __call__(self, scale):
         """Evaluation of strong coupling constant alpha_S at scale 'scale'."""
         assert scale > 0
-        if scale < self.cmass:
+        
+        
+        if scale < 0.188775276209:
+            return 0
+        elif scale < self.cmass:
             t = 2 * math.log(scale/self.cmass)
             return self.newton1(t, self.amc, 3)
         elif scale < self.bmass:
@@ -248,7 +252,7 @@ class Alphas_Runner(object):
         a_out = alphas / (1 + alphas * b0 * t)
         if nloop == 1:
             return a_out
-        
+
         a_out = alphas/(1+b0*alphas*t+c1*alphas*math.log(1+alphas*b0*t))
         if a_out < 0:
             a_out = 0.3

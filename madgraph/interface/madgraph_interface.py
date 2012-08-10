@@ -2141,7 +2141,35 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             pydoc.pager(outstr)            
         
-        elif args[0] in  ["options", "variable"]:
+        elif args[0] == 'options':
+            print "                          MadGraph Options    "
+            print "                          ----------------    "
+            for key, default in self.options_madgraph.items():
+                value = self.options[key]
+                if value == default:
+                    print "  %25s \t:\t%s" % (key,value)
+                else:
+                    print "  %25s \t:\t%s (user set)" % (key,value)
+            print 
+            print "                         MadEvent Options    "
+            print "                          ----------------    "
+            for key, default in self.options_madevent.items():
+                value = self.options[key]
+                if value == default:
+                    print "  %25s \t:\t%s" % (key,value)
+                else:
+                    print "  %25s \t:\t%s (user set)" % (key,value)  
+            print                  
+            print "                      Configuration Options    "
+            print "                      ---------------------    "
+            for key, default in self.options_configuration.items():
+                value = self.options[key]
+                if value == default:
+                    print "  %25s \t:\t%s" % (key,value)
+                else:
+                    print "  %25s \t:\t%s (user set)" % (key,value)                      
+                    
+        elif args[0] in  ["variable"]:
             super(MadGraphCmd, self).do_display(line, output)
                 
             
@@ -3477,7 +3505,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 for key, default in self.options_madgraph.items():
                     if self.options[key] != self.options_madgraph[key]:
                         to_define[key] = self.options[key]
-            
+            elif not '--auto' in args:
+                for key, default in self.options_madgraph.items():
+                    if self.options[key] != self.options_madgraph[key]:
+                        logger.info('The option %s is modified [%s] but will not be written in the configuration files.' \
+                                    % (key,self.options_madgraph[key]) )
+                        logger.info('If you want to make this value the default for future session, you can run \'save options --all\'')
             if len(args) >1 and not args[1].startswith('--'):
                 filepath = args[1]
             else:
@@ -3498,7 +3531,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         # Check the validity of the arguments
         self.check_set(args)
-
+        
+        # Check if we need to save this in the option file
+        if args[0] in self.options_configuration:
+            self.exec_cmd('save options --auto')
+        elif log and args[0] in self.options_madevent:
+            logger.info('This option will be the default in any output that you are going to create in this session.')
+            logger.info('In order to keep this changes permanent please run \'save configuration\'')
+        
         if args[0] == 'ignore_six_quark_processes':
             if args[1] == 'False':
                 self.options[args[0]] = False
