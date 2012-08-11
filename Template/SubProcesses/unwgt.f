@@ -533,48 +533,47 @@ c      Add mass information in pb(4)
 c
 c     Add info on resonant mothers
 c
-c     TO BE UNCOMMENTED!!!
-c      call addmothers(ip,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
-c     $                npart,numproc)
+      call addmothers(ip,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
+     $                npart,numproc)
 
 c     Need to flip after addmothers, since color might get overwritten
-c      if (flip) then
-c         do i=1,7
-c            j=jpart(i,1)
-c            jpart(i,1)=jpart(i,2)
-c            jpart(i,2)=j
-c         enddo
-c         ptcltmp(1)=ptclus(1)
-c         ptclus(1)=ptclus(2)
-c         ptclus(2)=ptcltmp(1)
-c      endif
+      if (flip) then
+         do i=1,7
+            j=jpart(i,1)
+            jpart(i,1)=jpart(i,2)
+            jpart(i,2)=j
+         enddo
+         ptcltmp(1)=ptclus(1)
+         ptclus(1)=ptclus(2)
+         ptclus(2)=ptcltmp(1)
+      endif
 
 c
 c     Write events to lun
 c
-c      write(*,*) 'Writing event'
-c      if(q2fact(1).gt.0.and.q2fact(2).gt.0)then
-c         sscale = sqrt(max(q2fact(1),q2fact(2)))
-c      else if(q2fact(1).gt.0)then
-c         sscale = sqrt(q2fact(1))
-c      else if(q2fact(2).gt.0)then
-c         sscale = sqrt(q2fact(2))
-c      else
-c         sscale = 0d0
-c      endif
-c      aaqcd = g*g/4d0/3.1415926d0
-c      aaqed = gal(1)*gal(1)/4d0/3.1415926d0
+      write(*,*) 'Writing event'
+      if(q2fact(1).gt.0.and.q2fact(2).gt.0)then
+         sscale = sqrt(max(q2fact(1),q2fact(2)))
+      else if(q2fact(1).gt.0)then
+         sscale = sqrt(q2fact(1))
+      else if(q2fact(2).gt.0)then
+         sscale = sqrt(q2fact(2))
+      else
+         sscale = 0d0
+      endif
+      aaqcd = g*g/4d0/3.1415926d0
+      aaqed = gal(1)*gal(1)/4d0/3.1415926d0
 
-c      if (btest(mlevel,3)) then
-c        write(*,*)' write_leshouche: SCALUP to: ',sscale
-c      endif
+      if (btest(mlevel,3)) then
+        write(*,*)' write_leshouche: SCALUP to: ',sscale
+      endif
       
       
-c      call write_event(lun,pb(0,1),wgt,npart,jpart(1,1),ngroup,
-c     &   sscale,aaqcd,aaqed,buff)
-c      if(btest(mlevel,1))
-c     &   call write_event(6,pb(0,1),wgt,npart,jpart(1,1),ngroup,
-c     &   sscale,aaqcd,aaqed,buff)
+      call write_event(lun,pb(0,1),wgt,npart,jpart(1,1),ngroup,
+     &   sscale,aaqcd,aaqed,buff)
+      if(btest(mlevel,1))
+     &   call write_event(6,pb(0,1),wgt,npart,jpart(1,1),ngroup,
+     &   sscale,aaqcd,aaqed,buff)
 
       end
       
