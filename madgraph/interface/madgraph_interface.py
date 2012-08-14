@@ -3112,7 +3112,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if not os.path.exists(os.path.join(MG5DIR,'input','.autoupdate')) or \
                 os.path.exists(os.path.join(MG5DIR,'.bzr')):
             error_text = """This version of MG5 doesn\'t support auto-update. Common reasons are:
-            1) This version was loaded via bazaar (use bzr pull to update instead)
+            1) This version was loaded via bazaar (use bzr pull to update instead).
             2) This version is a beta release of MG5."""
             if mode == 'userrequest':
                 raise self.ConfigurationError(error_text)
@@ -3217,7 +3217,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             fsock.close()
             logger.info('Update bypassed.')
             logger.info('The next check for a new version will be performed in %s days' \
-                        % self.options['auto_update'])
+                        % abs(self.options['auto_update']))
             logger.info('In order to change this delay. Enter the command:')
             logger.info('set auto_update X')
             logger.info('Putting X to zero will prevent this check at anytime.')
@@ -3226,7 +3226,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         else: #answer is on_exit
             #ensure that the test will be done on exit
             #Do not use the set command here!!
-            self.options['auto_update'] = -1
+            self.options['auto_update'] = -1 * self.options['auto_update']
 
 
     
