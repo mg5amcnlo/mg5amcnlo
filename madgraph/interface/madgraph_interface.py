@@ -2142,33 +2142,33 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             pydoc.pager(outstr)            
         
         elif args[0] == 'options':
-            print "                          MadGraph Options    "
-            print "                          ----------------    "
+            outstr = "                          MadGraph Options    \n"
+            outstr += "                          ----------------    \n"
             for key, default in self.options_madgraph.items():
                 value = self.options[key]
                 if value == default:
-                    print "  %25s \t:\t%s" % (key,value)
+                    outstr += "  %25s \t:\t%s\n" % (key,value)
                 else:
-                    print "  %25s \t:\t%s (user set)" % (key,value)
-            print 
-            print "                         MadEvent Options    "
-            print "                          ----------------    "
+                    outstr += "  %25s \t:\t%s (user set)\n" % (key,value)
+            outstr += "\n"
+            outstr += "                         MadEvent Options    \n"
+            outstr += "                          ----------------    \n"
             for key, default in self.options_madevent.items():
                 value = self.options[key]
                 if value == default:
-                    print "  %25s \t:\t%s" % (key,value)
+                    outstr += "  %25s \t:\t%s\n" % (key,value)
                 else:
-                    print "  %25s \t:\t%s (user set)" % (key,value)  
-            print                  
-            print "                      Configuration Options    "
-            print "                      ---------------------    "
+                    outstr += "  %25s \t:\t%s (user set)\n" % (key,value)  
+            outstr += "\n"                 
+            outstr += "                      Configuration Options    \n"
+            outstr += "                      ---------------------    \n"
             for key, default in self.options_configuration.items():
                 value = self.options[key]
                 if value == default:
-                    print "  %25s \t:\t%s" % (key,value)
+                    outstr += "  %25s \t:\t%s\n" % (key,value)
                 else:
-                    print "  %25s \t:\t%s (user set)" % (key,value)                      
-                    
+                    outstr += "  %25s \t:\t%s (user set)\n" % (key,value)
+            output.write(outstr)
         elif args[0] in  ["variable"]:
             super(MadGraphCmd, self).do_display(line, output)
                 
@@ -3741,37 +3741,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 raise self.InvalidCmd('Stopped by user request')
             else:
                 shutil.rmtree(self._export_dir)
-
-        #check if we need to group processes
-        group_subprocesses = False
-        if self._export_format == 'madevent' and \
-                                            self.options['group_subprocesses']:
-                if self.options['group_subprocesses'] is True:
-                    group_subprocesses = True
-                elif self._curr_amps[0].get_ninitial()  == 2:
-                    group_subprocesses = True
-
                              
         # Make a Template Copy
-        if self._export_format == 'madevent':
-            if group_subprocesses:
-                if not self.options['complex_mass_scheme']:
-                    self._curr_exporter = export_v4.ProcessExporterFortranMEGroup(\
-                                      self._mgme_dir, self._export_dir,
-                                      not noclean)
-                else:
-                    self._curr_exporter = \
-                            export_v4.ProcessExporterFortranMEGroupComplexMass(\
-                                      self._mgme_dir, self._export_dir,
-                                      not noclean)                    
-            else:
-                self._curr_exporter = export_v4.ProcessExporterFortranME(\
-                                      self._mgme_dir, self._export_dir,
-                                      not noclean)
-        
-        elif self._export_format in ['standalone', 'matrix']:
-            self._curr_exporter = export_v4.ProcessExporterFortranSA(\
-                                  self._mgme_dir, self._export_dir,not noclean)
+        if self._export_format in ['madevent', 'standalone', 'matrix']:
+            self._curr_exporter = export_v4.ExportV4Factory(self, noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif not os.path.isdir(self._export_dir):

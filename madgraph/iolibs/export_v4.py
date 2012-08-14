@@ -64,13 +64,17 @@ class ProcessExporterFortran(object):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
-    def __init__(self, mgme_dir = "", dir_path = "", clean = False):
+    def __init__(self, mgme_dir = "", dir_path = "", opt=None):
         """Initiate the ProcessExporterFortran with directory information"""
         self.mgme_dir = mgme_dir
         self.dir_path = dir_path
-        self.clean = clean
         self.model = None
-
+        if opt:
+            self.opt = opt
+        else:
+            self.opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'madevent'}
+            
     #===========================================================================
     # copy the Template in a new directory.
     #===========================================================================
@@ -108,7 +112,7 @@ class ProcessExporterFortran(object):
                 "5." + MG5_version['version'])
 
         #Ensure that the Template is clean
-        if self.clean:
+        if self.opt['clean']:
             logger.info('remove old information in %s' % \
                                                   os.path.basename(self.dir_path))
             if os.environ.has_key('MADGRAPH_BASE'):
@@ -342,7 +346,7 @@ class ProcessExporterFortran(object):
 
         # create the MODEL
         write_dir=pjoin(self.dir_path, 'Source', 'MODEL')
-        model_builder = UFO_model_to_mg4(model, write_dir)
+        model_builder = UFO_model_to_mg4(model, write_dir, self.opt)
         model_builder.build(wanted_couplings)
 
         # Create and write ALOHA Routine
@@ -2371,9 +2375,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         including the necessary matrix_N.f files, configs.inc and various
         other helper files"""
 
-        if not isinstance(subproc_group, group_subprocs.SubProcessGroup):
-            raise base_objects.PhysicsObject.PhysicsObjectError,\
-                  "subproc_group object not SubProcessGroup"
+        assert isinstance(subproc_group, group_subprocs.SubProcessGroup), \
+                                      "subproc_group object not SubProcessGroup"
 
         if not self.model:
             self.model = subproc_group.get('matrix_elements')[0].\
@@ -2798,14 +2801,17 @@ python_to_fortran = lambda x: parsers.UFOExpressionParserFortran().parse(x)
 class UFO_model_to_mg4(object):
     """ A converter of the UFO-MG5 Model to the MG4 format """
     
-    def __init__(self, model, output_path, cmass_scheme=False):
+    def __init__(self, model, output_path, opt=None):
         """ initialization of the objects """
        
         self.model = model
         self.model_name = model['name']
         self.dir_path = output_path
-        self.cmass_scheme=cmass_scheme
-        
+        if opt:
+            self.opt = opt
+        else:
+            self.opt = {'complex_mass': False, 'export_format': 'madevent'}
+            
         self.coups_dep = []    # (name, expression, type)
         self.coups_indep = []  # (name, expression, type)
         self.params_dep = []   # (name, expression, type)
@@ -2962,11 +2968,20 @@ class UFO_model_to_mg4(object):
     
         
         #copy the library files
-        file_to_link = ['formats.inc', 'lha_read.f', 'makefile','printout.f', \
+        file_to_link = ['formats.inc', 'lha_read.f','printout.f', \
                         'rw_para.f', 'testprog.f', 'rw_para.f']
+    
     
         for filename in file_to_link:
             cp( MG5DIR + '/models/template_files/fortran/' + filename, self.dir_path)
+
+        if self.opt['export_format'] == 'madevent':
+            cp( MG5DIR + '/models/template_files/fortran/makefile_madevent', 
+                self.dir_path + '/makefile')
+        else:
+            cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
+                self.dir_path + '/makefile')
+
 
     def create_coupl_inc(self):
         """ write coupling.inc """
@@ -2986,7 +3001,7 @@ class UFO_model_to_mg4(object):
         # Write the Mass definition/ common block
         masses = set()
         widths = set()
-        if aloha.complex_mass:
+        if self.opt['complex_mass']:
             complex_mass = set()
             
         for particle in self.model.get('particles'):
@@ -2999,7 +3014,7 @@ class UFO_model_to_mg4(object):
             one_width = particle.get('width')
             if one_width.lower() != 'zero':
                 widths.add(one_width)
-                if aloha.complex_mass and one_mass.lower() != 'zero':
+                if self.opt['complex_mass'] and one_mass.lower() != 'zero':
                     complex_mass.add('CMASS_%s' % one_mass)
         
         fsock.writelines('double precision '+','.join(masses)+'\n')
@@ -3014,7 +3029,7 @@ class UFO_model_to_mg4(object):
         fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
         
         # Write complex mass for complex mass scheme (if activated)
-        if aloha.complex_mass:
+        if self.opt['complex_mass']:
             fsock.writelines('double complex '+', '.join(complex_mass)+'\n')
             fsock.writelines('common/couplings/ '+', '.join(complex_mass)+'\n')            
         
@@ -3044,7 +3059,7 @@ class UFO_model_to_mg4(object):
         for particle in self.model.get('particles'):
             already_def.add(particle.get('mass').lower())
             already_def.add(particle.get('width').lower())
-            if aloha.complex_mass:
+            if self.opt['complex_mass']:
                 already_def.add('cmass_%s' % particle.get('mass').lower())
 
         is_valid = lambda name: name !='G' and name.lower() not in already_def
@@ -3255,6 +3270,11 @@ class UFO_model_to_mg4(object):
         
     def create_param_read(self):    
         """create param_read"""
+        
+        if self.opt['export_format'] == 'madevent':
+            fsock = self.open('param_read.inc', format='fortran')
+            fsock.writelines(' include \'../param_card.inc\'')
+            return
     
         def format_line(parameter):
             """return the line for the ident_card corresponding to this 
@@ -3301,43 +3321,38 @@ class UFO_model_to_mg4(object):
                 translator.make_valid_param_card(out_path, out_path2)
             translator.convert_to_slha1(out_path)
         
+        
+def ExportV4Factory(cmd, noclean):
+    """ Determine which Export_v4 class is required. cmd is the command 
+        interface containing all potential usefull information."""
 
-
-#===============================================================================
-# ProcessExporterFortranMEGroup
-#===============================================================================
-class ProcessExporterFortranMEGroupComplexMass(ProcessExporterFortranMEGroup):
-    """Class to take care of exporting a set of matrix elements to
-    MadEvent subprocess group format in complex mass scheme format"""
-
-    def convert_model_to_mg4(self, model, wanted_lorentz = [],
-                             wanted_couplings = []):
-        """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
-
-        # create the MODEL
-        write_dir=os.path.join(self.dir_path, 'Source', 'MODEL')
-        model_builder = UFO_model_to_mg4(model, write_dir, cmass_scheme=True)
-        model_builder.build(wanted_couplings)
-
-        # Create and write ALOHA Routine
-        aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
-        if wanted_lorentz:
-            aloha_model.compute_subset(wanted_lorentz)
+    group_subprocesses = cmd.options['group_subprocesses']
+    #check if we need to group processes
+    if cmd.options['group_subprocesses'] == 'Auto':
+        if cmd._curr_amps[0].get_ninitial()  == 2:
+            group_subprocesses = True
         else:
-            aloha_model.compute_all(save=False)
-        write_dir=os.path.join(self.dir_path, 'Source', 'DHELAS')
-        aloha_model.write(write_dir, 'Fortran')
+            group_subprocesses = False
 
-        #copy Helas Template
-        cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
-        for filename in os.listdir(os.path.join(MG5DIR,'aloha','template_files')):
-            if not filename.lower().endswith('.f'):
-                continue
-            cp((MG5DIR + '/aloha/template_files/' + filename), write_dir)
-        create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
+    assert group_subprocesses in [True, False]
+    
+    
+    opt = {'clean': not noclean, 
+           'complex_mass': cmd.options['complex_mass_scheme'],
+           'export_format':cmd._export_format}
 
-        # Make final link in the Process
-        self.make_model_symbolic_link()
-
-
-
+    if cmd._export_format in ['standalone', 'matrix']:
+        return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt)
+    elif cmd._export_format in ['madevent'] and group_subprocesses:
+        return  ProcessExporterFortranMEGroup(cmd._mgme_dir, cmd._export_dir,
+                                                                        opt)
+    elif cmd._export_format in ['madevent']:
+        return ProcessExporterFortranME(cmd._mgme_dir, cmd._export_dir,opt)
+    
+    else:
+        raise Exception, 'Wrong export_v4 format'
+        
+    
+    
+    
+            
