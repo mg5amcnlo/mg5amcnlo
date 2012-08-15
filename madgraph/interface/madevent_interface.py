@@ -200,6 +200,7 @@ class CmdExtended(cmd.Cmd):
     def postcmd(self, stop, line):
         """ Update the status of  the run for finishing interactive command """
         
+        stop = super(CmdExtended, self).postcmd(stop, line)   
         # relaxing the tag forbidding question
         self.force = False
         
@@ -511,6 +512,48 @@ class CheckValidForCmd(object):
                        os.path.isdir(args[0]):
                     raise self.InvalidCmd("invalid path %s " % dirpath)
                 
+    def check_save(self, args):
+        """ check the validity of the line"""
+        
+        if len(args) == 0:
+            args.append('options')
+        
+        if args[0] not in self._save_opts:
+            raise self.InvalidCmd('wrong \"save\" format')
+        
+        if args[0] != 'options' and len(args) != 2:
+            self.help_save()
+            raise self.InvalidCmd('wrong \"save\" format')
+        elif args[0] != 'options' and len(args) == 2:
+            basename = os.path.dirname(args[1])
+            if not os.path.exists(basename):
+                raise self.InvalidCmd('%s is not a valid path, please retry' % \
+                                                                        args[1])
+        
+        if args[0] == 'options':
+            has_path = None
+            for arg in args[1:]:
+                if arg in ['--auto', '--all']:
+                    continue
+                elif arg.startswith('--'):
+                    raise self.InvalidCmd('unknow command for \'save options\'')
+                else:
+                    basename = os.path.dirname(arg)
+                    if not os.path.exists(basename):
+                        raise self.InvalidCmd('%s is not a valid path, please retry' % \
+                                                                        arg)
+                    elif has_path:
+                        raise self.InvalidCmd('only one path is allowed')
+                    else:
+                        args.remove(arg)
+                        args.insert(1, arg)
+                        has_path = True
+            if not has_path:
+                if '--auto' in arg and self.options['mg5_path']:
+                    args.insert(1, pjoin(self.options['mg5_path'],'input','mg5_configuration.txt'))  
+                else:
+                    args.insert(1, pjoin(self.me_dir,'Cards','me5_configuration.txt'))  
+                        
     def check_set(self, args):
         """ check the validity of the line"""
 
@@ -1664,7 +1707,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             elif key not in ['text_editor','eps_viewer','web_browser']:
                 # Default: try to set parameter
                 try:
-                    self.do_set("%s %s" % (key, self.options[key]), log=False)
+                    self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
                 except self.InvalidCmd:
                     logger.warning("Option %s from config file not understood" \
                                    % key)
@@ -1732,9 +1775,78 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     print ', '.join(tags)
             else:
                 print 'No run detected.'
+                
+        elif  args[0] == 'options':
+            outstr = "                              Run Options    \n"
+            outstr += "                              -----------    \n"
+            for key, default in self.options_madgraph.items():
+                value = self.options[key]
+                if value == default:
+                    outstr += "  %25s \t:\t%s\n" % (key,value)
+                else:
+                    outstr += "  %25s \t:\t%s (user set)\n" % (key,value)
+            outstr += "\n"
+            outstr += "                         MadEvent Options    \n"
+            outstr += "                         ----------------    \n"
+            for key, default in self.options_madevent.items():
+                value = self.options[key]
+                if value == default:
+                    outstr += "  %25s \t:\t%s\n" % (key,value)
+                else:
+                    outstr += "  %25s \t:\t%s (user set)\n" % (key,value)  
+            outstr += "\n"                 
+            outstr += "                      Configuration Options    \n"
+            outstr += "                      ---------------------    \n"
+            for key, default in self.options_configuration.items():
+                value = self.options[key]
+                if value == default:
+                    outstr += "  %25s \t:\t%s\n" % (key,value)
+                else:
+                    outstr += "  %25s \t:\t%s (user set)\n" % (key,value)
+            output.write(outstr)
         else:
             super(MadEventCmd, self).do_display(line, output)
  
+    def do_save(self, line, check=True, to_keep={}):
+        """Not in help: Save information to file"""  
+        
+        args = self.split_arg(line)
+        # Check argument validity
+        if check:
+            self.check_save(args)
+        
+        if args[0] == 'options':
+            # First look at options which should be put in MG5DIR/input
+            to_define = {}
+            for key, default in self.options_configuration.items():
+                if self.options[key] != self.options_configuration[key]:
+                    to_define[key] = self.options[key]
+            
+            if not '--auto' in args:
+                for key, default in self.options_madevent.items():
+                    if self.options[key] != self.options_madevent[key]:
+                        to_define[key] = self.options[key]
+            
+            if '--all' in args:
+                for key, default in self.options_madgraph.items():
+                    if self.options[key] != self.options_madgraph[key]:
+                        to_define[key] = self.options[key]
+            elif not '--auto' in args:
+                for key, default in self.options_madgraph.items():
+                    if self.options[key] != self.options_madgraph[key]:
+                        logger.info('The option %s is modified [%s] but will not be written in the configuration files.' \
+                                    % (key,self.options_madgraph[key]) )
+                        logger.info('If you want to make this value the default for future session, you can run \'save options --all\'')
+            if len(args) >1 and not args[1].startswith('--'):
+                filepath = args[1]
+            else:
+                filepath = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
+            basefile = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
+            basedir = self.me_dir
+            
+            if to_keep:
+                to_define = to_keep
+            self.write_configuration(filepath, basefile, basedir, to_define)
   
     ############################################################################
     def do_import(self, line):
@@ -1764,10 +1876,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def do_set(self, line, log=True):
         """Set an option, which will be default for coming generations/outputs
         """
+        # cmd calls automaticaly post_set after this command.
+
 
         args = self.split_arg(line) 
         # Check the validity of the arguments
         self.check_set(args)
+        # Check if we need to save this in the option file
+        if args[0] in self.options_configuration and '--no_save' not in args:
+            self.do_save('options --auto')
+        
         if args[0] == "stdout_level":
             if args[1].isdigit():
                 logging.root.setLevel(int(args[1]))
@@ -1814,7 +1932,21 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             else:
                 self.options[args[0]] = args[1]             
  
- 
+    def post_set(self, stop, line):
+        """Check if we need to save this in the option file"""
+        
+        args = self.split_arg(line)
+        # Check the validity of the arguments
+        self.check_set(args)
+        
+        if args[0] in self.options_configuration and '--no_save' not in args:
+            self.exec_cmd('save options --auto')
+        elif args[0] in self.options_madevent:
+            logger.info('This option will be the default in any output that you are going to create in this session.')
+            logger.info('In order to keep this changes permanent please run \'save options\'')
+        return stop
+
+
     ############################################################################
     def update_status(self, status, level, makehtml=True, force=True, error=False):
         """ update the index status """
@@ -3584,10 +3716,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('Creating root files', level='parton')
 
         eradir = self.options['exrootanalysis_path']
-        misc.call(['%s/ExRootLHEFConverter' % eradir, 
+        try:
+            misc.call(['%s/ExRootLHEFConverter' % eradir, 
                              input, output],
                             cwd=pjoin(self.me_dir, 'Events'))
-        
+        except:
+            logger.warning('fail to produce Root output [problem with ExRootAnalysis]')
     ############################################################################
     def create_plot(self, mode='parton', event_path=None, output=None):
         """create the plot""" 

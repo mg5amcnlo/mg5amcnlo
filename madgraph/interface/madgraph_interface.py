@@ -192,8 +192,10 @@ class CmdExtended(cmd.Cmd):
     
     def postcmd(self,stop, line):
         """ finishing a command
+        This looks if the command add a special post part.
         This looks if we have to write an additional text for the tutorial."""
         
+        stop = super(CmdExtended, self).postcmd(stop, line)   
         # Print additional information in case of routines fails
         if stop == False:
             return False
@@ -3270,7 +3272,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             else:
                 name = name.strip()
                 value = value.strip()
-                self.options[name] = value
+                if name != 'mg5_path':
+                    self.options[name] = value
                 if value.lower() == "none":
                     self.options[name] = None
 
@@ -3301,7 +3304,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
-                    self.do_set("%s %s" % (key, self.options[key]), log=False)
+                    self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
                 except MadGraph5Error, error:
                     print error
                     logger.warning("Option %s from config file not understood" \
@@ -3493,21 +3496,22 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # First look at options which should be put in MG5DIR/input
             to_define = {}
             for key, default in self.options_configuration.items():
-                if self.options[key] != self.options_configuration[key]:
+                if  self.options_configuration[key] != self.options[key] != None:
                     to_define[key] = self.options[key]
             
             if not '--auto' in args:
                 for key, default in self.options_madevent.items():
-                    if self.options[key] != self.options_madevent[key]:
+                    if self.options_madevent[key] != self.options[key] != None:
                         to_define[key] = self.options[key]
             
             if '--all' in args:
                 for key, default in self.options_madgraph.items():
-                    if self.options[key] != self.options_madgraph[key]:
+                    if self.options_madgraph[key] != self.options[key] != None and \
+                      key != 'stdout_level':
                         to_define[key] = self.options[key]
             elif not '--auto' in args:
                 for key, default in self.options_madgraph.items():
-                    if self.options[key] != self.options_madgraph[key]:
+                    if self.options_madgraph[key] != self.options[key] != None and  key != 'stdout_level':
                         logger.info('The option %s is modified [%s] but will not be written in the configuration files.' \
                                     % (key,self.options_madgraph[key]) )
                         logger.info('If you want to make this value the default for future session, you can run \'save options --all\'')
@@ -3526,19 +3530,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def do_set(self, line, log=True):
         """Set an option, which will be default for coming generations/outputs
         """
-	
+	    # This command is associated to a post_cmd: post_set.
+        
         args = self.split_arg(line)
         
         # Check the validity of the arguments
         self.check_set(args)
-        
-        # Check if we need to save this in the option file
-        if args[0] in self.options_configuration:
-            self.exec_cmd('save options --auto')
-        elif log and args[0] in self.options_madevent:
-            logger.info('This option will be the default in any output that you are going to create in this session.')
-            logger.info('In order to keep this changes permanent please run \'save configuration\'')
-        
+            
         if args[0] == 'ignore_six_quark_processes':
             if args[1] == 'False':
                 self.options[args[0]] = False
@@ -3662,6 +3660,20 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.options[args[0]] = eval(args[1])
             else:
                 self.options[args[0]] = args[1]             
+
+    def post_set(self, stop, line):
+        """Check if we need to save this in the option file"""
+        
+        args = self.split_arg(line)
+        # Check the validity of the arguments
+        self.check_set(args)
+        
+        if args[0] in self.options_configuration and '--no_save' not in args:
+            self.exec_cmd('save options --auto')
+        elif args[0] in self.options_madevent:
+            logger.info('This option will be the default in any output that you are going to create in this session.')
+            logger.info('In order to keep this changes permanent please run \'save options\'')
+        return stop
 
     def do_open(self, line):
         """Open a text file/ eps file / html file"""
