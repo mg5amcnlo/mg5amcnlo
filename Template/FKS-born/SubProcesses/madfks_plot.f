@@ -103,10 +103,8 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       real*8 emax,getcth,cpar,dpar,thrust,dot,shat
       integer i,j,kk,imax
 
-      LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
-      LOGICAL  IS_A_B(NEXTERNAL),IS_A_A(NEXTERNAL)
-      LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY
+      LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM
 c masses
       double precision pmass(nexternal)
       double precision  pt1, eta1, y1, pt2, eta2, y2, pt3, eta3, y3, ht

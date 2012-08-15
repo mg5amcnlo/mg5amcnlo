@@ -1,28 +1,14 @@
       logical function pass_point(p)
-c************************************************************************
-c     This function is called from sample to see if it needs to 
-c     bother calculating the weight from all the different conficurations
-c     You can either just return true, or have it call passcuts
-c************************************************************************
       implicit none
-c
-c     Arguments
-c
       double precision p
-c
-c     External
-c
       logical passcuts
       external passcuts
-c-----
-c  Begin Code
-c-----
       pass_point = .true.
 c      pass_point = passcuts(p)
       end
-C $B$ PASSCUTS $B$ !this is a tag for MadWeight
+
+
       LOGICAL FUNCTION PASSCUTS(P,rwgt)
-C $E$ PASSCUTS $E$ !this is a tag for MadWeight
 C**************************************************************************
 C     INPUT:
 C            P(0:3,1)           MOMENTUM OF INCOMING PARTON
@@ -69,88 +55,40 @@ C
 C
 C     LOCAL
 C
-      LOGICAL FIRSTTIME,FIRSTTIME2,pass_bw, notgood,good
-      LOGICAL nogo(nexternal)
-      integer i,j,njets,hardj1,hardj2,skip
-      REAL*8 XVAR,ptmax1,ptmax2,htj,cpar,logYcut
-      real*8 ptemp(0:3)
+      LOGICAL FIRSTTIME
+      DATA FIRSTTIME/.TRUE./
+      integer i,j
 C
 C     EXTERNAL
 C
-      REAL*8 R2,DOT,ET,RAP,DJ,SumDot,pt,rewgt
+      REAL*8 R2,DOT,ET,RAP,DJ,SumDot,pt,rewgt,eta
       logical cut_bw
-      external cut_bw,rewgt
+      external cut_bw,rewgt,eta,r2,dot,et,rap,dj,sumdot,pt
 C
 C     GLOBAL
 C
       include 'run.inc'
       include 'cuts.inc'
-
+c For boosts
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
-
-      double precision ptjet(nexternal)
-      double precision temp
-
-      double precision etmin(nincoming+1:nexternal),etamax(nincoming+1:nexternal)
-      double precision emin(nincoming+1:nexternal)
-      double precision                    r2min(nincoming+1:nexternal,nincoming+1:nexternal)
-      double precision s_min(nexternal,nexternal)
-      double precision etmax(nincoming+1:nexternal),etamin(nincoming+1:nexternal)
-      double precision emax(nincoming+1:nexternal)
-      double precision r2max(nincoming+1:nexternal,nincoming+1:nexternal)
-      double precision s_max(nexternal,nexternal)
-      common/to_cuts/  etmin, emin, etamax, r2min, s_min,
-     $     etmax, emax, etamin, r2max, s_max
-
-      double precision ptjmin4(4),ptjmax4(4),htjmin4(2:4),htjmax4(2:4)
-      logical jetor
-      common/to_jet_cuts/ ptjmin4,ptjmax4,htjmin4,htjmax4,jetor
-
-c
-c     Special cuts
-c
-
-      integer        lbw(0:nexternal)  !Use of B.W.
-      common /to_BW/ lbw
-C
-C     SPECIAL CUTS
-C
-C $B$ TO_SPECISA $B$ !this is a tag for MadWeight
-      LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
-      LOGICAL  IS_A_B(NEXTERNAL),IS_A_A(NEXTERNAL)
-      LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY
-C $E$ TO_SPECISA $E$ !this is a tag for MadWeight
-      include 'coupl.inc'
-C
-C
-c
-      DATA FIRSTTIME,FIRSTTIME2/.TRUE.,.TRUE./
-
-c jet cluster algorithm
-      integer NN,NJET,NSUB,JET(nexternal)
-      integer NNQCD
-      double precision pplab(0:3, nexternal)
-      double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
-      double precision rfj,sycut,palg,fastjetdmerge
-      double precision d01,d12,d23,d34
-      external fastjetdmerge
-      double precision ptmin(5)
-      integer njetbak
-      double precision thispt
-      double precision ymaxjet
-      double precision getrapidity
-      integer igoodjet(nexternal)
-
-      integer mm
-
-
+      double precision pjetlab(0:3,nexternal)
       double precision chybst,shybst,chybstmo
       double precision xd(1:3)
       data (xd(i),i=1,3)/0,0,1/
-      double precision totpt
+c Jets and charged leptons
+      LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM
+      include 'coupl.inc'
+c jet cluster algorithm
+      integer nQCD,NJET,JET(nexternal)
+      double precision plab(0:3, nexternal)
+      double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
+      double precision rfj,sycut,palg,fastjetdmerge
+      integer njet_eta
+
+      integer mm
 
 C-----
 C  BEGIN CODE
@@ -158,24 +96,27 @@ C-----
       PASSCUTS=.TRUE.             !EVENT IS OK UNLESS OTHERWISE CHANGED
       IF (FIRSTTIME) THEN
          FIRSTTIME=.FALSE.
-c
-         write(*,'(a10,10i8)') 'Particle',(i,i=nincoming+1,nexternal)
-         write(*,'(a10,10f8.1)') 'Et >',(etmin(i),i=nincoming+1,nexternal)
-         write(*,'(a10,10f8.1)') 'E >',(emin(i),i=nincoming+1,nexternal)
-         write(*,'(a10,10f8.1)') 'Eta <',(etamax(i),i=nincoming+1,nexternal)
-         do j=nincoming+1,nexternal-1
-            write(*,'(a,i2,a,10f8.1)') 'd R #',j,'  >',(-0.0,i=nincoming+1,j),
-     &           (r2min(i,j),i=j+1,nexternal)
-            do i=j+1,nexternal
-               r2min(i,j)=r2min(i,j)*dabs(r2min(i,j))    !Since r2 returns distance squared
-               r2max(i,j)=r2max(i,j)*dabs(r2max(i,j))
-            enddo
-         enddo
-         do j=1,nexternal-1
-            write(*,'(a,i2,a,10f8.1)') 's min #',j,'>',
-     &           (s_min(i,j),i=nincoming+1,nexternal)
-         enddo
-
+         write (*,*) '================================================='
+         write (*,*) 'From cuts.f'
+         if (jetalgo.eq.1) then
+            write (*,*) 'Jets are defined with the kT algorithm'
+         elseif (jetalgo.eq.0) then
+            write (*,*) 'Jets are defined with the C/A algorithm'
+         elseif (jetalgo.eq.-1) then
+            write (*,*) 'Jets are defined with the anti-kT algorithm'
+         else
+            write (*,*) 'Jet algorithm not defined in the run_card.dat,'
+     &           //'or not correctly processed by the code.',jetalgo
+         endif
+         write (*,*) 'with a mimumal pT of ',ptj,'GeV'
+         write (*,*) 'and maximal pseudo-rapidity of ',etaj,'.'
+         write (*,*) 'Charged leptons are required to have at least',ptl
+     &        ,'GeV of transverse momentum and'
+         write (*,*) 'pseudo rapidity of maximum',etal,'.'
+         write (*,*) 'Opposite charged lepton pairs need to be'//
+     &        ' separated by at least ',drll
+         write (*,*) 'and have an invariant mass of',mll,' GeV'
+         write (*,*) '================================================='
       ENDIF
 c
 c     Make sure have reasonable 4-momenta
@@ -197,60 +138,111 @@ c     Also make sure there's no INF or NAN
 
       rwgt=1d0
 
-c Boost the particles to the lab frame
-c$$$      chybst=cosh(ybst_til_tolab)
-c$$$      shybst=sinh(ybst_til_tolab)
-c$$$      chybstmo=chybst-1.d0
-c$$$      do i=3,nexternal
-c$$$        call boostwdir2(chybst,shybst,chybstmo,xd,
-c$$$     #                  p(0,i),pplab(0,i))
-c$$$      enddo
+c Uncomment for bypassing charged lepton cuts
+c$$$      goto 124
 
+c Boost the momenta p(0:3,nexternal) to the lab frame plab(0:3,nexternal)
+      chybst=cosh(ybst_til_tolab)
+      shybst=sinh(ybst_til_tolab)
+      chybstmo=chybst-1.d0
+      do i=1,nexternal
+         call boostwdir2(chybst,shybst,chybstmo,xd,
+     &        p(0,i),plab(0,i))
+      enddo
 
+c
+c CHARGED LEPTON CUTS
+c
+      do i=nincoming+1,nexternal
+         if (is_a_lp(i).or.is_a_lm(i)) then
+c transverse momentum
+            if (ptl.gt.0d0) then
+               if (pt(p(0,i)).lt.ptl) then
+                  passcuts=.false.
+                  return
+               endif
+            endif
+c pseudo-rapidity
+            if (etal.lt.100d0) then
+               if (abs(eta(plab(0,i))).gt.etal) then
+                  passcuts=.false.
+                  return
+               endif
+            endif
+c DeltaR and invariant mass cuts
+            if (is_a_lp(i)) then
+               do j=nincoming+1,nexternal
+                  if (is_a_lm(j)) then
+                     if (drll.gt.0d0) then
+                        if (R2(plab(0,i),plab(0,j)).lt.drll**2) then
+                           passcuts=.false.
+                           return
+                        endif
+                     endif
+                     if (mll.gt.0d0) then
+                        if (sumdot(p(0,i),p(0,j),1d0).lt.mll**2) then
+                           passcuts=.false.
+                           return
+                        endif
+                     endif
+                  endif
+               enddo
+            endif
+         endif
+      enddo
 
+ 124  continue
+
+c
+c JET CUTS
+c
 c Uncomment for bypassing jet algo and cuts.
 c$$$      goto 123
 
+c If we do not require a mimimum jet energy, there's no need to apply
+c jet clustering and all that.
+      if (ptj.ne.0d0) then
 
 c Put all (light) QCD partons in momentum array for jet clustering.
-c From the run_card.dat, maxjetflavor defines if b quark should
-c be considered here (via the logical variable 'is_a_jet').
+c From the run_card.dat, maxjetflavor defines if b quark should be
+c considered here (via the logical variable 'is_a_jet').  nQCD becomes
+c the number of (light) QCD partons at the real-emission level (i.e. one
+c more than the Born).
 
-      NN=0
-      do j=nincoming+1,nexternal
-         if (is_a_j(j)) then
-            NN=NN+1
-            do i=0,3
-c$$$               pQCD(i,NN)=pplab(i,j) ! Use lab-frame momenta
-               pQCD(i,NN)=p(i,j) ! Use C.o.M. frame momenta
-            enddo
-         endif
-      enddo
+         nQCD=0
+         do j=nincoming+1,nexternal
+            if (is_a_j(j)) then
+               nQCD=nQCD+1
+               do i=0,3
+                  pQCD(i,nQCD)=p(i,j) ! Use C.o.M. frame momenta
+               enddo
+            endif
+         enddo
 
 c Cut some peculiar momentum configurations, i.e. two partons very soft.
 c This is needed to get rid of numerical instabilities in the Real emission
 c matrix elements when the Born has a massless final-state parton, but
 c no possible divergence related to it (e.g. t-channel single top)
-      mm=0
-      do j=1,nn
-        if(abs(pQCD(0,j)/p(0,1)).lt.1.d-8) mm=mm+1
-      enddo
-      if(mm.gt.1)then
-         passcuts=.false.
-         return
-      endif
+         mm=0
+         do j=1,nQCD
+            if(abs(pQCD(0,j)/p(0,1)).lt.1.d-8) mm=mm+1
+         enddo
+         if(mm.gt.1)then
+            passcuts=.false.
+            return
+         endif
 
-c Define jet clustering parameters
-      palg=1.d0                 ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
-      rfj=0.4d0                 ! the radius parameter
-      sycut=60d0
+c Define jet clustering parameters (from cuts.inc via the run_card.dat)
+         palg=JETALGO           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
+         rfj=JETRADIUS          ! the radius parameter
+         sycut=PTJ              ! minimum transverse momentum
 
 c******************************************************************************
 c     call FASTJET to get all the jets
 c
 c     INPUT:
 c     input momenta:               pQCD(0:3,nexternal), energy is 0th component
-c     number of input momenta:     NN
+c     number of input momenta:     nQCD
 c     radius parameter:            rfj
 c     minumum jet pt:              sycut
 c     jet algorithm:               palg, 1.0=kt, 0.0=C/A, -1.0 = anti-kt
@@ -262,15 +254,36 @@ c     the jet for a given particle 'i':        jet(i),   note that this is
 c     the particle in pQCD, which doesn't necessarily correspond to the particle
 c     label in the process
 c
-      call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
+         call fastjetppgenkt(pQCD,nQCD,rfj,sycut,palg,pjet,njet,jet)
 c
 c******************************************************************************
 
-      if (NJET .ne. NN .and. NJET .ne. NN-1) then
-         passcuts=.false.
-         return
-      endif
+c Apply the maximal pseudo-rapidity cuts on the jets:      
+         if (etaj.lt.100d0) then 
+c Boost the jets to the lab frame for the pseudo-rapidity cut
+            chybst=cosh(ybst_til_tolab)
+            shybst=sinh(ybst_til_tolab)
+            chybstmo=chybst-1.d0
+            do i=1,njet
+               call boostwdir2(chybst,shybst,chybstmo,xd,
+     &              pjet(0,i),pjetlab(0,i))
+            enddo
+c Count the number of jets that pass the pseud-rapidity cut
+            njet_eta=0
+            do i=1,njet
+               if (abs(eta(pjet(0,i))).lt.ETAJ) then
+                  njet_eta=njet_eta+1
+               endif
+            enddo
+            njet=njet_eta
+         endif
 
+c Apply the jet cuts
+         if (njet .ne. nQCD .and. njet .ne. nQCD-1) then
+            passcuts=.false.
+            return
+         endif
+      endif
  123  continue
 
       RETURN
@@ -300,3 +313,4 @@ c the correct cross section.
 
       return
       end
+

@@ -25,7 +25,7 @@ shift
 shift
 if [[ "$@" == "" ]]; then
     echo "Please give the G directories that should be combined,"
-    echo "e.g. 'GH* GS*', as final arguments of this script" 
+    echo "e.g. 'GF* GV*', as final arguments of this script" 
     exit
 fi
 

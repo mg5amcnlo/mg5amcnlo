@@ -2136,10 +2136,8 @@ c
       include "nexternal.inc"
       include "madfks_mcatnlo.inc"
       include 'nFKSconfigs.inc'
-      LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
-      LOGICAL  IS_A_B(NEXTERNAL),IS_A_A(NEXTERNAL)
-      LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY
+      LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM
       double precision sqrtshat_ev,shat_ev
       common/parton_cms_ev/sqrtshat_ev,shat_ev
       double precision xi_i_fks_ev,y_ij_fks_ev

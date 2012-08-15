@@ -1,19 +1,33 @@
 C
+C     NEW CUTS
+C
+      REAL*8 JETALGO,JETRADIUS,PTJ,ETAJ  ! jet cuts
+      REAL*8 PTL,ETAL,DRLL,MLL           ! lepton cuts
+      COMMON /TO_NEW_AUTO_CUTS/
+     &     JETALGO,JETRADIUS,PTJ,ETAJ,
+     &     PTL,ETAL,DRLL,MLL
+
+C
 C     AUTOMATIC CUTS
 C
-      REAL*8 PTJ,PTB,PTA,PTL,PTONIUM  ! ptmin
+c      REAL*8 PTJ,PTB,PTA,PTL,PTONIUM  ! ptmin
+      REAL*8 PTB,PTA,PTONIUM  ! ptmin
       REAL*8 EJ,EB,EA,EL,ETAONIUM      ! min energy
-      REAL*8 ETAJ,ETAB,ETAA,ETAL ! min rapidity
-      REAL*8 DRJJ,DRBB,DRLL,DRAA,DRBJ,DRAJ,DRJL,DRAB,DRBL,DRAL ! min distance
+c      REAL*8 ETAJ,ETAB,ETAA,ETAL ! min rapidity
+      REAL*8 ETAB,ETAA ! min rapidity
+c      REAL*8 DRJJ,DRBB,DRLL,DRAA,DRBJ,DRAJ,DRJL,DRAB,DRBL,DRAL ! min distance
+      REAL*8 DRJJ,DRBB,DRAA,DRBJ,DRAJ,DRJL,DRAB,DRBL,DRAL ! min distance
       REAL*8 MMJJ,MMLL,MMAA,MMBB !min inv mass
       COMMON /TO_AUTO_CUTS/
-     &     PTJ ,PTB ,PTA ,PTL ,PTONIUM, ! pt
+c     &     PTJ ,PTB ,PTA ,PTL ,PTONIUM, ! pt
+     &     PTB ,PTA ,PTONIUM, ! pt
      &     EJ  ,EB  ,EA  ,EL  , ! energy
-     &     ETAJ,ETAB,ETAA,ETAL,ETAONIUM, ! rapidity 
+c     &     ETAJ,ETAB,ETAA,ETAL,ETAONIUM, ! rapidity 
+     &     ETAB,ETAA,ETAONIUM, ! rapidity 
      &     DRJJ,DRAJ,DRBJ,DRJL, ! delta R
      &     DRBB,DRAB,DRBL,
      &     DRAA,DRAL,
-     &     DRLL,
+c     &     DRLL,
      &     MMJJ,MMLL,MMAA,MMBB ! invariant masses of opposite sign
 
 C     
@@ -33,7 +47,6 @@ C
       REAL*8 ht2max,ht3max,ht4max
       REAL*8 htjmin,htjmax
       REAL*8 misset,missetmax,ptheavy
-      REAL*8 ptllmin,ptllmax
       integer maxjetflavor
 	
       COMMON /to_min_max_cuts/
@@ -53,7 +66,6 @@ C
      &     ht2max,ht3max,ht4max,
      &     htjmin,htjmax,
      &     misset,missetmax,ptheavy,
-     &     ptllmin,ptllmax,
      &     maxjetflavor
 
 C

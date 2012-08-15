@@ -81,11 +81,27 @@ c*********************************************************************
 
       call  get_integer (npara,param,value,"maxjetflavor",maxjetflavor,4)
 
+
+c*********************************************************************
+c jet definition
+c*********************************************************************
+      call get_real   (npara,param,value," jetalgo ",jetalgo,1d0)
+      call get_real   (npara,param,value," jetradius ",jetradius,0.7d0)
+      call get_real   (npara,param,value," ptj ",ptj,0d0)
+      call get_real   (npara,param,value," etaj ",etaj,1d2)
+
+c*********************************************************************
+c charged lepton cuts
+c*********************************************************************
+      call get_real   (npara,param,value," ptl ",ptl,10d0)
+      call get_real   (npara,param,value," etal ",etal,1d2)
+      call get_real   (npara,param,value," drll ",drll,0.4d0)
+      call get_real   (npara,param,value," mll ",mll,30d0)
+
 c*********************************************************************
 c     Minimum pt's                                                   *
 c*********************************************************************
 
-      call get_real   (npara,param,value," ptj ",ptj    ,0d0)
 c$$$      call get_real   (npara,param,value," ptb ",ptb    ,20d0)
 c$$$      call get_real   (npara,param,value," pta ",pta    ,20d0)
 c$$$      call get_real   (npara,param,value," ptl ",ptl    ,20d0)
@@ -117,12 +133,10 @@ c*********************************************************************
 c     Maximum rapidity (absolute value)                              *
 c*********************************************************************
 
-c$$$      call get_real   (npara,param,value," etaj ",    etaj,4d0)
 c$$$      call get_real   (npara,param,value," etab ",    etab,4d0)
 c$$$      call get_real   (npara,param,value," etaa ",    etaa,4d0)
 c$$$      call get_real   (npara,param,value," etal ",    etal,4d0)
 c$$$      call get_real   (npara,param,value," etaonium ",etaonium,1d2)
-      etaj=1d2
       etab=1d2
       etaa=1d2
       etal=1d2

@@ -33,12 +33,12 @@ c
 c
 c     External
 c
-      double precision rap,DELTA_PHI
-      external rap,delta_phi
+      double precision eta,DELTA_PHI
+      external eta,delta_phi
 c-----
 c  Begin Code
 c-----
-      R2 = (DELTA_PHI(P1,P2))**2+(rap(p1)-rap(p2))**2
+      R2 = (DELTA_PHI(P1,P2))**2+(eta(p1)-eta(p2))**2
       RETURN
       END
 
@@ -474,9 +474,9 @@ c-----
 
       tp=theta(p)
       if (abs(tp).lt.1d-5) then
-         eta=100d0
+         eta=25d0
       elseif (abs(tp-pi).lt.1d-5) then
-         eta=-100d0
+         eta=-25d0
       else
          eta=-dlog(dtan(theta(p)/2d0))
       endif

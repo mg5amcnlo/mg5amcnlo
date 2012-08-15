@@ -20,17 +20,20 @@
 #*********************************************************************
 # Collider type and energy                                           *
 #*********************************************************************
-        1     = lpp1  ! beam 1 type (0=NO PDF)
-        1     = lpp2  ! beam 2 type (0=NO PDF)
-      3500     = ebeam1  ! beam 1 energy in GeV
-      3500     = ebeam2  ! beam 2 energy in GeV
+    1     = lpp1  ! beam 1 type (0=NO PDF)
+    1     = lpp2  ! beam 2 type (0=NO PDF)
+ 4000     = ebeam1  ! beam 1 energy in GeV
+ 4000     = ebeam2  ! beam 2 energy in GeV
 #*********************************************************************
 # PDF CHOICE: this automatically fixes also alpha_s and its evol.    *
 #*********************************************************************
  'cteq6_m'    = pdlabel     ! PDF set                                     
-  10042      = lhaid
+  10042       = lhaid
 #*********************************************************************
 # Renormalization and factorization scales                           *
+# (Default functional form for the non-fixed scales is the sum of    *
+# the transverse masses of all final state particles & partons. This *
+# can be changed in SubProcesses/set_scales.f)                       *
 #*********************************************************************
  F        = fixed_ren_scale  ! if .true. use fixed ren scale
  F        = fixed_fac_scale  ! if .true. use fixed fac scale
@@ -48,18 +51,30 @@
  1        = QES_over_ref     ! ratio of current QES over reference QES
 #*********************************************************************
 #                                                                    
-#**********************************
-# BW cutoff (M+/-bwcutoff*Gamma)
-#**********************************
+#*********************************************************************
+# BW cutoff (M+/-bwcutoff*Gamma)                                     *
+#*********************************************************************
  15  = bwcutoff
 #*********************************************************************
-# Minimal pt of the jets at the Born level
-# apply cut separately in cuts.f !!!
+# Cuts on the jets                                                   *
+# When matching to a parton shower, these cuts should be considerably*
+# softer than the analysis cuts.                                     *
+# (more specific cuts can be specified in SubProcesses/cuts.f)       *
 #*********************************************************************
-  0  = ptj
+  1    = jetalgo    ! FastJet jet algorithm (1=kT, 0=C/A, -1=anti-kT)
+  0.7  = jetradius  ! The radius parameter for the jet algorithm
+  5.0  = ptj        ! Minimal jet transverse momentum
+  100  = etaj       ! Maximal jet pseudo-rapidity (absolute value)
+#*********************************************************************
+# Cuts on the charged leptons (e+, e-, mu+, mu-, tau+ and tau-)      *
+# (more specific cuts can be specified in SubProcesses/cuts.f)       *
+#*********************************************************************
+  0   = ptl   ! Min lepton transverse momentum
+  100 = etal  ! Max lepton pseudo rapidity
+  0   = drll  ! Min distance between opposite sign lepton pairs
+  30  = mll   ! Min invariant mass of all oppositely charged lepton pairs
 #*********************************************************************
 # maximal pdg code for quark to be considered as a jet               *
-# otherwise b cuts are applied                                       *
 #*********************************************************************
  5 = maxjetflavor
 #*********************************************************************
