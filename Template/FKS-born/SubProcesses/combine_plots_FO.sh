@@ -20,7 +20,7 @@ if [ -f $thisdir/MADatNLO.top ]
 then
 rm -f $thisdir/MADatNLO*.top
 fi
-make -f makefile_fks_dir read40
+make read40
 EXENAME=$thisdir/read40
 echo -n "" > dir
 counterp=0
@@ -92,7 +92,7 @@ for p in P0_* ; do
 done
 
 cd $thisdir
-make -f makefile_fks_dir split40
+make split40
 ./split40
 
 i=0
