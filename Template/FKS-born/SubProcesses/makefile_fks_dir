@@ -1,8 +1,6 @@
 include ../../Source/make_opts
 include ../../Source/fj_lhapdf_opts
 
-CC    = g++
-
 LIBDIR = ../../lib/
 
 FASTJET_CONFIG = $(fastjet_config)
@@ -49,33 +47,23 @@ TEST= $(FILES) LesHouchesDummy.o cuts.o
 # Files for gensym
 SYM= $(FILES) LesHouchesDummy.o symmetry_fks_v3.o write_ajob.o
 
-# Files for link_fks
-LINK= $(TEST) link_fks.o
-
-# Files for genint_fks
-INTEGRATE= genint_fks.o
-
 # Files for event reweighting to get e.g. scale and PDF uncertainties
 RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
 	cuts.o fastjetfortran_madfks.o boostwdir2.o 			\
 	$(reweight_xsec_events_pdf_dummy)
 
+# Files for splitting of the jobs
+WRITE_AJOB_BASIC=write_ajob_basic.o write_ajob.o
+
 %.o : %.f
 	$(FC) $(FFLAGS) -c $<
 %.o : %.for
 	$(FC) $(FFLAGS) -c $<
 %.o: %.c
-	$(CC) -g -c $^
+	$(CXX) -g -c $^
 %.o: %.cc
-	$(CC) -g -c $(CXXFLAGS) $^
-
-genint_fks: $(INTEGRATE)
-	$(FC) $(FFLAGS) -o genint_fks $(INTEGRATE)
-
-link_fks: $(LINK)
-	$(FC) $(FFLAGS) -o link_fks $(LINK) $(LINKLIBS) $(FJLIBS)
-	rm fks_singular.o genps_fks.o
+	$(CXX) -g -c $(CXXFLAGS) $^
 
 gensym: $(SYM)
 	$(FC) $(FFLAGS) -o gensym $(SYM) $(LINKLIBS) $(FJLIBS)
@@ -90,17 +78,20 @@ test_ME: symmetry_fks_test_ME.o $(TEST)
 test_MC: symmetry_fks_test_MC.o $(TEST) 
 	$(FC) $(FFLAGS) -o test_MC symmetry_fks_test_MC.o $(TEST) $(LINKLIBS) $(FJLIBS)
 
-madevent_vegas: $(VEGAS)  makefile $(LIBS)
+madevent_vegas: $(VEGAS) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
-madevent_mint: $(MINT)  makefile $(LIBS)
+madevent_mint: $(MINT) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o madevent_mint $(MINT) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
-madevent_mintMC: $(MINTMC)  makefile $(LIBS)
+madevent_mintMC: $(MINTMC) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
-madevent_reweight: $(BORN_REWEIGHT)  makefile $(LIBS)
+madevent_reweight: $(BORN_REWEIGHT) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS)
 
-reweight_xsec_events: $(RWGFILES)  makefile $(LIBS)
+reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS)
+
+write_ajob_basic: $(WRITE_AJOB_BASIC)
+	$(FC) $(FFLAGS) -o write_ajob_basic $(WRITE_AJOB_BASIC)

@@ -10,15 +10,14 @@ if [[  ! -d ./SubProcesses  ]]; then
 fi
 
 cd SubProcesses
-
 for pdir in P* ; do
     echo $pdir
     cd $pdir
+    make combine_jobs
     for gdir in G* ; do
 	if [[ -e $gdir/events_1.lhe ]]; then
 	    cd $gdir
-	    gfortran -o combine_jobs ../../combine_jobs.f ../../handling_lhe_events.f
-	    ./combine_jobs
+	    ../combine_jobs
 	    cd ..
 	fi
     done

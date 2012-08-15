@@ -20,7 +20,7 @@ if [ -f $thisdir/MADatNLO.top ]
 then
 rm -f $thisdir/MADatNLO*.top
 fi
-f77 -o $thisdir/read40 $thisdir/read40.for
+make -f makefile_fks_dir read40
 EXENAME=$thisdir/read40
 echo -n "" > dir
 counterp=0
@@ -92,7 +92,7 @@ for p in P0_* ; do
 done
 
 cd $thisdir
-gfortran -o split40 split40.f
+make -f makefile_fks_dir split40
 ./split40
 
 i=0
@@ -134,7 +134,7 @@ else
     echo 'ERRORS! see read40.errors for details'
 fi
 
-./NLO_Born3.py
-$TD MADatNLO_combined.top "POSTSCR,ORIENT=3"
-$PSOPEN MADatNLO_combined.ps
-#td2pdf MADatNLO_con
+#./NLO_Born3.py
+#$TD MADatNLO_combined.top "POSTSCR,ORIENT=3"
+#$PSOPEN MADatNLO_combined.ps
+##td2pdf MADatNLO_con

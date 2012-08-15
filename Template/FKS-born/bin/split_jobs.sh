@@ -21,8 +21,7 @@ fi
 rm -f P*/G*/nevts__*
 rm -f P*/G*/events_*.lhe
 
-# Compile and run the fortran code that writes the updated version of nevents_unweighted
-# and also writes the nevts_?? files in the P*/G* directories
+# run the code that writes the nevts_?? files in the P*/G* directories
 ./split_jobs.py
 
 # Loop over the directories
@@ -33,7 +32,7 @@ for pdir in P*; do
     rm -f genE*
     rm -f me*.cmd
 # compile and run the code that writes the new genE and cmd files
-    gfortran -o write_ajob_basic ../write_ajob_basic.f ../write_ajob.f
+    make write_ajob_basic
     ./write_ajob_basic
 # put them far away
     mv -f genE1 genE9999

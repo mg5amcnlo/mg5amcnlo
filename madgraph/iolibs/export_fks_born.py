@@ -331,6 +331,7 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                      'trapfpe.c',
                      'vegas2.for',
                      'write_ajob.f',
+                     'write_ajob_basic.f',
                      'handling_lhe_events.f',
                      'write_event.f']
 
