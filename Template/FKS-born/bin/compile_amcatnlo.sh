@@ -1,7 +1,7 @@
 #! /bin/bash
 
 echo '****************************************************'
-echo 'This script compiles, tests and runs a madfks process'
+echo 'This script compiles, tests and runs a aMC@NLO process'
 echo '****************************************************'
 
 
@@ -9,7 +9,7 @@ echo '****************************************************'
 if [[  ! -d ./SubProcesses  ]]; then
     cd ../
     if [[ ! -d ./SubProcesses ]]; then
-	echo "Error: compile_madfks.sh must be executed from the main, or bin directory"
+	echo "Error: compile_amcatnlo.sh must be executed from the main, or bin directory"
 	exit
     fi
 fi
@@ -124,8 +124,8 @@ if [[  $gensym == '1' || $madevent_compile == '1' || $test == "1" ]]; then
     # Source
     cd Source
     echo 'compiling Source...'
-    echo 'compiling Source' >>  $Maindir/compile_madfks.log
-    make -j$j >>  $Maindir/compile_madfks.log 2>&1
+    echo 'compiling Source' >>  $Maindir/compile_amcatnlo.log
+    make -j$j >>  $Maindir/compile_amcatnlo.log 2>&1
     echo '...done'
     cd ..
 
@@ -163,7 +163,7 @@ fi
 if [[ $gensym == '1' ]] ; then
     echo 'results from gensym' > $Maindir/gensym.log
 fi
-echo 'compilation results' > $Maindir/compile_madfks.log
+echo 'compilation results' > $Maindir/compile_amcatnlo.log
 echo 'compilation results for madloop' > $Maindir/compile_madloop.log
 
 
@@ -191,7 +191,7 @@ fi
 for dir in $dirs ; do
     cd $dir
     echo $dir
-    echo $dir >> $Maindir/compile_madfks.log
+    echo $dir >> $Maindir/compile_amcatnlo.log
 
 
 #
@@ -201,20 +201,20 @@ for dir in $dirs ; do
 	echo $dir >> $Maindir/test_ME.log
 	echo $dir >> $Maindir/test_MC.log
 	echo '     make test_ME...'
-	make -j$j test_ME >> $Maindir/compile_madfks.log 2>&1
+	make -j$j test_ME >> $Maindir/compile_amcatnlo.log 2>&1
 	if [[ -e "test_ME" ]]; then
 	    echo '     ...running test_ME'
 	    ./test_ME < $Maindir/input_ME | tee -a $Maindir/test_ME.log | grep 'Failures (fraction)'
 	else
-	    echo 'ERROR in compilation, see compile_madfks.log for details'
+	    echo 'ERROR in compilation, see compile_amcatnlo.log for details'
 	fi
 	echo '     make test_MC...'
-	make -j$j test_MC >> $Maindir/compile_madfks.log 2>&1
+	make -j$j test_MC >> $Maindir/compile_amcatnlo.log 2>&1
 	if [[ -e "test_MC" ]]; then
 	    echo '     ...running test_MC'
 	    ./test_MC < $Maindir/input_MC | tee -a $Maindir/test_MC.log | grep 'Failures (fraction)'
 	else
-	    echo 'ERROR in compilation, see compile_madfks.log for details'
+	    echo 'ERROR in compilation, see compile_amcatnlo.log for details'
 	fi
     fi
 
@@ -233,12 +233,12 @@ for dir in $dirs ; do
 	if [[ -e "mg1.cmd" ]]; then
 	    rm -f mg*.cmd
 	fi
-	make -j$j gensym >> $Maindir/compile_madfks.log 2>&1
+	make -j$j gensym >> $Maindir/compile_amcatnlo.log 2>&1
 	if [[ -e "gensym" ]]; then
 	    echo '     ...running gensym' $run_cluster
 	    echo $run_cluster | ./gensym >> $Maindir/gensym.log
 	else
-	    echo 'ERROR in compilation, see compile_madfks.log for details'
+	    echo 'ERROR in compilation, see compile_amcatnlo.log for details'
 	fi
     fi
 
@@ -259,18 +259,18 @@ for dir in $dirs ; do
             if [[ -e libMadLoop.a ]]; then
                 echo '     MadLoop library compiled'
             else
-                echo 'ERROR in compilation, see compile_madfks.log for details'
+                echo 'ERROR in compilation, see compile_amcatnlo.log for details'
             fi
         done
 	echo '     make' $executable...
 	if [[ -e $executable ]]; then
 	    rm -f $executable
 	fi
-	make -j$j $executable >> $Maindir/compile_madfks.log 2>&1
+	make -j$j $executable >> $Maindir/compile_amcatnlo.log 2>&1
 	if [[ -e $executable ]]; then
 	    echo "    " $executable "compiled"
 	else
-	    echo 'ERROR in compilation, see compile_madfks.log for details'
+	    echo 'ERROR in compilation, see compile_amcatnlo.log for details'
 	fi
         unset madloop
     fi
@@ -294,5 +294,5 @@ fi
 echo '*******************************************************************'
 echo 'Please, check the log files in the main directory for details:'
 echo 'link_fks.log, test_*.log, NLOComp.log and gensym.log'
-echo 'Compilation warnings/errors can be found in compile_madfks.log'
+echo 'Compilation warnings/errors can be found in compile_amcatnlo.log'
 echo '*******************************************************************'

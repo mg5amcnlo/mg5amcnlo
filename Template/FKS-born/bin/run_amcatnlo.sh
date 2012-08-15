@@ -1,14 +1,14 @@
 #! /bin/bash
 
 echo '****************************************************'
-echo 'This script runs a madfks process'
+echo 'This script runs a amcatnlo process'
 echo '****************************************************'
 
 # find the correct directory
 if [[  ! -d ./SubProcesses  ]]; then
     cd ../
     if [[ ! -d ./SubProcesses ]]; then
-	echo "Error: run_madfks.sh must be executed from the main, or bin directory"
+	echo "Error: run_amcatnlo.sh must be executed from the main, or bin directory"
 	exit
     fi
 fi
