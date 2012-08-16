@@ -9,7 +9,7 @@ cp -ra  $CONDOR_INITIAL_DIR/../../../Cards/* ./Cards/
 cp -ra  $CONDOR_INITIAL_DIR/../../../lib/Pdfdata ./lib/
 cp -ra  $CONDOR_INITIAL_DIR/../../../lib/PDFsets ./lib/
 cp -f  $CONDOR_INITIAL_DIR/../reweight_xsec_events .
-cp -f  $CONDOR_INITIAL_DIR/../../reweight_xsec_events.input .
+cp -f  $CONDOR_INITIAL_DIR/reweight_xsec_events.input .
 cp -f  $CONDOR_INITIAL_DIR/events.lhe .
 
 ./reweight_xsec_events < reweight_xsec_events.input > reweight_xsec_events.output
