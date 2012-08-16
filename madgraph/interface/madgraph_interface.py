@@ -1076,6 +1076,9 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         
     def check_install(self, args):
         """ No possibility to install new software on the web """
+        if args == ['update','--mode=mg5_start']:
+            return
+        
         raise self.WebRestriction('Impossible to install program on the cluster')
         
     def check_load(self, args):
@@ -1732,8 +1735,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def preloop(self):
         """Initializing before starting the main loop"""
 
-        self.prompt = 'mg5>'
-        
+        self.prompt = 'mg5>'       
         self.do_install('update --mode=mg5_start')
         
         # By default, load the UFO Standard Model

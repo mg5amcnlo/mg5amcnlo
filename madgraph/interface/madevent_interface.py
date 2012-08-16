@@ -482,19 +482,23 @@ class CheckValidForCmd(object):
         run_name = [arg[7:] for arg in args if arg.startswith('--name=')]
         if run_name:
             try:
-                os.exec_cmd('remove %s all banner' % run_name)
-            except:
+                os.exec_cmd('remove %s all banner -f' % run_name)
+            except Exception:
                 pass
             self.set_run_name(args[0], tag=None, level='parton', reload_card=True)
         elif type == 'banner':
             self.set_run_name(self.find_available_run_name(self.me_dir))
         elif type == 'run':
-            if os.path.exists(pjoin(self.me_dir, 'Events', name)):
+            if not self.results[name].is_empty():
                 run_name = self.find_available_run_name(self.me_dir)
                 logger.info('Run %s is not empty so will use run_name: %s' % \
                                                                (name, run_name))
                 self.set_run_name(run_name)
             else:
+                try:
+                    os.exec_cmd('remove %s all banner -f' % run_name)
+                except Exception:
+                    pass
                 self.set_run_name(name)
             
     def check_history(self, args):
@@ -1724,9 +1728,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         args = self.split_arg(line)
         #check the validity of the arguments
         self.check_banner_run(args)    
-             
-        banner_mod.split_banner(args[0], self.me_dir, proc_card=False)
-        
+                     
         # Remove previous cards
         for name in ['delphes_trigger.dat', 'delphes_card.dat',
                      'pgs_card.dat', 'pythia_card.dat']:
@@ -1734,7 +1736,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 os.remove(pjoin(self.me_dir, 'Cards', name))
             except:
                 pass
-        
+            
+        banner_mod.split_banner(args[0], self.me_dir, proc_card=False)
         
         # Check if we want to modify the run
         if not self.force:
@@ -2808,6 +2811,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         args = self.split_arg(line)
         run, tag, mode = self.check_remove(args)
+        if 'banner' in mode:
+            mode.append('all')
+        
+        
         if run == 'all':
             # Check first if they are not a run with a name run.
             if os.path.exists(pjoin(self.me_dir, 'Events', 'all')):
@@ -2845,7 +2852,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 try:
                     if self.results[run][0]['tag'] != tag:
                         raise Exception, 'dummy'
-                except:
+                except Exception:
                     pass
                 else:
                     nb_rm = len(to_delete)
@@ -2853,6 +2860,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                         to_delete.append('events.lhe.gz')
                     if os.path.exists(pjoin(self.me_dir, 'Events', run, 'unweighted_events.lhe.gz')):
                         to_delete.append('unweighted_events.lhe.gz')
+                    if os.path.exists(pjoin(self.me_dir, 'HTML', run,'plots_parton.html')):
+                        to_delete.append(pjoin(self.me_dir, 'HTML', run,'plots_parton.html'))                       
                     if nb_rm != len(to_delete):
                         logger.warning('Be carefull that partonic information are on the point to be removed.')
         if 'all' in mode:
@@ -2893,7 +2902,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Remove file in SubProcess directory
         if 'all' in mode or 'channel' in mode:
             try:
-                if self.results[run][0]['tag'] != tag:
+                if tag and self.results[run][0]['tag'] != tag:
                     raise Exception, 'dummy'
             except:
                 pass
@@ -3858,7 +3867,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
             if self.options['delphes_path']:
                 available_mode.append('4')
-        
+
         if len(available_mode) == 2:
             mode = 'parton'
         else:

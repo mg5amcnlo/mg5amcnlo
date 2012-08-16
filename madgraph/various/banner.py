@@ -75,8 +75,6 @@ class Banner(dict):
         text = ''
         store = False
         for line in open(input_path):
-            if store:
-                text += line
             if self.pat_begin.search(line):
                 tag = self.pat_begin.search(line).group('name').lower()
                 if tag in self.tag_to_file:
@@ -87,6 +85,8 @@ class Banner(dict):
                     self[tag] = text
                     text = ''
                     store = False
+            if store:
+                text += line
 
                 
     def load_basic(self, medir):
@@ -132,6 +132,7 @@ class Banner(dict):
                 continue
             ff = open(pjoin(me_dir, 'Cards', self.tag_to_file[tag]), 'w')
             ff.write(text)
+            ff.close()
 
     ############################################################################
     #  WRITE BANNER
@@ -141,7 +142,6 @@ class Banner(dict):
         
         ff = open(output_path, 'w')
         if MADEVENT:
-            
             ff.write(open(pjoin(MEDIR, 'Source', 'banner_header.txt')).read())
         else:
             ff.write(open(pjoin(MG5DIR,'Template', 'Source', 'banner_header.txt')).read())
