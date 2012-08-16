@@ -9,6 +9,9 @@ SPLIT40=split40.o
 # Files for the combining of splitted event files
 COMBINE_SPLIT_EVENTS=combine_jobs.o handling_lhe_events.o
 
+# Files to collect all the events in the separate integration channels into a single file
+COLLECT_EVENTS=collect_events.o handling_lhe_events.o
+
 %.o : %.f
 	$(FC) $(FFLAGS) -c $<
 %.o : %.for
@@ -22,4 +25,7 @@ split40: $(SPLIT40)
 
 combine_jobs: $(COMBINE_SPLIT_EVENTS)
 	$(FC) $(FFLAGS) -o combine_jobs $(COMBINE_SPLIT_EVENTS)
+
+collect_events: $(COLLECT_EVENTS)
+	$(FC) $(FFLAGS) -o collect_events $(COLLECT_EVENTS)
 
