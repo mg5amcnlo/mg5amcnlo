@@ -8,5 +8,4 @@
       data max_points /100000/
 
       double precision accuracy
-      data accuracy /0.01d0/
-
+      common /to_accuracy/ accuracy

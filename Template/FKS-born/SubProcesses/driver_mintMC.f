@@ -431,6 +431,7 @@ c     Constants
 c
       include 'nexternal.inc'
       include 'genps.inc'
+      include 'mint.inc'
 c
 c     Arguments
 c
@@ -446,8 +447,6 @@ c
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
-      double precision    accur
-      common /to_accuracy/accur
       integer           use_cut
       common /to_weight/use_cut
 
@@ -500,6 +499,10 @@ c-----
       read(*,*) ncall,itmax
       write(*,*) 'Number of events and iterations ',ncall,itmax
 
+      write(*,'(a)') 'Enter desired fractional accuracy: '
+      read(*,*) accuracy
+      write(*,*) 'Desired fractional accuracy: ',accuracy
+
       write(*,*)'Enter alpha, beta for G_soft'
       write(*,*)'  Enter alpha<0 to set G_soft=1 (no ME soft)'
       read(*,*)alsf,besf
@@ -510,8 +513,9 @@ c-----
       read(*,*)alazi,beazi
       write (*,*) 'for G_azi: alpha=',alazi,', beta=',beazi
 
-      write (*,*) "H-events (0), or S-events (1)"
-      read (*,*) i
+c$$$      write (*,*) "H-events (0), or S-events (1)"
+c$$$      read (*,*) i
+      i=2
       if (i.eq.0) then
          Hevents=.true.
          write (*,*) 'Doing the H-events'
@@ -527,7 +531,6 @@ c-----
       endif
 
 c These should be ignored (but kept for 'historical reasons')      
-      accur=0
       use_cut=2
 
 

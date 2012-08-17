@@ -285,8 +285,8 @@ c
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
-      double precision    accur
-      common /to_accuracy/accur
+      double precision    accuracy
+      common /to_accuracy/accuracy
       integer           use_cut
       common /to_weight/use_cut
 
@@ -329,8 +329,8 @@ c-----
       read(*,*) ncall,itmax
       write(*,*) 'Number of events and iterations ',ncall,itmax
       write(*,'(a)') 'Enter desired fractional accuracy: '
-      read(*,*) accur
-      write(*,*) 'Desired fractional accuracy: ',accur
+      read(*,*) accuracy
+      write(*,*) 'Desired fractional accuracy: ',accuracy
 
       write(*,'(a)') 'Enter 0 for fixed, 2 for adjustable grid: '
       read(*,*) use_cut

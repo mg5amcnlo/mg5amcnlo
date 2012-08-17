@@ -73,9 +73,16 @@ c others: same as 1 (for now)
      &     ,nit_included,kpoint_iter,non_zero_point,ntotcalls
       real * 8 ran3
       external ran3,fun
-c Set to true to use more evenly distributed random numbers (imode=0
-c only)
-      logical even
+      logical even,double_events
+c Accuracy defines if we should double events and grid intervals after
+c every iteration and if we should stop if required accuracy has been
+c reached.
+      if (accuracy.eq.0d0) then
+         double_events=.false.
+         nint_used=nintervals
+      else
+         double_events=.true.
+      endif
 c
       ncalls=0  ! # PS points (updated below)
       if(imode.eq.-1) then
@@ -235,7 +242,8 @@ c This guarantees a 10% increase of the upper bound in this cell
          etot_sgn=etot_abs
       enddo
       ntotcalls=ncalls*kpoint_iter
-      if (ntotcalls.gt.max_points .and. non_zero_point.lt.25) then
+      if (ntotcalls.gt.max_points .and. non_zero_point.lt.25 .and.
+     &     double_events) then
          write (*,*) 'ERROR: INTEGRAL APPEARS TO BE ZERO.'
          write (*,*) 'TRIED',ntotcalls,'PS POINTS AND ONLY '
      &        ,non_zero_point,' GAVE A NON-ZERO INTEGRAND.'
@@ -243,7 +251,7 @@ c This guarantees a 10% increase of the upper bound in this cell
       endif
 c Goto beginning of loop over PS points until enough points have found
 c that pass cuts.
-      if (non_zero_point.lt.ncalls) goto 2
+      if (non_zero_point.lt.ncalls .and. double_events) goto 2
 
       vtot_abs=vtot_abs/dble(ntotcalls)
       etot_abs=etot_abs/dble(ntotcalls)
@@ -265,7 +273,7 @@ c the abs is to avoid tiny negative values
          write (*,*) 'Large fluctuation ( >30 % ). '/
      &        /'Not including iteration in results.'
 c double the number of points for the next iteration
-         ncalls0=ncalls0*2
+         if (double_events) ncalls0=ncalls0*2
          goto 10
       endif
       if(nit.eq.1) then
@@ -280,7 +288,7 @@ c integrands
          if(etot_abs.eq.0.and.err_abs.eq.0) then
             if(ans_abs.eq.vtot_abs) then
 c double the number of points for the next iteration
-               ncalls0=ncalls0*2
+               if (double_events) ncalls0=ncalls0*2
                goto 10
             else
                err_abs=abs(vtot_abs-ans_abs)
@@ -364,7 +372,7 @@ c Regrid the MC over integers (used for the MC over FKS dirs)
          call regrid_MC_integer
       endif
 c Quit if required accuracy has been reached
-      if (nit_included.ge.min_it) then
+      if (nit_included.ge.min_it .and. double_events) then
          if (err_abs/ans_abs*max(1d0,chi2/dble(nit_included-1))
      &        .lt.accuracy) then
             write (*,*) 'Found required accuracy'
@@ -384,14 +392,14 @@ c Quit if required accuracy has been reached
          endif
       endif
 c Double the number of intervals in the grids if not yet reach the maximum
-      if (2*nint_used.le.nintervals) then
+      if (2*nint_used.le.nintervals .and. double_events) then
          do kdim=1,ndim
             call double_grid(xgrid(0,kdim),nint_used)
          enddo
          nint_used=2*nint_used
       endif
 c double the number of points for the next iteration
-      ncalls0=ncalls0*2
+      if (double_events) ncalls0=ncalls0*2
 c Also improve stats in plots
       call accum
 c Do next iteration
