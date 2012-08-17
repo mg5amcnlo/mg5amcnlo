@@ -3455,8 +3455,21 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     for me in self._curr_matrix_elements.get_matrix_elements():
                         uid += 1 # update the identification number
                         me.get('processes')[0].set('uid', uid)
-
+                        
             cpu_time2 = time.time()
+
+            # Temporary output for calculate_width debug
+            print "Debug: matrix elements generated."
+            i = 3
+            print '(id, number) of legs in process #%d:' %i
+            all_legs = [p['legs'] for p in self._curr_matrix_elements.get_matrix_elements()[i]['processes']]
+            print [[(l['id'], l['number']) for l in leglist] \
+                       for leglist in all_legs]
+            print '(id, number) from get_decay_legs:'
+            leglist_decay = [p.get_legs_with_decays() for p in self._curr_matrix_elements.get_matrix_elements()[i]['processes']]
+            print [[(l['id'], l['number']) for l in leglist] \
+                       for leglist in leglist_decay]
+
             return ndiags, cpu_time2 - cpu_time1
 
         # Start of the actual routine

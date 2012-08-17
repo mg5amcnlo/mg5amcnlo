@@ -4061,8 +4061,8 @@ class DecayAmplitude(diagram_generation.Amplitude):
                                                           'state': False})])
         # Extract legs from final legs of Channel.
         leglist.extend(base_objects.LegList(\
-                copy.deepcopy(sorted([l for l in dia.get_final_legs()],
-                                     legcmp))))
+                copy.deepcopy(sorted([l for l in dia.get_final_legs()], 
+                                     legcmp_bynumber))))
             
         # Set up process and model.
         self.set('process', base_objects.Process({'legs':leglist}))
@@ -5369,6 +5369,11 @@ def legcmp(x, y):
     mycmp = cmp(x['id'], y['id'])
     if mycmp == 0:
         mycmp = cmp(x['state'], y['state'])
+    return mycmp
+
+def legcmp_bynumber(x, y):
+    """Define the leg comparison, useful in generation of process in DecayAmplitude."""
+    mycmp = cmp(x['number'], y['number'])
     return mycmp
 
 def id_num_cmp(x, y):

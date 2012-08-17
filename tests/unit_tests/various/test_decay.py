@@ -1806,7 +1806,7 @@ class Test_Channel(unittest.TestCase):
 
         """ Test on MSSM, to get a feeling on the execution time. """        
         mssm = import_ufo.import_model('mssm')
-        param_path = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
+        param_path = os.path.join(_file_path,'../../models/mssm/restrict_default.dat')
         decay_mssm = decay_objects.DecayModel(mssm, force=True)
         decay_mssm.read_param_card(param_path)
         
@@ -2252,8 +2252,10 @@ class Test_DecayAmplitude(unittest.TestCase):
         # Set channels
         self.my_testmodel.find_all_channels(4)
         #print higgs.get_channels(4, True).nice_string()
-        h_mmvv_1 = higgs.get_channels(4, True)[5]
-        h_mmvv_2 = higgs.get_channels(4, True)[9]
+        #print t.get_channels(2,True)[0]
+        # Process No. 6 & 10
+        h_mmvv_1 = higgs.get_channels(4, True)[6-1]
+        h_mmvv_2 = higgs.get_channels(4, True)[10-1]
 
 
         # Test the initialization
@@ -2261,13 +2263,25 @@ class Test_DecayAmplitude(unittest.TestCase):
                                                     self.my_testmodel)
         amplt_t_bw = decay_objects.DecayAmplitude(t.get_channels(2,True)[0],
                                                   self.my_testmodel)
-        # goal id list for legs in process
-        goal_id_list = [-12, -11, 11, 12, 25]
-        self.assertEqual(sorted([l.get('id') for l in amplt_h_mmvv.get('process').get('legs')]), goal_id_list)
-        # Note: initial id in process should be POSITIVE
-        goal_id_list = [5, 6, 24]
         #print amplt_t_bw.nice_string()
-        self.assertEqual(sorted([l.get('id') for l in amplt_t_bw.get('process').get('legs')]), goal_id_list)
+
+        # goal id list for legs in process
+        # The legs are in the order of numbers!
+        # Subtest: test decay_objects.legcmp_bynumber
+        l1 = base_objects.Leg({'number':1, 'id':10})
+        l2 = base_objects.Leg({'number':2, 'id': 8})
+        sorted_legs = sorted([l2, l1], decay_objects.legcmp_bynumber)
+        self.assertEqual([l1, l2], sorted_legs)
+
+        # Note: initial id in process should be POSITIVE
+        goal_id_list_h = [25, 11, -11, -12, 12]
+        goal_id_list_t = [6, 5, 24]
+        self.assertEqual([l.get('id') \
+                              for l in amplt_h_mmvv.get('process').get('legs')],
+                         goal_id_list_h)
+        self.assertEqual([l.get('id') \
+                              for l in amplt_t_bw.get('process').get('legs')],
+                         goal_id_list_t)
 
         # Check the legs in process (id, number, and state)
         final_numbers = [2,3,4,5]
@@ -2704,7 +2718,7 @@ class Test_AbstractModel(unittest.TestCase):
         normal_sm_base = import_ufo.import_model('mssm')
         normal_sm = decay_objects.DecayModel(normal_sm_base,
                                              force=True)
-        param_path = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
+        param_path = os.path.join(_file_path,'../../models/sm/restrict_ckm.dat')
         normal_sm.read_param_card(param_path)
         #print normal_sm.get_interaction(59)
         normal_sm.generate_abstract_model()
