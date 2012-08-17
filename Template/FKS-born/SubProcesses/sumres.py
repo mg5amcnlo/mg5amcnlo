@@ -173,14 +173,16 @@ if nevents>0:
         nevts_file = open(os.path.join(proc['folder'], proc['channel'], 'nevts'),'w')
         nevts_file.write('%10d\n' % proc['nevents'])
         nevts_file.close()
+        fileinputs = open("madinMMC_F.2")
         fileinputschannel = open(os.path.join(proc['folder'], proc['channel'], 'madinM1'),'w')
         i=0
-        fileinputs = open("madinMMC_F.2")
         for line in fileinputs:
             i += 1
             if i == 2:
                 accuracy=min(math.sqrt(tot/(totevents*proc['result']))*0.9,0.2)
                 fileinputschannel.write('%10.8e\n' % accuracy)
+            elif i == 8:
+                fileinputschannel.write('1        ! MINT mode\n')
             else:
                 fileinputschannel.write(line)
         fileinputschannel.close()

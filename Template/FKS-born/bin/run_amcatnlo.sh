@@ -18,6 +18,7 @@ Maindir=`pwd`
 run_mode=$1
 use_preset=$2
 run_cluster=$3
+mint_mode=$4
 
 if [[ $run_mode == "" ]] ; then
     echo 'Enter run mode (F, V or B)'
@@ -56,6 +57,25 @@ else
     exit
 fi
 
+if [[ $mint_mode == "" ]] ; then
+    echo "Enter the mint MODE"
+    read mint_mode
+fi
+
+cd $Maindir/SubProcesses/
+if [[ $mint_mode == 0 ]] ; then
+    echo "setting-up integration grids"
+    sed -i ".bak" "8s/.*/0/" madinMMC_$run_mode.2
+elif [[ $mint_mode == 1 ]] ; then
+    echo "computing upper bounding envelope"
+    sed -i ".bak" "8s/.*/1/" madinMMC_$run_mode.2
+elif [[ $mint_mode == 2 ]] ; then
+    echo "generating events"
+    sed -i ".bak" "8s/.*/2/" madinMMC_$run_mode.2
+else
+    echo "ERROR" $mint_mode
+fi
+cd $Maindir/
 
 #---------------------------
 # Update random number seed
@@ -82,13 +102,13 @@ for dir in P*_* ; do
 	chmod +x ajob*
 	if [[ $run_cluster == 1 ]] ; then
 	    for job in mg*.cmd ; do
-		sed -i "7s/.*/Arguments = $vegas_mint $run_mode $use_preset/" $job
+		sed -i "7s/.*/Arguments = $vegas_mint $run_mode $mint_mode $use_preset/" $job
 		condor_submit $job
 	    done
 	elif [[ $run_cluster == 0 ]] ; then
 	    echo "Doing "$run_mode"-events in this dir"
 	    for job in ajob* ; do
-		./$job $vegas_mint $run_mode $use_preset
+		./$job $vegas_mint $run_mode $mint_mode $use_preset
 	    done
 	fi
     else

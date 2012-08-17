@@ -48,7 +48,7 @@ c-----
       open (unit=lun, file = fname, status='unknown')
       if (run_cluster.eq.0) then
          write(lun,15) '#!/bin/bash'
-         write(lun,15) 'script=' // fname(1:lname)//'.$1.$2.$3'
+         write(lun,15) 'script=' // fname(1:lname)//'.$1.$2.$4'
          write(lun,15) 'rm -f wait.$script >& /dev/null'
          write(lun,15) 'touch run.$script'
          write(lun,15) 'echo $script'
@@ -59,7 +59,7 @@ c-----
          write(lun,15) '    CONDOR_INITIAL_DIR=`pwd`'
          write(lun,15) '    cd $_CONDOR_SCRATCH_DIR'
          write(lun,15) 'fi'
-         write(lun,15) 'script=' // mname(1:lname+2)//'.$1.$2.$3'
+         write(lun,15) 'script=' // mname(1:lname+2)//'.$1.$2.$4'
          write(lun,15) 'rm -f $CONDOR_INITIAL_DIR/wait.$script '//
      &        '>& /dev/null'
          write(lun,15) 'touch $CONDOR_INITIAL_DIR/run.$script'
@@ -166,19 +166,19 @@ c madevent_vegas or madevent_mint
          write(lun,30) 'mkdir $j'
          write(lun,25) 'fi'
          write(lun,25) 'cd $j'
-         write(lun,25) 'if [[ "$3" != "" ]]; then'
-         write(lun,30) 'if [[ -e ../$3\_G$i ]]; then'
+         write(lun,25) 'if [[ "$4" != "" ]]; then'
+         write(lun,30) 'if [[ -e ../$4\_G$i ]]; then'
          write(lun,35) "if [[ $1 == '0' ]]; then"
-         write(lun,40) 'cp -f ../$3\_G$i/*.sv1 .'
+         write(lun,40) 'cp -f ../$4\_G$i/*.sv1 .'
          write(lun,40)
-     &        'cp -f ../$3\_G$i/grid.MC_integer . >/dev/null 2>&1'
+     &        'cp -f ../$4\_G$i/grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) "elif [[ $1 == '1' ]]; then"
-         write(lun,40) 'cp -f ../$3\_G$i/mint_grids .'
+         write(lun,40) 'cp -f ../$4\_G$i/mint_grids .'
          write(lun,40)
-     &        'cp -f ../$3\_G$i/grid.MC_integer . >/dev/null 2>&1'
+     &        'cp -f ../$4\_G$i/grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) "fi"
          write(lun,30) 'else'
-         write(lun,35) 'echo "Cannot find direcotry ../$3\_G$i/"'//
+         write(lun,35) 'echo "Cannot find direcotry ../$4\_G$i/"'//
      &        ' > log.txt'
          write(lun,35) 'exit'
          write(lun,30) 'fi'
@@ -190,13 +190,13 @@ c madevent_mintMC
          write(lun,30) 'mkdir $j'
          write(lun,25) 'fi'
          write(lun,25) 'cd $j'
-         write(lun,25) 'if [[ "$3" != "" ]]; then'
-         write(lun,30) 'if [[ -e ../G$3$i ]]; then'
-         write(lun,35) 'cp -f ../G$3$i/mint_grids ./preset_mint_grids'
+         write(lun,25) 'if [[ "$4" != "" ]]; then'
+         write(lun,30) 'if [[ -e ../G$4$i ]]; then'
+         write(lun,35) 'cp -f ../G$4$i/mint_grids ./preset_mint_grids'
          write(lun,35)
-     &        'cp -f ../G$3$i/grid.MC_integer . >/dev/null 2>&1'
+     &        'cp -f ../G$4$i/grid.MC_integer . >/dev/null 2>&1'
          write(lun,30) 'else'
-         write(lun,35) 'echo "Cannot find direcotry ../G$3$i/"'//
+         write(lun,35) 'echo "Cannot find direcotry ../G$4$i/"'//
      &        ' > log.txt'
          write(lun,35) 'exit'
          write(lun,30) 'fi'
@@ -243,9 +243,15 @@ c madevent_mint
          write(lun,25) 'echo "Time in seconds: ${T}" >>log.txt'
 c madevent_mintMC
          write(lun,20) "elif [[ $1 == '2' ]]; then"
-         write(lun,25) 'head -n 6 ../../madinMMC_$2.2 >& input_app.txt'
-         write(lun,25) 'echo $i >> input_app.txt'
-         write(lun,25) 'tail -n 4 ../../madinMMC_$2.2 >> input_app.txt'
+         write(lun,25) "if [[ $3 == '0' || $3 == '2' ]]; then"
+         write(lun,30) 'head -n 6 ../../madinMMC_$2.2 >& input_app.txt'
+         write(lun,30) 'echo $i >> input_app.txt'
+         write(lun,30) 'tail -n 4 ../../madinMMC_$2.2 >> input_app.txt'
+         write(lun,25) "elif [[ $3 == '1' ]] ; then"
+         write(lun,30) 'head -n 6 madinM1 >& input_app.txt'
+         write(lun,30) 'echo $i >> input_app.txt'
+         write(lun,30) 'tail -n 4 madinM1 >> input_app.txt'
+         write(lun,25) "fi"
          write(lun,25) 'T="$(date +%s)"'
          write(lun,25)
      &        'time ../madevent_mintMC > log.txt <input_app.txt'
@@ -269,19 +275,19 @@ c madevent_vegas or madevent_mint
          write(lun,25) 'fi'
          write(lun,25) 'cd $j'
          write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/$j/* .'
-         write(lun,25) 'if [[ "$3" != "" ]]; then'
-         write(lun,30) 'if [[ -e $CONDOR_INITIAL_DIR/$3\_G$i ]]; then'
+         write(lun,25) 'if [[ "$4" != "" ]]; then'
+         write(lun,30) 'if [[ -e $CONDOR_INITIAL_DIR/$4\_G$i ]]; then'
          write(lun,35) "if [[ $1 == '0' ]]; then"
-         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$3\_G$i/*.sv1 .'
-         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$3\_G$i/'/
+         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$4\_G$i/*.sv1 .'
+         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$4\_G$i/'/
      &        /'grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) "elif [[ $1 == '1' ]]; then"
-         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$3\_G$i/mint_grids .'
-         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$3\_G$i/'/
+         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$4\_G$i/mint_grids .'
+         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$4\_G$i/'/
      &        /'grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) "fi"
          write(lun,30) 'else'
-         write(lun,35) 'echo "Cannot find direcotry ../$3\_G$i/"'//
+         write(lun,35) 'echo "Cannot find direcotry ../$4\_G$i/"'//
      &        ' > log2.txt'
          write(lun,30) 'fi'
          write(lun,25) 'fi'
@@ -294,22 +300,22 @@ c madevent_mintMC
          write(lun,25) 'fi'
          write(lun,25) 'cd $j'
          write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/$j/* .'
-         write(lun,25) 'if [[ "$3" != "" ]]; then'
-         write(lun,30) 'if [[ "$3" == "H" ||"$3" == "S" ||'//
-     &        ' "$3" == "V" || "$3" == "B" || "$3" == "F" ]]; then'
+         write(lun,25) 'if [[ "$4" != "" ]]; then'
+         write(lun,30) 'if [[ "$4" == "H" ||"$4" == "S" ||'//
+     &        ' "$4" == "V" || "$4" == "B" || "$4" == "F" ]]; then'
 
-         write(lun,35) 'if [[ -e $CONDOR_INITIAL_DIR/G$3$i ]]; then'
-         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/G$3$i/mint_grids '//
+         write(lun,35) 'if [[ -e $CONDOR_INITIAL_DIR/G$4$i ]]; then'
+         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/G$4$i/mint_grids '//
      &        './preset_mint_grids'
-         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/G$3$i/'/
+         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/G$4$i/'/
      &        /'grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) 'else'
-         write(lun,40) 'echo "Cannot find direcotry ../G$3$i/"'//
+         write(lun,40) 'echo "Cannot find direcotry ../G$4$i/"'//
      &        ' > log.txt'
          write(lun,40) 'exit'
          write(lun,35) 'fi'
          write(lun,30) 'else'
-         write(lun,35) 'runnumber=$3'
+         write(lun,35) 'runnumber=$4'
          write(lun,30) 'fi'
          write(lun,25) 'fi'
 c endif
@@ -366,17 +372,23 @@ c madevent_mint
          write(lun,25) 'echo "Time in seconds: ${T}" >>log.txt'
 c madevent_mintMC
          write(lun,20) "elif [[ $1 == '2' ]]; then"
-         write(lun,20) 'if [[ $runnumber != 0 ]]; then'
-         write(lun,25) 'mv -f nevts__$runnumber nevts'
-         write(lun,25) 'source ./randinit'
-         write(lun,25) 'r=`expr $r + $runnumber`'
-         write(lun,25) 'echo "r=$r" >& randinit'
-         write(lun,20) 'fi'
-         write(lun,25) 'head -n 6 $CONDOR_INITIAL_DIR/'//
+         write(lun,25) 'if [[ $runnumber != 0 ]]; then'
+         write(lun,30) 'mv -f nevts__$runnumber nevts'
+         write(lun,30) 'source ./randinit'
+         write(lun,30) 'r=`expr $r + $runnumber`'
+         write(lun,30) 'echo "r=$r" >& randinit'
+         write(lun,25) 'fi'
+         write(lun,25) "if [[ $3 == '0' || $3 == '2' ]]; then"
+         write(lun,30) 'head -n 6 $CONDOR_INITIAL_DIR/'//
      &        '../madinMMC_$2.2 >& input_app.txt'
-         write(lun,25) 'echo $i >> input_app.txt'
-         write(lun,25) 'tail -n 4 $CONDOR_INITIAL_DIR/'//
+         write(lun,30) 'echo $i >> input_app.txt'
+         write(lun,30) 'tail -n 4 $CONDOR_INITIAL_DIR/'//
      &        '../madinMMC_$2.2 >> input_app.txt'
+         write(lun,25) "elif [[ $3 == '1' ]]; then"
+         write(lun,30) 'head -n 6 madinM1 >& input_app.txt'
+         write(lun,30) 'echo $i >> input_app.txt'
+         write(lun,30) 'tail -n 4 madinM1 >> input_app.txt'
+         write(lun,25) "fi"
          write(lun,25) 'T="$(date +%s)"'
          write(lun,25)
      &        'time ../madevent_mintMC > log.txt <input_app.txt 2>&1'
