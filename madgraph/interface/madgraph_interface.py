@@ -3251,7 +3251,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 aloha_model.compute_all(save=False)
             aloha_model.write(output, format)
             return
-        
+
         #################
         ## Other Output #
         #################
@@ -3275,7 +3275,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 elif self._curr_amps[0].get_ninitial()  == 2:
                     group_subprocesses = True
 
-                             
+
         # Make a Template Copy
         if self._export_format == 'madevent':
             if group_subprocesses:
@@ -3306,7 +3306,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Automatically run finalize
         self.finalize(nojpeg)
-            
+
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)
 
@@ -3651,17 +3651,22 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         part = self._curr_decaymodel.get_particle(pid)
 
         # Find channels as requested
-        if isinstance(level, int):
+        if isinstance(level, int) and level >1:
             self._curr_decaymodel.find_channels(part, level)
-            self._curr_amps = part.get_amplitudes(level)
+            print "find decay of %s to %d-body decays" \
+                % (part.get('name'),level)
+            
+            self._curr_amps = part.get_amplitudes(2)
+            for l in range(3, level+1):
+                self._curr_amps.extend(part.get_amplitudes(l))
             print self._curr_amps.nice_string()
 
         # Set _generate_info
         if len(self._curr_amps) > 0:
             process = self._curr_amps[0]['process'].nice_string()
-            print process
+            #print process
             self._generate_info = process[9:]
-            print self._generate_info
+            #print self._generate_info
         else:
             print "No decay is found"
         
