@@ -1253,11 +1253,12 @@ class Test_Channel(unittest.TestCase):
     
         full_vertexlist = import_vertexlist.full_vertexlist
         # h > t t~ > b b~ w+ w-
-        # h > t ~
+        # h > t t~
         vert_1 = copy.deepcopy(full_vertexlist[(62, 25)])
         vert_1['legs'][0]['number'] = 2
         vert_1['legs'][1]['number'] = 3
         vert_1['legs'][2]['number'] = 1
+        vert_1['legs'][2]['state'] = False
 
         # t~ > b~ w- (decay of antiparticle)
         vert_2 = copy.deepcopy(full_vertexlist[(33, 6)])
@@ -1712,9 +1713,10 @@ class Test_Channel(unittest.TestCase):
                           higgs.find_channels,
                           non_sm, self.my_testmodel)
 
-        # Test for initial id
+        # Test for initial id: anti id and state
         for c in t.get_channels(2, True):
             self.assertEqual(c['vertices'][-1]['legs'][-1]['id'], -6)
+            self.assertEqual(c['vertices'][-1]['legs'][-1]['state'], False)
             self.assertEqual(c.get_initial_id(), 6)
 
         # Create two equivalent channels,
@@ -1725,6 +1727,7 @@ class Test_Channel(unittest.TestCase):
         vert_1['legs'][0]['number'] = 2
         vert_1['legs'][1]['number'] = 3
         vert_1['legs'][2]['number'] = 1
+        vert_1['legs'][2]['state'] = False
 
         vert_2 = import_vertexlist.full_vertexlist[(40, 23)]
         #print vert_1, vert_2
@@ -1749,6 +1752,7 @@ class Test_Channel(unittest.TestCase):
         vert_3['legs'][0]['number'] = 2
         vert_3['legs'][1]['number'] = 3
         vert_3['legs'][2]['number'] = 1
+        vert_3['legs'][2]['state'] = False
         vert_4 = import_vertexlist.full_vertexlist[(66, 24)]
 
         channel_c = decay_objects.Channel({'vertices': base_objects.VertexList(\
@@ -1776,6 +1780,7 @@ class Test_Channel(unittest.TestCase):
         higgs.find_channels(3, self.my_testmodel)
         higgs.find_channels_nextlevel(self.my_testmodel)
         result1 = higgs.get_channels(3, True)
+        
         #print result1.nice_string()
 
 
@@ -3287,7 +3292,7 @@ class Test_AbstractModel(unittest.TestCase):
         amplist3 = ab_model.get_particle(9902100).get_amplitudes(3)
         # tt > vt l vl~ (3 families)
         self.assertEqual(len(amplist3), 1)
-        print amplist3.abstract_nice_string()
+        #print amplist3.abstract_nice_string()
 
 
         # Test if the diagrams in each amp have consistent final leg numbers.

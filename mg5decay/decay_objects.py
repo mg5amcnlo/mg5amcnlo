@@ -880,6 +880,7 @@ class DecayParticle(base_objects.Particle):
                 # The final one has 'number' as 1, pid as anti pid of mother
                 # (to be consistent with trunk)
                 temp_vert.get('legs')[-1]['number'] = 1
+                temp_vert.get('legs')[-1]['state'] = False
                 temp_vert.get('legs')[-1]['id'] = self.get_anti_pdg_code()
                 temp_channel['vertices'].append(temp_vert)
 
