@@ -3366,6 +3366,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     ME = madevent_interface.MadEventCmdShell(me_dir=args[1], options=self.options)
                 else:
                      ME = madevent_interface.MadEventCmd(me_dir=args[1],options=self.options)
+                     ME.pass_in_web_mode()
                 # transfer interactive configuration
                 config_line = [l for l in self.history if l.strip().startswith('set')]
                 for line in config_line:

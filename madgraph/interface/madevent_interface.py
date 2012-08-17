@@ -193,7 +193,7 @@ class CmdExtended(cmd.Cmd):
         try:
             if hasattr(self, 'results'):
                 self.update_status('Stop by the user', level=None, makehtml=False, error=True)
-                self.add_error_log_in_html()
+                self.add_error_log_in_html(KeyboardInterrupt)
         except:
             pass
     
@@ -229,18 +229,22 @@ class CmdExtended(cmd.Cmd):
         except:
             pass
         
-    def add_error_log_in_html(self):
+    def add_error_log_in_html(self, errortype=None):
         """If a ME run is currently running add a link in the html output"""
 
         # Be very carefull to not raise any error here (the traceback 
-        #will modify in that case.
+        #will be modify in that case.)
         if hasattr(self, 'results') and hasattr(self.results, 'current') and\
                 self.results.current and 'run_name' in self.results.current and \
                 hasattr(self, 'me_dir'):
             name = self.results.current['run_name']
             tag = self.results.current['tag']
             self.debug_output = pjoin(self.me_dir, '%s_%s_debug.log' % (name,tag))
-            self.results.current.debug = self.debug_output
+            if errortype:
+                self.results.current.debug = errortype
+            else:
+                self.results.current.debug = self.debug_output
+            
         else:
             #Force class default
             self.debug_output = MadEventCmd.debug_output
@@ -1531,8 +1535,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             %s and try again.''' % pjoin(me_dir,'RunWeb')
             raise MadEventAlreadyRunning, message
         else:
-            os.system('touch %s' % pjoin(me_dir,'RunWeb'))
-            misc.Popen([pjoin('bin', 'internal', 'gen_cardhtml-pl')], cwd=me_dir)
+            pid = os.getpid()
+            fsock = open(pjoin(me_dir,'RunWeb'),'w')
+            fsock.write(`pid`)
+            fsock.close()
+            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
       
         self.to_store = []
         self.run_name = None
@@ -1563,6 +1570,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         self.configured = 0 # time for reading the card
         self._options = {} # for compatibility with extended_cmd
+    
+    def pass_in_web_mode(self):
+        """configure web data"""
+        self.web = True
+        self.results.def_web_mode(True)
+        self.force = True
 
     ############################################################################    
     def split_arg(self, line, error=True):
@@ -1592,10 +1605,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.cluster_mode = 2
                 self.nb_core = int(arg.split('=',1)[1])
             elif arg.startswith('--web'):
-                self.web = True
+                self.pass_in_web_mode()
                 self.cluster_mode = 1
-                self.results.def_web_mode(True)
-                self.force = True
             else:
                 continue
             args.remove(arg)
@@ -3978,9 +3989,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 card_name = self.detect_card_type(answer)
                 if card_name == 'unknown':
                     card_name = self.ask('Fail to determine the type of the file. Please specify the format',
-                   ['param_card.dat', 'run_card.dat','pythia_card.dat','pgs_card.dat',
+                   'param_card.dat', choices=['param_card.dat', 'run_card.dat','pythia_card.dat','pgs_card.dat',
                     'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
-                elif card_name != 'banner':
+                if card_name != 'banner':
                     logger.info('copy %s as %s' % (answer, card_name))
                     files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
                     if card_name == 'param_card.dat':
@@ -4091,7 +4102,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                  card_name = self.detect_card_type(answer)
                  if card_name == 'unknown':
                      card_name = self.ask('Fail to determine the type of the file. Please specify the format',
-                  ['pythia_card.dat','pgs_card.dat',
+                  'pythia_card.dat',choices=['pythia_card.dat','pgs_card.dat',
                    'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
         
                  logger.info('copy %s as %s' % (answer, card_name))
@@ -4150,8 +4161,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                  # detect which card is provide
                  card_name = self.detect_card_type(answer)
                  if card_name == 'unknown':
-                     logger.warning('Fail to determine the type of the file. Impossible to load it')
-                     continue
+                     card_name = self.ask('Fail to determine the type of the file. Please specify the format',
+                  'pgs_card.dat', choices=['pgs_card.dat', 'delphes_card.dat', 'delphes_trigger.dat'])
         
                  logger.info('copy %s as %s' % (answer, card_name))
                  files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))

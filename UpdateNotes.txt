@@ -1,6 +1,5 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-
 1.5.0 (XX/XX/XX)  OM: Allow MG5 to run in complex mass scheme mode
                       (mg5> set complex_mass True)
                   OM: Allow MG5 to run in feynman Gauge
@@ -24,7 +23,14 @@ Update notes for MadGraph 5 (in reverse time order)
                       less memory than before (madevent and standalone output)
                   OM + PdA: Allow Large Extra Dimension Model (LED) to run in the
                       MG5 framework.
-                    
+                  OM: Fix a series of bug with the madevent command 'remove' and 
+		      'run_banner'                    
+
+1.4.8.2 (30/07/12) OM: Allow AE(1,1), AE(2,2) to not be present in SLAH1 card
+	               (1.4.8 crashes if they were not define in the param_card)
+                   OM: Add a button Stop-job for the cluster and make nicer output 
+		       when the user press Ctrl-C during the job.
+
 1.4.8 (24/07/12)  JA: Cancel running of integration channels where the BW
                       structure makes it impossible to get any events. This
                       can significantly speed up event generation for processes
