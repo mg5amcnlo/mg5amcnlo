@@ -56,6 +56,8 @@ import madgraph.core.helas_objects as helas_objects
 import models.import_ufo as import_ufo
 from madgraph import MadGraph5Error, MG5DIR
 
+import models.model_reader as model_reader
+
 ZERO = 0
 #===============================================================================
 # Logger for decay_module
@@ -1158,7 +1160,7 @@ class DecayParticleList(base_objects.ParticleList):
 #===============================================================================
 # DecayModel: Model object that is used in this module
 #===============================================================================
-class DecayModel(base_objects.Model):
+class DecayModel(model_reader.ModelReader):
     """DecayModel object is able construct the decay vertices for
        all its particles by find_vertexlist. When the user try to get stable
        particles, it will find all stable particles automatically according to
@@ -1172,7 +1174,7 @@ class DecayModel(base_objects.Model):
                    'stable_particles', 'vertexlist_found',
                    'reduced_interactions', 'decay_groups', 'max_vertexorder',
                    'decaywidth_list', 
-                   'ab_model', 'abmodel_generated'
+                   'ab_model', 'abmodel_generated', 'coupling_dict','parameter_dict'
                   ]
 
     def __init__(self, init_dict = {}, force=False):
@@ -1540,7 +1542,29 @@ class DecayModel(base_objects.Model):
 
         return color_dict[color_tuple]
 
+
+
+
+
     def read_param_card(self, param_card):
+        """Read a param_card and set all parameters and couplings as
+        members of this module"""
+
+        self.set_parameters_and_couplings(param_card)
+        for param, value in self.get('parameter_dict').items():
+            exec("globals()[\'%s\'] = %s" % (param, value))
+        for param, value in self.get('coupling_dict').items():
+            exec("globals()[\'%s\'] = %s" % (param, value))        
+
+        for particle in self.get('particles'):
+            pid = abs(particle['pdg_code'])
+            value = self.get('parameter_dict')[particle['width']]
+            self['decaywidth_list'][(pid, True)] = float(value.real)
+            
+        global amZ0, aS
+        amZ0 = aS
+
+    def read_param_card_old(self, param_card):
         """Read a param_card and set all parameters and couplings as
         members of this module"""
 

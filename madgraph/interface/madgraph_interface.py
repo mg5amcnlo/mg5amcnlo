@@ -373,6 +373,16 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   Note that identical particles will all be decayed.")
         logger.info("To generate a second process use the \"add process\" command")
 
+    def help_calculate_width(self):
+        logger.info("syntax: calculate_width PART PRECISION [PARAM_CARD_PATH]")
+        logger.info("Generate amplitudes for decay width calculation.")
+        logger.info("  PART: name of the particle you want to calculate width")
+        logger.info("  PRECISION: required precision for width")
+        logger.info("             if an integer is provide it means the max number of decay products")
+        logger.info("  PARAM_CARD_PATH: path for param_card (if not default)")
+        logger.info("")
+        logger.info(" example: calculate_width h 2 ./param_card")
+        
     def help_add(self):
 
         logger.info("syntax: add process INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2")
@@ -919,6 +929,54 @@ This will take effect only in a NEW terminal
                     self._export_dir = '.'
                     
         self._export_dir = os.path.realpath(self._export_dir)
+        
+    def check_calculate_width(self, args):
+        """ check and format calculate decay width:
+        Expected format: NAME PREC/LEVEL [param_card]
+        """    
+        
+        if len(args)<2:
+            self.help_calculate_width()
+            raise self.InvalidCmd('calculate_width requires at least two arguments')
+
+        # check that the first argument is the particle name.
+        if args[0].isdigit():
+            p = self._curr_model.get_particle(int(args[0]))
+            if not p:
+                raise self.InvalidCmd('Model doesn\'t have pid %s for a particle' % args[0])
+            args[0] = int(args[0])
+        else:
+            for p in self._curr_model['particles']:
+                if p['name'] == args[0] or p['antiname'] == args[0]:
+                    args[0] = abs(p.get_pdg_code())
+                    break
+            else:
+                raise self.InvalidCmd('invalid particle name')
+    
+        try:
+            args[1] = float(args[1])
+        except:
+            self.help_calculate_width()
+            raise self.InvalidCmd('second argument should be a number')
+        
+        if len(args) == 3:
+            if not os.path.exists(args[2]):
+                if os.path.exists(pjoin(MG5DIR, args[2])):
+                    args[2] = pjoin(MG5DIR, args[2])
+                elif self._model_v4_path and  os.path.exists(pjoin(self._model_v4_path, args[2])):
+                         args[2] = pjoin(self._curr_model_v4_path, args[2])   
+                elif os.path.exists(pjoin(self._curr_model.path, args[2])):
+                    args[2] = pjoin(self._curr_model.path, args[2])                
+                else: 
+                    raise self.InvalidCmd('%s is not a valid path' % args[2])
+            # check that the path is indeed a param_card:
+            if madevent_interface.MadEventCmd.detect_card_type(args[2]) != 'param_card.dat':
+                raise self.InvalidCmd('%s should be a path to a param_card' % args[2])
+        else:
+            args.append(None)     
+        
+                
+        
 
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
@@ -1122,6 +1180,22 @@ class CompleteForCmd(cmd.CompleteCmd):
         #    couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
         #return self.list_completion(text, self._particle_names + \
         #                            self._multiparticles.keys() + couplings)
+
+    def complete_calculate_width(self, text, line, begidx, endidx):
+        "Complete the add command"
+
+        args = self.split_arg(line[0:begidx])
+
+        # Format
+        if len(args) <= 1:
+            return self.model_completion(text, '')
+        elif len(args) == 2:
+            return self.list_completion(text, ['2','3','4','0.'])
+        elif len(args) == 3:
+            return self.path_completion(text)
+        else:
+            return self.path_completion(text, pjoin(*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
         
     def complete_add(self, text, line, begidx, endidx):
         "Complete the add command"
@@ -3615,20 +3689,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """
 
         args = self.split_arg(line)
+        #check the validity of the arguments
+        self.check_calculate_width(args)
         #print args
-        part_name = args[0]
-        level = eval(args[1])
+        pid = args[0]
+        level = args[1]
         param_card_path = args[2]
-
-
-        p_found = False
-        for p in self._curr_model['particles']:
-            if p['name'] == part_name:
-                pid = p.get_pdg_code()
-                p_found = True
-
-        if not p_found:
-            raise self.InvalidCmd('invalid particle name')
             
         # Reset amplitudes
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -3651,7 +3717,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         part = self._curr_decaymodel.get_particle(pid)
 
         # Find channels as requested
-        if isinstance(level, int) and level >1:
+        if level //1 == level and level >1:
+            level = int(level)
             self._curr_decaymodel.find_channels(part, level)
             print "find decay of %s to %d-body decays" \
                 % (part.get('name'),level)

@@ -115,6 +115,7 @@ def import_model(model_name, decay=False):
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
         model.restrict_model(restrict_file, rm_parameter=not decay)
+        model.path = model_path
         
     return model
 
