@@ -3436,19 +3436,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         elif 'lhapdf' in os.environ.keys():
             del os.environ['lhapdf']
             
-        # create param_card.inc and run_card.inc
-        self.do_treatcards('')
-        
-        # Compile
-        for name in ['../bin/internal/gen_ximprove', 'all', 
-                     '../bin/internal/combine_events', 
-                     '../bin/internal/combine_runs']:
-            misc.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
-        
-        
         # set random number
         if self.run_card['iseed'] != '0':
             self.random = int(self.run_card['iseed'])
+            self.run_card['iseed'] = '0'
             # Reset seed in run_card to 0, to ensure that following runs
             # will be statistically independent
             text = open(pjoin(self.me_dir, 'Cards','run_card.dat')).read()
@@ -3467,6 +3458,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.info('Running with CKKW matching')
             self.treat_CKKW_matching()
             
+        # create param_card.inc and run_card.inc
+        self.do_treatcards('')
+        
+        # Compile
+        for name in ['../bin/internal/gen_ximprove', 'all', 
+                     '../bin/internal/combine_events', 
+                     '../bin/internal/combine_runs']:
+            misc.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
+        
+        
     ############################################################################
     ##  HELPING ROUTINE
     ############################################################################

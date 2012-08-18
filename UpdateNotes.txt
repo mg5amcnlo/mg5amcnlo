@@ -24,6 +24,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       less memory than before (madevent and standalone output)
                   OM + PdA: Allow Large Extra Dimension Model (LED) to run in the
                       MG5 framework.
+                  JA: Ensure identical results for identical seeds also with
+                      multiple runs in the same directory.
                     
 1.4.8 (24/07/12)  JA: Cancel running of integration channels where the BW
                       structure makes it impossible to get any events. This
