@@ -355,12 +355,12 @@ class SGE(cluster):
             if not self.MWparam.param_is_actif[nbcard]:
                 return
 
-            if dir_type=='P':
-                posdir=pos+"/SubProcesses/"+directory+'/'+name+'/card_'+str(nbcard)+'/'
-                pos_prog="../../"+prog+"\n"
-            elif dir_type=='M':
-                posdir=pos+"/SubProcesses/"+directory+'/'+name+'/card_'+str(nbcard)+'/event_'+str(nbevent)+'/'
-                pos_prog="../../../comp_madweight\n"
+            #if dir_type=='P':
+            #    posdir=pos+"/SubProcesses/"+directory+'/'+name+'/card_'+str(nbcard)+'/'
+            #    pos_prog="../../"+prog+"\n"
+            #elif dir_type=='M':
+            posdir=pos+"/SubProcesses/"+directory+'/'+name+'/card_'+str(nbcard)+'/event_'+str(nbevent)+'/'
+            pos_prog="../../../comp_madweight\n"
 
             
             text=self.standard_text
@@ -434,12 +434,12 @@ class SGE2(cluster,SGE):
             text+="\n"
             text+="date\n"
             
-            if dir_type=='P':
-                return cluster.create_file.Event(self,directory,nb_event,dir_type)
-            elif dir_type=='M':
-                text+="cd ../../..\n"
-                text+="make\n"
-                for i in range(1,self.MWparam.actif_param):
+            #if dir_type=='P':
+            #    return cluster.create_file.Event(self,directory,nb_event,dir_type)
+            #elif dir_type=='M':
+            text+="cd ../../..\n"
+            text+="make\n"
+            for i in range(1,self.MWparam.actif_param):
                     text+="cd "+name+"/card_"+str(i)+"/event_"+str(nb_event)+'\n'
                     text+="../../../madweight\n"
                     text+="cd ../../..\n"
@@ -465,12 +465,12 @@ class SGE2(cluster,SGE):
             for i in range(0,len(nbcard)):
                 text+="cd ../"+directory[i]+'\n'
                 text+="cd "+name+"/card_"+str(nbcard[i])+"/event_"+str(nb_event[i])+'\n'
-                if dir_type[i]=='P':
-                    text+="../../"+prog+"\n"
-                    text+='cd ../../\n'
-                else:
-                    text+="../../../madweight\n"
-                    text+='cd ../../../\n'
+                #if dir_type[i]=='P':
+                #    text+="../../"+prog+"\n"
+                #    text+='cd ../../\n'
+                #else:
+                text+="../../../madweight\n"
+                text+='cd ../../../\n'
             text+="date\n"
             
             self.mother.submission_file.write(directory[0],text)
@@ -502,12 +502,12 @@ class Bsub(cluster):
             if  not  self.MWparam.param_is_actif[nbcard]:
                 return
 
-            if dir_type=='P':
-                posdir=pos+"/SubProcesses/"+directory+"/"+name+'/card_'+str(nbcard)+'/'
-                pos_prog="../../"+prog+"\n"
-            elif dir_type=='M':
-                posdir=pos+"/SubProcesses/"+directory+"/"+name+'/card_'+str(nbcard)+'/event_'+str(nbevent)
-                pos_prog="../../../comp_madweight\n"
+            #if dir_type=='P':
+            #    posdir=pos+"/SubProcesses/"+directory+"/"+name+'/card_'+str(nbcard)+'/'
+            #    pos_prog="../../"+prog+"\n"
+            #elif dir_type=='M':
+            posdir=pos+"/SubProcesses/"+directory+"/"+name+'/card_'+str(nbcard)+'/event_'+str(nbevent)
+            pos_prog="../../../comp_madweight\n"
                 
             text=self.standard_text
             if self.MWparam["mw_run"]['write_log']:
@@ -563,16 +563,16 @@ class ts(cluster):
         def one(self,directory,nbcard,nbevent=-1,dir_type='P'):
             name=self.MWparam.name
 
-            if dir_type=='M':
-                prog='../../../comp_madweight'
-                pos='./SubProcesses/'+directory+'/'+name+'/card_'+str(nbcard)+'/event_'+str(nbevent)
-                dirup=5
-            elif dir_type=='P':
-                prog='../../madevent.py'
-                pos='./SubProcesses/'+directory+'/'+name+'/card_'+str(nbcard)
-                dirup=4
-            else:
-                print 'wrong dir_type ',dir_type
+            #if dir_type=='M':
+            prog='../../../comp_madweight'
+            pos='./SubProcesses/'+directory+'/'+name+'/card_'+str(nbcard)+'/event_'+str(nbevent)
+            dirup=5
+            #elif dir_type=='P':
+            #    prog='../../madevent.py'
+            #    pos='./SubProcesses/'+directory+'/'+name+'/card_'+str(nbcard)
+            #    dirup=4
+            #else:
+            #    print 'wrong dir_type ',dir_type
 
             print "launching w/ TS"
             os.chdir(pos)
@@ -600,18 +600,18 @@ class QSUB(cluster):
        #3 ##################################################################				
         def one(self,directory,nbcard,nbevent=-1,dir_type='P',prog="madevent.py",argument=''):
             """SGE in pure local for the moment  """
-         
+    
 	    pos=os.path.realpath(os.getcwd())
             name=self.MWparam.name
             if not self.MWparam.param_is_actif[nbcard]:
                 return
 
-            if dir_type=='P':
-                posdir=pos+"/SubProcesses/"+directory+'/'+name+'/card_'+str(nbcard)+'/'
-                pos_prog="../../"+prog+"\n"
-            elif dir_type=='M':
-                posdir=pos+"/SubProcesses/"+directory+'/'+name+'/card_'+str(nbcard)+'/event_'+str(nbevent)+'/'
-                pos_prog="../../../comp_madweight\n"
+            #if dir_type=='P':
+            #    posdir=pos+"/SubProcesses/"+directory+'/'+name+'/card_'+str(nbcard)+'/'
+            #    pos_prog="../../"+prog+"\n"
+            #elif dir_type=='M':
+            posdir=pos+"/SubProcesses/"+directory+'/'+name+'/card_'+str(nbcard)+'/event_'+str(nbevent)+'/'
+            pos_prog="../../../comp_madweight\n"
 
             
             text = "#!/bin/sh\n"
@@ -669,7 +669,7 @@ class QSUB(cluster):
                 self.error  = "/dev/null"
 
             option = self.MWparam['mw_run']['queue']
-            
+        
             try:
                 os.system(self.submit_word+' '+option+' -o '+self.output+' -e '+self.error+' '+file+' &>'+file+'.log')
             except Exception, error:
@@ -751,18 +751,18 @@ class QSUB2(QSUB,cluster):
             
             for i in range(0,len(nbcard)):
                 text+="cd ../"+directory[i]+'\n'
-                if dir_type[i]=='P':
-                    current_dir = os.path.join(pos,'SubProcesses',directory[i],name, 'card_%s'% (i+1))
-                    text += "PBS_O_WORKDIR=%s\n" % current_dir
-                    text+="cd $PBS_O_WORKDIR\n"
-                    if not prog:
-                        raise Exception
-                    text+="../../"+prog+"\n"
-                    text+='cd ../../\n'
-                else:
-                    text+="cd "+name+"/card_"+str(nbcard[i])+"/event_"+str(nbevent[i])+'\n'
-                    text+="../../../madweight\n"
-                    text+='cd ../../../\n'
+                #if dir_type[i]=='P':
+                #    current_dir = os.path.join(pos,'SubProcesses',directory[i],name, 'card_%s'% (i+1))
+                #    text += "PBS_O_WORKDIR=%s\n" % current_dir
+                #    text+="cd $PBS_O_WORKDIR\n"
+                #    if not prog:
+                #        raise Exception
+                #    text+="../../"+prog+"\n"
+                #    text+='cd ../../\n'
+                #else:
+                text+="cd "+name+"/card_"+str(nbcard[i])+"/event_"+str(nbevent[i])+'\n'
+                text+="../../../madweight\n"
+                text+='cd ../../../\n'
             text+="date\n"
             
             self.mother.submission_file.write(directory[0],text)
