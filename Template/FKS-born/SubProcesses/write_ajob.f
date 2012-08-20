@@ -258,6 +258,7 @@ c madevent_mintMC
          write(lun,25) 'T="$(($(date +%s)-T))"'
          write(lun,25) 'echo "Time in seconds: ${T}" >>log.txt'
 c endif
+         write(lun,25) 'cp -f log.txt log_MINT$3.txt'
          write(lun,20) "fi"
          write(lun,20) 'cd ../'
          write(lun,15) 'done'
@@ -394,6 +395,7 @@ c madevent_mintMC
      &        'time ../madevent_mintMC > log.txt <input_app.txt 2>&1'
          write(lun,25) 'T="$(($(date +%s)-T))"'
          write(lun,25) 'echo "Time in seconds: ${T}" >>log.txt'
+         write(lun,25) 'cp -f log.txt log_MINT$3.txt'
 c endif
          write(lun,20) "fi"
 
@@ -401,7 +403,7 @@ c endif
          write(lun,25) 'cp -f events.lhe $CONDOR_INITIAL_DIR'//
      &        '/G$2$i/events_$runnumber.lhe'
          write(lun,25) 'cp -f log.txt $CONDOR_INITIAL_DIR'//
-     &        '/G$2$i/log_$runnumber.txt'
+     &        '/G$2$i/log_MINT$3_$runnumber.txt'
          write(lun,20) 'fi'
 
          write(lun,20) 'cd ../'

@@ -179,7 +179,7 @@ if nevents>0:
         for line in fileinputs:
             i += 1
             if i == 2:
-                accuracy=min(math.sqrt(tot/(totevents*proc['result']))*0.9,0.2)
+                accuracy=min(math.sqrt(tot/(totevents*proc['result'])),0.2)
                 fileinputschannel.write('%10.8e\n' % accuracy)
             elif i == 8:
                 fileinputschannel.write('1        ! MINT mode\n')

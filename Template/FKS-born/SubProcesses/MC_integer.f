@@ -31,9 +31,7 @@
          firsttime(this_dim)=.false.
          nintervals(this_dim)=fks_configs
          if (flat_grid) then
-            do i=0,nintervals(this_dim)
-               grid(i,this_dim)=dble(i)/nintervals(this_dim)
-            enddo
+            call reset_MC_grid
          else
             open(unit=52,file='grid.MC_integer',status='old',err=999)
             do i=1,this_dim-1
@@ -70,6 +68,26 @@ c
       return
       end
 
+      subroutine reset_MC_grid
+      implicit none
+      integer i,this_dim
+      integer maxdim
+      parameter (maxdim=50)
+      logical firsttime(maxdim)
+      integer nintervals(maxdim),maxintervals
+      parameter (maxintervals=200)
+      integer ncall(0:maxintervals,maxdim)
+      double precision grid(0:maxintervals,maxdim),acc(0:maxintervals
+     &     ,maxdim)
+      common/integration_integer/grid,acc,ncall,nintervals
+      do this_dim=1,maxdim
+         do i=0,nintervals(this_dim)
+            grid(i,this_dim)=dble(i)/nintervals(this_dim)
+         enddo
+      enddo
+      return
+      end
+            
       subroutine fill_MC_integer(this_dim,iint,f_abs)
       implicit none
       integer iint,this_dim

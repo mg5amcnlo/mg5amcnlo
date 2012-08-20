@@ -70,10 +70,10 @@ c others: same as 1 (for now)
       real * 8 dx(ndimmax),f_abs,f_sgn,vtot_abs,etot_abs,vtot_sgn
      &     ,etot_sgn,prod,f1,chi2,efrac_abs
       integer kdim,kint,kpoint,nit,ncalls,ibin,iret,nintcurr,ifirst
-     &     ,nit_included,kpoint_iter,non_zero_point,ntotcalls
+     &     ,nit_included,kpoint_iter,non_zero_point,ntotcalls,nint_used
       real * 8 ran3
       external ran3,fun
-      logical even,double_events
+      logical even,double_events,bad_iteration
 c Accuracy defines if we should double events and grid intervals after
 c every iteration and if we should stop if required accuracy has been
 c reached.
@@ -82,8 +82,13 @@ c reached.
          nint_used=nintervals
       else
          double_events=.true.
-         if (imode.eq.1) nint_used=nintervals
+         if (imode.eq.1) then
+            nint_used=nintervals
+         else
+            nint_used=min_inter
+         endif
       endif
+      bad_iteration=.false.
 c
       ncalls=0  ! # PS points (updated below)
       if(imode.eq.-1) then
@@ -277,11 +282,42 @@ c the abs is to avoid tiny negative values
      &     ' (',efrac_abs*100d0,'%)'
       write(*,*) ' int =',vtot_sgn,' +/- ',etot_sgn
       if (efrac_abs.gt.0.3d0.and.nit.gt.3) then
-         write (*,*) 'Large fluctuation ( >30 % ). '/
-     &        /'Not including iteration in results.'
+         write (*,*) 'Large fluctuation ( >30 % ).'
+c$$$     &        //'Not including iteration in results.'
 c double the number of points for the next iteration
          if (double_events) ncalls0=ncalls0*2
-         goto 10
+         if (bad_iteration .and. imode.eq.0) then
+c 2nd bad iteration is a row. Reset grids
+            write (*,*)'2nd bad iteration in a row. '/
+     &           /'Resetting grids and starting from scratch...'
+            nint_used=min_inter ! reset number of intervals
+            ncalls0=ncalls0/8 ! we did at least 5 iterations. Reduce a bit
+            nit=0
+            nit_included=0
+            do kdim=1,ndim
+               do kint=0,nint_used
+                  xgrid(kint,kdim)=dble(kint)/nint_used
+               enddo
+            enddo
+            call reset_MC_grid
+            ans_abs=0d0
+            err_abs=0d0
+            ans_sgn=0d0
+            err_sgn=0d0
+            chi2=0d0
+            do i=1,3
+               ans_abs3(i)=0d0
+               err_abs3(i)=0d0
+               ans_sgn3(i)=0d0
+               err_sgn3(i)=0d0
+            enddo
+            bad_iteration=.false.
+            goto 10
+         else
+            bad_iteration=.true.
+         endif
+      else
+         bad_iteration=.false.
       endif
       if(nit.eq.1) then
          ans_abs=vtot_abs
@@ -306,8 +342,8 @@ c double the number of points for the next iteration
          elseif(etot_abs.eq.0) then
             etot_abs=err_abs
             etot_sgn=etot_abs
-         elseif(err_abs.eq.0) then
-            err_abs=etot_abs
+         elseif(err_abs.eq.0) then ! 1st iteration; set to a large value
+            err_abs=etot_abs*1d99
             err_sgn=err_abs
          endif
          ans_abs=(ans_abs/err_abs+vtot_abs/etot_abs)/
@@ -320,7 +356,7 @@ c double the number of points for the next iteration
          write (*,*) 'Chi^2=',(vtot_abs-ans_abs)**2/etot_abs**2
       endif
       nit_included=nit_included+1
-      if (vtot_abs.ne.0d0) then
+      if (ans_abs.ne.0d0) then
          write(*,*) 'accumulated result |int|=',ans_abs,' +/- ',err_abs,
      &        ' (',err_abs/ans_abs*100d0,'%)'
       else
@@ -348,9 +384,9 @@ c Update the results of the last tree iterations
 c Compute the results of the last three iterations
       if (nit_included.ge.4) then
          ans_abs_l3=0d0
-         err_abs_l3=ans_abs3(1)
+         err_abs_l3=ans_abs3(1)*1d99
          ans_sgn_l3=0d0
-         err_sgn_l3=ans_sgn3(1)
+         err_sgn_l3=ans_abs3(1)*1d99
          chi2_l3=0d0
          do i=1,3
             ans_abs_l3=(ans_abs_l3/err_abs_l3+ans_abs3(i)/err_abs3(i))/
