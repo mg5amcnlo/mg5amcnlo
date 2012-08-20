@@ -2160,9 +2160,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.banner.add(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
         
         
-        misc.call(['%s/put_banner' % self.dirbin, 'events.lhe'],
+        misc.call(['%s/put_banner' % self.dirbin, 'events.lhe',
+                   str(self.random_orig)],
                             cwd=pjoin(self.me_dir, 'Events'))
-        misc.call(['%s/put_banner'% self.dirbin, 'unweighted_events.lhe'],
+        misc.call(['%s/put_banner'% self.dirbin, 'unweighted_events.lhe',
+                   str(self.random_orig)],
                             cwd=pjoin(self.me_dir, 'Events'))
         
         eradir = self.options['exrootanalysis_path']
@@ -3969,6 +3971,7 @@ class GridPackCmd(MadEventCmd):
         MadEventCmd.__init__(self, me_dir, *completekey, **stdin)
         self.run_mode = 0
         self.random = seed
+        self.random_orig = self.random
         self.options['automatic_html_opening'] = False
         # Now it's time to run!
         if me_dir and nb_event and seed:
