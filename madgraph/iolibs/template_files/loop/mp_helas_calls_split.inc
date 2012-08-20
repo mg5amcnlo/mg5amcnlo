@@ -28,7 +28,7 @@ C
 
 	  %(mp_born_amps_decl)s
 	  %(complex_mp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
-	  common/MP_WFCTS/W  
+	  common/MP_WFS/W  
 C
 C ----------
 C BEGIN CODE

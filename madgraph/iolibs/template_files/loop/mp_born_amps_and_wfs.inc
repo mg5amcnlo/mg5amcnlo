@@ -73,7 +73,7 @@ DO H=1,NCOMB
   ENDDO
   %(born_amps_and_wfs_calls)s
   ENDIF
-  c Copy the qp wfs to the dp ones as they are used to setup the CT calls.
+C  Copy the qp wfs to the dp ones as they are used to setup the CT calls.
   DO I=1,NWAVEFUNCS
     DO J=1,20
       DPW(J,I%(h_w_suffix)s)=W(J,I%(h_w_suffix)s)
