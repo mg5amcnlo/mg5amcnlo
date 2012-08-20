@@ -47,6 +47,8 @@ c
       common /to_split/split_channels
       integer ncode,npos
       character*20 formstr
+      logical file_exists
+      character*30 filename
 
 c-----
 c  Begin Code
@@ -150,7 +152,7 @@ c
 c     Read in integration data from run
 c
             open(unit=25,file=fname,status='old',err=95)
-            read(25,*,err=95,end=95) xsec(i),xerru(i),xerrc(i),nevents(i),nw(i),maxit,
+            read(25,*,err=94,end=94) xsec(i),xerru(i),xerrc(i),nevents(i),nw(i),maxit,
      &           nunwgt(i),xlum(i)
             if (xsec(i) .eq. 0d0) xlum(i)=1d99     !zero cross section
             xlum(i) = xlum(i)/1000   !convert to fb^-1 
@@ -187,6 +189,15 @@ c            tmax
 c            xtot = xtot+ xsec(i)*mfact(i)
 c            eff(i)= xerr(i)*sqrt(real(nevents(i)))/xsec(i)
 c            errtot = errtot+(mfact(i)*xerr(i))**2
+            goto 95
+ 94         continue
+c        There was an error reading an existing results.dat file
+c        Stop generation with error message
+            filename='../../error'
+            INQUIRE(FILE="../../RunWeb", EXIST=file_exists)
+            if(.not.file_exists) filename = '../' // filename
+            open(unit=26,file=filename,status='unknown')
+            write(26,*) 'Bad results.dat file for channel ',xi
  95         close(25)
 c            write(*,*) i,maxit,xsec(i), eff(i)
          else

@@ -208,7 +208,7 @@ class MELauncher(ExtLauncher):
             usecmd = ME.MadEventCmdShell(me_dir=self.running_dir)
         else:
             usecmd = ME.MadEventCmd(me_dir=self.running_dir)
-        
+            usecmd.pass_in_web_mode()
         #Check if some configuration were overwritten by a command. If so use it    
         set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
         for line in set_cmd:

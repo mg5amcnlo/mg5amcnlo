@@ -2,6 +2,9 @@ from __future__ import division
 import xml.etree.ElementTree as ET
 import math
 import os
+import logging
+
+logger = logging.getLogger('madgraph.models') # -> stdout
 
 class InvalidParamCard(Exception):
     """ a class for invalid param_card """
@@ -351,7 +354,6 @@ class ParamCard(dict):
         
         parameter = Parameter(block=block, lhacode=lha, value=value, 
                               comment=comment)
-
         try:
             new_block = self[block]
         except KeyError:
@@ -367,7 +369,14 @@ class ParamCard(dict):
 
         # Find the current block/parameter
         old_block = self[old_block]
-        parameter = old_block.get(old_lha)
+        try:
+            parameter = old_block.get(old_lha)
+        except:
+            if lhacode is not None:
+                lhacode=old_lha
+            self.add_param(block, lhacode, value, comment)
+            return
+        
 
         # Update the parameter
         if block:
@@ -650,6 +659,11 @@ class ParamCardRule(object):
         
         # check identical
         for block, id1, id2, comment in self.identical:
+            if block not in card:
+                logger.warning('''Param card is not complete: Block %s is simply missing.
+                We will use model default for all missing value! Please cross-check that
+                this correspond to your expectation.''' % block)
+                continue
             value2 = float(card[block].get(id2).value)
             try:
                 param = card[block].get(id1)
