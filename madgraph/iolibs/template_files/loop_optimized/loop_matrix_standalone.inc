@@ -323,12 +323,6 @@ C Check if we directly go to multiple precision
 IF (CTMODE.GE.4) THEN
   CALL MP_COMPUTE_LOOP_COEFS(P,BUFFR_BIS)
   MP_DONE=.TRUE.
-c Copy the qp wfs to the dp ones as they are used to setup the CT calls.
-  DO I=1,NWAVEFUNCS
-    DO J=1,MAXLWFSIZE+4
-      W(J,I)=MPW(J,I)
-    ENDDO
-  ENDDO
   goto 300 
 ELSE
   MP_DONE=.FALSE.

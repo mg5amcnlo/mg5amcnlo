@@ -958,6 +958,12 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         
         replace_dict = copy.copy(self.general_replace_dict)
 
+        # For the wavefunction copy, check what suffix is needed for the W array
+        if matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['h_w_suffix']=',H'
+        else:
+            replace_dict['h_w_suffix']=''            
+
         # Extract helas calls
         born_amps_and_wfs_calls = fortran_model.get_born_ct_helas_calls(\
                                                matrix_element, include_CT=False)

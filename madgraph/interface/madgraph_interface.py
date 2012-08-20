@@ -2282,6 +2282,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         gauge_result_no_brs = []
         lorentz_result =[]
         nb_processes = 0
+        timings = []
+        
         
         if "_cuttools_dir" in dir(self):
             CT_dir = self._cuttools_dir
