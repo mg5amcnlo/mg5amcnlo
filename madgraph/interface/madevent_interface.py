@@ -4051,6 +4051,11 @@ class GridPackCmd(MadEventCmd):
                     self.launch_job('./%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
                              run_type='Refine number %s on %s (%s/%s)' %
                              (self.nb_refine, subdir, nb_proc+1, len(subproc)))
+                    if os.path.exists(pjoin(self.me_dir,'error')):
+                        self.monitor(html=True)
+                        raise MadEventError, \
+                            'Error detected in dir %s: %s' % \
+                            (Pdir, open(pjoin(self.me_dir,'error')).read())
         self.monitor(run_type='All job submitted for refine number %s' % 
                                                                  self.nb_refine)
         
