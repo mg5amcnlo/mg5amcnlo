@@ -66,6 +66,7 @@ run_mode = 0
 # And cluster queue
 cluster_type = condor
 cluster_queue = madgraph
+temp_dir = None
 
 # Nb_core to use (None = all) This is use only for multicore run
 nb_core = None
