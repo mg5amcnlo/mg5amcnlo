@@ -118,6 +118,7 @@ class TestCmdShell1(unittest.TestCase):
                     'td_path': './td', 
                     'delphes_path': './Delphes', 
                     'cluster_type': 'condor', 
+                    'temp_dir': None, 
                     'madanalysis_path': './MadAnalysis', 
                     'fortran_compiler': None, 
                     'exrootanalysis_path': './ExRootAnalysis', 
