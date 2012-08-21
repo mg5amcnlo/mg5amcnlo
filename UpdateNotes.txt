@@ -6,11 +6,12 @@ Update notes for MadGraph 5 (in reverse time order)
                       access to central disk for copying, event combination,
                       running Pythia/PGS/Delphes etc.
 
-1.4.8.3 (20/08/12) JA: Ensure that the correct seed is written also in the .lhe
+1.4.8.3 (21/08/12) JA: Ensure that the correct seed is written also in the .lhe
                        file header.
                    JA: Stop run in presence of empty results.dat files 
                        (which can happen if there are problems with disk access
                        in a cluster run).
+                   JA: Allow reading up to 5M weighted events in combine_events.
 
 1.4.8.2 (30/07/12) OM: Allow AE(1,1), AE(2,2) to not be present in SLAH1 card
                        (1.4.8 crashes if they were not define in the param_card)
