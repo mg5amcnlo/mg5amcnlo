@@ -120,16 +120,3 @@ done
 
 cd ..
 
-
-
-echo ""
-echo "Execute ./SubProcesses/combine_results.sh to collect results and"
-echo "compute how many events are needed per channel."
-echo ""
-echo "./SubProcesses/combine_results.sh i n G"$run_mode"*"
-echo ""
-echo "where 'i' is 0 after grid setting and '1' after integration and"
-echo "'n' is the total number of unweigted events you want."
-echo "Update madinMMC_"$run_mode".2 before before"
-echo "executing the next integration or event generation step."
-echo ""

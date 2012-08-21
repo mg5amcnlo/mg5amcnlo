@@ -176,7 +176,7 @@ for line in $(cat nevents_unweighted) ; do
     fi
     if [[ $i == 3 ]] ; then
 	cross_section=$line
-	echo ' ' $pdir'/'$gdir'/'$event_file'.rwgt' '      ' $nevents '      ' $cross_section >> nevents_unweighted_reweight
+	echo ' '$pdir'/'$gdir'/'$event_file'.rwgt' '      ' $nevents '      ' $cross_section >> nevents_unweighted_reweight
 	i=0
     fi
 done

@@ -22,6 +22,7 @@ if [[ "$@" == "" ]]; then
 fi
 
 nevents=`awk '/^[^#].*=.*nevents/{print $1}' $Maindir/Cards/run_card.dat`
+echo "Generating" $nevents "events"
 
 for run_mode in "$@" ; do
     $Maindir/bin/run_amcatnlo.sh $run_mode none 0 0
@@ -36,6 +37,47 @@ $Maindir/SubProcesses/combine_results.sh 1 $nevents G$@\*
 for run_mode in "$@" ; do
     $Maindir/bin/run_amcatnlo.sh $run_mode none 0 2
 done
+
+reweight_scale=`awk '/^[^#].*=.*reweight_scale/{print $1}' $Maindir/Cards/run_card.dat`
+reweight_PDF=`awk '/^[^#].*=.*reweight_PDF/{print $1}' $Maindir/Cards/run_card.dat`
+PDF_set_min=`awk '/^[^#].*=.*PDF_set_min/{print $1}' $Maindir/Cards/run_card.dat`
+PDF_set_max=`awk '/^[^#].*=.*PDF_set_max/{print $1}' $Maindir/Cards/run_card.dat`
+muR_over_ref=`awk '/^[^#].*=.*muR_over_ref/{print $1}' $Maindir/Cards/run_card.dat`
+muF1_over_ref=`awk '/^[^#].*=.*muF1_over_ref/{print $1}' $Maindir/Cards/run_card.dat`
+muF2_over_ref=`awk '/^[^#].*=.*muF2_over_ref/{print $1}' $Maindir/Cards/run_card.dat`
+QES_over_ref=`awk '/^[^#].*=.*QES_over_ref/{print $1}' $Maindir/Cards/run_card.dat`
+lhaid=`awk '/^[^#].*=.*lhaid/{print $1}' $Maindir/Cards/run_card.dat`
+
+if [[ $muF1_over_ref == $muF2_over_ref ]] ; then
+    echo "0" > rwgt.temp
+    if [[ $reweight_scale == ".true." ]] ; then
+	echo "1" >> rwgt.temp
+    else
+	echo "0" >> rwgt.temp
+    fi
+    if [[ $reweight_PDF == ".true." ]] ; then
+	echo "1" >> rwgt.temp
+    else
+	echo "0" >> rwgt.temp
+    fi
+    echo $QES_over_ref >> rwgt.temp
+    echo $muR_over_ref $muF1_over_ref >> rwgt.temp
+    if [[ $reweight_scale == ".true." ]] ; then
+	echo "0.5 2.0" >> rwgt.temp
+	echo "0.5 2.0" >> rwgt.temp
+    fi
+    if [[ $reweight_PDF == ".true." ]] ; then
+	echo "lhaid" >> rwgt.temp
+	echo $PDF_set_min $PDF_set_max >> rwgt.temp
+    fi
+else
+    echo "Cannot include reweight information: muF1_over_ref != muF2_over_ref"
+fi
+
+
+./SubProcesses/reweight_xsec_events.sh < rwgt.temp
+
+rm -f rwgt.temp
 
 cd $Maindir/SubProcesses
 make collect_events
