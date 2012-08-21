@@ -1821,6 +1821,13 @@ c Update the shower starting scale with the shape from montecarlocounter
             write (*,*) 'ERROR, ',dsigS,
      &           ' found for dsigS, setting dsigS to 0 for this event'
             dsigS=0
+            do j=1,IPROC
+               if (.not.nbody) then
+                  unwgt_table(nFKSprocess,1,j)=0d0
+               else
+                  unwgt_table(0,1,j)=0d0
+               endif
+            enddo
          endif
          
          if (fkssymmetryfactorDeg.ne.fkssymmetryfactor) then
@@ -1942,6 +1949,11 @@ c Plot observables for counterevents and Born
             write (*,*) 'ERROR, ',dsigH,
      &           ' found for dsigH, setting dsigH to 0 for this event'
             dsigH=0
+            if (.not.nbody) then
+               do j=1,IPROC
+                  unwgt_table(nFKSprocess,2,j)=0d0
+               enddo
+         endif
          endif
 
          if (nbody.and.dsigH.ne.0d0) then

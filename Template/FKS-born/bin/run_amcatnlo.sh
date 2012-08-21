@@ -1,7 +1,7 @@
 #! /bin/bash
 
 echo '****************************************************'
-echo 'This script runs a amcatnlo process'
+echo 'This script runs an amcatnlo process'
 echo '****************************************************'
 
 # find the correct directory
