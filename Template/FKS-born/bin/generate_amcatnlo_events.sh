@@ -21,21 +21,29 @@ if [[ "$@" == "" ]]; then
     exit
 fi
 
+for run_mode in "$@" ; do
+    echo 'Cleaning previous results in the SubProcesses/P*/G'$run_mode'* directories'
+    rm -rf SubProcesses/P*/G$run_mode*/
+done
+
 nevents=`awk '/^[^#].*=.*nevents/{print $1}' $Maindir/Cards/run_card.dat`
-echo "Generating" $nevents "events"
+parton_shower=`awk '/^[^#].*=.*parton_shower/{print $1}' $Maindir/Cards/run_card.dat`
+echo "Generating" $nevents "events for" $parton_shower
+
+
 
 for run_mode in "$@" ; do
-    $Maindir/bin/run_amcatnlo.sh $run_mode none 0 0
+    $Maindir/bin/run_amcatnlo.sh $run_mode none 0 0 $parton_shower
 done
 $Maindir/SubProcesses/combine_results.sh 0 $nevents G$@\*
 
 for run_mode in "$@" ; do
-    $Maindir/bin/run_amcatnlo.sh $run_mode none 0 1
+    $Maindir/bin/run_amcatnlo.sh $run_mode none 0 1 $parton_shower
 done
 $Maindir/SubProcesses/combine_results.sh 1 $nevents G$@\*
 
 for run_mode in "$@" ; do
-    $Maindir/bin/run_amcatnlo.sh $run_mode none 0 2
+    $Maindir/bin/run_amcatnlo.sh $run_mode none 0 2 $parton_shower
 done
 
 reweight_scale=`awk '/^[^#].*=.*reweight_scale/{print $1}' $Maindir/Cards/run_card.dat`

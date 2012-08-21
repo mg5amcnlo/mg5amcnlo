@@ -1,8 +1,8 @@
 #! /bin/bash
 
-echo '****************************************************'
-echo 'This script runs an amcatnlo process'
-echo '****************************************************'
+#echo '****************************************************'
+#echo 'This script runs an amcatnlo process'
+#echo '****************************************************'
 
 # find the correct directory
 if [[  ! -d ./SubProcesses  ]]; then
@@ -19,6 +19,7 @@ run_mode=$1
 use_preset=$2
 run_cluster=$3
 mint_mode=$4
+parton_shower=$5
 
 if [[ $run_mode == "" ]] ; then
     echo 'Enter run mode (F, V or B)'
@@ -62,6 +63,12 @@ if [[ $mint_mode == "" ]] ; then
     read mint_mode
 fi
 
+if [[ $parton_shower == "" ]] ; then
+    echo "Enter the parton shower for which you want to include the NLO MC subtraction terms"
+    echo "options are HERWIG6, HERWIGPP, PYTHIA6Q, PYTHIA6PT, PYTHIA8"
+    read $parton_shower
+fi
+
 cd $Maindir/SubProcesses/
 if [[ $mint_mode == 0 ]] ; then
     echo "setting-up integration grids"
@@ -75,6 +82,7 @@ elif [[ $mint_mode == 2 ]] ; then
 else
     echo "ERROR" $mint_mode
 fi
+sed -i ".bak" "10s/.*/$parton_shower/" madinMMC_$run_mode.2
 cd $Maindir/
 
 #---------------------------
