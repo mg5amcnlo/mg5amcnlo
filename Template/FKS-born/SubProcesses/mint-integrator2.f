@@ -80,7 +80,14 @@ c reached.
       if (accuracy.eq.0d0) then
          double_events=.false.
          nint_used=nintervals
+         if (ncalls0.le.0) then
+            write (*,*) 'Number of PS points is <= 0 and accuracy=0'
+            stop
+         endif
       else
+         if (ncalls0.le.0) then
+            ncalls0=80*ndim
+         endif
          double_events=.true.
          if (imode.eq.1) then
             nint_used=nintervals
@@ -283,7 +290,7 @@ c the abs is to avoid tiny negative values
       write(*,*) ' int =',vtot_sgn,' +/- ',etot_sgn
       if (efrac_abs.gt.0.3d0.and.nit.gt.3) then
          write (*,*) 'Large fluctuation ( >30 % ).'
-c$$$     &        //'Not including iteration in results.'
+     &        //'Not including iteration in results.'
 c double the number of points for the next iteration
          if (double_events) ncalls0=ncalls0*2
          if (bad_iteration .and. imode.eq.0) then
@@ -312,10 +319,10 @@ c 2nd bad iteration is a row. Reset grids
                err_sgn3(i)=0d0
             enddo
             bad_iteration=.false.
-            goto 10
          else
             bad_iteration=.true.
          endif
+         goto 10
       else
          bad_iteration=.false.
       endif

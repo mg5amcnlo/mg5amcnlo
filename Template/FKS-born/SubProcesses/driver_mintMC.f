@@ -1069,12 +1069,12 @@ c much. Do this by overwrite the 'wgt' variable
      $        ,f_abs)
          if (f_check.ne.0d0.or.sigintF.ne.0d0) then
             if (abs(sigintF-f_check)/max(abs(f_check),abs(sigintF))
-     $           .gt.1d-4) then
+     $           .gt.1d-2) then
                write (*,*) 'Error inaccuracy in unweight table 1'
      $              ,sigintF,f_check
                stop
             elseif (abs(sigintF-f_check)/max(abs(f_check),abs(sigintF))
-     $           .gt.1d-8) then
+     $           .gt.1d-4) then
                write (*,*) 'Warning inaccuracy in unweight table 1'
      $              ,sigintF,f_check
             endif

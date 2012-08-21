@@ -2115,13 +2115,8 @@ c$$$         SCALUP(iFKS)=min(SCALUP(iFKS),shower_H_scale(iFKS))
          SCALUP(iFKS)=min(SCALUP(iFKS),shower_S_scale(iFKS))
       endif
 
-      if(SCALUP(iFKS).le.0.d0)then
-         write(*,*)'Scale too small in set_shower_scale:',iFKS
-     &        ,SCALUP(iFKS),emsca,xscalemax,sqrt(shat_ev)
-     &        ,shower_S_scale(iFKS) ,shower_H_scale(iFKS),Hevents
-         write(*,*)
-         stop
-      endif
+c Always have a very small minimal starting scale
+      if (SCALUP(iFKS).lt.3d0) SCALUP(iFKS)=3d0
 c
       return
       end
