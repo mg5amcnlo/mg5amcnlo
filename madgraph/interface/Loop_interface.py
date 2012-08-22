@@ -408,6 +408,12 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         # Check args validity
         self.model_validity()
         param_card = self.check_check(argss)
+        # For the stability check the user can specify the statistics (i.e
+        # number of trial PS points) as a second argument
+        if argss[0]=="stability":
+            stab_statistics=int(argss[1])
+            argss=argss[:1]+argss[2:]
+        # Now make sure the process is acceptable
         proc = " ".join(argss[1:])
         myprocdef = self.extract_process(proc)
         self.proc_validity(myprocdef)
