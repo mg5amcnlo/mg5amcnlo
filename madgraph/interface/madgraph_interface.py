@@ -551,7 +551,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             try: 
                 int(args[1])
             except ValueError:
-                args.insert(1, 100)
+                args.insert(1, '100')
 
         if args[0] not in self._check_opts:
             args.insert(0, 'full')
@@ -2415,7 +2415,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text += 'Stability result for the '+('optimized' if \
               self.options['loop_optimized_output'] else 'default')+' output:\n'
             text += process_checks.output_stability(stability,
-                                                         mg_root=self._mgme_dir)
+                                    mg_root=self._mgme_dir, 
+                                    opt = self.options['loop_optimized_output'])
         if gauge_result:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'

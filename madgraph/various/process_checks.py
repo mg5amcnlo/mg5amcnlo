@@ -1029,7 +1029,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             # Make sure all results make sense
             if any([not res for res in dp_res]):
                 return None
-            
+
             dp_accuracy = (max(dp_res)-min(dp_res))/abs(sum(dp_res)/len(dp_res))
             DP_stability.append({'CTMode1':dp_res[0],'CTMode2':dp_res[1],
                                                         'Accuracy':dp_accuracy})
@@ -1566,12 +1566,12 @@ def clean_up(mg_root):
     for dir in directories:
         shutil.rmtree(dir)
 
-def output_stability(stability, mg_root):
+def output_stability(stability, mg_root, opt):
     """Present the result of a stability check in a nice format.
     The full info is printed out in 'Stability_result_<proc_shell_string>.dat'
     under the MadGraph root folder (mg_root)"""
     
-#    return "Stability="+str(stability)
+    mode = 'optimized' if opt else 'default'
     DP_stability = [eval['Accuracy'] for eval in stability['DP_stability']]
     # Remember that an evaluation which did not require QP has an empty dictionary
     QP_stability = [eval['Accuracy'] if eval!={} else -1.0 for eval in \
@@ -1585,7 +1585,8 @@ def output_stability(stability, mg_root):
     EPS_stability_DP = [DP_stability[E[0]] for E in EPS]
     EPS_stability_QP = [QP_stability[E[0]] for E in EPS]
     
-    res_str = "%i PS points evaluated for %s \n"%(nPS,process.nice_string())
+    res_str = "%i PS points evaluated for %s (%s mode)\n"\
+                                           %(nPS,process.nice_string()[9:],mode)
     res_str += "\n= Double precision results\n"
     res_str += "|= Average accuracy............ %.3e\n"%(sum(DP_stability)/nPS)
     res_str += "|= Max accuracy................ %.3e\n"%min(DP_stability)
@@ -1611,12 +1612,12 @@ def output_stability(stability, mg_root):
         res_str += "|= QP Max accuracy............. %.3e\n"%min(EPS_stability_QP)
         res_str += "|= QP Min accuracy............. %.3e\n"%max(EPS_stability_QP)
 
-    logFile = open(os.path.join(mg_root, 'stability_%s.log'\
-                                                  %process.shell_string()), 'w')
+    logFile = open(os.path.join(mg_root, 'stability_%s_%s.log'\
+                                           %(mode,process.shell_string())), 'w')
     logFile.write('Stability check results\n\n')
     logFile.write(res_str)
     res_str += "\n= Full details of the run are output in the file"+\
-               " stability_%s.log\n"%process.shell_string()
+               " stability_%s_%s.log\n"%(mode,process.shell_string())
     if len(EPS)>0:
         logFile.write('\nFull details of the %i EPS encountered.\n'%len(EPS))
         for i, eps in enumerate(EPS):
@@ -1652,10 +1653,12 @@ def output_stability(stability, mg_root):
     try:
         import matplotlib.pyplot as plt
         plt.plot(accuracies, data_plot, color='b', marker='o', linestyle='-')
-        plt.axis([min(accuracies),max(accuracies),10**(-int(math.log(nPS)/math.log(10))-1), 1])
+        plt.axis([min(accuracies),max(accuracies),\
+                               10**(-int(math.log(nPS-0.5)/math.log(10))-1), 1])
         plt.yscale('log')
         plt.xscale('log')
-        plt.title('Stability plot for %s'%process.nice_string())
+        plt.title('Stability plot for %s (%s mode)'%\
+                                               (process.nice_string()[9:],mode))
         plt.ylabel('Fraction of events')
         plt.xlabel('Maximal precision')
         logger.info('Some stability statistics will be displayed once you '+\
