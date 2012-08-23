@@ -821,8 +821,7 @@ class ProcessExporterFortran(object):
 
     def set_compiler(self, default_compiler, force=False):
         """Set compiler based on what's available on the system"""
-        
-        
+                
         # Check for compiler
         if misc.which(default_compiler):
             compiler = default_compiler

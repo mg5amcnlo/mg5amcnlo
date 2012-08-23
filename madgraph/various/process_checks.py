@@ -822,7 +822,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         res_timings = self.setup_process(matrix_element, model,export_dir)
         if not res_timings:
             return None
-        dir_name=infos['dir_path']
+        dir_name=res_timings['dir_path']
 
         def check_disk_usage(path):
             return subprocess.check_output(["du -shc %s"%path],shell=True).\

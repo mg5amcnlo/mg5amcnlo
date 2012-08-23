@@ -66,7 +66,7 @@ ML5_processes_long =  [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':
 class ML5Test(unittest.TestCase):
     """ A class to test ML5 versus runs from older versions or ML4 """
 
-    test_model = 'loop_sm-no_widths'
+    test_model_name = 'loop_sm-no_widths'
 
     @staticmethod
     def create_pickle(my_proc_list, pickle_file, runner, ref_runner=None,
