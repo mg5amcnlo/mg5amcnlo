@@ -33,28 +33,35 @@ $(BINDIR)sum_html: sum_html.o
 	mv sum_html $(BINDIR)
 
 $(LIBDIR)libdhelas.a: DHELAS
+	rm -f $(LIBDIR)libdhelas.a
 	cd DHELAS; make
 
 $(LIBDIR)libdsample.a: $(DSAMPLE)
+	rm -f $(LIBDIR)libdsample.a
 	ar cru libdsample.a $(DSAMPLE)
 	ranlib libdsample.a
 	mv libdsample.a $(LIBDIR)
 
 $(LIBDIR)libdsample_fks.a: $(DSAMPLE_FKS)
+	rm -f $(LIBDIR)libdsample_fks.a
 	ar cru libdsample_fks.a $(DSAMPLE_FKS)
 	ranlib libdsample_fks.a
 	mv libdsample_fks.a $(LIBDIR)
 
 $(LIBDIR)libgeneric.a: $(GENERIC)
+	rm -f $(LIBDIR)libgeneric.a
 	ar cru libgeneric.a $(GENERIC)
 	ranlib libgeneric.a
 	mv libgeneric.a $(LIBDIR)
+	rm -f $(alfas_functions).o 
 
 
 $(LIBDIR)libpdf.a: PDF
+	rm -f $(LIBDIR)libpdf.a
 	cd PDF; make	
 
 $(LIBDIR)libmodel.a: MODEL
+	rm -f $(LIBDIR)libmodel.a
 	cd MODEL; make	
 
 
