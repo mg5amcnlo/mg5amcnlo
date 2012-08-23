@@ -37,8 +37,8 @@
 #*********************************************************************
         1     = lpp1  ! beam 1 type (0=NO PDF)
         1     = lpp2  ! beam 2 type (0=NO PDF)
-     7000     = ebeam1  ! beam 1 energy in GeV
-     7000     = ebeam2  ! beam 2 energy in GeV
+     7000     = ebeam1  ! beam 1 kinetic energy in GeV
+     7000     = ebeam2  ! beam 2 kinetic energy in GeV
 #*********************************************************************
 # Beam polarization from -100 (left-handed) to 100 (right-handed)    *
 #*********************************************************************
@@ -120,10 +120,10 @@
  1d5  = eamax ! maximum E for the photons
  1d5  = elmax ! maximum E for the charged leptons
 #*********************************************************************
-# Maximum and minimum rapidity                                       *
+# Maximum and minimum absolute rapidity in pp collisions             *
 #*********************************************************************
    5  = etaj    ! max rap for the jets 
- 1d2  = etab    ! max rap for the b 
+ 0d0  = etab    ! max rap for the b (0 means no cut)
  2.5  = etaa    ! max rap for the photons 
  2.5  = etal    ! max rap for the charged leptons 
  0.6  = etaonium ! max rap for the quarkonium states

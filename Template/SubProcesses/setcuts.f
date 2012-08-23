@@ -258,7 +258,7 @@ c
          emax(i)   = 1d5
 
          etamin(i) = 0d0
-         etamax(i) = 1d2
+         etamax(i) = 0d0
 
          if(do_cuts(i)) then
 

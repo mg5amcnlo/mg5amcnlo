@@ -350,7 +350,7 @@ c     Rapidity  min & max cuts
 c     
       do i=nincoming+1,nexternal
          if(debug) write (*,*) 'abs(rap(',i,'))=',abs(rap(p(0,i))),'   ',etamin(i),':',etamax(i)
-         notgood=(abs(rap(p(0,i))) .gt. etamax(i)).or.
+         notgood=(etamax(i).gt.0.and.abs(rap(p(0,i))) .gt. etamax(i)).or.
      &        (abs(rap(p(0,i))) .lt. etamin(i))
          if (notgood) then
             if(debug) write (*,*) i,' -> fails'

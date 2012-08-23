@@ -94,7 +94,8 @@ c
 
       DOUBLE PRECISION  FUNCTION rap(p)
 c************************************************************************
-c     Returns rapidity of particle in the lab frame
+c     Returns rapidity of particle with p in the CM frame
+c     Note that it only applies to p-p collisions
 c************************************************************************
       IMPLICIT NONE
 c
@@ -115,7 +116,7 @@ c-----
 c      pm=dsqrt(p(1)**2+p(2)**2+p(3)**2)
       pm = p(0)
       rap = .5d0*dlog((pm+p(3))/(pm-p(3)))+
-     $     .5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
+     $     .5d0*dlog(xbk(1)*(ebeam(1)+0.938)/(xbk(2)*(ebeam(2)+0.938)))
       end
       DOUBLE PRECISION  FUNCTION rap2(p)
 c************************************************************************
