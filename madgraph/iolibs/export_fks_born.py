@@ -279,6 +279,9 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         self.write_pmass_file(writers.FortranWriter(filename),
                              matrix_element.real_processes[0].matrix_element)
 
+        #draw the diagrams
+        self.draw_feynman_diagrams(matrix_element)
+
         linkfiles = ['LesHouchesDummy.f',
                      'MCmasses_HERWIG6.inc',
                      'MCmasses_HERWIGPP.inc',
@@ -527,6 +530,30 @@ end
         # Write the file
         writer.writelines(file)
         return 0
+
+
+    def draw_feynman_diagrams(self, matrix_element):
+        """Create the ps files containing the feynman diagrams for the born process,
+        as well as for all the real emission processes"""
+
+        filename = 'born.ps'
+        plot = draw.MultiEpsDiagramDrawer(matrix_element.born_matrix_element.\
+                                    get('base_amplitude').get('diagrams'),
+                                    filename,
+                                    model=matrix_element.born_matrix_element.\
+                                    get('processes')[0].get('model'),
+                                    amplitude=True)
+        plot.draw()
+
+        for n, fksreal in enumerate(matrix_element.real_processes):
+            filename = 'matrix_%d.ps' % (n + 1)
+            plot = draw.MultiEpsDiagramDrawer(fksreal.matrix_element.\
+                                        get('base_amplitude').get('diagrams'),
+                                        filename,
+                                        model=fksreal.matrix_element.\
+                                        get('processes')[0].get('model'),
+                                        amplitude=True)
+            plot.draw()
 
 
     def write_real_matrix_elements(self, matrix_element, fortran_model):
