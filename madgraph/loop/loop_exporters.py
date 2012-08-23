@@ -23,6 +23,8 @@ import re
 import shutil
 import subprocess
 import itertools
+import time
+import datetime
 
 import aloha
 
@@ -281,7 +283,21 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         
         # Now we construct the color factors between each born and loop amplitude
         # by scanning their contributions to the different jamps.
-        for jampl_list in ampl_to_jampl:
+        start = time.time()
+        time_info=False
+        for i, jampl_list in enumerate(ampl_to_jampl):
+            # This can be pretty long for processes with many color flows.
+            # So, if necessary (i.e. for more than 15s), we tell the user the
+            # estimated time for the processing.
+            if i==10:
+                elapsed_time = time.time()-start
+                t = int(len(ampl_to_jampl)*(elapsed_time/10.0))
+                if t > -1:
+                    time_info = True
+                    logger.info('The color factors computation will take '+\
+                      ' about %s to run. '%str(datetime.timedelta(seconds=t))+\
+                      'Started on %s.'%datetime.datetime.now().strftime(\
+                                                              "%d-%m-%Y %H:%M"))
             line_num=[]
             line_denom=[]
             for jampb_list in ampb_to_jampb:
@@ -326,6 +342,10 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
 
             ColorMatrixNumOutput.append(line_num)
             ColorMatrixDenomOutput.append(line_denom)
+
+        if time_info:
+            logger.info('Finished on %s.'%datetime.datetime.now().strftime(\
+                                                              "%d-%m-%Y %H:%M"))
 
         return (ColorMatrixNumOutput,ColorMatrixDenomOutput)
 
@@ -957,6 +977,12 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             return 0
         
         replace_dict = copy.copy(self.general_replace_dict)
+
+        # For the wavefunction copy, check what suffix is needed for the W array
+        if matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['h_w_suffix']=',H'
+        else:
+            replace_dict['h_w_suffix']=''            
 
         # Extract helas calls
         born_amps_and_wfs_calls = fortran_model.get_born_ct_helas_calls(\

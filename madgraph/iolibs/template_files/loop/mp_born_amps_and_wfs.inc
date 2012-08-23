@@ -32,7 +32,7 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I,H
+      INTEGER I,J,H
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
 	  DATA IC/NEXTERNAL*1/
 C  
@@ -56,6 +56,9 @@ C
 	  %(complex_mp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
 	  common/MP_WFS/W
 
+	  %(complex_dp_format)s DPW(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  common/WFCTS/DPW
+
 	  INTEGER HELC(NEXTERNAL,NCOMB)
 	  common/HELCONFIGS/HELC
 
@@ -70,6 +73,12 @@ DO H=1,NCOMB
   ENDDO
   %(born_amps_and_wfs_calls)s
   ENDIF
+C  Copy the qp wfs to the dp ones as they are used to setup the CT calls.
+  DO I=1,NWAVEFUNCS
+    DO J=1,20
+      DPW(J,I%(h_w_suffix)s)=W(J,I%(h_w_suffix)s)
+    ENDDO
+  ENDDO
 ENDDO
 
 END

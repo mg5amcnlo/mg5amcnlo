@@ -3332,9 +3332,9 @@ class UFO_model_to_mg4(object):
                             parameter  (PI=3.141592653589793d0)
                             parameter  (ZERO=0d0)""")
         if self.mp:
-            fsock.writelines("""%s MP__PI MP__ZERO
+            fsock.writelines("""%s MP__PI, MP__ZERO
                                 parameter (MP__PI=3.1415926535897932384626433832795e0_16)
-                                parameter (MP__ZER0)=0e0_16)
+                                parameter (MP__ZERO=0e0_16)
                                 include \'mp_input.inc\'
                                 include \'mp_coupl.inc\'
                         """%self.mp_real_format) 
@@ -3393,7 +3393,7 @@ class UFO_model_to_mg4(object):
                                 logical READLHA""")
             fsock.writelines("""%s MP__PI, MP__ZERO
                                     parameter (MP__PI=3.1415926535897932384626433832795e0_16)
-                                    parameter (MP__ZER0)=0e0_16)
+                                    parameter (MP__ZERO=0e0_16)
                                     include \'mp_input.inc\'
                                     include \'mp_coupl.inc\'
                             """%self.mp_real_format)

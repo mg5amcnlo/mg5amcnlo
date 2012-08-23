@@ -66,9 +66,11 @@ ML5_processes_long =  [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':
 class ML5Test(unittest.TestCase):
     """ A class to test ML5 versus runs from older versions or ML4 """
 
+    test_model = 'loop_sm-no_widths'
+
     @staticmethod
     def create_pickle(my_proc_list, pickle_file, runner, ref_runner=None,
-                      model = 'loop_sm-no_twidth', energy = 2000):
+                      model = 'loop_sm-no_widths', energy = 2000):
         """ Create a pickle with name 'pickle_file' on the specified processes
         and also possibly using the PS points provided by the reference runner """
         
@@ -87,7 +89,7 @@ class ML5Test(unittest.TestCase):
         my_comp.cleanup()
         
 
-    def compare_processes(self, my_proc_list = [], model = 'loop_sm-no_twidth',
+    def compare_processes(self, my_proc_list = [], model = 'loop_sm-no_widths',
                       pickle_file = "", energy = 2000, tolerance = 1e-06, filename = ""):
         """ A helper function to compare processes. """
         
@@ -136,32 +138,31 @@ class ML5Test(unittest.TestCase):
         if not os.path.isfile(os.path.join(_pickle_path,'ml5_parallel_test.pkl')):
             ML5_opt = loop_me_comparator.LoopMG5Runner()
             ML5_opt.setup(_mg5_path, optimized_output=True)       
-            # Replace here the path of your ML4 installation
             self.create_pickle(ML5_processes_short+ML5_processes_long,'ml5_parallel_test.pkl',
-                           ML5_opt, ref_runner=None, model='loop_sm-no_twidth',energy=2000)
+                           ML5_opt, ref_runner=None, model=self.test_model_name,energy=2000)
 
         if not os.path.isfile(os.path.join(_pickle_path,'ml4_parallel_test.pkl')): 
             ML4 = loop_me_comparator.LoopMG4Runner()
             # Replace here the path of your ML4 installation
             ML4.setup('/Users/Spooner/Documents/PhD/MadFKS/ML4ParrallelTest/NLOComp')
             self.create_pickle(ML4_processes_short+ML4_processes_long,'ml4_parallel_test.pkl',
-                           ML4, ref_runner=None, model='loop_sm-no_twidth',energy=2000) 
+                           ML4, ref_runner=None, model=self.test_model_name,energy=2000) 
 
 
     def test_short_sm_vs_stored_ML5(self):
-        self.compare_processes(ML5_processes_short, model = 'loop_sm-no_twidth',
+        self.compare_processes(ML5_processes_short, model = self.test_model_name,
           pickle_file = 'ml5_parallel_test.pkl',filename = 'ptest_short_ml5_vs_old_ml5')
 
     # The test below is a bit lengthy, so only run it when you want full proof check of ML5.
     def test_long_sm_vs_stored_ML5(self):
-        self.compare_processes(ML5_processes_long, model = 'loop_sm-no_twidth',
+        self.compare_processes(ML5_processes_long, model = self.test_model_name,
           pickle_file = 'ml5_parallel_test.pkl',filename = 'ptest_long_ml5_vs_old_ml5')
     # In principle since previous version of ML5 has been validated against ML4, it is not 
     # necessary to test both against ML4 and the old ML5.
     def test_short_sm_vs_stored_ML4(self):
-        self.compare_processes(ML4_processes_short, model = 'loop_sm-no_twidth',
+        self.compare_processes(ML4_processes_short, model = self.test_model_name,
           pickle_file = 'ml4_parallel_test.pkl',filename = 'ptest_short_ml5_vs_ml4')
 
     def test_long_sm_vs_stored_ML4(self):
-        self.compare_processes(ML4_processes_long, model = 'loop_sm-no_twidth',
+        self.compare_processes(ML4_processes_long, model = self.test_model_name,
           pickle_file = 'ml4_parallel_test.pkl',filename = 'ptest_long_ml5_vs_ml4')

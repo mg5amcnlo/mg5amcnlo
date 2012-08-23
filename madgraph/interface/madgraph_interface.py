@@ -544,6 +544,15 @@ class CheckValidForCmd(cmd.CheckCmd):
         if os.path.isfile(args[1]):
             param_card = args.pop(1)
 
+        if args[0]=="stability" and len(args)>1:
+            # If the first argument after 'stability' is not the integer
+            # specifying the desired statistics (i.e. number of points), then
+            # we insert the default value 100
+            try: 
+                int(args[1])
+            except ValueError:
+                args.insert(1, '100')
+
         if args[0] not in self._check_opts:
             args.insert(0, 'full')
 
@@ -1680,7 +1689,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _save_opts = ['model', 'processes', 'options']
     _tutorial_opts = ['start', 'stop']
     _switch_opts = ['mg5','aMC@NLO','ML5']
-    _check_opts = ['full', 'timing', 'permutation', 'gauge', 'lorentz', 'brs']
+    _check_opts = ['full', 'timing', 'stability', 'permutation', 'gauge', 
+                   'lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
@@ -2238,6 +2248,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         args = self.split_arg(line)
         # Check args validity
         param_card = self.check_check(args)
+        
+        # For the stability check the user can specify the statistics (i.e
+        # number of trial PS points) as a second argument
+        if args[0]=="stability":
+            stab_statistics=int(args[1])
+            args=args[:1]+args[2:]
+        
         proc_line = " ".join(args[1:])
         myprocdef = self.extract_process(proc_line)
 
@@ -2249,8 +2266,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             raise self.InvalidCmd("Processes involving loops can only be"+
                                                  " evaluated in Feynman gauge.")
 
-        if args[0]=='timing' and not myprocdef.get('perturbation_couplings'):
-            raise self.InvalidCmd("Only loop processes can have their timings checked.")
+        if args[0] in ['timing','stability'] and not \
+                                        myprocdef.get('perturbation_couplings'):
+            raise self.InvalidCmd("Only loop processes can have their "+
+                                  " timings or stability checked.")
         
         # Disable some loggers
         loggers = [logging.getLogger('madgraph.diagram_generation'),
@@ -2282,6 +2301,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         gauge_result_no_brs = []
         lorentz_result =[]
         nb_processes = 0
+        timings = []
+        stability = []
+        
         
         if "_cuttools_dir" in dir(self):
             CT_dir = self._cuttools_dir
@@ -2293,6 +2315,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                   mg_root=self._mgme_dir,
                                                   cuttools=CT_dir,
                                                   cmass_scheme = mass_scheme)        
+
+        if args[0] in ['stability']:
+            stability = process_checks.check_stability(myprocdef,
+                                                  mg_root=self._mgme_dir,
+                                                  cuttools=CT_dir,
+                                                  cmass_scheme = mass_scheme,
+                                                  nPoints=stab_statistics)
+
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
                                             param_card = param_card,
@@ -2366,7 +2396,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     % (nb_processes,
                       (cpu_time2 - cpu_time1)))
 
-        if args[0]!='timing':
+        if args[0] not in ['timing','stability']:
             if mass_scheme:
                 text = "Note that Complex mass scheme gives gauge/lorentz invariant\n"
                 text+= "results only for stable particles in final states.\n\n"
@@ -2381,6 +2411,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 
             text += process_checks.output_timings(myprocdef, timings,
                                          self.options['loop_optimized_output'])
+        if stability:
+            text += 'Stability result for the '+('optimized' if \
+              self.options['loop_optimized_output'] else 'default')+' output:\n'
+            text += process_checks.output_stability(stability,
+                                    mg_root=self._mgme_dir, 
+                                    opt = self.options['loop_optimized_output'])
         if gauge_result:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'

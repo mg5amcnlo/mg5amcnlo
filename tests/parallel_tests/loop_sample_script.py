@@ -59,6 +59,7 @@ if '__main__' == __name__:
     logging.basicConfig(level=logging.INFO)
 
     my_proc_list = []
+    my_proc_list.append(('g g > g g g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}))    
 # Just to check that th general setup is ok, let's try some trivial processes
 #    my_proc_list.append(('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
 #    my_proc_list.append(('d g > d g',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
@@ -76,7 +77,7 @@ if '__main__' == __name__:
 ## Check of the ggvv R2    
 #    my_proc_list.append(('d d~ > w+ w- g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}))
 #    my_proc_list.append(('d~ d > z z g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}))
-    my_proc_list.append(('d~ d > z a g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}))
+#    my_proc_list.append(('d~ d > z a g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}))
 ## Check of the gggv R2 
 #    my_proc_list.append(('d~ d > z g g',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}))
 #    my_proc_list.append(('d~ d > a g g',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}))
@@ -96,14 +97,14 @@ if '__main__' == __name__:
     #    initial=2, final_1=2, final_2 = 1)
 
     # Set the model we are working with
-    model = 'loop_sm-no_twidth'
+    model = 'loop_sm-no_widths'
 
     # Load a saved run
-    SavedRun = me_comparator.PickleRunner.find_comparisons(
-                         os.path.join(pickle_path,'ml5_parallel_test.pkl'))[0]
+    #SavedRun = me_comparator.PickleRunner.find_comparisons(
+    #                     os.path.join(pickle_path,'ml5_parallel_test.pkl'))[0]
     # Create a MERunner object for MadLoop 4
-    #ML4 = loop_me_comparator.LoopMG4Runner()
-    #ML4.setup('/Users/Spooner/Documents/PhD/MadFKS/ML4ParrallelTest/NLOComp')
+    ML4 = loop_me_comparator.LoopMG4Runner()
+    ML4.setup('/Users/Spooner/Documents/PhD/MadFKS/ML4ParrallelTest/NLOComp')
 
     # Create a MERunner object for GoSam
     # GoSam = loop_me_comparator.GoSamRunner()
@@ -125,10 +126,10 @@ if '__main__' == __name__:
     my_comp = loop_me_comparator.LoopMEComparator()
     # Always put the saved run first if you use it, so that the corresponding PS
     # points will be used
-    my_comp.set_me_runners(SavedRun,ML5_opt,ML5_default)
+    my_comp.set_me_runners(ML5_opt)
 
     # Run the actual comparison
-    energy=2000
+    energy=1000
     my_comp.run_comparison(my_proc_list,
                            model=model,
                            energy=energy)

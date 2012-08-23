@@ -68,6 +68,9 @@ C
 	  %(complex_mp_format)s W(20,NWAVEFUNCS)
 	  common/MP_W/W  
 
+	  %(complex_dp_format)s DPW(20,NWAVEFUNCS)
+	  common/W/DPW
+
 	  %(complex_mp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_mp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/MP_WL/WL,PL
@@ -150,6 +153,13 @@ DO H=1,NCOMB
   ENDDO 
   %(mp_coef_construction)s  
   ENDIF
+ENDDO
+
+c Copy the qp wfs to the dp ones as they are used to setup the CT calls.
+DO I=1,NWAVEFUNCS
+  DO J=1,MAXLWFSIZE+4
+    DPW(J,I)=W(J,I)
+  ENDDO
 ENDDO
 
 DO I=1,3

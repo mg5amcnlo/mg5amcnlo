@@ -2064,9 +2064,7 @@ C===============================================================================
       COMPLEX*32 RES
       COMPLEX*32 AMPS
 
-c     Need to check for the reason of this - sign.
-c     Only for QCD-Ghost like particles?
-      RES=-AMPS
+      RES=AMPS
 
       END
 
