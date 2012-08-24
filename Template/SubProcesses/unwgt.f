@@ -527,16 +527,16 @@ c
      $       xbk(2) .eq. 1d0) then
             pboost(0)=xbk(1)*(ebeam(1)+0.938d0)+ebeam(2)+PMASS(2)
             pboost(3)=xbk(1)*(ebeam(1)+0.938d0)-
-     $           sqrt(ebeam(2)*(ebeam(2)-2*PMASS(2)))
+     $           sqrt(ebeam(2)*(ebeam(2)+2*PMASS(2)))
          else if (xbk(2) .eq. 1d0 .and.
      $       xbk(2) .gt. 0d0 .and. xbk(2) .lt. 1d0) then
             pboost(0)=ebeam(1)+PMASS(1)+xbk(2)*(ebeam(2)+0.938d0)
-            pboost(3)=sqrt(ebeam(1)*(ebeam(1)-2*PMASS(1)))-
+            pboost(3)=sqrt(ebeam(1)*(ebeam(1)+2*PMASS(1)))-
      $           xbk(2)*(ebeam(2)+0.938d0)
          else if (xbk(2) .eq. 1d0 .and. xbk(2) .eq. 1d0) then
             pboost(0)=ebeam(1)+PMASS(1) + ebeam(2)+PMASS(2)
-            pboost(3)=sqrt(ebeam(1)*(ebeam(1)-2*PMASS(1)))-
-     $           sqrt(ebeam(2)*(ebeam(2)-2*PMASS(2)))
+            pboost(3)=sqrt(ebeam(1)*(ebeam(1)+2*PMASS(1)))-
+     $           sqrt(ebeam(2)*(ebeam(2)+2*PMASS(2)))
          else
             write(*,*) 'Warning bad x1 or x2 in write_leshouche',
      $           xbk(1),xbk(2)

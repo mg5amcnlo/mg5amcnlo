@@ -1,8 +1,7 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.9   (23/08/12) JA: Amended kinematics to correctly deal with the case of
-                       massive beams, as well as fixed-target proton collisions
-                       (note that eta cuts still only work well for p-p collisions).
+1.4.9   (24/08/12) JA: Amended kinematics to correctly deal with the case of
+                       massive beams, as well as fixed-target proton collisions.
 
 1.4.8.3 (21/08/12) JA: Ensure that the correct seed is written also in the .lhe
                        file header.

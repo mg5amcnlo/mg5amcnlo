@@ -110,13 +110,24 @@ c
 c     Global
 c
       include 'run.inc'
+
+      double precision cm_rap
+      logical set_cm_rap
+      common/to_cm_rap/set_cm_rap,cm_rap
+      data set_cm_rap/.false./
+
 c-----
 c  Begin Code
 c-----
+      if(.not.set_cm_rap) then
+         print *,'Need to set cm_rap before calling rap'
+         stop
+      endif
 c      pm=dsqrt(p(1)**2+p(2)**2+p(3)**2)
+      
       pm = p(0)
-      rap = .5d0*dlog((pm+p(3))/(pm-p(3)))+
-     $     .5d0*dlog(xbk(1)*(ebeam(1)+0.938)/(xbk(2)*(ebeam(2)+0.938)))
+      rap = .5d0*dlog((pm+p(3))/(pm-p(3)))+cm_rap
+c     $     .5d0*dlog(xbk(1)*(ebeam(1)+0.938)/(xbk(2)*(ebeam(2)+0.938)))
       end
       DOUBLE PRECISION  FUNCTION rap2(p)
 c************************************************************************
