@@ -265,7 +265,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
           matrix_element.get_born_color_amplitudes(),
           matrix_element.get_number_of_born_amplitudes())
         else:
-            ampb_to_jampb=ampl_to_jamp
+            ampb_to_jampb=ampl_to_jampl
         # Below is the original color matrix multiplying the JAMPS
         if matrix_element.get('color_matrix'):
             ColorMatrixDenom = \
