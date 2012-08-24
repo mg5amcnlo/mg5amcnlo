@@ -3327,12 +3327,14 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""subroutine coup()
 
                             implicit none
-                            double precision PI
+                            double precision PI, ZERO
                             logical READLHA
-                            parameter  (PI=3.141592653589793d0)""")
+                            parameter  (PI=3.141592653589793d0)
+                            parameter  (ZERO=0d0)""")
         if self.mp:
-            fsock.writelines("""%s MP__PI
+            fsock.writelines("""%s MP__PI, MP__ZERO
                                 parameter (MP__PI=3.1415926535897932384626433832795e0_16)
+                                parameter (MP__ZERO=0e0_16)
                                 include \'mp_input.inc\'
                                 include \'mp_coupl.inc\'
                         """%self.mp_real_format) 
@@ -3363,9 +3365,10 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""subroutine update_as_param()
 
                             implicit none
-                            double precision PI
+                            double precision PI, ZERO
                             logical READLHA
-                            parameter  (PI=3.141592653589793d0)""")               
+                            parameter  (PI=3.141592653589793d0)            
+                            parameter  (ZERO=0d0)""")
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'
                             READLHA = .false.""")
@@ -3388,8 +3391,9 @@ class UFO_model_to_mg4(object):
     
                                 implicit none
                                 logical READLHA""")
-            fsock.writelines("""%s MP__PI
+            fsock.writelines("""%s MP__PI, MP__ZERO
                                     parameter (MP__PI=3.1415926535897932384626433832795e0_16)
+                                    parameter (MP__ZERO=0e0_16)
                                     include \'mp_input.inc\'
                                     include \'mp_coupl.inc\'
                             """%self.mp_real_format)

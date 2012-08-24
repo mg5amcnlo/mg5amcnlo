@@ -24,8 +24,10 @@ carddir=$Maindir/Cards
 
 
 c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
+rm -f $libdir/libgeneric.a
+rm -f $libdir/libpdf.a
 if [[ $c == "'lhapdf'" ]]; then
-    echo Using LHAPDF interface!
+    echo Using LHAPDF interface
     LHAPDF=`$lhapdf_config --libdir`
     LHAPDFSETS=`$lhapdf_config --pdfsets-path`
     export lhapdf=true
@@ -36,6 +38,7 @@ if [[ $c == "'lhapdf'" ]]; then
       ln -s $LHAPDFSETS $libdir/. 
     fi
 else
+    echo Using built-in PDF libraries
     unset lhapdf
 fi
 
@@ -90,17 +93,15 @@ if [[ $gensym == "1" || $madevent_run == "1" ]] ; then
 fi
 
 if [[ $madevent_compile == "1" ]] ; then
-    echo 'press: "0" for Vegas, "1" for Mint, "2" for MintMC"'
+    echo 'press: "1" for NLO fixed order (Vegas), "2" for NLO matched to PS (MintMC)'
     read vegas_mint
-    if [[ $vegas_mint == "0" ]] ; then
+    if [[ $vegas_mint == "1" ]] ; then
 	executable='madevent_vegas'
-    elif [[ $vegas_mint == "1" ]] ; then
-	executable='madevent_mint'
     elif [[ $vegas_mint == "2" ]] ; then
 	executable='madevent_mintMC'
-    fi
-    if [[ $vegas_mint != "1" && $vegas_mint != "2" ]] ; then
-	vegas_mint="0"
+    else
+        echo 'Invalid input, quitting'
+        exit
     fi
 fi
 
@@ -124,9 +125,21 @@ if [[  $gensym == '1' || $madevent_compile == '1' || $test == "1" ]]; then
     # Source
     cd Source
     echo 'compiling Source...'
-    echo 'compiling Source' >>  $Maindir/compile_amcatnlo.log
+    echo 'compiling Source' >  $Maindir/compile_amcatnlo.log
     make -j$j >>  $Maindir/compile_amcatnlo.log 2>&1
-    echo '...done'
+
+    if [[ -e "$libdir/libdhelas.a" &&
+            -e "$libdir/libdsample.a" &&
+            -e "$libdir/libdsample_fks.a" &&
+            -e "$libdir/libgeneric.a" &&
+            -e "$libdir/libmodel.a" &&
+            -e "$libdir/libpdf.a" ]]; then
+        echo '...done'
+    else
+        echo 'Source compilation failed, check compile_amcatnlo.log for details.'
+        echo 'Quitting compilation'
+	exit
+    fi
     cd ..
 
 fi
@@ -163,7 +176,7 @@ fi
 if [[ $gensym == '1' ]] ; then
     echo 'results from gensym' > $Maindir/gensym.log
 fi
-echo 'compilation results' > $Maindir/compile_amcatnlo.log
+echo 'compilation results' >> $Maindir/compile_amcatnlo.log
 echo 'compilation results for madloop' > $Maindir/compile_madloop.log
 
 

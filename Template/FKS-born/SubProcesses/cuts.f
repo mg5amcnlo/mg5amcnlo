@@ -271,7 +271,7 @@ c Boost the jets to the lab frame for the pseudo-rapidity cut
 c Count the number of jets that pass the pseud-rapidity cut
             njet_eta=0
             do i=1,njet
-               if (abs(eta(pjet(0,i))).lt.ETAJ) then
+               if (abs(eta(pjetlab(0,i))).lt.ETAJ) then
                   njet_eta=njet_eta+1
                endif
             enddo
