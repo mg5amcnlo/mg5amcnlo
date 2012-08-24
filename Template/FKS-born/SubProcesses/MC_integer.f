@@ -82,7 +82,8 @@ c
       common/integration_integer/grid,acc,ncall,nintervals
       do this_dim=1,maxdim
          do i=0,nintervals(this_dim)
-            grid(i,this_dim)=dble(i)/nintervals(this_dim)
+            if (nintervals(this_dim).ne.0) 
+     &           grid(i,this_dim)=dble(i)/nintervals(this_dim)
          enddo
       enddo
       return

@@ -64,25 +64,23 @@ if [[ $mint_mode == "" ]] ; then
 fi
 
 if [[ $parton_shower == "" ]] ; then
-    echo "Enter the parton shower for which you want to include the NLO MC subtraction terms"
-    echo "options are HERWIG6, HERWIGPP, PYTHIA6Q, PYTHIA6PT, PYTHIA8"
-    read $parton_shower
+    parton_shower=`awk '/^[^#].*=.*parton_shower/{print $1}' $Maindir/Cards/run_card.dat`
 fi
 
 cd $Maindir/SubProcesses/
 if [[ $mint_mode == 0 ]] ; then
     echo "setting-up integration grids"
-    sed -i ".bak" "8s/.*/0/" madinMMC_$run_mode.2
+    sed -i.bak "8s/.*/0/" madinMMC_$run_mode.2
 elif [[ $mint_mode == 1 ]] ; then
     echo "computing upper bounding envelope"
-    sed -i ".bak" "8s/.*/1/" madinMMC_$run_mode.2
+    sed -i.bak "8s/.*/1/" madinMMC_$run_mode.2
 elif [[ $mint_mode == 2 ]] ; then
     echo "generating events"
-    sed -i ".bak" "8s/.*/2/" madinMMC_$run_mode.2
+    sed -i.bak "8s/.*/2/" madinMMC_$run_mode.2
 else
     echo "ERROR" $mint_mode
 fi
-sed -i ".bak" "10s/.*/$parton_shower/" madinMMC_$run_mode.2
+sed -i.bak "10s/.*/$parton_shower/" madinMMC_$run_mode.2
 cd $Maindir/
 
 #---------------------------
