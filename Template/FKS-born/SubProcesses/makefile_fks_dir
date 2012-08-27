@@ -10,9 +10,8 @@ FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
 #FJLIBS=
 
 NLOLIBS=$(libmadloop)
-LINKLIBS = -L$(LIBDIR) -ldhelas -ldsample_fks -lgeneric -lmodel -lpdf $(lhapdf)
-LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libdsample_fks.a		\
-	$(LIBDIR)libgeneric.a $(LIBDIR)libmodel.a $(LIBDIR)libpdf.a
+LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf $(lhapdf)
+LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libmodel.a $(LIBDIR)libpdf.a
 
 # Files for all executables
 FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\

@@ -6,14 +6,12 @@ PDFDIR= ./PDF/
 
 PROCESS= hfill.o matrix.o myamp.o 
 
-DSAMPLE = dsample.o ranmar.o 
-DSAMPLE_FKS = ranmar.o 
-
 HBOOK = hfill.o hcurve.o hbook1.o hbook2.o
 
-GENERIC = $(alfas_functions).o transpole.o invarients.o hfill.o pawgraphs.o ran1.o rw_events.o rw_routines.o kin_functions.o open_file.o basecode.o setrun.o run_printout.o dgauss.o
+GENERIC = $(alfas_functions).o invarients.o hfill.o pawgraphs.o ran1.o rw_events.o rw_routines.o kin_functions.o \
+	  open_file.o basecode.o setrun.o run_printout.o dgauss.o ranmar.o
 
-INCLUDEF= coupl.inc genps.inc hbook.inc DECAY/decay.inc psample.inc pmass.inc nexternal.inc cluster.inc
+INCLUDEF= coupl.inc genps.inc hbook.inc psample.inc pmass.inc nexternal.inc cluster.inc
 
 BANNER  =  write_banner.o  rw_events.o ranmar.o  kin_functions.o open_file.o  rw_routines.o alfas_functions.o
 
@@ -23,7 +21,7 @@ COMBINE = combine_events.o  rw_events.o ranmar.o  kin_functions.o open_file.o rw
 
 .f.o: ; $(FC) $(FFLAGS) -c $*.f
 
-all: $(LIBDIR)libdhelas.a $(LIBDIR)libdsample.a $(LIBDIR)libdsample_fks.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a  $(LIBDIR)libmodel.a
+all: $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a  $(LIBDIR)libmodel.a
 
 scaled.dat:
 	combine_events
@@ -36,25 +34,12 @@ $(LIBDIR)libdhelas.a: DHELAS
 	rm -f $(LIBDIR)libdhelas.a
 	cd DHELAS; make
 
-$(LIBDIR)libdsample.a: $(DSAMPLE)
-	rm -f $(LIBDIR)libdsample.a
-	ar cru libdsample.a $(DSAMPLE)
-	ranlib libdsample.a
-	mv libdsample.a $(LIBDIR)
-
-$(LIBDIR)libdsample_fks.a: $(DSAMPLE_FKS)
-	rm -f $(LIBDIR)libdsample_fks.a
-	ar cru libdsample_fks.a $(DSAMPLE_FKS)
-	ranlib libdsample_fks.a
-	mv libdsample_fks.a $(LIBDIR)
-
 $(LIBDIR)libgeneric.a: $(GENERIC)
 	rm -f $(LIBDIR)libgeneric.a
 	ar cru libgeneric.a $(GENERIC)
 	ranlib libgeneric.a
 	mv libgeneric.a $(LIBDIR)
 	rm -f $(alfas_functions).o 
-
 
 $(LIBDIR)libpdf.a: PDF
 	rm -f $(LIBDIR)libpdf.a
@@ -63,10 +48,6 @@ $(LIBDIR)libpdf.a: PDF
 $(LIBDIR)libmodel.a: MODEL
 	rm -f $(LIBDIR)libmodel.a
 	cd MODEL; make	
-
-
-dsample.o: dsample.f genps.inc
-dsample_fks.o: dsample_fks.f genps.inc
 
 genps.inc: nexternal.inc
 	touch genps.inc
