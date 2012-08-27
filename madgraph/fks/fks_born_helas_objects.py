@@ -187,17 +187,16 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
                               "Processing color information for %s" % \
                               matrix_element.born_matrix_element.get('processes')[0].nice_string().\
                                              replace('Process', 'process'))
-                            matrix_element.born_matrix_element.set('color_basis',
-                                               list_color_basis[col_index])
-                            matrix_element.born_matrix_element.set('color_matrix',
-                                               list_color_matrices[col_index])                    
+                        matrix_element.born_matrix_element.set('color_basis',
+                                           list_color_basis[col_index])
+                        matrix_element.born_matrix_element.set('color_matrix',
+                                           list_color_matrices[col_index])                    
                 else:
                     # this is in order not to handle valueErrors coming from other plaeces,
                     # e.g. from the add_process function
                     other.add_process(matrix_element)
 
         for me in matrix_elements:
-#                    matrix_element.set_color_links()
             me.set_color_links()
         return matrix_elements    
 
