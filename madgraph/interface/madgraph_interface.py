@@ -415,12 +415,6 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   fortran_compiler NAME")
         logger.info("      (default None) Force a specific fortran compiler.")
         logger.info("      If None, it tries first g77 and if not present gfortran.")
-        logger.info("   fks_mode real|born")
-        logger.info("      (default born) Build the real-emission contributions")
-        logger.info("      from the real or born topologies.")
-        logger.info("      Please note that the \"real\" mode may be used only for testing")
-        logger.info("      parton level computations. Matching to the shower is not supported")
-        logger.info("      in this mode.")
         logger.info("   loop_optimized_output True|False")
         logger.info("      Abandon the JAMP structure in order to bring considerable")
         logger.info("      improvement in running time.")
@@ -829,10 +823,6 @@ This will take effect only in a NEW terminal
             if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL']:
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')       
-
-        if args[0] in ['fks_mode']:
-            if args[1] not in ['born', 'real']:
-                raise self.InvalidCmd('fks_mode needs argument real or born')       
         
         if args[0] in ['timeout']:
             if not args[1].isdigit():
@@ -1458,9 +1448,6 @@ class CompleteForCmd(cmd.CompleteCmd):
                            'loop_optimized_output']:
                 return self.list_completion(text, ['False', 'True'])
             
-            elif args[1] in ['fks_mode']:
-                return self.list_completion(text, ['None', 'born', 'real'])
-
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
             elif args[1] == 'gauge':
@@ -1689,7 +1676,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'ignore_six_quark_processes',
                     'stdout_level',
                     'fortran_compiler',
-                    'fks_mode','loop_optimized_output','complex_mass_scheme',
+                    'loop_optimized_output','complex_mass_scheme',
                     'gauge']
 
     # Variables to store object information
@@ -1746,7 +1733,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Set defaults for options
         self.options['group_subprocesses'] = 'Auto'
         self.options['ignore_six_quark_processes'] = False
-        self.options['fks_mode'] = 'born'
         self.options['loop_optimized_output'] = False
         
         # Load the configuration file
@@ -3174,7 +3160,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                               'automatic_html_opening':True,
                               'group_subprocesses': 'Auto',
                               'ignore_six_quark_processes': False,
-                              'fks_mode': 'born',
                               'loop_optimized_output':False,
                               'complex_mass_scheme': False,
                               'gauge':'unitary'}
@@ -3557,21 +3542,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             else:
                 self.options['fortran_compiler'] = None
         
-        elif args[0] == 'fks_mode':
-            if args[1] != 'None':
-                if log:
-                    logger.info('set FKS mode to %s' % args[1])
-                if args[1] == 'real':
-                    logger.info('Please note that the \"real\" mode may be used ' + \
-                        'only for testing parton level computations. Matching to ' + \
-                        'the shower is not supported in this mode.')
-                logger.info('Note that you need to regenerate all processes')
-                self.options[args[0]] = args[1]
-            else:
-                self.options[args[0]] = args[1]
-            self._curr_amps = diagram_generation.AmplitudeList()
-            self._fks_multi_proc = None
-            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         elif args[0] == 'loop_optimized_output':
             if log:
                     logger.info('set loop optimized output to %s' % args[1])
