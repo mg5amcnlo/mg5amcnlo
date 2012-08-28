@@ -344,8 +344,7 @@ c         write(26,20) 'rm -f moffset.dat'
          write(26,'(5x,3a)')'echo "',gn(io(i))(2:ip-1),
      $        '" >>input_sg.txt'
          write(26,20) '../madevent >> $k <input_sg.txt'
-         write(26,20) 'mv ftn26 ftn25'
-c         write(26,20) 'rm ftn26'
+         write(26,20) 'rm ftn25 ftn26'
          write(26,20) 'cat $k >> log.txt'
          write(26,20) 'cd ../'
       endif
