@@ -1539,7 +1539,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             fsock = open(pjoin(me_dir,'RunWeb'),'w')
             fsock.write(`pid`)
             fsock.close()
-            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
+            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')])
       
         self.to_store = []
         self.run_name = None
@@ -2301,7 +2301,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     ############################################################################      
     def do_survey(self, line):
         """Advanced commands: launch survey for the current process """
-                
+        
+          
         args = self.split_arg(line)
         # Check argument's validity
         self.check_survey(args)
@@ -2374,8 +2375,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     ############################################################################      
     def do_refine(self, line):
         """Advanced commands: launch survey for the current process """
-        devnull = os.open(os.devnull, os.O_RDWR)
-
+        devnull = os.open(os.devnull, os.O_RDWR)  
         self.nb_refine += 1
         args = self.split_arg(line)
         # Check argument's validity
@@ -2486,7 +2486,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.banner = banner_mod.recover_banner(self.results, 'parton')
         self.banner.load_basic(self.me_dir)
         # Add cross-section/event information
-        self.banner.add_generation_info(self.results.current['cross'], nb_event)        
+        self.banner.add_generation_info(self.results.current['cross'], nb_event)
         if not hasattr(self, 'random_orig'): self.random_orig = 0
         self.banner.change_seed(self.random_orig)
         if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
@@ -2838,7 +2838,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     except self.InvalidCmd, error:
                         logger.info(error)
                         pass # run already clear
-                    return
+                return
             
         # Check that run exists
         if not os.path.exists(pjoin(self.me_dir, 'Events', run)):

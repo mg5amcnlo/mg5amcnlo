@@ -169,7 +169,7 @@ class AllResults(dict):
         assert run_name in self
 
         if not tag :
-            if self.current['run_name'] == run_name:
+            if self.current and self.current['run_name'] == run_name:
                 self.def_current(None)                    
             del self[run_name]
             self.order.remove(run_name)

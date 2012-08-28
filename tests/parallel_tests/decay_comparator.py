@@ -192,8 +192,8 @@ class TestFRDecay(unittest.TestCase):
             self.assertEqual('True', decay_framework.has_same_decay(name))
             print 'done in %s s' % (time.time() - start)
         
-    def test_decay_sextet(self):
-        decay_framework = DecayComparator('sextet_diquarks')
+    def test_decay_heft(self):
+        decay_framework = DecayComparator('Higgs_Effective_Couplings_UFO')
 
         for name in decay_framework.particles_id.keys():
             import time
