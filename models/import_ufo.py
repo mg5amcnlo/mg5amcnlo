@@ -512,14 +512,14 @@ class UFOMG5Converter(object):
                     error_msg = 'UFO model have inconsistency in the format:\n'
                     error_msg += 'interactions for  particles %s has color information %s\n'
                     error_msg += ' but both fermion are in the same representation %s'
-                    raise UFOFormatError, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
+                    raise InvalidModel, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
                 if particle.color == particle2.color and particle.color in [-3, 3]:
                     if particle.pdg_code in color_info and particle2.pdg_code in color_info:
                       if color_info[particle.pdg_code] == color_info[particle2.pdg_code]:
                         error_msg = 'UFO model have inconsistency in the format:\n'
                         error_msg += 'interactions for  particles %s has color information %s\n'
                         error_msg += ' but both fermion are in the same representation %s'
-                        raise UFOFormatError, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
+                        raise InvalidModel, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
                     elif particle.pdg_code in color_info:
                         color_info[particle2.pdg_code] = -particle.pdg_code
                     elif particle2.pdg_code in color_info:
@@ -528,7 +528,7 @@ class UFOMG5Converter(object):
                         error_msg = 'UFO model have inconsistency in the format:\n'
                         error_msg += 'interactions for  particles %s has color information %s\n'
                         error_msg += ' but both fermion are in the same representation %s'
-                        raise UFOFormatError, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
+                        raise InvalidModel, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
                 
                 
                 if particle.color == 6:
