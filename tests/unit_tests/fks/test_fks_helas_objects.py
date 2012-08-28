@@ -13,7 +13,7 @@
 #
 ################################################################################
 
-"""Testing modules for fks_born_helas_objects module"""
+"""Testing modules for fks_helas_objects module"""
 
 import sys
 import os
@@ -21,9 +21,9 @@ root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
 
 import tests.unit_tests as unittest
-import madgraph.fks.fks_born as fks_born
+import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_common as fks_common
-import madgraph.fks.fks_born_helas_objects as fks_born_helas
+import madgraph.fks.fks_helas_objects as fks_helas
 import madgraph.core.base_objects as MG
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.color_algebra as color
@@ -33,8 +33,8 @@ import copy
 import array
 import models.import_ufo as import_ufo
 
-class testFKSBornHelasObjects(unittest.TestCase):
-    """a class to test the module FKSBornHelasObjects"""
+class testFKSHelasObjects(unittest.TestCase):
+    """a class to test the module FKSHelasObjects"""
 
     def setUp(self):
         if not hasattr(self, 'mymodel') or \
@@ -86,13 +86,13 @@ class testFKSBornHelasObjects(unittest.TestCase):
                                'decay_chains': MG.ProcessList(),
                                'overall_orders': {}}
             
-            testFKSBornHelasObjects.mymodel = mymodel
-            testFKSBornHelasObjects.myleglist3 = myleglist3
-            testFKSBornHelasObjects.myproc1 = MG.Process(dict1)
-            testFKSBornHelasObjects.myproc3 = MG.Process(dict3)
+            testFKSHelasObjects.mymodel = mymodel
+            testFKSHelasObjects.myleglist3 = myleglist3
+            testFKSHelasObjects.myproc1 = MG.Process(dict1)
+            testFKSHelasObjects.myproc3 = MG.Process(dict3)
 
 
-    def test_fks_helas_multi_process_from_born_ppz(self):
+    def test_fks_helas_multi_process_ppz(self):
         """tests the correct recycling of color infos for MEs with the same 
         color flow (e.g. uu~>z and dd~>z)
         """
@@ -113,18 +113,18 @@ class testFKSBornHelasObjects(unittest.TestCase):
         my_process_definitions = MG.ProcessDefinitionList(\
             [my_process_definition])
 
-        my_multi_process = fks_born.FKSMultiProcessFromBorn(\
+        my_multi_process = fks_base.FKSMultiProcess(\
                 {'process_definitions': my_process_definitions})
-        my_helas_mp = fks_born_helas.FKSHelasMultiProcessFromBorn(my_multi_process, gen_color = True)
+        my_helas_mp = fks_helas.FKSHelasMultiProcess(my_multi_process, gen_color = True)
 
         for me in my_helas_mp['matrix_elements']:
             self.assertEqual(len(me.born_matrix_element['color_basis']), 1)
 
 
-    def test_fks_helas_multi_process_from_born_ppwj(self):
+    def test_fks_helas_multi_process_ppwj(self):
         """tests the correct initialization of a FKSHelasMultiProcess, 
         given an FKSMultiProcess. This also checks that, when combining 
-        2 FKSHelasProcessFromBorn using the add_process function, the real
+        2 FKSHelasProcess using the add_process function, the real
         emissions are combined consistently.
         The p p > w+ j process is studied
         """
@@ -146,9 +146,9 @@ class testFKSBornHelasObjects(unittest.TestCase):
         my_process_definitions = MG.ProcessDefinitionList(\
             [my_process_definition])
 
-        my_multi_process = fks_born.FKSMultiProcessFromBorn(\
+        my_multi_process = fks_base.FKSMultiProcess(\
                 {'process_definitions': my_process_definitions})
-        my_helas_mp = fks_born_helas.FKSHelasMultiProcessFromBorn(my_multi_process, gen_color = False)
+        my_helas_mp = fks_helas.FKSHelasMultiProcess(my_multi_process, gen_color = False)
 
         #there are 6  borns 
         self.assertEqual(len(my_helas_mp.get('matrix_elements')),6)
@@ -216,7 +216,7 @@ class testFKSBornHelasObjects(unittest.TestCase):
                 self.assertEqual(real_subprocesses[i][j], pdgs)
 
 
-    def test_fks_helas_multi_process_from_born_pptt(self):
+    def test_fks_helas_multi_process_pptt(self):
         """tests the correct initialization of a FKSHelasMultiProcess, 
         given an FKSMultiProcess. This test also checks that each real
         process corresponds to the correct number of FKS configurations.
@@ -241,9 +241,9 @@ class testFKSBornHelasObjects(unittest.TestCase):
         my_process_definitions = MG.ProcessDefinitionList(\
             [my_process_definition])
 
-        my_multi_process = fks_born.FKSMultiProcessFromBorn(\
+        my_multi_process = fks_base.FKSMultiProcess(\
                 {'process_definitions': my_process_definitions})
-        my_helas_mp = fks_born_helas.FKSHelasMultiProcessFromBorn(my_multi_process, False)
+        my_helas_mp = fks_helas.FKSHelasMultiProcess(my_multi_process, False)
         
         #there are 3 (gg uux uxu initiated) borns 
         self.assertEqual(len(my_helas_mp.get('matrix_elements')),3)
@@ -293,7 +293,7 @@ class testFKSBornHelasObjects(unittest.TestCase):
         --matrix element
         """         
         #uu~> dd~
-        fks3 = fks_born.FKSProcessFromBorn(self.myproc3)
+        fks3 = fks_base.FKSProcess(self.myproc3)
  
         fksleglist = copy.copy(fks_common.to_fks_legs(self.myleglist3,
                                                       self.mymodel))
@@ -313,9 +313,9 @@ class testFKSBornHelasObjects(unittest.TestCase):
         fksleglist[3]['fks']='j'
         fksleglist[4]['fks']='i'
         
-        real_proc = fks_born.FKSRealProcess(fks3.born_proc, fksleglist, 4, 0)
+        real_proc = fks_base.FKSRealProcess(fks3.born_proc, fksleglist, 4, 0)
         real_proc.generate_real_amplitude()
-        helas_real_proc = fks_born_helas.FKSHelasRealProcess(real_proc, me_list, me_id_list)
+        helas_real_proc = fks_helas.FKSHelasRealProcess(real_proc, me_list, me_id_list)
         self.assertEqual(helas_real_proc.fks_infos,
                 [{'i':5, 'j':4, 'ij':4, 'ij_glu':0, 'need_color_links': True}])
         target_me = helas_objects.HelasMatrixElement(real_proc.amplitude)
@@ -324,8 +324,8 @@ class testFKSBornHelasObjects(unittest.TestCase):
                          target_me.get('color_matrix'))
         
         
-    def test_fks_helas_process_from_born_init(self):
-        """tests the correct initialization of a FKSHelasProcessFromBorn object.
+    def test_fks_helas_process_init(self):
+        """tests the correct initialization of a FKSHelasProcess object.
         in particular checks:
         -- born ME
         -- list of FKSHelasRealProcesses
@@ -333,9 +333,9 @@ class testFKSBornHelasObjects(unittest.TestCase):
         -- fks_infos
         """
         #ug> ug
-        fks1 = fks_born.FKSProcessFromBorn(self.myproc1)
+        fks1 = fks_base.FKSProcess(self.myproc1)
         #uu~> dd~
-        fks3 = fks_born.FKSProcessFromBorn(self.myproc3)
+        fks3 = fks_base.FKSProcess(self.myproc3)
         
         pdg_list1 = []
         real_amp_list1 = diagram_generation.AmplitudeList()
@@ -351,9 +351,9 @@ class testFKSBornHelasObjects(unittest.TestCase):
         res_me_list=[]
         res_me_id_list=[]
 
-        helas_born_proc = fks_born_helas.FKSHelasProcessFromBorn(
+        helas_born_proc = fks_helas.FKSHelasProcess(
                                     fks1, me_list, me_id_list)
-        helas_born_proc3 = fks_born_helas.FKSHelasProcessFromBorn(
+        helas_born_proc3 = fks_helas.FKSHelasProcess(
                                     fks3, me_list3, me_id_list3)
         
         self.assertEqual(helas_born_proc.born_matrix_element,
@@ -361,7 +361,7 @@ class testFKSBornHelasObjects(unittest.TestCase):
                                     fks1.born_amp))
         res_reals = []
         for real in fks1.real_amps:
-            res_reals.append(fks_born_helas.FKSHelasRealProcess(
+            res_reals.append(fks_helas.FKSHelasRealProcess(
                                 real,res_me_list, res_me_id_list))
             # the process u g > u g g corresponds to 4 fks configs
             if real.pdgs == array.array('i', [2,21,2,21,21]):
@@ -381,17 +381,17 @@ class testFKSBornHelasObjects(unittest.TestCase):
 
 
     def test_get_fks_info_list(self):
-        """tests that the get_fks_info_list of a FKSHelasProcessFromBorn 
+        """tests that the get_fks_info_list of a FKSHelasProcess 
         returns the correct list of configurations/fks_configs"""
         
         #ug> ug
-        fks1 = fks_born.FKSProcessFromBorn(self.myproc1)
+        fks1 = fks_base.FKSProcess(self.myproc1)
         me_list=[]
         me_id_list=[]
         pdg_list1 = []
         real_amp_list1 = diagram_generation.AmplitudeList()
         fks1.generate_reals(pdg_list1, real_amp_list1)
-        helas_born_proc = fks_born_helas.FKSHelasProcessFromBorn(
+        helas_born_proc = fks_helas.FKSHelasProcess(
                                     fks1, me_list, me_id_list)
         goal = \
             [

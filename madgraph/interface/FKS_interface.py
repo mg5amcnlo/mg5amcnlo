@@ -25,9 +25,9 @@ import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.Loop_interface as Loop_interface
-import madgraph.fks.fks_born as fks_born
-import madgraph.fks.fks_born_helas_objects as fks_born_helas
-import madgraph.iolibs.export_fks_born as export_fks_born
+import madgraph.fks.fks_base as fks_base
+import madgraph.fks.fks_helas_objects as fks_helas
+import madgraph.iolibs.export_fks as export_fks
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
@@ -255,7 +255,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
                         % ', '.join(myprocdef['perturbation_couplings']))
 
-        self._fks_multi_proc.add(fks_born.FKSMultiProcessFromBorn(myprocdef,
+        self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,
                                    ignore_six_quark_processes))
 
@@ -285,7 +285,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         if self._export_format in ['NLO']:
             if not self.options['loop_optimized_output']:
                 logger.info("Exporting in MadFKS format, starting from born process")
-                self._curr_exporter = export_fks_born.ProcessExporterFortranFKS_born(\
+                self._curr_exporter = export_fks.ProcessExporterFortranFKS(\
                                           self._mgme_dir, self._export_dir,
                                           not noclean, 
                                           self.options['complex_mass_scheme'], 
@@ -296,7 +296,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             
             else:
                 logger.info("Exporting in MadFKS format, starting from born process using Optimized Loops")
-                self._curr_exporter = export_fks_born.ProcessOptimizedExporterFortranFKS_born(\
+                self._curr_exporter = export_fks.ProcessOptimizedExporterFortranFKS(\
                                           self._mgme_dir, self._export_dir,
                                           not noclean, 
                                           self.options['complex_mass_scheme'],
@@ -364,7 +364,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                     raise MadGraph5Error, "Cannot group subprocesses when exporting to NLO"
                 else:
                     self._curr_matrix_elements = \
-                             fks_born_helas.FKSHelasMultiProcessFromBorn(\
+                             fks_helas.FKSHelasMultiProcess(\
                                 self._fks_multi_proc, 
                                 loop_optimized= self.options['loop_optimized_output'])
 
@@ -391,7 +391,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         if self._export_format in ['NLO']:
             path = os.path.join(path, 'SubProcesses')
 
-            #_curr_matrix_element is a FKSHelasMultiProcessFromBornObject 
+            #_curr_matrix_element is a FKSHelasMultiProcess Object 
             self._fks_directories = []
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):

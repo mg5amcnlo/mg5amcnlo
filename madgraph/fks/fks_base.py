@@ -27,25 +27,25 @@ import copy
 import logging
 import array
 
-logger = logging.getLogger('madgraph.fks_born')
+logger = logging.getLogger('madgraph.fks_base')
 
 
 #===============================================================================
 # FKS Process
 #===============================================================================
-class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
+class FKSMultiProcess(diagram_generation.MultiProcess): #test written
     """A multi process class that contains informations on the born processes 
     and the reals.
     """
     
     def default_setup(self):
         """Default values for all properties"""
-        super(FKSMultiProcessFromBorn, self).default_setup()
-        self['born_processes'] = FKSProcessFromBornList()
+        super(FKSMultiProcess, self).default_setup()
+        self['born_processes'] = FKSProcessList()
     
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
-        keys = super(FKSMultiProcessFromBorn, self).get_sorted_keys()
+        keys = super(FKSMultiProcess, self).get_sorted_keys()
         keys += ['born_processes', 'real_amplitudes', 'real_pdgs']
         return keys
 
@@ -53,7 +53,7 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
         """Filter for valid leg property values."""
 
         if name == 'born_processes':
-            if not isinstance(value, FKSProcessFromBornList):
+            if not isinstance(value, FKSProcessList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list for born_processes " % str(value)                             
 
@@ -65,7 +65,7 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
             if not isinstance(value, List):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list for real_amplitudes " % str(value)                             
-        return super(FKSMultiProcessFromBorn,self).filter(name, value)
+        return super(FKSMultiProcess,self).filter(name, value)
     
     def __init__(self,  *arguments):
         """Initializes the original multiprocess, then generates the amps for the 
@@ -84,7 +84,7 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
         self['real_amplitudes'] = diagram_generation.AmplitudeList()
         self['pdgs'] = []
 
-        super(FKSMultiProcessFromBorn, self).__init__(*arguments)   
+        super(FKSMultiProcess, self).__init__(*arguments)   
 
         #check process definition(s):
         # a process such as g g > g g will lead to real emissions 
@@ -112,7 +112,7 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
 
         amps = self.get('amplitudes')
         for amp in amps:
-            born = FKSProcessFromBorn(amp)
+            born = FKSProcess(amp)
             self['born_processes'].append(born)
             born.generate_reals(self['pdgs'], self['real_amplitudes'])
 
@@ -290,15 +290,15 @@ class FKSRealProcess(object):
         return self.process.get('legs')[self.fks_infos[0]['j'] - 1]
 
 
-class FKSProcessFromBornList(MG.PhysicsObjectList):
-    """Class to handle lists of FKSProcessesFromBorn."""
+class FKSProcessList(MG.PhysicsObjectList):
+    """Class to handle lists of FKSProcesses."""
     
     def is_valid_element(self, obj):
-        """Test if object obj is a valid FKSProcessFromBorn for the list."""
-        return isinstance(obj, FKSProcessFromBorn)
+        """Test if object obj is a valid FKSProcess for the list."""
+        return isinstance(obj, FKSProcess)
 
             
-class FKSProcessFromBorn(object):
+class FKSProcess(object):
     """The class for a FKS process. Starts from the born process and finds
     all the possible splittings."""  
     
@@ -326,7 +326,7 @@ class FKSProcessFromBorn(object):
 
         if not remove_reals in [True, False]:
             raise fks_common.FKSProcessError(), \
-                    'Not valid type for remove_reals in FKSProcessFromBorn'
+                    'Not valid type for remove_reals in FKSProcess'
         
         if start_proc:
             if isinstance(start_proc, MG.Process):
@@ -337,7 +337,7 @@ class FKSProcessFromBorn(object):
                 self.born_amp = diagram_generation.Amplitude(self.born_proc)
             else:
                 raise fks_common.FKSProcessError(), \
-                    'Not valid start_proc in FKSProcessFromBorn'
+                    'Not valid start_proc in FKSProcess'
 
             logger.info("Generating FKS-subtracted matrix elements for born process%s" \
                 % self.born_proc.nice_string().replace('Process', '')) 

@@ -22,22 +22,22 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
-import madgraph.fks.fks_born as fks_born
+import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_common as fks_common
 import madgraph.loop.loop_helas_objects as loop_helas_objects
 import copy
 import logging
 import array
 
-logger = logging.getLogger('madgraph.fks_born_helas_objects')
+logger = logging.getLogger('madgraph.fks_helas_objects')
 
 
-class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
+class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
     """class to generate the helas calls for a FKSMultiProcess"""
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
-        keys = super(FKSMultiProcessFromBorn, self).get_sorted_keys()
+        keys = super(FKSMultiProcess, self).get_sorted_keys()
         keys += ['real_matrix_elements']
         return keys
 
@@ -110,9 +110,9 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
         matrix element is identical."""
 
         fksprocs = fksmulti['born_processes']
-        assert isinstance(fksprocs, fks_born.FKSProcessFromBornList), \
-                  "%s is not valid FKSProcessFromBornList" % \
-                   repr(FKSProcessFromBornList)
+        assert isinstance(fksprocs, fks_base.FKSProcessList), \
+                  "%s is not valid FKSProcessList" % \
+                   repr(FKSProcessList)
 
         # Keep track of already generated color objects, to reuse as
         # much as possible
@@ -123,7 +123,7 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
         real_me_list = []
         me_id_list = []
 
-        matrix_elements = FKSHelasProcessFromBornList()
+        matrix_elements = FKSHelasProcessList()
 
         while fksprocs:
             # Pop the amplitude to save memory space
@@ -131,14 +131,14 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
             logger.info("Generating Helas calls for FKS process %s" % \
                          proc.born_amp.get('process').nice_string().\
                                            replace('Process', 'process'))
-            matrix_element_list = [FKSHelasProcessFromBorn(proc, self['real_matrix_elements'],
+            matrix_element_list = [FKSHelasProcess(proc, self['real_matrix_elements'],
                                                            fksmulti['real_amplitudes'],
                                                           loop_optimized = self.loop_optimized,
                                                           decay_ids=decay_ids,
                                                           gen_color=False)]
             for matrix_element in matrix_element_list:
-                assert isinstance(matrix_element, FKSHelasProcessFromBorn), \
-                          "Not a FKSHelasProcessFromBorn: %s" % matrix_element
+                assert isinstance(matrix_element, FKSHelasProcess), \
+                          "Not a FKSHelasProcess: %s" % matrix_element
 
                 try:
                     # If an identical matrix element is already in the list,
@@ -201,23 +201,23 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
         return matrix_elements    
 
 
-class FKSHelasProcessFromBornList(MG.PhysicsObjectList):
-    """class to handle lists of FKSHelasProcessesFromBorn"""
+class FKSHelasProcessList(MG.PhysicsObjectList):
+    """class to handle lists of FKSHelasProcesses"""
     
     def is_valid_element(self, obj):
-        """Test if object obj is a valid FKSProcessFromBorn for the list."""
-        return isinstance(obj, FKSHelasProcessFromBorn)
+        """Test if object obj is a valid FKSProcess for the list."""
+        return isinstance(obj, FKSHelasProcess)
     
     
-class FKSHelasProcessFromBorn(object):
-    """class to generate the Helas calls for a FKSProcessFromBorn. Contains:
+class FKSHelasProcess(object):
+    """class to generate the Helas calls for a FKSProcess. Contains:
     -- born ME
     -- list of FKSHelasRealProcesses
     -- color links"""
     
     def __init__(self, fksproc=None, real_me_list =[], real_amp_list=[], 
             loop_optimized = False, **opts):#test written
-        """ constructor, starts from a FKSProcessFromBorn, 
+        """ constructor, starts from a FKSProcess, 
         sets reals and color links. Real_me_list and real_amp_list are the lists of pre-genrated
         matrix elements in 1-1 correspondence wiht the amplitudes"""
         

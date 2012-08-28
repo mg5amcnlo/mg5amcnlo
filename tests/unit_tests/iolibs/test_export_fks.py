@@ -13,7 +13,7 @@
 #
 ################################################################################
 
-"""Unit test library for the export realfks format routines"""
+"""Unit test library for the export_FKS format routines"""
 
 import StringIO
 import copy
@@ -27,9 +27,9 @@ sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
 import tests.unit_tests as unittest
 
 import madgraph.various.misc as misc
-import madgraph.iolibs.export_fks_born as export_fks_born
-import madgraph.fks.fks_born as fks_born
-import madgraph.fks.fks_born_helas_objects as fks_born_helas
+import madgraph.iolibs.export_fks as export_fks
+import madgraph.fks.fks_base as fks_base
+import madgraph.fks.fks_helas_objects as fks_helas
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.files as files
 import madgraph.iolibs.group_subprocs as group_subprocs
@@ -54,9 +54,9 @@ _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
 #===============================================================================
 # IOImportV4Test
 #===============================================================================
-class IOExportBornFKSTest(unittest.TestCase,
+class IOExportFKSTest(unittest.TestCase,
                      test_file_writers.CheckFileCreate):
-    """Test class for the export bornfks module"""
+    """Test class for the export fks module"""
 
 
     def setUp(self):
@@ -67,7 +67,7 @@ class IOExportBornFKSTest(unittest.TestCase,
             created_files = ['test']
 
             mymodel = import_ufo.import_model('sm')
-            IOExportBornFKSTest.myfortranmodel = helas_call_writers.FortranUFOHelasCallWriter(mymodel)
+            IOExportFKSTest.myfortranmodel = helas_call_writers.FortranUFOHelasCallWriter(mymodel)
 
             myleglist = MG.MultiLegList()
 
@@ -84,41 +84,41 @@ class IOExportBornFKSTest(unittest.TestCase,
                                  'NLO_mode': 'real'})
             my_process_definitions = MG.ProcessDefinitionList([myproc])
 
-            myfksmulti = fks_born.FKSMultiProcessFromBorn(\
+            myfksmulti = fks_base.FKSMultiProcess(\
                     {'process_definitions': my_process_definitions})
             
 
-            fkshelasmulti = fks_born_helas.FKSHelasMultiProcessFromBorn(myfksmulti)
-            IOExportBornFKSTest.myfks_me = fkshelasmulti['matrix_elements'][0]
-            IOExportBornFKSTest.myreals = fkshelasmulti['real_matrix_elements']
+            fkshelasmulti = fks_helas.FKSHelasMultiProcess(myfksmulti)
+            IOExportFKSTest.myfks_me = fkshelasmulti['matrix_elements'][0]
+            IOExportFKSTest.myreals = fkshelasmulti['real_matrix_elements']
 
 
         tearDown = test_file_writers.CheckFileCreate.clean_files
 
 
-    def test_write_maxconfigs_B(self):
+    def test_write_maxconfigs(self):
         goal = \
 """      INTEGER LMAXCONFIGS
       PARAMETER (LMAXCONFIGS=16)"""
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_maxconfigs_file(\
             writers.FortranWriter(self.give_pos('test')),\
             self.myreals)
         self.assertFileContains('test', goal)
 
 
-    def test_write_mparticles_B(self):
+    def test_write_mparticles(self):
         goal = \
 """      INTEGER MAX_PARTICLES
       PARAMETER (MAX_PARTICLES=5)"""
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_maxparticles_file(\
             writers.FortranWriter(self.give_pos('test')),\
             self.myreals)
         self.assertFileContains('test', goal)
 
 
-    def test_write_lh_order_B(self):
+    def test_write_lh_order(self):
         """tests the correct writing of the B-LH order file"""
 
         goal = \
@@ -134,14 +134,14 @@ NJetSymmetrizeFinal     Yes
 # process
 21 21 -> 6 -6 
 """
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_lh_order(\
             self.give_pos('test'),\
             self.myfks_me)
         self.assertFileContains('test', goal)
 
 
-    def test_write_real_me_wrapper_B(self):
+    def test_write_real_me_wrapper(self):
         """tests the correct writing of the real_me_chooser file, 
         that chooses among the different real emissions"""
 
@@ -178,7 +178,7 @@ NJetSymmetrizeFinal     Yes
       END
 
 """
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_real_me_wrapper(\
             writers.FortranWriter(self.give_pos('test')),
             self.myfks_me,
@@ -186,7 +186,7 @@ NJetSymmetrizeFinal     Yes
         self.assertFileContains('test', goal)
 
 
-    def test_write_pdf_wrapper_B(self):
+    def test_write_pdf_wrapper(self):
         """tests the correct writing of the parton_lum_chooser file, 
         that chooses thepdfs for the different real emissions"""
 
@@ -220,7 +220,7 @@ NJetSymmetrizeFinal     Yes
       END
 
 """
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_pdf_wrapper(\
             writers.FortranWriter(self.give_pos('test')),
             self.myfks_me,
@@ -228,7 +228,7 @@ NJetSymmetrizeFinal     Yes
         self.assertFileContains('test', goal)
 
 
-    def test_write_leshouche_info_file_B(self):
+    def test_write_leshouche_info_file(self):
         """tests the correct writing of fks_info.inc file, containing the 
         relevant informations for all the splittings"""
 
@@ -390,7 +390,7 @@ NJetSymmetrizeFinal     Yes
       DATA (MOTHUP_D(8,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
 
 """
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_leshouche_info_file(\
             writers.FortranWriter(self.give_pos('test')),
             self.myfks_me,
@@ -398,7 +398,7 @@ NJetSymmetrizeFinal     Yes
         self.assertFileContains('test', goal)
 
 
-    def test_write_fks_info_file_B(self):
+    def test_write_fks_info_file(self):
         """tests the correct writing of fks_info.inc file, containing the 
         relevant informations for all the splittings"""
 
@@ -468,7 +468,7 @@ C
 
 
 """
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_fks_info_file(\
             writers.FortranWriter(self.give_pos('test')),
             self.myfks_me,
@@ -476,7 +476,7 @@ C
         self.assertFileContains('test', goal)
 
 
-    def test_write_sborn_sf_B(self):
+    def test_write_sborn_sf(self):
         """Tests the correct writing of the sborn_sf file, containing the calls 
         to the different color linked borns."""
         
@@ -527,7 +527,7 @@ C       b_sf_008 links partons 4 and 4
       RETURN
       END
 """
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
 
         process_exporter.write_sborn_sf(\
             writers.FortranWriter(self.give_pos('test')),
@@ -538,7 +538,7 @@ C       b_sf_008 links partons 4 and 4
         self.assertFileContains('test', goal)
 
 
-    def test_write_leshouche_file_B(self):
+    def test_write_leshouche_file(self):
         """tests if the leshouche.inc file is correctly written for the born process
         """
         goal = \
@@ -550,7 +550,7 @@ C       b_sf_008 links partons 4 and 4
       DATA (ICOLUP(1,I,  2),I=1, 4)/503,501,501,  0/
       DATA (ICOLUP(2,I,  2),I=1, 4)/502,503,  0,502/
 """    
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
 
         nflows = \
             process_exporter.write_leshouche_file(
@@ -561,7 +561,7 @@ C       b_sf_008 links partons 4 and 4
         self.assertFileContains('test', goal) 
 
 
-    def test_write_nexternal_file_B(self):
+    def test_write_nexternal_file(self):
         """tests if the nexternal.inc file is correctly written.
         The real process used is uux_uxug (real_processes[5])
         """
@@ -571,7 +571,7 @@ C       b_sf_008 links partons 4 and 4
       INTEGER    NINCOMING
       PARAMETER (NINCOMING=2)
 """
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
         
         process_exporter.write_nexternal_file(
                     writers.FortranWriter(self.give_pos('test')),
@@ -580,7 +580,7 @@ C       b_sf_008 links partons 4 and 4
         self.assertFileContains('test', goal)  
 
 
-    def test_write_pmass_file_B(self):
+    def test_write_pmass_file(self):
         """tests if the pmass.inc file is correctly written.
         The function called is the one of the FortranProcessExporterV4 class.
         """
@@ -591,7 +591,7 @@ C       b_sf_008 links partons 4 and 4
       PMASS(4)=ABS(MT)
       PMASS(5)=ZERO
 """
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
         
         process_exporter.write_pmass_file(
                     writers.FortranWriter(self.give_pos('test')),
@@ -600,7 +600,7 @@ C       b_sf_008 links partons 4 and 4
         self.assertFileContains('test', goal) 
 
 
-    def test_write_pdf_file_B(self):
+    def test_write_pdf_file(self):
         """tests if the parton_lum_x.f file containing the parton distributions 
         for a given real process is correctly written.
         The real process tested is gg > ttxg (real_processes[0])
@@ -711,7 +711,7 @@ C
 
 """ % misc.get_pkg_info()
 
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
 
         nflows = \
             process_exporter.write_pdf_file(
@@ -722,7 +722,7 @@ C
         self.assertFileContains('test', goal) 
 
 
-    def test_write_matrix_element_fks_B(self):
+    def test_write_matrix_element_fks(self):
         """tests if the matrix_x.f file containing the matrix element 
         for a given real process is correctly written.
         The real process tested is gg > ttxg (real_processes[0])
@@ -987,7 +987,7 @@ C     Amplitude(s) for diagram number 16
 
 """ % misc.get_pkg_info()
 
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
 
         nflows = \
             process_exporter.write_matrix_element_fks(
@@ -999,7 +999,7 @@ C     Amplitude(s) for diagram number 16
 
 
 
-    def test_write_born_fks_B(self):
+    def test_write_born_fks(self):
         """tests if the born.f file containing the born matrix element
         is correctly written
         """
@@ -1376,7 +1376,7 @@ C         Amplitude(s) for diagram number 3
 
 """  % misc.get_pkg_info()
 
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
 
         nflows = \
             process_exporter.write_born_fks(
@@ -1387,7 +1387,7 @@ C         Amplitude(s) for diagram number 3
         self.assertFileContains('test', goal) 
 
 
-    def test_write_b_sf_fks_B(self):
+    def test_write_b_sf_fks(self):
         """Tests the correct writing of a b_sf_xxx.f file, containing one color
         linked born.
         """
@@ -1595,7 +1595,7 @@ C     ----------
 
 """ % misc.get_pkg_info()
         
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
 
         process_exporter.write_b_sf_fks(\
             writers.FortranWriter(self.give_pos('test')),
@@ -1605,14 +1605,14 @@ C     ----------
         self.assertFileContains('test', goal)
 
 
-    def test_write_born_nhel_file_B(self):
+    def test_write_born_nhel_file(self):
         """tests if the born_nhel.inc file is correctly written"""
         goal = \
 """      INTEGER    MAX_BHEL, MAX_BCOL
       PARAMETER (MAX_BHEL=16)
       PARAMETER(MAX_BCOL=2)
 """        
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
 
         calls, ncolor = \
             process_exporter.write_born_fks(
@@ -1636,7 +1636,7 @@ C     ----------
         self.assertFileContains('test', goal) 
 
 
-    def test_write_nfksconfigs_file_B(self):
+    def test_write_nfksconfigs_file(self):
         """tests if the nFKSconfigs.inc file is correctly written"""
         goal = \
 """      INTEGER FKS_CONFIGS
@@ -1644,7 +1644,7 @@ C     ----------
 
 
 """        
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_nfksconfigs_file(\
             writers.FortranWriter(self.give_pos('test')),
             self.myfks_me,
@@ -1652,7 +1652,7 @@ C     ----------
         self.assertFileContains('test', goal)
 
 
-    def test_write_configs_file_born_B(self):
+    def test_write_configs_file_born(self):
         """Tests if the configs.inc file is corretly written 
         for the born matrix element.
         """
@@ -1674,7 +1674,7 @@ C     Diagram 3
 C     Number of configs
       DATA MAPCONFIG(0)/   3/
 """
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
         
         nconfigs, mapconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
@@ -1685,7 +1685,7 @@ C     Number of configs
         self.assertFileContains('test', goal)    
 
     
-    def test_write_props_file_born_B(self):
+    def test_write_props_file_born(self):
         """Tests if the props.inc file is corretly written 
         for the born matrix element.
         """
@@ -1700,7 +1700,7 @@ C     Number of configs
       PWIDTH( -1,   3) = ABS(WT)
       POW( -1,   3) = 1
 """
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
         
         nconfigs, mapconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
@@ -1717,7 +1717,7 @@ C     Number of configs
         self.assertFileContains('test', goal)    
 
 
-    def test_write_coloramps_file_B(self):
+    def test_write_coloramps_file(self):
         """Tests if the coloramps.inc file is corretly written 
         for the born process
         """
@@ -1727,7 +1727,7 @@ C     Number of configs
       DATA(ICOLAMP(I,2,1),I=1,2)/.TRUE.,.FALSE./
       DATA(ICOLAMP(I,3,1),I=1,2)/.FALSE.,.TRUE./
 """
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
 
         nconfigs, mapconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
@@ -1744,7 +1744,7 @@ C     Number of configs
         self.assertFileContains('test', goal)    
 
 
-    def test_write_decayBW_file_B(self):
+    def test_write_decayBW_file(self):
         """Tests if the decayBW.inc file is correctly written 
         for the born process.
         """
@@ -1752,7 +1752,7 @@ C     Number of configs
 """      DATA GFORCEBW(-1,1)/.FALSE./
 """
 
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
 
         nconfigs, mapconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
@@ -1769,17 +1769,17 @@ C     Number of configs
 
 
 
-    def test_get_fks_j_from_i_lines_B(self):
+    def test_get_fks_j_from_i_lines(self):
         """Test that the lines corresponding to the fks_j_from_i array, to be 
         written in fks.inc. 
         """
         lines = ['DATA (FKS_J_FROM_I_D(2, 5, JPOS), JPOS = 0, 1)  / 1, 1 /','']
 
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
         self.assertEqual(lines, process_exporter.get_fks_j_from_i_lines(self.myfks_me.real_processes[1], 2))
 
 
-    def test_get_color_data_lines_from_color_matrix_B(self):
+    def test_get_color_data_lines_from_color_matrix(self):
         """tests if the color data lines are correctly extracted from a given
         color matrix. 
         The first color link is used.
@@ -1790,7 +1790,7 @@ C     Number of configs
                 "DATA DENOM(2)/3/",
                 "DATA (CF(I,  2),I=  1,  3) /   -2,   16,    6/"
                 ]
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
 
         lines = process_exporter.get_color_data_lines_from_color_matrix(
                     self.myfks_me.color_links[0]['link_matrix'])
@@ -1799,7 +1799,7 @@ C     Number of configs
             self.assertEqual(line.upper(), goalline)        
 
 
-    def test_den_factor_lines_B(self):
+    def test_den_factor_lines(self):
         """Tests if the den_factor lines for a given matrix element are correctly 
         returned.
         """
@@ -1807,14 +1807,14 @@ C     Number of configs
         goal = \
             ["INTEGER IDEN_VALUES(8)",
              "DATA IDEN_VALUES /256, 256, 256, 256, 256, 256, 256, 256/"]
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
 
         self.assertEqual(goal,
                 process_exporter.get_den_factor_lines(
                         self.myfks_me))
 
 
-    def test_write_ij_lines_B(self):
+    def test_write_ij_lines(self):
         """Tests if the ij lines for a given matrix element are correctly 
         returned.
         """
@@ -1822,7 +1822,7 @@ C     Number of configs
         goal = \
             ["INTEGER IJ_VALUES(8)",
              "DATA IJ_VALUES /1, 2, 3, 4, 1, 1, 2, 2/"]
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter = export_fks.ProcessExporterFortranFKS()
 
         self.assertEqual(goal,
                 process_exporter.get_ij_lines(

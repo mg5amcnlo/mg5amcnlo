@@ -21,8 +21,8 @@ root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
 
 import tests.unit_tests as unittest
-import madgraph.fks.fks_born as fks_born
-import madgraph.fks.fks_born_helas_objects as fks_born_helas
+import madgraph.fks.fks_base as fks_base
+import madgraph.fks.fks_helas_objects as fks_helas
 import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
 import madgraph.core.diagram_generation as diagram_generation
@@ -32,15 +32,15 @@ import string
 
 
 
-class TestGenerateLoopFKSFromBorn(unittest.TestCase):
-    """a class to test the generation of the virtual amps for a FKSMultiProcessFromReals"""
+class TestGenerateLoopFKS(unittest.TestCase):
+    """a class to test the generation of the virtual amps for a FKSMultiProcess"""
 
     def setUp(self):
         if not hasattr(self, 'mymodel'):
-            TestGenerateLoopFKSFromBorn.mymodel = import_ufo.import_model('loop_sm')
+            TestGenerateLoopFKS.mymodel = import_ufo.import_model('loop_sm')
     
 
-    def test_generate_virtuals_single_processB(self):
+    def test_generate_virtuals_single_process(self):
         """checks that the virtuals are correctly generated for a single process"""
 
         myleglist = MG.MultiLegList()
@@ -67,10 +67,10 @@ class TestGenerateLoopFKSFromBorn(unittest.TestCase):
         my_process_definitions2 = MG.ProcessDefinitionList([myproc2])
         
         # without virtuals
-        myfksmulti1 = fks_born.FKSMultiProcessFromBorn(\
+        myfksmulti1 = fks_base.FKSMultiProcess(\
                 {'process_definitions': my_process_definitions1})
         # with wirtuals
-        myfksmulti2 = fks_born.FKSMultiProcessFromBorn(\
+        myfksmulti2 = fks_base.FKSMultiProcess(\
                 {'process_definitions': my_process_definitions2})
 
         self.assertEqual(myfksmulti1['born_processes'][0].virt_amp, None)
@@ -81,7 +81,7 @@ class TestGenerateLoopFKSFromBorn(unittest.TestCase):
                          [2,-2,2,-2])
 
 
-    def test_generate_virtuals_helas_matrix_elementB(self):
+    def test_generate_virtuals_helas_matrix_element(self):
         """checks that the virtuals are correctly generated for a FKShelasMatrixElement"""
 
         myleglist = MG.MultiLegList()
@@ -100,11 +100,11 @@ class TestGenerateLoopFKSFromBorn(unittest.TestCase):
         
         my_process_definitions = MG.ProcessDefinitionList([myproc])
         
-        myfksmulti = fks_born.FKSMultiProcessFromBorn(\
+        myfksmulti = fks_base.FKSMultiProcess(\
                 {'process_definitions': my_process_definitions})
 
         myfksmulti.generate_virtuals()
-        myfksme = fks_born_helas.FKSHelasMultiProcessFromBorn(myfksmulti)
+        myfksme = fks_helas.FKSHelasMultiProcess(myfksmulti)
         self.assertNotEqual(myfksme['matrix_elements'][0].virt_matrix_element, None)
 
 

@@ -43,7 +43,7 @@ import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madgraph_interface as MGcmd
 import madgraph.interface.Loop_interface as LoopCmd
 import madgraph.interface.FKS_interface as FKSCmd
-import madgraph.fks.fks_born as fks_born
+import madgraph.fks.fks_base as fks_base
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
@@ -236,7 +236,7 @@ class Switcher(object):
                     'The NLO mode %s is not valid. Please chose one among: %s' \
                     % (nlo_mode, ' '.join(self._valid_nlo_modes)))
                 elif nlo_mode == 'all' or nlo_mode == 'real':
-                    self._fks_multi_proc = fks_born.FKSMultiProcessFromBorn()
+                    self._fks_multi_proc = fks_base.FKSMultiProcess()
                     self.change_principal_cmd('FKS')
                 elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
                     self.change_principal_cmd('Loop')

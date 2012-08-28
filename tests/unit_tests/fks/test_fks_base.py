@@ -13,7 +13,7 @@
 #
 ################################################################################
 
-"""Testing modules for FKS_process_born class"""
+"""Testing modules for FKS_process class"""
 
 import sys
 import os
@@ -21,7 +21,7 @@ root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
 
 import tests.unit_tests as unittest
-import madgraph.fks.fks_born as fks_born
+import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_common as fks_common
 import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
@@ -386,7 +386,7 @@ class TestFKSProcess(unittest.TestCase):
     myprocaa= MG.Process(dict3)
     
     
-    def test_FKSMultiProcessFromBorn(self):
+    def test_FKSMultiProcess(self):
         """tests the correct initializiation of a FKSMultiProcess. In particular
         checks that the correct number of borns is found"""
         
@@ -407,7 +407,7 @@ class TestFKSProcess(unittest.TestCase):
         my_process_definitions = MG.ProcessDefinitionList(\
             [my_process_definition])
 
-        my_multi_process = fks_born.FKSMultiProcessFromBorn(\
+        my_multi_process = fks_base.FKSMultiProcess(\
                 {'process_definitions':my_process_definitions})
         
         self.assertEqual(len(my_multi_process.get('born_processes')),4)
@@ -418,7 +418,7 @@ class TestFKSProcess(unittest.TestCase):
                 totreals += len(reals)
         self.assertEqual(totreals, 44)
 
-    def test_FKSProcessFromBonr_gggg(self):
+    def test_FKSProcess_gggg(self):
         """tests that for g g > g g all the relevant splittings are there"""
         glu = MG.Leg({'id': 21, 'state':True})
         leglist = MG.LegList([MG.Leg({'id': 21, 'state':False}),
@@ -438,7 +438,7 @@ class TestFKSProcess(unittest.TestCase):
                    'decay_chains': MG.ProcessList(),
                    'overall_orders': {}}
 
-        myfks = fks_born.FKSProcessFromBorn(MG.Process(dict))
+        myfks = fks_base.FKSProcess(MG.Process(dict))
 
         target_fks_infos = [ \
                 # real config 1: g g > g g g
@@ -482,10 +482,10 @@ class TestFKSProcess(unittest.TestCase):
         --leg_permutation <<REMOVED
         are set to the correct values"""
         #u g > u g
-        fksproc = fks_born.FKSProcessFromBorn(self.myproc)
+        fksproc = fks_base.FKSProcess(self.myproc)
         #take the first real for this process 2j 21 >2 21 21i
         leglist = fksproc.reals[0][0]
-        realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist, 1,0)
+        realproc = fks_base.FKSRealProcess(fksproc.born_proc, leglist, 1,0)
 
         self.assertEqual(realproc.fks_infos, [{'i' : 5,
                                                'j' : 1,
@@ -542,10 +542,10 @@ class TestFKSProcess(unittest.TestCase):
         """tests that the find_fks_j_from_i function of a FKSRealProcess returns the
         correct result"""
         #u g > u g
-        fksproc = fks_born.FKSProcessFromBorn(self.myproc)
+        fksproc = fks_base.FKSProcess(self.myproc)
         #take the first real for this process 2j 21 >2 21 21i
         leglist = fksproc.reals[0][0]
-        realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist, 1,0)
+        realproc = fks_base.FKSRealProcess(fksproc.born_proc, leglist, 1,0)
         target_full = {1:[], 2:[], 3:[1,2], 4:[1,2,3,5], 5:[1,2,3,4] }
         borns = [[2,21,2,21], [21,21,21,21], [2,-2,21,21]]
         self.assertEqual(target_full, realproc.find_fks_j_from_i(borns))
@@ -558,10 +558,10 @@ class TestFKSProcess(unittest.TestCase):
     def test_fks_real_process_get_leg_i_j(self):
         """test the correct output of the FKSRealProcess.get_leg_i/j() function"""
         #u g > u g
-        fksproc = fks_born.FKSProcessFromBorn(self.myproc)
+        fksproc = fks_base.FKSProcess(self.myproc)
         #take the first real for this process 2j 21 > 2 21 21i
         leglist = fksproc.reals[0][0]
-        realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist,1,0)
+        realproc = fks_base.FKSRealProcess(fksproc.born_proc, leglist,1,0)
         self.assertEqual(realproc.get_leg_i(), leglist[4])
         self.assertEqual(realproc.get_leg_j(), leglist[0])
     
@@ -574,7 +574,7 @@ class TestFKSProcess(unittest.TestCase):
         that are called by generate_reals"""
         
         #process u g > u g 
-        fksproc = fks_born.FKSProcessFromBorn(self.myproc)
+        fksproc = fks_base.FKSProcess(self.myproc)
         fksproc.generate_reals([],[],False)
         
         #there should be 11 real processes for this born
@@ -589,7 +589,7 @@ class TestFKSProcess(unittest.TestCase):
         Check also that real emissions with the same m.e. are combined together"""
         
         #process u g > u g 
-        fksproc = fks_born.FKSProcessFromBorn(self.myproc)
+        fksproc = fks_base.FKSProcess(self.myproc)
         fksproc.generate_reals([],[])
         
         #there should be 8 real processes for this born
@@ -609,7 +609,7 @@ class TestFKSProcess(unittest.TestCase):
     def test_find_reals(self):
         """tests if all the real processes are found for a given born"""
         #process is u g > u g
-        fksproc = fks_born.FKSProcessFromBorn(self.myproc)
+        fksproc = fks_base.FKSProcess(self.myproc)
         target = []
         
         #leg 1 can split as u g > u g g or  g g > u u~ g 
@@ -931,7 +931,7 @@ class TestFKSProcess(unittest.TestCase):
                 self.assertEqual(fksproc.reals[i][j], target[i][j]) 
         
         #process is d d~ > u u~
-        fksproc2 = fks_born.FKSProcessFromBorn(self.myproc2)
+        fksproc2 = fks_base.FKSProcess(self.myproc2)
         target2 = []
         #leg 1 can split as d d~ > u u~ g or  g d~ > d~ u u~ 
         target2.append( [fks_common.to_fks_legs([
@@ -1109,7 +1109,7 @@ class TestFKSProcess(unittest.TestCase):
             self.assertEqual(fksproc2.reals[i], target2[i])       
     
         #d d~ > a a
-        fksproc3 = fks_born.FKSProcessFromBorn(self.myprocaa)
+        fksproc3 = fks_base.FKSProcess(self.myprocaa)
         target3 = []
         #leg 1 can split as d d~ > g a a or  g d~ > d~ a a 
         target3.append( [fks_common.to_fks_legs([
@@ -1228,8 +1228,8 @@ class TestFKSProcess(unittest.TestCase):
             self.assertEqual(real, res) 
 
 
-    def test_sort_fks_proc_from_born(self):
-        """tests that two FKSProcessesFromBorn with different legs order in the
+    def test_sort_fks_proc(self):
+        """tests that two FKSProcesses with different legs order in the
         input process/amplitude are returned as equal"""
         model = import_ufo.import_model('sm')
 
@@ -1258,14 +1258,14 @@ class TestFKSProcess(unittest.TestCase):
         amp_s = diagram_generation.Amplitude(proc_s)
         amp_u = diagram_generation.Amplitude(proc_u)
 
-        fks_p_s = fks_born.FKSProcessFromBorn(proc_s)
-        fks_p_u = fks_born.FKSProcessFromBorn(proc_u)
+        fks_p_s = fks_base.FKSProcess(proc_s)
+        fks_p_u = fks_base.FKSProcess(proc_u)
 
         self.assertEqual(fks_p_s.born_proc, fks_p_u.born_proc)
         self.assertEqual(fks_p_s.born_amp, fks_p_u.born_amp)
 
-        fks_a_s = fks_born.FKSProcessFromBorn(amp_s)
-        fks_a_u = fks_born.FKSProcessFromBorn(amp_u)
+        fks_a_s = fks_base.FKSProcess(amp_s)
+        fks_a_u = fks_base.FKSProcess(amp_u)
 
         self.assertEqual(fks_a_s.born_proc, fks_a_u.born_proc)
         self.assertEqual(fks_a_s.born_amp, fks_a_u.born_amp)

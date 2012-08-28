@@ -27,7 +27,7 @@ import copy
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
-import madgraph.fks.fks_born as fks
+import madgraph.fks.fks_base as fks
 import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
 import madgraph.iolibs.file_writers as writers
@@ -50,7 +50,7 @@ logger = logging.getLogger('madgraph.export_fks')
 #=================================================================================
 # Class for used of the (non-optimized) Loop process
 #=================================================================================
-class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA):
+class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
     
@@ -87,7 +87,7 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                       "No valid MG_ME path given for MG4 run directory creation."
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
-            shutil.copytree(os.path.join(mgme_dir, 'Template', 'FKS-born'), dir_path, True)
+            shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
         elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
             if not mgme_dir:
                 raise MadGraph5Error, \
@@ -1831,7 +1831,7 @@ C
 #=================================================================================
 # Class for using the optimized Loop process
 #=================================================================================
-class ProcessOptimizedExporterFortranFKS_born(loop_exporters.LoopProcessOptimizedExporterFortranSA,ProcessExporterFortranFKS_born):
+class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExporterFortranSA,ProcessExporterFortranFKS):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
     
@@ -1867,7 +1867,7 @@ class ProcessOptimizedExporterFortranFKS_born(loop_exporters.LoopProcessOptimize
                       "No valid MG_ME path given for MG4 run directory creation."
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
-            shutil.copytree(os.path.join(mgme_dir, 'Template', 'FKS-born'), dir_path, True)
+            shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
         elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
             if not mgme_dir:
                 raise MadGraph5Error, \
