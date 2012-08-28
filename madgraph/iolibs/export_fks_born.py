@@ -144,7 +144,42 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         # Return to original PWD
         os.chdir(cwd)
 
-            
+
+    #===========================================================================
+    # write_maxparticles_file
+    #===========================================================================
+    def write_maxparticles_file(self, writer, matrix_elements):
+        """Write the maxparticles.inc file for MadEvent"""
+
+        maxparticles = max([me.get_nexternal_ninitial()[0] \
+                              for me in matrix_elements])
+
+        lines = "integer max_particles\n"
+        lines += "parameter (max_particles=%d)" % maxparticles
+
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
+
+    #===========================================================================
+    # write_maxconfigs_file
+    #===========================================================================
+    def write_maxconfigs_file(self, writer, matrix_elements):
+        """Write the maxconfigs.inc file for MadEvent"""
+
+        maxconfigs = max([me.get_num_configs() for me in matrix_elements])
+
+        lines = "integer lmaxconfigs\n"
+        lines += "parameter (lmaxconfigs=%d)" % maxconfigs
+
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
+
     #===============================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
     #===============================================================================
@@ -336,7 +371,9 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                      'write_ajob.f',
                      'write_ajob_basic.f',
                      'handling_lhe_events.f',
-                     'write_event.f']
+                     'write_event.f',
+                     'maxparticles.inc',
+                     'maxconfigs.inc']
 
         for file in linkfiles:
             ln('../' + file , '.')
@@ -373,14 +410,14 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
 
 
 #        # Write maxconfigs.inc based on max of ME's/subprocess groups
-#        filename = os.path.join(self.dir_path,'Source','maxconfigs.inc')
-#        self.write_maxconfigs_file(writers.FortranWriter(filename),
-#                                   matrix_elements)
+        filename = os.path.join(self.dir_path,'Source','maxconfigs.inc')
+        self.write_maxconfigs_file(writers.FortranWriter(filename),
+                                   matrix_elements['real_matrix_elements'])
         
 #        # Write maxparticles.inc based on max of ME's/subprocess groups
-#        filename = os.path.join(self.dir_path,'Source','maxparticles.inc')
-#        self.write_maxparticles_file(writers.FortranWriter(filename),
-#                                     matrix_elements)
+        filename = os.path.join(self.dir_path,'Source','maxparticles.inc')
+        self.write_maxparticles_file(writers.FortranWriter(filename),
+                                     matrix_elements['real_matrix_elements'])
         
         # Touch "done" file
         os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))

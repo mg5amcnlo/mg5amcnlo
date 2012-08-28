@@ -61,7 +61,8 @@ class IOExportBornFKSTest(unittest.TestCase,
 
     def setUp(self):
         if not hasattr(self, 'myfks_me') or \
-           not hasattr(self, 'myfortranmodel'):
+           not hasattr(self, 'myfortranmodel') or \
+           not hasattr(self, 'myreals'):
 
             created_files = ['test']
 
@@ -86,10 +87,35 @@ class IOExportBornFKSTest(unittest.TestCase,
             myfksmulti = fks_born.FKSMultiProcessFromBorn(\
                     {'process_definitions': my_process_definitions})
             
-            IOExportBornFKSTest.myfks_me = fks_born_helas.FKSHelasMultiProcessFromBorn(\
-                   myfksmulti)['matrix_elements'][0]
+
+            fkshelasmulti = fks_born_helas.FKSHelasMultiProcessFromBorn(myfksmulti)
+            IOExportBornFKSTest.myfks_me = fkshelasmulti['matrix_elements'][0]
+            IOExportBornFKSTest.myreals = fkshelasmulti['real_matrix_elements']
+
 
         tearDown = test_file_writers.CheckFileCreate.clean_files
+
+
+    def test_write_maxconfigs_B(self):
+        goal = \
+"""      INTEGER LMAXCONFIGS
+      PARAMETER (LMAXCONFIGS=16)"""
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter.write_maxconfigs_file(\
+            writers.FortranWriter(self.give_pos('test')),\
+            self.myreals)
+        self.assertFileContains('test', goal)
+
+
+    def test_write_mparticles_B(self):
+        goal = \
+"""      INTEGER MAX_PARTICLES
+      PARAMETER (MAX_PARTICLES=5)"""
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter.write_maxparticles_file(\
+            writers.FortranWriter(self.give_pos('test')),\
+            self.myreals)
+        self.assertFileContains('test', goal)
 
 
     def test_write_lh_order_B(self):
