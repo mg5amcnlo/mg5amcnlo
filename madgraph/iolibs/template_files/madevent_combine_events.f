@@ -523,7 +523,7 @@ c
       parameter (maxexternal=2*max_particles-3)
       include 'run_config.inc'
       integer    max_read
-      parameter (max_read = 2000000)
+      parameter (max_read = 5000000)
 c
 c     Arguments
 c
@@ -624,9 +624,10 @@ c
             endif
          endif
          if (kevent .ge. max_read) then
-            write(*,*) 'Error too many events to read in select_events'
-     $           , kevent
-            write(*,*) 'Reset max_read in Source/select_events.f'
+            write(*,*) 'Error too many events to read in combine_events',
+     $           kevent
+            write(*,*) 'Increase cmax_events and max_read in ',
+     $                 'Source/combine_events.f'
             stop
          endif
       enddo

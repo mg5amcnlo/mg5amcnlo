@@ -2497,9 +2497,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.banner.add(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
         
         
-        misc.call(['%s/put_banner' % self.dirbin, 'events.lhe'],
+        misc.call(['%s/put_banner' % self.dirbin, 'events.lhe',
+                   str(self.random_orig)],
                             cwd=pjoin(self.me_dir, 'Events'))
-        misc.call(['%s/put_banner'% self.dirbin, 'unweighted_events.lhe'],
+        misc.call(['%s/put_banner'% self.dirbin, 'unweighted_events.lhe',
+                   str(self.random_orig)],
                             cwd=pjoin(self.me_dir, 'Events'))
         
         eradir = self.options['exrootanalysis_path']
@@ -4361,6 +4363,7 @@ class GridPackCmd(MadEventCmd):
         MadEventCmd.__init__(self, me_dir, *completekey, **stdin)
         self.run_mode = 0
         self.random = seed
+        self.random_orig = self.random
         self.options['automatic_html_opening'] = False
         # Now it's time to run!
         if me_dir and nb_event and seed:
@@ -4440,6 +4443,11 @@ class GridPackCmd(MadEventCmd):
                     self.launch_job('./%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
                              run_type='Refine number %s on %s (%s/%s)' %
                              (self.nb_refine, subdir, nb_proc+1, len(subproc)))
+                    if os.path.exists(pjoin(self.me_dir,'error')):
+                        self.monitor(html=True)
+                        raise MadEventError, \
+                            'Error detected in dir %s: %s' % \
+                            (Pdir, open(pjoin(self.me_dir,'error')).read())
         self.monitor(run_type='All job submitted for refine number %s' % 
                                                                  self.nb_refine)
         
