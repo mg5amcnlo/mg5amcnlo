@@ -1,4 +1,9 @@
-c Integrator Package for POWHEG
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c MINT Integrator Package
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c Original version by Paolo Nason (for POWHEG (BOX))
+c Modified by Rikkert Frederix (for aMC@NLO)
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c      subroutine mint(fun,ndim,ncalls0,nitmax,imode,
 c ndim=number of dimensions
 c ncalls0=# of calls per iteration
@@ -50,9 +55,11 @@ c imode=1: frozen grid, compute the integral and the upper bounds
 c others: same as 1 (for now)
       implicit none
       include "mint.inc"
-      integer ncalls0,ndim,nitmax,imode
-      real * 8 fun,xgrid(0:nintervals,ndim),xint,ymax(nintervals,ndim),
-     #  ans_abs,err_abs,ans_sgn,err_sgn
+      integer i,ncalls0,ndim,nitmax,imode
+      real * 8 fun,xgrid(0:nintervals,ndim),xint,ymax(nintervals,ndim)
+     &     ,ans_abs,err_abs,ans_sgn,err_sgn,ans_abs3(3),err_abs3(3)
+     &     ,ans_sgn3(3),err_sgn3(3),ans_abs_l3,err_abs_l3,ans_sgn_l3
+     &     ,err_sgn_l3,chi2_l3
       real * 8 x(ndimmax),vol
       real * 8 xacc(0:nintervals,ndimmax)
       integer icell(ndimmax),ncell(ndimmax)
@@ -63,62 +70,81 @@ c others: same as 1 (for now)
       real * 8 dx(ndimmax),f_abs,f_sgn,vtot_abs,etot_abs,vtot_sgn
      &     ,etot_sgn,prod,f1,chi2,efrac_abs
       integer kdim,kint,kpoint,nit,ncalls,ibin,iret,nintcurr,ifirst
-     &     ,nit_included
+     &     ,nit_included,kpoint_iter,non_zero_point,ntotcalls,nint_used
       real * 8 ran3
       external ran3,fun
-c Set to true to use more evenly distributed random numbers (imode=0
-c only)
-      logical even
+      logical even,double_events,bad_iteration
+c Accuracy defines if we should double events and grid intervals after
+c every iteration and if we should stop if required accuracy has been
+c reached.
+      if (accuracy.eq.0d0) then
+         double_events=.false.
+         nint_used=nintervals
+         if (ncalls0.le.0) then
+            write (*,*) 'Number of PS points is <= 0 and accuracy=0'
+            stop
+         endif
+      else
+         if (ncalls0.le.0) then
+            ncalls0=80*ndim
+         endif
+         double_events=.true.
+         if (imode.eq.1) then
+            nint_used=nintervals
+         else
+            nint_used=min_inter
+         endif
+      endif
+      bad_iteration=.false.
 c
-      ncalls=ncalls0
+      ncalls=0  ! # PS points (updated below)
       if(imode.eq.-1) then
+c Grids read from file
          even=.true.
          imode=0
          do kdim=1,ndim
             ifold(kdim)=1
          enddo
       elseif(imode.eq.0) then
+c Initialize grids
          even=.true.
          do kdim=1,ndim
             ifold(kdim)=1
-            do kint=0,nintervals
-               xgrid(kint,kdim)=dble(kint)/nintervals
+            do kint=0,nint_used
+               xgrid(kint,kdim)=dble(kint)/nint_used
             enddo
          enddo
       elseif(imode.eq.1) then
+c Initialize upper bounding envelope
          even=.false.
          do kdim=1,ndim
-            nintcurr=nintervals/ifold(kdim)
-            if(nintcurr*ifold(kdim).ne.nintervals) then
-               write(*,*)
-     # 'mint: the values in the ifold array shoud be divisors of',
-     #  nintervals
+            nintcurr=nint_used/ifold(kdim)
+            if(nintcurr*ifold(kdim).ne.nint_used) then
+               write(*,*) 'mint: the values in the ifold array'/
+     &              /'shoud be divisors of',nint_used
                stop
             endif
             do kint=1,nintcurr
-               ymax(kint,kdim)=
-     #              xint**(1d0/ndim)
+               ymax(kint,kdim)=xint**(1d0/ndim)
             enddo
          enddo
       endif
-      if (even) then
-c Uses more evenly distributed random numbers. This overwrites the
-c number of calls
-         call initialize_even_random_numbers(ncalls0,ndim,ncalls)
-         write (*,*) 'Update ncalls: ',ncalls0,' --> ',ncalls
-      endif
       nit=0
       nit_included=0
-      ans_abs=0
-      err_abs=0
-      ans_sgn=0
-      err_sgn=0
+      ans_abs=0d0
+      err_abs=0d0
+      ans_sgn=0d0
+      err_sgn=0d0
+      do i=1,3
+         ans_abs3(i)=0d0
+         err_abs3(i)=0d0
+         ans_sgn3(i)=0d0
+         err_sgn3(i)=0d0
+      enddo
+c Main loop over the iterations
  10   continue
-      nit=nit+1
-      if (nit.gt.nitmax/2+1) then
-         even=.false.
-      endif
-      if(nit.gt.nitmax) then
+      if(nit.ge.nitmax) then
+c We did enough iterations, update arguments and return
          if(imode.eq.0) xint=ans_abs
          if (nit_included.ge.2) then
             chi2=chi2/dble(nit_included-1)
@@ -128,10 +154,22 @@ c number of calls
          write (*,*) '-------'
          return
       endif
+      nit=nit+1
       write (*,*) '------- iteration',nit
+      if (even .and. ncalls.ne.ncalls0) then
+c Uses more evenly distributed random numbers. This overwrites the
+c number of calls
+         call initialize_even_random_numbers(ncalls0,ndim,ncalls)
+         write (*,*) 'Update # PS points (even): ',ncalls0,' --> '
+     &        ,ncalls
+      elseif (ncalls0.ne.ncalls) then
+         ncalls=ncalls0
+         write (*,*) 'Update # PS points: ',ncalls0,' --> ',ncalls
+      endif
+c Reset the accumulated results for grid updating
       if(imode.eq.0) then
          do kdim=1,ndim
-            do kint=0,nintervals
+            do kint=0,nint_used
                xacc(kint,kdim)=0
                if(kint.gt.0) then
                   nhits(kint,kdim)=0
@@ -143,6 +181,10 @@ c number of calls
       etot_abs=0
       vtot_sgn=0
       etot_sgn=0
+      kpoint_iter=0
+      non_zero_point=0
+c Loop over PS points
+ 2    kpoint_iter=kpoint_iter+1
       do kpoint=1,ncalls
 c find random x, and its random cell
          do kdim=1,ndim
@@ -150,14 +192,12 @@ c find random x, and its random cell
 c if(even), we should compute the ncell and the rand from the ran3()
             if (even) then
                rand(kdim)=ran3(even)
-               ncell(kdim)= min(int(rand(kdim)*nintervals)+1,
-     &              nintervals)
-               rand(kdim)=rand(kdim)*nintervals-(ncell(kdim)-1)
+               ncell(kdim)= min(int(rand(kdim)*nint_used)+1,
+     &              nint_used)
+               rand(kdim)=rand(kdim)*nint_used-(ncell(kdim)-1)
             else
-cRF fix here if ran3() is exactly one
-c$$$            ncell(kdim)=nintervals/ifold(kdim)*ran3(even))+1
-               ncell(kdim)=min(int(nintervals/ifold(kdim)*ran3(even))+1,
-     &              nintervals)
+               ncell(kdim)=min(int(nint_used/ifold(kdim)*ran3(even))+1,
+     &              nint_used)
                rand(kdim)=ran3(even)
             endif
          enddo
@@ -166,8 +206,9 @@ c$$$            ncell(kdim)=nintervals/ifold(kdim)*ran3(even))+1
          ifirst=0
  1       continue
          vol=1
+c compute jacobian ('vol') for the PS point
          do kdim=1,ndim
-            nintcurr=nintervals/ifold(kdim)
+            nintcurr=nint_used/ifold(kdim)
             icell(kdim)=ncell(kdim)+(kfold(kdim)-1)*nintcurr
             ibin=icell(kdim)
             dx(kdim)=xgrid(icell(kdim),kdim)-xgrid(icell(kdim)-1,kdim)
@@ -211,14 +252,34 @@ c This guarantees a 10% increase of the upper bound in this cell
                enddo
             endif
          endif
-         vtot_abs=vtot_abs+f_abs/ncalls
-         etot_abs=etot_abs+f_abs**2/ncalls
-         vtot_sgn=vtot_sgn+f_sgn/ncalls
+         if (f_abs.ne.0d0) non_zero_point=non_zero_point+1
+c Add the PS point to the result of this iteration
+         vtot_abs=vtot_abs+f_abs
+         etot_abs=etot_abs+f_abs**2
+         vtot_sgn=vtot_sgn+f_sgn
          etot_sgn=etot_abs
       enddo
+      ntotcalls=ncalls*kpoint_iter
+      if (ntotcalls.gt.max_points .and. non_zero_point.lt.25 .and.
+     &     double_events) then
+         write (*,*) 'ERROR: INTEGRAL APPEARS TO BE ZERO.'
+         write (*,*) 'TRIED',ntotcalls,'PS POINTS AND ONLY '
+     &        ,non_zero_point,' GAVE A NON-ZERO INTEGRAND.'
+         stop
+      endif
+c Goto beginning of loop over PS points until enough points have found
+c that pass cuts.
+      if (non_zero_point.lt.ncalls .and. double_events) goto 2
+
+c Iteration done. Update the accumulated results and print them to the
+c screen
+      vtot_abs=vtot_abs/dble(ntotcalls)
+      etot_abs=etot_abs/dble(ntotcalls)
+      vtot_sgn=vtot_sgn/dble(ntotcalls)
+      etot_sgn=etot_sgn/dble(ntotcalls)
 c the abs is to avoid tiny negative values
-      etot_abs=sqrt(abs(etot_abs-vtot_abs**2)/ncalls)
-      etot_sgn=sqrt(abs(etot_sgn-vtot_sgn**2)/ncalls)
+      etot_abs=sqrt(abs(etot_abs-vtot_abs**2)/dble(ntotcalls))
+      etot_sgn=sqrt(abs(etot_sgn-vtot_sgn**2)/dble(ntotcalls))
       if (vtot_abs.ne.0d0) then
          efrac_abs=etot_abs/vtot_abs
       else
@@ -228,9 +289,42 @@ c the abs is to avoid tiny negative values
      &     ' (',efrac_abs*100d0,'%)'
       write(*,*) ' int =',vtot_sgn,' +/- ',etot_sgn
       if (efrac_abs.gt.0.3d0.and.nit.gt.3) then
-         write (*,*) 'Large fluctuation ( >30 % ). '/
-     &        /'Not including iteration in results.'
+         write (*,*) 'Large fluctuation ( >30 % ).'
+     &        //'Not including iteration in results.'
+c double the number of points for the next iteration
+         if (double_events) ncalls0=ncalls0*2
+         if (bad_iteration .and. imode.eq.0) then
+c 2nd bad iteration is a row. Reset grids
+            write (*,*)'2nd bad iteration in a row. '/
+     &           /'Resetting grids and starting from scratch...'
+            nint_used=min_inter ! reset number of intervals
+            ncalls0=ncalls0/8 ! we did at least 5 iterations. Reduce a bit
+            nit=0
+            nit_included=0
+            do kdim=1,ndim
+               do kint=0,nint_used
+                  xgrid(kint,kdim)=dble(kint)/nint_used
+               enddo
+            enddo
+            call reset_MC_grid
+            ans_abs=0d0
+            err_abs=0d0
+            ans_sgn=0d0
+            err_sgn=0d0
+            chi2=0d0
+            do i=1,3
+               ans_abs3(i)=0d0
+               err_abs3(i)=0d0
+               ans_sgn3(i)=0d0
+               err_sgn3(i)=0d0
+            enddo
+            bad_iteration=.false.
+         else
+            bad_iteration=.true.
+         endif
          goto 10
+      else
+         bad_iteration=.false.
       endif
       if(nit.eq.1) then
          ans_abs=vtot_abs
@@ -243,6 +337,8 @@ c prevent annoying division by zero for nearly zero
 c integrands
          if(etot_abs.eq.0.and.err_abs.eq.0) then
             if(ans_abs.eq.vtot_abs) then
+c double the number of points for the next iteration
+               if (double_events) ncalls0=ncalls0*2
                goto 10
             else
                err_abs=abs(vtot_abs-ans_abs)
@@ -253,8 +349,8 @@ c integrands
          elseif(etot_abs.eq.0) then
             etot_abs=err_abs
             etot_sgn=etot_abs
-         elseif(err_abs.eq.0) then
-            err_abs=etot_abs
+         elseif(err_abs.eq.0) then ! 1st iteration; set to a large value
+            err_abs=etot_abs*1d99
             err_sgn=err_abs
          endif
          ans_abs=(ans_abs/err_abs+vtot_abs/etot_abs)/
@@ -267,7 +363,7 @@ c integrands
          write (*,*) 'Chi^2=',(vtot_abs-ans_abs)**2/etot_abs**2
       endif
       nit_included=nit_included+1
-      if (vtot_abs.ne.0d0) then
+      if (ans_abs.ne.0d0) then
          write(*,*) 'accumulated result |int|=',ans_abs,' +/- ',err_abs,
      &        ' (',err_abs/ans_abs*100d0,'%)'
       else
@@ -281,25 +377,105 @@ c integrands
          write (*,*) 'accumulated result Chi^2 per DoF =',
      &        chi2/dble(nit_included-1)
       endif
+c Update the results of the last tree iterations
+      do i=1,2
+         ans_abs3(i)=ans_abs3(i+1)
+         err_abs3(i)=err_abs3(i+1)
+         ans_sgn3(i)=ans_sgn3(i+1)
+         err_sgn3(i)=err_sgn3(i+1)
+      enddo
+      ans_abs3(3)=vtot_abs
+      err_abs3(3)=etot_abs
+      ans_sgn3(3)=vtot_sgn
+      err_sgn3(3)=etot_sgn
+c Compute the results of the last three iterations
+      if (nit_included.ge.4) then
+         ans_abs_l3=0d0
+         err_abs_l3=ans_abs3(1)*1d99
+         ans_sgn_l3=0d0
+         err_sgn_l3=ans_abs3(1)*1d99
+         chi2_l3=0d0
+         do i=1,3
+            ans_abs_l3=(ans_abs_l3/err_abs_l3+ans_abs3(i)/err_abs3(i))/
+     &        (1/err_abs_l3+1/err_abs3(i))
+            err_abs_l3=1/sqrt(1/err_abs_l3**2+1/err_abs3(i)**2)
+            ans_sgn_l3=(ans_sgn_l3/err_sgn_l3+ans_sgn3(i)/err_sgn3(i))/
+     &        (1/err_sgn_l3+1/err_sgn3(i))
+            err_sgn_l3=1/sqrt(1/err_sgn_l3**2+1/err_sgn3(i)**2)
+            chi2_l3=chi2_l3+(ans_abs3(i)-ans_abs_l3)**2/err_abs3(i)**2
+         enddo
+         chi2_l3=chi2_l3/2d0    ! three iterations, so 2 degrees of freedom
+         write(*,*) 'accumulated result last 3 iter |int|=',ans_abs_l3
+     &        ,' +/- ',err_abs_l3,' (',err_abs_l3/ans_abs_l3*100d0,'%)'
+         write(*,*) 'accumulated result last 3 iter  int =',ans_sgn_l3
+     &        ,' +/- ',err_sgn_l3
+         write(*,*) 'accumulated result last 3 iter Chi^2 per DoF =',
+     &        chi2_l3
+      endif
       if(imode.eq.0) then
-c iteration is finished; now rearrange the grid
+c Iteration is finished; now rearrange the grid
          do kdim=1,ndim
             call regrid(xacc(0,kdim),xgrid(0,kdim),
-     #           nhits(1,kdim),nintervals)
+     #           nhits(1,kdim),nint_used)
          enddo
+c Regrid the MC over integers (used for the MC over FKS dirs)
          call regrid_MC_integer
       endif
+c Quit if the desired accuracy has been reached
+      if (nit_included.ge.min_it .and. double_events) then
+         if (err_abs/ans_abs*max(1d0,chi2/dble(nit_included-1))
+     &        .lt.accuracy) then
+            write (*,*) 'Found desired accuracy'
+            nit=nitmax
+            goto 10
+         elseif(err_abs_l3/ans_abs_l3*max(1d0,chi2_l3).lt.accuracy)
+     &           then
+            write (*,*)
+     &           'Found desired accuracy in last 3 iterations'
+            nit=nitmax
+            ans_abs=ans_abs_l3
+            err_abs=err_abs_l3
+            ans_sgn=ans_sgn_l3
+            err_sgn=err_sgn_l3
+            chi2=chi2_l3*dble(nit_included-1)
+            goto 10
+         endif
+      endif
+c Double the number of intervals in the grids if not yet reach the maximum
+      if (2*nint_used.le.nintervals .and. double_events) then
+         do kdim=1,ndim
+            call double_grid(xgrid(0,kdim),nint_used)
+         enddo
+         nint_used=2*nint_used
+      endif
+c double the number of points for the next iteration
+      if (double_events) ncalls0=ncalls0*2
 c Also improve stats in plots
       call accum
 c Do next iteration
       goto 10
       end
 
+      subroutine double_grid(xgrid,nint)
+      implicit none
+      include "mint.inc"
+      integer  nint
+      real * 8 xgrid(0:nintervals)
+      integer i
+      do i=nint,1,-1
+         xgrid(i*2)=xgrid(i)
+         xgrid(i*2-1)=(xgrid(i)+xgrid(i-1))/2d0
+      enddo
+      return
+      end
+
+
       subroutine regrid(xacc,xgrid,nhits,nint)
       implicit none
-      integer  nint,nhits(nint)
-      real * 8 xacc(0:nint),xgrid(0:nint)
-      real * 8 xn(nint),r,tiny,xl,xu
+      include "mint.inc"
+      integer  nint,nhits(nintervals)
+      real * 8 xacc(0:nintervals),xgrid(0:nintervals)
+      real * 8 xn(nintervals),r,tiny,xl,xu
       parameter ( tiny=1d-8 )
       integer kint,jint
       logical plot_grid
@@ -614,13 +790,16 @@ c Recompute the number of calls. Uses the algorithm from VEGAS
       integer ncalls0,ndim,ncalls,i
       integer dim,ng,npg,k
       common /even_ran/dim,ng,npg,k
+c Number of dimension of the integral
       dim=ndim
+c Number of elements in which we can split one dimension
       ng=(ncalls0/2.)**(1./ndim)
+c Total number of hypercubes
       k=ng**ndim
-      npg=ncalls0/k
-      if(npg.lt.2)npg=2
+c Number of PS points in each hypercube (at least 2)
+      npg=max(ncalls0/k,2)
+c Number of PS points for this iteration
       ncalls=npg*k
-      write (*,*) ' dim:',dim,' ng:',ng,' npg:',npg,' k:',k
       return
       end
 

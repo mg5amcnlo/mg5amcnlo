@@ -1323,6 +1323,7 @@ c
 
 c Set scales for all counterevents, using soft kinematics as done
 c in the case of parton-level NLO computations
+
       call set_alphaS(p1_cnt(0,1,0))
       if(doreweight)then
          if (nbody) then
@@ -1345,7 +1346,6 @@ c in the case of parton-level NLO computations
             ifill2S=1
          endif
       endif
-
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
      &     nbody)goto 545
 c
@@ -1821,6 +1821,13 @@ c Update the shower starting scale with the shape from montecarlocounter
             write (*,*) 'ERROR, ',dsigS,
      &           ' found for dsigS, setting dsigS to 0 for this event'
             dsigS=0
+            do j=1,IPROC
+               if (.not.nbody) then
+                  unwgt_table(nFKSprocess,1,j)=0d0
+               else
+                  unwgt_table(0,1,j)=0d0
+               endif
+            enddo
          endif
          
          if (fkssymmetryfactorDeg.ne.fkssymmetryfactor) then
@@ -1942,6 +1949,11 @@ c Plot observables for counterevents and Born
             write (*,*) 'ERROR, ',dsigH,
      &           ' found for dsigH, setting dsigH to 0 for this event'
             dsigH=0
+            if (.not.nbody) then
+               do j=1,IPROC
+                  unwgt_table(nFKSprocess,2,j)=0d0
+               enddo
+         endif
          endif
 
          if (nbody.and.dsigH.ne.0d0) then
@@ -2115,13 +2127,8 @@ c$$$         SCALUP(iFKS)=min(SCALUP(iFKS),shower_H_scale(iFKS))
          SCALUP(iFKS)=min(SCALUP(iFKS),shower_S_scale(iFKS))
       endif
 
-      if(SCALUP(iFKS).le.0.d0)then
-         write(*,*)'Scale too small in set_shower_scale:',iFKS
-     &        ,SCALUP(iFKS),emsca,xscalemax,sqrt(shat_ev)
-     &        ,shower_S_scale(iFKS) ,shower_H_scale(iFKS),Hevents
-         write(*,*)
-         stop
-      endif
+c Always have a very small minimal starting scale
+      if (SCALUP(iFKS).lt.3d0) SCALUP(iFKS)=3d0
 c
       return
       end
@@ -2209,11 +2216,13 @@ c can be changed
             call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
             do i=1,NN
                di_cnt(i)=sqrt(fastjetdmergemax(i-1))
-               if(i.gt.1.and.di_cnt(i).gt.di_cnt(i-1))then
-                  write (*,*) 'Error in set_shower_scale_noshape '/
-     &                 /'-- di_cnt(i) not ordered'
-                  write (*,*) NN,i,di_cnt(i),di_cnt(i-1)
-                  stop
+               if(i.gt.1) then
+                  if (di_cnt(i).gt.di_cnt(i-1))then
+                     write (*,*) 'Error in set_shower_scale_noshape '/
+     &                    /'-- di_cnt(i) not ordered'
+                     write (*,*) NN,i,di_cnt(i),di_cnt(i-1)
+                     stop
+                  endif
                endif
             enddo
             shower_S_scale(iFKS)=di_cnt(NN)
@@ -2243,11 +2252,13 @@ c can be changed
             call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
             do i=1,NN
                di_ev(i)=sqrt(fastjetdmergemax(i-1))
-               if(i.gt.1.and.di_ev(i).gt.di_ev(i-1))then
-                  write (*,*) 'Error in set_shower_scale_noshape '/
-     &                 /'-- di_ev(i) not ordered'
-                  write (*,*) NN,i,di_ev(i),di_ev(i-1)
-                  stop
+               if(i.gt.1) then
+                  if (di_ev(i).gt.di_ev(i-1)) then
+                     write (*,*) 'Error in set_shower_scale_noshape '/
+     &                    /'-- di_ev(i) not ordered'
+                     write (*,*) NN,i,di_ev(i),di_ev(i-1)
+                     stop
+                  endif
                endif
             enddo
             ref_H_scale(iFKS)=di_ev(NN-1)

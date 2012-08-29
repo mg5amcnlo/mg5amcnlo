@@ -130,7 +130,7 @@ for p in P*_* ; do
     chmod +x ajob*
     for job in $jobs ; do
 	if [[ $run_cluster == 1 ]] ; then
-            sed -i.bak "7s/.*/Arguments = $vegas_mint $run_mode $use_preset/" $job
+            sed -i.bak "7s/.*/Arguments = $vegas_mint $run_mode 0 $use_preset/" $job
 	    if [[ -e done.$job.$vegas_mint.$run_mode.$use_preset ]] ; then
 		rm -f done.$job.$vegas_mint.$run_mode.$use_preset
 	    fi
@@ -138,7 +138,7 @@ for p in P*_* ; do
             condor_submit $job
             rm $job.bak
 	elif [[ $run_cluster == 0 ]] ; then
-   	    ./$job $vegas_mint $run_mode $use_preset
+   	    ./$job $vegas_mint $run_mode 0 $use_preset
 	fi
     done
     cd ..

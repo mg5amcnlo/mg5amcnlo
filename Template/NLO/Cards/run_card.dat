@@ -18,17 +18,26 @@
 #*******************                                                 
 #                                                                    
 #*********************************************************************
+# Number of events                                                   *
+#*********************************************************************
+ 10000    = nevents       ! Number of unweighted events requested 
+#*********************************************************************
 # Collider type and energy                                           *
 #*********************************************************************
-    1     = lpp1  ! beam 1 type (0=NO PDF)
-    1     = lpp2  ! beam 2 type (0=NO PDF)
- 4000     = ebeam1  ! beam 1 energy in GeV
- 4000     = ebeam2  ! beam 2 energy in GeV
+    1   = lpp1    ! beam 1 type (0 = no PDF)
+    1   = lpp2    ! beam 2 type (0 = no PDF)
+ 4000   = ebeam1  ! beam 1 energy in GeV
+ 4000   = ebeam2  ! beam 2 energy in GeV
 #*********************************************************************
-# PDF CHOICE: this automatically fixes also alpha_s and its evol.    *
+# PDF choice: this automatically fixes also alpha_s(MZ) and its evol.*
 #*********************************************************************
- 'cteq6_m'    = pdlabel     ! PDF set                                     
-  10042       = lhaid
+ 'cteq6_m'   = pdlabel     ! PDF set                                     
+  10042      = lhaid
+#*********************************************************************
+# Include the NLO Monte Carlo subtr. terms for the following parton  *
+# shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT | PYTHIA8)       *
+#*********************************************************************
+  HERWIG6   = parton_shower
 #*********************************************************************
 # Renormalization and factorization scales                           *
 # (Default functional form for the non-fixed scales is the sum of    *
@@ -49,6 +58,15 @@
  1        = muF1_over_ref    ! ratio of current muF1 over reference muF1
  1        = muF2_over_ref    ! ratio of current muF2 over reference muF2
  1        = QES_over_ref     ! ratio of current QES over reference QES
+#********************************************************************* 
+# Reweight flags to get scale dependence and PDF uncertainty         *
+# For scale dependence: factor 2 up and down around central scale    *
+# For PDF uncertainty: use LHAPDF with supported set                 *
+#*********************************************************************
+ .true.   = reweight_scale   ! reweight to get scale dependence
+ .false.  = reweight_PDF     ! reweight to get PDF uncertainty
+  21101   = PDF_set_min      ! First of the error PDF sets 
+  21140   = PDF_set_max      ! Last of the error PDF sets
 #*********************************************************************
 #                                                                    
 #*********************************************************************
@@ -57,17 +75,17 @@
  15  = bwcutoff
 #*********************************************************************
 # Cuts on the jets                                                   *
-# When matching to a parton shower, these cuts should be considerably*
-# softer than the analysis cuts.                                     *
+# When matching to a parton shower, these generation cuts should be  *
+# considerably softer than the analysis cuts.                        *
 # (more specific cuts can be specified in SubProcesses/cuts.f)       *
 #*********************************************************************
-  1    = jetalgo    ! FastJet jet algorithm (1=kT, 0=C/A, -1=anti-kT)
+    1  = jetalgo    ! FastJet jet algorithm (1=kT, 0=C/A, -1=anti-kT)
   0.7  = jetradius  ! The radius parameter for the jet algorithm
-  5.0  = ptj        ! Minimal jet transverse momentum
+   10  = ptj        ! Minimal jet transverse momentum
   100  = etaj       ! Maximal jet pseudo-rapidity (absolute value)
 #*********************************************************************
 # Cuts on the charged leptons (e+, e-, mu+, mu-, tau+ and tau-)      *
-# (more specific cuts can be specified in SubProcesses/cuts.f)       *
+# (more specific gen cuts can be specified in SubProcesses/cuts.f)   *
 #*********************************************************************
   0   = ptl   ! Min lepton transverse momentum
   100 = etal  ! Max lepton pseudo rapidity

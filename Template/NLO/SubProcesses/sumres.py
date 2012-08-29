@@ -127,39 +127,27 @@ file.close()
 
 #determine the events for each process:
 if nevents>0:
-    totevts=0
-    totrest=0.
+    #get the random number seed from the randinit file
+    file=open("randinit")
+    exec file
+    file.close
+    print "random seed found in 'randinit' is", r
+    random.seed(r)
+    totevts=nevents
     for proc in processes:
         proc['lhefile'] = os.path.join(proc['folder'], proc['channel'], 'events.lhe')
-        proc['nevents'] = math.floor(proc['result']/tot * nevents)
-        totevts += proc['nevents']
-        proc['rest'] = proc['result']/tot * nevents - math.floor(proc['result']/tot * nevents)
-        totrest += totrest + math.sqrt(proc['rest'] + proc['nevents'])
-
-
-    restevts = nevents - totevts
-
-    if restevts>len(processes) or restevts < 0:
-        sys.exit("ERROR, restevts is not valid: %d" % restevts)
-
-# Determine what to do with the few remaining 'rest events'.
-# Put them to channels at random given by the sqrt(Nevents) 
-# already in the channel (including the rest)
-
-    while restevts:
-        target = random.random() * totrest
-        restsum=0.
+        proc['nevents'] = 0
+    while totevts :
+        target = random.random() * tot
+        crosssum = 0.
         i = 0
-        while i<len(processes) and restsum < target:
+        while i<len(processes) and crosssum < target:
             proc = processes[i]
-            restsum += math.sqrt(proc['rest']+proc['nevents'])
-            i += 1
+            crosssum += proc['result']
+            i += 1            
+        totevts -= 1
         i -= 1
-        totrest += - math.sqrt(proc['rest']+proc['nevents']) \
-                   + math.sqrt(1.+proc['nevents'])
         processes[i]['nevents'] += 1
-        processes[i]['rest'] = 0.
-        restevts -=1
         
 #check that we now have all the events in the channels
     totevents = sum(proc['nevents'] for proc in processes)
@@ -173,8 +161,20 @@ if nevents>0:
         nevts_file = open(os.path.join(proc['folder'], proc['channel'], 'nevts'),'w')
         nevts_file.write('%10d\n' % proc['nevents'])
         nevts_file.close()
-
-
+        fileinputs = open("madinMMC_F.2")
+        fileinputschannel = open(os.path.join(proc['folder'], proc['channel'], 'madinM1'),'w')
+        i=0
+        for line in fileinputs:
+            i += 1
+            if i == 2:
+                accuracy=min(math.sqrt(tot/(totevents*proc['result'])),0.2)
+                fileinputschannel.write('%10.8e\n' % accuracy)
+            elif i == 8:
+                fileinputschannel.write('1        ! MINT mode\n')
+            else:
+                fileinputschannel.write(line)
+        fileinputschannel.close()
+        fileinputs.close()
 
     evts_file = open('nevents_unweighted', 'w')
     evts_file.write(content_evts)

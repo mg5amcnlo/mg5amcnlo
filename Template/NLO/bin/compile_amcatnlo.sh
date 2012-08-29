@@ -1,9 +1,8 @@
 #! /bin/bash
 
-echo '****************************************************'
-echo 'This script compiles, tests and runs a aMC@NLO process'
-echo '****************************************************'
-echo
+echo '*******************************************************'
+echo 'This script compiles, tests and runs an aMC@NLO process'
+echo '*******************************************************'
 
 
 # find the correct directory

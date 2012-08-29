@@ -1,8 +1,8 @@
 #! /bin/bash
 
-echo '****************************************************'
-echo 'This script runs a amcatnlo process'
-echo '****************************************************'
+#echo '****************************************************'
+#echo 'This script runs an amcatnlo process'
+#echo '****************************************************'
 
 # find the correct directory
 if [[  ! -d ./SubProcesses  ]]; then
@@ -18,6 +18,8 @@ Maindir=`pwd`
 run_mode=$1
 use_preset=$2
 run_cluster=$3
+mint_mode=$4
+parton_shower=$5
 
 if [[ $run_mode == "" ]] ; then
     echo 'Enter run mode (F, V or B)'
@@ -56,6 +58,30 @@ else
     exit
 fi
 
+if [[ $mint_mode == "" ]] ; then
+    echo "Enter the mint MODE"
+    read mint_mode
+fi
+
+if [[ $parton_shower == "" ]] ; then
+    parton_shower=`awk '/^[^#].*=.*parton_shower/{print $1}' $Maindir/Cards/run_card.dat`
+fi
+
+cd $Maindir/SubProcesses/
+if [[ $mint_mode == 0 ]] ; then
+    echo "setting-up integration grids"
+    sed -i.bak "8s/.*/0/" madinMMC_$run_mode.2
+elif [[ $mint_mode == 1 ]] ; then
+    echo "computing upper bounding envelope"
+    sed -i.bak "8s/.*/1/" madinMMC_$run_mode.2
+elif [[ $mint_mode == 2 ]] ; then
+    echo "generating events"
+    sed -i.bak "8s/.*/2/" madinMMC_$run_mode.2
+else
+    echo "ERROR" $mint_mode
+fi
+sed -i.bak "10s/.*/$parton_shower/" madinMMC_$run_mode.2
+cd $Maindir/
 
 #---------------------------
 # Update random number seed
@@ -82,13 +108,13 @@ for dir in P*_* ; do
 	chmod +x ajob*
 	if [[ $run_cluster == 1 ]] ; then
 	    for job in mg*.cmd ; do
-		sed -i "7s/.*/Arguments = $vegas_mint $run_mode $use_preset/" $job
+		sed -i "7s/.*/Arguments = $vegas_mint $run_mode $mint_mode $use_preset/" $job
 		condor_submit $job
 	    done
 	elif [[ $run_cluster == 0 ]] ; then
 	    echo "Doing "$run_mode"-events in this dir"
 	    for job in ajob* ; do
-		./$job $vegas_mint $run_mode $use_preset
+		./$job $vegas_mint $run_mode $mint_mode $use_preset
 	    done
 	fi
     else
@@ -100,16 +126,3 @@ done
 
 cd ..
 
-
-
-echo ""
-echo "Execute ./SubProcesses/combine_results.sh to collect results and"
-echo "compute how many events are needed per channel."
-echo ""
-echo "./SubProcesses/combine_results.sh i n G"$run_mode"*"
-echo ""
-echo "where 'i' is 0 after grid setting and '1' after integration and"
-echo "'n' is the total number of unweigted events you want."
-echo "Update madinMMC_"$run_mode".2 before before"
-echo "executing the next integration or event generation step."
-echo ""
