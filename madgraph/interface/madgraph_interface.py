@@ -3088,7 +3088,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 os.chmod(pjoin(MG5DIR,'td','td'), 0775)
                 if sys.maxsize > 2**32:
                     logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer
-                Please follow instruction in http://cp3wks05.fynu.ucl.ac.be/twiki/bin/view/Software/TopDrawer.''')
+                Please follow instruction in https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/TopDrawer .''')
             
             if not misc.which('gs'):
                 logger.warning('''gosthscript not install on your system. This is not required to run MA.
