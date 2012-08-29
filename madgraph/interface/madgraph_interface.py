@@ -238,6 +238,10 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("syntax: save %s FILENAME" % "|".join(self._save_opts))
         logger.info("-- save information as file FILENAME")
         logger.info("   FILENAME is optional for saving 'options'.")
+        logger.info('   By default it uses ./input/mg5_configuration.txt')
+        logger.info('   If you put "global" for FILENAME it will use ~/.mg5/mg5_configuration.txt')
+        logger.info('   If this files exists, it is uses by all MG5 on the system but continues')
+        logger.info('   to read the local options files.')
 
     def help_load(self):
         logger.info("syntax: load %s FILENAME" % "|".join(self._save_opts))
@@ -404,8 +408,8 @@ class HelpToCmd(cmd.HelpCmd):
         
 
     def help_set(self):
-        logger.info("syntax: set %s argument" % "|".join(self._set_options))
-        logger.info("-- set options for generation or output")
+        logger.info("syntax: set %s argument|default" % "|".join(self._set_options))
+        logger.info("-- set options for generation or output.")
         logger.info("   group_subprocesses True/False/Auto: ")
         logger.info("     (default Auto) Smart grouping of subprocesses into ")
         logger.info("     directories, mirroring of initial states, and ")
@@ -784,9 +788,11 @@ This will take effect only in a NEW terminal
         if len(args) == 0:
             args.append('options')
         
-        if args[0] not in self._save_opts:
+        if args[0] not in self._save_opts and args[0] != 'global':
             self.help_save()
             raise self.InvalidCmd('wrong \"save\" format')
+        elif args[0] == 'global':
+            args.insert(0, 'options')
         
         if args[0] != 'options' and len(args) != 2:
             self.help_save()
@@ -804,6 +810,11 @@ This will take effect only in a NEW terminal
                     continue
                 elif arg.startswith('--'):
                     raise self.InvalidCmd('unknow command for \'save options\'')
+                elif arg == 'global':
+                    if os.environ.has_key('HOME'):
+                        args.remove('global')
+                        args.insert(1,pjoin(os.environ['HOME'],'.mg5','mg5_configuration.txt'))
+                        has_path = True
                 else:
                     basename = os.path.dirname(arg)
                     if not os.path.exists(basename):
@@ -819,10 +830,7 @@ This will take effect only in a NEW terminal
                 args.insert(1, pjoin(MG5DIR,'input','mg5_configuration.txt'))     
                 
 
-           
-    
-    
-    def check_set(self, args):
+    def check_set(self, args, log=True):
         """ check the validity of the line"""
         
         if len(args) == 1 and args[0] == 'complex_mass_scheme':
@@ -831,6 +839,20 @@ This will take effect only in a NEW terminal
         if len(args) < 2:
             self.help_set()
             raise self.InvalidCmd('set needs an option and an argument')
+
+        if args[1] == 'default':
+            if args[0] in self.options_configuration:
+                default = self.options_configuration[args[0]]
+            elif args[0] in self.options_madgraph:
+                default = self.options_madgraph[args[0]]
+            elif args[0] in self.options_madevent:
+                default = self.options_madevent[args[0]]
+            else:
+                raise self.InvalidCmd('%s doesn\'t have a valid default value' % args[0])
+            if log:
+                logger.info('Pass parameter %s to it\'s default value: %s' % 
+                                                             (args[0], default))
+            args[1] = str(default)
 
         if args[0] not in self._set_options:
             if not args[0] in self.options and not args[0] in self.options:
@@ -857,8 +879,10 @@ This will take effect only in a NEW terminal
 
         if args[0] in ['timeout']:
             if not args[1].isdigit():
-                raise self.InvalidCmd('timeout values should be a integer')   
+                raise self.InvalidCmd('timeout values should be a integer')
+            
 
+            
     def check_open(self, args):
         """ check the validity of the line """
         
@@ -1332,7 +1356,7 @@ class CompleteForCmd(cmd.CompleteCmd):
 
         # Filename if directory is not given
         if len(args) == 2:
-            return self.path_completion(text)
+            return self.path_completion(text) + self.list_completion(text, ['global'])
 
     @cmd.debug()    
     def complete_open(self, text, line, begidx, endidx): 
@@ -1461,30 +1485,30 @@ class CompleteForCmd(cmd.CompleteCmd):
 
         if len(args) == 2:
             if args[1] in ['group_subprocesses', 'complex_mass_scheme']:
-                return self.list_completion(text, ['False', 'True'])
+                return self.list_completion(text, ['False', 'True','default'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
             elif args[1] == 'gauge':
-                return self.list_completion(text, ['unitary', 'Feynman'])
+                return self.list_completion(text, ['unitary', 'Feynman','default'])
             elif args[1] == 'stdout_level':
-                return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR','CRITICAL'])
+                return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR','CRITICAL','default'])
         
             elif args[1] == 'fortran_compiler':
-                return self.list_completion(text, ['f77','g77','gfortran'])
+                return self.list_completion(text, ['f77','g77','gfortran','default'])
             elif args[1] == 'nb_core':
-                return self.list_completion(text, [str(i) for i in range(100)])
+                return self.list_completion(text, [str(i) for i in range(100)] + ['default'] )
             elif args[1] == 'run_mode':
-                return self.list_completion(text, [str(i) for i in range(3)])
+                return self.list_completion(text, [str(i) for i in range(3)] + ['default'])
             elif args[1] == 'cluster_type':
-                return self.list_completion(text, cluster.from_name.keys())
+                return self.list_completion(text, cluster.from_name.keys() + ['default'])
             elif args[1] == 'cluster_queue':
                 return []
             elif args[1] == 'automatic_html_opening':
-                return self.list_completion(text, ['False', 'True'])            
+                return self.list_completion(text, ['False', 'True', 'default'])            
             else:
                 # directory names
                 second_set = [name for name in self.path_completion(text, '.', only_dirs = True)]
-                return self.list_completion(text, first_set + second_set)
+                return self.list_completion(text, first_set + second_set + ['default'])
         elif len(args) >2 and args[-1].endswith(os.path.sep):
                 return self.path_completion(text,
                         pjoin(*[a for a in args if a.endswith(os.path.sep)]),
@@ -3669,7 +3693,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         args = self.split_arg(line)
         # Check the validity of the arguments
-        self.check_set(args)
+        self.check_set(args, log=False)
         
         if args[0] in self.options_configuration and '--no_save' not in args:
             self.exec_cmd('save options --auto')
