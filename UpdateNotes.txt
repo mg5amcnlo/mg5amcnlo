@@ -1,5 +1,7 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.4.8.4 (29/08/12) OM: Fix a web problem which creates generations to run twice on the web.
+
 1.4.8.3 (21/08/12) JA: Ensure that the correct seed is written also in the .lhe
                        file header.
                    JA: Stop run in presence of empty results.dat files 
