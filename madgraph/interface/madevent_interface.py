@@ -28,6 +28,7 @@ import pydoc
 import random
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import traceback
@@ -2350,8 +2351,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 logger.critical(stdout)
                 raise MadEventError, 'Error gensym run not successful'
             #
-            os.system("chmod +x %s/ajob*" % Pdir)
-        
             misc.compile(['madevent'], cwd=Pdir)
             
             alljobs = glob.glob(pjoin(Pdir,'ajob*'))
@@ -2421,7 +2420,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if os.path.exists(pjoin(Pdir, 'ajob1')):
                 misc.compile(['madevent'], cwd=Pdir)
                 #
-                os.system("chmod +x %s/ajob*" % Pdir)
                 alljobs = glob.glob(pjoin(Pdir,'ajob*'))
                 nb_tot = len(alljobs)            
                 self.total_jobs += nb_tot
@@ -3265,7 +3263,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         argument = [str(arg) for arg in argument]
         if mode is None:
             mode = self.cluster_mode
+        
+        # ensure that exe is executable
+        if os.path.exists(exe) and not os.access(exe, os.X_OK):
+            os.system('chmod +x %s ' % exe)
 
+        elif (cwd and os.path.exists(pjoin(cwd, exe))) and not \
+                                            os.access(pjoin(cwd, exe), os.X_OK):
+            os.system('chmod +x %s ' % pjoin(cwd, exe))
+            
         def launch_in_thread(exe, argument, cwd, stdout, control_thread):
             """ way to launch for multicore"""
 
@@ -4432,9 +4438,6 @@ class GridPackCmd(MadEventCmd):
             proc.communicate('%s 1 F\n' % (precision))
 
             if os.path.exists(pjoin(Pdir, 'ajob1')):
-                # misc.compile(['madevent'], cwd=Pdir) # Done before
-                #
-                os.system("chmod +x %s/ajob*" % Pdir)
                 alljobs = glob.glob(pjoin(Pdir,'ajob*'))
                 nb_tot = len(alljobs)            
                 self.total_jobs += nb_tot
