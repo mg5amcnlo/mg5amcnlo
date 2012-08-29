@@ -92,6 +92,35 @@ class testFKSBornHelasObjects(unittest.TestCase):
             testFKSBornHelasObjects.myproc3 = MG.Process(dict3)
 
 
+    def test_fks_helas_multi_process_from_born_ppz(self):
+        """tests the correct recycling of color infos for MEs with the same 
+        color flow (e.g. uu~>z and dd~>z)
+        """
+        p= [21, 1, 2, 3, 4, -1, -2, -3, -4]
+        z_leg= MG.MultiLeg({'ids':[23], 'state': True})
+        p_leg = MG.MultiLeg({'ids': p, 'state': False});
+
+        # Define the multiprocess
+        my_multi_leglist = MG.MultiLegList([copy.copy(leg) for leg in [p_leg] * 2] \
+                    + MG.MultiLegList([z_leg]))
+
+        my_process_definition = MG.ProcessDefinition({ \
+                        'orders': {'QED':1},
+                        'legs': my_multi_leglist,
+                        'perturbation_couplings': ['QCD'],
+                        'NLO_mode': 'real',
+                        'model': self.mymodel})
+        my_process_definitions = MG.ProcessDefinitionList(\
+            [my_process_definition])
+
+        my_multi_process = fks_born.FKSMultiProcessFromBorn(\
+                {'process_definitions': my_process_definitions})
+        my_helas_mp = fks_born_helas.FKSHelasMultiProcessFromBorn(my_multi_process, gen_color = True)
+
+        for me in my_helas_mp['matrix_elements']:
+            self.assertEqual(len(me.born_matrix_element['color_basis']), 1)
+
+
     def test_fks_helas_multi_process_from_born_ppwj(self):
         """tests the correct initialization of a FKSHelasMultiProcess, 
         given an FKSMultiProcess. This also checks that, when combining 
@@ -119,7 +148,7 @@ class testFKSBornHelasObjects(unittest.TestCase):
 
         my_multi_process = fks_born.FKSMultiProcessFromBorn(\
                 {'process_definitions': my_process_definitions})
-        my_helas_mp = fks_born_helas.FKSHelasMultiProcessFromBorn(my_multi_process, False)
+        my_helas_mp = fks_born_helas.FKSHelasMultiProcessFromBorn(my_multi_process, gen_color = False)
 
         #there are 6  borns 
         self.assertEqual(len(my_helas_mp.get('matrix_elements')),6)

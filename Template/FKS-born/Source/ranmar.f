@@ -1,4 +1,4 @@
-      function ran2()
+      subroutine ntuple(x,a,b,ii,jconfig)
 c-------------------------------------------------------
 c     Front to ranmar which allows user to easily
 c     choose the seed.
@@ -7,22 +7,22 @@ c------------------------------------------------------
 c
 c     Arguments
 c
-      real*8 ran2
+      double precision x,a,b
+      integer ii,jconfig
 c
 c     Local
 c
-      real*8 x
-      integer init,ioffset
-      integer ij,kl,iseed1,iseed2
+      integer init, ioffset, joffset
+      integer     ij, kl, iseed1,iseed2
 
 c
 c     Global
 c
-      integer         iseed
+c-------
+c     18/6/2012 tjs promoted to integer*8 to avoid overflow for iseed > 60K
+c------
+      integer*8       iseed
       common /to_seed/iseed
-
-      integer           iconfig
-      common/to_configs/iconfig
 c
 c     Data
 c
@@ -38,14 +38,27 @@ c-----
 c
 c     TJS 3/13/2008
 c     Modified to allow for more sequences 
-c     iseed can be between 0 and 31328*30081
+c     iseed can be between 0 and 30081*30081
 c     before pattern repeats
 c
-         ij=1802+iconfig + mod(iseed,30081)
-         kl=9373+(iseed/31328)+ioffset 
-         write(*,'(a,i6,a3,i6)') 'Using random seed offsets',iconfig,
-     &        " : ",ioffset
-         write(*,*) ' with seed', iseed
+c
+c     TJS 12/3/2010
+c     multipied iseed to give larger values more likely to make change
+c     get offset for multiple runs of single process
+c
+c
+c     TJS 18/6/2012
+c     Updated to better divide iseed among ij and kl seeds
+c     Note it may still be possible to get identical ij,kl for
+c     different iseed, if have exactly compensating joffset, ioffset, jconfig
+c
+         call get_moffset(joffset)
+         joffset = joffset * 3157
+         iseed = iseed * 31300       
+         ij=1802+jconfig + mod(iseed,30081)
+         kl=9373+(iseed/30081)+ioffset + joffset     !Switched to 30081  20/6/12 to avoid dupes in range 30082-31328
+         write(*,'(a,i6,a3,i6)') 'Using random seed offsets',jconfig," : ",ioffset
+         write(*,*) ' with seed', iseed/31300
          do while (ij .gt. 31328)
             ij = ij - 31328
          enddo
@@ -58,10 +71,8 @@ c
       do while (x .lt. 1d-16)
          call ranmar(x)
       enddo
-      ran2=x
+      x = a+x*(b-a)
       end
-
-
 
       subroutine get_base(iseed)
 c-------------------------------------------------------
@@ -76,7 +87,7 @@ c
 c
 c     Arguments
 c
-      integer iseed
+      integer*8 iseed
 c
 c     Local
 c
@@ -146,6 +157,36 @@ c-----
  25   iseed = 0
       end
 
+      subroutine get_moffset(iseed)
+c-------------------------------------------------------
+c     Looks for file moffset.dat to offset random number gen
+c------------------------------------------------------
+      implicit none
+c
+c     Constants
+c
+      integer    lun
+      parameter (lun=22)
+c
+c     Arguments
+c
+      integer iseed
+c
+c     Local
+c
+c-----
+c  Begin Code
+c-----
+
+      open(unit=lun,file='./moffset.dat',status='old',err=25)
+         read(lun,*,err=14) iseed
+         write(*,*) "Got moffset",iseed
+         close(lun)
+         return
+ 14   close(lun)
+ 25   iseed = 0
+      end
+
       subroutine ranmar(rvec)
 *     -----------------
 * universal random number generator proposed by marsaglia and zaman
@@ -175,6 +216,8 @@ c-----
 * any pseudorandom numbers with ranmar. the input values should be in
 * the ranges 0<=ij<=31328 ; 0<=kl<=30081
       implicit real*8(a-h,o-z)
+      character*30 filename
+      logical file_exists
       common/ raset1 / ranu(97),ranc,rancd,rancm
       common/ raset2 / iranmr,jranmr
       save /raset1/,/raset2/
@@ -183,6 +226,25 @@ c-----
 * to get the standard values in the marsaglia-zaman paper (i=12,j=34
 * k=56,l=78) put ij=1802, kl=9373
       write(*,*) "Ranmar initialization seeds",ij,kl
+c
+c    18/6/2012 TJS  Added check to ensure ij and kl are in range
+c      
+      if (ij .lt. 0 .or. ij .gt. 31328 .or.
+     $     kl .lt. 0 .or. kl .gt. 30081) then
+         filename='../../error'
+         INQUIRE(FILE="../../RunWeb", EXIST=file_exists)
+         if(.not.file_exists) filename = '../' // filename
+         open(unit=26,file=filename,status='unknown')
+         if (ij .lt. 0 .or. ij .gt. 31328) then
+            write(26,*) 'Bad initialization value of ij in rmarin ', ij
+            write(*,*) 'Bad initialization value of ij in rmarin ', ij
+         elseif (kl .lt. 0 .or. kl .gt. 30081) then
+            write(26,*) 'Bad initialization value of kl in rmarin ', kl
+            write(*,*) 'Bad initialization value of kl in rmarin ', kl
+         endif
+         stop
+      endif
+
       i = mod( ij/177 , 177 ) + 2
       j = mod( ij     , 177 ) + 2
       k = mod( kl/169 , 178 ) + 1
@@ -217,7 +279,7 @@ c-----
 
 
 
-      subroutine ntuple(x,a,b,ii,jconfig)
+      function ran2()
 c-------------------------------------------------------
 c     Front to ranmar which allows user to easily
 c     choose the seed.
@@ -226,19 +288,22 @@ c------------------------------------------------------
 c
 c     Arguments
 c
-      double precision x,a,b
-      integer ii,jconfig
+      real*8 ran2
 c
 c     Local
 c
-      integer init, ioffset
-      integer     ij, kl, iseed1,iseed2
+      real*8 x
+      integer init,ioffset
+      integer ij,kl,iseed1,iseed2
 
 c
 c     Global
 c
-      integer         iseed
+      integer*8       iseed
       common /to_seed/iseed
+
+      integer           iconfig
+      common/to_configs/iconfig
 c
 c     Data
 c
@@ -257,9 +322,9 @@ c     Modified to allow for more sequences
 c     iseed can be between 0 and 31328*30081
 c     before pattern repeats
 c
-         ij=1802+jconfig + mod(iseed,30081)
+         ij=1802+iconfig + mod(iseed,30081)
          kl=9373+(iseed/31328)+ioffset 
-         write(*,'(a,i6,a3,i6)') 'Using random seed offsets',jconfig,
+         write(*,'(a,i6,a3,i6)') 'Using random seed offsets',iconfig,
      &        " : ",ioffset
          write(*,*) ' with seed', iseed
          do while (ij .gt. 31328)
@@ -274,5 +339,5 @@ c
       do while (x .lt. 1d-16)
          call ranmar(x)
       enddo
-      x = a+x*(b-a)
+      ran2=x
       end

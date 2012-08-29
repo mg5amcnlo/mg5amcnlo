@@ -475,6 +475,9 @@ c a scale to be used as a reference for renormalization scale
       include 'nexternal.inc'
       double precision scale_global_reference,pp(0:3,nexternal)
       double precision tmp,pt,et,dot,xm2,sumdot
+c this is to avoid too low dynamic scales      
+      double precision minscale
+      parameter (minscale=2d0)
       external pt,et,dot,sumdot
       integer i,itype
       parameter (itype=2)
@@ -500,7 +503,7 @@ c Sum of transverse masses
         write(*,*)'Unknown option in scale_global_reference',itype
         stop
       endif
-      scale_global_reference=tmp
+      scale_global_reference=max(minscale,tmp)
 c
       return
       end

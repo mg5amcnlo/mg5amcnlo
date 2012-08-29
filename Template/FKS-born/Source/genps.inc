@@ -5,16 +5,18 @@ c*************************************************************************
 c       Parameters used by genps and dsample, you must recompile
 c	dsample if you change anything below
 c*************************************************************************
-      integer    max_particles  , max_branch
-      parameter (max_particles=10, max_branch=max_particles-2)
+      include 'maxparticles.inc'
+      integer max_branch
+      parameter (max_branch=max_particles-1)
       integer    max_tree    , max_dim
       parameter (max_tree=200, max_dim=max_tree*(max_branch+1))
       integer    ng     , maxdim     , maxinvar     , maxconfigs
-      parameter (ng = 96, maxdim = 25, maxinvar= 50 , maxconfigs=10)
+c      parameter (ng = 96, maxdim = 25, maxinvar= 50 , maxconfigs=10)
+      parameter (ng = 96, maxdim = 3*(max_particles-2)-1, maxinvar= 4*max_particles, maxconfigs=10)
 
-      integer    lmaxconfigs
-      parameter (lmaxconfigs=7500)       !Used for iforest
+      include 'maxconfigs.inc'
 
+        
       double precision  xgmin,     xgmax
       parameter        (xgmin=-1d0, xgmax=1d0)
 

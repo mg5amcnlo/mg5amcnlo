@@ -129,8 +129,6 @@ if [[  $gensym == '1' || $madevent_compile == '1' || $test == "1" ]]; then
     make -j$j >>  $Maindir/compile_amcatnlo.log 2>&1
 
     if [[ -e "$libdir/libdhelas.a" &&
-            -e "$libdir/libdsample.a" &&
-            -e "$libdir/libdsample_fks.a" &&
             -e "$libdir/libgeneric.a" &&
             -e "$libdir/libmodel.a" &&
             -e "$libdir/libpdf.a" ]]; then
