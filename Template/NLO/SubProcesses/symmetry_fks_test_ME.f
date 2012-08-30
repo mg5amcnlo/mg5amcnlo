@@ -117,6 +117,11 @@ c
       external pass_point, dsig,ran2
       external check_swap, fks_Sij
 
+c define here the maximum fraction of failures to consider the test
+c   passed
+      double precision max_fail, fail_frac
+      parameter (max_fail=0.3d0)
+
 c helicity stuff
       integer          isum_hel
       logical                    multi_channel
@@ -376,11 +381,11 @@ c
       if(nsofttests.gt.10)then
          write(*,*)'Soft tests done for (Born) config',iconfig
          write(*,*)'Failures:',nerr
-         write(*,*)'Failures (fraction) (soft limit,     ',nFKSprocess
-     &        ,'):',nerr/dfloat(nsofttests) 
-         if (nerr/dble(nsofttests).gt.0.4d0) then
-            write (12,*) 'ERROR soft test ME failed',
-     &           iconfig,nerr/dble(nsofttests)
+         fail_frac= nerr/dble(nsofttests)
+         if (fail_frac.lt.max_fail) then
+             write(*,401) nFKSprocess, fail_frac
+         else
+             write(*,402) nFKSprocess, fail_frac
          endif
       endif
 
@@ -500,11 +505,11 @@ c
       if(ncolltests.gt.10)then
          write(*,*)'Collinear tests done for (Born) config', iconfig
          write(*,*)'Failures:',nerr
-         write(*,*)'Failures (fraction) (collinear limit,',nFKSprocess
-     &        ,'):',nerr/dfloat(ncolltests)
-         if (nerr/dble(ncolltests).gt.0.4d0) then
-            write (12,*) 'ERROR collinear test ME failed',
-     &           iconfig,nerr/dble(ncolltests)
+         fail_frac= nerr/dble(ncolltests)
+         if (fail_frac.lt.max_fail) then
+             write(*,501) nFKSprocess, fail_frac
+         else
+             write(*,502) nFKSprocess, fail_frac
          endif
       endif
 
@@ -513,7 +518,16 @@ c
       enddo                     ! Loop over Born configurations
       enddo                     ! Loop over nFKSprocess
 
+
       return
+ 401  format('     Soft test ',i2,' PASSED. Fraction of failures: ',
+     & f4.2) 
+ 402  format('     Soft test ',I2,' FAILED. Fraction of failures: ',
+     & f4.2) 
+ 501  format('Collinear test ',i2,' PASSED. Fraction of failures: ',
+     & f4.2) 
+ 502  format('Collinear test ',I2,' FAILED. Fraction of failures: ',
+     & f4.2) 
       end
 
 c

@@ -215,7 +215,7 @@ for dir in $dirs ; do
 	make -j$j test_ME >> $Maindir/compile_amcatnlo.log 2>&1
 	if [[ -e "test_ME" ]]; then
 	    echo '     ...running test_ME'
-	    ./test_ME < $Maindir/input_ME | tee -a $Maindir/test_ME.log | grep 'Failures (fraction)'
+	    ./test_ME < $Maindir/input_ME | tee -a $Maindir/test_ME.log | grep 'Fraction of failures'
 	else
 	    echo 'ERROR in compilation, see compile_amcatnlo.log for details'
 	fi
@@ -223,7 +223,7 @@ for dir in $dirs ; do
 	make -j$j test_MC >> $Maindir/compile_amcatnlo.log 2>&1
 	if [[ -e "test_MC" ]]; then
 	    echo '     ...running test_MC'
-	    ./test_MC < $Maindir/input_MC | tee -a $Maindir/test_MC.log | grep 'Failures (fraction)'
+	    ./test_MC < $Maindir/input_MC | tee -a $Maindir/test_MC.log | grep 'Fraction of failures'
 	else
 	    echo 'ERROR in compilation, see compile_amcatnlo.log for details'
 	fi
