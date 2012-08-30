@@ -597,10 +597,9 @@ c this is standard MC@NLO
 c
 C
 C For processes that have jets at the Born level, we need to include a
-C theta-function: The radiation from the shower (ptdamp) should always
-C be softer than the jets at the Born (defined by the shower_S_scale),
-C hence no need to include the MC counter terms when the radiation is
-C hard.
+C theta-function: The radiation from the shower should always be softer
+C than the jets at the Born, hence no need to include the MC counter
+C terms when the radiation is hard.
 C
 C THIS NEEDS TO BE UPDATED FOR OTHER MC'S AS WELL
 C

@@ -2121,8 +2121,8 @@ c based on previous PS points (done in LesHouches.f)
 
       if (Hevents) then
 c$$$         SCALUP(iFKS)=min(SCALUP(iFKS),shower_H_scale(iFKS))
-         SCALUP(iFKS)=max(shower_H_scale(iFKS),ref_H_scale(iFKS)
-     &        -min(emsca,scalemax))
+         SCALUP(iFKS)=min(SCALUP(iFKS),max(shower_H_scale(iFKS)
+     &        ,ref_H_scale(iFKS)-min(emsca,scalemax)))
       else
          SCALUP(iFKS)=min(SCALUP(iFKS),shower_S_scale(iFKS))
       endif
@@ -2189,7 +2189,9 @@ c For processes without jets at the Born
 c
          pt_hardness=0d0
          shower_S_scale(iFKS)=sqrtshat_cnt(0)
-         shower_H_scale(iFKS)=sqrtshat_ev-ptparton
+c$$$         shower_H_scale(iFKS)=sqrtshat_ev-ptparton
+         shower_H_scale(iFKS)=sqrtshat_cnt(0)
+         ref_H_scale(iFKS)=0d0
       else
          pt_hardness=0d0        ! updated below if event exists
 c     
