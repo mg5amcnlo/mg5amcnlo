@@ -83,20 +83,6 @@ fi
 sed -i.bak "10s/.*/$parton_shower/" madinMMC_$run_mode.2
 cd $Maindir/
 
-#---------------------------
-# Update random number seed
-cd $Maindir/SubProcesses/
-r=0
-if [[ -e randinit ]]; then
-    source ./randinit
-fi
-for i in P*_* ; do
-    r=`expr $r + 1`
-done
-echo "r=$r" >& randinit
-cd $Maindir
-
-
 vegas_mint="2"
 
 cd SubProcesses

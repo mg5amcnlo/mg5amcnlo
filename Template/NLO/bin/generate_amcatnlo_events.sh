@@ -48,7 +48,27 @@ else
     echo "Input not understood:" $run_mode_num
     exit
 fi
-    
+
+
+#---------------------------
+
+# Update random number seed with the value from the run_card. If this
+# value is "0", update the number according to use a 'fresh' one
+iseed=`awk '/^[^#].*=.*iseed/{print $1}' $Maindir/Cards/run_card.dat`
+if [[ $iseed == "0" ]] ; then
+    cd $Maindir/SubProcesses/
+    r=0
+    if [[ -e randinit ]]; then
+	source ./randinit
+    fi
+    r=`expr $r + 1`
+    echo "r=$r" >& randinit
+    cd $Maindir
+else
+    echo "r="$iseed >& $Maindir/SubProcesses/randinit
+fi
+
+
 nevents=`awk '/^[^#].*=.*nevents/{print $1}' $Maindir/Cards/run_card.dat`
 parton_shower=`awk '/^[^#].*=.*parton_shower/{print $1}' $Maindir/Cards/run_card.dat`
 echo "Generating" $nevents "events for" $parton_shower

@@ -52,6 +52,21 @@ c-----
          write(lun,15) 'rm -f wait.$script >& /dev/null'
          write(lun,15) 'touch run.$script'
          write(lun,15) 'echo $script'
+         write(lun,15) 'ln -sf ../../randinit .'
+         write(lun,15) 'ln -sf ../symfact.dat .'
+         write(lun,15) 'if [[ -e ../MadLoopParams.dat ]]; then'
+         write(lun,20) 'ln -sf ../MadLoopParams.dat .'
+         write(lun,15) 'fi'
+         write(lun,15)
+     &        'if [[ -e ../ColorDenomFactors.dat ]]; then'
+         write(lun,20) 'ln -sf ../ColorDenomFactors.dat .'
+         write(lun,15) 'fi'
+         write(lun,15) 'if [[ -e ../HelConfigs.dat ]]; then'
+         write(lun,20) 'ln -sf ../HelConfigs.dat .'
+         write(lun,15) 'fi'
+         write(lun,15) 'if [[ -e ../ColorNumFactors.dat ]]; then'
+         write(lun,20) 'ln -sf ../ColorNumFactors.dat .'
+         write(lun,15) 'fi'
          write(lun,'(a$)') 'for i in '
       elseif(run_cluster.eq.1) then
          write(lun,15) '#!/bin/bash'
@@ -66,39 +81,50 @@ c-----
          write(lun,15) 'mkdir lib'
          write(lun,15) 'mkdir Cards'
          write(lun,15) 'mkdir SubProcesses'
-         write(lun,15) 'cp -a  $CONDOR_INITIAL_DIR/'//
-     &        '../../MGMEVersion.txt .'
-         write(lun,15) '#cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        '../../Source .'
-         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        '../../Cards/* ./Cards/'
-         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        '../../lib/Pdfdata ./lib/'
-         write(lun,15) 'ln -s  $CONDOR_INITIAL_DIR/'//
-     &        '../../lib/PDFsets ./lib/'
-c         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-c     &        '../../lib/PDFsets ./lib/'
-c         write(lun,15) 'cd ./lib/PDFsets'
-c         write(lun,15) 'gunzip *.gz'
-c         write(lun,15) 'cd ../../'
-
-         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        'MadLoopParams.dat .'
-         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        'ColorDenomFactors.dat .'
-         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        'ColorNumFactors.dat .'
-         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        'HelConfigs.dat .'
+         write(lun,15) 'cp -af  $CONDOR_INITIAL_DIR/'/
+     &        /'../../MGMEVersion.txt .'
+         write(lun,15) 'cp -af $CONDOR_INITIAL_DIR/'/
+     &        /'../../Cards/* ./Cards/'
+         write(lun,15) 'cp -af $CONDOR_INITIAL_DIR/'/
+     &        /'../../lib/Pdfdata ./lib/'
+         write(lun,15) 'ln -s $CONDOR_INITIAL_DIR/'/
+     &        /'../../lib/PDFsets ./lib/'
+         write(lun,15) 'cp -af $CONDOR_INITIAL_DIR/'/
+     &        /'../../randinit .'
+         write(lun,15) 'cp -af $CONDOR_INITIAL_DIR/'/
+     &        /'../symfact.dat .'
+         write(lun,15) 'cp -af $CONDOR_INITIAL_DIR/'/
+     &        /'../iproc.dat .'
+c Specal stuff for MadLoop (only copy if they exist)
+         write(lun,15) 'if [[ -e $CONDOR_INITIAL_DIR/'/
+     &        /'MadLoopParams.dat ]]; then'
+         write(lun,20) 'cp -af $CONDOR_INITIAL_DIR/'/
+     &        /'MadLoopParams.dat .'
+         write(lun,15) 'fi'
+         write(lun,15) 'if [[ -e $CONDOR_INITIAL_DIR/'/
+     &        /'ColorDenomFactors.dat ]]; then'
+         write(lun,20) 'cp -af $CONDOR_INITIAL_DIR/'/
+     &        /'ColorDenomFactors.dat .'
+         write(lun,15) 'fi'
+         write(lun,15) 'if [[ -e $CONDOR_INITIAL_DIR/'/
+     &        /'ColorNumFactors.dat ]]; then'
+         write(lun,20) 'cp -af $CONDOR_INITIAL_DIR/'/
+     &        /'ColorNumFactors.dat .'
+         write(lun,15) 'fi'
+         write(lun,15) 'if [[ -e $CONDOR_INITIAL_DIR/'/
+     &        /'HelConfigs.dat ]]; then'
+         write(lun,20) 'cp -af $CONDOR_INITIAL_DIR/'/
+     &        /'HelConfigs.dat .'
+         write(lun,15) 'fi'
 
          write(lun,15) "if [[ $1 == '0' ]]; then"
-         write(lun,15) '    cp -a  $CONDOR_INITIAL_DIR/'//
+         write(lun,20) 'cp -af $CONDOR_INITIAL_DIR/'//
      &           'madevent_vegas ./SubProcesses'
          write(lun,15) "elif [[ $1 == '1' ]]; then"
-         write(lun,15) '    cp -a  $CONDOR_INITIAL_DIR/'//
+         write(lun,20) 'cp -af  $CONDOR_INITIAL_DIR/'//
      &           'madevent_mint ./SubProcesses'
          write(lun,15) "elif [[ $1 == '2' ]]; then"
-         write(lun,15) '    cp -a  $CONDOR_INITIAL_DIR/'//
+         write(lun,20) 'cp -af  $CONDOR_INITIAL_DIR/'//
      &           'madevent_mintMC ./SubProcesses'
          write(lun,15) "fi"
 
@@ -121,6 +147,7 @@ c         write(lun,15) 'cd ../../'
       endif
 
  15   format(a)
+ 20   format(4x,a)
       end
 
       subroutine close_bash_file(lun)
@@ -169,13 +196,13 @@ c madevent_vegas or madevent_mint
          write(lun,25) 'if [[ "$4" != "" ]]; then'
          write(lun,30) 'if [[ -e ../$4\_G$i ]]; then'
          write(lun,35) "if [[ $1 == '0' ]]; then"
-         write(lun,40) 'cp -f ../$4\_G$i/*.sv1 .'
+         write(lun,40) 'cp -af ../$4\_G$i/*.sv1 .'
          write(lun,40)
-     &        'cp -f ../$4\_G$i/grid.MC_integer . >/dev/null 2>&1'
+     &        'cp -af ../$4\_G$i/grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) "elif [[ $1 == '1' ]]; then"
-         write(lun,40) 'cp -f ../$4\_G$i/mint_grids .'
+         write(lun,40) 'cp -af ../$4\_G$i/mint_grids .'
          write(lun,40)
-     &        'cp -f ../$4\_G$i/grid.MC_integer . >/dev/null 2>&1'
+     &        'cp -af ../$4\_G$i/grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) "fi"
          write(lun,30) 'else'
          write(lun,35) 'echo "Cannot find direcotry ../$4\_G$i/"'//
@@ -192,9 +219,9 @@ c madevent_mintMC
          write(lun,25) 'cd $j'
          write(lun,25) 'if [[ "$4" != "" ]]; then'
          write(lun,30) 'if [[ -e ../G$4$i ]]; then'
-         write(lun,35) 'cp -f ../G$4$i/mint_grids ./preset_mint_grids'
+         write(lun,35) 'cp -af ../G$4$i/mint_grids ./preset_mint_grids'
          write(lun,35)
-     &        'cp -f ../G$4$i/grid.MC_integer . >/dev/null 2>&1'
+     &        'cp -af ../G$4$i/grid.MC_integer . >/dev/null 2>&1'
          write(lun,30) 'else'
          write(lun,35) 'echo "Cannot find direcotry ../G$4$i/"'//
      &        ' > log.txt'
@@ -204,25 +231,6 @@ c madevent_mintMC
 c endif
          write(lun,20) "fi"
 
-         write(lun,20) 'if [[ -e ../../randinit ]]; then'
-         write(lun,25) 'cp -f ../../randinit .'
-         write(lun,20) 'fi'
-         write(lun,20) 'if [[ -e ../symfact.dat ]]; then'
-         write(lun,25) 'ln -sf ../symfact.dat .'
-         write(lun,20) 'fi'
-         write(lun,20) 'if [[ -e ../MadLoopParams.dat ]]; then'
-         write(lun,25) 'ln -sf ../MadLoopParams.dat .'
-         write(lun,20) 'fi'
-         write(lun,20)
-     &        'if [[ -e ../ColorDenomFactors.dat ]]; then'
-         write(lun,25) 'ln -sf ../ColorDenomFactors.dat .'
-         write(lun,20) 'fi'
-         write(lun,20) 'if [[ -e ../HelConfigs.dat ]]; then'
-         write(lun,25) 'ln -sf ../HelConfigs.dat .'
-         write(lun,20) 'fi'
-         write(lun,20) 'if [[ -e ../ColorNumFactors.dat ]]; then'
-         write(lun,25) 'ln -sf ../ColorNumFactors.dat .'
-         write(lun,20) 'fi'
 c madevent_vegas
          write(lun,20) "if [[ $1 == '0' ]]; then"
          write(lun,25) 'head -n 5 ../../madin.$2 >& input_app.txt'
@@ -258,11 +266,11 @@ c madevent_mintMC
          write(lun,25) 'T="$(($(date +%s)-T))"'
          write(lun,25) 'echo "Time in seconds: ${T}" >>log.txt'
 c endif
-         write(lun,25) 'cp -f log.txt log_MINT$3.txt'
+         write(lun,25) 'cp -af log.txt log_MINT$3.txt'
          write(lun,20) "fi"
          write(lun,20) 'cd ../'
          write(lun,15) 'done'
-         write(lun,15) 'rm -f run.$script'
+         write(lun,15) 'rm -af run.$script'
          write(lun,15) 'touch done.$script'
 
       elseif(run_cluster.eq.1) then
@@ -275,16 +283,16 @@ c madevent_vegas or madevent_mint
          write(lun,30) 'mkdir $j'
          write(lun,25) 'fi'
          write(lun,25) 'cd $j'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/$j/* .'
+         write(lun,25) 'cp -af $CONDOR_INITIAL_DIR/$j/* .'
          write(lun,25) 'if [[ "$4" != "" ]]; then'
          write(lun,30) 'if [[ -e $CONDOR_INITIAL_DIR/$4\_G$i ]]; then'
          write(lun,35) "if [[ $1 == '0' ]]; then"
-         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$4\_G$i/*.sv1 .'
-         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$4\_G$i/'/
+         write(lun,40) 'cp -af $CONDOR_INITIAL_DIR/$4\_G$i/*.sv1 .'
+         write(lun,40) 'cp -af $CONDOR_INITIAL_DIR/$4\_G$i/'/
      &        /'grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) "elif [[ $1 == '1' ]]; then"
-         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$4\_G$i/mint_grids .'
-         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$4\_G$i/'/
+         write(lun,40) 'cp -af $CONDOR_INITIAL_DIR/$4\_G$i/mint_grids .'
+         write(lun,40) 'cp -af $CONDOR_INITIAL_DIR/$4\_G$i/'/
      &        /'grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) "fi"
          write(lun,30) 'else'
@@ -300,15 +308,15 @@ c madevent_mintMC
          write(lun,30) 'mkdir $j'
          write(lun,25) 'fi'
          write(lun,25) 'cd $j'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/$j/* .'
+         write(lun,25) 'cp -af $CONDOR_INITIAL_DIR/$j/* .'
          write(lun,25) 'if [[ "$4" != "" ]]; then'
          write(lun,30) 'if [[ "$4" == "H" ||"$4" == "S" ||'//
      &        ' "$4" == "V" || "$4" == "B" || "$4" == "F" ]]; then'
 
          write(lun,35) 'if [[ -e $CONDOR_INITIAL_DIR/G$4$i ]]; then'
-         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/G$4$i/mint_grids '//
+         write(lun,40) 'cp -af $CONDOR_INITIAL_DIR/G$4$i/mint_grids '//
      &        './preset_mint_grids'
-         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/G$4$i/'/
+         write(lun,40) 'cp -af $CONDOR_INITIAL_DIR/G$4$i/'/
      &        /'grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) 'else'
          write(lun,40) 'echo "Cannot find direcotry ../G$4$i/"'//
@@ -321,31 +329,6 @@ c madevent_mintMC
          write(lun,25) 'fi'
 c endif
          write(lun,20) "fi"
-         write(lun,20)
-     &        'if [[ -e $CONDOR_INITIAL_DIR/../randinit ]]; then'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/../randinit .'
-         write(lun,20) 'fi'
-         write(lun,20)
-     &        'if [[ -e $CONDOR_INITIAL_DIR/symfact.dat ]]; then'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/symfact.dat .'
-         write(lun,20) 'fi'
-         write(lun,20)
-     &        'if [[ -e $CONDOR_INITIAL_DIR/MadLoopParams.dat ]]; then'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/MadLoopParams.dat .'
-         write(lun,20) 'fi'
-         write(lun,20)'if [[ -e $CONDOR_INITIAL_DIR'/
-     &        /'/ColorDenomFactors.dat ]]; then'
-         write(lun,25)
-     &        'cp -f $CONDOR_INITIAL_DIR/ColorDenomFactors.dat .'
-         write(lun,20) 'fi'
-         write(lun,20)
-     &        'if [[ -e $CONDOR_INITIAL_DIR/HelConfigs.dat ]]; then'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/HelConfigs.dat .'
-         write(lun,20) 'fi'
-         write(lun,20)
-     &      'if [[ -e $CONDOR_INITIAL_DIR/ColorNumFactors.dat ]]; then'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/ColorNumFactors.dat .'
-         write(lun,20) 'fi'
 
 c madevent_vegas
          write(lun,20) "if [[ $1 == '0' ]]; then"
@@ -375,9 +358,10 @@ c madevent_mintMC
          write(lun,20) "elif [[ $1 == '2' ]]; then"
          write(lun,25) 'if [[ $runnumber != 0 ]]; then'
          write(lun,30) 'mv -f nevts__$runnumber nevts'
-         write(lun,30) 'source ./randinit'
-         write(lun,30) 'r=`expr $r + $runnumber`'
-         write(lun,30) 'echo "r=$r" >& randinit'
+c$$$         write(lun,30) 'source ./randinit'
+c$$$         write(lun,30) 'r=`expr $r + $runnumber`'
+c$$$         write(lun,30) 'echo "r=$r" >& randinit'
+         write(lun,30) 'echo $runnumber >& moffset.dat'
          write(lun,25) 'fi'
          write(lun,25) "if [[ $3 == '0' || $3 == '2' ]]; then"
          write(lun,30) 'head -n 6 $CONDOR_INITIAL_DIR/'//
@@ -395,14 +379,14 @@ c madevent_mintMC
      &        'time ../madevent_mintMC > log.txt <input_app.txt 2>&1'
          write(lun,25) 'T="$(($(date +%s)-T))"'
          write(lun,25) 'echo "Time in seconds: ${T}" >>log.txt'
-         write(lun,25) 'cp -f log.txt log_MINT$3.txt'
+         write(lun,25) 'cp -af log.txt log_MINT$3.txt'
 c endif
          write(lun,20) "fi"
 
          write(lun,20) "if [[ $1 == '2' && $runnumber != 0 ]]; then"
-         write(lun,25) 'cp -f events.lhe $CONDOR_INITIAL_DIR'//
+         write(lun,25) 'cp -af events.lhe $CONDOR_INITIAL_DIR'//
      &        '/G$2$i/events_$runnumber.lhe'
-         write(lun,25) 'cp -f log.txt $CONDOR_INITIAL_DIR'//
+         write(lun,25) 'cp -af log.txt $CONDOR_INITIAL_DIR'//
      &        '/G$2$i/log_MINT$3_$runnumber.txt'
          write(lun,20) 'fi'
 
@@ -410,10 +394,10 @@ c endif
          write(lun,15) 'done'
 c madevent_vegas or madevent_mint
          write(lun,15) "if [[ $1 == '0' || $1 == '1' ]]; then"
-         write(lun,20) 'cp -ar $2\_G* $CONDOR_INITIAL_DIR/'
+         write(lun,20) 'cp -af $2\_G* $CONDOR_INITIAL_DIR/'
 c madevent_mintMC
          write(lun,15) "elif [[ $1 == '2' && $runnumber == 0 ]]; then"
-         write(lun,20) 'cp -ar G$2* $CONDOR_INITIAL_DIR/'
+         write(lun,20) 'cp -af G$2* $CONDOR_INITIAL_DIR/'
          write(lun,20) 
 c endif
          write(lun,15) "fi"

@@ -283,6 +283,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                     matrix_element, 
                                     fortran_model)
 
+        filename = 'iproc.dat'
+        self.write_iproc_file(writers.FortranWriter(filename),
+                              me_number)
+
         filename = 'fks_info.inc'
         self.write_fks_info_file(writers.FortranWriter(filename), 
                                  matrix_element, 
@@ -639,7 +643,7 @@ end
         filename = 'born_decayBW.inc'
         self.write_decayBW_file(writers.FortranWriter(filename),
                             s_and_t_channels)
-    
+
         filename = 'born_leshouche.inc'
         nflows = self.write_leshouche_file(writers.FortranWriter(filename),
                              matrix_element.born_matrix_element,

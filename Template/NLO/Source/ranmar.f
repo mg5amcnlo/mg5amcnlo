@@ -1,3 +1,19 @@
+      function ran2()
+c Wrapper for the random numbers; needed for the NLO stuff
+      implicit none
+      double precision ran2,x,a,b
+      integer ii,jconfig
+      integer           iconfig
+      common/to_configs/iconfig
+      a=0d0           ! min allowed value for x
+      b=1d0           ! max allowed value for x
+      ii=0            ! dummy argument of ntuple
+      jconfig=iconfig ! integration channel (for off-set)
+      call ntuple(x,a,b,ii,jconfig)
+      ran2=x
+      return
+      end
+
       subroutine ntuple(x,a,b,ii,jconfig)
 c-------------------------------------------------------
 c     Front to ranmar which allows user to easily
@@ -41,11 +57,9 @@ c     Modified to allow for more sequences
 c     iseed can be between 0 and 30081*30081
 c     before pattern repeats
 c
-c
 c     TJS 12/3/2010
 c     multipied iseed to give larger values more likely to make change
 c     get offset for multiple runs of single process
-c
 c
 c     TJS 18/6/2012
 c     Updated to better divide iseed among ij and kl seeds
@@ -56,8 +70,12 @@ c
          joffset = joffset * 3157
          iseed = iseed * 31300       
          ij=1802+jconfig + mod(iseed,30081)
-         kl=9373+(iseed/30081)+ioffset + joffset     !Switched to 30081  20/6/12 to avoid dupes in range 30082-31328
-         write(*,'(a,i6,a3,i6)') 'Using random seed offsets',jconfig," : ",ioffset
+         kl=9373+(iseed/30081)+ioffset + joffset     !Switched to 30081
+                                                     !20/6/12 to avoid
+                                                     !dupes in range
+                                                     !30082-31328
+         write(*,'(a,i6,a3,i6,a3,i6)') 'Using random seed offsets:'
+     &        ,jconfig," , ",ioffset," , ",joffset
          write(*,*) ' with seed', iseed/31300
          do while (ij .gt. 31328)
             ij = ij - 31328
@@ -270,74 +288,3 @@ c
       jranmr = 33
       end
 
-
-
-
-
-
-
-
-
-
-      function ran2()
-c-------------------------------------------------------
-c     Front to ranmar which allows user to easily
-c     choose the seed.
-c------------------------------------------------------
-      implicit none
-c
-c     Arguments
-c
-      real*8 ran2
-c
-c     Local
-c
-      real*8 x
-      integer init,ioffset
-      integer ij,kl,iseed1,iseed2
-
-c
-c     Global
-c
-      integer*8       iseed
-      common /to_seed/iseed
-
-      integer           iconfig
-      common/to_configs/iconfig
-c
-c     Data
-c
-      data init /1/
-      save ij, kl
-c-----
-c  Begin Code
-c-----
-      if (init .eq. 1) then
-         init = 0
-         call get_offset(ioffset)
-         if (iseed .eq. 0) call get_base(iseed)
-c
-c     TJS 3/13/2008
-c     Modified to allow for more sequences 
-c     iseed can be between 0 and 31328*30081
-c     before pattern repeats
-c
-         ij=1802+iconfig + mod(iseed,30081)
-         kl=9373+(iseed/31328)+ioffset 
-         write(*,'(a,i6,a3,i6)') 'Using random seed offsets',iconfig,
-     &        " : ",ioffset
-         write(*,*) ' with seed', iseed
-         do while (ij .gt. 31328)
-            ij = ij - 31328
-         enddo
-         do while (kl .gt. 30081)
-            kl = kl - 30081
-         enddo
-        call rmarin(ij,kl)         
-      endif
-      call ranmar(x)
-      do while (x .lt. 1d-16)
-         call ranmar(x)
-      enddo
-      ran2=x
-      end

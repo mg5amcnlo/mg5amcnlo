@@ -24,9 +24,7 @@ r=0
 if [[ -e randinit ]]; then
     source ./randinit
 fi
-for i in P*_* ; do
-    r=`expr $r + 1`
-done
+r=`expr $r + 1`
 echo "r=$r" >& randinit
 #--------------------------
 
