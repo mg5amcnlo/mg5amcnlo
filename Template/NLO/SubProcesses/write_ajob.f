@@ -52,21 +52,6 @@ c-----
          write(lun,15) 'rm -f wait.$script >& /dev/null'
          write(lun,15) 'touch run.$script'
          write(lun,15) 'echo $script'
-         write(lun,15) 'ln -sf ../../randinit .'
-         write(lun,15) 'ln -sf ../symfact.dat .'
-         write(lun,15) 'if [[ -e ../MadLoopParams.dat ]]; then'
-         write(lun,20) 'ln -sf ../MadLoopParams.dat .'
-         write(lun,15) 'fi'
-         write(lun,15)
-     &        'if [[ -e ../ColorDenomFactors.dat ]]; then'
-         write(lun,20) 'ln -sf ../ColorDenomFactors.dat .'
-         write(lun,15) 'fi'
-         write(lun,15) 'if [[ -e ../HelConfigs.dat ]]; then'
-         write(lun,20) 'ln -sf ../HelConfigs.dat .'
-         write(lun,15) 'fi'
-         write(lun,15) 'if [[ -e ../ColorNumFactors.dat ]]; then'
-         write(lun,20) 'ln -sf ../ColorNumFactors.dat .'
-         write(lun,15) 'fi'
          write(lun,'(a$)') 'for i in '
       elseif(run_cluster.eq.1) then
          write(lun,15) '#!/bin/bash'
@@ -89,12 +74,9 @@ c-----
      &        /'../../lib/Pdfdata ./lib/'
          write(lun,15) 'ln -s $CONDOR_INITIAL_DIR/'/
      &        /'../../lib/PDFsets ./lib/'
-         write(lun,15) 'cp -af $CONDOR_INITIAL_DIR/'/
-     &        /'../../randinit .'
-         write(lun,15) 'cp -af $CONDOR_INITIAL_DIR/'/
-     &        /'../symfact.dat .'
-         write(lun,15) 'cp -af $CONDOR_INITIAL_DIR/'/
-     &        /'../iproc.dat .'
+         write(lun,15) 'cp -af $CONDOR_INITIAL_DIR/../randinit .'
+         write(lun,15) 'cp -af $CONDOR_INITIAL_DIR/symfact.dat .'
+         write(lun,15) 'cp -af $CONDOR_INITIAL_DIR/iproc.dat .'
 c Specal stuff for MadLoop (only copy if they exist)
          write(lun,15) 'if [[ -e $CONDOR_INITIAL_DIR/'/
      &        /'MadLoopParams.dat ]]; then'
@@ -196,13 +178,13 @@ c madevent_vegas or madevent_mint
          write(lun,25) 'if [[ "$4" != "" ]]; then'
          write(lun,30) 'if [[ -e ../$4\_G$i ]]; then'
          write(lun,35) "if [[ $1 == '0' ]]; then"
-         write(lun,40) 'cp -af ../$4\_G$i/*.sv1 .'
+         write(lun,40) 'cp -rf ../$4\_G$i/*.sv1 .'
          write(lun,40)
-     &        'cp -af ../$4\_G$i/grid.MC_integer . >/dev/null 2>&1'
+     &        'cp -f ../$4\_G$i/grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) "elif [[ $1 == '1' ]]; then"
-         write(lun,40) 'cp -af ../$4\_G$i/mint_grids .'
+         write(lun,40) 'cp -f ../$4\_G$i/mint_grids .'
          write(lun,40)
-     &        'cp -af ../$4\_G$i/grid.MC_integer . >/dev/null 2>&1'
+     &        'cp -f ../$4\_G$i/grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) "fi"
          write(lun,30) 'else'
          write(lun,35) 'echo "Cannot find direcotry ../$4\_G$i/"'//
@@ -219,9 +201,9 @@ c madevent_mintMC
          write(lun,25) 'cd $j'
          write(lun,25) 'if [[ "$4" != "" ]]; then'
          write(lun,30) 'if [[ -e ../G$4$i ]]; then'
-         write(lun,35) 'cp -af ../G$4$i/mint_grids ./preset_mint_grids'
+         write(lun,35) 'cp -f ../G$4$i/mint_grids ./preset_mint_grids'
          write(lun,35)
-     &        'cp -af ../G$4$i/grid.MC_integer . >/dev/null 2>&1'
+     &        'cp -f ../G$4$i/grid.MC_integer . >/dev/null 2>&1'
          write(lun,30) 'else'
          write(lun,35) 'echo "Cannot find direcotry ../G$4$i/"'//
      &        ' > log.txt'
@@ -230,6 +212,21 @@ c madevent_mintMC
          write(lun,25) 'fi'
 c endif
          write(lun,20) "fi"
+         write(lun,15) 'ln -sf ../../randinit .'
+         write(lun,15) 'ln -sf ../symfact.dat .'
+         write(lun,15) 'if [[ -e ../MadLoopParams.dat ]]; then'
+         write(lun,20) 'ln -sf ../MadLoopParams.dat .'
+         write(lun,15) 'fi'
+         write(lun,15)
+     &        'if [[ -e ../ColorDenomFactors.dat ]]; then'
+         write(lun,20) 'ln -sf ../ColorDenomFactors.dat .'
+         write(lun,15) 'fi'
+         write(lun,15) 'if [[ -e ../HelConfigs.dat ]]; then'
+         write(lun,20) 'ln -sf ../HelConfigs.dat .'
+         write(lun,15) 'fi'
+         write(lun,15) 'if [[ -e ../ColorNumFactors.dat ]]; then'
+         write(lun,20) 'ln -sf ../ColorNumFactors.dat .'
+         write(lun,15) 'fi'
 
 c madevent_vegas
          write(lun,20) "if [[ $1 == '0' ]]; then"
@@ -266,11 +263,11 @@ c madevent_mintMC
          write(lun,25) 'T="$(($(date +%s)-T))"'
          write(lun,25) 'echo "Time in seconds: ${T}" >>log.txt'
 c endif
-         write(lun,25) 'cp -af log.txt log_MINT$3.txt'
+         write(lun,25) 'cp -f log.txt log_MINT$3.txt'
          write(lun,20) "fi"
          write(lun,20) 'cd ../'
          write(lun,15) 'done'
-         write(lun,15) 'rm -af run.$script'
+         write(lun,15) 'rm -f run.$script'
          write(lun,15) 'touch done.$script'
 
       elseif(run_cluster.eq.1) then
@@ -379,7 +376,7 @@ c$$$         write(lun,30) 'echo "r=$r" >& randinit'
      &        'time ../madevent_mintMC > log.txt <input_app.txt 2>&1'
          write(lun,25) 'T="$(($(date +%s)-T))"'
          write(lun,25) 'echo "Time in seconds: ${T}" >>log.txt'
-         write(lun,25) 'cp -af log.txt log_MINT$3.txt'
+         write(lun,25) 'cp -f log.txt log_MINT$3.txt'
 c endif
          write(lun,20) "fi"
 
