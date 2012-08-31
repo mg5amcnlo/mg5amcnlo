@@ -82,10 +82,10 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         fi
     fi
     if  [[ ! -e randinit ]] ; then
-	ln -sf ../randinit .
+	cp -af ../randinit .
     fi
-    if  [[ ! -e symfact ]] ; then
-	ln -sf ../symfact .
+    if  [[ ! -e symfact.dat ]] ; then
+	cp -af ../symfact.dat .
     fi
     if  [[ ! -e MadLoopParams.dat ]] ; then
 	ln -sf ../MadLoopParams.dat .
