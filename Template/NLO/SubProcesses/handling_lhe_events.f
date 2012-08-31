@@ -59,10 +59,10 @@ c
 
       subroutine write_lhef_header_banner(ifile,nevents,MonteCarlo,path)
       implicit none 
-      integer ifile,nevents
+      integer ifile,nevents,iseed
       character*10 MonteCarlo
       character*100 path
-      character*72 buffer
+      character*72 buffer,buffer2
 c
       write(ifile,'(a)') '<LesHouchesEvents version="1.0">'
       write(ifile,'(a)') '  <!--'
@@ -93,7 +93,20 @@ c
      &     ,err=97)
       do
          read(71,'(a)',err=87,end=87) buffer
-         write(ifile,'(a)') buffer
+c Replace the random number seed with the one used...
+         if (index(buffer,'iseed').ne.0) then
+            open (unit=72,file="randinit",status="old",err=96)
+            read(72,'(a)') buffer2
+            if (index(buffer2,'=').eq.0) goto 96
+            buffer2=buffer2(index(buffer2,'=')+1:)
+            read(buffer2,*) iseed
+            close(72)
+            write(buffer,'(i11,a)')iseed,' =  iseed'
+         endif
+         goto 95
+ 96      write (*,*) '"randinit" file not found in write_lhef_header_'/
+     &        /'banner: not overwriting iseed in event file header.'
+ 95      write(ifile,'(a)') buffer
       enddo
  87   close(71)
       write(ifile,'(a)') '  </MG5RunCard>'
