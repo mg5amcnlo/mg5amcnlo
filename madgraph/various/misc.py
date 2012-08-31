@@ -194,6 +194,72 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
         raise MadGraph5Error, error_text
     return p.returncode
 
+def mod_compilator(directory, new='gfortran', current=None):
+    #define global regular expression
+    if type(directory)!=list:
+        directory=[directory]
+
+    #search file
+    file_to_change=find_makefile_in_dir(directory)
+    for name in file_to_change:
+        text = open(name,'r').read()
+        if new == 'g77' and current is None:
+            current = 'gfortran'
+        elif new == 'gfortran' and current is None:
+            current = 'g77'
+        pattern = re.compile(current)
+        text= pattern.sub(new, text)
+        open(name,'w').write(text)
+
+def detect_current_compiler(path):
+    """find the current compiler for the current directory"""
+    
+    comp = re.compile("^\s*FC\s*=\s*(\w+)\s*")
+    for line in open(path):
+        if comp.search(line):
+            compiler = comp.search(line).groups()[0]
+            return compiler
+
+def find_makefile_in_dir(directory):
+    """ return a list of all file starting with makefile in the given directory"""
+
+    out=[]
+    #list mode
+    if type(directory)==list:
+        for name in directory:
+            out+=find_makefile_in_dir(name)
+        return out
+
+    #single mode
+    for name in os.listdir(directory):
+        if os.path.isdir(directory+'/'+name):
+            out+=find_makefile_in_dir(directory+'/'+name)
+        elif os.path.isfile(directory+'/'+name) and name.lower().startswith('makefile'):
+            out.append(directory+'/'+name)
+        elif os.path.isfile(directory+'/'+name) and name.lower().startswith('make_opt'):
+            out.append(directory+'/'+name)
+    return out
+
+def rm_old_compile_file():
+
+    # remove all the .o files
+    os.path.walk('.', rm_file_extension, '.o')
+    
+    # remove related libraries
+    libraries = ['libblocks.a', 'libgeneric_mw.a', 'libMWPS.a', 'libtools.a', 'libdhelas3.a',
+                 'libdsample.a', 'libgeneric.a', 'libmodel.a', 'libpdf.a', 'libdhelas3.so', 'libTF.a', 
+                 'libdsample.so', 'libgeneric.so', 'libmodel.so', 'libpdf.so']
+    lib_pos='./lib'
+    [os.remove(os.path.join(lib_pos, lib)) for lib in libraries \
+                                 if os.path.exists(os.path.join(lib_pos, lib))]
+
+
+def rm_file_extension( ext, dirname, names):
+
+    [os.remove(os.path.join(dirname, name)) for name in names if name.endswith(ext)]
+
+
+
 # Control
 def check_system_error(value=1):
     def deco_check(f):

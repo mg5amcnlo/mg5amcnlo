@@ -446,6 +446,20 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # execute the line command
         return line
 
+    def postcmd(self,stop, line):
+        """ finishing a command
+        This looks if the command add a special post part."""
+
+        if line.strip():
+            try:
+                cmd, subline = line.split(None, 1)
+            except ValueError:
+                pass
+            else:
+                if hasattr(self,'post_%s' %cmd):
+                    stop = getattr(self, 'post_%s' % cmd)(stop, subline)
+        return stop
+
     def nice_error_handling(self, error, line):
         """ """ 
         # Make sure that we are at the initial position
@@ -708,7 +722,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             self.history.pop()
         
         # Read the lines of the file and execute them
-        self.inputfile = open(filepath)
+        commandline = open(filepath).readlines()
+        self.inputfile = (l for l in commandline) # make a generator
+        # Note using "for line in open(filepath)" is not safe since the file
+        # filepath can be overwritten during the run (leading to weird results)
+        # Note also that we need a generator and not a list.
         for line in self.inputfile:
             #remove pointless spaces and \n
             line = line.replace('\n', '').strip()
@@ -752,7 +770,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         """ """
         
         args = self.split_arg(self.lastcmd)
-        if args[0] in ['quit','exit']:
+        if args and args[0] in ['quit','exit']:
             if 'all' in args:
                 return True
             if len(args) >1 and args[1].isdigit():
@@ -1066,30 +1084,37 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             args.append(base)
         self.write_configuration(args[0], base, basedir)
         
-    def write_configuration(self, filepath, basefile, basedir):
+    def write_configuration(self, filepath, basefile, basedir, to_keep):
         """Write the configuration file"""
         # We use the default configuration file as a template.
         # to ensure that all configuration information are written we 
         # keep track of all key that we need to write.
 
         logger.info('save configuration file to %s' % filepath)
-        to_write = self.options.keys()[:]
+        to_write = to_keep.keys()
         text = ""
         # Use local configuration => Need to update the path
         for line in file(basefile):
-            if '#' in line:
-                data, comment = line.split('#',1)
+            if '=' in line:
+                data, value = line.split('=',1)
             else: 
-                data, comment = line, ''
-            data = data.split('=')
-            if len(data) !=2:
                 text += line
                 continue
-            key = data[0].strip()
-            if key in self.options:
-                value = str(self.options[key])
+            data = data.strip()
+            if data.startswith('#'):
+                key = data[1:].strip()
+            else: 
+                key = data 
+            if '#' in value:
+                value, comment = value.split('#',1)
             else:
-                value = data[1].strip()
+                comment = ''    
+            
+            if key in to_keep:
+                value = str(to_keep[key])
+            else:
+                text += line
+                continue
             try:
                 to_write.remove(key)
             except:
@@ -1097,14 +1122,17 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if '_path' in key:       
                 # special case need to update path
                 # check if absolute path
-                if value.startswith('./'):
+                if not os.path.isabs(value):
                     value = os.path.realpath(os.path.join(basedir, value))
             text += '%s = %s # %s \n' % (key, value, comment)
         for key in to_write:
-            if key in self.options:
-                text += '%s = %s \n' % (key,self.options[key])
-            else:
-                text += '%s = %s \n' % (key,self.options[key])
+            if key in to_keep:
+                text += '%s = %s \n' % (key, to_keep[key])
+        
+        if not MADEVENT:
+            text += """\n# MG5 MAIN DIRECTORY\n"""
+            text += "mg5_path = %s\n" % MG5DIR         
+        
         writer = open(filepath,'w')
         writer.write(text)
         writer.close()

@@ -66,13 +66,20 @@ class LoopExporterFortran(object):
         clean. This creates a diamond inheritance scheme in which we avoid mro
         (method resolution order) ambiguity by using unique method names here."""
 
-    def __init__(self, loop_dir = "", cuttools_dir = "", *args, **kwargs):
+    def __init__(self, mgme_dir="", dir_path = "", opt=None):
         """Initiate the LoopExporterFortran with directory information on where
         to find all the loop-related source files, like CutTools"""
 
-        self.loop_dir = loop_dir
-        self.cuttools_dir = cuttools_dir
-        super(LoopExporterFortran,self).__init__(*args, **kwargs)
+        if opt:
+            self.opt = opt
+        else: 
+            self.opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'madevent', 'mp':True,
+                        'loop_dir':'', 'cuttools_dir':''}
+
+        self.loop_dir = self.opt['loop_dir']
+        self.cuttools_dir = self.opt['cuttools_dir']
+        super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)
         
     def link_CutTools(self, targetPath):
         """Link the CutTools source directory inside the target path given
@@ -118,18 +125,14 @@ class LoopExporterFortran(object):
 #===============================================================================
 # LoopProcessExporterFortranSA
 #===============================================================================
-class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
-                                   LoopExporterFortran):
+class LoopProcessExporterFortranSA(LoopExporterFortran,
+                                   export_v4.ProcessExporterFortranSA):
+                                   
     """Class to take care of exporting a set of loop matrix elements in the
        Fortran format."""
        
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop')
     
-    # Init function to initialize both mother classes, depending on the nature
-    # of the argument given
-    def __init__(self, *args, **kwargs):
-       super(LoopProcessExporterFortranSA, self).__init__(*args, **kwargs)          
-
     def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """

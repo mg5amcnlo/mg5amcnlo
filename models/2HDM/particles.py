@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 535 $
-# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Mon 11 Apr 2011 22:27:17
+# This file was automatically created by FeynRules 1.7.55
+# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (October 6, 2011)
+# Date: Wed 8 Aug 2012 14:37:00
 
 
 from __future__ import division
@@ -15,10 +15,10 @@ ve = Particle(pdg_code = 12,
               mass = Param.ZERO,
               width = Param.ZERO,
               texname = 've',
-              antitexname = 've',
+              antitexname = 've~',
               charge = 0,
-              LeptonNumber = 1,
-              GhostNumber = 0)
+              GhostNumber = 0,
+              LeptonNumber = 1)
 
 ve__tilde__ = ve.anti()
 
@@ -30,10 +30,10 @@ vm = Particle(pdg_code = 14,
               mass = Param.ZERO,
               width = Param.ZERO,
               texname = 'vm',
-              antitexname = 'vm',
+              antitexname = 'vm~',
               charge = 0,
-              LeptonNumber = 1,
-              GhostNumber = 0)
+              GhostNumber = 0,
+              LeptonNumber = 1)
 
 vm__tilde__ = vm.anti()
 
@@ -45,10 +45,10 @@ vt = Particle(pdg_code = 16,
               mass = Param.ZERO,
               width = Param.ZERO,
               texname = 'vt',
-              antitexname = 'vt',
+              antitexname = 'vt~',
               charge = 0,
-              LeptonNumber = 1,
-              GhostNumber = 0)
+              GhostNumber = 0,
+              LeptonNumber = 1)
 
 vt__tilde__ = vt.anti()
 
@@ -60,10 +60,10 @@ e__minus__ = Particle(pdg_code = 11,
                       mass = Param.ZERO,
                       width = Param.ZERO,
                       texname = 'e-',
-                      antitexname = 'e-',
+                      antitexname = 'e+',
                       charge = -1,
-                      LeptonNumber = 1,
-                      GhostNumber = 0)
+                      GhostNumber = 0,
+                      LeptonNumber = 1)
 
 e__plus__ = e__minus__.anti()
 
@@ -75,10 +75,10 @@ m__minus__ = Particle(pdg_code = 13,
                       mass = Param.MM,
                       width = Param.ZERO,
                       texname = 'm-',
-                      antitexname = 'm-',
+                      antitexname = 'm+',
                       charge = -1,
-                      LeptonNumber = 1,
-                      GhostNumber = 0)
+                      GhostNumber = 0,
+                      LeptonNumber = 1)
 
 m__plus__ = m__minus__.anti()
 
@@ -90,10 +90,10 @@ tt__minus__ = Particle(pdg_code = 15,
                        mass = Param.MTA,
                        width = Param.ZERO,
                        texname = 'tt-',
-                       antitexname = 'tt-',
+                       antitexname = 'tt+',
                        charge = -1,
-                       LeptonNumber = 1,
-                       GhostNumber = 0)
+                       GhostNumber = 0,
+                       LeptonNumber = 1)
 
 tt__plus__ = tt__minus__.anti()
 
@@ -105,10 +105,10 @@ u = Particle(pdg_code = 2,
              mass = Param.ZERO,
              width = Param.ZERO,
              texname = 'u',
-             antitexname = 'u',
+             antitexname = 'u~',
              charge = 2/3,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 u__tilde__ = u.anti()
 
@@ -120,10 +120,10 @@ c = Particle(pdg_code = 4,
              mass = Param.MC,
              width = Param.ZERO,
              texname = 'c',
-             antitexname = 'c',
+             antitexname = 'c~',
              charge = 2/3,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 c__tilde__ = c.anti()
 
@@ -135,10 +135,10 @@ t = Particle(pdg_code = 6,
              mass = Param.MT,
              width = Param.WT,
              texname = 't',
-             antitexname = 't',
+             antitexname = 't~',
              charge = 2/3,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 t__tilde__ = t.anti()
 
@@ -150,10 +150,10 @@ d = Particle(pdg_code = 1,
              mass = Param.ZERO,
              width = Param.ZERO,
              texname = 'd',
-             antitexname = 'd',
+             antitexname = 'd~',
              charge = -1/3,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 d__tilde__ = d.anti()
 
@@ -165,10 +165,10 @@ s = Particle(pdg_code = 3,
              mass = Param.MS,
              width = Param.ZERO,
              texname = 's',
-             antitexname = 's',
+             antitexname = 's~',
              charge = -1/3,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 s__tilde__ = s.anti()
 
@@ -180,10 +180,10 @@ b = Particle(pdg_code = 5,
              mass = Param.MB,
              width = Param.ZERO,
              texname = 'b',
-             antitexname = 'b',
+             antitexname = 'b~',
              charge = -1/3,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 b__tilde__ = b.anti()
 
@@ -197,8 +197,8 @@ a = Particle(pdg_code = 22,
              texname = 'a',
              antitexname = 'a',
              charge = 0,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 z = Particle(pdg_code = 23,
              name = 'z',
@@ -210,8 +210,8 @@ z = Particle(pdg_code = 23,
              texname = 'z',
              antitexname = 'z',
              charge = 0,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 w__plus__ = Particle(pdg_code = 24,
                      name = 'w+',
@@ -221,10 +221,10 @@ w__plus__ = Particle(pdg_code = 24,
                      mass = Param.MW,
                      width = Param.WW,
                      texname = 'w+',
-                     antitexname = 'w+',
+                     antitexname = 'w-',
                      charge = 1,
-                     LeptonNumber = 0,
-                     GhostNumber = 0)
+                     GhostNumber = 0,
+                     LeptonNumber = 0)
 
 w__minus__ = w__plus__.anti()
 
@@ -238,8 +238,8 @@ G = Particle(pdg_code = 21,
              texname = 'G',
              antitexname = 'G',
              charge = 0,
-             LeptonNumber = 0,
-             GhostNumber = 0)
+             GhostNumber = 0,
+             LeptonNumber = 0)
 
 h__plus__ = Particle(pdg_code = 37,
                      name = 'h+',
@@ -249,10 +249,10 @@ h__plus__ = Particle(pdg_code = 37,
                      mass = Param.mhc,
                      width = Param.whc,
                      texname = 'h+',
-                     antitexname = 'h+',
+                     antitexname = 'h-',
                      charge = 1,
-                     LeptonNumber = 0,
-                     GhostNumber = 0)
+                     GhostNumber = 0,
+                     LeptonNumber = 0)
 
 h__minus__ = h__plus__.anti()
 
@@ -266,8 +266,8 @@ h1 = Particle(pdg_code = 25,
               texname = 'h1',
               antitexname = 'h1',
               charge = 0,
-              LeptonNumber = 0,
-              GhostNumber = 0)
+              GhostNumber = 0,
+              LeptonNumber = 0)
 
 h2 = Particle(pdg_code = 35,
               name = 'h2',
@@ -279,8 +279,8 @@ h2 = Particle(pdg_code = 35,
               texname = 'h2',
               antitexname = 'h2',
               charge = 0,
-              LeptonNumber = 0,
-              GhostNumber = 0)
+              GhostNumber = 0,
+              LeptonNumber = 0)
 
 h3 = Particle(pdg_code = 36,
               name = 'h3',
@@ -292,6 +292,6 @@ h3 = Particle(pdg_code = 36,
               texname = 'h3',
               antitexname = 'h3',
               charge = 0,
-              LeptonNumber = 0,
-              GhostNumber = 0)
+              GhostNumber = 0,
+              LeptonNumber = 0)
 

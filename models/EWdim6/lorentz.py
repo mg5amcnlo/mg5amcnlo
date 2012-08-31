@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 1167 $
+# This file was automatically created by FeynRules 1.7.9
 # Mathematica version: 8.0 for Linux x86 (64-bit) (February 23, 2011)
-# Date: Fri 4 May 2012 16:30:01
+# Date: Fri 18 May 2012 14:43:24
 
 
 from object_library import all_lorentz, Lorentz
@@ -9,225 +9,213 @@ from function_library import complexconjugate, re, im, csc, sec, acsc, asec
 
 
 
-UUV1 = Lorentz(name = 'UUV1',
+UUV2 = Lorentz(name = 'UUV2',
                spins = [ -1, -1, 3 ],
                structure = 'P(3,2) + P(3,3)')
 
-SSS1 = Lorentz(name = 'SSS1',
+SSS2 = Lorentz(name = 'SSS2',
                spins = [ 1, 1, 1 ],
                structure = '1')
 
-FFS1 = Lorentz(name = 'FFS1',
+FFS2 = Lorentz(name = 'FFS2',
                spins = [ 2, 2, 1 ],
                structure = 'Identity(2,1)')
 
-FFV1 = Lorentz(name = 'FFV1',
+FFV6 = Lorentz(name = 'FFV6',
                spins = [ 2, 2, 3 ],
                structure = 'Gamma(3,2,1)')
 
-FFV2 = Lorentz(name = 'FFV2',
+FFV7 = Lorentz(name = 'FFV7',
                spins = [ 2, 2, 3 ],
                structure = 'Gamma(3,2,-1)*ProjM(-1,1)')
 
-FFV3 = Lorentz(name = 'FFV3',
+FFV8 = Lorentz(name = 'FFV8',
                spins = [ 2, 2, 3 ],
                structure = 'Gamma(3,2,-1)*ProjM(-1,1) - 2*Gamma(3,2,-1)*ProjP(-1,1)')
 
-FFV4 = Lorentz(name = 'FFV4',
-               spins = [ 2, 2, 3 ],
-               structure = 'Gamma(3,2,-1)*ProjM(-1,1) + Gamma(3,2,-1)*ProjP(-1,1)')
-
-FFV5 = Lorentz(name = 'FFV5',
+FFV9 = Lorentz(name = 'FFV9',
                spins = [ 2, 2, 3 ],
                structure = 'Gamma(3,2,-1)*ProjM(-1,1) + 2*Gamma(3,2,-1)*ProjP(-1,1)')
 
-FFV6 = Lorentz(name = 'FFV6',
-               spins = [ 2, 2, 3 ],
-               structure = 'Gamma(3,2,-1)*ProjM(-1,1) + 4*Gamma(3,2,-1)*ProjP(-1,1)')
+FFV10 = Lorentz(name = 'FFV10',
+                spins = [ 2, 2, 3 ],
+                structure = 'Gamma(3,2,-1)*ProjM(-1,1) + 4*Gamma(3,2,-1)*ProjP(-1,1)')
 
 VSS1 = Lorentz(name = 'VSS1',
                spins = [ 3, 1, 1 ],
                structure = 'Epsilon(1,-1,-2,-3)*P(-3,1)*P(-2,3)*P(-1,2) + Epsilon(1,-1,-2,-3)*P(-3,1)*P(-2,2)*P(-1,3)')
 
-VVS1 = Lorentz(name = 'VVS1',
+VVS5 = Lorentz(name = 'VVS5',
                spins = [ 3, 3, 1 ],
                structure = 'Epsilon(1,2,-1,-2)*P(-2,1)*P(-1,3)')
 
-VVS2 = Lorentz(name = 'VVS2',
+VVS6 = Lorentz(name = 'VVS6',
                spins = [ 3, 3, 1 ],
                structure = 'Epsilon(1,2,-1,-2)*P(-2,2)*P(-1,3)')
 
-VVS3 = Lorentz(name = 'VVS3',
+VVS7 = Lorentz(name = 'VVS7',
                spins = [ 3, 3, 1 ],
                structure = 'Epsilon(1,2,-1,-2)*P(-2,1)*P(-1,3) - Epsilon(1,2,-1,-2)*P(-2,2)*P(-1,3)')
 
-VVS4 = Lorentz(name = 'VVS4',
+VVS8 = Lorentz(name = 'VVS8',
                spins = [ 3, 3, 1 ],
                structure = 'Metric(1,2)')
 
-VVS5 = Lorentz(name = 'VVS5',
+VVS9 = Lorentz(name = 'VVS9',
                spins = [ 3, 3, 1 ],
                structure = 'P(1,3)*P(2,1) - P(-1,1)*P(-1,3)*Metric(1,2)')
 
-VVS6 = Lorentz(name = 'VVS6',
-               spins = [ 3, 3, 1 ],
-               structure = 'P(1,2)*P(2,3) - P(-1,2)*P(-1,3)*Metric(1,2)')
+VVS10 = Lorentz(name = 'VVS10',
+                spins = [ 3, 3, 1 ],
+                structure = 'P(1,2)*P(2,3) - P(-1,2)*P(-1,3)*Metric(1,2)')
 
-VVS7 = Lorentz(name = 'VVS7',
-               spins = [ 3, 3, 1 ],
-               structure = 'P(1,3)*P(2,1) + P(1,2)*P(2,3) - P(-1,1)*P(-1,3)*Metric(1,2) - P(-1,2)*P(-1,3)*Metric(1,2)')
-
-VVV1 = Lorentz(name = 'VVV1',
-               spins = [ 3, 3, 3 ],
-               structure = 'Epsilon(1,2,3,-1)*P(-1,1) + Epsilon(1,2,3,-1)*P(-1,2)')
-
-VVV2 = Lorentz(name = 'VVV2',
-               spins = [ 3, 3, 3 ],
-               structure = 'Epsilon(1,2,3,-1)*P(-1,2) + Epsilon(1,2,3,-1)*P(-1,3)')
-
-VVV3 = Lorentz(name = 'VVV3',
-               spins = [ 3, 3, 3 ],
-               structure = 'Epsilon(1,2,3,-1)*P(-1,1) + Epsilon(1,2,3,-1)*P(-1,2) + Epsilon(1,2,3,-1)*P(-1,3)')
+VVS11 = Lorentz(name = 'VVS11',
+                spins = [ 3, 3, 1 ],
+                structure = 'P(1,3)*P(2,1) + P(1,2)*P(2,3) - P(-1,1)*P(-1,3)*Metric(1,2) - P(-1,2)*P(-1,3)*Metric(1,2)')
 
 VVV4 = Lorentz(name = 'VVV4',
                spins = [ 3, 3, 3 ],
-               structure = 'P(3,1)*Metric(1,2) - P(2,1)*Metric(1,3)')
+               structure = 'Epsilon(1,2,3,-1)*P(-1,1) + Epsilon(1,2,3,-1)*P(-1,2)')
 
 VVV5 = Lorentz(name = 'VVV5',
                spins = [ 3, 3, 3 ],
-               structure = 'P(3,1)*Metric(1,2) - P(3,2)*Metric(1,2) - P(2,1)*Metric(1,3) + P(1,2)*Metric(2,3)')
+               structure = 'Epsilon(1,2,3,-1)*P(-1,2) + Epsilon(1,2,3,-1)*P(-1,3)')
 
 VVV6 = Lorentz(name = 'VVV6',
                spins = [ 3, 3, 3 ],
-               structure = 'P(2,3)*Metric(1,3) - P(1,3)*Metric(2,3)')
+               structure = 'Epsilon(1,2,3,-1)*P(-1,1) + Epsilon(1,2,3,-1)*P(-1,2) + Epsilon(1,2,3,-1)*P(-1,3)')
 
 VVV7 = Lorentz(name = 'VVV7',
                spins = [ 3, 3, 3 ],
-               structure = 'P(3,1)*Metric(1,2) - P(3,2)*Metric(1,2) - P(2,1)*Metric(1,3) + P(2,3)*Metric(1,3) + P(1,2)*Metric(2,3) - P(1,3)*Metric(2,3)')
+               structure = 'P(3,1)*Metric(1,2) - P(2,1)*Metric(1,3)')
 
 VVV8 = Lorentz(name = 'VVV8',
                spins = [ 3, 3, 3 ],
-               structure = 'P(3,2)*Metric(1,2) - P(2,3)*Metric(1,3) - P(1,2)*Metric(2,3) + P(1,3)*Metric(2,3)')
+               structure = 'P(3,1)*Metric(1,2) - P(3,2)*Metric(1,2) - P(2,1)*Metric(1,3) + P(1,2)*Metric(2,3)')
 
 VVV9 = Lorentz(name = 'VVV9',
                spins = [ 3, 3, 3 ],
-               structure = '-(P(1,2)*P(2,3)*P(3,1)) + P(1,3)*P(2,1)*P(3,2) + P(-1,2)*P(-1,3)*P(3,1)*Metric(1,2) - P(-1,1)*P(-1,3)*P(3,2)*Metric(1,2) - P(-1,2)*P(-1,3)*P(2,1)*Metric(1,3) + P(-1,1)*P(-1,2)*P(2,3)*Metric(1,3) + P(-1,1)*P(-1,3)*P(1,2)*Metric(2,3) - P(-1,1)*P(-1,2)*P(1,3)*Metric(2,3)')
+               structure = 'P(2,3)*Metric(1,3) - P(1,3)*Metric(2,3)')
 
 VVV10 = Lorentz(name = 'VVV10',
                 spins = [ 3, 3, 3 ],
+                structure = 'P(3,1)*Metric(1,2) - P(3,2)*Metric(1,2) - P(2,1)*Metric(1,3) + P(2,3)*Metric(1,3) + P(1,2)*Metric(2,3) - P(1,3)*Metric(2,3)')
+
+VVV11 = Lorentz(name = 'VVV11',
+                spins = [ 3, 3, 3 ],
+                structure = 'P(3,2)*Metric(1,2) - P(2,3)*Metric(1,3) - P(1,2)*Metric(2,3) + P(1,3)*Metric(2,3)')
+
+VVV12 = Lorentz(name = 'VVV12',
+                spins = [ 3, 3, 3 ],
+                structure = '-(P(1,2)*P(2,3)*P(3,1)) + P(1,3)*P(2,1)*P(3,2) + P(-1,2)*P(-1,3)*P(3,1)*Metric(1,2) - P(-1,1)*P(-1,3)*P(3,2)*Metric(1,2) - P(-1,2)*P(-1,3)*P(2,1)*Metric(1,3) + P(-1,1)*P(-1,2)*P(2,3)*Metric(1,3) + P(-1,1)*P(-1,3)*P(1,2)*Metric(2,3) - P(-1,1)*P(-1,2)*P(1,3)*Metric(2,3)')
+
+VVV13 = Lorentz(name = 'VVV13',
+                spins = [ 3, 3, 3 ],
                 structure = '2*Epsilon(1,2,3,-2)*P(-2,3)*P(-1,1)*P(-1,2) + 2*Epsilon(1,2,3,-2)*P(-2,2)*P(-1,1)*P(-1,3) + 2*Epsilon(1,2,3,-2)*P(-2,1)*P(-1,2)*P(-1,3) - Epsilon(2,3,-1,-2)*P(-2,3)*P(-1,1)*P(1,2) + Epsilon(2,3,-1,-2)*P(-2,1)*P(-1,3)*P(1,2) - Epsilon(2,3,-1,-2)*P(-2,2)*P(-1,1)*P(1,3) + Epsilon(2,3,-1,-2)*P(-2,1)*P(-1,2)*P(1,3) + Epsilon(1,3,-1,-2)*P(-2,3)*P(-1,2)*P(2,1) - Epsilon(1,3,-1,-2)*P(-2,2)*P(-1,3)*P(2,1) - Epsilon(1,3,-1,-2)*P(-2,2)*P(-1,1)*P(2,3) + Epsilon(1,3,-1,-2)*P(-2,1)*P(-1,2)*P(2,3) + Epsilon(1,2,-1,-2)*P(-2,3)*P(-1,2)*P(3,1) - Epsilon(1,2,-1,-2)*P(-2,2)*P(-1,3)*P(3,1) + Epsilon(1,2,-1,-2)*P(-2,3)*P(-1,1)*P(3,2) - Epsilon(1,2,-1,-2)*P(-2,1)*P(-1,3)*P(3,2) + (Epsilon(3,-1,-2,-3)*P(-3,3)*P(-2,2)*P(-1,1)*Metric(1,2))/2. - (Epsilon(3,-1,-2,-3)*P(-3,3)*P(-2,1)*P(-1,2)*Metric(1,2))/2. + (Epsilon(3,-1,-2,-3)*P(-3,2)*P(-2,1)*P(-1,3)*Metric(1,2))/2. - (Epsilon(3,-1,-2,-3)*P(-3,1)*P(-2,2)*P(-1,3)*Metric(1,2))/2. - (Epsilon(2,-1,-2,-3)*P(-3,2)*P(-2,3)*P(-1,1)*Metric(1,3))/2. - (Epsilon(2,-1,-2,-3)*P(-3,3)*P(-2,1)*P(-1,2)*Metric(1,3))/2. + (Epsilon(2,-1,-2,-3)*P(-3,1)*P(-2,3)*P(-1,2)*Metric(1,3))/2. + (Epsilon(2,-1,-2,-3)*P(-3,2)*P(-2,1)*P(-1,3)*Metric(1,3))/2. + (Epsilon(1,-1,-2,-3)*P(-3,3)*P(-2,2)*P(-1,1)*Metric(2,3))/2. - (Epsilon(1,-1,-2,-3)*P(-3,2)*P(-2,3)*P(-1,1)*Metric(2,3))/2. + (Epsilon(1,-1,-2,-3)*P(-3,1)*P(-2,3)*P(-1,2)*Metric(2,3))/2. - (Epsilon(1,-1,-2,-3)*P(-3,1)*P(-2,2)*P(-1,3)*Metric(2,3))/2.')
 
-SSSS1 = Lorentz(name = 'SSSS1',
+SSSS2 = Lorentz(name = 'SSSS2',
                 spins = [ 1, 1, 1, 1 ],
                 structure = '1')
 
-FFVS1 = Lorentz(name = 'FFVS1',
-                spins = [ 2, 2, 3, 1 ],
-                structure = 'Gamma(3,2,-1)*ProjM(-1,1)')
-
-VVSS1 = Lorentz(name = 'VVSS1',
+VVSS5 = Lorentz(name = 'VVSS5',
                 spins = [ 3, 3, 1, 1 ],
                 structure = 'Epsilon(1,2,-1,-2)*P(-2,1)*P(-1,3) + Epsilon(1,2,-1,-2)*P(-2,1)*P(-1,4)')
 
-VVSS2 = Lorentz(name = 'VVSS2',
+VVSS6 = Lorentz(name = 'VVSS6',
                 spins = [ 3, 3, 1, 1 ],
                 structure = 'Epsilon(1,2,-1,-2)*P(-2,1)*P(-1,3) - Epsilon(1,2,-1,-2)*P(-2,2)*P(-1,3) + Epsilon(1,2,-1,-2)*P(-2,1)*P(-1,4) - Epsilon(1,2,-1,-2)*P(-2,2)*P(-1,4)')
 
-VVSS3 = Lorentz(name = 'VVSS3',
+VVSS7 = Lorentz(name = 'VVSS7',
                 spins = [ 3, 3, 1, 1 ],
                 structure = 'Epsilon(1,2,-1,-2)*P(-2,2)*P(-1,3) + Epsilon(1,2,-1,-2)*P(-2,2)*P(-1,4)')
 
-VVSS4 = Lorentz(name = 'VVSS4',
+VVSS8 = Lorentz(name = 'VVSS8',
                 spins = [ 3, 3, 1, 1 ],
                 structure = 'Epsilon(1,2,-1,-2)*P(-2,1)*P(-1,3) - Epsilon(1,2,-1,-2)*P(-2,2)*P(-1,3) - Epsilon(1,2,-1,-2)*P(-2,4)*P(-1,3) + Epsilon(1,2,-1,-2)*P(-2,1)*P(-1,4) - Epsilon(1,2,-1,-2)*P(-2,2)*P(-1,4) - Epsilon(1,2,-1,-2)*P(-2,3)*P(-1,4)')
 
-VVSS5 = Lorentz(name = 'VVSS5',
+VVSS9 = Lorentz(name = 'VVSS9',
                 spins = [ 3, 3, 1, 1 ],
                 structure = 'Metric(1,2)')
 
-VVSS6 = Lorentz(name = 'VVSS6',
-                spins = [ 3, 3, 1, 1 ],
-                structure = 'P(1,3)*P(2,1) + P(1,4)*P(2,1) - P(-1,1)*P(-1,3)*Metric(1,2) - P(-1,1)*P(-1,4)*Metric(1,2)')
+VVSS10 = Lorentz(name = 'VVSS10',
+                 spins = [ 3, 3, 1, 1 ],
+                 structure = 'P(1,3)*P(2,1) + P(1,4)*P(2,1) - P(-1,1)*P(-1,3)*Metric(1,2) - P(-1,1)*P(-1,4)*Metric(1,2)')
 
-VVSS7 = Lorentz(name = 'VVSS7',
-                spins = [ 3, 3, 1, 1 ],
-                structure = 'P(1,2)*P(2,3) + P(1,2)*P(2,4) - P(-1,2)*P(-1,3)*Metric(1,2) - P(-1,2)*P(-1,4)*Metric(1,2)')
+VVSS11 = Lorentz(name = 'VVSS11',
+                 spins = [ 3, 3, 1, 1 ],
+                 structure = 'P(1,2)*P(2,3) + P(1,2)*P(2,4) - P(-1,2)*P(-1,3)*Metric(1,2) - P(-1,2)*P(-1,4)*Metric(1,2)')
 
-VVSS8 = Lorentz(name = 'VVSS8',
-                spins = [ 3, 3, 1, 1 ],
-                structure = 'P(1,3)*P(2,1) + P(1,4)*P(2,1) + P(1,2)*P(2,3) + P(1,2)*P(2,4) - P(-1,1)*P(-1,3)*Metric(1,2) - P(-1,2)*P(-1,3)*Metric(1,2) - P(-1,1)*P(-1,4)*Metric(1,2) - P(-1,2)*P(-1,4)*Metric(1,2)')
-
-VVVS1 = Lorentz(name = 'VVVS1',
-                spins = [ 3, 3, 3, 1 ],
-                structure = 'Epsilon(1,2,3,-1)*P(-1,1) + Epsilon(1,2,3,-1)*P(-1,2) + Epsilon(1,2,3,-1)*P(-1,4)')
-
-VVVS2 = Lorentz(name = 'VVVS2',
-                spins = [ 3, 3, 3, 1 ],
-                structure = 'Epsilon(1,2,3,-1)*P(-1,2) + Epsilon(1,2,3,-1)*P(-1,3) + Epsilon(1,2,3,-1)*P(-1,4)')
-
-VVVS3 = Lorentz(name = 'VVVS3',
-                spins = [ 3, 3, 3, 1 ],
-                structure = 'Epsilon(1,2,3,-1)*P(-1,1) + Epsilon(1,2,3,-1)*P(-1,2) + Epsilon(1,2,3,-1)*P(-1,3) + 3*Epsilon(1,2,3,-1)*P(-1,4)')
+VVSS12 = Lorentz(name = 'VVSS12',
+                 spins = [ 3, 3, 1, 1 ],
+                 structure = 'P(1,3)*P(2,1) + P(1,4)*P(2,1) + P(1,2)*P(2,3) + P(1,2)*P(2,4) - P(-1,1)*P(-1,3)*Metric(1,2) - P(-1,2)*P(-1,3)*Metric(1,2) - P(-1,1)*P(-1,4)*Metric(1,2) - P(-1,2)*P(-1,4)*Metric(1,2)')
 
 VVVS4 = Lorentz(name = 'VVVS4',
                 spins = [ 3, 3, 3, 1 ],
-                structure = 'P(3,1)*Metric(1,2) - P(2,1)*Metric(1,3)')
+                structure = 'Epsilon(1,2,3,-1)*P(-1,1) + Epsilon(1,2,3,-1)*P(-1,2) + Epsilon(1,2,3,-1)*P(-1,4)')
 
 VVVS5 = Lorentz(name = 'VVVS5',
                 spins = [ 3, 3, 3, 1 ],
-                structure = 'P(2,3)*Metric(1,3) - P(1,3)*Metric(2,3)')
+                structure = 'Epsilon(1,2,3,-1)*P(-1,2) + Epsilon(1,2,3,-1)*P(-1,3) + Epsilon(1,2,3,-1)*P(-1,4)')
 
 VVVS6 = Lorentz(name = 'VVVS6',
                 spins = [ 3, 3, 3, 1 ],
-                structure = 'P(3,1)*Metric(1,2) - P(3,2)*Metric(1,2) - P(2,1)*Metric(1,3) + P(2,3)*Metric(1,3) + P(1,2)*Metric(2,3) - P(1,3)*Metric(2,3)')
+                structure = 'Epsilon(1,2,3,-1)*P(-1,1) + Epsilon(1,2,3,-1)*P(-1,2) + Epsilon(1,2,3,-1)*P(-1,3) + 3*Epsilon(1,2,3,-1)*P(-1,4)')
 
 VVVS7 = Lorentz(name = 'VVVS7',
                 spins = [ 3, 3, 3, 1 ],
-                structure = 'P(3,2)*Metric(1,2) - P(3,4)*Metric(1,2) - P(2,3)*Metric(1,3) + P(2,4)*Metric(1,3) - P(1,2)*Metric(2,3) + P(1,3)*Metric(2,3)')
+                structure = 'P(3,1)*Metric(1,2) - P(2,1)*Metric(1,3)')
 
 VVVS8 = Lorentz(name = 'VVVS8',
                 spins = [ 3, 3, 3, 1 ],
-                structure = 'P(3,1)*Metric(1,2) - P(3,2)*Metric(1,2) - P(2,1)*Metric(1,3) + P(2,4)*Metric(1,3) + P(1,2)*Metric(2,3) - P(1,4)*Metric(2,3)')
+                structure = 'P(2,3)*Metric(1,3) - P(1,3)*Metric(2,3)')
 
-VVVV1 = Lorentz(name = 'VVVV1',
-                spins = [ 3, 3, 3, 3 ],
-                structure = 'Metric(1,4)*Metric(2,3) - Metric(1,3)*Metric(2,4)')
+VVVS9 = Lorentz(name = 'VVVS9',
+                spins = [ 3, 3, 3, 1 ],
+                structure = 'P(3,1)*Metric(1,2) - P(3,2)*Metric(1,2) - P(2,1)*Metric(1,3) + P(2,3)*Metric(1,3) + P(1,2)*Metric(2,3) - P(1,3)*Metric(2,3)')
 
-VVVV2 = Lorentz(name = 'VVVV2',
-                spins = [ 3, 3, 3, 3 ],
-                structure = 'Epsilon(1,2,3,4)*P(-1,1)*P(-1,3) - Epsilon(1,2,3,4)*P(-1,2)*P(-1,3) - Epsilon(1,2,3,4)*P(-1,1)*P(-1,4) + Epsilon(1,2,3,4)*P(-1,2)*P(-1,4) + Epsilon(2,3,4,-1)*P(-1,3)*P(1,2) - Epsilon(2,3,4,-1)*P(-1,4)*P(1,2) + Epsilon(2,3,4,-1)*P(-1,1)*P(1,3) + Epsilon(2,3,4,-1)*P(-1,2)*P(1,3) - Epsilon(2,3,4,-1)*P(-1,1)*P(1,4) - Epsilon(2,3,4,-1)*P(-1,2)*P(1,4) + Epsilon(1,3,4,-1)*P(-1,3)*P(2,1) - Epsilon(1,3,4,-1)*P(-1,4)*P(2,1) + Epsilon(1,3,4,-1)*P(-1,1)*P(2,3) + Epsilon(1,3,4,-1)*P(-1,2)*P(2,3) - Epsilon(1,3,4,-1)*P(-1,1)*P(2,4) - Epsilon(1,3,4,-1)*P(-1,2)*P(2,4) + Epsilon(1,2,4,-1)*P(-1,3)*P(3,1) + Epsilon(1,2,4,-1)*P(-1,4)*P(3,1) - Epsilon(1,2,4,-1)*P(-1,3)*P(3,2) - Epsilon(1,2,4,-1)*P(-1,4)*P(3,2) + Epsilon(1,2,4,-1)*P(-1,1)*P(3,4) - Epsilon(1,2,4,-1)*P(-1,2)*P(3,4) + Epsilon(1,2,3,-1)*P(-1,3)*P(4,1) + Epsilon(1,2,3,-1)*P(-1,4)*P(4,1) - Epsilon(1,2,3,-1)*P(-1,3)*P(4,2) - Epsilon(1,2,3,-1)*P(-1,4)*P(4,2) + Epsilon(1,2,3,-1)*P(-1,1)*P(4,3) - Epsilon(1,2,3,-1)*P(-1,2)*P(4,3) - (Epsilon(3,4,-1,-2)*P(-2,3)*P(-1,1)*Metric(1,2))/2. + (Epsilon(3,4,-1,-2)*P(-2,4)*P(-1,1)*Metric(1,2))/2. - (Epsilon(3,4,-1,-2)*P(-2,3)*P(-1,2)*Metric(1,2))/2. + (Epsilon(3,4,-1,-2)*P(-2,4)*P(-1,2)*Metric(1,2))/2. + (Epsilon(3,4,-1,-2)*P(-2,1)*P(-1,3)*Metric(1,2))/2. + (Epsilon(3,4,-1,-2)*P(-2,2)*P(-1,3)*Metric(1,2))/2. - (Epsilon(3,4,-1,-2)*P(-2,1)*P(-1,4)*Metric(1,2))/2. - (Epsilon(3,4,-1,-2)*P(-2,2)*P(-1,4)*Metric(1,2))/2. - (Epsilon(2,4,-1,-2)*P(-2,3)*P(-1,1)*Metric(1,3))/2. - (Epsilon(2,4,-1,-2)*P(-2,4)*P(-1,1)*Metric(1,3))/2. - (Epsilon(2,4,-1,-2)*P(-2,3)*P(-1,2)*Metric(1,3))/2. + (Epsilon(2,4,-1,-2)*P(-2,1)*P(-1,3)*Metric(1,3))/2. + (Epsilon(2,4,-1,-2)*P(-2,2)*P(-1,3)*Metric(1,3))/2. + (Epsilon(2,4,-1,-2)*P(-2,1)*P(-1,4)*Metric(1,3))/2. - (Epsilon(2,3,-1,-2)*P(-2,3)*P(-1,1)*Metric(1,4))/2. - (Epsilon(2,3,-1,-2)*P(-2,4)*P(-1,1)*Metric(1,4))/2. - (Epsilon(2,3,-1,-2)*P(-2,4)*P(-1,2)*Metric(1,4))/2. + (Epsilon(2,3,-1,-2)*P(-2,1)*P(-1,3)*Metric(1,4))/2. + (Epsilon(2,3,-1,-2)*P(-2,1)*P(-1,4)*Metric(1,4))/2. + (Epsilon(2,3,-1,-2)*P(-2,2)*P(-1,4)*Metric(1,4))/2. - (Epsilon(1,4,-1,-2)*P(-2,3)*P(-1,1)*Metric(2,3))/2. - (Epsilon(1,4,-1,-2)*P(-2,3)*P(-1,2)*Metric(2,3))/2. - (Epsilon(1,4,-1,-2)*P(-2,4)*P(-1,2)*Metric(2,3))/2. + (Epsilon(1,4,-1,-2)*P(-2,1)*P(-1,3)*Metric(2,3))/2. + (Epsilon(1,4,-1,-2)*P(-2,2)*P(-1,3)*Metric(2,3))/2. + (Epsilon(1,4,-1,-2)*P(-2,2)*P(-1,4)*Metric(2,3))/2. - (Epsilon(1,3,-1,-2)*P(-2,4)*P(-1,1)*Metric(2,4))/2. - (Epsilon(1,3,-1,-2)*P(-2,3)*P(-1,2)*Metric(2,4))/2. - (Epsilon(1,3,-1,-2)*P(-2,4)*P(-1,2)*Metric(2,4))/2. + (Epsilon(1,3,-1,-2)*P(-2,2)*P(-1,3)*Metric(2,4))/2. + (Epsilon(1,3,-1,-2)*P(-2,1)*P(-1,4)*Metric(2,4))/2. + (Epsilon(1,3,-1,-2)*P(-2,2)*P(-1,4)*Metric(2,4))/2. + (Epsilon(1,2,-1,-2)*P(-2,3)*P(-1,1)*Metric(3,4))/2. + (Epsilon(1,2,-1,-2)*P(-2,4)*P(-1,1)*Metric(3,4))/2. - (Epsilon(1,2,-1,-2)*P(-2,3)*P(-1,2)*Metric(3,4))/2. - (Epsilon(1,2,-1,-2)*P(-2,4)*P(-1,2)*Metric(3,4))/2. - (Epsilon(1,2,-1,-2)*P(-2,1)*P(-1,3)*Metric(3,4))/2. + (Epsilon(1,2,-1,-2)*P(-2,2)*P(-1,3)*Metric(3,4))/2. - (Epsilon(1,2,-1,-2)*P(-2,1)*P(-1,4)*Metric(3,4))/2. + (Epsilon(1,2,-1,-2)*P(-2,2)*P(-1,4)*Metric(3,4))/2.')
+VVVS10 = Lorentz(name = 'VVVS10',
+                 spins = [ 3, 3, 3, 1 ],
+                 structure = 'P(3,2)*Metric(1,2) - P(3,4)*Metric(1,2) - P(2,3)*Metric(1,3) + P(2,4)*Metric(1,3) - P(1,2)*Metric(2,3) + P(1,3)*Metric(2,3)')
 
-VVVV3 = Lorentz(name = 'VVVV3',
-                spins = [ 3, 3, 3, 3 ],
-                structure = 'Epsilon(1,2,3,4)*P(-1,1)*P(-1,2) - Epsilon(1,2,3,4)*P(-1,1)*P(-1,3) - Epsilon(1,2,3,4)*P(-1,2)*P(-1,4) + Epsilon(1,2,3,4)*P(-1,3)*P(-1,4) + Epsilon(2,3,4,-1)*P(-1,1)*P(1,2) + Epsilon(2,3,4,-1)*P(-1,4)*P(1,2) - Epsilon(2,3,4,-1)*P(-1,1)*P(1,3) - Epsilon(2,3,4,-1)*P(-1,4)*P(1,3) + Epsilon(2,3,4,-1)*P(-1,2)*P(1,4) - Epsilon(2,3,4,-1)*P(-1,3)*P(1,4) - Epsilon(1,3,4,-1)*P(-1,2)*P(2,1) - Epsilon(1,3,4,-1)*P(-1,3)*P(2,1) - Epsilon(1,3,4,-1)*P(-1,1)*P(2,3) + Epsilon(1,3,4,-1)*P(-1,4)*P(2,3) + Epsilon(1,3,4,-1)*P(-1,2)*P(2,4) + Epsilon(1,3,4,-1)*P(-1,3)*P(2,4) - Epsilon(1,2,4,-1)*P(-1,2)*P(3,1) - Epsilon(1,2,4,-1)*P(-1,3)*P(3,1) - Epsilon(1,2,4,-1)*P(-1,1)*P(3,2) + Epsilon(1,2,4,-1)*P(-1,4)*P(3,2) + Epsilon(1,2,4,-1)*P(-1,2)*P(3,4) + Epsilon(1,2,4,-1)*P(-1,3)*P(3,4) + Epsilon(1,2,3,-1)*P(-1,2)*P(4,1) - Epsilon(1,2,3,-1)*P(-1,3)*P(4,1) + Epsilon(1,2,3,-1)*P(-1,1)*P(4,2) + Epsilon(1,2,3,-1)*P(-1,4)*P(4,2) - Epsilon(1,2,3,-1)*P(-1,1)*P(4,3) - Epsilon(1,2,3,-1)*P(-1,4)*P(4,3) + (Epsilon(3,4,-1,-2)*P(-2,2)*P(-1,1)*Metric(1,2))/2. + (Epsilon(3,4,-1,-2)*P(-2,3)*P(-1,1)*Metric(1,2))/2. - (Epsilon(3,4,-1,-2)*P(-2,1)*P(-1,2)*Metric(1,2))/2. - (Epsilon(3,4,-1,-2)*P(-2,4)*P(-1,2)*Metric(1,2))/2. - (Epsilon(3,4,-1,-2)*P(-2,1)*P(-1,3)*Metric(1,2))/2. + (Epsilon(3,4,-1,-2)*P(-2,2)*P(-1,4)*Metric(1,2))/2. + (Epsilon(2,4,-1,-2)*P(-2,2)*P(-1,1)*Metric(1,3))/2. + (Epsilon(2,4,-1,-2)*P(-2,3)*P(-1,1)*Metric(1,3))/2. - (Epsilon(2,4,-1,-2)*P(-2,1)*P(-1,2)*Metric(1,3))/2. - (Epsilon(2,4,-1,-2)*P(-2,1)*P(-1,3)*Metric(1,3))/2. - (Epsilon(2,4,-1,-2)*P(-2,4)*P(-1,3)*Metric(1,3))/2. + (Epsilon(2,4,-1,-2)*P(-2,3)*P(-1,4)*Metric(1,3))/2. - (Epsilon(2,3,-1,-2)*P(-2,2)*P(-1,1)*Metric(1,4))/2. + (Epsilon(2,3,-1,-2)*P(-2,3)*P(-1,1)*Metric(1,4))/2. + (Epsilon(2,3,-1,-2)*P(-2,1)*P(-1,2)*Metric(1,4))/2. + (Epsilon(2,3,-1,-2)*P(-2,4)*P(-1,2)*Metric(1,4))/2. - (Epsilon(2,3,-1,-2)*P(-2,1)*P(-1,3)*Metric(1,4))/2. - (Epsilon(2,3,-1,-2)*P(-2,4)*P(-1,3)*Metric(1,4))/2. - (Epsilon(2,3,-1,-2)*P(-2,2)*P(-1,4)*Metric(1,4))/2. + (Epsilon(2,3,-1,-2)*P(-2,3)*P(-1,4)*Metric(1,4))/2. + (Epsilon(1,4,-1,-2)*P(-2,2)*P(-1,1)*Metric(2,3))/2. + (Epsilon(1,4,-1,-2)*P(-2,3)*P(-1,1)*Metric(2,3))/2. - (Epsilon(1,4,-1,-2)*P(-2,1)*P(-1,2)*Metric(2,3))/2. + (Epsilon(1,4,-1,-2)*P(-2,4)*P(-1,2)*Metric(2,3))/2. - (Epsilon(1,4,-1,-2)*P(-2,1)*P(-1,3)*Metric(2,3))/2. + (Epsilon(1,4,-1,-2)*P(-2,4)*P(-1,3)*Metric(2,3))/2. - (Epsilon(1,4,-1,-2)*P(-2,2)*P(-1,4)*Metric(2,3))/2. - (Epsilon(1,4,-1,-2)*P(-2,3)*P(-1,4)*Metric(2,3))/2. - (Epsilon(1,3,-1,-2)*P(-2,2)*P(-1,1)*Metric(2,4))/2. + (Epsilon(1,3,-1,-2)*P(-2,1)*P(-1,2)*Metric(2,4))/2. + (Epsilon(1,3,-1,-2)*P(-2,4)*P(-1,2)*Metric(2,4))/2. + (Epsilon(1,3,-1,-2)*P(-2,4)*P(-1,3)*Metric(2,4))/2. - (Epsilon(1,3,-1,-2)*P(-2,2)*P(-1,4)*Metric(2,4))/2. - (Epsilon(1,3,-1,-2)*P(-2,3)*P(-1,4)*Metric(2,4))/2. - (Epsilon(1,2,-1,-2)*P(-2,3)*P(-1,1)*Metric(3,4))/2. + (Epsilon(1,2,-1,-2)*P(-2,4)*P(-1,2)*Metric(3,4))/2. + (Epsilon(1,2,-1,-2)*P(-2,1)*P(-1,3)*Metric(3,4))/2. + (Epsilon(1,2,-1,-2)*P(-2,4)*P(-1,3)*Metric(3,4))/2. - (Epsilon(1,2,-1,-2)*P(-2,2)*P(-1,4)*Metric(3,4))/2. - (Epsilon(1,2,-1,-2)*P(-2,3)*P(-1,4)*Metric(3,4))/2.')
-
-VVVV4 = Lorentz(name = 'VVVV4',
-                spins = [ 3, 3, 3, 3 ],
-                structure = 'Metric(1,4)*Metric(2,3) + Metric(1,3)*Metric(2,4) - 2*Metric(1,2)*Metric(3,4)')
-
-VVVV5 = Lorentz(name = 'VVVV5',
-                spins = [ 3, 3, 3, 3 ],
-                structure = 'Metric(1,4)*Metric(2,3) - Metric(1,2)*Metric(3,4)')
+VVVS11 = Lorentz(name = 'VVVS11',
+                 spins = [ 3, 3, 3, 1 ],
+                 structure = 'P(3,1)*Metric(1,2) - P(3,2)*Metric(1,2) - P(2,1)*Metric(1,3) + P(2,4)*Metric(1,3) + P(1,2)*Metric(2,3) - P(1,4)*Metric(2,3)')
 
 VVVV6 = Lorentz(name = 'VVVV6',
                 spins = [ 3, 3, 3, 3 ],
-                structure = 'Metric(1,3)*Metric(2,4) - Metric(1,2)*Metric(3,4)')
+                structure = 'Metric(1,4)*Metric(2,3) - Metric(1,3)*Metric(2,4)')
 
 VVVV7 = Lorentz(name = 'VVVV7',
                 spins = [ 3, 3, 3, 3 ],
-                structure = 'Metric(1,4)*Metric(2,3) - (Metric(1,3)*Metric(2,4))/2. - (Metric(1,2)*Metric(3,4))/2.')
+                structure = 'Epsilon(1,2,3,4)*P(-1,1)*P(-1,3) - Epsilon(1,2,3,4)*P(-1,2)*P(-1,3) - Epsilon(1,2,3,4)*P(-1,1)*P(-1,4) + Epsilon(1,2,3,4)*P(-1,2)*P(-1,4) + Epsilon(2,3,4,-1)*P(-1,3)*P(1,2) - Epsilon(2,3,4,-1)*P(-1,4)*P(1,2) + Epsilon(2,3,4,-1)*P(-1,1)*P(1,3) + Epsilon(2,3,4,-1)*P(-1,2)*P(1,3) - Epsilon(2,3,4,-1)*P(-1,1)*P(1,4) - Epsilon(2,3,4,-1)*P(-1,2)*P(1,4) + Epsilon(1,3,4,-1)*P(-1,3)*P(2,1) - Epsilon(1,3,4,-1)*P(-1,4)*P(2,1) + Epsilon(1,3,4,-1)*P(-1,1)*P(2,3) + Epsilon(1,3,4,-1)*P(-1,2)*P(2,3) - Epsilon(1,3,4,-1)*P(-1,1)*P(2,4) - Epsilon(1,3,4,-1)*P(-1,2)*P(2,4) + Epsilon(1,2,4,-1)*P(-1,3)*P(3,1) + Epsilon(1,2,4,-1)*P(-1,4)*P(3,1) - Epsilon(1,2,4,-1)*P(-1,3)*P(3,2) - Epsilon(1,2,4,-1)*P(-1,4)*P(3,2) + Epsilon(1,2,4,-1)*P(-1,1)*P(3,4) - Epsilon(1,2,4,-1)*P(-1,2)*P(3,4) + Epsilon(1,2,3,-1)*P(-1,3)*P(4,1) + Epsilon(1,2,3,-1)*P(-1,4)*P(4,1) - Epsilon(1,2,3,-1)*P(-1,3)*P(4,2) - Epsilon(1,2,3,-1)*P(-1,4)*P(4,2) + Epsilon(1,2,3,-1)*P(-1,1)*P(4,3) - Epsilon(1,2,3,-1)*P(-1,2)*P(4,3) - (Epsilon(3,4,-1,-2)*P(-2,3)*P(-1,1)*Metric(1,2))/2. + (Epsilon(3,4,-1,-2)*P(-2,4)*P(-1,1)*Metric(1,2))/2. - (Epsilon(3,4,-1,-2)*P(-2,3)*P(-1,2)*Metric(1,2))/2. + (Epsilon(3,4,-1,-2)*P(-2,4)*P(-1,2)*Metric(1,2))/2. + (Epsilon(3,4,-1,-2)*P(-2,1)*P(-1,3)*Metric(1,2))/2. + (Epsilon(3,4,-1,-2)*P(-2,2)*P(-1,3)*Metric(1,2))/2. - (Epsilon(3,4,-1,-2)*P(-2,1)*P(-1,4)*Metric(1,2))/2. - (Epsilon(3,4,-1,-2)*P(-2,2)*P(-1,4)*Metric(1,2))/2. - (Epsilon(2,4,-1,-2)*P(-2,3)*P(-1,1)*Metric(1,3))/2. - (Epsilon(2,4,-1,-2)*P(-2,4)*P(-1,1)*Metric(1,3))/2. - (Epsilon(2,4,-1,-2)*P(-2,3)*P(-1,2)*Metric(1,3))/2. + (Epsilon(2,4,-1,-2)*P(-2,1)*P(-1,3)*Metric(1,3))/2. + (Epsilon(2,4,-1,-2)*P(-2,2)*P(-1,3)*Metric(1,3))/2. + (Epsilon(2,4,-1,-2)*P(-2,1)*P(-1,4)*Metric(1,3))/2. - (Epsilon(2,3,-1,-2)*P(-2,3)*P(-1,1)*Metric(1,4))/2. - (Epsilon(2,3,-1,-2)*P(-2,4)*P(-1,1)*Metric(1,4))/2. - (Epsilon(2,3,-1,-2)*P(-2,4)*P(-1,2)*Metric(1,4))/2. + (Epsilon(2,3,-1,-2)*P(-2,1)*P(-1,3)*Metric(1,4))/2. + (Epsilon(2,3,-1,-2)*P(-2,1)*P(-1,4)*Metric(1,4))/2. + (Epsilon(2,3,-1,-2)*P(-2,2)*P(-1,4)*Metric(1,4))/2. - (Epsilon(1,4,-1,-2)*P(-2,3)*P(-1,1)*Metric(2,3))/2. - (Epsilon(1,4,-1,-2)*P(-2,3)*P(-1,2)*Metric(2,3))/2. - (Epsilon(1,4,-1,-2)*P(-2,4)*P(-1,2)*Metric(2,3))/2. + (Epsilon(1,4,-1,-2)*P(-2,1)*P(-1,3)*Metric(2,3))/2. + (Epsilon(1,4,-1,-2)*P(-2,2)*P(-1,3)*Metric(2,3))/2. + (Epsilon(1,4,-1,-2)*P(-2,2)*P(-1,4)*Metric(2,3))/2. - (Epsilon(1,3,-1,-2)*P(-2,4)*P(-1,1)*Metric(2,4))/2. - (Epsilon(1,3,-1,-2)*P(-2,3)*P(-1,2)*Metric(2,4))/2. - (Epsilon(1,3,-1,-2)*P(-2,4)*P(-1,2)*Metric(2,4))/2. + (Epsilon(1,3,-1,-2)*P(-2,2)*P(-1,3)*Metric(2,4))/2. + (Epsilon(1,3,-1,-2)*P(-2,1)*P(-1,4)*Metric(2,4))/2. + (Epsilon(1,3,-1,-2)*P(-2,2)*P(-1,4)*Metric(2,4))/2. + (Epsilon(1,2,-1,-2)*P(-2,3)*P(-1,1)*Metric(3,4))/2. + (Epsilon(1,2,-1,-2)*P(-2,4)*P(-1,1)*Metric(3,4))/2. - (Epsilon(1,2,-1,-2)*P(-2,3)*P(-1,2)*Metric(3,4))/2. - (Epsilon(1,2,-1,-2)*P(-2,4)*P(-1,2)*Metric(3,4))/2. - (Epsilon(1,2,-1,-2)*P(-2,1)*P(-1,3)*Metric(3,4))/2. + (Epsilon(1,2,-1,-2)*P(-2,2)*P(-1,3)*Metric(3,4))/2. - (Epsilon(1,2,-1,-2)*P(-2,1)*P(-1,4)*Metric(3,4))/2. + (Epsilon(1,2,-1,-2)*P(-2,2)*P(-1,4)*Metric(3,4))/2.')
 
 VVVV8 = Lorentz(name = 'VVVV8',
                 spins = [ 3, 3, 3, 3 ],
-                structure = 'P(3,2)*P(4,1)*Metric(1,2) - P(3,1)*P(4,2)*Metric(1,2) + P(3,4)*P(4,2)*Metric(1,2) + P(3,1)*P(4,3)*Metric(1,2) + P(2,3)*P(4,1)*Metric(1,3) + P(2,1)*P(4,2)*Metric(1,3) - P(2,1)*P(4,3)*Metric(1,3) + P(2,4)*P(4,3)*Metric(1,3) - P(2,3)*P(3,1)*Metric(1,4) - P(2,1)*P(3,2)*Metric(1,4) - P(2,4)*P(3,2)*Metric(1,4) - P(2,3)*P(3,4)*Metric(1,4) - P(1,2)*P(4,1)*Metric(2,3) - P(1,3)*P(4,1)*Metric(2,3) - P(1,4)*P(4,2)*Metric(2,3) - P(1,4)*P(4,3)*Metric(2,3) + P(-1,1)*P(-1,2)*Metric(1,4)*Metric(2,3) + P(-1,1)*P(-1,3)*Metric(1,4)*Metric(2,3) + P(-1,2)*P(-1,4)*Metric(1,4)*Metric(2,3) + P(-1,3)*P(-1,4)*Metric(1,4)*Metric(2,3) + P(1,2)*P(3,1)*Metric(2,4) + P(1,4)*P(3,2)*Metric(2,4) - P(1,2)*P(3,4)*Metric(2,4) + P(1,3)*P(3,4)*Metric(2,4) - P(-1,1)*P(-1,2)*Metric(1,3)*Metric(2,4) - P(-1,3)*P(-1,4)*Metric(1,3)*Metric(2,4) + P(1,3)*P(2,1)*Metric(3,4) + P(1,4)*P(2,3)*Metric(3,4) + P(1,2)*P(2,4)*Metric(3,4) - P(1,3)*P(2,4)*Metric(3,4) - P(-1,1)*P(-1,3)*Metric(1,2)*Metric(3,4) - P(-1,2)*P(-1,4)*Metric(1,2)*Metric(3,4)')
+                structure = 'Epsilon(1,2,3,4)*P(-1,1)*P(-1,2) - Epsilon(1,2,3,4)*P(-1,1)*P(-1,3) - Epsilon(1,2,3,4)*P(-1,2)*P(-1,4) + Epsilon(1,2,3,4)*P(-1,3)*P(-1,4) + Epsilon(2,3,4,-1)*P(-1,1)*P(1,2) + Epsilon(2,3,4,-1)*P(-1,4)*P(1,2) - Epsilon(2,3,4,-1)*P(-1,1)*P(1,3) - Epsilon(2,3,4,-1)*P(-1,4)*P(1,3) + Epsilon(2,3,4,-1)*P(-1,2)*P(1,4) - Epsilon(2,3,4,-1)*P(-1,3)*P(1,4) - Epsilon(1,3,4,-1)*P(-1,2)*P(2,1) - Epsilon(1,3,4,-1)*P(-1,3)*P(2,1) - Epsilon(1,3,4,-1)*P(-1,1)*P(2,3) + Epsilon(1,3,4,-1)*P(-1,4)*P(2,3) + Epsilon(1,3,4,-1)*P(-1,2)*P(2,4) + Epsilon(1,3,4,-1)*P(-1,3)*P(2,4) - Epsilon(1,2,4,-1)*P(-1,2)*P(3,1) - Epsilon(1,2,4,-1)*P(-1,3)*P(3,1) - Epsilon(1,2,4,-1)*P(-1,1)*P(3,2) + Epsilon(1,2,4,-1)*P(-1,4)*P(3,2) + Epsilon(1,2,4,-1)*P(-1,2)*P(3,4) + Epsilon(1,2,4,-1)*P(-1,3)*P(3,4) + Epsilon(1,2,3,-1)*P(-1,2)*P(4,1) - Epsilon(1,2,3,-1)*P(-1,3)*P(4,1) + Epsilon(1,2,3,-1)*P(-1,1)*P(4,2) + Epsilon(1,2,3,-1)*P(-1,4)*P(4,2) - Epsilon(1,2,3,-1)*P(-1,1)*P(4,3) - Epsilon(1,2,3,-1)*P(-1,4)*P(4,3) + (Epsilon(3,4,-1,-2)*P(-2,2)*P(-1,1)*Metric(1,2))/2. + (Epsilon(3,4,-1,-2)*P(-2,3)*P(-1,1)*Metric(1,2))/2. - (Epsilon(3,4,-1,-2)*P(-2,1)*P(-1,2)*Metric(1,2))/2. - (Epsilon(3,4,-1,-2)*P(-2,4)*P(-1,2)*Metric(1,2))/2. - (Epsilon(3,4,-1,-2)*P(-2,1)*P(-1,3)*Metric(1,2))/2. + (Epsilon(3,4,-1,-2)*P(-2,2)*P(-1,4)*Metric(1,2))/2. + (Epsilon(2,4,-1,-2)*P(-2,2)*P(-1,1)*Metric(1,3))/2. + (Epsilon(2,4,-1,-2)*P(-2,3)*P(-1,1)*Metric(1,3))/2. - (Epsilon(2,4,-1,-2)*P(-2,1)*P(-1,2)*Metric(1,3))/2. - (Epsilon(2,4,-1,-2)*P(-2,1)*P(-1,3)*Metric(1,3))/2. - (Epsilon(2,4,-1,-2)*P(-2,4)*P(-1,3)*Metric(1,3))/2. + (Epsilon(2,4,-1,-2)*P(-2,3)*P(-1,4)*Metric(1,3))/2. - (Epsilon(2,3,-1,-2)*P(-2,2)*P(-1,1)*Metric(1,4))/2. + (Epsilon(2,3,-1,-2)*P(-2,3)*P(-1,1)*Metric(1,4))/2. + (Epsilon(2,3,-1,-2)*P(-2,1)*P(-1,2)*Metric(1,4))/2. + (Epsilon(2,3,-1,-2)*P(-2,4)*P(-1,2)*Metric(1,4))/2. - (Epsilon(2,3,-1,-2)*P(-2,1)*P(-1,3)*Metric(1,4))/2. - (Epsilon(2,3,-1,-2)*P(-2,4)*P(-1,3)*Metric(1,4))/2. - (Epsilon(2,3,-1,-2)*P(-2,2)*P(-1,4)*Metric(1,4))/2. + (Epsilon(2,3,-1,-2)*P(-2,3)*P(-1,4)*Metric(1,4))/2. + (Epsilon(1,4,-1,-2)*P(-2,2)*P(-1,1)*Metric(2,3))/2. + (Epsilon(1,4,-1,-2)*P(-2,3)*P(-1,1)*Metric(2,3))/2. - (Epsilon(1,4,-1,-2)*P(-2,1)*P(-1,2)*Metric(2,3))/2. + (Epsilon(1,4,-1,-2)*P(-2,4)*P(-1,2)*Metric(2,3))/2. - (Epsilon(1,4,-1,-2)*P(-2,1)*P(-1,3)*Metric(2,3))/2. + (Epsilon(1,4,-1,-2)*P(-2,4)*P(-1,3)*Metric(2,3))/2. - (Epsilon(1,4,-1,-2)*P(-2,2)*P(-1,4)*Metric(2,3))/2. - (Epsilon(1,4,-1,-2)*P(-2,3)*P(-1,4)*Metric(2,3))/2. - (Epsilon(1,3,-1,-2)*P(-2,2)*P(-1,1)*Metric(2,4))/2. + (Epsilon(1,3,-1,-2)*P(-2,1)*P(-1,2)*Metric(2,4))/2. + (Epsilon(1,3,-1,-2)*P(-2,4)*P(-1,2)*Metric(2,4))/2. + (Epsilon(1,3,-1,-2)*P(-2,4)*P(-1,3)*Metric(2,4))/2. - (Epsilon(1,3,-1,-2)*P(-2,2)*P(-1,4)*Metric(2,4))/2. - (Epsilon(1,3,-1,-2)*P(-2,3)*P(-1,4)*Metric(2,4))/2. - (Epsilon(1,2,-1,-2)*P(-2,3)*P(-1,1)*Metric(3,4))/2. + (Epsilon(1,2,-1,-2)*P(-2,4)*P(-1,2)*Metric(3,4))/2. + (Epsilon(1,2,-1,-2)*P(-2,1)*P(-1,3)*Metric(3,4))/2. + (Epsilon(1,2,-1,-2)*P(-2,4)*P(-1,3)*Metric(3,4))/2. - (Epsilon(1,2,-1,-2)*P(-2,2)*P(-1,4)*Metric(3,4))/2. - (Epsilon(1,2,-1,-2)*P(-2,3)*P(-1,4)*Metric(3,4))/2.')
 
 VVVV9 = Lorentz(name = 'VVVV9',
                 spins = [ 3, 3, 3, 3 ],
-                structure = 'P(3,4)*P(4,1)*Metric(1,2) + P(3,4)*P(4,2)*Metric(1,2) + P(3,1)*P(4,3)*Metric(1,2) + P(3,2)*P(4,3)*Metric(1,2) + P(2,3)*P(4,1)*Metric(1,3) - P(2,4)*P(4,1)*Metric(1,3) - P(2,3)*P(4,2)*Metric(1,3) - P(2,1)*P(4,3)*Metric(1,3) - P(2,3)*P(3,1)*Metric(1,4) + P(2,4)*P(3,1)*Metric(1,4) - P(2,4)*P(3,2)*Metric(1,4) - P(2,1)*P(3,4)*Metric(1,4) - P(1,3)*P(4,1)*Metric(2,3) + P(1,3)*P(4,2)*Metric(2,3) - P(1,4)*P(4,2)*Metric(2,3) - P(1,2)*P(4,3)*Metric(2,3) + P(-1,1)*P(-1,3)*Metric(1,4)*Metric(2,3) + P(-1,2)*P(-1,4)*Metric(1,4)*Metric(2,3) - P(1,4)*P(3,1)*Metric(2,4) - P(1,3)*P(3,2)*Metric(2,4) + P(1,4)*P(3,2)*Metric(2,4) - P(1,2)*P(3,4)*Metric(2,4) + P(-1,2)*P(-1,3)*Metric(1,3)*Metric(2,4) + P(-1,1)*P(-1,4)*Metric(1,3)*Metric(2,4) + P(1,3)*P(2,1)*Metric(3,4) + P(1,4)*P(2,1)*Metric(3,4) + P(1,2)*P(2,3)*Metric(3,4) + P(1,2)*P(2,4)*Metric(3,4) - P(-1,1)*P(-1,3)*Metric(1,2)*Metric(3,4) - P(-1,2)*P(-1,3)*Metric(1,2)*Metric(3,4) - P(-1,1)*P(-1,4)*Metric(1,2)*Metric(3,4) - P(-1,2)*P(-1,4)*Metric(1,2)*Metric(3,4)')
+                structure = 'Metric(1,4)*Metric(2,3) + Metric(1,3)*Metric(2,4) - 2*Metric(1,2)*Metric(3,4)')
 
-FFVSS1 = Lorentz(name = 'FFVSS1',
-                 spins = [ 2, 2, 3, 1, 1 ],
-                 structure = 'Gamma(3,2,-1)*ProjM(-1,1)')
+VVVV10 = Lorentz(name = 'VVVV10',
+                 spins = [ 3, 3, 3, 3 ],
+                 structure = 'Metric(1,4)*Metric(2,3) - Metric(1,2)*Metric(3,4)')
+
+VVVV11 = Lorentz(name = 'VVVV11',
+                 spins = [ 3, 3, 3, 3 ],
+                 structure = 'Metric(1,3)*Metric(2,4) - Metric(1,2)*Metric(3,4)')
+
+VVVV12 = Lorentz(name = 'VVVV12',
+                 spins = [ 3, 3, 3, 3 ],
+                 structure = 'Metric(1,4)*Metric(2,3) - (Metric(1,3)*Metric(2,4))/2. - (Metric(1,2)*Metric(3,4))/2.')
+
+VVVV13 = Lorentz(name = 'VVVV13',
+                 spins = [ 3, 3, 3, 3 ],
+                 structure = 'P(3,2)*P(4,1)*Metric(1,2) - P(3,1)*P(4,2)*Metric(1,2) + P(3,4)*P(4,2)*Metric(1,2) + P(3,1)*P(4,3)*Metric(1,2) + P(2,3)*P(4,1)*Metric(1,3) + P(2,1)*P(4,2)*Metric(1,3) - P(2,1)*P(4,3)*Metric(1,3) + P(2,4)*P(4,3)*Metric(1,3) - P(2,3)*P(3,1)*Metric(1,4) - P(2,1)*P(3,2)*Metric(1,4) - P(2,4)*P(3,2)*Metric(1,4) - P(2,3)*P(3,4)*Metric(1,4) - P(1,2)*P(4,1)*Metric(2,3) - P(1,3)*P(4,1)*Metric(2,3) - P(1,4)*P(4,2)*Metric(2,3) - P(1,4)*P(4,3)*Metric(2,3) + P(-1,1)*P(-1,2)*Metric(1,4)*Metric(2,3) + P(-1,1)*P(-1,3)*Metric(1,4)*Metric(2,3) + P(-1,2)*P(-1,4)*Metric(1,4)*Metric(2,3) + P(-1,3)*P(-1,4)*Metric(1,4)*Metric(2,3) + P(1,2)*P(3,1)*Metric(2,4) + P(1,4)*P(3,2)*Metric(2,4) - P(1,2)*P(3,4)*Metric(2,4) + P(1,3)*P(3,4)*Metric(2,4) - P(-1,1)*P(-1,2)*Metric(1,3)*Metric(2,4) - P(-1,3)*P(-1,4)*Metric(1,3)*Metric(2,4) + P(1,3)*P(2,1)*Metric(3,4) + P(1,4)*P(2,3)*Metric(3,4) + P(1,2)*P(2,4)*Metric(3,4) - P(1,3)*P(2,4)*Metric(3,4) - P(-1,1)*P(-1,3)*Metric(1,2)*Metric(3,4) - P(-1,2)*P(-1,4)*Metric(1,2)*Metric(3,4)')
+
+VVVV14 = Lorentz(name = 'VVVV14',
+                 spins = [ 3, 3, 3, 3 ],
+                 structure = 'P(3,4)*P(4,1)*Metric(1,2) + P(3,4)*P(4,2)*Metric(1,2) + P(3,1)*P(4,3)*Metric(1,2) + P(3,2)*P(4,3)*Metric(1,2) + P(2,3)*P(4,1)*Metric(1,3) - P(2,4)*P(4,1)*Metric(1,3) - P(2,3)*P(4,2)*Metric(1,3) - P(2,1)*P(4,3)*Metric(1,3) - P(2,3)*P(3,1)*Metric(1,4) + P(2,4)*P(3,1)*Metric(1,4) - P(2,4)*P(3,2)*Metric(1,4) - P(2,1)*P(3,4)*Metric(1,4) - P(1,3)*P(4,1)*Metric(2,3) + P(1,3)*P(4,2)*Metric(2,3) - P(1,4)*P(4,2)*Metric(2,3) - P(1,2)*P(4,3)*Metric(2,3) + P(-1,1)*P(-1,3)*Metric(1,4)*Metric(2,3) + P(-1,2)*P(-1,4)*Metric(1,4)*Metric(2,3) - P(1,4)*P(3,1)*Metric(2,4) - P(1,3)*P(3,2)*Metric(2,4) + P(1,4)*P(3,2)*Metric(2,4) - P(1,2)*P(3,4)*Metric(2,4) + P(-1,2)*P(-1,3)*Metric(1,3)*Metric(2,4) + P(-1,1)*P(-1,4)*Metric(1,3)*Metric(2,4) + P(1,3)*P(2,1)*Metric(3,4) + P(1,4)*P(2,1)*Metric(3,4) + P(1,2)*P(2,3)*Metric(3,4) + P(1,2)*P(2,4)*Metric(3,4) - P(-1,1)*P(-1,3)*Metric(1,2)*Metric(3,4) - P(-1,2)*P(-1,3)*Metric(1,2)*Metric(3,4) - P(-1,1)*P(-1,4)*Metric(1,2)*Metric(3,4) - P(-1,2)*P(-1,4)*Metric(1,2)*Metric(3,4)')
 
 VVVSS1 = Lorentz(name = 'VVVSS1',
                  spins = [ 3, 3, 3, 1, 1 ],

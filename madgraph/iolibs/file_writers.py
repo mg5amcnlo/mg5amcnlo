@@ -170,7 +170,7 @@ class FortranWriter(FileWriter):
             while i < len(splitline):
                 if i % 2 == 1:
                     # This is a quote - check for escaped \'s
-                    while splitline[i][len(splitline[i]) - 1] == '\\':
+                    while  splitline[i] and splitline[i][-1] == '\\':
                         splitline[i] = splitline[i] + '\'' + splitline.pop(i + 1)
                 else:
                     # Otherwise downcase/upcase

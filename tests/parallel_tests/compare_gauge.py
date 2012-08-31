@@ -27,6 +27,7 @@ import unittest
 import subprocess
 
 from madgraph import MG5DIR
+import tests.unit_tests.various.test_aloha as test_aloha
 
 pjoin = os.path.join
 _file_path = os.path.dirname(os.path.realpath(__file__))
@@ -143,6 +144,7 @@ class GaugeComparator(unittest.TestCase):
                              orders = {'QED':99, 'QCD':99},model = 'sm_mw',
                              filename = "short_cs_sm_gauge.log")
 
+    @test_aloha.set_global(loop=False, unitary=False, mp=False, cms=False)
     def test_short_gauge(self):
         """Test a semi-complete list of sm 2->4 processes"""
         # Create a list of processes to check automatically       

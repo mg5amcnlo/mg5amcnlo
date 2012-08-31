@@ -108,13 +108,15 @@ class TestCmdShell1(unittest.TestCase):
         
     def test_config(self):
         """check that configuration file is at default value"""
-        
-        config = self.cmd.set_configuration(MG5DIR+'/input/mg5_configuration.txt', test=True)
+        self.maxDiff=None
+        config = self.cmd.set_configuration(MG5DIR+'/input/.mg5_configuration_default.txt', final=False)
+        config =dict(config)
+        del config['stdout_level']
         expected = {'web_browser': None, 
                     'text_editor': None, 
                     'cluster_queue': 'madgraph',
                     'nb_core': None,
-                    'run_mode': '0',
+                    'run_mode': 2,
                     'pythia-pgs_path': './pythia-pgs', 
                     'td_path': './td', 
                     'delphes_path': './Delphes', 
@@ -123,8 +125,8 @@ class TestCmdShell1(unittest.TestCase):
                     'fortran_compiler': None, 
                     'exrootanalysis_path': './ExRootAnalysis', 
                     'eps_viewer': None, 
-                    'automatic_html_opening': 'True', 
-                    'pythia8_path': './pythia8',
+                    'automatic_html_opening': True, 
+                    'pythia8_path': None,
                     'group_subprocesses': 'Auto',
                     'complex_mass_scheme': False,
                     'gauge': 'unitary',
@@ -132,8 +134,9 @@ class TestCmdShell1(unittest.TestCase):
                     'fks_mode': 'real',
                     'loop_optimized_output': False,
                     'fastjet': 'fastjet-config',
-                    'timeout': '20',
+                    'timeout': 20,
                     'ignore_six_quark_processes': False
+                    'auto_update': 7
                     }
 
         self.assertEqual(config, expected)
@@ -630,7 +633,7 @@ class TestCmdShell2(unittest.TestCase,
                 self.assertAlmostEqual(value, 1.951829785476705e-2)
 
     def test_load_feynman(self):
-        """ Test that the complex_mass compile in fortran """
+        """ Test that feynman gauge assignment works """
         
         self.do('import model sm')
         # check that the model is correctly loaded (has some goldstone)
@@ -640,6 +643,7 @@ class TestCmdShell2(unittest.TestCase,
                 nb_goldstone += 1
         self.assertEqual(nb_goldstone, 0)
         self.do('set gauge Feynman')
+        self.do('import model sm')
         # check that the model is correctly loaded (has some goldstone)
         nb_goldstone = 0
         for part in self.cmd._curr_model['particles']:
@@ -1157,6 +1161,9 @@ P1_qq_wp_wp_lvl
         
     def test_import_banner_command(self):
         """check that the import banner command works"""
+        
+        cwd = os.getcwd()
+        os.chdir(MG5DIR)
         self.do('import banner %s --no_launch' % pjoin(MG5DIR, 'tests', 'input_files', 'tt_banner.txt'))
         
         # check that the output exists:
@@ -1166,5 +1173,5 @@ P1_qq_wp_wp_lvl
         run_card = open(pjoin(self.out_dir,'Cards','run_card.dat')).read()
         self.assertTrue("'tt'     = run_tag" in run_card)
         self.assertTrue("200       = nevents" in run_card)
-        
+        os.chdir(cwd)
         

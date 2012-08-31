@@ -213,7 +213,9 @@ class WriteALOHA:
                 self.declaration.add(('double','M%s' % self.outgoing))                
                 call_arg.append(('double','W%s' % self.outgoing))              
                 self.declaration.add(('double','W%s' % self.outgoing))
-            
+        
+        assert len(call_arg) == len(set([a[1] for a in call_arg]))
+        assert len(self.declaration) == len(set([a[1] for a in self.declaration])), self.declaration
         self.call_arg = call_arg
         return call_arg
 
@@ -450,7 +452,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             
 
     
-    def get_header_txt(self, name=None, couplings=None, mode=''):
+    def get_header_txt(self, name=None, couplings=None, **opt):
         """Define the Header of the fortran file. 
         """
         if name is None:
@@ -628,7 +630,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             decla = name.split('_',1)[0]
             self.declaration.add(('list_%s' % type, decla))
         else:
-            self.declaration.add((name.type, name.split('_',1)[0]))
+            self.declaration.add((name.type, name))
         name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         return name
   
@@ -711,11 +713,15 @@ class ALOHAWriterForFortran(WriteALOHA):
                     coeff = 'COUP*'
                 else:
                     coeff = ''
-                
+            to_order = {}  
             for ind in numerator.listindices():
-                out.write('    %s(%d)= %s%s\n' % (self.outname, 
-                                        self.pass_to_HELAS(ind)+1, coeff,
-                                        self.write_obj(numerator.get_rep(ind))))
+                to_order[self.pass_to_HELAS(ind)] = \
+                        '    %s(%d)= %s%s\n' % (self.outname, self.pass_to_HELAS(ind)+1, 
+                        coeff, self.write_obj(numerator.get_rep(ind)))
+            key = to_order.keys()
+            key.sort()
+            for i in key:
+                out.write(to_order[i])
         return out.getvalue()
 
     def define_symmetry(self, new_nb, couplings=None):
@@ -786,7 +792,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                     routine.write( '    vertex = vertex + tmp\n')
                 else:
                     size = self.type_to_size[self.particles[offshell -1]] -2
-                    routine.write(" do i = %s, %s\n" % (self.momentum_size, self.momentum_size+size))
+                    routine.write(" do i = %s, %s\n" % (self.momentum_size+1, self.momentum_size+size))
                     routine.write("        %(main)s(i) = %(main)s(i) + %(tmp)s(i)\n" %\
                                {'main': main, 'tmp': data['out']})
                     routine.write(' enddo\n')
@@ -1053,7 +1059,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         
         
         
-    def get_header_txt(self, name=None, couplings=None, mode=''):
+    def get_header_txt(self, name=None, couplings=None, **opt):
         """Define the Header of the fortran file. This include
             - function tag
             - definition of variable
@@ -1083,7 +1089,7 @@ class ALOHAWriterForFortranLoopQP(QP, ALOHAWriterForFortranLoop):
 def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     """ build the name of the aloha function """
     
-    assert (name and outgoing) or abstract
+    assert (name and outgoing is not None) or abstract
 
     if tag is None:
         tag = list(abstract.tag)
@@ -1715,7 +1721,7 @@ class ALOHAWriterForPython(WriteALOHA):
         """
         
         if '_' not in name:
-            self.declaration.add(('complex', name))
+            self.declaration.add((name.type, name))
         else:
             self.declaration.add(('', name.split('_',1)[0]))
         name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
@@ -1964,6 +1970,17 @@ class Declaration_list(set):
             return var in self.var_name
         self.var_name = [name for type,name in self]
         return var in self.var_name
+    
+    def add(self,obj):
+        if __debug__:
+            type, name = obj
+            samename = [t for t,n in self if n ==name]
+            for type2 in samename:
+                assert type2 == type, '%s is defined with two different type "%s" and "%s"' % \
+                            (name, type2, type)
+            
+        set.add(self,obj)
+        
 
 class WriterFactory(object):
     
