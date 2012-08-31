@@ -19,16 +19,16 @@ cp -af $CONDOR_INITIAL_DIR/../randinit .
 cp -af $CONDOR_INITIAL_DIR/symfact.dat .
 cp -af $CONDOR_INITIAL_DIR/iproc.dat .
 if [[ -e $CONDOR_INITIAL_DIR/MadLoopParams.dat ]]; then
-    cp -af  $CONDOR_INITIAL_DIR/MadLoopParams.dat .
+    cp -f  $CONDOR_INITIAL_DIR/MadLoopParams.dat .
 fi
 if [[ -e $CONDOR_INITIAL_DIR/ColorDenomFactors.dat ]]; then
-    cp -af  $CONDOR_INITIAL_DIR/ColorDenomFactors.dat .
+    cp -f  $CONDOR_INITIAL_DIR/ColorDenomFactors.dat .
 fi
 if [[ -e $CONDOR_INITIAL_DIR/ColorNumFactors.dat ]]; then
-    cp -af  $CONDOR_INITIAL_DIR/ColorNumFactors.dat .
+    cp -f  $CONDOR_INITIAL_DIR/ColorNumFactors.dat .
 fi
 if [[ -e $CONDOR_INITIAL_DIR/HelConfigs.dat ]]; then
-    cp -af  $CONDOR_INITIAL_DIR/HelConfigs.dat .
+    cp -f  $CONDOR_INITIAL_DIR/HelConfigs.dat .
 fi
 if [[ $1 == '0' ]]; then
     cp -af  $CONDOR_INITIAL_DIR/madevent_vegas .
@@ -46,7 +46,7 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
             mkdir $j
         fi
         cd $j
-        cp -af $CONDOR_INITIAL_DIR/$j/* .
+        cp -rf $CONDOR_INITIAL_DIR/$j/* .
         if [[ "$4" != "" ]]; then
             if [[ -e $CONDOR_INITIAL_DIR/$4\_G$i ]]; then
                 if [[ $1 == '0' ]]; then
