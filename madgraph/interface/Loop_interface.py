@@ -410,7 +410,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         param_card = self.check_check(argss)
         # For the stability check the user can specify the statistics (i.e
         # number of trial PS points) as a second argument
-        if argss[0]=="stability":
+        if argss[0] in ['stability', 'profile']:
             stab_statistics=int(argss[1])
             argss=argss[:1]+argss[2:]
         # Now make sure the process is acceptable

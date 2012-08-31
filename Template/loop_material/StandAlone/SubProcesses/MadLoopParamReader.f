@@ -28,11 +28,25 @@
      &           CTModeRun .gt. 6 ) then
                stop 'CTModeRun must be >= -1 and <=6.'
              endif 
-           
+
+           else if (buff .eq. '#NRotations_DP') then
+             read(666,*,end=999) NRotations_DP
+             if (NRotations_DP .lt. 0 .or.
+     &           NRotations_DP .gt. 2 ) then
+               stop 'NRotations_DP must be >= 0 and <=2.'
+             endif 
+
+           else if (buff .eq. '#NRotations_QP') then
+             read(666,*,end=999) NRotations_QP
+             if (NRotations_QP .lt. 0 .or.
+     &           NRotations_QP .gt. 2 ) then
+               stop 'NRotations_QP must be >= 0 and <=2.'
+             endif
+
            else if (buff .eq. '#MLStabThres') then
              read(666,*,end=999) MLStabThres
-             if (MLStabThres.le.0.0d0) then
-                 stop 'MLStabThres must be > 0'
+             if (MLStabThres.lt.0.0d0) then
+                 stop 'MLStabThres must be >= 0'
              endif
           
            else if (buff .eq. '#CTLoopLibrary') then
@@ -110,6 +124,8 @@
      & '==============================================================='
       write(*,*) ' > CTModeRun                 = ',CTModeRun
       write(*,*) ' > MLStabThres               = ',MLStabThres
+      write(*,*) ' > NRotations_DP             = ',NRotations_DP
+      write(*,*) ' > NRotations_QP             = ',NRotations_QP
       write(*,*) ' > CTStabThres               = ',CTStabThres
       write(*,*) ' > CTLoopLibrary             = ',CTLoopLibrary
       write(*,*) ' > CTModeInit                = ',CTModeInit
@@ -137,9 +153,11 @@
 
       CTModeInit=0
       CTModeRun=-1
+      NRotations_DP=1
+      NRotations_QP=0
       MLStabThres=1.0d-5
       CTStabThres=1.0d-2
-      CTLoopLibrary=2
+      CTLoopLibrary=3
       CheckCycle=3
       MaxAttempts=10
       UseLoopFilter=.True.

@@ -292,7 +292,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             if i==10:
                 elapsed_time = time.time()-start
                 t = int(len(ampl_to_jampl)*(elapsed_time/10.0))
-                if t > -1:
+                if t > 20:
                     time_info = True
                     logger.info('The color factors computation will take '+\
                       ' about %s to run. '%str(datetime.timedelta(seconds=t))+\

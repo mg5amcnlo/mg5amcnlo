@@ -6,13 +6,13 @@
 !====================================================================
 !
 	  integer CTModeInit,CTModeRun,CheckCycle,MaxAttempts,
-     &CTLoopLibrary
+     &CTLoopLibrary,NRotations_DP,NRotations_QP
 
       real*8 MLStabThres,CTStabThres,ZeroThres
 
       logical UseLoopFilter,LoopInitStartOver,DoubleCheckHelicityFilter
 
-      common /MADLOOP/CTModeInit,CTModeRun,CheckCycle,
-     &MaxAttempts,UseLoopFilter,MLStabThres,CTStabThres,
+      common /MADLOOP/CTModeInit,CTModeRun,NRotations_DP,NRotations_QP,
+     &CheckCycle, MaxAttempts,UseLoopFilter,MLStabThres,CTStabThres,
      &CTLoopLibrary,LoopInitStartOver,DoubleCheckHelicityFilter,
      &ZeroThres

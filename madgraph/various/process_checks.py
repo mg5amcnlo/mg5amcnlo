@@ -913,9 +913,12 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 # Global helper function run_multiprocs
 #===============================================================================
 
-    def check_matrix_element_stability(self, matrix_element, model, nPoints):
+    def check_matrix_element_stability(self, matrix_element, model, nPoints,
+                                                                  infos = None):
         """ Output the matrix_element in argument, run in for nPoints and return
-        a dictionary containing the stability information on each of these points
+        a dictionary containing the stability information on each of these points.
+        If infos are provided, then the matrix element output is skipped and 
+        reused from a previous run and the content of infos.
         """
         
         # Accuracy threshold of double precision evaluations above which the
@@ -941,15 +944,16 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         process = matrix_element['processes'][0]
         proc_name = process.shell_string()
         export_dir=os.path.join(self.mg_root,'TMP_DIR_FOR_THE_CHECK_CMD')
-        infos = self.setup_process(matrix_element, model,export_dir)
         if not infos:
-            return None
+            infos = self.setup_process(matrix_element, model,export_dir)
+            if not infos:
+                return None            
         dir_path=infos['dir_path']
         
         logger.info("Checking stability of process %s "%proc_name+\
                     "with %d PS points."%nPoints)
         time_per_ps_estimate = (infos['Initialization']/4.0)/2.0
-        sec_needed = int(time_per_ps_estimate*nPoints*2)
+        sec_needed = int(time_per_ps_estimate*nPoints*4)
         if sec_needed>15:     
             logger.info("This check should take about "+\
                         "%s to run. Started on %s."%(\
@@ -973,7 +977,26 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         if retcode != 0:
             logging.info("Error while executing make in %s" % dir_path)
             return None
-        
+
+        def output_PS_point(dir_path, p, rotation=0):
+            """ Write out the specified PS point to the file dir_path/PS.input
+            while rotating it if rotation!=0. We consider only rotations of 90
+            but one could think of having rotation of arbitrary angle too.
+            rotation=1 => (x'=z,y'=-x,z'=-y)
+            rotation=2 => (x'=-z,y'=y,z'=x)"""
+            if rotation==0:
+                p_out=copy.copy(p)
+            elif rotation==1:
+                p_out=[[pm[0],pm[3],-pm[1],-pm[2]] for pm in p]
+            elif rotation==2:
+                p_out=[[pm[0],-pm[3],pm[2],pm[1]] for pm in p]
+            else:
+                raise MadGraphError("Rotation id %i not implemented"%rotation)
+            PSfile = open(os.path.join(dir_path, 'PS.input'), 'w')
+            PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in pmom]) \
+                                                            for pmom in p_out]))
+            PSfile.close()  
+  
         def pick_PS_point(proc):
             """ Randomly generate a PS point and make sure it is eligible. Then
             return it. Users can edit the cuts here if they want."""
@@ -1017,36 +1040,48 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             p = pick_PS_point(process)
 #            print "I use P_%i="%i,p
             # Write it in the input file
-            PSfile = open(os.path.join(dir_path, 'PS.input'), 'w')
-            PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in pmom]) \
-                                                                for pmom in p]))
-            PSfile.close()
+            output_PS_point(dir_path,p,0)
+            dp_dict={}
             dp_res=[]
             dp_res.append(self.get_me_value(1,\
                               os.path.join(export_dir,'SubProcesses'),dir_path))
+            dp_dict['CTModeA']=dp_res[-1]
             dp_res.append(self.get_me_value(2,\
                               os.path.join(export_dir,'SubProcesses'),dir_path))
+            dp_dict['CTModeB']=dp_res[-1]
+            for rotation in range(1,3):
+                output_PS_point(dir_path,p,rotation)                
+                dp_res.append(self.get_me_value(1,\
+                              os.path.join(export_dir,'SubProcesses'),dir_path))
+                dp_dict['Rotation%i'%rotation]=dp_res[-1]
             # Make sure all results make sense
             if any([not res for res in dp_res]):
                 return None
-
             dp_accuracy = (max(dp_res)-min(dp_res))/abs(sum(dp_res)/len(dp_res))
-            DP_stability.append({'CTMode1':dp_res[0],'CTMode2':dp_res[1],
-                                                        'Accuracy':dp_accuracy})
+            dp_dict['Accuracy'] = dp_accuracy
+            DP_stability.append(dp_dict)
             if dp_accuracy>accuracy_threshold:
                 Unstable_PS_points.append([i,p])
                 qp_res=[]
+                qp_dict={}
                 qp_res.append(self.get_me_value(4,\
                                   os.path.join(export_dir,'SubProcesses'),dir_path))
+                qp_dict['CTModeA']=qp_res[-1]
                 qp_res.append(self.get_me_value(5,\
                                   os.path.join(export_dir,'SubProcesses'),dir_path))
+                qp_dict['CTModeB']=qp_res[-1]
+                for rotation in range(1,3):
+                    output_PS_point(dir_path,p,rotation)                
+                    qp_res.append(self.get_me_value(4,\
+                              os.path.join(export_dir,'SubProcesses'),dir_path))
+                    qp_dict['Rotation%i'%rotation]=qp_res[-1]
                 # Make sure all results make sense
                 if any([not res for res in qp_res]):
                     return None
                 
                 qp_accuracy = (max(qp_res)-min(qp_res))/abs(sum(qp_res)/len(qp_res))
-                QP_stability.append({'CTMode4':qp_res[0],'CTMode5':qp_res[1],
-                                                        'Accuracy':qp_accuracy})
+                qp_dict['Accuracy']=qp_accuracy
+                QP_stability.append(qp_dict)
                 if qp_accuracy>accuracy_threshold:
                     Exceptional_PS_points.append([i,p])
             else:
@@ -1220,20 +1255,19 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
     return False
 
 #===============================================================================
-# check_timing for loop processes
+# Generate a loop matrix element
 #===============================================================================
-def check_stability(process_definition, mg_root="",cuttools="",
-                    cmass_scheme = False, nPoints=100):
-    """For a single loop process, give a detailed summary of the generation and
-    execution timing."""
-    
+def generate_loop_matrix_element(process_definition):
+    """ Generate a loop matrix element from the process definition, and returns
+    it along with the timing information dictionary """
+
     assert isinstance(process_definition,base_objects.ProcessDefinition)
     assert process_definition.get('perturbation_couplings')!=[]
-
+    
     model=process_definition.get('model')
     
     if any(len(l.get('ids'))>1 for l in process_definition.get('legs')):
-        raise InvalidCmd("The stability check can only be performed on single "+
+        raise InvalidCmd("This check can only be performed on single "+
                          " processes. (i.e. without multiparticle labels).")
 
     isids = [leg.get('ids')[0] for leg in process_definition.get('legs') \
@@ -1243,17 +1277,76 @@ def check_stability(process_definition, mg_root="",cuttools="",
 
     # Now generate a process based on the ProcessDefinition given in argument.
     process = process_definition.get_process(isids,fsids)
-
+    
     logger.info("Generating p%s"%process_definition.nice_string()[1:])
-
+    
+    timing = {}
+    start=time.time()
     amplitude = loop_diagram_generation.LoopAmplitude(process)
+    timing['Diagrams_generation']=time.time()-start
+    timing['n_loops']=len(amplitude.get('loop_diagrams'))
+    start=time.time()
     matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                         optimized_output = loop_optimized_output,gen_color=True)
+    timing['HelasDiagrams_generation']=time.time()-start
+    
+    if loop_optimized_output:
+        timing['n_loop_groups']=len(matrix_element.get('loop_groups'))
+        lwfs=[l for ldiag in matrix_element.get_loop_diagrams() for l in \
+                                                ldiag.get('loop_wavefunctions')]
+        timing['n_loop_wfs']=len(lwfs)
+        timing['loop_wfs_ranks']=[]
+        for rank in range(0,max([l.get('rank') for l in lwfs])+1):
+            timing['loop_wfs_ranks'].append(\
+                                  len([1 for l in lwfs if l.get('rank')==rank]))
+    
+    return timing, matrix_element
+
+#===============================================================================
+# check profile for loop process (timings + stability in one go)
+#===============================================================================
+def check_profile(process_definition, mg_root="",cuttools="",
+                                             cmass_scheme = False, nPoints=100):
+    """For a single loop process, check both its timings and then its stability
+    in one go without regenerating it."""
+
+    model=process_definition.get('model')
+
+    timing1, matrix_element = generate_loop_matrix_element(process_definition)
+    myProfiler = LoopMatrixElementTimer(mg_root=mg_root, cuttools_dir=cuttools, 
+                                       model=model, cmass_scheme = cmass_scheme)
+    timing2 = myProfiler.time_matrix_element(matrix_element, model)
+    
+    if timing2 == None:
+        return None, None
+
+    # The timing info is made of the merged two dictionaries
+    timing = dict(timing1.items()+timing2.items())
+
+    stability = myProfiler.check_matrix_element_stability(matrix_element, 
+                                            model,nPoints=nPoints, infos=timing)
+    if stability == None:
+        return None, None
+    else:
+        clean_up(mg_root)
+        stability['Process']=matrix_element['processes'][0]
+        return timing, stability
+
+#===============================================================================
+# check_timing for loop processes
+#===============================================================================
+def check_stability(process_definition, mg_root="",cuttools="",
+                    cmass_scheme = False, nPoints=100):
+    """For a single loop process, give a detailed summary of the generation and
+    execution timing."""
+    
+    model=process_definition.get('model')
+
+    timing, matrix_element = generate_loop_matrix_element(process_definition)
 
     myStabilityChecker = LoopMatrixElementTimer(mg_root=mg_root, 
                            cuttools_dir=cuttools, model=model, 
                            cmass_scheme = cmass_scheme)
-    
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
                                                           model,nPoints=nPoints)
     
@@ -1261,7 +1354,7 @@ def check_stability(process_definition, mg_root="",cuttools="",
         return None
     else:
         clean_up(mg_root)
-        stability['Process']=process
+        stability['Process']=matrix_element['processes'][0]
         return stability
 
 #===============================================================================
@@ -1270,46 +1363,9 @@ def check_stability(process_definition, mg_root="",cuttools="",
 def check_timing(process_definition, mg_root="",cuttools="",cmass_scheme = False):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
-    
-    assert isinstance(process_definition,base_objects.ProcessDefinition)
-    assert process_definition.get('perturbation_couplings')!=[]
-    
+
     model=process_definition.get('model')
-    
-    if any(len(l.get('ids'))>1 for l in process_definition.get('legs')):
-        raise InvalidCmd("The timing check can only be performed on single "+
-                         " processes. (i.e. without multiparticle labels).")
-
-    isids = [leg.get('ids')[0] for leg in process_definition.get('legs') \
-              if not leg.get('state')]
-    fsids = [leg.get('ids')[0] for leg in process_definition.get('legs') \
-             if leg.get('state')]
-
-    # Now generate a process based on the ProcessDefinition given in argument.
-    process = process_definition.get_process(isids,fsids)
-    
-    logger.info("Generating p%s"%process_definition.nice_string()[1:])
-    
-    timing1 = {}
-    start=time.time()
-    amplitude = loop_diagram_generation.LoopAmplitude(process)
-    timing1['Diagrams_generation']=time.time()-start
-    timing1['n_loops']=len(amplitude.get('loop_diagrams'))
-    start=time.time()
-    matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
-                        optimized_output = loop_optimized_output,gen_color=True)
-    timing1['HelasDiagrams_generation']=time.time()-start
-    
-    if loop_optimized_output:
-        timing1['n_loop_groups']=len(matrix_element.get('loop_groups'))
-        lwfs=[l for ldiag in matrix_element.get_loop_diagrams() for l in \
-                                                ldiag.get('loop_wavefunctions')]
-        timing1['n_loop_wfs']=len(lwfs)
-        timing1['loop_wfs_ranks']=[]
-        for rank in range(0,max([l.get('rank') for l in lwfs])+1):
-            timing1['loop_wfs_ranks'].append(\
-                                  len([1 for l in lwfs if l.get('rank')==rank]))
-    
+    timing1, matrix_element = generate_loop_matrix_element(process_definition)
     myTimer = LoopMatrixElementTimer(mg_root=mg_root, cuttools_dir=cuttools, 
                                        model=model, cmass_scheme = cmass_scheme)
     timing2 = myTimer.time_matrix_element(matrix_element, model)
@@ -1566,10 +1622,99 @@ def clean_up(mg_root):
     for dir in directories:
         shutil.rmtree(dir)
 
+def output_profile(myprocdef, stability, timing, mg_root, opt):
+    """Present the results from a timing and stability consecutive check"""
+
+    text = 'Timing result for the '+('optimized' if opt else 'default')+\
+                                                                    ' output:\n'
+    text += output_timings(myprocdef,timing,opt)
+
+    text += '\nStability result for the '+('optimized' if opt else 'default')+\
+                                                                    ' output:\n'
+    text += output_stability(stability,mg_root=mg_root,opt = opt)
+
+    mode = 'optimized' if opt else 'default'
+    logFilePath =  os.path.join(mg_root, 'profile_%s_%s.log'\
+                                    %(mode,stability['Process'].shell_string()))        
+    logFile = open(logFilePath, 'w')
+    logFile.write(text)
+    logFile.close()
+    logger.info('Log of this profile check was output to file %s'\
+                                                              %str(logFilePath))
+    return text
+
 def output_stability(stability, mg_root, opt):
     """Present the result of a stability check in a nice format.
     The full info is printed out in 'Stability_result_<proc_shell_string>.dat'
     under the MadGraph root folder (mg_root)"""
+    
+    def accuracy(eval_list):
+        """ Compute the accuracy from different evaluations."""
+        return (2.0*(max(eval_list)-min(eval_list))/
+                                             abs(max(eval_list)+min(eval_list)))
+    
+    def best_estimate(eval_list):
+        """ Returns the best estimate from different evaluations."""
+        return (max(eval_list)+min(eval_list))/2.0
+    
+    def loop_direction_test_power(eval_list):
+        """ Computes the loop direction test power P is computed as follow:
+          P = accuracy(loop_dir_test) / accuracy(all_test)
+        So that P is large if the loop direction test is effective.
+        The tuple returned is (log(median(P)),log(min(P)),frac)
+        where frac is the fraction of events with powers smaller than -2
+        which means events for which the reading direction test shows an
+        accuracy two digits higher than it really is according to the other
+        tests."""
+        
+        powers=[]
+        for eval in eval_list:
+            loop_dir_evals = [eval['CTModeA'],eval['CTModeB']]
+            other_evals = [eval[key] for key in eval.keys() if key not in \
+                                               ['CTModeA','CTModeB','Accuracy']]
+            if accuracy(other_evals)!=0.0 and accuracy(loop_dir_evals)!=0.0:
+                powers.append(accuracy(loop_dir_evals)/accuracy(other_evals))
+        
+        n_fail=0
+        for p in powers:
+            if math.log(p)<-2:
+                n_fail+=1
+                
+        if len(powers)==0:
+            return (0.0,0.0,0.0,'NA')
+
+        return (math.log(median(powers)),math.log(min(powers)),
+                                                        n_fail/len(powers),'OK')
+        
+    def test_consistency(dp_eval_list, qp_eval_list):
+        """ Computes the consistency test C from the DP and QP evaluations.
+          C = accuracy(all_DP_test) / abs(best_QP_eval-best_DP_eval)
+        So a consistent test would have C as close to one as possible.
+        The tuple returned is (log(median(C)),log(min(C)),log(max(C)))"""
+        consistencies = []
+        for dp_eval, qp_eval in zip(dp_eval_list,qp_eval_list):
+            dp_evals = [dp_eval[key] for key in dp_eval.keys() \
+                                                             if key!='Accuracy']
+            qp_evals = [qp_eval[key] for key in qp_eval.keys() \
+                                                             if key!='Accuracy']
+            if (abs(best_estimate(qp_evals)-best_estimate(dp_evals)))!=0.0 and \
+               accuracy(dp_evals)!=0.0:
+                consistencies.append(accuracy(dp_evals)/(abs(\
+                              best_estimate(qp_evals)-best_estimate(dp_evals))))
+
+        if len(consistencies)==0:
+            return (0.0,0.0,0.0,'NA')
+        return (math.log(median(consistencies)),math.log(min(consistencies)),
+                                              math.log(max(consistencies)),'OK')
+    
+    def median(orig_list):
+        """ Find the median of a sorted float list. """
+        list=copy.copy(orig_list)
+        list.sort()
+        if len(list)%2==0:
+            return (list[int((len(list)/2)-1)]+list[int(len(list)/2)])/2.0
+        else:
+            return list[int((len(list)-1)/2)]
     
     mode = 'optimized' if opt else 'default'
     DP_stability = [eval['Accuracy'] for eval in stability['DP_stability']]
@@ -1588,35 +1733,92 @@ def output_stability(stability, mg_root, opt):
     res_str = "%i PS points evaluated for %s (%s mode)\n"\
                                            %(nPS,process.nice_string()[9:],mode)
     res_str += "\n= Double precision results\n"
-    res_str += "|= Average accuracy............ %.3e\n"%(sum(DP_stability)/nPS)
-    res_str += "|= Max accuracy................ %.3e\n"%min(DP_stability)
-    res_str += "|= Min accuracy................ %.3e\n"%max(DP_stability)
+    res_str += "|= Median accuracy............... %.2e\n"%median(DP_stability)
+    res_str += "|= Max accuracy.................. %.2e\n"%min(DP_stability)
+    res_str += "|= Min accuracy.................. %.2e\n"%max(DP_stability)
+    (pmed,pmin,pfrac,flag)=loop_direction_test_power(stability['DP_stability'])
+    if flag!='NA':
+        res_str += "|= Overall DP loop_dir test power %.1f,%.1f\n"%(pmed,pmin)
+        res_str += "|= Fraction of evts with power<-2 %.2e\n"%pfrac
+    else:
+        res_str += "|= Overall DP loop_dir test power NA\n"
+        res_str += "|= Fraction of evts with power<-2 NA\n"
     res_str += "\n= Number of Unstable PS points    : %i\n"%len(UPS)
     if len(UPS)>0:
-        res_str += "|= DP Average inaccuracy....... %.3e\n"%\
-                                                (sum(UPS_stability_DP)/len(UPS))
-        res_str += "|= DP Max accuracy............. %.3e\n"%min(UPS_stability_DP)
-        res_str += "|= DP Min accuracy............. %.3e\n"%max(UPS_stability_DP)
-        res_str += "|= QP Average accuracy......... %.3e\n"%\
-                                                (sum(UPS_stability_QP)/len(UPS))
-        res_str += "|= QP Max accuracy............. %.3e\n"%min(UPS_stability_QP)
-        res_str += "|= QP Min accuracy............. %.3e\n"%max(UPS_stability_QP)
+        res_str += "|= DP Median inaccuracy.......... %.2e\n"%median(UPS_stability_DP)
+        res_str += "|= DP Max accuracy............... %.2e\n"%min(UPS_stability_DP)
+        res_str += "|= DP Min accuracy............... %.2e\n"%max(UPS_stability_DP)
+        (pmed,pmin,pfrac,flag)=loop_direction_test_power(\
+                                 [stability['DP_stability'][U[0]] for U in UPS])
+        if flag!='NA':
+            res_str += "|= UPS DP loop_dir test power.... %.1f,%.1f\n"%(pmed,pmin)
+            res_str += "|= UPS DP fraction with power<-2. %.2e\n"%pfrac
+        else:
+            res_str += "|= UPS DP loop_dir test power.... NA\n"
+            res_str += "|= UPS DP fraction with power<-2. NA\n"
+        res_str += "|= QP Median accuracy............ %.2e\n"%median(UPS_stability_QP)
+        res_str += "|= QP Max accuracy............... %.2e\n"%min(UPS_stability_QP)
+        res_str += "|= QP Min accuracy............... %.2e\n"%max(UPS_stability_QP)
+        (pmed,pmin,pfrac,flag)=loop_direction_test_power(\
+                                 [stability['QP_stability'][U[0]] for U in UPS])
+        if flag!='NA':
+            res_str += "|= UPS QP loop_dir test power.... %.1f,%.1f\n"%(pmed,pmin)
+            res_str += "|= UPS QP fraction with power<-2. %.2e\n"%pfrac
+        else:
+            res_str += "|= UPS QP loop_dir test power.... NA\n"
+            res_str += "|= UPS QP fraction with power<-2. NA\n"
+        (pmed,pmin,pmax,flag)=test_consistency(\
+                                 [stability['DP_stability'][U[0]] for U in UPS],
+                                 [stability['QP_stability'][U[0]] for U in UPS])
+        if flag!='NA':
+            res_str += "|= DP vs QP stab test consistency %.1f,%.1f,%.1f\n"%\
+                                                                (pmed,pmin,pmax)
+        else:
+            res_str += "|= DP vs QP stab test consistency NA\n"    
+        
     res_str += "\n= Number of Exceptional PS points : %i\n"%len(EPS)
     if len(EPS)>0:
-        res_str += "|= DP Average accuracy......... %.3e\n"%\
-                                                (sum(EPS_stability_DP)/len(EPS))
-        res_str += "|= DP Max accuracy............. %.3e\n"%min(EPS_stability_DP)
-        res_str += "|= DP Min accuracy............. %.3e\n"%max(EPS_stability_DP)
-        res_str += "|= QP Average accuracy......... %.3e\n"%\
-                                                (sum(EPS_stability_QP)/len(EPS))
-        res_str += "|= QP Max accuracy............. %.3e\n"%min(EPS_stability_QP)
-        res_str += "|= QP Min accuracy............. %.3e\n"%max(EPS_stability_QP)
+        res_str += "|= DP Median accuracy............ %.2e\n"%median(EPS_stability_DP)
+        res_str += "|= DP Max accuracy............... %.2e\n"%min(EPS_stability_DP)
+        res_str += "|= DP Min accuracy............... %.2e\n"%max(EPS_stability_DP)
+        (pmed,pmin,pfrac,flag)=loop_direction_test_power(\
+                                 [stability['DP_stability'][E[0]] for E in EPS])
+        if flag!='NA':
+            res_str += "|= EPS DP loop_dir test power.... %.1f,%.1f\n"%(pmed,pmin)
+            res_str += "|= EPS DP fraction with power<-2. %.2e\n"%pfrac
+        else:
+            res_str += "|= EPS DP loop_dir test power.... NA\n"
+            res_str += "|= EPS DP fraction with power<-2. NA\n"
+        res_str += "|= QP Median accuracy............ %.2e\n"%median(EPS_stability_QP)
+        res_str += "|= QP Max accuracy............... %.2e\n"%min(EPS_stability_QP)
+        res_str += "|= QP Min accuracy............... %.2e\n"%max(EPS_stability_QP)
+        (pmed,pmin,pfrac,flag)=loop_direction_test_power(\
+                                 [stability['QP_stability'][E[0]] for E in EPS])
+        if flag!='NA':
+            res_str += "|= EPS QP loop_dir test power.... %.1f,%.1f\n"%(pmed,pmin)
+            res_str += "|= EPS QP fraction with power<-2. %.2e\n"%pfrac
+        else:
+            res_str += "|= EPS QP loop_dir test power.... NA\n"
+            res_str += "|= EPS QP fraction with power<-2. NA\n"
+
+    res_str += \
+    """
+= Legend for the statistics of the stability tests.
+  The loop direction test power P is computed as follow:
+     P = accuracy(loop_dir_test) / accuracy(all_other_test)
+  So that P is large if the loop direction test is effective.
+  The tuple printed out is (log(median(P)),log(min(P)))
+  The consistency test C is computed when QP evaluations are available:
+     C = accuracy(all_DP_test) / abs(best_QP_eval-best_DP_eval)
+  So a consistent test would have log(C) as close to zero as possible.
+  The tuple printed out is (log(median(C)),log(min(C)),log(max(C)))
+"""
 
     logFile = open(os.path.join(mg_root, 'stability_%s_%s.log'\
                                            %(mode,process.shell_string())), 'w')
     logFile.write('Stability check results\n\n')
     logFile.write(res_str)
-    res_str += "\n= Full details of the run are output in the file"+\
+    res_str += "\n= Stability details of the run are output to the file"+\
                " stability_%s_%s.log\n"%(mode,process.shell_string())
     if len(EPS)>0:
         logFile.write('\nFull details of the %i EPS encountered.\n'%len(EPS))
