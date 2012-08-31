@@ -1,20 +1,20 @@
 !
 ! Copyright (C) 2012 Andreas van Hameren. 
 !
-! This file is part of OneLOop-3.1.1.
+! This file is part of OneLOop-3.2.
 !
-! OneLOop-3.1.1 is free software: you can redistribute it and/or modify
+! OneLOop-3.2 is free software: you can redistribute it and/or modify
 ! it under the terms of the GNU General Public License as published by
 ! the Free Software Foundation, either version 3 of the License, or
 ! (at your option) any later version.
 !
-! OneLOop-3.1.1 is distributed in the hope that it will be useful,
+! OneLOop-3.2 is distributed in the hope that it will be useful,
 ! but WITHOUT ANY WARRANTY; without even the implied warranty of
 ! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ! GNU General Public License for more details.
 !
 ! You should have received a copy of the GNU General Public License
-! along with OneLOop-3.1.1.  If not, see <http://www.gnu.org/licenses/>.
+! along with OneLOop-3.2.  If not, see <http://www.gnu.org/licenses/>.
 !
 
 
@@ -28,12 +28,12 @@ contains
   if (done) return ;done=.true.
   write(*,'(a72)') '########################################################################'
   write(*,'(a72)') '#                                                                      #'
-  write(*,'(a72)') '#                     You are using OneLOop-3.1.1                      #'
+  write(*,'(a72)') '#                      You are using OneLOop-3.2                       #'
   write(*,'(a72)') '#                                                                      #'
   write(*,'(a72)') '# for the evaluation of 1-loop scalar 1-, 2-, 3- and 4-point functions #'
   write(*,'(a72)') '#                                                                      #'
   write(*,'(a72)') '# author: Andreas van Hameren <hamerenREMOVETHIS@ifj.edu.pl>           #'
-  write(*,'(a72)') '#   date: 05-06-2012                                                   #'
+  write(*,'(a72)') '#   date: 19-07-2012                                                   #'
   write(*,'(a72)') '#                                                                      #'
   write(*,'(a72)') '# Please cite                                                          #'
   write(*,'(a72)') '#    A. van Hameren,                                                   #'
@@ -1756,8 +1756,8 @@ contains
 !
   if (j1.ne.j2) then
     if (r1.eq.r2) then
-!Val      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!Val        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
+      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_c j1=/=j2,r1=r2' !DEBUG
       return
@@ -1770,8 +1770,8 @@ contains
 !
   if (a1.lt.eps) then
     if (a2.lt.eps) then
-!Val      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!Val        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
+      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_c r1<eps,r2<eps' !DEBUG
       return
@@ -1890,8 +1890,8 @@ contains
 !
   if (j1.ne.j2) then
     if (r1.eq.r2) then
-!Val      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!Val        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
+      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_r j1=/=j2,r1=r2' !DEBUG
       return
@@ -1904,8 +1904,8 @@ contains
 !
   if (r1.lt.eps) then
     if (r2.lt.eps) then
-!Val      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!Val        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
+      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_r r1<eps,r2<eps' !DEBUG
       return
@@ -4708,26 +4708,21 @@ contains
   type(qmplx_type) :: qx1,qx2,qss,q12,q13,q14,q23,q24,q34
   complex(kindr2) &
     :: smm,sm4,aa,bb,cc,dd,x1,x2,r12,r13,r14,r23,r24,r34
-  logical :: r12zero,r13zero
+  logical :: r12zero,r13zero,r14zero
 !
   sm4 = mysqrt(m4)
   smm = abs(sm4) 
 !
-  r12 = 0
-  r13 = 0
-  r14 = 0
-  r23 = 0
-  r24 = 0
-  r34 = 0
-  if (m4.ne.p4 ) r12 = ( m4-p4 -p4 *IEPS )/(smm*sm4)
-  if (m4.ne.p23) r13 = ( m4-p23-p23*IEPS )/(smm*sm4)
-  if (m4.ne.p3 ) r14 = ( m4-p3 -p3 *IEPS )/(smm*sm4)
-                 r23 = (   -p1 -p1 *IEPS )/(smm*smm)
-                 r24 = (   -p12-p12*IEPS )/(smm*smm)
-                 r34 = (   -p2 -p2 *IEPS )/(smm*smm)
+  r12 = ( m4-p4 -p4 *IEPS )/(smm*sm4)
+  r13 = ( m4-p23-p23*IEPS )/(smm*sm4)
+  r14 = ( m4-p3 -p3 *IEPS )/(smm*sm4)
+  r23 = (   -p1 -p1 *IEPS )/(smm*smm)
+  r24 = (   -p12-p12*IEPS )/(smm*smm)
+  r34 = (   -p2 -p2 *IEPS )/(smm*smm)
 !
-  r12zero = (r12.eq.CZRO)
-  r13zero = (r13.eq.CZRO)
+  r12zero=(abs(areal(r12))+abs(aimag(r12)).lt.neglig(prcpar))
+  r13zero=(abs(areal(r13))+abs(aimag(r13)).lt.neglig(prcpar))
+  r14zero=(abs(areal(r14))+abs(aimag(r14)).lt.neglig(prcpar))
 !
   aa = r34*r24
 !
@@ -4781,7 +4776,7 @@ contains
     endif
   endif
 !
-  if (r14.ne.CZRO) then
+  if (.not.r14zero) then
     rslt(0) = rslt(0) - li2c2( qx1*q14 ,qx2*q14 )*r14
   endif
 !
@@ -4824,23 +4819,18 @@ contains
 !
   smm = abs(sm3)
 !
-  r12 = 0
-  r13 = 0
-  k14 = 0
-  r23 = 0
-  r24 = 0
-  r34 = 0
-  if (   m4.ne.p4 ) r12 = (    m4-p4 -p4 *IEPS )/(smm*sm4)
-  if (   m4.ne.p23) r13 = (    m4-p23-p23*IEPS )/(smm*sm4)
-  if (m3+m4.ne.p3 ) k14 = ( m3+m4-p3 -p3 *IEPS )/(sm3*sm4)
-                    r23 = (      -p1 -p1 *IEPS )/(smm*smm)
-  if (   m3.ne.p12) r24 = (    m3-p12-p12*IEPS )/(smm*sm3)
-  if (   m3.ne.p2 ) r34 = (    m3-p2 -p2 *IEPS )/(smm*sm3)
+  r12 = (    m4-p4 -p4 *IEPS )/(smm*sm4)
+  r13 = (    m4-p23-p23*IEPS )/(smm*sm4)
+  k14 = ( m3+m4-p3 -p3 *IEPS )/(sm3*sm4)
+  r23 = (      -p1 -p1 *IEPS )/(smm*smm)
+  r24 = (    m3-p12-p12*IEPS )/(smm*sm3)
+  r34 = (    m3-p2 -p2 *IEPS )/(smm*sm3)
 !
-  r12zero = (r12.eq.CZRO)
-  r13zero = (r13.eq.CZRO)
-  r24zero = (r24.eq.CZRO)
-  r34zero = (r34.eq.CZRO)
+  r12zero = (abs(areal(r12))+abs(aimag(r12)).lt.neglig(prcpar))
+  r13zero = (abs(areal(r13))+abs(aimag(r13)).lt.neglig(prcpar))
+  r24zero = (abs(areal(r24))+abs(aimag(r24)).lt.neglig(prcpar))
+  r34zero = (abs(areal(r34))+abs(aimag(r34)).lt.neglig(prcpar))
+!
   if (r12zero.and.r24zero) then
     if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop boxf2: ' &
        ,'m4=p4 and m3=p12, returning 0'
@@ -4961,22 +4951,17 @@ contains
   sm4 = mysqrt(m4)
   sm3 = abs(sm2)
 !
-  k12 = 0
-  r13 = 0
-  k14 = 0
-  r23 = 0
-  k24 = 0
-  r34 = 0
-  if (m1+m2.ne.p1 ) k12 = ( m1 + m2 - p1 -p1 *IEPS )/(sm1*sm2) ! p1
-  if (m1   .ne.p12) r13 = ( m1      - p12-p12*IEPS )/(sm1*sm3) ! p1+p2
-  if (m1+m4.ne.p4 ) k14 = ( m1 + m4 - p4 -p4 *IEPS )/(sm1*sm4) ! p1+p2+p3
-  if (m2   .ne.p2 ) r23 = ( m2      - p2 -p2 *IEPS )/(sm2*sm3) ! p2
-  if (m2+m4.ne.p23) k24 = ( m2 + m4 - p23-p23*IEPS )/(sm2*sm4) ! p2+p3
-  if (   m4.ne.p3 ) r34 = (      m4 - p3 -p3 *IEPS )/(sm3*sm4) ! p3
+  k12 = ( m1+m2-p1 -p1 *IEPS )/(sm1*sm2) ! p1
+  r13 = ( m1   -p12-p12*IEPS )/(sm1*sm3) ! p1+p2
+  k14 = ( m1+m4-p4 -p4 *IEPS )/(sm1*sm4) ! p1+p2+p3
+  r23 = ( m2   -p2 -p2 *IEPS )/(sm2*sm3) ! p2
+  k24 = ( m2+m4-p23-p23*IEPS )/(sm2*sm4) ! p2+p3
+  r34 = (    m4-p3 -p3 *IEPS )/(sm3*sm4) ! p3
 !
-  r13zero = (r13.eq.CZRO)
-  r23zero = (r23.eq.CZRO)
-  r34zero = (r34.eq.CZRO)
+  r13zero = (abs(areal(r13))+abs(aimag(r13)).lt.neglig(prcpar))
+  r23zero = (abs(areal(r23))+abs(aimag(r23)).lt.neglig(prcpar))
+  r34zero = (abs(areal(r34))+abs(aimag(r34)).lt.neglig(prcpar))
+!
   if (r13zero) then
     if     (r23zero) then
       if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop boxf33: ' &
@@ -5069,18 +5054,12 @@ contains
   sm3 = mysqrt(m3)
   sm4 = mysqrt(m4)
 !
-  k12 = 0
-  k13 = 0
-  k14 = 0
-  k23 = 0
-  k24 = 0
-  k34 = 0
-  if (m1+m2.ne.p1 ) k12 = ( m1 + m2 - p1 -p1 *IEPS)/(sm1*sm2) ! p1
-  if (m1+m3.ne.p12) k13 = ( m1 + m3 - p12-p12*IEPS)/(sm1*sm3) ! p1+p2
-  if (m1+m4.ne.p4 ) k14 = ( m1 + m4 - p4 -p4 *IEPS)/(sm1*sm4) ! p1+p2+p3
-  if (m2+m3.ne.p2 ) k23 = ( m2 + m3 - p2 -p2 *IEPS)/(sm2*sm3) ! p2
-  if (m2+m4.ne.p23) k24 = ( m2 + m4 - p23-p23*IEPS)/(sm2*sm4) ! p2+p3
-  if (m3+m4.ne.p3 ) k34 = ( m3 + m4 - p3 -p3 *IEPS)/(sm3*sm4) ! p3
+  k12 = ( m1+m2-p1 -p1 *IEPS)/(sm1*sm2) ! p1
+  k13 = ( m1+m3-p12-p12*IEPS)/(sm1*sm3) ! p1+p2
+  k14 = ( m1+m4-p4 -p4 *IEPS)/(sm1*sm4) ! p1+p2+p3
+  k23 = ( m2+m3-p2 -p2 *IEPS)/(sm2*sm3) ! p2
+  k24 = ( m2+m4-p23-p23*IEPS)/(sm2*sm4) ! p2+p3
+  k34 = ( m3+m4-p3 -p3 *IEPS)/(sm3*sm4) ! p3
 !
   call rfun( r12,d12 ,k12 )
   call rfun( r13,d13 ,k13 )
@@ -8128,12 +8107,20 @@ contains
     endif
   endif
 !
-  min13=min(ap(1),ap(3))
-  min24=min(ap(2),ap(4))
-  min56=min(ap(5),ap(6))
-  if     (min56.ge.min13.and.min56.ge.min24) then ;jj=1
-  elseif (min13.ge.min24.and.min13.ge.min56) then ;jj=2
-                                             else ;jj=3
+  jj = 1
+  min56 = min(ap(5),ap(6))
+  if (min56.lt.hh) then
+    if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+      ,'input does not seem to represent hard kinematics, '&
+      ,'trying to permutate'
+    min13=min(ap(1),ap(3))
+    min24=min(ap(2),ap(4))
+    if     (min13.gt.min24.and.min13.gt.min56) then ;jj=2
+    elseif (min24.gt.min13.and.min24.gt.min56) then ;jj=3
+    else
+      if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+        ,'no permutation helps, errors might follow'
+    endif
   endif
 !
   icase = 0
@@ -8393,12 +8380,20 @@ contains
     endif
   endif
 !
-  min13=min(ap(1),ap(3))
-  min24=min(ap(2),ap(4))
-  min56=min(ap(5),ap(6))
-  if     (min56.ge.min13.and.min56.ge.min24) then ;jj=1
-  elseif (min13.ge.min24.and.min13.ge.min56) then ;jj=2
-                                             else ;jj=3
+  jj = 1
+  min56 = min(ap(5),ap(6))
+  if (min56.lt.hh) then
+    if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+      ,'input does not seem to represent hard kinematics, '&
+      ,'trying to permutate'
+    min13=min(ap(1),ap(3))
+    min24=min(ap(2),ap(4))
+    if     (min13.gt.min24.and.min13.gt.min56) then ;jj=2
+    elseif (min24.gt.min13.and.min24.gt.min56) then ;jj=3
+    else
+      if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+        ,'no permutation helps, errors might follow'
+    endif
   endif
 !
   icase = 0
@@ -8650,12 +8645,20 @@ contains
     endif
   endif
 !
-  min13=min(ap(1),ap(3))
-  min24=min(ap(2),ap(4))
-  min56=min(ap(5),ap(6))
-  if     (min56.ge.min13.and.min56.ge.min24) then ;jj=1
-  elseif (min13.ge.min24.and.min13.ge.min56) then ;jj=2
-                                             else ;jj=3
+  jj = 1
+  min56 = min(ap(5),ap(6))
+  if (min56.lt.hh) then
+    if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+      ,'input does not seem to represent hard kinematics, '&
+      ,'trying to permutate'
+    min13=min(ap(1),ap(3))
+    min24=min(ap(2),ap(4))
+    if     (min13.gt.min24.and.min13.gt.min56) then ;jj=2
+    elseif (min24.gt.min13.and.min24.gt.min56) then ;jj=3
+    else
+      if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+        ,'no permutation helps, errors might follow'
+    endif
   endif
 !
   icase = 0
@@ -8909,12 +8912,20 @@ contains
     endif
   endif
 !
-  min13=min(ap(1),ap(3))
-  min24=min(ap(2),ap(4))
-  min56=min(ap(5),ap(6))
-  if     (min56.ge.min13.and.min56.ge.min24) then ;jj=1
-  elseif (min13.ge.min24.and.min13.ge.min56) then ;jj=2
-                                             else ;jj=3
+  jj = 1
+  min56 = min(ap(5),ap(6))
+  if (min56.lt.hh) then
+    if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+      ,'input does not seem to represent hard kinematics, '&
+      ,'trying to permutate'
+    min13=min(ap(1),ap(3))
+    min24=min(ap(2),ap(4))
+    if     (min13.gt.min24.and.min13.gt.min56) then ;jj=2
+    elseif (min24.gt.min13.and.min24.gt.min56) then ;jj=3
+    else
+      if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+        ,'no permutation helps, errors might follow'
+    endif
   endif
 !
   icase = 0
@@ -9159,12 +9170,20 @@ contains
     endif
   endif
 !
-  min13=min(ap(1),ap(3))
-  min24=min(ap(2),ap(4))
-  min56=min(ap(5),ap(6))
-  if     (min56.ge.min13.and.min56.ge.min24) then ;jj=1
-  elseif (min13.ge.min24.and.min13.ge.min56) then ;jj=2
-                                             else ;jj=3
+  jj = 1
+  min56 = min(ap(5),ap(6))
+  if (min56.lt.hh) then
+    if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+      ,'input does not seem to represent hard kinematics, '&
+      ,'trying to permutate'
+    min13=min(ap(1),ap(3))
+    min24=min(ap(2),ap(4))
+    if     (min13.gt.min24.and.min13.gt.min56) then ;jj=2
+    elseif (min24.gt.min13.and.min24.gt.min56) then ;jj=3
+    else
+      if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+        ,'no permutation helps, errors might follow'
+    endif
   endif
 !
   icase = 0
@@ -9411,12 +9430,20 @@ contains
     endif
   endif
 !
-  min13=min(ap(1),ap(3))
-  min24=min(ap(2),ap(4))
-  min56=min(ap(5),ap(6))
-  if     (min56.ge.min13.and.min56.ge.min24) then ;jj=1
-  elseif (min13.ge.min24.and.min13.ge.min56) then ;jj=2
-                                             else ;jj=3
+  jj = 1
+  min56 = min(ap(5),ap(6))
+  if (min56.lt.hh) then
+    if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+      ,'input does not seem to represent hard kinematics, '&
+      ,'trying to permutate'
+    min13=min(ap(1),ap(3))
+    min24=min(ap(2),ap(4))
+    if     (min13.gt.min24.and.min13.gt.min56) then ;jj=2
+    elseif (min24.gt.min13.and.min24.gt.min56) then ;jj=3
+    else
+      if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+        ,'no permutation helps, errors might follow'
+    endif
   endif
 !
   icase = 0
@@ -9835,6 +9862,7 @@ end module
 
 module avh_olo_mp_prec
   include 'cts_mprec.h'
+
   implicit none
   public
   private :: IMAG,acmplx_r,acmplx_rr,acmplx_ir,acmplx_ri,acmplx_c
@@ -11281,8 +11309,8 @@ contains
 !
   if (j1.ne.j2) then
     if (r1.eq.r2) then
-!Val      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!Val        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
+      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_c j1=/=j2,r1=r2' !DEBUG
       return
@@ -11295,8 +11323,8 @@ contains
 !
   if (a1.lt.eps) then
     if (a2.lt.eps) then
-!Val      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!Val        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
+      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_c r1<eps,r2<eps' !DEBUG
       return
@@ -11415,8 +11443,8 @@ contains
 !
   if (j1.ne.j2) then
     if (r1.eq.r2) then
-!Val      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!Val        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
+      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_r j1=/=j2,r1=r2' !DEBUG
       return
@@ -11429,8 +11457,8 @@ contains
 !
   if (r1.lt.eps) then
     if (r2.lt.eps) then
-!Val      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!Val        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
+      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_r r1<eps,r2<eps' !DEBUG
       return
@@ -14233,26 +14261,21 @@ contains
   type(qmplx_type) :: qx1,qx2,qss,q12,q13,q14,q23,q24,q34
   include 'cts_mpc.h'
     :: smm,sm4,aa,bb,cc,dd,x1,x2,r12,r13,r14,r23,r24,r34
-  logical :: r12zero,r13zero
+  logical :: r12zero,r13zero,r14zero
 !
   sm4 = mysqrt(m4)
   smm = abs(sm4) 
 !
-  r12 = 0
-  r13 = 0
-  r14 = 0
-  r23 = 0
-  r24 = 0
-  r34 = 0
-  if (m4.ne.p4 ) r12 = ( m4-p4 -p4 *IEPS )/(smm*sm4)
-  if (m4.ne.p23) r13 = ( m4-p23-p23*IEPS )/(smm*sm4)
-  if (m4.ne.p3 ) r14 = ( m4-p3 -p3 *IEPS )/(smm*sm4)
-                 r23 = (   -p1 -p1 *IEPS )/(smm*smm)
-                 r24 = (   -p12-p12*IEPS )/(smm*smm)
-                 r34 = (   -p2 -p2 *IEPS )/(smm*smm)
+  r12 = ( m4-p4 -p4 *IEPS )/(smm*sm4)
+  r13 = ( m4-p23-p23*IEPS )/(smm*sm4)
+  r14 = ( m4-p3 -p3 *IEPS )/(smm*sm4)
+  r23 = (   -p1 -p1 *IEPS )/(smm*smm)
+  r24 = (   -p12-p12*IEPS )/(smm*smm)
+  r34 = (   -p2 -p2 *IEPS )/(smm*smm)
 !
-  r12zero = (r12.eq.CZRO)
-  r13zero = (r13.eq.CZRO)
+  r12zero=(abs(areal(r12))+abs(aimag(r12)).lt.neglig(prcpar))
+  r13zero=(abs(areal(r13))+abs(aimag(r13)).lt.neglig(prcpar))
+  r14zero=(abs(areal(r14))+abs(aimag(r14)).lt.neglig(prcpar))
 !
   aa = r34*r24
 !
@@ -14306,7 +14329,7 @@ contains
     endif
   endif
 !
-  if (r14.ne.CZRO) then
+  if (.not.r14zero) then
     rslt(0) = rslt(0) - li2c2( qx1*q14 ,qx2*q14 )*r14
   endif
 !
@@ -14349,23 +14372,18 @@ contains
 !
   smm = abs(sm3)
 !
-  r12 = 0
-  r13 = 0
-  k14 = 0
-  r23 = 0
-  r24 = 0
-  r34 = 0
-  if (   m4.ne.p4 ) r12 = (    m4-p4 -p4 *IEPS )/(smm*sm4)
-  if (   m4.ne.p23) r13 = (    m4-p23-p23*IEPS )/(smm*sm4)
-  if (m3+m4.ne.p3 ) k14 = ( m3+m4-p3 -p3 *IEPS )/(sm3*sm4)
-                    r23 = (      -p1 -p1 *IEPS )/(smm*smm)
-  if (   m3.ne.p12) r24 = (    m3-p12-p12*IEPS )/(smm*sm3)
-  if (   m3.ne.p2 ) r34 = (    m3-p2 -p2 *IEPS )/(smm*sm3)
+  r12 = (    m4-p4 -p4 *IEPS )/(smm*sm4)
+  r13 = (    m4-p23-p23*IEPS )/(smm*sm4)
+  k14 = ( m3+m4-p3 -p3 *IEPS )/(sm3*sm4)
+  r23 = (      -p1 -p1 *IEPS )/(smm*smm)
+  r24 = (    m3-p12-p12*IEPS )/(smm*sm3)
+  r34 = (    m3-p2 -p2 *IEPS )/(smm*sm3)
 !
-  r12zero = (r12.eq.CZRO)
-  r13zero = (r13.eq.CZRO)
-  r24zero = (r24.eq.CZRO)
-  r34zero = (r34.eq.CZRO)
+  r12zero = (abs(areal(r12))+abs(aimag(r12)).lt.neglig(prcpar))
+  r13zero = (abs(areal(r13))+abs(aimag(r13)).lt.neglig(prcpar))
+  r24zero = (abs(areal(r24))+abs(aimag(r24)).lt.neglig(prcpar))
+  r34zero = (abs(areal(r34))+abs(aimag(r34)).lt.neglig(prcpar))
+!
   if (r12zero.and.r24zero) then
     if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop boxf2: ' &
        ,'m4=p4 and m3=p12, returning 0'
@@ -14486,22 +14504,17 @@ contains
   sm4 = mysqrt(m4)
   sm3 = abs(sm2)
 !
-  k12 = 0
-  r13 = 0
-  k14 = 0
-  r23 = 0
-  k24 = 0
-  r34 = 0
-  if (m1+m2.ne.p1 ) k12 = ( m1 + m2 - p1 -p1 *IEPS )/(sm1*sm2) ! p1
-  if (m1   .ne.p12) r13 = ( m1      - p12-p12*IEPS )/(sm1*sm3) ! p1+p2
-  if (m1+m4.ne.p4 ) k14 = ( m1 + m4 - p4 -p4 *IEPS )/(sm1*sm4) ! p1+p2+p3
-  if (m2   .ne.p2 ) r23 = ( m2      - p2 -p2 *IEPS )/(sm2*sm3) ! p2
-  if (m2+m4.ne.p23) k24 = ( m2 + m4 - p23-p23*IEPS )/(sm2*sm4) ! p2+p3
-  if (   m4.ne.p3 ) r34 = (      m4 - p3 -p3 *IEPS )/(sm3*sm4) ! p3
+  k12 = ( m1+m2-p1 -p1 *IEPS )/(sm1*sm2) ! p1
+  r13 = ( m1   -p12-p12*IEPS )/(sm1*sm3) ! p1+p2
+  k14 = ( m1+m4-p4 -p4 *IEPS )/(sm1*sm4) ! p1+p2+p3
+  r23 = ( m2   -p2 -p2 *IEPS )/(sm2*sm3) ! p2
+  k24 = ( m2+m4-p23-p23*IEPS )/(sm2*sm4) ! p2+p3
+  r34 = (    m4-p3 -p3 *IEPS )/(sm3*sm4) ! p3
 !
-  r13zero = (r13.eq.CZRO)
-  r23zero = (r23.eq.CZRO)
-  r34zero = (r34.eq.CZRO)
+  r13zero = (abs(areal(r13))+abs(aimag(r13)).lt.neglig(prcpar))
+  r23zero = (abs(areal(r23))+abs(aimag(r23)).lt.neglig(prcpar))
+  r34zero = (abs(areal(r34))+abs(aimag(r34)).lt.neglig(prcpar))
+!
   if (r13zero) then
     if     (r23zero) then
       if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop boxf33: ' &
@@ -14594,18 +14607,12 @@ contains
   sm3 = mysqrt(m3)
   sm4 = mysqrt(m4)
 !
-  k12 = 0
-  k13 = 0
-  k14 = 0
-  k23 = 0
-  k24 = 0
-  k34 = 0
-  if (m1+m2.ne.p1 ) k12 = ( m1 + m2 - p1 -p1 *IEPS)/(sm1*sm2) ! p1
-  if (m1+m3.ne.p12) k13 = ( m1 + m3 - p12-p12*IEPS)/(sm1*sm3) ! p1+p2
-  if (m1+m4.ne.p4 ) k14 = ( m1 + m4 - p4 -p4 *IEPS)/(sm1*sm4) ! p1+p2+p3
-  if (m2+m3.ne.p2 ) k23 = ( m2 + m3 - p2 -p2 *IEPS)/(sm2*sm3) ! p2
-  if (m2+m4.ne.p23) k24 = ( m2 + m4 - p23-p23*IEPS)/(sm2*sm4) ! p2+p3
-  if (m3+m4.ne.p3 ) k34 = ( m3 + m4 - p3 -p3 *IEPS)/(sm3*sm4) ! p3
+  k12 = ( m1+m2-p1 -p1 *IEPS)/(sm1*sm2) ! p1
+  k13 = ( m1+m3-p12-p12*IEPS)/(sm1*sm3) ! p1+p2
+  k14 = ( m1+m4-p4 -p4 *IEPS)/(sm1*sm4) ! p1+p2+p3
+  k23 = ( m2+m3-p2 -p2 *IEPS)/(sm2*sm3) ! p2
+  k24 = ( m2+m4-p23-p23*IEPS)/(sm2*sm4) ! p2+p3
+  k34 = ( m3+m4-p3 -p3 *IEPS)/(sm3*sm4) ! p3
 !
   call rfun( r12,d12 ,k12 )
   call rfun( r13,d13 ,k13 )
@@ -17653,12 +17660,20 @@ contains
     endif
   endif
 !
-  min13=min(ap(1),ap(3))
-  min24=min(ap(2),ap(4))
-  min56=min(ap(5),ap(6))
-  if     (min56.ge.min13.and.min56.ge.min24) then ;jj=1
-  elseif (min13.ge.min24.and.min13.ge.min56) then ;jj=2
-                                             else ;jj=3
+  jj = 1
+  min56 = min(ap(5),ap(6))
+  if (min56.lt.hh) then
+    if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+      ,'input does not seem to represent hard kinematics, '&
+      ,'trying to permutate'
+    min13=min(ap(1),ap(3))
+    min24=min(ap(2),ap(4))
+    if     (min13.gt.min24.and.min13.gt.min56) then ;jj=2
+    elseif (min24.gt.min13.and.min24.gt.min56) then ;jj=3
+    else
+      if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+        ,'no permutation helps, errors might follow'
+    endif
   endif
 !
   icase = 0
@@ -17918,12 +17933,20 @@ contains
     endif
   endif
 !
-  min13=min(ap(1),ap(3))
-  min24=min(ap(2),ap(4))
-  min56=min(ap(5),ap(6))
-  if     (min56.ge.min13.and.min56.ge.min24) then ;jj=1
-  elseif (min13.ge.min24.and.min13.ge.min56) then ;jj=2
-                                             else ;jj=3
+  jj = 1
+  min56 = min(ap(5),ap(6))
+  if (min56.lt.hh) then
+    if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+      ,'input does not seem to represent hard kinematics, '&
+      ,'trying to permutate'
+    min13=min(ap(1),ap(3))
+    min24=min(ap(2),ap(4))
+    if     (min13.gt.min24.and.min13.gt.min56) then ;jj=2
+    elseif (min24.gt.min13.and.min24.gt.min56) then ;jj=3
+    else
+      if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+        ,'no permutation helps, errors might follow'
+    endif
   endif
 !
   icase = 0
@@ -18175,12 +18198,20 @@ contains
     endif
   endif
 !
-  min13=min(ap(1),ap(3))
-  min24=min(ap(2),ap(4))
-  min56=min(ap(5),ap(6))
-  if     (min56.ge.min13.and.min56.ge.min24) then ;jj=1
-  elseif (min13.ge.min24.and.min13.ge.min56) then ;jj=2
-                                             else ;jj=3
+  jj = 1
+  min56 = min(ap(5),ap(6))
+  if (min56.lt.hh) then
+    if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+      ,'input does not seem to represent hard kinematics, '&
+      ,'trying to permutate'
+    min13=min(ap(1),ap(3))
+    min24=min(ap(2),ap(4))
+    if     (min13.gt.min24.and.min13.gt.min56) then ;jj=2
+    elseif (min24.gt.min13.and.min24.gt.min56) then ;jj=3
+    else
+      if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+        ,'no permutation helps, errors might follow'
+    endif
   endif
 !
   icase = 0
@@ -18434,12 +18465,20 @@ contains
     endif
   endif
 !
-  min13=min(ap(1),ap(3))
-  min24=min(ap(2),ap(4))
-  min56=min(ap(5),ap(6))
-  if     (min56.ge.min13.and.min56.ge.min24) then ;jj=1
-  elseif (min13.ge.min24.and.min13.ge.min56) then ;jj=2
-                                             else ;jj=3
+  jj = 1
+  min56 = min(ap(5),ap(6))
+  if (min56.lt.hh) then
+    if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+      ,'input does not seem to represent hard kinematics, '&
+      ,'trying to permutate'
+    min13=min(ap(1),ap(3))
+    min24=min(ap(2),ap(4))
+    if     (min13.gt.min24.and.min13.gt.min56) then ;jj=2
+    elseif (min24.gt.min13.and.min24.gt.min56) then ;jj=3
+    else
+      if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+        ,'no permutation helps, errors might follow'
+    endif
   endif
 !
   icase = 0
@@ -18684,12 +18723,20 @@ contains
     endif
   endif
 !
-  min13=min(ap(1),ap(3))
-  min24=min(ap(2),ap(4))
-  min56=min(ap(5),ap(6))
-  if     (min56.ge.min13.and.min56.ge.min24) then ;jj=1
-  elseif (min13.ge.min24.and.min13.ge.min56) then ;jj=2
-                                             else ;jj=3
+  jj = 1
+  min56 = min(ap(5),ap(6))
+  if (min56.lt.hh) then
+    if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+      ,'input does not seem to represent hard kinematics, '&
+      ,'trying to permutate'
+    min13=min(ap(1),ap(3))
+    min24=min(ap(2),ap(4))
+    if     (min13.gt.min24.and.min13.gt.min56) then ;jj=2
+    elseif (min24.gt.min13.and.min24.gt.min56) then ;jj=3
+    else
+      if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+        ,'no permutation helps, errors might follow'
+    endif
   endif
 !
   icase = 0
@@ -18936,12 +18983,20 @@ contains
     endif
   endif
 !
-  min13=min(ap(1),ap(3))
-  min24=min(ap(2),ap(4))
-  min56=min(ap(5),ap(6))
-  if     (min56.ge.min13.and.min56.ge.min24) then ;jj=1
-  elseif (min13.ge.min24.and.min13.ge.min56) then ;jj=2
-                                             else ;jj=3
+  jj = 1
+  min56 = min(ap(5),ap(6))
+  if (min56.lt.hh) then
+    if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+      ,'input does not seem to represent hard kinematics, '&
+      ,'trying to permutate'
+    min13=min(ap(1),ap(3))
+    min24=min(ap(2),ap(4))
+    if     (min13.gt.min24.and.min13.gt.min56) then ;jj=2
+    elseif (min24.gt.min13.and.min24.gt.min56) then ;jj=3
+    else
+      if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+        ,'no permutation helps, errors might follow'
+    endif
   endif
 !
   icase = 0
