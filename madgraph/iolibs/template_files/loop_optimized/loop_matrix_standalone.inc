@@ -348,22 +348,13 @@ ENDDO
 
 200 CONTINUE
 
-C Check if we directly go to multiple precision
-IF (CTMODE.GE.4) THEN
-  CALL MP_COMPUTE_LOOP_COEFS(P,BUFFR_BIS)
-  MP_DONE=.TRUE.
-  goto 300 
-ELSE
-  MP_DONE=.FALSE.
-ENDIF
-
 C This improvement seems to yield problems for some PS point of d d~ > w+ w- g
 C So it is safer to remove it for double precision.
 C Instead of having n-1 particles exactly onshell and perfect energy-momentum
 c conservation, this subroutine should be written so to have n exactly onshell part.
 C CALL IMPROVE_PS_POINT_PRECISION(P)
 
-LSCALE=DSQRT((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1)+P(3,2))**2)
+LSCALE=DSQRT(ABS((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1)+P(3,2))**2))
 
 DO I=1,NLOOPS
   DO J=0,LOOPMAXCOEFS-1
@@ -374,6 +365,15 @@ ENDDO
 DO K=1,3
   ANS(K)=0.0d0
 ENDDO
+
+C Check if we directly go to multiple precision
+IF (CTMODE.GE.4) THEN
+  CALL MP_COMPUTE_LOOP_COEFS(P,BUFFR_BIS)
+  MP_DONE=.TRUE.
+  goto 300 
+ELSE
+  MP_DONE=.FALSE.
+ENDIF
 
 DO H=1,NCOMB
   IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHEL(H).NE.0)))) THEN
@@ -741,10 +741,10 @@ C
 
 	  DO I=1,NEXTERNAL-1
 	    REF=ABS(P(0,I))+ABS(P(1,I))+ABS(P(2,I))+ABS(P(3,I))
-		IF ((SQRT(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2)/REF).GT.1.0d-4) THEN
+		IF ((SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF).GT.1.0d-4) THEN
 		  STOP 'Four-momentum conservation is not accurate enough.'
 		ELSE
-	      P(3,I)=SIGN(SQRT(P(0,I)**2-P(1,I)**2-P(2,I)**2-MASSES(I)**2),P(3,I))
+	      P(3,I)=SIGN(SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-MASSES(I)**2)),P(3,I))
 		ENDIF
 	  ENDDO
 
@@ -889,8 +889,9 @@ C ----------
 	    N_QP_EVALS=1
 	  ENDIF
 
-	  IF(N_DP_EVALS.LT.20.OR.N_QP_EVALS.LT.20) THEN
+	  IF(N_DP_EVALS.GT.20.OR.N_QP_EVALS.GT.20) THEN
 	    WRITE(*,*) 'ERROR:: Increase hardcoded maxstabilitylength.'
+		STOP
 	  ENDIF
 
 	  END

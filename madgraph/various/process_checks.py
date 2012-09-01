@@ -922,7 +922,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         """
         
         # Accuracy threshold of double precision evaluations above which the
-        # PS points is also evaluated in quadruple preicsion
+        # PS points is also evaluated in quadruple precision
         accuracy_threshold=1.0e-3
         
         # Each evaluations is performed in different ways to assess its stability.
