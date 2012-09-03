@@ -225,14 +225,14 @@ c to save grids:
          close (12)
 
       elseif(imode.eq.1) then
-         open (unit=99,file='nevts',status='old',err=999)
-         read (99,*) nevts
-         close(99)
-         if(nevts.eq.0) then
-            write (*,*)
-     &           'No events needed for this channel...skipping it'
-            stop
-         endif
+c$$$         open (unit=99,file='nevts',status='old',err=999)
+c$$$         read (99,*) nevts
+c$$$         close(99)
+c$$$         if(nevts.eq.0) then
+c$$$            write (*,*)
+c$$$     &           'No events needed for this channel...skipping it'
+c$$$            stop
+c$$$         endif
 c
          if(plotKin)then
             open(unit=99,file='MADatNLO.top',status='unknown')
