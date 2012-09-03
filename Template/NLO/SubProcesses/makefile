@@ -10,7 +10,7 @@ SPLIT40=split40.o
 COMBINE_SPLIT_EVENTS=combine_jobs.o handling_lhe_events.o
 
 # Files to collect all the events in the separate integration channels into a single file
-COLLECT_EVENTS=collect_events.o handling_lhe_events.o
+COLLECT_EVENTS=collect_events.o handling_lhe_events.o fill_MC_mshell.o
 
 %.o : %.f
 	$(FC) $(FFLAGS) -c $<

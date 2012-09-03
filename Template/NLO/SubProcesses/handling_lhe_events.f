@@ -55,11 +55,23 @@ c
       return
       end
 
-
+      subroutine fill_MC_mshell_wrap(MC,masses)
+      double precision mcmass(-5:21),masses(-5:21)
+      common/cmcmass/mcmass
+      character*10 MonteCarlo,MC
+      common/cMonteCarloType/MonteCarlo
+      MonteCarlo=MC
+      call fill_MC_mshell()
+      do i=-5,21
+         masses(i)=mcmass(i)
+      enddo
+      return
+      end
 
       subroutine write_lhef_header_banner(ifile,nevents,MonteCarlo,path)
       implicit none 
-      integer ifile,nevents,iseed
+      integer ifile,nevents,iseed,i
+      double precision mcmass(-5:21)
       character*10 MonteCarlo
       character*100 path
       character*72 buffer,buffer2
@@ -110,6 +122,13 @@ c Replace the random number seed with the one used...
       enddo
  87   close(71)
       write(ifile,'(a)') '  </MG5RunCard>'
+      write(ifile,'(a)') '  <MonteCarloMasses>'
+      call fill_MC_mshell_wrap(MonteCarlo,mcmass)
+      do i=1,5
+         write (ifile,'(2x,i6,3x,e12.6)')i,mcmass(i)
+      enddo
+      write (ifile,'(2x,i6,3x,e12.6)')21,mcmass(21)
+      write(ifile,'(a)') '  </MonteCarloMasses>'
       write(ifile,250) nevents
       write(ifile,'(a)') '  </header>'
  250  format(1x,i8)

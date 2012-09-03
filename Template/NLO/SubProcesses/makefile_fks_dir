@@ -24,7 +24,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 
 # Files needed for vegas, mint & mintMC
 RUN= $(FILES) cuts.o add_write_info.o LesHouches.o madfks_dbook.o	\
-	madfks_plot.o MC_integer.o
+	madfks_plot.o MC_integer.o fill_MC_mshell.o
 
 # Files for vegas
 VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o

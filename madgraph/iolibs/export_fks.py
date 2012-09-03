@@ -376,6 +376,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'write_ajob_basic.f',
                      'handling_lhe_events.f',
                      'write_event.f',
+                     'fill_MC_mshell.f',
                      'maxparticles.inc',
                      'maxconfigs.inc']
 
