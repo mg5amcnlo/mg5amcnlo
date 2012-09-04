@@ -227,7 +227,7 @@ CC
        if(.not.mtc_at.and..not.mtc_t.and..not.mtc_am.and..not.mtc_m.and.
      +.not.mtc_ae.and..not.mtc_e)then
             do i=1,num_bjet
-               perm_prov(i)=perm(num_jet+i)
+               perm_prov(i)=perm(num_jet+i)-num_jet
             enddo
             call nexper(num_bjet,perm_prov,mtc_b,even_b)
 c     assignation fo the permutation         
