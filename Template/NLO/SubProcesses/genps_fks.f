@@ -141,7 +141,7 @@ c local
      &     ,sqrtshat_born,S(-max_branch:max_particles),xpswgt0
      &     ,m_born(nexternal-1),m_j_fks,xmrec2,xjac,xpswgt,phi_i_fks
      &     ,tau,ycm,xbjrk(2),xiimax,xinorm,xi_i_fks ,y_ij_fks,flux
-     &     ,p_i_fks(0:3),pwgt
+     &     ,p_i_fks(0:3),pwgt,p_born_CHECK(0:3,nexternal-1)
       logical one_body,pass
 c external
       double precision lambda
@@ -157,7 +157,7 @@ c parameters
       parameter (zero=0d0)
 c saves
       save m,stot,totmassin,totmass,ns_channel,nt_channel,one_body
-     &     ,ionebody,fksmass
+     &     ,ionebody,fksmass,nbranch
       pass=.true.
       do i=1,nexternal-1
          if (i.lt.i_fks) then
@@ -319,10 +319,11 @@ c
       do i=1,nexternal-1
          do j=0,3
             p_born(j,i)=pb(j,i)
+            p_born_CHECK(j,i)=pb(j,i)
          enddo
          m_born(i)=m(i)
       enddo
-      call phspncheck_born(sqrtshat_born,m_born,p_born,pass)
+      call phspncheck_born(sqrtshat_born,m_born,p_born_CHECK,pass)
       if (.not.pass) then
          xjac0=-142
          goto 222
@@ -1191,6 +1192,7 @@ c local
      $     ,xdir_t(3),cosphi_i_fks,sinphi_i_fks,shy_lbst,chy_lbst
      $     ,encmso2,E_i_fks,sinth_i_fks,xpifksred(0:3),xi_i_fks
      $     ,xi_i_hat,xiimin,yij_upp,yij_low,y_ij_fks_upp,y_ij_fks_low
+      save xi_i_hat
       double complex resAoR0
 c external
 c

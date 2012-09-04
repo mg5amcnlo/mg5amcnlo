@@ -718,10 +718,10 @@ c Should cause the code to crash if used
             if(wgtwreal(k).ne.0.d0.or.
      #         wgtwdeg(k).ne.0.d0.or.
      #         wgtwdegmuf(k).ne.0.d0.or.
-     #         (k.eq.2.and.(wgtwborn(k).ne.0.d0.or.
-     #                      wgtwns(k).ne.0.d0.or.
-     #                      wgtwnsmuf(k).ne.0.d0.or.
-     #                      wgtwnsmur(k).ne.0.d0)))then
+     #         (k.eq.2.and.(wgtwborn(2).ne.0.d0.or.
+     #                      wgtwns(2).ne.0.d0.or.
+     #                      wgtwnsmuf(2).ne.0.d0.or.
+     #                      wgtwnsmur(2).ne.0.d0)))then
               write(*,*)'Error #2 in compute_rwgt_wgt_NLO'
               write(*,*)k,xbk(1),xbk(2)
               write(*,*)wgtwreal(k),wgtwdeg(k),wgtwdegmuf(k)

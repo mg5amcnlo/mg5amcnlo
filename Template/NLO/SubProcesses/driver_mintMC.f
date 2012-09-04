@@ -712,7 +712,7 @@ c From dsample_fks
       double precision unwgt_table(0:fks_configs,2,maxproc)
       common/c_unwgt_table/unwgt_table
       integer maxproc_save
-      save maxproc_save
+      save maxproc_save,proc_map
 c
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -1028,9 +1028,6 @@ c
             do i=1,proc_map(proc_map(0,1),0)
                nFKSprocess=proc_map(proc_map(0,1),i)
                nFKSprocess_used=nFKSprocess
-
-c               write (*,*) 'nFKSprocess',i,nFKSprocess,vol,proc_map(0,1),w
-
                call fks_inc_chooser()
                call leshouche_inc_chooser()
 c THIS CAN BE OPTIMIZED
