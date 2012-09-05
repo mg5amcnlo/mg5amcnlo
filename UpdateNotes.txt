@@ -5,11 +5,11 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Allow MG5 to run in feynman Gauge
                       (mg5> set gauge Feynman)
                   OM: Support UFO model with spin 3/2.
-		  FR team: add a file decays.py in the UFO format, this files 
+                  FR team: add a file decays.py in the UFO format, this files 
                       contains the analytical expression for one to two decays
        		  OM: implement a function for computing the 1 to 2 width on 
-		      the fly. (requires that MG5 install on the computer 
-		      not only the output directory)
+                      the fly. (requires that MG5 install on the computer 
+                      not only the output directory)
                   OM: Add auto-detection if MG5 is up-to-date and propose to
                       apply the various patch if not.
                   OM: MadEvent change automatically the compiler according to 
@@ -24,9 +24,12 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM + PdA: Allow Large Extra Dimension Model (LED) to run in the
                       MG5 framework.
                   OM: Fix a series of bug with the madevent command 'remove' and 
-		      'run_banner'                    
+                      'run_banner'                    
                   JA: Ensure identical results for identical seeds also with
-                      multiple runs in the same directory.
+                      multiple runs in the same directory. Note that identical runs
+                      from previous versions can't be guaranteed (but different
+                      seeds are guaranteed to give statistically independent runs).
+                    
 
 1.4.8.4 (29/08/12) OM: Fix a web problem which creates generations to run twice 
                        on the web.
