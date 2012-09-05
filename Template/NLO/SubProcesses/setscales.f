@@ -72,9 +72,6 @@ c put momenta in common block for couplings.f
       logical firsttime
       data firsttime/.true./
 
-c After recomputing alphaS, be sure to set 'calculatedBorn' to false
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
 c
       if (firsttime) then
         firsttime=.false.
@@ -131,20 +128,11 @@ c Put momenta in the common block to zero to start
         enddo
       endif
 c
-c Recompute scales if dynamic
-c Note: Ellis-Sexton scale must be computed before calling setpara(),
-c since some R2 couplings depend on it
-      if(.not.fixed_ren_scale) then
-        call set_ren_scale(xp,dummy)
-      endif
-
-      if(.not.fixed_fac_scale) then
-        call set_fac_scale(xp,dummies)
-      endif
-
-      if(.not.fixed_QES_scale) then
-        call set_QES_scale(xp,dummyQES)
-      endif
+c Recompute scales
+c
+      call set_QES_scale(xp,dummyQES)
+      call set_fac_scale(xp,dummies)
+      call set_ren_scale(xp,dummy)
 c
 
 c Pass momenta to couplings.f
@@ -160,13 +148,6 @@ c Pass momenta to couplings.f
         endif
 cc         call setpara('param_card.dat')
       endif
-
-c Reset calculatedBorn, because the couplings might have been changed.
-c This is needed in particular for the MC events, because there the
-c coupling should be set according to the real-emission kinematics,
-c even when computing the Born matrix elements.
-      call update_as_param()
-      calculatedBorn=.false.
 
  200  format(1x,a,2(1x,d12.6),2x,f4.2)
 
@@ -192,6 +173,9 @@ c the value of variable scale in common block /to_scale/
      #                         muF2_id_str,QES_id_str
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
+c After recomputing alphaS, be sure to set 'calculatedBorn' to false
+      logical calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
 c
       temp_scale_id='  '
       if(fixed_ren_scale)then
@@ -208,6 +192,11 @@ c The following is for backward compatibility. DO NOT REMOVE
       scale=muR
       g=sqrt(4d0*pi*alphas(scale))
       call update_as_param()
+c Reset calculatedBorn, because the couplings might have been changed.
+c This is needed in particular for the MC events, because there the
+c coupling should be set according to the real-emission kinematics,
+c even when computing the Born matrix elements.
+      calculatedBorn=.false.
 c
       return
       end
