@@ -216,6 +216,9 @@ c a scale to be used as a reference for renormalization scale
       common/ctemp_scale_id/temp_scale_id
       integer i,imurtype
       parameter (imurtype=1)
+c this is to avoid too low dynamic scales      
+      double precision minscaleR
+      parameter (minscaleR=2d0)
 c for 'geometric mean'
       integer j
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
@@ -296,6 +299,7 @@ c  particles (e.g. top quarks or Higgs) into account.
         write(*,*)'Unknown option in muR_ref_dynamic',imurtype
         stop
       endif
+      tmp=max(minscaleR,tmp)
       muR_ref_dynamic=tmp
 c
       return
@@ -363,6 +367,9 @@ c a scale to be used as a reference for factorizations scales
       common/ctemp_scale_id/temp_scale_id
       integer i,imuftype
       parameter (imuftype=1)
+c this is to avoid too low dynamic scales      
+      double precision minscaleF
+      parameter (minscaleF=2d0)
 c
       tmp=0
       if(imuftype.eq.1)then
@@ -377,6 +384,7 @@ c
         write(*,*)'Unknown option in muF_ref_dynamic',imuftype
         stop
       endif
+      tmp=max(minscaleF,tmp)
       muF_ref_dynamic=tmp
 c
       return
@@ -464,9 +472,6 @@ c a scale to be used as a reference for renormalization scale
       include 'nexternal.inc'
       double precision scale_global_reference,pp(0:3,nexternal)
       double precision tmp,pt,et,dot,xm2,sumdot
-c this is to avoid too low dynamic scales      
-      double precision minscale
-      parameter (minscale=2d0)
       external pt,et,dot,sumdot
       integer i,itype
       parameter (itype=2)
@@ -492,7 +497,6 @@ c Sum of transverse masses
         write(*,*)'Unknown option in scale_global_reference',itype
         stop
       endif
-      scale_global_reference=max(minscale,tmp)
 c
       return
       end
