@@ -716,7 +716,6 @@ C
       DOUBLE PRECISION P(0:3,NEXTERNAL)
 
 C   global variables
-C   global variables
 C     Present process number
       INTEGER IMIRROR,IPROC
       COMMON/TO_MIRROR/IMIRROR, IPROC
@@ -729,6 +728,8 @@ C     Present process number
 c     q2bck holds the central q2fact scales
       real*8 q2bck(2)
       common /to_q2bck/q2bck
+      double precision stot
+      common/to_stot/stot
 
 C   local variables
       integer i, j, idi, idj
@@ -775,7 +776,7 @@ c   Set mimimum kt scale, depending on highest mult or not
      $     write(*,*) 'pt2min set to ',pt2min
 
 c   Set etot, used for non-radiating partons
-      etot=2d0*sqrt(ebeam(1)*ebeam(2))
+      etot=sqrt(stot)
 
 c   Since we use pdf reweighting, need to know particle identities
       iprocset=1

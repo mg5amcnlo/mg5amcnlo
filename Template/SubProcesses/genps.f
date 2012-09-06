@@ -106,7 +106,9 @@ c
       integer nparticles,nfinal
       double precision jac,sjac,pswgt,pwgt(maxconfigs),flux
       double precision tprb, mtot
-      double precision stot, xtau, dum
+      double precision xtau, dum
+      double precision pi1(0:3),pi2(0:3),m1,m2,p0,p3
+      save m,m1,m2
 
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
@@ -153,10 +155,22 @@ c
       double precision      spole(maxinvar),swidth(maxinvar),bwjac
       common/to_brietwigner/spole          ,swidth          ,bwjac
 
+      double precision stot
+      common/to_stot/stot
+
       save lwgt
       save ndim,nfinal,nbranch,nparticles
 
       integer jfig,k
+
+      double precision cm_rap
+      logical set_cm_rap
+      common/to_cm_rap/set_cm_rap,cm_rap      
+
+c     External function
+      double precision SumDot
+      external SumDot
+
 c
 c     data
 c
@@ -170,11 +184,25 @@ c  Begin Code
 c----
       this_config = iconfig             !Pass iconfig to amplitude routine
 c      write(*,*) 'using iconfig',iconfig
-      do i=1,nexternal
-         m(i)=pmass(i)
-      enddo
       if (firsttime) then
          firsttime=.false.
+         do i=1,nexternal
+            m(i)=pmass(i)
+         enddo
+c        Set stot
+         if (nincoming.eq.1) then
+            stot=m(1)**2
+         else
+            m1=m(1)
+            m2=m(2)
+            if (abs(lpp(1)) .ge. 1) m1 = 0.938d0
+            if (abs(lpp(2)) .ge. 1) m2 = 0.938d0
+            pi1(0)=ebeam(1)+m1
+            pi1(3)=sqrt(ebeam(1)*(ebeam(1)+2*m1))
+            pi2(0)=ebeam(2)+m2
+            pi2(3)=-sqrt(ebeam(2)*(ebeam(2)+2*m2))
+            stot=m1**2+m2**2+2*(pi1(0)*pi2(0)-pi1(3)*pi2(3))
+         endif
          do i=1,mapconfig(0)
             if (mapconfig(i) .eq. iconfig) this_config=i
          enddo
@@ -252,7 +280,6 @@ c
       xbk(1)   = 1d0
       xbk(2)   = 1d0
       sjac = 1d0
-      stot = 4d0*ebeam(1)*ebeam(2)
       if (abs(lpp(1)) .ge. 1 .and. abs(lpp(2)) .ge. 1) then
          call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)
 c-----
@@ -267,15 +294,43 @@ c-------
          call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
          CALL GENCMS(STOT,Xbk(1),Xbk(2),X(ndim-1),0d0,SJAC)
          x(ndim-1) = xtau                   !Fix for 2->1 process
+c        Set CM rapidity for use in the rap() function
+         cm_rap=.5d0*dlog(xbk(1)*(ebeam(1)+m1)/(xbk(2)*(ebeam(2)+m2)))
+         set_cm_rap=.true.
+c        Set shat
+         s(-nbranch) = xbk(1)*xbk(2)*stot
       elseif (abs(lpp(1)) .ge. 1) then
          call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
          xbk(1) = x(ndim)
+c        Set CM rapidity for use in the rap() function
+         p0=xbk(1)*(ebeam(1)+m1)+ebeam(2)+m2
+         p3=xbk(1)*(ebeam(1)+m1)-sqrt(ebeam(2)*(ebeam(2)+2*m2))
+         cm_rap=.5d0*dlog((p0+p3)/(p0-p3))
+         set_cm_rap=.true.
+c        Set shat
+         s(-nbranch) = m2**2+xbk(1)*(ebeam(1)+m1) * 
+     $                 (ebeam(2)+m2+sqrt(ebeam(2)*(ebeam(2)+2*m2)))
       elseif (abs(lpp(2)) .ge. 1) then
          call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
          xbk(2) = x(ndim)
+c        Set CM rapidity for use in the rap() function
+         p0=ebeam(1)+m1+xbk(2)*(ebeam(2)+m2)
+         p3=sqrt(ebeam(1)*(ebeam(1)+2*m1))-xbk(2)*(ebeam(2)+m2)
+         cm_rap=.5d0*dlog((p0+p3)/(p0-p3))
+         set_cm_rap=.true.
+c        Set shat
+         s(-nbranch) = m1**2+(ebeam(1)+m1+sqrt(ebeam(1)*(ebeam(1)+2*m1)))
+     $                 * xbk(2)*(ebeam(2)+m2)
+      else
+c        Set CM rapidity for use in the rap() function
+         p0=ebeam(1)+m1 + ebeam(2)+m2
+         p3=sqrt(ebeam(1)*(ebeam(1)+2*m1))-sqrt(ebeam(2)*(ebeam(2)+2*m2))
+         cm_rap=.5d0*dlog((p0+p3)/(p0-p3))
+         set_cm_rap=.true.
+c        Set shat
+         s(-nbranch) = stot
       endif
-      s(-nbranch)  = xbk(1)*xbk(2)*stot
-c      write(*,*) "stot=",sqrt(s(-nbranch))
+c      write(*,*) "shat=",sqrt(s(-nbranch))
       m(-nbranch)  = sqrt(s(-nbranch))
       p(0,-nbranch)= m(-nbranch)
       p(1,-nbranch)= 0d0
@@ -508,7 +563,7 @@ c
       integer ibranch,i,ns_channel,nt_channel,ix  !,nerr
 c      data nerr/0/
       double precision smin,smax,totmass,totmassin,xa2,xb2,wgt
-      double precision costh,phi,tmin,tmax,t, stot
+      double precision costh,phi,tmin,tmax,t
       double precision ma2,mb2,m12,mn2,s1
 c
 c     External
@@ -517,6 +572,8 @@ c
 c
 c     Global
 c
+      double precision stot
+      common/to_stot/stot
 
       include 'run.inc'
 
@@ -527,7 +584,6 @@ c-----
       pswgt = 1d0
       wgt   = 1d0
       pass = .true.
-      stot = 4d0*ebeam(1)*ebeam(2)
 c-----------
 c     Trap for trivial case 2->1
 c----------

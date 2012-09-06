@@ -252,13 +252,13 @@ c
       do i=nincoming+1,nexternal
 
          etmin(i)  = 0d0
-         etmax(i)  = 1d5
+         etmax(i)  = -1
 
          emin(i)   = 0d0
-         emax(i)   = 1d5
+         emax(i)   = -1
 
          etamin(i) = 0d0
-         etamax(i) = 1d2
+         etamax(i) = -1
 
          if(do_cuts(i)) then
 
@@ -302,7 +302,7 @@ c
       do i=nincoming+1,nexternal-1
          do j=i+1,nexternal
             r2min(j,i)=0d0
-            r2max(j,i)=1d2
+            r2max(j,i)=-1
             if(do_cuts(i).and.do_cuts(j)) then
 
                if(is_a_j(i).and.is_a_j(j)) r2min(j,i)=drjj
@@ -350,7 +350,7 @@ c
       do i=nincoming+1,nexternal-1
          do j=i+1,nexternal
             s_min(j,i)=0.0d0**2
-            s_max(j,i)=1d5**2
+            s_max(j,i)=-1
             if(do_cuts(i).and.do_cuts(j)) then
                if(is_a_j(i).and.is_a_j(j)) s_min(j,i)=mmjj*dabs(mmjj)   
                if(is_a_a(i).and.is_a_a(j)) s_min(j,i)=mmaa*dabs(mmaa)  
@@ -378,7 +378,7 @@ c
       do i=nincoming+1,nexternal-1
          do j=i+1,nexternal
             ptll_min(j,i)=0.0d0**2
-            ptll_max(j,i)=1d5**2
+            ptll_max(j,i)=-1
             if(((is_a_l(i).and.is_a_l(j)).and.
      &      (abs(idup(i,1,1)).eq.abs(idup(j,1,1))).and.
      &      (idup(i,1,1)*idup(j,1,1).lt.0))! Leptons from same flavor but different charge

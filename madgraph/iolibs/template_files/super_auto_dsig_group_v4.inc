@@ -73,6 +73,10 @@ C   ICONFIG has this config number
 C     IPROC has the present process number
       INTEGER IPROC
       COMMON/TO_MIRROR/IMIRROR, IPROC
+C     CM_RAP has parton-parton system rapidity
+      DOUBLE PRECISION CM_RAP
+      LOGICAL SET_CM_RAP
+      COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
 C ----------
 C BEGIN CODE
 C ----------
@@ -159,6 +163,7 @@ C                 Need to flip back x values
                         XDUM=XBK(1)
                         XBK(1)=XBK(2)
                         XBK(2)=XDUM
+                        CM_RAP=-CM_RAP
                      ENDIF
                   ENDIF
                ENDDO
@@ -244,6 +249,10 @@ C     IB gives which beam is which (for mirror processes)
 C     ICONFIG has this config number
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
+C     CM_RAP has parton-parton system rapidity
+      DOUBLE PRECISION CM_RAP
+      LOGICAL SET_CM_RAP
+      COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
 C  
 C EXTERNAL FUNCTIONS
 C  
@@ -281,6 +290,8 @@ C       Flip x values (to get boost right)
         XDUM=XBK(1)
         XBK(1)=XBK(2)
         XBK(2)=XDUM
+C       Flip CM_RAP (to get rapidity right)
+        CM_RAP=-CM_RAP
       ENDIF
 
       DSIGPROC=0D0
