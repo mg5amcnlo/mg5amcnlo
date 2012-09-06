@@ -1540,7 +1540,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             fsock = open(pjoin(me_dir,'RunWeb'),'w')
             fsock.write(`pid`)
             fsock.close()
-            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')])
+            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
       
         self.to_store = []
         self.run_name = None
@@ -2579,6 +2579,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if not os.path.exists(pjoin(self.me_dir, 'HTML', run)):
             os.mkdir(pjoin(self.me_dir, 'HTML', run))    
         
+        # 1) Store overall process information
+        input = pjoin(self.me_dir, 'SubProcesses', 'results.dat')
+        output = pjoin(self.me_dir, 'SubProcesses', '%s_results.dat' % run)
+        files.cp(input, output) 
+
         # 2) Treat the files present in the P directory
         for P_path in SubProcesses.get_subP(self.me_dir):
             G_dir = [G for G in os.listdir(P_path) if G.startswith('G') and 
@@ -2588,10 +2593,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 # Remove events file (if present)
                 if os.path.exists(pjoin(G_path, 'events.lhe')):
                     os.remove(pjoin(G_path, 'events.lhe'))
-                # Remove results.dat (but not for gridpack)
-                if self.run_card['gridpack'] not in self.true:
-                    if os.path.exists(pjoin(G_path, 'results.dat')):
-                        os.remove(pjoin(G_path, 'results.dat'))
+                # Store results.dat
+                if os.path.exists(pjoin(G_path, 'results.dat')):
+                    input = pjoin(G_path, 'results.dat')
+                    output = pjoin(G_path, '%s_results.dat' % run)
+                    files.cp(input, output) 
                 # Store log
                 if os.path.exists(pjoin(G_path, 'log.txt')):
                     input = pjoin(G_path, 'log.txt')
@@ -2607,6 +2613,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                         files.mv(input, output) 
                         misc.call(['gzip', output], stdout=devnull, 
                                         stderr=devnull, cwd=G_path)
+                # Delete ftn25 to ensure reproducible runs
+                if os.path.exists(pjoin(G_path, 'ftn25')):
+                    os.remove(pjoin(G_path, 'ftn25'))
+
         # 3) Update the index.html
         misc.call(['%s/gen_cardhtml-pl' % self.dirbin],
                             cwd=pjoin(self.me_dir))
@@ -4411,6 +4421,9 @@ class GridPackCmd(MadEventCmd):
         # initialize / remove lhapdf mode
         # self.configure_directory() # All this has been done before
         self.cluster_mode = 0 # force single machine
+
+        # Store seed in randinit file, to be read by ranmar.f
+        self.save_random()
         
         self.update_status('Refine results to %s' % precision, level=None)
         logger.info("Using random number seed offset = %s" % self.random)
