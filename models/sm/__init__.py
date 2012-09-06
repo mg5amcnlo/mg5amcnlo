@@ -6,7 +6,10 @@ import vertices
 import coupling_orders
 import write_param_card
 import decays
-
+try:
+    import build_restrict
+except ImportError:
+    pass
 
 # model options
 gauge = [0, 1]

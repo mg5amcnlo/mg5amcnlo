@@ -1148,8 +1148,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
          if hasattr(model, 'restrict_card'):
-             files.cp(model.restrict_card, pjoin(self.dir_path, 'bin', 'internal',
-                                             'ufomodel','restrict_default.dat'))
+             out_path = pjoin(self.dir_path, 'bin', 'internal','ufomodel',
+                                                         'restrict_default.dat')
+             if isinstance(model.restrict_card, check_param_card.ParamCard):
+                 model.restrict_card.write(out_path)
+             else:
+                 files.cp(model.restrict_card, out_path)
 
                 
     #===========================================================================

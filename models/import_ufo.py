@@ -853,7 +853,8 @@ class RestrictModel(model_reader.ModelReader):
                 self['parameter_dict'][name] = 1
             elif value == 0.000001e-99:
                 self['parameter_dict'][name] = 0
-
+      
+                    
     def locate_coupling(self):
         """ create a dict couplings_name -> vertex """
         
@@ -928,7 +929,7 @@ class RestrictModel(model_reader.ModelReader):
         #detect identical parameter and remove the duplicate parameter
         for param in external_parameters[:]:
             value = self['parameter_dict'][param.name]
-            if value == 0:
+            if value in [0,1,0.000001e-99,9.999999e-1]:
                 continue
             key = (param.lhablock, value)
             mkey =  (param.lhablock, -value)

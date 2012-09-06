@@ -4,6 +4,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       (mg5> set complex_mass True)
                   OM: Allow MG5 to run in feynman Gauge
                       (mg5> set gauge Feynman)
+		  OM: Add anew command: 'customize_model' which allow (for a
+		      selection of model) to fine tune the model to your need.
                   OM: Support UFO model with spin 3/2.
                   FR team: add a file decays.py in the UFO format, this files 
                       contains the analytical expression for one to two decays

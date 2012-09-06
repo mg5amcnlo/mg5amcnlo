@@ -988,6 +988,8 @@ class OneTagResults(dict):
         elif isinstance(self.debug, basestring):
             if not os.path.isabs(self.debug) and not self.debug.startswith('./'):
                 self.debug = './' + self.debug
+            elif os.path.isabs(self.debug):
+                self.debug = os.path.relpath(self.debug, self.me_dir)
             debug = '<br> <a href=\'%s\'> <font color=red>ERROR</font></a>' \
                                                % (self.debug)
         elif self.debug:
