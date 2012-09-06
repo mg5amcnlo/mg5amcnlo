@@ -1,5 +1,9 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.5.0   (XX/XX/XX) JA: Avoid creating directories for integration channels
+                       that can not give events based on BW settings
+                       (further improvement compared to v. 1.4.8).
+
 1.4.8.4 (29/08/12) OM: Fix a web problem which creates generations to run twice on the web.
 
 1.4.8.3 (21/08/12) JA: Ensure that the correct seed is written also in the .lhe
