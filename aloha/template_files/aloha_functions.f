@@ -313,7 +313,7 @@ c
       parameter( rOne = 1.0d0, rTwo = 2.0d0 )
 
 
-      tc(18)=NHEL
+      tc(3)=NHEL
       tc(1) = dcmplx(p(0),p(3))*nst
       tc(2) = dcmplx(p(1),p(2))*nst
 
@@ -1075,8 +1075,8 @@ c#endif
       pp = min(p(0),sqrt(pt2+p(3)**2))
       pt = min(pp,sqrt(pt2))
 
-      rc(5,1) = dcmplx(p(0),p(3))*nsr
-      rc(6,1) = dcmplx(p(1),p(2))*nsr
+      rc(5,1) = -1*dcmplx(p(0),p(3))*nsr
+      rc(6,1) = -1*dcmplx(p(1),p(2))*nsr
 
       nsv = -nsr ! nsv=+1 for final, -1 for initial
 
@@ -1302,24 +1302,24 @@ c spin-3/2 fermion wavefunction
          end do
       end if
 
-      ri(1) = rc(1,1)
-      ri(2) = rc(1,2)
-      ri(3) = rc(1,3)
-      ri(4) = rc(1,4)
-      ri(5) = rc(2,1)
-      ri(6) = rc(2,2)
-      ri(7) = rc(2,3)
-      ri(8) = rc(2,4)
-      ri(9) = rc(3,1)
-      ri(10) = rc(3,2)
-      ri(11) = rc(3,3)
-      ri(12) = rc(3,4)
-      ri(13) = rc(4,1)
-      ri(14) = rc(4,2)
-      ri(15) = rc(4,3)
-      ri(16) = rc(4,4)
-      ri(17) = rc(5,1)
-      ri(18) = rc(6,1)
+      ri(3) = rc(1,1)
+      ri(4) = rc(1,2)
+      ri(5) = rc(1,3)
+      ri(6) = rc(1,4)
+      ri(7) = rc(2,1)
+      ri(8) = rc(2,2)
+      ri(9) = rc(2,3)
+      ri(10) = rc(2,4)
+      ri(11) = rc(3,1)
+      ri(12) = rc(3,2)
+      ri(13) = rc(3,3)
+      ri(14) = rc(3,4)
+      ri(15) = rc(4,1)
+      ri(16) = rc(4,2)
+      ri(17) = rc(4,3)
+      ri(18) = rc(4,4)
+      ri(1) = rc(5,1)
+      ri(2) = rc(6,1)
 
       return
       end
@@ -1666,24 +1666,24 @@ c spin-3/2 fermion wavefunction
          end do
       end if
 
-      ro(1) = rc(1,1)
-      ro(2) = rc(1,2)
-      ro(3) = rc(1,3)
-      ro(4) = rc(1,4)
-      ro(5) = rc(2,1)
-      ro(6) = rc(2,2)
-      ro(7) = rc(2,3)
-      ro(8) = rc(2,4)
-      ro(9) = rc(3,1)
-      ro(10) = rc(3,2)
-      ro(11) = rc(3,3)
-      ro(12) = rc(3,4)
-      ro(13) = rc(4,1)
-      ro(14) = rc(4,2)
-      ro(15) = rc(4,3)
-      ro(16) = rc(4,4)
-      ro(17) = rc(5,1)
-      ro(18) = rc(6,1)
+      ro(3) = rc(1,1)
+      ro(4) = rc(1,2)
+      ro(5) = rc(1,3)
+      ro(6) = rc(1,4)
+      ro(7) = rc(2,1)
+      ro(8) = rc(2,2)
+      ro(9) = rc(2,3)
+      ro(10) = rc(2,4)
+      ro(11) = rc(3,1)
+      ro(12) = rc(3,2)
+      ro(13) = rc(3,3)
+      ro(14) = rc(3,4)
+      ro(15) = rc(4,1)
+      ro(16) = rc(4,2)
+      ro(17) = rc(4,3)
+      ro(18) = rc(4,4)
+      ro(1) = rc(5,1)
+      ro(2) = rc(6,1)
 
       return
       end

@@ -33,9 +33,8 @@ C
 C   
 C LOCAL VARIABLES 
 C  
-      INTEGER I,J,K,LUN,IDUM,ICONF,IMIRROR,NPROC
-      DATA IDUM/0/
-      SAVE NPROC,IDUM
+      INTEGER I,J,K,LUN,ICONF,IMIRROR,NPROC
+      SAVE NPROC
       INTEGER SYMCONF(0:LMAXCONFIGS)
       SAVE SYMCONF
       DOUBLE PRECISION SUMPROB,TOTWGT,R,XDUM
@@ -61,9 +60,8 @@ C
 C EXTERNAL FUNCTIONS
 C  
       INTEGER NEXTUNOPEN
-      REAL XRAN1
       DOUBLE PRECISION DSIGPROC
-      EXTERNAL NEXTUNOPEN,XRAN1,DSIGPROC
+      EXTERNAL NEXTUNOPEN,DSIGPROC
 C  
 C GLOBAL VARIABLES
 C  
@@ -75,6 +73,10 @@ C   ICONFIG has this config number
 C     IPROC has the present process number
       INTEGER IPROC
       COMMON/TO_MIRROR/IMIRROR, IPROC
+C     CM_RAP has parton-parton system rapidity
+      DOUBLE PRECISION CM_RAP
+      LOGICAL SET_CM_RAP
+      COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
 C ----------
 C BEGIN CODE
 C ----------
@@ -161,6 +163,7 @@ C                 Need to flip back x values
                         XDUM=XBK(1)
                         XBK(1)=XBK(2)
                         XBK(2)=XDUM
+                        CM_RAP=-CM_RAP
                      ENDIF
                   ENDIF
                ENDDO
@@ -169,8 +172,8 @@ C                 Need to flip back x values
        ENDDO
 
 C     Perform the selection
-      IDUM=0
-      R=XRAN1(IDUM)*SUMPROB
+      CALL RANMAR(R)
+      R=R*SUMPROB
       ICONF=0
       IPROC=0
       TOTWGT=0D0
@@ -246,6 +249,10 @@ C     IB gives which beam is which (for mirror processes)
 C     ICONFIG has this config number
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
+C     CM_RAP has parton-parton system rapidity
+      DOUBLE PRECISION CM_RAP
+      LOGICAL SET_CM_RAP
+      COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
 C  
 C EXTERNAL FUNCTIONS
 C  
@@ -283,6 +290,8 @@ C       Flip x values (to get boost right)
         XDUM=XBK(1)
         XBK(1)=XBK(2)
         XBK(2)=XDUM
+C       Flip CM_RAP (to get rapidity right)
+        CM_RAP=-CM_RAP
       ENDIF
 
       DSIGPROC=0D0

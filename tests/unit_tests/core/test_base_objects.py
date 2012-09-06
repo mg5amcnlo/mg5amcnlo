@@ -219,13 +219,13 @@ class ParticleTest(unittest.TestCase):
                           not_a_part)
         # test particle search
         self.assertEqual(self.mypart,
-                         mypartlist.find_name(self.mypart['name']))
+                         mypartlist.get_copy(self.mypart['name']))
         anti_part = copy.copy(self.mypart)
         anti_part.set('is_part', False)
         self.assertEqual(anti_part,
-                         mypartlist.find_name(self.mypart['antiname']))
+                         mypartlist.get_copy(self.mypart['antiname']))
         self.assertEqual(None,
-                         mypartlist.find_name('none'))
+                         mypartlist.get_copy('none'))
 
         mydict = {6:self.mypart, -6:anti_part}
 
@@ -919,7 +919,7 @@ class ModelTest2(unittest.TestCase):
     def setUp(self):
         """ """
         import madgraph.interface.master_interface as Cmd
-        cmd = Cmd.MasterCmd() 
+        cmd = Cmd.MasterCmd()
         cmd.do_load('model %s' % os.path.join(madgraph.MG5DIR, 'tests',
                                                         'input_files','sm.pkl'))
         self.model = cmd._curr_model

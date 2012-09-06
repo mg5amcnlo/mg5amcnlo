@@ -479,6 +479,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
             return self['particle'].get_name()
         elif name == 'antiname':
             return self['particle'].get_anti_name()
+        elif name == 'me_id':
+            out = super(HelasWavefunction, self).get(name)
+            if out: 
+                return out
+            else:
+                return super(HelasWavefunction, self).get('number')
         else:
             return super(HelasWavefunction, self).get(name)
         
@@ -613,7 +619,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                self.get_spin_state_number() == -2 and \
                self.get('self_antipart') and \
                [m.get('color') for m in self.get('mothers')] == [8, 8]:
-            self.set('coupling', ['-' + c for c in self.get('coupling')])
+            self.set('coupling', [ c if c.startswith('-') else '-%s' % c 
+                                              for c in self.get('coupling')])
         
     def set_state_and_particle(self, model):
         """Set incoming/outgoing state according to mother states and
@@ -2722,9 +2729,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # Append this diagram in the diagram list
             helas_diagrams.append(helas_diagram)
         
-        # optimize output. Note that if you comment this line, you might want
-        # to comment the equivalent line occuring after decay merging.
-        helas_diagrams = self.reuse_outdated_wavefunctions(helas_diagrams)
+
         self.set('diagrams', helas_diagrams)
 
         # Sort all mothers according to the order wanted in Helas calls
@@ -3732,9 +3737,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Return a list with all couplings used by this
         HelasMatrixElement."""
 
-        return [wa.get('coupling') for wa in \
+        tmp = [wa.get('coupling') for wa in \
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
                 if wa.get('interaction_id') != 0]
+        #some coupling have a minus one associated -> need to remove those
+        return [ [t] if not t.startswith('-') else [t[1:]] for t2 in tmp for t in t2]
+    
 
     def get_mirror_processes(self):
         """Return a list of processes with initial states interchanged
@@ -4216,12 +4224,6 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                         matrix_elements.append(matrix_element)
                         me_tags.append(me_tag)
 
-        # Optimize the output to reuse id of wavefunctions which are not use 
-        # anymore. If this optimization is on in generate_helas_diagrams, this
-        # SHOULD be kept activate here (otherwise the output will be wrong)
-        for me in matrix_elements:
-            matrix_element = me.get('diagrams')
-            me.reuse_outdated_wavefunctions(matrix_element)
 
 
         return matrix_elements
@@ -4303,12 +4305,12 @@ class HelasMultiProcess(base_objects.PhysicsObject):
     def get_used_couplings(self):
         """Return a list with all couplings used by this
         HelasMatrixElement."""
-
+        
         coupling_list = []
 
         for me in self.get('matrix_elements'):
             coupling_list.extend([c for l in me.get_used_couplings() for c in l])
-
+        
         return list(set(coupling_list))
     
     def get_matrix_elements(self):

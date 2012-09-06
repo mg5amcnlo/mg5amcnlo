@@ -36,7 +36,8 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
     # Dictionaries used for automatic generation of Helas calls
     # Dictionaries from spin states to letters in Helas call
-    mother_dict = {1: 'S', 2: 'O', -2: 'I', 3: 'V', 5: 'T', 4:'OR', -4:'IR'}
+    mother_dict = {1: 'S', 2: 'O', -2: 'I', 3: 'V', 5: 'T', 4:'OR', -4:'IR',
+                   99:'P'}
 
     def default_setup(self):
 
@@ -87,7 +88,10 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
         assert isinstance(matrix_element, helas_objects.HelasMatrixElement), \
                   "%s not valid argument for get_matrix_element_calls" % \
-                  repr(matrix_element)
+                  type(matrix_element)
+
+        me = matrix_element.get('diagrams')
+        matrix_element.reuse_outdated_wavefunctions(me)
 
         res = []
         for diagram in matrix_element.get('diagrams'):
@@ -1124,6 +1128,9 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
         assert isinstance(matrix_element, helas_objects.HelasMatrixElement), \
                   "%s not valid argument for get_matrix_element_calls" % \
                   repr(matrix_element)
+
+        me = matrix_element.get('diagrams')
+        matrix_element.reuse_outdated_wavefunctions(me)
 
         res = []
         for diagram in matrix_element.get('diagrams'):
