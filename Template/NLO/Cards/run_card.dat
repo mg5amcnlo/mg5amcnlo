@@ -83,15 +83,15 @@
     1  = jetalgo    ! FastJet jet algorithm (1=kT, 0=C/A, -1=anti-kT)
   0.7  = jetradius  ! The radius parameter for the jet algorithm
    10  = ptj        ! Minimal jet transverse momentum
-  100  = etaj       ! Maximal jet pseudo-rapidity (absolute value)
+   -1  = etaj       ! Maximal jet pseudo-rapidity (absolute value)
 #*********************************************************************
 # Cuts on the charged leptons (e+, e-, mu+, mu-, tau+ and tau-)      *
 # (more specific gen cuts can be specified in SubProcesses/cuts.f)   *
 #*********************************************************************
-  0   = ptl   ! Min lepton transverse momentum
-  100 = etal  ! Max lepton pseudo rapidity
-  0   = drll  ! Min distance between opposite sign lepton pairs
-  30  = mll   ! Min invariant mass of all oppositely charged lepton pairs
+   0  = ptl   ! Min lepton transverse momentum
+  -1  = etal  ! Max lepton pseudo rapidity
+   0  = drll  ! Min distance between opposite sign lepton pairs
+  30  = mll   ! Min inv. mass of all oppositely charged lepton pairs
 #*********************************************************************
 # maximal pdg code for quark to be considered as a jet               *
 #*********************************************************************

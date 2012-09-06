@@ -109,10 +109,18 @@ C-----
      &           //'or not correctly processed by the code.',jetalgo
          endif
          write (*,*) 'with a mimumal pT of ',ptj,'GeV'
-         write (*,*) 'and maximal pseudo-rapidity of ',etaj,'.'
+         if (etaj.gt.0) then
+            write (*,*) 'and maximal pseudo-rapidity of ',etaj,'.'
+         else
+            write (*,*) 'and no maximal pseudo-rapidity.'
+         endif
          write (*,*) 'Charged leptons are required to have at least',ptl
      &        ,'GeV of transverse momentum and'
-         write (*,*) 'pseudo rapidity of maximum',etal,'.'
+         if (etal.gt.0) then
+            write (*,*) 'pseudo rapidity of maximum',etal,'.'
+         else
+            write (*,*) 'no maximum for the pseudo rapidity.'
+         endif
          write (*,*) 'Opposite charged lepton pairs need to be'//
      &        ' separated by at least ',drll
          write (*,*) 'and have an invariant mass of',mll,' GeV'
@@ -163,7 +171,7 @@ c transverse momentum
                endif
             endif
 c pseudo-rapidity
-            if (etal.lt.100d0) then
+            if (etal.gt.0d0) then
                if (abs(eta(plab(0,i))).gt.etal) then
                   passcuts=.false.
                   return
@@ -259,7 +267,7 @@ c
 c******************************************************************************
 
 c Apply the maximal pseudo-rapidity cuts on the jets:      
-         if (etaj.lt.100d0) then 
+         if (etaj.gt.0d0) then 
 c Boost the jets to the lab frame for the pseudo-rapidity cut
             chybst=cosh(ybst_til_tolab)
             shybst=sinh(ybst_til_tolab)
