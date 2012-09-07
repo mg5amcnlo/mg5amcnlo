@@ -120,7 +120,6 @@ class CheckFKS(mg_interface.CheckValidForCmd):
                 args.append('NLO')
         mode = args[1]
         
-        
         # search for a valid path
         if os.path.isdir(args[0]):
             path = os.path.realpath(args[0])
@@ -130,7 +129,6 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             path = pjoin(MG4DIR,args[0])
         else:    
             raise self.InvalidCmd, '%s is not a valid directory' % args[0]
-
                 
         # inform where we are for future command
         self._done_export = [path, mode]
@@ -485,16 +483,15 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         (options, argss) = mg_interface._launch_parser.parse_args(argss)
         self.check_launch(argss, options)
         mode = argss[1]
-        print 'hello'
         self.me_dir = os.path.join(os.getcwd(), argss[0])
-        #self.ask_run_configuration(mode)
-        #self.compile(mode, options)
-        #if self.options['run_mode'] == 0:
-        #    self.run_serial(mode, options)
-        #if self.options['run_mode'] == 1:
-        #    self.run_cluster(mode, options)
-        #if self.options['run_mode'] == 2:
-        #    self.run_multicore(mode, options)
+        self.ask_run_configuration(mode)
+        self.compile(mode, options)
+        if self.options['run_mode'] == 0:
+            self.run_serial(mode, options)
+        if self.options['run_mode'] == 1:
+            self.run_cluster(mode, options)
+        if self.options['run_mode'] == 2:
+            self.run_multicore(mode, options)
 
     def run_serial(self, mode, options):
         """runs aMC@NLO serially"""
