@@ -192,12 +192,14 @@ C-----
                p(j,i)=px(j,i)
             enddo
          enddo
-         xwgt = wgt
+         xwgt = abs(wgt)
          if (zooming) call zoom_event(xwgt,P)
          if (xwgt .eq. 0d0) return
          yran = xran1(idum)
          if (xwgt .gt. twgt*fudge*yran) then
             uwgt = max(xwgt,twgt*fudge)
+c           Set sign of uwgt to sign of wgt
+            uwgt = dsign(uwgt,wgt)
             if (twgt .gt. 0) uwgt=uwgt/twgt/fudge
 c            call write_event(p,uwgt)
 c            write(29,'(2e15.5)') matrix,wgt
@@ -233,7 +235,7 @@ c
       integer i, lunw, ic(7,2*nexternal-3), n, j
       logical done
       double precision wgt,p(0:4,2*nexternal-3)
-      double precision xsec,xerr,xscale,xtot
+      double precision xsec,xsecabs,xerr,xscale,xtot
       double precision xsum, xover
       double precision target_wgt,orig_Wgt(maxevents)
       logical store_event(maxevents)
@@ -269,24 +271,24 @@ c
 c     First scale all of the events to the total cross section
 c
       if (nw .le. 0) return
-      call sample_result(xsec,xerr,itmin)
-      if (xsec .le. 0) return   !Fix by TS 12/3/2010
+      call sample_result(xsecabs,xsec,xerr,itmin)
+      if (xsecabs .le. 0) return   !Fix by TS 12/3/2010
       xtot=0
       call dsort(nw, swgt)
       do i=1,nw
-         xtot=xtot+swgt(i)
+         xtot=xtot+dabs(swgt(i))
       enddo
 c
 c     Determine minimum target weight given truncation parameter
 c
       xsum = 0d0
       i = nw
-      do while (xsum-swgt(i)*(nw-i) .lt. xtot*trunc_max .and. i .gt. 2)
-         xsum = xsum + swgt(i)
+      do while (xsum-dabs(swgt(i))*(nw-i) .lt. xtot*trunc_max .and. i .gt. 2)
+         xsum = xsum + dabs(swgt(i))
          i = i-1
       enddo
       if (i .lt. nw) i=i+1
-      target_wgt = swgt(i)
+      target_wgt = dabs(swgt(i))
 c
 c     Select events which will be written
 c
@@ -300,15 +302,15 @@ c
          else
             wgt = 0d0
          endif
-         if (wgt .gt. target_wgt*xran1(iseed)) then
-            xsum=xsum+max(wgt,target_Wgt)
+         if (dabs(wgt) .gt. target_wgt*xran1(iseed)) then
+            xsum=xsum+max(dabs(wgt),target_Wgt)
             store_event(i)=.true.
             nstore=nstore+1
          else
             store_event(i) = .false.
          endif
       enddo
-      xscale = xsec/xsum
+      xscale = xsecabs/xsum
       target_wgt = target_wgt*xscale
       rewind(lun)
 c     JA 8/17/2011 Don't check for previously stored events
@@ -331,19 +333,20 @@ c      endif
          endif
          if (store_event(j) .and. .not. done) then
             wgt=wgt*xscale
-            wgt = max(wgt, target_wgt)
-            if (wgt .gt. target_wgt) then
-               xover = xover + wgt - target_wgt
+            wgt = dsign(max(dabs(wgt), target_wgt),wgt)
+            if (dabs(wgt) .gt. target_wgt) then
+               xover = xover + dabs(wgt) - target_wgt
                nover = nover+1
             endif
-            xtot = xtot + wgt
+            xtot = xtot + dabs(wgt)
             i=i+1
             call write_Event(lunw,p,wgt,n,ic,ngroup,scale,aqcd,aqed,buff)
          endif
       enddo
       write(*,*) 'Found ',nw,' events.'
       write(*,*) 'Wrote ',i ,' events.'
-      write(*,*) 'Correct xsec ',xsec
+      write(*,*) 'Actual xsec ',xsec
+      write(*,*) 'Correct abs xsec ',xsecabs
       write(*,*) 'Event xsec ', xtot
       write(*,*) 'Events wgts > 1: ', nover
       write(*,*) '% Cross section > 1: ',xover, xover/xtot*100.
@@ -377,8 +380,8 @@ c
 c     Local
 c
       integer i,j,k
-      double precision sum_wgt,sum_wgt2, xtarget,targetamp(maxflow)
-      integer ip, np, ic, nc, jpart(7,-nexternal+3:2*nexternal-3)
+      double precision xtarget,targetamp(maxflow)
+      integer ic, nc, jpart(7,-nexternal+3:2*nexternal-3)
       integer ida(2),ito(-nexternal+3:nexternal),ns,nres,ires,icloop
       integer iseed
       double precision pboost(0:3),pb(0:4,-nexternal+3:2*nexternal-3),eta
@@ -406,9 +409,8 @@ C
       integer                             lun, nw, itmin
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
 
-      integer              IPROC 
-      DOUBLE PRECISION PD(0:MAXPROC)
-      COMMON /SubProc/ PD, IPROC
+      integer          IPSEL
+      COMMON /SubProc/ IPSEL
 
       Double Precision amp2(maxamps), jamp2(0:maxflow)
       common/to_amps/  amp2,       jamp2
@@ -443,24 +445,10 @@ C  BEGIN CODE
 C-----
       
       if (nw .ge. maxevents) return
+
+c     Store weight for event
       nw = nw+1
       swgt(nw)=wgt
-      sum_wgt=sum_wgt+wgt
-      sum_wgt2=sum_wgt2+wgt**2
-c
-c     First choose a process  iproc comes set to the number of processes
-c
-      if(ickkw.gt.0)then
-        ip = iprocset
-      else
-        np = iproc
-        xtarget=ran1(iseed)*pd(np)
-        ip = 1
-        do while (pd(ip) .lt. xtarget .and. ip .lt. np)
-          ip=ip+1
-        enddo
-      endif
-      
 c
 c     In case of identical particles symmetry, choose assignment
 c
@@ -473,7 +461,7 @@ c
 c     Fill jpart color and particle info
 c
       do i=1,nexternal
-         jpart(1,isym(i,jsym)) = idup(i,ip,numproc)
+         jpart(1,isym(i,jsym)) = idup(i,ipsel,numproc)
          jpart(2,isym(i,jsym)) = mothup(1,i)
          jpart(3,isym(i,jsym)) = mothup(2,i)
 c        Color info is filled in mothup
@@ -551,7 +539,7 @@ c      Add mass information in pb(4)
 c
 c     Add info on resonant mothers
 c
-      call addmothers(ip,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
+      call addmothers(ipsel,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
      $                npart,numproc)
 
 c     Need to flip after addmothers, since color might get overwritten
@@ -646,7 +634,7 @@ c      write(*,*) 'Number unweighted ',sum/swgt(i), nw
 
       subroutine dsort(n,ra)
       integer n
-      double precision ra(n)
+      double precision ra(n),rra
 
       l=n/2+1
       ir=n
@@ -667,9 +655,9 @@ c      write(*,*) 'Number unweighted ',sum/swgt(i), nw
         j=l+l
 20      if(j.le.ir)then
           if(j.lt.ir)then
-            if(ra(j).lt.ra(j+1))j=j+1
+            if(dabs(ra(j)).lt.dabs(ra(j+1))) j=j+1
           endif
-          if(rra.lt.ra(j))then
+          if(dabs(rra).lt.dabs(ra(j)))then
             ra(i)=ra(j)
             i=j
             j=j+j

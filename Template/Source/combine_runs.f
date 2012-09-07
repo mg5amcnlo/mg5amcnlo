@@ -165,11 +165,12 @@ c
       character*26 alphabet
       integer jc,i
       integer njobs
-      double precision xsec(maxjobs),xerr(maxjobs)
+      double precision xsec(maxjobs),xerr(maxjobs),rxsec(maxjobs)
       double precision xsec_it(9,maxjobs),xerr_it(9,maxjobs)
+      double precision rxsec_it(9,maxjobs)
       double precision eff(9,maxjobs),wmax(9,maxjobs)
       integer nevents(maxjobs),ntry(maxjobs)
-      double precision xsec_tot, xerr_tot
+      double precision xsec_tot, rxsec_tot, xerr_tot
       integer tot_nevents, tot_ntry
       integer lunw,nw
       double precision wgt
@@ -190,31 +191,35 @@ c     Read in results from each of the jobs
 c
       do i = 1, njobs
          pathname = channame(1:jc-2) // alphabet(i:i)
-         call get_results(pathname,xsec(i),xerr(i),ntry(i),nevents(i),
-     $        xsec_it(1,i),xerr_it(1,i),eff(1,i),wmax(1,i))
+         call get_results(pathname,xsec(i),rxsec(i),xerr(i),ntry(i),nevents(i),
+     $        xsec_it(1,i),xerr_it(1,i),rxsec_it(1,i),eff(1,i),wmax(1,i))
       enddo
 c
 c     Process results from each job to get final statistics
 c
       xsec_tot = 0d0
+      rxsec_tot = 0d0
       xerr_tot = 0d0
       tot_ntry = 0
       tot_nevents = 0
       do i = 1, njobs
          xsec_tot = xsec_tot+xsec(i)
+         rxsec_tot = rxsec_tot+rxsec(i)
          xerr_tot = xerr_tot+xerr(i)**2
          tot_ntry = tot_ntry+ntry(i)
          tot_nevents = tot_nevents+nevents(i)
       enddo
       xsec_tot = xsec_tot / njobs
+      rxsec_tot = rxsec_tot / njobs
       xerr_tot = sqrt(xerr_tot)/njobs
 
       pathname = channame(1:jc-2)
       i=1
-      call put_results(pathname,xsec_tot,xerr_tot,tot_ntry,tot_nevents,
-     $        xsec_it(1,i),xerr_it(1,i),eff(1,i),wmax(1,i))
-      call write_logfile(pathname,xsec,xerr,ntry,nevents,
-     $        xsec_it,xerr_it,eff,wmax,njobs)
+      call put_results(pathname,xsec_tot,rxsec_tot,xerr_tot,tot_ntry,
+     $     tot_nevents,xsec_it(1,i),rxsec_it(1,i),xerr_it(1,i),eff(1,i),
+     $     wmax(1,i))
+      call write_logfile(pathname,xsec,rxsec,xerr,ntry,nevents,
+     $        xsec_it,rxsec_it,xerr_it,eff,wmax,njobs)
 c
 c     Now read in all of the events and write them
 c     back out with the appropriate scaled weight
@@ -291,6 +296,7 @@ c-----
          call read_event(35,P,xwgt,n,ic,ievent,scale,
      $        aqcd,aqed,buff,done)
          if (.not. done) then
+            wgt = dsign(wgt,xwgt)
             call write_event(lunw,P,wgt,n,ic,ievent,scale,
      $           aqcd,aqed,buff)
             nw=nw+1
@@ -302,8 +308,8 @@ c-----
       write(*,*) "Error unable to open ",fname
       end
 
-      subroutine get_results(pathname,xsec,xerr,ntry,nevents,
-     $     xsec_it,xerr_it,eff,wmax)
+      subroutine get_results(pathname,xsec,rxsec,xerr,ntry,nevents,
+     $     xsec_it,xerr_it,rxsec_it,eff,wmax)
 c*********************************************************************
 c     Read run results from file results.dat
 c*********************************************************************
@@ -317,8 +323,8 @@ c
 c     Arguments
 c
       character*(*) pathname
-      double precision xsec,xerr
-      double precision xsec_it(9),xerr_it(9)
+      double precision xsec,rxsec,xerr
+      double precision xsec_it(9),rxsec_it(9),xerr_it(9)
       double precision eff(9),wmax(9)
       integer nevents,ntry
 c     
@@ -335,10 +341,10 @@ c-----
       nevents = 0
       i=1
       open(unit=35, file=fname,status='old',err=99)
-      read(35,*,err=99,end=99) xsec,xerr, x1, ntry,x3,x4,nevents
+      read(35,*,err=99,end=99) xsec,xerr, x1, ntry,x3,x4,nevents,x1,x1,rxsec
       do while (.true.)
          read(35,*,end=99,err=99) x1,xsec_it(i),xerr_it(i),
-     $        eff(i),wmax(i)
+     $        eff(i),wmax(i),rxsec_it(i)
          i=i+1
       enddo
  99   close(35)
@@ -348,14 +354,14 @@ c-----
          write(*,*) "Found ",nevents, " events in ", pathname(1:jc-1)
          i=1
          do while (xsec_it(i) .gt. 0d0)
-            write(*,*) i,xsec_it(i),xerr_it(i),eff(i),wmax(i)
+            write(*,*) i,rxsec_it(i),xsec_it(i),xerr_it(i),eff(i),wmax(i)
             i=i+1
          enddo
       endif      
       end
 
-      subroutine write_logfile(pathname,xsec,xerr,ntry,nevents,
-     $     xsec_it,xerr_it,eff,wmax,njobs)
+      subroutine write_logfile(pathname,xsec,rxsec,xerr,ntry,nevents,
+     $     xsec_it,rxsec_it,xerr_it,eff,wmax,njobs)
 c*********************************************************************
 c     Read run results from file results.dat
 c*********************************************************************
@@ -371,11 +377,12 @@ c
 c     Arguments
 c
       character*(*) pathname
-      double precision xsec(maxjobs),xerr(maxjobs)
+      double precision xsec(maxjobs),rxsec(maxjobs),xerr(maxjobs)
       double precision xsec_it(9,maxjobs),xerr_it(9,maxjobs)
+      double precision rxsec_it(9,maxjobs)
       double precision eff(9,maxjobs),wmax(9,maxjobs)
       integer nevents(maxjobs),ntry(maxjobs)
-      double precision xsec_tot, xerr_tot
+      double precision xsec_tot, rxsec_tot, xerr_tot
       integer tot_nevents, tot_ntry
       integer njobs
 c     
@@ -392,10 +399,10 @@ c-----
       fname = pathname(1:jc-1) // "/" // logfname
       open(unit=35,file=fname,status="old",access="append",err=999)
 
-      write(35,*) '--------------------- Multi run with ',njobs,' jobs. ',
-     $            '---------------------'
+      write(35,*) '--------------------- Multi run with ',njobs,
+     $     ' jobs. ','---------------------'
       do i=1,njobs
-         write(35,*) "job ",alphabet(i:i),":",xsec(i),nevents(i)
+         write(35,*) "job ",alphabet(i:i),":",rxsec(i),xsec(i),nevents(i)
       enddo
       close(35)
       return
@@ -403,8 +410,8 @@ c-----
       close(35)
       end
 
-      subroutine put_results(pathname,xsec,xerr,ntry,nevents,
-     $     xsec_it,xerr_it,eff,wmax)
+      subroutine put_results(pathname,xsec,rxsec,xerr,ntry,nevents,
+     $     xsec_it,rxsec_it,xerr_it,eff,wmax)
 c*********************************************************************
 c     Read run results from file results.dat
 c*********************************************************************
@@ -418,8 +425,8 @@ c
 c     Arguments
 c
       character*(*) pathname
-      double precision xsec,xerr
-      double precision xsec_it(9),xerr_it(9)
+      double precision xsec,rxsec,xerr
+      double precision xsec_it(9),rxsec_it(9),xerr_it(9)
       double precision eff(9),wmax(9)
       integer nevents,ntry
 c     
@@ -439,12 +446,12 @@ c-----
       i3 = 0
       i4 = 0
       open(unit=35, file=fname,status='unknown',err=99)
-      write(35,'(3e12.5,2i9,i5,i9,e10.3)') xsec,xerr, x1, ntry,i3,i4
-     $     ,nevents,(1.00*nevents)/xsec
+      write(35,'(3e12.5,2i9,i5,i9,e10.3,e11.3,e13.5)') xsec,xerr, x1, ntry,i3,i4
+     $     ,nevents,(1.00*nevents)/xsec,0d0,rxsec
       i=1
       do while (xsec_it(i) .gt. 0 .and. i .lt. 10)
-         write(35,'(i4,4e15.5)') i,xsec_it(i),xerr_it(i),
-     $        eff(i),wmax(i)
+         write(35,'(i4,5e15.5)') i,xsec_it(i),xerr_it(i),
+     $        eff(i),wmax(i),rxsec_it(i)
          i=i+1
       enddo
  99   close(35)
