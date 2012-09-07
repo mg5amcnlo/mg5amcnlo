@@ -2351,6 +2351,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 logger.critical(stdout)
                 raise MadEventError, 'Error gensym run not successful'
             #
+            if os.path.exists(pjoin(self.me_dir,'error')):
+                self.monitor(html=True)
+                raise MadEventError, 'Error in gensym: %s' % \
+                    open(pjoin(self.me_dir,'error')).read()
+
             misc.compile(['madevent'], cwd=Pdir)
             
             alljobs = glob.glob(pjoin(Pdir,'ajob*'))
@@ -3390,7 +3395,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     self.cluster.remove()
                 raise
                     
-        if mode == 2:
+        if mode == 2 and hasattr(self, 'control_thread'):
             # Wait that all thread finish
             if not self.control_thread[2]:
 #                time.sleep(1)

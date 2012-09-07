@@ -41,6 +41,7 @@ Update notes for MadGraph 5 (in reverse time order)
                    JA: Avoid creating directories for integration channels
                        that can not give events based on BW settings
                        (further improvement compared to v. 1.4.8).
+                   JA: Fix problem when there are resonances with mass above ECM.
 
 1.4.8.4 (29/08/12) OM: Fix a web problem which creates generations to run twice 
                        on the web.

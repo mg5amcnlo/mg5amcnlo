@@ -11,6 +11,7 @@ c
       include 'maxconfigs.inc'
       include '../../Source/run_config.inc'
       include 'maxamps.inc'
+      include 'nexternal.inc'
       
       double precision ZERO
       parameter       (ZERO = 0d0)
@@ -29,6 +30,9 @@ c
       double precision prwidth(-max_branch:-1,lmaxconfigs)  !Propagotor width
       integer pow(-max_branch:-1,lmaxconfigs)
       character*20 param(maxpara),value(maxpara)
+      double precision pmass(nexternal)   !External particle mass
+      double precision pi1(0:3),pi2(0:3),m1,m2,ebeam(2)
+      integer lpp(2)
 c
 c     Global
 c
@@ -37,6 +41,8 @@ c
       common/to_gridpack/gridpack
       double precision bwcutoff
       common/to_bwcutoff/bwcutoff
+      double precision stot
+      common/to_stot/stot
 c
 c     DATA
 c
@@ -49,6 +55,7 @@ c
 c-----
 c  Begin Code
 c-----
+
 c      write(*,*) 'Enter compression (0=none, 1=sym, 2=BW, 3=full)'
 c      read(*,*) icomp
 c      if (icomp .gt. 3 .or. icomp .lt. 0) icomp=0
@@ -73,13 +80,35 @@ c     If different card options set for nhel_refine and nhel_survey:
      $     1*nhel_survey)
       call get_logical(npara,param,value," gridpack ",gridpack,.false.)
       call get_real(npara,param,value," bwcutoff ",bwcutoff,5d0)
+      call get_real(npara,param,value," ebeam1 ",ebeam(1),0d0)
+      call get_real(npara,param,value," ebeam2 ",ebeam(2),0d0)
+      call get_integer(npara,param,value," lpp1 ",lpp(1),0)
+      call get_integer(npara,param,value," lpp2 ",lpp(2),0)
+
+      call setpara('%(param_card_name)s' %(setparasecondarg)s)   !Sets up couplings and masses
+      include 'pmass.inc'
+
+c     Set stot
+      if (nincoming.eq.1) then
+         stot=pmass(1)**2
+      else
+         m1=pmass(1)
+         m2=pmass(2)
+         if (abs(lpp(1)) .ge. 1) m1 = 0.938d0
+         if (abs(lpp(2)) .ge. 1) m2 = 0.938d0
+         pi1(0)=ebeam(1)+m1
+         pi1(3)=sqrt(ebeam(1)*(ebeam(1)+2*m1))
+         pi2(0)=ebeam(2)+m2
+         pi2(3)=-sqrt(ebeam(2)*(ebeam(2)+2*m2))
+         stot=m1**2+m2**2+2*(pi1(0)*pi2(0)-pi1(3)*pi2(3))
+      endif
 
       write(*,*) 'Read parameters:'
       write(*,*) 'nhel_survey = ',nhel_survey
       write(*,*) 'gridpack    = ',gridpack
       write(*,*) 'bwcutoff    = ',bwcutoff
+      write(*,*) 'sqrt(stot)  = ',sqrt(stot)
 
-      call setpara('%(param_card_name)s' %(setparasecondarg)s)   !Sets up couplings and masses
       call printout
       include 'props.inc'
 
@@ -224,10 +253,10 @@ c
       integer i, j, nbw, ic, icode
       integer ncode, nconf, nsym
       double precision dconfig
-      character*20 formstr,formstr2
+      character*20 formstr,formstr2,filename
       integer iarray(imax)
       logical lconflict(-max_branch:nexternal)
-      logical done
+      logical done,file_exists
       logical failConfig
       external failConfig
       integer gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
@@ -323,6 +352,18 @@ c                 Write symmetry factors
       enddo
       call close_bash_file(26)
       close(27)
+      if(ic.eq.0) then
+c        Stop generation with error message
+         filename='../../error'
+         INQUIRE(FILE="../../RunWeb", EXIST=file_exists)
+         if(.not.file_exists) filename = '../' // filename
+         open(unit=26,file=filename,status='unknown')
+         write(26,*)'Error: No valid channels found. ',
+     $        'Please check particle masses.'
+         write(*,*)'Error: No valid channels found. ',
+     $        'Please check particle masses.'
+         close(26)
+      endif
       end
 
 
@@ -361,11 +402,14 @@ c
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
+      double precision mtot
       include 'leshouche.inc'
 c
 c     Global
 c
       include 'coupl.inc'                     !Mass and width info
+      double precision stot
+      common/to_stot/stot
 
 c-----
 c  Begin Code
@@ -383,6 +427,11 @@ c
          lconflict(-i) = .false.
          iden_part(-i)=0
       enddo
+c     Initialize mtot (needed final-state phase space)
+      mtot=0
+      do i=nincoming+1,nexternal
+          mtot=mtot+xmass(i)
+      enddo
 c
 c     Start by determining which propagators are part of the same 
 c     chain, or could potentially conflict
@@ -390,6 +439,7 @@ c
       i=1
       do while (i .lt. nexternal-2 .and. itree(1,-i) .ne. 1)
          xmass(-i) = xmass(itree(1,-i))+xmass(itree(2,-i))
+         mtot=mtot-xmass(-i)
          if (prwidth(-i,iconfig) .gt. 0d0) then
 c     JA 3/31/11 Keep track of identical particles (i.e., radiation vertices)
 c     by tracing the particle identity from the external particle.
@@ -423,6 +473,7 @@ c     by tracing the particle identity from the external particle.
             endif
          endif
          xmass(-i) = max(xmass(-i),prmass(-i,iconfig)+3d0*prwidth(-i,iconfig))        
+         mtot=mtot+xmass(-i)
          i=i+1
       enddo
 c
@@ -435,6 +486,15 @@ c
             write(*,*) 'Adding conflict ',itree(1,-j),itree(2,-j)
          endif
       enddo
+c
+c     If not enough energy, mark all BWs as conflicting
+c
+      if(stot.lt.mtot**2)then
+         write(*,*) 'Not enough energy, set all BWs as conflicting'
+         do j=i,1,-1
+            lconflict(-j) = .true.
+         enddo
+      endif
 c
 c     Only include BW props as conflicting, but not if radiation
 c
@@ -487,6 +547,7 @@ c
       double precision xmass(-max_branch:nexternal)
       double precision xwidth(-max_branch:nexternal)
       double precision pmass(nexternal)   !External particle mass
+      double precision mtot
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
@@ -496,6 +557,8 @@ c     Global
 c
       double precision bwcutoff
       common/to_bwcutoff/bwcutoff
+      double precision stot
+      common/to_stot/stot
       include 'coupl.inc'                     !Mass and width info
 
 c-----
@@ -514,6 +577,11 @@ c
          lconflict(-i) = .false.
          iden_part(-i)=0
       enddo
+c     Initialize mtot (needed final-state phase space)
+      mtot=0
+      do i=nincoming+1,nexternal
+          mtot=mtot+xmass(i)
+      enddo
 
 c     By default pass
       failConfig=.false.
@@ -527,6 +595,7 @@ c
      $     sprop(1,-i).ne.0)
 
          xmass(-i) = xmass(itree(1,-i))+xmass(itree(2,-i))
+         mtot=mtot-xmass(-i)
          xwidth(-i)=prwidth(-i,iconfig)
          if (xwidth(-i) .gt. 0d0) then
             nbw=nbw+1
@@ -547,8 +616,15 @@ c
                endif
             endif
          endif
+         mtot=mtot+xmass(-i)
          i=i+1
       enddo
+
+c     Fail if too small phase space
+      if (stot.lt.mtot**2) then
+         failConfig=.true.
+      endif
+
       return
       end
 

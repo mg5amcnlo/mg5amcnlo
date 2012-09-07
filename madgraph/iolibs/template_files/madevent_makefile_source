@@ -44,7 +44,7 @@ $(LIBDIR)libpdf.$(libext): PDF
 	cd PDF; make	
 $(LIBDIR)libcernlib.$(libext): CERNLIB
 	cd CERNLIB; make	
-$(LIBDIR)libmodel.$(libext): MODEL
+$(LIBDIR)libmodel.$(libext): MODEL param_card.inc
 	cd MODEL; make	
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o
