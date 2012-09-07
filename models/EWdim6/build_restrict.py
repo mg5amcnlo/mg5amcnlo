@@ -15,6 +15,13 @@
 """ This part is not part of the UFO Model but only of MG5 suite. 
 This files defines how the restrict card can be build automatically """ 
 
+### Important Warning ###
+# When you develop such file. Please cross check that they are NO
+# unwanted simplification to your model. This can happen especially
+# if a bunch of value are set to 1.0 by default. This YOUR responsability
+# to check that you get the expected behavior                            
+### Important Warning ###
+
 import models.build_restriction_lib as build_restrict_lib
 all_categories = []
 

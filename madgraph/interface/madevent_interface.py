@@ -2473,9 +2473,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         output = open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
         # Store the number of unweighted events for the results object
         pat = re.compile(r'''\s*Unweighting selected\s*(\d+)\s*events''',re.MULTILINE)
-        if output:
+        if self.cluster_mode == 1 and not output:
+            time.sleep(30)
+            output = open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
+            
+        if output:  
             nb_event = pat.search(output).groups()[0]
             self.results.add_detail('nb_event', nb_event)
+        else :
+            nb_event =0
         
         # Define The Banner
         tag = self.run_card['run_tag']

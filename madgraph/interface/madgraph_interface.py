@@ -3606,10 +3606,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 elif value == 1:
                     param.value = 9.999999e-1                
                 elif abs(value) in value_dict:
-                    param.value += value_dict[value] * 1e-6 * param.value
-                    value_dict[value] += 1
+                    param.value += value_dict[abs(value)] * 1e-4 * param.value
+                    value_dict[abs(value)] += 1
                 else:
-                    value_dict[value] = 1 
+                    value_dict[abs(value)] = 1 
         
         for category in all_categories:
             for options in category:
