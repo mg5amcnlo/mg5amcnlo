@@ -347,7 +347,8 @@ c
       write(*,'(a)') '-------------------------------------------------'
       write(*,'(a)') '---------------------------'
       write(*,'(a,i3,a,e12.4)') ' Results Last ',itsum,
-     $     ' iters:  Integral = ',trmean, ' Abs integral = ',tmean
+     $     ' iters: Integral = ',trmean
+      write(*,'(21x,a,e12.4)') 'Abs integral = ',tmean
       write(*,'(25x,a,e12.4)') 'Std dev = ',tsigma
       write(*,'(17x,a,f12.4)') 'Chi**2 per DoF. =',chi2
       write(*,'(a)') '-------------------------------------------------'
