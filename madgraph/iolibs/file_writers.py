@@ -170,7 +170,7 @@ class FortranWriter(FileWriter):
             while i < len(splitline):
                 if i % 2 == 1:
                     # This is a quote - check for escaped \'s
-                    while splitline[i][len(splitline[i]) - 1] == '\\':
+                    while  splitline[i] and splitline[i][-1] == '\\':
                         splitline[i] = splitline[i] + '\'' + splitline.pop(i + 1)
                 else:
                     # Otherwise downcase/upcase
@@ -771,3 +771,13 @@ class CPPWriter(FileWriter):
             
         return res_lines
 
+class PythonWriter(FileWriter):
+    
+    def write_comments(self, text):
+        text = '#%s\n' % text.replace('\n','\n#')
+        file.write(self, text)
+    
+    def write_line(self, line):
+        """Write a line with proper indent and splitting of long lines
+        for the language in question."""
+        return [line]

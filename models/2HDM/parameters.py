@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 535 $
-# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Mon 11 Apr 2011 22:27:17
+# This file was automatically created by FeynRules 1.7.55
+# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (October 6, 2011)
+# Date: Wed 8 Aug 2012 14:37:00
 
 
 
@@ -17,149 +17,149 @@ ZERO = Parameter(name = 'ZERO',
                  texname = '0')
 
 # User-defined parameters.
-CKMI11 = Parameter(name = 'CKMI11',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{CKMI11}',
-                   lhablock = 'CKMI',
-                   lhacode = [ 1, 1 ])
+CKMI1x1 = Parameter(name = 'CKMI1x1',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.,
+                    texname = '\\text{CKMI1x1}',
+                    lhablock = 'CKMI',
+                    lhacode = [ 1, 1 ])
 
-CKMI12 = Parameter(name = 'CKMI12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{CKMI12}',
-                   lhablock = 'CKMI',
-                   lhacode = [ 1, 2 ])
+CKMI1x2 = Parameter(name = 'CKMI1x2',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.,
+                    texname = '\\text{CKMI1x2}',
+                    lhablock = 'CKMI',
+                    lhacode = [ 1, 2 ])
 
-CKMI13 = Parameter(name = 'CKMI13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{CKMI13}',
-                   lhablock = 'CKMI',
-                   lhacode = [ 1, 3 ])
+CKMI1x3 = Parameter(name = 'CKMI1x3',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.,
+                    texname = '\\text{CKMI1x3}',
+                    lhablock = 'CKMI',
+                    lhacode = [ 1, 3 ])
 
-CKMI21 = Parameter(name = 'CKMI21',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{CKMI21}',
-                   lhablock = 'CKMI',
-                   lhacode = [ 2, 1 ])
+CKMI2x1 = Parameter(name = 'CKMI2x1',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.,
+                    texname = '\\text{CKMI2x1}',
+                    lhablock = 'CKMI',
+                    lhacode = [ 2, 1 ])
 
-CKMI22 = Parameter(name = 'CKMI22',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{CKMI22}',
-                   lhablock = 'CKMI',
-                   lhacode = [ 2, 2 ])
+CKMI2x2 = Parameter(name = 'CKMI2x2',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.,
+                    texname = '\\text{CKMI2x2}',
+                    lhablock = 'CKMI',
+                    lhacode = [ 2, 2 ])
 
-CKMI23 = Parameter(name = 'CKMI23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{CKMI23}',
-                   lhablock = 'CKMI',
-                   lhacode = [ 2, 3 ])
+CKMI2x3 = Parameter(name = 'CKMI2x3',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.,
+                    texname = '\\text{CKMI2x3}',
+                    lhablock = 'CKMI',
+                    lhacode = [ 2, 3 ])
 
-CKMI31 = Parameter(name = 'CKMI31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{CKMI31}',
-                   lhablock = 'CKMI',
-                   lhacode = [ 3, 1 ])
+CKMI3x1 = Parameter(name = 'CKMI3x1',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.,
+                    texname = '\\text{CKMI3x1}',
+                    lhablock = 'CKMI',
+                    lhacode = [ 3, 1 ])
 
-CKMI32 = Parameter(name = 'CKMI32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{CKMI32}',
-                   lhablock = 'CKMI',
-                   lhacode = [ 3, 2 ])
+CKMI3x2 = Parameter(name = 'CKMI3x2',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.,
+                    texname = '\\text{CKMI3x2}',
+                    lhablock = 'CKMI',
+                    lhacode = [ 3, 2 ])
 
-CKMI33 = Parameter(name = 'CKMI33',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{CKMI33}',
-                   lhablock = 'CKMI',
-                   lhacode = [ 3, 3 ])
+CKMI3x3 = Parameter(name = 'CKMI3x3',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.,
+                    texname = '\\text{CKMI3x3}',
+                    lhablock = 'CKMI',
+                    lhacode = [ 3, 3 ])
 
-CKMR11 = Parameter(name = 'CKMR11',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.974589144,
-                   texname = '\\text{CKMR11}',
-                   lhablock = 'CKMR',
-                   lhacode = [ 1, 1 ])
+CKMR1x1 = Parameter(name = 'CKMR1x1',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.974589144,
+                    texname = '\\text{CKMR1x1}',
+                    lhablock = 'CKMR',
+                    lhacode = [ 1, 1 ])
 
-CKMR12 = Parameter(name = 'CKMR12',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.224,
-                   texname = '\\text{CKMR12}',
-                   lhablock = 'CKMR',
-                   lhacode = [ 1, 2 ])
+CKMR1x2 = Parameter(name = 'CKMR1x2',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.224,
+                    texname = '\\text{CKMR1x2}',
+                    lhablock = 'CKMR',
+                    lhacode = [ 1, 2 ])
 
-CKMR13 = Parameter(name = 'CKMR13',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{CKMR13}',
-                   lhablock = 'CKMR',
-                   lhacode = [ 1, 3 ])
+CKMR1x3 = Parameter(name = 'CKMR1x3',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.,
+                    texname = '\\text{CKMR1x3}',
+                    lhablock = 'CKMR',
+                    lhacode = [ 1, 3 ])
 
-CKMR21 = Parameter(name = 'CKMR21',
-                   nature = 'external',
-                   type = 'real',
-                   value = -0.224,
-                   texname = '\\text{CKMR21}',
-                   lhablock = 'CKMR',
-                   lhacode = [ 2, 1 ])
+CKMR2x1 = Parameter(name = 'CKMR2x1',
+                    nature = 'external',
+                    type = 'real',
+                    value = -0.224,
+                    texname = '\\text{CKMR2x1}',
+                    lhablock = 'CKMR',
+                    lhacode = [ 2, 1 ])
 
-CKMR22 = Parameter(name = 'CKMR22',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.974589144,
-                   texname = '\\text{CKMR22}',
-                   lhablock = 'CKMR',
-                   lhacode = [ 2, 2 ])
+CKMR2x2 = Parameter(name = 'CKMR2x2',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.974589144,
+                    texname = '\\text{CKMR2x2}',
+                    lhablock = 'CKMR',
+                    lhacode = [ 2, 2 ])
 
-CKMR23 = Parameter(name = 'CKMR23',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{CKMR23}',
-                   lhablock = 'CKMR',
-                   lhacode = [ 2, 3 ])
+CKMR2x3 = Parameter(name = 'CKMR2x3',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.,
+                    texname = '\\text{CKMR2x3}',
+                    lhablock = 'CKMR',
+                    lhacode = [ 2, 3 ])
 
-CKMR31 = Parameter(name = 'CKMR31',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{CKMR31}',
-                   lhablock = 'CKMR',
-                   lhacode = [ 3, 1 ])
+CKMR3x1 = Parameter(name = 'CKMR3x1',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.,
+                    texname = '\\text{CKMR3x1}',
+                    lhablock = 'CKMR',
+                    lhacode = [ 3, 1 ])
 
-CKMR32 = Parameter(name = 'CKMR32',
-                   nature = 'external',
-                   type = 'real',
-                   value = 0.,
-                   texname = '\\text{CKMR32}',
-                   lhablock = 'CKMR',
-                   lhacode = [ 3, 2 ])
+CKMR3x2 = Parameter(name = 'CKMR3x2',
+                    nature = 'external',
+                    type = 'real',
+                    value = 0.,
+                    texname = '\\text{CKMR3x2}',
+                    lhablock = 'CKMR',
+                    lhacode = [ 3, 2 ])
 
-CKMR33 = Parameter(name = 'CKMR33',
-                   nature = 'external',
-                   type = 'real',
-                   value = 1.,
-                   texname = '\\text{CKMR33}',
-                   lhablock = 'CKMR',
-                   lhacode = [ 3, 3 ])
+CKMR3x3 = Parameter(name = 'CKMR3x3',
+                    nature = 'external',
+                    type = 'real',
+                    value = 1.,
+                    texname = '\\text{CKMR3x3}',
+                    lhablock = 'CKMR',
+                    lhacode = [ 3, 3 ])
 
 l1 = Parameter(name = 'l1',
                nature = 'external',
@@ -193,117 +193,125 @@ l4 = Parameter(name = 'l4',
                lhablock = 'Higgs',
                lhacode = [ 4 ])
 
-l5 = Parameter(name = 'l5',
-               nature = 'external',
-               type = 'real',
-               value = 0.4,
-               texname = '\\text{l5}',
-               lhablock = 'Higgs',
-               lhacode = [ 5 ])
+lR5 = Parameter(name = 'lR5',
+                nature = 'external',
+                type = 'real',
+                value = 0.4,
+                texname = '\\text{lR5}',
+                lhablock = 'Higgs',
+                lhacode = [ 5 ])
+
+lI5 = Parameter(name = 'lI5',
+                nature = 'external',
+                type = 'real',
+                value = 0.3,
+                texname = '\\text{lI5}',
+                lhablock = 'Higgs',
+                lhacode = [ 6 ])
 
 lR6 = Parameter(name = 'lR6',
                 nature = 'external',
                 type = 'real',
-                value = 0.3,
+                value = 0.,
                 texname = '\\text{lR6}',
                 lhablock = 'Higgs',
-                lhacode = [ 6 ])
+                lhacode = [ 7 ])
 
 lI6 = Parameter(name = 'lI6',
                 nature = 'external',
                 type = 'real',
-                value = 0.,
+                value = 0.2,
                 texname = '\\text{lI6}',
                 lhablock = 'Higgs',
-                lhacode = [ 7 ])
+                lhacode = [ 8 ])
 
 lR7 = Parameter(name = 'lR7',
                 nature = 'external',
                 type = 'real',
-                value = 0.2,
+                value = 0.,
                 texname = '\\text{lR7}',
                 lhablock = 'Higgs',
-                lhacode = [ 8 ])
+                lhacode = [ 9 ])
 
 lI7 = Parameter(name = 'lI7',
                 nature = 'external',
                 type = 'real',
-                value = 0.,
+                value = 0,
                 texname = '\\text{lI7}',
                 lhablock = 'Higgs',
-                lhacode = [ 9 ])
+                lhacode = [ 10 ])
 
-TH11 = Parameter(name = 'TH11',
-                 nature = 'external',
-                 type = 'real',
-                 value = 0.,
-                 texname = '\\text{TH11}',
-                 lhablock = 'HiggsMix',
-                 lhacode = [ 1, 1 ])
+TH1x1 = Parameter(name = 'TH1x1',
+                  nature = 'external',
+                  type = 'real',
+                  value = 0.,
+                  texname = '\\text{TH1x1}',
+                  lhablock = 'HiggsMix',
+                  lhacode = [ 1, 1 ])
 
-TH12 = Parameter(name = 'TH12',
-                 nature = 'external',
-                 type = 'real',
-                 value = 0.78064408782535,
-                 texname = '\\text{TH12}',
-                 lhablock = 'HiggsMix',
-                 lhacode = [ 1, 2 ])
+TH1x2 = Parameter(name = 'TH1x2',
+                  nature = 'external',
+                  type = 'real',
+                  value = 0.78064408782535,
+                  texname = '\\text{TH1x2}',
+                  lhablock = 'HiggsMix',
+                  lhacode = [ 1, 2 ])
 
-TH13 = Parameter(name = 'TH13',
-                 nature = 'external',
-                 type = 'real',
-                 value = 0.62497584604793,
-                 texname = '\\text{TH13}',
-                 lhablock = 'HiggsMix',
-                 lhacode = [ 1, 3 ])
+TH1x3 = Parameter(name = 'TH1x3',
+                  nature = 'external',
+                  type = 'real',
+                  value = 0.62497584604793,
+                  texname = '\\text{TH1x3}',
+                  lhablock = 'HiggsMix',
+                  lhacode = [ 1, 3 ])
 
-TH21 = Parameter(name = 'TH21',
-                 nature = 'external',
-                 type = 'real',
-                 value = 0.,
-                 texname = '\\text{TH21}',
-                 lhablock = 'HiggsMix',
-                 lhacode = [ 2, 1 ])
+TH2x1 = Parameter(name = 'TH2x1',
+                  nature = 'external',
+                  type = 'real',
+                  value = 0.,
+                  texname = '\\text{TH2x1}',
+                  lhablock = 'HiggsMix',
+                  lhacode = [ 2, 1 ])
 
-TH22 = Parameter(name = 'TH22',
-                 nature = 'external',
-                 type = 'real',
-                 value = -0.62497584604793,
-                 texname = '\\text{TH22}',
-                 lhablock = 'HiggsMix',
-                 lhacode = [ 2, 2 ])
+TH2x2 = Parameter(name = 'TH2x2',
+                  nature = 'external',
+                  type = 'real',
+                  value = -0.62497584604793,
+                  texname = '\\text{TH2x2}',
+                  lhablock = 'HiggsMix',
+                  lhacode = [ 2, 2 ])
 
-TH23 = Parameter(name = 'TH23',
-                 nature = 'external',
-                 type = 'real',
-                 value = 0.78064408782535,
-                 texname = '\\text{TH23}',
-                 lhablock = 'HiggsMix',
-                 lhacode = [ 2, 3 ])
+TH2x3 = Parameter(name = 'TH2x3',
+                  nature = 'external',
+                  type = 'real',
+                  value = 0.78064408782535,
+                  texname = '\\text{TH2x3}',
+                  lhablock = 'HiggsMix',
+                  lhacode = [ 2, 3 ])
 
-TH31 = Parameter(name = 'TH31',
-                 nature = 'external',
-                 type = 'real',
-                 value = 1.,
-                 texname = '\\text{TH31}',
-                 lhablock = 'HiggsMix',
-                 lhacode = [ 3, 1 ])
+TH3x1 = Parameter(name = 'TH3x1',
+                  nature = 'external',
+                  type = 'real',
+                  value = 1.,
+                  texname = '\\text{TH3x1}',
+                  lhablock = 'HiggsMix',
+                  lhacode = [ 3, 1 ])
 
-TH32 = Parameter(name = 'TH32',
-                 nature = 'external',
-                 type = 'real',
-                 value = 0.,
-                 texname = '\\text{TH32}',
-                 lhablock = 'HiggsMix',
-                 lhacode = [ 3, 2 ])
+TH3x2 = Parameter(name = 'TH3x2',
+                  nature = 'external',
+                  type = 'real',
+                  value = 0.,
+                  texname = '\\text{TH3x2}',
+                  lhablock = 'HiggsMix',
+                  lhacode = [ 3, 2 ])
 
-TH33 = Parameter(name = 'TH33',
-                 nature = 'external',
-                 type = 'real',
-                 value = 0.,
-                 texname = '\\text{TH33}',
-                 lhablock = 'HiggsMix',
-                 lhacode = [ 3, 3 ])
+TH3x3 = Parameter(name = 'TH3x3',
+                  nature = 'external',
+                  type = 'real',
+                  value = 0.,
+                  texname = '\\text{TH3x3}',
+                  lhablock = 'HiggsMix',
+                  lhacode = [ 3, 3 ])
 
 aEWM1 = Parameter(name = 'aEWM1',
                   nature = 'external',
@@ -353,437 +361,437 @@ yukd3 = Parameter(name = 'yukd3',
                   lhablock = 'YUKAWAD',
                   lhacode = [ 3 ])
 
-GDI11 = Parameter(name = 'GDI11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GDI11}',
-                  lhablock = 'YukawaGDI',
-                  lhacode = [ 1, 1 ])
+GDI1x1 = Parameter(name = 'GDI1x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GDI1x1}',
+                   lhablock = 'YukawaGDI',
+                   lhacode = [ 1, 1 ])
 
-GDI12 = Parameter(name = 'GDI12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GDI12}',
-                  lhablock = 'YukawaGDI',
-                  lhacode = [ 1, 2 ])
+GDI1x2 = Parameter(name = 'GDI1x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GDI1x2}',
+                   lhablock = 'YukawaGDI',
+                   lhacode = [ 1, 2 ])
 
-GDI13 = Parameter(name = 'GDI13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GDI13}',
-                  lhablock = 'YukawaGDI',
-                  lhacode = [ 1, 3 ])
+GDI1x3 = Parameter(name = 'GDI1x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GDI1x3}',
+                   lhablock = 'YukawaGDI',
+                   lhacode = [ 1, 3 ])
 
-GDI21 = Parameter(name = 'GDI21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GDI21}',
-                  lhablock = 'YukawaGDI',
-                  lhacode = [ 2, 1 ])
+GDI2x1 = Parameter(name = 'GDI2x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GDI2x1}',
+                   lhablock = 'YukawaGDI',
+                   lhacode = [ 2, 1 ])
 
-GDI22 = Parameter(name = 'GDI22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GDI22}',
-                  lhablock = 'YukawaGDI',
-                  lhacode = [ 2, 2 ])
+GDI2x2 = Parameter(name = 'GDI2x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GDI2x2}',
+                   lhablock = 'YukawaGDI',
+                   lhacode = [ 2, 2 ])
 
-GDI23 = Parameter(name = 'GDI23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GDI23}',
-                  lhablock = 'YukawaGDI',
-                  lhacode = [ 2, 3 ])
+GDI2x3 = Parameter(name = 'GDI2x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GDI2x3}',
+                   lhablock = 'YukawaGDI',
+                   lhacode = [ 2, 3 ])
 
-GDI31 = Parameter(name = 'GDI31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GDI31}',
-                  lhablock = 'YukawaGDI',
-                  lhacode = [ 3, 1 ])
+GDI3x1 = Parameter(name = 'GDI3x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GDI3x1}',
+                   lhablock = 'YukawaGDI',
+                   lhacode = [ 3, 1 ])
 
-GDI32 = Parameter(name = 'GDI32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GDI32}',
-                  lhablock = 'YukawaGDI',
-                  lhacode = [ 3, 2 ])
+GDI3x2 = Parameter(name = 'GDI3x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GDI3x2}',
+                   lhablock = 'YukawaGDI',
+                   lhacode = [ 3, 2 ])
 
-GDI33 = Parameter(name = 'GDI33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GDI33}',
-                  lhablock = 'YukawaGDI',
-                  lhacode = [ 3, 3 ])
+GDI3x3 = Parameter(name = 'GDI3x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GDI3x3}',
+                   lhablock = 'YukawaGDI',
+                   lhacode = [ 3, 3 ])
 
-GDR11 = Parameter(name = 'GDR11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GDR11}',
-                  lhablock = 'YukawaGDR',
-                  lhacode = [ 1, 1 ])
+GDR1x1 = Parameter(name = 'GDR1x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GDR1x1}',
+                   lhablock = 'YukawaGDR',
+                   lhacode = [ 1, 1 ])
 
-GDR12 = Parameter(name = 'GDR12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GDR12}',
-                  lhablock = 'YukawaGDR',
-                  lhacode = [ 1, 2 ])
+GDR1x2 = Parameter(name = 'GDR1x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GDR1x2}',
+                   lhablock = 'YukawaGDR',
+                   lhacode = [ 1, 2 ])
 
-GDR13 = Parameter(name = 'GDR13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GDR13}',
-                  lhablock = 'YukawaGDR',
-                  lhacode = [ 1, 3 ])
+GDR1x3 = Parameter(name = 'GDR1x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GDR1x3}',
+                   lhablock = 'YukawaGDR',
+                   lhacode = [ 1, 3 ])
 
-GDR21 = Parameter(name = 'GDR21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GDR21}',
-                  lhablock = 'YukawaGDR',
-                  lhacode = [ 2, 1 ])
+GDR2x1 = Parameter(name = 'GDR2x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GDR2x1}',
+                   lhablock = 'YukawaGDR',
+                   lhacode = [ 2, 1 ])
 
-GDR22 = Parameter(name = 'GDR22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.4,
-                  texname = '\\text{GDR22}',
-                  lhablock = 'YukawaGDR',
-                  lhacode = [ 2, 2 ])
+GDR2x2 = Parameter(name = 'GDR2x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.4,
+                   texname = '\\text{GDR2x2}',
+                   lhablock = 'YukawaGDR',
+                   lhacode = [ 2, 2 ])
 
-GDR23 = Parameter(name = 'GDR23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GDR23}',
-                  lhablock = 'YukawaGDR',
-                  lhacode = [ 2, 3 ])
+GDR2x3 = Parameter(name = 'GDR2x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GDR2x3}',
+                   lhablock = 'YukawaGDR',
+                   lhacode = [ 2, 3 ])
 
-GDR31 = Parameter(name = 'GDR31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GDR31}',
-                  lhablock = 'YukawaGDR',
-                  lhacode = [ 3, 1 ])
+GDR3x1 = Parameter(name = 'GDR3x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GDR3x1}',
+                   lhablock = 'YukawaGDR',
+                   lhacode = [ 3, 1 ])
 
-GDR32 = Parameter(name = 'GDR32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.2,
-                  texname = '\\text{GDR32}',
-                  lhablock = 'YukawaGDR',
-                  lhacode = [ 3, 2 ])
+GDR3x2 = Parameter(name = 'GDR3x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.2,
+                   texname = '\\text{GDR3x2}',
+                   lhablock = 'YukawaGDR',
+                   lhacode = [ 3, 2 ])
 
-GDR33 = Parameter(name = 'GDR33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 5.,
-                  texname = '\\text{GDR33}',
-                  lhablock = 'YukawaGDR',
-                  lhacode = [ 3, 3 ])
+GDR3x3 = Parameter(name = 'GDR3x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 5.,
+                   texname = '\\text{GDR3x3}',
+                   lhablock = 'YukawaGDR',
+                   lhacode = [ 3, 3 ])
 
-GLI11 = Parameter(name = 'GLI11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GLI11}',
-                  lhablock = 'YukawaGLI',
-                  lhacode = [ 1, 1 ])
+GLI1x1 = Parameter(name = 'GLI1x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GLI1x1}',
+                   lhablock = 'YukawaGLI',
+                   lhacode = [ 1, 1 ])
 
-GLI12 = Parameter(name = 'GLI12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GLI12}',
-                  lhablock = 'YukawaGLI',
-                  lhacode = [ 1, 2 ])
+GLI1x2 = Parameter(name = 'GLI1x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GLI1x2}',
+                   lhablock = 'YukawaGLI',
+                   lhacode = [ 1, 2 ])
 
-GLI13 = Parameter(name = 'GLI13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GLI13}',
-                  lhablock = 'YukawaGLI',
-                  lhacode = [ 1, 3 ])
+GLI1x3 = Parameter(name = 'GLI1x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GLI1x3}',
+                   lhablock = 'YukawaGLI',
+                   lhacode = [ 1, 3 ])
 
-GLI21 = Parameter(name = 'GLI21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GLI21}',
-                  lhablock = 'YukawaGLI',
-                  lhacode = [ 2, 1 ])
+GLI2x1 = Parameter(name = 'GLI2x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GLI2x1}',
+                   lhablock = 'YukawaGLI',
+                   lhacode = [ 2, 1 ])
 
-GLI22 = Parameter(name = 'GLI22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GLI22}',
-                  lhablock = 'YukawaGLI',
-                  lhacode = [ 2, 2 ])
+GLI2x2 = Parameter(name = 'GLI2x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GLI2x2}',
+                   lhablock = 'YukawaGLI',
+                   lhacode = [ 2, 2 ])
 
-GLI23 = Parameter(name = 'GLI23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GLI23}',
-                  lhablock = 'YukawaGLI',
-                  lhacode = [ 2, 3 ])
+GLI2x3 = Parameter(name = 'GLI2x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GLI2x3}',
+                   lhablock = 'YukawaGLI',
+                   lhacode = [ 2, 3 ])
 
-GLI31 = Parameter(name = 'GLI31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GLI31}',
-                  lhablock = 'YukawaGLI',
-                  lhacode = [ 3, 1 ])
+GLI3x1 = Parameter(name = 'GLI3x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GLI3x1}',
+                   lhablock = 'YukawaGLI',
+                   lhacode = [ 3, 1 ])
 
-GLI32 = Parameter(name = 'GLI32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GLI32}',
-                  lhablock = 'YukawaGLI',
-                  lhacode = [ 3, 2 ])
+GLI3x2 = Parameter(name = 'GLI3x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GLI3x2}',
+                   lhablock = 'YukawaGLI',
+                   lhacode = [ 3, 2 ])
 
-GLI33 = Parameter(name = 'GLI33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GLI33}',
-                  lhablock = 'YukawaGLI',
-                  lhacode = [ 3, 3 ])
+GLI3x3 = Parameter(name = 'GLI3x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GLI3x3}',
+                   lhablock = 'YukawaGLI',
+                   lhacode = [ 3, 3 ])
 
-GLR11 = Parameter(name = 'GLR11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GLR11}',
-                  lhablock = 'YukawaGLR',
-                  lhacode = [ 1, 1 ])
+GLR1x1 = Parameter(name = 'GLR1x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GLR1x1}',
+                   lhablock = 'YukawaGLR',
+                   lhacode = [ 1, 1 ])
 
-GLR12 = Parameter(name = 'GLR12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GLR12}',
-                  lhablock = 'YukawaGLR',
-                  lhacode = [ 1, 2 ])
+GLR1x2 = Parameter(name = 'GLR1x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GLR1x2}',
+                   lhablock = 'YukawaGLR',
+                   lhacode = [ 1, 2 ])
 
-GLR13 = Parameter(name = 'GLR13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GLR13}',
-                  lhablock = 'YukawaGLR',
-                  lhacode = [ 1, 3 ])
+GLR1x3 = Parameter(name = 'GLR1x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GLR1x3}',
+                   lhablock = 'YukawaGLR',
+                   lhacode = [ 1, 3 ])
 
-GLR21 = Parameter(name = 'GLR21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GLR21}',
-                  lhablock = 'YukawaGLR',
-                  lhacode = [ 2, 1 ])
+GLR2x1 = Parameter(name = 'GLR2x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GLR2x1}',
+                   lhablock = 'YukawaGLR',
+                   lhacode = [ 2, 1 ])
 
-GLR22 = Parameter(name = 'GLR22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.1,
-                  texname = '\\text{GLR22}',
-                  lhablock = 'YukawaGLR',
-                  lhacode = [ 2, 2 ])
+GLR2x2 = Parameter(name = 'GLR2x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.1,
+                   texname = '\\text{GLR2x2}',
+                   lhablock = 'YukawaGLR',
+                   lhacode = [ 2, 2 ])
 
-GLR23 = Parameter(name = 'GLR23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GLR23}',
-                  lhablock = 'YukawaGLR',
-                  lhacode = [ 2, 3 ])
+GLR2x3 = Parameter(name = 'GLR2x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GLR2x3}',
+                   lhablock = 'YukawaGLR',
+                   lhacode = [ 2, 3 ])
 
-GLR31 = Parameter(name = 'GLR31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GLR31}',
-                  lhablock = 'YukawaGLR',
-                  lhacode = [ 3, 1 ])
+GLR3x1 = Parameter(name = 'GLR3x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GLR3x1}',
+                   lhablock = 'YukawaGLR',
+                   lhacode = [ 3, 1 ])
 
-GLR32 = Parameter(name = 'GLR32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.5,
-                  texname = '\\text{GLR32}',
-                  lhablock = 'YukawaGLR',
-                  lhacode = [ 3, 2 ])
+GLR3x2 = Parameter(name = 'GLR3x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.5,
+                   texname = '\\text{GLR3x2}',
+                   lhablock = 'YukawaGLR',
+                   lhacode = [ 3, 2 ])
 
-GLR33 = Parameter(name = 'GLR33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 3.,
-                  texname = '\\text{GLR33}',
-                  lhablock = 'YukawaGLR',
-                  lhacode = [ 3, 3 ])
+GLR3x3 = Parameter(name = 'GLR3x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 3.,
+                   texname = '\\text{GLR3x3}',
+                   lhablock = 'YukawaGLR',
+                   lhacode = [ 3, 3 ])
 
-GUI11 = Parameter(name = 'GUI11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GUI11}',
-                  lhablock = 'YukawaGUI',
-                  lhacode = [ 1, 1 ])
+GUI1x1 = Parameter(name = 'GUI1x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GUI1x1}',
+                   lhablock = 'YukawaGUI',
+                   lhacode = [ 1, 1 ])
 
-GUI12 = Parameter(name = 'GUI12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GUI12}',
-                  lhablock = 'YukawaGUI',
-                  lhacode = [ 1, 2 ])
+GUI1x2 = Parameter(name = 'GUI1x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GUI1x2}',
+                   lhablock = 'YukawaGUI',
+                   lhacode = [ 1, 2 ])
 
-GUI13 = Parameter(name = 'GUI13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GUI13}',
-                  lhablock = 'YukawaGUI',
-                  lhacode = [ 1, 3 ])
+GUI1x3 = Parameter(name = 'GUI1x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GUI1x3}',
+                   lhablock = 'YukawaGUI',
+                   lhacode = [ 1, 3 ])
 
-GUI21 = Parameter(name = 'GUI21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GUI21}',
-                  lhablock = 'YukawaGUI',
-                  lhacode = [ 2, 1 ])
+GUI2x1 = Parameter(name = 'GUI2x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GUI2x1}',
+                   lhablock = 'YukawaGUI',
+                   lhacode = [ 2, 1 ])
 
-GUI22 = Parameter(name = 'GUI22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GUI22}',
-                  lhablock = 'YukawaGUI',
-                  lhacode = [ 2, 2 ])
+GUI2x2 = Parameter(name = 'GUI2x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GUI2x2}',
+                   lhablock = 'YukawaGUI',
+                   lhacode = [ 2, 2 ])
 
-GUI23 = Parameter(name = 'GUI23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GUI23}',
-                  lhablock = 'YukawaGUI',
-                  lhacode = [ 2, 3 ])
+GUI2x3 = Parameter(name = 'GUI2x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GUI2x3}',
+                   lhablock = 'YukawaGUI',
+                   lhacode = [ 2, 3 ])
 
-GUI31 = Parameter(name = 'GUI31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GUI31}',
-                  lhablock = 'YukawaGUI',
-                  lhacode = [ 3, 1 ])
+GUI3x1 = Parameter(name = 'GUI3x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GUI3x1}',
+                   lhablock = 'YukawaGUI',
+                   lhacode = [ 3, 1 ])
 
-GUI32 = Parameter(name = 'GUI32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GUI32}',
-                  lhablock = 'YukawaGUI',
-                  lhacode = [ 3, 2 ])
+GUI3x2 = Parameter(name = 'GUI3x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GUI3x2}',
+                   lhablock = 'YukawaGUI',
+                   lhacode = [ 3, 2 ])
 
-GUI33 = Parameter(name = 'GUI33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GUI33}',
-                  lhablock = 'YukawaGUI',
-                  lhacode = [ 3, 3 ])
+GUI3x3 = Parameter(name = 'GUI3x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GUI3x3}',
+                   lhablock = 'YukawaGUI',
+                   lhacode = [ 3, 3 ])
 
-GUR11 = Parameter(name = 'GUR11',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GUR11}',
-                  lhablock = 'YukawaGUR',
-                  lhacode = [ 1, 1 ])
+GUR1x1 = Parameter(name = 'GUR1x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GUR1x1}',
+                   lhablock = 'YukawaGUR',
+                   lhacode = [ 1, 1 ])
 
-GUR12 = Parameter(name = 'GUR12',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GUR12}',
-                  lhablock = 'YukawaGUR',
-                  lhacode = [ 1, 2 ])
+GUR1x2 = Parameter(name = 'GUR1x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GUR1x2}',
+                   lhablock = 'YukawaGUR',
+                   lhacode = [ 1, 2 ])
 
-GUR13 = Parameter(name = 'GUR13',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GUR13}',
-                  lhablock = 'YukawaGUR',
-                  lhacode = [ 1, 3 ])
+GUR1x3 = Parameter(name = 'GUR1x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GUR1x3}',
+                   lhablock = 'YukawaGUR',
+                   lhacode = [ 1, 3 ])
 
-GUR21 = Parameter(name = 'GUR21',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GUR21}',
-                  lhablock = 'YukawaGUR',
-                  lhacode = [ 2, 1 ])
+GUR2x1 = Parameter(name = 'GUR2x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GUR2x1}',
+                   lhablock = 'YukawaGUR',
+                   lhacode = [ 2, 1 ])
 
-GUR22 = Parameter(name = 'GUR22',
-                  nature = 'external',
-                  type = 'real',
-                  value = 2.,
-                  texname = '\\text{GUR22}',
-                  lhablock = 'YukawaGUR',
-                  lhacode = [ 2, 2 ])
+GUR2x2 = Parameter(name = 'GUR2x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 2.,
+                   texname = '\\text{GUR2x2}',
+                   lhablock = 'YukawaGUR',
+                   lhacode = [ 2, 2 ])
 
-GUR23 = Parameter(name = 'GUR23',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GUR23}',
-                  lhablock = 'YukawaGUR',
-                  lhacode = [ 2, 3 ])
+GUR2x3 = Parameter(name = 'GUR2x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GUR2x3}',
+                   lhablock = 'YukawaGUR',
+                   lhacode = [ 2, 3 ])
 
-GUR31 = Parameter(name = 'GUR31',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0.,
-                  texname = '\\text{GUR31}',
-                  lhablock = 'YukawaGUR',
-                  lhacode = [ 3, 1 ])
+GUR3x1 = Parameter(name = 'GUR3x1',
+                   nature = 'external',
+                   type = 'real',
+                   value = 0.,
+                   texname = '\\text{GUR3x1}',
+                   lhablock = 'YukawaGUR',
+                   lhacode = [ 3, 1 ])
 
-GUR32 = Parameter(name = 'GUR32',
-                  nature = 'external',
-                  type = 'real',
-                  value = 1.,
-                  texname = '\\text{GUR32}',
-                  lhablock = 'YukawaGUR',
-                  lhacode = [ 3, 2 ])
+GUR3x2 = Parameter(name = 'GUR3x2',
+                   nature = 'external',
+                   type = 'real',
+                   value = 1.,
+                   texname = '\\text{GUR3x2}',
+                   lhablock = 'YukawaGUR',
+                   lhacode = [ 3, 2 ])
 
-GUR33 = Parameter(name = 'GUR33',
-                  nature = 'external',
-                  type = 'real',
-                  value = 100.,
-                  texname = '\\text{GUR33}',
-                  lhablock = 'YukawaGUR',
-                  lhacode = [ 3, 3 ])
+GUR3x3 = Parameter(name = 'GUR3x3',
+                   nature = 'external',
+                   type = 'real',
+                   value = 100.,
+                   texname = '\\text{GUR3x3}',
+                   lhablock = 'YukawaGUR',
+                   lhacode = [ 3, 3 ])
 
 yukl1 = Parameter(name = 'yukl1',
                   nature = 'external',
@@ -977,209 +985,209 @@ Wh3 = Parameter(name = 'Wh3',
                 lhablock = 'DECAY',
                 lhacode = [ 36 ])
 
-CKM11 = Parameter(name = 'CKM11',
+CKM1x1 = Parameter(name = 'CKM1x1',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'CKMR1x1 + CKMI1x1*complex(0,1)',
+                   texname = '\\text{CKM1x1}')
+
+CKM1x2 = Parameter(name = 'CKM1x2',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'CKMR1x2 + CKMI1x2*complex(0,1)',
+                   texname = '\\text{CKM1x2}')
+
+CKM2x1 = Parameter(name = 'CKM2x1',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'CKMR2x1 + CKMI2x1*complex(0,1)',
+                   texname = '\\text{CKM2x1}')
+
+CKM2x2 = Parameter(name = 'CKM2x2',
+                   nature = 'internal',
+                   type = 'complex',
+                   value = 'CKMR2x2 + CKMI2x2*complex(0,1)',
+                   texname = '\\text{CKM2x2}')
+
+DD1x1 = Parameter(name = 'DD1x1',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'CKMR11 + CKMI11*complex(0,1)',
-                  texname = '\\text{CKM11}')
+                  value = '0',
+                  texname = '\\text{DD1x1}')
 
-CKM12 = Parameter(name = 'CKM12',
+DD2x2 = Parameter(name = 'DD2x2',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'CKMR12 + CKMI12*complex(0,1)',
-                  texname = '\\text{CKM12}')
+                  value = '0',
+                  texname = '\\text{DD2x2}')
 
-CKM21 = Parameter(name = 'CKM21',
+DD3x3 = Parameter(name = 'DD3x3',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'CKMR21 + CKMI21*complex(0,1)',
-                  texname = '\\text{CKM21}')
+                  value = '0',
+                  texname = '\\text{DD3x3}')
 
-CKM22 = Parameter(name = 'CKM22',
+GD1x1 = Parameter(name = 'GD1x1',
                   nature = 'internal',
                   type = 'complex',
-                  value = 'CKMR22 + CKMI22*complex(0,1)',
-                  texname = '\\text{CKM22}')
+                  value = 'complex(0,1)*GDI1x1 + GDR1x1',
+                  texname = '\\text{GD1x1}')
 
-DD11 = Parameter(name = 'DD11',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = '0',
-                 texname = '\\text{DD11}')
+GD1x2 = Parameter(name = 'GD1x2',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GDI1x2 + GDR1x2',
+                  texname = '\\text{GD1x2}')
 
-DD22 = Parameter(name = 'DD22',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = '0',
-                 texname = '\\text{DD22}')
+GD1x3 = Parameter(name = 'GD1x3',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GDI1x3 + GDR1x3',
+                  texname = '\\text{GD1x3}')
 
-DD33 = Parameter(name = 'DD33',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = '0',
-                 texname = '\\text{DD33}')
+GD2x1 = Parameter(name = 'GD2x1',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GDI2x1 + GDR2x1',
+                  texname = '\\text{GD2x1}')
 
-GD11 = Parameter(name = 'GD11',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GDI11 + GDR11',
-                 texname = '\\text{GD11}')
+GD2x2 = Parameter(name = 'GD2x2',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GDI2x2 + GDR2x2',
+                  texname = '\\text{GD2x2}')
 
-GD12 = Parameter(name = 'GD12',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GDI12 + GDR12',
-                 texname = '\\text{GD12}')
+GD2x3 = Parameter(name = 'GD2x3',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GDI2x3 + GDR2x3',
+                  texname = '\\text{GD2x3}')
 
-GD13 = Parameter(name = 'GD13',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GDI13 + GDR13',
-                 texname = '\\text{GD13}')
+GD3x1 = Parameter(name = 'GD3x1',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GDI3x1 + GDR3x1',
+                  texname = '\\text{GD3x1}')
 
-GD21 = Parameter(name = 'GD21',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GDI21 + GDR21',
-                 texname = '\\text{GD21}')
+GD3x2 = Parameter(name = 'GD3x2',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GDI3x2 + GDR3x2',
+                  texname = '\\text{GD3x2}')
 
-GD22 = Parameter(name = 'GD22',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GDI22 + GDR22',
-                 texname = '\\text{GD22}')
+GD3x3 = Parameter(name = 'GD3x3',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GDI3x3 + GDR3x3',
+                  texname = '\\text{GD3x3}')
 
-GD23 = Parameter(name = 'GD23',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GDI23 + GDR23',
-                 texname = '\\text{GD23}')
+GL1x1 = Parameter(name = 'GL1x1',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GLI1x1 + GLR1x1',
+                  texname = '\\text{GL1x1}')
 
-GD31 = Parameter(name = 'GD31',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GDI31 + GDR31',
-                 texname = '\\text{GD31}')
+GL1x2 = Parameter(name = 'GL1x2',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GLI1x2 + GLR1x2',
+                  texname = '\\text{GL1x2}')
 
-GD32 = Parameter(name = 'GD32',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GDI32 + GDR32',
-                 texname = '\\text{GD32}')
+GL1x3 = Parameter(name = 'GL1x3',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GLI1x3 + GLR1x3',
+                  texname = '\\text{GL1x3}')
 
-GD33 = Parameter(name = 'GD33',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GDI33 + GDR33',
-                 texname = '\\text{GD33}')
+GL2x1 = Parameter(name = 'GL2x1',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GLI2x1 + GLR2x1',
+                  texname = '\\text{GL2x1}')
 
-GL11 = Parameter(name = 'GL11',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GLI11 + GLR11',
-                 texname = '\\text{GL11}')
+GL2x2 = Parameter(name = 'GL2x2',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GLI2x2 + GLR2x2',
+                  texname = '\\text{GL2x2}')
 
-GL12 = Parameter(name = 'GL12',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GLI12 + GLR12',
-                 texname = '\\text{GL12}')
+GL2x3 = Parameter(name = 'GL2x3',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GLI2x3 + GLR2x3',
+                  texname = '\\text{GL2x3}')
 
-GL13 = Parameter(name = 'GL13',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GLI13 + GLR13',
-                 texname = '\\text{GL13}')
+GL3x1 = Parameter(name = 'GL3x1',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GLI3x1 + GLR3x1',
+                  texname = '\\text{GL3x1}')
 
-GL21 = Parameter(name = 'GL21',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GLI21 + GLR21',
-                 texname = '\\text{GL21}')
+GL3x2 = Parameter(name = 'GL3x2',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GLI3x2 + GLR3x2',
+                  texname = '\\text{GL3x2}')
 
-GL22 = Parameter(name = 'GL22',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GLI22 + GLR22',
-                 texname = '\\text{GL22}')
+GL3x3 = Parameter(name = 'GL3x3',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GLI3x3 + GLR3x3',
+                  texname = '\\text{GL3x3}')
 
-GL23 = Parameter(name = 'GL23',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GLI23 + GLR23',
-                 texname = '\\text{GL23}')
+GU1x1 = Parameter(name = 'GU1x1',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GUI1x1 + GUR1x1',
+                  texname = '\\text{GU1x1}')
 
-GL31 = Parameter(name = 'GL31',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GLI31 + GLR31',
-                 texname = '\\text{GL31}')
+GU1x2 = Parameter(name = 'GU1x2',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GUI1x2 + GUR1x2',
+                  texname = '\\text{GU1x2}')
 
-GL32 = Parameter(name = 'GL32',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GLI32 + GLR32',
-                 texname = '\\text{GL32}')
+GU1x3 = Parameter(name = 'GU1x3',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GUI1x3 + GUR1x3',
+                  texname = '\\text{GU1x3}')
 
-GL33 = Parameter(name = 'GL33',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GLI33 + GLR33',
-                 texname = '\\text{GL33}')
+GU2x1 = Parameter(name = 'GU2x1',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GUI2x1 + GUR2x1',
+                  texname = '\\text{GU2x1}')
 
-GU11 = Parameter(name = 'GU11',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GUI11 + GUR11',
-                 texname = '\\text{GU11}')
+GU2x2 = Parameter(name = 'GU2x2',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GUI2x2 + GUR2x2',
+                  texname = '\\text{GU2x2}')
 
-GU12 = Parameter(name = 'GU12',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GUI12 + GUR12',
-                 texname = '\\text{GU12}')
+GU2x3 = Parameter(name = 'GU2x3',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GUI2x3 + GUR2x3',
+                  texname = '\\text{GU2x3}')
 
-GU13 = Parameter(name = 'GU13',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GUI13 + GUR13',
-                 texname = '\\text{GU13}')
+GU3x1 = Parameter(name = 'GU3x1',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GUI3x1 + GUR3x1',
+                  texname = '\\text{GU3x1}')
 
-GU21 = Parameter(name = 'GU21',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GUI21 + GUR21',
-                 texname = '\\text{GU21}')
+GU3x2 = Parameter(name = 'GU3x2',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GUI3x2 + GUR3x2',
+                  texname = '\\text{GU3x2}')
 
-GU22 = Parameter(name = 'GU22',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GUI22 + GUR22',
-                 texname = '\\text{GU22}')
-
-GU23 = Parameter(name = 'GU23',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GUI23 + GUR23',
-                 texname = '\\text{GU23}')
-
-GU31 = Parameter(name = 'GU31',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GUI31 + GUR31',
-                 texname = '\\text{GU31}')
-
-GU32 = Parameter(name = 'GU32',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GUI32 + GUR32',
-                 texname = '\\text{GU32}')
-
-GU33 = Parameter(name = 'GU33',
-                 nature = 'internal',
-                 type = 'complex',
-                 value = 'complex(0,1)*GUI33 + GUR33',
-                 texname = '\\text{GU33}')
+GU3x3 = Parameter(name = 'GU3x3',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'complex(0,1)*GUI3x3 + GUR3x3',
+                  texname = '\\text{GU3x3}')
 
 aEW = Parameter(name = 'aEW',
                 nature = 'internal',
@@ -1192,6 +1200,12 @@ G = Parameter(name = 'G',
               type = 'real',
               value = '2*cmath.sqrt(aS)*cmath.sqrt(cmath.pi)',
               texname = 'G')
+
+l5 = Parameter(name = 'l5',
+               nature = 'internal',
+               type = 'complex',
+               value = 'complex(0,1)*lI5 + lR5',
+               texname = '\\text{l5}')
 
 l6 = Parameter(name = 'l6',
                nature = 'internal',

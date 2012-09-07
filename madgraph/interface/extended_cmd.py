@@ -40,7 +40,7 @@ try:
     MADEVENT = False
 except Exception, error:
     if __debug__:
-        print error
+       logger_stderr.info(error)
     import internal.misc as misc
     MADEVENT = True
 
@@ -60,8 +60,8 @@ def debug(debug_only=True):
             try:
                 return f(*args, **opt)
             except Exception, error:
-                print error
-                print traceback.print_exc(file=sys.stdout)
+                logger.error(error)
+                logger.error(traceback.print_exc(file=sys.stdout))
                 return
         return deco_f
     return deco_debug
@@ -152,7 +152,7 @@ class BasicCmd(cmd.Cmd):
             self.stdout.flush()
         except Exception, error:
             if __debug__:
-                 print error
+                logger.error(error)
             
     def getTerminalSize(self):
         def ioctl_GWINSZ(fd):
@@ -244,9 +244,8 @@ class BasicCmd(cmd.Cmd):
             return self.completion_matches[state]
         except IndexError, error:
             #if __debug__:
-            #    print '\n Completion ERROR:'
-            #    print error
-            #    print '\n'
+            #    logger.error('\n Completion ERROR:')
+            #    logger.error( error)
             return None    
 
 class CheckCmd(object):
@@ -447,6 +446,20 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # execute the line command
         return line
 
+    def postcmd(self,stop, line):
+        """ finishing a command
+        This looks if the command add a special post part."""
+
+        if line.strip():
+            try:
+                cmd, subline = line.split(None, 1)
+            except ValueError:
+                pass
+            else:
+                if hasattr(self,'post_%s' %cmd):
+                    stop = getattr(self, 'post_%s' % cmd)(stop, subline)
+        return stop
+
     def nice_error_handling(self, error, line):
         """ """ 
         # Make sure that we are at the initial position
@@ -461,7 +474,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         try:
             cmd.Cmd.onecmd(self, 'history %s' % self.debug_output.replace(' ', '\ '))
         except Exception, error:
-            print error
+           logger.error(error)
             
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
@@ -561,7 +574,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         except KeyboardInterrupt as error:
             self.stop_on_keyboard_stop()
             #self.nice_error_handling(error, line)
-            print self.keyboard_stop_msg
+            logger.error(self.keyboard_stop_msg)
     
     def stop_on_keyboard_stop(self):
         """action to perform to close nicely on a keyboard interupt"""
@@ -646,7 +659,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         self.check_history(args)
 
         if len(args) == 0:
-            print '\n'.join(self.history)
+            logger.info('\n'.join(self.history))
             return
         elif args[0] == 'clean':
             self.history = []
@@ -788,7 +801,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             result = fct(question)
         except TimeOutError:
             if noerror:
-                print '\nuse %s' % default
+                logger.info('\nuse %s' % default)
                 if fct_timeout:
                     fct_timeout(True)
                 return default
@@ -988,8 +1001,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             else: 
                 last_action_2 = 'none'
         
-        print 'Contextual Help'
-        print '==============='
+        logger.info('Contextual Help')
+        logger.info('===============')
         if last_action_2 in authorize:
             options = self.next_possibility[last_action_2]
         elif last_action in authorize:
@@ -998,7 +1011,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         text = 'The following command(s) may be useful in order to continue.\n'
         for option in options:
             text+='\t %s \n' % option      
-        print text
+        logger.info(text)
 
     def do_display(self, line, output=sys.stdout):
         """Advanced commands: basic display"""
@@ -1071,30 +1084,37 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             args.append(base)
         self.write_configuration(args[0], base, basedir)
         
-    def write_configuration(self, filepath, basefile, basedir):
+    def write_configuration(self, filepath, basefile, basedir, to_keep):
         """Write the configuration file"""
         # We use the default configuration file as a template.
         # to ensure that all configuration information are written we 
         # keep track of all key that we need to write.
 
         logger.info('save configuration file to %s' % filepath)
-        to_write = self.options.keys()[:]
+        to_write = to_keep.keys()
         text = ""
         # Use local configuration => Need to update the path
         for line in file(basefile):
-            if '#' in line:
-                data, comment = line.split('#',1)
+            if '=' in line:
+                data, value = line.split('=',1)
             else: 
-                data, comment = line, ''
-            data = data.split('=')
-            if len(data) !=2:
                 text += line
                 continue
-            key = data[0].strip()
-            if key in self.options:
-                value = str(self.options[key])
+            data = data.strip()
+            if data.startswith('#'):
+                key = data[1:].strip()
+            else: 
+                key = data 
+            if '#' in value:
+                value, comment = value.split('#',1)
             else:
-                value = data[1].strip()
+                comment = ''    
+            
+            if key in to_keep:
+                value = str(to_keep[key])
+            else:
+                text += line
+                continue
             try:
                 to_write.remove(key)
             except:
@@ -1102,14 +1122,17 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if '_path' in key:       
                 # special case need to update path
                 # check if absolute path
-                if value.startswith('./'):
+                if not os.path.isabs(value):
                     value = os.path.realpath(os.path.join(basedir, value))
             text += '%s = %s # %s \n' % (key, value, comment)
         for key in to_write:
-            if key in self.options:
-                text += '%s = %s \n' % (key,self.options[key])
-            else:
-                text += '%s = %s \n' % (key,self.options[key])
+            if key in to_keep:
+                text += '%s = %s \n' % (key, to_keep[key])
+        
+        if not MADEVENT:
+            text += """\n# MG5 MAIN DIRECTORY\n"""
+            text += "mg5_path = %s\n" % MG5DIR         
+        
         writer = open(filepath,'w')
         writer.write(text)
         writer.close()

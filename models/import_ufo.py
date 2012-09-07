@@ -12,7 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-from compiler.ast import Continue
 """ How to import a UFO model to the MG5 format """
 
 
@@ -28,9 +27,10 @@ import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
 import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
-
 import madgraph.various.misc as misc
 
+
+import aloha
 import aloha.create_aloha as create_aloha
 import aloha.aloha_fct as aloha_fct
 
@@ -68,7 +68,7 @@ def find_ufo_path(model_name):
 
     return model_path
 
-def import_model(model_name):
+def import_model(model_name, decay=False):
     """ a practical and efficient way to import a model"""
     
     # check if this is a valid path or if this include restriction file       
@@ -96,7 +96,7 @@ def import_model(model_name):
             restrict_file = None
     
     #import the FULL model
-    model = import_full_model(model_path) 
+    model = import_full_model(model_path, decay) 
     # restore the model name
     if restrict_name:
         model["name"] += '-' + restrict_name 
@@ -114,12 +114,17 @@ def import_model(model_name):
             
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
-        model.restrict_model(restrict_file)
+        if model_name == 'mssm':
+            keep_external=True
+        else:
+            keep_external=False
+        model.restrict_model(restrict_file, rm_parameter=not decay,
+                                            keep_external=keep_external)
         
     return model
 
 _import_once = []
-def import_full_model(model_path):
+def import_full_model(model_path, decay=False):
     """ a practical and efficient way to import one of those models 
         (no restriction file use)"""
 
@@ -137,19 +142,25 @@ def import_full_model(model_path):
         files_list.append(filepath)
         
     # use pickle files if defined and up-to-date
-    if files.is_uptodate(os.path.join(model_path, 'model.pkl'), files_list):
+    if aloha.unitary_gauge: 
+        pickle_name = 'model.pkl'
+    else:
+        pickle_name = 'model_Feynman.pkl'
+        
+    
+    if files.is_uptodate(os.path.join(model_path, pickle_name), files_list):
         try:
             model = save_load_object.load_from_file( \
-                                          os.path.join(model_path, 'model.pkl'))
+                                          os.path.join(model_path, pickle_name))
         except Exception, error:
             logger.info('failed to load model from pickle file. Try importing UFO from File')
         else:
             # check path is correct 
             if model.has_key('version_tag') and model.get('version_tag') == os.path.realpath(model_path) + str(misc.get_pkg_info()):
-                _import_once.append(model_path)
+                _import_once.append((model_path, aloha.unitary_gauge))
                 return model
 
-    if model_path in _import_once:
+    if (model_path,aloha.unitary_gauge) in _import_once:
         raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch mg5' 
 
     # Load basic information
@@ -159,7 +170,7 @@ def import_full_model(model_path):
     
     if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
     model.set('name', os.path.split(model_path)[-1])
-    model.set('version_tag', os.path.realpath(model_path) + str(misc.get_pkg_info()))
+    model.set('version_tag', os.path.realpath(model_path) +'##'+ str(misc.get_pkg_info()))
 
     # Load the Parameter/Coupling in a convinient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main()
@@ -167,8 +178,21 @@ def import_full_model(model_path):
     model.set('couplings', couplings)
     model.set('functions', ufo_model.all_functions)
     
+    # Optional UFO part: decay_width information
+    if decay and hasattr(ufo_model, 'all_decays') and ufo_model.all_decays:
+        for ufo_part in ufo_model.all_particles:
+            name =  ufo_part.name
+            if ufo2mg5_converter.use_lower_part_names:
+               name = name.lower() 
+            p = model['particles'].find_name(name)
+            if hasattr(ufo_part, 'partial_widths'):
+                p.partial_widths = ufo_part.partial_widths
+            elif p and not hasattr(p, 'partial_widths'):
+                p.partial_widths = {}
+            # might be None for ghost
+            
     # save in a pickle files to fasten future usage
-    save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model) 
+    save_load_object.save_to_file(os.path.join(model_path, pickle_name), model) 
  
     #if default and os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
     #    restrict_file = os.path.join(model_path, 'restrict_default.dat') 
@@ -208,8 +232,10 @@ class UFOMG5Converter(object):
                 if len(param.lhablock.split())>1:
                     raise InvalidModel, '''LHABlock should be single word which is not the case for
     \'%s\' parameter with lhablock \'%s\'''' % (param.name, param.lhablock)
-            
-
+         
+	if hasattr(self.ufomodel, 'gauge'):    
+            self.model.set('gauge', self.ufomodel.gauge)
+	
         logger.info('load particles')
         # Check if multiple particles have the same name but different case.
         # Otherwise, we can use lowercase particle names.
@@ -275,15 +301,18 @@ class UFOMG5Converter(object):
         pdg = particle_info.pdg_code
         if pdg in self.incoming or (pdg not in self.outcoming and pdg <0):
             return
-                        
-        # MG5 doesn't use ghost (use unitary gauges)
+        
+        # MG5 doesn't use ghost (The sum over polarization has momenta term)
         if particle_info.spin < 0:
             return 
         
-        # MG5 doesn't use goldstone boson 
-        if hasattr(particle_info, 'GoldstoneBoson'):
-            if particle_info.GoldstoneBoson:
-                return
+        if (aloha.unitary_gauge and 0 in self.model['gauge']) \
+	          or (1 not in self.model['gauge']): 
+        
+            # MG5 doesn't use goldstone boson 
+            if hasattr(particle_info, 'GoldstoneBoson'):
+                if particle_info.GoldstoneBoson:
+                    return
                
         # Initialize a particles
         particle = base_objects.Particle()
@@ -305,7 +334,7 @@ class UFOMG5Converter(object):
                     particle.set(key, str(value))
                 else:
                     particle.set(key, value)
-            elif key.lower() not in ('ghostnumber','selfconjugate','goldstoneboson'):
+            elif key.lower() not in ('ghostnumber','selfconjugate','goldstoneboson','partial_widths'):
                 # add charge -we will check later if those are conserve 
                 self.conservecharge.add(key)
                 particle.set(key,value, force=True)
@@ -404,7 +433,6 @@ class UFOMG5Converter(object):
         # Import particles content:
         particles = [self.model.get_particle(particle.pdg_code) \
                                     for particle in interaction_info.particles]
-      
         if None in particles:
             # Interaction with a ghost/goldstone
             return 
@@ -433,7 +461,6 @@ class UFOMG5Converter(object):
                                     interaction_info.color]
         
         order_to_int={}
-        
         for key, couplings in interaction_info.couplings.items():
             if not isinstance(couplings, list):
                 couplings = [couplings]
@@ -490,14 +517,14 @@ class UFOMG5Converter(object):
                     error_msg = 'UFO model have inconsistency in the format:\n'
                     error_msg += 'interactions for  particles %s has color information %s\n'
                     error_msg += ' but both fermion are in the same representation %s'
-                    raise UFOFormatError, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
+                    raise InvalidModel, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
                 if particle.color == particle2.color and particle.color in [-3, 3]:
                     if particle.pdg_code in color_info and particle2.pdg_code in color_info:
                       if color_info[particle.pdg_code] == color_info[particle2.pdg_code]:
                         error_msg = 'UFO model have inconsistency in the format:\n'
                         error_msg += 'interactions for  particles %s has color information %s\n'
                         error_msg += ' but both fermion are in the same representation %s'
-                        raise UFOFormatError, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
+                        raise InvalidModel, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
                     elif particle.pdg_code in color_info:
                         color_info[particle2.pdg_code] = -particle.pdg_code
                     elif particle2.pdg_code in color_info:
@@ -506,7 +533,7 @@ class UFOMG5Converter(object):
                         error_msg = 'UFO model have inconsistency in the format:\n'
                         error_msg += 'interactions for  particles %s has color information %s\n'
                         error_msg += ' but both fermion are in the same representation %s'
-                        raise UFOFormatError, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
+                        raise InvalidModel, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
                 
                 
                 if particle.color == 6:
@@ -784,10 +811,16 @@ class RestrictModel(model_reader.ModelReader):
         self.del_coup = []
         super(RestrictModel, self).default_setup()
         self.rule_card = check_param_card.ParamCardRule()
+        self.restrict_card = None
      
-    def restrict_model(self, param_card):
-        """apply the model restriction following param_card"""
+    def restrict_model(self, param_card, rm_parameter=True, keep_external=False):
+        """apply the model restriction following param_card.
+        rm_parameter defines if the Zero/one parameter are removed or not from
+        the model.
+        keep_external if the param_card need to be kept intact
+        """
 
+        self.restrict_card = param_card
         # Reset particle dict to ensure synchronized particles and interactions
         self.set('particles', self.get('particles'))
 
@@ -811,12 +844,14 @@ class RestrictModel(model_reader.ModelReader):
                 
         # deal with parameters
         parameters = self.detect_special_parameters()
-        self.fix_parameter_values(*parameters)
+        self.fix_parameter_values(*parameters, simplify=rm_parameter, 
+                                                    keep_external=keep_external)
         
         # deal with identical parameters
-        iden_parameters = self.detect_identical_parameters()
-        for iden_param in iden_parameters:
-            self.merge_iden_parameters(iden_param)
+        if not keep_external:
+            iden_parameters = self.detect_identical_parameters()
+            for iden_param in iden_parameters:
+                self.merge_iden_parameters(iden_param)
             
         # change value of default parameter if they have special value:
         # 9.999999e-1 -> 1.0
@@ -826,7 +861,8 @@ class RestrictModel(model_reader.ModelReader):
                 self['parameter_dict'][name] = 1
             elif value == 0.000001e-99:
                 self['parameter_dict'][name] = 0
-
+      
+                    
     def locate_coupling(self):
         """ create a dict couplings_name -> vertex """
         
@@ -901,7 +937,7 @@ class RestrictModel(model_reader.ModelReader):
         #detect identical parameter and remove the duplicate parameter
         for param in external_parameters[:]:
             value = self['parameter_dict'][param.name]
-            if value == 0:
+            if value in [0,1,0.000001e-99,9.999999e-1]:
                 continue
             key = (param.lhablock, value)
             mkey =  (param.lhablock, -value)
@@ -1024,7 +1060,8 @@ class RestrictModel(model_reader.ModelReader):
                     data.remove(coupling)
                             
         
-    def fix_parameter_values(self, zero_parameters, one_parameters):
+    def fix_parameter_values(self, zero_parameters, one_parameters, 
+                                            simplify=True, keep_external=False):
         """ Remove all instance of the parameters in the model and replace it by 
         zero when needed."""
 
@@ -1037,9 +1074,6 @@ class RestrictModel(model_reader.ModelReader):
                 self.rule_card.add_zero(block, param.lhacode)
             elif value == 1:
                 self.rule_card.add_one(block, param.lhacode)
-
-
-
 
         special_parameters = zero_parameters + one_parameters
         
@@ -1055,21 +1089,24 @@ class RestrictModel(model_reader.ModelReader):
             if particle['width'] in zero_parameters:
                 particle['width'] = 'ZERO'            
 
-        # check if the parameters is still usefull:
-        re_str = '|'.join(special_parameters)
-        re_pat = re.compile(r'''\b(%s)\b''' % re_str)
-        used = set()
-        # check in coupling
-        for name, coupling_list in self['couplings'].items():
-            for coupling in coupling_list:
-                for use in  re_pat.findall(coupling.expr):
-                    used.add(use)  
+        if simplify:
+            # check if the parameters is still usefull:
+            re_str = '|'.join(special_parameters)
+            re_pat = re.compile(r'''\b(%s)\b''' % re_str)
+            used = set()
+            # check in coupling
+            for name, coupling_list in self['couplings'].items():
+                for coupling in coupling_list:
+                    for use in  re_pat.findall(coupling.expr):
+                        used.add(use)
+        else:
+            used = set([i for i in special_parameters if i])
+        
         
         # simplify the regular expression
         re_str = '|'.join([param for param in special_parameters 
-                                                          if param not in used])
-        re_pat = re.compile(r'''\b(%s)\b''' % re_str)
-        
+                                                      if param not in used])
+        re_pat = re.compile(r'''\b(%s)\b''' % re_str)            
         param_info = {}
         # check in parameters
         for dep, param_list in self['parameters'].items():
@@ -1077,7 +1114,7 @@ class RestrictModel(model_reader.ModelReader):
                 # update information concerning zero/one parameters
                 if parameter.name in special_parameters:
                     param_info[parameter.name]= {'dep': dep, 'tag': tag, 
-                                                               'obj': parameter}
+                                                           'obj': parameter}
                     continue
                                     
                 # Bypass all external parameter
@@ -1085,11 +1122,14 @@ class RestrictModel(model_reader.ModelReader):
                     continue
 
                 # check the presence of zero/one parameter
-                for use in  re_pat.findall(parameter.expr):
-                    used.add(use)
-
+                if simplify:
+                    for use in  re_pat.findall(parameter.expr):
+                        used.add(use)
+                        
         # modify the object for those which are still used
         for param in used:
+            if not param:
+                continue
             data = self['parameters'][param_info[param]['dep']]
             data.remove(param_info[param]['obj'])
             tag = param_info[param]['tag']
@@ -1102,7 +1142,8 @@ class RestrictModel(model_reader.ModelReader):
         # remove completely useless parameters
         for param in special_parameters:
             #by pass parameter still in use
-            if param in used:
+            if param in used or \
+                  (keep_external and param_info[param]['dep'] == ('external',)):
                 logger_mod.debug('fix parameter value: %s' % param)
                 continue 
             logger_mod.debug('remove parameters: %s' % param)

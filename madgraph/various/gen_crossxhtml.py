@@ -169,8 +169,8 @@ class AllResults(dict):
         assert run_name in self
 
         if not tag :
-            if self.current['run_name'] == run_name:
-                self.results.def_current(None)                    
+            if self.current and self.current['run_name'] == run_name:
+                self.def_current(None)                    
             del self[run_name]
             self.order.remove(run_name)
             if self.lastrun == run_name:
@@ -476,6 +476,20 @@ class RunResults(list):
             return self[-1]
         
         raise Exception, '%s is not a valid tag' % name
+    
+    def is_empty(self):
+        """Check if this run contains smtg else than html information"""
+
+        if not self:
+            return True
+        if len(self) > 1:
+            return False
+        
+        data = self[0]
+        if data.parton or data.pythia or data.pgs or data.delphes:
+            return False
+        else:
+            return True
         
     def add(self, obj):
         """ """
@@ -929,14 +943,35 @@ class OneTagResults(dict):
                     local_dico['action'] = self.command_suggestion_html('remove %s %s --tag=%s' %\
                                                               (self['run_name'], type, self['tag']))
 
-
-            
             # create the text
             subresults_html += template % local_dico
-
-
-
+            
+            
         if subresults_html == '':
+            if runresults.web:
+                    action = """
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
+<INPUT TYPE=HIDDEN NAME=level VALUE="banner">
+<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Remove Banner">
+</FORM>
+                    
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="banner">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Run the banner">
+</FORM>"""
+            else:
+                    action = self.command_suggestion_html('remove %s banner --tag=%s' \
+                                                                       % (self['run_name'], self['tag']))
+                    action += self.command_suggestion_html('banner_run %s ' % self['run_name'])
+            
+            
+            
             subresults_html = sub_part_template_parton % \
                           {'type': '', 
                            'run': self['run_name'],
@@ -945,7 +980,7 @@ class OneTagResults(dict):
                            'err': self['error'],
                            'nb_event': self['nb_event'] and self['nb_event'] or 'No events yet',
                            'links': 'banner only',
-                           'action': ''
+                           'action': action
                            }                                
                                   
         if self.debug is KeyboardInterrupt:
@@ -953,6 +988,8 @@ class OneTagResults(dict):
         elif isinstance(self.debug, basestring):
             if not os.path.isabs(self.debug) and not self.debug.startswith('./'):
                 self.debug = './' + self.debug
+            elif os.path.isabs(self.debug):
+                self.debug = os.path.relpath(self.debug, self.me_dir)
             debug = '<br> <a href=\'%s\'> <font color=red>ERROR</font></a>' \
                                                % (self.debug)
         elif self.debug:
@@ -972,8 +1009,12 @@ class OneTagResults(dict):
         
         if command.startswith('pythia'):
             button = 'launch pythia'
+        elif command.startswith('remove banner'):
+            button = 'remove banner'
         elif command.startswith('remove'):
             button = 'remove run'
+        elif command.startswith('banner_run'):
+            button = 're-run from the banner'
         else:
             button = 'launch detector simulation'
         

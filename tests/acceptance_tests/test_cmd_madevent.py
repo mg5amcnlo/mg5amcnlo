@@ -99,14 +99,14 @@ class TestMECmdShell(unittest.TestCase):
         data = text.split('DECAY  23')[1].split('DECAY',1)[0]
         self.assertEqual("""1.492240e+00
 #  BR             NDA  ID1    ID2   ...
-   2.493165e-01   2    3  -3
-   2.493165e-01   2    1  -1
-   1.944158e-01   2    4  -4
-   1.944158e-01   2    2  -2
-   5.626776e-02   2    -11  11
-   5.626776e-02   2    -13  13
+   2.493165e-01   2    3  -3 # 0.37204
+   2.493165e-01   2    1  -1 # 0.37204
+   1.944158e-01   2    4  -4 # 0.290115
+   1.944158e-01   2    2  -2 # 0.290115
+   5.626776e-02   2    -11  11 # 0.083965
+   5.626776e-02   2    -13  13 # 0.083965
 #
-#      PDG        Width""", data.strip())
+#      PDG        Width""".split('\n'), data.strip().split('\n'))
         
     def test_creating_matched_plot(self):
         """test that the creation of matched plot works"""

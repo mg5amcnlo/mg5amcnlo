@@ -1404,11 +1404,11 @@ class FeynmanDiagram:
                 line2 = self.lineList[j]
                 #check if they are a unvalid intersection
                 if line.has_intersection(line2):
-                    print 'intersection for %s %s' % (i, j)
-                    print 'line', i, '(', line.start.pos_x, line.start.pos_y, \
-                                     ') (', line.end.pos_x, line.end.pos_y, ')'
-                    print 'line', j, '(', line2.start.pos_x, line2.start.pos_y, \
-                                ') (', line2.end.pos_x, line2.end.pos_y, ')'
+                    logger.info('intersection for %s %s' % (i, j))
+                    logger.info('line', i, '(', line.start.pos_x, line.start.pos_y, \
+                                     ') (', line.end.pos_x, line.end.pos_y, ')')
+                    logger.info('line', j, '(', line2.start.pos_x, line2.start.pos_y, \
+                                ') (', line2.end.pos_x, line2.end.pos_y, ')')
                     return True
         return False
 
