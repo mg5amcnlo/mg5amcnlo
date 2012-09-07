@@ -20,10 +20,12 @@ import os
 import logging
 import sys
 import time
+import subprocess
 
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 import madgraph.interface.madgraph_interface as mg_interface
+import madgraph.interface.madevent_interface as me_interface
 import madgraph.interface.Loop_interface as Loop_interface
 import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_helas_objects as fks_helas
@@ -82,6 +84,57 @@ class CheckFKS(mg_interface.CheckValidForCmd):
 
         self._export_dir = os.path.realpath(self._export_dir)
 
+                
+    def check_launch(self, args, options):
+        """check the validity of the line. args are DIR and MODE
+        MODE being NLO or aMC@NLO. If no mode is passed, NLO is used"""
+        # modify args in order to be DIR 
+        # mode being either standalone or madevent
+        if not( 0 <= int(options.cluster) <= 2):
+            return self.InvalidCmd, 'cluster mode should be between 0 and 2'
+        
+        if not args:
+            if self._done_export:
+                args.append(self._done_export[0])
+                args.append('NLO')
+
+                return
+            else:
+                self.help_launch()
+                raise self.InvalidCmd, \
+                       'No default location available, please specify location.'
+        
+        if len(args) > 2:
+            self.help_launch()
+            return self.InvalidCmd, 'Invalid Syntax: Too many argument'
+
+        elif len(args) == 2:
+            if not args[1] in ['NLO', 'aMC@NLO']:
+                raise self.InvalidCmd, '%s is not a valid mode, please use "NLO" or "aMC@NLO"' % args[1]
+        else:
+            #check if args[0] is path or mode
+            if args[0] in ['NLO', 'aMC@NLO'] and self._done_export:
+                args.insert(0, self._done_export[0])
+            elif os.path.isdir(args[0]) or os.path.isdir(pjoin(MG5dir, args[0]))\
+                    or os.path.isdir(pjoin(MG4dir, args[0])):
+                args.append('NLO')
+        mode = args[1]
+        
+        
+        # search for a valid path
+        if os.path.isdir(args[0]):
+            path = os.path.realpath(args[0])
+        elif os.path.isdir(pjoin(MG5DIR,args[0])):
+            path = pjoin(MG5DIR,args[0])
+        elif  MG4DIR and os.path.isdir(pjoin(MG4DIR,args[0])):
+            path = pjoin(MG4DIR,args[0])
+        else:    
+            raise self.InvalidCmd, '%s is not a valid directory' % args[0]
+
+                
+        # inform where we are for future command
+        self._done_export = [path, mode]
+
 
     def validate_model(self, loop_type):
         """ Upgrade the model sm to loop_sm if needed """
@@ -125,6 +178,12 @@ class HelpFKS(mg_interface.HelpToCmd):
         mg_interface.MadGraphCmd.help_display(self)
         logger.info("   In aMC@NLO5, after display diagrams, the user can add the option")
         logger.info("   \"born\", \"virt\" or \"real\" to display only the corresponding diagrams.")
+
+    def help_launch(self):
+        """help for launch command"""
+        logger.info("Usage: launch [DIRPATH] [MODE]")
+        logger.info("   By default DIRPATH is the latest created directory")
+        logger.info("   MODE can be either NLO or aMC@NLO (if omitted, it is set to NLO)") 
 
 class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
     _fks_display_opts = ['real_diagrams', 'born_diagrams', 'virt_diagrams', 
@@ -223,7 +282,6 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
         else:
             mg_interface.MadGraphCmd.do_display(self,line,output)
-
 
     def do_add(self, line, *args,**opt):
         
@@ -418,6 +476,181 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             
         cpu_time1 = time.time()
 
+
+    def do_launch(self, line):
+        """Ask for editing the parameters and then execute the code (NLO or aMC@NLO)
+        """
+        argss = self.split_arg(line)
+        # check argument validity and normalise argument
+        (options, argss) = mg_interface._launch_parser.parse_args(argss)
+        self.check_launch(argss, options)
+        mode = argss[1]
+        print 'hello'
+        self.me_dir = os.path.join(os.getcwd(), argss[0])
+        #self.ask_run_configuration(mode)
+        #self.compile(mode, options)
+        #if self.options['run_mode'] == 0:
+        #    self.run_serial(mode, options)
+        #if self.options['run_mode'] == 1:
+        #    self.run_cluster(mode, options)
+        #if self.options['run_mode'] == 2:
+        #    self.run_multicore(mode, options)
+
+    def run_serial(self, mode, options):
+        """runs aMC@NLO serially"""
+        logger.info('Starting serial run')
+
+    def run_cluster(self, mode, options):
+        """runs aMC@NLO on cluster"""
+        logger.info('Starting cluster run')
+
+    def run_multicore(self, mode, options):
+        """runs aMC@NLO on multi-core"""
+        logger.warning('Multicore run not yet supported for aMC@NLO')
+
+    def compile(self, mode, options):
+        """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
+        specified in mode"""
+        libdir = os.path.join(self.me_dir, 'lib')
+        # read the run_card to find if lhapdf is used or not
+        run_card_file = open(os.path.join(self.me_dir, 'Cards','run_card.dat'))
+        found = False
+        while not found:
+            line = run_card_file.readline()
+            if 'pdlabel' in line:
+                found = True
+        run_card_file.close()
+        # rm links to lhapdflib/ PDFsets if exist
+        if os.path.islink(os.path.join(libdir, 'libLHAPDF.a')):
+            os.remove(os.path.join(libdir, 'libLHAPDF.a'))
+        if os.path.islink(os.path.join(libdir, 'PDFsets')):
+            os.remove(os.path.join(libdir, 'PDFsets'))
+
+        if line.split()[0] == '\'lhapdf\'':
+            logger.info('Using LHAPDF interface for PDFs')
+            lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
+                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            lhasetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'], 
+                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            os.symlink(os.path.join(lhalibdir, 'libLHAPDF.a'), \
+                       os.path.join(libdir, 'libLHAPDF.a'))
+            os.symlink(lhasetsdir, os.path.join(libdir, 'PDFsets'))
+            os.putenv('lhapdf', 'True')
+        else:
+            logger.info('Using built in libraries for PDFs')
+            os.unsetenv('lhapdf')
+        amcatnlo_log = os.path.join(self.me_dir, 'compile_amcatnlo.log')
+        madloop_log = os.path.join(self.me_dir, 'compile_madloop.log')
+        gensym_log = os.path.join(self.me_dir, 'gensym.log')
+        test_log = os.path.join(self.me_dir, 'test.log')
+        # make Source
+        logger.info('Compiling source...')
+        os.chdir(os.path.join(self.me_dir, 'Source'))
+        os.system('make > %s 2>&1' % amcatnlo_log)
+        if os.path.exists(os.path.join(libdir, 'libdhelas.a')) \
+          and os.path.exists(os.path.join(libdir, 'libgeneric.a')) \
+          and os.path.exists(os.path.join(libdir, 'libmodel.a')) \
+          and os.path.exists(os.path.join(libdir, 'libpdf.a')):
+            logger.info('          ...done, continuing with P* directories')
+        else:
+            raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
+
+        os.chdir(self.me_dir)
+        os.chdir(os.path.join(self.me_dir, 'SubProcesses'))
+        p_dirs = [file for file in os.listdir('.') if file.startswith('P') and os.path.isdir(file)]
+        # make and run tests (if asked for), gensym and make madevent in each dir
+        for p_dir in p_dirs:
+            logger.info(p_dir)
+            this_dir = os.path.join(self.me_dir, 'SubProcesses', p_dir) 
+            os.chdir(this_dir)
+#            if 'MEtests' in options or 'ALLtests' in options:
+#                logger.info('   Compiling test_ME...')
+#                os.system('make test_ME >> %s 2>&1' % test_log)
+#
+#                logger.info('   Compiling test_MC...')
+#                os.system('make test_MC >> %s 2>&1' % test_log)
+
+            logger.info('   Compiling gensym...')
+            os.system('make gensym >> %s 2>&1 ' % amcatnlo_log)
+            if not os.path.exists(os.path.join(this_dir, 'gensym')):
+                raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
+
+            logger.info('   Running gensym...')
+            os.system('echo %s | ./gensym >> %s' % (self.options['run_mode'], gensym_log)) 
+            #compile madloop library
+            v_dirs = [file for file in os.listdir('.') if file.startswith('V') and os.path.isdir(file)]
+            for v_dir in v_dirs:
+                os.putenv('madloop', 'true')
+                logger.info('   Compiling MadLoop library in %s' % v_dir)
+                madloop_dir = os.path.join(this_dir, v_dir)
+                os.chdir(madloop_dir)
+                os.system('make >> %s 2>&1' % madloop_log)
+                if not os.path.exists(os.path.join(this_dir, 'libMadLoop.a')):
+                    raise MadGraph5Error('Compilation failed, check %s for details' % madloop_log)
+            os.chdir(this_dir)
+            if mode =='NLO':
+                exe = 'madevent_vegas'
+            if mode =='aMC@NLO':
+                exe = 'madevent_mintMC'
+            logger.info('   Compiling %s' % exe)
+            os.system('make %s >> %s 2>&1' % (exe, amcatnlo_log))
+            os.unsetenv('madloop')
+            if not os.path.exists(os.path.join(this_dir, exe)):
+                raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
+
+
+
+
+
+
+
+        os.chdir(os.path.join(self.me_dir))
+
+
+
+
+        
+
+
+
+    ############################################################################
+    def ask_run_configuration(self, mode):
+        """Ask the question when launching generate_events/multi_run"""
+        
+        logger.info('Will run in mode %s' % mode)
+        cards = ['param_card.dat', 'run_card.dat']
+
+        def get_question(mode):
+            # Ask the user if he wants to edit any of the files
+            #First create the asking text
+            question = """Do you want to edit one cards (press enter to bypass editing)?
+  1 / param   : param_card.dat (be carefull about parameter consistency, especially widths)
+  2 / run     : run_card.dat\n"""
+            possible_answer = ['0','done', 1, 'param', 2, 'run']
+            card = {0:'done', 1:'param', 2:'run'}
+            # Add the path options
+            question += '  Path to a valid card.\n'
+            return question, possible_answer, card
+        
+        # Loop as long as the user is not done.
+        answer = 'no'
+        while answer != 'done':
+            question, possible_answer, card = get_question(mode)
+            answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
+            if answer.isdigit():
+                answer = card[int(answer)]
+            if answer == 'done':
+                return
+            if not os.path.isfile(answer):
+                if answer != 'trigger':
+                    path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+                else:
+                    path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
+                self.exec_cmd('open %s' % path)                    
+            else:
+                # detect which card is provided
+                card_name = answer + 'card.dat'
+                    
    
 class FKSInterfaceWeb(mg_interface.CheckValidForCmdWeb, FKSInterface):
     pass
