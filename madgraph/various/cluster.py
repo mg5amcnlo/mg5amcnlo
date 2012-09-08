@@ -74,6 +74,12 @@ class Cluster(object):
         """How to make one submission. Return status id on the cluster."""
         raise NotImplemented, 'No implementation of how to submit a job to cluster \'%s\'' % self.name
 
+    def submit2(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
+                log=None, input_files=[], output_files=[]):
+        """How to make one submission. Return status id on the cluster.
+        NO SHARE DISK"""
+        self.submit(prog, argument,cwd,stdout,stderr)
+
     def control(self, me_dir=None):
         """Check the status of job associated to directory me_dir. return (idle, run, finish, fail)"""
         if not self.submitted_ids:
@@ -162,7 +168,7 @@ class CondorCluster(Cluster):
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
-        """Submit the """
+        """Submit the job on the cluster"""
         
         text = """Executable = %(prog)s
                   output = %(stdout)s
@@ -217,6 +223,86 @@ class CondorCluster(Cluster):
         self.submitted += 1
         self.submitted_ids.append(id)
         return id
+
+    @multiple_try()
+    def submit2(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
+                log=None, input_files=[], output_files=[]):
+        """Submit the job on the cluster NO SHARE DISK
+           input/output file should be give relative to cwd
+        """
+        
+        text = """Executable = %(prog)s
+                  output = %(stdout)s
+                  error = %(stderr)s
+                  log = %(log)s
+                  %(argument)s
+                  should_transfer_files = YES
+                  when_to_transfer_output = ON_EXIT
+                  transfer_input_files = %(input_files)
+                  %(output_files)
+                  Universe = vanilla
+                  notification = Error
+                  Initialdir = %(cwd)s
+                  %(requirement)s
+                  getenv=True
+                  queue 1
+               """
+        
+        if self.cluster_queue not in ['None', None]:
+            requirement = 'Requirements = %s=?=True' % self.cluster_queue
+        else:
+            requirement = ''
+
+        if cwd is None:
+            cwd = os.getcwd()
+        if stdout is None:
+            stdout = '/dev/null'
+        if stderr is None:
+            stderr = '/dev/null'
+        if log is None:
+            log = '/dev/null'
+        if not os.path.exists(prog):
+            prog = os.path.join(cwd, prog)
+        if argument:
+            argument = 'Arguments = %s' % ' '.join(argument)
+        else:
+            argument = ''
+        # input/output file treatment
+        if input_files:
+            input_files = ','.join(input_files)
+        else: 
+            input_files = ''
+        if output_files:
+            output_files = 'transfer_input_files = %s' % ','.join(output_files)
+        else:
+            output_files = ''
+        
+        
+
+        dico = {'prog': prog, 'cwd': cwd, 'stdout': stdout, 
+                'stderr': stderr,'log': log,'argument': argument,
+                'requirement': requirement, 'input_files':input_files, 
+                'output_files':output_files}
+
+        open('submit_condor','w').write(text % dico)
+        a = subprocess.Popen(['condor_submit','submit_condor'], stdout=subprocess.PIPE)
+        output = a.stdout.read()
+        #Submitting job(s).
+        #Logging submit event(s).
+        #1 job(s) submitted to cluster 2253622.
+        pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
+        try:
+            id = pat.search(output).groups()[0]
+        except:
+            raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
+                                                                        % output 
+        self.submitted += 1
+        self.submitted_ids.append(id)
+        return id
+
+
+
+
     
     @multiple_try(nb_try=10, sleep=10)
     def control_one_job(self, id):

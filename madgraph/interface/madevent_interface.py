@@ -3308,7 +3308,42 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
 
         elif mode == 1:
-            self.cluster.submit(exe, stdout=stdout, cwd=cwd)
+            # For condor cluster, create the input/output files
+            if self.options['cluster_mode']  == 'condor' and 'ajob' in exe: 
+                input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
+                               pjoin(self.me_dir, 'SubProcesses','randinit')]
+                output_files = []
+                
+                #Find the correct PDF input file
+                if self.pdffile:
+                    input_files.append(self.pdffile)
+                else:
+                    for line in open(pjoin(self.me_dir,'Source','PDF','pdf_list.txt')):
+                        data = line.split()
+                        if data[0].lower() == self.run_card['pdlabel'].lower():
+                            self.pdffile = pjoin(self.me_dir, 'lib', 'Pdfdata', data[2])
+                            input_files.append(self.pdffile) 
+                            break
+                    else:
+                        self.pdffile = ' ' # possible when using lhapdf
+                
+                #Find the correct ajob
+                Gre = re.compile("\s*j=(G[\d\.\w]+)")
+                try : 
+                    fsock = open(exe)
+                except:
+                    fsock = open(pjoin(cwd,exe))
+                output_files = Gre.findall(fsock.read())
+                for G in output_files:
+                    if os.path.isdir(pjoin(cwd,G)):
+                        input_files.append(G)
+                
+                #submitting
+                self.cluster.submit(exe, stdout=stdout, cwd=cwd, 
+                             input_files=input_files, output_files=output_files)
+            
+            else:
+                self.cluster.submit(exe, stdout=stdout, cwd=cwd)
 
         elif mode == 2:
             import thread
@@ -3454,6 +3489,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             os.environ['lhapdf'] = 'True'
         elif 'lhapdf' in os.environ.keys():
             del os.environ['lhapdf']
+        self.pdffile = None
             
         # set random number
         if self.run_card['iseed'] != '0':
