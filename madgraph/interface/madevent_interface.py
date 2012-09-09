@@ -3309,7 +3309,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         elif mode == 1:
             # For condor cluster, create the input/output files
-            if self.options['cluster_mode']  == 'condor' and 'ajob' in exe: 
+            if self.options['cluster_type+']  == 'condor' and 'ajob' in exe: 
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
                 output_files = []
@@ -3320,6 +3320,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 else:
                     for line in open(pjoin(self.me_dir,'Source','PDF','pdf_list.txt')):
                         data = line.split()
+                        if len(data) < 4:
+                            continue
                         if data[0].lower() == self.run_card['pdlabel'].lower():
                             self.pdffile = pjoin(self.me_dir, 'lib', 'Pdfdata', data[2])
                             input_files.append(self.pdffile) 
@@ -3329,17 +3331,26 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 
                 #Find the correct ajob
                 Gre = re.compile("\s*j=(G[\d\.\w]+)")
+                Ire = re
                 try : 
                     fsock = open(exe)
                 except:
                     fsock = open(pjoin(cwd,exe))
-                output_files = Gre.findall(fsock.read())
-                for G in output_files:
-                    if os.path.isdir(pjoin(cwd,G)):
-                        input_files.append(G)
+                text = fsock.read()
+                output_files = Gre.findall(text)
+                if not output_files:
+                    Ire = re.compile("for i in ([\d\s*]) ; do")
+                    data = Ire.findall(text)
+                    data = data.split()
+                    for nb in data:
+                        output_files.append('G%s' % nb)
+                else:
+                    for G in output_files:
+                        if os.path.isdir(pjoin(cwd,G)):
+                            input_files.append(G)
                 
                 #submitting
-                self.cluster.submit(exe, stdout=stdout, cwd=cwd, 
+                self.cluster.submit2(exe, stdout=stdout, cwd=cwd, 
                              input_files=input_files, output_files=output_files)
             
             else:

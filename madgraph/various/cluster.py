@@ -238,8 +238,8 @@ class CondorCluster(Cluster):
                   %(argument)s
                   should_transfer_files = YES
                   when_to_transfer_output = ON_EXIT
-                  transfer_input_files = %(input_files)
-                  %(output_files)
+                  transfer_input_files = %(input_files)s
+                  %(output_files)s
                   Universe = vanilla
                   notification = Error
                   Initialdir = %(cwd)s
