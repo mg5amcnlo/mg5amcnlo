@@ -19,6 +19,7 @@ import fractions
 import glob
 import logging
 import os
+import sys
 import re
 import shutil
 import subprocess
@@ -43,6 +44,7 @@ import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.process_checks as process_checks
+import madgraph.various.progressbar as pbar
 import madgraph.core.color_amp as color_amp
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 
@@ -284,7 +286,8 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         # Now we construct the color factors between each born and loop amplitude
         # by scanning their contributions to the different jamps.
         start = time.time()
-        time_info=False
+        progress_bar = None
+        time_info = False
         for i, jampl_list in enumerate(ampl_to_jampl):
             # This can be pretty long for processes with many color flows.
             # So, if necessary (i.e. for more than 15s), we tell the user the
@@ -298,6 +301,13 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                       ' about %s to run. '%str(datetime.timedelta(seconds=t))+\
                       'Started on %s.'%datetime.datetime.now().strftime(\
                                                               "%d-%m-%Y %H:%M"))
+                    if logger.getEffectiveLevel()<logging.WARNING:
+                        widgets = ['Color computation:', pbar.Percentage(), ' ', 
+                                                pbar.Bar(),' ', pbar.ETA(), ' ']
+                        progress_bar = pbar.ProgressBar(widgets=widgets, 
+                                        maxval=len(ampl_to_jampl),fd=sys.stdout)
+            if progress_bar!=None:
+                progress_bar.update(i+1)
             line_num=[]
             line_denom=[]
             for jampb_list in ampb_to_jampb:
@@ -345,7 +355,10 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
 
         if time_info:
             logger.info('Finished on %s.'%datetime.datetime.now().strftime(\
-                                                              "%d-%m-%Y %H:%M"))
+                                                              "%d-%m-%Y %H:%M"))            
+        if progress_bar!=None:
+            progress_bar.finish()
+
 
         return (ColorMatrixNumOutput,ColorMatrixDenomOutput)
 

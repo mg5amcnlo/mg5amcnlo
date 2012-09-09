@@ -538,14 +538,21 @@ class CheckValidForCmd(cmd.CheckCmd):
         if os.path.isfile(args[1]):
             param_card = args.pop(1)
 
+        if args[0] in ['stability','profile','timing'] and len(args)>1:
+            if args[1] != "-reuse":
+                if args[1][0] == '-':
+                    raise self.InvalidCmd("Command option %s not recognized."%args[1])
+                else:    
+                    args.insert(1, '-no_reuse')
+
         if args[0] in ['stability', 'profile'] and len(args)>1:
             # If the first argument after 'stability' is not the integer
             # specifying the desired statistics (i.e. number of points), then
             # we insert the default value 100
             try: 
-                int(args[1])
+                int(args[2])
             except ValueError:
-                args.insert(1, '100')
+                args.insert(2, '100')
 
         if args[0] not in self._check_opts:
             args.insert(0, 'full')
@@ -2237,9 +2244,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         # For the stability check the user can specify the statistics (i.e
         # number of trial PS points) as a second argument
+        if args[0] in ['stability','profile','timing']:        
+            reuse = args[1]=="-reuse"       
+            args = args[:1]+args[2:] 
         if args[0] in ['stability', 'profile']:
-            stab_statistics=int(args[1])
-            args=args[:1]+args[2:]
+            stab_statistics = int(args[1])
+            args = args[:1]+args[2:]
         
         proc_line = " ".join(args[1:])
         myprocdef = self.extract_process(proc_line)
@@ -2302,14 +2312,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             timings = process_checks.check_timing(myprocdef,
                                                   mg_root=self._mgme_dir,
                                                   cuttools=CT_dir,
-                                                  cmass_scheme = mass_scheme)        
+                                                  cmass_scheme = mass_scheme,
+                                                  reuse = reuse)        
 
         if args[0] in ['stability']:
             stability = process_checks.check_stability(myprocdef,
                                                   mg_root=self._mgme_dir,
                                                   cuttools=CT_dir,
                                                   cmass_scheme = mass_scheme,
-                                                  nPoints=stab_statistics)
+                                                  nPoints=stab_statistics,
+                                                  reuse = reuse)
 
         if args[0] in ['profile']:
             # In this case timing and stability will be checked one after the
@@ -2318,7 +2330,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                   mg_root=self._mgme_dir,
                                                   cuttools=CT_dir,
                                                   cmass_scheme = mass_scheme,
-                                                  nPoints=stab_statistics)
+                                                  nPoints=stab_statistics,
+                                                  reuse = reuse)
 
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
@@ -2419,8 +2432,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text += 'Timing result '+('optimized' if \
                     self.options['loop_optimized_output'] else 'default')+':\n'
             text += process_checks.output_profile(myprocdef, profile_stab,
-                                                  profile_time, self._mgme_dir,
-                                   self.options['loop_optimized_output']) + '\n'
+                                   profile_time, self._mgme_dir,
+                                   self.options['loop_optimized_output'],
+                                   reuse) + '\n'
         if gauge_result:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'
@@ -2438,7 +2452,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._comparisons = comparisons
 
         logger.info(text)
-        pydoc.pager(text)
+        if not (reuse and args[0] in ['profile']):
+            pydoc.pager(text)
         # Restore diagram logger
         for i, logger in enumerate(loggers):
             logger.setLevel(old_levels[i])
@@ -2448,6 +2463,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # clean the globals created.
         process_checks.clean_added_globals(process_checks.ADDED_GLOBAL)
+        if not reuse:
+            process_checks.clean_up(self._mgme_dir)
     
     # Generate a new amplitude
     def do_generate(self, line):

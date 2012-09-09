@@ -26,6 +26,7 @@ import itertools
 import logging
 import math
 import os
+import sys
 import re
 import shutil
 import glob
@@ -51,7 +52,7 @@ import madgraph.core.diagram_generation as diagram_generation
 
 import madgraph.various.rambo as rambo
 import madgraph.various.misc as misc
-
+import madgraph.various.progressbar as pbar
 
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_helas_objects as loop_helas_objects
@@ -66,6 +67,8 @@ from aloha.template_files.wavefunctions import \
 ADDED_GLOBAL = []
 
 loop_optimized_output = False
+
+temp_dir_prefix = "TMP_CHECK"
 
 def clean_added_globals(to_clean):
     for value in list(to_clean):
@@ -392,16 +395,16 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                  ].index(matrix_element)][1]
             logger.debug("Reusing generated output %s"%str(export_dir))
         else:        
-            export_dir=os.path.join(self.mg_root,'TMP_DIR_FOR_THE_CHECK_CMD')
+            export_dir=os.path.join(self.mg_root,temp_dir_prefix)
             if os.path.isdir(export_dir):
                 if not self.proliferate:
                     raise InvalidCmd("The directory %s already exist. Please remove it."%str(export_dir))
                 else:
                     id=1
                     while os.path.isdir(os.path.join(self.mg_root,\
-                                        'TMP_DIR_FOR_THE_CHECK_CMD_%i'%id)):
+                                        '%s_%i'%(temp_dir_prefix,id))):
                         id+=1
-                    export_dir=os.path.join(self.mg_root,'TMP_DIR_FOR_THE_CHECK_CMD_%i'%id)
+                    export_dir=os.path.join(self.mg_root,'%s_%i'%(temp_dir_prefix,id))
             
             if self.proliferate:
                 self.stored_quantities['matrix_elements'].append(\
@@ -735,43 +738,57 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         file.write(loop_matrix)
         file.close()
 
-    def setup_process(self, matrix_element, model, export_dir):
+    def setup_process(self, matrix_element, model, export_dir, reusing = False):
         """ Output the matrix_element in argument and perform the initialization
         while providing some details about the output in the dictionary returned. 
         Returns None if anything fails"""
 
-        infos={}
+        infos={'Process_output': None,
+               'HELAS_MODEL_compilation' : None,
+               'dir_path' : None,
+               'Initialization' : None,
+               'Process_compilation' : None}
 
-        if os.path.isdir(export_dir):
-            raise InvalidCmd(\
-            "The directory %s already exist. Please remove it."%str(export_dir))
-
-        # I do the import here because there is some cyclic import of export_v4
-        # otherwise
-        import madgraph.loop.loop_exporters as loop_exporters
-        if loop_optimized_output:
-            exporter=loop_exporters.LoopProcessOptimizedExporterFortranSA
+        if not reusing:
+            if os.path.isdir(export_dir):
+                clean_up(self.mg_root)
+                if os.path.isdir(export_dir):
+                    raise InvalidCmd(\
+                      "The directory %s already exist. Please remove it."\
+                                                               %str(export_dir))
         else:
-            exporter=loop_exporters.LoopProcessExporterFortranSA
-            
-        start=time.time()
-        FortranExporter = exporter(\
-            self.mg_root, export_dir, clean=True,
-            complex_mass_scheme = self.cmass_scheme, mp=True,
-            loop_dir=os.path.join(self.mg_root, 'Template/loop_material'),\
-            cuttools_dir=self.cuttools_dir)
-        FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
-        FortranExporter.copy_v4template(modelname=model.get('name'))
-        FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
-        wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
-        wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
-                                                                for c in l]))
-        FortranExporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
-        infos['Process_output'] = time.time()-start
-        start=time.time()
-        FortranExporter.finalize_v4_directory(None,"",False,False,'gfortran')
-        infos['HELAS_MODEL_compilation'] = time.time()-start
+            if not os.path.isdir(export_dir):
+                raise InvalidCmd(\
+                    "Could not find the directory %s to reuse."%str(export_dir))                           
         
+
+        if not reusing:
+            # I do the import here because there is some cyclic import of export_v4
+            # otherwise
+            import madgraph.loop.loop_exporters as loop_exporters
+            if loop_optimized_output:
+                exporter=loop_exporters.LoopProcessOptimizedExporterFortranSA
+            else:
+                exporter=loop_exporters.LoopProcessExporterFortranSA
+                
+            start=time.time()
+            FortranExporter = exporter(\
+                self.mg_root, export_dir, clean=True,
+                complex_mass_scheme = self.cmass_scheme, mp=True,
+                loop_dir=os.path.join(self.mg_root, 'Template/loop_material'),\
+                cuttools_dir=self.cuttools_dir)
+            FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
+            FortranExporter.copy_v4template(modelname=model.get('name'))
+            FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
+            wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
+            wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
+                                                                    for c in l]))
+            FortranExporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
+            infos['Process_output'] = time.time()-start
+            start=time.time()
+            FortranExporter.finalize_v4_directory(None,"",False,False,'gfortran')
+            infos['HELAS_MODEL_compilation'] = time.time()-start
+
         # First Initialize filters (in later versions where this will be done
         # at generation time, it can be skipped)
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
@@ -786,40 +803,55 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         dir_name = os.path.join(export_dir, 'SubProcesses', shell_name)
         infos['dir_path']=dir_name
 
-        compile_time, run_time = self.make_and_run(dir_name)
-        if compile_time==None:
-            logging.error("Failed at running the process %s."%shell_name)
-            return None
-        
         if not os.path.exists(os.path.join(dir_name,'HelFilter.dat')) or not \
-               os.path.exists(os.path.join(dir_name,'LoopFilter.dat')):
-            logger.warning("Could not initialize the process %s"%shell_name+\
-                            " with 4 PS points. Now trying with 15 PS points.")
-            self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
-                                                  read_ps = False, npoints = 15)
+               os.path.exists(os.path.join(dir_name,'LoopFilter.dat')) or not \
+               os.path.isfile(os.path.join(dir_name,'check')) or not \
+               os.access(os.path.join(dir_name,'check'), os.X_OK):
             compile_time, run_time = self.make_and_run(dir_name)
-            if compile_time == None: return None
-            if not os.path.exists(os.path.join(dir_name,'HelFilter.dat')) or \
-               not os.path.exists(os.path.join(dir_name,'LoopFilter.dat')):
-                logger.error("Could not initialize the process %s"%shell_name+\
-                            " with 15 PS points.")
+            if compile_time==None:
+                logging.error("Failed at running the process %s."%shell_name)
                 return None
-        
-        infos['Initialization'] = run_time
-        infos['Process_compilation'] = compile_time
+            infos['Process_compilation'] = compile_time
+            
+            if not os.path.exists(os.path.join(dir_name,'HelFilter.dat')) or not \
+                   os.path.exists(os.path.join(dir_name,'LoopFilter.dat')):
+                logger.warning("Could not initialize the process %s"%shell_name+\
+                                " with 4 PS points. Now trying with 15 PS points.")
+                self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
+                                                      read_ps = False, npoints = 15)
+                compile_time, run_time = self.make_and_run(dir_name)
+                if compile_time == None: return None
+                if not os.path.exists(os.path.join(dir_name,'HelFilter.dat')) or \
+                   not os.path.exists(os.path.join(dir_name,'LoopFilter.dat')):
+                    logger.error("Could not initialize the process %s"%shell_name+\
+                                " with 15 PS points.")
+                    return None
+            
+            infos['Initialization'] = run_time
 
         return infos
 
-    def time_matrix_element(self, matrix_element, model):
+    def time_matrix_element(self, matrix_element, model, reusing = False):
         """ Output the matrix_element in argument and give detail information
         about the timing for its output and running"""
         
         # Normally, this should work for loop-induced processes as well
 #        if not matrix_element.get('processes')[0]['has_born']:
 #            return None
-        proc_name = matrix_element['processes'][0].shell_string()
-        export_dir=os.path.join(self.mg_root,'TMP_DIR_FOR_THE_CHECK_CMD')
-        res_timings = self.setup_process(matrix_element, model,export_dir)
+
+        assert ((not reusing and isinstance(matrix_element, \
+                 helas_objects.HelasMatrixElement)) or (reusing and 
+                              isinstance(matrix_element, base_objects.Process)))
+        if not reusing:
+            proc_name = matrix_element['processes'][0].shell_string()
+        else:
+            proc_name = matrix_element.shell_string()
+            
+        export_dir=os.path.join(self.mg_root,temp_dir_prefix+"_%s"%proc_name)
+        
+        
+        res_timings = self.setup_process(matrix_element, model,export_dir, \
+                                                                        reusing)
         if not res_timings:
             return None
         dir_name=res_timings['dir_path']
@@ -834,7 +866,15 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         res_timings['du_color']=check_disk_usage(os.path.join(dir_name,'*.dat'))
         res_timings['du_exe']=check_disk_usage(os.path.join(dir_name,'check'))
 
-        time_per_ps_estimate = (res_timings['Initialization']/4.0)/2.0
+        if not res_timings['Initialization']==None:
+            time_per_ps_estimate = (res_timings['Initialization']/4.0)/2.0
+        else:
+            # We cannot estimate from the initialization, so we run just a 3
+            # PS point run to evaluate it.
+            self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
+                                  read_ps = False, npoints = 3, hel_config = -1)
+            compile_time, run_time = self.make_and_run(dir_name)
+            time_per_ps_estimate = run_time/3.0
         
         self.boot_time_setup(dir_name,bootandstop=True)
         compile_time, run_time = self.make_and_run(dir_name)
@@ -859,8 +899,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         res_timings['n_contrib_hel']=n_contrib_hel
         res_timings['n_tot_hel']=len(helicities)
         
-        # We aim at a 15 sec run
-        target_pspoints_number = max(int(15.0/time_per_ps_estimate)+1,10)
+        # We aim at a 20 sec run
+        target_pspoints_number = max(int(20.0/time_per_ps_estimate)+1,5)
 
         logger.info("Checking timing for process %s "%proc_name+\
                                     "with %d PS points."%target_pspoints_number)
@@ -914,16 +954,20 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 #===============================================================================
 
     def check_matrix_element_stability(self, matrix_element, model, nPoints,
-                                                                  infos = None):
+                                                 infos = None, reusing = False):
         """ Output the matrix_element in argument, run in for nPoints and return
         a dictionary containing the stability information on each of these points.
         If infos are provided, then the matrix element output is skipped and 
         reused from a previous run and the content of infos.
         """
         
+        assert ((not reusing and isinstance(matrix_element, \
+                 helas_objects.HelasMatrixElement)) or (reusing and 
+                              isinstance(matrix_element, base_objects.Process)))            
+        
         # Accuracy threshold of double precision evaluations above which the
         # PS points is also evaluated in quadruple precision
-        accuracy_threshold=1.0e-3
+        accuracy_threshold=1.0e0
         
         # Each evaluations is performed in different ways to assess its stability.
         # There are two dictionaries, one for the double precision evaluation
@@ -940,25 +984,39 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         # Normally, this should work for loop-induced processes as well
 #        if not matrix_element.get('processes')[0]['has_born']:
 #            return None
-        
-        process = matrix_element['processes'][0]
+        if not reusing:
+            process = matrix_element['processes'][0]
+        else:
+            process = matrix_element
         proc_name = process.shell_string()
-        export_dir=os.path.join(self.mg_root,'TMP_DIR_FOR_THE_CHECK_CMD')
+        export_dir=os.path.join(self.mg_root,temp_dir_prefix+"_%s"%proc_name)
         if not infos:
-            infos = self.setup_process(matrix_element, model,export_dir)
+            infos = self.setup_process(matrix_element, model,export_dir, reusing)
             if not infos:
                 return None            
         dir_path=infos['dir_path']
         
         logger.info("Checking stability of process %s "%proc_name+\
                     "with %d PS points."%nPoints)
-        time_per_ps_estimate = (infos['Initialization']/4.0)/2.0
-        sec_needed = int(time_per_ps_estimate*nPoints*4)
-        if sec_needed>15:     
+        if infos['Initialization'] != None:
+            time_per_ps_estimate = (infos['Initialization']/4.0)/2.0
+            sec_needed = int(time_per_ps_estimate*nPoints*4)
+        else:
+            sec_needed = 0
+        progress_bar = None
+        time_info = False
+        if sec_needed>5:
+            time_info = True
             logger.info("This check should take about "+\
-                        "%s to run. Started on %s."%(\
+                            "%s to run. Started on %s."%(\
                             str(datetime.timedelta(seconds=sec_needed)),\
                             datetime.datetime.now().strftime("%d-%m-%Y %H:%M")))
+        if logger.getEffectiveLevel()<logging.WARNING and \
+                (sec_needed>5 or (reusing and infos['Initialization'] == None)):
+            widgets = ['Stability check:', pbar.Percentage(), ' ', 
+                                            pbar.Bar(),' ', pbar.ETA(), ' ']
+            progress_bar = pbar.ProgressBar(widgets=widgets, maxval=nPoints, 
+                                                              fd=sys.stdout)
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
                                    read_ps = True, npoints = 1, hel_config = -1)
         # Recompile (Notice that the recompilation is only necessary once) for
@@ -1034,11 +1092,15 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             while not pass_cuts(p):
                 p, w_rambo = self.get_momenta(proc)
             return p                
-        
+
+        if progress_bar!=None:
+                progress_bar.start()
         for i in range(nPoints):
             # Pick an eligible PS point with rambo
             p = pick_PS_point(process)
 #            print "I use P_%i="%i,p
+            if progress_bar!=None:
+                progress_bar.update(i+1)
             # Write it in the input file
             output_PS_point(dir_path,p,0)
             dp_dict={}
@@ -1050,7 +1112,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                               os.path.join(export_dir,'SubProcesses'),dir_path))
             dp_dict['CTModeB']=dp_res[-1]
             for rotation in range(1,3):
-                output_PS_point(dir_path,p,rotation)                
+                output_PS_point(dir_path,p,rotation)
                 dp_res.append(self.get_me_value(1,\
                               os.path.join(export_dir,'SubProcesses'),dir_path))
                 dp_dict['Rotation%i'%rotation]=dp_res[-1]
@@ -1086,11 +1148,19 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                     Exceptional_PS_points.append([i,p])
             else:
                 QP_stability.append({})
+
+        if progress_bar!=None:
+            progress_bar.finish()
+        if time_info:
+            logger.info('Finished check on %s.'%datetime.datetime.now().strftime(\
+                                                              "%d-%m-%Y %H:%M"))
         
         return {'DP_stability':DP_stability,
                 'QP_stability':QP_stability,
                 'Unstable_PS_points':Unstable_PS_points,
-                'Exceptional_PS_points':Exceptional_PS_points}
+                'Exceptional_PS_points':Exceptional_PS_points,
+                'Process': matrix_element.get('processes')[0] if not reusing\
+                                                            else matrix_element}
 
     def get_me_value(self,mode,param_card_path,dir_path):
         """ This version of get_me_value is simplified for the purpose of this
@@ -1257,12 +1327,21 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
 #===============================================================================
 # Generate a loop matrix element
 #===============================================================================
-def generate_loop_matrix_element(process_definition):
+def generate_loop_matrix_element(process_definition, mg_root, reuse):
     """ Generate a loop matrix element from the process definition, and returns
-    it along with the timing information dictionary """
+    it along with the timing information dictionary.
+    If reuse is True, it reuses the already output directory if found."""
 
     assert isinstance(process_definition,base_objects.ProcessDefinition)
     assert process_definition.get('perturbation_couplings')!=[]
+    
+    # By default, set all entries to None
+    timing = {'Diagrams_generation': None,
+              'n_loops': None,
+              'HelasDiagrams_generation': None,
+              'n_loop_groups': None,
+              'n_loop_wfs': None,
+              'loop_wfs_ranks': None}
     
     model=process_definition.get('model')
     
@@ -1278,9 +1357,14 @@ def generate_loop_matrix_element(process_definition):
     # Now generate a process based on the ProcessDefinition given in argument.
     process = process_definition.get_process(isids,fsids)
     
-    logger.info("Generating p%s"%process_definition.nice_string()[1:])
+    proc_dir = os.path.join(mg_root,temp_dir_prefix+"_%s"%process.shell_string())
+    if reuse and os.path.isdir(proc_dir):
+        logger.info("Reusing directory %s"%str(proc_dir))
+        # If reusing, return process instead of matrix element
+        return timing, process
     
-    timing = {}
+    logger.info("Generating p%s"%process_definition.nice_string()[1:])
+
     start=time.time()
     amplitude = loop_diagram_generation.LoopAmplitude(process)
     timing['Diagrams_generation']=time.time()-start
@@ -1306,16 +1390,18 @@ def generate_loop_matrix_element(process_definition):
 # check profile for loop process (timings + stability in one go)
 #===============================================================================
 def check_profile(process_definition, mg_root="",cuttools="",
-                                             cmass_scheme = False, nPoints=100):
+                              cmass_scheme = False, nPoints=100, reuse = False):
     """For a single loop process, check both its timings and then its stability
     in one go without regenerating it."""
 
     model=process_definition.get('model')
 
-    timing1, matrix_element = generate_loop_matrix_element(process_definition)
+    timing1, matrix_element = generate_loop_matrix_element(process_definition,
+                                                                  mg_root,reuse)
+    reusing = isinstance(matrix_element, base_objects.Process)
     myProfiler = LoopMatrixElementTimer(mg_root=mg_root, cuttools_dir=cuttools, 
                                        model=model, cmass_scheme = cmass_scheme)
-    timing2 = myProfiler.time_matrix_element(matrix_element, model)
+    timing2 = myProfiler.time_matrix_element(matrix_element, model, reusing)
     
     if timing2 == None:
         return None, None
@@ -1324,59 +1410,57 @@ def check_profile(process_definition, mg_root="",cuttools="",
     timing = dict(timing1.items()+timing2.items())
 
     stability = myProfiler.check_matrix_element_stability(matrix_element, 
-                                            model,nPoints=nPoints, infos=timing)
+                           model,nPoints=nPoints, infos=timing, reusing=reusing)
     if stability == None:
         return None, None
     else:
-        clean_up(mg_root)
-        stability['Process']=matrix_element['processes'][0]
         return timing, stability
 
 #===============================================================================
 # check_timing for loop processes
 #===============================================================================
 def check_stability(process_definition, mg_root="",cuttools="",
-                    cmass_scheme = False, nPoints=100):
+                                cmass_scheme = False, nPoints=100, reuse=False):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
     
     model=process_definition.get('model')
 
-    timing, matrix_element = generate_loop_matrix_element(process_definition)
-
+    timing, matrix_element = generate_loop_matrix_element(process_definition,
+                                                                 mg_root, reuse)
+    reusing = isinstance(matrix_element, base_objects.Process)
     myStabilityChecker = LoopMatrixElementTimer(mg_root=mg_root, 
                            cuttools_dir=cuttools, model=model, 
                            cmass_scheme = cmass_scheme)
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
-                                                          model,nPoints=nPoints)
+                                          model,nPoints=nPoints,reusing=reusing)
     
     if stability == None:
         return None
     else:
-        clean_up(mg_root)
-        stability['Process']=matrix_element['processes'][0]
         return stability
 
 #===============================================================================
 # check_timing for loop processes
 #===============================================================================
-def check_timing(process_definition, mg_root="",cuttools="",cmass_scheme = False):
+def check_timing(process_definition, mg_root="",cuttools="",
+                                           cmass_scheme = False, reuse = False):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
 
     model=process_definition.get('model')
-    timing1, matrix_element = generate_loop_matrix_element(process_definition)
+    timing1, matrix_element = generate_loop_matrix_element(process_definition,
+                                                                  mg_root,reuse)
+    reusing = isinstance(matrix_element, base_objects.Process)
     myTimer = LoopMatrixElementTimer(mg_root=mg_root, cuttools_dir=cuttools, 
                                        model=model, cmass_scheme = cmass_scheme)
-    timing2 = myTimer.time_matrix_element(matrix_element, model)
+    timing2 = myTimer.time_matrix_element(matrix_element, model, reusing)
     
     if timing2 == None:
         return None
-    else:
-        clean_up(mg_root)
-    
-    # Return the merged two dictionaries
-    return dict(timing1.items()+timing2.items())
+    else:    
+        # Return the merged two dictionaries
+        return dict(timing1.items()+timing2.items())
 
 #===============================================================================
 # check_processes
@@ -1618,11 +1702,21 @@ def clean_up(mg_root):
     """Clean-up the possible left-over outputs from 'evaluate_matrix element' of
     the LoopMatrixEvaluator (when its argument proliferate is set to true). """
 
-    directories = glob.glob(os.path.join(mg_root, 'TMP_DIR_FOR_THE_CHECK_CMD*'))
+    logger.info("Cleaning old temporary %s* check runs."%temp_dir_prefix)
+    directories = glob.glob(os.path.join(mg_root, '%s*'%temp_dir_prefix))
     for dir in directories:
         shutil.rmtree(dir)
 
-def output_profile(myprocdef, stability, timing, mg_root, opt):
+def format_output(output,format):
+    """ Return a string for 'output' with the specified format. If output is 
+    None, it returns 'NA'."""
+    
+    if output!=None:
+        return format%output
+    else:
+        return 'NA'
+
+def output_profile(myprocdef, stability, timing, mg_root, opt, reusing=False):
     """Present the results from a timing and stability consecutive check"""
 
     text = 'Timing result for the '+('optimized' if opt else 'default')+\
@@ -1631,7 +1725,7 @@ def output_profile(myprocdef, stability, timing, mg_root, opt):
 
     text += '\nStability result for the '+('optimized' if opt else 'default')+\
                                                                     ' output:\n'
-    text += output_stability(stability,mg_root=mg_root,opt = opt)
+    text += output_stability(stability,mg_root=mg_root,opt = opt, reusing=reusing)
 
     mode = 'optimized' if opt else 'default'
     logFilePath =  os.path.join(mg_root, 'profile_%s_%s.log'\
@@ -1643,7 +1737,7 @@ def output_profile(myprocdef, stability, timing, mg_root, opt):
                                                               %str(logFilePath))
     return text
 
-def output_stability(stability, mg_root, opt):
+def output_stability(stability, mg_root, opt, reusing=False):
     """Present the result of a stability check in a nice format.
     The full info is printed out in 'Stability_result_<proc_shell_string>.dat'
     under the MadGraph root folder (mg_root)"""
@@ -1677,14 +1771,15 @@ def output_stability(stability, mg_root, opt):
         
         n_fail=0
         for p in powers:
-            if math.log(p)<-2:
+            if (math.log(p)/math.log(10))<-3:
                 n_fail+=1
                 
         if len(powers)==0:
-            return (0.0,0.0,0.0,'NA')
+            return (None,None,None)
 
-        return (math.log(median(powers)),math.log(min(powers)),
-                                                        n_fail/len(powers),'OK')
+        return (math.log(median(powers))/math.log(10),
+                math.log(min(powers))/math.log(10),
+                n_fail/len(powers))
         
     def test_consistency(dp_eval_list, qp_eval_list):
         """ Computes the consistency test C from the DP and QP evaluations.
@@ -1703,9 +1798,11 @@ def output_stability(stability, mg_root, opt):
                               best_estimate(qp_evals)-best_estimate(dp_evals))))
 
         if len(consistencies)==0:
-            return (0.0,0.0,0.0,'NA')
-        return (math.log(median(consistencies)),math.log(min(consistencies)),
-                                              math.log(max(consistencies)),'OK')
+            return (None,None,None)
+
+        return (math.log(median(consistencies))/math.log(10),
+                math.log(min(consistencies))/math.log(10),
+                math.log(max(consistencies))/math.log(10))
     
     def median(orig_list):
         """ Find the median of a sorted float list. """
@@ -1715,7 +1812,10 @@ def output_stability(stability, mg_root, opt):
             return (list[int((len(list)/2)-1)]+list[int(len(list)/2)])/2.0
         else:
             return list[int((len(list)-1)/2)]
-    
+
+    # Define shortcut
+    f = format_output
+
     mode = 'optimized' if opt else 'default'
     DP_stability = [eval['Accuracy'] for eval in stability['DP_stability']]
     # Remember that an evaluation which did not require QP has an empty dictionary
@@ -1733,80 +1833,68 @@ def output_stability(stability, mg_root, opt):
     res_str = "%i PS points evaluated for %s (%s mode)\n"\
                                            %(nPS,process.nice_string()[9:],mode)
     res_str += "\n= Double precision results\n"
-    res_str += "|= Median accuracy............... %.2e\n"%median(DP_stability)
-    res_str += "|= Max accuracy.................. %.2e\n"%min(DP_stability)
-    res_str += "|= Min accuracy.................. %.2e\n"%max(DP_stability)
-    (pmed,pmin,pfrac,flag)=loop_direction_test_power(stability['DP_stability'])
-    if flag!='NA':
-        res_str += "|= Overall DP loop_dir test power %.1f,%.1f\n"%(pmed,pmin)
-        res_str += "|= Fraction of evts with power<-2 %.2e\n"%pfrac
-    else:
-        res_str += "|= Overall DP loop_dir test power NA\n"
-        res_str += "|= Fraction of evts with power<-2 NA\n"
+    res_str += "|= Median accuracy............... %s\n"%f(median(DP_stability),'%.2e')
+    res_str += "|= Max accuracy.................. %s\n"%f(min(DP_stability),'%.2e')
+    res_str += "|= Min accuracy.................. %s\n"%f(max(DP_stability),'%.2e')
+    (pmed,pmin,pfrac)=loop_direction_test_power(stability['DP_stability'])
+    res_str += "|= Overall DP loop_dir test power %s,%s\n"\
+                                                %(f(pmed,'%.1f'),f(pmin,'%.1f'))
+    res_str += "|= Fraction of evts with power<-3 %s\n"\
+                                                                %f(pfrac,'%.2e')
     res_str += "\n= Number of Unstable PS points    : %i\n"%len(UPS)
     if len(UPS)>0:
         res_str += "|= DP Median inaccuracy.......... %.2e\n"%median(UPS_stability_DP)
         res_str += "|= DP Max accuracy............... %.2e\n"%min(UPS_stability_DP)
         res_str += "|= DP Min accuracy............... %.2e\n"%max(UPS_stability_DP)
-        (pmed,pmin,pfrac,flag)=loop_direction_test_power(\
+        (pmed,pmin,pfrac)=loop_direction_test_power(\
                                  [stability['DP_stability'][U[0]] for U in UPS])
-        if flag!='NA':
-            res_str += "|= UPS DP loop_dir test power.... %.1f,%.1f\n"%(pmed,pmin)
-            res_str += "|= UPS DP fraction with power<-2. %.2e\n"%pfrac
-        else:
-            res_str += "|= UPS DP loop_dir test power.... NA\n"
-            res_str += "|= UPS DP fraction with power<-2. NA\n"
+        res_str += "|= UPS DP loop_dir test power.... %s,%s\n"\
+                                                %(f(pmed,'%.1f'),f(pmin,'%.1f'))
+        res_str += "|= UPS DP fraction with power<-3. %s\n"\
+                                                                %f(pfrac,'%.2e')
         res_str += "|= QP Median accuracy............ %.2e\n"%median(UPS_stability_QP)
         res_str += "|= QP Max accuracy............... %.2e\n"%min(UPS_stability_QP)
         res_str += "|= QP Min accuracy............... %.2e\n"%max(UPS_stability_QP)
-        (pmed,pmin,pfrac,flag)=loop_direction_test_power(\
+        (pmed,pmin,pfrac)=loop_direction_test_power(\
                                  [stability['QP_stability'][U[0]] for U in UPS])
-        if flag!='NA':
-            res_str += "|= UPS QP loop_dir test power.... %.1f,%.1f\n"%(pmed,pmin)
-            res_str += "|= UPS QP fraction with power<-2. %.2e\n"%pfrac
-        else:
-            res_str += "|= UPS QP loop_dir test power.... NA\n"
-            res_str += "|= UPS QP fraction with power<-2. NA\n"
-        (pmed,pmin,pmax,flag)=test_consistency(\
+        res_str += "|= UPS QP loop_dir test power.... %s,%s\n"\
+                                                %(f(pmed,'%.1f'),f(pmin,'%.1f'))
+        res_str += "|= UPS QP fraction with power<-3. %s\n"\
+                                                                %f(pfrac,'%.2e')
+        (pmed,pmin,pmax)=test_consistency(\
                                  [stability['DP_stability'][U[0]] for U in UPS],
                                  [stability['QP_stability'][U[0]] for U in UPS])
-        if flag!='NA':
-            res_str += "|= DP vs QP stab test consistency %.1f,%.1f,%.1f\n"%\
-                                                                (pmed,pmin,pmax)
-        else:
-            res_str += "|= DP vs QP stab test consistency NA\n"    
-        
+        res_str += "|= DP vs QP stab test consistency %s,%s,%s\n"\
+                                 %(f(pmed,'%.1f'),f(pmin,'%.1f'),f(pmax,'%.1f'))        
     res_str += "\n= Number of Exceptional PS points : %i\n"%len(EPS)
     if len(EPS)>0:
-        res_str += "|= DP Median accuracy............ %.2e\n"%median(EPS_stability_DP)
-        res_str += "|= DP Max accuracy............... %.2e\n"%min(EPS_stability_DP)
-        res_str += "|= DP Min accuracy............... %.2e\n"%max(EPS_stability_DP)
-        (pmed,pmin,pfrac,flag)=loop_direction_test_power(\
+        res_str += "|= DP Median accuracy............ %s\n"%f(median(EPS_stability_DP),'%.2e')
+        res_str += "|= DP Max accuracy............... %s\n"%f(min(EPS_stability_DP),'%.2e')
+        res_str += "|= DP Min accuracy............... %s\n"%f(max(EPS_stability_DP),'%.2e')
+        pmed,pmin,pfrac=loop_direction_test_power(\
                                  [stability['DP_stability'][E[0]] for E in EPS])
-        if flag!='NA':
-            res_str += "|= EPS DP loop_dir test power.... %.1f,%.1f\n"%(pmed,pmin)
-            res_str += "|= EPS DP fraction with power<-2. %.2e\n"%pfrac
-        else:
-            res_str += "|= EPS DP loop_dir test power.... NA\n"
-            res_str += "|= EPS DP fraction with power<-2. NA\n"
-        res_str += "|= QP Median accuracy............ %.2e\n"%median(EPS_stability_QP)
-        res_str += "|= QP Max accuracy............... %.2e\n"%min(EPS_stability_QP)
-        res_str += "|= QP Min accuracy............... %.2e\n"%max(EPS_stability_QP)
-        (pmed,pmin,pfrac,flag)=loop_direction_test_power(\
+        res_str += "|= EPS DP loop_dir test power.... %s,%s\n"\
+                                                %(f(pmed,'%.1f'),f(pmin,'%.1f'))
+        res_str += "|= EPS DP fraction with power<-3. %s\n"\
+                                                                %f(pfrac,'%.2e')
+        res_str += "|= QP Median accuracy............ %s\n"\
+                                             %f(median(EPS_stability_QP),'%.2e')
+        res_str += "|= QP Max accuracy............... %s\n"\
+                                                %f(min(EPS_stability_QP),'%.2e')
+        res_str += "|= QP Min accuracy............... %s\n"\
+                                                %f(max(EPS_stability_QP),'%.2e')
+        pmed,pmin,pfrac=loop_direction_test_power(\
                                  [stability['QP_stability'][E[0]] for E in EPS])
-        if flag!='NA':
-            res_str += "|= EPS QP loop_dir test power.... %.1f,%.1f\n"%(pmed,pmin)
-            res_str += "|= EPS QP fraction with power<-2. %.2e\n"%pfrac
-        else:
-            res_str += "|= EPS QP loop_dir test power.... NA\n"
-            res_str += "|= EPS QP fraction with power<-2. NA\n"
+        res_str += "|= EPS QP loop_dir test power.... %s,%s\n"\
+                                                %(f(pmed,'%.1f'),f(pmin,'%.1f'))
+        res_str += "|= EPS QP fraction with power<-3. %s\n"%f(pfrac,'%.2e')
 
     res_str += \
     """
-= Legend for the statistics of the stability tests.
+= Legend for the statistics of the stability tests. (all log below ar log_10)
   The loop direction test power P is computed as follow:
      P = accuracy(loop_dir_test) / accuracy(all_other_test)
-  So that P is large if the loop direction test is effective.
+  So that log(P) is positive if the loop direction test is effective.
   The tuple printed out is (log(median(P)),log(min(P)))
   The consistency test C is computed when QP evaluations are available:
      C = accuracy(all_DP_test) / abs(best_QP_eval-best_DP_eval)
@@ -1837,7 +1925,11 @@ def output_stability(stability, mg_root, opt):
             logFile.write('\n  DP accuracy :  %.3e\n'%DP_stability[ups[0]])
             logFile.write('  QP accuracy :  %.3e\n'%QP_stability[ups[0]])
     
-    accuracies=[10**(-i/5.0) for i in range(5*17)]
+    # Set the x-range so that it spans [10**-17,10**(min_digit_accuracy)]
+    min_digit_acc=int(math.log(max(DP_stability))/math.log(10))
+    if min_digit_acc>=0:
+        min_digit_acc = min_digit_acc+1
+    accuracies=[10**(-17+(i/5.0)) for i in range(5*(17+min_digit_acc)+1)]
     data_plot=[]
     for acc in accuracies:
         data_plot.append(float(len([d for d in DP_stability if d>acc]))\
@@ -1863,9 +1955,15 @@ def output_stability(stability, mg_root, opt):
                                                (process.nice_string()[9:],mode))
         plt.ylabel('Fraction of events')
         plt.xlabel('Maximal precision')
-        logger.info('Some stability statistics will be displayed once you '+\
+        if not reusing:
+            logger.info('Some stability statistics will be displayed once you '+\
                                                         'close the plot window')
-        plt.show()
+            plt.show()
+        else:
+            fig_output_file = str(os.path.join(mg_root, 'stability_plot_%s_%s.png'\
+                                                %(mode,process.shell_string())))
+            logger.info('Stability plot output to file %s. '%fig_output_file)
+            plt.savefig(fig_output_file)
         return res_str
     except ImportError:
         res_str += "\n= Install matplotlib to get a "+\
@@ -1875,26 +1973,32 @@ def output_stability(stability, mg_root, opt):
 def output_timings(process, timings, loop_optimized_output):
     """Present the result of a timings check in a nice format """
     
+    # Define shortcut
+    f = format_output
+    
     res_str = "%s \n"%process.nice_string()
-    gen_total = timings['HELAS_MODEL_compilation']+\
-                timings['HelasDiagrams_generation']+\
-                timings['Process_output']+\
-                timings['Diagrams_generation']+\
-                timings['Process_compilation']+\
-                timings['Initialization']
-    res_str += "\n= Generation time total...... ========== %.3gs\n"%gen_total
-    res_str += "|= Diagrams generation....... %.3gs\n"\
-                                                 %timings['Diagrams_generation']
-    res_str += "|= Helas Diagrams generation. %.3gs\n"\
-                                            %timings['HelasDiagrams_generation']
-    res_str += "|= Process output............ %.3gs\n"\
-                                            %timings['Process_output']
-    res_str += "|= HELAS+model compilation... %.3gs\n"\
-                                            %timings['HELAS_MODEL_compilation']
-    res_str += "|= Process compilation....... %.3gs\n"\
-                                            %timings['Process_compilation']
-    res_str += "|= Initialization............ %.3gs\n"\
-                                            %timings['Initialization']
+    try:
+        gen_total = timings['HELAS_MODEL_compilation']+\
+                    timings['HelasDiagrams_generation']+\
+                    timings['Process_output']+\
+                    timings['Diagrams_generation']+\
+                    timings['Process_compilation']+\
+                    timings['Initialization']
+    except TypeError:
+        gen_total = None
+    res_str += "\n= Generation time total...... ========== %s\n"%f(gen_total,'%.3gs')
+    res_str += "|= Diagrams generation....... %s\n"\
+                                       %f(timings['Diagrams_generation'],'%.3gs')
+    res_str += "|= Helas Diagrams generation. %s\n"\
+                                  %f(timings['HelasDiagrams_generation'],'%.3gs')
+    res_str += "|= Process output............ %s\n"\
+                                            %f(timings['Process_output'],'%.3gs')
+    res_str += "|= HELAS+model compilation... %s\n"\
+                                   %f(timings['HELAS_MODEL_compilation'],'%.3gs')
+    res_str += "|= Process compilation....... %s\n"\
+                                       %f(timings['Process_compilation'],'%.3gs')
+    res_str += "|= Initialization............ %s\n"\
+                                            %f(timings['Initialization'],'%.3gs')
     res_str += "\n= Unpolarized time / PSpoint. ========== %.3gms\n"\
                                     %(timings['run_unpolarized_total']*1000.0)
     if loop_optimized_output:
@@ -1921,19 +2025,21 @@ def output_timings(process, timings, loop_optimized_output):
     res_str += "\n= Miscellaneous ========================\n"
     res_str += "|= Loading time (Color data). ~%.3gms\n"\
                                                %(timings['Booting_time']*1000.0)
-    res_str += "|= Number of hel. computed... %d/%d\n"\
-                                %(timings['n_contrib_hel'],timings['n_tot_hel'])
-    res_str += "|= Number of loop diagrams... %d\n"%timings['n_loops']
+    res_str += "|= Number of hel. computed... %s/%s\n"\
+                %(f(timings['n_contrib_hel'],'%d'),f(timings['n_tot_hel'],'%d'))
+    res_str += "|= Number of loop diagrams... %s\n"%f(timings['n_loops'],'%d')
     if loop_optimized_output:
-        res_str += "|= Number of loop groups..... %d\n"%timings['n_loop_groups']
-        res_str += "|= Number of loop wfs........ %d\n"%timings['n_loop_wfs']
+        res_str += "|= Number of loop groups..... %s\n"\
+                                               %f(timings['n_loop_groups'],'%d')
+        res_str += "|= Number of loop wfs........ %s\n"\
+                                                  %f(timings['n_loop_wfs'],'%d')
         for i, r in enumerate(timings['loop_wfs_ranks']):
             res_str += "||= # of loop wfs of rank %d.. %d\n"%(i,r)
     res_str += "\n= Output disk size =====================\n"
-    res_str += "|= Source directory sources.. %s\n"%timings['du_source']
-    res_str += "|= Process sources........... %s\n"%timings['du_process']    
-    res_str += "|= Color and helicity data... %s\n"%timings['du_color']  
-    res_str += "|= Executable size........... %s\n"%timings['du_exe'] 
+    res_str += "|= Source directory sources.. %s\n"%f(timings['du_source'],'%s')
+    res_str += "|= Process sources........... %s\n"%f(timings['du_process'],'%s')    
+    res_str += "|= Color and helicity data... %s\n"%f(timings['du_color'],'%s')
+    res_str += "|= Executable size........... %s\n"%f(timings['du_exe'],'%s')
     
     return res_str
 
