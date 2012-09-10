@@ -108,7 +108,7 @@ class Cluster(object):
             if fail:
                 raise ClusterManagmentError('Some Jobs are in a Hold/... state. Please try to investigate or contact the IT team')
             if idle + run == 0:
-                time.sleep(20) #security to ensure that the file are really written on the disk
+                time.sleep(60) #security to ensure that the file are really written on the disk
                 logger.info('All jobs finished')
                 break
             fct(idle, run, finish)
