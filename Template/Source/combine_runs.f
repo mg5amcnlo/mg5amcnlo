@@ -335,7 +335,7 @@ c-----
       nevents = 0
       i=1
       open(unit=35, file=fname,status='old',err=99)
-      read(35,*,err=99,end=99) xsec,xerr, x1, ntry,x3,x4,nevents
+      read(35,*,err=99,end=99) xsec,xerr, x1, ntry,x3,x4,nevents,x3,x4
       do while (.true.)
          read(35,*,end=99,err=99) x1,xsec_it(i),xerr_it(i),
      $        eff(i),wmax(i)
@@ -439,8 +439,8 @@ c-----
       i3 = 0
       i4 = 0
       open(unit=35, file=fname,status='unknown',err=99)
-      write(35,'(3e12.5,2i9,i5,i9,e10.3)') xsec,xerr, x1, ntry,i3,i4
-     $     ,nevents,(1.00*nevents)/xsec
+      write(35,'(3e12.5,2i9,i5,i9,e10.3,e12.5)') xsec,xerr, x1, ntry,i3,i4
+     $     ,nevents,(1.00*nevents)/xsec,(1.00*nevents)/xsec
       i=1
       do while (xsec_it(i) .gt. 0 .and. i .lt. 10)
          write(35,'(i4,4e15.5)') i,xsec_it(i),xerr_it(i),
