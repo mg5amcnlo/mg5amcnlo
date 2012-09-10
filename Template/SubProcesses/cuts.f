@@ -384,9 +384,9 @@ c     s-channel min & max pt of sum of 4-momenta
 c     
       do i=nincoming+1,nexternal-1
          do j=i+1,nexternal
-            if(debug)write (*,*) 'ptll(',i,',',j,')=',dsqrt(PtDot(p(0,i),p(0,j)))
-            if(debug)write (*,*) dsqrt(ptll_min(j,i)),dsqrt(ptll_max(j,i))
-            if(ptll_min(j,i).gt.0.or.dsqrt(ptll_max(j,i)).ge.0d0) then
+            if(debug)write (*,*) 'ptll(',i,',',j,')=',PtDot(p(0,i),p(0,j))
+            if(debug)write (*,*) ptll_min(j,i),ptll_max(j,i)
+            if(ptll_min(j,i).gt.0.or.ptll_max(j,i).ge.0d0) then
                tmp=PtDot(p(0,i),p(0,j))
                notgood=(tmp .lt. ptll_min(j,i).or.
      $              ptll_max(j,i).ge.0d0 .and. tmp.gt.ptll_max(j,i))
@@ -407,8 +407,8 @@ c     s-channel min & max invariant mass cuts
 c     
       do i=nincoming+1,nexternal-1
          do j=i+1,nexternal
-            if(debug) write (*,*) 's(',i,',',j,')=',dsqrt(Sumdot(p(0,i),p(0,j),+1d0))
-            if(debug) write (*,*) dsqrt(s_min(j,i)),dsqrt(s_max(j,i))
+            if(debug) write (*,*) 's(',i,',',j,')=',Sumdot(p(0,i),p(0,j),+1d0)
+            if(debug) write (*,*) s_min(j,i),s_max(j,i)
             if(s_min(j,i).gt.0.or.s_max(j,i).ge.0d0) then
                tmp=SumDot(p(0,i),p(0,j),+1d0)
                if(s_min(j,i).le.s_max(j,i) .or. s_max(j,i).lt.0d0)then

@@ -844,7 +844,7 @@ c         write(*,*) 'using costh,phi',ix,ix+1
             jac=-8
             return
          endif
-         pswgt = pswgt*.5D0*PI*SQRT(LAMBDA(ONE,XA2,XB2))/(4.D0*PI)
+         pswgt = pswgt*.5D0*PI*SQRT(MAX(LAMBDA(ONE,XA2,XB2),0d0))/(4.D0*PI)
          call mom2cx(m(i),m(itree(1,i)),m(itree(2,i)),costh,phi,
      &        p(0,itree(1,i)),p(0,itree(2,i)))
          call boostx(p(0,itree(1,i)),p(0,i),p(0,itree(1,i)))

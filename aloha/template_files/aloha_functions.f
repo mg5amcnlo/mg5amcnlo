@@ -762,7 +762,7 @@ c#endif
 
       if ( qq.ne.rZero ) then
          pq = p(1)*q(1)+p(2)*q(2)+p(3)*q(3)
-         m = sqrt(q(0)**2-qq)
+         m = sqrt(max(q(0)**2-qq,1d-99))
          lf = ((q(0)-m)*pq/qq+p(0))/m
          pboost(0) = (p(0)*q(0)+pq)/m
          pboost(1) =  p(1)+q(1)*lf
@@ -983,7 +983,7 @@ c#endif
       if ( mass1*mass2.eq.rZero ) then
          pp = (esum-abs(ed))*rHalf
       else
-         pp = sqrt((md2/esum)**2-rTwo*(mass1**2+mass2**2)+esum**2)*rHalf
+         pp = sqrt(max((md2/esum)**2-rTwo*(mass1**2+mass2**2)+esum**2,1d-99))*rHalf
       endif
       sinth1 = sqrt((rOne-costh1)*(rOne+costh1))
 
