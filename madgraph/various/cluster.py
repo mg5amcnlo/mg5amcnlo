@@ -273,7 +273,7 @@ class CondorCluster(Cluster):
         else: 
             input_files = ''
         if output_files:
-            output_files = 'transfer_input_files = %s' % ','.join(output_files)
+            output_files = 'transfer_output_files = %s' % ','.join(output_files)
         else:
             output_files = ''
         

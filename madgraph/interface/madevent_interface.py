@@ -3309,7 +3309,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         elif mode == 1:
             # For condor cluster, create the input/output files
-            if self.options['cluster_type+']  == 'condor' and 'ajob' in exe: 
+            if self.options['cluster_type']  == 'condor' and 'ajob' in exe: 
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
                 output_files = []
@@ -3339,9 +3339,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 text = fsock.read()
                 output_files = Gre.findall(text)
                 if not output_files:
-                    Ire = re.compile("for i in ([\d\s*]) ; do")
+                    Ire = re.compile("for i in ([\d\s]*) ; do")
                     data = Ire.findall(text)
-                    data = data.split()
+                    data = ' '.join(data).split()
                     for nb in data:
                         output_files.append('G%s' % nb)
                 else:
