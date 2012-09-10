@@ -130,13 +130,8 @@ class Cluster(object):
         while 1:        
             status = self.control_one_job(id)
             if not status in ['R','I']:
-                time.sleep(20) #security to ensure that the file are really written on the disk
-                if log:
-                    # Check for existance of log file
-                    if os.path.exists(log):
-                        break
-                else:    
-                    break
+                time.sleep(60) #security to ensure that the file are really written on the disk
+                break
             time.sleep(30)
         
         if special_output:
