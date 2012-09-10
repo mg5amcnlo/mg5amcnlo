@@ -1,10 +1,12 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.9 (XX/XX/12)  JA: Added set option "temp_dir" in madevent interface to
+1.4.8.5 (XX/XX/12)  JA: Added set option "temp_dir" in madevent interface to
                       allow running event generation without using central
                       disk access for the integration channels. Still need
                       access to central disk for copying, event combination,
                       running Pythia/PGS/Delphes etc.
+
+1.4.8.4 (29/08/12) OM: Fix a web problem which creates generations to run twice on the web.
 
 1.4.8.3 (21/08/12) JA: Ensure that the correct seed is written also in the .lhe
                        file header.

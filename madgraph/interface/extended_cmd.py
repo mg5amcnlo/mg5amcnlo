@@ -709,7 +709,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             self.history.pop()
         
         # Read the lines of the file and execute them
-        self.inputfile = open(filepath)
+        commandline = open(filepath).readlines()
+        self.inputfile = (l for l in commandline) # make a generator
+        # Note using "for line in open(filepath)" is not safe since the file
+        # filepath can be overwritten during the run (leading to weird results)
+        # Note also that we need a generator and not a list.
         for line in self.inputfile:
             #remove pointless spaces and \n
             line = line.replace('\n', '').strip()
