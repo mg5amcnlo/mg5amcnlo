@@ -162,8 +162,6 @@ class Cluster(object):
         of central disk"""
 
         # Only use this for ajob files, not for combine_events, pythia, etc.
-        if prog.startswith("./"):
-            prog = prog[2:]
         if not prog.startswith("ajob"):
             return prog
 

@@ -2032,7 +2032,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.total_jobs += len(alljobs)
             for i, job in enumerate(alljobs):
                 job = os.path.basename(job)
-                self.launch_job('./%s' % job, cwd=Pdir, remaining=(len(alljobs)-i-1), 
+                self.launch_job('%s' % job, cwd=Pdir, remaining=(len(alljobs)-i-1), 
                                                     run_type='survey on %s (%s/%s)' % (subdir,nb_proc+1,len(subproc)))
                 if os.path.exists(pjoin(self.me_dir,'error')):
                     self.monitor(html=True)
@@ -2101,7 +2101,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.total_jobs += nb_tot
                 for i, job in enumerate(alljobs):
                     job = os.path.basename(job)
-                    self.launch_job('./%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
+                    self.launch_job('%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
                              run_type='Refine number %s on %s (%s/%s)' % 
                              (self.nb_refine, subdir, nb_proc+1, len(subproc)))
         self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine, 
@@ -4059,7 +4059,7 @@ class GridPackCmd(MadEventCmd):
                 self.total_jobs += nb_tot
                 for i, job in enumerate(alljobs):
                     job = os.path.basename(job)
-                    self.launch_job('./%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
+                    self.launch_job('%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
                              run_type='Refine number %s on %s (%s/%s)' %
                              (self.nb_refine, subdir, nb_proc+1, len(subproc)))
                     if os.path.exists(pjoin(self.me_dir,'error')):
