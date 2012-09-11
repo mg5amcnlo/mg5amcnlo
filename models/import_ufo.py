@@ -114,7 +114,12 @@ def import_model(model_name, decay=False):
             
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
-        model.restrict_model(restrict_file, rm_parameter=not decay)
+        if model_name == 'mssm':
+            keep_external=True
+        else:
+            keep_external=False
+        model.restrict_model(restrict_file, rm_parameter=not decay,
+                                            keep_external=keep_external)
         
     return model
 
@@ -808,10 +813,11 @@ class RestrictModel(model_reader.ModelReader):
         self.rule_card = check_param_card.ParamCardRule()
         self.restrict_card = None
      
-    def restrict_model(self, param_card, rm_parameter=True):
+    def restrict_model(self, param_card, rm_parameter=True, keep_external=False):
         """apply the model restriction following param_card.
-        fix_parameter defines if the Zero/one parameter are removed or not from
+        rm_parameter defines if the Zero/one parameter are removed or not from
         the model.
+        keep_external if the param_card need to be kept intact
         """
 
         self.restrict_card = param_card
@@ -838,12 +844,14 @@ class RestrictModel(model_reader.ModelReader):
                 
         # deal with parameters
         parameters = self.detect_special_parameters()
-        self.fix_parameter_values(*parameters, simplify=rm_parameter)
+        self.fix_parameter_values(*parameters, simplify=rm_parameter, 
+                                                    keep_external=keep_external)
         
         # deal with identical parameters
-        iden_parameters = self.detect_identical_parameters()
-        for iden_param in iden_parameters:
-            self.merge_iden_parameters(iden_param)
+        if not keep_external:
+            iden_parameters = self.detect_identical_parameters()
+            for iden_param in iden_parameters:
+                self.merge_iden_parameters(iden_param)
             
         # change value of default parameter if they have special value:
         # 9.999999e-1 -> 1.0
@@ -853,7 +861,8 @@ class RestrictModel(model_reader.ModelReader):
                 self['parameter_dict'][name] = 1
             elif value == 0.000001e-99:
                 self['parameter_dict'][name] = 0
-
+      
+                    
     def locate_coupling(self):
         """ create a dict couplings_name -> vertex """
         
@@ -928,7 +937,7 @@ class RestrictModel(model_reader.ModelReader):
         #detect identical parameter and remove the duplicate parameter
         for param in external_parameters[:]:
             value = self['parameter_dict'][param.name]
-            if value == 0:
+            if value in [0,1,0.000001e-99,9.999999e-1]:
                 continue
             key = (param.lhablock, value)
             mkey =  (param.lhablock, -value)
@@ -1051,7 +1060,8 @@ class RestrictModel(model_reader.ModelReader):
                     data.remove(coupling)
                             
         
-    def fix_parameter_values(self, zero_parameters, one_parameters, simplify=True):
+    def fix_parameter_values(self, zero_parameters, one_parameters, 
+                                            simplify=True, keep_external=False):
         """ Remove all instance of the parameters in the model and replace it by 
         zero when needed."""
 
@@ -1091,7 +1101,7 @@ class RestrictModel(model_reader.ModelReader):
                         used.add(use)
         else:
             used = set([i for i in special_parameters if i])
-             
+        
         
         # simplify the regular expression
         re_str = '|'.join([param for param in special_parameters 
@@ -1115,6 +1125,7 @@ class RestrictModel(model_reader.ModelReader):
                 if simplify:
                     for use in  re_pat.findall(parameter.expr):
                         used.add(use)
+                        
         # modify the object for those which are still used
         for param in used:
             if not param:
@@ -1131,7 +1142,8 @@ class RestrictModel(model_reader.ModelReader):
         # remove completely useless parameters
         for param in special_parameters:
             #by pass parameter still in use
-            if param in used:
+            if param in used or \
+                  (keep_external and param_info[param]['dep'] == ('external',)):
                 logger_mod.debug('fix parameter value: %s' % param)
                 continue 
             logger_mod.debug('remove parameters: %s' % param)

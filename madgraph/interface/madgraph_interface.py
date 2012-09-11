@@ -26,6 +26,7 @@ import signal
 import subprocess
 import sys
 import shutil
+import StringIO
 import traceback
 import time
 import urllib
@@ -72,6 +73,8 @@ import madgraph.various.cluster as cluster
 
 import models as ufomodels
 import models.import_ufo as import_ufo
+import models.write_param_card as param_writer
+import models.check_param_card as check_param_card
 
 import aloha.aloha_fct as aloha_fct
 import aloha.create_aloha as create_aloha
@@ -317,6 +320,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info('   the path to the last created/used directory is used')
         logger.info('   The program used to open those files can be chosen in the')
         logger.info('   configuration file ./input/mg5_configuration.txt')
+        
+    def help_customize_model(self):
+        logger.info("syntax: customize_model --save=NAME")
+        logger.info("--  Open an invite where you options to tweak the model.")
+        logger.info("    If you specify the option --save=NAME, this tweak will be")
+        logger.info("    available for future import with the command 'import model XXXX-NAME'")
         
     def help_output(self):
         logger.info("syntax: output [" + "|".join(self._export_formats) + \
@@ -780,7 +789,25 @@ This will take effect only in a NEW terminal
         if len(args) != 2 or args[0] not in self._save_opts:
             self.help_load()
             raise self.InvalidCmd('wrong \"load\" format')
+    
+    def check_customize_model(self, args):
+        """check the validity of the line"""
+        
+        # Check argument validity
+        if len(args) >1 :
+            self.help_customize_model()
+            raise self.InvalidCmd('No argument expected for this command')
+        
+        if len(args):
+            if not args[0].startswith('--save='):
+                self.help_customize_model()
+                raise self.InvalidCmd('Wrong argument for this command')
+            if '-' in args[0][6:]:
+                raise self.InvalidCmd('The name given in save options can\'t contain \'-\' symbol.')
             
+        if self._model_v4_path:
+            raise self.InvalidCmd('Restriction of Model is not supported by v4 model.')
+        
         
     def check_save(self, args):
         """ check the validity of the line"""
@@ -1211,9 +1238,19 @@ class CompleteForCmd(cmd.CompleteCmd):
             couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
         return self.list_completion(text, self._particle_names + \
                                     self._multiparticles.keys() + couplings)
-          
+    
+    def complete_customize_model(self, text, line, begidx, endidx):
+        "Complete the customize_model command"
+        
+        args = self.split_arg(line[0:begidx])
+
+        # Format
+        if len(args) == 1:
+            return self.list_completion(text, ['--save='])
+        
+    
     def complete_check(self, text, line, begidx, endidx):
-        "Complete the add command"
+        "Complete the check command"
 
         args = self.split_arg(line[0:begidx])
 
@@ -3496,6 +3533,111 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self._done_export = None
             else:
                 raise self.RWError('Could not load processes from file %s' % args[1])
+    
+    
+    def do_customize_model(self, line):
+        """create a restriction card in a interactive way"""
+
+        args = self.split_arg(line)
+        self.check_customize_model(args)
+
+        try:
+            model_path = import_ufo.find_ufo_path(self._curr_model.get('name'))
+        except import_ufo.UFOImportError:
+            name = self._curr_model.get('name').rsplit('-',1)[0]
+            try:
+                model_path = import_ufo.find_ufo_path(name)
+            except import_ufo.UFOImportError:
+                print name
+                raise self.InvalidCmd('''Invalid model.''')
+                
+        if not os.path.exists(pjoin(model_path,'build_restrict.py')):
+            raise self.InvalidCmd('''Model not compatible with this option.''')
+        
+        # (re)import the full model (get rid of the default restriction)
+        self._curr_model = import_ufo.import_full_model(model_path)
+        
+        #1) create the full param_card
+        out_path = StringIO.StringIO()
+        param_writer.ParamCardWriter(self._curr_model, out_path)
+        # and load it to a python object
+        param_card = check_param_card.ParamCard(out_path.getvalue().split('\n'))
+        
+        #2) Import the option available in the model
+        ufo_model = ufomodels.load_model(model_path)
+        all_categories = ufo_model.build_restrict.all_categories
+        
+        #3) making the options
+        def change_options(name, all_categories):
+            for category in all_categories:
+                for options in category:            
+                    if options.name == name:
+                        options.status = not options.status
+
+        # asking the question to the user                        
+        while 1:
+            question = ''
+            answers = ['0']
+            cat = {} 
+            for category in all_categories:
+                question += category.name + ':\n'
+                for options in category:
+                    if not options.first:
+                        continue
+                    question += '    %s: %s [%s]\n' % (len(answers), options.name, 
+                                options.display(options.status))
+                    cat[str(len(answers))] = options.name
+                    answers.append(len(answers))
+            question += 'Enter a number to change it\'s status or press enter to validate'
+            answers.append('done')
+            value = self.ask(question,'0',answers)
+            if value not in ['0','done']:
+                change_options(cat[value], all_categories)
+            else:
+                break
+
+        ## Make a Temaplate for  the restriction card. (card with no restrict)
+        for block in param_card:
+            value_dict = {}
+            for param in param_card[block]:
+                value = param.value
+                if value == 0:
+                    param.value = 0.000001e-99
+                elif value == 1:
+                    param.value = 9.999999e-1                
+                elif abs(value) in value_dict:
+                    param.value += value_dict[abs(value)] * 1e-4 * param.value
+                    value_dict[abs(value)] += 1
+                else:
+                    value_dict[abs(value)] = 1 
+        
+        for category in all_categories:
+            for options in category:
+                if not options.status:
+                    continue
+                param = param_card[options.lhablock].get(options.lhaid)
+                param.value = options.value
+        
+        logger.info('Loading the resulting model')
+        # Applying the restriction 
+        self._curr_model = import_ufo.RestrictModel(self._curr_model)
+        self._curr_model.restrict_model(param_card)
+        
+        if args:
+            name = args[0].split('=',1)[1]
+            path = pjoin(model_path,'restrict_%s.dat' % name)
+            logger.info('Save restriction file as %s' % path)
+            param_card.write(path)
+            self._curr_model['name'] += '-%s' % name
+        
+        
+        
+        
+        
+        
+        
+        
+    
     
     def do_save(self, line, check=True, to_keep={}):
         """Not in help: Save information to file"""

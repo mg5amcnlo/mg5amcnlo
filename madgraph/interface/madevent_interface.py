@@ -61,6 +61,7 @@ try:
     import madgraph.various.gen_crossxhtml as gen_crossxhtml
     import madgraph.various.sum_html as sum_html
     import madgraph.various.misc as misc
+    import madgraph.various.combine_runs as combine_runs
 
     import models.check_param_card as check_param_card    
     from madgraph import InvalidCmd, MadGraph5Error
@@ -79,6 +80,7 @@ except Exception, error:
     import internal.cluster as cluster
     import internal.check_param_card as check_param_card
     import internal.sum_html as sum_html
+    import internal.combine_runs as combine_runs
     MADEVENT = True
 
 class MadEventError(Exception):
@@ -1540,7 +1542,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             fsock = open(pjoin(me_dir,'RunWeb'),'w')
             fsock.write(`pid`)
             fsock.close()
-            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')])
+            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
       
         self.to_store = []
         self.run_name = None
@@ -2438,9 +2440,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             pass
         
         bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
-        misc.call([pjoin(bindir, 'combine_runs')], 
-                                          cwd=pjoin(self.me_dir,'SubProcesses'),
-                                          stdout=devnull)
+
+        #misc.call([pjoin(bindir, 'combine_runs')], 
+        #                                  cwd=pjoin(self.me_dir,'SubProcesses'),
+        #                                  stdout=devnull)
+        #print 'combine_runs takes %s s ' % (time.time() - start)
+        #start = time.time()
+        combine_runs.CombineRuns(self.me_dir)
+        #print 'combine_runs (python) takes %s s ' % (time.time() - start)
         
         cross, error = sum_html.make_all_html_results(self)
         self.results.add_detail('cross', cross)
@@ -2473,9 +2480,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         output = open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
         # Store the number of unweighted events for the results object
         pat = re.compile(r'''\s*Unweighting selected\s*(\d+)\s*events''',re.MULTILINE)
-        if output:
+        if self.cluster_mode == 1 and not output:
+            time.sleep(30)
+            output = open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
+            
+        if output:  
             nb_event = pat.search(output).groups()[0]
             self.results.add_detail('nb_event', nb_event)
+        else :
+            nb_event =0
         
         # Define The Banner
         tag = self.run_card['run_tag']
@@ -2579,6 +2592,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if not os.path.exists(pjoin(self.me_dir, 'HTML', run)):
             os.mkdir(pjoin(self.me_dir, 'HTML', run))    
         
+        # 1) Store overall process information
+        input = pjoin(self.me_dir, 'SubProcesses', 'results.dat')
+        output = pjoin(self.me_dir, 'SubProcesses', '%s_results.dat' % run)
+        files.cp(input, output) 
+
         # 2) Treat the files present in the P directory
         for P_path in SubProcesses.get_subP(self.me_dir):
             G_dir = [G for G in os.listdir(P_path) if G.startswith('G') and 
@@ -2588,10 +2606,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 # Remove events file (if present)
                 if os.path.exists(pjoin(G_path, 'events.lhe')):
                     os.remove(pjoin(G_path, 'events.lhe'))
-                # Remove results.dat (but not for gridpack)
-                if self.run_card['gridpack'] not in self.true:
-                    if os.path.exists(pjoin(G_path, 'results.dat')):
-                        os.remove(pjoin(G_path, 'results.dat'))
+                # Store results.dat
+                if os.path.exists(pjoin(G_path, 'results.dat')):
+                    input = pjoin(G_path, 'results.dat')
+                    output = pjoin(G_path, '%s_results.dat' % run)
+                    files.cp(input, output) 
                 # Store log
                 if os.path.exists(pjoin(G_path, 'log.txt')):
                     input = pjoin(G_path, 'log.txt')
@@ -2607,6 +2626,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                         files.mv(input, output) 
                         misc.call(['gzip', output], stdout=devnull, 
                                         stderr=devnull, cwd=G_path)
+                # Delete ftn25 to ensure reproducible runs
+                if os.path.exists(pjoin(G_path, 'ftn25')):
+                    os.remove(pjoin(G_path, 'ftn25'))
+
         # 3) Update the index.html
         misc.call(['%s/gen_cardhtml-pl' % self.dirbin],
                             cwd=pjoin(self.me_dir))
@@ -3529,8 +3552,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         # Compile
         for name in ['../bin/internal/gen_ximprove', 'all', 
-                     '../bin/internal/combine_events', 
-                     '../bin/internal/combine_runs']:
+                     '../bin/internal/combine_events']:
             misc.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
         
@@ -4458,6 +4480,9 @@ class GridPackCmd(MadEventCmd):
         # initialize / remove lhapdf mode
         # self.configure_directory() # All this has been done before
         self.cluster_mode = 0 # force single machine
+
+        # Store seed in randinit file, to be read by ranmar.f
+        self.save_random()
         
         self.update_status('Refine results to %s' % precision, level=None)
         logger.info("Using random number seed offset = %s" % self.random)

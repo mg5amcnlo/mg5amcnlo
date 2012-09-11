@@ -184,7 +184,7 @@ class Switcher(object):
         
     def check_process_format(self, *args, **opts):
         return self.cmd.check_process_format(self, *args, **opts)
-        
+    
     def check_save(self, *args, **opts):
         return self.cmd.check_save(self, *args, **opts)
         
@@ -298,7 +298,7 @@ class Switcher(object):
         
     def do_set(self, *args, **opts):
         return self.cmd.do_set(self, *args, **opts)
-        
+    
     def do_tutorial(self, *args, **opts):
         return self.cmd.do_tutorial(self, *args, **opts)
         
@@ -361,6 +361,18 @@ class Switcher(object):
 
     def set_configuration(self, *args, **opts):
         return self.cmd.set_configuration(self, *args, **opts)
+
+    def check_customize_model(self, *args, **opts):
+        return self.cmd.check_customize_model(self, *args, **opts)
+
+    def complete_customize_model(self, *args, **opts):
+        return self.cmd.complete_customize_model(self, *args, **opts)
+
+    def do_customize_model(self, *args, **opts):
+        return self.cmd.do_customize_model(self, *args, **opts)
+
+    def help_customize_model(self, *args, **opts):
+        return self.cmd.help_customize_model(self, *args, **opts)
 
 
 class MasterCmd(Switcher, MGcmd.MadGraphCmd, cmd.CmdShell):

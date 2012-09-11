@@ -45,8 +45,8 @@ c
       integer           mincfig, maxcfig
       common/to_configs/mincfig, maxcfig
 
-      double precision     xmean(99),xsigma(99),xwmax(99),xeff(99)
-      common/to_iterations/xmean,    xsigma,    xwmax,    xeff
+      double precision     xmean(99),xsigma(99),xwmax(99),xeff(99), xrmean(99)
+      common/to_iterations/xmean,    xsigma,    xwmax,    xeff,     xrmean
 
       double precision    accur
       common /to_accuracy/accur
@@ -62,10 +62,10 @@ c
       double precision xzoomfact
       common/to_zoom/  xzoomfact
 
-      double precision tmean, tsigma
+      double precision tmean, trmean, tsigma
       integer             dim, events, itm, kn, cur_it, invar, configs
       common /sample_common/
-     .     tmean, tsigma, dim, events, itm, kn, cur_it, invar, configs
+     .     tmean, trmean, tsigma, dim, events, itm, kn, cur_it, invar, configs
 
       integer           use_cut
       common /to_weight/use_cut
@@ -129,26 +129,16 @@ c
             ievent=ievent+1
             call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
             if (pass_point(p)) then
-               xzoomfact = 1d0
                fx = dsig(p,wgt,0) !Evaluate function
-               if (xzoomfact .gt. 0d0) then
-                  wgt = wgt*fx*xzoomfact
-               else
-                  wgt = -xzoomfact
-               endif
-               if (wgt .gt. 0d0) call graph_point(p,wgt) !Update graphs
+               wgt = wgt*fx
+               if (wgt .ne. 0d0) call graph_point(p,wgt) !Update graphs
             else
                fx =0d0
                wgt=0d0
             endif
-            if (nzoom .le. 0) then
-               call sample_put_point(wgt,x(1),iter,ipole,itmin) !Store result
-            else
-               nzoom = nzoom -1
-               ievent=ievent-1
-            endif
+            call sample_put_point(wgt,x(1),iter,ipole,itmin) !Store result
          endif
-         if (wgt .gt. 0d0) kevent=kevent+1    
+         if (wgt .ne. 0d0) kevent=kevent+1    
 c
 c     Write out progress/histograms
 c
@@ -172,15 +162,18 @@ c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin but < 3
       i = cur_it - itsum
       if (i .gt. 0) then
       tmean = 0d0
+      trmean = 0d0
       tsigma = 0d0
       tdem = 0d0
       do while (xmean(i) .ne. 0 .and. i .lt. cur_it)
          tmean = tmean+xmean(i)*xmean(i)**2/xsigma(i)**2
+         trmean = trmean+xrmean(i)*xmean(i)**2/xsigma(i)**2
          tdem = tdem+xmean(i)**2/xsigma(i)**2
          tsigma = tsigma + xmean(i)**2/ xsigma(i)**2
          i=i+1
       enddo
       tmean = tmean/tsigma
+      trmean = trmean/tsigma
       tsigma= tmean/sqrt(tsigma)
 c      nun = n_unwgted()
 
@@ -191,13 +184,14 @@ c      nun = n_unwgted()
          chi2 = chi2+(xmean(i)-tmean)**2/xsigma(i)**2
       enddo
       chi2 = chi2/2d0   !Since using only last 3, n-1=2
-      write(*,'(a)') '-----------------------------------------------------'
+      write(*,'(a)') '-------------------------------------------------'
       write(*,'(a)') '---------------------------'
       write(*,'(a,i3,a,e12.4)') ' Results Last ',itsum,
-     $     ' iters:  Integral = ',tmean
-      write(*,'(25x,a,e12.4)') 'Std dev = ',tsigma
-      write(*,'(17x,a,f12.4)') 'Chi**2 per DoF. =',chi2
-      write(*,'(a)') '-----------------------------------------------------'
+     $     ' iters: Integral = ',trmean
+      write(*,'(21x,a,e12.4)') 'Abs integral = ',tmean
+      write(*,'(26x,a,e12.4)') 'Std dev = ',tsigma
+      write(*,'(18x,a,f12.4)') 'Chi**2 per DoF. =',chi2
+      write(*,'(a)') '-------------------------------------------------'
       write(*,'(a)') '---------------------------'
 
       if (nun .lt. 0) nun=-nun   !Case when wrote maximun number allowed
@@ -205,22 +199,22 @@ c      nun = n_unwgted()
 c     JA 02/2011 Added twgt to results.dat to allow event generation in
 c     first iteration for gridpack runs
       if (icor .eq. 0) then
-         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5)')tmean,tsigma,0.0,
-     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,e13.5)')tmean,tsigma,0.0,
+     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt, trmean
       else
-         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5)')tmean,0.0,tsigma,
-     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,e13.5)')tmean,0.0,tsigma,
+     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt, trmean
       endif
 c      do i=1,cur_it-1
       do i=cur_it-itsum,cur_it-1
-         write(66,'(i4,4e15.5)') i,xmean(i),xsigma(i),xeff(i),xwmax(i)
+         write(66,'(i4,5e15.5)') i,xmean(i),xsigma(i),xeff(i),xwmax(i),xrmean(i)
       enddo
       close(66)
       else
          open(unit=66,file='results.dat',status='unknown')
-         write(66,'(3e12.5,2i9,i5,i9,e10.3)')0,0,0.0,kevent,nw,
-     &     1,0, 0
-         write(66,'(i4,4e15.5)') 1,0,0,0,0
+         write(66,'(3e12.5,2i9,i5,i9,2e10.3)')0.,0.,0.,kevent,nw,
+     &     1,0,0.,0.
+         write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
          close(66)
 
       endif
@@ -326,15 +320,18 @@ c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin
       i = cur_it - itsum
       if (i .gt. 0) then
       tmean = 0d0
+      trmean = 0d0
       tsigma = 0d0
       tdem = 0d0
       do while (xmean(i) .ne. 0 .and. i .lt. cur_it)
          tmean = tmean+xmean(i)*xmean(i)**2/xsigma(i)**2
+         trmean = trmean+xrmean(i)*xmean(i)**2/xsigma(i)**2
          tdem = tdem+xmean(i)**2/xsigma(i)**2
          tsigma = tsigma + xmean(i)**2/ xsigma(i)**2
          i=i+1
       enddo
       tmean = tmean/tsigma
+      trmean = trmean/tsigma
       tsigma= tmean/sqrt(tsigma)
 c      nun = n_unwgted()
 c
@@ -347,12 +344,14 @@ c
          chi2 = chi2+(xmean(i)-tmean)**2/xsigma(i)**2
       enddo
       chi2 = chi2/2d0   !Since using only last 3, n-1=2
-      write(*,'(a)') '-----------------------------------------------------'
+      write(*,'(a)') '-------------------------------------------------'
       write(*,'(a)') '---------------------------'
-      write(*,'(a,i3,a,e12.4)') ' Results Last ',itsum,' iters:  Integral = ',tmean
+      write(*,'(a,i3,a,e12.4)') ' Results Last ',itsum,
+     $     ' iters: Integral = ',trmean
+      write(*,'(21x,a,e12.4)') 'Abs integral = ',tmean
       write(*,'(25x,a,e12.4)') 'Std dev = ',tsigma
       write(*,'(17x,a,f12.4)') 'Chi**2 per DoF. =',chi2
-      write(*,'(a)') '-----------------------------------------------------'
+      write(*,'(a)') '-------------------------------------------------'
       write(*,'(a)') '---------------------------'
 
       if (nun .lt. 0) nun=-nun   !Case when wrote maximun number allowed
@@ -360,22 +359,22 @@ c
 c     JA 02/2011 Added twgt to results.dat to allow event generation in
 c     first iteration for gridpack runs
       if (icor .eq. 0) then
-         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5)')tmean,tsigma,0.0,
-     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,e13.5)')tmean,tsigma,0.0,
+     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt,trmean
       else
-         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5)')tmean,0.0,tsigma,
-     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,e13.5)')tmean,0.0,tsigma,
+     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt,trmean
       endif
 c      do i=1,cur_it-1
       do i=cur_it-itsum,cur_it-1
-         write(66,'(i4,4e15.5)') i,xmean(i),xsigma(i),xeff(i),xwmax(i)
+         write(66,'(i4,5e15.5)') i,xmean(i),xsigma(i),xeff(i),xwmax(i),xrmean(i)
       enddo
       close(66)
       else
          open(unit=66,file='results.dat',status='unknown')
-         write(66,'(3e12.5,2i9,i5,i9,e10.3)')0,0,0.0,kevent,nw,
-     &     1,0, 0
-         write(66,'(i4,4e15.5)') 1,0,0,0,0
+         write(66,'(3e12.5,2i9,i5,i9,2e10.3)')0.,0.,0.,kevent,nw,
+     &     1,0,0.,0.
+         write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
          close(66)
 
       endif      
@@ -403,8 +402,8 @@ c
 c
 c     Global
 c
-      double precision     xmean(99),xsigma(99),xwmax(99),xeff(99)
-      common/to_iterations/xmean,    xsigma,    xwmax,    xeff
+      double precision     xmean(99),xsigma(99),xwmax(99),xeff(99), xrmean(99)
+      common/to_iterations/xmean,    xsigma,    xwmax,    xeff,     xrmean
 
 c-----
 c  Begin Code
@@ -484,10 +483,10 @@ c
       character*40          result_file,where_file
       common /sample_status/result_file,where_file,nsteps
 
-      double precision tmean, tsigma
-      integer             dim, events, iter, kn, cur_it, invar, configs
+      double precision tmean, trmean, tsigma
+      integer             dim, events, itm, kn, cur_it, invar, configs
       common /sample_common/
-     .     tmean, tsigma, dim, events, iter, kn, cur_it, invar, configs
+     .     tmean, trmean, tsigma, dim, events, itm, kn, cur_it, invar, configs
 
       double precision   grid(2, ng, 0:maxinvar)
       common /data_grid/ grid
@@ -546,7 +545,7 @@ c      close(22)
 
       dim      = p1
       events   = p2
-      iter     = p3
+      itm     = p3
       invar    = p4
       configs  = p5
       first_time = .true.
@@ -569,7 +568,7 @@ c      endif
       endif
 
       write(*,'(i3,a,i7,a,i3,a,i3,a,i3,a)') dim, ' dimensions', events,
-     &     ' events',p4,' invarients',iter, ' iterations',
+     &     ' events',p4,' invarients',itm, ' iterations',
      &     p5,' config(s),  (0.99)'
 
       if (ituple .eq. 1) then
@@ -598,6 +597,7 @@ c
 c     Reset counters
 c
       tmean = 0d0
+      trmean = 0d0
       tsigma = 0d0
       kn = 0
       cur_it = 1
@@ -806,10 +806,10 @@ c
 c
 c     Global
 c
-      double precision tmean, tsigma
-      integer             dim, events, iter, kn, cur_it, invar, configs
+      double precision tmean, trmean, tsigma
+      integer             dim, events, itm, kn, cur_it, invar, configs
       common /sample_common/
-     .     tmean, tsigma, dim, events, iter, kn, cur_it, invar, configs
+     .     tmean, trmean, tsigma, dim, events, itm, kn, cur_it, invar, configs
       double precision   psect(maxconfigs),alpha(maxconfigs)
       common/to_mconfig2/psect            ,alpha
       data idum/0/
@@ -821,10 +821,10 @@ c-----
 c  Begin Code
 c-----
       iteration = cur_it
-      if (cur_it .gt. iter) then
+      if (cur_it .gt. itm) then
          wgt = -1d0
       else
-         wgt = 1d0 / (dble(events) * dble(iter))
+         wgt = 1d0 / (dble(events) * dble(itm))
 c
 c     Choose configuration
 c
@@ -873,10 +873,10 @@ c
 c
 c     Global
 c
-      double precision tmean, tsigma
-      integer             dim, events, iter, kn, cur_it, invar, configs
+      double precision tmean, trmean, tsigma
+      integer             dim, events, itm, kn, cur_it, invar, configs
       common /sample_common/
-     .     tmean, tsigma, dim, events, iter, kn, cur_it, invar, configs
+     .     tmean, trmean, tsigma, dim, events, itm, kn, cur_it, invar, configs
 
       double precision    grid(2, ng, 0:maxinvar)
       common /data_grid/ grid
@@ -1047,10 +1047,10 @@ c
 c
 c     Global
 c
-      double precision tmean, tsigma
-      integer             dim, events, iter, kn, cur_it, invar, configs
+      double precision tmean, trmean, tsigma
+      integer             dim, events, itm, kn, cur_it, invar, configs
       common /sample_common/
-     .     tmean, tsigma, dim, events, iter, kn, cur_it, invar, configs
+     .     tmean, trmean, tsigma, dim, events, itm, kn, cur_it, invar, configs
 
       double precision    grid(2, ng, 0:maxinvar)
       common /data_grid/ grid
@@ -1116,14 +1116,14 @@ c     &        dble(xbin_max-xbin_min),bwjac
       endif
       end
 
-      subroutine sample_result(mean, sigma, itmin)
+      subroutine sample_result(mean, rmean, sigma, itmin)
       implicit none
-      double precision mean, sigma
+      double precision mean, rmean, sigma
       integer i,cur_it,itmin,itsum
-      double precision tsigma,tmean,tsig,tdem
+      double precision tsigma,tmean,trmean,tsig,tdem
 
-      double precision     xmean(99),xsigma(99),xwmax(99),xeff(99)
-      common/to_iterations/xmean,    xsigma,    xwmax,    xeff
+      double precision     xmean(99),xsigma(99),xwmax(99),xeff(99), xrmean(99)
+      common/to_iterations/xmean,    xsigma,    xwmax,    xeff,     xrmean
 
 
       i=1
@@ -1135,20 +1135,24 @@ c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin
       itsum = min(max(itmin,cur_it-1),3)
       i = cur_it - itsum
       tmean = 0d0
+      trmean = 0d0
       tsigma = 0d0
       if (i .gt. 0) then
       tdem = 0d0
       do while (xmean(i) .ne. 0 .and. i .lt. cur_it)
          tmean = tmean+xmean(i)*xmean(i)**2/xsigma(i)**2
+         trmean = trmean+xrmean(i)*xmean(i)**2/xsigma(i)**2
          tdem = tdem+xmean(i)**2/xsigma(i)**2
          tsigma = tsigma + xmean(i)**2/ xsigma(i)**2
          i=i+1
       enddo
       tmean = tmean/tsigma
+      trmean = trmean/tsigma
       tsigma= tmean/sqrt(tsigma)
       endif
 
       mean = tmean
+      rmean = trmean
       sigma = tsigma
 
       end
@@ -1183,7 +1187,7 @@ c
       save chi2, non_zero
       double precision wmax1,ddumb
       save wmax1
-      double precision twgt1,xchi2,xmean,tmeant,tsigmat
+      double precision twgt1,xchi2,xxmean,tmeant,tsigmat
       integer iavg,navg
       save twgt1,iavg,navg
 c
@@ -1199,20 +1203,20 @@ c
       double precision    accur
       common /to_accuracy/accur
 
-      double precision     ymean(99),ysigma(99),ywmax(99),yeff(99)
-      common/to_iterations/ymean,    ysigma,    ywmax,    yeff
+      double precision     xmean(99),xsigma(99),xwmax(99),xeff(99), xrmean(99)
+      common/to_iterations/xmean,    xsigma,    xwmax,    xeff,     xrmean
 
-      double precision mean,sigma
-      common/to_result/mean,sigma
+      double precision mean,rmean,sigma
+      common/to_result/mean,rmean,sigma
 
       double precision grid2(0:ng,maxinvar)
       integer               inon_zero(ng,maxinvar)
       common/to_grid2/grid2,inon_zero
 
-      double precision tmean, tsigma
-      integer             dim, events, iter, kn, cur_it, invar, configs
+      double precision tmean, trmean, tsigma
+      integer             dim, events, itm, kn, cur_it, invar, configs
       common /sample_common/
-     .     tmean, tsigma, dim, events, iter, kn, cur_it, invar, configs
+     .     tmean, trmean, tsigma, dim, events, itm, kn, cur_it, invar, configs
 
       double precision    grid(2, ng, 0:maxinvar)
       common /data_grid/ grid
@@ -1268,10 +1272,11 @@ c-----
          wmax1= 99d99
          wmax = -1d0
          mean = 0d0
+         rmean = 0d0
          sigma = 0d0
          chi2 = 0d0
          non_zero = 0
-         vol = 1d0 / dble(events * iter)
+         vol = 1d0 / dble(events * itm)
          knt = events
 
          do i=1,maxconfigs
@@ -1291,7 +1296,7 @@ c-----
       if (iteration .eq. cur_it) then
          kn = kn + 1
          if (.true.) then       !Average points to increase error estimate
-            twgt1=twgt1+wgt     !This doesn't change anything should remove
+            twgt1=twgt1+dabs(wgt)     !This doesn't change anything should remove
             iavg = iavg+1
             if (iavg .ge. navg) then
                sigma=sigma+twgt1**2
@@ -1301,12 +1306,13 @@ c-----
          else
             sigma = sigma + wgt**2
          endif
-         if (wgt .gt. 0.) then
-            if (wgt*iter*events .gt. wmax) then
-               wmax=wgt*iter*events
+         if (wgt .ne. 0.) then
+            if (dabs(wgt)*itm*events .gt. wmax) then
+               wmax=dabs(wgt)*itm*events
             endif
             non_zero = non_zero + 1
-            mean = mean + wgt
+            mean = mean + dabs(wgt)
+            rmean = rmean + wgt
             if (.true. ) then
 c               psect(ipole)=psect(ipole)+wgt*wgt/alpha(ipole)  !Ohl 
 c               psect(ipole)=1d0                 !Not doing multi_config
@@ -1378,6 +1384,7 @@ c         if (kn .eq. events) then
          if (non_zero .eq. events .or. (kn .gt. 200*events .and.
      $        non_zero .gt. 5)) then
             mean=mean*dble(events)/dble(non_zero)
+            rmean=rmean*dble(events)/dble(non_zero)
             twgt1=twgt1*dble(events)/dble(non_zero)
             sigma=sigma+twgt1**2    !This line for averaging over points
             if (non_zero .eq. 0) then
@@ -1385,9 +1392,10 @@ c         if (kn .eq. events) then
                write(*,*) 'Try running with more points or looser cuts.'
                stop
             endif
-c            mean = mean * iter                 !Used if don't have non_zero
+c            mean = mean * itm                 !Used if don't have non_zero
             if (.true.) then
-               mean = mean * iter *dble(non_zero)/dble(kn)
+               mean = mean * itm *dble(non_zero)/dble(kn)
+               rmean = rmean * itm *dble(non_zero)/dble(kn)
                knt = kn
             endif
 c
@@ -1397,7 +1405,7 @@ c        write(*,*) (sigma/vol/vol-knt*mean*mean)/dble(knt-1)/dble(knt),
 c     &        (sigma/vol/vol-knt*mean*mean*navg)/dble(knt-1)/ dble(knt)
 
             if (.true.) then
-c               vol = 1d0/(knt*iter)
+c               vol = 1d0/(knt*itm)
                sigma = (sigma/vol/vol-non_zero*mean*mean*navg)  !knt replaced by non_zero
      .              / dble(knt-1) / dble(knt)
             else
@@ -1406,26 +1414,28 @@ c               vol = 1d0/(knt*iter)
             endif
 
             tmean = tmean + mean * (mean**2 / sigma)
+            trmean = trmean + rmean * (mean**2 / sigma)
             tsigma = tsigma + mean**2 / sigma
             chi2 = chi2 + mean**2 * (mean**2 / sigma)
             sigma = sqrt(abs(sigma))
 
             if (cur_it .lt. 100) then
-               ymean(cur_it) = mean
-               ysigma(cur_it) = sigma
-               ywmax(cur_it)= wmax*dble(non_zero)/dble(kn)
-               yeff(cur_it)= sigma*sqrt(dble(non_zero))/mean
+               xmean(cur_it) = mean
+               xrmean(cur_it) = rmean
+               xsigma(cur_it) = sigma
+               xwmax(cur_it)= wmax*dble(non_zero)/dble(kn)
+               xeff(cur_it)= sigma*sqrt(dble(non_zero))/mean
 c               call sample_writehtm()
             endif
-            write(*,222) 'Iteration',cur_it,'Mean: ',mean,
-     &           '  Fluctuation: ',sigma,
+            write(*,222) 'Iteration',cur_it,'Mean: ',rmean,
+     &           ' Abs mean: ',mean, '  Fluctuation: ',sigma,
      &           wmax*(dble(non_zero)/dble(kn)),
      &           dble(non_zero)/dble(kn)*100.,'%'
- 222        format(a10,I3,3x,a6,e10.4,a16,e10.3,e12.3,3x,f5.1,a1)
+ 222        format(a10,I3,3x,a6,e10.4,a11,e10.4,a16,e10.3,e12.3,3x,f5.1,a1)
 
-            write(*,223) cur_it, mean, ' +- ', sigma,
+            write(*,223) cur_it, rmean, mean,' +- ', sigma,
      &           sigma*sqrt(dble(non_zero))/mean
- 223        format( i3,3x,e10.4,a,e10.4,f10.2)
+ 223        format( i3,3x,2e11.4,a,e10.4,f10.2)
             tot=0d0
             do i=1,configs
                tot=tot+psect(i)
@@ -1436,23 +1446,23 @@ c
 c     Now set things up for generating unweighted events
 c
             if (twgt .eq. -2d0) then               
-               twgt = mean *kn/ (dble(iter)*dble(events)*dble(events))
+               twgt = mean *kn/ (dble(itm)*dble(events)*dble(events))
 c
 c     now scale twgt, in case have large fluctuations
 c
 
-c               twgt = twgt * max(1d0, yeff(cur_it))
+c               twgt = twgt * max(1d0, xeff(cur_it))
 
 c
 c     For small number of events only write about 1% of events
 c
 c               if (events .le. 2500) then
 c                  twgt = mean *kn*100 /
-c     $                 (dble(iter)*dble(events)*dble(events)) 
+c     $                 (dble(itm)*dble(events)*dble(events)) 
 c               endif
 c               twgt = max(twgt, maxwgt/10d0)
-               write(*,*) 'Writing out events',twgt, yeff(cur_it)
-c               write(*,*) mean, kn, iter, events
+               write(*,*) 'Writing out events',twgt, xeff(cur_it)
+c               write(*,*) mean, kn, itm, events
             endif
 c
 c     This tells it to write out a file for unweighted events
@@ -1494,12 +1504,13 @@ c------
 c    Here we will double the number of events requested for the next run
 c-----
  23         events = 2 * events
-            vol = 1d0/dble(events*iter)
+            vol = 1d0/dble(events*itm)
             knt = events
-            twgt = mean / (dble(iter)*dble(events))
+            twgt = mean / (dble(itm)*dble(events))
 c            write(*,*) 'New number of events',events,twgt
 
             mean = 0d0
+            rmean = 0d0
             sigma = 0d0
             cur_it = cur_it + 1
             kn = 0
@@ -1675,8 +1686,8 @@ c     Allow minimum itmin iterations
 c
             if (tsigma .gt. 0d0 .and. cur_it .gt. itmin .and. accur .gt. 0d0) then
 
-               xmean = tmean/tsigma
-               xchi2 = (chi2/xmean/xmean-tsigma)/dble(cur_it-2)               
+               xxmean = tmean/tsigma
+               xchi2 = (chi2/xxmean/xxmean-tsigma)/dble(cur_it-2)               
                write(*,'(a,4f8.3)') ' Accuracy: ',sqrt(xchi2/tsigma),
      &              accur,1/sqrt(tsigma),xchi2
 c               write(*,*) 'We got it',1d0/sqrt(tsigma), accur
@@ -1684,13 +1695,14 @@ c               if (1d0/sqrt(tsigma) .lt. accur) then
                if (sqrt(xchi2/tsigma) .lt. accur) then
                   write(*,*) 'Finished due to accuracy ',sqrt(xchi2/tsigma), accur
                   tmean = tmean / tsigma
+                  trmean = trmean / tsigma
                   if (cur_it .gt. 2) then
                      chi2 = (chi2/tmean/tmean-tsigma)/dble(cur_it-2)
                   else
                      chi2=0d0
                   endif
                   tsigma = tmean / sqrt(tsigma)
-                  write(*, 80) real(tmean), real(tsigma), real(chi2)
+                  write(*, 80) real(tmean), real(tsigma), real(trmean), real(chi2)
                   if (use_cut .ne. 0) then
                   open(26, file='ftn26',status='unknown')
                   write(26,fmt='(4f20.17)')
@@ -1705,7 +1717,7 @@ c                  write(22, 80) real(tmean), real(tsigma), real(chi2)
 c 122              close(22)
                   tsigma = tsigma*sqrt(chi2)  !This gives the 68% confidence cross section
                   call store_events
-                  cur_it = iter+2
+                  cur_it = itm+2
                   return
                endif
             endif                  
@@ -1729,13 +1741,13 @@ c     Calculate chi2 for last few iterations (ja 03/11)
 c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin but < 3
                itsum = min(max(itmin,cur_it-1),3)
                do i=cur_it-itsum,cur_it-1
-                  tmeant = tmeant+ymean(i)*ymean(i)**2/ysigma(i)**2
-                  tsigmat = tsigmat + ymean(i)**2/ ysigma(i)**2
+                  tmeant = tmeant+xmean(i)*xmean(i)**2/xsigma(i)**2
+                  tsigmat = tsigmat + xmean(i)**2/ xsigma(i)**2
                enddo
                tmeant = tmeant/tsigmat
                chi2tmp = 0d0
                do i = cur_it-itsum,cur_it-1
-                  chi2tmp = chi2tmp+(ymean(i)-tmeant)**2/ysigma(i)**2
+                  chi2tmp = chi2tmp+(xmean(i)-tmeant)**2/xsigma(i)**2
                enddo
                chi2tmp = chi2tmp/2d0  !Since using only last 3, n-1=2
 c     JA 8/17/2011 Redefined -accur as lumi, so nevents is -accur*cross section
@@ -1764,20 +1776,22 @@ c     $                 access='append',err=129)
 c                  write(22, 80) real(tmean), real(tsigma), real(chi2)
 c 129              close(22)
                   tsigma = tsigma*sqrt(chi2) !This gives the 68% confidence cross section
-                  cur_it = iter+20
+                  cur_it = itm+20
                   return
                endif
             endif                     
 
 
-            if (cur_it .gt. iter) then               
+            if (cur_it .gt. itm) then               
                call store_events
                tmean = tmean / tsigma
-               chi2 = (chi2 / tmean / tmean - tsigma) / dble(iter - 1)
+               trmean = trmean / tsigma
+               chi2 = (chi2 / tmean / tmean - tsigma) / dble(itm - 1)
                tsigma = tmean / sqrt(tsigma)
-               write(*, 80) real(tmean), real(tsigma), real(chi2)
+               write(*, 80) real(tmean), real(tsigma), real(trmean), real(chi2)
  80            format(/1X,79(1H-)/1X,23HAccumulated results:   ,
-     .              10HIntegral =,e12.4/24X,10HStd dev  =,e12.4/
+     .              10HIntegral =,e12.4/24X,10HStd dev  =,e12.4
+     .              /23X,11HCross sec =,e12.4/
      .              13X,21HChi**2 per DoF.     =,f12.4/1X,79(1H-))
                if (use_cut .ne. 0) then
                open(26, file='ftn26',status='unknown')
@@ -1842,8 +1856,8 @@ c 23   close(22)
  222  format(a10,I3,3x,a6,e10.4,a16,e10.3,e12.3,3x,f5.1,a1)
 
       open(unit=66,file='results.dat',status='unknown')
-      write(66,*) 0,0,0,0,0,0,0,1
-         write(66,'(i4,4e15.5)') 1,0d0,0d0,0d0,0d0
+      write(66,*) 0,0,0,0,0,0,0,1,0,0
+         write(66,'(i4,5e15.5)') 1,0d0,0d0,0d0,0d0,0d0
       close(66)
 
 c     Remove file events.lhe (otherwise event combination gets screwed up)

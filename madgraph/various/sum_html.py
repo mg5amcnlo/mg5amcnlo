@@ -31,7 +31,8 @@ class OneResult(object):
         """Initialize all data """
         
         self.name = name
-        self.xsec = 0
+        self.axsec = 0  # Absolute cross section = Sum(abs(wgt))
+        self.xsec = 0 # Real cross section = Sum(wgt)
         self.xerru = 0  # uncorrelated error
         self.xerrc = 0  # correlated error
         self.nevents = 0
@@ -42,6 +43,9 @@ class OneResult(object):
         self.mfactor = 1 # number of times that this channel occur (due to symmetry)
         self.ysec_iter = []
         self.yerr_iter = []
+        self.yasec_iter = []
+        self.eff_iter = []
+        self.maxwgt_iter = []
         return
     
     @cluster.multiple_try(nb_try=4,sleep=5)
@@ -53,19 +57,22 @@ class OneResult(object):
             i+=1
             if i == 1:
                 data = [float(d) for d in line.split()]
-                self.xsec, self.xerru, self.xerrc, self.nevents, self.nw,\
-                         self.maxit, self.nunwgt, self.luminosity = data[:8]
+                self.axsec, self.xerru, self.xerrc, self.nevents, self.nw,\
+                         self.maxit, self.nunwgt, self.luminosity, self.wgt, self.xsec = data[:10]
                 if self.mfactor > 1:
                     self.luminosity /= self.mfactor
-                    #self.ysec_iter.append(self.xsec)
+                    #self.ysec_iter.append(self.axsec)
                     #self.yerr_iter.append(0)
                 continue
             try:
-                l, sec, err, eff, maxwgt = line.split()
+                l, sec, err, eff, maxwgt, asec = line.split()
             except:
                 return
             self.ysec_iter.append(float(sec))
             self.yerr_iter.append(float(err))
+            self.yasec_iter.append(float(asec))
+            self.eff_iter.append(float(eff))
+            self.maxwgt_iter.append(float(maxwgt))
         
         
     def set_mfactor(self, value):
@@ -114,6 +121,7 @@ class Combine_results(list, OneResult):
         """compute the value associate to this combination"""
 
         self.compute_iterations()
+        self.axsec = sum([one.axsec for one in self])
         self.xsec = sum([one.xsec for one in self])
         self.xerrc = sum([one.xerrc for one in self])
         self.xerru = math.sqrt(sum([one.xerru**2 for one in self]))
@@ -122,7 +130,38 @@ class Combine_results(list, OneResult):
         self.nw = sum([one.nw for one in self])
         self.maxit = len(self.yerr_iter)  # 
         self.nunwgt = sum([one.nunwgt for one in self])  
+        self.wgt = 0
+        self.luminosity = sum([one.luminosity for one in self])
+        
+        
+        
+        
+    def compute_average(self):
+        """compute the value associate to this combination"""
+
+        nbjobs = len(self)
+        if not nbjobs:
+            return
+        self.axsec = sum([one.axsec for one in self]) / nbjobs
+        self.xsec = sum([one.xsec for one in self]) /nbjobs
+        self.xerrc = sum([one.xerrc for one in self]) /nbjobs
+        self.xerru = math.sqrt(sum([one.xerru**2 for one in self])) /nbjobs
+
+        self.nevents = sum([one.nevents for one in self])
+        self.nw = sum([one.nw for one in self])
+        self.maxit = len(self.yerr_iter)  # 
+        self.nunwgt = sum([one.nunwgt for one in self])  
+        self.wgt = 0
         self.luminosity = min([one.luminosity for one in self])
+        self.ysec_iter = []
+        self.yerr_iter = []
+        for result in self:
+            self.ysec_iter+=result.ysec_iter
+            self.yerr_iter+=result.yerr_iter
+            self.yasec_iter += result.yasec_iter
+            self.eff_iter += result.eff_iter
+            self.maxwgt_iter += result.maxwgt_iter
+
     
     def compute_iterations(self):
         """Compute iterations to have a chi-square on the stability of the 
@@ -234,6 +273,7 @@ class Combine_results(list, OneResult):
             title = ''
             
         dico = {'cross': self.xsec,
+                'abscross': self.axsec,
                 'error': self.xerru,
                 'unit': unit,
                 'result_type': 'Cross-Section',
@@ -245,11 +285,17 @@ class Combine_results(list, OneResult):
         return html_text
     
     def write_results_dat(self, output_path):
+        """write a correctly formatted results.dat"""
         
-        line = '%s %s %s %s %s %s %s %s \n' % (self.xsec, self.xerru, self.xerrc,
-                 self.nevents, self.nw, self.maxit, self.nunwgt, self.luminosity)
+        line = '%s %s %s %s %s %s %s %s %s %s \n' % (self.axsec, self.xerru, self.xerrc,
+                 self.nevents, self.nw, self.maxit, self.nunwgt, self.luminosity, self.wgt, self.xsec)
+        fsock = open(output_path,'w') 
+        fsock.writelines(line)
+        for i in range(len(self.ysec_iter)):
+            line = '%s %s %s %s %s %s\n' % (i+1, self.ysec_iter[i], self.yerr_iter[i], 
+                      self.eff_iter[i], self.maxwgt_iter[i], self.yasec_iter[i]) 
+            fsock.writelines(line)
         
-        open(output_path,'w').writelines(line)
 
 
 results_header = """
