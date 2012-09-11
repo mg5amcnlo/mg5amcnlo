@@ -87,7 +87,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
                 
     def check_launch(self, args, options):
         """check the validity of the line. args are DIR and MODE
-        MODE being NLO, aMC@NLO or aMC@LO. If no mode is passed, NLO is used"""
+        MODE being NLO, aMC@NLO or aMC@LO. If no mode is passed, aMC@NLO is used"""
         # modify args in order to be DIR 
         # mode being either standalone or madevent
         if not( 0 <= int(options.cluster) <= 2):
@@ -96,7 +96,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         if not args:
             if self._done_export:
                 args.append(self._done_export[0])
-                args.append('NLO')
+                args.append('aMC@NLO')
 
                 return
             else:
@@ -117,7 +117,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
                 args.insert(0, self._done_export[0])
             elif os.path.isdir(args[0]) or os.path.isdir(pjoin(MG5dir, args[0]))\
                     or os.path.isdir(pjoin(MG4dir, args[0])):
-                args.append('NLO')
+                args.append('aMC@NLO')
         mode = args[1]
         
         # search for a valid path
@@ -181,7 +181,7 @@ class HelpFKS(mg_interface.HelpToCmd):
         """help for launch command"""
         logger.info("Usage: launch [DIRPATH] [MODE]")
         logger.info("   By default DIRPATH is the latest created directory")
-        logger.info("   MODE can be either NLO, aMC@NLO or aMC@LO (if omitted, it is set to NLO)") 
+        logger.info("   MODE can be either NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)") 
 
 class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
     _fks_display_opts = ['real_diagrams', 'born_diagrams', 'virt_diagrams', 
@@ -483,45 +483,68 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         (options, argss) = mg_interface._launch_parser.parse_args(argss)
         self.check_launch(argss, options)
         mode = argss[1]
+        self.orig_dir = os.path.join(os.getcwd())
         self.me_dir = os.path.join(os.getcwd(), argss[0])
         self.ask_run_configuration(mode)
         self.compile(mode, options)
-        if self.options['run_mode'] == '0':
-            self.run_serial(mode, options)
-        if self.options['run_mode'] == '1':
-            self.run_cluster(mode, options)
-        if self.options['run_mode'] == '2':
-            self.run_multicore(mode, options)
+        self.run(mode, options)
 
-    def run_serial(self, mode, options):
-        """runs aMC@NLO serially"""
-        logger.info('Starting serial run')
+        os.chdir(self.orig_dir)
+
+
+    def update_random_seed(self):
+        """Update random number seed with the value from the run_card. 
+        If this is 0, update the number according to a fresh one"""
+        run_card = pjoin(self.me_dir, 'Cards', 'run_card.dat')
+        if not os.path.exists(run_card):
+            raise MadGraph5Error('%s is not a valid run_card' % run_card)
+        file = open(run_card)
+        lines = file.read().split('\n')
+        file.close()
+        iseed = 0
+        for line in lines:
+            if len(line.split()) > 2:
+                if line.split()[2] == 'iseed':
+                    iseed = int(line.split()[0])
+        if iseed != 0:
+            os.system('echo "r=%d > %s"' \
+                    % (iseed, pjoin(self.me_dir, 'SubProcesses', 'randinit')))
+        else:
+            randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'))
+            iseed = int(randinit.read()[2:]) + 1
+            randinit.close()
+            randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'), 'w')
+            randinit.write('r=%d' % iseed)
+            randinit.close()
+            os.system('cat %s' % pjoin(self.me_dir, 'SubProcesses', 'randinit'))
+
+
+    def run(self, mode, options):
+        """runs aMC@NLO"""
+        logger.info('Starting run')
+        self.update_random_seed()
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+        #find and keep track of all the jobs
+        job_dict = {}
+        p_dirs = [file for file in os.listdir('.') if file.startswith('P') and os.path.isdir(file)]
+        for dir in p_dirs:
+            os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
+            job_dict[dir] = [file for file in os.listdir('.') if file.startswith('ajob')] 
+
         if mode == 'NLO':
             logger.info('Doing fixed order NLO')
             logger.info('   Cleaning previous results')
             os.system('rm -rf P*/grid_G* P*/novB_G* P*/viSB_G*')
+
             logger.info('   Setting up grid')
-            p_dirs = [file for file in os.listdir('.') if file.startswith('P') and os.path.isdir(file)]
-            for dir in p_dirs:
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
-                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
-                for job in jobs:
-                    os.system('chmod +x %s' % job)
-                    os.system('./%s 0 grid 0 ' % job)
+            self.run_all(job_dict, ['0', 'grid', '0'])
+
             logger.info('   Runnning subtracted reals')
-            for dir in p_dirs:
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
-                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
-                for job in jobs:
-                    os.system('./%s 0 novB 0 grid ' % job)
+            self.run_all(job_dict, ['0', 'novB', '0', 'grid'])
+
             logger.info('   Runnning virtuals')
-            for dir in p_dirs:
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
-                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
-                for job in jobs:
-                    os.system('./%s 0 viSB 0 grid ' % job)
-            os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+            self.run_all(job_dict, ['0', 'viSB', '0', 'grid'])
+
             os.system('./combine_results_FO.sh viSB* novB*')
 
         elif mode == 'aMC@NLO':
@@ -530,59 +553,39 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             logger.info('   Cleaning previous results')
             os.system('rm -rf P*/GF* P*/GV*')
             logger.info('   Setting up grid')
+
             logger.info('     Running subtracted reals')
             self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'novB', 0) 
-            p_dirs = [file for file in os.listdir('.') if file.startswith('P') and os.path.isdir(file)]
-            for dir in p_dirs:
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
-                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
-                for job in jobs:
-                    os.system('chmod +x %s' % job)
-                    os.system('./%s 2 F 0 ' % job)
+            self.run_all(job_dict, ['2', 'F', '0'])
+
             logger.info('     Running virtuals')
             self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'viSB', 0) 
-            for dir in p_dirs:
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
-                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
-                for job in jobs:
-                    os.system('./%s 2 V 0 ' % job)
-            os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+            self.run_all(job_dict, ['2', 'V', '0'])
+
             os.system('./combine_results.sh 0 %d GF* GV*' % nevents)
 
             logger.info('   Computing upper envelope')
+
             logger.info('     Running subtracted reals')
             self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'novB', 1) 
-            for dir in p_dirs:
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
-                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
-                for job in jobs:
-                    os.system('./%s 2 F 1 ' % job)
+            self.run_all(job_dict, ['2', 'F', '1'])
+
             logger.info('     Running virtuals')
             self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'viSB', 1) 
-            for dir in p_dirs:
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
-                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
-                for job in jobs:
-                    os.system('./%s 2 V 1 ' % job)
-            os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+            self.run_all(job_dict, ['2', 'V', '1'])
+
             os.system('./combine_results.sh 1 %d GF* GV*' % nevents)
 
             logger.info('   Generating events')
+
             logger.info('     Running subtracted reals')
             self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'novB', 2) 
-            for dir in p_dirs:
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
-                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
-                for job in jobs:
-                    os.system('./%s 2 F 2 ' % job)
+            self.run_all(job_dict, ['2', 'F', '2'])
+
             logger.info('     Running virtuals')
             self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'viSB', 2) 
-            for dir in p_dirs:
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
-                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
-                for job in jobs:
-                    os.system('./%s 2 V 2 ' % job)
-            os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+            self.run_all(job_dict, ['2', 'V', '2'])
+
             os.system('make collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
             os.system('echo "1" | ./collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
 
@@ -602,34 +605,18 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             os.system('rm -rf P*/GB*')
             logger.info('   Setting up grid at LO')
             self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'born', 0) 
-            p_dirs = [file for file in os.listdir('.') if file.startswith('P') and os.path.isdir(file)]
-            for dir in p_dirs:
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
-                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
-                for job in jobs:
-                    os.system('chmod +x %s' % job)
-                    os.system('./%s 2 B 0 ' % job)
-            os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+            self.run_all(job_dict, ['2', 'B', '0'])
             os.system('./combine_results.sh 0 %d GB*' % nevents)
 
             logger.info('   Computing upper envelope at LO')
             self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'born', 1) 
-            for dir in p_dirs:
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
-                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
-                for job in jobs:
-                    os.system('./%s 2 B 1 ' % job)
-            os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+            self.run_all(job_dict, ['2', 'B', '1'])
             os.system('./combine_results.sh 1 %d GB*' % nevents)
 
             logger.info('   Generating events at LO')
             self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'born', 2) 
-            for dir in p_dirs:
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
-                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
-                for job in jobs:
-                    os.system('./%s 2 B 2 ' % job)
-            os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+            self.run_all(job_dict, ['2', 'B', '2'])
+
             os.system('make collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
             os.system('echo "1" | ./collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
 
@@ -641,6 +628,44 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                     (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file))
             logger.info('The %s file has been generated.\nIt contains %d LO events to be showered' \
                     % (evt_file, nevents))
+
+
+    def run_all(self, job_dict, args):
+        """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
+        for dir, jobs in job_dict.items():
+            os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
+            for job in jobs:
+                self.run_exe(job, args)
+        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+
+
+    def run_exe(self, exe, args):
+        """this basic function launch locally/on cluster exe with args as argument."""
+        # first test that exe exists:
+        if not os.path.exists(exe):
+            raise MadGraph5Error('Cannot find executable %s in %s' \
+                % (exe, os.getcwd()))
+        # check that the executable has exec permissions
+        if not os.access(exe, os.X_OK):
+            os.system('chmod +x %s' % exe)
+        # finally run it
+        if self.options['run_mode'] == '0':
+            #this is for the serial run
+            os.system('./%s %s ' % (exe, ' '.join(args)))
+        elif self.options['run_mode'] == '1':
+            #this is for the cluster run
+            if not hasattr(self, 'cluster'):
+                cluster_name = self.options['cluster_type']
+                self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'])
+
+        elif self.options['run_mode'] == '2':
+            #this is for the multicore run
+            raise MadGraph5Error('Multicore run not yet available for aMC@NLO')
+
+
+
+
+
 
 
     def read_shower_events(self, run_card):
@@ -712,6 +737,9 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
     def run_cluster(self, mode, options):
         """runs aMC@NLO on cluster"""
         logger.info('Starting cluster run')
+        if not hasattr(self, 'cluster'):
+            cluster_name = self.options['cluster_type']
+            self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'])
 
     def run_multicore(self, mode, options):
         """runs aMC@NLO on multi-core"""
