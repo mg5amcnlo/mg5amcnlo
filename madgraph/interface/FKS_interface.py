@@ -87,7 +87,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
                 
     def check_launch(self, args, options):
         """check the validity of the line. args are DIR and MODE
-        MODE being NLO or aMC@NLO. If no mode is passed, NLO is used"""
+        MODE being NLO, aMC@NLO or aMC@LO. If no mode is passed, NLO is used"""
         # modify args in order to be DIR 
         # mode being either standalone or madevent
         if not( 0 <= int(options.cluster) <= 2):
@@ -109,11 +109,11 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             return self.InvalidCmd, 'Invalid Syntax: Too many argument'
 
         elif len(args) == 2:
-            if not args[1] in ['NLO', 'aMC@NLO']:
-                raise self.InvalidCmd, '%s is not a valid mode, please use "NLO" or "aMC@NLO"' % args[1]
+            if not args[1] in ['NLO', 'aMC@NLO', 'aMC@LO']:
+                raise self.InvalidCmd, '%s is not a valid mode, please use "NLO", "aMC@NLO" or "aMC@LO"' % args[1]
         else:
             #check if args[0] is path or mode
-            if args[0] in ['NLO', 'aMC@NLO'] and self._done_export:
+            if args[0] in ['NLO', 'aMC@NLO', 'aMC@LO'] and self._done_export:
                 args.insert(0, self._done_export[0])
             elif os.path.isdir(args[0]) or os.path.isdir(pjoin(MG5dir, args[0]))\
                     or os.path.isdir(pjoin(MG4dir, args[0])):
@@ -181,7 +181,7 @@ class HelpFKS(mg_interface.HelpToCmd):
         """help for launch command"""
         logger.info("Usage: launch [DIRPATH] [MODE]")
         logger.info("   By default DIRPATH is the latest created directory")
-        logger.info("   MODE can be either NLO or aMC@NLO (if omitted, it is set to NLO)") 
+        logger.info("   MODE can be either NLO, aMC@NLO or aMC@LO (if omitted, it is set to NLO)") 
 
 class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
     _fks_display_opts = ['real_diagrams', 'born_diagrams', 'virt_diagrams', 
@@ -216,12 +216,12 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         # Set where to look for CutTools installation.
         # In further versions, it will be set in the same manner as _mgme_dir so that
         # the user can chose its own CutTools distribution.
-        self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
-        if not os.path.isdir(os.path.join(self._cuttools_dir, 'src','cts')):
+        self._cuttools_dir=str(pjoin(self._mgme_dir,'vendor','CutTools'))
+        if not os.path.isdir(pjoin(self._cuttools_dir, 'src','cts')):
             logger.warning(('Warning: Directory %s is not a valid CutTools directory.'+\
                            'Using default CutTools instead.') % \
                              self._cuttools_dir)
-            self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
+            self._cuttools_dir=str(pjoin(self._mgme_dir,'vendor','CutTools'))
 
     def do_set(self, line, log=True):
         """Set the loop optimized output while correctly switching to the
@@ -476,7 +476,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
 
     def do_launch(self, line):
-        """Ask for editing the parameters and then execute the code (NLO or aMC@NLO)
+        """Ask for editing the parameters and then execute the code (NLO or aMC@(N)LO)
         """
         argss = self.split_arg(line)
         # check argument validity and normalise argument
@@ -486,16 +486,228 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         self.me_dir = os.path.join(os.getcwd(), argss[0])
         self.ask_run_configuration(mode)
         self.compile(mode, options)
-        if self.options['run_mode'] == 0:
+        if self.options['run_mode'] == '0':
             self.run_serial(mode, options)
-        if self.options['run_mode'] == 1:
+        if self.options['run_mode'] == '1':
             self.run_cluster(mode, options)
-        if self.options['run_mode'] == 2:
+        if self.options['run_mode'] == '2':
             self.run_multicore(mode, options)
 
     def run_serial(self, mode, options):
         """runs aMC@NLO serially"""
         logger.info('Starting serial run')
+        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+        if mode == 'NLO':
+            logger.info('Doing fixed order NLO')
+            logger.info('   Cleaning previous results')
+            os.system('rm -rf P*/grid_G* P*/novB_G* P*/viSB_G*')
+            logger.info('   Setting up grid')
+            p_dirs = [file for file in os.listdir('.') if file.startswith('P') and os.path.isdir(file)]
+            for dir in p_dirs:
+                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
+                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
+                for job in jobs:
+                    os.system('chmod +x %s' % job)
+                    os.system('./%s 0 grid 0 ' % job)
+            logger.info('   Runnning subtracted reals')
+            for dir in p_dirs:
+                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
+                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
+                for job in jobs:
+                    os.system('./%s 0 novB 0 grid ' % job)
+            logger.info('   Runnning virtuals')
+            for dir in p_dirs:
+                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
+                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
+                for job in jobs:
+                    os.system('./%s 0 viSB 0 grid ' % job)
+            os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+            os.system('./combine_results_FO.sh viSB* novB*')
+
+        elif mode == 'aMC@NLO':
+            logger.info('Doing NLO matched to parton shower')
+            shower, nevents = self.read_shower_events(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
+            logger.info('   Cleaning previous results')
+            os.system('rm -rf P*/GF* P*/GV*')
+            logger.info('   Setting up grid')
+            logger.info('     Running subtracted reals')
+            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'novB', 0) 
+            p_dirs = [file for file in os.listdir('.') if file.startswith('P') and os.path.isdir(file)]
+            for dir in p_dirs:
+                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
+                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
+                for job in jobs:
+                    os.system('chmod +x %s' % job)
+                    os.system('./%s 2 F 0 ' % job)
+            logger.info('     Running virtuals')
+            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'viSB', 0) 
+            for dir in p_dirs:
+                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
+                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
+                for job in jobs:
+                    os.system('./%s 2 V 0 ' % job)
+            os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+            os.system('./combine_results.sh 0 %d GF* GV*' % nevents)
+
+            logger.info('   Computing upper envelope')
+            logger.info('     Running subtracted reals')
+            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'novB', 1) 
+            for dir in p_dirs:
+                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
+                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
+                for job in jobs:
+                    os.system('./%s 2 F 1 ' % job)
+            logger.info('     Running virtuals')
+            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'viSB', 1) 
+            for dir in p_dirs:
+                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
+                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
+                for job in jobs:
+                    os.system('./%s 2 V 1 ' % job)
+            os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+            os.system('./combine_results.sh 1 %d GF* GV*' % nevents)
+
+            logger.info('   Generating events')
+            logger.info('     Running subtracted reals')
+            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'novB', 2) 
+            for dir in p_dirs:
+                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
+                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
+                for job in jobs:
+                    os.system('./%s 2 F 2 ' % job)
+            logger.info('     Running virtuals')
+            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'viSB', 2) 
+            for dir in p_dirs:
+                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
+                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
+                for job in jobs:
+                    os.system('./%s 2 V 2 ' % job)
+            os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+            os.system('make collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
+            os.system('echo "1" | ./collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
+
+            count = 1
+            while os.path.exists(pjoin(self.me_dir, 'Events', 'events_%d' % count)):
+                count += 1
+            evt_file = pjoin(self.me_dir, 'Events', 'events_%d' % count)
+            os.system('mv %s %s' % 
+                    (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file))
+            logger.info('The %s file has been generated.\nIt contains %d NLO events to be showered with %s' \
+                    % (evt_file, nevents, shower))
+
+        elif mode == 'aMC@LO':
+            logger.info('Doing LO matched to parton shower')
+            shower, nevents = self.read_shower_events(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
+            logger.info('   Cleaning previous results')
+            os.system('rm -rf P*/GB*')
+            logger.info('   Setting up grid at LO')
+            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'born', 0) 
+            p_dirs = [file for file in os.listdir('.') if file.startswith('P') and os.path.isdir(file)]
+            for dir in p_dirs:
+                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
+                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
+                for job in jobs:
+                    os.system('chmod +x %s' % job)
+                    os.system('./%s 2 B 0 ' % job)
+            os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+            os.system('./combine_results.sh 0 %d GB*' % nevents)
+
+            logger.info('   Computing upper envelope at LO')
+            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'born', 1) 
+            for dir in p_dirs:
+                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
+                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
+                for job in jobs:
+                    os.system('./%s 2 B 1 ' % job)
+            os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+            os.system('./combine_results.sh 1 %d GB*' % nevents)
+
+            logger.info('   Generating events at LO')
+            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'born', 2) 
+            for dir in p_dirs:
+                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
+                jobs = [file for file in os.listdir('.') if file.startswith('ajob')] 
+                for job in jobs:
+                    os.system('./%s 2 B 2 ' % job)
+            os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+            os.system('make collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
+            os.system('echo "1" | ./collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
+
+            count = 1
+            while os.path.exists(pjoin(self.me_dir, 'Events', 'events_%d' % count)):
+                count += 1
+            evt_file = pjoin(self.me_dir, 'Events', 'events_%d' % count)
+            os.system('mv %s %s' % 
+                    (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file))
+            logger.info('The %s file has been generated.\nIt contains %d LO events to be showered' \
+                    % (evt_file, nevents))
+
+
+    def read_shower_events(self, run_card):
+        """read the parton shower and the requested number of events in the run_card"""
+        if not os.path.exists(run_card):
+            raise MadGraph5Error('%s is not a valid run_card' % run_card)
+        file = open(run_card)
+        lines = file.read().split('\n')
+        file.close()
+        nevents = 0
+        shower = ''
+        for line in lines:
+            if len(line.split()) > 2:
+                if line.split()[2] == 'parton_shower':
+                    shower = line.split()[0]
+                if line.split()[2] == 'nevents':
+                    nevents = int(line.split()[0])
+
+        if shower and nevents:
+            logger.info('Input read from the run_card.dat: \n Generating %d events for shower %s' \
+                    %(nevents, shower))
+        else:
+            raise MadGraph5Error('Falied to read shower and number of events from the run_card.dat')
+
+        return shower, nevents
+
+
+    def write_madinMMC_file(self, path, shower, run_mode, mint_mode):
+        """writes the madinMMC_?.2 file"""
+        #check the validity of the arguments
+        shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
+        if not shower in shower_list:
+            raise MadGraph5Error('%s is not a valid parton shower. Please use one of the following: %s' \
+                    % (shower, ', '.join(shower_list)))
+        run_modes = ['born', 'virt', 'novi', 'all', 'viSB', 'novB']
+        if run_mode not in run_modes:
+            raise MadGraph5Error('%s is not a valid mode for run. Please use one of the following: %s' \
+                    % (run_mode, ', '.join(run_modes)))
+        mint_modes = [0, 1, 2]
+        if mint_mode not in mint_modes:
+            raise MadGraph5Error('%s is not a valid mode for mintMC. Please use one of the following: %s' \
+                    % (mint_mode, ', '.join(mint_modes)))
+        if run_mode in ['born']:
+            name_suffix = 'B'
+        elif run_mode in ['virt', 'viSB']:
+            name_suffix = 'V'
+        else:
+            name_suffix = 'F'
+
+        content = \
+"""-1 12      ! points, iterations
+0.05       ! desired fractional accuracy
+1 -0.1     ! alpha, beta for Gsoft
+-1 -0.1    ! alpha, beta for Gazi
+1          ! Suppress amplitude (0 no, 1 yes)?
+0          ! Exact helicity sum (0 yes, n = number/event)?
+1          ! Enter Configuration Number:
+%1d          ! MINT imode: 0 to set-up grids, 1 to perform integral, 2 generate events
+1 1 1      ! if imode is 1: Folding parameters for xi_i, phi_i and y_ij
+%s   ! entries may be HERWIG6,HERWIGPP,PYTHIA6Q,PYTHIA6PT,PYTHIA8
+%s        ! all, born, real, virt
+""" \
+                    % (mint_mode, shower, run_mode)
+        file = open(pjoin(path, 'madinMMC_%s.2' % name_suffix), 'w')
+        file.write(content)
+        file.close()
+
 
     def run_cluster(self, mode, options):
         """runs aMC@NLO on cluster"""
@@ -508,9 +720,9 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
-        libdir = os.path.join(self.me_dir, 'lib')
+        libdir = pjoin(self.me_dir, 'lib')
         # read the run_card to find if lhapdf is used or not
-        run_card_file = open(os.path.join(self.me_dir, 'Cards','run_card.dat'))
+        run_card_file = open(pjoin(self.me_dir, 'Cards','run_card.dat'))
         found = False
         while not found:
             line = run_card_file.readline()
@@ -518,10 +730,10 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 found = True
         run_card_file.close()
         # rm links to lhapdflib/ PDFsets if exist
-        if os.path.islink(os.path.join(libdir, 'libLHAPDF.a')):
-            os.remove(os.path.join(libdir, 'libLHAPDF.a'))
-        if os.path.islink(os.path.join(libdir, 'PDFsets')):
-            os.remove(os.path.join(libdir, 'PDFsets'))
+        if os.path.islink(pjoin(libdir, 'libLHAPDF.a')):
+            os.remove(pjoin(libdir, 'libLHAPDF.a'))
+        if os.path.islink(pjoin(libdir, 'PDFsets')):
+            os.remove(pjoin(libdir, 'PDFsets'))
 
         if line.split()[0] == '\'lhapdf\'':
             logger.info('Using LHAPDF interface for PDFs')
@@ -529,36 +741,35 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                     shell = True, stdout = subprocess.PIPE).stdout.read().strip()
             lhasetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'], 
                     shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-            os.symlink(os.path.join(lhalibdir, 'libLHAPDF.a'), \
-                       os.path.join(libdir, 'libLHAPDF.a'))
-            os.symlink(lhasetsdir, os.path.join(libdir, 'PDFsets'))
+            os.symlink(pjoin(lhalibdir, 'libLHAPDF.a'), pjoin(libdir, 'libLHAPDF.a'))
+            os.symlink(lhasetsdir, pjoin(libdir, 'PDFsets'))
             os.putenv('lhapdf', 'True')
         else:
-            logger.info('Using built in libraries for PDFs')
+            logger.info('Using built-in libraries for PDFs')
             os.unsetenv('lhapdf')
-        amcatnlo_log = os.path.join(self.me_dir, 'compile_amcatnlo.log')
-        madloop_log = os.path.join(self.me_dir, 'compile_madloop.log')
-        gensym_log = os.path.join(self.me_dir, 'gensym.log')
-        test_log = os.path.join(self.me_dir, 'test.log')
+        amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
+        madloop_log = pjoin(self.me_dir, 'compile_madloop.log')
+        gensym_log = pjoin(self.me_dir, 'gensym.log')
+        test_log = pjoin(self.me_dir, 'test.log')
         # make Source
         logger.info('Compiling source...')
-        os.chdir(os.path.join(self.me_dir, 'Source'))
+        os.chdir(pjoin(self.me_dir, 'Source'))
         os.system('make > %s 2>&1' % amcatnlo_log)
-        if os.path.exists(os.path.join(libdir, 'libdhelas.a')) \
-          and os.path.exists(os.path.join(libdir, 'libgeneric.a')) \
-          and os.path.exists(os.path.join(libdir, 'libmodel.a')) \
-          and os.path.exists(os.path.join(libdir, 'libpdf.a')):
+        if os.path.exists(pjoin(libdir, 'libdhelas.a')) \
+          and os.path.exists(pjoin(libdir, 'libgeneric.a')) \
+          and os.path.exists(pjoin(libdir, 'libmodel.a')) \
+          and os.path.exists(pjoin(libdir, 'libpdf.a')):
             logger.info('          ...done, continuing with P* directories')
         else:
             raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
 
         os.chdir(self.me_dir)
-        os.chdir(os.path.join(self.me_dir, 'SubProcesses'))
+        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
         p_dirs = [file for file in os.listdir('.') if file.startswith('P') and os.path.isdir(file)]
         # make and run tests (if asked for), gensym and make madevent in each dir
         for p_dir in p_dirs:
             logger.info(p_dir)
-            this_dir = os.path.join(self.me_dir, 'SubProcesses', p_dir) 
+            this_dir = pjoin(self.me_dir, 'SubProcesses', p_dir) 
             os.chdir(this_dir)
 #            if 'MEtests' in options or 'ALLtests' in options:
 #                logger.info('   Compiling test_ME...')
@@ -569,7 +780,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
             logger.info('   Compiling gensym...')
             os.system('make gensym >> %s 2>&1 ' % amcatnlo_log)
-            if not os.path.exists(os.path.join(this_dir, 'gensym')):
+            if not os.path.exists(pjoin(this_dir, 'gensym')):
                 raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
 
             logger.info('   Running gensym...')
@@ -579,29 +790,22 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             for v_dir in v_dirs:
                 os.putenv('madloop', 'true')
                 logger.info('   Compiling MadLoop library in %s' % v_dir)
-                madloop_dir = os.path.join(this_dir, v_dir)
+                madloop_dir = pjoin(this_dir, v_dir)
                 os.chdir(madloop_dir)
                 os.system('make >> %s 2>&1' % madloop_log)
-                if not os.path.exists(os.path.join(this_dir, 'libMadLoop.a')):
+                if not os.path.exists(pjoin(this_dir, 'libMadLoop.a')):
                     raise MadGraph5Error('Compilation failed, check %s for details' % madloop_log)
             os.chdir(this_dir)
             if mode =='NLO':
                 exe = 'madevent_vegas'
-            if mode =='aMC@NLO':
+            if mode in ['aMC@NLO', 'aMC@LO']:
                 exe = 'madevent_mintMC'
             logger.info('   Compiling %s' % exe)
             os.system('make %s >> %s 2>&1' % (exe, amcatnlo_log))
             os.unsetenv('madloop')
-            if not os.path.exists(os.path.join(this_dir, exe)):
+            if not os.path.exists(pjoin(this_dir, exe)):
                 raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
-
-
-
-
-
-
-
-        os.chdir(os.path.join(self.me_dir))
+        os.chdir(pjoin(self.me_dir))
 
 
 

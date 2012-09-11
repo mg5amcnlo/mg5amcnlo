@@ -410,13 +410,16 @@ c (Ellis-Sexton scale squared) in common block /COUPL_ES/
      #                         muF2_id_str,QES_id_str
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
+c this is to avoid too low dynamic scales      
+      double precision minscaleES
+      parameter (minscaleES=2d0)
 c
       temp_scale_id='  '
       if(fixed_QES_scale)then
         QES_temp=QES_ref_fixed
         temp_scale_id='fixed'
       else
-        QES_temp=QES_ref_dynamic(pp)
+        QES_temp=max(minscaleES, QES_ref_dynamic(pp))
       endif
       QES=QES_over_ref*QES_temp
       QES2_current=QES**2
