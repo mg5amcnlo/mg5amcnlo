@@ -30,11 +30,13 @@ try:
     import madgraph
     from madgraph import MadGraph5Error
     import madgraph.iolibs.files as files
+    import madgraph.various.cluster as cluster
 except:
     # Use in MadEvent
     import internal as madgraph
     from internal import MadGraph5Error
     import internal.files as files
+    import internal.cluster as cluster
     
 logger = logging.getLogger('cmdprint.ext_program')
 pjoin = os.path.join
@@ -301,8 +303,10 @@ def Popen(arg, *args, **opt):
     """nice way to call an external program with nice error treatment"""
     return subprocess.Popen(arg, *args, **opt)
 
-                
-
+@cluster.multiple_try()
+def mult_try_open(filepath, *args, **opt):
+    """try to open a file with multiple try to ensure that filesystem is sync"""  
+    return open(filepath, *args, ** opt)
 
 
 ################################################################################

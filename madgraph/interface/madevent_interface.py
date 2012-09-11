@@ -2476,8 +2476,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             out = misc.call(['../bin/internal/run_combine'],
                          cwd=pjoin(self.me_dir,'SubProcesses'), 
                          stdout=open(pjoin(self.me_dir,'SubProcesses','combine.log'),'w'))
-            
-        output = open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
+        
+        
+        output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
         # Store the number of unweighted events for the results object
         pat = re.compile(r'''\s*Unweighting selected\s*(\d+)\s*events''',re.MULTILINE)
         if self.cluster_mode == 1 and not output:
