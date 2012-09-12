@@ -20,6 +20,7 @@ import os
 import logging
 import sys
 import time
+import optparse
 import subprocess
 
 import madgraph
@@ -91,8 +92,6 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         MODE being NLO, aMC@NLO or aMC@LO. If no mode is passed, aMC@NLO is used"""
         # modify args in order to be DIR 
         # mode being either standalone or madevent
-        if not( 0 <= int(options.cluster) <= 2):
-            return self.InvalidCmd, 'cluster mode should be between 0 and 2'
         
         if not args:
             if self._done_export:
@@ -180,9 +179,7 @@ class HelpFKS(mg_interface.HelpToCmd):
 
     def help_launch(self):
         """help for launch command"""
-        logger.info("Usage: launch [DIRPATH] [MODE]")
-        logger.info("   By default DIRPATH is the latest created directory")
-        logger.info("   MODE can be either NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)") 
+        _launch_parser.print_help()
 
 class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
     _fks_display_opts = ['real_diagrams', 'born_diagrams', 'virt_diagrams', 
@@ -481,7 +478,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         """
         argss = self.split_arg(line)
         # check argument validity and normalise argument
-        (options, argss) = mg_interface._launch_parser.parse_args(argss)
+        (options, argss) = _launch_parser.parse_args(argss)
         self.check_launch(argss, options)
         mode = argss[1]
         self.orig_dir = os.path.join(os.getcwd())
@@ -580,12 +577,14 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
         elif mode == 'aMC@LO':
             logger.info('Doing LO matched to parton shower')
-            shower, nevents = self.read_shower_events(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
+            shower, nevents = self.read_shower_events(
+                        pjoin(self.me_dir, 'Cards', 'run_card.dat'))
             logger.info('   Cleaning previous results')
             os.system('rm -rf P*/GB*')
             for i, status in enumerate(mcatnlo_status):
                 logger.info('   %s at LO' % status)
-                self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'born', i) 
+                self.write_madinMMC_file(
+                        pjoin(self.me_dir, 'SubProcesses'), shower, 'born', i) 
                 self.run_all(job_dict, ['2', 'F', '%d' % i])
                 self.wait_for_complete()
 
@@ -597,15 +596,17 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             logger.info('Waiting while files are trasferred back from the cluster nodes')
             time.sleep(15)
 
-        os.system('make collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
-        os.system('echo "1" | ./collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
+        os.system('make collect_events > %s' % \
+                pjoin (self.me_dir, 'log_collect_events'))
+        os.system('echo "1" | ./collect_events > %s' % \
+                pjoin (self.me_dir, 'log_collect_events'))
 
         count = 1
         while os.path.exists(pjoin(self.me_dir, 'Events', 'events_%d' % count)):
             count += 1
         evt_file = pjoin(self.me_dir, 'Events', 'events_%d' % count)
         os.system('mv %s %s' % 
-                (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file))
+            (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file))
         logger.info('The %s file has been generated.\nIt contains %d %s events to be showered' \
                 % (evt_file, nevents, mode[4:]))
 
@@ -632,10 +633,18 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
     def run_all(self, job_dict, args):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
+        njobs = sum(len(jobs) for jobs in job_dict.values())
+        ijob = 0
         for dir, jobs in job_dict.items():
             os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
             for job in jobs:
                 self.run_exe(job, args)
+                # print some statistics if running serially
+                ijob += 1
+                if self.options['run_mode'] == '0':
+                    logger.info('%d/%d completed\n' \
+                            % (ijob, njobs))
+
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
 
 
@@ -666,7 +675,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
 
 
-    def read_shower_events(self, run_card):
+    def read_shower_events(self, run_card, verbose=True):
         """read the parton shower and the requested number of events in the run_card"""
         if not os.path.exists(run_card):
             raise MadGraph5Error('%s is not a valid run_card' % run_card)
@@ -682,10 +691,10 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 if line.split()[2] == 'nevents':
                     nevents = int(line.split()[0])
 
-        if shower and nevents:
+        if shower and nevents and verbose:
             logger.info('Input read from the run_card.dat: \n Generating %d events for shower %s' \
                     %(nevents, shower))
-        else:
+        elif not shower or not nevents:
             raise MadGraph5Error('Falied to read shower and number of events from the run_card.dat')
 
         return shower, nevents
@@ -732,20 +741,33 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         file.close()
 
 
-    def run_cluster(self, mode, options):
-        """runs aMC@NLO on cluster"""
-        logger.info('Starting cluster run')
-        if not hasattr(self, 'cluster'):
-            cluster_name = self.options['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'])
-
-    def run_multicore(self, mode, options):
-        """runs aMC@NLO on multi-core"""
-        logger.warning('Multicore run not yet supported for aMC@NLO')
 
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
+        #define a bunch of log files
+        amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
+        madloop_log = pjoin(self.me_dir, 'compile_madloop.log')
+        gensym_log = pjoin(self.me_dir, 'gensym.log')
+        test_log = pjoin(self.me_dir, 'test.log')
+
+        #define which executable/tests to compile
+        if mode =='NLO':
+            exe = 'madevent_vegas'
+            tests = ['test_ME']
+        if mode in ['aMC@NLO', 'aMC@LO']:
+            exe = 'madevent_mintMC'
+            tests = ['test_ME', 'test_MC']
+        #directory where to compile exe
+        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+        p_dirs = [file for file in os.listdir('.') if file.startswith('P') and os.path.isdir(file)]
+        # if --nocompile option is specified, check here that all exes exists. 
+        # If they exists, return
+        if all([os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, exe)) \
+                for p_dir in p_dirs]) and options.__dict__['nocompile'] \
+                and not options.__dict__['tests']:
+            return
+
         libdir = pjoin(self.me_dir, 'lib')
         # read the run_card to find if lhapdf is used or not
         run_card_file = open(pjoin(self.me_dir, 'Cards','run_card.dat'))
@@ -773,10 +795,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         else:
             logger.info('Using built-in libraries for PDFs')
             os.unsetenv('lhapdf')
-        amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
-        madloop_log = pjoin(self.me_dir, 'compile_madloop.log')
-        gensym_log = pjoin(self.me_dir, 'gensym.log')
-        test_log = pjoin(self.me_dir, 'test.log')
+
         # make Source
         logger.info('Compiling source...')
         os.chdir(pjoin(self.me_dir, 'Source'))
@@ -789,20 +808,26 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         else:
             raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
 
-        os.chdir(self.me_dir)
-        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
-        p_dirs = [file for file in os.listdir('.') if file.startswith('P') and os.path.isdir(file)]
         # make and run tests (if asked for), gensym and make madevent in each dir
         for p_dir in p_dirs:
             logger.info(p_dir)
             this_dir = pjoin(self.me_dir, 'SubProcesses', p_dir) 
             os.chdir(this_dir)
-#            if 'MEtests' in options or 'ALLtests' in options:
-#                logger.info('   Compiling test_ME...')
-#                os.system('make test_ME >> %s 2>&1' % test_log)
-#
-#                logger.info('   Compiling test_MC...')
-#                os.system('make test_MC >> %s 2>&1' % test_log)
+            # compile and run tests if asked for
+            if options.__dict__['tests']:
+                for test in tests:
+                    logger.info('   Compiling %s...' % test)
+                    os.system('make %s >> %s 2>&1 ' % (test, test_log))
+                    if not os.path.exists(pjoin(this_dir, test)):
+                        raise MadGraph5Error('Compilation failed, check %s for details' \
+                                % test_log)
+                    logger.info('   Running %s...' % test)
+                    self.write_test_input(test)
+                    input = pjoin(self.me_dir, '%s_input.txt' % test)
+                    #this can be improved/better written to handle the output
+                    os.system('./%s < %s | tee -a %s | grep "Fraction of failures"' \
+                            % (test, input, test_log))
+                    os.system('rm -f %s' % input)
 
             logger.info('   Compiling gensym...')
             os.system('make gensym >> %s 2>&1 ' % amcatnlo_log)
@@ -822,10 +847,6 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 if not os.path.exists(pjoin(this_dir, 'libMadLoop.a')):
                     raise MadGraph5Error('Compilation failed, check %s for details' % madloop_log)
             os.chdir(this_dir)
-            if mode =='NLO':
-                exe = 'madevent_vegas'
-            if mode in ['aMC@NLO', 'aMC@LO']:
-                exe = 'madevent_mintMC'
             logger.info('   Compiling %s' % exe)
             os.system('make %s >> %s 2>&1' % (exe, amcatnlo_log))
             os.unsetenv('madloop')
@@ -834,10 +855,24 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         os.chdir(pjoin(self.me_dir))
 
 
-
-
+    def write_test_input(self, test):
+        """write the input files to run test_ME/MC"""
+        content = "-2 -2\n" #generate randomly energy/angle
+        content+= "100 100\n" #run 100 points for soft and collinear tests
+        content+= "0\n" #sum over helicities
+        content+= "0\n" #all FKS configs
+        content+= '\n'.join(["-1"] * 50) #random diagram
         
-
+        file = open(pjoin(self.me_dir, '%s_input.txt' % test), 'w')
+        if test == 'test_ME':
+            file.write(content)
+        elif test == 'test_MC':
+            shower, events = self.read_shower_events(\
+                    pjoin(self.me_dir, 'Cards', 'run_card.dat'), verbose=False)
+            MC_header = "%s\n " % shower + \
+                        "1 \n1 -0.1\n-1 -0.1\n"
+            file.write(MC_header + content)
+        file.close()
 
 
     ############################################################################
@@ -881,4 +916,18 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
    
 class FKSInterfaceWeb(mg_interface.CheckValidForCmdWeb, FKSInterface):
     pass
+
+_launch_usage = "launch [DIRPATH] [MODE] [options]\n" + \
+                "-- execute the aMC@NLO output present in DIRPATH\n" + \
+                "   By default DIRPATH is the latest created directory\n" + \
+                "   MODE can be either NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n"
+
+_launch_parser = optparse.OptionParser(usage=_launch_usage)
+_launch_parser.add_option("-n", "--nocompile", default=False, action='store_true',
+                            help="Skip compilation. Ignored if no executable is found, " + \
+                            "or with --tests")
+_launch_parser.add_option("-t", "--tests", default=False, action='store_true',
+                            help="Run soft/collinear tests to check the NLO/MC subtraction terms." + \
+                                 " MC tests are skipped in NLO mode.") 
+
 
