@@ -516,7 +516,6 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'), 'w')
             randinit.write('r=%d' % iseed)
             randinit.close()
-            os.system('cat %s' % pjoin(self.me_dir, 'SubProcesses', 'randinit'))
 
 
     def run(self, mode, options):
@@ -530,6 +529,8 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         for dir in p_dirs:
             os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
             job_dict[dir] = [file for file in os.listdir('.') if file.startswith('ajob')] 
+
+        mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
         if mode == 'NLO':
             logger.info('Doing fixed order NLO')
@@ -552,39 +553,19 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             shower, nevents = self.read_shower_events(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
             logger.info('   Cleaning previous results')
             os.system('rm -rf P*/GF* P*/GV*')
-            logger.info('   Setting up grid')
 
-            logger.info('     Running subtracted reals')
-            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'novB', 0) 
-            self.run_all(job_dict, ['2', 'F', '0'])
+            for i, mode in enumerate(mcatnlo_status):
+                logger.info('   %s' % mode)
+                logger.info('     Running subtracted reals')
+                self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'novB', i) 
+                self.run_all(job_dict, ['2', 'F', '%d' % i])
 
-            logger.info('     Running virtuals')
-            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'viSB', 0) 
-            self.run_all(job_dict, ['2', 'V', '0'])
+                logger.info('     Running virtuals')
+                self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'viSB', i) 
+                self.run_all(job_dict, ['2', 'V', '%d' % i])
 
-            os.system('./combine_results.sh 0 %d GF* GV*' % nevents)
-
-            logger.info('   Computing upper envelope')
-
-            logger.info('     Running subtracted reals')
-            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'novB', 1) 
-            self.run_all(job_dict, ['2', 'F', '1'])
-
-            logger.info('     Running virtuals')
-            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'viSB', 1) 
-            self.run_all(job_dict, ['2', 'V', '1'])
-
-            os.system('./combine_results.sh 1 %d GF* GV*' % nevents)
-
-            logger.info('   Generating events')
-
-            logger.info('     Running subtracted reals')
-            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'novB', 2) 
-            self.run_all(job_dict, ['2', 'F', '2'])
-
-            logger.info('     Running virtuals')
-            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'viSB', 2) 
-            self.run_all(job_dict, ['2', 'V', '2'])
+                if i < 2:
+                    os.system('./combine_results.sh %d %d GF* GV*' % (i, nevents))
 
             os.system('make collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
             os.system('echo "1" | ./collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
@@ -603,19 +584,13 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             shower, nevents = self.read_shower_events(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
             logger.info('   Cleaning previous results')
             os.system('rm -rf P*/GB*')
-            logger.info('   Setting up grid at LO')
-            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'born', 0) 
-            self.run_all(job_dict, ['2', 'B', '0'])
-            os.system('./combine_results.sh 0 %d GB*' % nevents)
+            for i, mode in enumerate(mcatnlo_status):
+                logger.info('   %s at LO' % mode)
+                self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'born', i) 
+                self.run_all(job_dict, ['2', 'F', '%d' % i])
 
-            logger.info('   Computing upper envelope at LO')
-            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'born', 1) 
-            self.run_all(job_dict, ['2', 'B', '1'])
-            os.system('./combine_results.sh 1 %d GB*' % nevents)
-
-            logger.info('   Generating events at LO')
-            self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'born', 2) 
-            self.run_all(job_dict, ['2', 'B', '2'])
+                if i < 2:
+                    os.system('./combine_results.sh %d %d GB*' % (i, nevents))
 
             os.system('make collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
             os.system('echo "1" | ./collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
