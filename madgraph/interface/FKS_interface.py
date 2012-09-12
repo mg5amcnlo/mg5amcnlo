@@ -33,6 +33,7 @@ import madgraph.iolibs.export_fks as export_fks
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
+import madgraph.various.cluster as cluster
 
 #usefull shortcut
 pjoin = os.path.join
@@ -521,6 +522,10 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
     def run(self, mode, options):
         """runs aMC@NLO"""
         logger.info('Starting run')
+
+        if self.options['run_mode'] == '1':
+            cluster_name = self.options['cluster_type']
+            self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'])
         self.update_random_seed()
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
         #find and keep track of all the jobs
@@ -530,6 +535,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
             job_dict[dir] = [file for file in os.listdir('.') if file.startswith('ajob')] 
 
+        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
         if mode == 'NLO':
@@ -539,6 +545,8 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
             logger.info('   Setting up grid')
             self.run_all(job_dict, ['0', 'grid', '0'])
+            self.wait_for_complete()
+            os.system('./combine_results_FO.sh grid*')
 
             logger.info('   Runnning subtracted reals')
             self.run_all(job_dict, ['0', 'novB', '0', 'grid'])
@@ -546,7 +554,9 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             logger.info('   Runnning virtuals')
             self.run_all(job_dict, ['0', 'viSB', '0', 'grid'])
 
+            self.wait_for_complete()
             os.system('./combine_results_FO.sh viSB* novB*')
+            return
 
         elif mode == 'aMC@NLO':
             logger.info('Doing NLO matched to parton shower')
@@ -554,8 +564,8 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             logger.info('   Cleaning previous results')
             os.system('rm -rf P*/GF* P*/GV*')
 
-            for i, mode in enumerate(mcatnlo_status):
-                logger.info('   %s' % mode)
+            for i, status in enumerate(mcatnlo_status):
+                logger.info('   %s' % status)
                 logger.info('     Running subtracted reals')
                 self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'novB', i) 
                 self.run_all(job_dict, ['2', 'F', '%d' % i])
@@ -564,45 +574,60 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'viSB', i) 
                 self.run_all(job_dict, ['2', 'V', '%d' % i])
 
+                self.wait_for_complete()
                 if i < 2:
                     os.system('./combine_results.sh %d %d GF* GV*' % (i, nevents))
-
-            os.system('make collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
-            os.system('echo "1" | ./collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
-
-            count = 1
-            while os.path.exists(pjoin(self.me_dir, 'Events', 'events_%d' % count)):
-                count += 1
-            evt_file = pjoin(self.me_dir, 'Events', 'events_%d' % count)
-            os.system('mv %s %s' % 
-                    (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file))
-            logger.info('The %s file has been generated.\nIt contains %d NLO events to be showered with %s' \
-                    % (evt_file, nevents, shower))
 
         elif mode == 'aMC@LO':
             logger.info('Doing LO matched to parton shower')
             shower, nevents = self.read_shower_events(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
             logger.info('   Cleaning previous results')
             os.system('rm -rf P*/GB*')
-            for i, mode in enumerate(mcatnlo_status):
-                logger.info('   %s at LO' % mode)
+            for i, status in enumerate(mcatnlo_status):
+                logger.info('   %s at LO' % status)
                 self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'born', i) 
                 self.run_all(job_dict, ['2', 'F', '%d' % i])
+                self.wait_for_complete()
 
                 if i < 2:
                     os.system('./combine_results.sh %d %d GB*' % (i, nevents))
 
-            os.system('make collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
-            os.system('echo "1" | ./collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
+        if self.options['run_mode'] == '1':
+            #if cluster run, wait 15 sec so that event files are transferred back
+            logger.info('Waiting while files are trasferred back from the cluster nodes')
+            time.sleep(15)
 
-            count = 1
-            while os.path.exists(pjoin(self.me_dir, 'Events', 'events_%d' % count)):
-                count += 1
-            evt_file = pjoin(self.me_dir, 'Events', 'events_%d' % count)
-            os.system('mv %s %s' % 
-                    (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file))
-            logger.info('The %s file has been generated.\nIt contains %d LO events to be showered' \
-                    % (evt_file, nevents))
+        os.system('make collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
+        os.system('echo "1" | ./collect_events > %s' % pjoin (self.me_dir, 'log_collect_events'))
+
+        count = 1
+        while os.path.exists(pjoin(self.me_dir, 'Events', 'events_%d' % count)):
+            count += 1
+        evt_file = pjoin(self.me_dir, 'Events', 'events_%d' % count)
+        os.system('mv %s %s' % 
+                (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file))
+        logger.info('The %s file has been generated.\nIt contains %d %s events to be showered' \
+                % (evt_file, nevents, mode[4:]))
+
+
+    def wait_for_complete(self):
+        """this function waits for jobs on cluster to complete their run."""
+
+        # do nothing if running serially
+        if self.options['run_mode'] == '0':
+            return
+
+        idle = 1
+        run = 1
+        logger.info('     Waiting for submitted jobs to complete')
+        while idle + run > 0:
+            idle, run, finish, fail = self.cluster.control('')
+            time.sleep(5)
+            logger.info('     Job status: %d idle, %d running, %d failed, %d completed' \
+                    % (idle, run, fail, finish))
+        #reset the cluster after completion
+#        self.cluster.submitted = 0
+#        self.cluster.submitted_ids = []
 
 
     def run_all(self, job_dict, args):
@@ -629,9 +654,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             os.system('./%s %s ' % (exe, ' '.join(args)))
         elif self.options['run_mode'] == '1':
             #this is for the cluster run
-            if not hasattr(self, 'cluster'):
-                cluster_name = self.options['cluster_type']
-                self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'])
+            self.cluster.submit(exe, args)
 
         elif self.options['run_mode'] == '2':
             #this is for the multicore run
