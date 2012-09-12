@@ -2336,7 +2336,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             # clean previous run
             for match in glob.glob(pjoin(Pdir, '*ajob*')):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
-                    os.remove(pjoin(Pdir, match))
+                    os.remove(match)
+            for match in glob.glob(pjoin(Pdir, 'G*')):
+                if os.path.exists(pjoin(match,'results.dat')):
+                    os.remove(pjoin(match, 'results.dat'))
             
             #compile gensym
             misc.compile(['gensym'], cwd=Pdir)
@@ -2411,7 +2414,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             # clean previous run
             for match in glob.glob(pjoin(Pdir, '*ajob*')):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
-                    os.remove(pjoin(Pdir, match))
+                    os.remove(match)
             
             proc = misc.Popen([pjoin(bindir, 'gen_ximprove')],
                                     stdout=devnull,
@@ -2421,8 +2424,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
             if os.path.exists(pjoin(Pdir, 'ajob1')):
                 misc.compile(['madevent'], cwd=Pdir)
-                #
                 alljobs = glob.glob(pjoin(Pdir,'ajob*'))
+                
+                #remove associated results.dat (ensure to not mix with all data)
+                Gre = re.compile("\s*j=(G[\d\.\w]+)")
+                for job in alljobs:
+                    Gdirs = Gre.findall(open(job).read())
+                    for Gdir in Gdirs:
+                        if os.path.exists(pjoin(Pdir, Gdir, 'results.dat')):
+                            os.remove(pjoin(Pdir, Gdir,'results.dat'))
+                
                 nb_tot = len(alljobs)            
                 self.total_jobs += nb_tot
                 for i, job in enumerate(alljobs):
@@ -2441,13 +2452,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
 
-        #misc.call([pjoin(bindir, 'combine_runs')], 
-        #                                  cwd=pjoin(self.me_dir,'SubProcesses'),
-        #                                  stdout=devnull)
-        #print 'combine_runs takes %s s ' % (time.time() - start)
-        #start = time.time()
         combine_runs.CombineRuns(self.me_dir)
-        #print 'combine_runs (python) takes %s s ' % (time.time() - start)
         
         cross, error = sum_html.make_all_html_results(self)
         self.results.add_detail('cross', cross)

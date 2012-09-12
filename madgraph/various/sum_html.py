@@ -131,7 +131,7 @@ class Combine_results(list, OneResult):
         self.maxit = len(self.yerr_iter)  # 
         self.nunwgt = sum([one.nunwgt for one in self])  
         self.wgt = 0
-        self.luminosity = sum([one.luminosity for one in self])
+        self.luminosity = min([one.luminosity for one in self])
         
         
         
@@ -148,11 +148,11 @@ class Combine_results(list, OneResult):
         self.xerru = math.sqrt(sum([one.xerru**2 for one in self])) /nbjobs
 
         self.nevents = sum([one.nevents for one in self])
-        self.nw = sum([one.nw for one in self])
-        self.maxit = len(self.yerr_iter)  # 
+        self.nw = 0#sum([one.nw for one in self])
+        self.maxit = 0#len(self.yerr_iter)  # 
         self.nunwgt = sum([one.nunwgt for one in self])  
         self.wgt = 0
-        self.luminosity = min([one.luminosity for one in self])
+        self.luminosity = sum([one.luminosity for one in self])
         self.ysec_iter = []
         self.yerr_iter = []
         for result in self:
@@ -286,9 +286,17 @@ class Combine_results(list, OneResult):
     
     def write_results_dat(self, output_path):
         """write a correctly formatted results.dat"""
-        
-        line = '%s %s %s %s %s %s %s %s %s %s \n' % (self.axsec, self.xerru, self.xerrc,
-                 self.nevents, self.nw, self.maxit, self.nunwgt, self.luminosity, self.wgt, self.xsec)
+
+        def fstr(nb):
+            data = '%E' % nb
+            nb, power = data.split('E')
+            nb = float(nb) /10
+            power = int(power) + 1
+            return '%.5fE%+03i' %(nb,power)
+
+        line = '%s %s %s %i %i %i %i %s %s %s\n' % (fstr(self.axsec), fstr(self.xerru), 
+                fstr(self.xerrc), self.nevents, self.nw, self.maxit, self.nunwgt,
+                 fstr(self.luminosity), fstr(self.wgt), fstr(self.xsec))        
         fsock = open(output_path,'w') 
         fsock.writelines(line)
         for i in range(len(self.ysec_iter)):

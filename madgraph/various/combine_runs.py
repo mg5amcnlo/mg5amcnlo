@@ -98,7 +98,7 @@ class CombineRuns(object):
         fsock.write('--------------------- Multi run with %s jobs. ---------------------\n'
                     % njobs)
         for r in results:
-            fsock.write('job %s : %s %s %s\n' % (r.name, r.xsec, r.axsec, r.nevents))  
+            fsock.write('job %s : %s %s %s\n' % (r.name, r.xsec, r.axsec, r.nunwgt))  
             
         #Now read in all of the events and write them
         #back out with the appropriate scaled weight
@@ -125,19 +125,13 @@ class CombineRuns(object):
             nb = float(nb) /10
             power = int(power) + 1
             return '%.7fE%+03i' %(nb,power)
-        
-        fread = open(input)
-        #1 read the wgt
-        for line in fread:
+        new_wgt = get_fortran_str(new_wgt)
+        for line in open(input):
             data = line.split()
             if len(data) == 6:
-                old_wgt = data[2]
-                break
-        fread.seek(0)
-        
-        text = open(input).read()
-        fsock.write(text.replace(old_wgt,
-                                 get_fortran_str(new_wgt)))
+                line= ' %s  %s  %s\n' % ('   '.join(data[:2]), new_wgt, '  '.join(data[3:]))
+                #line = ' %s\n' % '  '.join(data[:2] + [new_wgt]+ data[3:]) 
+            fsock.write(line)
 
         
         
@@ -157,16 +151,16 @@ class CombineRuns(object):
                 xi, j = line.split()
             except Exception:
                 break
-            xi, j  = float(xi), float(j)
+            xi, j  = float(xi), int(j)
             
             if j > 0:
-                k = int(xi*(1+10**(-ncode))) 
-                npos = int(xi*math.log10(k))+1
+                k = int(xi) 
+                npos = int(math.log10(k))+1
                 #Write with correct number of digits
-                if xi-k == 0:
-                    dirname = 'G%0{0}i'.format(npos) % k
+                if xi == k:
+                    dirname = 'G%i' % k
                 else:
-                    dirname = 'G%0{0}.{1}f'.format(npos+ncode+1, ncode) % xi
+                    dirname = 'G%.{0}f'.format(ncode) % xi
                 channels.append(os.path.join(proc_path,dirname))
         return channels
     
