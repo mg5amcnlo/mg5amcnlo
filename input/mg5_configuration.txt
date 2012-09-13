@@ -60,7 +60,7 @@ automatic_html_opening = True
 
 # Default Running mode 
 # 0: single machine/ 1: cluster / 2: multicore
-run_mode = 1
+run_mode = 0
 
 # Cluster Type [pbs|sge|condor|lsf|ge] Use for cluster run only
 # And cluster queue
