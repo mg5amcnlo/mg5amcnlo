@@ -480,6 +480,11 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         # check argument validity and normalise argument
         (options, argss) = _launch_parser.parse_args(argss)
         self.check_launch(argss, options)
+        #check if asked for cluster run, if so remember the old run_mode and restore it at the end
+        if options.__dict__['cluster']:
+            logger.info('Prepairing cluster run')
+            old_run_mode = self.options['run_mode']
+            self.options['run_mode'] = '1'
         mode = argss[1]
         self.orig_dir = os.path.join(os.getcwd())
         self.me_dir = os.path.join(os.getcwd(), argss[0])
@@ -488,6 +493,8 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         self.run(mode, options)
 
         os.chdir(self.orig_dir)
+        if options.__dict__['cluster']:
+            self.options['run_mode'] = old_run_mode
 
 
     def update_random_seed(self):
@@ -970,6 +977,8 @@ _launch_usage = "launch [DIRPATH] [MODE] [options]\n" + \
                 "   MODE can be either NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n"
 
 _launch_parser = optparse.OptionParser(usage=_launch_usage)
+_launch_parser.add_option("-c", "--cluster", default=False, action='store_true',
+                            help="Submit the jobs on the cluster")
 _launch_parser.add_option("-n", "--nocompile", default=False, action='store_true',
                             help="Skip compilation. Ignored if no executable is found, " + \
                             "or with --tests")
