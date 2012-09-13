@@ -360,8 +360,7 @@ c        Stop generation with error message
          INQUIRE(FILE="../../RunWeb", EXIST=file_exists)
          if(.not.file_exists) filename = '../' // filename
          open(unit=26,file=filename,status='unknown')
-         write(26,*)'Error: No valid channels found. ',
-     $        'Please check particle masses.'
+         write(26,*)'No Phase Space. Please check particle masses.'
          write(*,*)'Error: No valid channels found. ',
      $        'Please check particle masses.'
          close(26)

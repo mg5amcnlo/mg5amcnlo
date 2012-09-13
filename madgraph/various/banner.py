@@ -198,7 +198,7 @@ def recover_banner(results_object, level):
     try:  
         run = results_object.current['run_name']    
         tag = results_object.current['tag'] 
-    except:
+    except Exception:
         return Banner()                                  
     path = results_object.path
     banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
