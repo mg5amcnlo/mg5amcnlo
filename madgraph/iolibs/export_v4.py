@@ -2975,7 +2975,7 @@ class UFO_model_to_mg4(object):
         
         #copy the library files
         file_to_link = ['formats.inc', 'lha_read.f','printout.f', \
-                        'rw_para.f', 'testprog.f', 'rw_para.f']
+                        'rw_para.f', 'testprog.f']
     
     
         for filename in file_to_link:
