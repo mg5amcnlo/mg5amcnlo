@@ -61,10 +61,12 @@
  1        = QES_over_ref     ! ratio of current QES over reference QES
 #********************************************************************* 
 # Reweight flags to get scale dependence and PDF uncertainty         *
-# For scale dependence: factor 2 up and down around central scale    *
+# For scale dependence: factor rw_scale_up/down around central scale *
 # For PDF uncertainty: use LHAPDF with supported set                 *
 #*********************************************************************
  .true.   = reweight_scale   ! reweight to get scale dependence
+  0.5     = rw_scale_down    ! lower bound for scale variations
+  2.0     = rw_scale_up      ! upper bound for scale variations
  .false.  = reweight_PDF     ! reweight to get PDF uncertainty
   21101   = PDF_set_min      ! First of the error PDF sets 
   21140   = PDF_set_max      ! Last of the error PDF sets

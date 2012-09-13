@@ -585,7 +585,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 logger.info('   %s at LO' % status)
                 self.write_madinMMC_file(
                         pjoin(self.me_dir, 'SubProcesses'), shower, 'born', i) 
-                self.run_all(job_dict, ['2', 'F', '%d' % i])
+                self.run_all(job_dict, ['2', 'B', '%d' % i])
                 self.wait_for_complete()
 
                 if i < 2:
@@ -596,12 +596,17 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             logger.info('Waiting while files are trasferred back from the cluster nodes')
             time.sleep(15)
 
+        self.run_reweight()
+
         os.system('make collect_events > %s' % \
-                pjoin (self.me_dir, 'log_collect_events'))
+                pjoin (self.me_dir, 'log_collect_events.txt'))
         os.system('echo "1" | ./collect_events > %s' % \
-                pjoin (self.me_dir, 'log_collect_events'))
+                pjoin (self.me_dir, 'log_collect_events.txt'))
 
         count = 1
+        if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001')):
+            raise MadGraph5Error('An error occurred during event generation. ' + \
+                    'The event file has not been created. Check log_collect_events.txt')
         while os.path.exists(pjoin(self.me_dir, 'Events', 'events_%d' % count)):
             count += 1
         evt_file = pjoin(self.me_dir, 'Events', 'events_%d' % count)
@@ -609,6 +614,28 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file))
         logger.info('The %s file has been generated.\nIt contains %d %s events to be showered' \
                 % (evt_file, nevents, mode[4:]))
+
+
+    def run_reweight(self):
+        """runs the reweight_xsec_events eecutables on each sub-event file generated
+        to compute on the fly scale and/or PDF uncertainities"""
+
+        reweight_log = pjoin(self.me_dir, 'compile_reweight.log')
+        #read the nevents_unweighted file to get the list of event files
+        file = open(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted'))
+        lines = file.read().split('\n')
+        file.close()
+        evt_files = [line.split()[0] for line in lines if line]
+        for i, evt_file in enumerate(evt_files):
+            path, evt = os.path.split(evt_file)
+            if self.options['run_mode'] == '0':
+                logger.info('Reweighting file %s (%d/%d)' \
+                        %(evt_file, i + 1, len(evt_files)))
+                os.chdir(pjoin(self.me_dir, 'SubProcesses', path))
+                os.system('echo "%s \n 1" |../reweight_xsec_events >> %s' \
+                        % (evt, reweight_log))
+
+        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
 
 
     def wait_for_complete(self):
@@ -732,10 +759,9 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 1          ! Enter Configuration Number:
 %1d          ! MINT imode: 0 to set-up grids, 1 to perform integral, 2 generate events
 1 1 1      ! if imode is 1: Folding parameters for xi_i, phi_i and y_ij
-%s   ! entries may be HERWIG6,HERWIGPP,PYTHIA6Q,PYTHIA6PT,PYTHIA8
 %s        ! all, born, real, virt
 """ \
-                    % (mint_mode, shower, run_mode)
+                    % (mint_mode, run_mode)
         file = open(pjoin(path, 'madinMMC_%s.2' % name_suffix), 'w')
         file.write(content)
         file.close()
@@ -748,6 +774,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
         madloop_log = pjoin(self.me_dir, 'compile_madloop.log')
+        reweight_log = pjoin(self.me_dir, 'compile_reweight.log')
         gensym_log = pjoin(self.me_dir, 'gensym.log')
         test_log = pjoin(self.me_dir, 'test.log')
 
@@ -852,6 +879,12 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             os.unsetenv('madloop')
             if not os.path.exists(pjoin(this_dir, exe)):
                 raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
+            if mode in ['aMC@NLO', 'aMC@LO']:
+                logger.info('   Compiling reweight_xsec_events')
+                os.system('make reweight_xsec_events >> %s 2>&1' % (reweight_log))
+                if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
+                    raise MadGraph5Error('Compilation failed, check %s for details' % reweight_log)
+
         os.chdir(pjoin(self.me_dir))
 
 

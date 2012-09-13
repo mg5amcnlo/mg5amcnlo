@@ -488,8 +488,6 @@ c
       logical usexinteg,mint
       common/cusexinteg/usexinteg,mint
 
-      character*10 MonteCarlo
-      common/cMonteCarloType/MonteCarlo
 c-----
 c  Begin Code
 c-----
@@ -580,18 +578,6 @@ c These should be ignored (but kept for 'historical reasons')
       read (*,*) ixi_i,iphi_i,iy_ij
       write (*,*)ixi_i,iphi_i,iy_ij
 
-
-      write (*,'(a)') 'Monte Carlo for showering. Possible options are'
-      write (*,'(a)') 'HERWIG6, HERWIGPP, PYTHIA6Q, PYTHIA6PT, PYTHIA8'
-      read (*,*) MonteCarlo
-      write (*,*) MonteCarlo
-
-      if(MonteCarlo.ne.'HERWIG6' .and.MonteCarlo.ne.'HERWIGPP' .and.
-     #   MonteCarlo.ne.'PYTHIA6Q'.and.MonteCarlo.ne.'PYTHIA6PT'.and.
-     #   MonteCarlo.ne.'PYTHIA8')then
-        write(*,*)'Take it easy. This MC is not implemented'
-        stop
-      endif
 
       abrvinput='     '
       write (*,*) "'all ', 'born', 'real', 'virt', 'novi' or 'grid'?"

@@ -60,3 +60,19 @@ c
       integer ktscheme
       logical chcluster,pdfwgt
       common/to_cluster/ktscheme,chcluster,pdfwgt
+
+c
+c     Shower MonteCarlo
+c     
+      character*10 shower_mc
+      common /cMonteCarloType/shower_mc
+
+c
+c     Reweight info
+c
+      logical do_rwgt_scale, do_rwgt_pdf
+      integer pdf_set_min, pdf_set_max
+      double precision rw_Fscale_down, rw_Fscale_up, rw_Rscale_down, rw_Rscale_up
+      common/to_rwgt/ do_rwgt_scale, rw_Fscale_down, rw_Fscale_up, rw_Rscale_down, rw_Rscale_up,
+     # do_rwgt_pdf, pdf_set_min, pdf_set_max 
+

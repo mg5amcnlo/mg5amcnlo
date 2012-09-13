@@ -10,7 +10,11 @@ c Compile with makefile_rwgt
       include "genps.inc"
       include "nFKSconfigs.inc"
       include "reweight_all.inc"
-      integer maxevt,ifile,ofile,i,isave,imu,ipdf,ii
+      include "run.inc"
+      character*7 pdlabel,epa_label
+      integer lhaid
+      common/to_pdf/lhaid,pdlabel,epa_label
+      integer maxevt,ifile,ofile,i,isave,ii
       double precision saved_weight
       logical unweighted
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
@@ -57,49 +61,36 @@ c
         isave=0
       endif
 
-      write(*,*)'Enter 1 to compute scale uncertainty'
-      write(*,*)'      0 otherwise'
-      read(*,*)imu
 
-      write(*,*)'Enter 1 to compute PDF uncertainty'
-      write(*,*)'      0 otherwise'
-      read(*,*)ipdf
-
-      write(6,*)'Enter QES_over_ref used in the reference computation'
-      read(5,*)xQES_over_ref
-
-      write(6,*)'Enter muR_over_ref, muF1_over_ref(=muF2_over_ref)'
-      write(6,*)'  used in the reference computation'
-      read(5,*)xmuR_over_ref,xmuF1_over_ref
-      xmuF2_over_ref=xmuF1_over_ref
-
-      if(imu.ne.0)then
-        write(6,*)'Enter renormalization scale variation range'
-        write(6,*)'  (e.g., 0.5 2.0)'
-        read(5,*)yfactR(2),yfactR(3)
-        yfactR(1)=1.d0
-        write(6,*)'Enter factorization scale variation range'
-        write(6,*)'  (e.g., 0.5 2.0)'
-        read(5,*)yfactF(2),yfactF(3)
-        yfactF(1)=1.d0
-        numscales=3
-        if(numscales.gt.maxscales)then
-          write(*,*)
-     #      'Too many scales: increase maxscales in reweight0.inc'
+      xQES_over_ref=QES_over_ref
+      xmuR_over_ref=muR_over_ref
+      xmuF1_over_ref=muF1_over_ref
+      xmuF2_over_ref=muF2_over_ref
+      if (xmuF1_over_ref .ne. xmuF2_over_ref) then
+          write(*,*) "The variables muF1_over_ref and muF2_over_ref" //
+     1     " have to be set equal in the run_card.dat." //
+     1     " Run cannot continue, quitting..."
           stop
-        endif
+      endif
+
+      if(do_rwgt_scale)then
+        yfactR(1)=1.d0
+        yfactR(2)=rw_Rscale_down
+        yfactR(2)=rw_Rscale_up
+        yfactF(1)=1.d0
+        yfactF(2)=rw_Fscale_down
+        yfactF(2)=rw_Fscale_up
+        numscales=3
       else
         numscales=0
       endif
 
 c Note: when ipdf#0, the central PDF set will be used also as a reference
 c for the scale uncertainty
-      if(ipdf.ne.0)then
-        write(6,*)'Enter id number of central set'
-        read(5,*)idpdf(0)
-        write(6,*)'Enter id numbers of first and last error set'
-        read(5,*)idpdf(1),itmp
-c
+      if(do_rwgt_pdf)then
+        idpdf(0)=lhaid
+        idpdf(1)=pdf_set_min
+        itmp=pdf_set_max
         nsets=itmp-idpdf(1)+1
         if(mod(nsets,2).ne.0)then
           write(*,*)'The number of error sets must be even',nsets
@@ -220,7 +211,7 @@ c$$$      call fk88strcat(event_file,'.rwgt',fname1)
 
         if (kwgtinfo.eq.5) call reweight_settozero()
 
-        if(imu.ne.0)then
+        if(do_rwgt_scale)then
 
           wgtmumin=1.d40
           wgtmumax=-1.d40
@@ -288,7 +279,7 @@ c
 
         endif
 
-        if(ipdf.ne.0)then
+        if(do_rwgt_pdf)then
 
           do n=0,nsets
              wgtref=0d0
@@ -341,7 +332,7 @@ c
              endif
           enddo
 
-          if(imu.ne.0)then
+          if(do_rwgt_scale)then
             if(abs(xsecPDFr(0)/wgtcentral-1.d0).gt.1.d-6)then
               write(*,*)'Central valued computed with mu and PDF differ'
               write(*,*)xsecPDFr(0),wgtcentral

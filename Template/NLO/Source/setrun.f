@@ -66,6 +66,7 @@ c
       logical gridrun,gridpack
       integer          iseed
       common /to_seed/ iseed
+
 c
 c----------
 c     start
@@ -402,6 +403,31 @@ c For backward compatibility
 c
       call get_logical(npara,param,value," fixed_couplings ",
      #                 fixed_couplings,.true.)
+
+c read shower monte carlo
+      call get_string(npara,param,value," parton_shower ",
+     #                 shower_mc,.false.)
+
+      call to_upper(shower_mc)
+
+c info for reweight
+      call get_logical(npara,param,value," reweight_scale ",
+     #                 do_rwgt_scale,.false.)
+      call get_real(npara,param,value," rw_fscale_down ",
+     #      rw_fscale_down,0.5)
+      call get_real(npara,param,value," rw_fscale_up ",
+     #      rw_fscale_up,0.5)
+      call get_real(npara,param,value," rw_rscale_down ",
+     #      rw_rscale_down,0.5)
+      call get_real(npara,param,value," rw_rscale_up ",
+     #      rw_rscale_up,0.5)
+      call get_logical(npara,param,value," reweight_pdf ",
+     #                 do_rwgt_pdf,.false.)
+      call get_integer(npara,param,value," pdf_set_min ",
+     #                 pdf_set_min,.false.)
+      call get_integer(npara,param,value," pdf_set_max ",
+     #                 pdf_set_max,.false.)
+
 c$$$      call get_integer(npara,param,value," ickkw "          ,ickkw    , 0  )
 c$$$      call get_logical(npara,param,value," chcluster ",chcluster,.false.)
 c$$$c     ktscheme for xqcut: 1: pT/Durham kT; 2: pythia pTE/Durham kT

@@ -390,6 +390,32 @@ c
       return
       end
 
+
+      subroutine to_upper(name)
+c**********************************************************    
+c change the string to uppercase if the input is not
+c**********************************************************
+      implicit none
+c
+c     ARGUMENT
+c      
+      character*20 name
+c
+c     LOCAL
+c
+      integer i,k
+
+      do i=1,20
+         k=ichar(name(i:i))
+         if(k.gt.90) then  !upper case A-Z
+            k=ichar(name(i:i))-32   
+            name(i:i)=char(k)        
+         endif
+      enddo
+
+      return
+      end
+
 c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 c ++
 c ++ firststring -> return the first "word" of string 
