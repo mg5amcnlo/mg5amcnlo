@@ -25,7 +25,7 @@ import logging
 try:
     import madgraph.various.sum_html as sum_html
 except:
-    import internal.sum_html
+    import internal.sum_html as sum_html
     
 logger = logging.getLogger('madevent.combine_run') # -> stdout
 
@@ -76,10 +76,15 @@ class CombineRuns(object):
        
         alphabet = "abcdefghijklmnopqrstuvwxyz"
 
-        njobs = int(open(pjoin(channel, 'multijob.dat')).read())
+        if os.path.exists(pjoin(channel, 'multijob.dat')):
+            njobs = int(open(pjoin(channel, 'multijob.dat')).read())
+        else:
+            return
         results = sum_html.Combine_results(channel)
         if njobs:
             logger.debug('find %s multijob in %s' % (njobs, channel))
+        else:
+            return
         for i in range(njobs):
             if channel.endswith(os.path.pathsep):
                 path = channel[:-1] + alphabet[i] 
