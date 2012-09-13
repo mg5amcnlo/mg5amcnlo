@@ -351,8 +351,8 @@ c
       integer        lbw(0:nexternal)  !Use of B.W.
       common /to_BW/ lbw
 
-      double precision stot
-      common/to_stot/stot
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
 
       include 'coupl.inc'
       include 'cuts.inc'

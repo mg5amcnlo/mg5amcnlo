@@ -993,7 +993,13 @@ class OneTagResults(dict):
             debug = '<br> <a href=\'%s\'> <font color=red>ERROR</font></a>' \
                                                % (self.debug)
         elif self.debug:
-            debug = '<br><font color=red>%s</font>' %self.debug
+            text = str(self.debug).replace('.','.<br>')
+            if 'htpp' in text:
+                pat = re.compile('(http[\S]*)')
+                text = pat.sub(r'<a href=\1> here </a>', text)
+                
+            debug = '<br><font color=red>%s</font>' % text
+            
         else:
             debug = ''                                       
         text = tag_template % {'tag_span': nb_line,

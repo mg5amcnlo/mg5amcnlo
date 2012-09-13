@@ -84,6 +84,9 @@ except Exception, error:
 class MadEventError(Exception):
     pass
 
+class ZeroResult(MadEventError):
+    pass
+
 #===============================================================================
 # CmdExtended
 #===============================================================================
@@ -269,9 +272,38 @@ class CmdExtended(cmd.Cmd):
 
     def nice_error_handling(self, error, line):
         """If a ME run is currently running add a link in the html output"""
+        
 
-        self.add_error_log_in_html()            
-        cmd.Cmd.nice_error_handling(self, error, line)
+        if isinstance(error, ZeroResult):
+            self.add_error_log_in_html(error)
+            logger.warning('Zero result detected: %s' % error)
+            # create a banner if needed
+            try:
+                if not self.banner:
+                    self.banner = banner_mod.Banner()
+                if 'slha' not in self.banner:
+                    self.banner.add(pjoin(self.me_dir,'Cards','param_card.dat'))
+                if 'mgruncard' not in self.banner:
+                    self.banner.add(pjoin(self.me_dir,'Cards','run_card.dat'))
+                if 'mg5proccard' not in self.banner:
+                    proc_card = pjoin(self.me_dir,'Cards','proc_card_mg5.dat')
+                    if os.path.exists(proc_card):
+                        self.banner.add(proc_card)
+                
+                out_dir = pjoin(self.me_dir, 'Events', self.run_name)
+                if not os.path.isdir(out_dir):
+                    os.mkdir(out_dir)
+                output_path = pjoin(out_dir, '%s_%s_banner.txt' % \
+                                                  (self.run_name, self.run_tag))
+                self.banner.write(output_path)
+            except Exception:
+                if __debug__:
+                    raise
+                else:
+                    pass
+        else:
+            self.add_error_log_in_html()            
+            cmd.Cmd.nice_error_handling(self, error, line)
 
         
         
@@ -2024,13 +2056,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                           postcmd=False)
             if not float(self.results.current['cross']):
                 # Zero cross-section. Try to guess why
-                raise MadGraph5Error('''Survey return zero cross section. 
+                text = '''Survey return zero cross section. 
    Typical reasons are the following:
    1) A massive s-channel particle has a width set to zero.
    2) The pdf are zero for at least one of the initial state particles.
    3) The cuts are too strong.
-   Please check/correct your param_card and/or your run_card.''')
-            
+   Please check/correct your param_card and/or your run_card.'''
+                logger_stderr.critical(text)
+                raise ZeroResult('See https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/FAQ-General-14')
             nb_event = self.run_card['nevents']
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
@@ -2349,10 +2382,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                  stderr=subprocess.STDOUT, cwd=Pdir)
             sym_input = "%(points)d %(iterations)d %(accuracy)f %(gridpack)s\n" % self.opts
             (stdout, stderr) = p.communicate(sym_input)
+            if os.path.exists(pjoin(self.me_dir,'error')):
+                raise ZeroResult, '%s' % \
+                    open(pjoin(self.me_dir,'error')).read()
+            
             if not os.path.exists(pjoin(Pdir, 'ajob1')) or p.returncode:
                 logger.critical(stdout)
                 raise MadEventError, 'Error gensym run not successful'
-            #
+
+
             misc.compile(['madevent'], cwd=Pdir)
             
             alljobs = glob.glob(pjoin(Pdir,'ajob*'))
