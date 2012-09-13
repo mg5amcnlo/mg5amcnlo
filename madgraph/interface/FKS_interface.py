@@ -593,7 +593,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
         if self.options['run_mode'] == '1':
             #if cluster run, wait 15 sec so that event files are transferred back
-            logger.info('Waiting while files are trasferred back from the cluster nodes')
+            logger.info('Waiting while files are transferred back from the cluster nodes')
             time.sleep(15)
 
         self.run_reweight()
@@ -640,6 +640,10 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 if last_line != "</LesHouchesEvents>":
                     raise MadGraph5Error('An error occurred during reweight.' + \
                             ' Check %s for details' % reweight_log)
+            if self.options['run_mode'] == '1':
+                logger.info('Cluster mode not yet implemented for reweight')
+                logger.info('Event file will not be reweighted')
+                return
 
         newfile = open(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted'), 'w')
         for line in lines:
@@ -663,13 +667,13 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         run = 1
         logger.info('     Waiting for submitted jobs to complete')
         while idle + run > 0:
+            time.sleep(10)
             idle, run, finish, fail = self.cluster.control('')
-            time.sleep(5)
             logger.info('     Job status: %d idle, %d running, %d failed, %d completed' \
                     % (idle, run, fail, finish))
         #reset the cluster after completion
-#        self.cluster.submitted = 0
-#        self.cluster.submitted_ids = []
+        self.cluster.submitted = 0
+        self.cluster.submitted_ids = []
 
 
     def run_all(self, job_dict, args):
@@ -704,15 +708,11 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             os.system('./%s %s ' % (exe, ' '.join(args)))
         elif self.options['run_mode'] == '1':
             #this is for the cluster run
-            self.cluster.submit(exe, args)
+            self.cluster.submit(exe, args, stdout='out', stderr='err',log='log')
 
         elif self.options['run_mode'] == '2':
             #this is for the multicore run
             raise MadGraph5Error('Multicore run not yet available for aMC@NLO')
-
-
-
-
 
 
 
