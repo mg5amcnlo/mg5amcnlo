@@ -66,6 +66,11 @@ c
       xmuR_over_ref=muR_over_ref
       xmuF1_over_ref=muF1_over_ref
       xmuF2_over_ref=muF2_over_ref
+      write(*,*) 'Using:'  
+      write(*,*) 'QES_over_ref: ', xQES_over_ref
+      write(*,*) 'muR_over_ref: ', xmuR_over_ref
+      write(*,*) 'muF1_over_ref: ', xmuF1_over_ref
+      write(*,*) 'muF2_over_ref: ', xmuF2_over_ref
       if (xmuF1_over_ref .ne. xmuF2_over_ref) then
           write(*,*) "The variables muF1_over_ref and muF2_over_ref" //
      1     " have to be set equal in the run_card.dat." //
@@ -76,10 +81,13 @@ c
       if(do_rwgt_scale)then
         yfactR(1)=1.d0
         yfactR(2)=rw_Rscale_down
-        yfactR(2)=rw_Rscale_up
+        yfactR(3)=rw_Rscale_up
         yfactF(1)=1.d0
         yfactF(2)=rw_Fscale_down
-        yfactF(2)=rw_Fscale_up
+        yfactF(3)=rw_Fscale_up
+        write(*,*) 'Doing scale reweight:'
+        write(*,*) rw_Fscale_down, ' < mu_F < ', rw_Fscale_up
+        write(*,*) rw_Rscale_down, ' < mu_R < ', rw_Rscale_up
         numscales=3
       else
         numscales=0
@@ -88,10 +96,15 @@ c
 c Note: when ipdf#0, the central PDF set will be used also as a reference
 c for the scale uncertainty
       if(do_rwgt_pdf)then
+
         idpdf(0)=lhaid
         idpdf(1)=pdf_set_min
         itmp=pdf_set_max
         nsets=itmp-idpdf(1)+1
+        write(*,*) 'Doing PDF reweight:'
+        write(*,*) 'Central set id: ', idpdf(0)
+        write(*,*) 'Min error set id: ', idpdf(1)
+        write(*,*) 'Max error set id: ', itmp
         if(mod(nsets,2).ne.0)then
           write(*,*)'The number of error sets must be even',nsets
           stop

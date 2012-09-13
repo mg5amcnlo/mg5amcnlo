@@ -65,8 +65,10 @@
 # For PDF uncertainty: use LHAPDF with supported set                 *
 #*********************************************************************
  .true.   = reweight_scale   ! reweight to get scale dependence
-  0.5     = rw_scale_down    ! lower bound for scale variations
-  2.0     = rw_scale_up      ! upper bound for scale variations
+  0.5     = rw_Rscale_down   ! lower bound for ren scale variations
+  2.0     = rw_Rscale_up     ! upper bound for ren scale variations
+  0.5     = rw_Fscale_down   ! lower bound for fact scale variations
+  2.0     = rw_Fscale_up     ! upper bound for fact scale variations
  .false.  = reweight_PDF     ! reweight to get PDF uncertainty
   21101   = PDF_set_min      ! First of the error PDF sets 
   21140   = PDF_set_max      ! Last of the error PDF sets

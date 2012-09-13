@@ -634,6 +634,20 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 os.chdir(pjoin(self.me_dir, 'SubProcesses', path))
                 os.system('echo "%s \n 1" |../reweight_xsec_events >> %s' \
                         % (evt, reweight_log))
+                #check that the new event file is complete
+                last_line = subprocess.Popen('tail -n1 %s.rwgt ' % evt ,
+                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+                if last_line != "</LesHouchesEvents>":
+                    raise MadGraph5Error('An error occurred during reweight.' + \
+                            ' Check %s for details' % reweight_log)
+
+        newfile = open(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted'), 'w')
+        for line in lines:
+            if line:
+                newfile.write(line.replace(line.split()[0], line.split()[0] + '.rwgt') + '\n')
+        newfile.close()
+
+
 
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
 
