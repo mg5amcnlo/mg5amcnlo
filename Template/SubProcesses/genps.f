@@ -107,8 +107,8 @@ c
       double precision jac,sjac,pswgt,pwgt(maxconfigs),flux
       double precision tprb, mtot
       double precision xtau, dum
-      double precision pi1(0:3),pi2(0:3),m1,m2,p0,p3
-      save m,m1,m2
+      double precision pi1(0:3),pi2(0:3),p0,p3
+      save m
 
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
@@ -155,8 +155,8 @@ c
       double precision      spole(maxinvar),swidth(maxinvar),bwjac
       common/to_brietwigner/spole          ,swidth          ,bwjac
 
-      double precision stot
-      common/to_stot/stot
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
 
       save lwgt
       save ndim,nfinal,nbranch,nparticles
@@ -195,14 +195,20 @@ c        Set stot
          else
             m1=m(1)
             m2=m(2)
-            if (abs(lpp(1)) .ge. 1) m1 = 0.938d0
-            if (abs(lpp(2)) .ge. 1) m2 = 0.938d0
-            pi1(0)=ebeam(1)+m1
-            pi1(3)=sqrt(ebeam(1)*(ebeam(1)+2*m1))
-            pi2(0)=ebeam(2)+m2
-            pi2(3)=-sqrt(ebeam(2)*(ebeam(2)+2*m2))
+            if (abs(lpp(1)) .eq. 1 .or. abs(lpp(1)) .eq. 2) m1 = 0.938d0
+            if (abs(lpp(2)) .eq. 1 .or. abs(lpp(2)) .eq. 2) m2 = 0.938d0
+            if (abs(lpp(1)) .eq. 3) m1 = 0.000511d0
+            if (abs(lpp(2)) .eq. 3) m2 = 0.000511d0
+            if(ebeam(1).lt.m1) ebeam(1)=m1
+            if(ebeam(2).lt.m2) ebeam(2)=m2
+            pi1(0)=ebeam(1)
+            pi1(3)=sqrt(ebeam(1)**2-m1**2)
+            pi2(0)=ebeam(2)
+            pi2(3)=-sqrt(ebeam(2)**2-m2**2)
             stot=m1**2+m2**2+2*(pi1(0)*pi2(0)-pi1(3)*pi2(3))
          endif
+         write(*,'(x,a,f13.2)') 'Set CM energy to ',sqrt(stot)
+c        Start graph mapping
          do i=1,mapconfig(0)
             if (mapconfig(i) .eq. iconfig) this_config=i
          enddo
@@ -295,7 +301,7 @@ c-------
          CALL GENCMS(STOT,Xbk(1),Xbk(2),X(ndim-1),0d0,SJAC)
          x(ndim-1) = xtau                   !Fix for 2->1 process
 c        Set CM rapidity for use in the rap() function
-         cm_rap=.5d0*dlog(xbk(1)*(ebeam(1)+m1)/(xbk(2)*(ebeam(2)+m2)))
+         cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
          set_cm_rap=.true.
 c        Set shat
          s(-nbranch) = xbk(1)*xbk(2)*stot
@@ -303,28 +309,28 @@ c        Set shat
          call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
          xbk(1) = x(ndim)
 c        Set CM rapidity for use in the rap() function
-         p0=xbk(1)*(ebeam(1)+m1)+ebeam(2)+m2
-         p3=xbk(1)*(ebeam(1)+m1)-sqrt(ebeam(2)*(ebeam(2)+2*m2))
+         p0=xbk(1)*ebeam(1)+ebeam(2)
+         p3=xbk(1)*ebeam(1)-sqrt(ebeam(2)**2-m2**2)
          cm_rap=.5d0*dlog((p0+p3)/(p0-p3))
          set_cm_rap=.true.
 c        Set shat
-         s(-nbranch) = m2**2+xbk(1)*(ebeam(1)+m1) * 
-     $                 (ebeam(2)+m2+sqrt(ebeam(2)*(ebeam(2)+2*m2)))
+         s(-nbranch) = m2**2+xbk(1)*ebeam(1) * 
+     $                 (ebeam(2)+sqrt(ebeam(2)**2-m2**2))
       elseif (abs(lpp(2)) .ge. 1) then
          call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
          xbk(2) = x(ndim)
 c        Set CM rapidity for use in the rap() function
-         p0=ebeam(1)+m1+xbk(2)*(ebeam(2)+m2)
-         p3=sqrt(ebeam(1)*(ebeam(1)+2*m1))-xbk(2)*(ebeam(2)+m2)
+         p0=ebeam(1)+xbk(2)*ebeam(2)
+         p3=sqrt(ebeam(1)**2-m1**2)-xbk(2)*ebeam(2)
          cm_rap=.5d0*dlog((p0+p3)/(p0-p3))
          set_cm_rap=.true.
 c        Set shat
-         s(-nbranch) = m1**2+(ebeam(1)+m1+sqrt(ebeam(1)*(ebeam(1)+2*m1)))
-     $                 * xbk(2)*(ebeam(2)+m2)
+         s(-nbranch) = m1**2+(ebeam(1)+sqrt(ebeam(1)**2-m1**2))
+     $                 * xbk(2)*ebeam(2)
       else
 c        Set CM rapidity for use in the rap() function
-         p0=ebeam(1)+m1 + ebeam(2)+m2
-         p3=sqrt(ebeam(1)*(ebeam(1)+2*m1))-sqrt(ebeam(2)*(ebeam(2)+2*m2))
+         p0=ebeam(1) + ebeam(2)
+         p3=sqrt(ebeam(1)**2-m1**2)-sqrt(ebeam(2)**2-m2**2)
          cm_rap=.5d0*dlog((p0+p3)/(p0-p3))
          set_cm_rap=.true.
 c        Set shat
@@ -572,8 +578,8 @@ c
 c
 c     Global
 c
-      double precision stot
-      common/to_stot/stot
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
 
       include 'run.inc'
 
