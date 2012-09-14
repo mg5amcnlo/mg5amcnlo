@@ -135,8 +135,11 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         self._done_export = [path, mode]
 
         # check for incompatible options/modes
+        if options.__dict__['multicore'] and options.__dict__['cluster']:
+            raise self.InvalidCmd, 'options -m (--multicore) and -c (--cluster)' + \
+                    ' are not compatible. Please choose one.'
         if options.__dict__['noreweight'] and options.__dict__['reweightonly']:
-            raise self.InvalidCmd, 'options -R (--noreweight) and --R (--reweightonly)' + \
+            raise self.InvalidCmd, 'options -R (--noreweight) and -R (--reweightonly)' + \
                     ' are not compatible. Please choose one.'
         if mode == 'NLO' and options.__dict__['reweightonly']:
             raise self.InvalidCmd, 'option -r (--reweightonly) needs mode "aMC@NLO" or "aMC@LO"'
@@ -494,6 +497,10 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             logger.info('Prepairing cluster run')
             old_run_mode = self.options['run_mode']
             self.options['run_mode'] = '1'
+        if options.__dict__['multicore']:
+            logger.info('Prepairing cluster run')
+            old_run_mode = self.options['run_mode']
+            self.options['run_mode'] = '2'
         mode = argss[1]
         self.orig_dir = os.path.join(os.getcwd())
         self.me_dir = os.path.join(os.getcwd(), argss[0])
@@ -502,7 +509,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         self.run(mode, options)
 
         os.chdir(self.orig_dir)
-        if options.__dict__['cluster']:
+        if options.__dict__['cluster'] or options.__dict__['multicore']:
             self.options['run_mode'] = old_run_mode
 
 
@@ -539,6 +546,12 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         if self.options['run_mode'] == '1':
             cluster_name = self.options['cluster_type']
             self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'])
+        if self.options['run_mode'] == '2':
+            import multiprocessing
+            self.nb_core = self.options['nb_core']
+            if not self.nb_core:
+                self.nb_core = multiprocessing.cpu_count()
+            logger.info('Using %d cores' % self.nb_core)
         self.update_random_seed()
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
         #find and keep track of all the jobs
@@ -669,37 +682,29 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         # make copy of the original nevent_unweighted file
         os.system('cp %s %s' % (nev_unw, nev_unw + '.orig'))
         evt_files = [line.split()[0] for line in lines if line]
+        #prepare the job_dict
+        job_dict = {}
         for i, evt_file in enumerate(evt_files):
             path, evt = os.path.split(evt_file)
-            if self.options['run_mode'] == '0':
-                logger.info('Reweighting file %s (%d/%d)' \
-                        %(evt_file, i + 1, len(evt_files)))
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', path))
-                #proc = misc.call(['../reweight_xsec_events > %s' % reweight_log], cwd=os.getcwd())
-                proc = misc.Popen(['-c','../reweight_xsec_events > ' + reweight_log], 
-                                cwd=os.getcwd(), stdin=subprocess.PIPE, shell=True)
-                proc.communicate("%s \n 1\n" % evt)
+            os.chdir(pjoin(self.me_dir, 'SubProcesses', path))
+            if self.options['run_mode'] == '0' or self.options['run_mode'] == '2':
+                exe = 'reweight_xsec_events.local'
+            elif self.options['run_mode'] == '1':
+                exe = 'reweight_xsec_events.cluster'
+            os.system('ln -sf ../../%s .' % exe)
+            job_dict[path] = [exe]
 
-                #os.system('echo "%s \n 1" |../reweight_xsec_events >> %s' \
-                #        % (evt, reweight_log))
-                misc
-                os.system('echo "%s \n 1" |../reweight_xsec_events >> %s' \
-                        % (evt, reweight_log))
-                #check that the new event file is complete
-                last_line = subprocess.Popen('tail -n1 %s.rwgt ' % evt, \
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-                if last_line != "</LesHouchesEvents>":
-                    raise MadGraph5Error('An error occurred during reweight.' + \
-                            ' Check %s for details' % reweight_log)
-            if self.options['run_mode'] == '1':
-
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', path))
-                os.system('ln -sf ../../reweight_xsec_events.cluster .')
-                os.system('chmod +x reweight_xsec_events.cluster')
-                self.cluster.submit('reweight_xsec_events.cluster', [evt, '1'], stderr='err', stdout='out', log='log')
-
-        
+        self.run_all(job_dict, [evt, '1'])
         self.wait_for_complete()
+        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+
+        #check that the new event files are complete
+        for evt_file in evt_files:
+            last_line = subprocess.Popen('tail -n1 %s.rwgt ' % evt_file, \
+                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            if last_line != "</LesHouchesEvents>":
+                raise MadGraph5Error('An error occurred during reweight.' + \
+                      ' Check %s for details' % reweight_log)
 
         #update file name in nevents_unweighted
         newfile = open(nev_unw, 'w')
@@ -707,28 +712,33 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             if line:
                 newfile.write(line.replace(line.split()[0], line.split()[0] + '.rwgt') + '\n')
         newfile.close()
-        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
 
 
     def wait_for_complete(self):
         """this function waits for jobs on cluster to complete their run."""
 
-        # do nothing if running serially
+        # if running serially nothing to do
         if self.options['run_mode'] == '0':
             return
 
-        idle = 1
-        run = 1
-        logger.info('     Waiting for submitted jobs to complete (will update each 10s)')
-        while idle + run > 0:
-            time.sleep(10)
-            idle, run, finish, fail = self.cluster.control('')
-            logger.info('     Job status: %d idle, %d running, %d failed, %d completed' \
-                    % (idle, run, fail, finish))
-        #reset the cluster after completion
-        self.cluster.submitted = 0
-        self.cluster.submitted_ids = []
+        # if running on cluster just use the control function of the module
+        elif self.options['run_mode'] == '1':
+            idle = 1
+            run = 1
+            logger.info('     Waiting for submitted jobs to complete (will update each 10s)')
+            while idle + run > 0:
+                time.sleep(10)
+                idle, run, finish, fail = self.cluster.control('')
+                logger.info('     Job status: %d idle, %d running, %d failed, %d completed' \
+                        % (idle, run, fail, finish))
+            #reset the cluster after completion
+            self.cluster.submitted = 0
+            self.cluster.submitted_ids = []
 
+        # if running multicore
+        elif self.options['run_mode'] == '2':
+            while self.control_thread[0] == self.nb_core:
+                time.sleep(10)
 
     def run_all(self, job_dict, args):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
@@ -741,7 +751,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 # print some statistics if running serially
                 ijob += 1
                 if self.options['run_mode'] == '0':
-                    logger.info('%d/%d completed\n' \
+                    logger.info('     Jobs completed: %d/%d ' \
                             % (ijob, njobs))
 
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
@@ -749,6 +759,28 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
     def run_exe(self, exe, args):
         """this basic function launch locally/on cluster exe with args as argument."""
+
+        def launch_in_thread(exe, argument, cwd, stdout, control_thread):
+            """ way to launch for multicore"""
+
+            start = time.time()
+            if (cwd and os.path.exists(pjoin(cwd, exe))) or os.path.exists(exe):
+                exe = './' + exe
+            misc.call([exe] + argument, cwd=cwd, stdout=stdout,
+                        stderr=subprocess.STDOUT)
+            #logger.info('%s run in %f s' % (exe, time.time() -start))
+            
+            # release the lock for allowing to launch the next job      
+            while not control_thread[1].locked():
+                # check that the status is locked to avoid coincidence unlock
+                if not control_thread[2]:
+                    # Main is not yet locked
+                    control_thread[0] -= 1
+                    return 
+                time.sleep(1)
+            control_thread[0] -= 1 # upate the number of running thread
+            control_thread[1].release()
+
         # first test that exe exists:
         if not os.path.exists(exe):
             raise MadGraph5Error('Cannot find executable %s in %s' \
@@ -763,11 +795,30 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         elif self.options['run_mode'] == '1':
             #this is for the cluster run
             self.cluster.submit(exe, args)
-
         elif self.options['run_mode'] == '2':
             #this is for the multicore run
-            raise MadGraph5Error('Multicore run not yet available for aMC@NLO')
-
+            import thread
+            if not hasattr(self, 'control_thread'):
+                self.control_thread = [0] # [used_thread]
+                self.control_thread.append(thread.allocate_lock()) # The lock
+                self.control_thread.append(False) # True if all thread submit 
+                                                  #-> waiting mode
+            if self.control_thread[2]:
+#                self.update_status((remaining + 1, self.control_thread[0], 
+#                                self.total_jobs - remaining - self.control_thread[0] - 1, run_type), 
+#                                   level=None, force=False)
+                self.control_thread[1].acquire()
+                self.control_thread[0] += 1 # upate the number of running thread
+                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread))
+            elif self.control_thread[0] <  self.nb_core -1:
+                self.control_thread[0] += 1 # upate the number of running thread
+                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread))
+            elif self.control_thread[0] ==  self.nb_core -1:
+                self.control_thread[0] += 1 # upate the number of running thread
+                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread))
+                self.control_thread[2] = True
+                self.control_thread[1].acquire() # Lock the next submission
+                                                 # Up to a release
 
 
     def read_shower_events(self, run_card, verbose=True):
@@ -1027,6 +1078,8 @@ _launch_usage = "launch [DIRPATH] [MODE] [options]\n" + \
 _launch_parser = optparse.OptionParser(usage=_launch_usage)
 _launch_parser.add_option("-c", "--cluster", default=False, action='store_true',
                             help="Submit the jobs on the cluster")
+_launch_parser.add_option("-m", "--multicore", default=False, action='store_true',
+                            help="Submit the jobs on multicore mode")
 _launch_parser.add_option("-n", "--nocompile", default=False, action='store_true',
                             help="Skip compilation. Ignored if no executable is found, " + \
                             "or with --tests")

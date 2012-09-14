@@ -130,12 +130,17 @@ c  Begin Code
 c-----
       write (*,'(a)') "Setting-up ajob's..."
       write (*,'(a)') "Give run mode and (adaptive) importance sampler:"
-      write (*,'(a)') '"0" for local run, "1" for condor cluster'
+      write (*,'(a)') '"0" for local run, "1" for condor cluster' //
+     1 '"2" for multicore'
       read  (*,*) run_cluster
       if (run_cluster.eq.0) then
          write (*,*) "Setting up ajob's for local run"
       elseif(run_cluster.eq.1) then
          write (*,*) "Setting up ajob's for condor cluster run"
+      elseif(run_cluster.eq.2) then
+         write (*,*) "Setting up ajob's for multicore run"
+c     in this case it is the same as for serial run
+         run_cluster=0
       else
          write (*,*) "Invalid run mode", run_cluster
       endif
