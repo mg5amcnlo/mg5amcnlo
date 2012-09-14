@@ -548,7 +548,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'])
         if self.options['run_mode'] == '2':
             import multiprocessing
-            self.nb_core = self.options['nb_core']
+            self.nb_core = int(self.options['nb_core'])
             if not self.nb_core:
                 self.nb_core = multiprocessing.cpu_count()
             logger.info('Using %d cores' % self.nb_core)
@@ -752,6 +752,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 exe = './' + exe
             misc.call([exe] + argument, cwd=cwd, stdout=stdout,
                         stderr=subprocess.STDOUT)
+            time.sleep(1)
             self.ijob += 1
             logger.info('     Jobs completed: %d/%d' %(self.ijob, self.njobs))
             
