@@ -2785,7 +2785,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         logger_stderr.warning('WARNING: %s' % error)
                         logger_stderr.warning('Try to recover by running automatically `import model_v4 %s` instead.' \
                                                                       % args[1])
-                    self.exec_cmd('import model_v4 %s ' % args[1], precmd=True)    
+                    self.exec_cmd('import model_v4 %s ' % args[1], precmd=True)
+                    return    
                 if self.options['complex_mass_scheme']:
                     self._curr_model.change_mass_to_complex_scheme()
                     if hasattr(self._curr_model, 'set_parameters_and_couplings'):
@@ -2816,7 +2817,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             # Do post-processing of model
             self.process_model()
-
             # Reset amplitudes and matrix elements and global checks
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -2881,7 +2881,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
  
             #convert and excecute the card
             self.import_mg4_proc_card(proc_card)
-
+            
     
     def import_ufo_model(self, model_name):
         """ import the UFO model """

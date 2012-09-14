@@ -38,6 +38,7 @@ import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.gen_infohtml as gen_infohtml
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
+import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.misc as misc
 import madgraph.various.process_checks as process_checks
@@ -1491,6 +1492,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
 
+        
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
 
@@ -2383,7 +2385,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         assert isinstance(subproc_group, group_subprocs.SubProcessGroup), \
                                       "subproc_group object not SubProcessGroup"
-
+        
         if not self.model:
             self.model = subproc_group.get('matrix_elements')[0].\
                          get('processes')[0].get('model')

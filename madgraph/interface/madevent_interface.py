@@ -2325,6 +2325,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             elif os.path.isfile(pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')):
                 default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
             elif not os.path.exists(pjoin(self.me_dir,'bin','internal','ufomodel')):
+                fsock = open(pjoin(self.me_dir,'Source','param_card.inc'),'w')
+                fsock.write(' ')
+                fsock.close()
                 return
             else:
                 subprocess.call(['python', 'write_param_card.py'], 
