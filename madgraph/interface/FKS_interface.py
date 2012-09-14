@@ -35,6 +35,7 @@ import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
 import madgraph.various.cluster as cluster
+import madgraph.various.misc as misc
 
 #usefull shortcut
 pjoin = os.path.join
@@ -674,6 +675,14 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 logger.info('Reweighting file %s (%d/%d)' \
                         %(evt_file, i + 1, len(evt_files)))
                 os.chdir(pjoin(self.me_dir, 'SubProcesses', path))
+                #proc = misc.call(['../reweight_xsec_events > %s' % reweight_log], cwd=os.getcwd())
+                proc = misc.Popen(['-c','../reweight_xsec_events > ' + reweight_log], 
+                                cwd=os.getcwd(), stdin=subprocess.PIPE, shell=True)
+                proc.communicate("%s \n 1\n" % evt)
+
+                #os.system('echo "%s \n 1" |../reweight_xsec_events >> %s' \
+                #        % (evt, reweight_log))
+                misc
                 os.system('echo "%s \n 1" |../reweight_xsec_events >> %s' \
                         % (evt, reweight_log))
                 #check that the new event file is complete
@@ -750,7 +759,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         # finally run it
         if self.options['run_mode'] == '0':
             #this is for the serial run
-            os.system('./%s %s ' % (exe, ' '.join(args)))
+            misc.call(['./'+exe] + args, cwd= os.getcwd())
         elif self.options['run_mode'] == '1':
             #this is for the cluster run
             self.cluster.submit(exe, args)
