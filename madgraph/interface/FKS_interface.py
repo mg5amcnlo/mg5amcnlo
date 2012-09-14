@@ -577,17 +577,10 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             os.system('rm -rf P*/grid_G* P*/novB_G* P*/viSB_G*')
 
             logger.info('   Setting up grid')
-            self.run_all(job_dict, ['0', 'grid', '0'])
-            self.wait_for_complete()
+            self.run_all(job_dict, [['0', 'grid', '0']])
             os.system('./combine_results_FO.sh grid*')
 
-            logger.info('   Runnning subtracted reals')
-            self.run_all(job_dict, ['0', 'novB', '0', 'grid'])
-
-            logger.info('   Runnning virtuals')
-            self.run_all(job_dict, ['0', 'viSB', '0', 'grid'])
-
-            self.wait_for_complete()
+            self.run_all(job_dict, [['0', 'novB', '0', 'grid'], ['0', 'viSB', '0', 'grid']])
             os.system('./combine_results_FO.sh viSB* novB*')
             return
 
@@ -599,15 +592,10 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
             for i, status in enumerate(mcatnlo_status):
                 logger.info('   %s' % status)
-                logger.info('     Running subtracted reals')
                 self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'novB', i) 
-                self.run_all(job_dict, ['2', 'F', '%d' % i])
-
-                logger.info('     Running virtuals')
                 self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'viSB', i) 
-                self.run_all(job_dict, ['2', 'V', '%d' % i])
+                self.run_all(job_dict, [['2', 'F', '%d' % i], ['2', 'V', '%d' % i]])
 
-                self.wait_for_complete()
                 if i < 2:
                     os.system('./combine_results.sh %d %d GF* GV*' % (i, nevents))
 
@@ -621,8 +609,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 logger.info('   %s at LO' % status)
                 self.write_madinMMC_file(
                         pjoin(self.me_dir, 'SubProcesses'), shower, 'born', i) 
-                self.run_all(job_dict, ['2', 'B', '%d' % i])
-                self.wait_for_complete()
+                self.run_all(job_dict, [['2', 'B', '%d' % i]])
 
                 if i < 2:
                     os.system('./combine_results.sh %d %d GB*' % (i, nevents))
@@ -694,8 +681,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             os.system('ln -sf ../../%s .' % exe)
             job_dict[path] = [exe]
 
-        self.run_all(job_dict, [evt, '1'])
-        self.wait_for_complete()
+        self.run_all(job_dict, [[evt, '1']])
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
 
         #check that the new event files are complete
@@ -734,41 +720,40 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             #reset the cluster after completion
             self.cluster.submitted = 0
             self.cluster.submitted_ids = []
-
-        # if running multicore
         elif self.options['run_mode'] == '2':
             while self.control_thread[0] == self.nb_core:
                 time.sleep(10)
 
-    def run_all(self, job_dict, args):
+    def run_all(self, job_dict, arg_list):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
-        njobs = sum(len(jobs) for jobs in job_dict.values())
-        ijob = 0
-        for dir, jobs in job_dict.items():
-            os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
-            for job in jobs:
-                self.run_exe(job, args)
-                # print some statistics if running serially
-                ijob += 1
-                if self.options['run_mode'] == '0':
-                    logger.info('     Jobs completed: %d/%d ' \
-                            % (ijob, njobs))
+        self.njobs = sum(len(jobs) for jobs in job_dict.values()) * len(arg_list)
+        self.ijob = 0
+        for args in arg_list:
+            for dir, jobs in job_dict.items():
+                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
+                for job in jobs:
+                    self.run_exe(job, args)
+                    # print some statistics if running serially
 
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
+        self.wait_for_complete()
 
 
     def run_exe(self, exe, args):
-        """this basic function launch locally/on cluster exe with args as argument."""
+        """this basic function launch locally/on cluster exe with args as argument.
+        """
 
         def launch_in_thread(exe, argument, cwd, stdout, control_thread):
-            """ way to launch for multicore"""
+            """ way to launch for multicore.
+            """
 
             start = time.time()
             if (cwd and os.path.exists(pjoin(cwd, exe))) or os.path.exists(exe):
                 exe = './' + exe
             misc.call([exe] + argument, cwd=cwd, stdout=stdout,
                         stderr=subprocess.STDOUT)
-            #logger.info('%s run in %f s' % (exe, time.time() -start))
+            self.ijob += 1
+            logger.info('     Jobs completed: %d/%d' %(self.ijob, self.njobs))
             
             # release the lock for allowing to launch the next job      
             while not control_thread[1].locked():
@@ -792,6 +777,8 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         if self.options['run_mode'] == '0':
             #this is for the serial run
             misc.call(['./'+exe] + args, cwd= os.getcwd())
+            self.ijob += 1
+            logger.info('     Jobs completed: %d/%d' %(self.ijob, self.njobs))
         elif self.options['run_mode'] == '1':
             #this is for the cluster run
             self.cluster.submit(exe, args)
@@ -811,7 +798,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 self.control_thread[0] += 1 # upate the number of running thread
                 thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread))
             elif self.control_thread[0] <  self.nb_core -1:
-                self.control_thread[0] += 1 # upate the number of running thread
+                self.control_thread[0] += 1 # upate the number of running thread 
                 thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread))
             elif self.control_thread[0] ==  self.nb_core -1:
                 self.control_thread[0] += 1 # upate the number of running thread
