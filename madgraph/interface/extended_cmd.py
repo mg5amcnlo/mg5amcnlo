@@ -40,7 +40,7 @@ try:
     MADEVENT = False
 except Exception, error:
     if __debug__:
-       logger_stderr.info(error)
+       logger.info('extended_cmd:'+str(error))
     import internal.misc as misc
     MADEVENT = True
 

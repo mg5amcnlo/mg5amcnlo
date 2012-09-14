@@ -273,7 +273,9 @@ class ProcessExporterFortran(object):
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)'
-        text = open(path).read() % {'libraries': set_of_lib} 
+        model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc\n\tcd MODEL; make    
+param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
+        text = open(path).read() % {'libraries': set_of_lib, 'model':model_line} 
         writer.write(text)
         
         return True
@@ -976,7 +978,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = '$(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)'
-        text = open(path).read() % {'libraries': set_of_lib} 
+        model_line='''$(LIBDIR)libmodel.$(libext): MODEL\n\t cd MODEL; make\n'''
+        text = open(path).read() % {'libraries': set_of_lib, 'model':model_line} 
         writer.write(text)
         
         return True
@@ -2989,6 +2992,13 @@ class UFO_model_to_mg4(object):
         else:
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
+            text = open(pjoin(self.dir_path, 'rw_para.f')).read()
+            text = re.sub(r'c\s*call LHA_loadcard','       call LHA_loadcard',text, re.I)
+            fsock = open(pjoin(self.dir_path, 'rw_para.f'), 'w')
+            fsock.write(text)
+            fsock.close()
+            
+     
 
 
     def create_coupl_inc(self):
