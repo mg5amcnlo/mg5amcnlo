@@ -133,6 +133,14 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         # inform where we are for future command
         self._done_export = [path, mode]
 
+        # check for incompatible options/modes
+        if options.__dict__['noreweight'] and options.__dict__['reweightonly']:
+            raise self.InvalidCmd, 'options -R (--noreweight) and --R (--reweightonly)' + \
+                    ' are not compatible. Please choose one.'
+        if mode == 'NLO' and options.__dict__['reweightonly']:
+            raise self.InvalidCmd, 'option -r (--reweightonly) needs mode "aMC@NLO" or "aMC@LO"'
+
+
 
     def validate_model(self, loop_type):
         """ Upgrade the model sm to loop_sm if needed """
@@ -542,6 +550,13 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
+        if options.__dict__['reweightonly']:
+            shower, nevents = \
+                self.read_shower_events(pjoin(self.me_dir, 'Cards', 'run_card.dat'), 
+                                        verbose = False)
+            self.reweight_and_collect_events(options, mode, nevents)
+            return
+
         if mode == 'NLO':
             logger.info('Doing fixed order NLO')
             logger.info('   Cleaning previous results')
@@ -603,8 +618,17 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             logger.info('Waiting while files are transferred back from the cluster nodes')
             time.sleep(15)
 
-        self.run_reweight()
+        self.reweight_and_collect_events(options, mode, nevents)
 
+
+    def reweight_and_collect_events(self, options, mode, nevents):
+        """this function calls the reweighting routines and creates the event file in the 
+        Event dir
+        """
+        if not options.__dict__['noreweight']:
+            self.run_reweight(options.__dict__['reweightonly'])
+
+        logger.info('   Collecting events')
         os.system('make collect_events > %s' % \
                 pjoin (self.me_dir, 'log_collect_events.txt'))
         os.system('echo "1" | ./collect_events > %s' % \
@@ -623,15 +647,26 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 % (evt_file, nevents, mode[4:]))
 
 
-    def run_reweight(self):
+    def run_reweight(self, only):
         """runs the reweight_xsec_events eecutables on each sub-event file generated
         to compute on the fly scale and/or PDF uncertainities"""
+        logger.info('   Doing reweight')
+
+        nev_unw = pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted')
+        # if only doing reweight, copy back the nevents_unweighted file
+        if only:
+            if os.path.exists(nev_unw + '.orig'):
+                os.system('cp %s %s' % (nev_unw + '.orig', nev_unw))
+            else:
+                raise MadGraph5Error('Cannot find event file information')
 
         reweight_log = pjoin(self.me_dir, 'compile_reweight.log')
         #read the nevents_unweighted file to get the list of event files
-        file = open(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted'))
+        file = open(nev_unw)
         lines = file.read().split('\n')
         file.close()
+        # make copy of the original nevent_unweighted file
+        os.system('cp %s %s' % (nev_unw, nev_unw + '.orig'))
         evt_files = [line.split()[0] for line in lines if line]
         for i, evt_file in enumerate(evt_files):
             path, evt = os.path.split(evt_file)
@@ -642,24 +677,27 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 os.system('echo "%s \n 1" |../reweight_xsec_events >> %s' \
                         % (evt, reweight_log))
                 #check that the new event file is complete
-                last_line = subprocess.Popen('tail -n1 %s.rwgt ' % evt ,
+                last_line = subprocess.Popen('tail -n1 %s.rwgt ' % evt, \
                     shell = True, stdout = subprocess.PIPE).stdout.read().strip()
                 if last_line != "</LesHouchesEvents>":
                     raise MadGraph5Error('An error occurred during reweight.' + \
                             ' Check %s for details' % reweight_log)
             if self.options['run_mode'] == '1':
-                logger.info('Cluster mode not yet implemented for reweight')
-                logger.info('Event file will not be reweighted')
-                return
 
-        newfile = open(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted'), 'w')
+                os.chdir(pjoin(self.me_dir, 'SubProcesses', path))
+                os.system('ln -sf ../../reweight_xsec_events.cluster .')
+                os.system('chmod +x reweight_xsec_events.cluster')
+                self.cluster.submit('reweight_xsec_events.cluster', [evt, '1'], stderr='err', stdout='out', log='log')
+
+        
+        self.wait_for_complete()
+
+        #update file name in nevents_unweighted
+        newfile = open(nev_unw, 'w')
         for line in lines:
             if line:
                 newfile.write(line.replace(line.split()[0], line.split()[0] + '.rwgt') + '\n')
         newfile.close()
-
-
-
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
 
 
@@ -672,7 +710,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
         idle = 1
         run = 1
-        logger.info('     Waiting for submitted jobs to complete')
+        logger.info('     Waiting for submitted jobs to complete (will update each 10s)')
         while idle + run > 0:
             time.sleep(10)
             idle, run, finish, fail = self.cluster.control('')
@@ -715,7 +753,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             os.system('./%s %s ' % (exe, ' '.join(args)))
         elif self.options['run_mode'] == '1':
             #this is for the cluster run
-            self.cluster.submit(exe, args, stdout='out', stderr='err',log='log')
+            self.cluster.submit(exe, args)
 
         elif self.options['run_mode'] == '2':
             #this is for the multicore run
@@ -877,30 +915,31 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                             % (test, input, test_log))
                     os.system('rm -f %s' % input)
 
-            logger.info('   Compiling gensym...')
-            os.system('make gensym >> %s 2>&1 ' % amcatnlo_log)
-            if not os.path.exists(pjoin(this_dir, 'gensym')):
-                raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
+            if not options.__dict__['reweightonly']:
+                logger.info('   Compiling gensym...')
+                os.system('make gensym >> %s 2>&1 ' % amcatnlo_log)
+                if not os.path.exists(pjoin(this_dir, 'gensym')):
+                    raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
 
-            logger.info('   Running gensym...')
-            os.system('echo %s | ./gensym >> %s' % (self.options['run_mode'], gensym_log)) 
-            #compile madloop library
-            v_dirs = [file for file in os.listdir('.') if file.startswith('V') and os.path.isdir(file)]
-            for v_dir in v_dirs:
-                os.putenv('madloop', 'true')
-                logger.info('   Compiling MadLoop library in %s' % v_dir)
-                madloop_dir = pjoin(this_dir, v_dir)
-                os.chdir(madloop_dir)
-                os.system('make >> %s 2>&1' % madloop_log)
-                if not os.path.exists(pjoin(this_dir, 'libMadLoop.a')):
-                    raise MadGraph5Error('Compilation failed, check %s for details' % madloop_log)
-            os.chdir(this_dir)
-            logger.info('   Compiling %s' % exe)
-            os.system('make %s >> %s 2>&1' % (exe, amcatnlo_log))
-            os.unsetenv('madloop')
-            if not os.path.exists(pjoin(this_dir, exe)):
-                raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
-            if mode in ['aMC@NLO', 'aMC@LO']:
+                logger.info('   Running gensym...')
+                os.system('echo %s | ./gensym >> %s' % (self.options['run_mode'], gensym_log)) 
+                #compile madloop library
+                v_dirs = [file for file in os.listdir('.') if file.startswith('V') and os.path.isdir(file)]
+                for v_dir in v_dirs:
+                    os.putenv('madloop', 'true')
+                    logger.info('   Compiling MadLoop library in %s' % v_dir)
+                    madloop_dir = pjoin(this_dir, v_dir)
+                    os.chdir(madloop_dir)
+                    os.system('make >> %s 2>&1' % madloop_log)
+                    if not os.path.exists(pjoin(this_dir, 'libMadLoop.a')):
+                        raise MadGraph5Error('Compilation failed, check %s for details' % madloop_log)
+                os.chdir(this_dir)
+                logger.info('   Compiling %s' % exe)
+                os.system('make %s >> %s 2>&1' % (exe, amcatnlo_log))
+                os.unsetenv('madloop')
+                if not os.path.exists(pjoin(this_dir, exe)):
+                    raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
+            if mode in ['aMC@NLO', 'aMC@LO'] and not options.__dict__['noreweight']:
                 logger.info('   Compiling reweight_xsec_events')
                 os.system('make reweight_xsec_events >> %s 2>&1' % (reweight_log))
                 if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
@@ -985,5 +1024,9 @@ _launch_parser.add_option("-n", "--nocompile", default=False, action='store_true
 _launch_parser.add_option("-t", "--tests", default=False, action='store_true',
                             help="Run soft/collinear tests to check the NLO/MC subtraction terms." + \
                                  " MC tests are skipped in NLO mode.") 
-
+_launch_parser.add_option("-r", "--reweightonly", default=False, action='store_true',
+                            help="Skip integration and event generation, just run reweight on the" + \
+                                 " latest generated event files (see list in SubProcesses/nevents_unweighted)")
+_launch_parser.add_option("-R", "--noreweight", default=False, action='store_true',
+                            help="Skip file reweighting")
 

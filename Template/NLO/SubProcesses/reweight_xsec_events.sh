@@ -66,45 +66,6 @@ fi
 #read isave
 echo 1 >> reweight_xsec_events.input
 
-echo 'Enter 1 to compute scale uncertainty'
-echo '      0 otherwise'
-read imu
-echo $imu >> reweight_xsec_events.input
-
-echo 'Enter 1 to compute PDF uncertainty'
-echo '      0 otherwise'
-read ipdf
-echo $ipdf >> reweight_xsec_events.input
-
-echo 'Enter QES_over_ref used in the reference computation'
-read xQES_over_ref
-echo $xQES_over_ref >> reweight_xsec_events.input
-
-echo 'Enter muR_over_ref, muF1_over_ref(=muF2_over_ref)'
-echo '  used in the reference computation'
-read -e xmuR_over_ref
-#echo $xmuR_over_ref $xmuF1_over_ref >> reweight_xsec_events.input
-echo $xmuR_over_ref >> reweight_xsec_events.input
-
-if [[ ! $imu == 0 ]]; then
-    echo 'Enter renormalization scale variation range'
-    echo '  (e.g., 0.5 2.0)'
-    read -e yfactR2
-    echo $yfactR2 >> reweight_xsec_events.input
-    echo 'Enter factorization scale variation range'
-    echo '  (e.g., 0.5 2.0)'
-    read -e yfactF2
-    echo $yfactF2 >> reweight_xsec_events.input
-fi
-
-if [[ ! $ipdf == 0 ]]; then
-    echo 'Enter id number of central set'
-    read idpdf0
-    echo $idpdf0 >> reweight_xsec_events.input
-    echo 'Enter id numbers of first and last error set'
-    read -e idpdf1
-    echo $idpdf1 >> reweight_xsec_events.input
-fi
 
 if [[ $run_cluster == 1 ]] ; then
     chmod +x reweight_xsec_events.cluster
@@ -137,7 +98,8 @@ for line in $(cat nevents_unweighted) ; do
 	    cat ../../reweight_xsec_events.input >> reweight_xsec_events.input
 	    if [[ $run_cluster == 1 ]] ; then
 		ln -sf ../../reweight_xsec_events.cmd .
-		ln -sf ../../reweight_xsec_events.cluster .
+		sed s/"args ="/"args = 1 $event_file" ../../reweight_xsec_events.cluster > reweight_xsec_events.cluster
+                chmod +x reweight_xsec_events.cluster
 		condor_submit reweight_xsec_events.cmd
 	    elif [[ $run_cluster == 0 ]] ; then
    		../reweight_xsec_events < reweight_xsec_events.input > reweight_xsec_events.output

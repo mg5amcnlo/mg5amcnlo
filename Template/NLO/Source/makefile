@@ -22,6 +22,7 @@ COMBINE = combine_events.o  rw_events.o ranmar.o  kin_functions.o open_file.o rw
 .f.o: ; $(FC) $(FFLAGS) -c $*.f
 
 all: $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a  $(LIBDIR)libmodel.a
+	rm -f PDF/*.o
 
 scaled.dat:
 	combine_events
