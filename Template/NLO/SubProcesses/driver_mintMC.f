@@ -382,30 +382,30 @@ c to restore grids:
       write(*,*)'Found for:',xisave,ysave
 
 
-
-      write (*,*) ''
-      write (*,*) '----------------------------------------------------'
-      write (*,*) 'Total points tried:                   ',
-     &     ncall*itmax
-      write (*,*) 'Total points passing generation cuts: ',
-     &     itotalpoints
-      write (*,*) 'Efficiency of events passing cuts:    ',
-     &     dble(itotalpoints)/dble(ncall*itmax)
-      write (*,*) '----------------------------------------------------'
-      write (*,*) ''
-      write (*,*) ''
-      write (*,*) '----------------------------------------------------'
-      write (*,*) 'number of except PS points:',ivirtpointsExcept,
-     &     'out of',ivirtpoints,'points'
-      write (*,*) '   treatment of exceptional PS points:'
-      write (*,*) '      maximum approximation:',
-     &     total_wgt_sum + dsqrt(total_wgt_sum_max)/dble(ncall*itmax)
-      write (*,*) '      minimum approximation:',
-     &     total_wgt_sum - dsqrt(total_wgt_sum_min)/dble(ncall*itmax)
-      write (*,*) '      taking the max/min average:',
-     &     total_wgt_sum/dble(ncall*itmax)
-      write (*,*) '----------------------------------------------------'
-      write (*,*) ''
+c$$$ THIS INFORMATION IS NO LONGER UP-TO-DATE
+c$$$      write (*,*) ''
+c$$$      write (*,*) '----------------------------------------------------'
+c$$$      write (*,*) 'Total points tried:                   ',
+c$$$     &     ncall*itmax
+c$$$      write (*,*) 'Total points passing generation cuts: ',
+c$$$     &     itotalpoints
+c$$$      write (*,*) 'Efficiency of events passing cuts:    ',
+c$$$     &     dble(itotalpoints)/dble(ncall*itmax)
+c$$$      write (*,*) '----------------------------------------------------'
+c$$$      write (*,*) ''
+c$$$      write (*,*) ''
+c$$$      write (*,*) '----------------------------------------------------'
+c$$$      write (*,*) 'number of except PS points:',ivirtpointsExcept,
+c$$$     &     'out of',ivirtpoints,'points'
+c$$$      write (*,*) '   treatment of exceptional PS points:'
+c$$$      write (*,*) '      maximum approximation:',
+c$$$     &     total_wgt_sum + dsqrt(total_wgt_sum_max)/dble(ncall*itmax)
+c$$$      write (*,*) '      minimum approximation:',
+c$$$     &     total_wgt_sum - dsqrt(total_wgt_sum_min)/dble(ncall*itmax)
+c$$$      write (*,*) '      taking the max/min average:',
+c$$$     &     total_wgt_sum/dble(ncall*itmax)
+c$$$      write (*,*) '----------------------------------------------------'
+c$$$      write (*,*) ''
 
 
 
