@@ -173,6 +173,9 @@ c the value of variable scale in common block /to_scale/
      #                         muF2_id_str,QES_id_str
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
+c this is to avoid too low dynamic scales      
+      double precision minscaleR
+      parameter (minscaleR=2d0)
 c After recomputing alphaS, be sure to set 'calculatedBorn' to false
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
@@ -182,7 +185,7 @@ c
         mur_temp=muR_ref_fixed
         temp_scale_id='fixed'
       else
-        mur_temp=muR_ref_dynamic(pp)
+        mur_temp=max(minscaleR,muR_ref_dynamic(pp))
       endif
       muR=muR_over_ref*mur_temp
       muR2_current=muR**2
@@ -216,9 +219,6 @@ c a scale to be used as a reference for renormalization scale
       common/ctemp_scale_id/temp_scale_id
       integer i,imurtype
       parameter (imurtype=1)
-c this is to avoid too low dynamic scales      
-      double precision minscaleR
-      parameter (minscaleR=2d0)
 c for 'geometric mean'
       integer j
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
@@ -299,7 +299,6 @@ c  particles (e.g. top quarks or Higgs) into account.
         write(*,*)'Unknown option in muR_ref_dynamic',imurtype
         stop
       endif
-      tmp=max(minscaleR,tmp)
       muR_ref_dynamic=tmp
 c
       return
@@ -323,6 +322,9 @@ c Note: the old version returned the factorization scales squared
      #                         muF2_id_str,QES_id_str
       character*80 temp_scale_id,temp_scale_id2
       common/ctemp_scale_id/temp_scale_id
+c this is to avoid too low dynamic scales      
+      double precision minscaleF
+      parameter (minscaleF=2d0)
 c
       temp_scale_id='  '
       temp_scale_id2='  '
@@ -332,7 +334,7 @@ c
         temp_scale_id='fixed'
         temp_scale_id2='fixed'
       else
-        muf_temp(1)=muF_ref_dynamic(pp)
+        muf_temp(1)=max(minscaleF,muF_ref_dynamic(pp))
         muf_temp(2)=muf_temp(1)
         temp_scale_id2=temp_scale_id
       endif
@@ -367,9 +369,6 @@ c a scale to be used as a reference for factorizations scales
       common/ctemp_scale_id/temp_scale_id
       integer i,imuftype
       parameter (imuftype=1)
-c this is to avoid too low dynamic scales      
-      double precision minscaleF
-      parameter (minscaleF=2d0)
 c
       tmp=0
       if(imuftype.eq.1)then
@@ -384,7 +383,6 @@ c
         write(*,*)'Unknown option in muF_ref_dynamic',imuftype
         stop
       endif
-      tmp=max(minscaleF,tmp)
       muF_ref_dynamic=tmp
 c
       return
@@ -419,7 +417,7 @@ c
         QES_temp=QES_ref_fixed
         temp_scale_id='fixed'
       else
-        QES_temp=max(minscaleES, QES_ref_dynamic(pp))
+        QES_temp=max(minscaleES,QES_ref_dynamic(pp))
       endif
       QES=QES_over_ref*QES_temp
       QES2_current=QES**2
@@ -500,6 +498,7 @@ c Sum of transverse masses
         write(*,*)'Unknown option in scale_global_reference',itype
         stop
       endif
+      scale_global_reference=tmp
 c
       return
       end
