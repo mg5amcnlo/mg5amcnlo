@@ -398,8 +398,11 @@ class Switcher(object):
     def do_install(self, *args, **opts):
         self.cmd.do_install(self, *args, **opts)
         
-    def do_launch(self, *args, **opts):
-        return self.cmd.do_launch(self, *args, **opts)
+    def do_launch(self, line, *args, **opts):
+        argss = cmd.Cmd.split_arg(line)
+        if len(argss)>=2 and argss[1] in  ['NLO', 'aMC@NLO', 'aMC@LO']:
+            self.change_principal_cmd('FKS')
+        return self.cmd.do_launch(self, line, *args, **opts)
         
     def do_load(self, *args, **opts):
         return self.cmd.do_load(self, *args, **opts)
