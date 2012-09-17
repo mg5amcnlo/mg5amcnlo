@@ -722,7 +722,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             self.cluster.submitted = 0
             self.cluster.submitted_ids = []
         elif self.options['run_mode'] == '2':
-            while self.control_thread[0] == self.nb_core:
+            while self.ijob != self.njobs:
                 time.sleep(10)
 
     def run_all(self, job_dict, arg_list):
@@ -753,7 +753,6 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 exe = './' + exe
             misc.call([exe] + argument, cwd=cwd, stdout=stdout,
                         stderr=subprocess.STDOUT)
-            time.sleep(1)
             self.ijob += 1
             logger.info('     Jobs completed: %d/%d' %(self.ijob, self.njobs))
             
