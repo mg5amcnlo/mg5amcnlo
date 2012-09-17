@@ -498,7 +498,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             old_run_mode = self.options['run_mode']
             self.options['run_mode'] = '1'
         if options.__dict__['multicore']:
-            logger.info('Prepairing cluster run')
+            logger.info('Prepairing multicore run')
             old_run_mode = self.options['run_mode']
             self.options['run_mode'] = '2'
         mode = argss[1]
@@ -548,8 +548,9 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'])
         if self.options['run_mode'] == '2':
             import multiprocessing
-            self.nb_core = int(self.options['nb_core'])
-            if not self.nb_core:
+            try:
+                self.nb_core = int(self.options['nb_core'])
+            except TypeError:
                 self.nb_core = multiprocessing.cpu_count()
             logger.info('Using %d cores' % self.nb_core)
         self.update_random_seed()
