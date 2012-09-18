@@ -837,7 +837,8 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
     def write_madinMMC_file(self, path, shower, run_mode, mint_mode):
         """writes the madinMMC_?.2 file"""
         #check the validity of the arguments
-        shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
+        #shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
+        shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q']
         if not shower in shower_list:
             raise MadGraph5Error('%s is not a valid parton shower. Please use one of the following: %s' \
                     % (shower, ', '.join(shower_list)))
