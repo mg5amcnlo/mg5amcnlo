@@ -662,7 +662,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             else:
                 raise MadGraph5Error('Cannot find event file information')
 
-        reweight_log = pjoin(self.me_dir, 'compile_reweight.log')
+        reweight_log = pjoin(self.me_dir, 'reweight.log')
         #read the nevents_unweighted file to get the list of event files
         file = open(nev_unw)
         lines = file.read().split('\n')

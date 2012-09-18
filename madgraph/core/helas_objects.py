@@ -1278,9 +1278,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
     def get_s_and_t_channels(self, ninitial, mother_leg, reverse_t_ch = False):
         """Returns two lists of vertices corresponding to the s- and
-        t-channels that can be traced from this wavefunction, ordered
-        from the outermost s-channel and in/down towards the highest
-        number initial state leg. mother_leg corresponds to self but with
+        t-channels that can be traced from this wavefunction, ordered 
+        from the outermost s-channel and in/down towards the highest 
+        (if not reverse_t_ch) or lowest (if reverse_t_ch) number initial 
+        state leg. mother_leg corresponds to self but with
         correct leg number = min(final state mothers)."""
 
         schannels = base_objects.VertexList()
@@ -2212,8 +2213,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
     def get_s_and_t_channels(self, ninitial, new_pdg, reverse_t_ch = False):
         """Returns two lists of vertices corresponding to the s- and
         t-channels of this amplitude/diagram, ordered from the outermost
-        s-channel and in/down towards the highest number initial state
-        leg."""
+        s-channel and in/down towards the highest (if not reverse_t_ch) or
+        lowest (if reverse_t_ch) number initial state leg."""
 
         schannels = base_objects.VertexList()
         tchannels = base_objects.VertexList()

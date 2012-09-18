@@ -1,4 +1,4 @@
-      subroutine LesHouches(p,born_wgt,virt_wgt)
+      subroutine BinothLHAs(p,born_wgt,virt_wgt)
 c
 c Given the Born momenta, this is the Binoth-Les Houches interface file
 c that calls the OLP and returns the virtual weights. For convenience
@@ -127,7 +127,7 @@ c======================================================================
       return
       end
 
-      subroutine LesHouchesInit(filename)
+      subroutine BinothLHAInit(filename)
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -150,7 +150,7 @@ c      endif
 c BlackHat:
 c      call get_procnum(filename,procnum)
 c      if(procnum.ne.1) then
-c         write (*,*) 'Error in LesHouchesInit', procnum
+c         write (*,*) 'Error in BinothLHAInit', procnum
 c         stop
 c       endif
 c      call OLE_Init(filename//Char(0))

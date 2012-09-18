@@ -861,7 +861,7 @@ c for except PS points, this is the minimal approx for the virtual
 
 c If exceptional PS point found, go back to beginning recompute
 c the weight for this PS point using an approximation
-c based on previous PS points (done in LesHouches.f)
+c based on previous PS points (done in BinothLHA.f)
       if (ExceptPSpoint .and. iminmax.le.1) goto 44
 
       return
@@ -2061,7 +2061,7 @@ c for except PS points, this is the minimal approx for the virtual
 
 c If exceptional PS point found, go back to beginning recompute
 c the weight for this PS point using an approximation
-c based on previous PS points (done in LesHouches.f)
+c based on previous PS points (done in BinothLHA.f)
       if (ExceptPSpoint .and. iminmax.le.1) goto 44
       return
       end
@@ -4129,10 +4129,10 @@ c
 
  548     continue
 c Finite part of one-loop corrections
-c convert to Les Houches Accord standards
+c convert to Binoth Les Houches Accord standards
          if (ran2().le.1d0/virt_fraction .and. abrv(1:3).ne.'nov') then
             if (fold.eq.0) then
-               Call LesHouches(p_born,born_wgt,virt_wgt)
+               Call BinothLHA(p_born,born_wgt,virt_wgt)
 c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
                virt_wgt_save = virt_wgt
             elseif (fold.eq.1) then
@@ -5130,7 +5130,7 @@ c Set color types of i_fks, j_fks and fks_mother.
       endif
 
       filename="contract.file"
-      call LesHouchesInit(filename)
+      call BinothLHAInit(filename)
 
 c Set matrices used by MC counterterms
       call set_mc_matrices

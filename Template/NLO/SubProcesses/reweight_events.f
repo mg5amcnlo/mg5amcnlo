@@ -7,15 +7,15 @@ c
 c It must be run from a P* directory, because nexternal.inc,
 c coupl.inc, fks.inc, pmass.inc  and run.inc should all be there.
 c
-c Call to virtual is via the LesHouches() interface subroutine
+c Call to virtual is via the BinothLHA() interface subroutine
 c (in the corresponding file.)
 c
 C***************************************************************
-c The virt_wgt coming from LesHouches() should have the same
+c The virt_wgt coming from BinothLHA() should have the same
 c adjusted identical particle symmetry factor as the Born in
 c the MadFKS framework (i.e. divided by dble(ngluons)).
 c This is also needed for normal inclusion of the virtual, so
-c in general, nothing needs to be changed in LesHouches().
+c in general, nothing needs to be changed in BinothLHA().
 C***************************************************************
 c
       program reweight_events
@@ -173,7 +173,7 @@ c Compute Born
          call sborn(p_born,wgt1)
          born_wgt=dble(wgt1(1))
 c Compute Virtual
-         call LesHouches(p_born,born_wgt,virt_wgt)
+         call BinothLHA(p_born,born_wgt,virt_wgt)
 c Reweight the events
          wgt=wgt * virt_wgt/born_wgt
 c Write event
@@ -329,7 +329,7 @@ c Set color types of i_fks, j_fks and fks_mother.
          if (pdg_type(i).eq.21) ngluons=ngluons+1
       enddo
 
-      call LesHouchesInit("contract.file")
+      call BinothLHAInit("contract.file")
 
       return
  99   write (*,*) 'Error: file config.fks not found'

@@ -114,7 +114,7 @@ for subpr in subprocesses:
     content+=  '%(subproc)20s    %(xsect)10.8e   %(err)6.4e\n' % subpr
  
 
-content+='\nTotal cross-section: %10.8e +- %6.4e  (%6.4e%%)\n' %\
+content+='\nTotal: \n                      %10.8e +- %6.4e  (%6.4e%%)\n' %\
         (tot, math.sqrt(err), math.sqrt(err)/tot *100.)
 
 if not correct:

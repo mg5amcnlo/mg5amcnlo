@@ -1,4 +1,4 @@
-      subroutine LesHouches(p_born,born_wgt,virt_wgt)
+      subroutine BinothLHA(p_born,born_wgt,virt_wgt)
       implicit none
       include "nexternal.inc"
       double precision p_born(0:3,nexternal-1),virt_wgt,born_wgt
@@ -6,7 +6,7 @@
       return
       end
 
-      subroutine LesHouchesInit(filename)
+      subroutine BinothLHAInit(filename)
       implicit none
       character*(*) filename
       return

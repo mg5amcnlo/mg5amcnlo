@@ -321,7 +321,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         #draw the diagrams
         self.draw_feynman_diagrams(matrix_element)
 
-        linkfiles = ['LesHouchesDummy.f',
+        linkfiles = ['BinothLHADummy.f',
                      'MCmasses_HERWIG6.inc',
                      'MCmasses_HERWIGPP.inc',
                      'MCmasses_PYTHIA6Q.inc',
@@ -387,9 +387,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         #copy the makefile 
         os.system("ln -s ../makefile_fks_dir ./makefile")
         if matrix_element.virt_matrix_element:
-            os.system("ln -s ../LesHouches.f ./LesHouches.f")
+            os.system("ln -s ../BinothLHA.f ./BinothLHA.f")
         else:
-            os.system("ln -s ../LesHouches_user.f ./LesHouches.f")
+            os.system("ln -s ../BinothLHA_user.f ./BinothLHA.f")
 
 
         #import nexternal/leshouches in Source

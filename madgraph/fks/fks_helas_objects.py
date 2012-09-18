@@ -335,6 +335,9 @@ class FKSHelasProcess(object):
         taken care of by constructing the list of self_reals."""
         self.born_matrix_element.get('processes').extend(
                 other.born_matrix_element.get('processes'))
+        if self.virt_matrix_element and other.virt_matrix_element:
+            self.virt_matrix_element.get('processes').extend(
+                    other.virt_matrix_element.get('processes'))
         self_reals = [real.matrix_element for real in self.real_processes]
         for oth_real in other.real_processes:
             this_real = self.real_processes[self_reals.index(oth_real.matrix_element)]

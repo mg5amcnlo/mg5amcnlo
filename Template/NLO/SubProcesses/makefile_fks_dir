@@ -23,7 +23,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o
 
 # Files needed for vegas, mint & mintMC
-RUN= $(FILES) cuts.o add_write_info.o LesHouches.o madfks_dbook.o	\
+RUN= $(FILES) cuts.o add_write_info.o BinothLHA.o madfks_dbook.o	\
 	madfks_plot.o MC_integer.o fill_MC_mshell.o
 
 # Files for vegas
@@ -41,10 +41,10 @@ BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o	\
 	write_event.o
 
 # Files for tests
-TEST= $(FILES) LesHouchesDummy.o cuts.o
+TEST= $(FILES) BinothLHADummy.o cuts.o
 
 # Files for gensym
-SYM= $(FILES) LesHouchesDummy.o symmetry_fks_v3.o write_ajob.o
+SYM= $(FILES) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
 
 # Files for event reweighting to get e.g. scale and PDF uncertainties
 RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\

@@ -45,6 +45,7 @@ elif [[ $arg1 == '1' ]] ; then
     echo 'Updating the number of unweighted events per channel'
 fi
 ./sumres.py $NTOT $arg2
+echo 'Integrated abs(cross-section)' 
 tail -n1 res.txt
 mv res.txt res_$arg1\_abs.txt
 rm dirs.txt
@@ -58,5 +59,6 @@ for dir in "$@" ; do
     grep -H 'Final result:' P*/$dir/res_$arg1 >> res.txt
 done
 ./sumres.py $NTOT -1
+echo 'Integrated cross-section' 
 tail -n1 res.txt
 mv res.txt res_$arg1\_tot.txt

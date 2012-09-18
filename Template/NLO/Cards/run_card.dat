@@ -36,7 +36,7 @@
   10042      = lhaid
 #*********************************************************************
 # Include the NLO Monte Carlo subtr. terms for the following parton  *
-# shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT | PYTHIA8)       *
+# shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA8)                   *
 #*********************************************************************
   HERWIG6   = parton_shower
 #*********************************************************************

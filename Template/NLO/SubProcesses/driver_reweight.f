@@ -343,7 +343,7 @@ c
      &          '# of points (passing cuts) with Born=0 and virt=0:',
      &          nvtozero
         endif
-        write (*,*) 'virtual weights directly from LesHouches.f:'
+        write (*,*) 'virtual weights directly from BinothLHA.f:'
         if (ivirtpoints.ne.0) then
            write (*,*) 'max(virtual/Born/ao2pi)= ',virtmax
            write (*,*) 'min(virtual/Born/ao2pi)= ',virtmin
