@@ -103,11 +103,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         if clean:
             logger.info('remove old information in %s' % os.path.basename(dir_path))
             if os.environ.has_key('MADGRAPH_BASE'):
-                subprocess.call([os.path.join('bin', 'clean_template'), '--web'], \
-                                                                       cwd=dir_path)
+                subprocess.call([os.path.join('bin', 'internal', 'clean_template'), 
+                                    '--web'],cwd=dir_path)
             else:
                 try:
-                    subprocess.call([os.path.join('bin', 'clean_template')], \
+                    subprocess.call([os.path.join('bin', 'internal', 'clean_template')], \
                                                                        cwd=dir_path)
                 except Exception, why:
                     raise MadGraph5Error('Failed to clean correctly %s: \n %s' \
@@ -143,6 +143,39 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         # Return to original PWD
         os.chdir(cwd)
+        # Copy the different python files in the Template
+        self.copy_python_files()
+
+
+    #===========================================================================
+    # copy_python_files 
+    #===========================================================================        
+    def copy_python_files(self):
+        """copy python files required for the Template"""
+
+        cp(_file_path+'/interface/aMCatNLO_run_interface.py',
+                            self.dir_path+'/bin/internal/aMCatNLO_run_interface.py')
+        cp(_file_path+'/interface/extended_cmd.py',
+                                  self.dir_path+'/bin/internal/extended_cmd.py')
+        cp(_file_path+'/various/misc.py', self.dir_path+'/bin/internal/misc.py')        
+        cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
+        cp(_file_path+'/iolibs/save_load_object.py', 
+                              self.dir_path+'/bin/internal/save_load_object.py') 
+        cp(_file_path+'../models/check_param_card.py', 
+                              self.dir_path+'/bin/internal/check_param_card.py')
+        cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
+        cp(_file_path+'/various/gen_crossxhtml.py', 
+                                self.dir_path+'/bin/internal/gen_crossxhtml.py')                
+        cp(_file_path+'/various/banner.py', 
+                                   self.dir_path+'/bin/internal/banner.py')
+        cp(_file_path+'/various/cluster.py', 
+                                       self.dir_path+'/bin/internal/cluster.py') 
+        cp(_file_path+'/various/sum_html.py', 
+                                       self.dir_path+'/bin/internal/sum_html.py') 
+        cp(_file_path+'/interface/.mg5_logging.conf', 
+                                 self.dir_path+'/bin/internal/me5_logging.conf') 
+        cp(_file_path+'/interface/coloring_logging.py', 
+                                 self.dir_path+'/bin/internal/coloring_logging.py') 
 
 
     #===========================================================================
@@ -1888,11 +1921,11 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         if clean:
             logger.info('remove old information in %s' % os.path.basename(dir_path))
             if os.environ.has_key('MADGRAPH_BASE'):
-                subprocess.call([os.path.join('bin', 'clean_template'), '--web'], \
-                                                                       cwd=dir_path)
+                subprocess.call([os.path.join('bin', 'internal', 'clean_template'), 
+                    '--web'], cwd=dir_path)
             else:
                 try:
-                    subprocess.call([os.path.join('bin', 'clean_template')], \
+                    subprocess.call([os.path.join('bin', 'internal', 'clean_template')], \
                                                                        cwd=dir_path)
                 except Exception, why:
                     raise MadGraph5Error('Failed to clean correctly %s: \n %s' \

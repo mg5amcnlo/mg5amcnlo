@@ -4001,7 +4001,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
 
         elif self._export_format in ['NLO']:
-            ## wrtie fj_lhapdf_opts file
+            ## write fj_lhapdf_opts file
             fj_lhapdf_file = open(os.path.join(self._export_dir,'Source','fj_lhapdf_opts'),'w')
             fj_lhapdf_lines = \
                  ['fastjet_config=%s' % self.fastjet_config,
@@ -4016,6 +4016,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                            not nojpeg,
                                            online,
                                            self.options['fortran_compiler'])
+            # Create configuration file [path to executable] for amcatnlo
+            filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
+            self.do_save('options %s' % filename.replace(' ', '\ '), check=False)
 
         elif self._export_format == 'madevent':          
             # Create configuration file [path to executable] for madevent

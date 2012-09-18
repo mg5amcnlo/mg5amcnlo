@@ -27,6 +27,7 @@ import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.madevent_interface as me_interface
+import madgraph.interface.aMCatNLO_run_interface as amcatnlo_interface
 import madgraph.interface.Loop_interface as Loop_interface
 import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_helas_objects as fks_helas
@@ -90,7 +91,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
                 
     def check_launch(self, args, options):
         """check the validity of the line. args are DIR and MODE
-        MODE being NLO, aMC@NLO or aMC@LO. If no mode is passed, aMC@NLO is used"""
+        MODE being LO, NLO, aMC@NLO or aMC@LO. If no mode is passed, aMC@NLO is used"""
         # modify args in order to be DIR 
         # mode being either standalone or madevent
         
@@ -110,8 +111,8 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             return self.InvalidCmd, 'Invalid Syntax: Too many argument'
 
         elif len(args) == 2:
-            if not args[1] in ['NLO', 'aMC@NLO', 'aMC@LO']:
-                raise self.InvalidCmd, '%s is not a valid mode, please use "NLO", "aMC@NLO" or "aMC@LO"' % args[1]
+            if not args[1] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO']:
+                raise self.InvalidCmd, '%s is not a valid mode, please use "LO", "NLO", "aMC@NLO" or "aMC@LO"' % args[1]
         else:
             #check if args[0] is path or mode
             if args[0] in ['NLO', 'aMC@NLO', 'aMC@LO'] and self._done_export:
@@ -135,13 +136,13 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         self._done_export = [path, mode]
 
         # check for incompatible options/modes
-        if options.__dict__['multicore'] and options.__dict__['cluster']:
+        if options['multicore'] and options['cluster']:
             raise self.InvalidCmd, 'options -m (--multicore) and -c (--cluster)' + \
                     ' are not compatible. Please choose one.'
-        if options.__dict__['noreweight'] and options.__dict__['reweightonly']:
+        if options['noreweight'] and options['reweightonly']:
             raise self.InvalidCmd, 'options -R (--noreweight) and -R (--reweightonly)' + \
                     ' are not compatible. Please choose one.'
-        if mode == 'NLO' and options.__dict__['reweightonly']:
+        if mode == 'NLO' and options['reweightonly']:
             raise self.InvalidCmd, 'option -r (--reweightonly) needs mode "aMC@NLO" or "aMC@LO"'
 
 
@@ -491,569 +492,22 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _launch_parser.parse_args(argss)
+        options = options.__dict__
         self.check_launch(argss, options)
-        #check if asked for cluster run, if so remember the old run_mode and restore it at the end
-        if options.__dict__['cluster']:
-            logger.info('Prepairing cluster run')
-            old_run_mode = self.options['run_mode']
-            self.options['run_mode'] = '1'
-        if options.__dict__['multicore']:
-            logger.info('Prepairing multicore run')
-            old_run_mode = self.options['run_mode']
-            self.options['run_mode'] = '2'
+        run_interface = amcatnlo_interface.aMCatNLOCmd(\
+                me_dir = pjoin(os.getcwd(), argss[0]))
+        
         mode = argss[1]
-        self.orig_dir = os.path.join(os.getcwd())
-        self.me_dir = os.path.join(os.getcwd(), argss[0])
-        self.ask_run_configuration(mode)
-        self.compile(mode, options)
-        self.run(mode, options)
-
-        os.chdir(self.orig_dir)
-        if options.__dict__['cluster'] or options.__dict__['multicore']:
-            self.options['run_mode'] = old_run_mode
-
-
-    def update_random_seed(self):
-        """Update random number seed with the value from the run_card. 
-        If this is 0, update the number according to a fresh one"""
-        run_card = pjoin(self.me_dir, 'Cards', 'run_card.dat')
-        if not os.path.exists(run_card):
-            raise MadGraph5Error('%s is not a valid run_card' % run_card)
-        file = open(run_card)
-        lines = file.read().split('\n')
-        file.close()
-        iseed = 0
-        for line in lines:
-            if len(line.split()) > 2:
-                if line.split()[2] == 'iseed':
-                    iseed = int(line.split()[0])
-        if iseed != 0:
-            os.system('echo "r=%d > %s"' \
-                    % (iseed, pjoin(self.me_dir, 'SubProcesses', 'randinit')))
+        if options['multicore']:
+            run_interface.cluster_mode = 2
+        elif options['cluster']:
+            run_interface.cluster_mode = 1
         else:
-            randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'))
-            iseed = int(randinit.read()[2:]) + 1
-            randinit.close()
-            randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'), 'w')
-            randinit.write('r=%d' % iseed)
-            randinit.close()
+            run_interface.cluster_mode = int(self.options['run_mode'])
 
-
-    def run(self, mode, options):
-        """runs aMC@NLO"""
-        logger.info('Starting run')
-
-        if self.options['run_mode'] == '1':
-            cluster_name = self.options['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'])
-        if self.options['run_mode'] == '2':
-            import multiprocessing
-            try:
-                self.nb_core = int(self.options['nb_core'])
-            except TypeError:
-                self.nb_core = multiprocessing.cpu_count()
-            logger.info('Using %d cores' % self.nb_core)
-        self.update_random_seed()
-        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
-        #find and keep track of all the jobs
-        job_dict = {}
-        p_dirs = [file for file in os.listdir('.') if file.startswith('P') and os.path.isdir(file)]
-        for dir in p_dirs:
-            os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
-            job_dict[dir] = [file for file in os.listdir('.') if file.startswith('ajob')] 
-
-        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
-        mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
-
-        if options.__dict__['reweightonly']:
-            shower, nevents = \
-                self.read_shower_events(pjoin(self.me_dir, 'Cards', 'run_card.dat'), 
-                                        verbose = False)
-            self.reweight_and_collect_events(options, mode, nevents)
-            return
-
-        if mode == 'NLO':
-            logger.info('Doing fixed order NLO')
-            logger.info('   Cleaning previous results')
-            os.system('rm -rf P*/grid_G* P*/novB_G* P*/viSB_G*')
-
-            logger.info('   Setting up grid')
-            self.run_all(job_dict, [['0', 'grid', '0']])
-            os.system('./combine_results_FO.sh grid*')
-
-            self.run_all(job_dict, [['0', 'novB', '0', 'grid'], ['0', 'viSB', '0', 'grid']])
-            os.system('./combine_results_FO.sh viSB* novB*')
-            return
-
-        elif mode == 'aMC@NLO':
-            logger.info('Doing NLO matched to parton shower')
-            shower, nevents = self.read_shower_events(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
-            logger.info('   Cleaning previous results')
-            os.system('rm -rf P*/GF* P*/GV*')
-
-            for i, status in enumerate(mcatnlo_status):
-                logger.info('   %s' % status)
-                self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'novB', i) 
-                self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), shower, 'viSB', i) 
-                self.run_all(job_dict, [['2', 'F', '%d' % i], ['2', 'V', '%d' % i]])
-
-                if i < 2:
-                    os.system('./combine_results.sh %d %d GF* GV*' % (i, nevents))
-
-        elif mode == 'aMC@LO':
-            logger.info('Doing LO matched to parton shower')
-            shower, nevents = self.read_shower_events(
-                        pjoin(self.me_dir, 'Cards', 'run_card.dat'))
-            logger.info('   Cleaning previous results')
-            os.system('rm -rf P*/GB*')
-            for i, status in enumerate(mcatnlo_status):
-                logger.info('   %s at LO' % status)
-                self.write_madinMMC_file(
-                        pjoin(self.me_dir, 'SubProcesses'), shower, 'born', i) 
-                self.run_all(job_dict, [['2', 'B', '%d' % i]])
-
-                if i < 2:
-                    os.system('./combine_results.sh %d %d GB*' % (i, nevents))
-
-        if self.options['run_mode'] == '1':
-            #if cluster run, wait 15 sec so that event files are transferred back
-            logger.info('Waiting while files are transferred back from the cluster nodes')
-            time.sleep(15)
-
-        self.reweight_and_collect_events(options, mode, nevents)
-
-
-    def reweight_and_collect_events(self, options, mode, nevents):
-        """this function calls the reweighting routines and creates the event file in the 
-        Event dir
-        """
-        if not options.__dict__['noreweight']:
-            self.run_reweight(options.__dict__['reweightonly'])
-
-        logger.info('   Collecting events')
-        os.system('make collect_events > %s' % \
-                pjoin (self.me_dir, 'log_collect_events.txt'))
-        os.system('echo "1" | ./collect_events > %s' % \
-                pjoin (self.me_dir, 'log_collect_events.txt'))
-
-        count = 1
-        if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001')):
-            raise MadGraph5Error('An error occurred during event generation. ' + \
-                    'The event file has not been created. Check log_collect_events.txt')
-        while os.path.exists(pjoin(self.me_dir, 'Events', 'events_%d' % count)):
-            count += 1
-        evt_file = pjoin(self.me_dir, 'Events', 'events_%d' % count)
-        os.system('mv %s %s' % 
-            (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file))
-        logger.info('The %s file has been generated.\nIt contains %d %s events to be showered' \
-                % (evt_file, nevents, mode[4:]))
-
-
-    def run_reweight(self, only):
-        """runs the reweight_xsec_events eecutables on each sub-event file generated
-        to compute on the fly scale and/or PDF uncertainities"""
-        logger.info('   Doing reweight')
-
-        nev_unw = pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted')
-        # if only doing reweight, copy back the nevents_unweighted file
-        if only:
-            if os.path.exists(nev_unw + '.orig'):
-                os.system('cp %s %s' % (nev_unw + '.orig', nev_unw))
-            else:
-                raise MadGraph5Error('Cannot find event file information')
-
-        reweight_log = pjoin(self.me_dir, 'reweight.log')
-        #read the nevents_unweighted file to get the list of event files
-        file = open(nev_unw)
-        lines = file.read().split('\n')
-        file.close()
-        # make copy of the original nevent_unweighted file
-        os.system('cp %s %s' % (nev_unw, nev_unw + '.orig'))
-        evt_files = [line.split()[0] for line in lines if line]
-        #prepare the job_dict
-        job_dict = {}
-        for i, evt_file in enumerate(evt_files):
-            path, evt = os.path.split(evt_file)
-            os.chdir(pjoin(self.me_dir, 'SubProcesses', path))
-            if self.options['run_mode'] == '0' or self.options['run_mode'] == '2':
-                exe = 'reweight_xsec_events.local'
-            elif self.options['run_mode'] == '1':
-                exe = 'reweight_xsec_events.cluster'
-            os.system('ln -sf ../../%s .' % exe)
-            job_dict[path] = [exe]
-
-        self.run_all(job_dict, [[evt, '1']])
-        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
-
-        #check that the new event files are complete
-        for evt_file in evt_files:
-            last_line = subprocess.Popen('tail -n1 %s.rwgt ' % evt_file, \
-                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-            if last_line != "</LesHouchesEvents>":
-                raise MadGraph5Error('An error occurred during reweight.' + \
-                      ' Check %s for details' % reweight_log)
-
-        #update file name in nevents_unweighted
-        newfile = open(nev_unw, 'w')
-        for line in lines:
-            if line:
-                newfile.write(line.replace(line.split()[0], line.split()[0] + '.rwgt') + '\n')
-        newfile.close()
-
-
-    def wait_for_complete(self):
-        """this function waits for jobs on cluster to complete their run."""
-
-        # if running serially nothing to do
-        if self.options['run_mode'] == '0':
-            return
-
-        # if running on cluster just use the control function of the module
-        elif self.options['run_mode'] == '1':
-            idle = 1
-            run = 1
-            logger.info('     Waiting for submitted jobs to complete (will update each 10s)')
-            while idle + run > 0:
-                time.sleep(10)
-                idle, run, finish, fail = self.cluster.control('')
-                logger.info('     Job status: %d idle, %d running, %d failed, %d completed' \
-                        % (idle, run, fail, finish))
-            #reset the cluster after completion
-            self.cluster.submitted = 0
-            self.cluster.submitted_ids = []
-        elif self.options['run_mode'] == '2':
-            while self.ijob != self.njobs:
-                time.sleep(10)
-
-    def run_all(self, job_dict, arg_list):
-        """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
-        self.njobs = sum(len(jobs) for jobs in job_dict.values()) * len(arg_list)
-        self.ijob = 0
-        for args in arg_list:
-            for dir, jobs in job_dict.items():
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
-                for job in jobs:
-                    self.run_exe(job, args)
-                    # print some statistics if running serially
-
-        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
-        self.wait_for_complete()
-
-
-    def run_exe(self, exe, args):
-        """this basic function launch locally/on cluster exe with args as argument.
-        """
-
-        def launch_in_thread(exe, argument, cwd, stdout, control_thread):
-            """ way to launch for multicore.
-            """
-
-            start = time.time()
-            if (cwd and os.path.exists(pjoin(cwd, exe))) or os.path.exists(exe):
-                exe = './' + exe
-            misc.call([exe] + argument, cwd=cwd, stdout=stdout,
-                        stderr=subprocess.STDOUT)
-            self.ijob += 1
-            logger.info('     Jobs completed: %d/%d' %(self.ijob, self.njobs))
-            
-            # release the lock for allowing to launch the next job      
-            while not control_thread[1].locked():
-                # check that the status is locked to avoid coincidence unlock
-                if not control_thread[2]:
-                    # Main is not yet locked
-                    control_thread[0] -= 1
-                    return 
-                time.sleep(1)
-            control_thread[0] -= 1 # upate the number of running thread
-            control_thread[1].release()
-
-        # first test that exe exists:
-        if not os.path.exists(exe):
-            raise MadGraph5Error('Cannot find executable %s in %s' \
-                % (exe, os.getcwd()))
-        # check that the executable has exec permissions
-        if not os.access(exe, os.X_OK):
-            os.system('chmod +x %s' % exe)
-        # finally run it
-        if self.options['run_mode'] == '0':
-            #this is for the serial run
-            misc.call(['./'+exe] + args, cwd= os.getcwd())
-            self.ijob += 1
-            logger.info('     Jobs completed: %d/%d' %(self.ijob, self.njobs))
-        elif self.options['run_mode'] == '1':
-            #this is for the cluster run
-            self.cluster.submit(exe, args)
-        elif self.options['run_mode'] == '2':
-            #this is for the multicore run
-            import thread
-            if not hasattr(self, 'control_thread'):
-                self.control_thread = [0] # [used_thread]
-                self.control_thread.append(thread.allocate_lock()) # The lock
-                self.control_thread.append(False) # True if all thread submit 
-                                                  #-> waiting mode
-            if self.control_thread[2]:
-#                self.update_status((remaining + 1, self.control_thread[0], 
-#                                self.total_jobs - remaining - self.control_thread[0] - 1, run_type), 
-#                                   level=None, force=False)
-                self.control_thread[1].acquire()
-                self.control_thread[0] += 1 # upate the number of running thread
-                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread))
-            elif self.control_thread[0] <  self.nb_core -1:
-                self.control_thread[0] += 1 # upate the number of running thread 
-                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread))
-            elif self.control_thread[0] ==  self.nb_core -1:
-                self.control_thread[0] += 1 # upate the number of running thread
-                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread))
-                self.control_thread[2] = True
-                self.control_thread[1].acquire() # Lock the next submission
-                                                 # Up to a release
-
-
-    def read_shower_events(self, run_card, verbose=True):
-        """read the parton shower and the requested number of events in the run_card"""
-        if not os.path.exists(run_card):
-            raise MadGraph5Error('%s is not a valid run_card' % run_card)
-        file = open(run_card)
-        lines = file.read().split('\n')
-        file.close()
-        nevents = 0
-        shower = ''
-        for line in lines:
-            if len(line.split()) > 2:
-                if line.split()[2] == 'parton_shower':
-                    shower = line.split()[0]
-                if line.split()[2] == 'nevents':
-                    nevents = int(line.split()[0])
-
-        if shower and nevents and verbose:
-            logger.info('Input read from the run_card.dat: \n Generating %d events for shower %s' \
-                    %(nevents, shower))
-        elif not shower or not nevents:
-            raise MadGraph5Error('Falied to read shower and number of events from the run_card.dat')
-
-        return shower, nevents
-
-
-    def write_madinMMC_file(self, path, shower, run_mode, mint_mode):
-        """writes the madinMMC_?.2 file"""
-        #check the validity of the arguments
-        #shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
-        shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q']
-        if not shower in shower_list:
-            raise MadGraph5Error('%s is not a valid parton shower. Please use one of the following: %s' \
-                    % (shower, ', '.join(shower_list)))
-        run_modes = ['born', 'virt', 'novi', 'all', 'viSB', 'novB']
-        if run_mode not in run_modes:
-            raise MadGraph5Error('%s is not a valid mode for run. Please use one of the following: %s' \
-                    % (run_mode, ', '.join(run_modes)))
-        mint_modes = [0, 1, 2]
-        if mint_mode not in mint_modes:
-            raise MadGraph5Error('%s is not a valid mode for mintMC. Please use one of the following: %s' \
-                    % (mint_mode, ', '.join(mint_modes)))
-        if run_mode in ['born']:
-            name_suffix = 'B'
-        elif run_mode in ['virt', 'viSB']:
-            name_suffix = 'V'
-        else:
-            name_suffix = 'F'
-
-        content = \
-"""-1 12      ! points, iterations
-0.05       ! desired fractional accuracy
-1 -0.1     ! alpha, beta for Gsoft
--1 -0.1    ! alpha, beta for Gazi
-1          ! Suppress amplitude (0 no, 1 yes)?
-0          ! Exact helicity sum (0 yes, n = number/event)?
-1          ! Enter Configuration Number:
-%1d          ! MINT imode: 0 to set-up grids, 1 to perform integral, 2 generate events
-1 1 1      ! if imode is 1: Folding parameters for xi_i, phi_i and y_ij
-%s        ! all, born, real, virt
-""" \
-                    % (mint_mode, run_mode)
-        file = open(pjoin(path, 'madinMMC_%s.2' % name_suffix), 'w')
-        file.write(content)
-        file.close()
-
-
-
-    def compile(self, mode, options):
-        """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
-        specified in mode"""
-        #define a bunch of log files
-        amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
-        madloop_log = pjoin(self.me_dir, 'compile_madloop.log')
-        reweight_log = pjoin(self.me_dir, 'compile_reweight.log')
-        gensym_log = pjoin(self.me_dir, 'gensym.log')
-        test_log = pjoin(self.me_dir, 'test.log')
-
-        #define which executable/tests to compile
-        if mode =='NLO':
-            exe = 'madevent_vegas'
-            tests = ['test_ME']
-        if mode in ['aMC@NLO', 'aMC@LO']:
-            exe = 'madevent_mintMC'
-            tests = ['test_ME', 'test_MC']
-        #directory where to compile exe
-        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
-        p_dirs = [file for file in os.listdir('.') if file.startswith('P') and os.path.isdir(file)]
-        # if --nocompile option is specified, check here that all exes exists. 
-        # If they exists, return
-        if all([os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, exe)) \
-                for p_dir in p_dirs]) and options.__dict__['nocompile'] \
-                and not options.__dict__['tests']:
-            return
-
-        libdir = pjoin(self.me_dir, 'lib')
-        # read the run_card to find if lhapdf is used or not
-        run_card_file = open(pjoin(self.me_dir, 'Cards','run_card.dat'))
-        found = False
-        while not found:
-            line = run_card_file.readline()
-            if 'pdlabel' in line:
-                found = True
-        run_card_file.close()
-        # rm links to lhapdflib/ PDFsets if exist
-        if os.path.islink(pjoin(libdir, 'libLHAPDF.a')):
-            os.remove(pjoin(libdir, 'libLHAPDF.a'))
-        if os.path.islink(pjoin(libdir, 'PDFsets')):
-            os.remove(pjoin(libdir, 'PDFsets'))
-
-        if line.split()[0] == '\'lhapdf\'':
-            logger.info('Using LHAPDF interface for PDFs')
-            lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-            lhasetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'], 
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-            os.symlink(pjoin(lhalibdir, 'libLHAPDF.a'), pjoin(libdir, 'libLHAPDF.a'))
-            os.symlink(lhasetsdir, pjoin(libdir, 'PDFsets'))
-            os.putenv('lhapdf', 'True')
-        else:
-            logger.info('Using built-in libraries for PDFs')
-            os.unsetenv('lhapdf')
-
-        # make Source
-        logger.info('Compiling source...')
-        os.chdir(pjoin(self.me_dir, 'Source'))
-        os.system('make > %s 2>&1' % amcatnlo_log)
-        if os.path.exists(pjoin(libdir, 'libdhelas.a')) \
-          and os.path.exists(pjoin(libdir, 'libgeneric.a')) \
-          and os.path.exists(pjoin(libdir, 'libmodel.a')) \
-          and os.path.exists(pjoin(libdir, 'libpdf.a')):
-            logger.info('          ...done, continuing with P* directories')
-        else:
-            raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
-
-        # make and run tests (if asked for), gensym and make madevent in each dir
-        for p_dir in p_dirs:
-            logger.info(p_dir)
-            this_dir = pjoin(self.me_dir, 'SubProcesses', p_dir) 
-            os.chdir(this_dir)
-            # compile and run tests if asked for
-            if options.__dict__['tests']:
-                for test in tests:
-                    logger.info('   Compiling %s...' % test)
-                    os.system('make %s >> %s 2>&1 ' % (test, test_log))
-                    if not os.path.exists(pjoin(this_dir, test)):
-                        raise MadGraph5Error('Compilation failed, check %s for details' \
-                                % test_log)
-                    logger.info('   Running %s...' % test)
-                    self.write_test_input(test)
-                    input = pjoin(self.me_dir, '%s_input.txt' % test)
-                    #this can be improved/better written to handle the output
-                    os.system('./%s < %s | tee -a %s | grep "Fraction of failures"' \
-                            % (test, input, test_log))
-                    os.system('rm -f %s' % input)
-
-            if not options.__dict__['reweightonly']:
-                logger.info('   Compiling gensym...')
-                os.system('make gensym >> %s 2>&1 ' % amcatnlo_log)
-                if not os.path.exists(pjoin(this_dir, 'gensym')):
-                    raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
-
-                logger.info('   Running gensym...')
-                os.system('echo %s | ./gensym >> %s' % (self.options['run_mode'], gensym_log)) 
-                #compile madloop library
-                v_dirs = [file for file in os.listdir('.') if file.startswith('V') and os.path.isdir(file)]
-                for v_dir in v_dirs:
-                    os.putenv('madloop', 'true')
-                    logger.info('   Compiling MadLoop library in %s' % v_dir)
-                    madloop_dir = pjoin(this_dir, v_dir)
-                    os.chdir(madloop_dir)
-                    os.system('make >> %s 2>&1' % madloop_log)
-                    if not os.path.exists(pjoin(this_dir, 'libMadLoop.a')):
-                        raise MadGraph5Error('Compilation failed, check %s for details' % madloop_log)
-                os.chdir(this_dir)
-                logger.info('   Compiling %s' % exe)
-                os.system('make %s >> %s 2>&1' % (exe, amcatnlo_log))
-                os.unsetenv('madloop')
-                if not os.path.exists(pjoin(this_dir, exe)):
-                    raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
-            if mode in ['aMC@NLO', 'aMC@LO'] and not options.__dict__['noreweight']:
-                logger.info('   Compiling reweight_xsec_events')
-                os.system('make reweight_xsec_events >> %s 2>&1' % (reweight_log))
-                if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
-                    raise MadGraph5Error('Compilation failed, check %s for details' % reweight_log)
-
-        os.chdir(pjoin(self.me_dir))
-
-
-    def write_test_input(self, test):
-        """write the input files to run test_ME/MC"""
-        content = "-2 -2\n" #generate randomly energy/angle
-        content+= "100 100\n" #run 100 points for soft and collinear tests
-        content+= "0\n" #sum over helicities
-        content+= "0\n" #all FKS configs
-        content+= '\n'.join(["-1"] * 50) #random diagram
-        
-        file = open(pjoin(self.me_dir, '%s_input.txt' % test), 'w')
-        if test == 'test_ME':
-            file.write(content)
-        elif test == 'test_MC':
-            shower, events = self.read_shower_events(\
-                    pjoin(self.me_dir, 'Cards', 'run_card.dat'), verbose=False)
-            MC_header = "%s\n " % shower + \
-                        "1 \n1 -0.1\n-1 -0.1\n"
-            file.write(MC_header + content)
-        file.close()
-
-
-    ############################################################################
-    def ask_run_configuration(self, mode):
-        """Ask the question when launching generate_events/multi_run"""
-        
-        logger.info('Will run in mode %s' % mode)
-        cards = ['param_card.dat', 'run_card.dat']
-
-        def get_question(mode):
-            # Ask the user if he wants to edit any of the files
-            #First create the asking text
-            question = """Do you want to edit one cards (press enter to bypass editing)?
-  1 / param   : param_card.dat (be carefull about parameter consistency, especially widths)
-  2 / run     : run_card.dat\n"""
-            possible_answer = ['0','done', 1, 'param', 2, 'run']
-            card = {0:'done', 1:'param', 2:'run'}
-            # Add the path options
-            question += '  Path to a valid card.\n'
-            return question, possible_answer, card
-        
-        # Loop as long as the user is not done.
-        answer = 'no'
-        while answer != 'done':
-            question, possible_answer, card = get_question(mode)
-            answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
-            if answer.isdigit():
-                answer = card[int(answer)]
-            if answer == 'done':
-                return
-            if not os.path.isfile(answer):
-                if answer != 'trigger':
-                    path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
-                else:
-                    path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
-                self.exec_cmd('open %s' % path)                    
-            else:
-                # detect which card is provided
-                card_name = answer + 'card.dat'
+        run_interface.ask_run_configuration(mode)
+        run_interface.compile(mode, options) 
+        run_interface.run(mode, options)
                     
    
 class FKSInterfaceWeb(mg_interface.CheckValidForCmdWeb, FKSInterface):
@@ -1062,7 +516,7 @@ class FKSInterfaceWeb(mg_interface.CheckValidForCmdWeb, FKSInterface):
 _launch_usage = "launch [DIRPATH] [MODE] [options]\n" + \
                 "-- execute the aMC@NLO output present in DIRPATH\n" + \
                 "   By default DIRPATH is the latest created directory\n" + \
-                "   MODE can be either NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n"
+                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n"
 
 _launch_parser = optparse.OptionParser(usage=_launch_usage)
 _launch_parser.add_option("-c", "--cluster", default=False, action='store_true',
