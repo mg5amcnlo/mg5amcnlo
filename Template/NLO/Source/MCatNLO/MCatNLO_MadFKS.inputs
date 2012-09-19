@@ -1,0 +1,133 @@
+#
+#!/bin/bash
+
+
+##### GENERAL SETTINGS
+
+##### RUN
+# prefix for input file, event file, executable respectively
+FPREFIX=sthw
+EVPREFIX=sthw
+EXEPREFIX=sthw
+# number of events to shower. Negative if the whole file
+NEVENTS=10000
+# MCMODE can be = HERWIG6, PYTHIA6Q, (HERWIGPP, PYTHIA6PT, PYTHIA8)
+MCMODE=HERWIG6
+# path to source MC codes
+HWPATH="../srcHerwig"
+PYPATH="../srcPythia"
+# set the following variables equal to the name of the version of 
+# the MC that you use 
+HERWIGVER="herwig6520.o"
+PYTHIAVER="pythia6426.o"
+# set the following variables equal to the list of object files that
+# you need when using the MC (for analysis purposes, for example)
+HWUTI="mcatnlo_hwanstp.o mcatnlo_hbook_gfortran.o"
+PYUTI="mcatnlo_pyanstp.o mcatnlo_hbook_gfortran.o"
+# set the following variable equal to the names of the libraries which 
+# need be linked. Library names are separated by white spaces. 
+# Note: LHAPDF is a special case, and must not be included here
+EXTRALIBS=
+# set the following variable equal to the paths to the libraries which 
+# need be linked. Library paths are separated by white spaces. 
+# Note: LHAPDF is a special case, and must not be included here
+EXTRAPATHS=
+# set the following variable equal to the paths to the directories which 
+# contain header files needed by C++ files. Directory names are separated 
+# by white spaces
+INCLUDEPATHS=
+
+##### PDFs
+# set ***PDF=DEFAULT to use the MC default PDFs, =EXTPDF to use 
+# another set; if =DEFAULT all other variables about PDFs are not
+# effective
+HERPDF=DEFAULT
+PYTPDF=DEFAULT
+# set PDFLIBRARY=THISLIB, =PDFLIB, or =LHAPDF to obtain PDFs from
+# our private PDF library, from PDFLIB or from LHAPDF respectively
+PDFLIBRARY=LHAPDF
+# PDF group name; unused when linked to LHAPDF
+PDFGROUP=CTEQ
+# PDF set number; use LHAGLUE conventions when linked to LHAPDF
+PDFSET=56
+# set the following variable equal to the name of the directory where
+# the PDF grid files are stored. Effective only if PDFLIBRARY=THISLIB
+PDFPATH="/Users/paolotorrielli/WORK/Research/PDF_Libraries/thislib"
+# set the following variable equal to the name of the directory where
+# the local version of LHAPDF is installed. We assume that the library,
+# PDF sets, and configuration script are located in lib/, 
+# share/lhapdf/PDFsets/, and bin/ respectively. Effective only if
+#PDFLIBRARY=LHAPDF
+LHALIBPATH="/Users/paolotorrielli/WORK/Research/PDF_Libraries/LHAPDF/lhapdf-5.8.8_install"
+# set the following variable equal to STATIC or DYNAMIC according to
+# the type of LHAPDF library one wants to link to
+LHALINK=DYNAMIC
+# set LHAOFL=FREEZE to freeze PDFs from LHAPDF at the boundaries,
+# =EXTRAPOLATE otherwise. This variable is related to LHAPARM(18)
+LHAOFL=FREEZE
+
+
+#### STILL TO BE ADJUSTED
+# bottom mass
+BMASS=4.8
+# the variable HWPPPATH must be set equal to the name of directory 
+# under which one finds the ./bin/Herwig++ executable
+HWPPPATH="/itp/torrielli/Desktop/WORK/Herwig++/Herwig++_install"
+# the variable PY8PATH must be set equal to the name of directory 
+# under which one finds the ./examples/bin/ folder
+PY8PATH="/Users/torrielli/WORK/Research/Programs/Pythia8/Pythia-8.165/"
+# the variable THEPEGPATH must be set equal to the name of directory 
+# under which one finds the ./lib/ThePeg libraries
+THEPEGPATH="/itp/torrielli/Desktop/WORK/ThePEG/ThePEG_install"
+# the variable HEPMCPATH must be set equal to the name of directory 
+# under which one finds the ./lib/HepMC libraries
+HEPMCPATH="/Users/torrielli/WORK/Research/Programs/HepMC/HepMC_install"
+# prepend this string to prefixes to avoid storage problems
+# leave blank to store event and data files in the running directory
+SCRTCH=
+# set the following variable equal to the list of object files that
+# originate from fortran files which are linked to an HERWIG++ analysis
+HWPPUTI="mcatnlo_hwanllp_hepmc.o mcatnlo_hbook_gfortran.o"
+# set the following variable equal to the list of object files that
+# originate from fortran files which are linked to an PYTHIA8 analysis
+PY8UTI="mcatnlo_pyanllp_hepmc.o mcatnlo_hbook_gfortran.o"
+# set the following variable equal to the name of the .cc analyzer file
+# you need when using HERWIG++
+HWPPANALYZER="HepMCFortran"
+
+
+##### MC-SPECIFIC SETTINGS
+
+##### HERWIG6
+LHSOFT=.FALSE.                 # Underlying event on (.TRUE.) or off (.FALSE.)
+MODBOS_1=5                     # Gauge boson decay modes
+MODBOS_2=5                     # Gauge boson decay modes
+MAXPR_HW=2                     # Number of events to be printed out
+ERR_FR_HW=0.01                 # Tolerated fraction of errors
+IS_ST_HW=.FALSE.               # .TRUE. if it is single-top production
+IS_BB_HW=.FALSE.               # .TRUE. if it is b-bbar production
+RNDEVSEED1_HW=0                # First random seed (0 for default)
+RNDEVSEED2_HW=0                # Second random seed (0 for default)
+PI_STABLE_HW=.TRUE.            # .TRUE. if one wants Pi0 stable
+LAMBDAHERW=-1                  # Lambda_5; negative for default
+
+##### PYTHIA6Q
+MSTP_81=0                      # Underlying event on (1) or off (0)
+W_STABLE_PY=.FALSE.            # .TRUE. if one wants W+/- stable
+Z_STABLE_PY=.FALSE.            # .TRUE. if one wants Z0 stable
+MAXPR_PY=2                     # Number of events to be printed out
+ERR_FR_PY=0.01                 # Tolerated fraction of errors
+IS_ST_PY=.FALSE.               # .TRUE. if it is single-top production
+IS_4L_PY=.FALSE.               # .TRUE. if it is four-lepton production
+RNDEVSEED_PY=0                 # Random seed (0 for default)
+PI_STABLE_PY=.TRUE.            # .TRUE. if one wants Pi0 stable
+LAMBDAPYTH=-1                  # Lambda_5; negative for default
+
+
+##### LOAD THE SCRIPTS: DO NOT REMOVE
+. `pwd`/MCatNLO_MadFKS_$MCMODE.Script
+
+
+##### EXECUTION: DO NOT REMOVE
+# Type compileMC to compile the shower, runMC to compile and run
+runMC

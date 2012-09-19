@@ -1,0 +1,561 @@
+# finds out architecture name, defines system files, and construct
+# the relevant directory for run, if not present. If the architecture
+# cannot be figured out, defines ./Run as working directory, and use 
+# sun as system file -- it should work in most of the cases
+function architecture {
+PATH=".:""$PATH"
+thisdir=`pwd`
+homedir=$HOME
+case `uname` in
+Linux*) ARCHNAME=LinuxPP ; DBGFLAG='DEBUG=-ggdb' ; EXTRA='EXTRAOBJ=linux.o' ;
+        EXMAKE=gmake ; CPOPT=pu ;;
+OSF*)  ARCHNAME=AlphaPP ; DBGFLAG='DEBUG=-g' ; EXTRA='EXTRAOBJ=alpha.o' ;
+       EXMAKE=gmake ; CPOPT=p ;;
+Sun*) ARCHNAME=SunPP ; DBGFLAG='DEBUG=-g' ; EXTRA='EXTRAOBJ=sun.o' ;
+      EXMAKE=gmake ; CPOPT=p ;;
+Darwin*) ARCHNAME=DarwinPP ; DBGFLAG='DEBUG=-g' ; EXTRA='EXTRAOBJ=sun.o' ;
+         EXMAKE=make ; CPOPT=p ;;
+*) ARCHNAME=RunPP ; DBGFLAG='DEBUG=-g' ; EXTRA='EXTRAOBJ=sun.o' ;;
+esac
+#
+if [ -d $thisdir/$ARCHNAME ]
+then
+    echo $thisdir/$ARCHNAME directory already present
+else
+    mkdir $thisdir/$ARCHNAME
+fi
+}
+
+# $? is the value of last executed command. A call to this function
+# after a failure will cause the program to quit the script
+function teststatus {
+rc=$?
+if [ 0 = $rc ]
+then
+:
+else
+echo $* did not succeed, exit status=$rc 
+exit $rc
+fi
+}
+
+# given IPROC, returns a string which identifies the target
+# for the Makefile
+function getSTRmake {
+stringmake=MadFKS
+}
+
+# utility function for dothelinks
+function stripextension {
+echo $1 | sed "s/\..*\$//"
+}
+
+# utility function for dothelinks
+function capitalize {
+echo $1 | sed "y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/"
+}
+
+# creates logical links for the PDF grid files. By P. Nason
+function dothelinks {
+if [ -d $PDFPATH ]
+then
+for i in ${PDFPATH}/*.dat ${PDFPATH}/*.tbl
+do
+if [ -f $i ]
+then
+name=`basename $i`
+name=`stripextension $name`
+case $name in
+mrst200*) ;;
+*mrs*|grpol|grvdm|lac1|pion[1-3]) name=`capitalize $name`;;
+esac
+if [ ! -L $thisdir/$ARCHNAME/$name ] || [ ! $thisdir/$ARCHNAME/$name -ef $i ]
+then
+ln -sf $i $thisdir/$ARCHNAME/$name
+fi
+fi
+done
+for i in ${PDFPATH}/a02.*
+do
+if [ -f $i ]
+then
+name=`basename $i`
+if [ ! -L $thisdir/$ARCHNAME/$name ] || [ ! $thisdir/$ARCHNAME/$name -ef $i ]
+then
+ln -sf $i $thisdir/$ARCHNAME/$name
+fi
+fi
+done
+fi
+}
+
+# creates logical links for LHAPDF, and replaced PDF group name (unused
+# by LHAPDF) with a LHAPDF-specific string
+function linklhapdf {
+case $LHAOFL in
+FREEZE|freeze) PDFGROUP=LHAPDF ;;
+EXTRAPOLATE|extrapolate) PDFGROUP=LHAEXT ;;
+*) echo "no such option; failure in linklhapdf" ; exit 1 ;;
+esac
+if [ -d "$LHALIBPATH" ]
+then
+  ln -sf $LHALIBPATH/bin/lhapdf-config $thisdir/$ARCHNAME/lhapdf-config
+else
+  echo "Cannot find LHAPDF directory"
+  exit 1
+fi
+}    
+
+# creates the executable for NLO and MC; the entry of the function
+# is either NLO or MC, depending on which executable one wants to obtain;
+# PDFLIB or private PDF library is linked, depending on the value of
+# the parameter UsedPdfLib, which is set by the function whichpdflib.
+# Extra libraries are listed in the shell variable EXTRALIBS; do NOT
+# remove the double quotes in the call to nameextralib, otherwise only
+# the first library of the list is taken
+function compile {
+architecture
+whichpdflib $PDFLIBRARY
+whichlhapdf $LHALINK
+nameextralib "$EXTRALIBS"
+pathextralib "$EXTRAPATHS"
+pathextralibdyn "$EXTRAPATHS"
+pathextraincl "$INCLUDEPATHS"
+EXEC_NAME=
+EXEC_NAMEF=
+EXEC_NAMEFF=
+HWPPUTIMAKE="HWPPUTI="$HWPPUTI
+HERWGMAKE="HERWIGVER="$HERWIGVER
+LIBSMAKE="EXTRALIBS="$ExtraLibs
+LIBSMAKEP="EXTRAPATHS="$ExtraPaths
+INCLMAKE="INCLOPTION="$ExtraIncl
+INCDIRMK="INCDIR="`pwd`"/include"
+COMSRCMK="COMSRC="`pwd`"/srcCommon"
+if [ "$LD_LIBRARY_PATH" = "" ]
+then
+  LD_LIBRARY_PATH="$ExtraPathsDyn"
+else
+  if [ "$ExtraPathsDyn" != "" ]
+  then
+    LD_LIBRARY_PATH="$ExtraPathsDyn"":""$LD_LIBRARY_PATH"
+  fi
+fi
+LIBSLHA="LHALIB="
+case $1 in
+NLO) echo "NLO must be computed with MadFKS"; exit 1
+     if [ $UsedPdfLib = "PDFLIB" ]
+     then
+       EXEC_NAMEF="NLO_EXE_PDFLIB"
+     elif [ $UsedPdfLib = "THISLIB" ]
+     then
+       EXEC_NAMEF="NLO_EXE_THISLIB"
+     elif [ $UsedPdfLib = "LHAPDF" ]
+     then
+       EXEC_NAMEF="NLO_EXE_LHAPDF"
+       if [ $UsedLhaPdf = "lhasta" ]
+       then
+         LIBSLHA="$LIBSLHA""$LHALIBPATH""/lib/libLHAPDF.a"
+       else
+         LIBSMAKE="$LIBSMAKE"" -lLHAPDF"
+         LIBSMAKEP="$LIBSMAKEP"" -L$LHALIBPATH""/lib/"
+         if [ "$LD_LIBRARY_PATH" = "" ]
+         then
+           LD_LIBRARY_PATH="$LHALIBPATH""/lib/"
+         else
+           LD_LIBRARY_PATH="$LHALIBPATH""/lib/:""$LD_LIBRARY_PATH"
+         fi
+       fi
+     else
+       echo "no such option"; exit 1
+     fi ;;
+MC) if [ $UsedPdfLib = "PDFLIB" ]
+     then
+       whichherpdf $HERPDF
+       if [ $pdftype = 1 ]
+       then
+         echo "Warning: HW++ not available with PDFLIB."
+         echo "         Will reset to HW++ default PDF."
+         HERPDF="DEFAULT"
+       fi
+       EXEC_NAMEF="MC_EXE_DEFAULT"
+     elif [ $UsedPdfLib = "THISLIB" ]
+     then
+       whichherpdf $HERPDF
+       if [ $pdftype = 1 ]
+       then
+         echo "Warning: HW++ not available with THISLIB."
+         echo "         Will reset to HW++ default PDF."
+         HERPDF="DEFAULT"
+       fi
+       EXEC_NAMEF="MC_EXE_DEFAULT"
+     elif [ $UsedPdfLib = "LHAPDF" ]
+     then
+       whichherpdf $HERPDF
+       if [ $pdftype = 1 ]
+       then
+         EXEC_NAMEF="MC_EXE_LHAPDF"
+       else
+         EXEC_NAMEF="MC_EXE_DEFAULT"
+       fi
+     else
+       echo "fatal error in compile"; exit 1
+     fi ;;
+*) echo "do not know what to do in function compile" ; exit 1 ;;
+esac
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HEPMCPATH/lib
+if [ $1 = "NLO" ]
+then
+  getSTRmake $IPROC
+  EXEC_NAME=$stringmake$EXEC_NAMEF
+fi
+EXEC_NAMEFF="$EXEPREFIX""$EXEC_NAMEF"
+# stops if executable already exists (safety measure) 
+if [ -f $thisdir/$ARCHNAME/$EXEC_NAMEFF ]
+then
+  echo "Executable already present: quitting"
+  exit 1
+fi
+# creates a temporary directory to produce the executable, eventually moved
+# back to running directory (only for NLO, MC see below)
+if [ $1 = "NLO" ]
+then
+  CURRDATE=`date`
+  TMPDIRNAME=`echo $CURRDATE | cut -d" " -f1`
+  TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f2`
+  TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f3`
+  TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f4`
+  TMPDIRNAME=$EXEPREFIX$TMPDIRNAME
+  if [ -d "$thisdir/$ARCHNAME/$TMPDIRNAME" ]
+    then
+    echo "Directory already present: quitting"
+    exit 1
+  else
+    mkdir "$thisdir/$ARCHNAME/$TMPDIRNAME"
+  fi
+  (cd $thisdir/$ARCHNAME/$TMPDIRNAME ;\
+   $EXMAKE -f $thisdir/Makefile_MadFKS $EXTRA "$HWPPUTIMAKE" "$HERWGMAKE" \
+   "$LIBSLHA" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" \
+   "$INCDIRMK" "$COMSRCMK" \
+   VPATH=$thisdir/$ARCHNAME/:$thisdir/:$HWPATH:$LHALIBPATH/lib/ $EXEC_NAME ;\
+   if [ "$EXEC_NAME" != "$EXEC_NAMEFF" ] 
+   then
+     \mv $EXEC_NAME $EXEC_NAMEFF
+   fi ;\
+   if [ -f $thisdir/$ARCHNAME/$EXEC_NAMEFF ]
+   then
+     echo "Executable already present: quitting"
+     exit 1
+   else
+     \mv $EXEC_NAMEFF $thisdir/$ARCHNAME/$EXEC_NAMEFF
+     chmod 744 $thisdir/$ARCHNAME/$EXEC_NAMEFF
+     find . -name "*".o -exec \cp -"$CPOPT" {} $thisdir/$ARCHNAME/ \;
+     cd $thisdir/$ARCHNAME
+     \rm -r $thisdir/$ARCHNAME/$TMPDIRNAME
+   fi)
+# new compilation step for HW++ mode
+else
+  # compile the analyzer & link it into the EXE directory
+  # TODO: Stream via Inputs script
+  FORFILEMAKE="FORFILE="$HWPPUTI
+  HWPPMAKE="HWPPPATH="$HWPPPATH" HEPMC="$HEPMCPATH
+  if ! make -C $thisdir/HWPPAnalyzer $HWPPUTI $HWPPANALYZER.so $HWPPMAKE "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$FORFILEMAKE"
+  then
+    echo $HWPPANALYZER compilation did not succeed, exiting.
+    exit -1 
+  fi
+  ln -sf $thisdir/HWPPAnalyzer/$HWPPANALYZER.so $thisdir/$ARCHNAME
+  # link the HE++ executable into the EXE directoy
+  ln -sf $HWPPPATH/bin/Herwig++ $thisdir/$ARCHNAME
+  # link the stupid LHAPDF index, if necessary
+  whichherpdf $HERPDF
+  if [ $pdftype = 1 ]
+  then
+    mkdir -p PDF
+    ln -sf $THEPEGPATH/share/ThePEG/PDFsets.index PDF/PDFsets.index
+  fi
+  # create executable if eveything is ok 
+  echo "./Herwig++ read "$EXEPREFIX"MCinput" > $thisdir/$ARCHNAME/$EXEC_NAMEFF
+  # temporary fix *FIX-ME* to only run over 98% of the hard events, avoiding 'over-sampling'
+  NMCEVENTS=$(echo "scale=0;$NEVENTS*0.98" | bc | sed 's/\./\n/g' | sed -n 1'p')
+  echo "./Herwig++ run -N "$NMCEVENTS" "$EXEPREFIX"MC.run" >> $thisdir/$ARCHNAME/$EXEC_NAMEFF
+  chmod +x $thisdir/$ARCHNAME/$EXEC_NAMEFF
+fi
+teststatus Compilation
+}
+
+# foolproof utility function, to be called by the user
+function compileMC {
+compile MC
+}
+
+# wrapper for the functions which run and compile MC codes
+# THIS IS NEW FOR HERWIG++ RUNNING
+function runMC {
+compile MC
+runMCMadFKS
+teststatus runMC
+}
+
+# compiles and runs the MC
+function runMCMadFKS {
+ifile="$FPREFIX"MCinput
+ofile="$FPREFIX"MC
+if [ -f ./$ARCHNAME/$ifile ]
+then
+\rm ./$ARCHNAME/$ifile 
+fi
+# create input file
+createHWPPinputfile ./$ARCHNAME/$ifile 
+
+cat <<EOF >> ./$ARCHNAME/$ifile 
+
+# DEFINE THE INPUT EVENT FILE
+set /Herwig/EventHandlers/LHEReader:FileName $SCRTCH$EVPREFIX.events
+
+# --------------------------------------------------------------------- #
+# 2.) DEFINE PHYSICS PARAMETERS FROM FILE <MCatNLO_MadFKS.inputs> (DO NOT MODIFY)
+
+# TODO set the correct incoming particles
+
+# set the masses and widths
+set /Herwig/Particles/W+:NominalMass $WMASS
+set /Herwig/Particles/W+:Width $WWIDTH
+set /Herwig/Particles/W-:NominalMass $WMASS
+set /Herwig/Particles/W-:Width $WWIDTH
+set /Herwig/Particles/Z0:NominalMass $ZMASS
+set /Herwig/Particles/Z0:Width $ZWIDTH
+set /Herwig/Particles/t:NominalMass $TMASS
+set /Herwig/Particles/t:Width $TWIDTH
+set /Herwig/Particles/tbar:NominalMass $TMASS
+set /Herwig/Particles/tbar:Width $TWIDTH
+set /Herwig/Particles/h0:NominalMass $HGGMASS
+set /Herwig/Particles/h0:Width $HGGWIDTH
+# Modify for the bottom !!
+#set /Herwig/Particles/b:NominalMass $BMASS
+#set /Herwig/Particles/bbar:NominalMass $BMASS
+# --------------------------------------------------------------------- #
+EOF
+
+finalizeHWPPinputfile ./$ARCHNAME/$ifile $ofile 
+
+( cd ./$ARCHNAME ;\
+     $EXEC_NAMEFF )
+}
+
+# the entry is the CM energy, the return value (beammom) is half
+# of it (that is, the beam momentum in the CM frame, neglecting
+# particle masses. Only two decimal digits are kept; if more are
+# needed, increase the scale value in the expression below
+function getbeammom {
+beammom=0
+two=2
+beammom=$(echo "scale=2; $1 / $two" | bc -l)
+}
+
+# this function set the parameter pdftype according to the value 
+# of HERPDF (the entry of this function) given in input
+function whichherpdf {
+case $1 in
+DEFAULT|default) pdftype=0 ;;
+EXTPDF|extpdf) pdftype=1 ;;
+*) echo "error in whichherpdf: no such option" ; exit 1 ;;
+esac
+}
+
+# checks that the value given to PDFLIBRAY in input is meaningful
+function whichpdflib {
+case $1 in
+THISLIB|thislib) UsedPdfLib=THISLIB ;;
+PDFLIB|pdflib) UsedPdfLib=PDFLIB ;;
+LHAPDF|lhapdf) UsedPdfLib=LHAPDF ;;
+*) echo "no such library for PDFS; failure in whichpdflib" ; exit 1 ;;
+esac
+}
+
+# checks that the value given to LHALINK in input is meaningful
+function whichlhapdf {
+case $1 in
+STATIC|static) UsedLhaPdf=lhasta ;;
+DYNAMIC|dynamic) UsedLhaPdf=lhadyn ;;
+*) echo "no such option for LHAPDF; failure in whichlhapdf" ; exit 1 ;;
+esac
+}
+
+# prepends -l to library names
+function nameextralib {
+ExtraLibs="$1"
+ilen1=${#ExtraLibs}
+if [ $ilen1 -ne 0 ]
+then
+  ExtraLibs=`echo $ExtraLibs | sed "s/ / -l/g"`
+  ExtraLibs="-l""$ExtraLibs"
+fi
+##If using gfortran, reinstate the following
+##ExtraLibs=$ExtraLibs" -lstdc++"
+}
+
+# prepends -L to library paths
+function pathextralib {
+ExtraPaths="$1"
+ilen2=${#ExtraPaths}
+if [ $ilen2 -ne 0 ]
+then
+  ExtraPaths=`echo $ExtraPaths | sed "s/ / -L/g"`
+  ExtraPaths="-L""$ExtraPaths"
+fi
+}
+
+# separate library names with columns
+function pathextralibdyn {
+ExtraPathsDyn="$1"
+ilen3=${#ExtraPathsDyn}
+if [ $ilen3 -ne 0 ]
+then
+  ExtraPathsDyn=`echo $ExtraPathsDyn | sed "s/ /:/g"`
+fi
+}
+
+# prepends -I to include paths
+function pathextraincl {
+ExtraIncl="$1"
+ilen4=${#ExtraIncl}
+if [ $ilen4 -ne 0 ]
+then
+  ExtraIncl=`echo $ExtraIncl | sed "s/ / -I/g"`
+  ExtraIncl="-I""$ExtraIncl"
+fi
+}
+
+
+#### NEW STUFF FOR WRITING HW++ INPUT FILES
+function createHWPPinputfile {
+cat <<EOF > $1
+#
+#  Create the Les Houches handler for MC@NLO
+#
+
+library LesHouches.so
+
+# --------------------------------------------------------------------- #
+# 1.) NECESSARY SETTINGS FOR RUNNING WITH MC@NLO EVENTS (DO NOT MODIFY)
+
+set /Herwig/Shower/Evolver:HardVetoMode 1
+set /Herwig/Shower/Evolver:HardVetoScaleSource 1
+set /Herwig/Shower/Evolver:MECorrMode 0
+
+
+# create the Handler & Reader
+create ThePEG::LesHouchesFileReader /Herwig/EventHandlers/LHEReader
+create ThePEG::LesHouchesEventHandler /Herwig/EventHandlers/LHEHandler 
+insert /Herwig/EventHandlers/LHEHandler:LesHouchesReaders 0 /Herwig/EventHandlers/LHEReader
+
+set /Herwig/EventHandlers/LHEReader:AllowedToReOpen 0
+set /Herwig/EventHandlers/LHEReader:MomentumTreatment RescaleEnergy
+set /Herwig/EventHandlers/LHEReader:WeightWarnings 0
+
+set /Herwig/EventHandlers/LHEHandler:WeightOption VarNegWeight
+set /Herwig/EventHandlers/LHEHandler:PartonExtractor /Herwig/Partons/QCDExtractor
+set /Herwig/EventHandlers/LHEHandler:CascadeHandler /Herwig/Shower/ShowerHandler 
+set /Herwig/EventHandlers/LHEHandler:HadronizationHandler /Herwig/Hadronization/ClusterHadHandler
+set /Herwig/EventHandlers/LHEHandler:DecayHandler /Herwig/Decays/DecayHandler
+
+set /Herwig/Generators/LHCGenerator:EventHandler /Herwig/EventHandlers/LHEHandler
+set /Herwig/Generators/LHCGenerator:NumberOfEvents $NEVENTS 
+set /Herwig/Generators/LHCGenerator:RandomNumberGenerator:Seed $RNDEVSEED
+set /Herwig/Generators/LHCGenerator:PrintEvent 10
+set /Herwig/Generators/LHCGenerator:MaxErrors 10000 
+set /Herwig/Generators/LHCGenerator:DebugLevel 0
+
+EOF
+
+whichherpdf $HERPDF
+if [ $pdftype = 1 ]
+then
+
+cat <<EOF >> $1
+
+# Define PDF from MCatNLO.inputs PDFSET number
+mkdir /LHAPDF
+create ThePEG::LHAPDF /LHAPDF/MCNLOPDF
+set /LHAPDF/MCNLOPDF:PDFNumber $PDFSET
+set /LHAPDF/MCNLOPDF:RemnantHandler /Herwig/Partons/HadronRemnants
+
+set /Herwig/EventHandlers/LHEReader:PDFA /LHAPDF/MCNLOPDF
+set /Herwig/EventHandlers/LHEReader:PDFB /LHAPDF/MCNLOPDF
+set /Herwig/Particles/p+:PDF /LHAPDF/MCNLOPDF
+set /Herwig/Particles/pbar-:PDF /LHAPDF/MCNLOPDF
+set /Herwig/Shower/ShowerHandler:PDFA /LHAPDF/MCNLOPDF
+set /Herwig/Shower/ShowerHandler:PDFB /LHAPDF/MCNLOPDF
+
+EOF
+
+else
+
+cat <<EOF >> $1
+
+# Use internal HW++ defualt PDF sets
+set /Herwig/EventHandlers/LHEReader:PDFA /Herwig/Partons/MRST-NLO
+set /Herwig/EventHandlers/LHEReader:PDFB /Herwig/Partons/MRST-NLO
+set /Herwig/Particles/p+:PDF /Herwig/Partons/MRST-NLO
+set /Herwig/Particles/pbar-:PDF /Herwig/Partons/MRST-NLO
+set /Herwig/Shower/ShowerHandler:PDFA /Herwig/Partons/MRST-NLO
+set /Herwig/Shower/ShowerHandler:PDFB /Herwig/Partons/MRST-NLO
+
+EOF
+
+fi
+
+}
+
+function finalizeHWPPinputfile {
+cat <<EOF >> $1
+# 3.) ADDITIONAL SETTINGS
+
+# SHOWER SETTINGS
+
+set /Herwig/Shower/Evolver:IntrinsicPtGaussian 2.2*GeV
+
+#set /Herwig/Shower/Evolver:IntrinsicPtGaussian 0.4*GeV
+#set /Herwig/Shower/AlphaQCD:NPAlphaS 5
+#set /Herwig/Shower/AlphaQCD:Qmin 3.0*GeV
+#set /Herwig/Shower/AlphaQCD:AlphaMaxNP 3
+
+# CREATE AND APPLY CUTS
+create ThePEG::Cuts /Herwig/Cuts/NoCuts 
+set /Herwig/EventHandlers/LHEReader:Cuts /Herwig/Cuts/NoCuts
+EOF
+
+# decide whether MPI is doen or not via IPROC...
+DOMPI=`expr $IPROC + 10000`
+if [ $DOMPI -lt 0 ]
+then
+cat <<EOF >> $1
+# Switching off MPI due to IPROC settings
+set /Herwig/Shower/ShowerHandler:MPIHandler NULL
+EOF
+fi
+
+
+# add the parameters from the additional input file
+cat HWPPInput.inputs >> $1
+
+cat <<EOF >> $1
+
+# 4.) HW++ SETTINGS THAT ARE NOT ALLOWED TO BE TOUCHED BY THE USER
+
+#Boost and reconstruction stuff
+set /Herwig/Shower/KinematicsReconstructor:ReconstructionOption General
+set /Herwig/Shower/KinematicsReconstructor:InitialInitialBoostOption LongTransBoost
+
+# --------------------------------------------------------------------- #
+# 5.) CREATE THE ANALYZER AND SAVE THE RUN (DO NOT MODIFY)
+
+create MCatNLO::$HWPPANALYZER $HWPPANALYZER $HWPPANALYZER.so
+insert /Herwig/Generators/LHCGenerator:AnalysisHandlers 0 $HWPPANALYZER
+
+#create MCatNLO::hepfortr hepfortr hepfortr.so
+#insert /Herwig/Generators/LHCGenerator:AnalysisHandlers 0 hepfortr
+
+saverun $2 /Herwig/Generators/LHCGenerator
+EOF
+}
