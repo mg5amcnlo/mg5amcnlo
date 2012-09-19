@@ -45,7 +45,7 @@ sys.path.append(root_path)
 sys.path.append(os.path.join(root_path, os.path.pardir, 'Template', 'bin', 'internal'))
 import check_param_card 
 
-
+ligns = []
 
 class UFOImportError(MadGraph5Error):
     """ a error class for wrong import of UFO model""" 
@@ -451,7 +451,8 @@ class UFOMG5Converter(object):
             elif nb_fermion:
                 if any(p.selfconjugate for p in interaction_info.particles):
                     text = "Majorana can not be dealt in 4/6/... fermion interactions"
-                    raise InvalidModel, text
+                    print text
+                    #raise InvalidModel, text
         except aloha_fct.WrongFermionFlow, error:
             text = 'Fermion Flow error for interactions %s: %s: %s\n %s' % \
              (', '.join([p.name for p in interaction_info.particles]), 
@@ -467,6 +468,7 @@ class UFOMG5Converter(object):
         
         
         order_to_int={}
+
         for key, couplings in interaction_info.couplings.items():
             if not isinstance(couplings, list):
                 couplings = [couplings]
@@ -477,6 +479,11 @@ class UFOMG5Converter(object):
                 flow = aloha_fct.get_fermion_flow(interaction_info.lorentz[key[1]].structure, 
                                                                      nb_fermion)
                 coupling_sign = self.get_sign_flow(flow, nb_fermion)
+                lign = '%s %s %s' % (interaction_info.lorentz[key[1]].name,flow, [coupling_sign])
+                if not lign in ligns:
+                    print lign
+                    ligns.append(lign)
+
             else:                
                 coupling_sign = ''            
             for coupling in couplings:
