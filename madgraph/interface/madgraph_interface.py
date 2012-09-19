@@ -2442,7 +2442,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Remove previous generations from history
         self.clean_history(to_remove=['add process'], remove_bef_lb1='generate',
-                           to_keep=['add','import','set','load'])
+                           to_keep=['add','import','set','load','define'])
 
         # Call add process
         args = self.split_arg(line)

@@ -687,7 +687,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                             remove_bef_lb1=None,
                             to_remove=['open','display','launch'],
                             keep_last=False):
-        """Remove all commands in arguments from history"""
+        """Remove command in arguments from history.
+        to_keep is a set of line to always keep
+        to_remove is a set of line to always remove
+        remove_bef_lb1 remove up to first occurrence.
+        keep_last ensure to keep the last entry.
+        """
         
     
         nline = -1
