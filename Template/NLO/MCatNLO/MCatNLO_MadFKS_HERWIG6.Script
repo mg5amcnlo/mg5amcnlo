@@ -134,7 +134,7 @@ SRCDIRMK="SRCDIR="`pwd`"/srcHerwig"
 COMSRCMK="COMSRC="`pwd`"/srcCommon"
 ANASRCMK="ANADIR="`pwd`"/HWAnalyzer"
 HWSSRCMK="HWSDIR=""$HWPATH"
-EVTDIR=`pwd`"/Events"
+EVTDIR=`pwd`"/../Events"
 if [ "$LD_LIBRARY_PATH" = "" ]
 then
   LD_LIBRARY_PATH="$ExtraPathsDyn"

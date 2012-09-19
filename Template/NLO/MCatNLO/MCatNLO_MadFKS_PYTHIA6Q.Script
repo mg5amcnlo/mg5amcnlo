@@ -133,7 +133,7 @@ INCDIRMK="INCDIR="`pwd`"/include"
 SRCDIRMK="SRCDIR="`pwd`"/srcPythia"
 COMSRCMK="COMSRC="`pwd`"/srcCommon"
 ANASRCMK="ANADIR="`pwd`"/PYAnalyzer"
-EVTDIR=`pwd`"/Events"
+EVTDIR=`pwd`"/../Events"
 if [ "$LD_LIBRARY_PATH" = "" ]
 then
   LD_LIBRARY_PATH="$ExtraPathsDyn"
