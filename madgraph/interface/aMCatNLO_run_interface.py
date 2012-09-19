@@ -56,7 +56,7 @@ try:
     import madgraph.various.misc as misc
 
     import models.check_param_card as check_param_card    
-    from madgraph import InvalidCmd, MadGraph5Error
+    from madgraph import InvalidCmd, aMCatNLOError
     aMCatNLO = False
 except Exception, error:
     if __debug__:
@@ -98,7 +98,7 @@ class CmdExtended(cmd.Cmd):
     
     # Define the Error
     InvalidCmd = InvalidCmd
-    ConfigurationError = MadGraph5Error
+    ConfigurationError = aMCatNLOError
 
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""
@@ -253,10 +253,13 @@ class HelpToCmd(object):
         """help for generate_events command"""
         _generate_events_parser.print_help()
 
-
     def help_calculate_xsect(self):
         """help for generate_events command"""
         _calculate_xsect_parser.print_help()
+
+    def help_run_mcatnlo(self):
+        """help for run_mcatnlo command"""
+        pass
 
     
     def help_open(self):
@@ -356,6 +359,16 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('No default path for this file') 
 
 
+    def check_run_mcatnlo(self, args, options):
+        """Check the validity of the line. args[0] is the event file"""
+        if len(args) == 0:
+            self.help_run_mcatnlo()
+            raise self.InvalidCmd, 'Invalid syntax, please specify the file to shower'
+        if not os.path.exists(pjoin(os.getcwd(), args[0])):
+            raise self.InvalidCmd, 'file %s does not exists' % \
+                            pjoin(os.getcwd(), args[0])
+    
+
     def check_calculate_xsect(self, args, options):
         """check the validity of the line. args is ORDER,
         ORDER being LO or NLO. If no mode is passed, NLO is used"""
@@ -367,8 +380,8 @@ class CheckValidForCmd(object):
             return
         
         if len(args) > 1:
-            self.help_launch()
-            return self.InvalidCmd, 'Invalid Syntax: Too many argument'
+            self.help_calculate_xsect()
+            raise self.InvalidCmd, 'Invalid Syntax: Too many argument'
 
         elif len(args) == 1:
             if not args[0] in ['NLO', 'LO']:
@@ -392,8 +405,8 @@ class CheckValidForCmd(object):
             return
         
         if len(args) > 1:
-            self.help_launch()
-            return self.InvalidCmd, 'Invalid Syntax: Too many argument'
+            self.help_generate_events()
+            raise self.InvalidCmd, 'Invalid Syntax: Too many argument'
 
         elif len(args) == 1:
             if not args[0] in ['NLO', 'LO']:
@@ -421,7 +434,7 @@ class CheckValidForCmd(object):
         
         if len(args) > 1:
             self.help_launch()
-            return self.InvalidCmd, 'Invalid Syntax: Too many argument'
+            raise self.InvalidCmd, 'Invalid Syntax: Too many argument'
 
         elif len(args) == 1:
             if not args[0] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO']:
@@ -450,12 +463,12 @@ class CheckValidForCmd(object):
             return
         
         if len(args) > 1:
-            self.help_launch()
-            return self.InvalidCmd, 'Invalid Syntax: Too many argument'
+            self.help_compile()
+            raise self.InvalidCmd, 'Invalid Syntax: Too many argument'
 
         elif len(args) == 1:
             if not args[0] in ['MC', 'FO']:
-                raise self.InvalidCmd, '%s is not a valid mode, please use "FO" or "MC"' % args[1]
+                raise self.InvalidCmd, '%s is not a valid mode, please use "FO" or "MC"' % args[0]
         mode = args[0]
         
         # check for incompatible options/modes
@@ -702,6 +715,16 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     raise self.InvalidCmd('Not a valid path: keep previous value: \'%s\'' % self.options[args[0]])
             else:
                 self.options[args[0]] = args[1]             
+
+    ############################################################################      
+    def do_run_mcatnlo(self, line):
+        """ calculates LO/NLO cross-section, using madevent_vegas """
+        argss = self.split_arg(line)
+        self.check_run_mcatnlo(argss, {})
+        evt_file = pjoin(os.getcwd(), argss[0])
+        # check argument validity and normalise argument
+        self.run_mcatnlo(evt_file)
+
  
 
     ############################################################################      
@@ -793,7 +816,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         If this is 0, update the number according to a fresh one"""
         run_card = pjoin(self.me_dir, 'Cards', 'run_card.dat')
         if not os.path.exists(run_card):
-            raise MadGraph5Error('%s is not a valid run_card' % run_card)
+            raise aMCatNLOError('%s is not a valid run_card' % run_card)
         iseed = int(self.read_run_card(run_card)['iseed'])
         if iseed != 0:
             os.system('echo "r=%d > %s"' \
@@ -869,7 +892,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             #shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
             shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q']
             if not shower in shower_list:
-                raise MadGraph5Error('%s is not a valid parton shower. Please use one of the following: %s' \
+                raise aMCatNLOError('%s is not a valid parton shower. Please use one of the following: %s' \
                     % (shower, ', '.join(shower_list)))
 
             if mode == 'aMC@NLO':
@@ -907,7 +930,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.reweight_and_collect_events(options, mode, nevents)
 
 
-
     def reweight_and_collect_events(self, options, mode, nevents):
         """this function calls the reweighting routines and creates the event file in the 
         Event dir
@@ -923,7 +945,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         count = 1
         if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001')):
-            raise MadGraph5Error('An error occurred during event generation. ' + \
+            raise aMCatNLOError('An error occurred during event generation. ' + \
                     'The event file has not been created. Check log_collect_events.txt')
         while os.path.exists(pjoin(self.me_dir, 'Events', 'events_%d' % count)):
             count += 1
@@ -932,6 +954,53 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file))
         logger.info('The %s file has been generated.\nIt contains %d %s events to be showered' \
                 % (evt_file, nevents, mode[4:]))
+
+
+    def run_mcatnlo(self, evt_file):
+        """runs mcatnlo on the generated event file, to produce showered-events"""
+        logger.info('   Prepairing MCatNLOrun')
+        self.evt_file_to_mcatnlo(evt_file)
+
+
+    def evt_file_to_mcatnlo(self, evt_file):
+        """creates the mcatnlo input script using the values set in the header of the event_file"""
+        file = open(evt_file)
+        nevents = 0
+        shower = ''
+        itry = 0
+        while True:
+            line = file.readline()
+            #print line
+            if not nevents and 'nevents' in line.split():
+                nevents = int(line.split()[0])
+            if not shower and 'parton_shower' in line.split():
+                shower = line.split()[0]
+            if nevents > 0 and shower != '':
+                break
+            itry += 1
+            if itry > 300:
+                file.close()
+                raise aMCatNLOError('Event file does not contain run information')
+        file.close()
+                
+        input = open(pjoin(self.me_dir, 'MCatNLO', 'MCatNLO_MadFKS.inputs'))
+        lines = input.read().split('\n')
+        input.close()
+        for i in range(len(lines)):
+            if lines[i].startswith('NEVENTS'):
+                lines[i]='NEVENTS=%d' % nevents
+            if lines[i].startswith('MCMODE'):
+                lines[i]='MCMODE=%s' % shower
+        
+        output = open(pjoin(self.me_dir, 'MCatNLO', 'MCatNLO_MadFKS.inputs'), 'w')
+        output.write('\n'.join(lines))
+        output.close()
+
+        
+
+
+        
+
 
 
     def run_reweight(self, only):
@@ -945,7 +1014,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if os.path.exists(nev_unw + '.orig'):
                 os.system('cp %s %s' % (nev_unw + '.orig', nev_unw))
             else:
-                raise MadGraph5Error('Cannot find event file information')
+                raise aMCatNLOError('Cannot find event file information')
 
         reweight_log = pjoin(self.me_dir, 'reweight.log')
         #read the nevents_unweighted file to get the list of event files
@@ -975,7 +1044,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             last_line = subprocess.Popen('tail -n1 %s.rwgt ' % evt_file, \
                 shell = True, stdout = subprocess.PIPE).stdout.read().strip()
             if last_line != "</LesHouchesEvents>":
-                raise MadGraph5Error('An error occurred during reweight.' + \
+                raise aMCatNLOError('An error occurred during reweight.' + \
                       ' Check %s for details' % reweight_log)
 
         #update file name in nevents_unweighted
@@ -1054,7 +1123,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         # first test that exe exists:
         if not os.path.exists(exe):
-            raise MadGraph5Error('Cannot find executable %s in %s' \
+            raise aMCatNLOError('Cannot find executable %s in %s' \
                 % (exe, os.getcwd()))
         # check that the executable has exec permissions
         if not os.access(exe, os.X_OK):
@@ -1102,11 +1171,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         #check the validity of the arguments
         run_modes = ['born', 'virt', 'novi', 'all', 'viSB', 'novB']
         if run_mode not in run_modes:
-            raise MadGraph5Error('%s is not a valid mode for run. Please use one of the following: %s' \
+            raise aMCatNLOError('%s is not a valid mode for run. Please use one of the following: %s' \
                     % (run_mode, ', '.join(run_modes)))
         mint_modes = [0, 1, 2]
         if mint_mode not in mint_modes:
-            raise MadGraph5Error('%s is not a valid mode for mintMC. Please use one of the following: %s' \
+            raise aMCatNLOError('%s is not a valid mode for mintMC. Please use one of the following: %s' \
                     % (mint_mode, ', '.join(mint_modes)))
         if run_mode in ['born']:
             name_suffix = 'B'
@@ -1199,7 +1268,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
           and os.path.exists(pjoin(libdir, 'libpdf.a')):
             logger.info('          ...done, continuing with P* directories')
         else:
-            raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
+            raise aMCatNLOError('Compilation failed, check %s for details' % amcatnlo_log)
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         for p_dir in p_dirs:
@@ -1212,7 +1281,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     logger.info('   Compiling %s...' % test)
                     os.system('make %s >> %s 2>&1 ' % (test, test_log))
                     if not os.path.exists(pjoin(this_dir, test)):
-                        raise MadGraph5Error('Compilation failed, check %s for details' \
+                        raise aMCatNLOError('Compilation failed, check %s for details' \
                                 % test_log)
                     logger.info('   Running %s...' % test)
                     self.write_test_input(test)
@@ -1226,7 +1295,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 logger.info('   Compiling gensym...')
                 os.system('make gensym >> %s 2>&1 ' % amcatnlo_log)
                 if not os.path.exists(pjoin(this_dir, 'gensym')):
-                    raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
+                    raise aMCatNLOError('Compilation failed, check %s for details' % amcatnlo_log)
 
                 logger.info('   Running gensym...')
                 os.system('echo %s | ./gensym >> %s' % (self.options['run_mode'], gensym_log)) 
@@ -1239,18 +1308,18 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     os.chdir(madloop_dir)
                     os.system('make >> %s 2>&1' % madloop_log)
                     if not os.path.exists(pjoin(this_dir, 'libMadLoop.a')):
-                        raise MadGraph5Error('Compilation failed, check %s for details' % madloop_log)
+                        raise aMCatNLOError('Compilation failed, check %s for details' % madloop_log)
                 os.chdir(this_dir)
                 logger.info('   Compiling %s' % exe)
                 os.system('make %s >> %s 2>&1' % (exe, amcatnlo_log))
                 os.unsetenv('madloop')
                 if not os.path.exists(pjoin(this_dir, exe)):
-                    raise MadGraph5Error('Compilation failed, check %s for details' % amcatnlo_log)
+                    raise aMCatNLOError('Compilation failed, check %s for details' % amcatnlo_log)
             if mode in ['aMC@NLO', 'aMC@LO'] and not options['noreweight']:
                 logger.info('   Compiling reweight_xsec_events')
                 os.system('make reweight_xsec_events >> %s 2>&1' % (reweight_log))
                 if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
-                    raise MadGraph5Error('Compilation failed, check %s for details' % reweight_log)
+                    raise aMCatNLOError('Compilation failed, check %s for details' % reweight_log)
 
         os.chdir(pjoin(self.me_dir))
 
