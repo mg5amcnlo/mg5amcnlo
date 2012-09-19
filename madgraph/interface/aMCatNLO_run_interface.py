@@ -317,6 +317,45 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd('timeout values should be a integer')   
 
 
+    def check_open(self, args):
+        """ check the validity of the line """
+        
+        if len(args) != 1:
+            self.help_open()
+            raise self.InvalidCmd('OPEN command requires exactly one argument')
+
+        if args[0].startswith('./'):
+            if not os.path.isfile(args[0]):
+                raise self.InvalidCmd('%s: not such file' % args[0])
+            return True
+
+        # if special : create the path.
+        if not self.me_dir:
+            if not os.path.isfile(args[0]):
+                self.help_open()
+                raise self.InvalidCmd('No MadEvent path defined. Unable to associate this name to a file')
+            else:
+                return True
+            
+        path = self.me_dir
+        if os.path.isfile(os.path.join(path,args[0])):
+            args[0] = os.path.join(path,args[0])
+        elif os.path.isfile(os.path.join(path,'Cards',args[0])):
+            args[0] = os.path.join(path,'Cards',args[0])
+        elif os.path.isfile(os.path.join(path,'HTML',args[0])):
+            args[0] = os.path.join(path,'HTML',args[0])
+        # special for card with _default define: copy the default and open it
+        elif '_card.dat' in args[0]:   
+            name = args[0].replace('_card.dat','_card_default.dat')
+            if os.path.isfile(os.path.join(path,'Cards', name)):
+                files.cp(path + '/Cards/' + name, path + '/Cards/'+ args[0])
+                args[0] = os.path.join(path,'Cards', args[0])
+            else:
+                raise self.InvalidCmd('No default path for this file')
+        elif not os.path.isfile(args[0]):
+            raise self.InvalidCmd('No default path for this file') 
+
+
     def check_calculate_xsect(self, args, options):
         """check the validity of the line. args is ORDER,
         ORDER being LO or NLO. If no mode is passed, NLO is used"""
@@ -603,6 +642,17 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         misc.open_file.configure(self.options)
           
         return self.options
+    
+    ############################################################################ 
+    def do_open(self, line):
+        """Open a text file/ eps file / html file"""
+        
+        args = self.split_arg(line)
+        # Check Argument validity and modify argument to be the real path
+        self.check_open(args)
+        file_path = args[0]
+        
+        misc.open_file(file_path)
   
 
     ############################################################################
