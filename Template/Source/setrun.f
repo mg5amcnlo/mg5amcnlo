@@ -124,8 +124,9 @@ C       Fill common block for Les Houches init info
         else
           idbmup(i)=lpp(i)
         endif
-        ebmup(i)=ebeam(i)
       enddo
+      ebmup(1)=ebeam(1)
+      ebmup(2)=ebeam(2)
       call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
 
       return

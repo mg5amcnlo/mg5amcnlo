@@ -141,8 +141,12 @@ class Block(list):
         
         assert isinstance(obj, Parameter)
         assert not obj.lhablock or obj.lhablock == self.name
-        assert tuple(obj.lhacode) not in self.param_dict, \
-                                  '%s already define in %s' % (obj.lhacode,self)
+        
+        if tuple(obj.lhacode) in self.param_dict:
+            if self.param_dict[tuple(obj.lhacode)].value != obj.value:
+                raise InvalidParamCard, '%s %s is already define to %s impossible to assign %s' % \
+                    (self.name, obj.lhacode, self.param_dict[tuple(obj.lhacode)].value, obj.value)
+            return
         
         list.append(self, obj)
         # update the dictionary of key

@@ -727,8 +727,8 @@ C     Present process number
 c     q2bck holds the central q2fact scales
       real*8 q2bck(2)
       common /to_q2bck/q2bck
-      double precision stot
-      common/to_stot/stot
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
 
 C   local variables
       integer i, j, idi, idj

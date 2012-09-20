@@ -104,7 +104,7 @@ if version not in Update_note:
 # 1. Adding the file .revision used for future auto-update.
 # Provide this only if version is not beta/tmp/...
 pattern = re.compile(r'''[\d.]+$''')
-if pattern.match(version):
+if 1:#pattern.match(version):
     #valid version format
     # Get current revision number:
     p = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE)
