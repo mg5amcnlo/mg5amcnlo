@@ -259,7 +259,10 @@ class HelpToCmd(object):
 
     def help_run_mcatnlo(self):
         """help for run_mcatnlo command"""
-        pass
+        logger.info('syntax: run_mcatnlo EVT_FILE')
+        logger.info('-- do shower/hadronization on parton-level file EVT_FILE')
+        logger.info('   all the information (e.g. number of events, MonteCarlo, ...)')
+        logger.info('   are directly read from the header of the file')
 
     
     def help_open(self):
@@ -479,7 +482,16 @@ class CheckValidForCmd(object):
 #===============================================================================
 class CompleteForCmd(CheckValidForCmd):
     """ The Series of help routine for the MadGraphCmd"""
-    pass
+
+    def complete_run_mcatnlo(self, text, line, begidx, endidx):
+        args = self.split_arg(line[0:begidx])
+        bad_files = ['../Events/banner_header.txt']
+        if not text.strip():
+            text = '../Events'
+        if len(args) == 1:
+            return [name for name in self.path_completion( text,
+                        '.', only_dirs = False) \
+                                if not name in bad_files]
 
 
 class aMCatNLOAlreadyRunning(InvalidCmd):
@@ -752,7 +764,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
     ############################################################################      
     def do_generate_events(self, line):
-        """ launch the full chain """
+        """ generate events """
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _generate_events_parser.parse_args(argss)
@@ -792,7 +804,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         mode = argss[0]
         self.ask_run_configuration(mode)
         self.compile(mode, options) 
-        self.run(mode, options)
+        evt_file = self.run(mode, options)
+        self.run_mcatnlo(evt_file)
 
 
     ############################################################################      
@@ -831,7 +844,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             
         
     def run(self, mode, options):
-        """runs aMC@NLO"""
+        """runs aMC@NLO. Returns the name of the event file created"""
         logger.info('Starting run')
 
         if self.cluster_mode == 1:
@@ -927,12 +940,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.info('Waiting while files are transferred back from the cluster nodes')
             time.sleep(15)
 
-        self.reweight_and_collect_events(options, mode, nevents)
+        return self.reweight_and_collect_events(options, mode, nevents)
 
 
     def reweight_and_collect_events(self, options, mode, nevents):
         """this function calls the reweighting routines and creates the event file in the 
-        Event dir
+        Event dir. Return the name of the event file created
         """
         if not options['noreweight']:
             self.run_reweight(options['reweightonly'])
@@ -954,12 +967,27 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file))
         logger.info('The %s file has been generated.\nIt contains %d %s events to be showered' \
                 % (evt_file, nevents, mode[4:]))
+        return evt_file
 
 
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events"""
-        logger.info('   Prepairing MCatNLOrun')
-        self.evt_file_to_mcatnlo(evt_file)
+        logger.info('   Prepairing MCatNLO run')
+        shower = self.evt_file_to_mcatnlo(evt_file)
+        os.chdir(pjoin(self.me_dir, 'MCatNLO'))
+        oldcwd = os.getcwd()
+
+        mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
+        logger.info('   Compiling MCatNLO for %s...' % shower) 
+        misc.call(['./MCatNLO_MadFKS.inputs > %s 2>&1' % mcatnlo_log], \
+                    cwd = os.getcwd(), shell=True)
+        if not os.path.exists('MCATNLO_EXE'):
+            raise aMCatNLOError('Compilation failed, check %s for details' % mcatnlo_log)
+        logger.info('                     ... done')
+        logger.info('   Running MCatNLO (this may take some time)...')
+        misc.call(['./MCATNLO_EXE < MCATNLO_input >> %s 2>&1' % mcatnlo_log], \
+                    cwd = os.getcwd(), shell=True)
+        os.chdir(oldcwd)
 
 
     def evt_file_to_mcatnlo(self, evt_file):
@@ -987,6 +1015,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         lines = input.read().split('\n')
         input.close()
         for i in range(len(lines)):
+            if lines[i].startswith('EVPREFIX'):
+                lines[i]='EVPREFIX=%s' % os.path.split(evt_file)[1]
             if lines[i].startswith('NEVENTS'):
                 lines[i]='NEVENTS=%d' % nevents
             if lines[i].startswith('MCMODE'):
@@ -995,6 +1025,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         output = open(pjoin(self.me_dir, 'MCatNLO', 'MCatNLO_MadFKS.inputs'), 'w')
         output.write('\n'.join(lines))
         output.close()
+        return shower
 
         
 

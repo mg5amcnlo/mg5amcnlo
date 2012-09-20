@@ -515,20 +515,20 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         (options, argss) = _launch_parser.parse_args(argss)
         options = options.__dict__
         self.check_launch(argss, options)
-        run_interface = run_interface.aMCatNLOCmd(\
-                me_dir = pjoin(os.getcwd(), argss[0]))
+        run = run_interface.aMCatNLOCmd(me_dir = pjoin(os.getcwd(), argss[0]))
         
         mode = argss[1]
         if options['multicore']:
-            run_interface.cluster_mode = 2
+            run.cluster_mode = 2
         elif options['cluster']:
-            run_interface.cluster_mode = 1
+            run.cluster_mode = 1
         else:
-            run_interface.cluster_mode = int(self.options['run_mode'])
+            run.cluster_mode = int(self.options['run_mode'])
 
-        run_interface.ask_run_configuration(mode)
-        run_interface.compile(mode, options) 
-        run_interface.run(mode, options)
+        run.ask_run_configuration(mode)
+        run.compile(mode, options) 
+        evt_file = run.run(mode, options)
+        run.run_mcatnlo(evt_file)
                     
    
 class aMCatNLOInterfaceWeb(mg_interface.CheckValidForCmdWeb, aMCatNLOInterface):

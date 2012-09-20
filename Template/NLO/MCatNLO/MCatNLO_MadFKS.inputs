@@ -7,10 +7,10 @@
 ##### RUN
 # prefix for input file, event file, executable respectively
 FPREFIX=sthw
-EVPREFIX=sthw
-EXEPREFIX=sthw
+EVPREFIX=events_2
+EXEPREFIX=
 # number of events to shower. Negative if the whole file
-NEVENTS=-1
+NEVENTS=10000
 # MCMODE can be = HERWIG6, PYTHIA6Q, (HERWIGPP, PYTHIA6PT, PYTHIA8)
 MCMODE=HERWIG6
 # path to source MC codes
@@ -22,8 +22,12 @@ HERWIGVER="herwig6520.o"
 PYTHIAVER="pythia6426.o"
 # set the following variables equal to the list of object files that
 # you need when using the MC (for analysis purposes, for example)
+### these are lines with a specific analyse
 HWUTI="mcatnlo_hwanstp.o mcatnlo_hbook_gfortran.o"
 PYUTI="mcatnlo_pyanstp.o mcatnlo_hbook_gfortran.o"
+### these are for the output in sthep format
+###HWUTI="mcatnlo_hwan_stdhep.o"
+###PYUTI="mcatnlo_pyan_stdhep.o"
 # set the following variable equal to the names of the libraries which 
 # need be linked. Library names are separated by white spaces. 
 # Note: LHAPDF is a special case, and must not be included here
@@ -72,9 +76,13 @@ source ../Cards/mcatnlo_card.dat
 
 
 ##### LOAD THE SCRIPTS: DO NOT REMOVE
+cp `pwd`/Scripts/MCatNLO_MadFKS_$MCMODE.Script `pwd`
 . `pwd`/MCatNLO_MadFKS_$MCMODE.Script
 
 
 ##### EXECUTION: DO NOT REMOVE
 # Type compileMC to compile the shower, runMC to compile and run
 runMC
+
+rm -f `pwd`/MCatNLO_MadFKS_$MCMODE.Script
+rm -f `pwd`/*.o

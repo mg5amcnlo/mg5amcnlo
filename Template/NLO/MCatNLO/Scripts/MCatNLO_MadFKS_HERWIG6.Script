@@ -18,12 +18,6 @@ Darwin*) ARCHNAME=DarwinHW ; DBGFLAG='DEBUG=-g' ; EXTRA='EXTRAOBJ=sun.o' ;
 *) ARCHNAME=RunHW ; DBGFLAG='DEBUG=-g' ; EXTRA='EXTRAOBJ=sun.o' ;;
 esac
 #
-if [ -d $thisdir/$ARCHNAME ]
-then
-    echo $thisdir/$ARCHNAME directory already present
-else
-    mkdir $thisdir/$ARCHNAME
-fi
 }
 
 # $? is the value of last executed command. A call to this function
@@ -69,9 +63,9 @@ case $name in
 mrst200*) ;;
 *mrs*|grpol|grvdm|lac1|pion[1-3]) name=`capitalize $name`;;
 esac
-if [ ! -L $thisdir/$ARCHNAME/$name ] || [ ! $thisdir/$ARCHNAME/$name -ef $i ]
+if [ ! -L $thisdir/$name ] || [ ! $thisdir/$name -ef $i ]
 then
-ln -sf $i $thisdir/$ARCHNAME/$name
+ln -sf $i $thisdir/$name
 fi
 fi
 done
@@ -80,9 +74,9 @@ do
 if [ -f $i ]
 then
 name=`basename $i`
-if [ ! -L $thisdir/$ARCHNAME/$name ] || [ ! $thisdir/$ARCHNAME/$name -ef $i ]
+if [ ! -L $thisdir/$name ] || [ ! $thisdir/$name -ef $i ]
 then
-ln -sf $i $thisdir/$ARCHNAME/$name
+ln -sf $i $thisdir/$name
 fi
 fi
 done
@@ -97,13 +91,7 @@ FREEZE|freeze) PDFGROUP=LHAPDF ;;
 EXTRAPOLATE|extrapolate) PDFGROUP=LHAEXT ;;
 *) echo "no such option; failure in linklhapdf" ; exit 1 ;;
 esac
-if [ -d "$LHALIBPATH" ]
-then
-  ln -sf $LHALIBPATH/bin/lhapdf-config $thisdir/$ARCHNAME/lhapdf-config
-else
-  echo "Cannot find LHAPDF directory"
-  exit 1
-fi
+source ../Source/fj_lhapdf_opts
 }    
 
 # creates the executable for NLO and MC; the entry of the function
@@ -118,7 +106,7 @@ architecture
 
 EVTDIR=`pwd`"/../Events"
 # stops if event file is not in the /Events folder
-EVT_NAMEF="$EVPREFIX"".events"
+EVT_NAMEF="$EVPREFIX"
 if [ ! -f $EVTDIR/$EVT_NAMEF ]
 then
   echo "Event file" $EVTDIR/$EVT_NAMEF "not found: quitting"
@@ -133,7 +121,7 @@ then
   HERPDF='EXTPDF'
   PDFLIBRARY='LHAPDF'
   UsedPdfLib='LHAPDF'
-  LHALIBPATH="/Users/paolotorrielli/WORK/Research/PDF_Libraries/LHAPDF/lhapdf-5.8.8_install"
+  LHALIBPATH=`pwd`"/../"
   LHALINK=DYNAMIC
   LHAOFL=FREEZE
   ARRAY_PDF=($(head -1000 $EVTDIR/$EVT_NAMEF | grep "= lhaid" | head -1))
@@ -243,14 +231,14 @@ then
 fi
 EXEC_NAMEFF="$EXEPREFIX""$EXEC_NAMEF"
 
-rm -f $thisdir/$ARCHNAME/$EXEC_NAMEFF
+rm -f $thisdir/$EXEC_NAMEFF
 
 # stops if executable already exists (safety measure) 
-if [ -f $thisdir/$ARCHNAME/$EXEC_NAMEFF ]
-then
-  echo "Executable already present: quitting"
-  exit 1
-fi
+#if [ -f $thisdir/$EXEC_NAMEFF ]
+#then
+#  echo "Executable already present: quitting"
+#  exit 1
+#fi
 # creates a temporary directory to produce the executable, eventually moved
 # back to running directory
 CURRDATE=`date`
@@ -259,33 +247,33 @@ TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f2`
 TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f3`
 TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f4`
 TMPDIRNAME=$EXEPREFIX$TMPDIRNAME
-if [ -d "$thisdir/$ARCHNAME/$TMPDIRNAME" ]
-then
-  echo "Directory already present: quitting"
-  exit 1
-else
-  mkdir "$thisdir/$ARCHNAME/$TMPDIRNAME"
-  ln -ns $EVTDIR/$EVT_NAMEF $thisdir/$ARCHNAME/$TMPDIRNAME
-fi
-(cd $thisdir/$ARCHNAME/$TMPDIRNAME ;\
+#if [ -d "$thisdir/$TMPDIRNAME" ]
+#then
+#  echo "Directory already present: quitting"
+#  exit 1
+#else
+  mkdir "$thisdir/$TMPDIRNAME"
+  ln -ns $EVTDIR/$EVT_NAMEF $thisdir/$TMPDIRNAME
+#fi
+(cd $thisdir/$TMPDIRNAME ;\
  $EXMAKE -f $thisdir/Makefile_MadFKS $EXTRA "$HWUTIMAKE" "$HERWGMAKE" \
  "$LIBSLHA" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" \
  "$INCDIRMK" "$SRCDIRMK" "$COMSRCMK" "$ANASRCMK" "$HWSSRCMK" \
- VPATH=$thisdir/$ARCHNAME/:$thisdir/:$HWPATH:$LHALIBPATH/lib/ $EXEC_NAME ;\
+ VPATH=$thisdir/:$thisdir/:$HWPATH:$LHALIBPATH/lib/ $EXEC_NAME ;\
  if [ "$EXEC_NAME" != "$EXEC_NAMEFF" ] 
  then
    \mv $EXEC_NAME $EXEC_NAMEFF
  fi ;\
- if [ -f $thisdir/$ARCHNAME/$EXEC_NAMEFF ]
+ if [ -f $thisdir/$EXEC_NAMEFF ]
  then
    echo "Executable already present: quitting"
    exit 1
  else
-   \mv $EXEC_NAMEFF $thisdir/$ARCHNAME/$EXEC_NAMEFF
-   chmod 744 $thisdir/$ARCHNAME/$EXEC_NAMEFF
-   find . -name "*".o -exec \cp -"$CPOPT" {} $thisdir/$ARCHNAME/ \;
-   cd $thisdir/$ARCHNAME
-   \rm -r $thisdir/$ARCHNAME/$TMPDIRNAME
+   \mv $EXEC_NAMEFF $thisdir/$EXEC_NAMEFF
+   chmod 744 $thisdir/$EXEC_NAMEFF
+   find . -name "*".o -exec \cp -"$CPOPT" {} $thisdir/ \;
+   cd $thisdir
+   \rm -r $thisdir/$TMPDIRNAME
  fi)
 teststatus Compilation
 }
@@ -302,11 +290,11 @@ compile MC
 # NEW FOR aMC@NLO5
 
 # Link event file in the running directory
-if [ -f $thisdir/$ARCHNAME/$EVT_NAMEF ]
+if [ -f $thisdir/$EVT_NAMEF ]
 then
-  rm $thisdir/$ARCHNAME/$EVT_NAMEF
+  rm $thisdir/$EVT_NAMEF
 fi
-ln -ns $EVTDIR/$EVT_NAMEF $thisdir/$ARCHNAME
+ln -ns $EVTDIR/$EVT_NAMEF $thisdir
 
 # Check correspondence between MCMODE and what written in the event file
 if [ $MCMODE != "HERWIG6" ]
@@ -314,7 +302,7 @@ then
   echo "Error! HERWIG6 Script called with MCMODE not equal to HERWIG6"
   exit 1
 fi
-MC_TYPE=$(head -3 $thisdir/$ARCHNAME/$EVT_NAMEF | tail -1)
+MC_TYPE=$(head -3 $thisdir/$EVT_NAMEF | tail -1)
 if [ $MCMODE != $MC_TYPE ]
 then
   echo " "
@@ -323,7 +311,7 @@ then
   echo " "
   exit 1
 fi
-ARRAY_MCMODE=($(head -1000 $thisdir/$ARCHNAME/$EVT_NAMEF | grep "= parton_shower " | head -1))
+ARRAY_MCMODE=($(head -1000 $thisdir/$EVT_NAMEF | grep "= parton_shower " | head -1))
 MCMODE2=${ARRAY_MCMODE[0]}
 if [ $MCMODE2 != $MC_TYPE ]
 then
@@ -337,7 +325,7 @@ fi
 
 
 # Determine number of events to be showered 
-NUM_OF_EVTS=$(head -6 $thisdir/$ARCHNAME/$EVT_NAMEF | tail -1)
+NUM_OF_EVTS=$(head -6 $thisdir/$EVT_NAMEF | tail -1)
 if [[ $NEVENTS -lt 0 || $NEVENTS -gt $NUM_OF_EVTS ]]
 then
   NEVENTS=$NUM_OF_EVTS
@@ -347,30 +335,30 @@ fi
 # of the event file
 
 # masses and widths
-ARRAY_M=($(head -1000 $thisdir/$ARCHNAME/$EVT_NAMEF | grep "# MT " | head -1))
+ARRAY_M=($(head -1000 $thisdir/$EVT_NAMEF | grep "# MT " | head -1))
 TMASS=${ARRAY_M[1]}
-ARRAY_W=($(head -1000 $thisdir/$ARCHNAME/$EVT_NAMEF | grep "# WT " | head -1))
+ARRAY_W=($(head -1000 $thisdir/$EVT_NAMEF | grep "# WT " | head -1))
 TWIDTH=${ARRAY_W[2]}
-ARRAY_M=($(head -1000 $thisdir/$ARCHNAME/$EVT_NAMEF | grep "# MZ " | head -1))
+ARRAY_M=($(head -1000 $thisdir/$EVT_NAMEF | grep "# MZ " | head -1))
 ZMASS=${ARRAY_M[1]}
-ARRAY_W=($(head -1000 $thisdir/$ARCHNAME/$EVT_NAMEF | grep "# WZ " | head -1))
+ARRAY_W=($(head -1000 $thisdir/$EVT_NAMEF | grep "# WZ " | head -1))
 ZWIDTH=${ARRAY_W[2]}
-ARRAY_M=($(head -1000 $thisdir/$ARCHNAME/$EVT_NAMEF | grep "# MH " | head -1))
+ARRAY_M=($(head -1000 $thisdir/$EVT_NAMEF | grep "# MH " | head -1))
 HGGMASS=${ARRAY_M[1]}
-ARRAY_W=($(head -1000 $thisdir/$ARCHNAME/$EVT_NAMEF | grep "# WH " | head -1))
+ARRAY_W=($(head -1000 $thisdir/$EVT_NAMEF | grep "# WH " | head -1))
 HGGWIDTH=${ARRAY_W[2]}
-ARRAY_M=($(head -1000 $thisdir/$ARCHNAME/$EVT_NAMEF | grep "# w+ " | head -1))
+ARRAY_M=($(head -1000 $thisdir/$EVT_NAMEF | grep "# w+ " | head -1))
 WMASS=${ARRAY_M[1]}
-ARRAY_W=($(head -1000 $thisdir/$ARCHNAME/$EVT_NAMEF | grep "# WW " | head -1))
+ARRAY_W=($(head -1000 $thisdir/$EVT_NAMEF | grep "# WW " | head -1))
 WWIDTH=${ARRAY_W[2]}
 
 # MC masses
-MC_HEAD=$(head -1000 $thisdir/$ARCHNAME/$EVT_NAMEF | grep -n "<MonteCarloMasses>" | head -1)
+MC_HEAD=$(head -1000 $thisdir/$EVT_NAMEF | grep -n "<MonteCarloMasses>" | head -1)
 MC_HEAD=${MC_HEAD:0:3}
 for i in {1..6}
 do
   let "MC_HEAD += 1"
-  ARRAY_MCM=($(head -$MC_HEAD $thisdir/$ARCHNAME/$EVT_NAMEF | tail -1))
+  ARRAY_MCM=($(head -$MC_HEAD $thisdir/$EVT_NAMEF | tail -1))
   ARRAY_MC[$i]=${ARRAY_MCM[1]}
 done
 UMASSHW=${ARRAY_MC[1]}
@@ -381,15 +369,15 @@ BMASSHW=${ARRAY_MC[5]}
 GMASSHW=${ARRAY_MC[6]}
 
 # collider energy and incoming beams
-ARRAY_E=($(head -1000 $thisdir/$ARCHNAME/$EVT_NAMEF | grep "ebeam1" | head -1))
+ARRAY_E=($(head -1000 $thisdir/$EVT_NAMEF | grep "ebeam1" | head -1))
 ECM=${ARRAY_E[0]}
-ARRAY_E=($(head -1000 $thisdir/$ARCHNAME/$EVT_NAMEF | grep "ebeam2" | head -1))
+ARRAY_E=($(head -1000 $thisdir/$EVT_NAMEF | grep "ebeam2" | head -1))
 ECM2=${ARRAY_E[0]}
 let "ECM += $ECM2"
 
-ARRAY_BEAM=($(head -1000 $thisdir/$ARCHNAME/$EVT_NAMEF | grep "lpp1" | head -1))
+ARRAY_BEAM=($(head -1000 $thisdir/$EVT_NAMEF | grep "lpp1" | head -1))
 BEAM1=${ARRAY_BEAM[0]}
-ARRAY_BEAM=($(head -1000 $thisdir/$ARCHNAME/$EVT_NAMEF | grep "lpp2" | head -1))
+ARRAY_BEAM=($(head -1000 $thisdir/$EVT_NAMEF | grep "lpp2" | head -1))
 BEAM2=${ARRAY_BEAM[0]}
 if [ $BEAM1 == 1 ]; then PART1="P"; elif [ $BEAM1 == -1 ]; then PART1="PBAR";
 elif [ $BEAM1 == 0 ]; then PART1="E+"; elif [ $BEAM1 == 2 ]; then PART1="N";
@@ -424,13 +412,13 @@ teststatus runMC
 # compiles and runs the MC
 function runMCMadFKS {
 ifile="$FPREFIX"MCinput
-if [ -f ./$ARCHNAME/$ifile ]
+if [ -f ./$ifile ]
 then
-\rm ./$ARCHNAME/$ifile 
+\rm ./$ifile 
 fi
 getbeammom $ECM
-cat <<EOF > ./$ARCHNAME/$ifile 
- '$SCRTCH$EVPREFIX.events'        ! event file
+cat <<EOF > ./$ifile 
+ '$SCRTCH$EVPREFIX'               ! event file
   $NEVENTS                        ! number of events
   $pdftype                        ! 0->Herwig PDFs, 1 otherwise
  '$PART1'  '$PART2'               ! hadron types
@@ -440,14 +428,14 @@ cat <<EOF > ./$ARCHNAME/$ifile
 EOF
 if [ $pdftype = 1 ]
 then
-cat <<EOF >> ./$ARCHNAME/$ifile
+cat <<EOF >> ./$ifile
  '$PDFGROUP'                      ! PDF group (1)
   $PDFSET                         ! PDF id number (1)
  '$PDFGROUP'                      ! PDF group (2)
   $PDFSET                         ! PDF id number (2)
 EOF
 fi
-cat <<EOF >> ./$ARCHNAME/$ifile
+cat <<EOF >> ./$ifile
   $LAMBDAHERW                     ! Lambda_5, < 0 for default
   $ZMASS $ZWIDTH                  ! M_Z, Gamma_Z
   $WMASS $WWIDTH                  ! M_W, Gamma_W
@@ -461,8 +449,9 @@ cat <<EOF >> ./$ARCHNAME/$ifile
   $RNDEVSEED1_HW $RNDEVSEED2_HW   ! First and second random seeds (0 0 for default)
   $PI_STABLE_HW                   ! .TRUE. if one wants Pi0 stable
 EOF
-( cd ./$ARCHNAME ;\
-     $EXEC_NAMEFF < $ifile > "$FPREFIX"MC.log)
+mv $EXEC_NAMEFF MCATNLO_EXE
+mv $ifile MCATNLO_input
+
 }
 
 # the entry is the CM energy, the return value (beammom) is half
