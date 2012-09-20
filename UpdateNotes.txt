@@ -44,10 +44,14 @@ Update notes for MadGraph 5 (in reverse time order)
                   JA: Fix problem when there are resonances with mass above ECM.
                   JA: Fixed issue in replace.pl script with more than 9 particles
                       in an event.
+                  JA+OM: Allow cluster run to run everything in a local (node) disk.
+                      This is done fully automatically for condor cluster. For other
+                      For the other cluster, the user should set the variable
+                      "cluster_temp_path" pointing to a local filesystem.
+                      Still need access to central disk for copying, event combination,
+                      running Pythia/PGS/Delphes etc.
 
-
-1.4.8.4 (29/08/12) OM: Fix a web problem which creates generations to run twice 
-                       on the web.
+1.4.8.4 (29/08/12) OM: Fix a web problem which creates generations to run twice on the web.
 
 1.4.8.3 (21/08/12) JA: Ensure that the correct seed is written also in the .lhe
                        file header.

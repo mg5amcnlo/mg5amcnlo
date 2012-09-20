@@ -340,7 +340,12 @@ class HelpToCmd(object):
         logger.info("   timeout VALUE")
         logger.info("      (default 20) Seconds allowed to answer questions.")
         logger.info("      Note that pressing tab always stops the timer.")        
-
+        logger.info("   cluster_temp_path PATH")
+        logger.info("      (default None) Allow to perform the run in PATH directory")
+        logger.info("      This allow to not run on the central disk. This is not used")
+        logger.info("      by condor cluster (since condor has it's own way to prevent it).")
+        
+        
     def run_options_help(self, data):
         if data:
             logger.info('-- local options:')
@@ -599,7 +604,7 @@ class CheckValidForCmd(object):
                         
     def check_set(self, args):
         """ check the validity of the line"""
-
+        
         if len(args) < 2:
             self.help_set()
             raise self.InvalidCmd('set needs an option and an argument')
@@ -1541,7 +1546,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
                          'cluster_queue':'madgraph',
-                         'nb_core': None}
+                         'nb_core': None,
+                         'cluster_temp_path':None}
     
     
     ############################################################################
@@ -1645,14 +1651,20 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             else:
                 continue
             args.remove(arg)
-        
+
+        if args and args[0] in ["run_mode", "cluster_mode", "cluster_queue", 
+                                "cluster_temp_path", "nb_core"]:
+            return args
+
         if self.cluster_mode == 2 and not self.nb_core:
             import multiprocessing
             self.nb_core = multiprocessing.cpu_count()
             
         if self.cluster_mode == 1 and not hasattr(self, 'cluster'):
-            cluster_name = self.options['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'])
+            opt = self.options
+            cluster_name = opt['cluster_type']
+            self.cluster = cluster.from_name[cluster_name](opt['cluster_queue'],
+                                                        opt['cluster_tmp_path'])
         return args
     
     ############################################################################            
@@ -1953,9 +1965,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 raise self.InvalidCmd, 'run_mode should be 0, 1 or 2.'
             self.cluster_mode = int(args[1])
             self.options['run_mode'] =  self.cluster_mode
-        elif args[0] == 'cluster_type':
-            self.options['cluster_type'] = args[1]
-            self.cluster = cluster.from_name[args[1]](self.options['cluster_queue'])
+        elif args[0] in  ['cluster_type', 'cluster_queue', 'cluster_temp_path']:
+            self.options[args[0]] = args[1]
+            opt = self.options
+            self.cluster = cluster.from_name[opt['cluster_type']](\
+                                 opt['cluster_queue'], opt['cluster_temp_path'])
         elif args[0] == 'nb_core':
             if args[1] == 'None':
                 import multiprocessing
@@ -2405,7 +2419,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.total_jobs += len(alljobs)
             for i, job in enumerate(alljobs):
                 job = os.path.basename(job)
-                self.launch_job('./%s' % job, cwd=Pdir, remaining=(len(alljobs)-i-1), 
+                self.launch_job('%s' % job, cwd=Pdir, remaining=(len(alljobs)-i-1), 
                                                     run_type='survey on %s (%s/%s)' % (subdir,nb_proc+1,len(subproc)))
                 if os.path.exists(pjoin(self.me_dir,'error')):
                     self.monitor(html=True)
@@ -2481,7 +2495,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.total_jobs += nb_tot
                 for i, job in enumerate(alljobs):
                     job = os.path.basename(job)
-                    self.launch_job('./%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
+                    self.launch_job('%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
                              run_type='Refine number %s on %s (%s/%s)' % 
                              (self.nb_refine, subdir, nb_proc+1, len(subproc)))
         self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine, 
@@ -2529,15 +2543,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
         # Store the number of unweighted events for the results object
         pat = re.compile(r'''\s*Unweighting selected\s*(\d+)\s*events''',re.MULTILINE)
-        if self.cluster_mode == 1 and not output:
-            time.sleep(30)
-            output = open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
-            
-        if output:  
-            nb_event = pat.search(output).groups()[0]
-            self.results.add_detail('nb_event', nb_event)
-        else :
-            nb_event =0
+              
+        nb_event = pat.search(output).groups()[0]
+        self.results.add_detail('nb_event', nb_event)
+        
         
         # Define The Banner
         tag = self.run_card['run_tag']
@@ -3381,7 +3390,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         elif mode == 1:
             # For condor cluster, create the input/output files
-            if self.options['cluster_type']  == 'condor' and 'ajob' in exe: 
+            if 'ajob' in exe: 
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
                 output_files = []
@@ -3399,7 +3408,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                             input_files.append(self.pdffile) 
                             break
                     else:
-                        self.pdffile = ' ' # possible when using lhapdf
+                        # possible when using lhapdf
+                        self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
+                        input_files.append(self.pdffile) 
+                        
                 
                 #Find the correct ajob
                 Gre = re.compile("\s*j=(G[\d\.\w]+)")
@@ -3544,7 +3556,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         time_mod = max([os.path.getctime(pjoin(self.me_dir,'Cards','run_card.dat')),
                         os.path.getctime(pjoin(self.me_dir,'Cards','param_card.dat'))])
         
-        if self.configured > time_mod:
+        if self.configured > time_mod and hasattr(self, 'random'):
             return
         else:
             self.configured = time.time()
@@ -4564,7 +4576,7 @@ class GridPackCmd(MadEventCmd):
                 self.total_jobs += nb_tot
                 for i, job in enumerate(alljobs):
                     job = os.path.basename(job)
-                    self.launch_job('./%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
+                    self.launch_job('%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
                              run_type='Refine number %s on %s (%s/%s)' %
                              (self.nb_refine, subdir, nb_proc+1, len(subproc)))
                     if os.path.exists(pjoin(self.me_dir,'error')):

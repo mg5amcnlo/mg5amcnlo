@@ -444,7 +444,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   timeout VALUE")
         logger.info("      (default 20) Seconds allowed to answer questions.")
         logger.info("      Note that pressing tab always stops the timer.")
-
+        logger.info("   cluster_temp_path PATH")
+        logger.info("      (default None) [Used in Madevent Output]")
+        logger.info("      Allow to perform the run in PATH directory")
+        logger.info("      This allow to not run on the central disk. This is not used")
+        logger.info("      by condor cluster (since condor has it's own way to prevent it).")
+       
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -859,7 +864,7 @@ This will take effect only in a NEW terminal
 
     def check_set(self, args, log=True):
         """ check the validity of the line"""
-        
+
         if len(args) == 1 and args[0] == 'complex_mass_scheme':
             args.append('True')
         
@@ -1781,6 +1786,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                          'run_mode':2,
                          'cluster_queue':'madgraph',
                          'nb_core': None,
+                         'cluster_temp_path': None
                          }
 
 
@@ -3835,7 +3841,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         args = self.split_arg(line)
         # Check the validity of the arguments
-        self.check_set(args, log=False)
+        try:
+            self.check_set(args, log=False)
+        except Exception:
+            return stop
         
         if args[0] in self.options_configuration and '--no_save' not in args:
             self.exec_cmd('save options --auto')

@@ -133,11 +133,11 @@ class CombineRuns(object):
         new_wgt = get_fortran_str(new_wgt)
         for line in open(input):
             data = line.split()
-            if float(data[2]) > 0:
-                sign = ''
-            else:
-                sign = '-'
-            if len(data) == 6:
+            if len(data) == 6:            
+                if float(data[2]) > 0:
+                    sign = ''
+                else:
+                    sign = '-'
                 line= ' %s  %s%s  %s\n' % ('   '.join(data[:2]), sign,
                                                    new_wgt, '  '.join(data[3:]))
             fsock.write(line)
