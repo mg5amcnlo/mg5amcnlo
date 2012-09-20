@@ -438,7 +438,7 @@ class CheckValidForCmd(object):
 
         elif len(args) == 1:
             if not args[0] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO']:
-                raise self.InvalidCmd, '%s is not a valid mode, please use "LO", "NLO", "aMC@NLO" or "aMC@LO"' % args[1]
+                raise self.InvalidCmd, '%s is not a valid mode, please use "LO", "NLO", "aMC@NLO" or "aMC@LO"' % args[0]
         mode = args[0]
         
         # check for incompatible options/modes

@@ -26,7 +26,7 @@ import time
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 pjoin = os.path.join
 sys.path.append(pjoin(root_path,'bin','internal'))
-import aMCatNLO_run_interface as run      
+import amcatnlo_run_interface as run      
 
 if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
     sys.exit('MadEvent works with python 2.6 or higher (but not python 3.X).\n\

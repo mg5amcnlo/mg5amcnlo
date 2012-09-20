@@ -772,8 +772,10 @@ This will take effect only in a NEW terminal
         
         if os.path.isdir(src_path):
             return 'standalone_cpp'
-        elif os.path.isfile(pjoin(bin_path,'generate_events')):
+        elif os.path.isfile(pjoin(bin_path,'madevent')):
             return 'madevent'
+        elif os.path.isfile(pjoin(bin_path,'aMCatNLO')):
+            return 'aMC@NLO'
         elif os.path.isdir(card_path):
             return 'standalone'
 
@@ -3350,6 +3352,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self.check_launch(args, options)
         options = options.__dict__
         # args is now MODE PATH
+        print args
         
         if args[0].startswith('standalone'):
             ext_program = launch_ext.SALauncher(self, args[1], **options)
@@ -3375,7 +3378,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 generate_info = generate_info.split('#')[0]
             else:
                 generate_info = self._generate_info
-            
+
             if len(generate_info.split('>')[0].strip().split())>1:
                 ext_program = launch_ext.MELauncher(args[1], self,
                                 shell = hasattr(self, 'do_shell'),
@@ -3388,6 +3391,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         elif args[0] == 'pythia8':
             ext_program = launch_ext.Pythia8Launcher( args[1], self, **options)
+
+        elif args[0] == 'aMC@NLO':
+            ext_program = launch_ext.aMCatNLOLauncher( args[1], self, **options)
         else:
             os.chdir(start_cwd) #ensure to go to the initial path
             raise self.InvalidCmd , '%s cannot be run from MG5 interface' % args[0]

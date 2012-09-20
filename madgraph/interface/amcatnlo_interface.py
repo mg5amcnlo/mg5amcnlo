@@ -18,6 +18,7 @@
 
 import os
 import logging
+import pydoc
 import sys
 import time
 import optparse
@@ -27,7 +28,7 @@ import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.madevent_interface as me_interface
-import madgraph.interface.aMCatNLO_run_interface as amcatnlo_interface
+import madgraph.interface.amcatnlo_run_interface as run_interface
 import madgraph.interface.Loop_interface as Loop_interface
 import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_helas_objects as fks_helas
@@ -194,7 +195,7 @@ class HelpFKS(mg_interface.HelpToCmd):
         """help for launch command"""
         _launch_parser.print_help()
 
-class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
+class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
     _fks_display_opts = ['real_diagrams', 'born_diagrams', 'virt_diagrams', 
                          'real_processes', 'born_processes', 'virt_processes']
 
@@ -254,7 +255,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         #check the validity of the arguments
         self.check_display(args)
 
-        if args[0] in ['diagrams', 'processes']:
+        if args[0] in ['diagrams', 'processes', 'diagrams_text']:
             get_amps_dict = {'real': self._fks_multi_proc.get_real_amplitudes,
                              'born': self._fks_multi_proc.get_born_amplitudes,
                              'loop': self._fks_multi_proc.get_virt_amplitudes,
@@ -273,6 +274,26 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 self.draw(' '.join(args[1:]))
             # set _curr_amps back to empty
             self._curr_amps = diagram_generation.AmplitudeList()
+
+        if args[0] == 'diagrams_text':
+            if len(args)>=2 and args[1] in get_amps_dict.keys():
+                get_amps = get_amps_dict[args[1]]
+                self._curr_amps = get_amps()
+                #check that if one requests the virt diagrams, there are virt_amplitudes
+                if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
+                    raise self.InvalidCmd('No virtuals have been generated')
+                text = "\n".join([amp.nice_string() for amp in self._curr_amps])
+            else:
+                text = 'Born diagrams:\n' 
+                text += '\n'.join(amp.nice_string() for amp in get_amps_dict['born']())
+                text += '\n\nReal diagrams:'
+                text += '\n'.join(amp.nice_string() for amp in get_amps_dict['real']())
+                text += '\n\nLoop diagrams:\n'
+                text += '\n'.join(amp.nice_string() for amp in get_amps_dict['virt']())
+            pydoc.pager(text)
+
+            # set _curr_amps back to empty
+            self._curr_amps = diagram_generation.AmplitudeList()
                 
         elif args[0] == 'processes':
             if len(args)>=2 and args[1] in get_amps_dict.keys():
@@ -283,9 +304,12 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                     raise self.InvalidCmd('No virtuals have been generated')
                 print '\n'.join(amp.nice_string_processes() for amp in self._curr_amps)
             else:
-                self._curr_amps = get_amps_dict['born']() + get_amps_dict['real']() + \
-                                  get_amps_dict['virt']()
-                print '\n'.join(amp.nice_string_processes() for amp in self._curr_amps)
+                print 'Born processes:'
+                print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['born']())
+                print 'Real processes:'
+                print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['real']())
+                print 'Loop processes:'
+                print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['virt']())
             # set _curr_amps back to empty
             self._curr_amps = diagram_generation.AmplitudeList()
 
@@ -310,7 +334,6 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         self.options['group_subprocesses'] = 'False'
         collect_mirror_procs = False
         ignore_six_quark_processes = self.options['ignore_six_quark_processes']
-#        super(FKSInterface, self).do_generate(line)
         if ',' in line:
             myprocdef, line = mg_interface.MadGraphCmd.extract_decay_chain_process(self,line)
             if myprocdef.are_decays_perturbed():
@@ -351,7 +374,6 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         # initialize the writer
         if self._export_format in ['NLO']:
             if not self.options['loop_optimized_output']:
-                logger.info("Exporting in MadFKS format, starting from born process")
                 self._curr_exporter = export_fks.ProcessExporterFortranFKS(\
                                           self._mgme_dir, self._export_dir,
                                           not noclean, 
@@ -362,7 +384,6 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                                           self._cuttools_dir)
             
             else:
-                logger.info("Exporting in MadFKS format, starting from born process using Optimized Loops")
                 self._curr_exporter = export_fks.ProcessOptimizedExporterFortranFKS(\
                                           self._mgme_dir, self._export_dir,
                                           not noclean, 
@@ -494,7 +515,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         (options, argss) = _launch_parser.parse_args(argss)
         options = options.__dict__
         self.check_launch(argss, options)
-        run_interface = amcatnlo_interface.aMCatNLOCmd(\
+        run_interface = run_interface.aMCatNLOCmd(\
                 me_dir = pjoin(os.getcwd(), argss[0]))
         
         mode = argss[1]
@@ -510,7 +531,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         run_interface.run(mode, options)
                     
    
-class FKSInterfaceWeb(mg_interface.CheckValidForCmdWeb, FKSInterface):
+class aMCatNLOInterfaceWeb(mg_interface.CheckValidForCmdWeb, aMCatNLOInterface):
     pass
 
 _launch_usage = "launch [DIRPATH] [MODE] [options]\n" + \

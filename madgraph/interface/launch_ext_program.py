@@ -150,6 +150,89 @@ class SALauncher(ExtLauncher):
                 misc.compile(cwd=cur_path, mode='unknown')
                 # check
                 subprocess.call(['./check'], cwd=cur_path)
+
+
+
+class aMCatNLOLauncher(ExtLauncher):
+    """A class to launch MadEvent run"""
+    
+    def __init__(self, running_dir, cmd_int , unit='pb', **option):
+        """ initialize the StandAlone Version"""
+
+        ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **option)
+        #self.executable = os.path.join('.', 'bin','generate_events')
+
+        assert hasattr(self, 'cluster')
+        assert hasattr(self, 'multicore')
+        assert hasattr(self, 'name')
+#        assert hasattr(self, 'shell')
+
+        self.unit = unit
+        
+        if self.cluster:
+            self.cluster = 1
+        if self.multicore:
+            self.cluster = 2
+        
+        self.cards = []
+
+        # Assign a valid run name if not put in options
+        if self.name == '':
+            self.name = me_cmd.MadEventCmd.find_available_run_name(self.running_dir)
+    
+    def launch_program(self):
+        """launch the main program"""
+        
+        # Check for number of cores if multicore mode
+        mode = str(self.cluster)
+        nb_node = 1
+        if mode == "2":
+            import multiprocessing
+            max_node = multiprocessing.cpu_count()
+            if max_node == 1:
+                logger.warning('Only one core is detected on your computer! Pass in single machine')
+                self.cluster = 0
+                self.launch_program()
+                return
+            elif max_node == 2:
+                nb_node = 2
+            elif not self.force:
+                nb_node = self.ask('How many core do you want to use?', max_node, range(2,max_node+1))
+            else:
+                nb_node=max_node
+                
+        import madgraph.interface.amcatnlo_run_interface as run_int
+        
+        if hasattr(self, 'shell'):
+            usecmd = run_int.aMCatNLOCmdShell(me_dir=self.running_dir)
+        else:
+            usecmd = run_int.aMCatNLOCmd(me_dir=self.running_dir)
+        
+        #Check if some configuration were overwritten by a command. If so use it    
+        set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
+        for line in set_cmd:
+            try:
+                usecmd.exec_cmd(line)
+            except:
+                pass
+        launch = self.cmd_int.define_child_cmd_interface(
+                     usecmd, interface=False)
+        #launch.me_dir = self.running_dir
+        command = 'launch '
+
+        if mode == "1":
+            command += " -c"
+        elif mode == "2":
+            command += " -m" 
+        try:
+            os.remove('ME5_debug')
+        except:
+           pass
+        launch.run_cmd(command)
+        launch.run_cmd('quit')
+        
+        
+
                 
         
 class MELauncher(ExtLauncher):

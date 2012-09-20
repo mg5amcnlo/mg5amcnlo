@@ -153,8 +153,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     def copy_python_files(self):
         """copy python files required for the Template"""
 
-        cp(_file_path+'/interface/aMCatNLO_run_interface.py',
-                            self.dir_path+'/bin/internal/aMCatNLO_run_interface.py')
+        cp(_file_path+'/interface/amcatnlo_run_interface.py',
+                            self.dir_path+'/bin/internal/amcatnlo_run_interface.py')
         cp(_file_path+'/interface/extended_cmd.py',
                                   self.dir_path+'/bin/internal/extended_cmd.py')
         cp(_file_path+'/various/misc.py', self.dir_path+'/bin/internal/misc.py')        

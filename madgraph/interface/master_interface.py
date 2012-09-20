@@ -42,7 +42,7 @@ import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madgraph_interface as MGcmd
 import madgraph.interface.Loop_interface as LoopCmd
-import madgraph.interface.FKS_interface as FKSCmd
+import madgraph.interface.amcatnlo_interface as amcatnloCmd
 import madgraph.fks.fks_base as fks_base
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
@@ -66,7 +66,7 @@ class Switcher(object):
 
     interface_names= {'MadGraph':('mg5',MGcmd.MadGraphCmd),
                       'Loop':('ML5',LoopCmd.LoopInterface),
-                      'FKS':('aMC@NLO',FKSCmd.FKSInterface)}
+                      'aMCatNLO':('aMC@NLO',amcatnloCmd.aMCatNLOInterface)}
 
     _switch_opts = [interface_names[key][0] for key in interface_names.keys()]
     current_interface = None
@@ -196,9 +196,9 @@ class Switcher(object):
                     'The NLO mode %s is not valid. Please chose one among: %s' \
                     % (nlo_mode, ' '.join(valid_nlo_modes)))
                 elif nlo_mode == 'all':
-                    self.change_principal_cmd('FKS')
+                    self.change_principal_cmd('aMCatNLO')
                 elif nlo_mode == 'real':
-                    self.change_principal_cmd('FKS')
+                    self.change_principal_cmd('aMCatNLO')
                 elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
                     self.change_principal_cmd('Loop')
                     
@@ -214,9 +214,9 @@ class Switcher(object):
                 'The NLO mode %s is not valid. Please chose one among: %s' \
                 % (nlo_mode, ' '.join(valid_nlo_modes)))
             elif nlo_mode == 'all':
-                self.change_principal_cmd('FKS')
+                self.change_principal_cmd('aMCatNLO')
             elif nlo_mode == 'real':
-                self.change_principal_cmd('FKS')
+                self.change_principal_cmd('aMCatNLO')
             elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
                 self.change_principal_cmd('Loop')
         else:
@@ -237,7 +237,7 @@ class Switcher(object):
                     % (nlo_mode, ' '.join(self._valid_nlo_modes)))
                 elif nlo_mode == 'all' or nlo_mode == 'real':
                     self._fks_multi_proc = fks_base.FKSMultiProcess()
-                    self.change_principal_cmd('FKS')
+                    self.change_principal_cmd('aMCatNLO')
                 elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
                     self.change_principal_cmd('Loop')
             else:
@@ -250,8 +250,8 @@ class Switcher(object):
         if self._curr_model:
             if isinstance(self._curr_model, loop_base_objects.LoopModel) and \
                self._curr_model['perturbation_couplings']!=[] and \
-               self.current_interface not in ['FKS','Loop']:
-                self.change_principal_cmd('FKS')
+               self.current_interface not in ['aMCatNLO','Loop']:
+                self.change_principal_cmd('aMCatNLO')
             if (not isinstance(self._curr_model, loop_base_objects.LoopModel) or \
                self._curr_model['perturbation_couplings']==[]) and \
                self.current_interface in ['Loop']:
@@ -401,7 +401,7 @@ class Switcher(object):
     def do_launch(self, line, *args, **opts):
         argss = cmd.Cmd.split_arg(line)
         if len(argss)>=2 and argss[1] in  ['NLO', 'aMC@NLO', 'aMC@LO']:
-            self.change_principal_cmd('FKS')
+            self.change_principal_cmd('aMCatNLO')
         return self.cmd.do_launch(self, line, *args, **opts)
         
     def do_load(self, *args, **opts):
@@ -485,7 +485,7 @@ class Switcher(object):
     def set_configuration(self, *args, **opts):
         return self.cmd.set_configuration(self, *args, **opts)
 
-class MasterCmd(Switcher, LoopCmd.LoopInterface, FKSCmd.FKSInterface, cmd.CmdShell):
+class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, cmd.CmdShell):
 
     def __init__(self, main='MadGraph', *args, **opt):
             

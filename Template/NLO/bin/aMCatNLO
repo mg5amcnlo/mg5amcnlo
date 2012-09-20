@@ -137,7 +137,7 @@ try:
     logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
 except:
     pass
-import internal.aMCatNLO_run_interface as cmd_interface
+import internal.amcatnlo_run_interface as cmd_interface
 
 # Call the cmd interface main loop
 try:
