@@ -115,6 +115,39 @@ fi
 # the first library of the list is taken
 function compile {
 architecture
+
+EVTDIR=`pwd`"/../Events"
+# stops if event file is not in the /Events folder
+EVT_NAMEF="$EVPREFIX"".events"
+if [ ! -f $EVTDIR/$EVT_NAMEF ]
+then
+  echo "Event file" $EVTDIR/$EVT_NAMEF "not found: quitting"
+  exit 1
+fi
+ARRAY_PDF=($(head -1000 $EVTDIR/$EVT_NAMEF | grep "= pdlabel" | head -1))
+PDLABEL=${ARRAY_PDF[0]}
+
+
+if [ $PDLABEL = "'lhapdf'" ]
+then
+  HERPDF='EXTPDF'
+  PDFLIBRARY='LHAPDF'
+  UsedPdfLib='LHAPDF'
+  LHALIBPATH="/Users/paolotorrielli/WORK/Research/PDF_Libraries/LHAPDF/lhapdf-5.8.8_install"
+  LHALINK=DYNAMIC
+  LHAOFL=FREEZE
+  ARRAY_PDF=($(head -1000 $EVTDIR/$EVT_NAMEF | grep "= lhaid" | head -1))
+  PDFGROUP='LHAPDF'
+  PDFSET=${ARRAY_PDF[0]}
+else
+  HERPDF='DEFAULT'
+  PDFLIBRARY='THISLIB'
+  UsedPdfLib='THISLIB'
+# the following is dummy
+  LHALINK=DYNAMIC
+  LHAOFL=FREEZE
+fi
+
 whichpdflib $PDFLIBRARY
 whichlhapdf $LHALINK
 nameextralib "$EXTRALIBS"
@@ -210,14 +243,6 @@ then
 fi
 EXEC_NAMEFF="$EXEPREFIX""$EXEC_NAMEF"
 
-# stops if event file is not in the /Events folder
-EVT_NAMEF="$EVPREFIX"".events"
-if [ ! -f $EVTDIR/$EVT_NAMEF ]
-then
-  echo "Event file" $EVTDIR/$EVT_NAMEF "not found: quitting"
-  exit 1
-fi
-
 rm -f $thisdir/$ARCHNAME/$EXEC_NAMEFF
 
 # stops if executable already exists (safety measure) 
@@ -294,6 +319,17 @@ if [ $MCMODE != $MC_TYPE ]
 then
   echo " "
   echo "Trying to shower a file generated for" $MC_TYPE "using MCMODE =" $MCMODE
+  echo "Quitting"
+  echo " "
+  exit 1
+fi
+ARRAY_MCMODE=($(head -1000 $thisdir/$ARCHNAME/$EVT_NAMEF | grep "= parton_shower " | head -1))
+MCMODE2=${ARRAY_MCMODE[0]}
+if [ $MCMODE2 != $MC_TYPE ]
+then
+  echo " "
+  echo "The event file seems not consistent: look for the string"
+  echo "'parton_shower' and compare with the third line of the header."
   echo "Quitting"
   echo " "
   exit 1
@@ -404,14 +440,14 @@ cat <<EOF > ./$ARCHNAME/$ifile
 EOF
 if [ $pdftype = 1 ]
 then
-cat <<EOF >> ./$ARCHNAME/$ifile 
+cat <<EOF >> ./$ARCHNAME/$ifile
  '$PDFGROUP'                      ! PDF group (1)
   $PDFSET                         ! PDF id number (1)
  '$PDFGROUP'                      ! PDF group (2)
   $PDFSET                         ! PDF id number (2)
 EOF
 fi
-cat <<EOF >> ./$ARCHNAME/$ifile 
+cat <<EOF >> ./$ARCHNAME/$ifile
   $LAMBDAHERW                     ! Lambda_5, < 0 for default
   $ZMASS $ZWIDTH                  ! M_Z, Gamma_Z
   $WMASS $WWIDTH                  ! M_W, Gamma_W

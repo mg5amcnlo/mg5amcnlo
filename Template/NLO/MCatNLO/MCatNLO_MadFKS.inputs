@@ -10,7 +10,7 @@ FPREFIX=sthw
 EVPREFIX=sthw
 EXEPREFIX=sthw
 # number of events to shower. Negative if the whole file
-NEVENTS=10000
+NEVENTS=-1
 # MCMODE can be = HERWIG6, PYTHIA6Q, (HERWIGPP, PYTHIA6PT, PYTHIA8)
 MCMODE=HERWIG6
 # path to source MC codes
@@ -36,35 +36,6 @@ EXTRAPATHS=
 # contain header files needed by C++ files. Directory names are separated 
 # by white spaces
 INCLUDEPATHS=
-
-##### PDFs
-# set ***PDF=DEFAULT to use the MC default PDFs, =EXTPDF to use 
-# another set; if =DEFAULT all other variables about PDFs are not
-# effective
-HERPDF=DEFAULT
-PYTPDF=DEFAULT
-# set PDFLIBRARY=THISLIB, =PDFLIB, or =LHAPDF to obtain PDFs from
-# our private PDF library, from PDFLIB or from LHAPDF respectively
-PDFLIBRARY=LHAPDF
-# PDF group name; unused when linked to LHAPDF
-PDFGROUP=CTEQ
-# PDF set number; use LHAGLUE conventions when linked to LHAPDF
-PDFSET=56
-# set the following variable equal to the name of the directory where
-# the PDF grid files are stored. Effective only if PDFLIBRARY=THISLIB
-PDFPATH="/Users/paolotorrielli/WORK/Research/PDF_Libraries/thislib"
-# set the following variable equal to the name of the directory where
-# the local version of LHAPDF is installed. We assume that the library,
-# PDF sets, and configuration script are located in lib/, 
-# share/lhapdf/PDFsets/, and bin/ respectively. Effective only if
-#PDFLIBRARY=LHAPDF
-LHALIBPATH="/Users/paolotorrielli/WORK/Research/PDF_Libraries/LHAPDF/lhapdf-5.8.8_install"
-# set the following variable equal to STATIC or DYNAMIC according to
-# the type of LHAPDF library one wants to link to
-LHALINK=DYNAMIC
-# set LHAOFL=FREEZE to freeze PDFs from LHAPDF at the boundaries,
-# =EXTRAPOLATE otherwise. This variable is related to LHAPARM(18)
-LHAOFL=FREEZE
 
 
 #### STILL TO BE ADJUSTED
