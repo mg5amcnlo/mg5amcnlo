@@ -62,12 +62,13 @@ class Cluster(object):
     """Basic Class for all cluster type submission"""
     name = 'mother class'
 
-    def __init__(self, cluster_queue=None):
+    def __init__(self, cluster_queue=None, temp_dir=None):
         """Init the cluster"""
         self.submitted = 0
         self.submitted_ids = []
         self.finish = 0
         self.cluster_queue = cluster_queue
+        self.temp_dir = temp_dir
         
     
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
@@ -78,7 +79,39 @@ class Cluster(object):
                 log=None, input_files=[], output_files=[]):
         """How to make one submission. Return status id on the cluster.
         NO SHARE DISK"""
-        self.submit(prog, argument,cwd,stdout,stderr)
+        
+        if not hasattr(self, 'temp_dir'):
+            return self.submit(prog, argument, cwd, stdout, stderr, log)
+            
+        temp_file_name = "sub." + os.path.basename(prog)
+        text = """MYTMP=%(tmpdir)s/run$%(job_id)s
+        MYPWD=`pwd`
+        input_files=( %(input_files)s )
+        for i in ${input_files[@]}
+        do
+            cp -r $i $MYTMP
+        done
+        cd $MYTMP
+        bash ./%(script)s
+        output_files=( %(output_files))
+        for i in ${input_file[@]}
+        do
+            cp -r $MYTMP/$i $MYPWD
+        done        
+        """
+        
+        dico = {'tmpdir' : self.temp_dir, 'script': os.path.basename(prog),
+                'job_id': self.job_id,
+                'input_files': ' '.join(input_files + prog),
+                'output_files': ' '.join(output_files)}
+        
+        # writing a new script for the submission
+        new_prog = os.path.join(os.path.dirname(prog), temp_file_name)
+        open(new_prog, 'w').write(text % dico)
+        
+        
+        return self.submit(new_prog, argument, cwd, stdout, stderr, log)
+        
 
     def control(self, me_dir=None):
         """Check the status of job associated to directory me_dir. return (idle, run, finish, fail)"""
@@ -362,6 +395,7 @@ class PBSCluster(Cluster):
     idle_tag = ['Q']
     running_tag = ['T','E','R']
     complete_tag = ['C']
+    job_id = 'PBS_JOBID'
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
@@ -475,6 +509,7 @@ class SGECluster(Cluster):
     name = 'sge'
     idle_tag = ['qw', 'hqw','hRqw','w']
     running_tag = ['r','t','Rr','Rt']
+    job_id = 'JOB_ID'
 
     def def_get_path(self,location):
         """replace string for path issues"""
@@ -617,6 +652,7 @@ class LSFCluster(Cluster):
     """Basic class for dealing with cluster submission"""
     
     name = 'lsf'
+    job_id = 'LSB_JOBID'
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
@@ -740,6 +776,7 @@ class GECluster(Cluster):
     
     name = 'ge'
     idle_tag = ['qw']
+    job_id = 'JOB_ID'
     running_tag = ['r']
 
     @multiple_try()
