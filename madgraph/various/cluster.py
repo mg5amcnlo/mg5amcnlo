@@ -96,7 +96,8 @@ class Cluster(object):
         for i in ${output_files[@]}
         do
             cp -r $MYTMP/$i $MYPWD
-        done        
+        done
+        rm -rf $MYTMP
         """
         
         dico = {'tmpdir' : self.temp_dir, 'script': os.path.basename(prog),
