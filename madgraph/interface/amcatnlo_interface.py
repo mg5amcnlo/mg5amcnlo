@@ -545,11 +545,7 @@ _launch_parser.add_option("-c", "--cluster", default=False, action='store_true',
 _launch_parser.add_option("-m", "--multicore", default=False, action='store_true',
                             help="Submit the jobs on multicore mode")
 _launch_parser.add_option("-n", "--nocompile", default=False, action='store_true',
-                            help="Skip compilation. Ignored if no executable is found, " + \
-                            "or with --tests")
-_launch_parser.add_option("-t", "--tests", default=False, action='store_true',
-                            help="Run soft/collinear tests to check the NLO/MC subtraction terms." + \
-                                 " MC tests are skipped in NLO mode.") 
+                            help="Skip compilation. Ignored if no executable is found")
 _launch_parser.add_option("-r", "--reweightonly", default=False, action='store_true',
                             help="Skip integration and event generation, just run reweight on the" + \
                                  " latest generated event files (see list in SubProcesses/nevents_unweighted)")

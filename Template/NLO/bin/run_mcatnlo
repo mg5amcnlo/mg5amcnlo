@@ -109,9 +109,6 @@ if '__main__' == __name__:
             launch.run_cmd('quit')
         except:
             pass
-    except run.MadEventAlreadyRunning, error:
-        logging.error(str(error))
-        sys.exit()
                           
     if os.path.exists(pjoin(root_path, 'RunWeb')):  
         os.remove(pjoin(root_path, 'RunWeb'))      

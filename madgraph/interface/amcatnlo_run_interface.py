@@ -895,7 +895,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             os.system('./combine_results_FO.sh grid*')
 
             logger.info('   Computing cross-section')
-            self.run_all(job_dict, [['0', 'novB', '0', 'grid'], ['0', 'viSB', '0', 'grid']])
+            self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'grid']])
             os.system('./combine_results_FO.sh viSB* novB*')
             return
 
@@ -917,7 +917,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     logger.info('   %s' % status)
                     self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
                     self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
-                    self.run_all(job_dict, [['2', 'F', '%d' % i], ['2', 'V', '%d' % i]])
+                    self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]])
 
                     if i < 2:
                         os.system('./combine_results.sh %d %d GF* GV*' % (i, nevents))
@@ -1252,6 +1252,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         gensym_log = pjoin(self.me_dir, 'gensym.log')
         test_log = pjoin(self.me_dir, 'test.log')
 
+        #clean files
+        os.system('rm -f %s' % 
+                ' '.join([amcatnlo_log, madloop_log, reweight_log, gensym_log, test_log]))
+
         #define which executable/tests to compile
         if mode in ['NLO', 'LO']:
             exe = 'madevent_vegas'
@@ -1265,8 +1269,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # if --nocompile option is specified, check here that all exes exists. 
         # If they exists, return
         if all([os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, exe)) \
-                for p_dir in p_dirs]) and options['nocompile'] \
-                and not options['tests']:
+                for p_dir in p_dirs]) and options['nocompile']:
             return
 
         libdir = pjoin(self.me_dir, 'lib')
@@ -1302,21 +1305,26 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.info(p_dir)
             this_dir = pjoin(self.me_dir, 'SubProcesses', p_dir) 
             os.chdir(this_dir)
-            # compile and run tests if asked for
-            if options['tests']:
-                for test in tests:
-                    logger.info('   Compiling %s...' % test)
-                    os.system('make %s >> %s 2>&1 ' % (test, test_log))
-                    if not os.path.exists(pjoin(this_dir, test)):
-                        raise aMCatNLOError('Compilation failed, check %s for details' \
-                                % test_log)
-                    logger.info('   Running %s...' % test)
-                    self.write_test_input(test)
-                    input = pjoin(self.me_dir, '%s_input.txt' % test)
-                    #this can be improved/better written to handle the output
-                    os.system('./%s < %s | tee -a %s | grep "Fraction of failures"' \
-                            % (test, input, test_log))
-                    os.system('rm -f %s' % input)
+            # compile and run tests
+            for test in tests:
+                logger.info('   Compiling %s...' % test)
+                os.system('make %s >> %s 2>&1 ' % (test, test_log))
+                if not os.path.exists(pjoin(this_dir, test)):
+                    raise aMCatNLOError('Compilation failed, check %s for details' \
+                            % test_log)
+                logger.info('   Running %s...' % test)
+                self.write_test_input(test)
+                input = pjoin(self.me_dir, '%s_input.txt' % test)
+                #this can be improved/better written to handle the output
+                os.system('./%s < %s | tee -a %s | grep "Fraction of failures"' \
+                        % (test, input, test_log))
+                os.system('rm -f %s' % input)
+            #check that none of the tests failed
+            file = open(test_log)
+            content = file.read()
+            file.close()
+            if 'FAILED' in content:
+                raise aMCatNLOError('Some tests failed, run cannot continue')
 
             if not options['reweightonly']:
                 logger.info('   Compiling gensym...')
@@ -1456,9 +1464,6 @@ _compile_usage = "compile [MODE] [options]\n" + \
                 "   (if omitted, it is set to MC)\n"
 _compile_parser = optparse.OptionParser(usage=_compile_usage)
 
-_compile_parser.add_option("-t", "--tests", default=False, action='store_true',
-                            help="Compile and run soft/collinear tests to check the NLO/MC subtraction terms." + \
-                                 " MC tests are skipped in FO mode.") 
 _compile_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip compiling reweight executable")
 
@@ -1473,11 +1478,7 @@ _launch_parser.add_option("-c", "--cluster", default=False, action='store_true',
 _launch_parser.add_option("-m", "--multicore", default=False, action='store_true',
                             help="Submit the jobs on multicore mode")
 _launch_parser.add_option("-n", "--nocompile", default=False, action='store_true',
-                            help="Skip compilation. Ignored if no executable is found, " + \
-                            "or with --tests")
-_launch_parser.add_option("-t", "--tests", default=False, action='store_true',
-                            help="Run soft/collinear tests to check the NLO/MC subtraction terms." + \
-                                 " MC tests are skipped in NLO mode.") 
+                            help="Skip compilation. Ignored if no executable is found")
 _launch_parser.add_option("-r", "--reweightonly", default=False, action='store_true',
                             help="Skip integration and event generation, just run reweight on the" + \
                                  " latest generated event files (see list in SubProcesses/nevents_unweighted)")
@@ -1497,9 +1498,6 @@ _calculate_xsect_parser.add_option("-m", "--multicore", default=False, action='s
 _calculate_xsect_parser.add_option("-n", "--nocompile", default=False, action='store_true',
                             help="Skip compilation. Ignored if no executable is found, " + \
                             "or with --tests")
-_calculate_xsect_parser.add_option("-t", "--tests", default=False, action='store_true',
-                            help="Run soft/collinear tests to check the NLO/MC subtraction terms." + \
-                                 " MC tests are skipped in NLO mode.") 
 
 
 _generate_events_usage = "generate_events [ORDER] [options]\n" + \
@@ -1516,8 +1514,5 @@ _generate_events_parser.add_option("-m", "--multicore", default=False, action='s
 _generate_events_parser.add_option("-n", "--nocompile", default=False, action='store_true',
                             help="Skip compilation. Ignored if no executable is found, " + \
                             "or with --tests")
-_generate_events_parser.add_option("-t", "--tests", default=False, action='store_true',
-                            help="Run soft/collinear tests to check the NLO/MC subtraction terms." + \
-                                 " MC tests are skipped in NLO mode.") 
 _generate_events_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip file reweighting")
