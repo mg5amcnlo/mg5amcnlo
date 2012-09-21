@@ -164,32 +164,7 @@ else
 fi
 LIBSLHA="LHALIB="
 case $1 in
-NLO) echo "NLO must be computed with MadFKS"; exit 1
-     if [ $UsedPdfLib = "PDFLIB" ]
-     then
-       EXEC_NAMEF="NLO_EXE_PDFLIB"
-     elif [ $UsedPdfLib = "THISLIB" ]
-     then
-       EXEC_NAMEF="NLO_EXE_THISLIB"
-     elif [ $UsedPdfLib = "LHAPDF" ]
-     then
-       EXEC_NAMEF="NLO_EXE_LHAPDF"
-       if [ $UsedLhaPdf = "lhasta" ]
-       then
-         LIBSLHA="$LIBSLHA""$LHALIBPATH""/lib/libLHAPDF.a"
-       else
-         LIBSMAKE="$LIBSMAKE"" -lLHAPDF -lstdc++"
-         LIBSMAKEP="$LIBSMAKEP"" -L$LHALIBPATH""/lib/"
-         if [ "$LD_LIBRARY_PATH" = "" ]
-         then
-           LD_LIBRARY_PATH="$LHALIBPATH""/lib/"
-         else
-           LD_LIBRARY_PATH="$LHALIBPATH""/lib/:""$LD_LIBRARY_PATH"
-         fi
-       fi
-     else
-       echo "no such option"; exit 1
-     fi ;;
+NLO) echo "NLO must be computed with MadFKS"; exit 1 ;;
 MC) if [ $UsedPdfLib = "PDFLIB" ]
      then
        HERPDF="DEFAULT"
@@ -643,21 +618,117 @@ create ThePEG::Cuts /Herwig/Cuts/NoCuts
 set /Herwig/EventHandlers/LHEReader:Cuts /Herwig/Cuts/NoCuts
 EOF
 
-# decide whether MPI is doen or not via IPROC...
-DOMPI=`expr $IPROC + 10000`
-if [ $DOMPI -lt 0 ]
+if [ $UE_HWPP = ".FALSE." ]
 then
 cat <<EOF >> $1
-# Switching off MPI due to IPROC settings
+# Switching off MPI
 set /Herwig/Shower/ShowerHandler:MPIHandler NULL
 EOF
 fi
 
+if [ $B_STABLE_HWPP = ".TRUE." ]
+then
+cat <<EOF >> $1
 
-# add the parameters from the additional input file
-cat HWPPInput.inputs >> $1
+#
+# Prevent particles from decaying
+# Particle names can be found in ThePEG/PDT/EnumParticles.h
+#
+
+#511
+set /Herwig/Particles/B0:Stable Stable
+set /Herwig/Particles/Bbar0:Stable Stable
+#521
+set /Herwig/Particles/B+:Stable Stable
+set /Herwig/Particles/B-:Stable Stable
+#531
+set /Herwig/Particles/B_s0:Stable Stable
+set /Herwig/Particles/B_sbar0:Stable Stable
+#541
+set /Herwig/Particles/B_c+:Stable Stable
+set /Herwig/Particles/B_c-:Stable Stable
+#
+#5112
+set /Herwig/Particles/Sigma_b-:Stable Stable
+set /Herwig/Particles/Sigma_bbar+:Stable Stable
+#5122
+set /Herwig/Particles/Lambda_b0:Stable Stable
+set /Herwig/Particles/Lambda_bbar0:Stable Stable
+#5132
+set /Herwig/Particles/Xi_b-:Stable Stable
+set /Herwig/Particles/Xi_bbar+:Stable Stable
+#5222
+set /Herwig/Particles/Sigma_b+:Stable Stable
+set /Herwig/Particles/Sigma_bbar-:Stable Stable
+#5232
+set /Herwig/Particles/Xi_b0:Stable Stable
+set /Herwig/Particles/Xi_bbar0:Stable Stable
+#5332
+set /Herwig/Particles/Omega_b-:Stable Stable
+set /Herwig/Particles/Omega_bbar+:Stable Stable
+#
+#553
+set /Herwig/Particles/Upsilon:Stable Stable
+
+EOF
+fi
+
+#
+# Prevent particles from decaying
+# Particle names can be found in ThePEG/PDT/EnumParticles.h
+#
+
+if [ $PI_STABLE_HWPP = ".TRUE." ]
+then
+cat <<EOF >> $1
+
+# pi0 
+set /Herwig/Particles/pi0:Stable Stable
+
+EOF
+fi
+
+
+if [ $HADRONIZE_HWPP = ".FALSE." ]
+then
+cat <<EOF >> $1
+
+# Hadronization off 
+set /Herwig/EventHandlers/LHEHandler:HadronizationHandler NULL
+
+EOF
+fi
+
 
 cat <<EOF >> $1
+
+# HERE YOU CAN TURN ON/OFF DECAY
+# If DecayHandler is set equal to NULL, then set CheckQuark equal to 0, to 
+# prevent a lot of warnings
+#set /Herwig/EventHandlers/LHEHandler:DecayHandler NULL
+#set /Herwig/Analysis/Basics:CheckQuark 0
+
+#
+# allow t->b e nu and tbar -> bbar mu nu only (for spin corr off)
+#
+cd /Herwig/Particles/t
+set t->b,bbar,c;:OnOff Off
+set t->b,c,dbar;:OnOff Off
+set t->b,c,sbar;:OnOff Off
+set t->b,sbar,u;:OnOff Off
+set t->b,u,dbar;:OnOff Off
+set t->nu_e,e+,b;:OnOff On
+set t->nu_mu,mu+,b;:OnOff Off
+set t->nu_tau,tau+,b;:OnOff Off
+cd /Herwig/Particles/tbar
+set tbar->b,bbar,cbar;:OnOff Off
+set tbar->bbar,cbar,d;:OnOff Off
+set tbar->bbar,cbar,s;:OnOff Off
+set tbar->bbar,s,ubar;:OnOff Off
+set tbar->bbar,ubar,d;:OnOff Off
+set tbar->nu_ebar,e-,bbar;:OnOff Off
+set tbar->nu_mubar,mu-,bbar;:OnOff On
+set tbar->nu_taubar,tau-,bbar;:OnOff Off
 
 # 4.) HW++ SETTINGS THAT ARE NOT ALLOWED TO BE TOUCHED BY THE USER
 

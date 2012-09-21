@@ -166,38 +166,13 @@ else
 fi
 LIBSLHA="LHALIB="
 case $1 in
-NLO) echo "NLO must be computed with MadFKS"; exit 1
-     if [ $UsedPdfLib = "PDFLIB" ]
-     then
-       EXEC_NAMEF="NLO_EXE_PDFLIB"
-     elif [ $UsedPdfLib = "THISLIB" ]
-     then
-       EXEC_NAMEF="NLO_EXE_DEFAULT"
-     elif [ $UsedPdfLib = "LHAPDF" ]
-     then
-       EXEC_NAMEF="NLO_EXE_LHAPDF"
-       if [ $UsedLhaPdf = "lhasta" ]
-       then
-         LIBSLHA="$LIBSLHA""$LHALIBPATH""/lib/libLHAPDF.a"
-       else
-         LIBSMAKE="$LIBSMAKE"" -lLHAPDF -lstdc++"
-         LIBSMAKEP="$LIBSMAKEP"" -L$LHALIBPATH""/lib/"
-         if [ "$LD_LIBRARY_PATH" = "" ]
-         then
-           LD_LIBRARY_PATH="$LHALIBPATH""/lib/"
-         else
-           LD_LIBRARY_PATH="$LHALIBPATH""/lib/:""$LD_LIBRARY_PATH"
-         fi
-       fi
-     else
-       echo "no such option"; exit 1
-     fi ;;
+NLO) echo "NLO must be computed with MadFKS"; exit 1 ;;
 MC) if [ $UsedPdfLib = "PDFLIB" ]
      then
        EXEC_NAMEF="PY_EXE_PDFLIB"
      elif [ $UsedPdfLib = "THISLIB" ]
      then
-       EXEC_NAMEF="PY_EXE_THISLIB"
+       EXEC_NAMEF="PY_EXE_DEFAULT"
      elif [ $UsedPdfLib = "LHAPDF" ]
      then
        EXEC_NAMEF="PY_EXE_LHAPDF"
@@ -422,8 +397,9 @@ cat <<EOF > ./$ifile
   $Z_STABLE_PY                    ! .TRUE. if one wants Z0 stable
   $MAXPR_PY                       ! Number of events to be printed out
   $ERR_FR_PY                      ! Tolerated fraction of errors
-  $IS_ST_PY                       ! .TRUE. if it is single-top production
+  $B_STABLE_PY                    ! .TRUE. if it is single-top production
   $MSTP_81                        ! Underlying event on (1) or off (0)
+  $MSTP_111                       ! Hadronization on (1) or off (0)
 EOF
 if [ $pdftype = 1 ]
 then

@@ -144,6 +144,15 @@ C UNDERLYING EVENT
      &WRITE(*,*)'Underlying event WILL NOT be generated'
       WRITE(*,*)
 
+C UNDERLYING EVENT
+      WRITE(*,*)'Enter 1 for hadronization, 0 otherwise'
+      READ(*,*)MSTP(111)
+      WRITE(*,*)
+      IF(MSTP(111).eq.1)WRITE(*,*)'Hadronization WILL be included'
+      IF(MSTP(111).eq.0)
+     &WRITE(*,*)'Hadronization WILL NOT be included'
+      WRITE(*,*)
+
       IF(IPDF.EQ.0)THEN
          MSTP(52)=1             !INTERNAL PDF LIBRARY (250)
          MSTP(51)=8             !DEFAULT PDF SET (249)
@@ -308,7 +317,6 @@ C THESE QUANTITIES IS HEP-PH/0603175 AND IN PARENTHESES I INDICATE THE PAGE
       MSTP(41)=2     !RESONANCE DECAYS (246)
       MSTP(61)=1     !INITIAL STATE SHOWER (253)
       MSTP(71)=1     !FINAL STATE SHOWER (253)
-      MSTP(111)=1    !HADRONIZATION (254)
       MSTP(125)=2    !OUTPUT MODE (256)
 C IF YOU DON'T USE MSTP(125)=2 THE PARTICLES WITH STATUS OTHER THAN
 C 1,11,12,21 ARE NOT VISUALIZED, SO YOU LOOSE A LOT OF INFORMATION 

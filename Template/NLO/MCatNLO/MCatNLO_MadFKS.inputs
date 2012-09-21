@@ -6,11 +6,11 @@
 
 ##### RUN
 # prefix for input file, event file, executable respectively
-FPREFIX=sthw
+FPREFIX=
 EVPREFIX=events_2
 EXEPREFIX=
 # number of events to shower. Negative if the whole file
-NEVENTS=10000
+NEVENTS=-1
 # MCMODE can be = HERWIG6, PYTHIA6Q, (HERWIGPP, PYTHIA6PT, PYTHIA8)
 MCMODE=HERWIG6
 # path to source MC codes

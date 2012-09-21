@@ -2,29 +2,33 @@
 LHSOFT=.FALSE.                 # Underlying event on (.TRUE.) or off (.FALSE.)
 MODBOS_1=5                     # Gauge boson decay modes
 MODBOS_2=5                     # Gauge boson decay modes
+B_STABLE_HW=.FALSE.            # .TRUE. to let weakly-decaying B hadrons stable
+PI_STABLE_HW=.TRUE.            # .TRUE. if one wants Pi0 stable
 MAXPR_HW=2                     # Number of events to be printed out
 ERR_FR_HW=0.01                 # Tolerated fraction of errors
-IS_ST_HW=.FALSE.               # .TRUE. if it is single-top production
 IS_BB_HW=.FALSE.               # .TRUE. if it is b-bbar production
 RNDEVSEED1_HW=0                # First random seed (0 for default)
 RNDEVSEED2_HW=0                # Second random seed (0 for default)
-PI_STABLE_HW=.TRUE.            # .TRUE. if one wants Pi0 stable
 LAMBDAHERW=-1                  # Lambda_5; negative for default
 
-##### HERWIG++
+##### HERWIGPP
+UE_HWPP=.FALSE.                # Underlying event on (.TRUE.) or off (.FALSE.)
+HADRONIZE_HWPP=.TRUE.          # Hadronization on (.TRUE.) or off (.FALSE.)
+B_STABLE_HWPP=.FALSE.          # .TRUE. to let weakly-decaying  B hadrons stable
+PI_STABLE_HWPP=.TRUE.          # .TRUE. if one wants Pi0 stable
 MAXPR_HWPP=2                   # Number of events to be printed out
 ERR_FR_HWPP=0.01               # Tolerated fraction of errors
 RNDEVSEED_HWPP=0               # Random seed (if negative it's reset to 0)
 
-
 ##### PYTHIA6Q
 MSTP_81=0                      # Underlying event on (1) or off (0)
+MSTP_111=1                     # Hadronization on (1) or off (0)
 W_STABLE_PY=.FALSE.            # .TRUE. if one wants W+/- stable
 Z_STABLE_PY=.FALSE.            # .TRUE. if one wants Z0 stable
+B_STABLE_PY=.FALSE.            # .TRUE. to let weakly-decaying  B hadrons stable
+PI_STABLE_PY=.TRUE.            # .TRUE. if one wants Pi0 stable
 MAXPR_PY=2                     # Number of events to be printed out
 ERR_FR_PY=0.01                 # Tolerated fraction of errors
-IS_ST_PY=.FALSE.               # .TRUE. if it is single-top production
 IS_4L_PY=.FALSE.               # .TRUE. if it is four-lepton production
 RNDEVSEED_PY=0                 # Random seed (0 for default)
-PI_STABLE_PY=.TRUE.            # .TRUE. if one wants Pi0 stable
 LAMBDAPYTH=-1                  # Lambda_5; negative for default

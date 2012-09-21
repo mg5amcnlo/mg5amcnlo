@@ -142,32 +142,7 @@ else
 fi
 LIBSLHA="LHALIB="
 case $1 in
-NLO) echo "NLO must be computed with MadFKS"; exit 1
-     if [ $UsedPdfLib = "PDFLIB" ]
-     then
-       EXEC_NAMEF="NLO_EXE_PDFLIB"
-     elif [ $UsedPdfLib = "THISLIB" ]
-     then
-       EXEC_NAMEF="NLO_EXE_THISLIB"
-     elif [ $UsedPdfLib = "LHAPDF" ]
-     then
-       EXEC_NAMEF="NLO_EXE_LHAPDF"
-       if [ $UsedLhaPdf = "lhasta" ]
-       then
-         LIBSLHA="$LIBSLHA""$LHALIBPATH""/lib/libLHAPDF.a"
-       else
-         LIBSMAKE="$LIBSMAKE"" -lLHAPDF"
-         LIBSMAKEP="$LIBSMAKEP"" -L$LHALIBPATH""/lib/"
-         if [ "$LD_LIBRARY_PATH" = "" ]
-         then
-           LD_LIBRARY_PATH="$LHALIBPATH""/lib/"
-         else
-           LD_LIBRARY_PATH="$LHALIBPATH""/lib/:""$LD_LIBRARY_PATH"
-         fi
-       fi
-     else
-       echo "no such option"; exit 1
-     fi ;;
+NLO) echo "NLO must be computed with MadFKS"; exit 1 ;;
 MC) if [ $UsedPdfLib = "PDFLIB" ]
      then
        whichpytpdf $PYTPDF
