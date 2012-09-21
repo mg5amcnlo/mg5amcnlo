@@ -1761,7 +1761,7 @@ class DiagramDrawer(object):
         #                                           amplitude=amplitude, opt=opt)
 
         # Find the position of all vertex and all line orientation
-            
+        assert isinstance(diagram, FeynmanDiagram)
         diagram.main()
 
         # Store-return information
@@ -1795,7 +1795,7 @@ class DiagramDrawer(object):
         if isinstance(diagram, LoopFeynmanDiagram):
             # If only 2 particle in the loop require that those lines are
             # curved
-            if len(diagram.diagram.get('vertices')) == 2:
+            if len([l for l in diagram.lineList if l.loop_line]) == 2:
                 curved_for_loop = True
                 self.curved_part_start = (0, 0)
         
@@ -1852,7 +1852,7 @@ class DiagramDrawer(object):
 
     def draw_curved_line(self, line):
         """Draw the line information.
-        First, call the method associate the line type [draw_XXXXXX]
+        First, call the method associate the line type [draw_curved_XXXXXX]
         Then finalize line representation by adding his name."""
 
         # Find the type line of the particle [straight, wavy, ...]
@@ -2036,8 +2036,14 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         
         # select the lines present in the loop
         loop_line = [line for line in self.lineList if line.loop_line]
-        # Fuse the cutted particles (the first and the last of the list)
-        self.fuse_line(loop_line[0], loop_line[-1])
+        
+        
+        # Fuse the cutted particles (the first and the last but one of the list)
+        fake_line = loop_line[-1]
+        self.fuse_line(loop_line[0], loop_line[-2])
+        # delete the fake line:
+        self.vertexList.remove(fake_line.end)
+        self.lineList.remove(fake_line)
 
     def find_vertex_at_level(self, previous_level, level):
         """Returns a list of vertex such that all those vertex are one level 
@@ -2149,25 +2155,30 @@ class LoopFeynmanDiagram(FeynmanDiagram):
 
         
         binding_side = {}
+        
         # Count the number of T-channel propagator
-        for vertex in self.diagram.get('vertices'):
+        for i,vertex in enumerate(self.diagram.get('vertices')):
+            if len([l.get('id') for l in vertex.get('legs')]) < 3:
+                continue            
             nb_T_channel += len([line for line in vertex.get('legs') if line.get('loop_line') 
                             and line.get('state') == False])
             
             
             nb_Tloop = len([line for line in vertex.get('legs') if line.get('loop_line') 
-                            and line.get('state')])
+                            and line.get('state')]) 
 
 
             line = vertex['legs'][-1]
+
             if nb_Tloop % 2:
                 continue
+
             if line.get('state'):
                 right_side += 1
                 left_direction = False
             else:
                 left_side += 1
-                left_direction = True
+                left_direction = True 
 
                 
             for line in vertex['legs'][:-1]:
@@ -2175,7 +2186,6 @@ class LoopFeynmanDiagram(FeynmanDiagram):
                     pass
                 binding_side[line.get('number')] = left_direction
         
-
         if not nb_T_channel:
             return False
         
@@ -2202,10 +2212,11 @@ class LoopFeynmanDiagram(FeynmanDiagram):
     
     def loop_flip(self):
         """ switch t-channel information for the particle in the loop """
-        
-        for vertex in self.diagram.get('vertices'):
-            leg = vertex['legs'][-1]
-            leg.set('state', not leg.get('state'))
+
+        #for vertex in self.diagram.get('vertices'):
+        #    leg = vertex['legs'][-1]
+        #    if leg.get('loop_line'):
+        #        leg.set('state', not leg.get('state'))
         
         for line in self.lineList:
             if not line.is_external() and line.loop_line:
