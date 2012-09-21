@@ -74,32 +74,41 @@ class Cluster(object):
         if not hasattr(self, 'temp_dir'):
             return self.submit(prog, argument, cwd, stdout, stderr, log)
             
+        if cwd is None:
+            cwd = os.getcwd()
+        if not os.path.exists(prog):
+            prog = os.path.join(cwd, prog)
+
         temp_file_name = "sub." + os.path.basename(prog)
-        text = """MYTMP=%(tmpdir)s/run$%(job_id)s
-        MYPWD=`pwd`
+        text = """#!/bin/bash
+        MYTMP=%(tmpdir)s/run$%(job_id)s
+        MYPWD=%(cwd)s
+        mkdir -p $MYTMP
+        cd $MYPWD
         input_files=( %(input_files)s )
         for i in ${input_files[@]}
         do
             cp -r $i $MYTMP
         done
         cd $MYTMP
-        bash ./%(script)s
-        output_files=( %(output_files))
-        for i in ${input_file[@]}
+        bash ./%(script)s %(arguments)s
+        output_files=( %(output_files)s )
+        for i in ${output_files[@]}
         do
             cp -r $MYTMP/$i $MYPWD
         done        
         """
         
         dico = {'tmpdir' : self.temp_dir, 'script': os.path.basename(prog),
-                'job_id': self.job_id,
-                'input_files': ' '.join(input_files + prog),
-                'output_files': ' '.join(output_files)}
+                'cwd': cwd, 'job_id': self.job_id,
+                'input_files': ' '.join(input_files + [prog]),
+                'output_files': ' '.join(output_files),
+                'arguments': ' '.join(argument)}
         
         # writing a new script for the submission
         new_prog = os.path.join(os.path.dirname(prog), temp_file_name)
         open(new_prog, 'w').write(text % dico)
-        
+        misc.Popen(['chmod','+x',new_prog],cwd=cwd)
         
         return self.submit(new_prog, argument, cwd, stdout, stderr, log)
         
@@ -136,7 +145,7 @@ class Cluster(object):
             if fail:
                 raise ClusterManagmentError('Some Jobs are in a Hold/... state. Please try to investigate or contact the IT team')
             if idle + run == 0:
-                time.sleep(60) #security to ensure that the file are really written on the disk
+                time.sleep(20) #security to ensure that the file are really written on the disk
                 logger.info('All jobs finished')
                 break
             fct(idle, run, finish)
@@ -158,7 +167,7 @@ class Cluster(object):
         while 1:        
             status = self.control_one_job(id)
             if not status in ['R','I']:
-                time.sleep(60) #security to ensure that the file are really written on the disk
+                time.sleep(30) #security to ensure that the file are really written on the disk
                 break
             time.sleep(30)
         
@@ -390,7 +399,6 @@ class PBSCluster(Cluster):
     idle_tag = ['Q']
     running_tag = ['T','E','R']
     complete_tag = ['C']
-    job_id = 'PBS_JOBID'
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
@@ -505,7 +513,6 @@ class SGECluster(Cluster):
     job_id = 'JOB_ID'
     idle_tag = ['qw', 'hqw','hRqw','w']
     running_tag = ['r','t','Rr','Rt']
-    job_id = 'JOB_ID'
 
     def def_get_path(self,location):
         """replace string for path issues"""
@@ -773,7 +780,6 @@ class GECluster(Cluster):
     name = 'ge'
     job_id = 'JOB_ID'
     idle_tag = ['qw']
-    job_id = 'JOB_ID'
     running_tag = ['r']
 
     @multiple_try()

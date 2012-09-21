@@ -1664,7 +1664,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             opt = self.options
             cluster_name = opt['cluster_type']
             self.cluster = cluster.from_name[cluster_name](opt['cluster_queue'],
-                                                        opt['cluster_tmp_path'])
+                                                        opt['cluster_temp_path'])
         return args
     
     ############################################################################            
