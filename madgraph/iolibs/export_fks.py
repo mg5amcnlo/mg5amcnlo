@@ -1964,6 +1964,8 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         self.write_mp_files(writers.FortranWriter('cts_mprec.h'),\
                             writers.FortranWriter('cts_mpc.h'),)
 
+        self.copy_python_files()
+
         # Return to original PWD
         os.chdir(cwd)
 
