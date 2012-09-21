@@ -3667,12 +3667,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             for key, default in self.options_configuration.items():
                 if  self.options_configuration[key] != self.options[key] != None:
                     to_define[key] = self.options[key]
-            
+                
             if not '--auto' in args:
                 for key, default in self.options_madevent.items():
                     if self.options_madevent[key] != self.options[key] != None:
                         to_define[key] = self.options[key]
-            
+                    elif key == 'cluster_queue' and self.options[key] is None:
+                        to_define[key] = self.options[key]
+                        
             if '--all' in args:
                 for key, default in self.options_madgraph.items():
                     if self.options_madgraph[key] != self.options[key] != None and \

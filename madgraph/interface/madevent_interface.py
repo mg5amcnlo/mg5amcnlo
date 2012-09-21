@@ -1856,7 +1856,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
  
     def do_save(self, line, check=True, to_keep={}):
         """Not in help: Save information to file"""  
-        
+
         args = self.split_arg(line)
         # Check argument validity
         if check:
@@ -1868,7 +1868,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             for key, default in self.options_configuration.items():
                 if self.options[key] != self.options_configuration[key]:
                     to_define[key] = self.options[key]
-            
+
             if not '--auto' in args:
                 for key, default in self.options_madevent.items():
                     if self.options[key] != self.options_madevent[key]:
