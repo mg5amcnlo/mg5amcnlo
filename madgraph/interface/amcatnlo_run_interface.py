@@ -991,10 +991,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
 
     def evt_file_to_mcatnlo(self, evt_file):
-        """creates the mcatnlo input script using the values set in the header of the event_file"""
+        """creates the mcatnlo input script using the values set in the header of the event_file.
+        It also checks if the lhapdf library is used"""
         file = open(evt_file)
         nevents = 0
         shower = ''
+        pdlabel = ''
         itry = 0
         while True:
             line = file.readline()
@@ -1003,13 +1005,19 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 nevents = int(line.split()[0])
             if not shower and 'parton_shower' in line.split():
                 shower = line.split()[0]
-            if nevents > 0 and shower != '':
+            if not pdlabel and 'pdlabel' in line.split():
+                pdlabel = line.split()[0]
+            if nevents and shower and pdlabel:
                 break
             itry += 1
             if itry > 300:
                 file.close()
                 raise aMCatNLOError('Event file does not contain run information')
         file.close()
+
+        # check if need to link lhapdf
+        if pdlabel =='\'lhapdf\'':
+            self.link_lhapdf(pjoin(self.me_dir, 'lib'))
                 
         input = open(pjoin(self.me_dir, 'MCatNLO', 'MCatNLO_MadFKS.inputs'))
         lines = input.read().split('\n')
@@ -1262,29 +1270,17 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             return
 
         libdir = pjoin(self.me_dir, 'lib')
-        # read the run_card to find if lhapdf is used or not
-        run_card_file = open(pjoin(self.me_dir, 'Cards','run_card.dat'))
-        found = False
-        while not found:
-            line = run_card_file.readline()
-            if 'pdlabel' in line:
-                found = True
-        run_card_file.close()
+
         # rm links to lhapdflib/ PDFsets if exist
         if os.path.islink(pjoin(libdir, 'libLHAPDF.a')):
             os.remove(pjoin(libdir, 'libLHAPDF.a'))
         if os.path.islink(pjoin(libdir, 'PDFsets')):
             os.remove(pjoin(libdir, 'PDFsets'))
 
-        if line.split()[0] == '\'lhapdf\'':
-            logger.info('Using LHAPDF interface for PDFs')
-            lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-            lhasetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'], 
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-            os.symlink(pjoin(lhalibdir, 'libLHAPDF.a'), pjoin(libdir, 'libLHAPDF.a'))
-            os.symlink(lhasetsdir, pjoin(libdir, 'PDFsets'))
-            os.putenv('lhapdf', 'True')
+        # read the run_card to find if lhapdf is used or not
+        if self.read_run_card(pjoin(self.me_dir, 'Cards','run_card.dat'))['pdlabel'] == \
+                'lhapdf':
+            self.link_lhapdf(libdir)
         else:
             logger.info('Using built-in libraries for PDFs')
             os.unsetenv('lhapdf')
@@ -1353,6 +1349,20 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     raise aMCatNLOError('Compilation failed, check %s for details' % reweight_log)
 
         os.chdir(pjoin(self.me_dir))
+
+
+    def link_lhapdf(self, libdir):
+        """links lhapdf into libdir"""
+        logger.info('Using LHAPDF interface for PDFs')
+        lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
+                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+        lhasetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'], 
+                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+        if not os.path.exists(pjoin(libdir, 'libLHAPDF.a')):
+            os.symlink(pjoin(lhalibdir, 'libLHAPDF.a'), pjoin(libdir, 'libLHAPDF.a'))
+        if not os.path.exists(pjoin(libdir, 'PDFsets')):
+            os.symlink(lhasetsdir, pjoin(libdir, 'PDFsets'))
+        os.putenv('lhapdf', 'True')
 
 
     def write_test_input(self, test):

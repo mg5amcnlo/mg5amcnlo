@@ -181,7 +181,7 @@ NLO) echo "NLO must be computed with MadFKS"; exit 1
        then
          LIBSLHA="$LIBSLHA""$LHALIBPATH""/lib/libLHAPDF.a"
        else
-         LIBSMAKE="$LIBSMAKE"" -lLHAPDF"
+         LIBSMAKE="$LIBSMAKE"" -lLHAPDF -lstdc++"
          LIBSMAKEP="$LIBSMAKEP"" -L$LHALIBPATH""/lib/"
          if [ "$LD_LIBRARY_PATH" = "" ]
          then
@@ -206,7 +206,7 @@ MC) if [ $UsedPdfLib = "PDFLIB" ]
        then
          LIBSLHA="$LIBSLHA""$LHALIBPATH""/lib/libLHAPDF.a"
        else
-         LIBSMAKE="$LIBSMAKE"" -lLHAPDF"
+         LIBSMAKE="$LIBSMAKE"" -lLHAPDF -lstdc++"
          LIBSMAKEP="$LIBSMAKEP"" -L$LHALIBPATH""/lib/"
          if [ "$LD_LIBRARY_PATH" = "" ]
          then
