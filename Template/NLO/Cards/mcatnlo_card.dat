@@ -11,6 +11,12 @@ RNDEVSEED2_HW=0                # Second random seed (0 for default)
 PI_STABLE_HW=.TRUE.            # .TRUE. if one wants Pi0 stable
 LAMBDAHERW=-1                  # Lambda_5; negative for default
 
+##### HERWIG++
+MAXPR_HWPP=2                   # Number of events to be printed out
+ERR_FR_HWPP=0.01               # Tolerated fraction of errors
+RNDEVSEED_HWPP=0               # Random seed (if negative it's reset to 0)
+
+
 ##### PYTHIA6Q
 MSTP_81=0                      # Underlying event on (1) or off (0)
 W_STABLE_PY=.FALSE.            # .TRUE. if one wants W+/- stable

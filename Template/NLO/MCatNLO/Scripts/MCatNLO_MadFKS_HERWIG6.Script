@@ -198,7 +198,7 @@ MC) if [ $UsedPdfLib = "PDFLIB" ]
        EXEC_NAMEF="HW_EXE_PDFLIB"
      elif [ $UsedPdfLib = "THISLIB" ]
      then
-       EXEC_NAMEF="HW_EXE_THISLIB"
+       EXEC_NAMEF="HW_EXE_DEFAULT"
      elif [ $UsedPdfLib = "LHAPDF" ]
      then
        EXEC_NAMEF="HW_EXE_LHAPDF"

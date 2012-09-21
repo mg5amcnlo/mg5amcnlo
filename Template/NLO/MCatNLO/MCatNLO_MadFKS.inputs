@@ -43,8 +43,6 @@ INCLUDEPATHS=
 
 
 #### STILL TO BE ADJUSTED
-# bottom mass
-BMASS=4.8
 # the variable HWPPPATH must be set equal to the name of directory 
 # under which one finds the ./bin/Herwig++ executable
 HWPPPATH="/itp/torrielli/Desktop/WORK/Herwig++/Herwig++_install"

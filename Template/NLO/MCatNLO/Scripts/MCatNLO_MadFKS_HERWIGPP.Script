@@ -18,12 +18,6 @@ Darwin*) ARCHNAME=DarwinPP ; DBGFLAG='DEBUG=-g' ; EXTRA='EXTRAOBJ=sun.o' ;
 *) ARCHNAME=RunPP ; DBGFLAG='DEBUG=-g' ; EXTRA='EXTRAOBJ=sun.o' ;;
 esac
 #
-if [ -d $thisdir/$ARCHNAME ]
-then
-    echo $thisdir/$ARCHNAME directory already present
-else
-    mkdir $thisdir/$ARCHNAME
-fi
 }
 
 # $? is the value of last executed command. A call to this function
@@ -39,7 +33,7 @@ exit $rc
 fi
 }
 
-# given IPROC, returns a string which identifies the target
+# returns a string which identifies the target
 # for the Makefile
 function getSTRmake {
 stringmake=MadFKS
@@ -69,9 +63,9 @@ case $name in
 mrst200*) ;;
 *mrs*|grpol|grvdm|lac1|pion[1-3]) name=`capitalize $name`;;
 esac
-if [ ! -L $thisdir/$ARCHNAME/$name ] || [ ! $thisdir/$ARCHNAME/$name -ef $i ]
+if [ ! -L $thisdir/$name ] || [ ! $thisdir/$name -ef $i ]
 then
-ln -sf $i $thisdir/$ARCHNAME/$name
+ln -sf $i $thisdir/$name
 fi
 fi
 done
@@ -80,9 +74,9 @@ do
 if [ -f $i ]
 then
 name=`basename $i`
-if [ ! -L $thisdir/$ARCHNAME/$name ] || [ ! $thisdir/$ARCHNAME/$name -ef $i ]
+if [ ! -L $thisdir/$name ] || [ ! $thisdir/$name -ef $i ]
 then
-ln -sf $i $thisdir/$ARCHNAME/$name
+ln -sf $i $thisdir/$name
 fi
 fi
 done
@@ -97,13 +91,7 @@ FREEZE|freeze) PDFGROUP=LHAPDF ;;
 EXTRAPOLATE|extrapolate) PDFGROUP=LHAEXT ;;
 *) echo "no such option; failure in linklhapdf" ; exit 1 ;;
 esac
-if [ -d "$LHALIBPATH" ]
-then
-  ln -sf $LHALIBPATH/bin/lhapdf-config $thisdir/$ARCHNAME/lhapdf-config
-else
-  echo "Cannot find LHAPDF directory"
-  exit 1
-fi
+source ../Source/fj_lhapdf_opts
 }    
 
 # creates the executable for NLO and MC; the entry of the function
@@ -115,6 +103,39 @@ fi
 # the first library of the list is taken
 function compile {
 architecture
+
+EVTDIR=`pwd`"/../Events"
+# stops if event file is not in the /Events folder
+EVT_NAMEF="$EVPREFIX"
+if [ ! -f $EVTDIR/$EVT_NAMEF ]
+then
+  echo "Event file" $EVTDIR/$EVT_NAMEF "not found: quitting"
+  exit 1
+fi
+ARRAY_PDF=($(head -1000 $EVTDIR/$EVT_NAMEF | grep "= pdlabel" | head -1))
+PDLABEL=${ARRAY_PDF[0]}
+
+
+if [ $PDLABEL = "'lhapdf'" ]
+then
+  HERPDF='EXTPDF'
+  PDFLIBRARY='LHAPDF'
+  UsedPdfLib='LHAPDF'
+  LHALIBPATH=`pwd`"/../"
+  LHALINK=DYNAMIC
+  LHAOFL=FREEZE
+  ARRAY_PDF=($(head -1000 $EVTDIR/$EVT_NAMEF | grep "= lhaid" | head -1))
+  PDFGROUP='LHAPDF'
+  PDFSET=${ARRAY_PDF[0]}
+else
+  HERPDF='DEFAULT'
+  PDFLIBRARY='THISLIB'
+  UsedPdfLib='THISLIB'
+# the following is dummy
+  LHALINK=DYNAMIC
+  LHAOFL=FREEZE
+fi
+
 whichpdflib $PDFLIBRARY
 whichlhapdf $LHALINK
 nameextralib "$EXTRALIBS"
@@ -131,6 +152,7 @@ LIBSMAKEP="EXTRAPATHS="$ExtraPaths
 INCLMAKE="INCLOPTION="$ExtraIncl
 INCDIRMK="INCDIR="`pwd`"/include"
 COMSRCMK="COMSRC="`pwd`"/srcCommon"
+EVTDIR=`pwd`"/../Events"
 if [ "$LD_LIBRARY_PATH" = "" ]
 then
   LD_LIBRARY_PATH="$ExtraPathsDyn"
@@ -156,7 +178,7 @@ NLO) echo "NLO must be computed with MadFKS"; exit 1
        then
          LIBSLHA="$LIBSLHA""$LHALIBPATH""/lib/libLHAPDF.a"
        else
-         LIBSMAKE="$LIBSMAKE"" -lLHAPDF"
+         LIBSMAKE="$LIBSMAKE"" -lLHAPDF -lstdc++"
          LIBSMAKEP="$LIBSMAKEP"" -L$LHALIBPATH""/lib/"
          if [ "$LD_LIBRARY_PATH" = "" ]
          then
@@ -170,32 +192,20 @@ NLO) echo "NLO must be computed with MadFKS"; exit 1
      fi ;;
 MC) if [ $UsedPdfLib = "PDFLIB" ]
      then
-       whichherpdf $HERPDF
-       if [ $pdftype = 1 ]
-       then
-         echo "Warning: HW++ not available with PDFLIB."
-         echo "         Will reset to HW++ default PDF."
-         HERPDF="DEFAULT"
-       fi
-       EXEC_NAMEF="MC_EXE_DEFAULT"
+       HERPDF="DEFAULT"
+       EXEC_NAMEF="HWPP_EXE_DEFAULT"
      elif [ $UsedPdfLib = "THISLIB" ]
      then
-       whichherpdf $HERPDF
-       if [ $pdftype = 1 ]
-       then
-         echo "Warning: HW++ not available with THISLIB."
-         echo "         Will reset to HW++ default PDF."
-         HERPDF="DEFAULT"
-       fi
-       EXEC_NAMEF="MC_EXE_DEFAULT"
+       HERPDF="DEFAULT"
+       EXEC_NAMEF="HWPP_EXE_DEFAULT"
      elif [ $UsedPdfLib = "LHAPDF" ]
      then
        whichherpdf $HERPDF
        if [ $pdftype = 1 ]
        then
-         EXEC_NAMEF="MC_EXE_LHAPDF"
+         EXEC_NAMEF="HWPP_EXE_LHAPDF"
        else
-         EXEC_NAMEF="MC_EXE_DEFAULT"
+         EXEC_NAMEF="HWPP_EXE_DEFAULT"
        fi
      else
        echo "fatal error in compile"; exit 1
@@ -205,81 +215,72 @@ esac
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HEPMCPATH/lib
 if [ $1 = "NLO" ]
 then
-  getSTRmake $IPROC
+  getSTRmake
   EXEC_NAME=$stringmake$EXEC_NAMEF
+elif [ $1 = "MC" ]
+then
+  EXEC_NAME="$EXEC_NAMEF"
 fi
 EXEC_NAMEFF="$EXEPREFIX""$EXEC_NAMEF"
-# stops if executable already exists (safety measure) 
-if [ -f $thisdir/$ARCHNAME/$EXEC_NAMEFF ]
-then
-  echo "Executable already present: quitting"
-  exit 1
-fi
+
+rm -f $thisdir/$EXEC_NAMEFF
+
 # creates a temporary directory to produce the executable, eventually moved
-# back to running directory (only for NLO, MC see below)
-if [ $1 = "NLO" ]
-then
-  CURRDATE=`date`
-  TMPDIRNAME=`echo $CURRDATE | cut -d" " -f1`
-  TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f2`
-  TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f3`
-  TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f4`
-  TMPDIRNAME=$EXEPREFIX$TMPDIRNAME
-  if [ -d "$thisdir/$ARCHNAME/$TMPDIRNAME" ]
-    then
-    echo "Directory already present: quitting"
-    exit 1
-  else
-    mkdir "$thisdir/$ARCHNAME/$TMPDIRNAME"
-  fi
-  (cd $thisdir/$ARCHNAME/$TMPDIRNAME ;\
-   $EXMAKE -f $thisdir/Makefile_MadFKS $EXTRA "$HWPPUTIMAKE" "$HERWGMAKE" \
-   "$LIBSLHA" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" \
-   "$INCDIRMK" "$COMSRCMK" \
-   VPATH=$thisdir/$ARCHNAME/:$thisdir/:$HWPATH:$LHALIBPATH/lib/ $EXEC_NAME ;\
-   if [ "$EXEC_NAME" != "$EXEC_NAMEFF" ] 
-   then
-     \mv $EXEC_NAME $EXEC_NAMEFF
-   fi ;\
-   if [ -f $thisdir/$ARCHNAME/$EXEC_NAMEFF ]
-   then
-     echo "Executable already present: quitting"
-     exit 1
-   else
-     \mv $EXEC_NAMEFF $thisdir/$ARCHNAME/$EXEC_NAMEFF
-     chmod 744 $thisdir/$ARCHNAME/$EXEC_NAMEFF
-     find . -name "*".o -exec \cp -"$CPOPT" {} $thisdir/$ARCHNAME/ \;
-     cd $thisdir/$ARCHNAME
-     \rm -r $thisdir/$ARCHNAME/$TMPDIRNAME
-   fi)
+# back to running directory
+CURRDATE=`date`
+TMPDIRNAME=`echo $CURRDATE | cut -d" " -f1`
+TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f2`
+TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f3`
+TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f4`
+TMPDIRNAME=$EXEPREFIX$TMPDIRNAME
+mkdir "$thisdir/$TMPDIRNAME"
+ln -ns $EVTDIR/$EVT_NAMEF $thisdir/$TMPDIRNAME
+(cd $thisdir/$TMPDIRNAME ;\
+ $EXMAKE -f $thisdir/Makefile_MadFKS $EXTRA "$HWPPUTIMAKE" "$HERWGMAKE" \
+ "$LIBSLHA" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" \
+ "$INCDIRMK" "$COMSRCMK" \
+ VPATH=$thisdir/:$thisdir/:$HWPATH:$LHALIBPATH/lib/ $EXEC_NAME ;\
+ if [ "$EXEC_NAME" != "$EXEC_NAMEFF" ] 
+ then
+   \mv $EXEC_NAME $EXEC_NAMEFF
+ fi ;\
+ if [ -f $thisdir/$EXEC_NAMEFF ]
+ then
+   echo "Executable already present: quitting"
+   exit 1
+ else
+   \mv $EXEC_NAMEFF $thisdir/$EXEC_NAMEFF
+   chmod 744 $thisdir/$EXEC_NAMEFF
+   find . -name "*".o -exec \cp -"$CPOPT" {} $thisdir/ \;
+   cd $thisdir
+   \rm -r $thisdir/$TMPDIRNAME
+ fi)
 # new compilation step for HW++ mode
-else
-  # compile the analyzer & link it into the EXE directory
-  # TODO: Stream via Inputs script
-  FORFILEMAKE="FORFILE="$HWPPUTI
-  HWPPMAKE="HWPPPATH="$HWPPPATH" HEPMC="$HEPMCPATH
-  if ! make -C $thisdir/HWPPAnalyzer $HWPPUTI $HWPPANALYZER.so $HWPPMAKE "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$FORFILEMAKE"
-  then
-    echo $HWPPANALYZER compilation did not succeed, exiting.
-    exit -1 
-  fi
-  ln -sf $thisdir/HWPPAnalyzer/$HWPPANALYZER.so $thisdir/$ARCHNAME
-  # link the HE++ executable into the EXE directoy
-  ln -sf $HWPPPATH/bin/Herwig++ $thisdir/$ARCHNAME
-  # link the stupid LHAPDF index, if necessary
-  whichherpdf $HERPDF
-  if [ $pdftype = 1 ]
-  then
-    mkdir -p PDF
-    ln -sf $THEPEGPATH/share/ThePEG/PDFsets.index PDF/PDFsets.index
-  fi
-  # create executable if eveything is ok 
-  echo "./Herwig++ read "$EXEPREFIX"MCinput" > $thisdir/$ARCHNAME/$EXEC_NAMEFF
-  # temporary fix *FIX-ME* to only run over 98% of the hard events, avoiding 'over-sampling'
-  NMCEVENTS=$(echo "scale=0;$NEVENTS*0.98" | bc | sed 's/\./\n/g' | sed -n 1'p')
-  echo "./Herwig++ run -N "$NMCEVENTS" "$EXEPREFIX"MC.run" >> $thisdir/$ARCHNAME/$EXEC_NAMEFF
-  chmod +x $thisdir/$ARCHNAME/$EXEC_NAMEFF
+# compile the analyzer & link it into the EXE directory
+# TODO: Stream via Inputs script
+FORFILEMAKE="FORFILE="$HWPPUTI
+HWPPMAKE="HWPPPATH="$HWPPPATH" HEPMC="$HEPMCPATH
+if ! make -C $thisdir/HWPPAnalyzer $HWPPUTI $HWPPANALYZER.so $HWPPMAKE "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$FORFILEMAKE"
+then
+  echo $HWPPANALYZER compilation did not succeed, exiting.
+  exit -1 
 fi
+ln -sf $thisdir/HWPPAnalyzer/$HWPPANALYZER.so $thisdir
+# link the HW++ executable into the EXE directoy
+ln -sf $HWPPPATH/bin/Herwig++ $thisdir
+# link the stupid LHAPDF index, if necessary
+whichherpdf $HERPDF
+if [ $pdftype = 1 ]
+then
+  mkdir -p PDF
+  ln -sf $THEPEGPATH/share/ThePEG/PDFsets.index PDF/PDFsets.index
+fi
+# create executable if eveything is ok 
+echo "./Herwig++ read "$EXEPREFIX"MCinput" > $thisdir/$EXEC_NAMEFF
+# temporary fix *FIX-ME* to only run over 98% of the hard events, avoiding 'over-sampling'
+NMCEVENTS=$(echo "scale=0;$NEVENTS*0.98" | bc | sed 's/\./\n/g' | sed -n 1'p')
+echo "./Herwig++ run -N "$NMCEVENTS" "$EXEPREFIX"MC.run" >> $thisdir/$EXEC_NAMEFF
+chmod +x $thisdir/$EXEC_NAMEFF
 teststatus Compilation
 }
 
@@ -289,9 +290,127 @@ compile MC
 }
 
 # wrapper for the functions which run and compile MC codes
-# THIS IS NEW FOR HERWIG++ RUNNING
 function runMC {
 compile MC
+
+# NEW FOR aMC@NLO5
+
+# Link event file in the running directory
+if [ -f $thisdir/$EVT_NAMEF ]
+then
+  rm $thisdir/$EVT_NAMEF
+fi
+ln -ns $EVTDIR/$EVT_NAMEF $thisdir
+
+# Check correspondence between MCMODE and what written in the event file
+if [ $MCMODE != "HERWIGPP" ]
+then
+  echo "Error! HERWIGPP Script called with MCMODE not equal to HERWIGPP"
+  exit 1
+fi
+MC_TYPE=$(head -3 $thisdir/$EVT_NAMEF | tail -1)
+if [ $MCMODE != $MC_TYPE ]
+then
+  echo " "
+  echo "Trying to shower a file generated for" $MC_TYPE "using MCMODE =" $MCMODE
+  echo "Quitting"
+  echo " "
+  exit 1
+fi
+ARRAY_MCMODE=($(head -1000 $thisdir/$EVT_NAMEF | grep "= parton_shower " | head -1))
+MCMODE2=${ARRAY_MCMODE[0]}
+if [ $MCMODE2 != $MC_TYPE ]
+then
+  echo " "
+  echo "The event file seems not consistent: look for the string"
+  echo "'parton_shower' and compare with the third line of the header."
+  echo "Quitting"
+  echo " "
+  exit 1
+fi
+
+
+# Determine number of events to be showered 
+NUM_OF_EVTS=$(head -6 $thisdir/$EVT_NAMEF | tail -1)
+if [[ $NEVENTS -lt 0 || $NEVENTS -gt $NUM_OF_EVTS ]]
+then
+  NEVENTS=$NUM_OF_EVTS
+fi
+
+# Read physical parameters from the MG5 cards copied in the header
+# of the event file
+
+# masses and widths
+ARRAY_M=($(head -1000 $thisdir/$EVT_NAMEF | grep "# MT " | head -1))
+TMASS=${ARRAY_M[1]}
+ARRAY_W=($(head -1000 $thisdir/$EVT_NAMEF | grep "# WT " | head -1))
+TWIDTH=${ARRAY_W[2]}
+ARRAY_M=($(head -1000 $thisdir/$EVT_NAMEF | grep "# MZ " | head -1))
+ZMASS=${ARRAY_M[1]}
+ARRAY_W=($(head -1000 $thisdir/$EVT_NAMEF | grep "# WZ " | head -1))
+ZWIDTH=${ARRAY_W[2]}
+ARRAY_M=($(head -1000 $thisdir/$EVT_NAMEF | grep "# MH " | head -1))
+HGGMASS=${ARRAY_M[1]}
+ARRAY_W=($(head -1000 $thisdir/$EVT_NAMEF | grep "# WH " | head -1))
+HGGWIDTH=${ARRAY_W[2]}
+ARRAY_M=($(head -1000 $thisdir/$EVT_NAMEF | grep "# w+ " | head -1))
+WMASS=${ARRAY_M[1]}
+ARRAY_W=($(head -1000 $thisdir/$EVT_NAMEF | grep "# WW " | head -1))
+WWIDTH=${ARRAY_W[2]}
+
+# MC masses
+MC_HEAD=$(head -1000 $thisdir/$EVT_NAMEF | grep -n "<MonteCarloMasses>" | head -1)
+MC_HEAD=${MC_HEAD:0:3}
+for i in {1..6}
+do
+  let "MC_HEAD += 1"
+  ARRAY_MCM=($(head -$MC_HEAD $thisdir/$EVT_NAMEF | tail -1))
+  ARRAY_MC[$i]=${ARRAY_MCM[1]}
+done
+UMASSHW=${ARRAY_MC[1]}
+DMASSHW=${ARRAY_MC[2]}
+SMASSHW=${ARRAY_MC[3]}
+CMASSHW=${ARRAY_MC[4]}
+BMASSHW=${ARRAY_MC[5]}
+GMASSHW=${ARRAY_MC[6]}
+
+# collider energy and incoming beams
+ARRAY_E=($(head -1000 $thisdir/$EVT_NAMEF | grep "ebeam1" | head -1))
+ECM=${ARRAY_E[0]}
+ARRAY_E=($(head -1000 $thisdir/$EVT_NAMEF | grep "ebeam2" | head -1))
+ECM2=${ARRAY_E[0]}
+let "ECM += $ECM2"
+
+ARRAY_BEAM=($(head -1000 $thisdir/$EVT_NAMEF | grep "lpp1" | head -1))
+BEAM1=${ARRAY_BEAM[0]}
+ARRAY_BEAM=($(head -1000 $thisdir/$EVT_NAMEF | grep "lpp2" | head -1))
+BEAM2=${ARRAY_BEAM[0]}
+if [ $BEAM1 == 1 ]; then PART1="P"; elif [ $BEAM1 == -1 ]; then PART1="PBAR";
+elif [ $BEAM1 == 0 ]; then PART1="E+"; elif [ $BEAM1 == 2 ]; then PART1="N";
+elif [ $BEAM1 == -2 ]; then PART1="NBAR"; else echo "Unrecognized incoming beam 1";
+exit 1; fi
+if [ $BEAM2 == 1 ]; then PART2="P"; elif [ $BEAM2 == -1 ]; then PART2="PBAR";
+elif [ $BEAM2 == 0 ]; then PART2="E-"; elif [ $BEAM2 == 2 ]; then PART2="N";
+elif [ $BEAM2 == -2 ]; then PART2="NBAR"; else echo "Unrecognized incoming beam 2";
+exit 1; fi
+# Check the previous!
+
+whichherpdf $HERPDF
+if [ $pdftype = 1 ]
+then
+  whichpdflib $PDFLIBRARY
+  if [ $UsedPdfLib = "THISLIB" ]
+  then
+    dothelinks
+  elif [ $UsedPdfLib = "LHAPDF" ]
+  then
+    linklhapdf
+  fi
+fi
+echo " "
+echo "*****   All parameters read from event file $EVT_NAMEF"
+echo "*****   Now showering" $NEVENTS "events with $MC_TYPE "
+echo " "
 runMCMadFKS
 teststatus runMC
 }
@@ -299,18 +418,17 @@ teststatus runMC
 # compiles and runs the MC
 function runMCMadFKS {
 ifile="$FPREFIX"MCinput
-ofile="$FPREFIX"MC
-if [ -f ./$ARCHNAME/$ifile ]
+if [ -f ./$ifile ]
 then
-\rm ./$ARCHNAME/$ifile 
+\rm ./$ifile 
 fi
 # create input file
-createHWPPinputfile ./$ARCHNAME/$ifile 
+createHWPPinputfile ./$ifile 
 
-cat <<EOF >> ./$ARCHNAME/$ifile 
+cat <<EOF >> .//$ifile 
 
 # DEFINE THE INPUT EVENT FILE
-set /Herwig/EventHandlers/LHEReader:FileName $SCRTCH$EVPREFIX.events
+set /Herwig/EventHandlers/LHEReader:FileName $SCRTCH$EVPREFIX
 
 # --------------------------------------------------------------------- #
 # 2.) DEFINE PHYSICS PARAMETERS FROM FILE <MCatNLO_MadFKS.inputs> (DO NOT MODIFY)
@@ -330,16 +448,13 @@ set /Herwig/Particles/tbar:NominalMass $TMASS
 set /Herwig/Particles/tbar:Width $TWIDTH
 set /Herwig/Particles/h0:NominalMass $HGGMASS
 set /Herwig/Particles/h0:Width $HGGWIDTH
-# Modify for the bottom !!
-#set /Herwig/Particles/b:NominalMass $BMASS
-#set /Herwig/Particles/bbar:NominalMass $BMASS
 # --------------------------------------------------------------------- #
 EOF
+mv $EXEC_NAMEFF MCATNLO_EXE
+mv $ifile MCATNLO_input
 
-finalizeHWPPinputfile ./$ARCHNAME/$ifile $ofile 
-
-( cd ./$ARCHNAME ;\
-     $EXEC_NAMEFF )
+finalizeHWPPinputfile ./MCATNLO_input
+( $MCATNLO_EXE )
 }
 
 # the entry is the CM energy, the return value (beammom) is half
@@ -390,8 +505,6 @@ then
   ExtraLibs=`echo $ExtraLibs | sed "s/ / -l/g"`
   ExtraLibs="-l""$ExtraLibs"
 fi
-##If using gfortran, reinstate the following
-##ExtraLibs=$ExtraLibs" -lstdc++"
 }
 
 # prepends -L to library paths
@@ -458,13 +571,18 @@ set /Herwig/EventHandlers/LHEHandler:PartonExtractor /Herwig/Partons/QCDExtracto
 set /Herwig/EventHandlers/LHEHandler:CascadeHandler /Herwig/Shower/ShowerHandler 
 set /Herwig/EventHandlers/LHEHandler:HadronizationHandler /Herwig/Hadronization/ClusterHadHandler
 set /Herwig/EventHandlers/LHEHandler:DecayHandler /Herwig/Decays/DecayHandler
+insert /Herwig/EventHandlers/LHEHandler:PreCascadeHandlers 0 /Herwig/NewPhysics/DecayHandler
 
 set /Herwig/Generators/LHCGenerator:EventHandler /Herwig/EventHandlers/LHEHandler
-set /Herwig/Generators/LHCGenerator:NumberOfEvents $NEVENTS 
-set /Herwig/Generators/LHCGenerator:RandomNumberGenerator:Seed $RNDEVSEED
-set /Herwig/Generators/LHCGenerator:PrintEvent 10
-set /Herwig/Generators/LHCGenerator:MaxErrors 10000 
-set /Herwig/Generators/LHCGenerator:DebugLevel 0
+set /Herwig/Generators/LHCGenerator:NumberOfEvents $NEVENTS
+set /Herwig/Generators/LHCGenerator:RandomNumberGenerator:Seed $RNDEVSEED_HWPP
+set /Herwig/Generators/LHCGenerator:PrintEvent $MAXPR_HWPP
+
+ERR_NUM_HWPP=$ERR_FR_HWPP
+let "ERR_NUM_HWPP = ERR_NUM_HWPP * $NEVENTS"
+
+set /Herwig/Generators/LHCGenerator:MaxErrors $ERR_NUM_HWPP 
+set /Herwig/Generators/LHCGenerator:DebugLevel 1
 
 EOF
 

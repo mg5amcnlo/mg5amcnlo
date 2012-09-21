@@ -172,7 +172,7 @@ NLO) echo "NLO must be computed with MadFKS"; exit 1
        EXEC_NAMEF="NLO_EXE_PDFLIB"
      elif [ $UsedPdfLib = "THISLIB" ]
      then
-       EXEC_NAMEF="NLO_EXE_THISLIB"
+       EXEC_NAMEF="NLO_EXE_DEFAULT"
      elif [ $UsedPdfLib = "LHAPDF" ]
      then
        EXEC_NAMEF="NLO_EXE_LHAPDF"
