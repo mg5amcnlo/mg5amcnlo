@@ -553,16 +553,42 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if self.history:
             self.history.pop()
         return False
+    
+    def onecmd_orig(self, line, **opt):
+        """Interpret the argument as though it had been typed in response
+        to the prompt.
 
-
-    def onecmd(self, line):
-        """catch all error and stop properly command accordingly"""
+        The return value is a flag indicating whether interpretation of
+        commands by the interpreter should stop.
         
+        This allow to pass extra argument for internal call.
+        """
+        
+        cmd, arg, line = self.parseline(line)
+        if not line:
+            return self.emptyline()
+        if cmd is None:
+            return self.default(line)
+        self.lastcmd = line
+        if cmd == '':
+            return self.default(line)
+        else:
+            try:
+                func = getattr(self, 'do_' + cmd)
+            except AttributeError:
+                return self.default(line)
+            return func(arg, **opt)
+
+
+    def onecmd(self, line, **opt):
+        """catch all error and stop properly command accordingly"""
+        print 'pass'
         try:
-            return cmd.Cmd.onecmd(self, line)
+            return self.onecmd_orig(line, **opt)
         except self.InvalidCmd as error:            
             if __debug__:
                 self.nice_error_handling(error, line)
+                self.history.pop()
             else:
                 self.nice_user_error(error, line)
         except self.ConfigurationError as error:
@@ -581,7 +607,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         pass # dummy function
             
     def exec_cmd(self, line, errorhandling=False, printcmd=True, 
-                                                 precmd=False, postcmd=True):
+                                     precmd=False, postcmd=True, **opt):
         """for third party call, call the line with pre and postfix treatment
         without global error handling """
 
@@ -595,9 +621,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if precmd:
             line = current_interface.precmd(line)
         if errorhandling:
-            stop = current_interface.onecmd(line)
+            stop = current_interface.onecmd(line, **opt)
         else:
-            stop = cmd.Cmd.onecmd(current_interface, line)
+            stop = Cmd.onecmd_orig(current_interface, line, **opt)
         if postcmd:
             stop = current_interface.postcmd(stop, line)
         return stop      
@@ -618,6 +644,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # Faulty command
         logger.warning("Command \"%s\" not recognized, please try again" % \
                                                                 line.split()[0])
+        self.history.pop()
         
 
     @staticmethod
@@ -685,20 +712,33 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
     def clean_history(self, to_keep=['set','add','load'],
                             remove_bef_lb1=None,
-                            to_remove=['open','display','launch'],
-                            keep_last=False):
+                            to_remove=['open','display','launch', 'check'],
+                            keep_last=False,
+                            allow_for_removal=None):
         """Remove command in arguments from history.
         to_keep is a set of line to always keep
-        to_remove is a set of line to always remove
+        to_remove is a set of line to always remove whatever the position is
         remove_bef_lb1 remove up to first occurrence.
         keep_last ensure to keep the last entry.
+        if allow_for_removal is define only the command in that list can be 
+        remove of the history.
         """
         
+        #check consistency
+        if __debug__ and allow_for_removal:
+            for arg in to_keep:
+                assert arg not in allow_for_removal
+            
     
         nline = -1
         last = 0
+        #looping backward
         while nline > -len(self.history):
-
+            if any([self.history[nline].startswith(arg) for arg in to_remove]):
+                self.history.pop(nline)
+                continue
+            
+            #check if we are in removal mode
             if remove_bef_lb1 and self.history[nline].startswith(remove_bef_lb1):
                 if last:
                     last = 2
@@ -709,9 +749,17 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if nline == -1 and keep_last:
                 nline -=1
                 continue
-            if any([self.history[nline].startswith(arg) for arg in to_remove]):
-                self.history.pop(nline)
-                continue
+            
+            # WE are in removal mode
+            if allow_for_removal:
+                if any([self.history[nline].startswith(arg) 
+                                                 for arg in allow_for_removal]):
+                    self.history.pop(nline)
+                else:
+                    nline -=1
+                    continue  
+            
+
             if last == 2:
                 if not any([self.history[nline].startswith(arg) for arg in to_keep]):
                   self.history.pop(nline)

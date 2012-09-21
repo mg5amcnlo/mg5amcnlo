@@ -2441,8 +2441,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._export_format = None
 
         # Remove previous generations from history
-        self.clean_history(to_remove=['add process'], remove_bef_lb1='generate',
-                           to_keep=['add','import','set','load','define'])
+        self.clean_history(remove_bef_lb1='generate', allow_for_removal= 
+                                          ['generate', 'add process', 'output'],
+                                          keep_last=True)
+
 
         # Call add process
         args = self.split_arg(line)
@@ -2766,7 +2768,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._model_v4_path = None
             # Clear history, amplitudes and matrix elements when a model is imported
             # Remove previous imports, generations and outputs from history
-            self.clean_history(remove_bef_lb1='import')
+            self.clean_history(remove_bef_lb1='import', allow_for_removal=
+                                ['generate', 'add process', 'output'])
             # Reset amplitudes and matrix elements
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -2823,9 +2826,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             process_checks.store_aloha = []
             
         elif args[0] == 'command':
-            # Remove previous imports, generations and outputs from history
-            self.clean_history(to_remove=['import', 'generate', 'add process',
-                                          'open','display','launch'])
 
             if not os.path.isfile(args[1]):
                 raise self.InvalidCmd("Path %s is not a valid pathname" % args[1])
@@ -2863,9 +2863,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
         elif args[0] == 'proc_v4':
             
-            # Remove previous imports, generations and outputs from history
-            self.clean_history(to_remove=['import', 'generate', 'add process',
-                                          'open','display','launch'])
 
             if len(args) == 1 and self._export_dir:
                 proc_card = pjoin(self._export_dir, 'Cards', \
@@ -3367,7 +3364,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
-                    self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
+                    self.exec_cmd("set %s %s --no_save" % (key, self.options[key]), 
+                                   printcmd=False, log=False)
                 except MadGraph5Error, error:
                     print error
                     logger.warning("Option %s from config file not understood" \
@@ -3700,7 +3698,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Set an option, which will be default for coming generations/outputs
         """
 	    # This command is associated to a post_cmd: post_set.
-        
         args = self.split_arg(line)
         
         # Check the validity of the arguments
@@ -3838,10 +3835,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self.check_set(args, log=False)
         
         if args[0] in self.options_configuration and '--no_save' not in args:
-            self.exec_cmd('save options --auto')
+            self.exec_cmd('save options --auto', log=False)
         elif args[0] in self.options_madevent:
-            logger.info('This option will be the default in any output that you are going to create in this session.')
-            logger.info('In order to keep this changes permanent please run \'save options\'')
+            if not '--no_save' in line:
+                logger.info('This option will be the default in any output that you are going to create in this session.')
+                logger.info('In order to keep this changes permanent please run \'save options\'')
+        else:
+            #madgraph configuration
+            if not self.history or self.history[-1].split() != line.split():
+                self.history.append('set %s' % line) 
         return stop
 
     def do_open(self, line):
@@ -3862,8 +3864,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self.check_output(args)
 
         # Remove previous outputs from history
-        self.clean_history(to_remove=['display','open','history','launch','output'],
-                           remove_bef_lb1='generate',
+        self.clean_history(allow_for_removal = ['output'],
+                           remove_bef_lb1='output',
                            keep_last=True)
         
         noclean = '-noclean' in args
