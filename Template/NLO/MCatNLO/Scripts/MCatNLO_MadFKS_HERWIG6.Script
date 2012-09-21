@@ -233,12 +233,6 @@ EXEC_NAMEFF="$EXEPREFIX""$EXEC_NAMEF"
 
 rm -f $thisdir/$EXEC_NAMEFF
 
-# stops if executable already exists (safety measure) 
-#if [ -f $thisdir/$EXEC_NAMEFF ]
-#then
-#  echo "Executable already present: quitting"
-#  exit 1
-#fi
 # creates a temporary directory to produce the executable, eventually moved
 # back to running directory
 CURRDATE=`date`
@@ -247,14 +241,8 @@ TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f2`
 TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f3`
 TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f4`
 TMPDIRNAME=$EXEPREFIX$TMPDIRNAME
-#if [ -d "$thisdir/$TMPDIRNAME" ]
-#then
-#  echo "Directory already present: quitting"
-#  exit 1
-#else
-  mkdir "$thisdir/$TMPDIRNAME"
-  ln -ns $EVTDIR/$EVT_NAMEF $thisdir/$TMPDIRNAME
-#fi
+mkdir "$thisdir/$TMPDIRNAME"
+ln -ns $EVTDIR/$EVT_NAMEF $thisdir/$TMPDIRNAME
 (cd $thisdir/$TMPDIRNAME ;\
  $EXMAKE -f $thisdir/Makefile_MadFKS $EXTRA "$HWUTIMAKE" "$HERWGMAKE" \
  "$LIBSLHA" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" \
@@ -449,9 +437,9 @@ cat <<EOF >> ./$ifile
   $RNDEVSEED1_HW $RNDEVSEED2_HW   ! First and second random seeds (0 0 for default)
   $PI_STABLE_HW                   ! .TRUE. if one wants Pi0 stable
 EOF
+
 mv $EXEC_NAMEFF MCATNLO_EXE
 mv $ifile MCATNLO_input
-
 }
 
 # the entry is the CM energy, the return value (beammom) is half
