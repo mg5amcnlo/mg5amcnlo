@@ -256,7 +256,7 @@ class L_Param(aloha_lib.LorentzObject):
         aloha_lib.LorentzObject.__init__(self, name, [], [])
         
     def create_representation(self):
-        param = aloha_lib.Variable( self.varname)
+        param = aloha_lib.Variable( self.varname, aloha_lib.ExtVariable)
 
         self.representation= aloha_lib.LorentzObjectRepresentation(
                             param, [], [])

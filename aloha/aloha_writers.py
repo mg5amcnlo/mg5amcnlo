@@ -5,6 +5,7 @@ except:
 
 import aloha
 import aloha.aloha_lib as aloha_lib
+import cmath
 import os
 import re 
 from numbers import Number
@@ -33,6 +34,8 @@ class WriteALOHA:
             self.momentum_size = 4
         else:
             self.momentum_size = 2
+            
+        self.has_model_parameter = False
         
         name = get_routine_name(abstract = abstract_routine)
 
@@ -360,7 +363,6 @@ class WriteALOHA:
         """
 
         str_var = str(obj)
-        
         self.declaration.add((obj.type, str_var))        
         return str_var
 
@@ -440,7 +442,8 @@ class ALOHAWriterForFortran(WriteALOHA):
                    'cmath.sqrt':'sqrt(%s)', 
                    'sqrt': 'sqrt(%s)',
                    'complexconjugate': 'conjg(%s)',
-                   '/' : '{0}/%s'.format(one) 
+                   '/' : '{0}/(%s)'.format(one),
+                   'pow': '(%s)**(%s)' 
                    }
             
         if fct in self.fct_format:
@@ -482,14 +485,20 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         out = StringIO()
         out.write('implicit none\n')
+        # Check if we are in formfactor mode
+        if self.has_model_parameter:
+            out.write(' include "../MODEL/input.inc"\n')
         argument_var = [name for type,name in self.call_arg]
         # define the complex number CI = 0+1j
         if 'MP' in self.tag:
             out.write(' complex*32 CI\n')
+            out.write(' double*16 PI\n')
         else:
             out.write(' complex*16 CI\n')
+            out.write(' double precision PI\n')
         out.write(' parameter (CI=(%s,%s))\n' % 
                     (self.change_number_format(0),self.change_number_format(1)))
+        out.write(' parameter (PI=%sD0)\n' % cmath.pi)
         for type, name in self.declaration:
             if type.startswith('list'):
                 type = type[5:]
@@ -518,6 +527,8 @@ class ALOHAWriterForFortran(WriteALOHA):
     
                 out.write(' %s %s(%s)\n' % (self.type2def[type], name, size))
             elif type == 'fct':
+                if name.upper() in ['EXP','LOG','SIN','COS','ASIN','ACOS']:
+                    continue
                 out.write(' %s %s\n' % (self.type2def['complex'], name))
                 out.write(' external %s\n' % (name))
             else:
@@ -624,10 +635,15 @@ class ALOHAWriterForFortran(WriteALOHA):
     def change_var_format(self, name): 
         """Formatting the variable name to Fortran format"""
         
+        if isinstance(name, aloha_lib.ExtVariable):
+            # external parameter nothing to do
+            self.has_model_parameter = True
+            return name
+        
         if '_' in name:
-            type = name.type
+            vtype = name.type
             decla = name.split('_',1)[0]
-            self.declaration.add(('list_%s' % type, decla))
+            self.declaration.add(('list_%s' % vtype, decla))
         else:
             self.declaration.add((name.type, name))
         name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
@@ -675,7 +691,12 @@ class ALOHAWriterForFortran(WriteALOHA):
                 
         for name, (fct, objs) in self.routine.fct.items():
             format = ' %s = %s\n' % (name, self.get_fct_format(fct))
-            out.write(format % ','.join([self.write_obj(obj) for obj in objs]))
+            try:
+                text = format % ','.join([self.write_obj(obj) for obj in objs])
+            except TypeError:
+                text = format % tuple([self.write_obj(obj) for obj in objs])
+            finally:
+                out.write(text)
         
 
         numerator = self.routine.expr
@@ -923,6 +944,8 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
     
                 out.write(' %s %s(%s)\n' % (self.type2def[type], name, size))
             elif type == 'fct':
+                if name.upper() in ['EXP','LOG','SIN','COS','ASIN','ACOS']:
+                    continue
                 out.write(' %s %s\n' % (self.type2def['complex'], name))
                 out.write(' external %s\n' % (name))
             else:

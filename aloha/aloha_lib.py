@@ -703,6 +703,19 @@ class MultVariable(array):
 #===============================================================================
 # FactoryVar
 #===============================================================================
+class C_Variable(str):
+    vartype=0
+    type = 'complex'
+    
+class R_Variable(str):
+    vartype=0
+    type = 'double'
+
+class ExtVariable(str):
+    vartype=0
+    type = 'parameter'
+
+
 class FactoryVar(object):
     """This is the standard object for all the variable linked to expression.
     """
@@ -721,8 +734,8 @@ class FactoryVar(object):
 
 class Variable(FactoryVar):
     
-    def __new__(self, name):
-        return FactoryVar(name, C_Variable)
+    def __new__(self, name, type=C_Variable):
+        return FactoryVar(name, type)
 
 class DVariable(FactoryVar):
     
@@ -739,13 +752,6 @@ class DVariable(FactoryVar):
         return FactoryVar(name, R_Variable)
 
 
-class C_Variable(str):
-    vartype=0
-    type = 'complex'
-    
-class R_Variable(str):
-    vartype=0
-    type = 'double'
 
 
 #===============================================================================
