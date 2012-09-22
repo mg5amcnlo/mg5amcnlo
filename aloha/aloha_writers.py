@@ -433,17 +433,20 @@ class ALOHAWriterForFortran(WriteALOHA):
         """Put the function in the correct format"""
         if not hasattr(self, 'fct_format'):
             one = self.change_number_format(1)
-            self.fct_format = {'csc' : '{0}/cos(%s)'.format(one),
-                   'sec': '{0}/sin(%s)'.format(one),
-                   'acsc': 'asin({0}/(%s))'.format(one),
+            self.fct_format = {'csc' : '{0}/cos(dble(%s))'.format(one),
+                   'sec': '{0}/sin(dble(%s))'.format(one),
+                   'acsc': 'asin({0}/(dble(%s)))'.format(one),
                    'asec': 'acos({0}/(%s))'.format(one),
                    're': ' dble(%s)',
                    'im': 'imag(%s)',
-                   'cmath.sqrt':'sqrt(%s)', 
-                   'sqrt': 'sqrt(%s)',
+                   'cmath.sqrt':'sqrt(dble(%s))', 
+                   'sqrt': 'sqrt(dble(%s))',
                    'complexconjugate': 'conjg(%s)',
                    '/' : '{0}/(%s)'.format(one),
-                   'pow': '(%s)**(%s)' 
+                   'pow': '(%s)**(%s)',
+                   'log': 'log(dble(%s))',
+                   'asin': 'asin(dble(%s))',
+                   'acos': 'acos(dble(%s))',
                    }
             
         if fct in self.fct_format:
@@ -688,8 +691,22 @@ class ALOHAWriterForFortran(WriteALOHA):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
-                
-        for name, (fct, objs) in self.routine.fct.items():
+        
+        
+        def sort_fct(a, b):
+            if len(a) < len(b):
+                return -1
+            elif len(a) > len(b):
+                return 1
+            elif a < b:
+                return -1
+            else:
+                return +1
+            
+        keys = self.routine.fct.keys()        
+        keys.sort(sort_fct)        
+        for name in keys:
+            fct, objs = self.routine.fct[name]
             format = ' %s = %s\n' % (name, self.get_fct_format(fct))
             try:
                 text = format % ','.join([self.write_obj(obj) for obj in objs])
