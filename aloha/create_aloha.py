@@ -123,6 +123,11 @@ class AbstractRoutineBuilder(object):
         self.spin2_massless = False
         self.contracted = {}
         self.fct = {}
+        if hasattr(lorentz, 'formfactors') and lorentz.formfactors:
+            self.lorentz_expr = '(%s)*(%s)' % (lorentz.formfactors.value, lorentz.structure)
+
+            
+        print self.lorentz_expr
         
     
     def compute_routine(self, mode, tag=[], factorize=True):
@@ -183,7 +188,10 @@ class AbstractRoutineBuilder(object):
     def define_simple_output(self):
         """ define a simple output for this AbstractRoutine """
     
-        infostr = str(self.lorentz_expr)        
+        infostr = str(self.lorentz_expr)
+        
+        
+                
         output = AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
                                                                         infostr)
         output.contracted = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
@@ -211,6 +219,7 @@ class AbstractRoutineBuilder(object):
         lorentz_expr = self.lorentz_expr
         calc = aloha_parsers.ALOHAExpressionParser()
         lorentz_expr = calc.parse(lorentz_expr)
+        print lorentz_expr
         return lorentz_expr
                 
     def compute_aloha_high_kernel(self, mode, factorize=True):
@@ -231,6 +240,7 @@ class AbstractRoutineBuilder(object):
             try:
                 lorentz = self.change_sign_for_outcoming_fermion()  
                 self.routine_kernel = lorentz
+                print lorentz
                 lorentz = eval(lorentz)
             except NameError, error:
                 logger.error('unknow type in Lorentz Evaluation:%s'%str(error))

@@ -226,7 +226,7 @@ class L_Width(aloha_lib.LorentzObject):
     """ Helas Object for an Impulsion """
  
     
-    def __init__(self, name, particle):
+    def __init__(self, name):
         self.particle = particle
         aloha_lib.LorentzObject.__init__(self, name, [], [])
         
@@ -243,6 +243,32 @@ class Width(aloha_lib.FactoryLorentz):
     @classmethod
     def get_unique_name(self, particle):
         return '_W%s' % particle
+
+#===============================================================================
+# Param
+#===============================================================================
+class L_Param(aloha_lib.LorentzObject):
+    """ Object for a Model Parameter """
+ 
+    
+    def __init__(self, Lname, name):
+        self.varname = name
+        aloha_lib.LorentzObject.__init__(self, name, [], [])
+        
+    def create_representation(self):
+        param = aloha_lib.Variable( self.varname)
+
+        self.representation= aloha_lib.LorentzObjectRepresentation(
+                            param, [], [])
+
+class Param(aloha_lib.FactoryLorentz):
+    
+    object_class = L_Param
+    
+    @classmethod
+    def get_unique_name(self, name):
+        return 'Param_%s' % name
+
 #===============================================================================
 # Scalar
 #===============================================================================

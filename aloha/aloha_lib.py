@@ -65,6 +65,7 @@ class Computation(dict):
         self.reduced_expr = {}
         self.fct_expr = {}
         self.reduced_expr2 = {}
+        self.inverted_fct = {}
         dict.__init__(self)
 
     def clean(self):
@@ -122,14 +123,21 @@ class Computation(dict):
         tag = 'FCT%s' % len(self.fct_expr)
         argument = []
         for expression in args:
-            expr = expression.expand().get_rep([0])
-            new = expr.simplify()
-            new = expr.factorize()
-            argument.append(new)       
-        self.fct_expr[tag] = (fct_tag, argument) 
-        self.reduced_expr2[tag] = (fct_tag, argument)
-        self.add_tag((tag,))
-        return 'FCT(%s)' % (len(self.fct_expr) -1)
+            if isinstance(expression, (MultLorentz, AddVariable, LorentzObject)):
+                expr = expression.expand().get_rep([0])
+                new = expr.simplify()
+                new = expr.factorize()
+                argument.append(new)
+            else:
+                argument.append(expression)
+        if str(fct_tag)+str(argument) in self.inverted_fct:
+            return self.inverted_fct[str(fct_tag)+str(argument)]
+        else:
+            self.fct_expr[tag] = (fct_tag, argument) 
+            self.reduced_expr2[tag] = (fct_tag, argument)
+            self.add_tag((tag,))
+            self.inverted_fct[str(fct_tag)+str(argument)] = 'FCT(%s)' % (len(self.fct_expr) -1)
+            return 'FCT(%s)' % (len(self.fct_expr) -1)
         
 KERNEL = Computation()
 
@@ -248,7 +256,11 @@ class AddVariable(list):
         
         for item in self[1:]:
             if self.prefactor == 1:
-                new += item.expand(veto)
+                try:
+                    new += item.expand(veto)
+                except AttributeError:
+                    new = new + item
+                
             else:
                 new += (self.prefactor) * item.expand(veto)
         return new
@@ -353,7 +365,23 @@ class AddVariable(list):
     __radd__ = __add__
     __rmul__ = __mul__ 
 
+    #def __pow__(self, obj):
+    #    
+    #    assert isinstance(obj, int)
+    #    
+    #    tmp = self
+    #    for i in range(obj-1):
+    ##       tmp = tmp * self
+    #    return tmp
 
+    def __div__(self, obj):
+        return self.__mul__(1/obj)
+    
+    __truediv__ = __div__
+
+    def __rdiv__(self, obj):
+        return self.__rmult__(1/obj)
+            
     def __str__(self):
         text = ''
         if self.prefactor != 1:
@@ -991,6 +1019,10 @@ class LorentzObjectRepresentation(dict):
         
         if not obj:
             return self
+        
+        if not hasattr(obj, 'vartype'):
+            obj = LorentzObjectRepresentation(obj, [], [])
+            
         
         assert(obj.vartype == 4 == self.vartype) # are LorentzObjectRepresentation
         
