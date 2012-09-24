@@ -124,11 +124,10 @@ class AbstractRoutineBuilder(object):
         self.contracted = {}
         self.fct = {}
         if hasattr(lorentz, 'formfactors') and lorentz.formfactors:
-            self.lorentz_expr = '(%s)*(%s)' % (lorentz.formfactors.value, lorentz.structure)
-
+            for formf in lorents.formfactors:
+                pat = re.compile(r'\b%\b' % formf.name)
+                self.lorentz_expr = pat.sub('(%s)' % formf.value, self.lorentz_expr)
             
-        
-    
     def compute_routine(self, mode, tag=[], factorize=True):
         """compute the expression and return it"""
         self.outgoing = mode
