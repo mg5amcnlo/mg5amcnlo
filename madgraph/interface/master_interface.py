@@ -424,6 +424,9 @@ class Switcher(object):
         
     def do_tutorial(self, *args, **opts):
         return self.cmd.do_tutorial(self, *args, **opts)
+
+    def do_tutorial_nlo(self, *args, **opts):
+        return self.cmd.do_tutorial_nlo(self, *args, **opts)
         
     def help_EOF(self, *args, **opts):
         return self.cmd.help_EOF(self, *args, **opts)

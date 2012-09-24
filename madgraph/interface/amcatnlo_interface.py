@@ -45,8 +45,6 @@ pjoin = os.path.join
 
 logger = logging.getLogger('cmdprint') # -> stdout
 logger_stderr = logging.getLogger('fatalerror') # ->stderr
-logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in  
-                                            #order to learn MG5
 
 class CheckFKS(mg_interface.CheckValidForCmd):
 
@@ -174,7 +172,7 @@ class CheckFKSWeb(mg_interface.CheckValidForCmdWeb, CheckFKS):
 class CompleteFKS(mg_interface.CompleteForCmd):
     
     def complete_display(self, text, line, begidx, endidx):
-        "Complete the display command in the context of the FKS interface"
+        """Complete the display command in the context of the FKS interface"""
 
         args = self.split_arg(line[0:begidx])
 
@@ -183,6 +181,35 @@ class CompleteFKS(mg_interface.CompleteForCmd):
         else:
             return mg_interface.MadGraphCmd.complete_display(self, text, line,
                                                                  begidx, endidx)
+
+
+    def complete_output(self, text, line, begidx, endidx):
+        """Complete the output command in the context of the FKS interface"""
+        #don't propose directory use by MG_ME
+        forbidden_names = ['MadGraphII', 'Template', 'pythia-pgs', 'CVS',
+                            'Calculators', 'MadAnalysis', 'SimpleAnalysis',
+                            'mg5', 'DECAY', 'EventConverter', 'Models',
+                            'ExRootAnalysis', 'HELAS', 'Transfer_Fct', 'aloha', 
+                            'madgraph', 'bin', 'tests', 'input', 'vendor', 'models']
+        
+        #name of the run =>proposes old run name
+        args = self.split_arg(line[0:begidx])
+        if len(args) >= 1: 
+            if len(args) > 1 and args[1] == 'aloha':
+                try:
+                    return self.aloha_complete_output(text, line, begidx, endidx)
+                except Exception, error:
+                    print error
+            # Directory continuation
+            if args[-1].endswith(os.path.sep):
+                return [name for name in self.path_completion(text,
+                        pjoin(*[a for a in args if a.endswith(os.path.sep)]),
+                        only_dirs = True) if name not in forbidden_names]
+
+            # directory names
+            content = [name for name in self.path_completion(text, '.', only_dirs = True) \
+                       if name not in forbidden_names]
+            return self.list_completion(text, content)
 
 class HelpFKS(mg_interface.HelpToCmd):
 

@@ -62,6 +62,7 @@ import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.tutorial_text as tutorial_text
+import madgraph.interface.tutorial_text_nlo as tutorial_text_nlo
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.interface.madevent_interface as madevent_interface
 
@@ -80,6 +81,8 @@ import aloha.create_aloha as create_aloha
 logger = logging.getLogger('cmdprint') # -> stdout
 logger_stderr = logging.getLogger('fatalerror') # ->stderr
 logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in  
+                                            #order to learn MG5
+logger_tuto_nlo = logging.getLogger('tutorial_nlo') # -> stdout include instruction in  
                                             #order to learn MG5
 
 #===============================================================================
@@ -184,6 +187,7 @@ class CmdExtended(cmd.Cmd):
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
         "*           Type 'tutorial' to learn how MG5 works         *\n" + \
+        "*      Type 'tutorial_nlo' to learn how aMC@NLO works      *\n" + \
         "*                                                          *\n" + \
         "************************************************************")
         
@@ -215,6 +219,14 @@ class CmdExtended(cmd.Cmd):
         except:
             try:
                 logger_tuto.info(getattr(tutorial_text, args[0]).replace('\n','\n\t'))
+            except:
+                pass
+
+        try:
+            logger_tuto_nlo.info(getattr(tutorial_text_nlo, command).replace('\n','\n\t'))
+        except:
+            try:
+                logger_tuto_nlo.info(getattr(tutorial_text_nlo, args[0]).replace('\n','\n\t'))
             except:
                 pass
         
@@ -2184,6 +2196,24 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        "\n\tWarning: To use all features in this tutorial, " + \
                        "please run from a" + \
                        "\n\t         valid MG_ME directory.")
+
+
+    def do_tutorial_nlo(self, line):
+        """Activate/deactivate the NLO tutorial mode."""
+
+        args = self.split_arg(line)
+        if len(args) > 0 and args[0] == "stop":
+            logger_tuto_nlo.info("\n\tThanks for using the tutorial!")
+            logger_tuto_nlo.setLevel(logging.ERROR)
+        else:
+            logger_tuto_nlo.setLevel(logging.INFO)
+
+        if not self._mgme_dir:
+            logger_tuto_nlo.info(\
+                       "\n\tWarning: To use all features in this tutorial, " + \
+                       "please run from a" + \
+                       "\n\t         valid MG_ME directory.")
+
 
     def draw(self, line,selection='all'):
         """ draw the Feynman diagram for the given process """
