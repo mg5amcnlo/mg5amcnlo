@@ -519,7 +519,7 @@ class CheckValidForCmd(object):
         run_name = [arg[7:] for arg in args if arg.startswith('--name=')]
         if run_name:
             try:
-                os.exec_cmd('remove %s all banner -f' % run_name)
+                self.exec_cmd('remove %s all banner -f' % run_name)
             except Exception:
                 pass
             self.set_run_name(args[0], tag=None, level='parton', reload_card=True)
@@ -533,7 +533,7 @@ class CheckValidForCmd(object):
                 self.set_run_name(run_name)
             else:
                 try:
-                    os.exec_cmd('remove %s all banner -f' % run_name)
+                    self.exec_cmd('remove %s all banner -f' % run_name)
                 except Exception:
                     pass
                 self.set_run_name(name)
@@ -918,7 +918,7 @@ class CheckValidForCmd(object):
         
         tag = [a for a in arg if a.startswith('--tag=')]
         if tag: 
-            args.remove(tag[0])
+            arg.remove(tag[0])
             tag = tag[0][6:]
         elif not self.run_tag:
             tag = 'tag_1'
@@ -3731,6 +3731,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         except Exception, error:         
             pass
         try:
+            devnull = os.open(os.devnull, os.O_RDWR) 
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)
         except:
@@ -3784,13 +3785,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 os.system('gunzip -fc %s > %s' % (issudfile, path))
             else:
                 msg = 'No sudakov grid file for parameter choice. Start to generate it. This might take a while'
+                logger.info(msg)
                 self.update_status('GENERATE SUDAKOF GRID', level='parton')
                 
                 for i in range(-2,6):
                     self.launch_job('%s/gensudgrid ' % self.dirbin, 
                                     arguments = [i],
                                     cwd=self.me_dir, 
-                                    stdout=open(pjoin(self.me_dir, 'gensudgrid%s.log' % s,'w')))
+                                    stdout=open(pjoin(self.me_dir, 'gensudgrid%s.log' % i,'w')))
                 self.monitor()
                 for i in range(-2,6):
                     path = pjoin(self.me_dir, 'lib', 'issudgrid.dat')
@@ -4039,7 +4041,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         answer = 'no'
         while answer != 'done':
             question, possible_answer, card = get_question(mode)
-            answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
+            answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), 
+                              path_msg='enter path', ask_class = AskforEditCard)
             if answer.isdigit():
                 answer = card[int(answer)]
             if answer == 'done':
@@ -4075,7 +4078,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                 mode = level
                                 break
                     else:
-                        clean_pointless_card(mode)
+                        self.clean_pointless_card(mode)
 
     ############################################################################
     def ask_pythia_run_configuration(self, mode=None):
@@ -4136,23 +4139,23 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         possible_answer = ['0','done', '1', 'pythia']
         card = {0:'done', 1:'pythia', 9:'plot'}
         if mode == 'pgs':
-             question += '  2 / pgs     : pgs_card.dat\n'
-             possible_answer.append(2)
-             possible_answer.append('pgs') 
-             card[2] = 'pgs'           
+            question += '  2 / pgs     : pgs_card.dat\n'
+            possible_answer.append(2)
+            possible_answer.append('pgs') 
+            card[2] = 'pgs'           
         if mode == 'delphes':
-             question += '  2 / delphes : delphes_card.dat\n'
-             question += '  3 / trigger : delphes_trigger.dat\n'
-             possible_answer.append(2)
-             possible_answer.append('delphes')
-             possible_answer.append(3)
-             possible_answer.append('trigger')
-             card[2] = 'delphes'
-             card[3] = 'trigger'
+            question += '  2 / delphes : delphes_card.dat\n'
+            question += '  3 / trigger : delphes_trigger.dat\n'
+            possible_answer.append(2)
+            possible_answer.append('delphes')
+            possible_answer.append(3)
+            possible_answer.append('trigger')
+            card[2] = 'delphes'
+            card[3] = 'trigger'
         if self.options['madanalysis_path']:
-             question += '  9 / plot : plot_card.dat\n'
-             possible_answer.append(9)
-             possible_answer.append('plot')
+            question += '  9 / plot : plot_card.dat\n'
+            possible_answer.append(9)
+            possible_answer.append('plot')
         
         # Add the path options
         question += '  Path to a valid card.\n'
@@ -4160,27 +4163,27 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Loop as long as the user is not done.
         answer = 'no'
         while answer != 'done':
-             answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
-             if answer.isdigit():
-                 answer = card[int(answer)]
-             if answer == 'done':
-                 return
-             if os.path.exists(answer):
-                 # detect which card is provide
-                 card_name = self.detect_card_type(answer)
-                 if card_name == 'unknown':
-                     card_name = self.ask('Fail to determine the type of the file. Please specify the format',
+            answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
+            if answer.isdigit():
+                answer = card[int(answer)]
+            if answer == 'done':
+                return
+            if os.path.exists(answer):
+                # detect which card is provide
+                card_name = self.detect_card_type(answer)
+                if card_name == 'unknown':
+                    card_name = self.ask('Fail to determine the type of the file. Please specify the format',
                   'pythia_card.dat',choices=['pythia_card.dat','pgs_card.dat',
                    'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
         
-                 logger.info('copy %s as %s' % (answer, card_name))
-                 files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
-                 continue
-             if answer != 'trigger':
-                 path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
-             else:
-                 path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
-             self.exec_cmd('open %s' % path)                    
+                logger.info('copy %s as %s' % (answer, card_name))
+                files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
+                continue
+            if answer != 'trigger':
+                path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+            else:
+                path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
+            self.exec_cmd('open %s' % path)                    
                  
         return mode
 
@@ -4209,10 +4212,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             card[i+1] = mode
         
         if plot and self.options['madanalysis_path']:
-             question += '  9 / %-9s : plot_card.dat\n' % 'plot'
-             possible_answer.append(9)
-             possible_answer.append('plot')
-             card[9] = 'plot'
+            question += '  9 / %-9s : plot_card.dat\n' % 'plot'
+            possible_answer.append(9)
+            possible_answer.append('plot')
+            card[9] = 'plot'
 
         # Add the path options
         question += '  Path to a valid card.\n'
@@ -4220,26 +4223,27 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Loop as long as the user is not done.
         answer = 'no'
         while answer != 'done':
-             answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
-             if answer.isdigit():
-                 answer = card[int(answer)]
-             if answer == 'done':
-                 return
-             if os.path.exists(answer):
-                 # detect which card is provide
-                 card_name = self.detect_card_type(answer)
-                 if card_name == 'unknown':
-                     card_name = self.ask('Fail to determine the type of the file. Please specify the format',
+            answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), 
+                              path_msg='enter path')
+            if answer.isdigit():
+                answer = card[int(answer)]
+            if answer == 'done':
+                return
+            if os.path.exists(answer):
+                # detect which card is provide
+                card_name = self.detect_card_type(answer)
+                if card_name == 'unknown':
+                    card_name = self.ask('Fail to determine the type of the file. Please specify the format',
                   'pgs_card.dat', choices=['pgs_card.dat', 'delphes_card.dat', 'delphes_trigger.dat'])
         
-                 logger.info('copy %s as %s' % (answer, card_name))
-                 files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
-                 continue
-             if answer != 'trigger':
-                 path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
-             else:
-                 path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
-             self.exec_cmd('open %s' % path)                    
+                logger.info('copy %s as %s' % (answer, card_name))
+                files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
+                continue
+            if answer != 'trigger':
+                path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+            else:
+                path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
+            self.exec_cmd('open %s' % path)                    
                  
         return mode
 
@@ -4365,7 +4369,7 @@ class SubProcesses(object):
         old_main = ''
 
         if not os.path.exists(os.path.join(path,'processes.dat')):
-            return make_info_html.get_subprocess_info_v4(path)
+            return SubProcesses.get_subP_info_v4(path)
 
         for line in open(os.path.join(path,'processes.dat')):
             main = line[:8].strip()
@@ -4535,4 +4539,17 @@ class GridPackCmd(MadEventCmd):
         
         self.update_status('finish refine', 'parton', makehtml=False)
 
+
+class AskforEditCard(cmd.OneLinePathCompletion):
+    """A class for asking a question where in addition you can have the 
+    set command define and modifying the param_card/run_card correctly"""
     
+    
+    def do_set(self, line):
+        """ """
+        print 'pass here'
+        
+    
+    
+
+

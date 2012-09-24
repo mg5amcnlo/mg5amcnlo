@@ -19,6 +19,7 @@ import cmd
 import logging
 import os
 import pydoc
+import re
 import signal
 import subprocess
 import sys
@@ -157,7 +158,7 @@ class BasicCmd(cmd.Cmd):
     def getTerminalSize(self):
         def ioctl_GWINSZ(fd):
             try:
-                import fcntl, termios, struct, os
+                import fcntl, termios, struct
                 cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,
                                                      '1234'))
             except:
@@ -173,7 +174,7 @@ class BasicCmd(cmd.Cmd):
                 pass
         if not cr:
             try:
-                cr = (env['LINES'], env['COLUMNS'])
+                cr = (os.environ['LINES'], os.environ['COLUMNS'])
             except:
                 cr = (25, 80)
         return int(cr[1])
@@ -397,7 +398,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         self.mother = None #This CMD interface was called from another one
         self.inputfile = None # input file (in non interactive mode)
         self.stored_line = '' # for be able to treat answer to question in input file 
-                             # answer which are not required.
+                              # answer which are not required.
 
         
         
@@ -638,17 +639,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 out.append(data)
         return out
 
-    def correct_splitting(line):
-        """if the line finish with a '-' the code splits in a weird way
-           on GNU_SPLITTING"""
-                
-        line = line.lstrip()
-        if line[-1] in [' ','\t']:
-            return '', line, len(line),len(enidx)
-        return text, line, begidx, endidx
-        
-        
-        
      
     # Write the list of command line use in this session
     def do_history(self, line):
@@ -824,7 +814,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     # Ask a question with nice options handling
     #===============================================================================    
     def ask(self, question, default, choices=[], path_msg=None, 
-            timeout = True, fct_timeout=None):
+            timeout = True, fct_timeout=None, ask_class=None):
         """ ask a question with some pre-define possibility
             path info is
         """
@@ -846,25 +836,27 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             question += "\033[%dm%s\033[0m, " % (4, default)    
             for data in choices[:9] + path_msg:
                 if default == data:
-                   continue
+                    continue
                 else:
                     question += "%s, " % data
                     
             if len(choices) > 9:
                 question += '... , ' 
             question = question[:-2]+']'
-                
-        if path_msg:
-            f = lambda q: raw_path_input(q, allow_arg=choices, default=default)
+        if ask_class:
+            obj = ask_class  
+        elif path_msg:
+            obj = OneLinePathCompletion
         else:
-            f = lambda q: smart_input(q, allow_arg=choices, default=default)
+            obj = SmartQuestion
 
+        question_instance = obj(allow_arg=choices, default=default)
         answer = self.check_answer_in_input_file(choices, path_msg)
         if answer is not None:
             return answer
         
         value =   Cmd.timed_input(question, default, timeout=timeout,
-                                    fct=f, fct_timeout=fct_timeout)
+                                 fct=question_instance, fct_timeout=fct_timeout)
 
         return value
         
@@ -1264,6 +1256,16 @@ class SmartQuestion(BasicCmd):
         self.default_value = str(default)
         cmd.Cmd.__init__(self, *arg, **opt)
 
+    def __call__(self, question, reprint_opt=True, **opts):
+        
+        self.question = question
+        for key,value in opts:
+            setattr(self, key, value)
+        if reprint_opt:
+            print question
+        return self.cmdloop()
+        
+
     def completenames(self, text, line, *ignored):
         prev_timer = signal.alarm(0) # avoid timer if any
         if prev_timer:
@@ -1276,6 +1278,18 @@ class SmartQuestion(BasicCmd):
         except Exception, error:
             print error
             
+    def reask(self, reprint_opt=True):
+        
+        prev_timer = signal.alarm(0) # avoid timer if any
+        if prev_timer: 
+            pat = re.compile('\[(\d*)s to answer\]')
+            if pat.search(self.question):
+                timeout = int(pat.search(self.question).groups()[0])
+            else:
+                timeout=20
+            signal.alarm(timeout)
+        return self(self.question, reprint_opt)
+        
     def default(self, line):
         """Default action if line is not recognized"""
 
@@ -1298,6 +1312,8 @@ class SmartQuestion(BasicCmd):
             elif str(self.value) == 'EOF':
                 self.value = self.default_value
                 return True
+            elif line and hasattr(self, 'do_%s' % line.split()[0]):
+                return self.reask()
             else: 
                 raise Exception
         except Exception:
@@ -1366,19 +1382,27 @@ class OneLinePathCompletion(SmartQuestion):
 
 
     def postcmd(self, stop, line):
-        
         try:    
             if self.value in self.allow_arg: 
                 return True
-            elif os.path.isfile(self.value):
+            elif self.value and os.path.isfile(self.value):
                 return os.path.relpath(self.value)
+            elif self.value and str(self.value) == 'EOF':
+                self.value = self.default_value
+                return True
+            elif line and hasattr(self, 'do_%s' % line.split()[0]):
+                pass # go to retry
+                reprint_opt = True          
             else:
                 raise Exception
-        except Exception, error:
+        except Exception, error:            
             print """not valid argument. Valid argument are file path or value in (%s).""" \
                           % ','.join(self.allow_arg)
             print 'please retry'
-            return False
+            reprint_opt = False 
+            
+        return self.reask(reprint_opt)
+
             
 # a function helper
 def raw_path_input(input_text, allow_arg=[], default=None):

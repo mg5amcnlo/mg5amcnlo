@@ -17,6 +17,7 @@
 
 import os
 import math
+import re
 import pickle
 try:
     import internal.files as files
