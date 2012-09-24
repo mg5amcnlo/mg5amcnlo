@@ -161,6 +161,10 @@ class AbstractRoutineBuilder(object):
     def apply_conjugation(self, pair=1):
         """ apply conjugation on self object"""
         
+        if pair > 1 or len([1 for s in self.spins if spins % 2 == 0])>2:
+            text = """Unable to deal with 4(or more) point interactions
+in presence of majorana particle/flow violation"""
+            raise ALOHAERROR, text
         
         old_id = 2 * pair - 1
         new_id = _conjugate_gap + old_id
