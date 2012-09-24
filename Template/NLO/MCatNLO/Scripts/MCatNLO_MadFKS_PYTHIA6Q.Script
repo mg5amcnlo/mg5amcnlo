@@ -421,8 +421,8 @@ cat <<EOF >> ./$ifile
   $IS_4L_PY                       ! .TRUE. if it is four-lepton production
 EOF
 
-mv $EXEC_NAMEFF MCATNLO_EXE
-mv $ifile MCATNLO_input
+mv $EXEC_NAMEFF MCATNLO_$MCMODE'_EXE'
+mv $ifile MCATNLO_$MCMODE'_input'
 }
 
 # the entry is the CM energy, the return value (beammom) is half

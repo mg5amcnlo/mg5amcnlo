@@ -974,19 +974,31 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """runs mcatnlo on the generated event file, to produce showered-events"""
         logger.info('   Prepairing MCatNLO run')
         shower = self.evt_file_to_mcatnlo(evt_file)
-        os.chdir(pjoin(self.me_dir, 'MCatNLO'))
         oldcwd = os.getcwd()
+        os.chdir(pjoin(self.me_dir, 'MCatNLO'))
 
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
         logger.info('   Compiling MCatNLO for %s...' % shower) 
         misc.call(['./MCatNLO_MadFKS.inputs > %s 2>&1' % mcatnlo_log], \
                     cwd = os.getcwd(), shell=True)
-        if not os.path.exists('MCATNLO_EXE'):
+        exe = 'MCATNLO_%s_EXE' % shower
+        if not os.path.exists(exe):
             raise aMCatNLOError('Compilation failed, check %s for details' % mcatnlo_log)
         logger.info('                     ... done')
-        logger.info('   Running MCatNLO (this may take some time)...')
-        misc.call(['./MCATNLO_EXE < MCATNLO_input >> %s 2>&1' % mcatnlo_log], \
-                    cwd = os.getcwd(), shell=True)
+        # create an empty dir where to run
+        count = 1
+        while os.path.isdir(pjoin(self.me_dir, 'MCATNLO', 'RUN_%s_%d' % \
+                        (shower, count))):
+            count += 1
+        rundir = pjoin(self.me_dir, 'MCATNLO', 'RUN_%s_%d' % \
+                        (shower, count))
+        os.mkdir(rundir)
+
+        logger.info('   Running MCatNLO in %s (this may take some time)...' % rundir)
+        os.chdir(rundir)
+        os.system('mv ../%s ../MCATNLO_%s_input .' % (exe, shower))
+        misc.call(['./%s < MCATNLO_%s_input >> %s 2>&1' % \
+                    (exe, shower, mcatnlo_log)], cwd = os.getcwd(), shell=True)
         os.chdir(oldcwd)
 
 

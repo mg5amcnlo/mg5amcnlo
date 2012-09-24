@@ -413,8 +413,8 @@ cat <<EOF >> ./$ifile
   $PI_STABLE_HW                   ! .TRUE. if one wants Pi0 stable
 EOF
 
-mv $EXEC_NAMEFF MCATNLO_EXE
-mv $ifile MCATNLO_input
+mv $EXEC_NAMEFF MCATNLO_$MCMODE'_EXE'
+mv $ifile MCATNLO_$MCMODE'_input'
 }
 
 # the entry is the CM energy, the return value (beammom) is half

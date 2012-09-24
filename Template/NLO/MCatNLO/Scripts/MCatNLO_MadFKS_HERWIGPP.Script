@@ -425,8 +425,8 @@ set /Herwig/Particles/h0:NominalMass $HGGMASS
 set /Herwig/Particles/h0:Width $HGGWIDTH
 # --------------------------------------------------------------------- #
 EOF
-mv $EXEC_NAMEFF MCATNLO_EXE
-mv $ifile MCATNLO_input
+mv $EXEC_NAMEFF MCATNLO_$MCMODE'_EXE'
+mv $ifile MCATNLO_$MCMODE'_input'
 
 finalizeHWPPinputfile ./MCATNLO_input
 ( $MCATNLO_EXE )
