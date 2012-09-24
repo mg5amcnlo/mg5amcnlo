@@ -3352,7 +3352,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self.check_launch(args, options)
         options = options.__dict__
         # args is now MODE PATH
-        print args
         
         if args[0].startswith('standalone'):
             ext_program = launch_ext.SALauncher(self, args[1], **options)

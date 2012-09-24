@@ -846,6 +846,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def run(self, mode, options):
         """runs aMC@NLO. Returns the name of the event file created"""
         logger.info('Starting run')
+        old_cwd = os.getcwd()
 
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
@@ -873,6 +874,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             nevents = int(self.read_run_card(\
                         pjoin(self.me_dir, 'Cards', 'run_card.dat')['nevents']))
             self.reweight_and_collect_events(options, mode, nevents)
+            os.chdir(old_cwd)
             return
 
         if mode == 'LO':
@@ -883,6 +885,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.info('   Computing cross-section')
             self.run_all(job_dict, [['0', 'born', '0']])
             os.system('./combine_results_FO.sh born_G*')
+            os.chdir(old_cwd)
             return
 
         if mode == 'NLO':
@@ -897,6 +900,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.info('   Computing cross-section')
             self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'grid']])
             os.system('./combine_results_FO.sh viSB* novB*')
+            os.chdir(old_cwd)
             return
 
         elif mode in ['aMC@NLO', 'aMC@LO']:
@@ -939,6 +943,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             #if cluster run, wait 15 sec so that event files are transferred back
             logger.info('Waiting while files are transferred back from the cluster nodes')
             time.sleep(15)
+
+        # chancge back to the original pwd
+        os.chdir(old_cwd)
 
         return self.reweight_and_collect_events(options, mode, nevents)
 
