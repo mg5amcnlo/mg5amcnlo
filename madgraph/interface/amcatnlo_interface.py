@@ -510,6 +510,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
     def do_launch(self, line):
         """Ask for editing the parameters and then execute the code (NLO or aMC@(N)LO)
         """
+        old_cwd = os.getcwd()
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _launch_parser.parse_args(argss)
@@ -529,6 +530,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         run.compile(mode, options) 
         evt_file = run.run(mode, options)
         run.run_mcatnlo(evt_file)
+        os.chdir(old_cwd)
                     
    
 class aMCatNLOInterfaceWeb(mg_interface.CheckValidForCmdWeb, aMCatNLOInterface):

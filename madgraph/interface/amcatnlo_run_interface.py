@@ -736,6 +736,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         evt_file = pjoin(os.getcwd(), argss[0])
         # check argument validity and normalise argument
         self.run_mcatnlo(evt_file)
+        os.chdir(root_path)
 
  
 
@@ -760,6 +761,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.ask_run_configuration(mode)
         self.compile(mode, options) 
         self.run(mode, options)
+        os.chdir(root_path)
 
         
     ############################################################################      
@@ -783,6 +785,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.ask_run_configuration(mode)
         self.compile(mode, options) 
         self.run(mode, options)
+        os.chdir(root_path)
 
         
     ############################################################################      
@@ -806,6 +809,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
         self.run_mcatnlo(evt_file)
+        os.chdir(root_path)
 
 
     ############################################################################      
@@ -822,6 +826,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         mode = {'FO': 'NLO', 'MC': 'aMC@NLO'}[argss[0]]
         self.ask_run_configuration(mode)
         self.compile(mode, options) 
+        os.chdir(root_path)
 
 
     def update_random_seed(self):
@@ -1268,6 +1273,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         gensym_log = pjoin(self.me_dir, 'gensym.log')
         test_log = pjoin(self.me_dir, 'test.log')
 
+        old_cwd = os.getcwd()
+
         #clean files
         os.system('rm -f %s' % 
                 ' '.join([amcatnlo_log, madloop_log, reweight_log, gensym_log, test_log]))
@@ -1286,6 +1293,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # If they exists, return
         if all([os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, exe)) \
                 for p_dir in p_dirs]) and options['nocompile']:
+            os.chdir(old_cwd)
             return
 
         libdir = pjoin(self.me_dir, 'lib')
@@ -1372,7 +1380,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
                     raise aMCatNLOError('Compilation failed, check %s for details' % reweight_log)
 
-        os.chdir(pjoin(self.me_dir))
+        os.chdir(old_cwd)
 
 
     def link_lhapdf(self, libdir):
