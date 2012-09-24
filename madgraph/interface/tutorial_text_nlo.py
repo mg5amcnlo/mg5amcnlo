@@ -80,7 +80,7 @@ been created which can be used in order to run aMC@NLO.
 Additionally to the commands in the bin directory (see 
 MY_FIRST_MG5_RUN/README), you can also generate your events/compute the 
 cross-section from this interface. 
-You will generate events to be showered à la MC@NLO, compute the theoretical
+You will generate events to be showered a la MC@NLO, compute the theoretical
 and PDF error on the fly (if asked for in the run_card.dat) and shower the events 
 with the parton_shower montecarlo you chosed in the run_card.dat 
 Please Enter:
