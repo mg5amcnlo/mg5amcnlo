@@ -1687,3 +1687,20 @@ c spin-3/2 fermion wavefunction
 
       return
       end
+
+
+      complex*16 function HEAVTHETA(cond, out_true, out_false)
+
+      double precision cond
+      complex*16 out_true, out_false
+
+      if (cond.ge.0d0) then
+        HEAVTHETA = out_true
+      else
+        HEAVTHETA = out_false
+      endif
+
+      return
+      end
+
+
