@@ -1004,8 +1004,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         logger.info('   Running MCatNLO in %s (this may take some time)...' % rundir)
         os.chdir(rundir)
         os.system('mv ../%s ../MCATNLO_%s_input .' % (exe, shower))
-        misc.call(['./%s < MCATNLO_%s_input >> %s 2>&1' % \
-                    (exe, shower, mcatnlo_log)], cwd = os.getcwd(), shell=True)
+        os.system('ln -s %s %s' % (evt_file, os.path.basename(evt_file)))
+        misc.call(['./%s < MCATNLO_%s_input > amcatnlo_run.log 2>&1' % \
+                    (exe, shower)], cwd = os.getcwd(), shell=True)
         os.chdir(oldcwd)
 
 
