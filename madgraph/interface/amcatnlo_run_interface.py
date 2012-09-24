@@ -1035,12 +1035,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         output.close()
         return shower
 
-        
-
-
-        
-
-
 
     def run_reweight(self, only):
         """runs the reweight_xsec_events eecutables on each sub-event file generated
@@ -1055,14 +1049,15 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             else:
                 raise aMCatNLOError('Cannot find event file information')
 
-        reweight_log = pjoin(self.me_dir, 'reweight.log')
         #read the nevents_unweighted file to get the list of event files
         file = open(nev_unw)
         lines = file.read().split('\n')
         file.close()
         # make copy of the original nevent_unweighted file
         os.system('cp %s %s' % (nev_unw, nev_unw + '.orig'))
-        evt_files = [line.split()[0] for line in lines if line]
+        # loop over lines (all but the last one whith is empty) and check that the
+        #  number of events is not 0
+        evt_files = [line.split()[0] for line in lines[:-1] if line.split()[1] != '0']
         #prepare the job_dict
         job_dict = {}
         for i, evt_file in enumerate(evt_files):
@@ -1083,8 +1078,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             last_line = subprocess.Popen('tail -n1 %s.rwgt ' % evt_file, \
                 shell = True, stdout = subprocess.PIPE).stdout.read().strip()
             if last_line != "</LesHouchesEvents>":
-                raise aMCatNLOError('An error occurred during reweight.' + \
-                      ' Check %s for details' % reweight_log)
+                raise aMCatNLOError('An error occurred during reweight. Check the' + \
+                        '\'reweight_xsec_events.output\' files inside the ' + \
+                        '\'SubProcesses/P*/G*/ directories for details')
 
         #update file name in nevents_unweighted
         newfile = open(nev_unw, 'w')
