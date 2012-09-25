@@ -7,10 +7,10 @@
 ##### RUN
 # prefix for input file, event file, executable respectively
 FPREFIX=
-EVPREFIX=events_2
+EVPREFIX=events_1
 EXEPREFIX=
 # number of events to shower. Negative if the whole file
-NEVENTS=-1
+NEVENTS=10000
 # MCMODE can be = HERWIG6, PYTHIA6Q, (HERWIGPP, PYTHIA6PT, PYTHIA8)
 MCMODE=HERWIG6
 # path to source MC codes
@@ -35,7 +35,7 @@ EXTRALIBS="stdhep Fmcfio"
 # set the following variable equal to the paths to the libraries which 
 # need be linked. Library paths are separated by white spaces. 
 # Note: LHAPDF is a special case, and must not be included here
-EXTRAPATHS="/Users/marcozaro/PhD/mg5/FKS5/FKS5/STDHEP/stdhep-5-06-01/lib"
+EXTRAPATHS="../../lib"
 # set the following variable equal to the paths to the directories which 
 # contain header files needed by C++ files. Directory names are separated 
 # by white spaces

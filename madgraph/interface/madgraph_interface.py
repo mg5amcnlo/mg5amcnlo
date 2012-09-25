@@ -1701,7 +1701,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation', 
                    'gauge','lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
-    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
+    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 'StdHEP']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
@@ -3138,7 +3138,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         name = {'td_mac': 'td', 'td_linux':'td', 'Delphes':'Delphes', 
                 'pythia-pgs':'pythia-pgs', 'ExRootAnalysis': 'ExRootAnalysis',
-                'MadAnalysis':'MadAnalysis'}
+                'MadAnalysis':'MadAnalysis', 'StdHEP':'StdHEP'}
         name = name[args[0]]
         
         try:
@@ -3155,6 +3155,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Untar the file
         returncode = misc.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR, 
                                      stdout=open(os.devnull, 'w'))
+
         if returncode:
             raise MadGraph5Error, 'Fail to download correctly the File. Stop'
         
@@ -3167,6 +3168,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             else:
                 created_name = created_name[0]
             files.mv(pjoin(MG5DIR, created_name), pjoin(MG5DIR, name))
+
+
         logger.info('compile %s. This might takes a while.' % name)
         
         # Modify Makefile for pythia-pgs on Mac 64 bit
@@ -3206,7 +3209,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
             status = misc.compile(mode='', cwd = os.path.join(MG5DIR, name))
         if not status:
-            logger.info('compilation succeeded')
+            logger.info('Compilation succeeded')
         else:
             logger.warning('Error detected during the compilation. Please check the compilation error and run make manually.')
 
@@ -4043,6 +4046,21 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False)
+
+            #link the StdHEP libraries if StdHep has been installed
+            if os.path.exists(pjoin(MG5DIR, 'StdHEP', 'lib', 'libstdhep.a')) \
+              and os.path.exists(pjoin(MG5DIR, 'StdHEP', 'lib', 'libFmcfio.a')):
+                if not os.path.islink(pjoin(self._export_dir, 'lib', 'libstdhep.a')):
+                    os.symlink(pjoin(MG5DIR, 'StdHEP', 'lib', 'libstdhep.a'),\
+                               pjoin(self._export_dir, 'lib', 'libstdhep.a'))
+                if not os.path.islink(pjoin(self._export_dir, 'lib', 'libFmcfio.a')):
+                    os.symlink(pjoin(MG5DIR, 'StdHEP', 'lib', 'libFmcfio.a'),\
+                               pjoin(self._export_dir, 'lib', 'libFmcfio.a'))
+                logger.info('StdHEP is installed, libraries heve been linked.')
+            else:
+                logger.warning('StdHEP is not installed. \nIf you want to shower events ' + \
+                        'with MC@NLO please install it by typing "install StdHEP" and ' + \
+                        'regenerate the process')
 
         elif self._export_format == 'madevent':          
             # Create configuration file [path to executable] for madevent

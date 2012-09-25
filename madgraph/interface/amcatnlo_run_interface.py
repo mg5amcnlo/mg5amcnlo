@@ -732,10 +732,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def do_run_mcatnlo(self, line):
         """ calculates LO/NLO cross-section, using madevent_vegas """
         argss = self.split_arg(line)
+        # check argument validity and normalise argument
         self.check_run_mcatnlo(argss, {})
         evt_file = pjoin(os.getcwd(), argss[0])
-        # check argument validity and normalise argument
-        self.run_mcatnlo(evt_file)
+        if self.check_for_stdhep():
+            self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
  
@@ -808,7 +809,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.ask_run_configuration(mode)
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
-        self.run_mcatnlo(evt_file)
+        if self.check_for_stdhep():
+            self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
 
@@ -827,6 +829,21 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.ask_run_configuration(mode)
         self.compile(mode, options) 
         os.chdir(root_path)
+
+    def check_for_stdhep(self):
+        """Check that StdHEP libraries are installed in the MadGraph directory
+        If this is the case, link them to the lib folder"""
+        if os.path.islink(pjoin(self.me_dir, 'lib', 'libstdhep.a')) and \
+           os.path.islink(pjoin(self.me_dir, 'lib', 'libFmcfio.a')):
+            return True
+        else:
+            if aMCatNLO:
+                logger.warning('StdHep is needed to shower the generated event samples.\n' + \
+                    'Please install it and link the libraries in the lib dir.\n' + \
+                    'Note that you can install it in the MadGraph shell by typing ' + \
+                    '"install StdHEP", so that processes generated afetrwards will ' + \
+                    'automatically have them linked')
+            return False
 
 
     def update_random_seed(self):
