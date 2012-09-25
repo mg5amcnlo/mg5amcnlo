@@ -23,19 +23,19 @@ PYTHIAVER="pythia6426.o"
 # set the following variables equal to the list of object files that
 # you need when using the MC (for analysis purposes, for example)
 ### these are lines with a specific analyse
-HWUTI="mcatnlo_hwan_stdhep.o mcatnlo_hbook_gfortran.o"
-PYUTI="mcatnlo_pyan_stdhep.o mcatnlo_hbook_gfortran.o"
+HWUTI="mcatnlo_hwanstp.o mcatnlo_hbook_gfortran.o"
+PYUTI="mcatnlo_pyanstp.o mcatnlo_hbook_gfortran.o"
 ### these are for the output in sthep format
 ###HWUTI="mcatnlo_hwan_stdhep.o"
 ###PYUTI="mcatnlo_pyan_stdhep.o"
 # set the following variable equal to the names of the libraries which 
 # need be linked. Library names are separated by white spaces. 
 # Note: LHAPDF is a special case, and must not be included here
-EXTRALIBS="stdhep Fmcfio"
+EXTRALIBS=
 # set the following variable equal to the paths to the libraries which 
 # need be linked. Library paths are separated by white spaces. 
 # Note: LHAPDF is a special case, and must not be included here
-EXTRAPATHS="/Users/marcozaro/PhD/mg5/FKS5/FKS5/STDHEP/stdhep-5-06-01/lib"
+EXTRAPATHS=
 # set the following variable equal to the paths to the directories which 
 # contain header files needed by C++ files. Directory names are separated 
 # by white spaces

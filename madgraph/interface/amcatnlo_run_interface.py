@@ -1009,9 +1009,26 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         logger.info('   Running MCatNLO in %s (this may take some time)...' % rundir)
         os.chdir(rundir)
         os.system('mv ../%s ../MCATNLO_%s_input .' % (exe, shower))
-        os.system('ln -s %s %s' % (evt_file, os.path.basename(evt_file)))
+        evt_name = os.path.basename(evt_file)
+        os.system('ln -s %s %s' % (evt_file, evt_name))
         misc.call(['./%s < MCATNLO_%s_input > amcatnlo_run.log 2>&1' % \
                     (exe, shower)], cwd = os.getcwd(), shell=True)
+        #copy the showered stdhep file back in events
+        if os.path.exists(evt_name + '.hep'):
+            count = 1
+            while os.path.exists('%s_%s_%d.hep' % (evt_file, shower, count)):
+                count += 1
+            hep_file = '%s_%s_%d.hep' % (evt_file, shower, count)
+            os.system('mv %s %s' % (evt_name + '.hep', hep_file)) 
+
+            logger.info(('The file %s has been generated. \nIt contains showered' + \
+                        ' and hadronized events in the StdHEP format obtained' + \
+                        ' showering the parton-level event file %s.') % \
+                        (hep_file, evt_file))
+
+            
+
+
         os.chdir(oldcwd)
 
 

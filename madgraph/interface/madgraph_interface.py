@@ -187,7 +187,7 @@ class CmdExtended(cmd.Cmd):
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
         "*           Type 'tutorial' to learn how MG5 works         *\n" + \
-        "*      Type 'tutorial_nlo' to learn how aMC@NLO works      *\n" + \
+        "*      Type 'tutorial nlo' to learn how aMC@NLO works      *\n" + \
         "*                                                          *\n" + \
         "************************************************************")
         
@@ -307,7 +307,8 @@ class HelpToCmd(cmd.HelpCmd):
 
     def help_tutorial(self):
         logger.info("syntax: tutorial [" + "|".join(self._tutorial_opts) + "]")
-        logger.info("-- start/stop the tutorial mode")
+        logger.info("-- start/stop the MG5 tutorial mode")
+        logger.info("-- nlo starts aMC@NLO tutorial mode")
 
     def help_open(self):
         logger.info("syntax: open FILE  ")
@@ -1695,7 +1696,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'checks', 'parameters', 'options', 'coupling_order','variable']
     _add_opts = ['process']
     _save_opts = ['model', 'processes', 'options']
-    _tutorial_opts = ['start', 'stop']
+    _tutorial_opts = ['nlo', 'start', 'stop']
     _switch_opts = ['mg5','aMC@NLO','ML5']
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation', 
                    'gauge','lorentz', 'brs']
@@ -2188,6 +2189,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if len(args) > 0 and args[0] == "stop":
             logger_tuto.info("\n\tThanks for using the tutorial!")
             logger_tuto.setLevel(logging.ERROR)
+            logger_tuto_nlo.info("\n\tThanks for using the tutorial!")
+            logger_tuto_nlo.setLevel(logging.ERROR)
+        elif len(args) > 0 and args[0] == "nlo":
+            logger_tuto_nlo.setLevel(logging.INFO)
         else:
             logger_tuto.setLevel(logging.INFO)
 
@@ -2197,22 +2202,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        "please run from a" + \
                        "\n\t         valid MG_ME directory.")
 
-
-    def do_tutorial_nlo(self, line):
-        """Activate/deactivate the NLO tutorial mode."""
-
-        args = self.split_arg(line)
-        if len(args) > 0 and args[0] == "stop":
-            logger_tuto_nlo.info("\n\tThanks for using the tutorial!")
-            logger_tuto_nlo.setLevel(logging.ERROR)
-        else:
-            logger_tuto_nlo.setLevel(logging.INFO)
-
-        if not self._mgme_dir:
-            logger_tuto_nlo.info(\
-                       "\n\tWarning: To use all features in this tutorial, " + \
-                       "please run from a" + \
-                       "\n\t         valid MG_ME directory.")
 
 
     def draw(self, line,selection='all'):
