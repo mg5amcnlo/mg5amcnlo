@@ -34,7 +34,6 @@ mg5>generate p p > e+ ve [QCD]
 Note that a space is mandatory between the particle names and that the [QCD] 
 specifies that you want to do NLO in QCD. Couplings different than QCD cannot
 be perturbed yet.
-Note also that the interface automatically switched to the aMC@NLO one.
 """
 
 generate = """
@@ -82,7 +81,8 @@ MY_FIRST_MG5_RUN/README), you can also generate your events/compute the
 cross-section from this interface. 
 You will generate events to be showered a la MC@NLO, compute the theoretical
 and PDF error on the fly (if asked for in the run_card.dat) and shower the events 
-with the parton_shower montecarlo you chosed in the run_card.dat 
+with the parton_shower MonteCarlo specified in the run_card.dat, generating a file in
+the StdHEP format.
 Please Enter:
 aMC@NLO> launch
 (you can interrupt the computation to continue the tutorial by pressing Ctrl-C)
@@ -100,93 +100,4 @@ In order to close this tutorial please enter
 aMC@NLO>tutorial stop
 If you want to exit MG5 please enter
 aMC@NLO>exit
-
-But you can also continue the tutorial to learn some other useful
-commands:
-d) How to load a model
-e) How to define a multi-particle label 
-f) How to store a history of the commands in a session
-g) How to call shell commands from MG5
-h) How to draw the diagrams for your processes without generating
-   MadEvent output
-
-To import a model, write:
-aMC@NLO>import model mssm
 """
-
-import_model ="""
-You have successfully imported a model. If you followed the tutorial
-this is the MSSM.
-
-If you want to know more information about this model you can use the
-following commands:
-aMC@NLO>display particles
-aMC@NLO>display interactions
-aMC@NLO>display multiparticles
-which show information on the particles and the vertices of the model
-or presently defined multiparticle labels.
-
-To define a multiparticle label, i.e. a label corresponding to a set
-of particles, write:
-aMC@NLO>define v = w+ w- z a
-This defines the symbol \"v\" to correspond to any EW vector boson.
-"""
-import_model_v4 = import_model
-
-define = """
-You have just defined a multiparticle label.
-If you followed the tutorial, the label is \"v\"
-
-Note that some multiparticles such as as p, j, l+, l- are
-predefined. Type
-aMC@NLO>display multiparticles
-to see their definitions.
-
-MG5 allows you to store a file with the list of command that you have
-used in an interactive session:
-aMC@NLO>history my_mg5_cmd.dat
-"""
-
-history = """
-You have written a history file. If you followed the tutorial this
-should be ./my_mg5_cmd.dat. In order to load a history file and
-execute the commands in it, you can do:
-aMC@NLO>import command my_mg5_cmd.dat
-or from the shell:
-./bin/mg5 my_mg5_cmd.dat
-
-It is also possible to display this file directly from MG5:
-aMC@NLO>open ./my_mg5_cmd.dat
-"""
-
-
-open_index = output
-
-open = """
-Note that in order to open some file, you might be need to use a shell command.
-Any shell command can be launched by MG5, by running \"shell\" or
-starting the line by an exclamation mark (!).
-
-The final command of the tutorial is display diagrams. This allows you to draw and
-look at the diagrams for your processes (in eps format) before
-creating an output for a given format. This can be useful for a fast
-check of your process. For this last command, we will also show how combine
-different command in a single line: 
-aMC@NLO>generate p p > go go; display diagrams
-
-Note that when you run output [madevent_v4], the diagrams are
-automatically written to the matrix.ps files in subprocess
-directory, just like with MadGraph 4.
-"""
-
-display_diagrams = """
-This command was the last step of the tutorial. 
-Quit the tutorial by typing:
-aMC@NLO>tutorial stop
-
-Thanks for using MG5.
-"""
-
-
-
-

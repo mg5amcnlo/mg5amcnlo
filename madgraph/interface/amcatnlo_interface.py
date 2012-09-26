@@ -287,58 +287,58 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
                              'born': self._fks_multi_proc.get_born_amplitudes,
                              'loop': self._fks_multi_proc.get_virt_amplitudes,
                              'virt': self._fks_multi_proc.get_virt_amplitudes}
-        if args[0] == 'diagrams':
-            if len(args)>=2 and args[1] in get_amps_dict.keys():
-                get_amps = get_amps_dict[args[1]]
-                self._curr_amps = get_amps()
-                #check that if one requests the virt diagrams, there are virt_amplitudes
-                if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
-                    raise self.InvalidCmd('No virtuals have been generated')
-                self.draw(' '.join(args[2:]))
-            else:
-                self._curr_amps = get_amps_dict['born']() + get_amps_dict['real']() + \
-                                  get_amps_dict['virt']()
-                self.draw(' '.join(args[1:]))
-            # set _curr_amps back to empty
-            self._curr_amps = diagram_generation.AmplitudeList()
+            if args[0] == 'diagrams':
+                if len(args)>=2 and args[1] in get_amps_dict.keys():
+                    get_amps = get_amps_dict[args[1]]
+                    self._curr_amps = get_amps()
+                    #check that if one requests the virt diagrams, there are virt_amplitudes
+                    if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
+                        raise self.InvalidCmd('No virtuals have been generated')
+                    self.draw(' '.join(args[2:]))
+                else:
+                    self._curr_amps = get_amps_dict['born']() + get_amps_dict['real']() + \
+                                      get_amps_dict['virt']()
+                    self.draw(' '.join(args[1:]))
+                # set _curr_amps back to empty
+                self._curr_amps = diagram_generation.AmplitudeList()
 
-        if args[0] == 'diagrams_text':
-            if len(args)>=2 and args[1] in get_amps_dict.keys():
-                get_amps = get_amps_dict[args[1]]
-                self._curr_amps = get_amps()
-                #check that if one requests the virt diagrams, there are virt_amplitudes
-                if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
-                    raise self.InvalidCmd('No virtuals have been generated')
-                text = "\n".join([amp.nice_string() for amp in self._curr_amps])
-            else:
-                text = 'Born diagrams:\n' 
-                text += '\n'.join(amp.nice_string() for amp in get_amps_dict['born']())
-                text += '\n\nReal diagrams:'
-                text += '\n'.join(amp.nice_string() for amp in get_amps_dict['real']())
-                text += '\n\nLoop diagrams:\n'
-                text += '\n'.join(amp.nice_string() for amp in get_amps_dict['virt']())
-            pydoc.pager(text)
+            if args[0] == 'diagrams_text':
+                if len(args)>=2 and args[1] in get_amps_dict.keys():
+                    get_amps = get_amps_dict[args[1]]
+                    self._curr_amps = get_amps()
+                    #check that if one requests the virt diagrams, there are virt_amplitudes
+                    if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
+                        raise self.InvalidCmd('No virtuals have been generated')
+                    text = "\n".join([amp.nice_string() for amp in self._curr_amps])
+                else:
+                    text = 'Born diagrams:\n' 
+                    text += '\n'.join(amp.nice_string() for amp in get_amps_dict['born']())
+                    text += '\n\nReal diagrams:'
+                    text += '\n'.join(amp.nice_string() for amp in get_amps_dict['real']())
+                    text += '\n\nLoop diagrams:\n'
+                    text += '\n'.join(amp.nice_string() for amp in get_amps_dict['virt']())
+                pydoc.pager(text)
 
-            # set _curr_amps back to empty
-            self._curr_amps = diagram_generation.AmplitudeList()
-                
-        elif args[0] == 'processes':
-            if len(args)>=2 and args[1] in get_amps_dict.keys():
-                get_amps = get_amps_dict[args[1]]
-                self._curr_amps = get_amps()
-                #check that if one requests the virt diagrams, there are virt_amplitudes
-                if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
-                    raise self.InvalidCmd('No virtuals have been generated')
-                print '\n'.join(amp.nice_string_processes() for amp in self._curr_amps)
-            else:
-                print 'Born processes:'
-                print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['born']())
-                print 'Real processes:'
-                print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['real']())
-                print 'Loop processes:'
-                print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['virt']())
-            # set _curr_amps back to empty
-            self._curr_amps = diagram_generation.AmplitudeList()
+                # set _curr_amps back to empty
+                self._curr_amps = diagram_generation.AmplitudeList()
+                    
+            elif args[0] == 'processes':
+                if len(args)>=2 and args[1] in get_amps_dict.keys():
+                    get_amps = get_amps_dict[args[1]]
+                    self._curr_amps = get_amps()
+                    #check that if one requests the virt diagrams, there are virt_amplitudes
+                    if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
+                        raise self.InvalidCmd('No virtuals have been generated')
+                    print '\n'.join(amp.nice_string_processes() for amp in self._curr_amps)
+                else:
+                    print 'Born processes:'
+                    print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['born']())
+                    print 'Real processes:'
+                    print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['real']())
+                    print 'Loop processes:'
+                    print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['virt']())
+                # set _curr_amps back to empty
+                self._curr_amps = diagram_generation.AmplitudeList()
 
         else:
             mg_interface.MadGraphCmd.do_display(self,line,output)
