@@ -1027,8 +1027,11 @@ class LorentzObjectRepresentation(dict):
             return self
         
         if not hasattr(obj, 'vartype'):
-            obj = LorentzObjectRepresentation(obj, [], [])
-            
+            assert self.lorentz_ind == []
+            assert self.spin_ind == []
+            new = self[(0,)] + obj * fact
+            out = LorentzObjectRepresentation(new, [], [])
+            return out
         
         assert(obj.vartype == 4 == self.vartype) # are LorentzObjectRepresentation
         

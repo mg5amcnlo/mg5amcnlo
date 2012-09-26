@@ -124,8 +124,8 @@ class AbstractRoutineBuilder(object):
         self.contracted = {}
         self.fct = {}
         if hasattr(lorentz, 'formfactors') and lorentz.formfactors:
-            for formf in lorents.formfactors:
-                pat = re.compile(r'\b%\b' % formf.name)
+            for formf in lorentz.formfactors:
+                pat = re.compile(r'\b%s\b' % formf.name)
                 self.lorentz_expr = pat.sub('(%s)' % formf.value, self.lorentz_expr)
             
     def compute_routine(self, mode, tag=[], factorize=True):
@@ -215,6 +215,7 @@ class AbstractRoutineBuilder(object):
         #lorentz_expr = momentum_pattern.sub(r'-P(\1,\2)', self.lorentz_expr)
         
         lorentz_expr = self.lorentz_expr
+        print lorentz_expr
         calc = aloha_parsers.ALOHAExpressionParser()
         lorentz_expr = calc.parse(lorentz_expr)
         return lorentz_expr

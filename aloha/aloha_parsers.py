@@ -186,6 +186,7 @@ class UFOExpressionParser(object):
 
     def p_error(self, p):
         if p:
+            print p
             raise Exception("Syntax error at '%s' in '%s'" % (p.value, self.f))
         else:
             logger.error("Syntax error at EOF")

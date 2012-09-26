@@ -264,7 +264,7 @@ class WriteALOHA:
             vartype = obj.vartype
         except:
             return self.change_number_format(obj)
-
+        
         # The order is from the most current one to the les probable one
         if vartype == 1 : # AddVariable
             return self.write_obj_Add(obj, prefactor)
@@ -346,7 +346,9 @@ class WriteALOHA:
                                                           for obj in obj_list]))
             if value not in [1,-1]:
                 file_str.write(')')
-                
+        if number:
+            total = sum(number)
+            file_str.write('+ %s' % self.change_number_format(total))
         file_str.write(')')
         return file_str.getvalue()
                 
@@ -491,6 +493,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         # Check if we are in formfactor mode
         if self.has_model_parameter:
             out.write(' include "../MODEL/input.inc"\n')
+            out.write(' include "../MODEL/coupl.inc"\n')
         argument_var = [name for type,name in self.call_arg]
         # define the complex number CI = 0+1j
         if 'MP' in self.tag:
