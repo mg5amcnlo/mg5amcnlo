@@ -1701,7 +1701,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation', 
                    'gauge','lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
-    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 'StdHEP']
+    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 'MCatNLO-utilities']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
@@ -3138,7 +3138,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         name = {'td_mac': 'td', 'td_linux':'td', 'Delphes':'Delphes', 
                 'pythia-pgs':'pythia-pgs', 'ExRootAnalysis': 'ExRootAnalysis',
-                'MadAnalysis':'MadAnalysis', 'StdHEP':'StdHEP'}
+                'MadAnalysis':'MadAnalysis', 'MCatNLO-utilities':'MCatNLO-utilities'}
         name = name[args[0]]
         
         try:
@@ -4047,19 +4047,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False)
 
-            #link the StdHEP libraries if StdHep has been installed
-            if os.path.exists(pjoin(MG5DIR, 'StdHEP', 'lib', 'libstdhep.a')) \
-              and os.path.exists(pjoin(MG5DIR, 'StdHEP', 'lib', 'libFmcfio.a')):
-                if not os.path.islink(pjoin(self._export_dir, 'lib', 'libstdhep.a')):
-                    os.symlink(pjoin(MG5DIR, 'StdHEP', 'lib', 'libstdhep.a'),\
-                               pjoin(self._export_dir, 'lib', 'libstdhep.a'))
-                if not os.path.islink(pjoin(self._export_dir, 'lib', 'libFmcfio.a')):
-                    os.symlink(pjoin(MG5DIR, 'StdHEP', 'lib', 'libFmcfio.a'),\
-                               pjoin(self._export_dir, 'lib', 'libFmcfio.a'))
-                logger.info('StdHEP is installed, libraries heve been linked.')
+            # copy the MCatNLO directory from mcatnlo-utils inside the exported dir
+            if os.path.isdir(pjoin(MG5DIR, 'MCatNLO-utilities')):
+                os.system('cp -r %s %s' % \
+                        (pjoin(MG5DIR, 'MCatNLO-utilities', 'MCatNLO'), self._export_dir))
             else:
-                logger.warning('StdHEP is not installed. \nIf you want to shower events ' + \
-                        'with MC@NLO please install it by typing "install StdHEP" and ' + \
+                logger.warning('MCatNLO-utilities is not installed. \nIf you want to shower events ' + \
+                        'with MC@NLO please install it by typing "install MCatNLO-utilities" and ' + \
                         'regenerate the process')
 
         elif self._export_format == 'madevent':          

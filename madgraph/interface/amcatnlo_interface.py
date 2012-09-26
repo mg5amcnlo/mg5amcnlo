@@ -556,7 +556,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         run.ask_run_configuration(mode)
         run.compile(mode, options) 
         evt_file = run.run(mode, options)
-        if run.check_for_stdhep():
+        if run.check_mcatnlo_dir():
             run.run_mcatnlo(evt_file)
         os.chdir(old_cwd)
                     

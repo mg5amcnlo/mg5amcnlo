@@ -735,7 +735,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # check argument validity and normalise argument
         self.check_run_mcatnlo(argss, {})
         evt_file = pjoin(os.getcwd(), argss[0])
-        if self.check_for_stdhep():
+        if self.check_mcatnlo_dir():
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
@@ -809,7 +809,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.ask_run_configuration(mode)
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
-        if self.check_for_stdhep():
+        if self.check_mcatnlo_dir():
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
@@ -830,19 +830,18 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.compile(mode, options) 
         os.chdir(root_path)
 
-    def check_for_stdhep(self):
-        """Check that StdHEP libraries are installed in the MadGraph directory
-        If this is the case, link them to the lib folder"""
-        if os.path.islink(pjoin(self.me_dir, 'lib', 'libstdhep.a')) and \
-           os.path.islink(pjoin(self.me_dir, 'lib', 'libFmcfio.a')):
+    def check_mcatnlo_dir(self):
+        """Check that the MCatNLO dir (with files to run the parton-shower has 
+        been copied inside the exported direcotry"""
+        if os.path.isdir(pjoin(self.me_dir, 'MCatNLO')):
             return True
         else:
             if aMCatNLO:
-                logger.warning('StdHep is needed to shower the generated event samples.\n' + \
-                    'Please install it and link the libraries in the lib dir.\n' + \
+                logger.warning('MCatNLO is needed to shower the generated event samples.\n' + \
+                    'Please install it and copy the MCatNLO directory inside the exported dir.\n' + \
                     'Note that you can install it in the MadGraph shell by typing ' + \
-                    '"install StdHEP", so that processes generated afetrwards will ' + \
-                    'automatically have them linked')
+                    '"install MCatNLO-utilities", so that processes generated afetrwards will ' + \
+                    'have it automatically')
             return False
 
 
