@@ -119,7 +119,6 @@ class Computation(dict):
         return new
     
     def add_function_expression(self, fct_tag, *args):
-
         tag = 'FCT%s' % len(self.fct_expr)
         argument = []
         for expression in args:

@@ -17,6 +17,8 @@
 different languages/frameworks (Fortran and Pythia8). Uses the PLY 3.3
 Lex + Yacc framework"""
 
+from __future__ import division
+
 import logging
 import os
 import re
@@ -186,7 +188,7 @@ class UFOExpressionParser(object):
 
     def p_error(self, p):
         if p:
-            print p
+            print p[:]
             raise Exception("Syntax error at '%s' in '%s'" % (p.value, self.f))
         else:
             logger.error("Syntax error at EOF")

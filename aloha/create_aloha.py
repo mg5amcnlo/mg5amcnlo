@@ -215,7 +215,6 @@ class AbstractRoutineBuilder(object):
         #lorentz_expr = momentum_pattern.sub(r'-P(\1,\2)', self.lorentz_expr)
         
         lorentz_expr = self.lorentz_expr
-        print lorentz_expr
         calc = aloha_parsers.ALOHAExpressionParser()
         lorentz_expr = calc.parse(lorentz_expr)
         return lorentz_expr
