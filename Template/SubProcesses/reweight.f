@@ -740,9 +740,8 @@ C   global variables
 C     Present process number
       INTEGER IMIRROR,IPROC
       COMMON/TO_MIRROR/IMIRROR, IPROC
-      integer              ISPROC 
-      DOUBLE PRECISION PD(0:MAXPROC)
-      COMMON /SubProc/ PD, ISPROC
+      integer              IPSEL
+      COMMON /SubProc/ IPSEL
       INTEGER SUBDIAG(MAXSPROC),IB(2)
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
       data IB/1,2/
@@ -753,6 +752,8 @@ c     q2bck holds the central q2fact scales
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
 
 C   local variables
       integer i, j, idi, idj
@@ -799,18 +800,11 @@ c   Set mimimum kt scale, depending on highest mult or not
      $     write(*,*) 'pt2min set to ',pt2min
 
 c   Set etot, used for non-radiating partons
-      etot=2d0*sqrt(ebeam(1)*ebeam(2))
+      etot=sqrt(stot)
 
 c   Since we use pdf reweighting, need to know particle identities
-      iprocset=1
-      np = isproc
-      xtarget=xran1(iseed)*pd(np)
-      iprocset = 1
-      do while (pd(iprocset) .lt. xtarget .and. iprocset .lt. np)
-         iprocset=iprocset+1
-      enddo
       if (btest(mlevel,1)) then
-         write(*,*) 'Set process number ',iprocset
+         write(*,*) 'Set process number ',ipsel
       endif
 c     Set incoming particle identities
       ipdgcl(1,igraphs(1),iproc)=idup(1,iprocset,iproc)

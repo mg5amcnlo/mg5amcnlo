@@ -23,6 +23,7 @@ import os
 import re
 import shutil
 import subprocess
+import aloha
 
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
@@ -135,6 +136,11 @@ class ProcessExporterPython(object):
             ndiags = len(matrix_element.get('diagrams'))
             replace_dict['ndiags'] = ndiags
 
+            # Extract helas calls
+            helas_calls = self.helas_call_writer.get_matrix_element_calls(\
+                                                    matrix_element, gauge_check)
+            replace_dict['helas_calls'] = "\n        ".join(helas_calls)
+
             # Extract nwavefuncs
             nwavefuncs = matrix_element.get_number_of_wavefunctions()
             replace_dict['nwavefuncs'] = nwavefuncs
@@ -153,10 +159,7 @@ class ProcessExporterPython(object):
             replace_dict['color_matrix_lines'] = \
                                                "\n        ".join(color_matrix_lines)
 
-            # Extract helas calls
-            helas_calls = self.helas_call_writer.get_matrix_element_calls(\
-                                                    matrix_element, gauge_check)
-            replace_dict['helas_calls'] = "\n        ".join(helas_calls)
+
 
             # Extract JAMP lines
             jamp_lines = self.get_jamp_lines(matrix_element)
@@ -345,7 +348,15 @@ class ProcessExporterPython(object):
         matrix element"""
 
         # Get all masses and widths used
-        parameters = [wf.get('mass') for wf in \
+        if aloha.complex_mass:
+            parameters = [(wf.get('mass') == 'ZERO' or wf.get('width')=='ZERO') 
+                          and wf.get('mass') or 'CMASS_%s' % wf.get('mass') 
+                          for wf in \
+                          matrix_element.get_all_wavefunctions()]
+            parameters += [wf.get('mass') for wf in \
+                      matrix_element.get_all_wavefunctions()]
+        else:
+            parameters = [wf.get('mass') for wf in \
                       matrix_element.get_all_wavefunctions()]
         parameters += [wf.get('width') for wf in \
                        matrix_element.get_all_wavefunctions()]

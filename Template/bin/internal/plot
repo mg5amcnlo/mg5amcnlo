@@ -66,12 +66,7 @@ for file in ma_plot??? ; do
   $td/td $file\.top
 done
 
-
 for file in ma_plot???.ps ; do
-  echo ">> Converting file $file" >> log.convert
-  $MAdir/epstosmth --gsopt='-r60x60 -dGraphicsAlphaBits=4' --gsdev=jpeg $file
-done
-for file in DJR?.ps ; do
   echo ">> Converting file $file" >> log.convert
   $MAdir/epstosmth --gsopt='-r60x60 -dGraphicsAlphaBits=4' --gsdev=jpeg $file
 done

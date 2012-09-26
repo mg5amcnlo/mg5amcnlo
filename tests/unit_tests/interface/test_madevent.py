@@ -99,5 +99,5 @@ class TestMadEventCmd(unittest.TestCase):
             if obj.__doc__ and ':' in obj.__doc__:
                 category.add(obj.__doc__.split(':',1)[0])
                 
-        target = set(['Advanced commands'])
+        target = set(['Advanced commands', 'Require MG5 directory', 'Not in help'])
         self.assertEqual(target, category)

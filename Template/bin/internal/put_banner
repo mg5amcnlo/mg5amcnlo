@@ -20,6 +20,13 @@ else
     c=$1
 fi
 
+if [[  "$2" == ""  ]]; then
+    echo 'Enter random seed for the run'
+    read r
+else
+    r=$2
+fi
+
 
 if [[ -d Events ]]; then
     cd Events
@@ -81,8 +88,7 @@ if [[ -d Events ]]; then
 #  sed -e "s/^/#/g" b.txt > bb.txt
 #  cat bb.txt >> b.txt
 #now update the random seed
-    r=0
-    if [[ -e ../SubProcesses/randinit ]]; then
+    if [[ $r -eq 0 && -e ../SubProcesses/randinit ]]; then
 	source ../SubProcesses/randinit
 #	echo "Got r "
     fi

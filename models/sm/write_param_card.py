@@ -1,5 +1,5 @@
 
-__date__ = "3 june 2010"
+__date__ = "22 Sept 2011"
 __author__ = 'olivier.mattelaer@uclouvain.be'
 
 from function_library import *
@@ -151,7 +151,6 @@ class ParamCardWriter(object):
         """ write qnumber """
         from particles import all_particles
         import particles
-        print particles.__file__
         text="""#===========================================================\n"""
         text += """# QUANTUM NUMBERS OF NEW STATE(S) (NON SM PDG CODE)\n"""
         text += """#===========================================================\n\n"""
@@ -162,7 +161,7 @@ class ParamCardWriter(object):
             text += self.data % {'pdg': part.pdg_code,
                                  'name': part.name,
                                  'charge': 3 * part.charge,
-                                 'spin': 2 * part.spin + 1,
+                                 'spin': part.spin,
                                  'color': part.color,
                                  'antipart': part.name != part.antiname and 1 or 0}
         

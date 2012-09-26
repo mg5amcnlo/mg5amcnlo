@@ -20,7 +20,10 @@ import logging
 logger = logging.getLogger('madevent.stdout') # -> stdout
 
 pjoin = os.path.join
-
+try:
+    import madgraph.various.cluster as cluster
+except:
+    import internal.cluster as cluster
 
 class OneResult(object):
     
@@ -28,7 +31,8 @@ class OneResult(object):
         """Initialize all data """
         
         self.name = name
-        self.xsec = 0
+        self.axsec = 0  # Absolute cross section = Sum(abs(wgt))
+        self.xsec = 0 # Real cross section = Sum(wgt)
         self.xerru = 0  # uncorrelated error
         self.xerrc = 0  # correlated error
         self.nevents = 0
@@ -41,6 +45,7 @@ class OneResult(object):
         self.yerr_iter = []
         return
     
+    @cluster.multiple_try(nb_try=4,sleep=5)
     def read_results(self, filepath):
         """read results.dat and fullfill information"""
         
@@ -49,11 +54,11 @@ class OneResult(object):
             i+=1
             if i == 1:
                 data = [float(d) for d in line.split()]
-                self.xsec, self.xerru, self.xerrc, self.nevents, self.nw,\
-                         self.maxit, self.nunwgt, self.luminosity = data[:8]
+                self.axsec, self.xerru, self.xerrc, self.nevents, self.nw,\
+                         self.maxit, self.nunwgt, self.luminosity, self.wgt, self.xsec = data[:10]
                 if self.mfactor > 1:
                     self.luminosity /= self.mfactor
-                    #self.ysec_iter.append(self.xsec)
+                    #self.ysec_iter.append(self.axsec)
                     #self.yerr_iter.append(0)
                 continue
             try:
@@ -110,6 +115,7 @@ class Combine_results(list, OneResult):
         """compute the value associate to this combination"""
 
         self.compute_iterations()
+        self.axsec = sum([one.axsec for one in self])
         self.xsec = sum([one.xsec for one in self])
         self.xerrc = sum([one.xerrc for one in self])
         self.xerru = math.sqrt(sum([one.xerru**2 for one in self]))
@@ -118,6 +124,7 @@ class Combine_results(list, OneResult):
         self.nw = sum([one.nw for one in self])
         self.maxit = len(self.yerr_iter)  # 
         self.nunwgt = sum([one.nunwgt for one in self])  
+        self.wgt = 0
         self.luminosity = min([one.luminosity for one in self])
     
     def compute_iterations(self):
@@ -230,6 +237,7 @@ class Combine_results(list, OneResult):
             title = ''
             
         dico = {'cross': self.xsec,
+                'abscross': self.axsec,
                 'error': self.xerru,
                 'unit': unit,
                 'result_type': 'Cross-Section',
@@ -242,8 +250,8 @@ class Combine_results(list, OneResult):
     
     def write_results_dat(self, output_path):
         
-        line = '%s %s %s %s %s %s %s %s \n' % (self.xsec, self.xerru, self.xerrc,
-                 self.nevents, self.nw, self.maxit, self.nunwgt, self.luminosity)
+        line = '%s %s %s %s %s %s %s %s %s %s \n' % (self.axsec, self.xerru, self.xerrc,
+                 self.nevents, self.nw, self.maxit, self.nunwgt, self.luminosity, self.wgt, self.xsec)
         
         open(output_path,'w').writelines(line)
 

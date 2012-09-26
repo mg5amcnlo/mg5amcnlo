@@ -29,6 +29,12 @@ $(PROG): $(PROCESS) auto_dsig.o $(LIBS)
 gensym: $(SYMMETRY) configs.inc $(LIBS)
 	$(FC) $(FFLAGS) -o gensym $(SYMMETRY) $(LINKLIBS)
 
+$(LIBDIR)libmodel.$(libext): ../../Cards/param_card.dat
+	cd ../../Source/MODEL; make
+
+$(LIBDIR)libgeneric.$(libext): ../../Cards/run_card.dat
+	cd ../../Source; make
+
 # Dependencies
 
 driver.f: genps.inc qmass.inc

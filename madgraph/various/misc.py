@@ -37,7 +37,7 @@ except:
     import internal.files as files
     
 logger = logging.getLogger('cmdprint.ext_program')
-
+pjoin = os.path.join
    
 #===============================================================================
 # parse_info_str
@@ -194,6 +194,116 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
         raise MadGraph5Error, error_text
     return p.returncode
 
+def mod_compilator(directory, new='gfortran', current=None):
+    #define global regular expression
+    if type(directory)!=list:
+        directory=[directory]
+
+    #search file
+    file_to_change=find_makefile_in_dir(directory)
+    for name in file_to_change:
+        text = open(name,'r').read()
+        if new == 'g77' and current is None:
+            current = 'gfortran'
+        elif new == 'gfortran' and current is None:
+            current = 'g77'
+        pattern = re.compile(current)
+        text= pattern.sub(new, text)
+        open(name,'w').write(text)
+
+def detect_current_compiler(path):
+    """find the current compiler for the current directory"""
+    
+    comp = re.compile("^\s*FC\s*=\s*(\w+)\s*")
+    for line in open(path):
+        if comp.search(line):
+            compiler = comp.search(line).groups()[0]
+            return compiler
+
+def find_makefile_in_dir(directory):
+    """ return a list of all file starting with makefile in the given directory"""
+
+    out=[]
+    #list mode
+    if type(directory)==list:
+        for name in directory:
+            out+=find_makefile_in_dir(name)
+        return out
+
+    #single mode
+    for name in os.listdir(directory):
+        if os.path.isdir(directory+'/'+name):
+            out+=find_makefile_in_dir(directory+'/'+name)
+        elif os.path.isfile(directory+'/'+name) and name.lower().startswith('makefile'):
+            out.append(directory+'/'+name)
+        elif os.path.isfile(directory+'/'+name) and name.lower().startswith('make_opt'):
+            out.append(directory+'/'+name)
+    return out
+
+def rm_old_compile_file():
+
+    # remove all the .o files
+    os.path.walk('.', rm_file_extension, '.o')
+    
+    # remove related libraries
+    libraries = ['libblocks.a', 'libgeneric_mw.a', 'libMWPS.a', 'libtools.a', 'libdhelas3.a',
+                 'libdsample.a', 'libgeneric.a', 'libmodel.a', 'libpdf.a', 'libdhelas3.so', 'libTF.a', 
+                 'libdsample.so', 'libgeneric.so', 'libmodel.so', 'libpdf.so']
+    lib_pos='./lib'
+    [os.remove(os.path.join(lib_pos, lib)) for lib in libraries \
+                                 if os.path.exists(os.path.join(lib_pos, lib))]
+
+
+def rm_file_extension( ext, dirname, names):
+
+    [os.remove(os.path.join(dirname, name)) for name in names if name.endswith(ext)]
+
+
+
+# Control
+def check_system_error(value=1):
+    def deco_check(f):
+        def deco_f(arg, *args, **opt):
+            try:
+                return f(arg, *args, **opt)
+            except OSError, error:
+                if isinstance(arg, list):
+                    prog =  arg[0]
+                else:
+                    prog = arg[0]
+                
+                # Permission denied
+                if error.errno == 13:     
+                    if os.path.exists(prog):
+                        os.system('chmod +x %s' % prog)
+                    elif 'cwd' in opt and opt['cwd'] and \
+                                       os.path.isfile(pjoin(opt['cwd'],arg[0])):
+                        os.system('chmod +x %s' % pjoin(opt['cwd'],arg[0]))
+                    return f(arg, *args, **opt)
+                # NO such file or directory
+                elif error.errno == 2:
+                    # raise a more meaningfull error message
+                    raise Exception, '%s fails with no such file or directory' \
+                                                                           % arg            
+                else:
+                    raise
+        return deco_f
+    return deco_check
+
+
+@check_system_error()
+def call(arg, *args, **opt):
+    """nice way to call an external program with nice error treatment"""
+    return subprocess.call(arg, *args, **opt)
+
+@check_system_error()
+def Popen(arg, *args, **opt):
+    """nice way to call an external program with nice error treatment"""
+    return subprocess.Popen(arg, *args, **opt)
+
+                
+
+
 
 ################################################################################
 # TAIL FUNCTION
@@ -217,6 +327,7 @@ def tail(f, n, offset=None):
         if len(lines) >= to_read or pos == 0:
             return lines[-to_read:offset and -offset or None]
         avg_line_length *= 1.3
+        avg_line_length = int(avg_line_length)
 
 ################################################################################
 # LAST LINE FUNCTION
@@ -226,6 +337,60 @@ def get_last_line(fsock):
     
     return tail(fsock, 1)[0]
     
+class BackRead(file):
+    """read a file returning the lines in reverse order for each call of readline()
+This actually just reads blocks (4096 bytes by default) of data from the end of
+the file and returns last line in an internal buffer."""
+
+
+    def readline(self):
+        """ readline in a backward way """
+        
+        while len(self.data) == 1 and ((self.blkcount * self.blksize) < self.size):
+          self.blkcount = self.blkcount + 1
+          line = self.data[0]
+          try:
+            self.seek(-self.blksize * self.blkcount, 2) # read from end of file
+            self.data = (self.read(self.blksize) + line).split('\n')
+          except IOError:  # can't seek before the beginning of the file
+            self.seek(0)
+            data = self.read(self.size - (self.blksize * (self.blkcount-1))) + line
+            self.data = data.split('\n')
+    
+        if len(self.data) == 0:
+          return ""
+    
+        line = self.data.pop()
+        return line + '\n'
+
+    def __init__(self, filepos, blksize=4096):
+        """initialize the internal structures"""
+
+        # get the file size
+        self.size = os.stat(filepos)[6]
+        # how big of a block to read from the file...
+        self.blksize = blksize
+        # how many blocks we've read
+        self.blkcount = 1
+        file.__init__(self, filepos, 'rb')
+        # if the file is smaller than the blocksize, read a block,
+        # otherwise, read the whole thing...
+        if self.size > self.blksize:
+          self.seek(-self.blksize * self.blkcount, 2) # read from end of file
+        self.data = self.read(self.blksize).split('\n')
+        # strip the last item if it's empty...  a byproduct of the last line having
+        # a newline at the end of it
+        if not self.data[-1]:
+          self.data.pop()
+        
+    def next(self):
+        line = self.readline()
+        if line:
+            return line
+        else:
+            raise StopIteration
+
+
 
 
 #
