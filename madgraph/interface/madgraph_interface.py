@@ -1764,7 +1764,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
-                       'timeout': 90,
+                       'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
                        'text_editor':None,

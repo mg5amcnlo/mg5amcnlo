@@ -90,8 +90,10 @@ class Parameter (object):
         """ return a SLAH string """
 
         if self.format == 'float':
-            if self.lhablock == 'decay':
+            if self.lhablock == 'decay' and self.value != 'auto' :
                 return 'DECAY %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+            elif self.lhablock == 'decay' and self.value == 'auto' :
+                return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
             else:
                 return '      %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'str':

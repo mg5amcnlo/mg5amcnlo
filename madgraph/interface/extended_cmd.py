@@ -1247,9 +1247,10 @@ class SmartQuestion(BasicCmd):
 
     def preloop(self):
         """Initializing before starting the main loop"""
-        self.prompt = ''
+        self.prompt = '>'
         self.value = None
         BasicCmd.preloop(self)
+        
 
     def __init__(self,  allow_arg=[], default=None, mother_interface=None, 
                                                                    *arg, **opt):
@@ -1283,16 +1284,21 @@ class SmartQuestion(BasicCmd):
             print error
             
     def reask(self, reprint_opt=True):
-        
+        pat = re.compile('\[(\d*)s to answer\]')
         prev_timer = signal.alarm(0) # avoid timer if any
-        if prev_timer: 
-            pat = re.compile('\[(\d*)s to answer\]')
+        
+        if prev_timer:     
             if pat.search(self.question):
                 timeout = int(pat.search(self.question).groups()[0])
             else:
                 timeout=20
+            print
             signal.alarm(timeout)
-        return self(self.question, reprint_opt)
+        if reprint_opt:
+            if not prev_timer:
+                self.question = pat.sub('',self.question)
+            print self.question
+        return False
         
     def default(self, line):
         """Default action if line is not recognized"""

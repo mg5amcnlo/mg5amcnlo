@@ -51,7 +51,7 @@
 # Time allowed to answer question (if no answer takes default value)
 # 0: No time limit
 
-#timeout = 20
+#timeout = 60
 
 # Pythia8 Path.
 # Define the path to the pythia8 directory.

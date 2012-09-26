@@ -1527,7 +1527,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
-                       'timeout': 90,
+                       'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
                        'text_editor':None,
@@ -4566,26 +4566,33 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # model.
         for bname, block in default_param.items():
             for lha_id, param in block.param_dict.items():
+                all_var = []
                 comment = param.comment
                 # treat merge parameter
                 if comment.strip().startswith('set of param :'):
-                    allvar = re.findall(r'''[^-]1\*(\w*)\b''')
-                    for var in allvar:
-                        var = var.lower()
-                        self.pname2block[var] = (bname, lha_id)
+                    all_var = list(re.findall(r'''[^-]1\*(\w*)\b'''))
                 # just the variable name as comment
                 elif len(comment.split()) == 1:
-                    var = comment.strip().lower()
-                    self.pname2block[var] = (bname, lha_id)
+                    all_var = [comment.strip().lower()]
                 # either contraction or not formatted
                 else:
                     split = comment.split()
-                    if split[1] == ':':
+                    if len(split) >2 and split[1] == ':':
                         # NO VAR associated
                         self.restricted_value[(bname, lha_id)] = ' '.join(split[1:])
+                    elif len(split) == 2:
+                        if re.search(r'''\[[A-Z]\]eV\^''', split[1]):
+                            all_var = [comment.strip().lower()]
                     else:
                         # not recognized format
                         continue
+                    
+                for var in all_var:
+                    var = var.lower()
+                    if var in self.pname2block:
+                        self.pname2block[var].append((bname, lha_id))
+                    else:
+                        self.pname2block[var] = [(bname, lha_id)]
                     
         # check for conflict with run_card
         for var in self.pname2block:                
@@ -4638,15 +4645,17 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         if 'block' in allowed.keys():
             if allowed['block'] == 'all':
+                allowed_block = [i for i in self.param_card.keys() if 'qnumbers' not in i]
                 possibilities['Param Card Block' ] = \
-                              self.list_completion(text, self.param_card.keys())
+                                       self.list_completion(text, allowed_block)
             elif isinstance(allowed['block'], basestring):
                 block = self.param_card[allowed['block']].param_dict
                 ids = [str(i[0]) for i in block 
                           if (allowed['block'], i) not in self.restricted_value]
                 possibilities['Param Card id' ] = self.list_completion(text, ids)
-                varname = [name for name,(bname,lhaid) in self.pname2block.items()
-                            if bname == allowed['block']]
+                varname = [name for name, all_var in self.pname2block.items()
+                                               if any((bname == allowed['block'] 
+                                                   for bname,lhaid in all_var))]
                 possibilities['Param card variable'] = self.list_completion(text,
                                                                         varname)
             else:
@@ -4699,7 +4708,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if args[start+1] == 'default':
                 default = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
                 if args[start] in default.keys():
-                    print default[args[start]]
                     self.run_card[args[start]] = default[args[start]]
                 else:
                     del self.run_card[args[start]]
@@ -4724,12 +4732,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
             
             if args[start+1] in self.pname2block:
-                bname, lhaid = self.pname2block[args[start+1]]
-                if bname != args[start]:
-                    logger.warning('%s is not part of block %s but %s. please correct.' %
+                all_var = self.pname2block[args[start+1]]
+                key = None
+                for bname, lhaid in all_var:
+                    if bname == args[start]:
+                        key = lhaid
+                        break
+                else:
+                    logger.warning('%s is not part of block "%s" but "%s". please correct.' %
                                     (args[start+1], args[start], bname))
                     return
-                key = lhaid
             else:
                 try:
                     key = tuple([int(i) for i in args[start+1:-1]])
@@ -4737,7 +4749,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.warning('invalid set command')
                     return 
 
-                 
             if key in self.param_card[args[start]].param_dict:
                 if (args[start], key) in self.restricted_value:
                     text = "Note that this parameter seems to be ignore by MG.\n"
@@ -4750,7 +4761,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     default = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
                     self.param_card[args[start]].param_dict[key].value = \
                                       default[args[start]].param_dict[key].value
+                elif args[-1] == 'auto':
+                    self.param_card[args[start]].param_dict[key].value = 'Auto'
                 else:
+                    print args[-1]
                     self.param_card[args[start]].param_dict[key].value = float(args[-1])
             else:
                 logger.warning('invalid set command')
@@ -4759,11 +4773,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         # PARAM_CARD NO BLOCK NAME
         elif args[start] in self.pname2block and card != 'run_card':
-            bname, lhaid = self.pname2block[args[start]]
-            new_line = line.replace(args[start], '%s %s' % 
-                                    (bname, ' '.join([ str(i) for i in lhaid])))
-            self.do_set(new_line)
-        
+            all_var = self.pname2block[args[start]]
+            for bname, lhaid in all_var: 
+                new_line = line.replace(args[start], '%s %s' % 
+                                (bname, ' '.join([ str(i) for i in lhaid])))
+                self.do_set(new_line)
+            if len(all_var) > 1:
+                logger.warning('This variable correspond to more than one parameter in the param_card.')
+                for bname, lhaid in all_var: 
+                    logger.warning('   %s %s' % (bname, ' '.join([str(i) for i in lhaid])))
+                logger.warning('all listed variables have been modified')
         #INVALID
         else:
             logger.warning('invalid set command')
