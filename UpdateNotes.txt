@@ -12,6 +12,10 @@ Update notes for MadGraph 5 (in reverse time order)
        		  OM: implement a function for computing the 1 to 2 width on 
                       the fly. (requires that MG5 install on the computer 
                       not only the output directory)
+                  OM: The question asking for the edition of the param_card/run_card
+		      accepts now a command set to change one value of those cards
+		      whithout opening an editor. This allow simple implemetation 
+                      of scanning.
                   OM: Add auto-detection if MG5 is up-to-date and propose to
                       apply the various patch if not.
                   OM: MadEvent change automatically the compiler according to 
