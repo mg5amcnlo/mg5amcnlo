@@ -4630,24 +4630,49 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning('invalid set command')
             return
         if args[0] in ['run_card', 'param_card']:
+            if args[1] == 'default':
+                logging.info('replace %s by the default card' % args[0])
+                files.cp(pjoin(self.me_dir,'Cards','%s_default.dat' % args[0]),
+                        pjoin(self.me_dir,'Cards','%s.dat'% args[0]))
+                return
             start=1
             if len(args) < 3:
                 logger.warning('invalid set command')
                 return
         
         if args[start] in self.run_card.keys():
-            self.run_card[args[start]] = eval(args[start+1])
+            if args[start+1] == 'default':
+                default = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
+                if args[start] in default.keys():
+                    print default[args[start]]
+                    self.run_card[args[start]] = default[args[start]]
+                else:
+                    del self.run_card[args[start]] 
+            else:
+                self.run_card[args[start]] = eval(args[start+1])
             self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'),
                               pjoin(self.me_dir,'Cards','run_card_default.dat'))
             
         elif args[start] in self.param_card:
-            key = tuple([int(i) for i in args[start+1:-1]])
+            try:
+                key = tuple([int(i) for i in args[start+1:-1]])
+            except ValueError:
+                logger.warning('invalid set command')
+                return 
+                            
             if key in self.param_card[args[start]].param_dict:
-                self.param_card[args[start]].param_dict[key].value = float(args[-1])
-                self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                if args[-1] == 'default':
+                    default = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
+                    self.param_card[args[start]].param_dict[key].value = \
+                                      default[args[start]].param_dict[key].value
+                else:
+                    self.param_card[args[start]].param_dict[key].value = float(args[-1])
             else:
                 logger.warning('invalid set command')
                 return                   
+            self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+
+        
         else:
             logger.warning('invalid set command')
             return            
@@ -4656,20 +4681,25 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         '''help message for set'''
         
         logger.info('********************* HELP SET ***************************')
-        logger.info("syntax: set [run_card] NAME VALUE")
-        logger.info("syntax: set [param_card] BLOCK ID(s) VALUE")
+        logger.info("syntax: set [run_card] NAME [VALUE|default]")
+        logger.info("syntax: set [param_card] BLOCK ID(s) [VALUE|default]")
         logger.info('')
         logger.info('-- Edit the param_card/run_card and replace the value of the')
         logger.info('    parameter by the value VALUE.')
+        logger.info('   ')
         logger.info('-- Example:')
         logger.info('     set run_card ebeam1 4000')
         logger.info('     set ebeam2 4000')
         logger.info('     set lpp1 0')
+        logger.info('     set ptj default')
         logger.info('')
         logger.info('     set param_card mass 6 175')
         logger.info('     set mass 25 125.3')
         logger.info('     set decay 25 0.004')
         logger.info('     set vmix 2 1 2.326612e-01')
+        logger.info('')
+        logger.info('     set param_card default #return all parameter to default')
+        logger.info('     set run_card default')
         logger.info('********************* HELP SET ***************************')
     
     
