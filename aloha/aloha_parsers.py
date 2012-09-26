@@ -17,6 +17,8 @@
 different languages/frameworks (Fortran and Pythia8). Uses the PLY 3.3
 Lex + Yacc framework"""
 
+from __future__ import division
+
 import logging
 import os
 import re
