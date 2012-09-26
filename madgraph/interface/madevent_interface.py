@@ -4034,8 +4034,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 possible_answer.append('plot')
             card = {0:'done', 1:'param', 2:'run', 3:'pythia', 
                       4: 'pgs', 5: 'delphes', 6:'trigger',9:'plot'}
-            # Add the path options
-            question += '  Path to a valid card.\n'
+            # Add the path options + set
+            question += ' you can also\n'
+            question += '   - enter the path to a valid card or banner.\n'
+            question += '   - use the \'set\' command to modify a parameter directly.\n'
+            question += '     The set option works only for param_card and run_card.\n'
+            question += '     Type \'help set\' for more information on this command.\n'
             return question, possible_answer, card
         
         # Loop as long as the user is not done.
@@ -4648,8 +4652,25 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning('invalid set command')
             return            
         
+    def help_set(self):
+        '''help message for set'''
         
-        
+        logger.info('********************* HELP SET ***************************')
+        logger.info("syntax: set [run_card] NAME VALUE")
+        logger.info("syntax: set [param_card] BLOCK ID(s) VALUE")
+        logger.info('')
+        logger.info('-- Edit the param_card/run_card and replace the value of the')
+        logger.info('    parameter by the value VALUE.')
+        logger.info('-- Example:')
+        logger.info('     set run_card ebeam1 4000')
+        logger.info('     set ebeam2 4000')
+        logger.info('     set lpp1 0')
+        logger.info('')
+        logger.info('     set param_card mass 6 175')
+        logger.info('     set mass 25 125.3')
+        logger.info('     set decay 25 0.004')
+        logger.info('     set vmix 2 1 2.326612e-01')
+        logger.info('********************* HELP SET ***************************')
     
     
 

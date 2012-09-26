@@ -1396,7 +1396,7 @@ class OneLinePathCompletion(SmartQuestion):
                 self.value = self.default_value
                 return True
             elif line and hasattr(self, 'do_%s' % line.split()[0]):
-                pass # go to retry
+                # go to retry
                 reprint_opt = True          
             else:
                 raise Exception
