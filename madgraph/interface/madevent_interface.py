@@ -27,6 +27,7 @@ import os
 import pydoc
 import random
 import re
+import signal
 import shutil
 import stat
 import subprocess
@@ -4544,10 +4545,110 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     """A class for asking a question where in addition you can have the 
     set command define and modifying the param_card/run_card correctly"""
     
+    def __init__(self, *args, **opt):
+        
+        cmd.OneLinePathCompletion.__init__(self, *args, **opt)
+        self.me_dir = self.mother_interface.me_dir
+        self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+        self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
+    
+    def complete_set(self, text, line, begidx, endidx):
+        """ Complete the set command"""
+        prev_timer = signal.alarm(0) # avoid timer if any
+        if prev_timer:
+            nb_back = len(line)
+            self.stdout.write('\b'*nb_back + '[timer stopped]\n')
+            self.stdout.write(line)
+            self.stdout.flush()
+        
+        possibilities = {}
+        allowed = {}
+        args = self.split_arg(line[0:begidx])
+        if len(args) == 1:
+            allowed = {'category':'', 'run_card':'', 'block':'all'}
+        elif len(args) == 2:
+            if args[1] == 'run_card':
+                allowed = {'run_card':''}
+            elif args[1] == 'param_card':
+                allowed = {'block':'all'}
+            elif args[1] in self.param_card.keys():
+                allowed = {'block':args[1]}
+        else:
+            start = 1
+            if args[1] in  ['run_card', 'param_card']:
+                start = 2
+            if args[start] in self.param_card.keys():
+                if args[start+1:]:
+                    allowed = {'block':(args[start], args[start+1:])}
+                else:
+                    allowed = {'block':args[start]}
+            
+        if 'category' in allowed.keys():
+            possibilities['category of parameter (optional)'] = \
+                          self.list_completion(text, ['run_card', 'param_card'])
+        
+        if 'run_card' in allowed.keys():
+            possibilities['Run Card Parameter'] = \
+                                self.list_completion(text, self.run_card.keys())
+        
+        if 'block' in allowed.keys():
+            if allowed['block'] == 'all':
+                possibilities['Param Card Block' ] = \
+                              self.list_completion(text, self.param_card.keys())
+            elif isinstance(allowed['block'], basestring):
+                block = self.param_card[allowed['block']].param_dict
+                ids = [str(i[0]) for i in block]
+                possibilities['Param Card id' ] = \
+                              self.list_completion(text, ids)
+            else:
+                block = self.param_card[allowed['block'][0]].param_dict
+                nb = len(allowed['block'][1])
+                ids = [str(i[nb]) for i in block if len(i) > nb and \
+                            [str(a) for a in i[:nb]] == allowed['block'][1]]
+
+                possibilities['Param Card id' ] = self.list_completion(text, ids)        
+
+        return self.deal_multiple_categories(possibilities)
+        
+        
+        args = self.split_arg(line[0:begidx])
+        # Format
+        if len(args) == 1:
+            return self.list_completion(text, self._set_options + self.options.keys() )
+        
     
     def do_set(self, line):
         """ """
-        print 'pass here'
+        
+        args = self.split_arg(line)
+        start = 0
+        if len(args) < 2:
+            logger.warning('invalid set command')
+            return
+        if args[0] in ['run_card', 'param_card']:
+            start=1
+            if len(args) < 3:
+                logger.warning('invalid set command')
+                return
+        
+        if args[start] in self.run_card.keys():
+            self.run_card[args[start]] = eval(args[start+1])
+            self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'),
+                              pjoin(self.me_dir,'Cards','run_card_default.dat'))
+            
+        elif args[start] in self.param_card:
+            key = tuple([int(i) for i in args[start+1:-1]])
+            if key in self.param_card[args[start]].param_dict:
+                self.param_card[args[start]].param_dict[key].value = float(args[-1])
+                self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+            else:
+                logger.warning('invalid set command')
+                return                   
+        else:
+            logger.warning('invalid set command')
+            return            
+        
+        
         
     
     

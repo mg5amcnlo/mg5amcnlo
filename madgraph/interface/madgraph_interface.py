@@ -1545,7 +1545,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             else:
                 # directory names
                 second_set = [name for name in self.path_completion(text, '.', only_dirs = True)]
-                return self.list_completion(text, first_set + second_set + ['default'])
+                return self.list_completion(text, second_set + ['default'])
         elif len(args) >2 and args[-1].endswith(os.path.sep):
                 return self.path_completion(text,
                         pjoin(*[a for a in args if a.endswith(os.path.sep)]),
@@ -2876,7 +2876,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 # self._export dir are define
                 self.check_for_export_dir(os.path.realpath(proc_card))
             else:
-                raise MadGraph5('No default directory in output')
+                raise MadGraph5Error('No default directory in output')
 
  
             #convert and excecute the card

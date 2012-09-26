@@ -248,6 +248,86 @@ class BasicCmd(cmd.Cmd):
             #    logger.error('\n Completion ERROR:')
             #    logger.error( error)
             return None    
+        
+    @staticmethod
+    def split_arg(line):
+        """Split a line of arguments"""
+        
+        split = line.split()
+        out=[]
+        tmp=''
+        for data in split:
+            if data[-1] == '\\':
+                tmp += data[:-1]+' '
+            elif tmp:
+                tmp += data
+                tmp = os.path.expanduser(os.path.expandvars(tmp))
+                out.append(tmp)
+            else:
+                out.append(data)
+        return out
+    
+    @staticmethod
+    def list_completion(text, list, line=''):
+        """Propose completions of text in list"""
+
+        if not text:
+            completions = list
+        else:
+            completions = [ f
+                            for f in list
+                            if f.startswith(text)
+                            ]
+            
+        return completions
+            
+
+    @staticmethod
+    def path_completion(text, base_dir = None, only_dirs = False, 
+                                                                 relative=True):
+        """Propose completions of text to compose a valid path"""
+
+        if base_dir is None:
+            base_dir = os.getcwd()
+
+        base_dir = os.path.expanduser(os.path.expandvars(base_dir))
+        
+        prefix, text = os.path.split(text)
+        base_dir = os.path.join(base_dir, prefix)
+        if prefix:
+            prefix += os.path.sep
+
+        if only_dirs:
+            completion = [prefix + f
+                          for f in os.listdir(base_dir)
+                          if f.startswith(text) and \
+                          os.path.isdir(os.path.join(base_dir, f)) and \
+                          (not f.startswith('.') or text.startswith('.'))
+                          ]
+        else:
+            completion = [ prefix + f
+                          for f in os.listdir(base_dir)
+                          if f.startswith(text) and \
+                          os.path.isfile(os.path.join(base_dir, f)) and \
+                          (not f.startswith('.') or text.startswith('.'))
+                          ]
+
+            completion = completion + \
+                         [prefix + f + os.path.sep
+                          for f in os.listdir(base_dir)
+                          if f.startswith(text) and \
+                          os.path.isdir(os.path.join(base_dir, f)) and \
+                          (not f.startswith('.') or text.startswith('.'))
+                          ]
+
+        if relative:
+            completion += [prefix + f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
+                       f.startswith(text) and not prefix.startswith('.')]
+        
+        completion = [a.replace(' ','\ ') for a in completion]
+        return completion
+    
+    
 
 class CheckCmd(object):
     """Extension of the cmd object for only the check command"""
@@ -621,23 +701,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                                                                 line.split()[0])
         
 
-    @staticmethod
-    def split_arg(line):
-        """Split a line of arguments"""
-        
-        split = line.split()
-        out=[]
-        tmp=''
-        for data in split:
-            if data[-1] == '\\':
-                tmp += data[:-1]+' '
-            elif tmp:
-                tmp += data
-                tmp = os.path.expanduser(os.path.expandvars(tmp))
-                out.append(tmp)
-            else:
-                out.append(data)
-        return out
+
 
      
     # Write the list of command line use in this session
@@ -850,7 +914,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         else:
             obj = SmartQuestion
 
-        question_instance = obj(allow_arg=choices, default=default)
+        question_instance = obj(allow_arg=choices, default=default, 
+                                                          mother_interface=self)
         answer = self.check_answer_in_input_file(choices, path_msg)
         if answer is not None:
             return answer
@@ -1135,69 +1200,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         writer.close()
                        
 
-
-
-    @staticmethod
-    def list_completion(text, list, line=''):
-        """Propose completions of text in list"""
-
-        if not text:
-            completions = list
-        else:
-            completions = [ f
-                            for f in list
-                            if f.startswith(text)
-                            ]
-            
-        return completions
-            
-
-    @staticmethod
-    def path_completion(text, base_dir = None, only_dirs = False, 
-                                                                 relative=True):
-        """Propose completions of text to compose a valid path"""
-
-        if base_dir is None:
-            base_dir = os.getcwd()
-
-        base_dir = os.path.expanduser(os.path.expandvars(base_dir))
-        
-        prefix, text = os.path.split(text)
-        base_dir = os.path.join(base_dir, prefix)
-        if prefix:
-            prefix += os.path.sep
-
-        if only_dirs:
-            completion = [prefix + f
-                          for f in os.listdir(base_dir)
-                          if f.startswith(text) and \
-                          os.path.isdir(os.path.join(base_dir, f)) and \
-                          (not f.startswith('.') or text.startswith('.'))
-                          ]
-        else:
-            completion = [ prefix + f
-                          for f in os.listdir(base_dir)
-                          if f.startswith(text) and \
-                          os.path.isfile(os.path.join(base_dir, f)) and \
-                          (not f.startswith('.') or text.startswith('.'))
-                          ]
-
-            completion = completion + \
-                         [prefix + f + os.path.sep
-                          for f in os.listdir(base_dir)
-                          if f.startswith(text) and \
-                          os.path.isdir(os.path.join(base_dir, f)) and \
-                          (not f.startswith('.') or text.startswith('.'))
-                          ]
-
-        if relative:
-            completion += [prefix + f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
-                       f.startswith(text) and not prefix.startswith('.')]
-        
-        completion = [a.replace(' ','\ ') for a in completion]
-        return completion
-    
-
     
 
 class CmdShell(Cmd):
@@ -1249,11 +1251,13 @@ class SmartQuestion(BasicCmd):
         self.value = None
         BasicCmd.preloop(self)
 
-    def __init__(self,  allow_arg=[], default=None, *arg, **opt):
+    def __init__(self,  allow_arg=[], default=None, mother_interface=None, 
+                                                                   *arg, **opt):
         self.wrong_answer = 0 # forbids infinite loop
         self.allow_arg = [str(a) for a in allow_arg]
         self.history_header = ''
         self.default_value = str(default)
+        self.mother_interface = mother_interface
         cmd.Cmd.__init__(self, *arg, **opt)
 
     def __call__(self, question, reprint_opt=True, **opts):
@@ -1355,6 +1359,7 @@ class OneLinePathCompletion(SmartQuestion):
             out = {}
             out[' Options'] = SmartQuestion.completenames(self, text, line)
             out[' Path from ./'] = Cmd.path_completion(text, only_dirs = False)
+            out[' Recognized command'] = BasicCmd.completenames(self, text)
             
             return self.deal_multiple_categories(out)
         except Exception, error:
