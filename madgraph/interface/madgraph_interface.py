@@ -1775,7 +1775,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'text_editor':None,
                        'fortran_compiler':None,
                        'auto_update':7,
-                       'cluster_type': 'condor'}
+                       'cluster_type': 'condor',
+                       'cluster_temp_path': None,
+                       'cluster_queue': None,
+                       }
     
     options_madgraph= {'group_subprocesses': 'Auto',
                           'ignore_six_quark_processes': False,
@@ -1784,9 +1787,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'stdout_level':None}
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
-                         'cluster_queue':'madgraph',
                          'nb_core': None,
-                         'cluster_temp_path': None
                          }
 
 
