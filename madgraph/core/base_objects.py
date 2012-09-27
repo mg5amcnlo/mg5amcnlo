@@ -1021,6 +1021,14 @@ class Model(PhysicsObject):
                     part.set('antiname', default[pdg])
                     if antipart:
                         antipart.set('antiname', default[pdg])
+        
+        #additional check for the Higgs in the mssm
+        if self.get('name') == 'mssm' or self.get('name').startswith('mssm-'):
+            part = self.get_particle(25)
+            part.set('name', 'h1')
+            part.set('antiname', 'h1')
+            
+        
 
     def get_first_non_pdg(self):
         """Return the first positive number that is not a valid PDG code"""

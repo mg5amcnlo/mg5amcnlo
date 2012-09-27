@@ -139,8 +139,8 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         """Test the UFO and MG4 MSSM model correspond to the same model """
         
         # import UFO model
-        sm_path = import_ufo.find_ufo_path('mssm')
-        ufo_model = import_ufo.import_model(sm_path)
+        mssm_path = import_ufo.find_ufo_path('mssm')
+        ufo_model = import_ufo.import_model(mssm_path)
         #converter = import_ufo.UFOMG5Converter(model)
         #ufo_model = converter.load_model()
         ufo_model.pass_particles_name_in_mg_default()
@@ -164,7 +164,7 @@ class CompareMG4WithUFOModel(unittest.TestCase):
             import_v4.read_interactions_v4,
             model['particles']))
         
-        model.pass_particles_name_in_mg_default()
+        #model.pass_particles_name_in_mg_default()
         # Checking the particles
         for particle in model['particles']:
             ufo_particle = ufo_model.get("particle_dict")[particle['pdg_code']]
@@ -321,12 +321,11 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         open(join('makefile'),'w').write(text)
         #make ../param_card.inc 
         param_card = check_param_card.ParamCard(join('param_card.dat'))
-        print join('')
         param_card.write_inc_file(join('../param_card.inc'), join('ident_card.dat'),
                                    join('param_card.dat'))
         
-        subprocess.call(['make', 'testprog'], cwd=self.output_path)
-                        #stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.call(['make', 'testprog'], cwd=self.output_path,
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.assertTrue(os.path.exists(self.give_pos('testprog')))
         
         os.chmod(os.path.join(self.output_path, 'testprog'), 0777)

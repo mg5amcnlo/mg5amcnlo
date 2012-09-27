@@ -2260,6 +2260,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         inv_sq_err = 0
         nb_event = 0
         for i in range(nb_run):
+            self.nb_refine = 0
             self.exec_cmd('generate_events %s_%s -f' % (main_name, i), postcmd=False)
             # Update collected value
             nb_event += int(self.results[self.run_name][-1]['nb_event'])  
@@ -2829,9 +2830,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                          argument= [pydir],
                                         cwd=pjoin(self.me_dir,'Events'))
             else:
+                logger.info('Generating pythia lhe events')
                 misc.call([self.dirbin+'/run_hep2lhe', pydir],
-                             cwd=pjoin(self.me_dir,'Events'))
-                
+                             cwd=pjoin(self.me_dir,'Events'),
+                             stdout=subprocess.PIPE)
+                logger.info('Warning! Never use this pythia lhe file for detector studies!')
             # Creating ROOT file
             if eradir and misc.is_executable(pjoin(eradir, 'ExRootLHEFConverter')):
                 self.update_status('Creating Pythia LHE Root File', level='pythia')
