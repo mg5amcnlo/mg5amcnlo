@@ -1132,6 +1132,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                        self.dir_path+'/bin/internal/cluster.py') 
         cp(_file_path+'/various/sum_html.py', 
                                        self.dir_path+'/bin/internal/sum_html.py') 
+        cp(_file_path+'/various/combine_runs.py', 
+                                       self.dir_path+'/bin/internal/combine_runs.py')
         # logging configuration
         cp(_file_path+'/interface/.mg5_logging.conf', 
                                  self.dir_path+'/bin/internal/me5_logging.conf') 

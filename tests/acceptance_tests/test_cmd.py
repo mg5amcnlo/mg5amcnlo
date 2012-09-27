@@ -113,7 +113,7 @@ class TestCmdShell1(unittest.TestCase):
         config =dict(config)
         del config['stdout_level']
         for key in config.keys():
-            if key.endswith('_path'):
+            if key.endswith('_path') and key != 'cluster_temp_path':
                 del config[key]
         expected = {'web_browser': None, 
                     'text_editor': None, 
@@ -125,6 +125,7 @@ class TestCmdShell1(unittest.TestCase):
 #                    'delphes_path': './Delphes', 
                     'cluster_type': 'condor', 
 #                    'madanalysis_path': './MadAnalysis', 
+                    'cluster_temp_path': None, 
                     'fortran_compiler': None, 
 #                    'exrootanalysis_path': './ExRootAnalysis', 
                     'eps_viewer': None, 
@@ -729,12 +730,6 @@ class TestCmdShell2(unittest.TestCase,
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'bin','internal', 'gen_ximprove')))
-        status = subprocess.call(['make', '../bin/internal/combine_runs'],
-                                 stdout=devnull, 
-                                 cwd=os.path.join(self.out_dir, 'Source'))
-        self.assertEqual(status, 0)
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'bin','internal', 'combine_runs')))
         # Check that gensym compiles
         status = subprocess.call(['make', 'gensym'],
                                  stdout=devnull, 

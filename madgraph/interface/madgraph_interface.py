@@ -444,7 +444,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   timeout VALUE")
         logger.info("      (default 20) Seconds allowed to answer questions.")
         logger.info("      Note that pressing tab always stops the timer.")
-
+        logger.info("   cluster_temp_path PATH")
+        logger.info("      (default None) [Used in Madevent Output]")
+        logger.info("      Allow to perform the run in PATH directory")
+        logger.info("      This allow to not run on the central disk. This is not used")
+        logger.info("      by condor cluster (since condor has it's own way to prevent it).")
+       
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -859,7 +864,7 @@ This will take effect only in a NEW terminal
 
     def check_set(self, args, log=True):
         """ check the validity of the line"""
-        
+
         if len(args) == 1 and args[0] == 'complex_mass_scheme':
             args.append('True')
         
@@ -1770,7 +1775,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'text_editor':None,
                        'fortran_compiler':None,
                        'auto_update':7,
-                       'cluster_type': 'condor'}
+                       'cluster_type': 'condor',
+                       'cluster_temp_path': None,
+                       'cluster_queue': None,
+                       }
     
     options_madgraph= {'group_subprocesses': 'Auto',
                           'ignore_six_quark_processes': False,
@@ -1779,7 +1787,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'stdout_level':None}
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
-                         'cluster_queue':'madgraph',
                          'nb_core': None,
                          }
 
@@ -3837,7 +3844,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         args = self.split_arg(line)
         # Check the validity of the arguments
-        self.check_set(args, log=False)
+        try:
+            self.check_set(args, log=False)
+        except Exception:
+            return stop
         
         if args[0] in self.options_configuration and '--no_save' not in args:
             self.exec_cmd('save options --auto')

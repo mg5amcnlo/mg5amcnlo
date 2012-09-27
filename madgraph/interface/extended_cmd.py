@@ -497,6 +497,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         except Exception, error:
             debug_file.write('Fail to write options with error %s' % error)
         
+
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
             return True 
