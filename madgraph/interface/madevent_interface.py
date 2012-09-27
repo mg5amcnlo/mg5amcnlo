@@ -4602,6 +4602,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     
     def complete_set(self, text, line, begidx, endidx):
         """ Complete the set command"""
+
         prev_timer = signal.alarm(0) # avoid timer if any
         if prev_timer:
             nb_back = len(line)
@@ -4616,11 +4617,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             allowed = {'category':'', 'run_card':'', 'block':'all', 'param_card':''}
         elif len(args) == 2:
             if args[1] == 'run_card':
-                allowed = {'run_card':''}
+                allowed = {'run_card':'default'}
             elif args[1] == 'param_card':
-                allowed = {'block':'all', 'param_card':''}
+                allowed = {'block':'all', 'param_card':'default'}
             elif args[1] in self.param_card.keys():
                 allowed = {'block':args[1]}
+            else:
+                allowed = {'value':''}
         else:
             start = 1
             if args[1] in  ['run_card', 'param_card']:
@@ -4630,18 +4633,35 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     allowed = {'block':(args[start], args[start+1:])}
                 else:
                     allowed = {'block':args[start]}
+            elif len(args) == start +1:
+                    allowed['value'] = ''
+
             
         if 'category' in allowed.keys():
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, ['run_card', 'param_card'])
         
         if 'run_card' in allowed.keys():
-            possibilities['Run Card Parameter'] = \
-                                self.list_completion(text, self.run_card.keys())
+            opts = self.run_card.keys()
+            if allowed['run_card'] == 'default':
+                opts.append('default')
+            
+            possibilities['Run Card'] = self.list_completion(text, opts)
 
         if 'param_card' in allowed.keys():
-            possibilities['Param Card Parameter'] = \
-                                self.list_completion(text, self.pname2block.keys())
+            opts = self.pname2block.keys()
+            if allowed['param_card'] == 'default':
+                opts.append('default')
+            possibilities['Param Card'] = self.list_completion(text, opts)
+                                
+        if 'value' in allowed.keys():
+            opts = ['default']
+            if 'decay' in args:
+                opts.append('Auto')
+            if args[-1] in self.pname2block and self.pname2block[args[-1]][0][0] == 'decay':
+                opts.append('Auto')
+            possibilities['Special Value'] = self.list_completion(text, opts)
+                 
 
         if 'block' in allowed.keys():
             if allowed['block'] == 'all':
@@ -4663,18 +4683,17 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 nb = len(allowed['block'][1])
                 ids = [str(i[nb]) for i in block if len(i) > nb and \
                             [str(a) for a in i[:nb]] == allowed['block'][1]]
-
+                
+                if not ids:
+                    if tuple([int(i) for i in allowed['block'][1]]) in block:
+                        opts = ['default']
+                        if allowed['block'][0] == 'decay':
+                            opts.append('Auto')
+                        possibilities['Special value'] = self.list_completion(text, opts)
                 possibilities['Param Card id' ] = self.list_completion(text, ids)        
 
         return self.deal_multiple_categories(possibilities)
-        
-        
-        args = self.split_arg(line[0:begidx])
-        # Format
-        if len(args) == 1:
-            return self.list_completion(text, self._set_options + self.options.keys() )
-        
-    
+           
     def do_set(self, line):
         """ """
         
@@ -4792,7 +4811,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         '''help message for set'''
         
         logger.info('********************* HELP SET ***************************')
-        logger.info("syntax: set [run_card] NAME [VALUE|default]")
+        logger.info("syntax: set [run_card|param_card] NAME [VALUE|default]")
         logger.info("syntax: set [param_card] BLOCK ID(s) [VALUE|default]")
         logger.info('')
         logger.info('-- Edit the param_card/run_card and replace the value of the')
@@ -4806,7 +4825,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info('')
         logger.info('     set param_card mass 6 175')
         logger.info('     set mass 25 125.3')
+        logger.info('     set mass mh 125')
+        logger.info('     set mh 125')
         logger.info('     set decay 25 0.004')
+        logger.info('     set decay wh 0.004')
         logger.info('     set vmix 2 1 2.326612e-01')
         logger.info('')
         logger.info('     set param_card default #return all parameter to default')
