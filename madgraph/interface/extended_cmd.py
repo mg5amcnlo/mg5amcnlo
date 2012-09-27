@@ -716,12 +716,15 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                             keep_last=False,
                             allow_for_removal=None):
         """Remove command in arguments from history.
-        to_keep is a set of line to always keep
-        to_remove is a set of line to always remove whatever the position is
-        remove_bef_lb1 remove up to first occurrence.
-        keep_last ensure to keep the last entry.
-        if allow_for_removal is define only the command in that list can be 
-        remove of the history.
+        All command before the last but one occurrence of  'remove_bef_lb1'
+        (including it) will be removed (but if another options tells the opposite).
+        'to_keep' is a set of line to always keep.
+        'to_remove' is a set of line to always remove (don't care about remove_bef_lb1).
+        if 'allow_for_removal' is define only the command in that list can be 
+        remove of the history for older command that remove_bef_lb1. all parameter
+        present in to_remove are always remove even if they are not part of this 
+        list.
+        'keep_last' ensure to keep the last entry of the history no matter what.
         """
         
         #check consistency
@@ -742,25 +745,22 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if remove_bef_lb1 and self.history[nline].startswith(remove_bef_lb1):
                 if last:
                     last = 2
-                    self.history.pop(nline)
-                    continue
                 else:
                     last=1
             if nline == -1 and keep_last:
                 nline -=1
                 continue
             
-            # WE are in removal mode
-            if allow_for_removal:
-                if any([self.history[nline].startswith(arg) 
-                                                 for arg in allow_for_removal]):
-                    self.history.pop(nline)
-                else:
-                    nline -=1
-                    continue  
-            
-
             if last == 2:
+                # WE are in removal mode 
+                if allow_for_removal:
+                    if any([self.history[nline].startswith(arg) 
+                                                     for arg in allow_for_removal]):
+                        self.history.pop(nline)
+                    else:
+                        nline -=1
+                        continue                 
+                #allow for removal not define, so remove everything (but those on keep)    
                 if not any([self.history[nline].startswith(arg) for arg in to_keep]):
                   self.history.pop(nline)
                   continue
