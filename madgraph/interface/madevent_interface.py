@@ -2820,7 +2820,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             out.writelines('<!--\n')
             out.writelines('# Warning! Never use this file for detector studies!\n')
             out.writelines('-->\n<!--\n')
-            out.writelines(open(banner_path).read())
+            out.writelines(open(banner_path).read().replace('<LesHouchesEvents version="1.0">',''))
             out.writelines('\n-->\n')
             out.close()
             
