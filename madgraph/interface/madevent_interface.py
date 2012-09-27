@@ -2835,11 +2835,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             # Creating ROOT file
             if eradir and misc.is_executable(pjoin(eradir, 'ExRootLHEFConverter')):
                 self.update_status('Creating Pythia LHE Root File', level='pythia')
-                misc.call([eradir+'/ExRootLHEFConverter', 
+                try:
+                    misc.call([eradir+'/ExRootLHEFConverter', 
                              'pythia_events.lhe', 
                              pjoin(self.run_name, '%s_pythia_lhe_events.root' % tag)],
                             cwd=pjoin(self.me_dir,'Events'))              
-
+                except:
+                    pass
         if int(self.run_card['ickkw']):
             misc.call(['gzip','-f','beforeveto.tree'], 
                                                 cwd=pjoin(self.me_dir,'Events'))

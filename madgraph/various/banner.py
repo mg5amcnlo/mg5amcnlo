@@ -148,6 +148,7 @@ class Banner(dict):
         for tag, text in self.items():
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
                      {'tag':tag, 'text':text})
+        ff.write('</header>\n')    
         ff.write('</LesHouchesEvents>\n')
             
     ############################################################################
