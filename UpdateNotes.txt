@@ -15,7 +15,7 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: The question asking for the edition of the param_card/run_card
 		      accepts now a command set to change one value of those cards
 		      whithout opening an editor. This allow simple implemetation 
-                      of scanning.
+                      of scanning. (Thanks G. Durieux to have push me to do it)
                   OM: Add auto-detection if MG5 is up-to-date and propose to
                       apply the various patch if not.
                   OM: MadEvent change automatically the compiler according to 

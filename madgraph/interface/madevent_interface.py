@@ -4783,7 +4783,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 elif args[-1] == 'auto':
                     self.param_card[args[start]].param_dict[key].value = 'Auto'
                 else:
-                    print args[-1]
                     self.param_card[args[start]].param_dict[key].value = float(args[-1])
             else:
                 logger.warning('invalid set command')
