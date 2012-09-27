@@ -54,6 +54,7 @@ try:
     import madgraph.iolibs.files as files
     import madgraph.various.cluster as cluster
     import madgraph.various.misc as misc
+    import madgraph.various.gen_crossxhtml as gen_crossxhtml
 
     import models.check_param_card as check_param_card    
     from madgraph import InvalidCmd, aMCatNLOError
@@ -67,6 +68,7 @@ except Exception, error:
     from internal import InvalidCmd, MadGraph5Error
     import internal.files as files
     import internal.cluster as cluster
+    import internal.various.gen_crossxhtml as gen_crossxhtml
     aMCatNLO = True
 
 
@@ -556,6 +558,17 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.status = pjoin(self.me_dir, 'status')
         self.error =  pjoin(self.me_dir, 'error')
         self.dirbin = pjoin(self.me_dir, 'bin', 'internal')
+
+        # Check that the directory is not currently running
+        if os.path.exists(pjoin(me_dir,'RunWeb')): 
+            message = '''Another instance of madevent is currently running.
+            Please wait that all instance of madevent are closed. If no
+            instance is running, you can delete the file
+            %s and try again.''' % pjoin(me_dir,'RunWeb')
+            raise MadEventAlreadyRunning, message
+        else:
+            os.system('touch %s' % pjoin(me_dir,'RunWeb'))
+            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
         
         self.to_store = []
         self.run_name = None
@@ -563,6 +576,16 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.banner = None
         # Load the configuration file
         self.set_configuration()
+
+        # load the current status of the directory
+        if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
+            self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
+            self.results.resetall(self.me_dir)
+        else:
+            model = self.find_model_name()
+            process = self.process # define in find_model_name
+            self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
+        self.results.def_web_mode(self.web)
 
         
     ############################################################################    
@@ -730,7 +753,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
     ############################################################################      
     def do_run_mcatnlo(self, line):
-        """ calculates LO/NLO cross-section, using madevent_vegas """
+        """ run the shower on a given parton level file """
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         self.check_run_mcatnlo(argss, {})
@@ -758,6 +781,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.cluster_mode = 1
         else:
             self.cluster_mode = int(self.options['run_mode'])
+
+        if self.options['automatic_html_opening']:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.options['automatic_html_opening'] = False
+
         mode = argss[0]
         self.ask_run_configuration(mode)
         self.compile(mode, options) 
@@ -782,6 +810,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.cluster_mode = 1
         else:
             self.cluster_mode = int(self.options['run_mode'])
+
+        if self.options['automatic_html_opening']:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.options['automatic_html_opening'] = False
+
         mode = 'aMC@' + argss[0]
         self.ask_run_configuration(mode)
         self.compile(mode, options) 
@@ -800,11 +833,15 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         if options['multicore']:
             self.cluster_mode = 2
-            print 'multicore'
         elif options['cluster']:
             self.cluster_mode = 1
         else:
             self.cluster_mode = int(self.options['run_mode'])
+
+        if self.options['automatic_html_opening']:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.options['automatic_html_opening'] = False
+
         mode = argss[0]
         self.ask_run_configuration(mode)
         self.compile(mode, options) 
@@ -867,6 +904,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def run(self, mode, options):
         """runs aMC@NLO. Returns the name of the event file created"""
         logger.info('Starting run')
+
+        self.run_name = self.find_available_run_name(self.me_dir)
+        if mode in ['aMC@NLO', 'aMC@LO']:
+            os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
         old_cwd = os.getcwd()
 
         if self.cluster_mode == 1:
@@ -984,13 +1025,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         os.system('echo "1" | ./collect_events > %s' % \
                 pjoin (self.me_dir, 'log_collect_events.txt'))
 
-        count = 1
         if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001')):
             raise aMCatNLOError('An error occurred during event generation. ' + \
                     'The event file has not been created. Check log_collect_events.txt')
-        while os.path.exists(pjoin(self.me_dir, 'Events', 'events_%d' % count)):
-            count += 1
-        evt_file = pjoin(self.me_dir, 'Events', 'events_%d' % count)
+        evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
         os.system('mv %s %s' % 
             (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file))
         logger.info('The %s file has been generated.\nIt contains %d %s events to be showered' \
@@ -1026,25 +1064,18 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         os.chdir(rundir)
         os.system('mv ../%s ../MCATNLO_%s_input .' % (exe, shower))
         evt_name = os.path.basename(evt_file)
-        os.system('ln -s %s %s' % (evt_file, evt_name))
+        os.system('ln -s %s %s' % (os.path.split(evt_file)[0], self.run_name))
         misc.call(['./%s < MCATNLO_%s_input > amcatnlo_run.log 2>&1' % \
                     (exe, shower)], cwd = os.getcwd(), shell=True)
         #copy the showered stdhep file back in events
-        if os.path.exists(evt_name + '.hep'):
-            count = 1
-            while os.path.exists('%s_%s_%d.hep' % (evt_file, shower, count)):
-                count += 1
-            hep_file = '%s_%s_%d.hep' % (evt_file, shower, count)
-            os.system('mv %s %s' % (evt_name + '.hep', hep_file)) 
+        if os.path.exists(pjoin(self.run_name, evt_name + '.hep')):
+            hep_file = '%s_%s.hep' % (evt_file[:-4], shower)
+            os.system('mv %s %s' % (pjoin(self.run_name, evt_name + '.hep'), hep_file)) 
 
             logger.info(('The file %s has been generated. \nIt contains showered' + \
                         ' and hadronized events in the StdHEP format obtained' + \
                         ' showering the parton-level event file %s.') % \
                         (hep_file, evt_file))
-
-            
-
-
         os.chdir(oldcwd)
 
 
@@ -1082,7 +1113,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         input.close()
         for i in range(len(lines)):
             if lines[i].startswith('EVPREFIX'):
-                lines[i]='EVPREFIX=%s' % os.path.split(evt_file)[1]
+                lines[i]='EVPREFIX=%s' % pjoin(self.run_name, os.path.split(evt_file)[1])
             if lines[i].startswith('NEVENTS'):
                 lines[i]='NEVENTS=%d' % nevents
             if lines[i].startswith('MCMODE'):
@@ -1448,6 +1479,40 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                         "1 \n1 -0.1\n-1 -0.1\n"
             file.write(MC_header + content)
         file.close()
+
+
+    @staticmethod
+    def find_available_run_name(me_dir):
+        """ find a valid run_name for the current job """
+        
+        name = 'run_%02d'
+        data = [int(s[4:6]) for s in os.listdir(pjoin(me_dir,'Events')) if
+                        s.startswith('run_') and len(s)>5 and s[4:6].isdigit()]
+        return name % (max(data+[0])+1) 
+
+
+    ############################################################################
+    def find_model_name(self):
+        """ return the model name """
+        if hasattr(self, 'model_name'):
+            return self.model_name
+        
+        model = 'sm'
+        proc = []
+        for line in open(os.path.join(self.me_dir,'Cards','proc_card_mg5.dat')):
+            line = line.split('#')[0]
+            #line = line.split('=')[0]
+            if line.startswith('import') and 'model' in line:
+                model = line.split()[2]   
+                proc = []
+            elif line.startswith('generate'):
+                proc.append(line.split(None,1)[1])
+            elif line.startswith('add process'):
+                proc.append(line.split(None,2)[2])
+       
+        self.model = model
+        self.process = proc 
+        return model
 
 
     ############################################################################

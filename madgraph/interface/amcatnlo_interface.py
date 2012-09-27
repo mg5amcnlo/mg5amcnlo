@@ -553,6 +553,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         else:
             run.cluster_mode = int(self.options['run_mode'])
 
+        if self.options['automatic_html_opening']:
+            misc.open_file(os.path.join(os.getcwd(), argss[0], 'crossx.html'))
+            self.options['automatic_html_opening'] = False
+
         run.ask_run_configuration(mode)
         run.compile(mode, options) 
         evt_file = run.run(mode, options)

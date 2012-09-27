@@ -26,8 +26,9 @@ import copy
 
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
-import madgraph.iolibs.drawing_eps as draw
 import madgraph.fks.fks_base as fks
+import madgraph.iolibs.drawing_eps as draw
+import madgraph.iolibs.gen_infohtml as gen_infohtml
 import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
 import madgraph.iolibs.file_writers as writers
@@ -429,8 +430,21 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         ln('nexternal.inc', '../../Source', log=False)
         ln('leshouche_info.inc', '../../Source', log=False)
 
+
+        # Return to SubProcesses dir
+        os.chdir(os.path.pardir)
+        # Add subprocess to subproc.mg
+        filename = 'subproc.mg'
+        files.append_to_file(filename,
+                             self.write_subproc,
+                             borndir)
+
             
         os.chdir(cwd)
+        # Generate info page
+        gen_infohtml.make_info_html_nlo(self.dir_path)
+
+
         return calls
 
 
@@ -1860,6 +1874,18 @@ C
         # Write the file
         writer.writelines(lines)
     
+        return True
+
+
+    #===========================================================================
+    # write_subproc
+    #===========================================================================
+    def write_subproc(self, writer, subprocdir):
+        """Append this subprocess to the subproc.mg file for MG4"""
+
+        # Write line to file
+        writer.write(subprocdir + "\n")
+
         return True
 
 
