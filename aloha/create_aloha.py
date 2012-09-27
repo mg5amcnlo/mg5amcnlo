@@ -33,6 +33,7 @@ import aloha.aloha_writers as aloha_writers
 import aloha.aloha_lib as aloha_lib
 import aloha.aloha_object as aloha_object
 import aloha.aloha_parsers as aloha_parsers
+import aloha.aloha_fct as aloha_fct
 try:
     import madgraph.iolibs.files as files
 except:
@@ -161,10 +162,15 @@ class AbstractRoutineBuilder(object):
     def apply_conjugation(self, pair=1):
         """ apply conjugation on self object"""
         
-        if pair > 1 or len([1 for s in self.spins if spins % 2 == 0])>2:
-            text = """Unable to deal with 4(or more) point interactions
+        nb_fermion = len([1 for s in self.spins if s % 2 == 0])        
+        if (pair > 1 or nb_fermion >2) and not self.conjg:
+            # self.conjg avoif multiple check
+            data = aloha_fct.get_fermion_flow(self.lorentz_expr, nb_fermion)
+            target = dict([(2*i+1,2*i+2) for i in range(nb_fermion//2)])
+            if not data == target:
+                text = """Unable to deal with 4(or more) point interactions
 in presence of majorana particle/flow violation"""
-            raise ALOHAERROR, text
+                raise ALOHAERROR, text
         
         old_id = 2 * pair - 1
         new_id = _conjugate_gap + old_id
