@@ -264,17 +264,38 @@ class RunCard(dict):
         
         elif format == 'float':
             if isinstance(value, str):
-               value = value.replace('d','e')
+                value = value.replace('d','e')
             return ('%.10e' % float(value)).replace('e','d')
         
         elif format == 'str':
             return "'%s'" % value
     
+
+        
+    def write(self, output_file, template):
+        """Write the run_card in output_file according to template 
+           (a path to a valid run_card)"""
+        
+        text = ""
+        for line in file(template,'r'):
+            nline = line.split('#')[0]
+            nline = nline.split('!')[0]
+            comment = line[len(nline):]
+            nline = nline.split('=')
+            if len(nline) != 2:
+                text += line
+            else:
+                text += '  %s\t= %s %s' % (self[nline[1].strip()],nline[1], comment)        
+        
+        fsock = open(output_file,'w')
+        fsock.write(text)
+        fsock.close()
+
+
     def write_include_file(self, output_path):
         """writing the run_card.inc file""" 
         
-        self.fsock = file_writers.FortranWriter(output_path)
-    
+        self.fsock = file_writers.FortranWriter(output_path)    
 ################################################################################
 #      Writing the lines corresponding to the cuts
 ################################################################################

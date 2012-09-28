@@ -27,6 +27,7 @@ import os
 import pydoc
 import random
 import re
+import signal
 import shutil
 import stat
 import subprocess
@@ -526,7 +527,7 @@ class CheckValidForCmd(object):
         run_name = [arg[7:] for arg in args if arg.startswith('--name=')]
         if run_name:
             try:
-                os.exec_cmd('remove %s all banner -f' % run_name)
+                self.exec_cmd('remove %s all banner -f' % run_name)
             except Exception:
                 pass
             self.set_run_name(args[0], tag=None, level='parton', reload_card=True)
@@ -540,7 +541,7 @@ class CheckValidForCmd(object):
                 self.set_run_name(run_name)
             else:
                 try:
-                    os.exec_cmd('remove %s all banner -f' % run_name)
+                    self.exec_cmd('remove %s all banner -f' % run_name)
                 except Exception:
                     pass
                 self.set_run_name(name)
@@ -925,7 +926,7 @@ class CheckValidForCmd(object):
         
         tag = [a for a in arg if a.startswith('--tag=')]
         if tag: 
-            args.remove(tag[0])
+            arg.remove(tag[0])
             tag = tag[0][6:]
         elif not self.run_tag:
             tag = 'tag_1'
@@ -1533,7 +1534,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
-                       'timeout': 20,
+                       'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
                        'text_editor':None,
@@ -3809,6 +3810,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         except Exception, error:         
             pass
         try:
+            devnull = os.open(os.devnull, os.O_RDWR) 
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)
         except:
@@ -3862,13 +3864,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 os.system('gunzip -fc %s > %s' % (issudfile, path))
             else:
                 msg = 'No sudakov grid file for parameter choice. Start to generate it. This might take a while'
+                logger.info(msg)
                 self.update_status('GENERATE SUDAKOF GRID', level='parton')
                 
                 for i in range(-2,6):
                     self.launch_job('%s/gensudgrid ' % self.dirbin, 
                                     arguments = [i],
                                     cwd=self.me_dir, 
-                                    stdout=open(pjoin(self.me_dir, 'gensudgrid%s.log' % s,'w')))
+                                    stdout=open(pjoin(self.me_dir, 'gensudgrid%s.log' % i,'w')))
                 self.monitor()
                 for i in range(-2,6):
                     path = pjoin(self.me_dir, 'lib', 'issudgrid.dat')
@@ -4109,15 +4112,20 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 possible_answer.append('plot')
             card = {0:'done', 1:'param', 2:'run', 3:'pythia', 
                       4: 'pgs', 5: 'delphes', 6:'trigger',9:'plot'}
-            # Add the path options
-            question += '  Path to a valid card.\n'
+            # Add the path options + set
+            question += ' you can also\n'
+            question += '   - enter the path to a valid card or banner.\n'
+            question += '   - use the \'set\' command to modify a parameter directly.\n'
+            question += '     The set option works only for param_card and run_card.\n'
+            question += '     Type \'help set\' for more information on this command.\n'
             return question, possible_answer, card
         
         # Loop as long as the user is not done.
         answer = 'no'
         while answer != 'done':
             question, possible_answer, card = get_question(mode)
-            answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
+            answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), 
+                              path_msg='enter path', ask_class = AskforEditCard)
             if answer.isdigit():
                 answer = card[int(answer)]
             if answer == 'done':
@@ -4153,7 +4161,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                 mode = level
                                 break
                     else:
-                        clean_pointless_card(mode)
+                        self.clean_pointless_card(mode)
 
     ############################################################################
     def ask_pythia_run_configuration(self, mode=None):
@@ -4214,23 +4222,23 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         possible_answer = ['0','done', '1', 'pythia']
         card = {0:'done', 1:'pythia', 9:'plot'}
         if mode == 'pgs':
-             question += '  2 / pgs     : pgs_card.dat\n'
-             possible_answer.append(2)
-             possible_answer.append('pgs') 
-             card[2] = 'pgs'           
+            question += '  2 / pgs     : pgs_card.dat\n'
+            possible_answer.append(2)
+            possible_answer.append('pgs') 
+            card[2] = 'pgs'           
         if mode == 'delphes':
-             question += '  2 / delphes : delphes_card.dat\n'
-             question += '  3 / trigger : delphes_trigger.dat\n'
-             possible_answer.append(2)
-             possible_answer.append('delphes')
-             possible_answer.append(3)
-             possible_answer.append('trigger')
-             card[2] = 'delphes'
-             card[3] = 'trigger'
+            question += '  2 / delphes : delphes_card.dat\n'
+            question += '  3 / trigger : delphes_trigger.dat\n'
+            possible_answer.append(2)
+            possible_answer.append('delphes')
+            possible_answer.append(3)
+            possible_answer.append('trigger')
+            card[2] = 'delphes'
+            card[3] = 'trigger'
         if self.options['madanalysis_path']:
-             question += '  9 / plot : plot_card.dat\n'
-             possible_answer.append(9)
-             possible_answer.append('plot')
+            question += '  9 / plot : plot_card.dat\n'
+            possible_answer.append(9)
+            possible_answer.append('plot')
         
         # Add the path options
         question += '  Path to a valid card.\n'
@@ -4238,27 +4246,27 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Loop as long as the user is not done.
         answer = 'no'
         while answer != 'done':
-             answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
-             if answer.isdigit():
-                 answer = card[int(answer)]
-             if answer == 'done':
-                 return
-             if os.path.exists(answer):
-                 # detect which card is provide
-                 card_name = self.detect_card_type(answer)
-                 if card_name == 'unknown':
-                     card_name = self.ask('Fail to determine the type of the file. Please specify the format',
+            answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
+            if answer.isdigit():
+                answer = card[int(answer)]
+            if answer == 'done':
+                return
+            if os.path.exists(answer):
+                # detect which card is provide
+                card_name = self.detect_card_type(answer)
+                if card_name == 'unknown':
+                    card_name = self.ask('Fail to determine the type of the file. Please specify the format',
                   'pythia_card.dat',choices=['pythia_card.dat','pgs_card.dat',
                    'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
         
-                 logger.info('copy %s as %s' % (answer, card_name))
-                 files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
-                 continue
-             if answer != 'trigger':
-                 path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
-             else:
-                 path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
-             self.exec_cmd('open %s' % path)                    
+                logger.info('copy %s as %s' % (answer, card_name))
+                files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
+                continue
+            if answer != 'trigger':
+                path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+            else:
+                path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
+            self.exec_cmd('open %s' % path)                    
                  
         return mode
 
@@ -4287,10 +4295,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             card[i+1] = mode
         
         if plot and self.options['madanalysis_path']:
-             question += '  9 / %-9s : plot_card.dat\n' % 'plot'
-             possible_answer.append(9)
-             possible_answer.append('plot')
-             card[9] = 'plot'
+            question += '  9 / %-9s : plot_card.dat\n' % 'plot'
+            possible_answer.append(9)
+            possible_answer.append('plot')
+            card[9] = 'plot'
 
         # Add the path options
         question += '  Path to a valid card.\n'
@@ -4298,26 +4306,27 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Loop as long as the user is not done.
         answer = 'no'
         while answer != 'done':
-             answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
-             if answer.isdigit():
-                 answer = card[int(answer)]
-             if answer == 'done':
-                 return
-             if os.path.exists(answer):
-                 # detect which card is provide
-                 card_name = self.detect_card_type(answer)
-                 if card_name == 'unknown':
-                     card_name = self.ask('Fail to determine the type of the file. Please specify the format',
+            answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), 
+                              path_msg='enter path')
+            if answer.isdigit():
+                answer = card[int(answer)]
+            if answer == 'done':
+                return
+            if os.path.exists(answer):
+                # detect which card is provide
+                card_name = self.detect_card_type(answer)
+                if card_name == 'unknown':
+                    card_name = self.ask('Fail to determine the type of the file. Please specify the format',
                   'pgs_card.dat', choices=['pgs_card.dat', 'delphes_card.dat', 'delphes_trigger.dat'])
         
-                 logger.info('copy %s as %s' % (answer, card_name))
-                 files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
-                 continue
-             if answer != 'trigger':
-                 path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
-             else:
-                 path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
-             self.exec_cmd('open %s' % path)                    
+                logger.info('copy %s as %s' % (answer, card_name))
+                files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
+                continue
+            if answer != 'trigger':
+                path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+            else:
+                path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
+            self.exec_cmd('open %s' % path)                    
                  
         return mode
 
@@ -4443,7 +4452,7 @@ class SubProcesses(object):
         old_main = ''
 
         if not os.path.exists(os.path.join(path,'processes.dat')):
-            return make_info_html.get_subprocess_info_v4(path)
+            return SubProcesses.get_subP_info_v4(path)
 
         for line in open(os.path.join(path,'processes.dat')):
             main = line[:8].strip()
@@ -4613,4 +4622,296 @@ class GridPackCmd(MadEventCmd):
         
         self.update_status('finish refine', 'parton', makehtml=False)
 
+
+class AskforEditCard(cmd.OneLinePathCompletion):
+    """A class for asking a question where in addition you can have the 
+    set command define and modifying the param_card/run_card correctly"""
     
+    def __init__(self, *args, **opt):
+        
+        cmd.OneLinePathCompletion.__init__(self, *args, **opt)
+        self.me_dir = self.mother_interface.me_dir
+        self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+        self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
+        default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
+    
+        self.pname2block = {}
+        self.conflict = []
+        self.restricted_value = {}
+        
+        # Read the comment of the param_card_default to find name variable for 
+        # the param_card also check which value seems to be constrained in the
+        # model.
+        for bname, block in default_param.items():
+            for lha_id, param in block.param_dict.items():
+                all_var = []
+                comment = param.comment
+                # treat merge parameter
+                if comment.strip().startswith('set of param :'):
+                    all_var = list(re.findall(r'''[^-]1\*(\w*)\b'''))
+                # just the variable name as comment
+                elif len(comment.split()) == 1:
+                    all_var = [comment.strip().lower()]
+                # either contraction or not formatted
+                else:
+                    split = comment.split()
+                    if len(split) >2 and split[1] == ':':
+                        # NO VAR associated
+                        self.restricted_value[(bname, lha_id)] = ' '.join(split[1:])
+                    elif len(split) == 2:
+                        if re.search(r'''\[[A-Z]\]eV\^''', split[1]):
+                            all_var = [comment.strip().lower()]
+                    else:
+                        # not recognized format
+                        continue
+                    
+                for var in all_var:
+                    var = var.lower()
+                    if var in self.pname2block:
+                        self.pname2block[var].append((bname, lha_id))
+                    else:
+                        self.pname2block[var] = [(bname, lha_id)]
+                    
+        # check for conflict with run_card
+        for var in self.pname2block:                
+            if var in self.run_card:
+                self.conflict.append(var)        
+                            
+    
+    def complete_set(self, text, line, begidx, endidx):
+        """ Complete the set command"""
+
+        prev_timer = signal.alarm(0) # avoid timer if any
+        if prev_timer:
+            nb_back = len(line)
+            self.stdout.write('\b'*nb_back + '[timer stopped]\n')
+            self.stdout.write(line)
+            self.stdout.flush()
+        
+        possibilities = {}
+        allowed = {}
+        args = self.split_arg(line[0:begidx])
+        if len(args) == 1:
+            allowed = {'category':'', 'run_card':'', 'block':'all', 'param_card':''}
+        elif len(args) == 2:
+            if args[1] == 'run_card':
+                allowed = {'run_card':'default'}
+            elif args[1] == 'param_card':
+                allowed = {'block':'all', 'param_card':'default'}
+            elif args[1] in self.param_card.keys():
+                allowed = {'block':args[1]}
+            else:
+                allowed = {'value':''}
+        else:
+            start = 1
+            if args[1] in  ['run_card', 'param_card']:
+                start = 2
+            if args[start] in self.param_card.keys():
+                if args[start+1:]:
+                    allowed = {'block':(args[start], args[start+1:])}
+                else:
+                    allowed = {'block':args[start]}
+            elif len(args) == start +1:
+                    allowed['value'] = ''
+
+            
+        if 'category' in allowed.keys():
+            possibilities['category of parameter (optional)'] = \
+                          self.list_completion(text, ['run_card', 'param_card'])
+        
+        if 'run_card' in allowed.keys():
+            opts = self.run_card.keys()
+            if allowed['run_card'] == 'default':
+                opts.append('default')
+            
+            possibilities['Run Card'] = self.list_completion(text, opts)
+
+        if 'param_card' in allowed.keys():
+            opts = self.pname2block.keys()
+            if allowed['param_card'] == 'default':
+                opts.append('default')
+            possibilities['Param Card'] = self.list_completion(text, opts)
+                                
+        if 'value' in allowed.keys():
+            opts = ['default']
+            if 'decay' in args:
+                opts.append('Auto')
+            if args[-1] in self.pname2block and self.pname2block[args[-1]][0][0] == 'decay':
+                opts.append('Auto')
+            possibilities['Special Value'] = self.list_completion(text, opts)
+                 
+
+        if 'block' in allowed.keys():
+            if allowed['block'] == 'all':
+                allowed_block = [i for i in self.param_card.keys() if 'qnumbers' not in i]
+                possibilities['Param Card Block' ] = \
+                                       self.list_completion(text, allowed_block)
+            elif isinstance(allowed['block'], basestring):
+                block = self.param_card[allowed['block']].param_dict
+                ids = [str(i[0]) for i in block 
+                          if (allowed['block'], i) not in self.restricted_value]
+                possibilities['Param Card id' ] = self.list_completion(text, ids)
+                varname = [name for name, all_var in self.pname2block.items()
+                                               if any((bname == allowed['block'] 
+                                                   for bname,lhaid in all_var))]
+                possibilities['Param card variable'] = self.list_completion(text,
+                                                                        varname)
+            else:
+                block = self.param_card[allowed['block'][0]].param_dict
+                nb = len(allowed['block'][1])
+                ids = [str(i[nb]) for i in block if len(i) > nb and \
+                            [str(a) for a in i[:nb]] == allowed['block'][1]]
+                
+                if not ids:
+                    if tuple([int(i) for i in allowed['block'][1]]) in block:
+                        opts = ['default']
+                        if allowed['block'][0] == 'decay':
+                            opts.append('Auto')
+                        possibilities['Special value'] = self.list_completion(text, opts)
+                possibilities['Param Card id' ] = self.list_completion(text, ids)        
+
+        return self.deal_multiple_categories(possibilities)
+           
+    def do_set(self, line):
+        """ """
+        
+        args = self.split_arg(line.lower())
+        start = 0
+        if len(args) < 2:
+            logger.warning('invalid set command')
+            return
+        
+        card = '' #store which card need to be modify (for name conflict)
+        if args[0] in ['run_card', 'param_card']:
+            if args[1] == 'default':
+                logging.info('replace %s by the default card' % args[0])
+                files.cp(pjoin(self.me_dir,'Cards','%s_default.dat' % args[0]),
+                        pjoin(self.me_dir,'Cards','%s.dat'% args[0]))
+                return
+            else:
+                card = args[0]
+            start=1
+            if len(args) < 3:
+                logger.warning('invalid set command')
+                return
+        
+        #### RUN CARD
+        if args[start] in self.run_card.keys() and card != 'param_card':
+            if args[start+1] in self.conflict and card == '':
+                text = 'ambiguous name (present in both param_card and run_card. Please specify'
+                logger.warning(text)
+                return
+                
+            if args[start+1] == 'default':
+                default = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
+                if args[start] in default.keys():
+                    self.run_card[args[start]] = default[args[start]]
+                else:
+                    del self.run_card[args[start]]
+            elif  args[start+1] in ['t','.true.']:
+                self.run_card[args[start]] = '.true.'
+            elif  args[start+1] in ['f','.false.']:
+                self.run_card[args[start]] = '.false.'            
+            else:
+                try:
+                    val = eval(args[start+1])
+                except NameError:
+                    val = args[start+1]
+                self.run_card[args[start]] = val
+            self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'),
+                              pjoin(self.me_dir,'Cards','run_card_default.dat'))
+            
+        ### PARAM_CARD WITH BLOCK NAME
+        elif args[start] in self.param_card and card != 'run_card':
+            if args[start+1] in self.conflict and card == '':
+                text = 'ambiguous name (present in both param_card and run_card. Please specify'
+                logger.warning(text)
+                return
+            
+            if args[start+1] in self.pname2block:
+                all_var = self.pname2block[args[start+1]]
+                key = None
+                for bname, lhaid in all_var:
+                    if bname == args[start]:
+                        key = lhaid
+                        break
+                else:
+                    logger.warning('%s is not part of block "%s" but "%s". please correct.' %
+                                    (args[start+1], args[start], bname))
+                    return
+            else:
+                try:
+                    key = tuple([int(i) for i in args[start+1:-1]])
+                except ValueError:
+                    logger.warning('invalid set command')
+                    return 
+
+            if key in self.param_card[args[start]].param_dict:
+                if (args[start], key) in self.restricted_value:
+                    text = "Note that this parameter seems to be ignore by MG.\n"
+                    text += "MG will use instead the expression: %s\n" % \
+                                      self.restricted_value[(args[start], key)]
+                    text += "You need to match this expression for external program (such pythia)."
+                    logger.warning(text)
+                
+                if args[-1] == 'default':
+                    default = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
+                    self.param_card[args[start]].param_dict[key].value = \
+                                      default[args[start]].param_dict[key].value
+                elif args[-1] == 'auto':
+                    self.param_card[args[start]].param_dict[key].value = 'Auto'
+                else:
+                    self.param_card[args[start]].param_dict[key].value = float(args[-1])
+            else:
+                logger.warning('invalid set command')
+                return                   
+            self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+        
+        # PARAM_CARD NO BLOCK NAME
+        elif args[start] in self.pname2block and card != 'run_card':
+            all_var = self.pname2block[args[start]]
+            for bname, lhaid in all_var: 
+                new_line = line.replace(args[start], '%s %s' % 
+                                (bname, ' '.join([ str(i) for i in lhaid])))
+                self.do_set(new_line)
+            if len(all_var) > 1:
+                logger.warning('This variable correspond to more than one parameter in the param_card.')
+                for bname, lhaid in all_var: 
+                    logger.warning('   %s %s' % (bname, ' '.join([str(i) for i in lhaid])))
+                logger.warning('all listed variables have been modified')
+        #INVALID
+        else:
+            logger.warning('invalid set command')
+            return            
+        
+    def help_set(self):
+        '''help message for set'''
+        
+        logger.info('********************* HELP SET ***************************')
+        logger.info("syntax: set [run_card|param_card] NAME [VALUE|default]")
+        logger.info("syntax: set [param_card] BLOCK ID(s) [VALUE|default]")
+        logger.info('')
+        logger.info('-- Edit the param_card/run_card and replace the value of the')
+        logger.info('    parameter by the value VALUE.')
+        logger.info('   ')
+        logger.info('-- Example:')
+        logger.info('     set run_card ebeam1 4000')
+        logger.info('     set ebeam2 4000')
+        logger.info('     set lpp1 0')
+        logger.info('     set ptj default')
+        logger.info('')
+        logger.info('     set param_card mass 6 175')
+        logger.info('     set mass 25 125.3')
+        logger.info('     set mass mh 125')
+        logger.info('     set mh 125')
+        logger.info('     set decay 25 0.004')
+        logger.info('     set decay wh 0.004')
+        logger.info('     set vmix 2 1 2.326612e-01')
+        logger.info('')
+        logger.info('     set param_card default #return all parameter to default')
+        logger.info('     set run_card default')
+        logger.info('********************* HELP SET ***************************')
+    
+    
+
+

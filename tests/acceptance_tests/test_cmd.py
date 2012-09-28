@@ -135,7 +135,7 @@ class TestCmdShell1(unittest.TestCase):
                     'ignore_six_quark_processes': False,
                     'complex_mass_scheme': False,
                     'gauge': 'unitary',
-                    'timeout': 20,
+                    'timeout': 60,
                     'auto_update': 7
                     }
 
