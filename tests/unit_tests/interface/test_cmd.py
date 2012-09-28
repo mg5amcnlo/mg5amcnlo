@@ -123,8 +123,8 @@ class TestValidCmd(unittest.TestCase):
         history = [l.strip() for l in  history.split('\n')]
         self.cmd.history = history         
         
-        self.cmd.clean_history(allow_for_removal = ['output'],
-                           remove_bef_lb1='output')
+        self.cmd.clean_history(allow_for_removal = ['output'], keep_switch=True,
+                           remove_bef_last='output')
 
         goal="""set cluster_queue 2
         import model mssm

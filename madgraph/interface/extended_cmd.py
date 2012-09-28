@@ -768,15 +768,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
     def clean_history(self, to_keep=['set','add','load'],
                             remove_bef_last=None,
-                            remove_bef_lb1=None,
                             to_remove=['open','display','launch', 'check'],
                             allow_for_removal=None,
                             keep_switch=False):
         """Remove command in arguments from history.
         All command before the last occurrence of  'remove_bef_last'
-        (including it) will be removed (but if another options tells the opposite).        
-        All command before the last but one occurrence of  'remove_bef_lb1'
-        (including it) will be removed (but if another options tells the opposite).        
+        (including it) will be removed (but if another options tells the opposite).                
         'to_keep' is a set of line to always keep.
         'to_remove' is a set of line to always remove (don't care about remove_bef_ 
         status but keep_switch acts.).
@@ -795,21 +792,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             
     
         nline = -1
-        last = 0 # number of occurence of remove_bef_lb1 found
         removal = False
         #looping backward
         while nline > -len(self.history):
             switch  = False # set in True when removal pass in True
 
             #check if we need to pass in removal mode
-            if not removal:
-                if remove_bef_lb1:
-                    if self.history[nline].startswith(remove_bef_lb1):
-                        last +=1
-                    if last == 2:
-                        removal = True
-                        switch = True
-                if remove_bef_last:
+            if not removal and remove_bef_last:
                     if self.history[nline].startswith(remove_bef_last):
                         removal = True
                         switch = True  
