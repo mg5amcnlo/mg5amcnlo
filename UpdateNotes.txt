@@ -6,12 +6,17 @@ Update notes for MadGraph 5 (in reverse time order)
                       (mg5> set gauge Feynman)
                   OM: Add a new command: 'customize_model' which allow (for a
                       selection of model) to fine tune the model to your need.
-                  OM: Support UFO model with spin 3/2.
                   FR team: add a file decays.py in the UFO format, this files 
                       contains the analytical expression for one to two decays
        		  OM: implement a function for computing the 1 to 2 width on 
                       the fly. (requires that MG5 install on the computer 
                       not only the output directory)
+                  OM: Support UFO model with spin 3/2
+                  OM + CDe: Support four fermion interactions fermion flow 
+                       violation/majorana are not yet allowed in fourfermion 
+		       interactions.
+                  OM + PdA: Allow Large Extra Dimension Model (LED) to run in the
+                      MG5 framework.
                   OM: Add auto-detection if MG5 is up-to-date and propose to
                       apply the various patch if not.
                   OM: MadEvent change automatically the compiler according to 
@@ -23,8 +28,6 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Improve error message when Source didn't compile properly.    
                   OM: The numerical evaluation of the matrix element requires now 
                       less memory than before (madevent and standalone output)
-                  OM + PdA: Allow Large Extra Dimension Model (LED) to run in the
-                      MG5 framework.
                   OM: Fix a series of bug with the madevent command 'remove' and 
                       'run_banner'                    
                   JA: Ensure identical results for identical seeds also with

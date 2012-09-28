@@ -853,6 +853,24 @@ class Model(PhysicsObject):
             except:
                 return None
 
+    def get_lorentz(self, name):
+        """return the lorentz object from the associate name"""
+        if hasattr(self, 'lorentz_name2obj'):
+            return self.lorentz_name2obj[name]  
+        else:
+            self.create_lorentz_dict()
+            return self.lorentz_name2obj[name]
+
+    def create_lorentz_dict(self):
+        """create the dictionary linked to the lorentz structure"""
+        self.lorentz_name2obj = {}
+        self.lorentz_expr2name = {}
+        if not self.get('lorentz'):
+            return
+        for lor in self.get('lorentz'):
+            self.lorentz_name2obj[lor.name] = lor
+            self.lorentz_expr2name[lor.structure] = lor.name
+
     def get_interaction(self, id):
         """Return the interaction corresponding to the id"""
 
