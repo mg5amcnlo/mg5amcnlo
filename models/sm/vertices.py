@@ -9,11 +9,11 @@ import couplings as C
 import lorentz as L
 
 
-#V_1 = Vertex(name = 'V_1',
-#             particles = [ P.H, P.H, P.H, P.H ],
-#             color = [ '1' ],
-#             lorentz = [ L.SSSS1 ],
-#             couplings = {(0,0):C.GC_17})
+V_1 = Vertex(name = 'V_1',
+             particles = [ P.H, P.H, P.H, P.H ],
+             color = [ '1' ],
+             lorentz = [ L.SSSS1 ],
+             couplings = {(0,0):C.GC_17})
 
 V_2 = Vertex(name = 'V_2',
              particles = [ P.H, P.H, P.phi0, P.phi0 ],

@@ -44,6 +44,7 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
             aloha.unitary_gauge = unitary
             aloha.mp_precision = mp
             aloha.complex_mass = cms
+            aloha_lib.KERNEL.clean()
             try:
                 out =  f(*args, **opt)
             except:
@@ -57,6 +58,7 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
             aloha.unitary_gauge = old_gauge
             aloha.mp_precision = old_mp
             aloha.complex_mass = old_cms
+            aloha_lib.KERNEL.clean()
             return out
         return deco_f_set
     return deco_set
@@ -3691,10 +3693,11 @@ def SSS1_3(S2,S3,COUP,M1,W1):
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
+    
+    @set_global()
     def test_pythonwriter_spin3half(self):
         """ test that python writer works """
 
-        aloha_lib.KERNEL.clean()
 
         solution ="""import wavefunctions
 def RFSC1_1(R1,S3,COUP,M2,W2):
@@ -4400,7 +4403,7 @@ P2[2] = -F2[1].imag();
 P2[3] = -F2[0].imag();
     denom = COUP/(pow(P2[0],2)-pow(P2[1],2)-pow(P2[2],2)-pow(P2[3],2) - M2 * (M2 -cI* W2));
     F2[2]= denom*cI*(F1[2]*(P2[0]*(V3[2]-V3[5])+(P2[1]*(+cI*(V3[4])-V3[3])+(P2[2]*-1.*(V3[4]+cI*(V3[3]))+P2[3]*(V3[2]-V3[5]))))+(F1[3]*(P2[0]*-1.*(V3[3]+cI*(V3[4]))+(P2[1]*(V3[2]+V3[5])+(P2[2]*(+cI*(V3[2]+V3[5]))-P2[3]*(V3[3]+cI*(V3[4])))))+M2*(F1[4]*-1.*(V3[2]+V3[5])-F1[5]*(V3[3]+cI*(V3[4])))));
-    F2[3]= denom*-cI*(F1[2]*(P2[0]*(V3[3]-cI*(V3[4]))+(P2[1]*(V3[5]-V3[2])+(P2[2]*(-cI*(V3[5])+cI*(V3[2]))+P2[3]*(+cI*(V3[4])-V3[3]))))+(F1[3]*(P2[0]*-1.*(V3[2]+V3[5])+(P2[1]*(V3[3]+cI*(V3[4]))+(P2[2]*(V3[4]-cI*(V3[3]))+P2[3]*(V3[2]+V3[5]))))+M2*(F1[4]*(V3[3]-cI*(V3[4]))+F1[5]*(V3[2]-V3[5]))));
+    F2[3]= denom*cI*(F1[2]*(P2[0]*(+cI*(V3[4])-V3[3])+(P2[1]*(V3[2]-V3[5])+(P2[2]*(-cI*(V3[2])+cI*(V3[5]))+P2[3]*(V3[3]-cI*(V3[4])))))+(F1[3]*(P2[0]*(V3[2]+V3[5])+(P2[1]*-1.*(V3[3]+cI*(V3[4]))+(P2[2]*(+cI*(V3[3])-V3[4])-P2[3]*(V3[2]+V3[5]))))+M2*(F1[4]*(+cI*(V3[4])-V3[3])+F1[5]*(V3[5]-V3[2]))));
     F2[4]= denom*-cI*(F1[4]*(P2[0]*-1.*(V3[2]+V3[5])+(P2[1]*(V3[3]-cI*(V3[4]))+(P2[2]*(V3[4]+cI*(V3[3]))+P2[3]*(V3[2]+V3[5]))))+(F1[5]*(P2[0]*-1.*(V3[3]+cI*(V3[4]))+(P2[1]*(V3[2]-V3[5])+(P2[2]*(-cI*(V3[5])+cI*(V3[2]))+P2[3]*(V3[3]+cI*(V3[4])))))+M2*(F1[2]*(V3[2]-V3[5])-F1[3]*(V3[3]+cI*(V3[4])))));
     F2[5]= denom*cI*(F1[4]*(P2[0]*(V3[3]-cI*(V3[4]))+(P2[1]*-1.*(V3[2]+V3[5])+(P2[2]*(+cI*(V3[2]+V3[5]))+P2[3]*(V3[3]-cI*(V3[4])))))+(F1[5]*(P2[0]*(V3[2]-V3[5])+(P2[1]*-1.*(V3[3]+cI*(V3[4]))+(P2[2]*(+cI*(V3[3])-V3[4])+P2[3]*(V3[2]-V3[5]))))+M2*(F1[2]*(V3[3]-cI*(V3[4]))-F1[3]*(V3[2]+V3[5]))));
 }
@@ -4421,12 +4424,13 @@ P2[3] = -F2[0].imag();
         self.assertEqual(len(split_routine), len(split_solution))
 
         split_solution = solution_c.split('\n')
+        split_solution2 = solution2_c.split('\n')
         split_routine = routine[1].split('\n')
-        try:
-            self.assertEqual(split_solution, split_routine)
-        except:
-            split_solution = solution2_c.split('\n')
-            self.assertEqual(split_solution, split_routine)
+        for i in range(len(split_routine)):
+            try:
+                self.assertEqual(split_solution[i], split_routine[i])
+            except:
+                self.assertEqual(split_solution2[i], split_routine[i])
         self.assertEqual(len(split_routine), len(split_solution))
 
         solution_h = """#ifndef FFV1C1_2_guard
@@ -4475,8 +4479,8 @@ P1[2] = -F1[1].imag();
 P1[3] = -F1[0].imag();
     denom = COUP/(pow(P1[0],2)-pow(P1[1],2)-pow(P1[2],2)-pow(P1[3],2) - M1 * (M1 -cI* W1));
     F1[2]= denom*-cI*(F2[2]*(P1[0]*(V3[2]+V3[5])+(P1[1]*-1.*(V3[3]+cI*(V3[4]))+(P1[2]*(+cI*(V3[3])-V3[4])-P1[3]*(V3[2]+V3[5]))))+(F2[3]*(P1[0]*(V3[3]-cI*(V3[4]))+(P1[1]*(V3[5]-V3[2])+(P1[2]*(-cI*(V3[5])+cI*(V3[2]))+P1[3]*(+cI*(V3[4])-V3[3]))))+M1*(F2[4]*(V3[2]-V3[5])+F2[5]*(+cI*(V3[4])-V3[3]))));
-    F1[3]= denom*cI*(F2[2]*(P1[0]*-1.*(V3[3]+cI*(V3[4]))+(P1[1]*(V3[2]+V3[5])+(P1[2]*(+cI*(V3[2]+V3[5]))-P1[3]*(V3[3]+cI*(V3[4])))))+(F2[3]*(P1[0]*(V3[5]-V3[2])+(P1[1]*(V3[3]-cI*(V3[4]))+(P1[2]*(V3[4]+cI*(V3[3]))+P1[3]*(V3[5]-V3[2]))))+M1*(F2[4]*(V3[3]+cI*(V3[4]))-F2[5]*(V3[2]+V3[5]))));
-    F1[4]= denom*cI*(F2[4]*(P1[0]*(V3[5]-V3[2])+(P1[1]*(V3[3]+cI*(V3[4]))+(P1[2]*(V3[4]-cI*(V3[3]))+P1[3]*(V3[5]-V3[2]))))+(F2[5]*(P1[0]*(V3[3]-cI*(V3[4]))+(P1[1]*-1.*(V3[2]+V3[5])+(P1[2]*(+cI*(V3[2]+V3[5]))+P1[3]*(V3[3]-cI*(V3[4])))))+M1*(F2[2]*-1.*(V3[2]+V3[5])+F2[3]*(+cI*(V3[4])-V3[3]))));
+    F1[3]= denom*-cI*(F2[2]*(P1[0]*(V3[3]+cI*(V3[4]))+(P1[1]*-1.*(V3[2]+V3[5])+(P1[2]*-1.*(+cI*(V3[2]+V3[5]))+P1[3]*(V3[3]+cI*(V3[4])))))+(F2[3]*(P1[0]*(V3[2]-V3[5])+(P1[1]*(+cI*(V3[4])-V3[3])+(P1[2]*-1.*(V3[4]+cI*(V3[3]))+P1[3]*(V3[2]-V3[5]))))+M1*(F2[4]*-1.*(V3[3]+cI*(V3[4]))+F2[5]*(V3[2]+V3[5]))));
+    F1[4]= denom*-cI*(F2[4]*(P1[0]*(V3[2]-V3[5])+(P1[1]*-1.*(V3[3]+cI*(V3[4]))+(P1[2]*(+cI*(V3[3])-V3[4])+P1[3]*(V3[2]-V3[5]))))+(F2[5]*(P1[0]*(+cI*(V3[4])-V3[3])+(P1[1]*(V3[2]+V3[5])+(P1[2]*-1.*(+cI*(V3[2]+V3[5]))+P1[3]*(+cI*(V3[4])-V3[3]))))+M1*(F2[2]*(V3[2]+V3[5])+F2[3]*(V3[3]-cI*(V3[4])))));
     F1[5]= denom*-cI*(F2[4]*(P1[0]*-1.*(V3[3]+cI*(V3[4]))+(P1[1]*(V3[2]-V3[5])+(P1[2]*(-cI*(V3[5])+cI*(V3[2]))+P1[3]*(V3[3]+cI*(V3[4])))))+(F2[5]*(P1[0]*(V3[2]+V3[5])+(P1[1]*(+cI*(V3[4])-V3[3])+(P1[2]*-1.*(V3[4]+cI*(V3[3]))-P1[3]*(V3[2]+V3[5]))))+M1*(F2[2]*(V3[3]+cI*(V3[4]))+F2[3]*(V3[2]-V3[5]))));
 }
 
@@ -4491,12 +4495,13 @@ P1[3] = -F1[0].imag();
         self.assertEqual(len(split_routine), len(split_solution))
 
         split_solution = solution_c.split('\n')
+        split_solution2 = solution2_c.split('\n')
         split_routine = routine[1].split('\n')
-        try:
-            self.assertEqual(split_solution, split_routine)
-        except:
-            split_solution = solution2_c.split('\n')
-            self.assertEqual(split_solution, split_routine)
+        for i in range(len(split_routine)):
+            try:
+                self.assertEqual(split_solution[i], split_routine[i])
+            except:
+                self.assertEqual(split_solution2[i], split_routine[i])
         self.assertEqual(len(split_routine), len(split_solution))
 
     @set_global(cms=True)

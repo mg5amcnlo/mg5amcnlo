@@ -802,10 +802,8 @@ C
       INTEGER JC(NEXTERNAL),II
       LOGICAL GOODHEL(NCOMB,2)
       REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
-      INTEGER IDUM, NGOOD(2), IGOOD(NCOMB,2)
+      INTEGER NGOOD(2), IGOOD(NCOMB,2)
       INTEGER JHEL(2), J, JJ
-      REAL     XRAN1
-      EXTERNAL XRAN1
 C     
 C     GLOBAL VARIABLES
 C     
@@ -828,7 +826,6 @@ C
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
       INTEGER SUBDIAG(MAXSPROC),IB(2)
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
-      DATA IDUM /0/
       DATA XTRY, XREJ /0,0/
       DATA NTRY /0,0/
       DATA NGOOD /0,0/
@@ -886,15 +883,15 @@ C     ----------
                 T=T*(2D0-ABS(POL(JJ)))
               ENDIF
             ENDDO
-            ANS=ANS+T
+            ANS=ANS+DABS(T)
             TS(I)=T
           ENDIF
         ENDDO
         JHEL(IMIRROR) = 1
         IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
           DO I=1,NCOMB
-            IF (.NOT.GOODHEL(I,IMIRROR) .AND. (TS(I).GT.ANS*LIMHEL
-     $       /NCOMB)) THEN
+            IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS
+     $       *LIMHEL/NCOMB)) THEN
               GOODHEL(I,IMIRROR)=.TRUE.
               NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
               IGOOD(NGOOD(IMIRROR),IMIRROR) = I
@@ -921,20 +918,24 @@ C     ----------
               T=T*(2D0-ABS(POL(JJ)))
             ENDIF
           ENDDO
-          ANS=ANS+T*HWGT
+          ANS=ANS+DABS(T)*HWGT
           TS(I)=T*HWGT
         ENDDO
         IF (ISHEL(IMIRROR) .EQ. 1) THEN
           WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+C         Set right sign for ANS, based on sign of chosen helicity
+          ANS=DSIGN(ANS,TS(I))
         ENDIF
       ENDIF
       IF (ISHEL(IMIRROR) .NE. 1) THEN
-        R=XRAN1(IDUM)*ANS
+        CALL RANMAR(R)
         SUMHEL=0D0
         DO I=1,NCOMB
-          SUMHEL=SUMHEL+TS(I)
+          SUMHEL=SUMHEL+DABS(TS(I))/ANS
           IF(R.LT.SUMHEL)THEN
             WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+C           Set right sign for ANS, based on sign of chosen helicity
+            ANS=DSIGN(ANS,TS(I))
             GOTO 10
           ENDIF
         ENDDO
@@ -1106,11 +1107,11 @@ C
 C     
 C     LOCAL VARIABLES 
 C     
-      INTEGER I,ITYPE,LP
+      INTEGER I,ITYPE,LP,IPROC
       DOUBLE PRECISION U1
       DOUBLE PRECISION UX2
-      DOUBLE PRECISION XPQ(-7:7)
-      DOUBLE PRECISION DSIGUU
+      DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
+      DOUBLE PRECISION DSIGUU,R
 C     
 C     EXTERNAL FUNCTIONS
 C     
@@ -1119,9 +1120,8 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
-      INTEGER              IPROC
-      DOUBLE PRECISION PD(0:MAXPROC)
-      COMMON /SUBPROC/ PD, IPROC
+      INTEGER          IPSEL
+      COMMON /SUBPROC/ IPSEL
 
       INTEGER SUBDIAG(MAXSPROC),IB(2)
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
@@ -1152,21 +1152,30 @@ C     Only run if IMODE is 0
       PD(0) = 0D0
       IPROC = 0
       IPROC=IPROC+1  ! u u~ > u u~
-      PD(IPROC)=PD(IPROC-1) + U1*UX2
+      PD(IPROC)=U1*UX2
+      PD(0)=PD(0)+DABS(PD(IPROC))
       IF (IMODE.EQ.4)THEN
-        DSIG1 = PD(IPROC)
+        DSIG1 = PD(0)
         RETURN
       ENDIF
       CALL SMATRIX1(PP,DSIGUU)
       DSIGUU=DSIGUU*REWGT(PP)
       IF (DSIGUU.LT.1D199) THEN
-        DSIG1=PD(IPROC)*CONV*DSIGUU
+C       Select a flavor combination (need to do here for right sign)
+        CALL RANMAR(R)
+        IPSEL=0
+        DO WHILE (R.GT.0D0 .AND. IPSEL.LT.IPROC)
+          IPSEL=IPSEL+1
+          R=R-DABS(PD(IPSEL))/PD(0)
+        ENDDO
+C       Set sign of dsig based on sign of PDF and matrix element
+        DSIG1=DSIGN(PD(0)*CONV*DSIGUU,DSIGUU*PD(IPSEL))
       ELSE
         WRITE(*,*) 'Error in matrix element'
         DSIGUU=0D0
         DSIG1=0D0
       ENDIF
-      IF(IMODE.EQ.0.AND.DSIG1.GT.0D0)THEN
+      IF(IMODE.EQ.0.AND.DABS(DSIG1).GT.0D0)THEN
 C       Call UNWGT to unweight and store events
         CALL UNWGT(PP,DSIG1*WGT,1)
       ENDIF
@@ -1223,9 +1232,8 @@ C
 C     
 C     LOCAL VARIABLES 
 C     
-      INTEGER I,J,K,LUN,IDUM,ICONF,IMIRROR,NPROC
-      DATA IDUM/0/
-      SAVE NPROC,IDUM
+      INTEGER I,J,K,LUN,ICONF,IMIRROR,NPROC
+      SAVE NPROC
       INTEGER SYMCONF(0:LMAXCONFIGS)
       SAVE SYMCONF
       DOUBLE PRECISION SUMPROB,TOTWGT,R,XDUM
@@ -1251,9 +1259,8 @@ C
 C     EXTERNAL FUNCTIONS
 C     
       INTEGER NEXTUNOPEN
-      REAL XRAN1
       DOUBLE PRECISION DSIGPROC
-      EXTERNAL NEXTUNOPEN,XRAN1,DSIGPROC
+      EXTERNAL NEXTUNOPEN,DSIGPROC
 C     
 C     GLOBAL VARIABLES
 C     
@@ -1265,6 +1272,10 @@ C     ICONFIG has this config number
 C     IPROC has the present process number
       INTEGER IPROC
       COMMON/TO_MIRROR/IMIRROR, IPROC
+C     CM_RAP has parton-parton system rapidity
+      DOUBLE PRECISION CM_RAP
+      LOGICAL SET_CM_RAP
+      COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -1354,6 +1365,7 @@ C                 Need to flip back x values
                   XDUM=XBK(1)
                   XBK(1)=XBK(2)
                   XBK(2)=XDUM
+                  CM_RAP=-CM_RAP
                 ENDIF
               ENDIF
             ENDDO
@@ -1362,8 +1374,8 @@ C                 Need to flip back x values
       ENDDO
 
 C     Perform the selection
-      IDUM=0
-      R=XRAN1(IDUM)*SUMPROB
+      CALL RANMAR(R)
+      R=R*SUMPROB
       ICONF=0
       IPROC=0
       TOTWGT=0D0
@@ -1395,7 +1407,7 @@ C     Call DSIGPROC to calculate sigma for process
       IF(DSIG.GT.0D0)THEN
 C       Update summed weight and number of events
         SUMWGT(IMIRROR,IPROC,ICONF)=SUMWGT(IMIRROR,IPROC,ICONF)
-     $   +DSIG*WGT
+     $   +DABS(DSIG*WGT)
         NUMEVTS(IMIRROR,IPROC,ICONF)=NUMEVTS(IMIRROR,IPROC,ICONF)+1
       ENDIF
 
@@ -1441,6 +1453,10 @@ C     IB gives which beam is which (for mirror processes)
 C     ICONFIG has this config number
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
+C     CM_RAP has parton-parton system rapidity
+      DOUBLE PRECISION CM_RAP
+      LOGICAL SET_CM_RAP
+      COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
 C     
 C     EXTERNAL FUNCTIONS
 C     
@@ -1478,6 +1494,8 @@ C       Flip x values (to get boost right)
         XDUM=XBK(1)
         XBK(1)=XBK(2)
         XBK(2)=XDUM
+C       Flip CM_RAP (to get rapidity right)
+        CM_RAP=-CM_RAP
       ENDIF
 
       DSIGPROC=0D0
@@ -3549,8 +3567,8 @@ C       This is dummy particle used in multiparticle vertices
 
         # Test pdf output (for auto_dsig.f)
         self.assertEqual(exporter.get_pdf_lines(matrix_element, 2),
-                         ("DOUBLE PRECISION u1\nDOUBLE PRECISION ux2",
-                          "DATA u1/1*1D0/\nDATA ux2/1*1D0/",
+                         ('DOUBLE PRECISION u1\nDOUBLE PRECISION ux2', 
+                          'DATA u1/1*1D0/\nDATA ux2/1*1D0/', 
                           """IF (ABS(LPP(1)) .GE. 1) THEN
 LP=SIGN(1,LPP(1))
 u1=PDG2PDF(ABS(LPP(1)),2*LP,XBK(1),DSQRT(Q2FACT(1)))
@@ -3562,7 +3580,8 @@ ENDIF
 PD(0) = 0d0
 IPROC = 0
 IPROC=IPROC+1 ! u u~ > u u~ u u~
-PD(IPROC)=PD(IPROC-1) + u1*ux2"""))
+PD(IPROC)=u1*ux2
+PD(0)=PD(0)+DABS(PD(IPROC))"""))
 
         # Test mg.sym
         writer = writers.FortranWriter(self.give_pos('test'))

@@ -200,6 +200,14 @@ class ParamCardWriter(object):
         if param.value.imag != 0:
             raise ParamCardWriterError, 'All External Parameter should be real'
     
+
+        # avoid to keep special value used to avoid restriction
+        if param.value == 9.999999e-1:
+            param.value = 1
+        elif param.value == 0.000001e-99:
+            param.value = 0
+    
+    
         lhacode=' '.join(['%3s' % key for key in param.lhacode])
         if lhablock != 'DECAY':
             text = """  %s %e # %s \n""" % (lhacode, param.value.real, info) 

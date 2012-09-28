@@ -40,7 +40,7 @@ try:
     MADEVENT = False
 except Exception, error:
     if __debug__:
-       logger_stderr.info(error)
+       logger.info('extended_cmd:'+str(error))
     import internal.misc as misc
     MADEVENT = True
 
@@ -446,6 +446,20 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # execute the line command
         return line
 
+    def postcmd(self,stop, line):
+        """ finishing a command
+        This looks if the command add a special post part."""
+
+        if line.strip():
+            try:
+                cmd, subline = line.split(None, 1)
+            except ValueError:
+                pass
+            else:
+                if hasattr(self,'post_%s' %cmd):
+                    stop = getattr(self, 'post_%s' % cmd)(stop, subline)
+        return stop
+
     def nice_error_handling(self, error, line):
         """ """ 
         # Make sure that we are at the initial position
@@ -483,6 +497,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         except Exception, error:
             debug_file.write('Fail to write options with error %s' % error)
         
+
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
             return True 
@@ -674,7 +689,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                             remove_bef_lb1=None,
                             to_remove=['open','display','launch'],
                             keep_last=False):
-        """Remove all commands in arguments from history"""
+        """Remove command in arguments from history.
+        to_keep is a set of line to always keep
+        to_remove is a set of line to always remove
+        remove_bef_lb1 remove up to first occurrence.
+        keep_last ensure to keep the last entry.
+        """
         
     
         nline = -1
@@ -709,7 +729,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             self.history.pop()
         
         # Read the lines of the file and execute them
-        self.inputfile = open(filepath)
+        commandline = open(filepath).readlines()
+        self.inputfile = (l for l in commandline) # make a generator
+        # Note using "for line in open(filepath)" is not safe since the file
+        # filepath can be overwritten during the run (leading to weird results)
+        # Note also that we need a generator and not a list.
         for line in self.inputfile:
             #remove pointless spaces and \n
             line = line.replace('\n', '').strip()
@@ -1078,23 +1102,26 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         text = ""
         # Use local configuration => Need to update the path
         for line in file(basefile):
-            if '#!' in line:
-                data, comment = line.split('#!',1)
+            if '=' in line:
+                data, value = line.split('=',1)
             else: 
-                data, comment = line, ''
-            data = data.split('=')
-            if len(data) !=2:
                 text += line
                 continue
-            key = data[0].strip()
-            if key.startswith('#'):
-                key = key[1:] 
-                
+            data = data.strip()
+            if data.startswith('#'):
+                key = data[1:].strip()
+            else: 
+                key = data 
+            if '#' in value:
+                value, comment = value.split('#',1)
+            else:
+                comment = ''    
+            
             if key in to_keep:
                 value = str(to_keep[key])
             else:
-                key = '#' + key
-                value = data[1]
+                text += line
+                continue
             try:
                 to_write.remove(key)
             except:
@@ -1102,7 +1129,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if '_path' in key:       
                 # special case need to update path
                 # check if absolute path
-                if os.path.isabs('./'):
+                if not os.path.isabs(value):
                     value = os.path.realpath(os.path.join(basedir, value))
             text += '%s = %s # %s \n' % (key, value, comment)
         for key in to_write:

@@ -211,7 +211,9 @@ class WriteALOHA:
                 self.declaration.add(('double','M%s' % self.outgoing))                
                 call_arg.append(('double','W%s' % self.outgoing))              
                 self.declaration.add(('double','W%s' % self.outgoing))
-            
+        
+        assert len(call_arg) == len(set([a[1] for a in call_arg]))
+        assert len(self.declaration) == len(set([a[1] for a in self.declaration])), self.declaration
         self.call_arg = call_arg
         return call_arg
 
@@ -627,7 +629,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             decla = name.split('_',1)[0]
             self.declaration.add(('list_%s' % type, decla))
         else:
-            self.declaration.add((name.type, name.split('_',1)[0]))
+            self.declaration.add((name.type, name))
         name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         return name
   
@@ -1701,7 +1703,7 @@ class ALOHAWriterForPython(WriteALOHA):
         """
         
         if '_' not in name:
-            self.declaration.add(('complex', name))
+            self.declaration.add((name.type, name))
         else:
             self.declaration.add(('', name.split('_',1)[0]))
         name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
@@ -1950,6 +1952,17 @@ class Declaration_list(set):
             return var in self.var_name
         self.var_name = [name for type,name in self]
         return var in self.var_name
+    
+    def add(self,obj):
+        if __debug__:
+            type, name = obj
+            samename = [t for t,n in self if n ==name]
+            for type2 in samename:
+                assert type2 == type, '%s is defined with two different type "%s" and "%s"' % \
+                            (name, type2, type)
+            
+        set.add(self,obj)
+        
 
 class WriterFactory(object):
     

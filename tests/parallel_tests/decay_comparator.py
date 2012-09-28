@@ -22,6 +22,7 @@ import os
 import shutil
 import unittest
 import subprocess
+import time
 
 pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
@@ -59,6 +60,20 @@ class DecayComparator(object):
         """create mg5 directory and then use fr to compare. Returns the ratio of
         the decay or None if this ratio is not constant for all channel.
         """
+        enter_time = time.time()
+        def error_text(mg5_info, fr_info, pid):
+            """get error text"""
+            text = "MG5 INFORMATION:\n"
+            text += 'total: %s ' % mg5_info['decay'].get((pid,)).value 
+            if mg5_info['decay'].decay_table.has_key(pid):
+                text += str(mg5_info['decay'].decay_table[pid])+'\n'
+            text += "FR INFORMATION\n"
+            text += 'total: %s ' % fr_info['decay'].get((pid,)).value 
+            if fr_info['decay'].decay_table.has_key(pid):
+                text += str(fr_info['decay'].decay_table[pid])+'\n'
+            print text
+            return text
+        
         dir_name = 'TEST_DECAY_%s_%s' % (self.model,particle)       
         pid = self.particles_id[particle]
         
@@ -68,7 +83,7 @@ class DecayComparator(object):
         #
         # RUN MG5
         #
-        
+        start1= time.time()
         self.cmd.exec_cmd('set automatic_html_opening False')
         self.cmd.exec_cmd('generate %s > all all' % particle)
 
@@ -77,9 +92,10 @@ class DecayComparator(object):
         
         files.cp(pjoin(_file_path, 'input_files/run_card_decay.dat'),
                  '%s/Cards/run_card.dat' % dir_name, log=True)
-
-        self.cmd.exec_cmd('launch -f')
         
+        self.cmd.exec_cmd('launch -f')
+        stop_mg5 = time.time()
+        print 'MG5 Running time: %s s ' % (stop_mg5 -start1)
         mg5_info = card_reader.ParamCard(pjoin(dir_name,'Events','run_01','param_card.dat'))
         
         #
@@ -87,9 +103,11 @@ class DecayComparator(object):
         #
                 
         me_cmd = me_interface.MadEventCmd(dir_name)
+        start3 = time.time()
         me_cmd.exec_cmd('compute_widths %s -f' % particle)
-        
+        stop_fr = time.time()
         fr_info = card_reader.ParamCard(pjoin(dir_name, 'Cards', 'param_card.dat'))
+        print 'FR Running time: %s s ' % (stop_fr -start3)
         
         
         # check the total width
@@ -100,7 +118,8 @@ class DecayComparator(object):
         if mg5_width == fr_width == 0:
             return 'True'
         elif (mg5_width - fr_width) / (mg5_width + fr_width) > 1e-4:
-            return '%s has not the same total width: ratio of %s' % \
+            text = error_text(mg5_info, fr_info, pid)
+            return text + '\n%s has not the same total width: ratio of %s' % \
                 (particle, (mg5_width - fr_width) / (mg5_width + fr_width))
         
         mg5_info_partial = {}
@@ -120,7 +139,8 @@ class DecayComparator(object):
                 continue
             elif (mg5_value - fr_value) / (mg5_value + fr_value) > 1e-3 and \
                 mg5_value / mg5_width > 1e-5:
-                return '%s has not the same partial width for %s: ratio of %s' % \
+                text = error_text(mg5_info, fr_info, pid)
+                return text + '\n%s has not the same partial width for %s: ratio of %s' % \
                 (particle, lha_code, (mg5_value - fr_value) / (mg5_value + fr_value))
                 return False            
             
@@ -133,7 +153,7 @@ class DecayComparator(object):
 class TestFRDecay(unittest.TestCase):
     
     def test_decay_mssm(self):
-        decay_framework = DecayComparator('MSSM_UFO')
+        decay_framework = DecayComparator('mssm')
         
         for name in decay_framework.particles_id.keys():
             import time
@@ -143,7 +163,7 @@ class TestFRDecay(unittest.TestCase):
             print 'done in %s s' % (time.time() - start)
         
     def test_decay_nmssm1(self):
-        decay_framework = DecayComparator('NMSSM_UFO')
+        decay_framework = DecayComparator('nmssm')
 
         for name in decay_framework.particles_id.keys()[:17]:
             import time
@@ -153,7 +173,7 @@ class TestFRDecay(unittest.TestCase):
             print 'done in %s s' % (time.time() - start)
     
     def test_decay_nmssm2(self):
-        decay_framework = DecayComparator('NMSSM_UFO')
+        decay_framework = DecayComparator('nmssm')
 
         for name in decay_framework.particles_id.keys()[17:34]:
             import time
@@ -163,7 +183,7 @@ class TestFRDecay(unittest.TestCase):
             print 'done in %s s' % (time.time() - start)
     
     def test_decay_nmssm3(self):
-        decay_framework = DecayComparator('NMSSM_UFO')
+        decay_framework = DecayComparator('nmssm')
 
         for name in decay_framework.particles_id.keys()[34:]:
             import time
@@ -172,7 +192,23 @@ class TestFRDecay(unittest.TestCase):
             self.assertEqual('True', decay_framework.has_same_decay(name))
             print 'done in %s s' % (time.time() - start)
         
+    def test_decay_heft(self):
+        decay_framework = DecayComparator('Higgs_Effective_Couplings_UFO')
+
+        for name in decay_framework.particles_id.keys():
+            import time
+            start = time.time()
+            print 'comparing decay for %s' % name
+            self.assertEqual('True', decay_framework.has_same_decay(name))
+            print 'done in %s s' % (time.time() - start)        
         
-        
-        
+    def test_decay_triplet_diquarks(self):
+        decay_framework = DecayComparator('triplet_diquarks')
+
+        for name in decay_framework.particles_id.keys():
+            import time
+            start = time.time()
+            print 'comparing decay for %s' % name
+            self.assertEqual('True', decay_framework.has_same_decay(name))
+            print 'done in %s s' % (time.time() - start)         
         

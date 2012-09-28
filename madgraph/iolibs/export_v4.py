@@ -38,6 +38,7 @@ import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.gen_infohtml as gen_infohtml
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
+import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.misc as misc
 import madgraph.various.process_checks as process_checks
@@ -64,13 +65,17 @@ class ProcessExporterFortran(object):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
-    def __init__(self, mgme_dir = "", dir_path = "", clean = False):
+    def __init__(self, mgme_dir = "", dir_path = "", opt=None):
         """Initiate the ProcessExporterFortran with directory information"""
         self.mgme_dir = mgme_dir
         self.dir_path = dir_path
-        self.clean = clean
         self.model = None
-
+        if opt:
+            self.opt = opt
+        else:
+            self.opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'madevent'}
+            
     #===========================================================================
     # copy the Template in a new directory.
     #===========================================================================
@@ -108,7 +113,7 @@ class ProcessExporterFortran(object):
                 "5." + MG5_version['version'])
 
         #Ensure that the Template is clean
-        if self.clean:
+        if self.opt['clean']:
             logger.info('remove old information in %s' % \
                                                   os.path.basename(self.dir_path))
             if os.environ.has_key('MADGRAPH_BASE'):
@@ -268,7 +273,9 @@ class ProcessExporterFortran(object):
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)'
-        text = open(path).read() % {'libraries': set_of_lib} 
+        model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc\n\tcd MODEL; make    
+param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
+        text = open(path).read() % {'libraries': set_of_lib, 'model':model_line} 
         writer.write(text)
         
         return True
@@ -342,7 +349,7 @@ class ProcessExporterFortran(object):
 
         # create the MODEL
         write_dir=pjoin(self.dir_path, 'Source', 'MODEL')
-        model_builder = UFO_model_to_mg4(model, write_dir)
+        model_builder = UFO_model_to_mg4(model, write_dir, self.opt)
         model_builder.build(wanted_couplings)
 
         # Create and write ALOHA Routine
@@ -618,7 +625,8 @@ class ProcessExporterFortran(object):
             for i, proc in enumerate(processes):
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + 1d0\n"
+                pdf_lines = pdf_lines + "\nPD(IPROC)=1d0\n"
+                pdf_lines = pdf_lines + "\nPD(0)=PD(0)+PD(IPROC)\n"
         else:
             # Pick out all initial state particles for the two beams
             initial_states = [sorted(list(set([p.get_initial_pdg(1) for \
@@ -693,7 +701,7 @@ class ProcessExporterFortran(object):
             for proc in processes:
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + "
+                pdf_lines = pdf_lines + "\nPD(IPROC)="
                 for ibeam in [1, 2]:
                     initial_state = proc.get_initial_pdg(ibeam)
                     if initial_state in pdf_codes.keys():
@@ -703,6 +711,7 @@ class ProcessExporterFortran(object):
                         pdf_lines = pdf_lines + "1d0*"
                 # Remove last "*" from pdf_lines
                 pdf_lines = pdf_lines[:-1] + "\n"
+                pdf_lines = pdf_lines + "PD(0)=PD(0)+DABS(PD(IPROC))\n"
 
         # Remove last line break from the return variables
         return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1]
@@ -970,7 +979,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = '$(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)'
-        text = open(path).read() % {'libraries': set_of_lib} 
+        model_line='''$(LIBDIR)libmodel.$(libext): MODEL\n\t cd MODEL; make\n'''
+        text = open(path).read() % {'libraries': set_of_lib, 'model':model_line} 
         writer.write(text)
         
         return True
@@ -1098,6 +1108,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     def copy_python_file(self):
         """copy the python file require for the Template"""
 
+        # madevent interface
         cp(_file_path+'/interface/madevent_interface.py',
                             self.dir_path+'/bin/internal/madevent_interface.py')
         cp(_file_path+'/interface/extended_cmd.py',
@@ -1106,8 +1117,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
         cp(_file_path+'/iolibs/save_load_object.py', 
                               self.dir_path+'/bin/internal/save_load_object.py') 
+        cp(_file_path+'/iolibs/file_writers.py', 
+                              self.dir_path+'/bin/internal/file_writers.py')
+        #model file                        
         cp(_file_path+'../models/check_param_card.py', 
-                              self.dir_path+'/bin/internal/check_param_card.py')
+                              self.dir_path+'/bin/internal/check_param_card.py')   
+                
+        #madevent file
         cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
         cp(_file_path+'/various/gen_crossxhtml.py', 
                                 self.dir_path+'/bin/internal/gen_crossxhtml.py')                
@@ -1117,6 +1133,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                        self.dir_path+'/bin/internal/cluster.py') 
         cp(_file_path+'/various/sum_html.py', 
                                        self.dir_path+'/bin/internal/sum_html.py') 
+        cp(_file_path+'/various/combine_runs.py', 
+                                       self.dir_path+'/bin/internal/combine_runs.py')
+        # logging configuration
         cp(_file_path+'/interface/.mg5_logging.conf', 
                                  self.dir_path+'/bin/internal/me5_logging.conf') 
         cp(_file_path+'/interface/coloring_logging.py', 
@@ -1138,8 +1157,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
          if hasattr(model, 'restrict_card'):
-             files.cp(model.restrict_card, pjoin(self.dir_path, 'bin', 'internal',
-                                             'ufomodel','restrict_default.dat'))
+             out_path = pjoin(self.dir_path, 'bin', 'internal','ufomodel',
+                                                         'restrict_default.dat')
+             if isinstance(model.restrict_card, check_param_card.ParamCard):
+                 model.restrict_card.write(out_path)
+             else:
+                 files.cp(model.restrict_card, out_path)
 
                 
     #===========================================================================
@@ -1475,6 +1498,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
 
+        
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
 
@@ -1612,10 +1636,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Set dsig_line
         if ninitial == 1:
             # No conversion, since result of decay should be given in GeV
-            dsig_line = "pd(IPROC)*dsiguu"
+            dsig_line = "pd(0)*dsiguu"
         else:
             # Convert result (in GeV) to pb
-            dsig_line = "pd(IPROC)*conv*dsiguu"
+            dsig_line = "pd(0)*conv*dsiguu"
 
         replace_dict['dsig_line'] = dsig_line
 
@@ -2365,10 +2389,9 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         including the necessary matrix_N.f files, configs.inc and various
         other helper files"""
 
-        if not isinstance(subproc_group, group_subprocs.SubProcessGroup):
-            raise base_objects.PhysicsObject.PhysicsObjectError,\
-                  "subproc_group object not SubProcessGroup"
-
+        assert isinstance(subproc_group, group_subprocs.SubProcessGroup), \
+                                      "subproc_group object not SubProcessGroup"
+        
         if not self.model:
             self.model = subproc_group.get('matrix_elements')[0].\
                          get('processes')[0].get('model')
@@ -2792,14 +2815,17 @@ python_to_fortran = lambda x: parsers.UFOExpressionParserFortran().parse(x)
 class UFO_model_to_mg4(object):
     """ A converter of the UFO-MG5 Model to the MG4 format """
     
-    def __init__(self, model, output_path, cmass_scheme=False):
+    def __init__(self, model, output_path, opt=None):
         """ initialization of the objects """
        
         self.model = model
         self.model_name = model['name']
         self.dir_path = output_path
-        self.cmass_scheme=cmass_scheme
-        
+        if opt:
+            self.opt = opt
+        else:
+            self.opt = {'complex_mass': False, 'export_format': 'madevent'}
+            
         self.coups_dep = []    # (name, expression, type)
         self.coups_indep = []  # (name, expression, type)
         self.params_dep = []   # (name, expression, type)
@@ -2956,11 +2982,27 @@ class UFO_model_to_mg4(object):
     
         
         #copy the library files
-        file_to_link = ['formats.inc', 'lha_read.f', 'makefile','printout.f', \
-                        'rw_para.f', 'testprog.f', 'rw_para.f']
+        file_to_link = ['formats.inc', 'lha_read.f','printout.f', \
+                        'rw_para.f', 'testprog.f']
+    
     
         for filename in file_to_link:
             cp( MG5DIR + '/models/template_files/fortran/' + filename, self.dir_path)
+
+        if self.opt['export_format'] == 'madevent':
+            cp( MG5DIR + '/models/template_files/fortran/makefile_madevent', 
+                self.dir_path + '/makefile')
+        else:
+            cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
+                self.dir_path + '/makefile')
+            text = open(pjoin(self.dir_path, 'rw_para.f')).read()
+            text = re.sub(r'c\s*call LHA_loadcard','       call LHA_loadcard',text, re.I)
+            fsock = open(pjoin(self.dir_path, 'rw_para.f'), 'w')
+            fsock.write(text)
+            fsock.close()
+            
+     
+
 
     def create_coupl_inc(self):
         """ write coupling.inc """
@@ -2980,7 +3022,7 @@ class UFO_model_to_mg4(object):
         # Write the Mass definition/ common block
         masses = set()
         widths = set()
-        if aloha.complex_mass:
+        if self.opt['complex_mass']:
             complex_mass = set()
             
         for particle in self.model.get('particles'):
@@ -2993,7 +3035,7 @@ class UFO_model_to_mg4(object):
             one_width = particle.get('width')
             if one_width.lower() != 'zero':
                 widths.add(one_width)
-                if aloha.complex_mass and one_mass.lower() != 'zero':
+                if self.opt['complex_mass'] and one_mass.lower() != 'zero':
                     complex_mass.add('CMASS_%s' % one_mass)
         
         fsock.writelines('double precision '+','.join(masses)+'\n')
@@ -3008,7 +3050,7 @@ class UFO_model_to_mg4(object):
         fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
         
         # Write complex mass for complex mass scheme (if activated)
-        if aloha.complex_mass:
+        if self.opt['complex_mass']:
             fsock.writelines('double complex '+', '.join(complex_mass)+'\n')
             fsock.writelines('common/couplings/ '+', '.join(complex_mass)+'\n')            
         
@@ -3038,7 +3080,7 @@ class UFO_model_to_mg4(object):
         for particle in self.model.get('particles'):
             already_def.add(particle.get('mass').lower())
             already_def.add(particle.get('width').lower())
-            if aloha.complex_mass:
+            if self.opt['complex_mass']:
                 already_def.add('cmass_%s' % particle.get('mass').lower())
 
         is_valid = lambda name: name !='G' and name.lower() not in already_def
@@ -3249,6 +3291,11 @@ class UFO_model_to_mg4(object):
         
     def create_param_read(self):    
         """create param_read"""
+        
+        if self.opt['export_format'] == 'madevent':
+            fsock = self.open('param_read.inc', format='fortran')
+            fsock.writelines(' include \'../param_card.inc\'')
+            return
     
         def format_line(parameter):
             """return the line for the ident_card corresponding to this 
@@ -3275,7 +3322,7 @@ class UFO_model_to_mg4(object):
                 
         
         fsock.writelines('\n'.join(res_strings))
-
+        
     def create_param_card(self):
         """ create the param_card.dat """
 
@@ -3295,44 +3342,37 @@ class UFO_model_to_mg4(object):
                 translator.make_valid_param_card(out_path, out_path2)
             translator.convert_to_slha1(out_path)
         
+def ExportV4Factory(cmd, noclean):
+    """ Determine which Export_v4 class is required. cmd is the command 
+        interface containing all potential usefull information."""
 
-
-#===============================================================================
-# ProcessExporterFortranMEGroup
-#===============================================================================
-class ProcessExporterFortranMEGroupComplexMass(ProcessExporterFortranMEGroup):
-    """Class to take care of exporting a set of matrix elements to
-    MadEvent subprocess group format in complex mass scheme format"""
-
-    def convert_model_to_mg4(self, model, wanted_lorentz = [],
-                             wanted_couplings = []):
-        """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
-
-        # create the MODEL
-        write_dir=os.path.join(self.dir_path, 'Source', 'MODEL')
-        model_builder = UFO_model_to_mg4(model, write_dir, cmass_scheme=True)
-        model_builder.build(wanted_couplings)
-
-        # Create and write ALOHA Routine
-        aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
-        aloha_model.add_Lorentz_object(model.get('lorentz'))
-        if wanted_lorentz:
-            aloha_model.compute_subset(wanted_lorentz)
+    group_subprocesses = cmd.options['group_subprocesses']
+    #check if we need to group processes
+    if cmd.options['group_subprocesses'] == 'Auto':
+        if cmd._curr_amps[0].get_ninitial()  == 2:
+            group_subprocesses = True
         else:
-            aloha_model.compute_all(save=False)
-        write_dir=os.path.join(self.dir_path, 'Source', 'DHELAS')
-        aloha_model.write(write_dir, 'Fortran')
+            group_subprocesses = False
 
-        #copy Helas Template
-        cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
-        for filename in os.listdir(os.path.join(MG5DIR,'aloha','template_files')):
-            if not filename.lower().endswith('.f'):
-                continue
-            cp((MG5DIR + '/aloha/template_files/' + filename), write_dir)
-        create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
+    assert group_subprocesses in [True, False]
+    
+    
+    opt = {'clean': not noclean, 
+           'complex_mass': cmd.options['complex_mass_scheme'],
+           'export_format':cmd._export_format}
 
-        # Make final link in the Process
-        self.make_model_symbolic_link()
-
-
-
+    if cmd._export_format in ['standalone', 'matrix']:
+        return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt)
+    elif cmd._export_format in ['madevent'] and group_subprocesses:
+        return  ProcessExporterFortranMEGroup(cmd._mgme_dir, cmd._export_dir,
+                                                                        opt)
+    elif cmd._export_format in ['madevent']:
+        return ProcessExporterFortranME(cmd._mgme_dir, cmd._export_dir,opt)
+    
+    else:
+        raise Exception, 'Wrong export_v4 format'
+        
+    
+    
+    
+            

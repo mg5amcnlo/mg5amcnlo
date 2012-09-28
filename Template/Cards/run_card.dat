@@ -34,11 +34,13 @@
       0       = iseed   ! rnd seed (0=assigned automatically=default))
 #*********************************************************************
 # Collider type and energy                                           *
+# lpp: 0=No PDF, 1=proton, -1=antiproton, 2=photon from proton,      *
+#                                         3=photon from electron     *
 #*********************************************************************
-        1     = lpp1  ! beam 1 type (0=NO PDF)
-        1     = lpp2  ! beam 2 type (0=NO PDF)
-     7000     = ebeam1  ! beam 1 energy in GeV
-     7000     = ebeam2  ! beam 2 energy in GeV
+        1     = lpp1    ! beam 1 type 
+        1     = lpp2    ! beam 2 type
+     7000     = ebeam1  ! beam 1 total energy in GeV
+     7000     = ebeam2  ! beam 2 total energy in GeV
 #*********************************************************************
 # Beam polarization from -100 (left-handed) to 100 (right-handed)    *
 #*********************************************************************
@@ -94,7 +96,7 @@
 #*******************                                                 
 #                                                                    
 #*********************************************************************
-# Minimum and maximum pt's                                           *
+# Minimum and maximum pt's (for max, -1 means no cut)                *
 #*********************************************************************
  20  = ptj       ! minimum pt for the jets 
   0  = ptb       ! minimum pt for the b 
@@ -103,11 +105,11 @@
   0  = misset    ! minimum missing Et (sum of neutrino's momenta)
   0  = ptheavy   ! minimum pt for one heavy final state
  1.0 = ptonium   ! minimum pt for the quarkonium states
- 1d5 = ptjmax    ! maximum pt for the jets
- 1d5 = ptbmax    ! maximum pt for the b
- 1d5 = ptamax    ! maximum pt for the photons
- 1d5 = ptlmax    ! maximum pt for the charged leptons
- 1d5 = missetmax ! maximum missing Et (sum of neutrino's momenta)
+ -1  = ptjmax    ! maximum pt for the jets
+ -1  = ptbmax    ! maximum pt for the b
+ -1  = ptamax    ! maximum pt for the photons
+ -1  = ptlmax    ! maximum pt for the charged leptons
+ -1  = missetmax ! maximum missing Et (sum of neutrino's momenta)
 #*********************************************************************
 # Minimum and maximum E's (in the lab frame)                         *
 #*********************************************************************
@@ -115,22 +117,22 @@
   0  = eb     ! minimum E for the b 
   0  = ea     ! minimum E for the photons 
   0  = el     ! minimum E for the charged leptons 
- 1d5  = ejmax ! maximum E for the jets
- 1d5  = ebmax ! maximum E for the b
- 1d5  = eamax ! maximum E for the photons
- 1d5  = elmax ! maximum E for the charged leptons
+ -1   = ejmax ! maximum E for the jets
+ -1   = ebmax ! maximum E for the b
+ -1   = eamax ! maximum E for the photons
+ -1   = elmax ! maximum E for the charged leptons
 #*********************************************************************
-# Maximum and minimum rapidity                                       *
+# Maximum and minimum absolute rapidity (for max, -1 means no cut)   *
 #*********************************************************************
    5  = etaj    ! max rap for the jets 
- 1d2  = etab    ! max rap for the b 
+  -1  = etab    ! max rap for the b
  2.5  = etaa    ! max rap for the photons 
  2.5  = etal    ! max rap for the charged leptons 
  0.6  = etaonium ! max rap for the quarkonium states
- 0d0  = etajmin ! min rap for the jets
- 0d0  = etabmin ! min rap for the b
- 0d0  = etaamin ! min rap for the photons
- 0d0  = etalmin ! main rap for the charged leptons
+   0  = etajmin ! min rap for the jets
+   0  = etabmin ! min rap for the b
+   0  = etaamin ! min rap for the photons
+   0  = etalmin ! main rap for the charged leptons
 #*********************************************************************
 # Minimum and maximum DeltaR distance                                *
 #*********************************************************************
@@ -144,16 +146,16 @@
  0   = drab    ! min distance between gamma and b 
  0   = drbl    ! min distance between b and lepton 
  0.4 = dral    ! min distance between gamma and lepton 
- 1d2 = drjjmax ! max distance between jets
- 1d2 = drbbmax ! max distance between b's
- 1d2 = drllmax ! max distance between leptons
- 1d2 = draamax ! max distance between gammas
- 1d2 = drbjmax ! max distance between b and jet
- 1d2 = drajmax ! max distance between gamma and jet
- 1d2 = drjlmax ! max distance between jet and lepton
- 1d2 = drabmax ! max distance between gamma and b
- 1d2 = drblmax ! max distance between b and lepton
- 1d2 = dralmax ! maxdistance between gamma and lepton
+ -1  = drjjmax ! max distance between jets
+ -1  = drbbmax ! max distance between b's
+ -1  = drllmax ! max distance between leptons
+ -1  = draamax ! max distance between gammas
+ -1  = drbjmax ! max distance between b and jet
+ -1  = drajmax ! max distance between gamma and jet
+ -1  = drjlmax ! max distance between jet and lepton
+ -1  = drabmax ! max distance between gamma and b
+ -1  = drblmax ! max distance between b and lepton
+ -1  = dralmax ! maxdistance between gamma and lepton
 #*********************************************************************
 # Minimum and maximum invariant mass for pairs                       *
 #*********************************************************************
@@ -161,20 +163,20 @@
  0   = mmbb    ! min invariant mass of a b pair 
  0   = mmaa    ! min invariant mass of gamma gamma pair
  0   = mmll    ! min invariant mass of l+l- (same flavour) lepton pair
- 1d5 = mmjjmax ! max invariant mass of a jet pair
- 1d5 = mmbbmax ! max invariant mass of a b pair
- 1d5 = mmaamax ! max invariant mass of gamma gamma pair
- 1d5 = mmllmax ! max invariant mass of l+l- (same flavour) lepton pair
+ -1  = mmjjmax ! max invariant mass of a jet pair
+ -1  = mmbbmax ! max invariant mass of a b pair
+ -1  = mmaamax ! max invariant mass of gamma gamma pair
+ -1  = mmllmax ! max invariant mass of l+l- (same flavour) lepton pair
 #*********************************************************************
 # Minimum and maximum invariant mass for all letpons                 *
 #*********************************************************************
  0   = mmnl    ! min invariant mass for all letpons (l+- and vl) 
- 1d5 = mmnlmax ! max invariant mass for all letpons (l+- and vl) 
+ -1  = mmnlmax ! max invariant mass for all letpons (l+- and vl) 
 #*********************************************************************
 # Minimum and maximum pt for 4-momenta sum of leptons                *
 #*********************************************************************
  0   = ptllmin  ! Minimum pt for 4-momenta sum of leptons(l and vl)
- 1d5 = ptllmax  ! Maximum pt for 4-momenta sum of leptons(l and vl)
+ -1  = ptllmax  ! Maximum pt for 4-momenta sum of leptons(l and vl)
 #*********************************************************************
 # Inclusive cuts                                                     *
 #*********************************************************************
@@ -189,10 +191,10 @@
  0   = ptj2min ! minimum pt for the second jet in pt
  0   = ptj3min ! minimum pt for the third jet in pt
  0   = ptj4min ! minimum pt for the fourth jet in pt
- 1d5 = ptj1max ! maximum pt for the leading jet in pt 
- 1d5 = ptj2max ! maximum pt for the second jet in pt
- 1d5 = ptj3max ! maximum pt for the third jet in pt
- 1d5 = ptj4max ! maximum pt for the fourth jet in pt
+ -1  = ptj1max ! maximum pt for the leading jet in pt 
+ -1  = ptj2max ! maximum pt for the second jet in pt
+ -1  = ptj3max ! maximum pt for the third jet in pt
+ -1  = ptj4max ! maximum pt for the fourth jet in pt
  0   = cutuse  ! reject event if fails any (0) / all (1) jet pt cuts
 #*********************************************************************
 # Control the pt's of leptons sorted by pt                           *
@@ -201,23 +203,23 @@
  0   = ptl2min ! minimum pt for the second lepton in pt
  0   = ptl3min ! minimum pt for the third lepton in pt
  0   = ptl4min ! minimum pt for the fourth lepton in pt
- 1d5 = ptl1max ! maximum pt for the leading lepton in pt 
- 1d5 = ptl2max ! maximum pt for the second lepton in pt
- 1d5 = ptl3max ! maximum pt for the third lepton in pt
- 1d5 = ptl4max ! maximum pt for the fourth lepton in pt
+ -1  = ptl1max ! maximum pt for the leading lepton in pt 
+ -1  = ptl2max ! maximum pt for the second lepton in pt
+ -1  = ptl3max ! maximum pt for the third lepton in pt
+ -1  = ptl4max ! maximum pt for the fourth lepton in pt
 #*********************************************************************
 # Control the Ht(k)=Sum of k leading jets                            *
 #*********************************************************************
  0   = htjmin ! minimum jet HT=Sum(jet pt)
- 1d5 = htjmax ! maximum jet HT=Sum(jet pt)
+ -1  = htjmax ! maximum jet HT=Sum(jet pt)
  0   = ihtmin  !inclusive Ht for all partons (including b)
- 1d5 = ihtmax  !inclusive Ht for all partons (including b)
+ -1  = ihtmax  !inclusive Ht for all partons (including b)
  0   = ht2min ! minimum Ht for the two leading jets
  0   = ht3min ! minimum Ht for the three leading jets
  0   = ht4min ! minimum Ht for the four leading jets
- 1d5 = ht2max ! maximum Ht for the two leading jets
- 1d5 = ht3max ! maximum Ht for the three leading jets
- 1d5 = ht4max ! maximum Ht for the four leading jets
+ -1  = ht2max ! maximum Ht for the two leading jets
+ -1  = ht3max ! maximum Ht for the three leading jets
+ -1  = ht4max ! maximum Ht for the four leading jets
 #*********************************************************************
 # WBF cuts                                                           *
 #*********************************************************************

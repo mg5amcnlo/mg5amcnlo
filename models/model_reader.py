@@ -63,13 +63,6 @@ class ModelReader(base_objects.Model):
         
         # Read in param_card
         if param_card:
-            
-            # Check that param_card exists
-            if not os.path.isfile(param_card):
-                raise MadGraph5Error, \
-                      "No such file %s" % param_card
-            
-
             # Create a dictionary from LHA block name and code to parameter name
             parameter_dict = {}
             for param in external_parameters:
@@ -80,7 +73,14 @@ class ModelReader(base_objects.Model):
                     parameter_dict[param.lhablock.lower()] = dictionary
                 dictionary[tuple(param.lhacode)] = param
                 
-            param_card = card_reader.ParamCard(param_card)
+            if isinstance(param_card, basestring):
+                # Check that param_card exists
+                if not os.path.isfile(param_card):
+                    raise MadGraph5Error, "No such file %s" % param_card
+                param_card = card_reader.ParamCard(param_card)
+            assert isinstance(param_card, card_reader.ParamCard)
+                
+           
             
             key = [k for k in param_card.keys() if not k.startswith('qnumbers ')
                                             and not k.startswith('decay_table')]
@@ -104,7 +104,7 @@ class ModelReader(base_objects.Model):
                         exec("locals()[\'%s\'] = %s" % (parameter_dict[block][id].name,
                                           value))
                         parameter_dict[block][id].value = float(value)
-                    
+           
         else:
             # No param_card, use default values
             for param in external_parameters:
@@ -207,7 +207,11 @@ class Alphas_Runner(object):
     def __call__(self, scale):
         """Evaluation of strong coupling constant alpha_S at scale 'scale'."""
         assert scale > 0
-        if scale < self.cmass:
+        
+        
+        if scale < 0.188775276209:
+            return 0
+        elif scale < self.cmass:
             t = 2 * math.log(scale/self.cmass)
             return self.newton1(t, self.amc, 3)
         elif scale < self.bmass:
@@ -248,7 +252,7 @@ class Alphas_Runner(object):
         a_out = alphas / (1 + alphas * b0 * t)
         if nloop == 1:
             return a_out
-        
+
         a_out = alphas/(1+b0*alphas*t+c1*alphas*math.log(1+alphas*b0*t))
         if a_out < 0:
             a_out = 0.3

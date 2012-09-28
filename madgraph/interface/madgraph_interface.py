@@ -26,6 +26,7 @@ import signal
 import subprocess
 import sys
 import shutil
+import StringIO
 import traceback
 import time
 import urllib
@@ -72,9 +73,12 @@ import madgraph.various.cluster as cluster
 
 import models as ufomodels
 import models.import_ufo as import_ufo
+import models.write_param_card as param_writer
+import models.check_param_card as check_param_card
 
 import aloha.aloha_fct as aloha_fct
 import aloha.create_aloha as create_aloha
+import aloha.aloha_lib as aloha_lib
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
@@ -191,8 +195,10 @@ class CmdExtended(cmd.Cmd):
     
     def postcmd(self,stop, line):
         """ finishing a command
+        This looks if the command add a special post part.
         This looks if we have to write an additional text for the tutorial."""
         
+        stop = super(CmdExtended, self).postcmd(stop, line)   
         # Print additional information in case of routines fails
         if stop == False:
             return False
@@ -235,6 +241,10 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("syntax: save %s FILENAME" % "|".join(self._save_opts))
         logger.info("-- save information as file FILENAME")
         logger.info("   FILENAME is optional for saving 'options'.")
+        logger.info('   By default it uses ./input/mg5_configuration.txt')
+        logger.info('   If you put "global" for FILENAME it will use ~/.mg5/mg5_configuration.txt')
+        logger.info('   If this files exists, it is uses by all MG5 on the system but continues')
+        logger.info('   to read the local options files.')
 
     def help_load(self):
         logger.info("syntax: load %s FILENAME" % "|".join(self._save_opts))
@@ -310,6 +320,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info('   the path to the last created/used directory is used')
         logger.info('   The program used to open those files can be chosen in the')
         logger.info('   configuration file ./input/mg5_configuration.txt')
+        
+    def help_customize_model(self):
+        logger.info("syntax: customize_model --save=NAME")
+        logger.info("--  Open an invite where you options to tweak the model.")
+        logger.info("    If you specify the option --save=NAME, this tweak will be")
+        logger.info("    available for future import with the command 'import model XXXX-NAME'")
         
     def help_output(self):
         logger.info("syntax: output [" + "|".join(self._export_formats) + \
@@ -401,8 +417,8 @@ class HelpToCmd(cmd.HelpCmd):
         
 
     def help_set(self):
-        logger.info("syntax: set %s argument" % "|".join(self._set_options))
-        logger.info("-- set options for generation or output")
+        logger.info("syntax: set %s argument|default" % "|".join(self._set_options))
+        logger.info("-- set options for generation or output.")
         logger.info("   group_subprocesses True/False/Auto: ")
         logger.info("     (default Auto) Smart grouping of subprocesses into ")
         logger.info("     directories, mirroring of initial states, and ")
@@ -428,7 +444,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   timeout VALUE")
         logger.info("      (default 20) Seconds allowed to answer questions.")
         logger.info("      Note that pressing tab always stops the timer.")
-
+        logger.info("   cluster_temp_path PATH")
+        logger.info("      (default None) [Used in Madevent Output]")
+        logger.info("      Allow to perform the run in PATH directory")
+        logger.info("      This allow to not run on the central disk. This is not used")
+        logger.info("      by condor cluster (since condor has it's own way to prevent it).")
+       
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -773,7 +794,25 @@ This will take effect only in a NEW terminal
         if len(args) != 2 or args[0] not in self._save_opts:
             self.help_load()
             raise self.InvalidCmd('wrong \"load\" format')
+    
+    def check_customize_model(self, args):
+        """check the validity of the line"""
+        
+        # Check argument validity
+        if len(args) >1 :
+            self.help_customize_model()
+            raise self.InvalidCmd('No argument expected for this command')
+        
+        if len(args):
+            if not args[0].startswith('--save='):
+                self.help_customize_model()
+                raise self.InvalidCmd('Wrong argument for this command')
+            if '-' in args[0][6:]:
+                raise self.InvalidCmd('The name given in save options can\'t contain \'-\' symbol.')
             
+        if self._model_v4_path:
+            raise self.InvalidCmd('Restriction of Model is not supported by v4 model.')
+        
         
     def check_save(self, args):
         """ check the validity of the line"""
@@ -781,9 +820,11 @@ This will take effect only in a NEW terminal
         if len(args) == 0:
             args.append('options')
         
-        if args[0] not in self._save_opts:
+        if args[0] not in self._save_opts and args[0] != 'global':
             self.help_save()
             raise self.InvalidCmd('wrong \"save\" format')
+        elif args[0] == 'global':
+            args.insert(0, 'options')
         
         if args[0] != 'options' and len(args) != 2:
             self.help_save()
@@ -801,6 +842,11 @@ This will take effect only in a NEW terminal
                     continue
                 elif arg.startswith('--'):
                     raise self.InvalidCmd('unknow command for \'save options\'')
+                elif arg == 'global':
+                    if os.environ.has_key('HOME'):
+                        args.remove('global')
+                        args.insert(1,pjoin(os.environ['HOME'],'.mg5','mg5_configuration.txt'))
+                        has_path = True
                 else:
                     basename = os.path.dirname(arg)
                     if not os.path.exists(basename):
@@ -816,18 +862,29 @@ This will take effect only in a NEW terminal
                 args.insert(1, pjoin(MG5DIR,'input','mg5_configuration.txt'))     
                 
 
-           
-    
-    
-    def check_set(self, args):
+    def check_set(self, args, log=True):
         """ check the validity of the line"""
-        
+
         if len(args) == 1 and args[0] == 'complex_mass_scheme':
             args.append('True')
         
         if len(args) < 2:
             self.help_set()
             raise self.InvalidCmd('set needs an option and an argument')
+
+        if args[1] == 'default':
+            if args[0] in self.options_configuration:
+                default = self.options_configuration[args[0]]
+            elif args[0] in self.options_madgraph:
+                default = self.options_madgraph[args[0]]
+            elif args[0] in self.options_madevent:
+                default = self.options_madevent[args[0]]
+            else:
+                raise self.InvalidCmd('%s doesn\'t have a valid default value' % args[0])
+            if log:
+                logger.info('Pass parameter %s to it\'s default value: %s' % 
+                                                             (args[0], default))
+            args[1] = str(default)
 
         if args[0] not in self._set_options:
             if not args[0] in self.options and not args[0] in self.options:
@@ -854,8 +911,10 @@ This will take effect only in a NEW terminal
 
         if args[0] in ['timeout']:
             if not args[1].isdigit():
-                raise self.InvalidCmd('timeout values should be a integer')   
+                raise self.InvalidCmd('timeout values should be a integer')
+            
 
+            
     def check_open(self, args):
         """ check the validity of the line """
         
@@ -1073,6 +1132,9 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         
     def check_install(self, args):
         """ No possibility to install new software on the web """
+        if args == ['update','--mode=mg5_start']:
+            return
+        
         raise self.WebRestriction('Impossible to install program on the cluster')
         
     def check_load(self, args):
@@ -1181,9 +1243,19 @@ class CompleteForCmd(cmd.CompleteCmd):
             couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
         return self.list_completion(text, self._particle_names + \
                                     self._multiparticles.keys() + couplings)
-          
+    
+    def complete_customize_model(self, text, line, begidx, endidx):
+        "Complete the customize_model command"
+        
+        args = self.split_arg(line[0:begidx])
+
+        # Format
+        if len(args) == 1:
+            return self.list_completion(text, ['--save='])
+        
+    
     def complete_check(self, text, line, begidx, endidx):
-        "Complete the add command"
+        "Complete the check command"
 
         args = self.split_arg(line[0:begidx])
 
@@ -1326,7 +1398,7 @@ class CompleteForCmd(cmd.CompleteCmd):
 
         # Filename if directory is not given
         if len(args) == 2:
-            return self.path_completion(text)
+            return self.path_completion(text) + self.list_completion(text, ['global'])
 
     @cmd.debug()    
     def complete_open(self, text, line, begidx, endidx): 
@@ -1455,30 +1527,30 @@ class CompleteForCmd(cmd.CompleteCmd):
 
         if len(args) == 2:
             if args[1] in ['group_subprocesses', 'complex_mass_scheme']:
-                return self.list_completion(text, ['False', 'True'])
+                return self.list_completion(text, ['False', 'True','default'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
             elif args[1] == 'gauge':
-                return self.list_completion(text, ['unitary', 'Feynman'])
+                return self.list_completion(text, ['unitary', 'Feynman','default'])
             elif args[1] == 'stdout_level':
-                return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR','CRITICAL'])
+                return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR','CRITICAL','default'])
         
             elif args[1] == 'fortran_compiler':
-                return self.list_completion(text, ['f77','g77','gfortran'])
+                return self.list_completion(text, ['f77','g77','gfortran','default'])
             elif args[1] == 'nb_core':
-                return self.list_completion(text, [str(i) for i in range(100)])
+                return self.list_completion(text, [str(i) for i in range(100)] + ['default'] )
             elif args[1] == 'run_mode':
-                return self.list_completion(text, [str(i) for i in range(3)])
+                return self.list_completion(text, [str(i) for i in range(3)] + ['default'])
             elif args[1] == 'cluster_type':
-                return self.list_completion(text, cluster.from_name.keys())
+                return self.list_completion(text, cluster.from_name.keys() + ['default'])
             elif args[1] == 'cluster_queue':
                 return []
             elif args[1] == 'automatic_html_opening':
-                return self.list_completion(text, ['False', 'True'])            
+                return self.list_completion(text, ['False', 'True', 'default'])            
             else:
                 # directory names
                 second_set = [name for name in self.path_completion(text, '.', only_dirs = True)]
-                return self.list_completion(text, first_set + second_set)
+                return self.list_completion(text, first_set + second_set + ['default'])
         elif len(args) >2 and args[-1].endswith(os.path.sep):
                 return self.path_completion(text,
                         pjoin(*[a for a in args if a.endswith(os.path.sep)]),
@@ -1703,7 +1775,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'text_editor':None,
                        'fortran_compiler':None,
                        'auto_update':7,
-                       'cluster_type': 'condor'}
+                       'cluster_type': 'condor',
+                       'cluster_temp_path': None,
+                       'cluster_queue': None,
+                       }
     
     options_madgraph= {'group_subprocesses': 'Auto',
                           'ignore_six_quark_processes': False,
@@ -1712,7 +1787,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'stdout_level':None}
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
-                         'cluster_queue':'madgraph',
                          'nb_core': None,
                          }
 
@@ -1729,8 +1803,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def preloop(self):
         """Initializing before starting the main loop"""
 
-        self.prompt = 'mg5>'
-        
+        self.prompt = 'mg5>'       
         self.do_install('update --mode=mg5_start')
         
         # By default, load the UFO Standard Model
@@ -2140,7 +2213,35 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             pydoc.pager(outstr)            
         
-        elif args[0] in  ["options", "variable"]:
+        elif args[0] == 'options':
+            outstr = "                          MadGraph Options    \n"
+            outstr += "                          ----------------    \n"
+            for key, default in self.options_madgraph.items():
+                value = self.options[key]
+                if value == default:
+                    outstr += "  %25s \t:\t%s\n" % (key,value)
+                else:
+                    outstr += "  %25s \t:\t%s (user set)\n" % (key,value)
+            outstr += "\n"
+            outstr += "                         MadEvent Options    \n"
+            outstr += "                          ----------------    \n"
+            for key, default in self.options_madevent.items():
+                value = self.options[key]
+                if value == default:
+                    outstr += "  %25s \t:\t%s\n" % (key,value)
+                else:
+                    outstr += "  %25s \t:\t%s (user set)\n" % (key,value)  
+            outstr += "\n"                 
+            outstr += "                      Configuration Options    \n"
+            outstr += "                      ---------------------    \n"
+            for key, default in self.options_configuration.items():
+                value = self.options[key]
+                if value == default:
+                    outstr += "  %25s \t:\t%s\n" % (key,value)
+                else:
+                    outstr += "  %25s \t:\t%s (user set)\n" % (key,value)
+            output.write(outstr)
+        elif args[0] in  ["variable"]:
             super(MadGraphCmd, self).do_display(line, output)
                 
             
@@ -2348,7 +2449,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Remove previous generations from history
         self.clean_history(to_remove=['add process'], remove_bef_lb1='generate',
-                           to_keep=['add','import','set','load'])
+                           to_keep=['add','import','set','load','define'])
 
         # Call add process
         args = self.split_arg(line)
@@ -2691,7 +2792,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         logger_stderr.warning('WARNING: %s' % error)
                         logger_stderr.warning('Try to recover by running automatically `import model_v4 %s` instead.' \
                                                                       % args[1])
-                    self.exec_cmd('import model_v4 %s ' % args[1], precmd=True)    
+                    self.exec_cmd('import model_v4 %s ' % args[1], precmd=True)
+                    return    
                 if self.options['complex_mass_scheme']:
                     self._curr_model.change_mass_to_complex_scheme()
                     if hasattr(self._curr_model, 'set_parameters_and_couplings'):
@@ -2722,7 +2824,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             # Do post-processing of model
             self.process_model()
-
             # Reset amplitudes and matrix elements and global checks
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -2787,7 +2888,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
  
             #convert and excecute the card
             self.import_mg4_proc_card(proc_card)
-
+            
     
     def import_ufo_model(self, model_name):
         """ import the UFO model """
@@ -3031,7 +3132,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 os.chmod(pjoin(MG5DIR,'td','td'), 0775)
                 if sys.maxsize > 2**32:
                     logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer
-                Please follow instruction in http://cp3wks05.fynu.ucl.ac.be/twiki/bin/view/Software/TopDrawer.''')
+                Please follow instruction in https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/TopDrawer .''')
             
             if not misc.which('gs'):
                 logger.warning('''gosthscript not install on your system. This is not required to run MA.
@@ -3083,7 +3184,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if not os.path.exists(os.path.join(MG5DIR,'input','.autoupdate')) or \
                 os.path.exists(os.path.join(MG5DIR,'.bzr')):
             error_text = """This version of MG5 doesn\'t support auto-update. Common reasons are:
-            1) This version was loaded via bazaar (use bzr pull to update instead)
+            1) This version was loaded via bazaar (use bzr pull to update instead).
             2) This version is a beta release of MG5."""
             if mode == 'userrequest':
                 raise self.ConfigurationError(error_text)
@@ -3134,8 +3235,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             fsock.write("version_nb   %s\n" % data['version_nb'])
             fsock.write("last_check   %s\n" % int(time.time()))
             fsock.close()
+            return
         elif data['version_nb'] > web_version:
             logger_stderr.info('impossible to update: local %s web %s' % (data['version_nb'], web_version))
+            fsock = open(os.path.join(MG5DIR,'input','.autoupdate'),'w')
+            fsock.write("version_nb   %s\n" % data['version_nb'])
+            fsock.write("last_check   %s\n" % int(time.time()))
+            fsock.close()
             return
         else:
             if not force:
@@ -3183,7 +3289,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             fsock.close()
             logger.info('Update bypassed.')
             logger.info('The next check for a new version will be performed in %s days' \
-                        % self.options['auto_update'])
+                        % abs(self.options['auto_update']))
             logger.info('In order to change this delay. Enter the command:')
             logger.info('set auto_update X')
             logger.info('Putting X to zero will prevent this check at anytime.')
@@ -3192,7 +3298,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         else: #answer is on_exit
             #ensure that the test will be done on exit
             #Do not use the set command here!!
-            self.options['auto_update'] = -1
+            self.options['auto_update'] = -1 * self.options['auto_update']
 
 
     
@@ -3236,7 +3342,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             else:
                 name = name.strip()
                 value = value.strip()
-                self.options[name] = value
+                if name != 'mg5_path':
+                    self.options[name] = value
                 if value.lower() == "none":
                     self.options[name] = None
 
@@ -3267,7 +3374,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
-                    self.do_set("%s %s" % (key, self.options[key]), log=False)
+                    self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
                 except MadGraph5Error, error:
                     print error
                     logger.warning("Option %s from config file not understood" \
@@ -3327,6 +3434,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     ME = madevent_interface.MadEventCmdShell(me_dir=args[1], options=self.options)
                 else:
                      ME = madevent_interface.MadEventCmd(me_dir=args[1],options=self.options)
+                     ME.pass_in_web_mode()
                 # transfer interactive configuration
                 config_line = [l for l in self.history if l.strip().startswith('set')]
                 for line in config_line:
@@ -3433,6 +3541,111 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             else:
                 raise self.RWError('Could not load processes from file %s' % args[1])
     
+    
+    def do_customize_model(self, line):
+        """create a restriction card in a interactive way"""
+
+        args = self.split_arg(line)
+        self.check_customize_model(args)
+
+        try:
+            model_path = import_ufo.find_ufo_path(self._curr_model.get('name'))
+        except import_ufo.UFOImportError:
+            name = self._curr_model.get('name').rsplit('-',1)[0]
+            try:
+                model_path = import_ufo.find_ufo_path(name)
+            except import_ufo.UFOImportError:
+                print name
+                raise self.InvalidCmd('''Invalid model.''')
+                
+        if not os.path.exists(pjoin(model_path,'build_restrict.py')):
+            raise self.InvalidCmd('''Model not compatible with this option.''')
+        
+        # (re)import the full model (get rid of the default restriction)
+        self._curr_model = import_ufo.import_full_model(model_path)
+        
+        #1) create the full param_card
+        out_path = StringIO.StringIO()
+        param_writer.ParamCardWriter(self._curr_model, out_path)
+        # and load it to a python object
+        param_card = check_param_card.ParamCard(out_path.getvalue().split('\n'))
+        
+        #2) Import the option available in the model
+        ufo_model = ufomodels.load_model(model_path)
+        all_categories = ufo_model.build_restrict.all_categories
+        
+        #3) making the options
+        def change_options(name, all_categories):
+            for category in all_categories:
+                for options in category:            
+                    if options.name == name:
+                        options.status = not options.status
+
+        # asking the question to the user                        
+        while 1:
+            question = ''
+            answers = ['0']
+            cat = {} 
+            for category in all_categories:
+                question += category.name + ':\n'
+                for options in category:
+                    if not options.first:
+                        continue
+                    question += '    %s: %s [%s]\n' % (len(answers), options.name, 
+                                options.display(options.status))
+                    cat[str(len(answers))] = options.name
+                    answers.append(len(answers))
+            question += 'Enter a number to change it\'s status or press enter to validate'
+            answers.append('done')
+            value = self.ask(question,'0',answers)
+            if value not in ['0','done']:
+                change_options(cat[value], all_categories)
+            else:
+                break
+
+        ## Make a Temaplate for  the restriction card. (card with no restrict)
+        for block in param_card:
+            value_dict = {}
+            for param in param_card[block]:
+                value = param.value
+                if value == 0:
+                    param.value = 0.000001e-99
+                elif value == 1:
+                    param.value = 9.999999e-1                
+                elif abs(value) in value_dict:
+                    param.value += value_dict[abs(value)] * 1e-4 * param.value
+                    value_dict[abs(value)] += 1
+                else:
+                    value_dict[abs(value)] = 1 
+        
+        for category in all_categories:
+            for options in category:
+                if not options.status:
+                    continue
+                param = param_card[options.lhablock].get(options.lhaid)
+                param.value = options.value
+        
+        logger.info('Loading the resulting model')
+        # Applying the restriction 
+        self._curr_model = import_ufo.RestrictModel(self._curr_model)
+        self._curr_model.restrict_model(param_card)
+        
+        if args:
+            name = args[0].split('=',1)[1]
+            path = pjoin(model_path,'restrict_%s.dat' % name)
+            logger.info('Save restriction file as %s' % path)
+            param_card.write(path)
+            self._curr_model['name'] += '-%s' % name
+        
+        
+        
+        
+        
+        
+        
+        
+    
+    
     def do_save(self, line, check=True, to_keep={}):
         """Not in help: Save information to file"""
 
@@ -3459,19 +3672,27 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # First look at options which should be put in MG5DIR/input
             to_define = {}
             for key, default in self.options_configuration.items():
-                if self.options[key] != self.options_configuration[key]:
+                if  self.options_configuration[key] != self.options[key] != None:
                     to_define[key] = self.options[key]
-            
+                
             if not '--auto' in args:
                 for key, default in self.options_madevent.items():
-                    if self.options[key] != self.options_madevent[key]:
+                    if self.options_madevent[key] != self.options[key] != None:
                         to_define[key] = self.options[key]
-            
+                    elif key == 'cluster_queue' and self.options[key] is None:
+                        to_define[key] = self.options[key]
+                        
             if '--all' in args:
                 for key, default in self.options_madgraph.items():
-                    if self.options[key] != self.options_madgraph[key]:
+                    if self.options_madgraph[key] != self.options[key] != None and \
+                      key != 'stdout_level':
                         to_define[key] = self.options[key]
-            
+            elif not '--auto' in args:
+                for key, default in self.options_madgraph.items():
+                    if self.options_madgraph[key] != self.options[key] != None and  key != 'stdout_level':
+                        logger.info('The option %s is modified [%s] but will not be written in the configuration files.' \
+                                    % (key,self.options_madgraph[key]) )
+                        logger.info('If you want to make this value the default for future session, you can run \'save options --all\'')
             if len(args) >1 and not args[1].startswith('--'):
                 filepath = args[1]
             else:
@@ -3487,12 +3708,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def do_set(self, line, log=True):
         """Set an option, which will be default for coming generations/outputs
         """
-	
+	    # This command is associated to a post_cmd: post_set.
+        
         args = self.split_arg(line)
         
         # Check the validity of the arguments
         self.check_set(args)
-
+            
         if args[0] == 'ignore_six_quark_processes':
             if args[1] == 'False':
                 self.options[args[0]] = False
@@ -3531,6 +3753,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             old = self.options[args[0]] 
             self.options[args[0]] = eval(args[1])
             aloha.complex_mass = eval(args[1])
+            aloha_lib.KERNEL.clean()
             if not self._curr_model:
                 pass
             elif self.options[args[0]]:
@@ -3560,6 +3783,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     aloha.unitary_gauge = True
                 else:
                     aloha.unitary_gauge = False
+                aloha_lib.KERNEL.clean()
                 self.options[args[0]] = args[1]
                 if log: logger.info('Pass to gauge %s.' % args[1])
                 return
@@ -3614,6 +3838,23 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.options[args[0]] = eval(args[1])
             else:
                 self.options[args[0]] = args[1]             
+
+    def post_set(self, stop, line):
+        """Check if we need to save this in the option file"""
+        
+        args = self.split_arg(line)
+        # Check the validity of the arguments
+        try:
+            self.check_set(args, log=False)
+        except Exception:
+            return stop
+        
+        if args[0] in self.options_configuration and '--no_save' not in args:
+            self.exec_cmd('save options --auto')
+        elif args[0] in self.options_madevent:
+            logger.info('This option will be the default in any output that you are going to create in this session.')
+            logger.info('In order to keep this changes permanent please run \'save options\'')
+        return stop
 
     def do_open(self, line):
         """Open a text file/ eps file / html file"""
@@ -3694,37 +3935,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 raise self.InvalidCmd('Stopped by user request')
             else:
                 shutil.rmtree(self._export_dir)
-
-        #check if we need to group processes
-        group_subprocesses = False
-        if self._export_format == 'madevent' and \
-                                            self.options['group_subprocesses']:
-                if self.options['group_subprocesses'] is True:
-                    group_subprocesses = True
-                elif self._curr_amps[0].get_ninitial()  == 2:
-                    group_subprocesses = True
-
                              
         # Make a Template Copy
-        if self._export_format == 'madevent':
-            if group_subprocesses:
-                if not self.options['complex_mass_scheme']:
-                    self._curr_exporter = export_v4.ProcessExporterFortranMEGroup(\
-                                      self._mgme_dir, self._export_dir,
-                                      not noclean)
-                else:
-                    self._curr_exporter = \
-                            export_v4.ProcessExporterFortranMEGroupComplexMass(\
-                                      self._mgme_dir, self._export_dir,
-                                      not noclean)                    
-            else:
-                self._curr_exporter = export_v4.ProcessExporterFortranME(\
-                                      self._mgme_dir, self._export_dir,
-                                      not noclean)
-        
-        elif self._export_format in ['standalone', 'matrix']:
-            self._curr_exporter = export_v4.ProcessExporterFortranSA(\
-                                  self._mgme_dir, self._export_dir,not noclean)
+        if self._export_format in ['madevent', 'standalone', 'matrix']:
+            self._curr_exporter = export_v4.ExportV4Factory(self, noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif not os.path.isdir(self._export_dir):
