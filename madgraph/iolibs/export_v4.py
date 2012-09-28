@@ -73,7 +73,6 @@ class ProcessExporterFortran(object):
         else:
             self.opt = {'clean': False, 'complex_mass':False,
                         'export_format':'madevent'}
-        super(ProcessExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)            
 
     #===========================================================================
     # copy the Template in a new directory.
@@ -350,7 +349,7 @@ class ProcessExporterFortran(object):
 
         # Make sure aloha is in quadruple precision if needed
         old_aloha_mp=aloha.mp_precision
-        aloha.mp_precision=self.mp
+        aloha.mp_precision=self.opt['mp']
 
         # create the MODEL
         write_dir=pjoin(self.dir_path, 'Source', 'MODEL')
@@ -3077,7 +3076,7 @@ class UFO_model_to_mg4(object):
         
         #copy the library files
         file_to_link = ['formats.inc', 'lha_read.f','printout.f', \
-                        'rw_para.f', 'testprog.f','makefile']
+                        'rw_para.f', 'testprog.f']
     
     
         for filename in file_to_link:
@@ -3087,7 +3086,7 @@ class UFO_model_to_mg4(object):
         file = open(os.path.join(MG5DIR,\
                               'models/template_files/fortran/rw_para.f')).read()
         includes=["include \'coupl.inc\'","include \'input.inc\'"]
-        if self.mp:
+        if self.opt['mp']:
             includes.extend(["include \'mp_coupl.inc\'","include \'mp_input.inc\'"])
         file=file%{'includes':'\n      '.join(includes)}
         writer=open(os.path.join(self.dir_path,'rw_para.f'),'w')
@@ -3106,7 +3105,7 @@ class UFO_model_to_mg4(object):
         """ write coupling.inc """
         
         fsock = self.open('coupl.inc', format='fortran')
-        if self.mp:
+        if self.opt['mp']:
             mp_fsock = self.open('mp_coupl.inc', format='fortran')
             mp_fsock_same_name = self.open('mp_coupl_same_name.inc',\
                                             format='fortran')
@@ -3130,7 +3129,7 @@ class UFO_model_to_mg4(object):
                 
         fsock.writelines(header)
         
-        if self.mp:
+        if self.opt['mp']:
             header = """%(real_mp_format)s %(mp_prefix)sG
                     common/MP_strong/ %(mp_prefix)sG
                      
@@ -3172,7 +3171,7 @@ class UFO_model_to_mg4(object):
         if masses:
             fsock.writelines('double precision '+','.join(masses)+'\n')
             fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
-            if self.mp:
+            if self.opt['mp']:
                 mp_fsock_same_name.writelines(self.mp_real_format+' '+\
                                                           ','.join(masses)+'\n')
                 mp_fsock_same_name.writelines('common/MP_masses/ '+\
@@ -3185,7 +3184,7 @@ class UFO_model_to_mg4(object):
         if widths:
             fsock.writelines('double precision '+','.join(widths)+'\n')
             fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')
-            if self.mp:
+            if self.opt['mp']:
                 mp_fsock_same_name.writelines(self.mp_real_format+' '+\
                                                           ','.join(widths)+'\n')
                 mp_fsock_same_name.writelines('common/MP_widths/ '+\
@@ -3199,7 +3198,7 @@ class UFO_model_to_mg4(object):
         coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep]       
         fsock.writelines('double complex '+', '.join(coupling_list)+'\n')
         fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
-        if self.mp:
+        if self.opt['mp']:
             mp_fsock_same_name.writelines(self.mp_complex_format+' '+\
                                                    ','.join(coupling_list)+'\n')
             mp_fsock_same_name.writelines('common/MP_couplings/ '+\
@@ -3213,7 +3212,7 @@ class UFO_model_to_mg4(object):
         if self.opt['complex_mass']:
             fsock.writelines('double complex '+', '.join(complex_mass)+'\n')
             fsock.writelines('common/couplings/ '+', '.join(complex_mass)+'\n')
-            if self.mp:
+            if self.opt['mp']:
                 mp_fsock_same_name.writelines(self.mp_complex_format+' '+\
                                                     ','.join(complex_mass)+'\n')
                 mp_fsock_same_name.writelines('common/MP_couplings/ '+\
@@ -3243,7 +3242,7 @@ class UFO_model_to_mg4(object):
         """create input.inc containing the definition of the parameters"""
         
         fsock = self.open('input.inc', format='fortran')
-        if self.mp:
+        if self.opt['mp']:
             mp_fsock = self.open('mp_input.inc', format='fortran')
                     
         #find mass/ width since they are already define
@@ -3266,7 +3265,7 @@ class UFO_model_to_mg4(object):
         
         fsock.writelines('double precision '+','.join(real_parameters)+'\n')
         fsock.writelines('common/params_R/ '+','.join(real_parameters)+'\n\n')
-        if self.mp:
+        if self.opt['mp']:
             mp_fsock.writelines(self.mp_real_format+' '+','.join([\
                               self.mp_prefix+p for p in real_parameters])+'\n')
             mp_fsock.writelines('common/MP_params_R/ '+','.join([\
@@ -3278,7 +3277,7 @@ class UFO_model_to_mg4(object):
 
         fsock.writelines('double complex '+','.join(complex_parameters)+'\n')
         fsock.writelines('common/params_C/ '+','.join(complex_parameters)+'\n\n')
-        if self.mp:
+        if self.opt['mp']:
             mp_fsock.writelines(self.mp_complex_format+' '+','.join([\
                             self.mp_prefix+p for p in complex_parameters])+'\n')
             mp_fsock.writelines('common/MP_params_C/ '+','.join([\
@@ -3351,7 +3350,7 @@ class UFO_model_to_mg4(object):
             # precision ones together
             data = self.coups_indep[nb_def_by_file * i: 
                              min(len(self.coups_indep), nb_def_by_file * (i+1))]
-            self.create_couplings_part(i + 1, data, dp=True, mp=self.mp)
+            self.create_couplings_part(i + 1, data, dp=True, mp=self.opt['mp'])
             
         for i in range(nb_coup_dep):
             # For the dependent couplings, we compute the double and multiple
@@ -3360,7 +3359,7 @@ class UFO_model_to_mg4(object):
                                min(len(self.coups_dep), nb_def_by_file * (i+1))]
             self.create_couplings_part( i + 1 + nb_coup_indep , data, 
                                                                dp=True,mp=False)
-            if self.mp:
+            if self.opt['mp']:
                 self.create_couplings_part( i + 1 + nb_coup_indep , data, 
                                                               dp=False,mp=True)
         
@@ -3377,7 +3376,7 @@ class UFO_model_to_mg4(object):
                             logical READLHA
                             parameter  (PI=3.141592653589793d0)
                             parameter  (ZERO=0d0)""")
-        if self.mp:
+        if self.opt['mp']:
             fsock.writelines("""%s MP__PI, MP__ZERO
                                 parameter (MP__PI=3.1415926535897932384626433832795e0_16)
                                 parameter (MP__ZERO=0e0_16)
@@ -3388,7 +3387,7 @@ class UFO_model_to_mg4(object):
                             include \'coupl.inc\'
                             READLHA = .true.
                             include \'intparam_definition.inc\'""")
-        if self.mp:
+        if self.opt['mp']:
             fsock.writelines("""include \'mp_intparam_definition.inc\'\n""")
         
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
@@ -3402,7 +3401,7 @@ class UFO_model_to_mg4(object):
         fsock.writelines('\n'.join(\
                     ['call coup%s()' %  (nb_coup_indep + i + 1) \
                       for i in range(nb_coup_dep)]))
-        if self.mp:
+        if self.opt['mp']:
             fsock.writelines('\n'.join(\
                     ['call mp_coup%s()' %  (nb_coup_indep + i + 1) \
                       for i in range(nb_coup_dep)]))
@@ -3432,7 +3431,7 @@ class UFO_model_to_mg4(object):
                       for i in range(nb_coup_dep)]))
         fsock.writelines('''\n return \n end\n''')
 
-        if self.mp:
+        if self.opt['mp']:
             fsock.writelines("""subroutine mp_update_as_param()
     
                                 implicit none
@@ -3503,7 +3502,7 @@ class UFO_model_to_mg4(object):
         fsock = self.open('model_functions.inc', format='fortran')
         fsock.writelines("""double complex cond
           double complex reglog""")
-        if self.mp:
+        if self.opt['mp']:
             fsock.writelines("""%(complex_mp_format)s mp_cond
           %(complex_mp_format)s mp_reglog"""\
           %{'complex_mp_format':self.mp_complex_format})
@@ -3532,7 +3531,7 @@ class UFO_model_to_mg4(object):
              reglog=log(arg)
           endif
           end""")
-        if self.mp:
+        if self.opt['mp']:
             fsock.writelines("""
               
               %(complex_mp_format)s function mp_cond(condition,truecase,falsecase)
@@ -3566,7 +3565,7 @@ class UFO_model_to_mg4(object):
         nb_coup_dep = 1 + len(self.coups_indep) // 25
         couplings_files=['couplings%s.o' % (i+1) \
                                 for i in range(nb_coup_dep + nb_coup_indep) ]
-        if self.mp:
+        if self.opt['mp']:
             couplings_files+=['mp_couplings%s.o' % (i+1) for i in \
                                range(nb_coup_dep,nb_coup_dep + nb_coup_indep) ]
         text += ' '.join(couplings_files)
@@ -3649,7 +3648,7 @@ class UFO_model_to_mg4(object):
             """ call LHA_get_real(npara,param,value,'%(name)s',%(name)s,%(value)s)""" \
                 % {'name': parameter.name,
                    'value': self.p_to_f.parse(str(parameter.value.real))}
-            if self.mp:
+            if self.opt['mp']:
                 template = template+ \
                 ("\n call MP_LHA_get_real(npara,param,value,'%(name)s',"+
                  "%(mp_prefix)s%(name)s,%(value)s)") \
@@ -3669,7 +3668,7 @@ class UFO_model_to_mg4(object):
                 
                 res_strings.append('%(width)s = sign(%(width)s,%(mass)s)' % \
                  {'width': particle.get('width'), 'mass': particle.get('mass')})
-                if self.mp:
+                if self.opt['mp']:
                     res_strings.append(\
                       ('%(mp_pref)s%(width)s = sign(%(mp_pref)s%(width)s,'+\
                        '%(mp_pref)s%(mass)s)')%{'width': particle.get('width'),\
@@ -3696,36 +3695,95 @@ class UFO_model_to_mg4(object):
                 translator.make_valid_param_card(out_path, out_path2)
             translator.convert_to_slha1(out_path)
         
-def ExportV4Factory(cmd, noclean):
+def ExportV4Factory(cmd, noclean, output_type='default'):
     """ Determine which Export_v4 class is required. cmd is the command 
-        interface containing all potential usefull information."""
+        interface containing all potential usefull information.
+        The output_type argument specifies from which context the output
+        is called. It is 'madloop' for MadLoop5, 'amcatnlo' for FKS5 output
+        and 'default' for tree-level outputs."""
 
     group_subprocesses = cmd.options['group_subprocesses']
-    #check if we need to group processes
-    if cmd.options['group_subprocesses'] == 'Auto':
-        if cmd._curr_amps[0].get_ninitial()  == 2:
-            group_subprocesses = True
+    
+    # First treat the MadLoop5 standalone case
+    if output_type=='madloop':
+        import madgraph.loop.loop_exporters as loop_exporters
+        if os.path.isdir(os.path.join(cmd._mgme_dir, 'Template/loop_material')):
+            ExporterClass=None
+            options = {'clean': not noclean, 
+              'complex_mass':cmd.options['complex_mass_scheme'],
+              'export_format':'madloop', 
+              'mp':True,
+              'loop_dir': os.path.join(cmd._mgme_dir, 'Template/loop_material'),
+              'cuttools_dir': cmd._cuttools_dir}
+
+            if not cmd.options['loop_optimized_output']:
+                stop
+                ExporterClass=loop_exporters.LoopProcessExporterFortranSA
+            else:
+                if all([amp['process']['has_born'] for amp in cmd._curr_amps]):
+                    ExporterClass=loop_exporters.LoopProcessOptimizedExporterFortranSA
+                    options['export_format'] = 'madloop_optimized'
+                else:
+                    logger.warning('ML5 can only exploit the optimized output for '+\
+                                   ' processes with born diagrams. The optimization '+\
+                                   ' option is therefore turned off for this process.')
+                    ExporterClass=loop_exporters.LoopProcessExporterFortranSA
+                    options['export_format'] = 'madloop_default'
+            return ExporterClass(cmd._mgme_dir, cmd._export_dir, options)
         else:
-            group_subprocesses = False
+            raise MadGraph5Error('MG5 cannot find the \'loop_material\' directory'+\
+                                 ' in %s'%str(cmd._mgme_dir))
 
-    assert group_subprocesses in [True, False]
-    
-    
-    opt = {'clean': not noclean, 
-           'complex_mass': cmd.options['complex_mass_scheme'],
-           'export_format':cmd._export_format}
+    # Then treat the aMC@NLO output     
+    elif output_type=='amcatnlo':
+        import madgraph.iolibs.export_fks as export_fks
+        ExporterClass=None
+        options = {'clean': not noclean, 
+              'complex_mass':cmd.options['complex_mass_scheme'],
+              'export_format':'madloop', 
+              #use MP for HELAS only if there are virtual amps 
+              'mp':len(self._fks_multi_proc.get_virt_amplitudes()) > 0,
+              'loop_dir': os.path.join(cmd._mgme_dir,'Template','loop_material'),
+              'cuttools_dir': cmd._cuttools_dir}
+        if not cmd.options['loop_optimized_output']:
+            logger.info("Exporting in MadFKS format, starting from born process")
+            ExporterClass = export_fks.ProcessExporterFortranFKS
+            options['export_format']='FKS5_default'
+        else:
+            logger.info("Exporting in MadFKS format, starting from "+\
+                                           "born process using optimized Loops")
+            ExporterClass = export_fks.ProcessOptimizedExporterFortranFKS
+            options['export_format']='FKS5_optimized'
+        return ExporterClass(cmd._mgme_dir, cmd._export_dir, options)
 
-    if cmd._export_format in ['standalone', 'matrix']:
-        return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt)
-    elif cmd._export_format in ['madevent'] and group_subprocesses:
-        return  ProcessExporterFortranMEGroup(cmd._mgme_dir, cmd._export_dir,
-                                                                        opt)
-    elif cmd._export_format in ['madevent']:
-        return ProcessExporterFortranME(cmd._mgme_dir, cmd._export_dir,opt)
+    # Then the default tree-level output
+    elif output_type=='default':
+        #check if we need to group processes
+        if cmd.options['group_subprocesses'] == 'Auto':
+            if cmd._curr_amps[0].get_ninitial()  == 2:
+                group_subprocesses = True
+            else:
+                group_subprocesses = False
     
-    else:
-        raise Exception, 'Wrong export_v4 format'
+        assert group_subprocesses in [True, False]
         
+        
+        opt = {'clean': not noclean, 
+               'complex_mass': cmd.options['complex_mass_scheme'],
+               'export_format':cmd._export_format}
+    
+        if cmd._export_format in ['standalone', 'matrix']:
+            return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt)
+        elif cmd._export_format in ['madevent'] and group_subprocesses:
+            return  ProcessExporterFortranMEGroup(cmd._mgme_dir, cmd._export_dir,
+                                                                            opt)
+        elif cmd._export_format in ['madevent']:
+            return ProcessExporterFortranME(cmd._mgme_dir, cmd._export_dir,opt)
+        
+        else:
+            raise Exception, 'Wrong export_v4 format'
+    else:
+        raise MG5Error, 'Output type %s not reckognized in ExportV4Factory.'
     
     
     

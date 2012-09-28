@@ -214,27 +214,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
 
-        if os.path.isdir(os.path.join(self._mgme_dir, 'Template/loop_material')):
-            ExporterClass=None
-            if not self.options['loop_optimized_output']:
-                ExporterClass=loop_exporters.LoopProcessExporterFortranSA
-            else:
-                if all([amp['process']['has_born'] for amp in self._curr_amps]):
-                    ExporterClass=loop_exporters.LoopProcessOptimizedExporterFortranSA
-                else:
-                    logger.warning('ML5 can only exploit the optimized output for '+\
-                                   ' processes with born diagrams. The optimization '+\
-                                   ' option is therefore turned off for this process.')
-                    ExporterClass=loop_exporters.LoopProcessExporterFortranSA
-            self._curr_exporter = ExporterClass(\
-                  self._mgme_dir, self._export_dir, not noclean,\
-                  complex_mass_scheme=self.options['complex_mass_scheme'],\
-                  mp=True,\
-                  loop_dir=os.path.join(self._mgme_dir, 'Template/loop_material'),\
-                  cuttools_dir=self._cuttools_dir)
-        else:
-            raise MadGraph5Error('MG5 cannot find the \'loop_material\' directory'+\
-                                 ' in %s'%str(self._mgme_dir))                                                           
+        self._curr_exporter = export_v4.ExportV4Factory(self, \
+                                                 noclean, output_type='madloop')
 
         if self._export_format in ['standalone']:
             self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))

@@ -160,11 +160,13 @@ class HelasCallWriter(base_objects.PhysicsObject):
                   "%s not valid argument for get_matrix_element_calls" % \
                   type(matrix_element)
 
-        me = matrix_element.get('diagrams')
-        matrix_element.reuse_outdated_wavefunctions(me)
-
+        # Do not reuse the wavefunctions for loop matrix elements
+        print "I have type=",matrix_element.__class__.__name__
         if isinstance(matrix_element, loop_helas_objects.LoopHelasMatrixElement):
             return self.get_loop_matrix_element_calls(matrix_element)
+        
+        me = matrix_element.get('diagrams')
+        matrix_element.reuse_outdated_wavefunctions(me)
 
         res = []
         for diagram in matrix_element.get('diagrams'):

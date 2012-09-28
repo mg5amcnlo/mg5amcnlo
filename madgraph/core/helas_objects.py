@@ -83,7 +83,10 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             identical_particle_factor = process.identical_particle_factor()
         sorted_tags = sorted([IdentifyMETag(d, model, ninitial) for d in \
                                   amplitude.get('diagrams')])
-        if sorted_tags:
+        # Do not use this for loop diagrams as for now the HelasMultiProcess
+        # always contain only exactly one loop amplitude.
+        if sorted_tags and not isinstance(amplitude, \
+                                         loop_diagram_generation.LoopAmplitude):
             # Need to keep track of relative permutations for all diagrams,
             # to make sure we indeed have different matrix elements,
             # and not just identical diagrams disregarding particle order.
@@ -4926,8 +4929,8 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                             amplitude.get('process').nice_string().\
                                            replace('Process', 'process'))
                     # Correctly the LoopHelasMatrix element for the loop amps.
-                    if isinstance(amplitude,\
-                      loop_diagram_generation.LoopAmplitude):
+                    print "I have amplitude type=",amplitude.__class__.__name__
+                    if isinstance(amplitude,loop_diagram_generation.LoopAmplitude):
                         import madgraph.loop.loop_helas_objects as loop_helas_objects
                         matrix_element_list = [\
                           loop_helas_objects.LoopHelasMatrixElement(amplitude,

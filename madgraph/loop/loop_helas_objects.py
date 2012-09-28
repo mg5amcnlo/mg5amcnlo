@@ -1697,8 +1697,17 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         # depending of the type of output
         if self.optimized_output:
             self.relabel_loop_wfs_and_amps_optimized(wfnumber)
+            for lwf in [lwf for loopdiag in self.get_loop_diagrams() for \
+                                     lwf in loopdiag.get('loop_wavefunctions')]:
+                lwf.set('me_id',wf.get('number'))
         else:
             self.relabel_loop_wfs_and_amps(wfnumber)
+            
+        # Finally, for loops we do not reuse previously defined wavefunctions to
+        # store new ones. So that 'me_id' is always equal to 'number'.
+        for wf in self.get_all_wavefunctions():
+            wf.set('me_id',wf.get('number'))
+        
 
     def get_number_of_wavefunctions(self):
         """Gives the total number of wavefunctions for this ME, including the

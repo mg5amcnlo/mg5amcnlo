@@ -53,20 +53,6 @@ logger = logging.getLogger('madgraph.export_fks')
 class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
-    
-    def __init__(self, mgme_dir = "", dir_path = "", clean = False, \
-                 complex_mass_scheme = False, mp = False, \
-                 loop_dir = "", cts_dir = ""):
-        """Initiate the ProcessExporterFortran with directory information"""
-        self.mgme_dir = mgme_dir
-        self.dir_path = dir_path
-        self.clean = clean
-        self.loop_dir = loop_dir
-        self.cuttools_dir = cts_dir
-        self.complex_mass_scheme = complex_mass_scheme
-        self.mp = mp
-
-
 
 #===============================================================================
 # copy the Template in a new directory.
@@ -78,7 +64,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         """
         mgme_dir = self.mgme_dir
         dir_path = self.dir_path
-        clean =self.clean
+        clean =self.opt['clean']
         
         #First copy the full template tree if dir_path doesn't exit
         if not os.path.isdir(dir_path):
@@ -1838,19 +1824,6 @@ C
 class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExporterFortranSA,ProcessExporterFortranFKS):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
-    
-    def __init__(self, mgme_dir = "", dir_path = "", clean = False, \
-                 complex_mass_scheme = False, mp = False, \
-                 loop_dir = "", cts_dir = ""):
-        """Initiate the ProcessExporterFortran with directory information"""
-        self.mgme_dir = mgme_dir
-        self.dir_path = dir_path
-        self.clean = clean
-        self.loop_dir = loop_dir
-        self.cuttools_dir = cts_dir
-        self.complex_mass_scheme = complex_mass_scheme
-        self.mp = mp
-
 
 #===============================================================================
 # copy the Template in a new directory.
@@ -1862,7 +1835,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         """
         mgme_dir = self.mgme_dir
         dir_path = self.dir_path
-        clean =self.clean
+        clean =self.opt['clean']
         
         #First copy the full template tree if dir_path doesn't exit
         if not os.path.isdir(dir_path):

@@ -283,27 +283,8 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         self.options['group_subprocesses'] = False
         # initialize the writer
         if self._export_format in ['NLO']:
-            if not self.options['loop_optimized_output']:
-                logger.info("Exporting in MadFKS format, starting from born process")
-                self._curr_exporter = export_fks.ProcessExporterFortranFKS(\
-                                          self._mgme_dir, self._export_dir,
-                                          not noclean, 
-                                          self.options['complex_mass_scheme'], 
-                                          #use MP for HELAS only if there are virtual amps 
-                                          len(self._fks_multi_proc.get_virt_amplitudes()) > 0, 
-                                          os.path.join(self._mgme_dir, 'Template', 'loop_material'),
-                                          self._cuttools_dir)
-            
-            else:
-                logger.info("Exporting in MadFKS format, starting from born process using Optimized Loops")
-                self._curr_exporter = export_fks.ProcessOptimizedExporterFortranFKS(\
-                                          self._mgme_dir, self._export_dir,
-                                          not noclean, 
-                                          self.options['complex_mass_scheme'],
-                                          #use MP for HELAS only if there are virtual amps 
-                                          len(self._fks_multi_proc.get_virt_amplitudes()) > 0, 
-                                          os.path.join(self._mgme_dir,'Template/loop_material'),
-                                          self._cuttools_dir)
+                self._curr_exporter = export_fks.ExportV4Factory(\
+                                          self, noclean, output_type='amcatnlo')
             
         # check if a dir with the same name already exists
         if not force and not noclean and os.path.isdir(self._export_dir)\

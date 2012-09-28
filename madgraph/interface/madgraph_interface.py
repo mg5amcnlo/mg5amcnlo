@@ -1825,12 +1825,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._mgme_dir = MG4DIR
         self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
         self._comparisons = None
-
-
-        # Set defaults for options
-        self.options['group_subprocesses'] = 'Auto'
-        self.options['ignore_six_quark_processes'] = False
-        self.options['loop_optimized_output'] = False
         
         # Load the configuration file
         self.set_configuration()
@@ -3460,7 +3454,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if not self.options:
             self.options = dict(self.options_configuration)
             self.options.update(self.options_madgraph)
-            self.options.update(self.options_madevent) 
+            self.options.update(self.options_madevent)             
 
         if not config_path:
             if os.environ.has_key('MADGRAPH_BASE'):

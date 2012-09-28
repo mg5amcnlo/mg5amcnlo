@@ -74,11 +74,12 @@ class LoopExporterFortran(object):
             self.opt = opt
         else: 
             self.opt = {'clean': False, 'complex_mass':False,
-                        'export_format':'madevent', 'mp':True,
+                        'export_format':'madloop', 'mp':True,
                         'loop_dir':'', 'cuttools_dir':''}
 
         self.loop_dir = self.opt['loop_dir']
         self.cuttools_dir = self.opt['cuttools_dir']
+
         super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)
         
     def link_CutTools(self, targetPath):
@@ -132,7 +133,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
        Fortran format."""
        
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop')
-    
+
     def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """
@@ -343,7 +344,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         so that there is no point reusing this mother function."""
 
         cwd = os.getcwd()
-
         # Create the directory PN_xx_xxxxx in the specified path
         dirpath = os.path.join(self.dir_path, 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
@@ -945,6 +945,9 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         bornME.set('diagrams',matrix_element.get_born_diagrams())        
         bornME.set('color_basis',matrix_element.get('born_color_basis'))
         bornME.set('color_matrix',color_amp.ColorMatrix(bornME.get('color_basis')))
+        # This is to decide wether once to reuse old wavefunction to store new
+        # ones (provided they are not used further in the code.)
+        bornME.optimization = True
         
         return super(LoopProcessExporterFortranSA,self).\
           write_matrix_element_v4(writer,bornME,fortran_model)
@@ -1259,7 +1262,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
             return 0
-        
+
         # Set lowercase/uppercase Fortran code
         
         writers.FortranWriter.downcase = False
