@@ -48,7 +48,7 @@ class OneResult(object):
         self.maxwgt_iter = []
         return
     
-    #@cluster.multiple_try(nb_try=5,sleep=20)
+    @cluster.multiple_try(nb_try=5,sleep=20)
     def read_results(self, filepath):
         """read results.dat and fullfill information"""
         
