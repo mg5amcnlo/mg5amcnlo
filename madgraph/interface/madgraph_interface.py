@@ -444,7 +444,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   timeout VALUE")
         logger.info("      (default 20) Seconds allowed to answer questions.")
         logger.info("      Note that pressing tab always stops the timer.")
-
+        logger.info("   cluster_temp_path PATH")
+        logger.info("      (default None) [Used in Madevent Output]")
+        logger.info("      Allow to perform the run in PATH directory")
+        logger.info("      This allow to not run on the central disk. This is not used")
+        logger.info("      by condor cluster (since condor has it's own way to prevent it).")
+       
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -859,7 +864,7 @@ This will take effect only in a NEW terminal
 
     def check_set(self, args, log=True):
         """ check the validity of the line"""
-        
+
         if len(args) == 1 and args[0] == 'complex_mass_scheme':
             args.append('True')
         
@@ -1545,7 +1550,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             else:
                 # directory names
                 second_set = [name for name in self.path_completion(text, '.', only_dirs = True)]
-                return self.list_completion(text, first_set + second_set + ['default'])
+                return self.list_completion(text, second_set + ['default'])
         elif len(args) >2 and args[-1].endswith(os.path.sep):
                 return self.path_completion(text,
                         pjoin(*[a for a in args if a.endswith(os.path.sep)]),
@@ -1764,13 +1769,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
-                       'timeout': 20,
+                       'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
                        'text_editor':None,
                        'fortran_compiler':None,
                        'auto_update':7,
-                       'cluster_type': 'condor'}
+                       'cluster_type': 'condor',
+                       'cluster_temp_path': None,
+                       'cluster_queue': None,
+                       }
     
     options_madgraph= {'group_subprocesses': 'Auto',
                           'ignore_six_quark_processes': False,
@@ -1779,7 +1787,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'stdout_level':None}
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
-                         'cluster_queue':'madgraph',
                          'nb_core': None,
                          }
 
@@ -2872,7 +2879,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 # self._export dir are define
                 self.check_for_export_dir(os.path.realpath(proc_card))
             else:
-                raise MadGraph5('No default directory in output')
+                raise MadGraph5Error('No default directory in output')
 
  
             #convert and excecute the card
@@ -3664,12 +3671,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             for key, default in self.options_configuration.items():
                 if  self.options_configuration[key] != self.options[key] != None:
                     to_define[key] = self.options[key]
-            
+                
             if not '--auto' in args:
                 for key, default in self.options_madevent.items():
                     if self.options_madevent[key] != self.options[key] != None:
                         to_define[key] = self.options[key]
-            
+                    elif key == 'cluster_queue' and self.options[key] is None:
+                        to_define[key] = self.options[key]
+                        
             if '--all' in args:
                 for key, default in self.options_madgraph.items():
                     if self.options_madgraph[key] != self.options[key] != None and \
@@ -3831,7 +3840,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         args = self.split_arg(line)
         # Check the validity of the arguments
-        self.check_set(args, log=False)
+        try:
+            self.check_set(args, log=False)
+        except Exception:
+            return stop
         
         if args[0] in self.options_configuration and '--no_save' not in args:
             self.exec_cmd('save options --auto', log=False)
@@ -3902,6 +3914,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             wanted_lorentz = aloha_fct.guess_routine_from_name(names)
             # Create and write ALOHA Routine
             aloha_model = create_aloha.AbstractALOHAModel(self._curr_model.get('name'))
+            aloha_model.add_Lorentz_object(self._curr_model.get('lorentz'))
             if wanted_lorentz:
                 aloha_model.compute_subset(wanted_lorentz)
             else:

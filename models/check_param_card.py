@@ -90,14 +90,16 @@ class Parameter (object):
         """ return a SLAH string """
 
         if self.format == 'float':
-            if self.lhablock == 'decay':
+            if self.lhablock == 'decay' and not isinstance(self.value,basestring):
                 return 'DECAY %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+            elif self.lhablock == 'decay':
+                return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
             else:
                 return '      %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'str':
-             return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+            return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'decay_table':
-             return '      %e %s # %s' % ( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
+            return '      %e %s # %s' % ( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
         
         else:
             if self.lhablock == 'decay':

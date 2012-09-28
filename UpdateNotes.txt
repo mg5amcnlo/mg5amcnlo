@@ -4,14 +4,23 @@ Update notes for MadGraph 5 (in reverse time order)
                       (mg5> set complex_mass True)
                   OM: Allow MG5 to run in feynman Gauge
                       (mg5> set gauge Feynman)
-                  OM: Add anew command: 'customize_model' which allow (for a
+                  OM: Add a new command: 'customize_model' which allow (for a
                       selection of model) to fine tune the model to your need.
-                  OM: Support UFO model with spin 3/2.
                   FR team: add a file decays.py in the UFO format, this files 
                       contains the analytical expression for one to two decays
        		  OM: implement a function for computing the 1 to 2 width on 
                       the fly. (requires that MG5 install on the computer 
                       not only the output directory)
+                  OM: The question asking for the edition of the param_card/run_card
+		      accepts now a command set to change one value of those cards
+		      whithout opening an editor. This allow simple implemetation 
+                      of scanning. (Thanks G. Durieux to have push me to do it)
+                  OM: Support UFO model with spin 3/2
+                  OM + CDe: Support four fermion interactions fermion flow 
+                       violation/majorana are not yet allowed in fourfermion 
+		       interactions.
+                  OM + PdA: Allow Large Extra Dimension Model (LED) to run in the
+                      MG5 framework.
                   OM: Add auto-detection if MG5 is up-to-date and propose to
                       apply the various patch if not.
                   OM: MadEvent change automatically the compiler according to 
@@ -23,8 +32,6 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Improve error message when Source didn't compile properly.    
                   OM: The numerical evaluation of the matrix element requires now 
                       less memory than before (madevent and standalone output)
-                  OM + PdA: Allow Large Extra Dimension Model (LED) to run in the
-                      MG5 framework.
                   OM: Fix a series of bug with the madevent command 'remove' and 
                       'run_banner'                    
                   JA: Ensure identical results for identical seeds also with
@@ -44,10 +51,18 @@ Update notes for MadGraph 5 (in reverse time order)
                   JA: Fix problem when there are resonances with mass above ECM.
                   JA: Fixed issue in replace.pl script with more than 9 particles
                       in an event.
+                  JA+OM: Allow cluster run to run everything in a local (node) disk.
+                      This is done fully automatically for condor cluster.
+                      For the other cluster, the user should set the variable
+                      "cluster_temp_path" pointing to a directory (usefull only if the 
+		      directory is on the node filesystem). This still requires
+		       access to central disk for copying, event combination,
+                      running Pythia/PGS/Delphes etc.
+		  OM: Replace fortran script combine_runs by a python script. This script
+		      allow to be more stable when running on cluster with quite unresponsive 
+		      filesystem (bug#1050269 and #1028844)		      
 
-
-1.4.8.4 (29/08/12) OM: Fix a web problem which creates generations to run twice 
-                       on the web.
+1.4.8.4 (29/08/12) OM: Fix a web problem which creates generations to run twice on the web.
 
 1.4.8.3 (21/08/12) JA: Ensure that the correct seed is written also in the .lhe
                        file header.
