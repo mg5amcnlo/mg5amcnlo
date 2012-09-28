@@ -2096,7 +2096,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def print_results_in_shell(self, data):
         """Have a nice results prints in the shell,
         data should be of type: gen_crossxhtml.OneTagResults"""
-
+        if not data:
+            return
         logger.info("  === Results Summary for run: %s tag: %s ===\n" % (data['run_name'],data['tag']))
         if self.ninitial == 1:
             logger.info("     Width :   %.4g +- %.4g GeV" % (data['cross'], data['error']))
@@ -2317,7 +2318,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         self.update_status('', level='parton')
         self.print_results_in_shell(self.results.current)   
-        self.results.def_current(None)
+        
 
     ############################################################################      
     def do_treatcards(self, line):
@@ -2887,7 +2888,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.exec_cmd('pgs --no_default', postcmd=False, printcmd=False)
         if self.options['delphes_path']:
             self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
-
         self.print_results_in_shell(self.results.current)
     
     def get_available_tag(self):
@@ -3245,10 +3245,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Creating Root file
         if eradir and misc.is_executable(pjoin(eradir, 'ExRootLHCOlympicsConverter')):
             self.update_status('Creating PGS Root File', level='pgs')
-            misc.call([eradir+'/ExRootLHCOlympicsConverter', 
+            try:
+                misc.call([eradir+'/ExRootLHCOlympicsConverter', 
                              'pgs_events.lhco',pjoin('%s/%s_pgs_events.root' % (self.run_name, tag))],
                             cwd=pjoin(self.me_dir, 'Events')) 
-        
+            except:
+                logger.warning('fail to produce Root output [problem with ExRootAnalysis')
         if os.path.exists(pjoin(self.me_dir, 'Events', 'pgs_events.lhco')):
             # Creating plots
             self.create_plot('PGS')

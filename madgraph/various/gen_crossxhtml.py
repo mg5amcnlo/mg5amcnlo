@@ -148,7 +148,7 @@ class AllResults(dict):
         """define the name of the current run
             The first argument can be a OneTagResults
         """
-        
+
         if isinstance(run, OneTagResults):
             self.current = run
             self.lastrun = run['run_name']
