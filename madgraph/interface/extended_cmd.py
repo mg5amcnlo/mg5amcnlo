@@ -711,20 +711,25 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             logger.info("History written to " + output_file.name)
 
     def clean_history(self, to_keep=['set','add','load'],
+                            remove_bef_last=None,
                             remove_bef_lb1=None,
                             to_remove=['open','display','launch', 'check'],
-                            keep_last=False,
-                            allow_for_removal=None):
+                            allow_for_removal=None,
+                            keep_switch=False):
         """Remove command in arguments from history.
+        All command before the last occurrence of  'remove_bef_last'
+        (including it) will be removed (but if another options tells the opposite).        
         All command before the last but one occurrence of  'remove_bef_lb1'
-        (including it) will be removed (but if another options tells the opposite).
+        (including it) will be removed (but if another options tells the opposite).        
         'to_keep' is a set of line to always keep.
-        'to_remove' is a set of line to always remove (don't care about remove_bef_lb1).
+        'to_remove' is a set of line to always remove (don't care about remove_bef_ 
+        status but keep_switch acts.).
         if 'allow_for_removal' is define only the command in that list can be 
         remove of the history for older command that remove_bef_lb1. all parameter
         present in to_remove are always remove even if they are not part of this 
         list.
-        'keep_last' ensure to keep the last entry of the history no matter what.
+        keep_switch force to keep the statement remove_bef_??? which changes starts
+        the removal mode.
         """
         
         #check consistency
@@ -734,40 +739,50 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             
     
         nline = -1
-        last = 0
+        last = 0 # number of occurence of remove_bef_lb1 found
+        removal = False
         #looping backward
         while nline > -len(self.history):
+            switch  = False # set in True when removal pass in True
+
+            #check if we need to pass in removal mode
+            if not removal:
+                if remove_bef_lb1:
+                    if self.history[nline].startswith(remove_bef_lb1):
+                        last +=1
+                    if last == 2:
+                        removal = True
+                        switch = True
+                if remove_bef_last:
+                    if self.history[nline].startswith(remove_bef_last):
+                        removal = True
+                        switch = True  
+
+            # if this is the switch and is protected pass to the next element
+            if switch and keep_switch:
+                nline -= 1
+                continue
+
+            # remove command in to_remove (whatever the status of removal)
             if any([self.history[nline].startswith(arg) for arg in to_remove]):
                 self.history.pop(nline)
                 continue
             
-            #check if we are in removal mode
-            if remove_bef_lb1 and self.history[nline].startswith(remove_bef_lb1):
-                if last:
-                    last = 2
-                else:
-                    last=1
-            if nline == -1 and keep_last:
-                nline -=1
-                continue
-            
-            if last == 2:
-                # WE are in removal mode 
+            # Only if removal mode is active!
+            if removal:
                 if allow_for_removal:
+                    # Only a subset of command can be removed
                     if any([self.history[nline].startswith(arg) 
-                                                     for arg in allow_for_removal]):
+                                                 for arg in allow_for_removal]):
                         self.history.pop(nline)
-                    else:
-                        nline -=1
-                        continue                 
-                #allow for removal not define, so remove everything (but those on keep)    
-                if not any([self.history[nline].startswith(arg) for arg in to_keep]):
-                  self.history.pop(nline)
-                  continue
-                else:
-                    nline -= 1  
-            else:
-                nline -= 1
+                        continue
+                elif not any([self.history[nline].startswith(arg) for arg in to_keep]):
+                    # All command have to be remove but protected
+                     self.history.pop(nline)
+                     continue
+            
+            # update the counter to pass to the next element
+            nline -= 1
                 
     def import_command_file(self, filepath):
         # remove this call from history

@@ -2441,9 +2441,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._export_format = None
 
         # Remove previous generations from history
-        self.clean_history(remove_bef_lb1='generate', allow_for_removal= 
-                                          ['generate', 'add process', 'output'],
-                                          keep_last=True)
+        self.clean_history(remove_bef_last='generate', keep_switch=True,
+                     allow_for_removal= ['generate', 'add process', 'output'])
 
 
         # Call add process
@@ -2768,8 +2767,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._model_v4_path = None
             # Clear history, amplitudes and matrix elements when a model is imported
             # Remove previous imports, generations and outputs from history
-            self.clean_history(remove_bef_lb1='import', allow_for_removal=
-                                ['generate', 'add process', 'output'])
+            self.clean_history(remove_bef_last='import', keep_switch=True,
+                        allow_for_removal=['generate', 'add process', 'output'])
             # Reset amplitudes and matrix elements
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -2862,7 +2861,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
             
         elif args[0] == 'proc_v4':
-            
+            self.history = []
 
             if len(args) == 1 and self._export_dir:
                 proc_card = pjoin(self._export_dir, 'Cards', \
@@ -3864,9 +3863,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self.check_output(args)
 
         # Remove previous outputs from history
-        self.clean_history(allow_for_removal = ['output'],
-                           remove_bef_lb1='output',
-                           keep_last=True)
+        self.clean_history(allow_for_removal = ['output','generate','add process'],
+                           remove_bef_lb1='output')
         
         noclean = '-noclean' in args
         force = '-f' in args 
