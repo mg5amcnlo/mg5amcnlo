@@ -1917,8 +1917,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         args = self.split_arg(line)
         # Check argument's validity
         self.check_import(args)
-        # Remove previous imports, generations and outputs from history
-        self.clean_history()
         
         # Execute the card
         self.import_command_file(args[1])  

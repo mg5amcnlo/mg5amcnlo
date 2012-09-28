@@ -635,16 +635,42 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if self.history:
             self.history.pop()
         return False
+    
+    def onecmd_orig(self, line, **opt):
+        """Interpret the argument as though it had been typed in response
+        to the prompt.
+
+        The return value is a flag indicating whether interpretation of
+        commands by the interpreter should stop.
+        
+        This allow to pass extra argument for internal call.
+        """
+        
+        cmd, arg, line = self.parseline(line)
+        if not line:
+            return self.emptyline()
+        if cmd is None:
+            return self.default(line)
+        self.lastcmd = line
+        if cmd == '':
+            return self.default(line)
+        else:
+            try:
+                func = getattr(self, 'do_' + cmd)
+            except AttributeError:
+                return self.default(line)
+            return func(arg, **opt)
 
 
-    def onecmd(self, line):
+    def onecmd(self, line, **opt):
         """catch all error and stop properly command accordingly"""
         
         try:
-            return cmd.Cmd.onecmd(self, line)
+            return self.onecmd_orig(line, **opt)
         except self.InvalidCmd as error:            
             if __debug__:
                 self.nice_error_handling(error, line)
+                self.history.pop()
             else:
                 self.nice_user_error(error, line)
         except self.ConfigurationError as error:
@@ -664,7 +690,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         pass # dummy function
             
     def exec_cmd(self, line, errorhandling=False, printcmd=True, 
-                                                 precmd=False, postcmd=True):
+                                     precmd=False, postcmd=True, **opt):
         """for third party call, call the line with pre and postfix treatment
         without global error handling """
 
@@ -678,9 +704,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if precmd:
             line = current_interface.precmd(line)
         if errorhandling:
-            stop = current_interface.onecmd(line)
+            stop = current_interface.onecmd(line, **opt)
         else:
-            stop = cmd.Cmd.onecmd(current_interface, line)
+            stop = Cmd.onecmd_orig(current_interface, line, **opt)
         if postcmd:
             stop = current_interface.postcmd(stop, line)
         return stop      
@@ -701,6 +727,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # Faulty command
         logger.warning("Command \"%s\" not recognized, please try again" % \
                                                                 line.split()[0])
+        self.history.pop()
         
 
 
@@ -740,42 +767,67 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             logger.info("History written to " + output_file.name)
 
     def clean_history(self, to_keep=['set','add','load'],
-                            remove_bef_lb1=None,
-                            to_remove=['open','display','launch'],
-                            keep_last=False):
+                            remove_bef_last=None,
+                            to_remove=['open','display','launch', 'check'],
+                            allow_for_removal=None,
+                            keep_switch=False):
         """Remove command in arguments from history.
-        to_keep is a set of line to always keep
-        to_remove is a set of line to always remove
-        remove_bef_lb1 remove up to first occurrence.
-        keep_last ensure to keep the last entry.
+        All command before the last occurrence of  'remove_bef_last'
+        (including it) will be removed (but if another options tells the opposite).                
+        'to_keep' is a set of line to always keep.
+        'to_remove' is a set of line to always remove (don't care about remove_bef_ 
+        status but keep_switch acts.).
+        if 'allow_for_removal' is define only the command in that list can be 
+        remove of the history for older command that remove_bef_lb1. all parameter
+        present in to_remove are always remove even if they are not part of this 
+        list.
+        keep_switch force to keep the statement remove_bef_??? which changes starts
+        the removal mode.
         """
         
+        #check consistency
+        if __debug__ and allow_for_removal:
+            for arg in to_keep:
+                assert arg not in allow_for_removal
+            
     
         nline = -1
-        last = 0
+        removal = False
+        #looping backward
         while nline > -len(self.history):
+            switch  = False # set in True when removal pass in True
 
-            if remove_bef_lb1 and self.history[nline].startswith(remove_bef_lb1):
-                if last:
-                    last = 2
-                    self.history.pop(nline)
-                    continue
-                else:
-                    last=1
-            if nline == -1 and keep_last:
-                nline -=1
+            #check if we need to pass in removal mode
+            if not removal and remove_bef_last:
+                    if self.history[nline].startswith(remove_bef_last):
+                        removal = True
+                        switch = True  
+
+            # if this is the switch and is protected pass to the next element
+            if switch and keep_switch:
+                nline -= 1
                 continue
+
+            # remove command in to_remove (whatever the status of removal)
             if any([self.history[nline].startswith(arg) for arg in to_remove]):
                 self.history.pop(nline)
                 continue
-            if last == 2:
-                if not any([self.history[nline].startswith(arg) for arg in to_keep]):
-                  self.history.pop(nline)
-                  continue
-                else:
-                    nline -= 1  
-            else:
-                nline -= 1
+            
+            # Only if removal mode is active!
+            if removal:
+                if allow_for_removal:
+                    # Only a subset of command can be removed
+                    if any([self.history[nline].startswith(arg) 
+                                                 for arg in allow_for_removal]):
+                        self.history.pop(nline)
+                        continue
+                elif not any([self.history[nline].startswith(arg) for arg in to_keep]):
+                    # All command have to be remove but protected
+                     self.history.pop(nline)
+                     continue
+            
+            # update the counter to pass to the next element
+            nline -= 1
                 
     def import_command_file(self, filepath):
         # remove this call from history
