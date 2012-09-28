@@ -33,10 +33,10 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I,ITYPE,LP
+      INTEGER I,ITYPE,LP,IPROC
 %(pdf_vars)s      
-      DOUBLE PRECISION XPQ(-7:7)
-      DOUBLE PRECISION DSIGUU
+      DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
+      DOUBLE PRECISION DSIGUU,R
 C  
 C EXTERNAL FUNCTIONS
 C  
@@ -45,9 +45,8 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      INTEGER              IPROC
-      DOUBLE PRECISION PD(0:MAXPROC)
-      COMMON /SubProc/ PD, IPROC
+      INTEGER          IPSEL
+      COMMON /SubProc/ IPSEL
 %(define_subdiag_lines)s
       include 'coupl.inc'
       include 'run.inc'
@@ -66,19 +65,27 @@ C   Only run if IMODE is 0
 %(passcuts_begin)s
 %(pdf_lines)s
          IF (IMODE.EQ.4)THEN
-            DSIG%(proc_id)s = PD(IPROC)
+            DSIG%(proc_id)s = PD(0)
             RETURN
          ENDIF
          CALL SMATRIX%(proc_id)s(PP,DSIGUU)                                              
          DSIGUU=DSIGUU*REWGT(PP)
          IF (DSIGUU.LT.1D199) THEN
-         DSIG%(proc_id)s=%(dsig_line)s
+c        Select a flavor combination (need to do here for right sign)
+            CALL RANMAR(R)
+            IPSEL=0
+            DO WHILE (R.GT.0D0 .AND. IPSEL.LT.IPROC)
+               IPSEL=IPSEL+1
+               R=R-DABS(PD(IPSEL))/PD(0)
+            ENDDO
+c           Set sign of dsig based on sign of PDF and matrix element
+            DSIG%(proc_id)s=DSIGN(%(dsig_line)s,DSIGUU*PD(IPSEL))
          ELSE
              write(*,*) "Error in matrix element"
              DSIGUU=0D0
              DSIG%(proc_id)s=0D0
          ENDIF
-        IF(IMODE.EQ.0.AND.DSIG%(proc_id)s.GT.0D0)THEN
+        IF(IMODE.EQ.0.AND.DABS(DSIG%(proc_id)s).GT.0D0)THEN
 C       Call UNWGT to unweight and store events
            CALL UNWGT(PP,DSIG%(proc_id)s*WGT,%(numproc)d)
         ENDIF

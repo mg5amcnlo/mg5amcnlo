@@ -12,12 +12,13 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-import madgraph
-
 """Unit test library for the various base objects of the core library"""
 
 import copy
+import os
 
+
+import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import tests.unit_tests as unittest
@@ -218,13 +219,13 @@ class ParticleTest(unittest.TestCase):
                           not_a_part)
         # test particle search
         self.assertEqual(self.mypart,
-                         mypartlist.find_name(self.mypart['name']))
+                         mypartlist.get_copy(self.mypart['name']))
         anti_part = copy.copy(self.mypart)
         anti_part.set('is_part', False)
         self.assertEqual(anti_part,
-                         mypartlist.find_name(self.mypart['antiname']))
+                         mypartlist.get_copy(self.mypart['antiname']))
         self.assertEqual(None,
-                         mypartlist.find_name('none'))
+                         mypartlist.get_copy('none'))
 
         mydict = {6:self.mypart, -6:anti_part}
 
@@ -889,7 +890,6 @@ class ModelTest(unittest.TestCase):
         self.assertRaises(madgraph.MadGraph5Error, \
                                        model2.pass_particles_name_in_mg_default)
 
-
     def test_get_max_WEIGHTED(self):
         """Test get_max_WEIGHTED"""
 
@@ -910,6 +910,77 @@ class ModelTest(unittest.TestCase):
 
         self.mymodel.get('interactions').pop(-1)
 
+#===============================================================================
+# ModelTest
+#===============================================================================
+class ModelTest2(unittest.TestCase):
+    """Test class for the Model object from a correct load"""
+    
+    def setUp(self):
+        """ """
+        import madgraph.interface.master_interface as Cmd
+        cmd = Cmd.MasterCmd()
+        cmd.do_load('model %s' % os.path.join(madgraph.MG5DIR, 'tests',
+                                                        'input_files','sm.pkl'))
+        self.model = cmd._curr_model
+        
+    def test_change_to_complex_mass_scheme(self):
+        """Check that a model can be converted to complex mass scheme"""
+        
+        model = copy.deepcopy(self.model)
+        model.change_mass_to_complex_scheme()
+        
+        # Check that the Width of the W is not anymore in the external parameter
+        # and the yukawa
+        self.assertEqual(len(self.model['parameters'][('external',)]) -4,
+                         len(model['parameters'][('external',)]) )
+        
+        
+        # Check that the Width of the W is in internal parameter
+        WW = None
+        WComplex = None
+        MW = None
+        for param in model['parameters'][('aEWM1',)]:
+            if param.name not in ['CMASS_MW', 'WW', 'MW']:
+                continue
+            elif param.name == 'CMASS_MW':
+                WComplex = param
+                self.assertFalse(WW)
+            elif param.name == 'WW':
+                WW = param
+            else:
+                MW = param
+                self.assertFalse(WW)
+                self.assertFalse(WComplex)
+        self.assertTrue(WW)
+        self.assertTrue(MW)
+        self.assertTrue(WComplex)
+        # Check that WW and MW are the real/imaginary part
+        self.assertEqual(WW.expr, '-1 * im(CMASS_MW**2) / MW')
+        self.assertEqual('cmath.sqrt(re(%s**2))' % WComplex.expr, MW.expr)
+        
+        # Check that MZ has a complex_mass definition
+        # and that the width and the mass are external
+        found = 0
+        for param in model['parameters'][('external',)]:
+            if param.name in ['WZ','MZ']:
+                self.assertEqual(param.type, 'real')
+                found += 1
+        self.assertEqual(found, 2)
+        
+        found=0
+        for param in model['parameters'][tuple([])]:
+            if param.name in ['CMASS_MZ']:
+                self.assertEqual(param.expr, 'cmath.sqrt(MZ**2 - complex(0,1) * MZ * WZ)')
+                found += 1
+                self.assertEqual(param.type, 'complex')
+            
+            # check that other parameter are changed correctly
+            if param.name in ['MZ__exp__2']:
+                self.assertEqual(param.expr, 'CMASS_MZ**2')
+                found += 1
+        self.assertEqual(found, 2)
+        
 #===============================================================================
 # LegTest
 #===============================================================================

@@ -39,7 +39,7 @@ import madgraph.various.misc as misc
 
 import aloha.create_aloha as create_aloha
 
-import models.sm.write_param_card as write_param_card
+import models.write_param_card as write_param_card
 from madgraph import MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'

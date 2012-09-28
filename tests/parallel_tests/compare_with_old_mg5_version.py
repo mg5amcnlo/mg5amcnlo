@@ -38,7 +38,7 @@ class OLDMG5Comparator(unittest.TestCase):
     """A class to compare the value of a old MG5 version and the current one"""
     
     old_mg5 = None # link to the previous version of MG5 (prevent multiple build)
-    reference_number = 229 #186 #146 corresponds to 1.3.3 
+    reference_number = 186 #186 #146 corresponds to 1.3.3 
     nb_test = 0
     
     
@@ -422,7 +422,8 @@ class OLDMG5Comparator(unittest.TestCase):
         my_proc_list = me_comparator.create_proc_list(\
             ['u'],
             initial=2, final=2)
-        my_proc_list = ['e+ e- > a > e+ e-', 'h h > h h', 'e+ e+ > e- e-']
+        my_proc_list = ['e+ e- > a > e+ e-', 'h h > h h', 'e+ e+ > e- e-', 
+                        'u w+ > u w+']
         # Store list of non-zero processes and results in file
         #pickle_file = "mg4_sm_%sminitest.pkl" % self.suffix_name
         self.compare_processes(my_proc_list, model='sm',
@@ -433,7 +434,7 @@ class OLDMG5Comparator(unittest.TestCase):
     def test_mg5_minitest_mssm(self):
         """Test a minimal list of sm 2->2 processes, mainly to test the test"""
         # Create a list of processes to check automatically
-        my_proc_list = ['g g > go go', 'e+ e-  > n1 n2']
+        my_proc_list = ['g g > go go', 'e+ e-  > n1 n2', 'g t~ > go t1~']
         # Store list of non-zero processes and results in file
         #pickle_file = "mg4_sm_%sminitest.pkl" % self.suffix_name
         self.compare_processes(my_proc_list, model='mssm',
@@ -447,11 +448,16 @@ class OLDMG5Comparator(unittest.TestCase):
     def test_mg5_sm_22(self):
         """Test a semi-complete list of sm 2->2 processes"""
         # Create a list of processes to check automatically
+        #my_proc_list = me_comparator.create_proc_list(\
+        #    ['w+', 'w-', 'a', 'z', 'h', 'g', 'u', 'u~', 'd', 'd~',
+        #    'b', 'b~', 't', 't~', 'ta+', 'ta-', 'vt', 'vt~'],
+        #    initial=2, final=2)
         my_proc_list = me_comparator.create_proc_list(\
             ['w+', 'w-', 'a', 'z', 'h', 'g', 'u', 'u~', 'd', 'd~',
             'b', 'b~', 't', 't~', 'ta+', 'ta-', 'vt', 'vt~'],
             initial=2, final=2)
-
+        #my_proc_list = ['e+ e- > e+ e-','e+ e- > e+ e- a']
+        
         # Store list of non-zero processes and results in file
         for i in range(len(my_proc_list)//500):
             print 'step %s/%s' %(i+1,len(my_proc_list)//500 )

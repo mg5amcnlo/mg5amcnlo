@@ -6,6 +6,11 @@ import logging
 
 logger = logging.getLogger('madgraph.models') # -> stdout
 
+try:
+    import madgraph.iolibs.file_writers as file_writers
+except:
+    import internal.file_writers as file_writers
+
 class InvalidParamCard(Exception):
     """ a class for invalid param_card """
     pass
@@ -85,14 +90,16 @@ class Parameter (object):
         """ return a SLAH string """
 
         if self.format == 'float':
-            if self.lhablock == 'decay':
+            if self.lhablock == 'decay' and not isinstance(self.value,basestring):
                 return 'DECAY %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+            elif self.lhablock == 'decay':
+                return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
             else:
                 return '      %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'str':
-             return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+            return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'decay_table':
-             return '      %e %s # %s' % ( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
+            return '      %e %s # %s' % ( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
         
         else:
             if self.lhablock == 'decay':
@@ -116,6 +123,7 @@ class Block(list):
         """return the parameter associate to the lhacode"""
         if not self.param_dict:
             self.create_param_dict()
+            
         try:
             return self.param_dict[tuple(lhacode)]
         except KeyError:
@@ -135,8 +143,12 @@ class Block(list):
         
         assert isinstance(obj, Parameter)
         assert not obj.lhablock or obj.lhablock == self.name
-        assert tuple(obj.lhacode) not in self.param_dict, \
-                                  '%s already define in %s' % (obj.lhacode,self)
+        
+        if tuple(obj.lhacode) in self.param_dict:
+            if self.param_dict[tuple(obj.lhacode)].value != obj.value:
+                raise InvalidParamCard, '%s %s is already define to %s impossible to assign %s' % \
+                    (self.name, obj.lhacode, self.param_dict[tuple(obj.lhacode)].value, obj.value)
+            return
         
         list.append(self, obj)
         # update the dictionary of key
@@ -253,6 +265,9 @@ class ParamCard(dict):
                 param.load_str(line[6:])
                 cur_block.append(param)
                 continue
+
+            if cur_block is None:
+                continue            
                     
             if cur_block.name == 'decay':
                 # This is a decay table
@@ -261,8 +276,7 @@ class ParamCard(dict):
                 self['decay'].decay_table[id] = cur_block
             
             
-            if cur_block is None:
-                continue
+
             
             if cur_block.name.startswith('decay_table'):
                 param = Parameter()
@@ -272,7 +286,7 @@ class ParamCard(dict):
                 param = Parameter()
                 param.load_str(line)
                 cur_block.append(param)
-                
+                    
         return self
     
     def write(self, outpath):
@@ -288,6 +302,34 @@ class ParamCard(dict):
             file(outpath,'w').write(text)
         else:
             outpath.write(text) # for test purpose
+            
+            
+    def write_inc_file(self, outpath, identpath, default):
+        """ write a fortran file which hardcode the param value"""
+        
+        fout = file_writers.FortranWriter(outpath)
+        defaultcard = ParamCard(default)
+        for line in open(identpath):
+            if line.startswith('c  ') or line.startswith('ccccc'):
+                continue
+            split = line.split()
+            if len(split) < 3:
+                continue
+            block = split[0]
+            lhaid = [int(i) for i in split[1:-1]]
+            variable = split[-1]
+            if block in self:
+                try:
+                    value = self[block].get(tuple(lhaid)).value
+                except KeyError:
+                    value =defaultcard[block].get(tuple(lhaid)).value
+            else:
+                value =defaultcard[block].get(tuple(lhaid)).value
+            value = str(value).lower()
+            fout.writelines(' %s = %s' % (variable, str(value).replace('e','d')))
+            
+        
+        
                 
     def append(self, object):
         """add an object to this"""

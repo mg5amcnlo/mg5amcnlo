@@ -25,6 +25,9 @@ import shutil
 import subprocess
 import sys
 
+
+import aloha
+
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
@@ -35,6 +38,7 @@ import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.gen_infohtml as gen_infohtml
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
+import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.misc as misc
 import madgraph.various.process_checks as process_checks
@@ -42,11 +46,15 @@ import madgraph.various.process_checks as process_checks
 
 
 import aloha.create_aloha as create_aloha
+import models.import_ufo as import_ufo
 import models.write_param_card as param_writer
 import models.check_param_card as check_param_card
 
 from madgraph import MadGraph5Error, MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
+
+pjoin = os.path.join
+
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_v4')
 
@@ -57,13 +65,17 @@ class ProcessExporterFortran(object):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
-    def __init__(self, mgme_dir = "", dir_path = "", clean = False):
+    def __init__(self, mgme_dir = "", dir_path = "", opt=None):
         """Initiate the ProcessExporterFortran with directory information"""
         self.mgme_dir = mgme_dir
         self.dir_path = dir_path
-        self.clean = clean
         self.model = None
-
+        if opt:
+            self.opt = opt
+        else:
+            self.opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'madevent'}
+            
     #===========================================================================
     # copy the Template in a new directory.
     #===========================================================================
@@ -78,38 +90,38 @@ class ProcessExporterFortran(object):
                      "No valid MG_ME path given for MG4 run directory creation."
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(self.dir_path))
-            shutil.copytree(os.path.join(self.mgme_dir, 'Template'),
+            shutil.copytree(pjoin(self.mgme_dir, 'Template'),
                             self.dir_path, True)
             # Duplicate run_card and plot_card
             for card in ['run_card', 'plot_card']:
                 try:
-                    shutil.copy(os.path.join(self.dir_path, 'Cards',
+                    shutil.copy(pjoin(self.dir_path, 'Cards',
                                              card + '.dat'),
-                               os.path.join(self.dir_path, 'Cards',
+                               pjoin(self.dir_path, 'Cards',
                                             card + '_default.dat'))
                 except IOError:
                     info.warning("Failed to copy " + card + ".dat to default")
                     
-        elif not os.path.isfile(os.path.join(self.dir_path, 'TemplateVersion.txt')):
+        elif not os.path.isfile(pjoin(self.dir_path, 'TemplateVersion.txt')):
             assert self.mgme_dir, \
                       "No valid MG_ME path given for MG4 run directory creation."
         try:
-            shutil.copy(os.path.join(self.mgme_dir, 'MGMEVersion.txt'), self.dir_path)
+            shutil.copy(pjoin(self.mgme_dir, 'MGMEVersion.txt'), self.dir_path)
         except IOError:
             MG5_version = misc.get_pkg_info()
-            open(os.path.join(self.dir_path, 'MGMEVersion.txt'), 'w').write( \
+            open(pjoin(self.dir_path, 'MGMEVersion.txt'), 'w').write( \
                 "5." + MG5_version['version'])
 
         #Ensure that the Template is clean
-        if self.clean:
+        if self.opt['clean']:
             logger.info('remove old information in %s' % \
                                                   os.path.basename(self.dir_path))
             if os.environ.has_key('MADGRAPH_BASE'):
-                subprocess.call([os.path.join('bin', 'internal', 'clean_template'),
+                subprocess.call([pjoin('bin', 'internal', 'clean_template'),
                                  '--web'], cwd=self.dir_path)
             else:
                 try:
-                    subprocess.call([os.path.join('bin', 'internal', 'clean_template')], \
+                    subprocess.call([pjoin('bin', 'internal', 'clean_template')], \
                                                                        cwd=self.dir_path)
                 except Exception, why:
                     raise MadGraph5Error('Failed to clean correctly %s: \n %s' \
@@ -117,13 +129,13 @@ class ProcessExporterFortran(object):
 
             #Write version info
             MG_version = misc.get_pkg_info()
-            open(os.path.join(self.dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
+            open(pjoin(self.dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
                                                               MG_version['version'])
 
             
         # add the makefile in Source directory 
-        filename = os.path.join(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FortranWriter(filename))
+        filename = pjoin(self.dir_path,'Source','makefile')
+        self.write_source_makefile(writers.FileWriter(filename))
             
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
@@ -190,17 +202,17 @@ class ProcessExporterFortran(object):
 
         # Import the model
         for file in os.listdir(model_path):
-            if os.path.isfile(os.path.join(model_path, file)):
-                shutil.copy2(os.path.join(model_path, file), \
-                                     os.path.join(self.dir_path, 'Source', 'MODEL'))
+            if os.path.isfile(pjoin(model_path, file)):
+                shutil.copy2(pjoin(model_path, file), \
+                                     pjoin(self.dir_path, 'Source', 'MODEL'))
 
 
     def make_model_symbolic_link(self):
         """Make the copy/symbolic links"""
         model_path = self.dir_path + '/Source/MODEL/'
-        if os.path.exists(os.path.join(model_path, 'ident_card.dat')):
+        if os.path.exists(pjoin(model_path, 'ident_card.dat')):
             mv(model_path + '/ident_card.dat', self.dir_path + '/Cards')
-        if os.path.exists(os.path.join(model_path, 'particles.dat')):
+        if os.path.exists(pjoin(model_path, 'particles.dat')):
             ln(model_path + '/particles.dat', self.dir_path + '/SubProcesses')
             ln(model_path + '/interactions.dat', self.dir_path + '/SubProcesses')
         cp(model_path + '/param_card.dat', self.dir_path + '/Cards')
@@ -220,7 +232,7 @@ class ProcessExporterFortran(object):
 
         # Import helas routine
         for filename in os.listdir(helas_path):
-            filepos = os.path.join(helas_path, filename)
+            filepos = pjoin(helas_path, filename)
             if os.path.isfile(filepos):
                 if filepos.endswith('Makefile.template'):
                     cp(filepos, self.dir_path + '/Source/DHELAS/Makefile')
@@ -233,13 +245,13 @@ class ProcessExporterFortran(object):
     #def export_helas(mgme_dir, dir_path):
     #
     #        # Copy the HELAS directory
-    #        helas_dir = os.path.join(mgme_dir, 'HELAS')
+    #        helas_dir = pjoin(mgme_dir, 'HELAS')
     #        for filename in os.listdir(helas_dir): 
-    #            if os.path.isfile(os.path.join(helas_dir, filename)):
-    #                shutil.copy2(os.path.join(helas_dir, filename),
-    #                            os.path.join(dir_path, 'Source', 'DHELAS'))
-    #        shutil.move(os.path.join(dir_path, 'Source', 'DHELAS', 'Makefile.template'),
-    #                    os.path.join(dir_path, 'Source', 'DHELAS', 'Makefile'))
+    #            if os.path.isfile(pjoin(helas_dir, filename)):
+    #                shutil.copy2(pjoin(helas_dir, filename),
+    #                            pjoin(dir_path, 'Source', 'DHELAS'))
+    #        shutil.move(pjoin(dir_path, 'Source', 'DHELAS', 'Makefile.template'),
+    #                    pjoin(dir_path, 'Source', 'DHELAS', 'Makefile'))
     #  
 
     #===========================================================================
@@ -259,9 +271,11 @@ class ProcessExporterFortran(object):
         """Write the nexternal.inc file for MG4"""
 
 
-        path = os.path.join(_file_path,'iolibs','template_files','madevent_makefile_source')
+        path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)'
-        text = open(path).read() % {'libraries': set_of_lib} 
+        model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc\n\tcd MODEL; make    
+param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
+        text = open(path).read() % {'libraries': set_of_lib, 'model':model_line} 
         writer.write(text)
         
         return True
@@ -334,22 +348,23 @@ class ProcessExporterFortran(object):
         """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
 
         # create the MODEL
-        write_dir=os.path.join(self.dir_path, 'Source', 'MODEL')
-        model_builder = UFO_model_to_mg4(model, write_dir)
+        write_dir=pjoin(self.dir_path, 'Source', 'MODEL')
+        model_builder = UFO_model_to_mg4(model, write_dir, self.opt)
         model_builder.build(wanted_couplings)
 
         # Create and write ALOHA Routine
         aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+        aloha_model.add_Lorentz_object(model.get('lorentz'))
         if wanted_lorentz:
             aloha_model.compute_subset(wanted_lorentz)
         else:
             aloha_model.compute_all(save=False)
-        write_dir=os.path.join(self.dir_path, 'Source', 'DHELAS')
+        write_dir=pjoin(self.dir_path, 'Source', 'DHELAS')
         aloha_model.write(write_dir, 'Fortran')
 
         #copy Helas Template
         cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
-        for filename in os.listdir(os.path.join(MG5DIR,'aloha','template_files')):
+        for filename in os.listdir(pjoin(MG5DIR,'aloha','template_files')):
             if not filename.lower().endswith('.f'):
                 continue
             cp((MG5DIR + '/aloha/template_files/' + filename), write_dir)
@@ -610,7 +625,8 @@ class ProcessExporterFortran(object):
             for i, proc in enumerate(processes):
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + 1d0\n"
+                pdf_lines = pdf_lines + "\nPD(IPROC)=1d0\n"
+                pdf_lines = pdf_lines + "\nPD(0)=PD(0)+PD(IPROC)\n"
         else:
             # Pick out all initial state particles for the two beams
             initial_states = [sorted(list(set([p.get_initial_pdg(1) for \
@@ -685,7 +701,7 @@ class ProcessExporterFortran(object):
             for proc in processes:
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + "
+                pdf_lines = pdf_lines + "\nPD(IPROC)="
                 for ibeam in [1, 2]:
                     initial_state = proc.get_initial_pdg(ibeam)
                     if initial_state in pdf_codes.keys():
@@ -695,6 +711,7 @@ class ProcessExporterFortran(object):
                         pdf_lines = pdf_lines + "1d0*"
                 # Remove last "*" from pdf_lines
                 pdf_lines = pdf_lines[:-1] + "\n"
+                pdf_lines = pdf_lines + "PD(0)=PD(0)+DABS(PD(IPROC))\n"
 
         # Remove last line break from the return variables
         return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1]
@@ -751,14 +768,14 @@ class ProcessExporterFortran(object):
         self.replace_make_opt_compiler(compiler)
         # Replace also for Template but not for cluster
         if not os.environ.has_key('MADGRAPH_DATA'):
-            self.replace_make_opt_compiler(compiler, os.path.join(MG5DIR, 'Template'))
+            self.replace_make_opt_compiler(compiler, pjoin(MG5DIR, 'Template'))
 
     def replace_make_opt_compiler(self, compiler, root_dir = ""):
         """Set FC=compiler in Source/make_opts"""
 
         if not root_dir:
             root_dir = self.dir_path
-        make_opts = os.path.join(root_dir, 'Source', 'make_opts')
+        make_opts = pjoin(root_dir, 'Source', 'make_opts')
         lines = open(make_opts).read().split('\n')
         FC_re = re.compile('^(\s*)FC\s*=\s*.+\s*$')
         for iline, line in enumerate(lines):
@@ -786,46 +803,46 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         
         logger.info('initialize a new standalone directory: %s' % \
                         os.path.basename(self.dir_path))
-        temp_dir = os.path.join(self.mgme_dir, 'Template')
+        temp_dir = pjoin(self.mgme_dir, 'Template')
         
         
         # Create the directory structure
         os.mkdir(self.dir_path)
-        os.mkdir(os.path.join(self.dir_path, 'Source'))
-        os.mkdir(os.path.join(self.dir_path, 'Source', 'MODEL'))
-        os.mkdir(os.path.join(self.dir_path, 'Source', 'DHELAS'))
-        os.mkdir(os.path.join(self.dir_path, 'SubProcesses'))
-        os.mkdir(os.path.join(self.dir_path, 'bin'))
-        os.mkdir(os.path.join(self.dir_path, 'bin', 'internal'))
-        os.mkdir(os.path.join(self.dir_path, 'lib'))
-        os.mkdir(os.path.join(self.dir_path, 'Cards'))
+        os.mkdir(pjoin(self.dir_path, 'Source'))
+        os.mkdir(pjoin(self.dir_path, 'Source', 'MODEL'))
+        os.mkdir(pjoin(self.dir_path, 'Source', 'DHELAS'))
+        os.mkdir(pjoin(self.dir_path, 'SubProcesses'))
+        os.mkdir(pjoin(self.dir_path, 'bin'))
+        os.mkdir(pjoin(self.dir_path, 'bin', 'internal'))
+        os.mkdir(pjoin(self.dir_path, 'lib'))
+        os.mkdir(pjoin(self.dir_path, 'Cards'))
         
         # Information at top-level
         #Write version info
-        shutil.copy(os.path.join(temp_dir, 'TemplateVersion.txt'), self.dir_path)
+        shutil.copy(pjoin(temp_dir, 'TemplateVersion.txt'), self.dir_path)
         try:
-            shutil.copy(os.path.join(self.mgme_dir, 'MGMEVersion.txt'), self.dir_path)
+            shutil.copy(pjoin(self.mgme_dir, 'MGMEVersion.txt'), self.dir_path)
         except IOError:
             MG5_version = misc.get_pkg_info()
-            open(os.path.join(self.dir_path, 'MGMEVersion.txt'), 'w').write( \
+            open(pjoin(self.dir_path, 'MGMEVersion.txt'), 'w').write( \
                 "5." + MG5_version['version'])
         
         # Add file in bin directory
-        shutil.copy(os.path.join(temp_dir, 'bin', 'change_compiler.py'), 
-                    os.path.join(self.dir_path, 'bin'))
+        #shutil.copy(pjoin(temp_dir, 'bin', 'change_compiler.py'), 
+        #            pjoin(self.dir_path, 'bin'))
         
         # Add file in SubProcesses
-        shutil.copy(os.path.join(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
-                    os.path.join(self.dir_path, 'SubProcesses', 'makefile'))
-        shutil.copy(os.path.join(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 
-                    os.path.join(self.dir_path, 'SubProcesses', 'check_sa.f'))
+        shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
+                    pjoin(self.dir_path, 'SubProcesses', 'makefile'))
+        shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 
+                    pjoin(self.dir_path, 'SubProcesses', 'check_sa.f'))
         
         # Add file in Source
-        shutil.copy(os.path.join(temp_dir, 'Source', 'make_opts'), 
-                    os.path.join(self.dir_path, 'Source'))        
+        shutil.copy(pjoin(temp_dir, 'Source', 'make_opts'), 
+                    pjoin(self.dir_path, 'Source'))        
         # add the makefile 
-        filename = os.path.join(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FortranWriter(filename))            
+        filename = pjoin(self.dir_path,'Source','makefile')
+        self.write_source_makefile(writers.FileWriter(filename))            
         
     #===========================================================================
     # export model files
@@ -838,9 +855,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # This is a function created in the UFO 
         
         
-        text = open(os.path.join(self.dir_path,'SubProcesses','check_sa.f')).read()
+        text = open(pjoin(self.dir_path,'SubProcesses','check_sa.f')).read()
         text = text.replace('call setpara(\'param_card.dat\')', 'call setpara(\'param_card.dat\', .true.)')
-        fsock = open(os.path.join(self.dir_path,'SubProcesses','check_sa.f'), 'w')
+        fsock = open(pjoin(self.dir_path,'SubProcesses','check_sa.f'), 'w')
         fsock.write(text)
         fsock.close()
         
@@ -854,7 +871,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         everything for running standalone
         """
 
-        source_dir = os.path.join(self.dir_path, "Source")
+        source_dir = pjoin(self.dir_path, "Source")
         logger.info("Running make for Helas")
         misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for Model")
@@ -871,8 +888,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         self.make()
 
         # Write command history as proc_card_mg5
-        if os.path.isdir(os.path.join(self.dir_path, 'Cards')):
-            output_file = os.path.join(self.dir_path, 'Cards', 'proc_card_mg5.dat')
+        if os.path.isdir(pjoin(self.dir_path, 'Cards')):
+            output_file = pjoin(self.dir_path, 'Cards', 'proc_card_mg5.dat')
             output_file = open(output_file, 'w')
             text = ('\n'.join(history) + '\n') % misc.get_time_info()
             output_file.write(text)
@@ -889,7 +906,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         cwd = os.getcwd()
 
         # Create the directory PN_xx_xxxxx in the specified path
-        dirpath = os.path.join(self.dir_path, 'SubProcesses', \
+        dirpath = pjoin(self.dir_path, 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
 
         try:
@@ -960,9 +977,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         """Write the nexternal.inc file for MG4"""
 
 
-        path = os.path.join(_file_path,'iolibs','template_files','madevent_makefile_source')
+        path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = '$(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)'
-        text = open(path).read() % {'libraries': set_of_lib} 
+        model_line='''$(LIBDIR)libmodel.$(libext): MODEL\n\t cd MODEL; make\n'''
+        text = open(path).read() % {'libraries': set_of_lib, 'model':model_line} 
         writer.write(text)
         
         return True
@@ -986,6 +1004,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         writers.FortranWriter.downcase = False
 
         replace_dict = {}
+
+        # Extract helas calls
+        helas_calls = fortran_model.get_matrix_element_calls(\
+                    matrix_element)
+        replace_dict['helas_calls'] = "\n".join(helas_calls)
 
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()
@@ -1028,16 +1051,12 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         color_data_lines = self.get_color_data_lines(matrix_element)
         replace_dict['color_data_lines'] = "\n".join(color_data_lines)
 
-        # Extract helas calls
-        helas_calls = fortran_model.get_matrix_element_calls(\
-                    matrix_element)
-        replace_dict['helas_calls'] = "\n".join(helas_calls)
 
         # Extract JAMP lines
         jamp_lines = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
-        file = open(os.path.join(_file_path, \
+        file = open(pjoin(_file_path, \
                           'iolibs/template_files/matrix_standalone_v4.inc')).read()
         file = file % replace_dict
 
@@ -1060,24 +1079,25 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         """
 
         super(ProcessExporterFortranME, self).copy_v4template(modelname)
-
+        
         # File created from Template (Different in some child class)
-        filename = os.path.join(self.dir_path,'Source','run_config.inc')
+        filename = pjoin(self.dir_path,'Source','run_config.inc')
         self.write_run_config_file(writers.FortranWriter(filename))
         
         # The next file are model dependant (due to SLAH convention)
         self.model_name = modelname
         # Add the combine_events.f 
-        filename = os.path.join(self.dir_path,'Source','combine_events.f')
-        self.write_combine_events(writers.FortranWriter(filename))
+        filename = pjoin(self.dir_path,'Source','combine_events.f')
+        self.write_combine_events(writers.FortranWriter(filename)) # already formatted
         # Add the symmetry.f 
-        filename = os.path.join(self.dir_path,'SubProcesses','symmetry.f')
+        filename = pjoin(self.dir_path,'SubProcesses','symmetry.f')
         self.write_symmetry(writers.FortranWriter(filename))
         # Add the driver.f 
-        filename = os.path.join(self.dir_path,'SubProcesses','driver.f')
+        filename = pjoin(self.dir_path,'SubProcesses','driver.f')
         self.write_driver(writers.FortranWriter(filename))
         # Copy the different python file in the Template
         self.copy_python_file()
+        
         
 
 
@@ -1088,6 +1108,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     def copy_python_file(self):
         """copy the python file require for the Template"""
 
+        # madevent interface
         cp(_file_path+'/interface/madevent_interface.py',
                             self.dir_path+'/bin/internal/madevent_interface.py')
         cp(_file_path+'/interface/extended_cmd.py',
@@ -1096,8 +1117,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
         cp(_file_path+'/iolibs/save_load_object.py', 
                               self.dir_path+'/bin/internal/save_load_object.py') 
+        cp(_file_path+'/iolibs/file_writers.py', 
+                              self.dir_path+'/bin/internal/file_writers.py')
+        #model file                        
         cp(_file_path+'../models/check_param_card.py', 
-                              self.dir_path+'/bin/internal/check_param_card.py')
+                              self.dir_path+'/bin/internal/check_param_card.py')   
+                
+        #madevent file
         cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
         cp(_file_path+'/various/gen_crossxhtml.py', 
                                 self.dir_path+'/bin/internal/gen_crossxhtml.py')                
@@ -1107,11 +1133,38 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                        self.dir_path+'/bin/internal/cluster.py') 
         cp(_file_path+'/various/sum_html.py', 
                                        self.dir_path+'/bin/internal/sum_html.py') 
+        cp(_file_path+'/various/combine_runs.py', 
+                                       self.dir_path+'/bin/internal/combine_runs.py')
+        # logging configuration
         cp(_file_path+'/interface/.mg5_logging.conf', 
                                  self.dir_path+'/bin/internal/me5_logging.conf') 
         cp(_file_path+'/interface/coloring_logging.py', 
-                                 self.dir_path+'/bin/internal/coloring_logging.py') 
+                                 self.dir_path+'/bin/internal/coloring_logging.py')
+ 
+ 
+    def convert_model_to_mg4(self, model, wanted_lorentz = [], 
+                                                         wanted_couplings = []):
+         
+         super(ProcessExporterFortranME,self).convert_model_to_mg4(model, 
+                                               wanted_lorentz, wanted_couplings)
+         
+         IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
+         try:
+             shutil.rmtree(pjoin(self.dir_path,'bin','internal','ufomodel'))
+         except OSError as error:
+             pass
+         shutil.copytree(model.get('version_tag').split('##')[0], 
+                               pjoin(self.dir_path,'bin','internal','ufomodel'),
+                               ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
+         if hasattr(model, 'restrict_card'):
+             out_path = pjoin(self.dir_path, 'bin', 'internal','ufomodel',
+                                                         'restrict_default.dat')
+             if isinstance(model.restrict_card, check_param_card.ParamCard):
+                 model.restrict_card.write(out_path)
+             else:
+                 files.cp(model.restrict_card, out_path)
 
+                
     #===========================================================================
     # export model files
     #=========================================================================== 
@@ -1119,6 +1172,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         """export the model dependent files"""
         
         super(ProcessExporterFortranME,self).export_model_files(model_path)
+        
         # Add the routine update_as_param in v4 model 
         # This is a function created in the UFO 
         text="""
@@ -1127,22 +1181,22 @@ class ProcessExporterFortranME(ProcessExporterFortran):
           return
         end
         """
-        ff = open(os.path.join(self.dir_path, 'Source', 'MODEL', 'couplings.f'),'a')
+        ff = open(pjoin(self.dir_path, 'Source', 'MODEL', 'couplings.f'),'a')
         ff.write(text)
         ff.close()
                 
         # Add the symmetry.f 
-        filename = os.path.join(self.dir_path,'SubProcesses','symmetry.f')
+        filename = pjoin(self.dir_path,'SubProcesses','symmetry.f')
         self.write_symmetry(writers.FortranWriter(filename), v5=False)
         
         # Add the driver.f 
-        filename = os.path.join(self.dir_path,'SubProcesses','driver.f')
+        filename = pjoin(self.dir_path,'SubProcesses','driver.f')
         self.write_driver(writers.FortranWriter(filename), v5=False)
         
         # Modify setrun.f
-        text = open(os.path.join(self.dir_path,'Source','setrun.f')).read()
+        text = open(pjoin(self.dir_path,'Source','setrun.f')).read()
         text = text.replace('call setpara(param_card_name)', 'call setpara(param_card_name, .true.)')
-        fsock = open(os.path.join(self.dir_path,'Source','setrun.f'), 'w')
+        fsock = open(pjoin(self.dir_path,'Source','setrun.f'), 'w')
         fsock.write(text)
         fsock.close()
         
@@ -1159,7 +1213,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         including the necessary matrix.f and various helper files"""
 
         cwd = os.getcwd()
-        path = os.path.join(self.dir_path, 'SubProcesses')
+        path = pjoin(self.dir_path, 'SubProcesses')
 
 
         if not self.model:
@@ -1220,7 +1274,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                            s_and_t_channels)
 
         filename = 'dname.mg'
-        self.write_dname_file(writers.FortranWriter(filename),
+        self.write_dname_file(writers.FileWriter(filename),
                          "P"+matrix_element.get('processes')[0].shell_string())
 
         filename = 'iproc.dat'
@@ -1347,30 +1401,30 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         
         modelname = self.model.get('name')
         if modelname == 'mssm' or modelname.startswith('mssm-'):
-            param_card = os.path.join(self.dir_path, 'Cards','param_card.dat')
-            mg5_param = os.path.join(self.dir_path, 'Source', 'MODEL', 'MG5_param.dat')
+            param_card = pjoin(self.dir_path, 'Cards','param_card.dat')
+            mg5_param = pjoin(self.dir_path, 'Source', 'MODEL', 'MG5_param.dat')
             check_param_card.convert_to_mg5card(param_card, mg5_param)
             check_param_card.check_valid_param_card(mg5_param)
 
 
         # Write maxconfigs.inc based on max of ME's/subprocess groups
-        filename = os.path.join(self.dir_path,'Source','maxconfigs.inc')
+        filename = pjoin(self.dir_path,'Source','maxconfigs.inc')
         self.write_maxconfigs_file(writers.FortranWriter(filename),
                                    matrix_elements)
         
         # Write maxparticles.inc based on max of ME's/subprocess groups
-        filename = os.path.join(self.dir_path,'Source','maxparticles.inc')
+        filename = pjoin(self.dir_path,'Source','maxparticles.inc')
         self.write_maxparticles_file(writers.FortranWriter(filename),
                                      matrix_elements)
         
         # Touch "done" file
-        os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
+        os.system('touch %s/done' % pjoin(self.dir_path,'SubProcesses'))
 
         # Check for compiler
         self.set_compiler(compiler)
 
         old_pos = os.getcwd()
-        os.chdir(os.path.join(self.dir_path, 'SubProcesses'))
+        os.chdir(pjoin(self.dir_path, 'SubProcesses'))
         P_dir_list = [proc for proc in os.listdir('.') if os.path.isdir(proc) and \
                                                                     proc[0] == 'P']
 
@@ -1381,18 +1435,18 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             for Pdir in P_dir_list:
                 os.chdir(Pdir)
                 try:
-                    subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+                    subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
                                 stdout = devnull)
                 except:
-                    os.system('chmod +x %s ' % os.path.join(old_pos, self.dir_path, 'bin', 'internal', '*'))
-                    subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+                    os.system('chmod +x %s ' % pjoin(old_pos, self.dir_path, 'bin', 'internal', '*'))
+                    subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
                                 stdout = devnull)
                 os.chdir(os.path.pardir)
 
         logger.info("Generate web pages")
         # Create the WebPage using perl script
 
-        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')], \
+        subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')], \
                                                                 stdout = devnull)
 
         os.chdir(os.path.pardir)
@@ -1403,27 +1457,27 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                             name != 'index.html']               
         if online:
             nb_channel = obj.rep_rule['nb_gen_diag']
-            open(os.path.join('./Online'),'w').write(str(nb_channel))
+            open(pjoin('./Online'),'w').write(str(nb_channel))
         
         # Write command history as proc_card_mg5
         if os.path.isdir('Cards'):
-            output_file = os.path.join('Cards', 'proc_card_mg5.dat')
+            output_file = pjoin('Cards', 'proc_card_mg5.dat')
             output_file = open(output_file, 'w')
             text = ('\n'.join(history) + '\n') % misc.get_time_info()
             output_file.write(text)
             output_file.close()
 
-        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
+        subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)
 
         # Run "make" to generate madevent.tar.gz file
-        if os.path.exists(os.path.join('SubProcesses', 'subproc.mg')):
+        if os.path.exists(pjoin('SubProcesses', 'subproc.mg')):
             if os.path.exists('madevent.tar.gz'):
                 os.remove('madevent.tar.gz')
             subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'make_madevent_tar')],
                         stdout = devnull)
 
-        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
+        subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)
 
         #return to the initial dir
@@ -1444,10 +1498,17 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
 
+        
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
 
         replace_dict = {}
+
+        # Extract helas calls
+        helas_calls = fortran_model.get_matrix_element_calls(\
+                    matrix_element)
+        replace_dict['helas_calls'] = "\n".join(helas_calls)
+
 
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()
@@ -1516,13 +1577,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         color_data_lines = self.get_color_data_lines(matrix_element)
         replace_dict['color_data_lines'] = "\n".join(color_data_lines)
 
-        # Extract helas calls
-        helas_calls = fortran_model.get_matrix_element_calls(\
-                    matrix_element)
-        replace_dict['helas_calls'] = "\n".join(helas_calls)
 
         # Set the size of Wavefunction
-        if not self.model or any([p.get('spin')==5 for p in self.model.get('particles') if p]):
+        if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
             replace_dict['wavefunctionsize'] = 18
         else:
             replace_dict['wavefunctionsize'] = 6
@@ -1535,7 +1592,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         jamp_lines = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
-        file = open(os.path.join(_file_path, \
+        file = open(pjoin(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)).read()
         file = file % replace_dict
 
@@ -1579,10 +1636,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Set dsig_line
         if ninitial == 1:
             # No conversion, since result of decay should be given in GeV
-            dsig_line = "pd(IPROC)*dsiguu"
+            dsig_line = "pd(0)*dsiguu"
         else:
             # Convert result (in GeV) to pb
-            dsig_line = "pd(IPROC)*conv*dsiguu"
+            dsig_line = "pd(0)*conv*dsiguu"
 
         replace_dict['dsig_line'] = dsig_line
 
@@ -1608,7 +1665,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['passcuts_end'] = "ENDIF"
             replace_dict['define_subdiag_lines'] = ""
 
-        file = open(os.path.join(_file_path, \
+        file = open(pjoin(_file_path, \
                           'iolibs/template_files/auto_dsig_v4.inc')).read()
         file = file % replace_dict
 
@@ -1759,7 +1816,7 @@ c           This is dummy particle used in multiparticle vertices
     def write_run_config_file(self, writer):
         """Write the run_configs.inc file for MadEvent"""
 
-        path = os.path.join(_file_path,'iolibs','template_files','madevent_run_config.inc') 
+        path = pjoin(_file_path,'iolibs','template_files','madevent_run_config.inc') 
         text = open(path).read() % {'chanperjob':'5'} 
         writer.write(text)
         return True
@@ -1945,7 +2002,7 @@ c           This is dummy particle used in multiparticle vertices
     def write_driver(self, writer, v5=True):
         """Write the SubProcess/driver.f file for MG4"""
 
-        path = os.path.join(_file_path,'iolibs','template_files','madevent_driver.f')
+        path = pjoin(_file_path,'iolibs','template_files','madevent_driver.f')
         
         if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
             card = 'Source/MODEL/MG5_param.dat'
@@ -1966,14 +2023,13 @@ c           This is dummy particle used in multiparticle vertices
     def write_combine_events(self, writer):
         """Write the SubProcess/driver.f file for MG4"""
 
-        path = os.path.join(_file_path,'iolibs','template_files','madevent_combine_events.f')
+        path = pjoin(_file_path,'iolibs','template_files','madevent_combine_events.f')
         
         if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
             card = 'Source/MODEL/MG5_param.dat'
         else:
             card = 'param_card.dat' 
         text = open(path).read() % {'param_card_name':card} 
-
         writer.write(text)
         
         return True
@@ -1985,7 +2041,7 @@ c           This is dummy particle used in multiparticle vertices
     def write_symmetry(self, writer, v5=True):
         """Write the SubProcess/driver.f file for ME"""
 
-        path = os.path.join(_file_path,'iolibs','template_files','madevent_symmetry.f')
+        path = pjoin(_file_path,'iolibs','template_files','madevent_symmetry.f')
         
         if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
             card = 'Source/MODEL/MG5_param.dat'
@@ -2333,19 +2389,17 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         including the necessary matrix_N.f files, configs.inc and various
         other helper files"""
 
-        if not isinstance(subproc_group, group_subprocs.SubProcessGroup):
-            raise base_objects.PhysicsObject.PhysicsObjectError,\
-                  "subproc_group object not SubProcessGroup"
-
+        assert isinstance(subproc_group, group_subprocs.SubProcessGroup), \
+                                      "subproc_group object not SubProcessGroup"
+        
         if not self.model:
             self.model = subproc_group.get('matrix_elements')[0].\
                          get('processes')[0].get('model')
 
         cwd = os.getcwd()
-        path = os.path.join(self.dir_path, 'SubProcesses')
+        path = pjoin(self.dir_path, 'SubProcesses')
 
         os.chdir(path)
-
         pathdir = os.getcwd()
 
         # Create the directory PN in the specified path
@@ -2515,7 +2569,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                            perms)
 
         # Generate jpgs -> pass in make_html
-        #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
+        #os.system(pjoin('..', '..', 'bin', 'gen_jpeg-pl'))
 
         linkfiles = ['addmothers.f',
                      'cluster.f',
@@ -2607,7 +2661,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                  "proc": matrix_elements[iproc].get('processes')[0].base_string()})
         replace_dict['call_dsig_proc_lines'] = "\n".join(call_dsig_proc_lines)
 
-        file = open(os.path.join(_file_path, \
+        file = open(pjoin(_file_path, \
                        'iolibs/template_files/super_auto_dsig_group_v4.inc')).read()
         file = file % replace_dict
 
@@ -2729,7 +2783,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
     def write_run_config_file(self, writer):
         """Write the run_configs.inc file for MadEvent"""
 
-        path = os.path.join(_file_path,'iolibs','template_files','madevent_run_config.inc') 
+        path = pjoin(_file_path,'iolibs','template_files','madevent_run_config.inc') 
         text = open(path).read() % {'chanperjob':'2'} 
         writer.write(text)
         return True
@@ -2761,13 +2815,17 @@ python_to_fortran = lambda x: parsers.UFOExpressionParserFortran().parse(x)
 class UFO_model_to_mg4(object):
     """ A converter of the UFO-MG5 Model to the MG4 format """
     
-    def __init__(self, model, output_path):
+    def __init__(self, model, output_path, opt=None):
         """ initialization of the objects """
        
         self.model = model
         self.model_name = model['name']
         self.dir_path = output_path
-        
+        if opt:
+            self.opt = opt
+        else:
+            self.opt = {'complex_mass': False, 'export_format': 'madevent'}
+            
         self.coups_dep = []    # (name, expression, type)
         self.coups_indep = []  # (name, expression, type)
         self.params_dep = []   # (name, expression, type)
@@ -2820,7 +2878,8 @@ class UFO_model_to_mg4(object):
                 coup.expr = rep_pattern.sub(replace, coup.expr)
 
 
-        
+               
+                
     def refactorize(self, wanted_couplings = []):    
         """modify the couplings to fit with MG4 convention """
             
@@ -2867,12 +2926,13 @@ class UFO_model_to_mg4(object):
         # write the files
         if full:
             self.write_all()
+            
 
     def open(self, name, comment='c', format='default'):
         """ Open the file name in the correct directory and with a valid
         header."""
         
-        file_path = os.path.join(self.dir_path, name)
+        file_path = pjoin(self.dir_path, name)
         
         if format == 'fortran':
             fsock = writers.FortranWriter(file_path, 'w')
@@ -2922,11 +2982,27 @@ class UFO_model_to_mg4(object):
     
         
         #copy the library files
-        file_to_link = ['formats.inc', 'lha_read.f', 'makefile','printout.f', \
-                        'rw_para.f', 'testprog.f', 'rw_para.f']
+        file_to_link = ['formats.inc', 'lha_read.f','printout.f', \
+                        'rw_para.f', 'testprog.f']
+    
     
         for filename in file_to_link:
             cp( MG5DIR + '/models/template_files/fortran/' + filename, self.dir_path)
+
+        if self.opt['export_format'] == 'madevent':
+            cp( MG5DIR + '/models/template_files/fortran/makefile_madevent', 
+                self.dir_path + '/makefile')
+        else:
+            cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
+                self.dir_path + '/makefile')
+            text = open(pjoin(self.dir_path, 'rw_para.f')).read()
+            text = re.sub(r'c\s*call LHA_loadcard','       call LHA_loadcard',text, re.I)
+            fsock = open(pjoin(self.dir_path, 'rw_para.f'), 'w')
+            fsock.write(text)
+            fsock.close()
+            
+     
+
 
     def create_coupl_inc(self):
         """ write coupling.inc """
@@ -2946,6 +3022,9 @@ class UFO_model_to_mg4(object):
         # Write the Mass definition/ common block
         masses = set()
         widths = set()
+        if self.opt['complex_mass']:
+            complex_mass = set()
+            
         for particle in self.model.get('particles'):
             #find masses
             one_mass = particle.get('mass')
@@ -2956,7 +3035,8 @@ class UFO_model_to_mg4(object):
             one_width = particle.get('width')
             if one_width.lower() != 'zero':
                 widths.add(one_width)
-            
+                if self.opt['complex_mass'] and one_mass.lower() != 'zero':
+                    complex_mass.add('CMASS_%s' % one_mass)
         
         fsock.writelines('double precision '+','.join(masses)+'\n')
         fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
@@ -2968,6 +3048,11 @@ class UFO_model_to_mg4(object):
         coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep]       
         fsock.writelines('double complex '+', '.join(coupling_list)+'\n')
         fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
+        
+        # Write complex mass for complex mass scheme (if activated)
+        if self.opt['complex_mass']:
+            fsock.writelines('double complex '+', '.join(complex_mass)+'\n')
+            fsock.writelines('common/couplings/ '+', '.join(complex_mass)+'\n')            
         
     def create_write_couplings(self):
         """ write the file coupl_write.inc """
@@ -2995,6 +3080,8 @@ class UFO_model_to_mg4(object):
         for particle in self.model.get('particles'):
             already_def.add(particle.get('mass').lower())
             already_def.add(particle.get('width').lower())
+            if self.opt['complex_mass']:
+                already_def.add('cmass_%s' % particle.get('mass').lower())
 
         is_valid = lambda name: name !='G' and name.lower() not in already_def
         
@@ -3010,7 +3097,8 @@ class UFO_model_to_mg4(object):
         fsock.writelines('common/params_R/ '+','.join(real_parameters)+'\n\n')
         
         complex_parameters = [param.name for param in self.params_dep + 
-                            self.params_indep if param.type == 'complex']
+                            self.params_indep if param.type == 'complex' and
+                            is_valid(param.name)]
 
 
         fsock.writelines('double complex '+','.join(complex_parameters)+'\n')
@@ -3203,6 +3291,11 @@ class UFO_model_to_mg4(object):
         
     def create_param_read(self):    
         """create param_read"""
+        
+        if self.opt['export_format'] == 'madevent':
+            fsock = self.open('param_read.inc', format='fortran')
+            fsock.writelines(' include \'../param_card.inc\'')
+            return
     
         def format_line(parameter):
             """return the line for the ident_card corresponding to this 
@@ -3229,15 +3322,15 @@ class UFO_model_to_mg4(object):
                 
         
         fsock.writelines('\n'.join(res_strings))
-
+        
     def create_param_card(self):
         """ create the param_card.dat """
 
-        out_path = os.path.join(self.dir_path, 'param_card.dat')
+        out_path = pjoin(self.dir_path, 'param_card.dat')
         param_writer.ParamCardWriter(self.model, out_path)
         out_path2 = None
         if hasattr(self.model, 'rule_card'):
-            out_path2 = os.path.join(self.dir_path, 'param_card_rule.dat')
+            out_path2 = pjoin(self.dir_path, 'param_card_rule.dat')
             self.model.rule_card.write_file(out_path2)
         
         # IF MSSM convert the card to SLAH1
@@ -3249,4 +3342,37 @@ class UFO_model_to_mg4(object):
                 translator.make_valid_param_card(out_path, out_path2)
             translator.convert_to_slha1(out_path)
         
+def ExportV4Factory(cmd, noclean):
+    """ Determine which Export_v4 class is required. cmd is the command 
+        interface containing all potential usefull information."""
 
+    group_subprocesses = cmd.options['group_subprocesses']
+    #check if we need to group processes
+    if cmd.options['group_subprocesses'] == 'Auto':
+        if cmd._curr_amps[0].get_ninitial()  == 2:
+            group_subprocesses = True
+        else:
+            group_subprocesses = False
+
+    assert group_subprocesses in [True, False]
+    
+    
+    opt = {'clean': not noclean, 
+           'complex_mass': cmd.options['complex_mass_scheme'],
+           'export_format':cmd._export_format}
+
+    if cmd._export_format in ['standalone', 'matrix']:
+        return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt)
+    elif cmd._export_format in ['madevent'] and group_subprocesses:
+        return  ProcessExporterFortranMEGroup(cmd._mgme_dir, cmd._export_dir,
+                                                                        opt)
+    elif cmd._export_format in ['madevent']:
+        return ProcessExporterFortranME(cmd._mgme_dir, cmd._export_dir,opt)
+    
+    else:
+        raise Exception, 'Wrong export_v4 format'
+        
+    
+    
+    
+            

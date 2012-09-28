@@ -21,7 +21,6 @@ c************************************************************************
       integer npara
       character*20 param(maxpara),value(maxpara)
 
-      call LHA_loadcard(param_name,npara,param,value)
       include 'param_read.inc'
       call coup()
 

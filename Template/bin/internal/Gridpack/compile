@@ -61,7 +61,26 @@ cd ..
 #  Now let shell know where to find important executables
 #
 
-bin/internal/compile_Source
+if [[ -d Source ]]; then
+    cd Source
+    for i in ../bin/internal/gen_ximprove all ../bin/internal/combine_events ../bin/internal/combine_runs; do
+    make $i > /dev/null
+    if [[ $? -ne 0 ]];then
+        # Make didn't exit successfully
+        echo Error make $i in Source not successful > ../error
+        cat ../error
+        exit 1
+    fi
+    done
+    cd ..
+else
+    echo 'Error Source directory not found' > error
+    cat error
+    exit 2
+fi
+
+
+
 
 if [[ -e error ]];then
    exit

@@ -23,9 +23,12 @@ writing Helas calls, found in the iolibs directory"""
 
 import array
 import copy
+import collections
 import logging
 import itertools
 import math
+
+import aloha
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -260,6 +263,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['mothers'] = HelasWavefunctionList()
         self['number_external'] = 0
         self['number'] = 0
+        self['me_id'] = 0
         self['fermionflow'] = 1
         # The decay flag is used in processes with defined decay chains,
         # to indicate that this wavefunction has a decay defined
@@ -475,6 +479,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
             return self['particle'].get_name()
         elif name == 'antiname':
             return self['particle'].get_anti_name()
+        elif name == 'me_id':
+            out = super(HelasWavefunction, self).get(name)
+            if out: 
+                return out
+            else:
+                return super(HelasWavefunction, self).get('number')
         else:
             return super(HelasWavefunction, self).get(name)
         
@@ -609,7 +619,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
                self.get_spin_state_number() == -2 and \
                self.get('self_antipart') and \
                [m.get('color') for m in self.get('mothers')] == [8, 8]:
-            self.set('coupling', [ c if c.startswith('-') else '-%s' % c 
+            if hasattr(self, 'octet_majorana_flip'):
+                return
+            self.octet_majorana_flip = True
+            self.set('coupling', ['-%s' % c 
                                               for c in self.get('coupling')])
         
     def set_state_and_particle(self, model):
@@ -923,6 +936,35 @@ class HelasWavefunction(base_objects.PhysicsObject):
                           ['incoming', 'outgoing'])[0]
         return self.get(name)
 
+    
+    def get_helas_call_dict(self, index=1):
+        """ return a dictionary to be used for formatting
+        HELAS call. """
+
+        if index == 1:
+            flip = 0
+        else:
+            flip = 1
+
+        output = {}
+        for i, mother in enumerate(self.get('mothers')):
+            nb = mother.get('me_id') - flip
+            output[str(i)] = nb
+        #fixed argument
+        for i, coup in enumerate(self.get_with_flow('coupling')):
+            output['coup%d'%i] = coup
+        output['out'] = self.get('me_id') - flip
+        output['M'] = self.get('mass')
+        output['W'] = self.get('width')
+        # optimization
+        if aloha.complex_mass: 
+            if (self.get('width') == 'ZERO' or self.get('mass') == 'ZERO'):
+                output['CM'] = '%s' % self.get('mass') 
+            else: 
+                output['CM'] ='CMASS_%s' % self.get('mass')
+        return output
+    
+    
     def get_spin_state_number(self):
         """Returns the number corresponding to the spin state, with a
         minus sign for incoming fermions"""
@@ -1818,6 +1860,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         # Pick out fermion mothers
         fermions = [wf for wf in self.get('mothers') if wf.is_fermion()]
+        assert len(fermions) % 2 == 0
 
         # Pick out bosons
         bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
@@ -2120,6 +2163,27 @@ class HelasAmplitude(base_objects.PhysicsObject):
             vertex_leg_numbers.extend(mother.get_vertex_leg_numbers())
 
         return vertex_leg_numbers
+
+    def get_helas_call_dict(self, index=1):
+        """ return a dictionary to be used for formatting
+        HELAS call. """
+        
+        if index == 1:
+            flip = 0
+        else:
+            flip = 1
+        
+        output = {}
+        for i, mother in enumerate(self.get('mothers')):
+            nb = mother.get('me_id') - flip 
+            output[str(i)] = nb
+        #fixed argument
+        for i, coup in enumerate(self.get('coupling')):
+            output['coup%d'%i] = str(coup)
+        output['out'] = self.get('number') - flip
+        return output
+
+
 
     def set_coupling_color_factor(self):
         """Check if there is a mismatch between order of fermions
@@ -2424,7 +2488,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     "Missing or erraneous arguments for generate_helas_diagrams"
         assert isinstance(optimization, int), \
                     "Missing or erraneous arguments for generate_helas_diagrams"
-
+        self.optimization = optimization
 
         diagram_list = amplitude.get('diagrams')
         process = amplitude.get('process')
@@ -2657,7 +2721,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # Sort the wavefunctions according to number
             diagram_wavefunctions.sort(lambda wf1, wf2: \
                           wf1.get('number') - wf2.get('number'))
-
+            
             if optimization:
                 wavefunctions.extend(diagram_wavefunctions)
                 wf_mother_arrays.extend([wf.to_array() for wf \
@@ -2667,6 +2731,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             # Append this diagram in the diagram list
             helas_diagrams.append(helas_diagram)
+        
 
         self.set('diagrams', helas_diagrams)
 
@@ -2677,6 +2742,67 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         for amp in self.get_all_amplitudes():
             amp.set('mothers', HelasMatrixElement.sorted_mothers(amp))
             amp.set('color_indices', amp.get_color_indices())
+
+              
+    def reuse_outdated_wavefunctions(self, helas_diagrams):
+        """change the wavefunctions id used in the writer to minimize the 
+           memory used by the wavefunctions."""
+        
+        if not self.optimization:
+            for diag in helas_diagrams:
+                for wf in diag['wavefunctions']:
+                    wf.set('me_id',wf.get('number'))
+            return helas_diagrams
+
+        # First compute the first/last appearance of each wavefunctions
+        # first takes the line number and return the id of the created wf
+        # last_lign takes the id of the wf and return the line number
+        last_lign={}
+        first={}
+        pos=0
+        for diag in helas_diagrams:
+            for wf in diag['wavefunctions']:
+                pos+=1
+                for wfin in wf.get('mothers'):
+                    last_lign[wfin.get('number')] = pos
+                    assert wfin.get('number') in first.values()
+                first[pos] = wf.get('number')
+            for amp in diag['amplitudes']:
+                pos+=1
+                for wfin in amp.get('mothers'):
+                    last_lign[wfin.get('number')] = pos
+        
+        # last takes the line number and return the last appearing wf at
+        #that particular line
+        last=collections.defaultdict(list)
+        for nb, pos in last_lign.items():
+            last[pos].append(nb)
+        tag = list(set(last.keys()+first.keys())) 
+        tag.sort() #lines number where something happen (new in/out) 
+
+        # Create the replacement id dictionary
+        outdated = [] # wf id which ar not use any more at this stage
+        replace = {}  # replacement directory
+        max_wf = 0
+        for nb in tag:
+            if outdated and nb in first:
+                replace[first[nb]] = outdated.pop()
+            elif nb in first:
+                assert first[nb] not in replace, '%s already assigned' % first[nb]
+                max_wf += 1
+                replace[first[nb]] = max_wf
+            if nb in last:
+                for value in last[nb]:
+                    outdated.append(replace[value])
+
+                   
+        #replace the id
+        for diag in helas_diagrams:
+            for wf in diag['wavefunctions']:
+                wf.set('me_id', replace[wf.get('number')])
+        
+        return helas_diagrams
+
 
     def insert_decay_chains(self, decay_dict):
         """Iteratively insert decay chains decays into this matrix
@@ -2820,6 +2946,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # Calculate identical particle factors for
         # this matrix element
         self.identical_decay_chain_factor(decay_dict.values())
+        
 
     def insert_decay(self, old_wfs, decay, numbers, got_majoranas):
         """Insert a decay chain matrix element into the matrix element.
@@ -3446,9 +3573,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def get_number_of_wavefunctions(self):
         """Gives the total number of wavefunctions for this ME"""
 
+        out =  max([wf.get('me_id') for wfs in self.get('diagrams') 
+                                    for wf in wfs.get('wavefunctions')]) 
+        if out: 
+            return out
         return sum([ len(d.get('wavefunctions')) for d in \
                        self.get('diagrams')])
-
+        
     def get_all_wavefunctions(self):
         """Gives a list of all wavefunctions for this ME"""
 
@@ -3600,7 +3731,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Return a list of (lorentz_name, conjugate, outgoing) with
         all lorentz structures used by this HelasMatrixElement."""
 
-        return [(tuple(wa.get('lorentz')), tuple(wa.get('conjugate_indices')),
+        return [(tuple(wa.get('lorentz')),  wa.get('conjugate_indices'),
                  wa.find_outgoing_number()) for wa in \
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
                 if wa.get('interaction_id') != 0]
@@ -3931,7 +4062,8 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
         final state particle.
         * If the number of decay chains and decaying final state particles
         don't correspond, all decays applying to a given particle type are
-        combined (without double counting)."""
+        combined (without double counting).
+        """
 
         # End recursion when there are no more decay chains
         if not self['decay_chains']:
@@ -4072,7 +4204,8 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                                         replace('Process: ', '') \
                                         for d in decay_dict.values()])))
 
-                matrix_element.insert_decay_chains(decay_dict)
+                matrix_element.insert_decay_chains(decay_dict)    
+                
                 me_tag = IdentifyMETag.create_tag(\
                             matrix_element.get_base_amplitude(),
                             matrix_element.get('identical_particle_factor'))
@@ -4093,6 +4226,8 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                            matrix_element.get('diagrams'):
                         matrix_elements.append(matrix_element)
                         me_tags.append(me_tag)
+
+
 
         return matrix_elements
 

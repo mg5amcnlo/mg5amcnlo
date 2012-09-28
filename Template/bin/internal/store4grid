@@ -29,13 +29,17 @@ for i in `find HTML/default -name "*_results.html"`;do
 done
 
 cd SubProcesses
+if [[ -e default_results.dat ]]; then
+    rm -f default_results.dat
+fi    
+cp -f $1_results.dat default_results.dat
 for i in `cat subproc.mg` ; do
     cd $i
     echo $i
     if [[ -e default_results.dat ]]; then
 	rm -f default_results.dat
     fi    
-    mv -f $1_results.dat default_results.dat
+    cp -f $1_results.dat default_results.dat
     for k in G* ; do
 	if [[ ! -d $k ]]; then
 	    continue

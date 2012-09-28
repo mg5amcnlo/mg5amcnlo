@@ -14,38 +14,56 @@
 ################################################################################
 #
 # This File contains some configuration variable for MadGraph/MadEvent
-# This File is use if the file ~/.mg5/mg5_configuration.txt is NOT present.
-# If you place this files in ~/.mg5/mg5_configuration.txt then all path should
-# be absolute.
+#
+# Line starting by #! are comment and should remain commented
+# Line starting with # should be uncommented if you want to modify the default
+#    value.
+# Current value for all options can seen by typing "display options"
+#    after either ./bin/mg5 or ./bin/madevent 
+#
+# You can place this files in ~/.mg5/mg5_configuration.txt if you have more than
+#    one version of MG5 
 #
 ################################################################################
 
 # Prefered Fortran Compiler
 # If None: try to find g77 or gfortran on the system
-fortran_compiler = None
+
+#fortran_compiler = None
 
 # Prefered Text Editor
 #  Default: use the shell default Editor
 #           or try to find one available on the system
 #  Be careful: Only shell based editor are allowed
-text_editor = None
+
+#text_editor = None
 
 # Prefered WebBrower
 # If None: try to find one available on the system
-web_browser = None
+
+#web_browser = None
 
 # Prefered PS viewer
 # If None: try to find one available on the system
-eps_viewer = None
+
+#eps_viewer = None
 
 # Time allowed to answer question (if no answer takes default value)
 # 0: No time limit
-timeout = 20
+
+#timeout = 60
 
 # Pythia8 Path.
 # Define the path to the pythia8 directory.
 # relative path start from mg5 directory
-pythia8_path = ./pythia8
+
+#pythia8_path = ./pythia8
+
+# Control when MG5 checks if he is up-to-date.
+# Enter the number of day between two check (0 means never)
+# A question is always asked before any update
+
+#auto_update = 7
 
 ################################################################################
 #  INFO FOR MADEVENT 
@@ -56,45 +74,55 @@ pythia8_path = ./pythia8
 
 # Allow/Forbid the automatic opening of the web browser  (on the status page)
 #when launching MadEvent [True/False]
-automatic_html_opening = True
+
+#automatic_html_opening = True
 
 # Default Running mode 
 # 0: single machine/ 1: cluster / 2: multicore
-run_mode = 0
+
+#run_mode = 2
 
 # Cluster Type [pbs|sge|condor|lsf|ge] Use for cluster run only
 # And cluster queue
-cluster_type = condor
-cluster_queue = madgraph
+
+#cluster_type = condor
+#cluster_queue = madgraph
+
+# Path to a node directory to avoid direct writting on the central disk
+#Note that condor cluster avoid direct writting by default (therefore this
+#options didn't modify condor cluster)
+
+#cluster_temp_path = None
 
 # Nb_core to use (None = all) This is use only for multicore run
-nb_core = None
+
+#nb_core = None
 
 # Pythia-PGS Package
 # relative path start from main directory
-#  
-pythia-pgs_path = ./pythia-pgs
+  
+#pythia-pgs_path = ./pythia-pgs
 
 # Delphes Package
 # relative path start from main directory
-#
-delphes_path = ./Delphes
+
+#delphes_path = ./Delphes
 
 # MadAnalysis Package [For Drawing output]
 # relative path start from main directory
-#
-madanalysis_path = ./MadAnalysis
+
+#madanalysis_path = ./MadAnalysis
 
 # ExRootAnalysis Package
 # relative path start from main directory
-#
-exrootanalysis_path = ./ExRootAnalysis
+
+#exrootanalysis_path = ./ExRootAnalysis
 
 # TOPDRAWER PATH
 # Path to the directory containing td executables
 # relative path start from main directory
-#
-td_path = ./td
+
+#td_path = ./td
 
 
 

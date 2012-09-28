@@ -35,7 +35,7 @@ logger = logging.getLogger('madgraph.ufo_parsers')
 class ModelError(MadGraph5Error):
     """Appropriate Error for a wrong parsing"""
 
-class UFOExpressionParser:
+class UFOExpressionParser(object):
     """A base class for parsers for algebraic expressions coming from UFO."""
 
     parsed_string = ""
@@ -237,7 +237,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
         elif p[1] == 're': p[0] = 'dble' + p[2]
         elif p[1] == 'im': p[0] = 'dimag' + p[2]
-        elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'dsqrt' + p[2]
+        elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
         elif p[1] == 'complexconjugate': p[0] = 'conjg' + p[2]
 
     def p_expression_pi(self, p):
@@ -297,18 +297,21 @@ class UFOExpressionParserCPP(UFOExpressionParser):
     def p_expression_pi(self, p):
         '''expression : PI'''
         p[0] = 'M_PI'
+           
 
 
 # Main program, allows to interactively test the parser
 if __name__ == '__main__':
 
     if len(sys.argv) == 1:
-        print "Please specify a parser: fortran or pythia8"
+        print "Please specify a parser: fortran, pythia8, aloha"
         exit()
     if sys.argv[1] == "fortran":
         calc = UFOExpressionParserFortran()
     elif sys.argv[1] == "c++":
         calc = UFOExpressionParserCPP()
+    elif sys.argv[1] == "aloha":
+        calc = ALOHAParserCpp()
     else:
         print "Please specify a parser: tex, fortran or c++"
         print "You gave", sys.argv

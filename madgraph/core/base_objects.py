@@ -80,7 +80,8 @@ class PhysicsObject(dict):
 
         if name not in self.keys():
             raise self.PhysicsObjectError, \
-                        "%s is not a valid property for this object" % name
+                        """%s is not a valid property for this object: %s\n
+    Valid property are %s""" % (name,self.__class__.__name__, self.keys())
 
         return True
 
@@ -235,9 +236,9 @@ class Particle(PhysicsObject):
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                     "Spin %s is not an integer" % repr(value)
-            if value < 1 or value > 5:
+            if (value < 1 or value > 5) and value != 99:
                 raise self.PhysicsObjectError, \
-                   "Spin %i is smaller than one" % value
+                   "Spin %i not valid" % value
 
         if name is 'color':
             if not isinstance(value, int):
@@ -264,7 +265,7 @@ class Particle(PhysicsObject):
             if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
                     "Line type %s is not a string" % repr(value)
-            if value not in ['dashed', 'straight', 'wavy', 'curly', 'double','swavy','scurly']:
+            if value not in ['dashed', 'straight', 'wavy', 'curly', 'double','swavy','scurly','dotted']:
                 raise self.PhysicsObjectError, \
                    "Line type %s is unknown" % value
 
@@ -339,7 +340,7 @@ class Particle(PhysicsObject):
         """Return a list of the helicity states for the onshell particle"""
 
         spin = self.get('spin')
-        if spin == 1:
+        if spin ==1:
             # Scalar
             return [ 0 ]
         elif spin == 2:
@@ -351,10 +352,17 @@ class Particle(PhysicsObject):
         elif spin == 3:
             # Massive vector
             return [ -1, 0, 1 ]
+        elif spin == 4 and self.get('mass').lower() == 'zero':
+            # Massless tensor
+            return [-3, 3]
+        elif spin == 4:
+            # Massive tensor
+            return [-3, -1, 1, 3]
+        
         elif spin == 5 and self.get('mass').lower() == 'zero':
             # Massless tensor
             return [-2, -1, 1, 2]
-        elif spin == 5:
+        elif spin in [5, 99]:
             # Massive tensor
             return [-2, -1, 0, 1, 2]
         
@@ -381,6 +389,24 @@ class ParticleList(PhysicsObjectList):
         """Test if object obj is a valid Particle for the list."""
         return isinstance(obj, Particle)
                     
+    def get_copy(self, name):
+        """Try to find a particle with the given name. Check both name
+        and antiname. If a match is found, return the a copy of the 
+        corresponding particle (first one in the list), with the 
+        is_part flag set accordingly. None otherwise."""
+        
+        part = self.find_name(name)
+        if not part:
+            return None
+        part = copy.copy(part)     
+          
+        if part.get('name') == name:
+            part.set('is_part', True)
+            return part
+        elif part.get('antiname') == name:
+            part.set('is_part', False)
+            return part
+        return None
 
     def find_name(self, name):
         """Try to find a particle with the given name. Check both name
@@ -391,13 +417,10 @@ class ParticleList(PhysicsObjectList):
         assert isinstance(name, str), "%s is not a valid string" % str(name) 
 
         for part in self:
-            mypart = copy.copy(part)
             if part.get('name') == name:
-                mypart.set('is_part', True)
-                return mypart
+                return part
             elif part.get('antiname') == name:
-                mypart.set('is_part', False)
-                return mypart
+                return part
 
         return None
 
@@ -679,6 +702,7 @@ class Model(PhysicsObject):
         self['coupling_orders'] = None
         self['expansion_order'] = None
         self['version_tag'] = None # position of the directory (for security)
+	self['gauge'] = [0, 1]
 
     def filter(self, name, value):
         """Filter for model property values"""
@@ -733,7 +757,11 @@ class Model(PhysicsObject):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a string" % type(value)
 
-
+        elif name == 'gauge':
+            if not (isinstance(value, list)):
+                raise self.PhysicsObjectError, \
+                    "Object of type %s is not a list" % type(value)
+		    
         return True
 
     def get(self, name):
@@ -812,28 +840,65 @@ class Model(PhysicsObject):
         """Return process property names as a nicely sorted list."""
 
         return ['name', 'particles', 'parameters', 'interactions', 'couplings',
-                'lorentz']
+                'lorentz', 'gauge']
 
     def get_particle(self, id):
         """Return the particle corresponding to the id"""
         
-        if id in self.get("particle_dict").keys():
+        try:
             return self["particle_dict"][id]
+        except:
+            try:
+                return self.get("particle_dict")[id]
+            except:
+                return None
+
+    def get_lorentz(self, name):
+        """return the lorentz object from the associate name"""
+        if hasattr(self, 'lorentz_name2obj'):
+            return self.lorentz_name2obj[name]  
         else:
-            return None
+            self.create_lorentz_dict()
+            return self.lorentz_name2obj[name]
+
+    def create_lorentz_dict(self):
+        """create the dictionary linked to the lorentz structure"""
+        self.lorentz_name2obj = {}
+        self.lorentz_expr2name = {}
+        if not self.get('lorentz'):
+            return
+        for lor in self.get('lorentz'):
+            self.lorentz_name2obj[lor.name] = lor
+            self.lorentz_expr2name[lor.structure] = lor.name
 
     def get_interaction(self, id):
         """Return the interaction corresponding to the id"""
 
-
-        if id in self.get("interaction_dict").keys():
-            return self["interaction_dict"][id]
-        else:
+        try:
+            return self.get("interaction_dict")[id]
+        except:
             return None
+
+    def get_parameter(self, name):
+        """Return the parameter associated to the name NAME"""
+        
+        # If information is saved
+        if hasattr(self, 'parameters_dict') and self.parameters_dict:
+            try:
+                return self.parameters_dict[name]
+            except:
+                # try to reload it before crashing 
+                pass
+            
+        # Else first build the dictionary
+        self.parameters_dict = {}
+        for data in self['parameters'].values():
+            [self.parameters_dict.__setitem__(p.name,p) for p in data]
+        
+        return self.parameters_dict[name]
 
     def get_coupling_orders(self):
         """Determine the coupling orders of the model"""
-
         return set(sum([i.get('orders').keys() for i in \
                         self.get('interactions')], []))
 
@@ -974,6 +1039,14 @@ class Model(PhysicsObject):
                     part.set('antiname', default[pdg])
                     if antipart:
                         antipart.set('antiname', default[pdg])
+        
+        #additional check for the Higgs in the mssm
+        if self.get('name') == 'mssm' or self.get('name').startswith('mssm-'):
+            part = self.get_particle(25)
+            part.set('name', 'h1')
+            part.set('antiname', 'h1')
+            
+        
 
     def get_first_non_pdg(self):
         """Return the first positive number that is not a valid PDG code"""
@@ -1009,6 +1082,133 @@ class Model(PhysicsObject):
             default[int(args[0])] = args[1].lower()
         
         return default
+
+    def change_mass_to_complex_scheme(self):
+        """modify the expression changing the mass to complex mass scheme"""
+        
+        # 1) Find All input parameter mass and width associated
+        #   Add a internal parameter and replace mass with that param
+        # 2) Find All mass fixed by the model and width associated
+        #   -> Both need to be fixed with a real() /Imag()
+        # 3) Find All width fixed by the model
+        #   -> Need to be fixed with a real()
+        # 4) Fix the Yukawa mass to the value of the complex mass/ real mass
+        # 5) Loop through all expression and modify those accordingly
+        #    Including all parameter expression as complex
+        
+        to_change = {}
+        mass_widths = [] # parameter which should stay real
+        for particle in self.get('particles'):
+            m = particle.get('width')
+            if m in mass_widths:
+                continue
+            mass_widths.append(particle.get('width'))
+            mass_widths.append(particle.get('mass'))
+            if particle.get('width') == 'ZERO':
+                #everything is fine when the width is zero
+                continue
+            width = self.get_parameter(particle.get('width'))
+            if not isinstance(width, ParamCardVariable):
+                width.expr = 're(%s)' % width.expr
+            if particle.get('mass') != 'ZERO':
+                mass = self.get_parameter(particle.get('mass'))
+                
+                # Add A new parameter CMASS
+                #first compute the dependencies (as,...)
+                depend = list(set(mass.depend + width.depend))
+                if len(depend)>1 and 'external' in depend:
+                    depend.remove('external')
+                depend = tuple(depend)
+                if depend == ('external',):
+                    depend = ()
+                    
+                # Create the new parameter
+                if isinstance(mass, ParamCardVariable):
+                    New_param = ModelVariable('CMASS_'+mass.name,
+                        'cmath.sqrt(%(mass)s**2 - complex(0,1) * %(mass)s * %(width)s)' \
+                              % {'mass': mass.name, 'width': width.name}, 
+                        'complex', depend)              
+                else:
+                    New_param = ModelVariable('CMASS_'+mass.name,
+                        mass.expr, 'complex', depend)
+                    # Modify the treatment of the width in this case
+                    if not isinstance(width, ParamCardVariable):
+                        width.expr = '- im(%s**2) / cmath.sqrt(re(%s**2))' % (mass.expr, mass.expr)
+                    else:
+                        # Remove external parameter from the param_card
+                        New_width = ModelVariable(width.name,
+                        '-1 * im(CMASS_%s**2) / %s' % (mass.name, mass.name), 'real', mass.depend)
+                        self.get('parameters')[('external',)].remove(width)
+                        self.add_param(New_param, (mass,))
+                        self.add_param(New_width, (New_param,))
+                        mass.expr = 'cmath.sqrt(re(%s**2))' % mass.expr                
+                        to_change[mass.name] = New_param.name
+                        continue                        
+                        
+                    mass.expr = 're(%s)' % mass.expr                
+                self.add_param(New_param, (mass, width))
+                to_change[mass.name] = New_param.name
+        
+        # Remove the Yukawa and fix those accordingly to the mass/complex mass
+        yukawas = [p for p in self.get('parameters')[('external',)] 
+                                              if p.lhablock.lower() == 'yukawa']
+        for yukawa in yukawas:
+            # clean the pevious parameter
+            self.get('parameters')[('external',)].remove(yukawa)
+            
+            particle = self.get_particle(yukawa.lhacode[0])
+            mass = self.get_parameter(particle.get('mass'))
+            
+            # add the new parameter in the correct category
+            if mass.depend == ('external',):
+                depend = ()
+            else:
+                depend = mass.depend
+                
+            New_param = ModelVariable(yukawa.name, mass.name, 'real', depend)
+            
+            # Add it in the model at the correct place (for the dependences)
+            if mass.name in to_change:
+                expr = 'CMASS_%s' % mass.name
+            else:
+                expr = mass.name
+            param_depend = self.get_parameter(expr)
+            self.add_param(New_param, [param_depend])
+            
+            
+            
+            
+        # So at this stage we still need to modify all parameters depending of
+        # particle's mass. In addition all parameter (but mass/width/external 
+        # parameter) should be pass in complex mode.
+        pat = '|'.join(to_change.keys())
+        pat = r'(%s)\b' % pat
+        pat = re.compile(pat)
+        def replace(match):
+            return to_change[match.group()]
+        
+        # Modify the parameters
+        for dep, list_param in self['parameters'].items():
+            for param in list_param:
+                if param.name.startswith('CMASS_') or param.name in mass_widths or\
+                              isinstance(param, ParamCardVariable):
+                    continue
+                param.type = 'complex'
+                param.expr = pat.sub(replace, param.expr)
+        
+        # Modify the couplings        
+        for dep, list_coup in self['couplings'].items():
+            for coup in list_coup:                
+                coup.expr = pat.sub(replace, coup.expr)
+                
+    def add_param(self, new_param, depend_param):
+        """add the parameter in the list of parameter in a correct position"""
+            
+        pos = 0
+        for i,param in enumerate(self.get('parameters')[new_param.depend]):
+            if param.name in depend_param:
+                pos = i + 1
+        self.get('parameters')[new_param.depend].insert(pos, new_param)
 
 ################################################################################
 # Class for Parameter / Coupling

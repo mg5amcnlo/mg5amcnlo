@@ -11,6 +11,7 @@
 #
 ################################################################################
 from aloha.aloha_object import *
+import aloha.aloha_lib as aloha_lib
 import cmath
 
 class WrongFermionFlow(Exception):
@@ -18,7 +19,78 @@ class WrongFermionFlow(Exception):
 
 ################################################################################    
 ##  CHECK FLOW VALIDITY OF A LORENTZ STRUCTURE
-################################################################################    
+################################################################################
+def get_fermion_flow(expression, nb_fermion):
+    """Get the fermion flow follows the UFO convention
+        {I1:O1, I2:O2,...}"""
+        
+    assert nb_fermion != 0 and (nb_fermion % 2) == 0     
+    # Need to expand the expression in order to have a simple sum of expression
+    try:
+        expr = eval(expression)
+    except Exception as error:
+        print error
+        return
+    expr = expr.simplify()
+    #expr is now a valid AddVariable object if they are a sum or
+    if expr.vartype != 1: # not AddVariable 
+        expr = [expr] # put in a list to allow comparison
+
+    out = {}
+    for term in expr:
+        if term.vartype == 0: # Single object
+            if not term.spin_ind in [[1,2], [2,1]]:
+                raise WrongFermionFlow, 'Fermion should be the first particles of any interactions'
+            if isinstance(term, (Gamma, Gamma5, Sigma)):
+                if term.spin_ind == [2,1]:
+                    out[1] = 2
+                else:
+                    out[2] = 1
+            elif isinstance(term, Identity):
+                out[1] = 2
+                    
+        elif term.vartype == 2: # product of object
+            link, rlink = {}, {}
+            for obj in term:
+                obj = aloha_lib.KERNEL.objs[obj]
+                if not obj.spin_ind:
+                    continue
+                ind1, ind2 = obj.spin_ind
+                if ind1 not in link.keys():
+                    link[ind1] = ind2
+                else:
+                    raise WrongFermionFlow, 'a spin indices should appear only once on the left indices of an object: %s' % expr
+                if ind2 not in rlink.keys():
+                    rlink[ind2] = ind1
+                else: 
+                    raise WrongFermionFlow, 'a spin indices should appear only once on the left indices of an object: %s' % expr             
+             
+            for i in range(1, nb_fermion):
+                if i in out.keys() or i in out.values():
+                    continue
+                old = []
+                pos = i
+                while 1:
+                    old.append(pos)
+                    if pos in link.keys() and link[pos] not in old:
+                        pos = link[pos]
+                    elif pos in rlink.keys() and rlink[pos] not in old:
+                        pos = rlink[pos]
+                    else:
+                        if pos in link.keys() and i in rlink.keys():
+                            out[i] = pos
+                            break
+                        elif pos in rlink.keys() and i in link.keys():
+                            out[pos] = i
+                            break
+                        else:
+                            raise WrongFermionFlow,  'incoherent IO state: %s' % expr
+    if not len(out) == nb_fermion //2:
+        raise WrongFermionFlow, 'Not coherent Incoming/outcoming fermion flow'
+    return out
+
+
+    
 def check_flow_validity(expression, nb_fermion):
     """Check that the fermion flow follows the UFO convention
        1) Only one flow is defined and is 1 -> 2, 3 -> 4, ...
@@ -28,12 +100,15 @@ def check_flow_validity(expression, nb_fermion):
     assert nb_fermion != 0 and (nb_fermion % 2) == 0
     
     # Need to expand the expression in order to have a simple sum of expression
-    expr = eval(expression)
+    try:
+        expr = eval(expression)
+    except:
+        return
     expr = expr.simplify()
     #expr is now a valid AddVariable object if they are a sum or
     if expr.vartype != 1: # not AddVariable 
         expr = [expr] # put in a list to allow comparison
-    
+
     for term in expr:
         if term.vartype == 0: # Single object
             if not term.spin_ind in [[1,2], [2,1]]:
@@ -45,6 +120,7 @@ def check_flow_validity(expression, nb_fermion):
         elif term.vartype == 2: # product of object
             link, rlink = {}, {}
             for obj in term:
+                obj = aloha_lib.KERNEL.objs[obj]
                 if not obj.spin_ind:
                     continue
                 ind1, ind2 = obj.spin_ind
@@ -79,24 +155,39 @@ def guess_routine_from_name(names):
     
     output =[]
     for name in names:
+        if name.startswith('MP_'):
+           name = name[3:]
+           tags = ['MP_']
+        else: 
+            tags = []
+        
         data = name.split('_')
         if len(data) == 2:
             main, offshell = data
-            multiple = []
+            multiple = []            
         else:
             main, multiple, offshell = data[0], data[1:-1],data[-1]
         
-        # search for tag allow tag [L, C$]
-        allow_tag = ['C1','C2','C3','C4','C5','C6','C7']    
+        # search for tag allow tag [L, L$, C$, MP]
+        allow_tag = ['C1','C2','C3','C4','C5','C6','C7']
+        allow_tag += ['L%s' % i for i in range(1,20)]
+        allow_tag += ['L']
         tags = []
+        
+        
         len_tag = -1
         while len(tags) != len_tag:
             len_tag = len(tags)
             for tag in allow_tag:
-                if main.endswith(tag):
-                    main = main[:-len(tag)]
-                    tags.append(int(tag[1:]))
+                if multiple and multiple[-1].endswith(tag):
+                    multiple[-1] = multiple[-1][:-len(tag)]
+                    tags.append(tag)
                     break
+                elif main.endswith(tag):
+                    main = main[:-len(tag)]
+                    tags.append(tag)
+                    break
+        
         
         # create the correct lorentz
         lorentz = [main]

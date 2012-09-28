@@ -30,6 +30,8 @@ import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.ufo_expression_parsers as ufo_expression_parsers
 from madgraph.iolibs import save_load_object
 
+import  models.check_param_card as check_param_card 
+
 logger = logging.getLogger('madgraph.test.model')
 pjoin = os.path.join
 
@@ -137,8 +139,8 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         """Test the UFO and MG4 MSSM model correspond to the same model """
         
         # import UFO model
-        sm_path = import_ufo.find_ufo_path('mssm')
-        ufo_model = import_ufo.import_model(sm_path)
+        mssm_path = import_ufo.find_ufo_path('mssm')
+        ufo_model = import_ufo.import_model(mssm_path)
         #converter = import_ufo.UFOMG5Converter(model)
         #ufo_model = converter.load_model()
         ufo_model.pass_particles_name_in_mg_default()
@@ -162,7 +164,7 @@ class CompareMG4WithUFOModel(unittest.TestCase):
             import_v4.read_interactions_v4,
             model['particles']))
         
-        model.pass_particles_name_in_mg_default()
+        #model.pass_particles_name_in_mg_default()
         # Checking the particles
         for particle in model['particles']:
             ufo_particle = ufo_model.get("particle_dict")[particle['pdg_code']]
@@ -302,7 +304,26 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
     def check_compilation(self):
         """check that the model compile return correct output"""
         #Check the cleaning
+        join = lambda p: os.path.join(self.output_path, p)
         self.assertFalse(os.path.exists(self.give_pos('testprog')))
+        try:
+            os.remove(join('../param_card.inc'))
+        except:
+            pass
+        # prepare for a local compilation
+        
+        subprocess.call(['python','write_param_card.py'], cwd=os.path.join(MG5DIR,'models','sm'),
+                        stdout=subprocess.PIPE)
+        files.cp(os.path.join(MG5DIR,'models','sm','param_card.dat'),
+                 join('param_card.dat'))
+        
+        text = file(join('makefile')).read().replace('../../Cards/param_card.dat','param_card.dat')
+        open(join('makefile'),'w').write(text)
+        #make ../param_card.inc 
+        param_card = check_param_card.ParamCard(join('param_card.dat'))
+        param_card.write_inc_file(join('../param_card.inc'), join('ident_card.dat'),
+                                   join('param_card.dat'))
+        
         subprocess.call(['make', 'testprog'], cwd=self.output_path,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.assertTrue(os.path.exists(self.give_pos('testprog')))
@@ -311,9 +332,10 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         testprog = subprocess.Popen("./testprog", stdout=subprocess.PIPE,
                             cwd=self.output_path,
                             stderr=subprocess.STDOUT, shell=True)
-        
-        solutions={'sqrt__aEW ': [0.0868721538], 'ymtau ': [1.777], 'GC_5 ': [0.0, 1.2177], 'sqrt__sw2 ': [0.471430255], 'sw__exp__2 ': [0.222246486], 'GC_11 ': [0.0, 0.21336], 'GC_3 ': [0.0, -0.30795], 'aEW ': [0.00754677111], 'MZ__exp__2 ': [8315.25134], 'MZ ': [91.188], 'WW ': [2.0476], 'GC_1 ': [0.0, -0.10265], 'GC_38 ': [0.0, -0.66811], 'GC_9 ': [0.0, 0.33188], 'GC_7 ': [0.0, 0.57609], 'GC_10 ': [0.0, -0.71259], 'ee__exp__2 ': [0.0948355228], 'aEWM1 ': [132.507], 'GC_29 ': [0.0, 0.37035], 'gw ': [0.65323293], 'ytau ': [0.010206617], 'GC_8 ': [0.0, -0.42671], 'MTA ': [1.777], 'sqrt__aS ': [0.343511281], 'MH ': [120.0], 'GC_27 ': [0.0, -0.35482], 'GC_31 ': [0.0, -175.45], 'GC_23 ': [0.0, 0.28804], 'aS ': [0.118], 'ymb ': [4.2], 'MZ__exp__4 ': [69143404.9], 'complexi ': [0.0, 1.0], 'yb ': [0.0241236868], 'MW__exp__2 ': [6467.21595], 'Gf ': [1.16639e-05], 'GC_33 ': [0.0, 67.544], 'ee ': [0.307953767], 'WZ ': [2.441404], 'v__exp__2 ': [60623.5291], 'v ': [246.218458], 'WH ': [0.005753088], 'cw__exp__2 ': [0.777753514], 'GC_6 ': [0.0, 1.4828], 'sw2 ': [0.222246486], 'GC_2 ': [0.0, 0.2053], 'GC_24 ': [0.0, -0.027437], 'MB ': [4.7], 'WT ': [1.4915], 'GC_28 ': [0.0, 0.094836], 'GC_4 ': [-1.2177, 0.0], 'MH__exp__2 ': [14400.0], 'ymt ': [164.5], 'GC_39 ': [0.0, -0.0072172], 'G__exp__2 ': [1.48283173], 'MT ': [173.0], 'lam ': [0.118765768], 'GC_25 ': [0.0, 0.08231], 'sw ': [0.471430255], 'gw__exp__2 ': [0.426713261], 'GC_26 ': [0.0, 0.30795], 'GC_34 ': [0.0, -0.017058], 'g1 ': [0.349192197], 'GC_22 ': [0.0, -0.28804], 'GC_30 ': [0.0, 0.27432], 'MW ': [80.4190024], 'CKM2x2 ': [1.0], 'muH ': [84.8528137], 'GC_17 ': [0.0, 0.46191], 'cw ': [0.881903347], 'sqrt__2 ': [1.41421356], 'GC_32 ': [0.0, 52.532], 'yt ': [0.944844399]}
+
+        solutions={'ymtau ': [1.777], 'GC_5 ': [0.0, 0.18967], 'MZ ': [91.188], 'GC_56 ': [16.545, 0.0], 'GC_60 ': [-13.239, 0.0], 'ee__exp__2 ': [0.0948355228], 'aEWM1 ': [132.507], 'ytau ': [0.010206617], 'GC_69 ': [0.017058, 0.0], 'GC_16 ': [0.0, -0.47506], 'conjg__CKM33 ': [1.0], 'GC_45 ': [29.784, 0.0], 'cw__exp__2 ': [0.777753514], 'G ': [1.21771578], 'GC_14 ': [0.0, 0.33188], 'Gf ': [1.16639e-05], 'GC_59 ': [0.0, 0.27432], 'GC_21 ': [0.0, -0.32662], 'ee ': [0.307953767], 'WZ ': [2.441404], 'v__exp__2 ': [60623.5291], 'sw2 ': [0.222246486], 'GC_92 ': [0.010207, 0.0], 'WT ': [1.5083359479904175], 'GC_57 ': [-16.545, 0.0], 'sqrt__sw2 ': [0.471430255], 'GC_67 ': [0.0, 67.544], 'GC_36 ': [0.0, -0.57609], 'GC_17 ': [0.0, -0.71259], 'GC_44 ': [-29.784, 0.0], 'GC_68 ': [0.0, -0.017058], 'GC_20 ': [0.0, 0.21336], 'sw__exp__2 ': [0.222246486], 'GC_3 ': [0.0, -0.30795], 'GC_91 ': [-0.010207, 0.0], 'GC_93 ': [0.0, -0.0072172], 'GC_54 ': [0.37035, 0.0], 'WW ': [2.0476], 'GC_112 ': [-0.94484, 0.0], 'GC_38 ': [-0.10058, 0.0], 'gw ': [0.65323293], 'MH ': [120.0], 'ymb ': [4.2], 'complexi ': [0.0, 1.0], 'GC_37 ': [0.0, 0.57609], 'GC_47 ': [0.0, -0.027437], 'GC_101 ': [0.0, 0.46191], 'GC_90 ': [0.94484, 0.0], 'GC_2 ': [0.0, 0.2053], 'GC_51 ': [0.0, 0.094836], 'GC_49 ': [0.0, 0.30795], 'GC_39 ': [0.0, -0.10058], 'GC_55 ': [0.0, 0.12671], 'GC_15 ': [0.0, -0.23753], 'cw ': [0.881903347], 'GC_46 ': [0.0, -33.772], 'yt ': [0.944844399], 'sqrt__aEW ': [0.0868721538], 'GC_35 ': [0.0, 0.28804], 'GC_72 ': [-0.024124, 0.0], 'GC_48 ': [0.0, 0.08231], 'GC_1 ': [0.0, -0.10265], 'GC_52 ': [0.0, -0.20573], 'GC_94 ': [0.0072172, 0.0], 'sqrt__aS ': [0.343511281], 'GC_41 ': [-26.266, 0.0], 'aS ': [0.118], 'MW__exp__2 ': [6467.21673128622], 'MZ__exp__4 ': [69143415.65084904], 'yb ': [0.0241236868], 'WH ': [0.005753088], 'MH__exp__2 ': [14400.0], 'GC_63 ': [0.0, -175.45], 'GC_53 ': [0.0, 0.37035], 'GC_64 ': [0.0, 52.532], 'GC_13 ': [0.0, -0.42671], 'sw ': [0.471430255], 'gw__exp__2 ': [0.4267133125521464], 'GC_40 ': [0.10058, 0.0], 'GC_9 ': [-1.2177, 0.0], 'muH ': [84.8528137], 'GC_7 ': [0.0, 0.053768], 'GC_87 ': [0.0, -0.66811], 'aEW ': [0.00754677111], 'MZ__exp__2 ': [8315.251989618177], 'GC_62 ': [0.0, -58.485], 'g1 ': [0.349192197], 'GC_10 ': [0.0, 1.2177], 'GC_22 ': [0.0, 0.32662], 'GC_43 ': [26.266, 0.0], 'CKM33 ': [1.0], 'MTA ': [1.777], 'GC_23 ': [0.32662, 0.0], 'MW ': [80.4190024], 'GC_18 ': [-24.765, 0.0], 'MT ': [172.0], 'v ': [246.218458], 'GC_6 ': [-0.053768, 0.0], 'GC_19 ': [24.765, 0.0], 'MB ': [4.7], 'GC_111 ': [0.024124, 0.0], 'GC_61 ': [13.239, 0.0], 'ymt ': [164.5], 'GC_86 ': [-0.66811, 0.0], 'G__exp__2 ': [1.48283173], 'lam ': [0.118765768], 'GC_50 ': [0.0, -0.35482], 'conjg__CKM22 ': [1.0], 'GC_34 ': [0.0, -0.28804], 'GC_11 ': [0.0, 1.4828], 'GC_8 ': [0.053768, 0.0], 'GC_42 ': [0.0, -26.266], 'sqrt__2 ': [1.41421356], 'GC_58 ': [0.0, 0.084653]}
         nb_value = 0
+#        solutions = {}
         for line in testprog.stdout:
             self.assertTrue('Warning' not in line)
             if '=' not in line:
@@ -325,6 +347,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
             else:
                 value=[float(numb) for numb in split[1].split()]
             nb_value +=1
+
             for i, singlevalue in enumerate(value):
                 #try:
                     self.assertAlmostEqual(singlevalue,
@@ -338,8 +361,9 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
                 #        solutions[variable] = [singlevalue]
                 #    else:
                 #        solutions[variable].append(singlevalue)
-       
-        self.assertEqual(nb_value, 72)
+        
+#        print solutions
+        self.assertEqual(nb_value, 113)
         
         
 
@@ -350,7 +374,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         alreadydefine = []
         for line in self.ReturnFile('intparam_definition.inc'):
             if 'ENDIF' in line:
-                self.assertEqual(len(alreadydefine), 29)
+                self.assertEqual(len(alreadydefine), 31)
             if '=' not in line:
                 continue
             new_def = line.split('=')[0].lstrip()
@@ -359,7 +383,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
             alreadydefine.append(new_def)
         alreadydefine = [name.lower() for name in alreadydefine]
         alreadydefine.sort()
-        solution = ['aew ', 'as ', 'ckm2x2 ', 'complexi ', 'cw ', 'cw__exp__2 ', 'ee ', 'ee__exp__2 ','g ', 'g1 ', 'g__exp__2 ', 'gal(1) ', 'gal(2) ', 'gw ', 'gw__exp__2 ', 'lam ', 'mh__exp__2 ', 'muh ', 'mw ', 'mw__exp__2 ', 'mz__exp__2 ', 'mz__exp__4 ', 'sqrt__2 ', 'sqrt__aew ', 'sqrt__as ', 'sqrt__sw2 ', 'sw ', 'sw2 ', 'sw__exp__2 ', 'v ', 'v__exp__2 ', 'yb ', 'yt ', 'ytau ']
+        solution = ['aew ', 'as ', 'ckm33 ', 'complexi ', 'conjg__ckm22 ', 'conjg__ckm33 ', 'cw ', 'cw__exp__2 ', 'ee ', 'ee__exp__2 ', 'g ', 'g1 ', 'g__exp__2 ', 'gal(1) ', 'gal(2) ', 'gw ', 'gw__exp__2 ', 'lam ', 'mh__exp__2 ', 'muh ', 'mw ', 'mw__exp__2 ', 'mz__exp__2 ', 'mz__exp__4 ', 'sqrt__2 ', 'sqrt__aew ', 'sqrt__as ', 'sqrt__sw2 ', 'sw ', 'sw2 ', 'sw__exp__2 ', 'v ', 'v__exp__2 ', 'yb ', 'yt ', 'ytau ']
         self.assertEqual(alreadydefine, solution)
         
 
