@@ -607,6 +607,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                               'delphes_path': '../Delphes',
                               'madanalysis_path': '../MadAnalysis',
                               'exrootanalysis_path': '../ExRootAnalysis',
+                              'MCatNLO-utilites_path': '../MCatNLO-utilities',
                               'td_path': '../',
                               'web_browser':None,
                               'eps_viewer':None,
@@ -805,7 +806,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         if options['multicore']:
             self.cluster_mode = 2
-            print 'multicore'
         elif options['cluster']:
             self.cluster_mode = 1
         else:
@@ -871,14 +871,21 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """Check that the MCatNLO dir (with files to run the parton-shower has 
         been copied inside the exported direcotry"""
         if os.path.isdir(pjoin(self.me_dir, 'MCatNLO')):
+            #the folder has been exported after installation of MCatNLO-utilities
             return True
+        elif os.path.isdir(self.options['MCatNLO-utilities_path']):
+            # the folder has been exported before installation of MCatNLO-utilities
+            # and they have been installed
+            misc.call(['cp -r %s %s' % \
+                     (pjoin(self.options['MCatNLO-utilities_path'], 'MCatNLO'), self.me_dir)],
+                     shell=True)
+            return True
+
         else:
             if aMCatNLO:
                 logger.warning('MCatNLO is needed to shower the generated event samples.\n' + \
-                    'Please install it and copy the MCatNLO directory inside the exported dir.\n' + \
-                    'Note that you can install it in the MadGraph shell by typing ' + \
-                    '"install MCatNLO-utilities", so that processes generated afetrwards will ' + \
-                    'have it automatically')
+                    'You can install it by typing "install MCatNLO-utilities" in the MadGraph' + \
+                    ' shell')
             return False
 
 
@@ -1040,6 +1047,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events"""
         logger.info('   Prepairing MCatNLO run')
+        if aMCatNLO:
+            self.run_name = os.path.split(\
+                    os.path.relpath(evt_file, pjoin(self.me_dir, 'Events')))[0]
+
         shower = self.evt_file_to_mcatnlo(evt_file)
         oldcwd = os.getcwd()
         os.chdir(pjoin(self.me_dir, 'MCatNLO'))

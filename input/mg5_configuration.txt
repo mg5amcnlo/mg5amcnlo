@@ -106,7 +106,7 @@ fastjet = fastjet-config
 
 # MCatNLO-utilities 
 # relative path start from main directory
-MCatNLO-utilites = ./MCatNLO-utilities
+MCatNLO-utilities_path = ./MCatNLO-utilities
 
 
 

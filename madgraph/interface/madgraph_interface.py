@@ -4053,8 +4053,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         (pjoin(MG5DIR, 'MCatNLO-utilities', 'MCatNLO'), self._export_dir))
             else:
                 logger.warning('MCatNLO-utilities is not installed. \nIf you want to shower events ' + \
-                        'with MC@NLO please install it by typing "install MCatNLO-utilities" and ' + \
-                        'regenerate the process')
+                        'with MC@NLO please install it by typing "install MCatNLO-utilities"')
 
         elif self._export_format == 'madevent':          
             # Create configuration file [path to executable] for madevent
