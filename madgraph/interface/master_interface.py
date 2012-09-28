@@ -452,7 +452,7 @@ class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
         return Switcher.set_configuration(self, config_path=config_path)
     
 
-    def do_save(self, line, check=True):
+    def do_save(self, line, check=True, **opt):
         """Save information to file"""
         
         if check:
@@ -461,12 +461,17 @@ class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
         
         args = self.split_arg(line)
         if args[0] != 'options':
-            Switcher.do_save(self, line,check)
+            Switcher.do_save(self, line,check, opt)
         else:
             # put default options since 
             # in the web the local file is not used
             # in download the default file is more usefull
             files.cp(pjoin(MG5DIR,'input','mg5_configuration.txt'), args[1])
+            
+    def do_install(self, line):
+        """block all install"""
+        return
+
             
 
 
