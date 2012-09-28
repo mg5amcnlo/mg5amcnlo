@@ -2382,6 +2382,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.total_jobs = 0
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
                                                                  'subproc.mg'))]
+        
+        P_zero_result = [] # check the number of times where they are no phase-space
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -2406,8 +2408,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             sym_input = "%(points)d %(iterations)d %(accuracy)f %(gridpack)s\n" % self.opts
             (stdout, stderr) = p.communicate(sym_input)
             if os.path.exists(pjoin(self.me_dir,'error')):
-                raise ZeroResult, '%s' % \
-                    open(pjoin(self.me_dir,'error')).read()
+                files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
+                P_zero_result.append(subdir)
+                continue
             
             if not os.path.exists(pjoin(Pdir, 'ajob1')) or p.returncode:
                 logger.critical(stdout)
@@ -2426,7 +2429,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     self.monitor(html=True)
                     raise MadEventError, 'Error detected Stop running: %s' % \
                                          open(pjoin(self.me_dir,'error')).read()
-        
+                                         
+        # Check if all or only some fails
+        if P_zero_result:
+            if len(P_zero_result) == len(subproc):
+                raise ZeroResult, '%s' % \
+                    open(pjoin(self.me_dir,'error')).read()
+            else:
+                logger.warning(''' %s SubProcesses doesn\'t have available phase-space.
+            Please check mass spectrum.''' % ','.join(P_zero_result))
+                
         
         self.monitor(run_type='All jobs submitted for survey', html=True)
         cross, error = sum_html.make_all_html_results(self)
@@ -3490,7 +3502,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         if mode is None:
             mode = self.cluster_mode
-        
         if mode == 1:
             if html:
                 update_status = lambda idle, run, finish: \

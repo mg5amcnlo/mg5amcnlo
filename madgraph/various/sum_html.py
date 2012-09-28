@@ -48,7 +48,7 @@ class OneResult(object):
         self.maxwgt_iter = []
         return
     
-    @cluster.multiple_try(nb_try=5,sleep=20)
+    #@cluster.multiple_try(nb_try=5,sleep=20)
     def read_results(self, filepath):
         """read results.dat and fullfill information"""
         
@@ -131,7 +131,7 @@ class Combine_results(list, OneResult):
         self.maxit = len(self.yerr_iter)  # 
         self.nunwgt = sum([one.nunwgt for one in self])  
         self.wgt = 0
-        self.luminosity = min([one.luminosity for one in self])
+        self.luminosity = min([0]+[one.luminosity for one in self])
         
         
         
@@ -370,6 +370,9 @@ def make_all_html_results(cmd):
             name = 'G' + name
             if float(mfactor) < 0:
                 continue
+            if os.path.exists(pjoin(P_path, 'ajob.no_ps.log')):
+                continue
+                                  
             P_comb.add_results(name, pjoin(P_path,name,'results.dat'), mfactor)
         P_comb.compute_values()
         P_text += P_comb.get_html(run, unit)
