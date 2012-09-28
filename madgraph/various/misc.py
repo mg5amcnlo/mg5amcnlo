@@ -30,7 +30,9 @@ try:
     import madgraph
     from madgraph import MadGraph5Error
     import madgraph.iolibs.files as files
-except:
+except Exception, error:
+    if __debug__:
+        print error
     # Use in MadEvent
     import internal as madgraph
     from internal import MadGraph5Error
@@ -139,6 +141,23 @@ def nice_representation(var, nb_space=0):
 
     return outstr
 
+#
+# Decorator for re-running a crashing function automatically.
+#
+def multiple_try(nb_try=5, sleep=20):
+
+    def deco_retry(f):
+        def deco_f_retry(*args, **opt):
+            for i in range(nb_try):
+                try:
+                    return f(*args, **opt)
+                except KeyboardInterrupt:
+                    raise
+                except:
+                    time.sleep(sleep * (i+1))
+            raise
+        return deco_f_retry
+    return deco_retry
 
 #===============================================================================
 # Compiler which returns smart output error in case of trouble
@@ -147,7 +166,7 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
     """compile a given directory"""
 
     try:
-        p = subprocess.Popen(['make'] + arg, stdout=subprocess.PIPE, 
+        p = subprocess.Popen(['make','-j2'] + arg, stdout=subprocess.PIPE, 
                              stderr=subprocess.STDOUT, cwd=cwd, **opt)
         (out, err) = p.communicate()
     except OSError, error:
@@ -301,8 +320,10 @@ def Popen(arg, *args, **opt):
     """nice way to call an external program with nice error treatment"""
     return subprocess.Popen(arg, *args, **opt)
 
-                
-
+@multiple_try()
+def mult_try_open(filepath, *args, **opt):
+    """try to open a file with multiple try to ensure that filesystem is sync"""  
+    return open(filepath, *args, ** opt)
 
 
 ################################################################################

@@ -104,9 +104,7 @@ class ExtLauncher(object):
             """WARNING: If you edit this file don\'t forget to modify 
             consistently the different parameters, especially 
             the width of all particles.""" 
-        
-        fct = lambda q: cmd.raw_path_input(q, allow_arg=['y','n'])     
-                                    
+                                         
         if not self.force:
             if msg:  print msg
             question = 'Do you want to edit file: %(card)s?' % {'card':filename}

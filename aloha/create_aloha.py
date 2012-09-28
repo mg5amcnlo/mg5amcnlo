@@ -33,6 +33,7 @@ import aloha.aloha_writers as aloha_writers
 import aloha.aloha_lib as aloha_lib
 import aloha.aloha_object as aloha_object
 import aloha.aloha_parsers as aloha_parsers
+import aloha.aloha_fct as aloha_fct
 try:
     import madgraph.iolibs.files as files
 except:
@@ -164,6 +165,15 @@ class AbstractRoutineBuilder(object):
     def apply_conjugation(self, pair=1):
         """ apply conjugation on self object"""
         
+        nb_fermion = len([1 for s in self.spins if s % 2 == 0])        
+        if (pair > 1 or nb_fermion >2) and not self.conjg:
+            # self.conjg avoif multiple check
+            data = aloha_fct.get_fermion_flow(self.lorentz_expr, nb_fermion)
+            target = dict([(2*i+1,2*i+2) for i in range(nb_fermion//2)])
+            if not data == target:
+                text = """Unable to deal with 4(or more) point interactions
+in presence of majorana particle/flow violation"""
+                raise ALOHAERROR, text
         
         old_id = 2 * pair - 1
         new_id = _conjugate_gap + old_id
@@ -621,7 +631,14 @@ class AbstractALOHAModel(dict):
         if save:
             self.save()
     
-
+    
+    def add_Lorentz_object(self, lorentzlist):
+        """add a series of Lorentz structure created dynamically"""
+        
+        for lor in lorentzlist:
+            if not hasattr(self.model.lorentz, lor.name):
+                setattr(self.model.lorentz, lor.name, lor)
+    
     def compute_subset(self, data):
         """ create the requested ALOHA routine. 
         data should be a list of tuple (lorentz, tag, outgoing)

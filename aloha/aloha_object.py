@@ -650,10 +650,7 @@ class Gamma5(aloha_lib.FactoryLorentz):
 
     @classmethod
     def get_unique_name(self, spin1, spin2):
-        if spin1 < spin2:
-            return 'Gamma5_%s_%s' % (spin1, spin2)
-        else: 
-            return 'Gamma5_%s_%s' % (spin2, spin1)
+        return 'Gamma5_%s_%s' % (spin1, spin2)
         
 #===============================================================================
 # Conjugate Matrices
@@ -841,10 +838,7 @@ class Identity(aloha_lib.FactoryLorentz):
 
     @classmethod
     def get_unique_name(self, spin1, spin2):
-        if spin1 < spin2:
-            return 'Id_%s_%s' % (spin1, spin2)
-        else: 
-            return 'Id_%s_%s' % (spin2, spin1)
+        return 'Id_%s_%s' % (spin1, spin2)
         
 ##===============================================================================
 ## IdentityL  (Commented since not use)
@@ -878,11 +872,8 @@ class L_ProjM(aloha_lib.LorentzObject):
                 
     def __init__(self,name, spin1, spin2):
         """Initialize the object"""
-        if spin1 < spin2:
-            aloha_lib.LorentzObject.__init__(self, name, [], [spin1, spin2])
-        else:
-            aloha_lib.LorentzObject.__init__(self, name, [], [spin2, spin1]) 
-    
+        aloha_lib.LorentzObject.__init__(self, name, [], [spin1, spin2])
+            
     def create_representation(self):
         
         self.representation = aloha_lib.LorentzObjectRepresentation(self.projm,
@@ -894,10 +885,7 @@ class ProjM(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, spin1, spin2):
-        if spin1 < spin2:
             return 'PROJM_%s_%s' % (spin1, spin2)
-        else:
-            return 'PROJM_%s_%s' % (spin2, spin1)
 #===============================================================================
 # ProjP 
 #===============================================================================    
@@ -912,11 +900,8 @@ class L_ProjP(aloha_lib.LorentzObject):
     
     def __init__(self,name, spin1, spin2):
         """Initialize the object"""
-        if spin1 < spin2:
-            aloha_lib.LorentzObject.__init__(self, name, [], [spin1, spin2])
-        else:
-            aloha_lib.LorentzObject.__init__(self, name, [], [spin2, spin1]) 
-        
+        aloha_lib.LorentzObject.__init__(self, name, [], [spin1, spin2])
+
           
     def create_representation(self):
         
@@ -929,10 +914,9 @@ class ProjP(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, spin1, spin2):
-        if spin1 < spin2:
-            return 'PROJP_%s_%s' % (spin1, spin2)
-        else:
-            return 'PROJP_%s_%s' % (spin2, spin1)
+        
+        return 'PROJP_%s_%s' % (spin1, spin2)
+        
 
 #===============================================================================
 # Denominator Propagator 

@@ -179,6 +179,7 @@ class MatrixElementEvaluator(object):
                                if lorentz not in self.store_aloha]
 
         aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+        aloha_model.add_Lorentz_object(model.get('lorentz'))
         aloha_model.compute_subset(me_used_lorentz)
 
         # Write out the routines in Python

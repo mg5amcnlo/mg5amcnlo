@@ -354,6 +354,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         # Create and write ALOHA Routine
         aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+        aloha_model.add_Lorentz_object(model.get('lorentz'))
         if wanted_lorentz:
             aloha_model.compute_subset(wanted_lorentz)
         else:
@@ -1132,6 +1133,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                        self.dir_path+'/bin/internal/cluster.py') 
         cp(_file_path+'/various/sum_html.py', 
                                        self.dir_path+'/bin/internal/sum_html.py') 
+        cp(_file_path+'/various/combine_runs.py', 
+                                       self.dir_path+'/bin/internal/combine_runs.py')
         # logging configuration
         cp(_file_path+'/interface/.mg5_logging.conf', 
                                  self.dir_path+'/bin/internal/me5_logging.conf') 
@@ -3338,7 +3341,6 @@ class UFO_model_to_mg4(object):
             if out_path2:
                 translator.make_valid_param_card(out_path, out_path2)
             translator.convert_to_slha1(out_path)
-        
         
 def ExportV4Factory(cmd, noclean):
     """ Determine which Export_v4 class is required. cmd is the command 

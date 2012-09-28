@@ -1890,6 +1890,7 @@ class UFOModelConverterCPP(object):
         template_cc_files = self.read_aloha_template_files(ext = 'cc')
 
         aloha_model = create_aloha.AbstractALOHAModel(self.model.get('name'))
+        aloha_model.add_Lorentz_object(self.model.get('lorentz'))
         
         if self.wanted_lorentz:
             aloha_model.compute_subset(self.wanted_lorentz)
