@@ -68,7 +68,7 @@ except Exception, error:
     from internal import InvalidCmd, MadGraph5Error
     import internal.files as files
     import internal.cluster as cluster
-    import internal.various.gen_crossxhtml as gen_crossxhtml
+    import internal.gen_crossxhtml as gen_crossxhtml
     aMCatNLO = True
 
 
@@ -565,9 +565,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             Please wait that all instance of madevent are closed. If no
             instance is running, you can delete the file
             %s and try again.''' % pjoin(me_dir,'RunWeb')
-            raise MadEventAlreadyRunning, message
+            raise aMCatNLOAlreadyRunning, message
         else:
-            os.system('touch %s' % pjoin(me_dir,'RunWeb'))
+            misc.call(['touch %s' % pjoin(me_dir,'RunWeb')], cwd=me_dir, shell=True)
             misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
         
         self.to_store = []
@@ -890,8 +890,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             raise aMCatNLOError('%s is not a valid run_card' % run_card)
         iseed = int(self.read_run_card(run_card)['iseed'])
         if iseed != 0:
-            os.system('echo "r=%d > %s"' \
-                    % (iseed, pjoin(self.me_dir, 'SubProcesses', 'randinit')))
+            misc.call(['echo "r=%d > %s"' \
+                    % (iseed, pjoin(self.me_dir, 'SubProcesses', 'randinit'))],
+                    cwd=self.me_dir)
         else:
             randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'))
             iseed = int(randinit.read()[2:]) + 1
@@ -942,26 +943,26 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if mode == 'LO':
             logger.info('Doing fixed order LO')
             logger.info('   Cleaning previous results')
-            os.system('rm -rf P*/born_G*')
+            misc.call(['rm -rf P*/born_G*'], shell=True)
 
             logger.info('   Computing cross-section')
             self.run_all(job_dict, [['0', 'born', '0']])
-            os.system('./combine_results_FO.sh born_G*')
+            misc.call(['./combine_results_FO.sh born_G*'], shell=True)
             os.chdir(old_cwd)
             return
 
         if mode == 'NLO':
             logger.info('Doing fixed order NLO')
             logger.info('   Cleaning previous results')
-            os.system('rm -rf P*/grid_G* P*/novB_G* P*/viSB_G*')
+            misc.call(['rm -rf P*/grid_G* P*/novB_G* P*/viSB_G*'], shell=True)
 
             logger.info('   Setting up grid')
             self.run_all(job_dict, [['0', 'grid', '0']])
-            os.system('./combine_results_FO.sh grid*')
+            misc.call(['./combine_results_FO.sh grid*'], shell=True)
 
             logger.info('   Computing cross-section')
             self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'grid']])
-            os.system('./combine_results_FO.sh viSB* novB*')
+            misc.call(['./combine_results_FO.sh viSB* novB*'], shell=True)
             os.chdir(old_cwd)
             return
 
@@ -977,7 +978,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if mode == 'aMC@NLO':
                 logger.info('Doing NLO matched to parton shower')
                 logger.info('   Cleaning previous results')
-                os.system('rm -rf P*/GF* P*/GV*')
+                misc.call(['rm -rf P*/GF* P*/GV*'], shell=True)
 
                 for i, status in enumerate(mcatnlo_status):
                     logger.info('   %s' % status)
@@ -986,12 +987,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]])
 
                     if i < 2:
-                        os.system('./combine_results.sh %d %d GF* GV*' % (i, nevents))
+                        misc.call(['./combine_results.sh %d %d GF* GV*' % (i, nevents)], shell=True)
 
             elif mode == 'aMC@LO':
                 logger.info('Doing LO matched to parton shower')
                 logger.info('   Cleaning previous results')
-                os.system('rm -rf P*/GB*')
+                misc.call(['rm -rf P*/GB*'], shell=True)
                 for i, status in enumerate(mcatnlo_status):
                     logger.info('   %s at LO' % status)
                     self.write_madinMMC_file(
@@ -999,7 +1000,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     self.run_all(job_dict, [['2', 'B', '%d' % i]])
 
                     if i < 2:
-                        os.system('./combine_results.sh %d %d GB*' % (i, nevents))
+                        misc.call(['./combine_results.sh %d %d GB*' % (i, nevents)], shell=True)
 
         if self.cluster_mode == 1:
             #if cluster run, wait 15 sec so that event files are transferred back
@@ -1020,17 +1021,17 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.run_reweight(options['reweightonly'])
 
         logger.info('   Collecting events')
-        os.system('make collect_events > %s' % \
-                pjoin (self.me_dir, 'log_collect_events.txt'))
-        os.system('echo "1" | ./collect_events > %s' % \
-                pjoin (self.me_dir, 'log_collect_events.txt'))
+        misc.call(['make collect_events > %s' % \
+                pjoin (self.me_dir, 'log_collect_events.txt')], shell=True)
+        misc.call(['echo "1" | ./collect_events > %s' % \
+                pjoin (self.me_dir, 'log_collect_events.txt')], shell=True)
 
         if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001')):
             raise aMCatNLOError('An error occurred during event generation. ' + \
                     'The event file has not been created. Check log_collect_events.txt')
         evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
-        os.system('mv %s %s' % 
-            (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file))
+        misc.call(['mv %s %s' % 
+            (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file)], shell=True )
         logger.info('The %s file has been generated.\nIt contains %d %s events to be showered' \
                 % (evt_file, nevents, mode[4:]))
         return evt_file
@@ -1062,15 +1063,15 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         logger.info('   Running MCatNLO in %s (this may take some time)...' % rundir)
         os.chdir(rundir)
-        os.system('mv ../%s ../MCATNLO_%s_input .' % (exe, shower))
+        misc.call(['mv ../%s ../MCATNLO_%s_input .' % (exe, shower)], shell=True)
         evt_name = os.path.basename(evt_file)
-        os.system('ln -s %s %s' % (os.path.split(evt_file)[0], self.run_name))
+        misc.call(['ln -s %s %s' % (os.path.split(evt_file)[0], self.run_name)], shell=True)
         misc.call(['./%s < MCATNLO_%s_input > amcatnlo_run.log 2>&1' % \
                     (exe, shower)], cwd = os.getcwd(), shell=True)
         #copy the showered stdhep file back in events
         if os.path.exists(pjoin(self.run_name, evt_name + '.hep')):
             hep_file = '%s_%s.hep' % (evt_file[:-4], shower)
-            os.system('mv %s %s' % (pjoin(self.run_name, evt_name + '.hep'), hep_file)) 
+            misc.call(['mv %s %s' % (pjoin(self.run_name, evt_name + '.hep'), hep_file)], shell=True) 
 
             logger.info(('The file %s has been generated. \nIt contains showered' + \
                         ' and hadronized events in the StdHEP format obtained' + \
@@ -1134,7 +1135,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # if only doing reweight, copy back the nevents_unweighted file
         if only:
             if os.path.exists(nev_unw + '.orig'):
-                os.system('cp %s %s' % (nev_unw + '.orig', nev_unw))
+                misc.call(['cp %s %s' % (nev_unw + '.orig', nev_unw)], shell=True)
             else:
                 raise aMCatNLOError('Cannot find event file information')
 
@@ -1143,7 +1144,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         lines = file.read().split('\n')
         file.close()
         # make copy of the original nevent_unweighted file
-        os.system('cp %s %s' % (nev_unw, nev_unw + '.orig'))
+        misc.call(['cp %s %s' % (nev_unw, nev_unw + '.orig')], shell=True)
         # loop over lines (all but the last one whith is empty) and check that the
         #  number of events is not 0
         evt_files = [line.split()[0] for line in lines[:-1] if line.split()[1] != '0']
@@ -1156,7 +1157,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 exe = 'reweight_xsec_events.local'
             elif self.cluster_mode == 1:
                 exe = 'reweight_xsec_events.cluster'
-            os.system('ln -sf ../../%s .' % exe)
+            misc.call(['ln -sf ../../%s .' % exe], shell=True)
             job_dict[path] = [exe]
 
         self.run_all(job_dict, [[evt, '1']])
@@ -1251,7 +1252,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 % (exe, os.getcwd()))
         # check that the executable has exec permissions
         if not os.access(exe, os.X_OK):
-            os.system('chmod +x %s' % exe)
+            misc.call(['chmod +x %s' % exe], shell=True)
         # finally run it
         if self.cluster_mode == 0:
             #this is for the serial run
@@ -1340,8 +1341,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         old_cwd = os.getcwd()
 
         #clean files
-        os.system('rm -f %s' % 
-                ' '.join([amcatnlo_log, madloop_log, reweight_log, gensym_log, test_log]))
+        misc.call(['rm -f %s' % 
+                ' '.join([amcatnlo_log, madloop_log, reweight_log, gensym_log, test_log])], \
+                  cwd=self.me_dir, shell=True)
 
         #define which executable/tests to compile
         if mode in ['NLO', 'LO']:
@@ -1379,7 +1381,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # make Source
         logger.info('Compiling source...')
         os.chdir(pjoin(self.me_dir, 'Source'))
-        os.system('make > %s 2>&1' % amcatnlo_log)
+        misc.call(['make > %s 2>&1' % amcatnlo_log], shell=True)
         if os.path.exists(pjoin(libdir, 'libdhelas.a')) \
           and os.path.exists(pjoin(libdir, 'libgeneric.a')) \
           and os.path.exists(pjoin(libdir, 'libmodel.a')) \
@@ -1396,7 +1398,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             # compile and run tests
             for test in tests:
                 logger.info('   Compiling %s...' % test)
-                os.system('make %s >> %s 2>&1 ' % (test, test_log))
+                misc.call(['make %s >> %s 2>&1 ' % (test, test_log)], shell=True)
                 if not os.path.exists(pjoin(this_dir, test)):
                     raise aMCatNLOError('Compilation failed, check %s for details' \
                             % test_log)
@@ -1404,9 +1406,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.write_test_input(test)
                 input = pjoin(self.me_dir, '%s_input.txt' % test)
                 #this can be improved/better written to handle the output
-                os.system('./%s < %s | tee -a %s | grep "Fraction of failures"' \
-                        % (test, input, test_log))
-                os.system('rm -f %s' % input)
+                misc.call(['./%s < %s | tee -a %s | grep "Fraction of failures"' \
+                        % (test, input, test_log)], shell=True)
+                misc.call(['rm -f %s' % input], shell=True)
             #check that none of the tests failed
             file = open(test_log)
             content = file.read()
@@ -1416,12 +1418,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
             if not options['reweightonly']:
                 logger.info('   Compiling gensym...')
-                os.system('make gensym >> %s 2>&1 ' % amcatnlo_log)
+                misc.call(['make gensym >> %s 2>&1 ' % amcatnlo_log], shell=True)
                 if not os.path.exists(pjoin(this_dir, 'gensym')):
                     raise aMCatNLOError('Compilation failed, check %s for details' % amcatnlo_log)
 
                 logger.info('   Running gensym...')
-                os.system('echo %s | ./gensym >> %s' % (self.options['run_mode'], gensym_log)) 
+                misc.call(['echo %s | ./gensym >> %s' % (self.options['run_mode'], gensym_log)], shell=True) 
                 #compile madloop library
                 v_dirs = [file for file in os.listdir('.') if file.startswith('V') and os.path.isdir(file)]
                 for v_dir in v_dirs:
@@ -1429,18 +1431,18 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     logger.info('   Compiling MadLoop library in %s' % v_dir)
                     madloop_dir = pjoin(this_dir, v_dir)
                     os.chdir(madloop_dir)
-                    os.system('make >> %s 2>&1' % madloop_log)
+                    misc.call(['make >> %s 2>&1' % madloop_log], shell=True)
                     if not os.path.exists(pjoin(this_dir, 'libMadLoop.a')):
                         raise aMCatNLOError('Compilation failed, check %s for details' % madloop_log)
                 os.chdir(this_dir)
                 logger.info('   Compiling %s' % exe)
-                os.system('make %s >> %s 2>&1' % (exe, amcatnlo_log))
+                misc.call(['make %s >> %s 2>&1' % (exe, amcatnlo_log)], shell=True)
                 os.unsetenv('madloop')
                 if not os.path.exists(pjoin(this_dir, exe)):
                     raise aMCatNLOError('Compilation failed, check %s for details' % amcatnlo_log)
             if mode in ['aMC@NLO', 'aMC@LO'] and not options['noreweight']:
                 logger.info('   Compiling reweight_xsec_events')
-                os.system('make reweight_xsec_events >> %s 2>&1' % (reweight_log))
+                misc.call(['make reweight_xsec_events >> %s 2>&1' % (reweight_log)], shell=True)
                 if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
                     raise aMCatNLOError('Compilation failed, check %s for details' % reweight_log)
 
@@ -1569,6 +1571,35 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             else:
                 # detect which card is provided
                 card_name = answer + 'card.dat'
+
+
+    def do_quit(self, line):
+        """ """
+  
+        try:
+            os.remove(pjoin(self.me_dir,'RunWeb'))
+        except:
+            pass
+#        try:
+#            self.store_result()
+#        except:
+#            # If nothing runs they they are no result to update
+#            pass
+#        try:
+#            self.update_status('', level=None)
+#        except Exception, error:         
+#            pass
+        try:
+            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
+                        stdout=devnull, stderr=devnull)
+        except:
+            pass
+
+        return super(aMCatNLOCmd, self).do_quit(line)
+    
+    # Aliases
+    do_EOF = do_quit
+    do_exit = do_quit
 
 
 

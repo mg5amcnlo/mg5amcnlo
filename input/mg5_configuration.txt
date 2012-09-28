@@ -104,6 +104,10 @@ lhapdf = lhapdf-config
 # If None: try to find one available on the system
 fastjet = fastjet-config
 
+# MCatNLO-utilities 
+# relative path start from main directory
+MCatNLO-utilites = ./MCatNLO-utilities
+
 
 
 
