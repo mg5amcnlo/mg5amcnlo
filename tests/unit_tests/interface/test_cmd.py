@@ -110,38 +110,33 @@ class TestValidCmd(unittest.TestCase):
 
         self.assertEqual(self.cmd.history, goal)
         
+        
         # Test the call present in do_output
         history="""set cluster_queue 2
         import model mssm
         define SW = May The Force Be With You
         generate p p > go go 
         import model mssm --modelname
-        add process p p > go go j
-        set gauge Feynman
-        check p p > go go
         output standalone
-        display particles
-        generate p p > go go
-        add process p p > test
+        launch
         output"""
         history = [l.strip() for l in  history.split('\n')]
         self.cmd.history = history         
         
-        self.cmd.clean_history(allow_for_removal = ['output','generate','add process'],
+        self.cmd.clean_history(allow_for_removal = ['output'],
                            remove_bef_lb1='output')
 
         goal="""set cluster_queue 2
         import model mssm
         define SW = May The Force Be With You
+        generate p p > go go 
         import model mssm --modelname
-        set gauge Feynman
-        generate p p > go go
-        add process p p > test
         output"""
         
         goal = [l.strip() for l in  goal.split('\n')]
         self.assertEqual(self.cmd.history, goal)
-        
+    
+    
     
     
     def test_help_category(self):

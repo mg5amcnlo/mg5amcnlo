@@ -3863,7 +3863,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self.check_output(args)
 
         # Remove previous outputs from history
-        self.clean_history(allow_for_removal = ['output','generate','add process'],
+        self.clean_history(allow_for_removal = ['output'],
                            remove_bef_lb1='output')
         
         noclean = '-noclean' in args
