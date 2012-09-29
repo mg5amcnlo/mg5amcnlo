@@ -2434,7 +2434,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if P_zero_result:
             if len(P_zero_result) == len(subproc):
                 raise ZeroResult, '%s' % \
-                    open(pjoin(self.me_dir,'error')).read()
+                    open(pjoin(Pdir,'ajob.no_ps.log')).read()
             else:
                 logger.warning(''' %s SubProcesses doesn\'t have available phase-space.
             Please check mass spectrum.''' % ','.join(P_zero_result))
