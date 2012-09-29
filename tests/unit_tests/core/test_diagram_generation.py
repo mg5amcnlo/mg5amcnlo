@@ -2863,6 +2863,171 @@ class MultiProcessTest(unittest.TestCase):
             #print 'Valid processes: ',len(filter(lambda item: item[1] > 0, valid_procs))
             #print 'Attempted processes: ',len(amplitudes)
 
+    def test_multiparticle_stop_decay(self):
+        """Setting up and testing pp > nj based on multiparticle lists,
+        using the amplitude functionality of MultiProcess
+        (which makes partial use of crossing symmetries)
+        """
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+        mymodel = base_objects.Model()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        g = mypartlist[-1]
+
+        # Two stop squarks
+        mypartlist.append(base_objects.Particle({'name':'t1',
+                      'antiname':'t1~',
+                      'spin':1,
+                      'color':3,
+                      'mass':'Mt1',
+                      'width':'Wt1',
+                      'texname':'t1',
+                      'antitexname':'\bar t1',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':1000006,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t1 = mypartlist[-1]
+        t1bar = copy.copy(t1)
+        t1bar.set('is_part', False)
+
+        mypartlist.append(base_objects.Particle({'name':'t2',
+                      'antiname':'t2~',
+                      'spin':1,
+                      'color':3,
+                      'mass':'Mt2',
+                      'width':'Wt2',
+                      'texname':'t2',
+                      'antitexname':'\bar t2',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2000006,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t2 = mypartlist[-1]
+        t2bar = copy.copy(t2)
+        t2bar.set('is_part', False)
+
+        # Gluon couplings to squarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [t1bar, \
+                                             t1, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [t2bar, \
+                                             t2, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [t1bar, \
+                                             t2, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G12G'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [t2bar, \
+                                             t1, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G12G'},
+                      'orders':{'QCD':1}}))
+
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions',myinterlist)
+        
+        max_fs = 2
+
+        p = [1000006, 2000006, -1000006, -2000006]
+
+        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
+
+        goal_number_processes = [8]
+
+        goal_valid_procs = []
+        goal_valid_procs.append([([1000006, 1000006, 21], 1), 
+                                 ([1000006, 2000006, 21], 1), 
+                                 ([2000006, 1000006, 21], 1), 
+                                 ([2000006, 2000006, 21], 1), 
+                                 ([-1000006, -1000006, 21], 1), 
+                                 ([-1000006, -2000006, 21], 1), 
+                                 ([-2000006, -1000006, 21], 1), 
+                                 ([-2000006, -2000006, 21], 1)])
+
+        for nfs in range(2, max_fs + 1):
+
+            # Define the multiprocess
+            my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 2])
+            my_multi_leglist += [copy.copy(base_objects.MultiLeg({'ids':[21]}))\
+                                 for n in range(2, nfs + 1)]
+
+            my_multi_leglist[0].set('state', False)
+
+            my_process_definition = base_objects.ProcessDefinition({\
+                                                     'legs':my_multi_leglist,
+                                                     'model':mymodel,
+                                                     'orders': {'QED': nfs}})
+            my_multiprocess = diagram_generation.MultiProcess(\
+                {'process_definitions':\
+                 base_objects.ProcessDefinitionList([my_process_definition])},
+                collect_mirror_procs = True)
+
+            nproc = 0
+
+            # Calculate diagrams for all processes
+
+            amplitudes = my_multiprocess.get('amplitudes')
+
+            valid_procs = [([leg.get('id') for leg in \
+                             amplitude.get('process').get('legs')],
+                            len(amplitude.get('diagrams'))) \
+                           for amplitude in amplitudes]
+
+#            print 'pp > ',nfs,'j (p,j = ', p, '):'
+#            print 'Valid processes: ',valid_procs
+
+            if nfs <= 3:
+                self.assertEqual(valid_procs, goal_valid_procs[nfs-2])
+
     def test_heft_multiparticle_pp_hnj(self):
         """Test pp > h+nj in HEFT, which tests new optimize_orders
         """
