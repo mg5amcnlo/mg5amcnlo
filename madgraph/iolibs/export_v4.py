@@ -38,6 +38,7 @@ import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.gen_infohtml as gen_infohtml
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
+import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.misc as misc
 import madgraph.various.process_checks as process_checks
@@ -275,7 +276,9 @@ class ProcessExporterFortran(object):
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)'
-        text = open(path).read() % {'libraries': set_of_lib} 
+        model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc\n\tcd MODEL; make    
+param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
+        text = open(path).read() % {'libraries': set_of_lib, 'model':model_line} 
         writer.write(text)
         
         return True
@@ -358,6 +361,7 @@ class ProcessExporterFortran(object):
 
         # Create and write ALOHA Routine
         aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+        aloha_model.add_Lorentz_object(model.get('lorentz'))
         if wanted_lorentz:
             aloha_model.compute_subset(wanted_lorentz)
         else:
@@ -703,7 +707,8 @@ class ProcessExporterFortran(object):
             for i, proc in enumerate(processes):
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + 1d0\n"
+                pdf_lines = pdf_lines + "\nPD(IPROC)=1d0\n"
+                pdf_lines = pdf_lines + "\nPD(0)=PD(0)+PD(IPROC)\n"
         else:
             # Pick out all initial state particles for the two beams
             initial_states = [sorted(list(set([p.get_initial_pdg(1) for \
@@ -778,7 +783,7 @@ class ProcessExporterFortran(object):
             for proc in processes:
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + "
+                pdf_lines = pdf_lines + "\nPD(IPROC)="
                 for ibeam in [1, 2]:
                     initial_state = proc.get_initial_pdg(ibeam)
                     if initial_state in pdf_codes.keys():
@@ -788,6 +793,7 @@ class ProcessExporterFortran(object):
                         pdf_lines = pdf_lines + "1d0*"
                 # Remove last "*" from pdf_lines
                 pdf_lines = pdf_lines[:-1] + "\n"
+                pdf_lines = pdf_lines + "PD(0)=PD(0)+DABS(PD(IPROC))\n"
 
         # Remove last line break from the return variables
         return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1]
@@ -1058,7 +1064,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = '$(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)'
-        text = open(path).read() % {'libraries': set_of_lib} 
+        model_line='''$(LIBDIR)libmodel.$(libext): MODEL\n\t cd MODEL; make\n'''
+        text = open(path).read() % {'libraries': set_of_lib, 'model':model_line} 
         writer.write(text)
         
         return True
@@ -1211,6 +1218,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                        self.dir_path+'/bin/internal/cluster.py') 
         cp(_file_path+'/various/sum_html.py', 
                                        self.dir_path+'/bin/internal/sum_html.py') 
+        cp(_file_path+'/various/combine_runs.py', 
+                                       self.dir_path+'/bin/internal/combine_runs.py')
         # logging configuration
         cp(_file_path+'/interface/.mg5_logging.conf', 
                                  self.dir_path+'/bin/internal/me5_logging.conf') 
@@ -1233,8 +1242,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
          if hasattr(model, 'restrict_card'):
-             files.cp(model.restrict_card, pjoin(self.dir_path, 'bin', 'internal',
-                                             'ufomodel','restrict_default.dat'))
+             out_path = pjoin(self.dir_path, 'bin', 'internal','ufomodel',
+                                                         'restrict_default.dat')
+             if isinstance(model.restrict_card, check_param_card.ParamCard):
+                 model.restrict_card.write(out_path)
+             else:
+                 files.cp(model.restrict_card, out_path)
 
                 
     #===========================================================================
@@ -1570,6 +1583,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
 
+        
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
 
@@ -1707,10 +1721,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Set dsig_line
         if ninitial == 1:
             # No conversion, since result of decay should be given in GeV
-            dsig_line = "pd(IPROC)*dsiguu"
+            dsig_line = "pd(0)*dsiguu"
         else:
             # Convert result (in GeV) to pb
-            dsig_line = "pd(IPROC)*conv*dsiguu"
+            dsig_line = "pd(0)*conv*dsiguu"
 
         replace_dict['dsig_line'] = dsig_line
 
@@ -2462,7 +2476,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         assert isinstance(subproc_group, group_subprocs.SubProcessGroup), \
                                       "subproc_group object not SubProcessGroup"
-
+        
         if not self.model:
             self.model = subproc_group.get('matrix_elements')[0].\
                          get('processes')[0].get('model')
@@ -3099,6 +3113,13 @@ class UFO_model_to_mg4(object):
         else:
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
+            text = open(pjoin(self.dir_path, 'rw_para.f')).read()
+            text = re.sub(r'c\s*call LHA_loadcard','       call LHA_loadcard',text, re.I)
+            fsock = open(pjoin(self.dir_path, 'rw_para.f'), 'w')
+            fsock.write(text)
+            fsock.close()
+            
+     
 
 
     def create_coupl_inc(self):

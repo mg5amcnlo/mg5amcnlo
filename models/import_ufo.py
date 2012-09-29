@@ -46,8 +46,6 @@ sys.path.append(root_path)
 sys.path.append(os.path.join(root_path, os.path.pardir, 'Template', 'bin', 'internal'))
 import check_param_card 
 
-
-
 class UFOImportError(MadGraph5Error):
     """ a error class for wrong import of UFO model""" 
 
@@ -115,8 +113,14 @@ def import_model(model_name, decay=False):
 
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
-        model.restrict_model(restrict_file, rm_parameter=not decay)
-    
+        
+        if model_name == 'mssm':
+            keep_external=True
+        else:
+            keep_external=False
+        model.restrict_model(restrict_file, rm_parameter=not decay,
+                                            keep_external=keep_external)
+        
     return model
 
 _import_once = []
@@ -266,6 +270,8 @@ class UFOMG5Converter(object):
         # Find which particles is in the 3/3bar color states (retrun {id: 3/-3})
         color_info = self.find_color_anti_color_rep()
 
+        # load the lorentz structure
+        self.model.set('lorentz', self.ufomodel.all_lorentz)
 
         logger.info('load vertices')
         for interaction_info in self.ufomodel.all_vertices:
@@ -570,30 +576,50 @@ class UFOMG5Converter(object):
             return 
         particles = base_objects.ParticleList(particles)
         
+        # Import Lorentz content:
+        lorentz = [helas for helas in interaction_info.lorentz]
+        
         # Check the coherence of the Fermion Flow
-        nb_fermion = sum([p.is_fermion() and 1 or 0 for p in particles])
+        nb_fermion = sum([ 1 if p.is_fermion() else 0 for p in particles])
         try:
-            if nb_fermion:
+            if nb_fermion == 2:
+                # Fermion Flow is suppose to be dealt by UFO
                 [aloha_fct.check_flow_validity(helas.structure, nb_fermion) \
                                           for helas in interaction_info.lorentz
                                           if helas.name not in self.checked_lor]
                 self.checked_lor.update(set([helas.name for helas in interaction_info.lorentz]))
+            elif nb_fermion:
+                if any(p.selfconjugate for p in interaction_info.particles):
+                    text = "Majorana can not be dealt in 4/6/... fermion interactions"
+                    raise InvalidModel, text
         except aloha_fct.WrongFermionFlow, error:
             text = 'Fermion Flow error for interactions %s: %s: %s\n %s' % \
              (', '.join([p.name for p in interaction_info.particles]), 
                                              helas.name, helas.structure, error)
             raise InvalidModel, text
-            
-        # Import Lorentz content:
-        lorentz = [helas.name for helas in interaction_info.lorentz]
         
+        
+            
+        lorentz = [helas.name for helas in lorentz] 
         # Import color information:
-        colors = [self.treat_color(color_obj, interaction_info, color_info) for color_obj in \
-                                    interaction_info.color]
+        colors = [self.treat_color(color_obj, interaction_info, color_info) 
+                                    for color_obj in interaction_info.color]
+        
+        
         order_to_int={}
+
         for key, couplings in interaction_info.couplings.items():
             if not isinstance(couplings, list):
                 couplings = [couplings]
+            if interaction_info.lorentz[key[1]].name not in lorentz:
+                continue 
+            # get the sign for the coupling (if we need to adapt the flow)
+            if nb_fermion > 2:
+                flow = aloha_fct.get_fermion_flow(interaction_info.lorentz[key[1]].structure, 
+                                                                     nb_fermion)
+                coupling_sign = self.get_sign_flow(flow, nb_fermion)
+            else:                
+                coupling_sign = ''            
             for coupling in couplings:
                 order = tuple(coupling.order.items())
                 if '1' in order:
@@ -601,13 +627,15 @@ class UFOMG5Converter(object):
                     This is not allowed in MG. 
                     Please defines an additional coupling to your model''' 
                 if order in order_to_int:
-                    order_to_int[order].get('couplings')[key] = coupling.name
+                    order_to_int[order].get('couplings')[key] = '%s%s' % \
+                                               (coupling_sign,coupling.name)
                 else:
                     # Initialize a new interaction with a new id tag
                     interaction = base_objects.Interaction({'id':len(self.interactions)+1})                
                     interaction.set('particles', particles)              
                     interaction.set('lorentz', lorentz)
-                    interaction.set('couplings', {key: coupling.name})
+                    interaction.set('couplings', {key: 
+                                     '%s%s' %(coupling_sign,coupling.name)})
                     interaction.set('orders', coupling.order)            
                     interaction.set('color', colors)
                     interaction.set('type', type)
@@ -627,7 +655,64 @@ class UFOMG5Converter(object):
                     pass
             if abs(total) > 1e-12:
                 logger.info('The model has interaction violating the charge: %s' % charge)
-            self.conservecharge.discard(charge)
+                self.conservecharge.discard(charge)
+        
+        
+    def get_sign_flow(self, flow, nb_fermion):
+        """ensure that the flow of particles/lorentz are coherent with flow 
+           and return a correct version if needed"""
+           
+        if not flow or nb_fermion < 4:
+            return ''
+           
+        expected = {}
+        for i in range(nb_fermion//2):
+            expected[i+1] = i+2
+        
+        if flow == expected:
+            return ''
+
+        switch = {}
+        for i in range(1, nb_fermion+1):
+            if not i in flow.keys():
+                continue
+            switch[i] = len(switch)
+            switch[flow[i]] = len(switch)
+
+        # compute the sign of the permutation
+        sign = 1
+        done = []
+   
+        # make a list of consecutive number which correspond to the new
+        # order of the particles in the new list.
+        new_order = []
+        for id in range(nb_fermion): # id is the position in the particles order (starts 0)
+            nid = switch[id+1]-1 # nid is the position in the new_particles 
+                                 #order (starts 0)
+            new_order.append(nid)
+             
+        # compute the sign:
+        sign =1
+        for k in range(len(new_order)-1):
+            for l in range(k+1,len(new_order)):
+                if new_order[l] < new_order[k]:
+                    sign *= -1     
+                    
+        return  '' if sign ==1 else '-'
+
+
+
+    
+    def add_lorentz(self, name, spins , expr):
+        """ Add a Lorentz expression which is not present in the UFO """
+        
+        new = self.model['lorentz'][0].__class__(name = name,
+                spins = spins,
+                structure = expr)
+        
+        self.model['lorentz'].append(new)
+        self.model.create_lorentz_dict()
+        return name
     
     _pat_T = re.compile(r'T\((?P<first>\d*),(?P<second>\d*)\)')
     _pat_id = re.compile(r'Identity\((?P<first>\d*),(?P<second>\d*)\)')
@@ -965,10 +1050,11 @@ class RestrictModel(model_reader.ModelReader):
         self.rule_card = check_param_card.ParamCardRule()
         self.restrict_card = None
      
-    def restrict_model(self, param_card, rm_parameter=True):
+    def restrict_model(self, param_card, rm_parameter=True, keep_external=False):
         """apply the model restriction following param_card.
-        fix_parameter defines if the Zero/one parameter are removed or not from
+        rm_parameter defines if the Zero/one parameter are removed or not from
         the model.
+        keep_external if the param_card need to be kept intact
         """
 
         self.restrict_card = param_card
@@ -996,12 +1082,14 @@ class RestrictModel(model_reader.ModelReader):
                 
         # deal with parameters
         parameters = self.detect_special_parameters()
-        self.fix_parameter_values(*parameters, simplify=rm_parameter)
+        self.fix_parameter_values(*parameters, simplify=rm_parameter, 
+                                                    keep_external=keep_external)
         
         # deal with identical parameters
-        iden_parameters = self.detect_identical_parameters()
-        for iden_param in iden_parameters:
-            self.merge_iden_parameters(iden_param)
+        if not keep_external:
+            iden_parameters = self.detect_identical_parameters()
+            for iden_param in iden_parameters:
+                self.merge_iden_parameters(iden_param)
             
         # change value of default parameter if they have special value:
         # 9.999999e-1 -> 1.0
@@ -1011,7 +1099,8 @@ class RestrictModel(model_reader.ModelReader):
                 self['parameter_dict'][name] = 1
             elif value == 0.000001e-99:
                 self['parameter_dict'][name] = 0
-
+      
+                    
     def locate_coupling(self):
         """ create a dict couplings_name -> vertex or (particle, counterterm_key) """
         
@@ -1095,7 +1184,7 @@ class RestrictModel(model_reader.ModelReader):
         #detect identical parameter and remove the duplicate parameter
         for param in external_parameters[:]:
             value = self['parameter_dict'][param.name]
-            if value == 0:
+            if value in [0,1,0.000001e-99,9.999999e-1]:
                 continue
             key = (param.lhablock, value)
             mkey =  (param.lhablock, -value)
@@ -1265,7 +1354,8 @@ class RestrictModel(model_reader.ModelReader):
                     data.remove(coupling)
                             
         
-    def fix_parameter_values(self, zero_parameters, one_parameters, simplify=True):
+    def fix_parameter_values(self, zero_parameters, one_parameters, 
+                                            simplify=True, keep_external=False):
         """ Remove all instance of the parameters in the model and replace it by 
         zero when needed."""
 
@@ -1329,8 +1419,7 @@ class RestrictModel(model_reader.ModelReader):
                     # check the presence of zero/one parameter
                     for use in  re_pat.findall(parameter.expr):
                         used.add(use)
-
-
+        
         # modify the object for those which are still used
         for param in used:
             if not param:
@@ -1347,7 +1436,8 @@ class RestrictModel(model_reader.ModelReader):
         # remove completely useless parameters
         for param in special_parameters:
             #by pass parameter still in use
-            if param in used:
+            if param in used or \
+                  (keep_external and param_info[param]['dep'] == ('external',)):
                 logger_mod.debug('fix parameter value: %s' % param)
                 continue 
             logger_mod.debug('remove parameters: %s' % param)

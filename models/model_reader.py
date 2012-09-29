@@ -64,13 +64,6 @@ class ModelReader(loop_base_objects.LoopModel):
         
         # Read in param_card
         if param_card:
-            
-            # Check that param_card exists
-            if not os.path.isfile(param_card):
-                raise MadGraph5Error, \
-                      "No such file %s" % param_card
-            
-
             # Create a dictionary from LHA block name and code to parameter name
             parameter_dict = {}
             for param in external_parameters:
@@ -81,7 +74,14 @@ class ModelReader(loop_base_objects.LoopModel):
                     parameter_dict[param.lhablock.lower()] = dictionary
                 dictionary[tuple(param.lhacode)] = param
                 
-            param_card = card_reader.ParamCard(param_card)
+            if isinstance(param_card, basestring):
+                # Check that param_card exists
+                if not os.path.isfile(param_card):
+                    raise MadGraph5Error, "No such file %s" % param_card
+                param_card = card_reader.ParamCard(param_card)
+            assert isinstance(param_card, card_reader.ParamCard)
+                
+           
             
             key = [k for k in param_card.keys() if not k.startswith('qnumbers ')
                                             and not k.startswith('decay_table')]
@@ -105,7 +105,7 @@ class ModelReader(loop_base_objects.LoopModel):
                         exec("locals()[\'%s\'] = %s" % (parameter_dict[block][id].name,
                                           value))
                         parameter_dict[block][id].value = float(value)
-                    
+           
         else:
             # No param_card, use default values
             for param in external_parameters:

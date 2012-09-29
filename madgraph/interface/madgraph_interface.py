@@ -26,6 +26,7 @@ import signal
 import subprocess
 import sys
 import shutil
+import StringIO
 import traceback
 import time
 import urllib
@@ -75,6 +76,8 @@ import madgraph.various.cluster as cluster
 
 import models as ufomodels
 import models.import_ufo as import_ufo
+import models.write_param_card as param_writer
+import models.check_param_card as check_param_card
 
 import aloha.aloha_fct as aloha_fct
 import aloha.create_aloha as create_aloha
@@ -321,6 +324,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info('   The program used to open those files can be chosen in the')
         logger.info('   configuration file ./input/mg5_configuration.txt')
         
+    def help_customize_model(self):
+        logger.info("syntax: customize_model --save=NAME")
+        logger.info("--  Open an invite where you options to tweak the model.")
+        logger.info("    If you specify the option --save=NAME, this tweak will be")
+        logger.info("    available for future import with the command 'import model XXXX-NAME'")
+        
     def help_output(self):
         logger.info("syntax: output [" + "|".join(self._export_formats) + \
                     "] [path|.|auto] [options]")
@@ -441,7 +450,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   timeout VALUE")
         logger.info("      (default 20) Seconds allowed to answer questions.")
         logger.info("      Note that pressing tab always stops the timer.")
-
+        logger.info("   cluster_temp_path PATH")
+        logger.info("      (default None) [Used in Madevent Output]")
+        logger.info("      Allow to perform the run in PATH directory")
+        logger.info("      This allow to not run on the central disk. This is not used")
+        logger.info("      by condor cluster (since condor has it's own way to prevent it).")
+       
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -787,7 +801,25 @@ This will take effect only in a NEW terminal
         if len(args) != 2 or args[0] not in self._save_opts:
             self.help_load()
             raise self.InvalidCmd('wrong \"load\" format')
+    
+    def check_customize_model(self, args):
+        """check the validity of the line"""
+        
+        # Check argument validity
+        if len(args) >1 :
+            self.help_customize_model()
+            raise self.InvalidCmd('No argument expected for this command')
+        
+        if len(args):
+            if not args[0].startswith('--save='):
+                self.help_customize_model()
+                raise self.InvalidCmd('Wrong argument for this command')
+            if '-' in args[0][6:]:
+                raise self.InvalidCmd('The name given in save options can\'t contain \'-\' symbol.')
             
+        if self._model_v4_path:
+            raise self.InvalidCmd('Restriction of Model is not supported by v4 model.')
+        
         
     def check_save(self, args):
         """ check the validity of the line"""
@@ -1234,9 +1266,19 @@ class CompleteForCmd(cmd.CompleteCmd):
             couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
         return self.list_completion(text, self._particle_names + \
                                     self._multiparticles.keys() + couplings)
-          
+    
+    def complete_customize_model(self, text, line, begidx, endidx):
+        "Complete the customize_model command"
+        
+        args = self.split_arg(line[0:begidx])
+
+        # Format
+        if len(args) == 1:
+            return self.list_completion(text, ['--save='])
+        
+    
     def complete_check(self, text, line, begidx, endidx):
-        "Complete the add command"
+        "Complete the check command"
 
         args = self.split_arg(line[0:begidx])
 
@@ -1532,7 +1574,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             else:
                 # directory names
                 second_set = [name for name in self.path_completion(text, '.', only_dirs = True)]
-                return self.list_completion(text, first_set + second_set + ['default'])
+                return self.list_completion(text, second_set + ['default'])
         elif len(args) >2 and args[-1].endswith(os.path.sep):
                 return self.path_completion(text,
                         pjoin(*[a for a in args if a.endswith(os.path.sep)]),
@@ -1753,13 +1795,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
-                       'timeout': 20,
+                       'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
                        'text_editor':None,
                        'fortran_compiler':None,
                        'auto_update':7,
-                       'cluster_type': 'condor'}
+                       'cluster_type': 'condor',
+                       'cluster_temp_path': None,
+                       'cluster_queue': None,
+                       }
     
     options_madgraph= {'group_subprocesses': 'Auto',
                           'ignore_six_quark_processes': False,
@@ -1770,7 +1815,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
-                         'cluster_queue':'madgraph',
                          'nb_core': None,
                          }
 
@@ -1837,7 +1881,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # interfaces
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
-        self.clean_history(remove_bef_lb1='import')
+        self.clean_history(remove_bef_last='import')
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -2531,8 +2575,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._export_format = None
 
         # Remove previous generations from history
-        self.clean_history(to_remove=['add process'], remove_bef_lb1='generate',
-                           to_keep=['add','import','set','load'])
+        self.clean_history(remove_bef_last='generate', keep_switch=True,
+                     allow_for_removal= ['generate', 'add process', 'output'])
+
 
         # Call add process
         args = self.split_arg(line)
@@ -2921,7 +2966,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._model_v4_path = None
             # Clear history, amplitudes and matrix elements when a model is imported
             # Remove previous imports, generations and outputs from history
-            self.clean_history(remove_bef_lb1='import')
+            self.clean_history(remove_bef_last='import', keep_switch=True,
+                        allow_for_removal=['generate', 'add process', 'output'])
             # Reset amplitudes and matrix elements
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -2940,7 +2986,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         logger_stderr.warning('WARNING: %s' % error)
                         logger_stderr.warning('Try to recover by running automatically `import model_v4 %s` instead.' \
                                                                       % args[1])
-                    self.exec_cmd('import model_v4 %s ' % args[1], precmd=True)    
+                    self.exec_cmd('import model_v4 %s ' % args[1], precmd=True)
+                    return    
                 if self.options['complex_mass_scheme']:
                     self._curr_model.change_mass_to_complex_scheme()
                     if hasattr(self._curr_model, 'set_parameters_and_couplings'):
@@ -2971,16 +3018,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             # Do post-processing of model
             self.process_model()
-
             # Reset amplitudes and matrix elements and global checks
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             process_checks.store_aloha = []
             
         elif args[0] == 'command':
-            # Remove previous imports, generations and outputs from history
-            self.clean_history(to_remove=['import', 'generate', 'add process',
-                                          'open','display','launch'])
 
             if not os.path.isfile(args[1]):
                 raise self.InvalidCmd("Path %s is not a valid pathname" % args[1])
@@ -3016,10 +3059,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.exec_cmd('launch')
             
         elif args[0] == 'proc_v4':
-            
-            # Remove previous imports, generations and outputs from history
-            self.clean_history(to_remove=['import', 'generate', 'add process',
-                                          'open','display','launch'])
+            self.history = []
 
             if len(args) == 1 and self._export_dir:
                 proc_card = pjoin(self._export_dir, 'Cards', \
@@ -3030,7 +3070,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 # self._export dir are define
                 self.check_for_export_dir(os.path.realpath(proc_card))
             else:
-                raise MadGraph5('No default directory in output')
+                raise MadGraph5Error('No default directory in output')
 
  
             #convert and excecute the card
@@ -3359,7 +3399,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         to_update = 0
         try:
             filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_build_nb')
-#            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_test_build_nb')
             signal.alarm(0)
             web_version = int(filetext.read().strip())            
         except (TimeOutError, ValueError, IOError):
@@ -3544,7 +3583,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
-                    self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
+                    self.exec_cmd("set %s %s --no_save" % (key, self.options[key]), 
+                                   printcmd=False, log=False)
                 except MadGraph5Error, error:
                     print error
                     logger.warning("Option %s from config file not understood" \
@@ -3708,6 +3748,111 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             else:
                 raise self.RWError('Could not load processes from file %s' % args[1])
     
+    
+    def do_customize_model(self, line):
+        """create a restriction card in a interactive way"""
+
+        args = self.split_arg(line)
+        self.check_customize_model(args)
+
+        try:
+            model_path = import_ufo.find_ufo_path(self._curr_model.get('name'))
+        except import_ufo.UFOImportError:
+            name = self._curr_model.get('name').rsplit('-',1)[0]
+            try:
+                model_path = import_ufo.find_ufo_path(name)
+            except import_ufo.UFOImportError:
+                print name
+                raise self.InvalidCmd('''Invalid model.''')
+                
+        if not os.path.exists(pjoin(model_path,'build_restrict.py')):
+            raise self.InvalidCmd('''Model not compatible with this option.''')
+        
+        # (re)import the full model (get rid of the default restriction)
+        self._curr_model = import_ufo.import_full_model(model_path)
+        
+        #1) create the full param_card
+        out_path = StringIO.StringIO()
+        param_writer.ParamCardWriter(self._curr_model, out_path)
+        # and load it to a python object
+        param_card = check_param_card.ParamCard(out_path.getvalue().split('\n'))
+        
+        #2) Import the option available in the model
+        ufo_model = ufomodels.load_model(model_path)
+        all_categories = ufo_model.build_restrict.all_categories
+        
+        #3) making the options
+        def change_options(name, all_categories):
+            for category in all_categories:
+                for options in category:            
+                    if options.name == name:
+                        options.status = not options.status
+
+        # asking the question to the user                        
+        while 1:
+            question = ''
+            answers = ['0']
+            cat = {} 
+            for category in all_categories:
+                question += category.name + ':\n'
+                for options in category:
+                    if not options.first:
+                        continue
+                    question += '    %s: %s [%s]\n' % (len(answers), options.name, 
+                                options.display(options.status))
+                    cat[str(len(answers))] = options.name
+                    answers.append(len(answers))
+            question += 'Enter a number to change it\'s status or press enter to validate'
+            answers.append('done')
+            value = self.ask(question,'0',answers)
+            if value not in ['0','done']:
+                change_options(cat[value], all_categories)
+            else:
+                break
+
+        ## Make a Temaplate for  the restriction card. (card with no restrict)
+        for block in param_card:
+            value_dict = {}
+            for param in param_card[block]:
+                value = param.value
+                if value == 0:
+                    param.value = 0.000001e-99
+                elif value == 1:
+                    param.value = 9.999999e-1                
+                elif abs(value) in value_dict:
+                    param.value += value_dict[abs(value)] * 1e-4 * param.value
+                    value_dict[abs(value)] += 1
+                else:
+                    value_dict[abs(value)] = 1 
+        
+        for category in all_categories:
+            for options in category:
+                if not options.status:
+                    continue
+                param = param_card[options.lhablock].get(options.lhaid)
+                param.value = options.value
+        
+        logger.info('Loading the resulting model')
+        # Applying the restriction 
+        self._curr_model = import_ufo.RestrictModel(self._curr_model)
+        self._curr_model.restrict_model(param_card)
+        
+        if args:
+            name = args[0].split('=',1)[1]
+            path = pjoin(model_path,'restrict_%s.dat' % name)
+            logger.info('Save restriction file as %s' % path)
+            param_card.write(path)
+            self._curr_model['name'] += '-%s' % name
+        
+        
+        
+        
+        
+        
+        
+        
+    
+    
     def do_save(self, line, check=True, to_keep={}):
         """Not in help: Save information to file"""
 
@@ -3736,12 +3881,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             for key, default in self.options_configuration.items():
                 if  self.options_configuration[key] != self.options[key] != None:
                     to_define[key] = self.options[key]
-            
+                
             if not '--auto' in args:
                 for key, default in self.options_madevent.items():
                     if self.options_madevent[key] != self.options[key] != None:
                         to_define[key] = self.options[key]
-            
+                    elif key == 'cluster_queue' and self.options[key] is None:
+                        to_define[key] = self.options[key]
+                        
             if '--all' in args:
                 for key, default in self.options_madgraph.items():
                     if self.options_madgraph[key] != self.options[key] != None and \
@@ -3769,7 +3916,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Set an option, which will be default for coming generations/outputs
         """
 	    # This command is associated to a post_cmd: post_set.
-        
         args = self.split_arg(line)
         
         # Check the validity of the arguments
@@ -3911,13 +4057,21 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         args = self.split_arg(line)
         # Check the validity of the arguments
-        self.check_set(args, log=False)
+        try:
+            self.check_set(args, log=False)
+        except Exception:
+            return stop
         
         if args[0] in self.options_configuration and '--no_save' not in args:
-            self.exec_cmd('save options --auto')
+            self.exec_cmd('save options --auto', log=False)
         elif args[0] in self.options_madevent:
-            logger.info('This option will be the default in any output that you are going to create in this session.')
-            logger.info('In order to keep this changes permanent please run \'save options\'')
+            if not '--no_save' in line:
+                logger.info('This option will be the default in any output that you are going to create in this session.')
+                logger.info('In order to keep this changes permanent please run \'save options\'')
+        else:
+            #madgraph configuration
+            if not self.history or self.history[-1].split() != line.split():
+                self.history.append('set %s' % line) 
         return stop
 
     def do_open(self, line):
@@ -3938,9 +4092,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self.check_output(args)
 
         # Remove previous outputs from history
-        self.clean_history(to_remove=['display','open','history','launch','output'],
-                           remove_bef_lb1='generate',
-                           keep_last=True)
+        self.clean_history(allow_for_removal = ['output'], keep_switch=True,
+                           remove_bef_last='output')
         
         noclean = '-noclean' in args
         force = '-f' in args 
@@ -3978,6 +4131,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             wanted_lorentz = aloha_fct.guess_routine_from_name(names)
             # Create and write ALOHA Routine
             aloha_model = create_aloha.AbstractALOHAModel(self._curr_model.get('name'))
+            aloha_model.add_Lorentz_object(self._curr_model.get('lorentz'))
             if wanted_lorentz:
                 aloha_model.compute_subset(wanted_lorentz)
             else:

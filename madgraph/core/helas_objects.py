@@ -729,7 +729,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
                self.get_spin_state_number() == -2 and \
                self.get('self_antipart') and \
                [m.get('color') for m in self.get('mothers')] == [8, 8]:
-            self.set('coupling', [ c if c.startswith('-') else '-%s' % c 
+            if hasattr(self, 'octet_majorana_flip'):
+                return
+            self.octet_majorana_flip = True
+            self.set('coupling', ['-%s' % c 
                                               for c in self.get('coupling')])
         
     def set_state_and_particle(self, model):

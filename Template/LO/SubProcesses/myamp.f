@@ -303,7 +303,7 @@ c
       double precision  xe(-nexternal:nexternal)
       double precision tsgn, xo, a
       double precision x1,x2,xk(nexternal)
-      double precision dr,mtot,etot,stot,xqfact
+      double precision dr,mtot,etot,xqfact
       integer i, iconfig, l1, l2, j, nt, nbw, iproc
       integer iden_part(-max_branch:-1)
 
@@ -351,6 +351,9 @@ c
       integer        lbw(0:nexternal)  !Use of B.W.
       common /to_BW/ lbw
 
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
+
       include 'coupl.inc'
       include 'cuts.inc'
 c
@@ -361,7 +364,6 @@ c-----
 c  Begin Code
 c-----      
       include 'props.inc'
-      stot = 4d0*ebeam(1)*ebeam(2)
 c      etmin = 10
       nt = 0
       iconfig = this_config

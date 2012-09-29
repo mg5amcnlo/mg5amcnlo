@@ -17,7 +17,9 @@
 
 import os
 import math
+import re
 import pickle
+import re
 try:
     import internal.files as files
     import internal.save_load_object as save_load_object
@@ -147,7 +149,7 @@ class AllResults(dict):
         """define the name of the current run
             The first argument can be a OneTagResults
         """
-        
+
         if isinstance(run, OneTagResults):
             self.current = run
             self.lastrun = run['run_name']
@@ -988,10 +990,17 @@ class OneTagResults(dict):
         elif isinstance(self.debug, basestring):
             if not os.path.isabs(self.debug) and not self.debug.startswith('./'):
                 self.debug = './' + self.debug
+            elif os.path.isabs(self.debug):
+                self.debug = os.path.relpath(self.debug, self.me_dir)
             debug = '<br> <a href=\'%s\'> <font color=red>ERROR</font></a>' \
                                                % (self.debug)
         elif self.debug:
-            debug = '<br><font color=red>%s</font>' %self.debug
+            text = str(self.debug).replace('. ','.<br>')
+            if 'http' in text:
+                pat = re.compile('(http[\S]*)')
+                text = pat.sub(r'<a href=\1> here </a>', text)
+            debug = '<br><font color=red>%s<BR>%s</font>' % \
+                                           (self.debug.__class__.__name__, text)
         else:
             debug = ''                                       
         text = tag_template % {'tag_span': nb_line,

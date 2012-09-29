@@ -143,7 +143,7 @@ while (my $line = <INFILE>) {
     } elsif ($eventblock > 0) {
 	# In <event> block
 	# Remove leading whitespace and split
-	$line  =~ m/^\s+(.*)/;
+	$line  =~ m/^\s*(.*)/;
 	if($line=~/^\#/){
 	#    print OUTFILE $line;
 	}

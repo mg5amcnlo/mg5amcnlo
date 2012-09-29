@@ -6,7 +6,7 @@ import parameters
 import vertices
 import coupling_orders
 import write_param_card
-
+import function_library
 
 all_particles = particles.all_particles
 all_vertices = vertices.all_vertices
@@ -22,6 +22,11 @@ except ImportError:
    pass
 else:
    all_decays = decays.all_decays
+
+try:
+   import build_restrict
+except ImportError:
+   pass
 
 
 gauge = [0]

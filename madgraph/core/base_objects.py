@@ -1075,6 +1075,24 @@ class Model(PhysicsObject):
             except:
                 return None
 
+    def get_lorentz(self, name):
+        """return the lorentz object from the associate name"""
+        if hasattr(self, 'lorentz_name2obj'):
+            return self.lorentz_name2obj[name]  
+        else:
+            self.create_lorentz_dict()
+            return self.lorentz_name2obj[name]
+
+    def create_lorentz_dict(self):
+        """create the dictionary linked to the lorentz structure"""
+        self.lorentz_name2obj = {}
+        self.lorentz_expr2name = {}
+        if not self.get('lorentz'):
+            return
+        for lor in self.get('lorentz'):
+            self.lorentz_name2obj[lor.name] = lor
+            self.lorentz_expr2name[lor.structure] = lor.name
+
     def get_interaction(self, id):
         """Return the interaction corresponding to the id"""
 
@@ -1254,6 +1272,14 @@ class Model(PhysicsObject):
                     part.set('antiname', default[pdg])
                     if antipart:
                         antipart.set('antiname', default[pdg])
+        
+        #additional check for the Higgs in the mssm
+        if self.get('name') == 'mssm' or self.get('name').startswith('mssm-'):
+            part = self.get_particle(25)
+            part.set('name', 'h1')
+            part.set('antiname', 'h1')
+            
+        
 
     def get_first_non_pdg(self):
         """Return the first positive number that is not a valid PDG code"""

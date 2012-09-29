@@ -89,7 +89,7 @@ c        Allow all the way down to a single iteration for gridruns
          call get_int8(npara,param,value," gseed "  ,iseed  ,4321   )
          call get_integer(npara,param,value," ngran "  ,ngran  , -1)
          if (ngran.eq.-1) ngran = 1
-         write(*,*) "Running on Grid to generate ",nreq," additional events"
+         write(*,*) "Running on Grid to generate ",nreq," events"
          write(*,*) "   with granularity equal to ",ngran
 c
 c     TJS 3/13/2008
@@ -103,8 +103,8 @@ c
          iseed = iseed * 31300       
          ij=1802 + mod(iseed,30081)      
          kl=9373 + (iseed/30081) + ioffset
-c         write(*,'($a,i6,a3,i6)') 'Using random seed offsets',jconfig," : ",ioffset
-c         write(*,*) ' with seed', iseed
+         write(*,'($a,i6,a3,i6)') 'Using random seed offset: ',ioffset
+         write(*,*) ' with seed', iseed
          do while (ij .gt. 31328)
             ij = ij - 31328
          enddo
@@ -112,7 +112,7 @@ c         write(*,*) ' with seed', iseed
             kl = kl - 30081
          enddo
          write(*,*) "Using random seeds",ij,kl
-        call rmarin(ij,kl)         
+        call rmarin(ij,kl)
       endif
       open(unit=15,file=symfile,status='old',err=999)
       errtot=0d0

@@ -125,12 +125,33 @@ mg5>display multiparticles
 which show information on the particles and the vertices of the model
 or presently defined multiparticle labels.
 
+Some of the model (including mssm) allow to modify the model (setting some
+mass to zero, put some matrices diagonal, remove some interaction, ...). You can
+see the possibility for each model by using the following command:
+mg5> customize_model 
+
 To define a multiparticle label, i.e. a label corresponding to a set
 of particles, write:
 mg5>define v = w+ w- z a
 This defines the symbol \"v\" to correspond to any EW vector boson.
 """
 import_model_v4 = import_model
+
+
+customize_model ="""
+The model with your customization is now loaded and you can use it as any other
+model. Note that if you want to save this specific customization you can do the
+following:
+mg5> customize_model --save=NAME
+the model will then be accessible by the command (assuming that you are based on mssm)
+mg5> import model mssm-NAME
+
+To define a multiparticle label, i.e. a label corresponding to a set
+of particles, write:
+mg5>define v = w+ w- z a
+This defines the symbol \"v\" to correspond to any EW vector boson.
+"""
+
 
 define = """
 You have just defined a multiparticle label.

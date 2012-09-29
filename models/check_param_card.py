@@ -90,14 +90,16 @@ class Parameter (object):
         """ return a SLAH string """
 
         if self.format == 'float':
-            if self.lhablock == 'decay':
+            if self.lhablock == 'decay' and not isinstance(self.value,basestring):
                 return 'DECAY %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+            elif self.lhablock == 'decay':
+                return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
             else:
                 return '      %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'str':
-             return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+            return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'decay_table':
-             return '      %e %s # %s' % ( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
+            return '      %e %s # %s' % ( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
         
         else:
             if self.lhablock == 'decay':
@@ -141,8 +143,12 @@ class Block(list):
         
         assert isinstance(obj, Parameter)
         assert not obj.lhablock or obj.lhablock == self.name
-        assert tuple(obj.lhacode) not in self.param_dict, \
-                                  '%s already define in %s' % (obj.lhacode,self)
+        
+        if tuple(obj.lhacode) in self.param_dict:
+            if self.param_dict[tuple(obj.lhacode)].value != obj.value:
+                raise InvalidParamCard, '%s %s is already define to %s impossible to assign %s' % \
+                    (self.name, obj.lhacode, self.param_dict[tuple(obj.lhacode)].value, obj.value)
+            return
         
         list.append(self, obj)
         # update the dictionary of key

@@ -196,8 +196,8 @@ class TestMEfromfile(unittest.TestCase):
 
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_mssm_generation')],
-                         cwd=pjoin(_file_path, os.path.pardir)
-                        ,stdout=devnull,stderr=devnull)
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=devnull,stderr=devnull)
 
         
         self.check_parton_output(cross=4.541638, error=0.035)
@@ -267,7 +267,7 @@ class TestMEfromPdirectory(unittest.TestCase):
         result = save_load_object.load_from_file('/tmp/MGPROCESS/HTML/results.pkl')
         return result[run_name]
 
-    def check_parton_output(self, run_name='run_01', target_event=100, cross=0, error=9e99):
+    def check_parton_output(self, run_name='run_01', target_event=100, cross=0):
         """Check that parton output exists and reach the targert for event"""
                 
         # check that the number of event is fine:
@@ -275,7 +275,7 @@ class TestMEfromPdirectory(unittest.TestCase):
         self.assertEqual(int(data[0]['nb_event']), target_event)
         self.assertTrue('lhe' in data[0].parton)
         if cross:
-            self.assertTrue(abs(cross - float(data[0]['cross']))/error < 3)
+            self.assertTrue(abs(cross - float(data[0]['cross']))/float(data[0]['error']) < 3)
 
 
         
@@ -298,6 +298,6 @@ class TestMEfromPdirectory(unittest.TestCase):
             output = None
         id = subprocess.call(['./bin/madevent','cmd.cmd'], stdout=output, stderr=output)
         self.assertEqual(id, 0)
-        self.check_parton_output(cross=946.58, error=1e-2)
+        self.check_parton_output(cross=947.9)
         os.chdir(cmd)
         

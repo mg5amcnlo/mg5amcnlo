@@ -145,7 +145,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         # interfaces
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
-        self.clean_history(remove_bef_lb1='import')
+        self.clean_history(remove_bef_last='import')
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -269,8 +269,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
         # Remove previous outputs from history
         self.clean_history(to_remove=['display','open','history','launch','output'],
-                           remove_bef_lb1='generate',
-                           keep_last=True)
+                           remove_bef_last='generate')
         
         noclean = '-noclean' in args
         force = '-f' in args 

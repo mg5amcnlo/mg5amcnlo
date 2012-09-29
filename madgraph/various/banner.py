@@ -148,6 +148,7 @@ class Banner(dict):
         for tag, text in self.items():
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
                      {'tag':tag, 'text':text})
+        ff.write('</header>\n')    
         ff.write('</LesHouchesEvents>\n')
             
     ############################################################################
@@ -198,7 +199,7 @@ def recover_banner(results_object, level):
     try:  
         run = results_object.current['run_name']    
         tag = results_object.current['tag'] 
-    except:
+    except Exception:
         return Banner()                                  
     path = results_object.path
     banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
@@ -263,17 +264,38 @@ class RunCard(dict):
         
         elif format == 'float':
             if isinstance(value, str):
-               value = value.replace('d','e')
+                value = value.replace('d','e')
             return ('%.10e' % float(value)).replace('e','d')
         
         elif format == 'str':
             return "'%s'" % value
     
+
+        
+    def write(self, output_file, template):
+        """Write the run_card in output_file according to template 
+           (a path to a valid run_card)"""
+        
+        text = ""
+        for line in file(template,'r'):
+            nline = line.split('#')[0]
+            nline = nline.split('!')[0]
+            comment = line[len(nline):]
+            nline = nline.split('=')
+            if len(nline) != 2:
+                text += line
+            else:
+                text += '  %s\t= %s %s' % (self[nline[1].strip()],nline[1], comment)        
+        
+        fsock = open(output_file,'w')
+        fsock.write(text)
+        fsock.close()
+
+
     def write_include_file(self, output_path):
         """writing the run_card.inc file""" 
         
-        self.fsock = file_writers.FortranWriter(output_path)
-    
+        self.fsock = file_writers.FortranWriter(output_path)    
 ################################################################################
 #      Writing the lines corresponding to the cuts
 ################################################################################
@@ -289,11 +311,11 @@ class RunCard(dict):
         self.add_line('misset', 'float', 0)
         self.add_line('ptonium', 'float', 0.0)
         # maximal pt
-        self.add_line('ptjmax', 'float', 1e5)
-        self.add_line('ptbmax', 'float', 1e5)
-        self.add_line('ptamax', 'float', 1e5)
-        self.add_line('ptlmax', 'float', 1e5)
-        self.add_line('missetmax', 'float', 1e5)
+        self.add_line('ptjmax', 'float', -1)
+        self.add_line('ptbmax', 'float', -1)
+        self.add_line('ptamax', 'float', -1)
+        self.add_line('ptlmax', 'float', -1)
+        self.add_line('missetmax', 'float', -1)
         # maximal rapidity (absolute value)
         self.add_line('etaj', 'float', 4.0)
         self.add_line('etab', 'float', 4.0)
@@ -311,10 +333,10 @@ class RunCard(dict):
         self.add_line('ea', 'float', 0.0)
         self.add_line('el', 'float', 0.0)
         # Maximum E's
-        self.add_line('ejmax', 'float', 1e5)
-        self.add_line('ebmax', 'float', 1e5)
-        self.add_line('eamax', 'float', 1e5)
-        self.add_line('elmax', 'float', 1e5)     
+        self.add_line('ejmax', 'float', -1)
+        self.add_line('ebmax', 'float', -1)
+        self.add_line('eamax', 'float', -1)
+        self.add_line('elmax', 'float', -1)     
         # minimum delta_r
         self.add_line('drjj', 'float', 0.4)     
         self.add_line('drbb', 'float', 0.4)     
@@ -327,29 +349,29 @@ class RunCard(dict):
         self.add_line('drbl', 'float', 0.4)     
         self.add_line('dral', 'float', 0.4)     
         # maximum delta_r
-        self.add_line('drjjmax', 'float', 100)
-        self.add_line('drbbmax', 'float', 100)
-        self.add_line('drllmax', 'float', 100)
-        self.add_line('draamax', 'float', 100)
-        self.add_line('drbjmax', 'float', 100)
-        self.add_line('drajmax', 'float', 100)
-        self.add_line('drjlmax', 'float', 100)
-        self.add_line('drabmax', 'float', 100)
-        self.add_line('drblmax', 'float', 100)
-        self.add_line('dralmax', 'float', 100)
+        self.add_line('drjjmax', 'float', -1)
+        self.add_line('drbbmax', 'float', -1)
+        self.add_line('drllmax', 'float', -1)
+        self.add_line('draamax', 'float', -1)
+        self.add_line('drbjmax', 'float', -1)
+        self.add_line('drajmax', 'float', -1)
+        self.add_line('drjlmax', 'float', -1)
+        self.add_line('drabmax', 'float', -1)
+        self.add_line('drblmax', 'float', -1)
+        self.add_line('dralmax', 'float', -1)
         # minimum invariant mass for pairs
         self.add_line('mmjj', 'float', 0.0)
         self.add_line('mmbb', 'float', 0.0)
         self.add_line('mmaa', 'float', 0.0)
         self.add_line('mmll', 'float', 0.0)
         # maximum invariant mall for pairs
-        self.add_line('mmjjmax', 'float', 1e5)
-        self.add_line('mmbbmax', 'float', 1e5)
-        self.add_line('mmaamax', 'float', 1e5)
-        self.add_line('mmllmax', 'float', 1e5)
+        self.add_line('mmjjmax', 'float', -1)
+        self.add_line('mmbbmax', 'float', -1)
+        self.add_line('mmaamax', 'float', -1)
+        self.add_line('mmllmax', 'float', -1)
         #Min Maxi invariant mass for all leptons 
         self.add_line("mmnl", 'float', 0.0)
-        self.add_line("mmnlmax", 'float', 1e5)
+        self.add_line("mmnlmax", 'float', -1)
         #inclusive cuts
         self.add_line("xptj", 'float', 0.0)
         self.add_line("xptb", 'float', 0.0)
@@ -366,37 +388,37 @@ class RunCard(dict):
         self.add_line("ptheavy", 'float', 0.0)
         # Pt of pairs of leptons (CHARGED AND NEUTRALS)
         self.add_line("ptllmin", "float", 0.0)
-        self.add_line("ptllmax", "float", 1e5)
+        self.add_line("ptllmax", "float", -1)
         # Check   the pt's of the jets sorted by pt
         self.add_line("ptj1min", "float", 0.0)
-        self.add_line("ptj1max", "float", 1e5)
+        self.add_line("ptj1max", "float", -1)
         self.add_line("ptj2min", "float", 0.0)
-        self.add_line("ptj2max", "float", 1e5)
+        self.add_line("ptj2max", "float", -1)
         self.add_line("ptj3min", "float", 0.0)
-        self.add_line("ptj3max", "float", 1e5)
+        self.add_line("ptj3max", "float", -1)
         self.add_line("ptj4min", "float", 0.0)
-        self.add_line("ptj4max", "float", 1e5)
+        self.add_line("ptj4max", "float", -1)
         self.add_line("cutuse", "float", 0.0)
         # Check   the pt's of leptons sorted by pt
         self.add_line("ptl1min", "float", 0.0)
-        self.add_line("ptl1max", "float", 1e5)
+        self.add_line("ptl1max", "float", -1)
         self.add_line("ptl2min", "float", 0.0)
-        self.add_line("ptl2max", "float", 1e5)
+        self.add_line("ptl2max", "float", -1)
         self.add_line("ptl3min", "float", 0.0)
-        self.add_line("ptl3max", "float", 1e5)
+        self.add_line("ptl3max", "float", -1)
         self.add_line("ptl4min", "float", 0.0)
-        self.add_line("ptl4max", "float", 1e5)
+        self.add_line("ptl4max", "float", -1)
         # Check  Ht
         self.add_line("ht2min", 'float', 0.0)
         self.add_line("ht3min", 'float', 0.0)
         self.add_line("ht4min", 'float', 0.0)
-        self.add_line("ht2max", 'float', 1e5)
-        self.add_line("ht3max", 'float', 1e5)
-        self.add_line("ht4max", 'float', 1e5)        
+        self.add_line("ht2max", 'float', -1)
+        self.add_line("ht3max", 'float', -1)
+        self.add_line("ht4max", 'float', -1)        
         self.add_line("htjmin", 'float', 0.0)
-        self.add_line("htjmax", 'float', 1e5)        
+        self.add_line("htjmax", 'float', -1)        
         self.add_line("ihtmin", 'float', 0.0)
-        self.add_line("ihtmax", 'float', 1e5)
+        self.add_line("ihtmax", 'float', -1)
 
 ################################################################################
 #      Writing the lines corresponding to anything but cuts
