@@ -3064,7 +3064,7 @@ class test_aloha_creation(unittest.TestCase):
 
     def test_aloha_multiple_lorentz_and_symmetry(self):
         """ check if the detection of multiple lorentz work """
-
+        
         aloha_lib.KERNEL.clean()
         VVS1 = self.Lorentz(name = 'VVS1',
                  spins = [ 3, 3, 1 ],

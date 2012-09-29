@@ -27,6 +27,7 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_base_objects as loop_base_objects
+import madgraph.loop.loop_helas_objects as loop_helas_objects
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.loop.loop_exporters as loop_exporters
@@ -255,7 +256,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
             ndiags = 0
             if not self._curr_matrix_elements.get_matrix_elements():
                 self._curr_matrix_elements = \
-                    helas_objects.HelasMultiProcess(self._curr_amps,
+                    loop_helas_objects.LoopHelasProcess(self._curr_amps,
                     optimized_output = self.options['loop_optimized_output'])
                 ndiags = sum([len(me.get('diagrams')) for \
                               me in self._curr_matrix_elements.\

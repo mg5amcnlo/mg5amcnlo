@@ -3717,7 +3717,6 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
               'cuttools_dir': cmd._cuttools_dir}
 
             if not cmd.options['loop_optimized_output']:
-                stop
                 ExporterClass=loop_exporters.LoopProcessExporterFortranSA
             else:
                 if all([amp['process']['has_born'] for amp in cmd._curr_amps]):
@@ -3742,7 +3741,7 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
               'complex_mass':cmd.options['complex_mass_scheme'],
               'export_format':'madloop', 
               #use MP for HELAS only if there are virtual amps 
-              'mp':len(self._fks_multi_proc.get_virt_amplitudes()) > 0,
+              'mp':len(cmd._fks_multi_proc.get_virt_amplitudes()) > 0,
               'loop_dir': os.path.join(cmd._mgme_dir,'Template','loop_material'),
               'cuttools_dir': cmd._cuttools_dir}
         if not cmd.options['loop_optimized_output']:

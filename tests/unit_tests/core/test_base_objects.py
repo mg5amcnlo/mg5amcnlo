@@ -17,7 +17,6 @@
 import copy
 import os
 
-
 import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color

@@ -28,6 +28,7 @@ import madgraph.interface.Loop_interface as Loop_interface
 import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_helas_objects as fks_helas
 import madgraph.iolibs.export_fks as export_fks
+import madgraph.iolibs.export_v4 as export_v4
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
@@ -283,7 +284,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         self.options['group_subprocesses'] = False
         # initialize the writer
         if self._export_format in ['NLO']:
-                self._curr_exporter = export_fks.ExportV4Factory(\
+                self._curr_exporter = export_v4.ExportV4Factory(\
                                           self, noclean, output_type='amcatnlo')
             
         # check if a dir with the same name already exists

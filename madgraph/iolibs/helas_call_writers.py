@@ -161,7 +161,6 @@ class HelasCallWriter(base_objects.PhysicsObject):
                   type(matrix_element)
 
         # Do not reuse the wavefunctions for loop matrix elements
-        print "I have type=",matrix_element.__class__.__name__
         if isinstance(matrix_element, loop_helas_objects.LoopHelasMatrixElement):
             return self.get_loop_matrix_element_calls(matrix_element)
         
@@ -1174,7 +1173,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                 else:
                     raise self.PhysicsObjectError, \
                   "The L-cut particle type is not supported"
-                # Relabel the 'number' attribute of the external wavefunctions
+                # Temporarily relabel the 'me_id' attribute of the external wfs
                 # in this wavefunction's mothers so to have them matching the
                 # convention in the loop helas calls.
                 # The same relabeling is performed for couplings.
@@ -1194,7 +1193,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                     for mother in lwf.get('mothers'):
                         if not mother.get('is_loop'):
                             originalNumbers.append(mother.get('number'))
-                            mother.set('number',externalWfNumber)
+                            mother.set('me_id',externalWfNumber)
                             externalWfNumber=externalWfNumber+1
                 # Now we can generate the call for the starting loop wavefunction
                 res.append(self.get_wavefunction_call(\
@@ -1218,7 +1217,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                         indexWfs=indexWfs+1
                     for mother in lwf.get('mothers'):
                         if not mother.get('is_loop'):
-                            mother.set('number',originalNumbers[indexMothers])
+                            mother.set('me_id',originalNumbers[indexMothers])
                             indexMothers=indexMothers+1 
                 res.append('ENDDO')
                 if lcutpart.get('spin')==1:

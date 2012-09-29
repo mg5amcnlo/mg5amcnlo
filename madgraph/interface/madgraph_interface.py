@@ -2388,6 +2388,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         gauge_result_no_brs = []
         lorentz_result =[]
         nb_processes = 0
+        timings = []
         
         if "_cuttools_dir" in dir(self):
             CT_dir = self._cuttools_dir
@@ -3357,8 +3358,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         signal.alarm(timeout)
         to_update = 0
         try:
-#            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_build_nb')
-            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_test_build_nb')
+            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_build_nb')
+#            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_test_build_nb')
             signal.alarm(0)
             web_version = int(filetext.read().strip())            
         except (TimeOutError, ValueError, IOError):
@@ -3401,8 +3402,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             fail = 0
             for i in range(data['version_nb'], web_version):
                 try:
-#                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch/build%s.patch' %(i+1))
-                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch_test/build%s.patch' %(i+1))
+                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch/build%s.patch' %(i+1))
+#                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch_test/build%s.patch' %(i+1))
                 except:
                     print 'fail to load patch to build #%s' % (i+1)
                     fail = i

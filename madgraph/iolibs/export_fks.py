@@ -1219,10 +1219,6 @@ C
         ngraphs = matrix_element.get_number_of_amplitudes()
         replace_dict['ngraphs'] = ngraphs
     
-        # Extract nwavefuncs
-        nwavefuncs = matrix_element.get_number_of_wavefunctions()
-        replace_dict['nwavefuncs'] = nwavefuncs
-    
         # Extract ncolor
         ncolor = max(1, len(matrix_element.get('color_basis')))
         replace_dict['ncolor'] = ncolor
@@ -1235,6 +1231,11 @@ C
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
         replace_dict['helas_calls'] = "\n".join(helas_calls)
+    
+        # Extract nwavefuncs (important to place after get_matrix_element_calls
+        # so that 'me_id' is set)
+        nwavefuncs = matrix_element.get_number_of_wavefunctions()
+        replace_dict['nwavefuncs'] = nwavefuncs
     
         # Extract amp2 lines
         amp2_lines = self.get_amp2_lines(matrix_element)

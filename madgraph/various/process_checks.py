@@ -410,15 +410,19 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             # otherwise
             import madgraph.loop.loop_exporters as loop_exporters
             if loop_optimized_output:
-                exporter=loop_exporters.LoopProcessOptimizedExporterFortranSA
+                exporter_class=loop_exporters.LoopProcessOptimizedExporterFortranSA
             else:
-                exporter=loop_exporters.LoopProcessExporterFortranSA
-
-            FortranExporter = exporter(\
-                self.mg_root, export_dir, clean=True,
-                complex_mass_scheme = self.cmass_scheme, mp=True,
-                loop_dir=os.path.join(self.mg_root, 'Template/loop_material'),\
-                cuttools_dir=self.cuttools_dir)
+                exporter_class=loop_exporters.LoopProcessExporterFortranSA
+            
+            options = {'clean': True, 
+                       'complex_mass': self.cmass_scheme,
+                       'export_format':'madloop', 
+                       'mp':True,
+              'loop_dir': os.path.join(self.mg_root,'Template','loop_material'),
+                       'cuttools_dir': self.cuttools_dir}
+                        
+            FortranExporter = exporter_class(\
+                self.mg_root, export_dir, options)
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
             FortranExporter.copy_v4template(modelname=model.get('name'))
             FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
@@ -750,16 +754,19 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         # otherwise
         import madgraph.loop.loop_exporters as loop_exporters
         if loop_optimized_output:
-            exporter=loop_exporters.LoopProcessOptimizedExporterFortranSA
+            exporter_class=loop_exporters.LoopProcessOptimizedExporterFortranSA
         else:
-            exporter=loop_exporters.LoopProcessExporterFortranSA
-            
+            exporter_class=loop_exporters.LoopProcessExporterFortranSA
+    
+        options = {'clean': True, 
+                   'complex_mass': self.cmass_scheme,
+                   'export_format':'madloop', 
+                   'mp':True,
+          'loop_dir': os.path.join(self.mg_root,'Template','loop_material'),
+                   'cuttools_dir': self.cuttools_dir}
+    
         start=time.time()
-        FortranExporter = exporter(\
-            self.mg_root, export_dir, clean=True,
-            complex_mass_scheme = self.cmass_scheme, mp=True,
-            loop_dir=os.path.join(self.mg_root, 'Template/loop_material'),\
-            cuttools_dir=self.cuttools_dir)
+        FortranExporter = exporter_class(self.mg_root, export_dir, options)
         FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
         FortranExporter.copy_v4template(modelname=model.get('name'))
         FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)

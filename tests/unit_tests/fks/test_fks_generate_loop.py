@@ -39,7 +39,6 @@ class TestGenerateLoopFKS(unittest.TestCase):
         if not hasattr(self, 'mymodel'):
             TestGenerateLoopFKS.mymodel = import_ufo.import_model('loop_sm')
     
-
     def test_generate_virtuals_single_process(self):
         """checks that the virtuals are correctly generated for a single process"""
 
