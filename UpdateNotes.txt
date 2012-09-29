@@ -1,6 +1,6 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.5.1 (XX/XX/XX)  JA: Ensure that mirrored processes are turned on for decay
+1.5.1 (XX/XX/XX)  JA: Ensure that mirrored processes are turned off for decay
                       processes of type A > B C...
 
 1.5.0 (28/09/12)  OM: Allow MG5 to run in complex mass scheme mode
