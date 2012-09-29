@@ -16,7 +16,17 @@ all_parameters = parameters.all_parameters
 all_orders = coupling_orders.all_orders
 all_functions = function_library.all_functions
 
+try:
+   import decays
+except ImportError:
+   pass
+else:
+   all_decays = decays.all_decays
 
-__author__ = "N. Christensen, C. Duhr"
-__version__ = "1.3"
-__email__ = "neil@pa.msu.edu, claude.duhr@uclouvain.be"
+
+gauge = [0]
+
+
+__author__ = "Benjamin Fuks"
+__date__ = "31.07.12"
+__version__= "1.0.9"

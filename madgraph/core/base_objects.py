@@ -280,7 +280,7 @@ class Particle(PhysicsObject):
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                     "Spin %s is not an integer" % repr(value)
-            if value < 1 or value > 5:
+            if (value < 1 or value > 5) and value != 99:
                 raise self.PhysicsObjectError, \
                    "Spin %i not valid" % value
 
@@ -395,7 +395,7 @@ class Particle(PhysicsObject):
         """Return a list of the helicity states for the onshell particle"""
 
         spin = self.get('spin')
-        if spin == 1:
+        if spin ==1:
             # Scalar
             return [ 0 ]
         elif spin == 2:
@@ -417,7 +417,7 @@ class Particle(PhysicsObject):
         elif spin == 5 and self.get('mass').lower() == 'zero':
             # Massless tensor
             return [-2, -1, 1, 2]
-        elif spin == 5:
+        elif spin in [5, 99]:
             # Massive tensor
             return [-2, -1, 0, 1, 2]
         
@@ -444,6 +444,24 @@ class ParticleList(PhysicsObjectList):
         """Test if object obj is a valid Particle for the list."""
         return isinstance(obj, Particle)
                     
+    def get_copy(self, name):
+        """Try to find a particle with the given name. Check both name
+        and antiname. If a match is found, return the a copy of the 
+        corresponding particle (first one in the list), with the 
+        is_part flag set accordingly. None otherwise."""
+        
+        part = self.find_name(name)
+        if not part:
+            return None
+        part = copy.copy(part)     
+          
+        if part.get('name') == name:
+            part.set('is_part', True)
+            return part
+        elif part.get('antiname') == name:
+            part.set('is_part', False)
+            return part
+        return None
 
     def find_name(self, name):
         """Try to find a particle with the given name. Check both name
@@ -454,13 +472,10 @@ class ParticleList(PhysicsObjectList):
         assert isinstance(name, str), "%s is not a valid string" % str(name) 
 
         for part in self:
-            mypart = copy.copy(part)
             if part.get('name') == name:
-                mypart.set('is_part', True)
-                return mypart
+                return part
             elif part.get('antiname') == name:
-                mypart.set('is_part', False)
-                return mypart
+                return part
 
         return None
 
@@ -759,7 +774,15 @@ class Interaction(PhysicsObject):
                     ref_dict_to1[pdg_tuple].append((pdg_part, self['id']))
             else:
                 ref_dict_to1[pdg_tuple] = [(pdg_part, self['id'])]
-                
+
+    def get_WEIGHTED_order(self, model):
+        """Get the WEIGHTED order for this interaction, for equivalent
+        3-particle vertex. Note that it can be fractional."""
+
+        return float(sum([model.get('order_hierarchy')[key]*self.get('orders')[key]\
+                          for key in self.get('orders')]))/ \
+               max((len(self.get('particles'))-2), 1)
+
     def __str__(self):
         """String representation of an interaction. Outputs valid Python 
         with improved format. Overrides the PhysicsObject __str__ to only
@@ -1052,6 +1075,24 @@ class Model(PhysicsObject):
             except:
                 return None
 
+    def get_lorentz(self, name):
+        """return the lorentz object from the associate name"""
+        if hasattr(self, 'lorentz_name2obj'):
+            return self.lorentz_name2obj[name]  
+        else:
+            self.create_lorentz_dict()
+            return self.lorentz_name2obj[name]
+
+    def create_lorentz_dict(self):
+        """create the dictionary linked to the lorentz structure"""
+        self.lorentz_name2obj = {}
+        self.lorentz_expr2name = {}
+        if not self.get('lorentz'):
+            return
+        for lor in self.get('lorentz'):
+            self.lorentz_name2obj[lor.name] = lor
+            self.lorentz_expr2name[lor.structure] = lor.name
+
     def get_interaction(self, id):
         """Return the interaction corresponding to the id"""
 
@@ -1149,6 +1190,14 @@ class Model(PhysicsObject):
 
         return particles, hierarchy
 
+    def get_max_WEIGHTED(self):
+        """Return the maximum WEIGHTED order for any interaction in the model,
+        for equivalent 3-particle vertices. Note that it can be fractional."""
+
+        return max([inter.get_WEIGHTED_order(self) for inter in \
+                        self.get('interactions')])
+            
+
     def check_majoranas(self):
         """Return True if there is fermion flow violation, False otherwise"""
 
@@ -1223,6 +1272,14 @@ class Model(PhysicsObject):
                     part.set('antiname', default[pdg])
                     if antipart:
                         antipart.set('antiname', default[pdg])
+        
+        #additional check for the Higgs in the mssm
+        if self.get('name') == 'mssm' or self.get('name').startswith('mssm-'):
+            part = self.get_particle(25)
+            part.set('name', 'h1')
+            part.set('antiname', 'h1')
+            
+        
 
     def get_first_non_pdg(self):
         """Return the first positive number that is not a valid PDG code"""
@@ -1921,7 +1978,7 @@ class Diagram(PhysicsObject):
         num_props = len([i for i in s_channels if i != 0 and \
                          model.get_particle(i).get('width').lower() != 'zero'])
         
-        if num_props <= 1:
+        if num_props < 1:
             return 1
         else:
             return 2**num_props
@@ -2464,8 +2521,19 @@ class Process(PhysicsObject):
         legs = copy.deepcopy(self.get('legs'))
         if self.get('is_decay_chain'):
             legs.pop(0)
+        org_decay_chains = copy.copy(self.get('decay_chains'))
+        sorted_decay_chains = []
+        # Sort decay chains according to leg order
+        for leg in legs:
+            if not leg.get('state'): continue
+            org_ids = [l.get('legs')[0].get('id') for l in \
+                           org_decay_chains]
+            if leg.get('id') in org_ids:
+                sorted_decay_chains.append(org_decay_chains.pop(\
+                                        org_ids.index(leg.get('id'))))
+        assert not org_decay_chains
         ileg = 0
-        for decay in self.get('decay_chains'):
+        for decay in sorted_decay_chains:
             while legs[ileg].get('state') == False or \
                       legs[ileg].get('id') != decay.get('legs')[0].get('id'):
                 ileg = ileg + 1

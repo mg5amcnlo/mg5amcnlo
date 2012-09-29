@@ -99,12 +99,12 @@ class TestMECmdShell(unittest.TestCase):
         data = text.split('DECAY  23')[1].split('DECAY',1)[0]
         self.assertEqual("""1.492240e+00
 #  BR             NDA  ID1    ID2   ...
-   2.493165e-01   2    3  -3
-   2.493165e-01   2    1  -1
-   1.944158e-01   2    4  -4
-   1.944158e-01   2    2  -2
-   5.626776e-02   2    -11  11
-   5.626776e-02   2    -13  13
+   2.493165e-01   2    3  -3 # 0.37204
+   2.493165e-01   2    1  -1 # 0.37204
+   1.944158e-01   2    4  -4 # 0.290115
+   1.944158e-01   2    2  -2 # 0.290115
+   5.626776e-02   2    -11  11 # 0.083965
+   5.626776e-02   2    -13  13 # 0.083965
 #
 #      PDG        Width""".split('\n'), data.strip().split('\n'))
         
@@ -188,7 +188,7 @@ class TestMEfromfile(unittest.TestCase):
         
         devnull =open(os.devnull,'w')
         if not os.path.exists(pjoin(_file_path, os.path.pardir, 'pythia-pgs')):
-            p = subprocess.POPEN([pjoin(_file_path, os.path.pardir,'bin','mg5')],
+            p = subprocess.Popen([pjoin(_file_path, os.path.pardir,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=devnull,stderr=devnull)
             out = p.communicate('install pythia-pgs')
@@ -197,7 +197,7 @@ class TestMEfromfile(unittest.TestCase):
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_mssm_generation')],
                          cwd=pjoin(_file_path, os.path.pardir),
-                         stdout=devnull,stderr=devnull)
+                        stdout=devnull,stderr=devnull)
 
         
         self.check_parton_output(cross=4.541638, error=0.035)
@@ -267,16 +267,15 @@ class TestMEfromPdirectory(unittest.TestCase):
         result = save_load_object.load_from_file('/tmp/MGPROCESS/HTML/results.pkl')
         return result[run_name]
 
-    def check_parton_output(self, run_name='run_01', target_event=100, cross=0, error=9e99):
+    def check_parton_output(self, run_name='run_01', target_event=100, cross=0):
         """Check that parton output exists and reach the targert for event"""
                 
         # check that the number of event is fine:
         data = self.load_result(run_name)
         self.assertEqual(int(data[0]['nb_event']), target_event)
         self.assertTrue('lhe' in data[0].parton)
-        
         if cross:
-            self.assertTrue(abs(cross - float(data[0]['cross']))/error < 3)
+            self.assertTrue(abs(cross - float(data[0]['cross']))/float(data[0]['error']) < 3)
 
 
         
@@ -299,6 +298,6 @@ class TestMEfromPdirectory(unittest.TestCase):
             output = None
         id = subprocess.call(['./bin/madevent','cmd.cmd'], stdout=output, stderr=output)
         self.assertEqual(id, 0)
-        self.check_parton_output(cross=944.4, error=1e-2)
+        self.check_parton_output(cross=947.9)
         os.chdir(cmd)
         

@@ -23,8 +23,8 @@ c
       double precision mpole(-nexternal:0),shat,tsgn
       integer i,j,iconfig
 
-      double precision pmass(-nexternal:0,lmaxconfigs)
-      double precision pwidth(-nexternal:0,lmaxconfigs)
+      double precision prmass(-nexternal:0,lmaxconfigs)
+      double precision prwidth(-nexternal:0,lmaxconfigs)
       integer pow(-nexternal:0,lmaxconfigs)
       logical first_time
 c
@@ -41,7 +41,7 @@ c     External
 c
       double precision dot
 
-      save pmass,pwidth,pow
+      save prmass,prwidth,pow
       data first_time /.true./
 c-----
 c  Begin Code
@@ -70,17 +70,17 @@ c      shat = 1d0
             xp(j,i) = xp(j,iforest(1,i,iconfig))
      $           +tsgn*xp(j,iforest(2,i,iconfig))
          enddo
-         if (pwidth(i,iconfig) .ne. 0d0 .and. .false.) then
+         if (prwidth(i,iconfig) .ne. 0d0 .and. .false.) then
             testamp=testamp/((dot(xp(0,i),xp(0,i))
-     $                        -pmass(i,iconfig)**2)**2
-     $         -(pmass(i,iconfig)*pwidth(i,iconfig))**2)
+     $                        -prmass(i,iconfig)**2)**2
+     $         -(prmass(i,iconfig)*prwidth(i,iconfig))**2)
          else
             testamp = testamp/((dot(xp(0,i),xp(0,i)) -
-     $                          pmass(i,iconfig)**2)
+     $                          prmass(i,iconfig)**2)
      $                          **(pow(i,iconfig)))
          endif
         testamp=testamp*shat**(pow(i,iconfig))
-c        write(*,*) i,iconfig,pow(i,iconfig),pmass(i,iconfig)
+c        write(*,*) i,iconfig,pow(i,iconfig),prmass(i,iconfig)
       enddo
 c      testamp = 1d0/dot(xp(0,-1),xp(0,-1))
       testamp=abs(testamp)
@@ -112,8 +112,8 @@ c
       double precision mpole(-nexternal:0),shat,tsgn
       integer i,j,iconfig,iproc
 
-      double precision pmass(-nexternal:0,lmaxconfigs)
-      double precision pwidth(-nexternal:0,lmaxconfigs)
+      double precision prmass(-nexternal:0,lmaxconfigs)
+      double precision prwidth(-nexternal:0,lmaxconfigs)
       integer pow(-nexternal:0,lmaxconfigs)
       logical first_time, onshell
       double precision xmass
@@ -152,7 +152,7 @@ c     External
 c
       double precision dot
 
-      save pmass,pwidth,pow
+      save prmass,prwidth,pow
       data first_time /.true./
 c-----
 c  Begin Code
@@ -169,7 +169,7 @@ c-----
               cycle
             endif
             nbw=nbw+1
-            if (pwidth(i,iconfig) .gt. 0d0) then
+            if (prwidth(i,iconfig) .gt. 0d0) then
                if (lbw(nbw) .eq. 1) then
                   write(*,*) 'Requiring BW ',i,nbw
                elseif(lbw(nbw) .eq. 2) then
@@ -207,15 +207,15 @@ c     Start loop over propagators
          enddo
          if (tsgn .lt. 0d0) cycle
          nbw=nbw+1
-         if (pwidth(i,iconfig) .gt. 0d0 ) then !This is B.W.
+         if (prwidth(i,iconfig) .gt. 0d0 ) then !This is B.W.
 c            write(*,*) 'Checking BW',nbw
             xmass = sqrt(dot(xp(0,i),xp(0,i)))
-c            write(*,*) 'xmass',xmass,pmass(i,iconfig)
+c            write(*,*) 'xmass',xmass,prmass(i,iconfig)
 c
 c           Here we set if the BW is "on-shell" for LesHouches
 c
-            onshell = (abs(xmass - pmass(i,iconfig)) .lt.
-     $           bwcutoff*pwidth(i,iconfig))
+            onshell = (abs(xmass - prmass(i,iconfig)) .lt.
+     $           bwcutoff*prwidth(i,iconfig))
             if(onshell)then
 c     Remove on-shell forbidden s-channels (gForceBW=2) (JA 2/10/11)
               if(gForceBW(i,iconfig).eq.2) then
@@ -246,9 +246,9 @@ c           Else remove daughter if forced to be onshell
                  elseif(gForceBW(i, iconfig).eq.1) then
                     OnBW(idenpart)=.false.
 c           Else remove either this resonance or daughter, which is closer to mass shell
-                 elseif(abs(xmass-pmass(i,iconfig)).gt.
+                 elseif(abs(xmass-prmass(i,iconfig)).gt.
      $                   abs(sqrt(dot(xp(0,idenpart),xp(0,idenpart)))-
-     $                   pmass(i,iconfig))) then
+     $                   prmass(i,iconfig))) then
                     OnBW(i)=.false.
 c           Else remove OnBW for daughter
                  else
@@ -264,8 +264,8 @@ c              write(*,*) 'cut_bw: ',i,gForceBW(i,iconfig),OnBW(i),cut_bw
 c
 c     Here we set onshell for phase space integration (JA 4/8/11)
 c
-            onshell = (abs(xmass - pmass(i,iconfig)) .lt.
-     $           5d0*pwidth(i,iconfig))
+            onshell = (abs(xmass - prmass(i,iconfig)) .lt.
+     $           5d0*prwidth(i,iconfig))
 
             if (onshell .and. (lbw(nbw).eq. 2) .or.
      $          .not. onshell .and. (lbw(nbw).eq. 1)) then
@@ -303,12 +303,12 @@ c
       double precision  xe(-nexternal:nexternal)
       double precision tsgn, xo, a
       double precision x1,x2,xk(nexternal)
-      double precision dr,mtot,etot,stot,xqfact
+      double precision dr,mtot,etot,xqfact
       integer i, iconfig, l1, l2, j, nt, nbw, iproc
       integer iden_part(-max_branch:-1)
 
-      double precision pmass(-nexternal:0,lmaxconfigs)
-      double precision pwidth(-nexternal:0,lmaxconfigs)
+      double precision prmass(-nexternal:0,lmaxconfigs)
+      double precision prwidth(-nexternal:0,lmaxconfigs)
       integer pow(-nexternal:0,lmaxconfigs)
 
       integer idup(nexternal,maxproc,maxsproc)
@@ -351,6 +351,9 @@ c
       integer        lbw(0:nexternal)  !Use of B.W.
       common /to_BW/ lbw
 
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
+
       include 'coupl.inc'
       include 'cuts.inc'
 c
@@ -361,7 +364,6 @@ c-----
 c  Begin Code
 c-----      
       include 'props.inc'
-      stot = 4d0*ebeam(1)*ebeam(2)
 c      etmin = 10
       nt = 0
       iconfig = this_config
@@ -390,7 +392,7 @@ c     Reset variables
       enddo
 c     Find non-zero process number
       do iproc=1,maxsproc
-         if(sprop(iproc,-1,iconfig).gt.0) goto 10
+         if(sprop(iproc,-1,iconfig).ne.0) goto 10
       enddo
  10   continue
 c     If no non-zero sprop, set iproc to 1
@@ -442,59 +444,72 @@ c-JA 1/2009: Set grid also based on xqcut
               xm(i)=max(xm(i),max(xqcutij(l1,l2),0d0))
             endif
 c            write(*,*) 'iconfig,i',iconfig,i
-c            write(*,*) pwidth(i,iconfig),pmass(i,iconfig)
-            if (pwidth(i,iconfig) .gt. 0 ) then
+c            write(*,*) prwidth(i,iconfig),prmass(i,iconfig)
+            if (prwidth(i,iconfig) .gt. 0 ) then
                nbw=nbw+1
 c              JA 6/8/2011 Set xe(i) for resonances
                if (lbw(nbw).eq.1) then
-                  xm(i) = max(xm(i), pmass(i,iconfig)-5d0*pwidth(i,iconfig))
+                  xm(i) = max(xm(i), prmass(i,iconfig)-5d0*prwidth(i,iconfig))
                else if (gforcebw(i,iconfig).eq.1) then
-                  xm(i) = max(xm(i), pmass(i,iconfig)-bwcutoff*pwidth(i,iconfig))
+                  xm(i) = max(xm(i), prmass(i,iconfig)-bwcutoff*prwidth(i,iconfig))
                endif
             endif
             xe(i)=max(xe(i),xm(i))
-            if (pwidth(i,iconfig) .gt. 0 .and. lbw(nbw) .le. 1) then         !B.W.
-c               nbw = nbw +1
-
+c     Check for impossible onshell configurations
+c     Either: required onshell and daughter masses too large
+c     Or: forced and daughter masses too large
+c     Or: required offshell and forced, with bwcutoff.le.5
+            if(prwidth(i,iconfig) .gt. 0.and.
+     $         (lbw(nbw).eq.1.and.
+     $          (prmass(i,iconfig)+5d0*prwidth(i,iconfig).lt.xm(i)
+     $           .or.prmass(i,iconfig)-5d0*prwidth(i,iconfig).gt.stot)
+     $          .or.gforcebw(i,iconfig).eq.1.and.
+     $              prmass(i,iconfig)+bwcutoff*prwidth(i,iconfig).lt.xm(i)
+     $          .or.lbw(nbw).eq.2.and.gforcebw(i,iconfig).eq.1 .and.
+     $              bwcutoff.le.5d0))
+     $        then
+c     Write results.dat and quit
+               call write_null_results()
+               stop
+            endif
+            if (prwidth(i,iconfig) .gt. 0 .and. lbw(nbw) .le. 1) then         !B.W.
                if (i .eq. -(nexternal-(nincoming+1))) then  !This is s-hat
                   j = 3*(nexternal-2)-4+1    !set i to ndim+1
 c-----
 c tjs 11/2008 if require BW then force even if worried about energy
 c JA 8/2011 don't use BW if mass is > CM energy
 c----
-                  if(pmass(i,iconfig).ge.xm(i).and.iden_part(i).eq.0.and.
-     $                 pmass(i,iconfig).lt.sqrt(stot)
+                  if(prmass(i,iconfig).ge.xm(i).and.iden_part(i).eq.0.and.
+     $                 prmass(i,iconfig).lt.sqrt(stot)
      $                 .or. lbw(nbw).eq.1) then
-                     write(*,*) 'Setting PDF BW',j,nbw,pmass(i,iconfig)
-                     spole(j)=pmass(i,iconfig)*pmass(i,iconfig)/stot
-                     swidth(j) = pwidth(i,iconfig)*pmass(i,iconfig)/stot
-                     xm(i) = pmass(i,iconfig)
+                     write(*,*) 'Setting PDF BW',j,nbw,prmass(i,iconfig)
+                     spole(j)=prmass(i,iconfig)*prmass(i,iconfig)/stot
+                     swidth(j) = prwidth(i,iconfig)*prmass(i,iconfig)/stot
                   endif
                   continue
                else if(iden_part(i).eq.0 .or. lbw(nbw).eq.1) then
-                  write(*,*) 'Setting BW',i,nbw,pmass(i,iconfig)
-                  spole(-i)=pmass(i,iconfig)*pmass(i,iconfig)/stot
-                  swidth(-i) = pwidth(i,iconfig)*pmass(i,iconfig)/stot
-                  xm(i) = pmass(i,iconfig)
+                  write(*,*) 'Setting BW',i,nbw,prmass(i,iconfig)
+                  spole(-i)=prmass(i,iconfig)*prmass(i,iconfig)/stot
+                  swidth(-i) = prwidth(i,iconfig)*prmass(i,iconfig)/stot
                endif
 c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
                if (swidth(-i) .eq. 0d0 .and.
      $              i.ne.-(nexternal-(nincoming+1)))then
-                  a=pmass(i,iconfig)**2/stot
+                  a=prmass(i,iconfig)**2/stot
                   xo = min(xm(i)**2/stot, 1-1d-8)
                   if (xo.eq.0d0) xo=1d0/stot
                   call setgrid(-i,xo,a,1)
                endif
             else                                  !1/x^pow
-              a=pmass(i,iconfig)**2/stot
+              a=prmass(i,iconfig)**2/stot
 c     JA 4/1/2011 always set grid
               xo = min(xm(i)**2/stot, 1-1d-8)
               if (xo.eq.0d0) xo=1d0/stot
-c              if (pwidth(i, iconfig) .eq. 0d0.or.iden_part(i).gt.0) then 
+c              if (prwidth(i, iconfig) .eq. 0d0.or.iden_part(i).gt.0) then 
               call setgrid(-i,xo,a,1)
 c              else 
 c                 write(*,*) 'Using flat grid for BW',i,nbw,
-c     $                pmass(i,iconfig)
+c     $                prmass(i,iconfig)
 c              endif
             endif
             etot = etot+xe(i)
@@ -510,7 +525,7 @@ c
 c-fax
 c-JA 1/2009: Set grid also based on xqcut
             if (l2 .gt. 0) x1 = max(etmin(l2),max(xqfact*xqcuti(l2),0d0))
-            x1 = max(x1, xm(l2)/1d0)
+            x1 = max(x1, xe(l2)/1d0)
             if (nt .gt. 1) x1 = max(x1,xk(nt-1))
             xk(nt)=x1
 c            write(*,*) 'Using 1',l2,x1
@@ -524,7 +539,7 @@ c
 c-JA 1/2009: Set grid also based on xqcut
             if (l2 .gt. 0) x2 = max(etmin(l2),max(xqfact*xqcuti(l2),0d0))
 c            if (l2 .gt. 0) x2 = max(etmin(l2),0d0)
-            x2 = max(x2, xm(l2)/1d0)
+            x2 = max(x2, xe(l2)/1d0)
 c            if (nt .gt. 1) x2 = max(x2,xk(nt-1))
             
 c            write(*,*) 'Using 2',l2,x2
@@ -538,7 +553,7 @@ c           Use 1/10000 of sqrt(s) as minimum, to always get integration
                write(*,*) 'Warning: No cutoff for shat integral found'
                write(*,*) '         Minimum set to ', xo
             endif
-            a=-pmass(i,iconfig)**2/stot
+            a=-prmass(i,iconfig)**2/stot
 c            call setgrid(-i,xo,a,pow(i,iconfig))
 
 c               write(*,*) 'Enter minimum for ',-i, xo
@@ -602,3 +617,12 @@ c      if (xo .gt. 0) call setgrid(-i,xo,a,1)
 
       end
 
+      subroutine write_null_results()
+      implicit none
+
+      write(*,*),'Impossible BW configuration'
+      open(unit=66,file='results.dat',status='unknown')
+      write(66,'(3e12.5,2i9,i5,i9,e10.3)')0.,0.,0.,0,0,1,0,0.
+      write(66,'(i4,4e15.5)') 1,0.,0.,0.,0.
+      close(66)
+      end

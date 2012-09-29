@@ -33,6 +33,7 @@ import madgraph.interface.Loop_interface as Loop_interface
 import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_helas_objects as fks_helas
 import madgraph.iolibs.export_fks as export_fks
+import madgraph.iolibs.export_v4 as export_v4
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
@@ -240,7 +241,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         # interfaces
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
-        self.clean_history(remove_bef_lb1='import')
+        self.clean_history(remove_bef_last='import')
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -385,8 +386,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
 
         # Remove previous outputs from history
         self.clean_history(to_remove=['display','open','history','launch','output'],
-                           remove_bef_lb1='generate',
-                           keep_last=True)
+                           remove_bef_last='generate')
         
         noclean = '-noclean' in args
         force = '-f' in args 
@@ -400,25 +400,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         self.options['group_subprocesses'] = False
         # initialize the writer
         if self._export_format in ['NLO']:
-            if not self.options['loop_optimized_output']:
-                self._curr_exporter = export_fks.ProcessExporterFortranFKS(\
-                                          self._mgme_dir, self._export_dir,
-                                          not noclean, 
-                                          self.options['complex_mass_scheme'], 
-                                          #use MP for HELAS only if there are virtual amps 
-                                          len(self._fks_multi_proc.get_virt_amplitudes()) > 0, 
-                                          os.path.join(self._mgme_dir, 'Template', 'loop_material'),
-                                          self._cuttools_dir)
-            
-            else:
-                self._curr_exporter = export_fks.ProcessOptimizedExporterFortranFKS(\
-                                          self._mgme_dir, self._export_dir,
-                                          not noclean, 
-                                          self.options['complex_mass_scheme'],
-                                          #use MP for HELAS only if there are virtual amps 
-                                          len(self._fks_multi_proc.get_virt_amplitudes()) > 0, 
-                                          os.path.join(self._mgme_dir,'Template/loop_material'),
-                                          self._cuttools_dir)
+            self._curr_exporter = export_v4.ExportV4Factory(\
+                                          self, noclean, output_type='amcatnlo')
             
         # check if a dir with the same name already exists
         if not force and not noclean and os.path.isdir(self._export_dir)\

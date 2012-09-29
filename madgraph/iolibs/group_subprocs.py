@@ -39,7 +39,7 @@ import madgraph.various.misc as misc
 
 import aloha.create_aloha as create_aloha
 
-import models.sm.write_param_card as write_param_card
+import models.write_param_card as write_param_card
 from madgraph import MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
@@ -393,11 +393,12 @@ class SubProcessGroup(base_objects.PhysicsObject):
         amplitude_classes = {}
 
         for iamp, amplitude in enumerate(amplitudes):
+            process = amplitude.get('process')
             is_parts = [model.get_particle(l.get('id')) for l in \
-                        amplitude.get('process').get('legs') if not \
+                        process.get('legs') if not \
                         l.get('state')]
             fs_parts = [model.get_particle(l.get('id')) for l in \
-                        amplitude.get('process').get('legs') if l.get('state')]
+                        process.get('legs') if l.get('state')]
             diagrams = amplitude.get('diagrams')
 
             # This is where the requirements for which particles to
@@ -408,9 +409,10 @@ class SubProcessGroup(base_objects.PhysicsObject):
             proc_class = [ [(p.is_fermion(), ) \
                             for p in is_parts], # p.get('is_part')
                            [(p.get('mass'), p.get('spin'),
-                             p.get('color') != 1) for p in \
-                            is_parts + fs_parts],
-                           amplitude.get('process').get('id')]
+                             abs(p.get('color')),l.get('onshell')) for (p, l) \
+                             in zip(is_parts + fs_parts, process.get('legs'))],
+                           amplitude.get('process').get('id'),
+                           process.get('id')]
             try:
                 amplitude_classes[iamp] = proc_classes.index(proc_class)
             except ValueError:
@@ -452,15 +454,15 @@ class SubProcessGroupList(base_objects.PhysicsObjectList):
 #===============================================================================
 
 class DecayChainSubProcessGroup(SubProcessGroup):
-    """Class to keep track of subprocess groups from a decay chain"""
+    """Class to keep track of subprocess groups from a list of decay chains"""
 
     def default_setup(self):
         """Define object and give default values"""
 
         self['core_groups'] = SubProcessGroupList()
         self['decay_groups'] = DecayChainSubProcessGroupList()
-        # decay_chain_amplitude is the original DecayChainAmplitude
-        self['decay_chain_amplitude'] = diagram_generation.DecayChainAmplitude()
+        # decay_chain_amplitudes is the original DecayChainAmplitudeList
+        self['decay_chain_amplitudes'] = diagram_generation.DecayChainAmplitudeList()
         
     def filter(self, name, value):
         """Filter for valid property values."""
@@ -473,16 +475,16 @@ class DecayChainSubProcessGroup(SubProcessGroup):
             if not isinstance(value, DecayChainSubProcessGroupList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid decay_groups" % str(value)
-        if name == 'decay_chain_amplitude':
-            if not isinstance(value, diagram_generation.DecayChainAmplitude):
+        if name == 'decay_chain_amplitudes':
+            if not isinstance(value, diagram_generation.DecayChainAmplitudeList):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid DecayChainAmplitude" % str(value)
+                        "%s is not a valid DecayChainAmplitudeList" % str(value)
         return True
 
     def get_sorted_keys(self):
         """Return diagram property names as a nicely sorted list."""
 
-        return ['core_groups', 'decay_groups', 'decay_chain_amplitude']
+        return ['core_groups', 'decay_groups', 'decay_chain_amplitudes']
 
     def nice_string(self, indent = 0):
         """Returns a nicely formatted string of the content."""
@@ -511,8 +513,8 @@ class DecayChainSubProcessGroup(SubProcessGroup):
         # Combine decays
         matrix_elements = \
                 helas_objects.HelasMultiProcess.generate_matrix_elements(\
-                                   diagram_generation.AmplitudeList(\
-                                          [self.get('decay_chain_amplitude')]))
+                              diagram_generation.AmplitudeList(\
+                                            self.get('decay_chain_amplitudes')))
 
         # For each matrix element, check which group it should go into and
         # calculate diagram_maps
@@ -544,8 +546,7 @@ class DecayChainSubProcessGroup(SubProcessGroup):
         return subproc_groups
 
     def assign_group_to_decay_process(self, process):
-        """Recursively identify which group process belongs to,
-        and determine the mapping_diagrams for the process."""
+        """Recursively identify which group process belongs to."""
 
         # Determine properties for the decay chains
         # The entries of group_assignments are:
@@ -578,19 +579,20 @@ class DecayChainSubProcessGroup(SubProcessGroup):
         # Now calculate the corresponding properties for process
 
         # Find core process group
-        ids = [l.get('id') for l in process.get('legs')]
-        core_group = [(i, group) for (i, group) in \
+        ids = [(l.get('id'),l.get('onshell')) for l in process.get('legs')]
+        core_groups = [(i, group) for (i, group) in \
                       enumerate(self.get('core_groups')) \
-                      if ids in [[l.get('id') for l in \
+                      if ids in [[(l.get('id'),l.get('onshell')) for l in \
                                   a.get('process').get('legs')] \
-                                 for a in group.get('amplitudes')]]
+                                 for a in group.get('amplitudes')] \
+                       and process.get('id') == group.get('number')]
 
-        if not core_group:
+        if not core_groups:
             return None
-
-        assert len(core_group) == 1
         
-        core_group = core_group[0]
+        assert len(core_groups) == 1
+        
+        core_group = core_groups[0]
         # This is the first return argument - the chain of group indices
         group_assignment = (core_group[0],
                             tuple([g for g in group_assignments]))
@@ -605,27 +607,35 @@ class DecayChainSubProcessGroup(SubProcessGroup):
     # group_amplitudes
     #===========================================================================
     @staticmethod
-    def group_amplitudes(decay_chain_amp):
+    def group_amplitudes(decay_chain_amps):
         """Recursive function. Starting from a DecayChainAmplitude,
         return a DecayChainSubProcessGroup with the core amplitudes
         and decay chains divided into subprocess groups"""
 
-        assert isinstance(decay_chain_amp, diagram_generation.DecayChainAmplitude), \
-                  "Argument to group_amplitudes must be DecayChainAmplitude"
+        assert isinstance(decay_chain_amps, diagram_generation.DecayChainAmplitudeList), \
+                  "Argument to group_amplitudes must be DecayChainAmplitudeList"
 
+        # Collect all amplitudes
+        amplitudes = diagram_generation.AmplitudeList()
+        for amp in decay_chain_amps:
+            amplitudes.extend(amp.get('amplitudes'))
 
         # Determine core process groups
-        core_groups = SubProcessGroup.group_amplitudes(\
-            decay_chain_amp.get('amplitudes'))
+        core_groups = SubProcessGroup.group_amplitudes(amplitudes)
 
         dc_subproc_group = DecayChainSubProcessGroup(\
             {'core_groups': core_groups,
-             'decay_chain_amplitude': decay_chain_amp})
+             'decay_chain_amplitudes': decay_chain_amps})
+
+        decays = diagram_generation.DecayChainAmplitudeList()
 
         # Recursively determine decay chain groups
-        for decay_chain in decay_chain_amp.get('decay_chains'):
+        for decay_chain_amp in decay_chain_amps:
+            decays.extend(decay_chain_amp.get('decay_chains'))
+                          
+        if decays:
             dc_subproc_group.get('decay_groups').append(\
-                DecayChainSubProcessGroup.group_amplitudes(decay_chain))
+                DecayChainSubProcessGroup.group_amplitudes(decays))
 
         return dc_subproc_group
 

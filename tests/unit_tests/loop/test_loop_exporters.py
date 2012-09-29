@@ -51,29 +51,37 @@ from tests.unit_tests.various.test_aloha import set_global
 from madgraph import MadGraph5Error
 
 _file_path = os.path.dirname(os.path.realpath(__file__))
+
 _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
-_mgme_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
-                                os.path.pardir)
-_loop_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
-                                os.path.pardir, 'Template','loop_material')
-_cuttools_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
-                                os.path.pardir, 'vendor','CutTools')
-_proc_file_path = os.path.join(_file_path, 'test_proc')
-
+_mgme_file_path = os.path.join(_file_path, *([os.path.pardir]*3))
+_loop_file_path = os.path.join(_mgme_file_path,'Template','loop_material')
+_cuttools_file_path = os.path.join(_mgme_file_path, 'vendor','CutTools')
+_proc_file_path = os.path.join(_mgme_file_path, 'test_proc')
 
 #===============================================================================
 # LoopExporterTest Test
 #===============================================================================
 class LoopExporterTest(unittest.TestCase):
     """Test class for all functions related to the Loop exporters."""
-    
+
     myloopmodel = loop_base_objects.LoopModel()
     fortran_model= helas_call_writers.FortranUFOHelasCallWriter()
+    
     loopExporter = loop_exporters.LoopProcessExporterFortranSA(\
                                   _mgme_file_path, _proc_file_path,
-                                  False, False, True, _loop_file_path,
-                                  _cuttools_file_path)
+                                  {'clean':False, 'complex_mass':False, 
+                                   'export_format':'madloop','mp':True,
+                                   'loop_dir':_loop_file_path,
+                                   'cuttools_dir':_cuttools_file_path})
+    
+    loopOptimizedExporter = loop_exporters.LoopProcessOptimizedExporterFortranSA(\
+                                  _mgme_file_path, _proc_file_path,
+                                  {'clean':False, 'complex_mass':False, 
+                                   'export_format':'madloop','mp':True,
+                                   'loop_dir':_loop_file_path,
+                                   'cuttools_dir':_cuttools_file_path})
+
     def setUp(self):
         """load the NLO toy model"""
         self.loadModel("UFO")
@@ -91,24 +99,29 @@ class LoopExporterTest(unittest.TestCase):
             return
 
     @test_aloha.set_global(loop=True, unitary=False, mp=True, cms=False) 
-    def check_output_sanity(self, loopME):
+    def check_output_sanity(self, loopME, chosenLoopExporter=None):
         """ Test different characteristics of the output of the 
         LoopMatrixElement given in argument to check the correct behavior
         of the loop exporter"""
+
+        if chosenLoopExporter==None:
+            exporter=self.loopExporter
+        else:
+            exporter=chosenLoopExporter
 
         # Cleaning last process directory
         if os.path.exists(_proc_file_path):
             shutil.rmtree(_proc_file_path)
         
-        self.loopExporter.copy_v4template(self.myloopmodel.get('name'))
-        self.loopExporter.generate_loop_subprocess(\
+        exporter.copy_v4template(self.myloopmodel.get('name'))
+        exporter.generate_loop_subprocess(\
                             loopME, self.fortran_model)
         wanted_lorentz = loopME.get_used_lorentz()
         wanted_couplings = list(set(sum(loopME.get_used_couplings(),[])))
-        self.loopExporter.convert_model_to_mg4(self.myloopmodel,
+        exporter.convert_model_to_mg4(self.myloopmodel,
                                            wanted_lorentz,
                                            wanted_couplings)
-        self.loopExporter.finalize_v4_directory( \
+        exporter.finalize_v4_directory( \
                         helas_objects.HelasMatrixElementList([loopME,]),
                         ["Generation from test_loop_exporters.py",],
                         False,False)
@@ -129,7 +142,7 @@ class LoopExporterTest(unittest.TestCase):
                'check_sa.f','cts_mpc.h']
         for file in files:
             self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
-                                              ,'SubProcesses',file)))    
+                     ,'SubProcesses',file)),'File %s not created.'%file)    
         
         files=['CT_interface.f','check_sa.f','cts_mprec.h','loop_num.f',
                'nexternal.inc','born_matrix.f','coupl.inc',
@@ -271,7 +284,9 @@ class LoopExporterTest(unittest.TestCase):
         myloopamplitude.generate_diagrams()
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
-
+        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude,
+                                                          optimized_output=True)
+        self.check_output_sanity(myloopME,self.loopOptimizedExporter)
 
     def notest_LoopProcessExporterFortranSA_gg_gddx(self):
         """Test the StandAlone output for different processes.
@@ -300,6 +315,9 @@ class LoopExporterTest(unittest.TestCase):
         myloopamplitude.generate_diagrams()
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
+        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude,
+                                                          optimized_output=True)
+        self.check_output_sanity(myloopME,self.loopOptimizedExporter)
 
     def test_LoopProcessExporterFortranSA_ddx_gg(self):
         """Test the StandAlone output for different processes.

@@ -70,13 +70,21 @@ class LoopExporterFortran(object):
         clean. This creates a diamond inheritance scheme in which we avoid mro
         (method resolution order) ambiguity by using unique method names here."""
 
-    def __init__(self, loop_dir = "", cuttools_dir = "", *args, **kwargs):
+    def __init__(self, mgme_dir="", dir_path = "", opt=None):
         """Initiate the LoopExporterFortran with directory information on where
         to find all the loop-related source files, like CutTools"""
 
-        self.loop_dir = loop_dir
-        self.cuttools_dir = cuttools_dir
-        super(LoopExporterFortran,self).__init__(*args, **kwargs)
+        if opt:
+            self.opt = opt
+        else: 
+            self.opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'madloop', 'mp':True,
+                        'loop_dir':'', 'cuttools_dir':''}
+
+        self.loop_dir = self.opt['loop_dir']
+        self.cuttools_dir = self.opt['cuttools_dir']
+
+        super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)
         
     def link_CutTools(self, targetPath):
         """Link the CutTools source directory inside the target path given
@@ -122,17 +130,13 @@ class LoopExporterFortran(object):
 #===============================================================================
 # LoopProcessExporterFortranSA
 #===============================================================================
-class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
-                                   LoopExporterFortran):
+class LoopProcessExporterFortranSA(LoopExporterFortran,
+                                   export_v4.ProcessExporterFortranSA):
+                                   
     """Class to take care of exporting a set of loop matrix elements in the
        Fortran format."""
        
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop')
-    
-    # Init function to initialize both mother classes, depending on the nature
-    # of the argument given
-    def __init__(self, *args, **kwargs):
-       super(LoopProcessExporterFortranSA, self).__init__(*args, **kwargs)          
 
     def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
@@ -373,7 +377,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         so that there is no point reusing this mother function."""
 
         cwd = os.getcwd()
-
         # Create the directory PN_xx_xxxxx in the specified path
         dirpath = os.path.join(self.dir_path, 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
@@ -975,6 +978,9 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         bornME.set('diagrams',matrix_element.get_born_diagrams())        
         bornME.set('color_basis',matrix_element.get('born_color_basis'))
         bornME.set('color_matrix',color_amp.ColorMatrix(bornME.get('color_basis')))
+        # This is to decide wether once to reuse old wavefunction to store new
+        # ones (provided they are not used further in the code.)
+        bornME.optimization = True
         
         return super(LoopProcessExporterFortranSA,self).\
           write_matrix_element_v4(writer,bornME,fortran_model)
@@ -1295,7 +1301,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
             return 0
-        
+
         # Set lowercase/uppercase Fortran code
         
         writers.FortranWriter.downcase = False

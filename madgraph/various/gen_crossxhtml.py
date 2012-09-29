@@ -17,7 +17,9 @@
 
 import os
 import math
+import re
 import pickle
+import re
 try:
     import internal.files as files
     import internal.save_load_object as save_load_object
@@ -97,13 +99,13 @@ status_template = """
         <TH nowrap ROWSPAN=2 font color="#0000FF"> Tag Name </TH>
         <TH nowrap ROWSPAN=2 font color="#0000FF"> Cards </TH>   
         <TH nowrap ROWSPAN=2 font color="#0000FF"> Results </TH> 
-        <TH nowrap ROWSPAN=1 COLSPAN=4 font color="#0000FF"> Status/Jobs
+        <TH nowrap ROWSPAN=1 COLSPAN=3 font color="#0000FF"> Status/Jobs </TH>
+    </TR>
         <TR> 
             <TH>   Queued </TH>
             <TH>  Running </TH>
             <TH> Done  </TH>
         </TR>
-    </TR>
     <TR ALIGN=CENTER> 
         <TD nowrap ROWSPAN=2> %(run_name)s </TD>
         <TD nowrap ROWSPAN=2> %(tag_name)s </TD>
@@ -117,7 +119,8 @@ status_template = """
         <TD nowrap ROWSPAN=2> %(results)s </TD> 
         %(status)s
  </TR>
- <tr></tr>
+ <TR></TR>
+   %(stop_form)s
  </TABLE>
 """
 
@@ -146,7 +149,7 @@ class AllResults(dict):
         """define the name of the current run
             The first argument can be a OneTagResults
         """
-        
+
         if isinstance(run, OneTagResults):
             self.current = run
             self.lastrun = run['run_name']
@@ -168,8 +171,8 @@ class AllResults(dict):
         assert run_name in self
 
         if not tag :
-            if self.current['run_name'] == run_name:
-                self.results.def_current(None)                    
+            if self.current and self.current['run_name'] == run_name:
+                self.def_current(None)                    
             del self[run_name]
             self.order.remove(run_name)
             if self.lastrun == run_name:
@@ -202,9 +205,16 @@ class AllResults(dict):
         if name in self.order:
             #self.order.remove(name) # Reorder the run to put this one at the end 
             if  tag in self[name].tags:
-                self[name].remove(tag) # Remove previous tag if define
-            #add the new tag run    
-            self[name].add(OneTagResults(name, run_card, self.path))
+                if self[name].return_tag(tag).parton and len(self[name]) > 1:
+                    #move the parton information before the removr
+                    self[name].return_tag(self[name][1]['tag']).parton = \
+                                               self[name].return_tag(tag).parton
+                if len(self[name]) > 1:        
+                    self[name].remove(tag) # Remove previous tag if define 
+                    self[name].add(OneTagResults(name, run_card, self.path))
+            else:
+                #add the new tag run    
+                self[name].add(OneTagResults(name, run_card, self.path))
             new = self[name] 
         else:
             new = RunResults(name, run_card, self.process, self.path)
@@ -326,7 +336,7 @@ class AllResults(dict):
 
             if exists(pjoin(self.path, 'HTML',self.current['run_name'], 
                         'results.html')):
-                status_dict['results'] = """<A HREF="./HTML/%(run_name)s/results.html">%(cross).4g <font face=symbol>&#177</font> %(error).4g (%(unit)s)</A>""" % status_dict
+                status_dict['results'] = """<A HREF="./HTML/%(run_name)s/results.html">%(cross).4g <font face=symbol>&#177;</font> %(error).4g (%(unit)s)</A>""" % status_dict
             else:
                 status_dict['results'] = "No results yet"
             if exists(pjoin(self.path, 'Cards', 'plot_card.dat')):
@@ -345,6 +355,18 @@ class AllResults(dict):
                 status_dict['delphes_card'] = """ <a href="./Cards/delphes_card.dat">delphes_card</a><BR>"""
             else:
                 status_dict['delphes_card'] = ""
+                
+            if self.web:
+                status_dict['stop_form'] = """
+                 <TR ALIGN=CENTER><TD COLSPAN=7 text-align=center>
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="stop_job">
+<INPUT TYPE=SUBMIT VALUE="Stop Current Job">
+</FORM></TD></TR>""" % {'me_dir': self.path, 'web': self.web}
+            else:
+                status_dict['stop_form'] = ""
+            
             
             status = status_template % status_dict
             refresh = "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"10\">"
@@ -384,7 +406,7 @@ class RunResults(list):
         """initialize the object"""
         
         self.info = {'run_name': run_name,'me_dir':path}
-        self.tags = []
+        self.tags = [run_card['run_tag']]
         # Set the collider information
         data = process.split('>',1)[0].split()
         if len(data) == 2:
@@ -456,6 +478,20 @@ class RunResults(list):
             return self[-1]
         
         raise Exception, '%s is not a valid tag' % name
+    
+    def is_empty(self):
+        """Check if this run contains smtg else than html information"""
+
+        if not self:
+            return True
+        if len(self) > 1:
+            return False
+        
+        data = self[0]
+        if data.parton or data.pythia or data.pgs or data.delphes:
+            return False
+        else:
+            return True
         
     def add(self, obj):
         """ """
@@ -753,7 +789,7 @@ class OneTagResults(dict):
         # Compute the text for eachsubpart
         
         sub_part_template_parton = """
-        <td rowspan=%(cross_span)s><center><a href="./HTML/%(run)s/results.html"> %(cross).4g <font face=symbol>&#177</font> %(err).2g </a></center></td>
+        <td rowspan=%(cross_span)s><center><a href="./HTML/%(run)s/results.html"> %(cross).4g <font face=symbol>&#177;</font> %(err).2g </a></center></td>
         <td rowspan=%(cross_span)s><center> %(nb_event)s<center></td><td> %(type)s </td>
         <td> %(links)s</td>
         <td> %(action)s</td>
@@ -909,14 +945,35 @@ class OneTagResults(dict):
                     local_dico['action'] = self.command_suggestion_html('remove %s %s --tag=%s' %\
                                                               (self['run_name'], type, self['tag']))
 
-
-            
             # create the text
             subresults_html += template % local_dico
-
-
-
+            
+            
         if subresults_html == '':
+            if runresults.web:
+                    action = """
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
+<INPUT TYPE=HIDDEN NAME=level VALUE="banner">
+<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Remove Banner">
+</FORM>
+                    
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="banner">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Run the banner">
+</FORM>"""
+            else:
+                    action = self.command_suggestion_html('remove %s banner --tag=%s' \
+                                                                       % (self['run_name'], self['tag']))
+                    action += self.command_suggestion_html('banner_run %s ' % self['run_name'])
+            
+            
+            
             subresults_html = sub_part_template_parton % \
                           {'type': '', 
                            'run': self['run_name'],
@@ -925,12 +982,25 @@ class OneTagResults(dict):
                            'err': self['error'],
                            'nb_event': self['nb_event'] and self['nb_event'] or 'No events yet',
                            'links': 'banner only',
-                           'action': ''
+                           'action': action
                            }                                
                                   
-        if self.debug:
-            debug = '<br> <a href=\'./%s_%s_debug.log\'> <font color=red>ERROR</font></a>' \
-                                               % (self['run_name'], self['tag']) 
+        if self.debug is KeyboardInterrupt:
+            debug = '<br><font color=red>Interrupted</font>'
+        elif isinstance(self.debug, basestring):
+            if not os.path.isabs(self.debug) and not self.debug.startswith('./'):
+                self.debug = './' + self.debug
+            elif os.path.isabs(self.debug):
+                self.debug = os.path.relpath(self.debug, self.me_dir)
+            debug = '<br> <a href=\'%s\'> <font color=red>ERROR</font></a>' \
+                                               % (self.debug)
+        elif self.debug:
+            text = str(self.debug).replace('. ','.<br>')
+            if 'http' in text:
+                pat = re.compile('(http[\S]*)')
+                text = pat.sub(r'<a href=\1> here </a>', text)
+            debug = '<br><font color=red>%s<BR>%s</font>' % \
+                                           (self.debug.__class__.__name__, text)
         else:
             debug = ''                                       
         text = tag_template % {'tag_span': nb_line,
@@ -946,8 +1016,12 @@ class OneTagResults(dict):
         
         if command.startswith('pythia'):
             button = 'launch pythia'
+        elif command.startswith('remove banner'):
+            button = 'remove banner'
         elif command.startswith('remove'):
             button = 'remove run'
+        elif command.startswith('banner_run'):
+            button = 're-run from the banner'
         else:
             button = 'launch detector simulation'
         

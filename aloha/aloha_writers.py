@@ -213,7 +213,9 @@ class WriteALOHA:
                 self.declaration.add(('double','M%s' % self.outgoing))                
                 call_arg.append(('double','W%s' % self.outgoing))              
                 self.declaration.add(('double','W%s' % self.outgoing))
-            
+        
+        assert len(call_arg) == len(set([a[1] for a in call_arg]))
+        assert len(self.declaration) == len(set([a[1] for a in self.declaration])), self.declaration
         self.call_arg = call_arg
         return call_arg
 
@@ -342,7 +344,9 @@ class WriteALOHA:
                                                           for obj in obj_list]))
             if value not in [1,-1]:
                 file_str.write(')')
-                
+        if number:
+            total = sum(number)
+            file_str.write('+ %s' % self.change_number_format(total))                
         file_str.write(')')
         return file_str.getvalue()
                 
@@ -359,7 +363,6 @@ class WriteALOHA:
         """
 
         str_var = str(obj)
-        
         self.declaration.add((obj.type, str_var))        
         return str_var
 
@@ -430,16 +433,20 @@ class ALOHAWriterForFortran(WriteALOHA):
         """Put the function in the correct format"""
         if not hasattr(self, 'fct_format'):
             one = self.change_number_format(1)
-            self.fct_format = {'csc' : '{0}/cos(%s)'.format(one),
-                   'sec': '{0}/sin(%s)'.format(one),
-                   'acsc': 'asin({0}/(%s))'.format(one),
+            self.fct_format = {'csc' : '{0}/cos(dble(%s))'.format(one),
+                   'sec': '{0}/sin(dble(%s))'.format(one),
+                   'acsc': 'asin({0}/(dble(%s)))'.format(one),
                    'asec': 'acos({0}/(%s))'.format(one),
                    're': ' dble(%s)',
                    'im': 'imag(%s)',
-                   'cmath.sqrt':'sqrt(%s)', 
-                   'sqrt': 'sqrt(%s)',
+                   'cmath.sqrt':'sqrt(dble(%s))', 
+                   'sqrt': 'sqrt(dble(%s))',
                    'complexconjugate': 'conjg(%s)',
-                   '/' : '{0}/%s'.format(one) 
+                   '/' : '{0}/(%s)'.format(one),
+                   'pow': '(%s)**(%s)',
+                   'log': 'log(dble(%s))',
+                   'asin': 'asin(dble(%s))',
+                   'acos': 'acos(dble(%s))',
                    }
             
         if fct in self.fct_format:
@@ -450,7 +457,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             
 
     
-    def get_header_txt(self, name=None, couplings=None, mode=''):
+    def get_header_txt(self, name=None, couplings=None, **opt):
         """Define the Header of the fortran file. 
         """
         if name is None:
@@ -517,6 +524,8 @@ class ALOHAWriterForFortran(WriteALOHA):
     
                 out.write(' %s %s(%s)\n' % (self.type2def[type], name, size))
             elif type == 'fct':
+                if name.upper() in ['EXP','LOG','SIN','COS','ASIN','ACOS']:
+                    continue
                 out.write(' %s %s\n' % (self.type2def['complex'], name))
                 out.write(' external %s\n' % (name))
             else:
@@ -628,7 +637,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             decla = name.split('_',1)[0]
             self.declaration.add(('list_%s' % type, decla))
         else:
-            self.declaration.add((name.type, name.split('_',1)[0]))
+            self.declaration.add((name.type, name))
         name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         return name
   
@@ -671,10 +680,28 @@ class ALOHAWriterForFortran(WriteALOHA):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
-                
-        for name, (fct, objs) in self.routine.fct.items():
+        
+        def sort_fct(a, b):
+            if len(a) < len(b):
+                return -1
+            elif len(a) > len(b):
+                return 1
+            elif a < b:
+                return -1
+            else:
+                return +1
+            
+        keys = self.routine.fct.keys()        
+        keys.sort(sort_fct)
+        for name in keys:
+            fct, objs = self.routine.fct[name]
             format = ' %s = %s\n' % (name, self.get_fct_format(fct))
-            out.write(format % ','.join([self.write_obj(obj) for obj in objs]))
+            try:
+                text = format % ','.join([self.write_obj(obj) for obj in objs])
+            except TypeError:
+                text = format % tuple([self.write_obj(obj) for obj in objs])
+            finally:
+                out.write(text)
         
 
         numerator = self.routine.expr
@@ -711,11 +738,15 @@ class ALOHAWriterForFortran(WriteALOHA):
                     coeff = 'COUP*'
                 else:
                     coeff = ''
-                
+            to_order = {}  
             for ind in numerator.listindices():
-                out.write('    %s(%d)= %s%s\n' % (self.outname, 
-                                        self.pass_to_HELAS(ind)+1, coeff,
-                                        self.write_obj(numerator.get_rep(ind))))
+                to_order[self.pass_to_HELAS(ind)] = \
+                        '    %s(%d)= %s%s\n' % (self.outname, self.pass_to_HELAS(ind)+1, 
+                        coeff, self.write_obj(numerator.get_rep(ind)))
+            key = to_order.keys()
+            key.sort()
+            for i in key:
+                out.write(to_order[i])
         return out.getvalue()
 
     def define_symmetry(self, new_nb, couplings=None):
@@ -933,6 +964,8 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
     
                 out.write(' %s %s(%s)\n' % (self.type2def[type], name, size))
             elif type == 'fct':
+                if name.upper() in ['EXP','LOG','SIN','COS','ASIN','ACOS']:
+                    continue
                 out.write(' %s %s\n' % (self.type2def['complex'], name))
                 out.write(' external %s\n' % (name))
             else:
@@ -1053,7 +1086,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         
         
         
-    def get_header_txt(self, name=None, couplings=None, mode=''):
+    def get_header_txt(self, name=None, couplings=None, **opt):
         """Define the Header of the fortran file. This include
             - function tag
             - definition of variable
@@ -1083,7 +1116,7 @@ class ALOHAWriterForFortranLoopQP(QP, ALOHAWriterForFortranLoop):
 def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     """ build the name of the aloha function """
     
-    assert (name and outgoing) or abstract
+    assert (name and outgoing is not None) or abstract
 
     if tag is None:
         tag = list(abstract.tag)
@@ -1715,7 +1748,7 @@ class ALOHAWriterForPython(WriteALOHA):
         """
         
         if '_' not in name:
-            self.declaration.add(('complex', name))
+            self.declaration.add((name.type, name))
         else:
             self.declaration.add(('', name.split('_',1)[0]))
         name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
@@ -1964,6 +1997,17 @@ class Declaration_list(set):
             return var in self.var_name
         self.var_name = [name for type,name in self]
         return var in self.var_name
+    
+    def add(self,obj):
+        if __debug__:
+            type, name = obj
+            samename = [t for t,n in self if n ==name]
+            for type2 in samename:
+                assert type2 == type, '%s is defined with two different type "%s" and "%s"' % \
+                            (name, type2, type)
+            
+        set.add(self,obj)
+        
 
 class WriterFactory(object):
     

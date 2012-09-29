@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 1167 $
+# This file was automatically created by FeynRules 1.7.9
 # Mathematica version: 8.0 for Linux x86 (64-bit) (February 23, 2011)
-# Date: Fri 4 May 2012 16:30:01
+# Date: Fri 18 May 2012 14:43:24
 
 
 
@@ -25,85 +25,45 @@ cabi = Parameter(name = 'cabi',
                  lhablock = 'CKMBLOCK',
                  lhacode = [ 1 ])
 
-Lambda = Parameter(name = 'Lambda',
-                   nature = 'external',
-                   type = 'real',
-                   value = 1000,
-                   texname = '\\Lambda',
-                   lhablock = 'DIM6',
-                   lhacode = [ 1 ])
-
-C3phiq = Parameter(name = 'C3phiq',
+CWWWL2 = Parameter(name = 'CWWWL2',
                    nature = 'external',
                    type = 'real',
                    value = 1,
-                   texname = 'C_{\\text{$\\phi $q}}^{\\text{(3)}}',
+                   texname = '\\frac{C_{\\text{WWW}}}{\\Lambda ^2}',
                    lhablock = 'DIM6',
-                   lhacode = [ 2 ])
+                   lhacode = [ 1 ])
 
-Cphiq = Parameter(name = 'Cphiq',
-                  nature = 'external',
-                  type = 'real',
-                  value = 1,
-                  texname = 'C_{\\text{$\\phi $q}}',
-                  lhablock = 'DIM6',
-                  lhacode = [ 3 ])
-
-Cphiu = Parameter(name = 'Cphiu',
-                  nature = 'external',
-                  type = 'real',
-                  value = 1,
-                  texname = 'C_{\\text{$\\phi $u}}',
-                  lhablock = 'DIM6',
-                  lhacode = [ 4 ])
-
-Cphid = Parameter(name = 'Cphid',
-                  nature = 'external',
-                  type = 'real',
-                  value = 1,
-                  texname = 'C_{\\text{$\\phi $d}}',
-                  lhablock = 'DIM6',
-                  lhacode = [ 5 ])
-
-CWWW = Parameter(name = 'CWWW',
+CWL2 = Parameter(name = 'CWL2',
                  nature = 'external',
                  type = 'real',
                  value = 1,
-                 texname = 'C_{\\text{WWW}}',
+                 texname = '\\frac{C_W}{\\Lambda ^2}',
                  lhablock = 'DIM6',
-                 lhacode = [ 6 ])
+                 lhacode = [ 2 ])
 
-HW = Parameter(name = 'HW',
-               nature = 'external',
-               type = 'real',
-               value = 1,
-               texname = 'H_W',
-               lhablock = 'DIM6',
-               lhacode = [ 7 ])
+CBL2 = Parameter(name = 'CBL2',
+                 nature = 'external',
+                 type = 'real',
+                 value = 1,
+                 texname = '\\frac{C_B}{\\Lambda ^2}',
+                 lhablock = 'DIM6',
+                 lhacode = [ 3 ])
 
-HB = Parameter(name = 'HB',
-               nature = 'external',
-               type = 'real',
-               value = 1,
-               texname = 'H_B',
-               lhablock = 'DIM6',
-               lhacode = [ 8 ])
+CPWWWL2 = Parameter(name = 'CPWWWL2',
+                    nature = 'external',
+                    type = 'real',
+                    value = 1,
+                    texname = '\\frac{\\text{CP}_{\\text{WWW}}}{\\Lambda ^2}',
+                    lhablock = 'DIM6',
+                    lhacode = [ 4 ])
 
-CPW = Parameter(name = 'CPW',
-                nature = 'external',
-                type = 'real',
-                value = 1,
-                texname = '\\text{CP}_W',
-                lhablock = 'DIM6',
-                lhacode = [ 9 ])
-
-CPW = Parameter(name = 'CPW',
-                nature = 'external',
-                type = 'real',
-                value = 1,
-                texname = '\\text{CP}_W',
-                lhablock = 'DIM6',
-                lhacode = [ 10 ])
+CPWL2 = Parameter(name = 'CPWL2',
+                  nature = 'external',
+                  type = 'real',
+                  value = 1,
+                  texname = '\\frac{\\text{CP}_W}{\\Lambda ^2}',
+                  lhablock = 'DIM6',
+                  lhacode = [ 5 ])
 
 aEWM1 = Parameter(name = 'aEWM1',
                   nature = 'external',

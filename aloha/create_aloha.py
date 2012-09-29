@@ -33,6 +33,7 @@ import aloha.aloha_writers as aloha_writers
 import aloha.aloha_lib as aloha_lib
 import aloha.aloha_object as aloha_object
 import aloha.aloha_parsers as aloha_parsers
+import aloha.aloha_fct as aloha_fct
 try:
     import madgraph.iolibs.files as files
 except:
@@ -161,6 +162,15 @@ class AbstractRoutineBuilder(object):
     def apply_conjugation(self, pair=1):
         """ apply conjugation on self object"""
         
+        nb_fermion = len([1 for s in self.spins if s % 2 == 0])        
+        if (pair > 1 or nb_fermion >2) and not self.conjg:
+            # self.conjg avoif multiple check
+            data = aloha_fct.get_fermion_flow(self.lorentz_expr, nb_fermion)
+            target = dict([(2*i+1,2*i+2) for i in range(nb_fermion//2)])
+            if not data == target:
+                text = """Unable to deal with 4(or more) point interactions
+in presence of majorana particle/flow violation"""
+                raise ALOHAERROR, text
         
         old_id = 2 * pair - 1
         new_id = _conjugate_gap + old_id
@@ -579,7 +589,8 @@ class AbstractALOHAModel(dict):
                 continue 
             
             if lorentz.structure == 'external':
-                self.external_routines.append(lorentz.name)
+                for i in range(len(lorent.spins)):
+                    self.external_routines.append('%s_%s' % (lorentz.name, i))
                 continue
             
             builder = AbstractRoutineBuilder(lorentz)
@@ -617,7 +628,14 @@ class AbstractALOHAModel(dict):
         if save:
             self.save()
     
-
+    
+    def add_Lorentz_object(self, lorentzlist):
+        """add a series of Lorentz structure created dynamically"""
+        
+        for lor in lorentzlist:
+            if not hasattr(self.model.lorentz, lor.name):
+                setattr(self.model.lorentz, lor.name, lor)
+    
     def compute_subset(self, data):
         """ create the requested ALOHA routine. 
         data should be a list of tuple (lorentz, tag, outgoing)
@@ -659,8 +677,12 @@ class AbstractALOHAModel(dict):
         for l_name in request:
             lorentz = eval('self.model.lorentz.%s' % l_name)
             if lorentz.structure == 'external':
-                if lorentz.name not in self.external_routines:
-                    self.external_routines.append(lorentz.name)
+                for tmp in request[l_name]:
+                    for outgoing, tag in request[l_name][tmp]:
+                        name = aloha_writers.get_routine_name(lorentz.name,outgoing=outgoing,tag=tag)
+                        if name not in self.external_routines:
+                            print name
+                            self.external_routines.append(name)
                 continue
             
             builder = AbstractRoutineBuilder(lorentz)
@@ -697,7 +719,11 @@ class AbstractALOHAModel(dict):
             if not self.explicit_combine:
                 lorentzname = list_l_name[0]
                 lorentzname += ''.join(tag)
-                self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
+                if self.has_key((lorentzname, outgoing)):
+                    self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
+                else:
+                    lorentz = eval('self.model.lorentz.%s' % lorentzname)
+                    assert lorentz.structure == 'external'
             else:
                 l_lorentz = []
                 for l_name in list_l_name: 
@@ -787,22 +813,24 @@ class AbstractALOHAModel(dict):
                            'Fortran' : 'f',
                            'CPP': 'C'}
         ext = language_to_ext[language]
-         
-        if os.path.exists(os.path.join(self.model_pos, '%s.%s' % (name, ext))):
-            filepos = '%s/%s.%s' % (self.model_pos, name, ext)
+        paths = [os.path.join(self.model_pos, language), self.model_pos, 
+                           os.path.join(root_path, 'aloha', 'template_files', )]
 
-        elif os.path.exists(os.path.join(root_path, 'aloha', 'template_files', 
-                                                       '%s.%s' %(name, ext))):
-            filepos = '%s/aloha/template_files/%s.%s' % (root_path, name, ext)
-        else:
-            path1 = self.model_pos
-            path2 = os.path.join(root_path, 'aloha', 'template_files', )
-            raise ALOHAERROR, 'No external routine \"%s.%s\" in directories\n %s\n %s' % \
-                        (name, ext, path1, path2)
-        
+        ext_files  = []
+        for path in paths:
+            ext_files = glob.glob(os.path.join(path, '%s.%s' % (name, ext)))
+            if ext_files:
+                break
+        else: 
+
+            raise ALOHAERROR, 'No external routine \"%s.%s\" in directories\n %s' % \
+                        (name, ext, '\n'.join(paths))
+       
         if output_dir:
-            files.cp(filepos, output_dir)
-        return filepos
+            for filepath in ext_files:
+                
+                files.cp(filepath, output_dir)
+        return ext_files
                     
         
 

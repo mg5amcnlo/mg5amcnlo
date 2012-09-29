@@ -6,7 +6,11 @@ import parameters
 import vertices
 import coupling_orders
 import write_param_card
-
+try:
+    import build_restrict
+except ImportError, error:
+    print error
+    
 
 all_particles = particles.all_particles
 all_vertices = vertices.all_vertices

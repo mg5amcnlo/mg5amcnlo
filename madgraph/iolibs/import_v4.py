@@ -217,7 +217,7 @@ def read_interactions_v4(fsock, ref_part_list):
 
             try:
                 for str_name in values:
-                    curr_part = ref_part_list.find_name(str_name.lower())
+                    curr_part = ref_part_list.get_copy(str_name.lower())
                     if isinstance(curr_part, Particle):
                         # Look at the total number of strings, stop if 
                         # anyway not enough, required if a variable name 

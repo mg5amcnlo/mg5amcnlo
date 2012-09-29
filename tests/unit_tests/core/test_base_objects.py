@@ -17,7 +17,6 @@
 import copy
 import os
 
-
 import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
@@ -223,13 +222,13 @@ class ParticleTest(unittest.TestCase):
                           not_a_part)
         # test particle search
         self.assertEqual(self.mypart,
-                         mypartlist.find_name(self.mypart['name']))
+                         mypartlist.get_copy(self.mypart['name']))
         anti_part = copy.copy(self.mypart)
         anti_part.set('is_part', False)
         self.assertEqual(anti_part,
-                         mypartlist.find_name(self.mypart['antiname']))
+                         mypartlist.get_copy(self.mypart['antiname']))
         self.assertEqual(None,
-                         mypartlist.find_name('none'))
+                         mypartlist.get_copy('none'))
 
         mydict = {6:self.mypart, -6:anti_part}
 
@@ -559,6 +558,7 @@ class ModelTest(unittest.TestCase):
 
         self.mymodel.set('interactions', self.myinterlist)
         self.mymodel.set('particles', self.mypartlist)
+        self.mymodel.set('order_hierarchy', {'QCD': 1, 'QED': 2})
 
     def test_model_initialization(self):
         """Test the default Model class initialization"""
@@ -899,6 +899,25 @@ class ModelTest(unittest.TestCase):
         self.assertRaises(madgraph.MadGraph5Error, \
                                        model2.pass_particles_name_in_mg_default)
 
+    def test_get_max_WEIGHTED(self):
+        """Test get_max_WEIGHTED"""
+
+        self.mymodel.get('interactions').append(\
+            base_objects.Interaction({
+                      'id':10,
+                      'particles': base_objects.ParticleList(\
+                                         [self.mymodel.get_particle(6), \
+                                          self.mymodel.get_particle(-6), \
+                                          self.mymodel.get_particle(21), \
+                                          self.mymodel.get_particle(21), \
+                                          self.mymodel.get_particle(21)]),
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1, 'QED':5}}))
+
+
+        self.assertEqual(self.mymodel.get_max_WEIGHTED(), 11./3)
+
+        self.mymodel.get('interactions').pop(-1)
 
 #===============================================================================
 # ModelTest
@@ -970,9 +989,6 @@ class ModelTest2(unittest.TestCase):
                 found += 1
         self.assertEqual(found, 2)
         
-        
-        
-            
 #===============================================================================
 # LegTest
 #===============================================================================

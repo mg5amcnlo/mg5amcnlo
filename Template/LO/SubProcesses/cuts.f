@@ -256,9 +256,10 @@ c
 c     p_t min & max cuts
 c     
       do i=nincoming+1,nexternal
-         if(debug) write (*,*) 'pt(',i,')=',pt(p(0,i)),'   ',etmin(i),':',etmax(i)
+         if(debug) write (*,*) 'pt(',i,')=',pt(p(0,i)),'   ',etmin(i),
+     $        ':',etmax(i)
          notgood=(pt(p(0,i)) .lt. etmin(i)).or.
-     &        (pt(p(0,i)) .gt. etmax(i))
+     &        (etmax(i).ge.0d0.and.pt(p(0,i)) .gt. etmax(i))
          if (notgood) then
             if(debug) write (*,*) i,' -> fails'
             passcuts=.false.
@@ -296,15 +297,15 @@ c-  check the et
       if(debug.and.ptemp(0).gt.0d0) write (*,*) 'Energy of leptons =',pt(ptemp2(0))
       if(ptemp(0).gt.0d0) then
          notgood=(pt(ptemp(0)) .lt. misset).or.
-     &        (pt(ptemp(0)) .gt. missetmax)
+     &        (missetmax.ge.0d0.and.pt(ptemp(0)) .gt. missetmax)
          if (notgood) then
             if(debug) write (*,*) ' missing et cut -> fails'
             passcuts=.false.
             return
          endif
       endif
-      if (mmnl.gt.0d0.or.mmnlmax.lt.1d5)then
-         if(dsqrt(SumDot(ptemp,ptemp2,1d0)).lt.mmnl.or.dsqrt(SumDot(ptemp, ptemp2,1d0)).gt.mmnlmax) then
+      if (mmnl.gt.0d0.or.mmnlmax.ge.0d0)then
+         if(dsqrt(SumDot(ptemp,ptemp2,1d0)).lt.mmnl.or.mmnlmax.ge.0d0.and.dsqrt(SumDot(ptemp, ptemp2,1d0)).gt.mmnlmax) then
             if(debug) write (*,*) 'lepton invariant mass -> fails'
             passcuts=.false.
             return
@@ -338,7 +339,7 @@ c
       do i=nincoming+1,nexternal
          if(debug) write (*,*) 'p(0,',i,')=',p(0,i),'   ',emin(i),':',emax(i)
          notgood=(p(0,i) .le. emin(i)).or.
-     &        (p(0,i) .gt. emax(i))
+     &        (emax(i).ge.0d0 .and. p(0,i) .gt. emax(i))
          if (notgood) then
             if(debug) write (*,*) i,' -> fails'
             passcuts=.false.
@@ -350,7 +351,7 @@ c     Rapidity  min & max cuts
 c     
       do i=nincoming+1,nexternal
          if(debug) write (*,*) 'abs(rap(',i,'))=',abs(rap(p(0,i))),'   ',etamin(i),':',etamax(i)
-         notgood=(abs(rap(p(0,i))) .gt. etamax(i)).or.
+         notgood=(etamax(i).ge.0.and.abs(rap(p(0,i))) .gt. etamax(i)).or.
      &        (abs(rap(p(0,i))) .lt. etamin(i))
          if (notgood) then
             if(debug) write (*,*) i,' -> fails'
@@ -365,9 +366,10 @@ c
          do j=i+1,nexternal
             if(debug) write (*,*) 'r2(',i, ',' ,j,')=',dsqrt(r2(p(0,i),p(0,j)))
             if(debug) write (*,*) dsqrt(r2min(j,i)),dsqrt(r2max(j,i))
-            if(r2min(j,i).gt.0.or.r2max(j,i).lt.1d2) then
+            if(r2min(j,i).gt.0.or.r2max(j,i).ge.0d0) then
                tmp=r2(p(0,i),p(0,j))
-               notgood=(tmp .lt. r2min(j,i)).or.(tmp .gt. r2max(j,i))
+               notgood=(tmp .lt. r2min(j,i)).or.
+     $              (r2max(j,i).ge.0d0 .and. tmp .gt. r2max(j,i))
                if (notgood) then
                   if(debug) write (*,*) i,j,' -> fails'
                   passcuts=.false.
@@ -382,11 +384,12 @@ c     s-channel min & max pt of sum of 4-momenta
 c     
       do i=nincoming+1,nexternal-1
          do j=i+1,nexternal
-            if(debug)write (*,*) 'ptll(',i,',',j,')=',dsqrt(PtDot(p(0,i),p(0,j)))
-            if(debug)write (*,*) dsqrt(ptll_min(j,i)),dsqrt(ptll_max(j,i))
-            if(ptll_min(j,i).gt.0.or.dsqrt(ptll_max(j,i)).lt.1d5) then
+            if(debug)write (*,*) 'ptll(',i,',',j,')=',PtDot(p(0,i),p(0,j))
+            if(debug)write (*,*) ptll_min(j,i),ptll_max(j,i)
+            if(ptll_min(j,i).gt.0.or.ptll_max(j,i).ge.0d0) then
                tmp=PtDot(p(0,i),p(0,j))
-               notgood=(tmp .lt. ptll_min(j,i).or.tmp.gt.ptll_max(j,i))
+               notgood=(tmp .lt. ptll_min(j,i).or.
+     $              ptll_max(j,i).ge.0d0 .and. tmp.gt.ptll_max(j,i))
                if (notgood) then
                   if(debug) write (*,*) i,j,' -> fails'
                   passcuts=.false.
@@ -404,12 +407,13 @@ c     s-channel min & max invariant mass cuts
 c     
       do i=nincoming+1,nexternal-1
          do j=i+1,nexternal
-            if(debug) write (*,*) 's(',i,',',j,')=',dsqrt(Sumdot(p(0,i),p(0,j),+1d0))
-            if(debug) write (*,*) dsqrt(s_min(j,i)),dsqrt(s_max(j,i))
-            if(s_min(j,i).gt.0.or.s_max(j,i).lt.1d5) then
+            if(debug) write (*,*) 's(',i,',',j,')=',Sumdot(p(0,i),p(0,j),+1d0)
+            if(debug) write (*,*) s_min(j,i),s_max(j,i)
+            if(s_min(j,i).gt.0.or.s_max(j,i).ge.0d0) then
                tmp=SumDot(p(0,i),p(0,j),+1d0)
-               if(s_min(j,i).le.s_max(j,i))then
-                  notgood=(tmp .lt. s_min(j,i).or.tmp .gt. s_max(j,i)) 
+               if(s_min(j,i).le.s_max(j,i) .or. s_max(j,i).lt.0d0)then
+                  notgood=(tmp .lt. s_min(j,i).or.
+     $                 s_max(j,i).ge.0d0 .and. tmp .gt. s_max(j,i)) 
                   if (notgood) then
                      if(debug) write (*,*) i,j,' -> fails'
                      passcuts=.false.
@@ -490,17 +494,20 @@ c
        if(debug) write (*,*) 'jetor :',jetor  
        if(debug) write (*,*) '0',notgood   
       
-      do i=1,njets 
-            if(debug) write (*,*) i,ptjet(i), '   ',ptjmin4(min(i,4)),':',ptjmax4(min(i,4))
+      do i=1,min(njets,4)
+            if(debug) write (*,*) i,ptjet(i), '   ',ptjmin4(i),
+     $        ':',ptjmax4(i)
          if(jetor) then     
 c---  if one of the jets does not pass, the event is rejected
-            notgood=notgood.or.(ptjet(i).gt.ptjmax4(min(i,4))).or.
-     $           (ptjet(i).lt.ptjmin4(min(i,4)))
+            notgood=notgood.or.(ptjmax4(i).ge.0d0 .and.
+     $           ptjet(i).gt.ptjmax4(i)) .or.
+     $           (ptjet(i).lt.ptjmin4(i))
             if(debug) write (*,*) i,' notgood total:', notgood   
          else
 c---  all cuts must fail to reject the event
-            notgood=notgood.and.(ptjet(i).gt.ptjmax4(min(i,4))
-     $              .or.(ptjet(i).lt.ptjmin4(min(i,4))))
+            notgood=notgood.and.(ptjmax4(i).ge.0d0 .and.
+     $              ptjet(i).gt.ptjmax4(i) .or.
+     $              (ptjet(i).lt.ptjmin4(i)))
             if(debug) write (*,*) i,' notgood total:', notgood   
          endif
       enddo
@@ -520,15 +527,16 @@ C---------------------------
       do i=2,njets
          htj=htj+ptjet(i)
          if(debug) write (*,*) i, 'htj ',htj
-         if(debug) write (*,*) 'htmin ',i,' ', htjmin4(min(i,4)),':',htjmax4(min(i,4))
-         if(htj.lt.htjmin4(min(i,4)) .or. htj.gt.htjmax4(min(i,4))) then
+         if(debug.and.i.le.4) write (*,*) 'htmin ',i,' ', htjmin4(i),':',htjmax4(i)
+         if(i.le.4.and.(htj.lt.htjmin4(i) .or.
+     $        htjmax4(i).ge.0d0.and.htj.gt.htjmax4(i))) then
             if(debug) write (*,*) i, ' ht -> fails'
             passcuts=.false.
             return
          endif
       enddo
 
-      if(htj.lt.htjmin.or.htj.gt.htjmax)then
+      if(htj.lt.htjmin.or.htjmax.ge.0d0.and.htj.gt.htjmax)then
          if(debug) write (*,*) i, ' htj -> fails'
          passcuts=.false.
          return
@@ -544,7 +552,8 @@ C---------------------------
          enddo
       endif !if there are heavyjets
 
-      if(inclht.lt.inclHtmin.or.inclht.gt.inclHtmax)then
+      if(inclht.lt.inclHtmin.or.
+     $     inclHtmax.ge.0d0.and.inclht.gt.inclHtmax)then
          if(debug) write (*,*) ' inclhtmin=',inclHtmin,' -> fails'
          passcuts=.false.
          return
@@ -556,8 +565,8 @@ c
       nleptons=0
 
       if(ptl1min.gt.0.or.ptl2min.gt.0.or.ptl3min.gt.0.or.ptl4min.gt.0.or.
-     $     ptl1max.lt.1d5.or.ptl2max.lt.1d5.or.
-     $     ptl3max.lt.1d5.or.ptl4max.lt.1d5) then
+     $     ptl1max.ge.0d0.or.ptl2max.ge.0d0.or.
+     $     ptl3max.ge.0d0.or.ptl4max.ge.0d0) then
 
 c     - fill ptlepton with the pt's of the leptons.
          do i=nincoming+1,nexternal
@@ -593,11 +602,12 @@ c     - sort lepton pts
          if(nleptons.gt.0) then
 
             notgood = .false.
-            do i=1,nleptons 
-               if(debug) write (*,*) i,ptlepton(i), '   ',ptlmin4(min(i,4)),':',ptlmax4(min(i,4))
+            do i=1,min(nleptons,4)
+               if(debug) write (*,*) i,ptlepton(i), '   ',ptlmin4(i),':',ptlmax4(i)
 c---  if one of the leptons does not pass, the event is rejected
-               notgood=notgood.or.(ptlepton(i).gt.ptlmax4(min(i,4))).or.
-     $              (ptlepton(i).lt.ptlmin4(min(i,4)))
+               notgood=notgood.or.
+     $              (ptlmax4(i).ge.0d0.and.ptlepton(i).gt.ptlmax4(i)).or.
+     $              (ptlepton(i).lt.ptlmin4(i))
                if(debug) write (*,*) i,' notgood total:', notgood   
             enddo
 

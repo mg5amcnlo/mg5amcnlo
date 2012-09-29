@@ -81,7 +81,7 @@ BLOCK SMINPUTS Q= 1.000000e+00 #  test
         self.assertEqual(len(b),2)
         self.assertRaises(AssertionError, b.append, writter.Parameter(block='other'))
                          
-        self.assertRaises(AssertionError, 
+        self.assertRaises(writter.InvalidParamCard, 
            b.append, writter.Parameter(block='sminputs', lhacode=[1,2], value=9))
         self.assertEqual(len(b),2)
         
@@ -194,7 +194,7 @@ class TestParamCard(unittest.TestCase):
         card.mod_param('polemass', [35], value=2, comment='new')
         self.assertEqual(param.value, 2)
         self.assertEqual(param.comment, 'new')
-        self.assertRaises(AssertionError, card.mod_param, 
+        self.assertRaises(writter.InvalidParamCard, card.mod_param, 
                                              *('polemass', [35], 'width', [24]))
         
     
@@ -1306,16 +1306,22 @@ BLOCK UPMNS #
 ## INFORMATION FOR TE
 ###################################
 BLOCK TE # 
+      1 1 0.000000e+00 # T_e(Q) DRbar
+      2 2 0.000000e+00 # T_mu(Q) DRbar
       3 3 -2.540197e+01 # T_tau(Q) DRbar
 ###################################
 ## INFORMATION FOR TU
 ###################################
 BLOCK TU # 
+      1 1 0.000000e+00 # T_u(Q) DRbar
+      2 2 0.000000e+00 # T_c(Q) DRbar
       3 3 -4.447525e+02 # T_t(Q) DRbar
 ###################################
 ## INFORMATION FOR TD
 ###################################
 BLOCK TD # 
+      1 1 0.000000e+00 # T_d(Q) DRbar
+      2 2 0.000000e+00 # T_s(Q) DRbar
       3 3 -1.106937e+02 # T_b(Q) DRbar
 ###################################
 ## INFORMATION FOR MSL2

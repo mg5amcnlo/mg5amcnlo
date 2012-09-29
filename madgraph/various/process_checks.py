@@ -194,6 +194,7 @@ class MatrixElementEvaluator(object):
                                if lorentz not in self.store_aloha]
 
         aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+        aloha_model.add_Lorentz_object(model.get('lorentz'))
         aloha_model.compute_subset(me_used_lorentz)
 
         # Write out the routines in Python
@@ -414,15 +415,19 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             # otherwise
             import madgraph.loop.loop_exporters as loop_exporters
             if loop_optimized_output:
-                exporter=loop_exporters.LoopProcessOptimizedExporterFortranSA
+                exporter_class=loop_exporters.LoopProcessOptimizedExporterFortranSA
             else:
-                exporter=loop_exporters.LoopProcessExporterFortranSA
-
-            FortranExporter = exporter(\
-                self.mg_root, export_dir, clean=True,
-                complex_mass_scheme = self.cmass_scheme, mp=True,
-                loop_dir=os.path.join(self.mg_root, 'Template/loop_material'),\
-                cuttools_dir=self.cuttools_dir)
+                exporter_class=loop_exporters.LoopProcessExporterFortranSA
+            
+            options = {'clean': True, 
+                       'complex_mass': self.cmass_scheme,
+                       'export_format':'madloop', 
+                       'mp':True,
+              'loop_dir': os.path.join(self.mg_root,'Template','loop_material'),
+                       'cuttools_dir': self.cuttools_dir}
+                        
+            FortranExporter = exporter_class(\
+                self.mg_root, export_dir, options)
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
             FortranExporter.copy_v4template(modelname=model.get('name'))
             FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
@@ -767,28 +772,31 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             # otherwise
             import madgraph.loop.loop_exporters as loop_exporters
             if loop_optimized_output:
-                exporter=loop_exporters.LoopProcessOptimizedExporterFortranSA
+                exporter_class=loop_exporters.LoopProcessOptimizedExporterFortranSA
             else:
-                exporter=loop_exporters.LoopProcessExporterFortranSA
-                
+                exporter_class=loop_exporters.LoopProcessExporterFortranSA
+    
+            options = {'clean': True, 
+                       'complex_mass': self.cmass_scheme,
+                       'export_format':'madloop', 
+                       'mp':True,
+          'loop_dir': os.path.join(self.mg_root,'Template','loop_material'),
+                       'cuttools_dir': self.cuttools_dir}
+    
             start=time.time()
-            FortranExporter = exporter(\
-                self.mg_root, export_dir, clean=True,
-                complex_mass_scheme = self.cmass_scheme, mp=True,
-                loop_dir=os.path.join(self.mg_root, 'Template/loop_material'),\
-                cuttools_dir=self.cuttools_dir)
+            FortranExporter = exporter_class(self.mg_root, export_dir, options)
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
             FortranExporter.copy_v4template(modelname=model.get('name'))
             FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
             wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
             wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
-                                                                    for c in l]))
+                                                                for c in l]))
             FortranExporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
             infos['Process_output'] = time.time()-start
             start=time.time()
             FortranExporter.finalize_v4_directory(None,"",False,False,'gfortran')
             infos['HELAS_MODEL_compilation'] = time.time()-start
-
+        
         # First Initialize filters (in later versions where this will be done
         # at generation time, it can be skipped)
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
@@ -1704,7 +1712,7 @@ def clean_up(mg_root):
 
     directories = glob.glob(os.path.join(mg_root, '%s*'%temp_dir_prefix))
     if directories != []:
-        logger.info("Cleaning old temporary %s* check runs."%temp_dir_prefix)
+        logger.info("Cleaning temporary %s* check runs."%temp_dir_prefix)
     for dir in directories:
         shutil.rmtree(dir)
 

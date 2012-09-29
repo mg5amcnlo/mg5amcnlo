@@ -44,7 +44,10 @@ c
       integer i
 
 c     first try in the current directory
-
+      LHAPath='./PDFsets'
+      Inquire(File=LHAPath, exist=exists)
+      if(exists)return
+c     first try in the main directory
       LHAPath='lib/PDFsets'
       Inquire(File=LHAPath, exist=exists)
       if(exists)return

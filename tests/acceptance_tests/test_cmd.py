@@ -108,23 +108,29 @@ class TestCmdShell1(unittest.TestCase):
         
     def test_config(self):
         """check that configuration file is at default value"""
-        
-        config = self.cmd.set_configuration(MG5DIR+'/input/mg5_configuration.txt', test=True)
+        self.maxDiff=None
+        config = self.cmd.set_configuration(MG5DIR+'/input/.mg5_configuration_default.txt', final=False)
+        config =dict(config)
+        del config['stdout_level']
+        for key in config.keys():
+            if key.endswith('_path') and key != 'cluster_temp_path':
+                del config[key]
         expected = {'web_browser': None, 
                     'text_editor': None, 
-                    'cluster_queue': 'madgraph',
+                    'cluster_queue': None,
                     'nb_core': None,
-                    'run_mode': '0',
-                    'pythia-pgs_path': './pythia-pgs', 
-                    'td_path': './td', 
-                    'delphes_path': './Delphes', 
+                    'run_mode': 2,
+#                    'pythia-pgs_path': './pythia-pgs', 
+#                    'td_path': './td', 
+#                    'delphes_path': './Delphes', 
                     'cluster_type': 'condor', 
-                    'madanalysis_path': './MadAnalysis', 
+#                    'madanalysis_path': './MadAnalysis', 
+                    'cluster_temp_path': None, 
                     'fortran_compiler': None, 
-                    'exrootanalysis_path': './ExRootAnalysis', 
+#                    'exrootanalysis_path': './ExRootAnalysis', 
                     'eps_viewer': None, 
-                    'automatic_html_opening': 'True', 
-                    'pythia8_path': './pythia8',
+                    'automatic_html_opening': True, 
+#                    'pythia8_path': None,
                     'group_subprocesses': 'Auto',
                     'complex_mass_scheme': False,
                     'gauge': 'unitary',
@@ -132,8 +138,9 @@ class TestCmdShell1(unittest.TestCase):
                     'fks_mode': 'real',
                     'loop_optimized_output': False,
                     'fastjet': 'fastjet-config',
-                    'timeout': '20',
+                    'timeout': 60,
                     'ignore_six_quark_processes': False
+                    'auto_update': 7
                     }
 
         self.assertEqual(config, expected)
@@ -630,7 +637,7 @@ class TestCmdShell2(unittest.TestCase,
                 self.assertAlmostEqual(value, 1.951829785476705e-2)
 
     def test_load_feynman(self):
-        """ Test that the complex_mass compile in fortran """
+        """ Test that feynman gauge assignment works """
         
         self.do('import model sm')
         # check that the model is correctly loaded (has some goldstone)
@@ -640,6 +647,7 @@ class TestCmdShell2(unittest.TestCase,
                 nb_goldstone += 1
         self.assertEqual(nb_goldstone, 0)
         self.do('set gauge Feynman')
+        self.do('import model sm')
         # check that the model is correctly loaded (has some goldstone)
         nb_goldstone = 0
         for part in self.cmd._curr_model['particles']:
@@ -726,12 +734,6 @@ class TestCmdShell2(unittest.TestCase,
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'bin','internal', 'gen_ximprove')))
-        status = subprocess.call(['make', '../bin/internal/combine_runs'],
-                                 stdout=devnull, 
-                                 cwd=os.path.join(self.out_dir, 'Source'))
-        self.assertEqual(status, 0)
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'bin','internal', 'combine_runs')))
         # Check that gensym compiles
         status = subprocess.call(['make', 'gensym'],
                                  stdout=devnull, 
@@ -1055,8 +1057,8 @@ P1_qq_wp_wp_lvl
         self.assertEqual(len(self.cmd._curr_amps), 1)
         nicestring = """Process: mu+ mu- > ta+ ta- WEIGHTED=4
 2 diagrams:
-1  ((1(13),2(-13)>1(22),id:34),(3(-15),4(15),1(22),id:35)) (QCD=0,QED=2,WEIGHTED=4)
-2  ((1(13),2(-13)>1(23),id:40),(3(-15),4(15),1(23),id:41)) (QCD=0,QED=2,WEIGHTED=4)"""
+1  ((1(13),2(-13)>1(22),id:35),(3(-15),4(15),1(22),id:36)) (QCD=0,QED=2,WEIGHTED=4)
+2  ((1(13),2(-13)>1(23),id:41),(3(-15),4(15),1(23),id:42)) (QCD=0,QED=2,WEIGHTED=4)"""
 
         self.assertEqual(self.cmd._curr_amps[0].nice_string().split('\n'), nicestring.split('\n'))
         self.do('save processes /tmp/model.pkl')
@@ -1157,6 +1159,9 @@ P1_qq_wp_wp_lvl
         
     def test_import_banner_command(self):
         """check that the import banner command works"""
+        
+        cwd = os.getcwd()
+        os.chdir(MG5DIR)
         self.do('import banner %s --no_launch' % pjoin(MG5DIR, 'tests', 'input_files', 'tt_banner.txt'))
         
         # check that the output exists:
@@ -1166,5 +1171,5 @@ P1_qq_wp_wp_lvl
         run_card = open(pjoin(self.out_dir,'Cards','run_card.dat')).read()
         self.assertTrue("'tt'     = run_tag" in run_card)
         self.assertTrue("200       = nevents" in run_card)
-        
+        os.chdir(cwd)
         

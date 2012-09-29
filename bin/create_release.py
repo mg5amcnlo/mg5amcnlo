@@ -43,6 +43,7 @@ import time
 
 import os
 import os.path as path
+import re
 import shutil
 import subprocess
 
@@ -70,12 +71,12 @@ if len(args) == 0:
 logging.basicConfig(level=vars(logging)[options.logging],
                     format="%(message)s")
 
-# 0. check that all modification are commited in this directory
+# 0. check that all modification are committed in this directory
 #    and that the date/UpdateNote are up-to-date
 diff_result = subprocess.Popen(["bzr", "diff"], stdout=subprocess.PIPE).communicate()[0] 
 
 if diff_result:
-    logging.warning("Directory is not up-to-date. The release follow the last commited version.")
+    logging.warning("Directory is not up-to-date. The release follow the last committed version.")
     answer = raw_input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
@@ -100,6 +101,24 @@ if version not in Update_note:
     if answer != 'y':
         exit()
 
+# 1. Adding the file .revision used for future auto-update.
+# Provide this only if version is not beta/tmp/...
+pattern = re.compile(r'''[\d.]+$''')
+if pattern.match(version):
+    #valid version format
+    # Get current revision number:
+    p = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE)
+    rev_nb = p.stdout.read().strip()
+    logging.info('find %s for the revision number -> starting point for the auto-update' % rev_nb)  
+else:
+    logging.warning("WARNING: version number %s is not in format A.B.C,\n" % version +\
+         "in consequence the automatic update of the code will be deactivated" )
+    answer = raw_input('Do you want to continue anyway? (y/n)')
+    if answer != 'y':
+        exit()
+    rev_nb=None
+
+ 
 # 1. bzr branch the present directory to a new directory
 #    MadGraph5_vVERSION
 
@@ -125,6 +144,18 @@ for data in glob.glob(path.join(filepath, 'bin', '*')):
 os.remove(path.join(filepath, 'README.developer'))
 shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
 
+
+# 1. Add information for the auto-update
+if rev_nb:
+    fsock = open(os.path.join(filepath,'input','.autoupdate'),'w')
+    fsock.write("version_nb   %s\n" % rev_nb)
+    fsock.write("last_check   %s\n" % int(time.time()))
+    fsock.close()
+    
+# 1. Copy the .mg5_configuration_default.txt to it's default path
+shutil.copy(path.join(filepath, 'input','.mg5_configuration_default.txt'), 
+            path.join(filepath, 'input','mg5_configuration.txt'))
+
 # 2. Create the automatic documentation in the apidoc directory
 
 try:
@@ -139,7 +170,7 @@ except:
 if status1:
     logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
                  status)
-    exit()
+    sys.exit()
 
 # 3. tar the MadGraph5_vVERSION directory.
 
@@ -150,14 +181,15 @@ status2 = subprocess.call(['tar', 'czf', filename, filepath])
 if status2:
     logging.error('Non-0 exit code %d from tar. Please check result.' % \
                  status)
-    exit()
+    sys.exit()
 
 logging.info("Running tests on directory %s", filepath)
 
 
 logging.config.fileConfig(os.path.join(root_path,'tests','.mg5_logging.conf'))
 logging.root.setLevel(eval('logging.CRITICAL'))
-logging.getLogger('madgraph').setLevel(eval('logging.CRITICAL'))
+for name in logging.Logger.manager.loggerDict.keys():
+    logging.getLogger(name).setLevel(eval('logging.CRITICAL'))
 logging.getLogger('cmdprint').setLevel(eval('logging.CRITICAL'))
 logging.getLogger('tutorial').setLevel(eval('logging.CRITICAL'))
 
@@ -178,6 +210,12 @@ reload(madgraph.various.misc)
 test_results = test_manager.run(package=os.path.join('tests',
                                                      'unit_tests'))
 
+if test_results.errors:
+    logging.error("Removing %s and quitting..." % filename)
+    os.remove(filename)
+    exit()
+
+
 a_test_results = test_manager.run(package=os.path.join('tests',
                                                        'acceptance_tests'),
                                   )
@@ -186,15 +224,7 @@ logging.basicConfig(level=vars(logging)[options.logging],
                     format="%(message)s")
 logging.root.setLevel(vars(logging)[options.logging])
 
-if not test_results.wasSuccessful():
-    logging.error("Failed %d unit tests, please check!" % \
-                    (len(test_results.errors) + len(test_results.failures)))
-
-if not a_test_results.wasSuccessful():
-    logging.error("Failed %d acceptance tests, please check!" % \
-                  (len(a_test_results.errors) + len(a_test_results.failures)))
-
-if a_test_results.errors or test_results.errors:
+if a_test_results.errors:
     logging.error("Removing %s and quitting..." % filename)
     os.remove(filename)
     exit()
@@ -205,16 +235,22 @@ p_test_results = test_manager.run(['test_short_.*'],
                                                        'parallel_tests')
                                   )
 
+if not test_results.wasSuccessful():
+    logging.error("Failed %d unit tests, please check!" % \
+                    (len(test_results.errors) + len(test_results.failures)))
+
+if not a_test_results.wasSuccessful():
+    logging.error("Failed %d acceptance tests, please check!" % \
+                  (len(a_test_results.errors) + len(a_test_results.failures)))
+
 if not p_test_results.wasSuccessful():
     logging.error("Failed %d parallel tests, please check!" % \
                   (len(p_test_results.errors) + len(p_test_results.failures)))
 
-if p_test_results.errors or p_test_results.failures:
+if p_test_results.errors:
     logging.error("Removing %s and quitting..." % filename)
     os.remove(filename)
     exit()
-
-
 
 
 try:
@@ -233,10 +269,12 @@ except:
                     "gpg --armor --sign --detach-sig " + filename)
 
 
-if not a_test_results.failures and not test_results.failures:
+if not a_test_results.failures and not test_results.failures and not p_test_results.failures:
     logging.info("All good. Removing temporary %s directory." % filepath)
     shutil.rmtree(filepath)
 else:
     logging.error("Some failures - please check before using release file")
+    if p_test_results.failures:
+        logging.error('This include discrepancy in parallel test please be carefull')
 
 logging.info("Thanks for creating a release.")
