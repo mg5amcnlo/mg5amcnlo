@@ -2265,6 +2265,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         # For the stability check the user can specify the statistics (i.e
         # number of trial PS points) as a second argument
+        reuse = False
         if args[0] in ['stability','profile','timing']:        
             reuse = args[1]=="-reuse"       
             args = args[:1]+args[2:] 

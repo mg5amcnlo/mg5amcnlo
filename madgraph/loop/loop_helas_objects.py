@@ -1553,6 +1553,8 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
     def find_max_loop_coupling(self):
         """ Find the maximum number of loop couplings appearing in any of the
         LoopHelasAmplitude in this LoopHelasMatrixElement"""
+        if len(self.get_loop_diagrams())==0:
+            return 0
         return max([len(amp.get('coupling')) for amp in \
             sum([d.get_loop_amplitudes() for d in self.get_loop_diagrams()],[])])
 

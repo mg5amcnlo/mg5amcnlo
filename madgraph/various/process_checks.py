@@ -1702,8 +1702,9 @@ def clean_up(mg_root):
     """Clean-up the possible left-over outputs from 'evaluate_matrix element' of
     the LoopMatrixEvaluator (when its argument proliferate is set to true). """
 
-    logger.info("Cleaning old temporary %s* check runs."%temp_dir_prefix)
     directories = glob.glob(os.path.join(mg_root, '%s*'%temp_dir_prefix))
+    if directories != []:
+        logger.info("Cleaning old temporary %s* check runs."%temp_dir_prefix)
     for dir in directories:
         shutil.rmtree(dir)
 
