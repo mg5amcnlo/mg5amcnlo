@@ -65,7 +65,8 @@ to be displayed.
 If you want to add a second process, you can use the add process command:
 ML5> add process u u~ > t t~ [virt=QCD]
 But keep in mind that you must still consider only virtual corrections and 
-cannot employ multiparticle labels.
+cannot employ multiparticle labels. Also decay chains are not available for
+loops.
 
 At this stage you can export your processes.
 This is done simply by typing:

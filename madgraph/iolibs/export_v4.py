@@ -68,12 +68,11 @@ class ProcessExporterFortran(object):
         self.dir_path = dir_path
         self.model = None
 
-
         if opt:
             self.opt = opt
         else:
             self.opt = {'clean': False, 'complex_mass':False,
-                        'export_format':'madevent'}
+                        'export_format':'madevent', 'mp': False}
 
     #===========================================================================
     # copy the Template in a new directory.
@@ -3091,17 +3090,27 @@ class UFO_model_to_mg4(object):
         file_to_link = ['formats.inc', 'lha_read.f','printout.f', \
                         'rw_para.f', 'testprog.f']
     
-    
         for filename in file_to_link:
             cp( MG5DIR + '/models/template_files/fortran/' + filename, \
                                                                 self.dir_path)
 
+
+            
         file = open(os.path.join(MG5DIR,\
                               'models/template_files/fortran/rw_para.f')).read()
+
         includes=["include \'coupl.inc\'","include \'input.inc\'"]
         if self.opt['mp']:
             includes.extend(["include \'mp_coupl.inc\'","include \'mp_input.inc\'"])
-        file=file%{'includes':'\n      '.join(includes)}
+        # In standalone and madloop we do no use the compiled param card but
+        # still parse the .dat one so we must load it.
+        if self.opt['export_format'] in ['madloop','standalone']:
+            load_card = 'call LHA_loadcard(param_name,npara,param,value)'
+        else:
+            load_card = ''
+        
+        file=file%{'includes':'\n      '.join(includes),
+                   'load_card':load_card}
         writer=open(os.path.join(self.dir_path,'rw_para.f'),'w')
         writer.writelines(file)
         writer.close()
@@ -3789,7 +3798,8 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
         
         opt = {'clean': not noclean, 
                'complex_mass': cmd.options['complex_mass_scheme'],
-               'export_format':cmd._export_format}
+               'export_format':cmd._export_format,
+               'mp': False}
     
         if cmd._export_format in ['standalone', 'matrix']:
             return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt)
