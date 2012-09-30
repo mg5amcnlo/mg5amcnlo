@@ -422,17 +422,22 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         self.write_ngraphs_file(writers.FortranWriter(filename),
                            len(matrix_element.get_all_amplitudes()))
 
-        filename = "loop_matrix.ps"
-#        writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
-#        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
-#                                             get('loop_diagrams'),
-#                                          filename,
-#                                          model=matrix_element.get('processes')[0].\
-#                                             get('model'),
-#                                          amplitude='')
-#        logger.info("Generating loop Feynman diagrams for " + \
-#                     matrix_element.get('processes')[0].nice_string())
-#        plot.draw()
+        # Do not draw the loop diagrams if they are too many.
+        # The user can always decide to do it manually, if really needed
+        if (len(matrix_element.get('base_amplitude').get('loop_diagrams'))>1000):
+            logger.info("There are more than 1000 loop diagrams,"+\
+                                                   " their drawing is skipped.")
+        else:
+            filename = "loop_matrix.ps"
+            writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
+            plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                           get('loop_diagrams'),
+                           filename,
+                           model=matrix_element.get('processes')[0].get('model'),
+                           amplitude='')
+            logger.info("Drawing loop Feynman diagrams for " + \
+                         matrix_element.get('processes')[0].nice_string())
+            plot.draw()
 
         if matrix_element.get('processes')[0].get('has_born'):   
             filename = "born_matrix.ps"
