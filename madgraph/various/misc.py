@@ -162,11 +162,12 @@ def multiple_try(nb_try=5, sleep=20):
 #===============================================================================
 # Compiler which returns smart output error in case of trouble
 #===============================================================================
-def compile(arg=[], cwd=None, mode='fortran', **opt):
+def compile(arg=[], cwd=None, mode='fortran', job_specs = True ,**opt):
     """compile a given directory"""
-
+    
+    command = ['make','-j2'] if job_specs else ['make']
     try:
-        p = subprocess.Popen(['make','-j2'] + arg, stdout=subprocess.PIPE, 
+        p = subprocess.Popen(command + arg, stdout=subprocess.PIPE, 
                              stderr=subprocess.STDOUT, cwd=cwd, **opt)
         (out, err) = p.communicate()
     except OSError, error:
@@ -179,7 +180,7 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
             error_text += "In general this means that your computer is not able to compile."
             if sys.platform == "darwin":
                 error_text += "Note that MacOSX doesn\'t have gmake/gfortan install by default.\n"
-                error_text += "Xcode3 contains those require program"
+                error_text += "Xcode3 contains those required program"
             raise MadGraph5Error, error_text
 
     if p.returncode:
