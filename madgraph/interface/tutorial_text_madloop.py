@@ -13,47 +13,63 @@
 #
 ################################################################################
 
-tutorial_nlo = """
+tutorial_MadLoop = """
 You have entered tutorial mode. This will introduce you to the main
-syntax options of aMC@NLO. Most of the syntax corresponds to the MadGraph one 
+syntax options for MadLoop which are mostly similar to the MadGraph5 one. 
+If you have not done so already, please follow MadGraph5 tutorial before 
+this one.  
 
-As in MadGraph, to learn more about the different options for a command, 
-you can use
+Remember that exactly as in MadGraph5, you can learn more about the different 
+options for any command by typing
 aMC@NLO>help A_CMD
-To see a list of all commands, use
+And to see a list of all commands, use
 aMC@NLO>help 
 
-The goal of this tutorial is to learn how to generate a process and to
-produce an output for aMC@NLO. In this part we will learn
-a) How to generate a process
-b) How to create output for aMC@NLO
-c) How to run the aMC@NLO output
+MadLoop is the part of MadGraph5 used by aMC@NLO to generate the code for
+evaluating the loop diagrams. This tutorial teaches you how to use MadLoop
+as standalone tool for studying loops within particular processes.
+Therefore in this mode, you can only consider definite processes, meaning 
+without multiparticle labels.
 
-Let's start with the first point, how to generate a process at NLO:
-mg5>generate p p > e+ ve [QCD]
-Note that a space is mandatory between the particle names and that '[QCD]' 
-specifies that you want to consider QCD NLO corrections. 
-Couplings different than QCD cannot be perturbed yet.
+This tutorial has three parts:
+a) How to generate a process.
+b) How to cross-check / profile an output.
+c) How to compute the loop matrix element squared for local phase-space points.
+
+Let's start with the first point, how to generate a process with MadLoop in
+standalone mode. Keep in mind that this means only the loop and born diagrams
+are generated.
+
+mg5>generate g g > t t~ [virt=QCD]
+
+Note that a space is mandatory between the particle names and that '[virt=QCD]' 
+specifies that you want to consider QCD NLO corrections. The keyword option
+'virt' before '=' within the squared brackets precisely specifies you are only
+interested in the virtual contribution. 
+You will notice that MG5 recognizes you want to use standalone MadLoop because
+the header of your interface will change from 'mg5>' to 'ML5>'. 
 """
 
 generate = """
 You have just generated a new process.
 You can find more information on supported syntax by using:
-aMC@NLO>help generate
+ML5>help generate
 To list all defined processes, type
-aMC@NLO>display processes
+ML5>display processes
 
-If you want to know more about particles and multiparticles present,
-write
-aMC@NLO>display particles
-aMC@NLO>display multiparticles
+You can display a pictorial representation of the diagrams with 
+ML5>display diagrams
+Notice you can add the option 'loop' or 'born' if you only want those diagrams
+to be displayed.
 
-If you want to add a second process, use the add process command:
-aMC@NLO>add process p p > e+ e- @2
+If you want to add a second process, you can use the add process command:
+ML5> add process u u~ > t t~ [virt=QCD]
+But keep in mind that you must still consider only virtual corrections and 
+cannot employ multiparticle labels.
 
 At this stage you can export your processes.
 This is done simply by typing:
-aMC@NLO>output MY_FIRST_AMCATNLO_RUN
+ML5>output MY_FIRST_MADLOOP_RUN
 """
 
 display_processes = """

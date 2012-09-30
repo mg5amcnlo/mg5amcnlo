@@ -67,6 +67,7 @@ import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.tutorial_text as tutorial_text
 import madgraph.interface.tutorial_text_nlo as tutorial_text_nlo
+import madgraph.interface.tutorial_text_madloop as tutorial_text_madloop
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.interface.madevent_interface as madevent_interface
 
@@ -90,7 +91,9 @@ logger_stderr = logging.getLogger('fatalerror') # ->stderr
 logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in  
                                             #order to learn MG5
 logger_tuto_nlo = logging.getLogger('tutorial_nlo') # -> stdout include instruction in  
-                                            #order to learn MG5
+                                                        #order to learn aMC@NLO
+
+logger_tuto_madloop = logging.getLogger('tutorial_madloop') # -> stoud for MadLoop tuto
 
 #===============================================================================
 # CmdExtended
@@ -195,6 +198,7 @@ class CmdExtended(cmd.Cmd):
         "*               Type 'help' for in-line help.              *\n" + \
         "*           Type 'tutorial' to learn how MG5 works         *\n" + \
         "*      Type 'tutorial nlo' to learn how aMC@NLO works      *\n" + \
+        "*    Type 'tutorial MadLoop' to learn how MadLoop works    *\n" + \
         "*                                                          *\n" + \
         "************************************************************")
         
@@ -236,6 +240,14 @@ class CmdExtended(cmd.Cmd):
         except:
             try:
                 logger_tuto_nlo.info(getattr(tutorial_text_nlo, args[0]).replace('\n','\n\t'))
+            except:
+                pass
+        
+        try:
+            logger_tuto_madloop.info(getattr(tutorial_text_madloop, command).replace('\n','\n\t'))
+        except:
+            try:
+                logger_tuto_madloop.info(getattr(tutorial_text_madloop, args[0]).replace('\n','\n\t'))
             except:
                 pass
         
@@ -1802,7 +1814,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'checks', 'parameters', 'options', 'coupling_order','variable']
     _add_opts = ['process']
     _save_opts = ['model', 'processes', 'options']
-    _tutorial_opts = ['nlo', 'start', 'stop']
+    _tutorial_opts = ['nlo', 'start', 'stop', 'MadLoop']
     _switch_opts = ['mg5','aMC@NLO','ML5']
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation', 
                    'gauge','lorentz', 'brs']
@@ -2354,8 +2366,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             logger_tuto.setLevel(logging.ERROR)
             logger_tuto_nlo.info("\n\tThanks for using the tutorial!")
             logger_tuto_nlo.setLevel(logging.ERROR)
+            logger_tuto_madloop.info("\n\tThanks for using MadLoop tutorial!")
+            logger_tuto_madloop.setLevel(logging.ERROR)
         elif len(args) > 0 and args[0] == "nlo":
             logger_tuto_nlo.setLevel(logging.INFO)
+        elif len(args) > 0 and args[0] == "MadLoop":
+            logger_tuto_madloop.setLevel(logging.INFO)
         else:
             logger_tuto.setLevel(logging.INFO)
 

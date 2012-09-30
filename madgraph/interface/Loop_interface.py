@@ -17,6 +17,7 @@
 """
 
 import os
+import shutil
 import time
 import logging
 
@@ -62,7 +63,7 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         
         mg_interface.MadGraphCmd.check_output(self,args)
         
-        if args and args[0] in ['matrix','standalone']:
+        if args and args[0] in ['standalone']:
             self._export_format = args.pop(0)
         else:
             self._export_format = 'standalone'
@@ -197,8 +198,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         aloha_original_quad_mode = aloha.mp_precision
         aloha.mp_precision = True
 
-        if self._export_format not in ['standalone','matrix']:
-            raise self.InvalidCmd('ML5 only support standalone and matrix as export format.')
+        if self._export_format not in ['standalone']:
+            raise self.InvalidCmd('ML5 only support standalone as export format.')
 
         if not os.path.isdir(self._export_dir) and \
            self._export_format in ['matrix']:
@@ -213,6 +214,12 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
             answer = self.ask('Do you want to continue?', 'y', ['y','n'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
+            else:
+                try:
+                    shutil.rmtree(self._export_dir)
+                except OSError:
+                    raise self.InvalidCmd('Could not remove directory %s.'\
+                                                         %str(self._export_dir))     
 
         self._curr_exporter = export_v4.ExportV4Factory(self, \
                                                  noclean, output_type='madloop')
