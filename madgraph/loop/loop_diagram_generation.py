@@ -276,15 +276,17 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
     def filter_from_order_config(self, diags, config, discarded_configurations):
         """ Filter diags to select only the diagram with the non perturbed orders
-        configuration config and update discarded_configurations"""
+        configuration config and update discarded_configurations.Diags is the
+        name of the key attribute of this class containing the diagrams to
+        filter."""
         newdiagselection = base_objects.DiagramList()
-        for diag in diags:
+        for diag in self[diags]:
             diag_config = self.get_non_pert_order_config(diag)
             if diag_config == config:
                 newdiagselection.append(diag)
             elif diag_config not in discarded_configurations:
                 discarded_configurations.append(diag_config)
-        diags = newdiagselection
+        self[diags] = newdiagselection
 
     def filter_loop_for_perturbative_orders(self):
         """ Filter the loop diagrams to make sure they belong to the class
@@ -431,7 +433,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         discarded_configurations = []
         # The born diagrams are now filtered according to the chose configuration
         if chosen_order_config != {}:
-            self.filter_from_order_config(self['born_diagrams'], \
+            self.filter_from_order_config('born_diagrams', \
                                    chosen_order_config,discarded_configurations)
         
         # Before proceeding with the loop contributions, we must make sure that
@@ -516,6 +518,26 @@ class LoopAmplitude(diagram_generation.Amplitude):
         ldg_debug_info("#Diags after diagram generation",\
                                                      len(self['loop_diagrams']))
 
+
+        # If a special non perturbed order configuration was chosen at the
+        # beginning because of the absence of order settings by the user,
+        # the corresponding filter is applied now to loop diagrams.
+        # List of discarded configurations 
+        if chosen_order_config != {}:
+            self.filter_from_order_config('loop_diagrams', \
+                                   chosen_order_config,discarded_configurations)
+            # Warn about discarded configurations.
+            if discarded_configurations!=[]:
+                msg = ("The contribution%s of th%s coupling orders "+\
+                 "configuration%s %s discarded :%s")%(('s','ese','s','are','\n')\
+                 if len(discarded_configurations)>1 else ('','is','','is',' '))
+                msg = msg + '\n'.join(['(%s)'%self.print_config(conf) for conf \
+                                                   in discarded_configurations])
+                msg = msg + "\nManually set the coupling orders to "+\
+                  "generate %sthe contribution%s above."%(('any of ','s') if \
+                                   len(discarded_configurations)>1 else ('',''))
+                logger.warn(msg)
+
         # Now select only the loops corresponding to the perturbative orders
         # asked for.
         self.filter_loop_for_perturbative_orders()
@@ -536,24 +558,6 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 self.check_squared_orders(self['process']['squared_orders'])
                 if len(self['loop_diagrams'])==nloopdiag_remaining:
                     break
-
-        # If a special non perturbed order configuration was chosen at the
-        # beginning because of the absence of order settings by the user,
-        # the corresponding filter is applied now to loop diagrams.
-        # List of discarded configurations 
-        if chosen_order_config != {}:
-            self.filter_from_order_config(self['loop_diagrams'], \
-                                   chosen_order_config,discarded_configurations)
-            # Warn about discarded configurations.
-            if discarded_configurations!=[]:
-                msg = ("The contribution%s of th%s coupling orders "+\
-                 "configuration%s %s discarded :%s")%(('s','ese','s','are','\n')\
-                 if len(discarded_configurations)>1 else ('','is','','is',' '))
-                msg = msg + '\n'.join(['(%s)'%self.print_config(conf) for conf \
-                                                   in discarded_configurations])
-                msg = msg + "\nManually set the coupling orders to "+\
-                                                    "generate any of the above."
-                logger.warn(msg)
                                      
         ldg_debug_info("#Diags after constraints",\
                                                      len(self['loop_diagrams']))                
@@ -593,10 +597,11 @@ class LoopAmplitude(diagram_generation.Amplitude):
             nLoopDiag+=1
             nCT['UV']+=len(ldiag.get_CT(self['process']['model'],'UV'))
             nCT['R2']+=len(ldiag.get_CT(self['process']['model'],'R2'))         
-            
-        logger.info("Generated %d loop diagrams"%nLoopDiag+\
-                    " with %d R2"%nCT['R2']+" and %d UV counterterms"%nCT['UV'])
-        
+
+        logger.info("Contributing diagrams generated: "+\
+                     "%d born, %d loop, %d R2, %d UV"%\
+                     (len(self['born_diagrams']),nLoopDiag,nCT['R2'],nCT['UV']))
+
         ldg_debug_info("#Diags after filtering",len(self['loop_diagrams']))
         ldg_debug_info("# of different structures identified",\
                                               len(self['structure_repository']))
@@ -608,7 +613,6 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         bornsuccessful, self['born_diagrams'] = \
           super(LoopAmplitude, self).generate_diagrams(True)
-        logger.info("Generated %d born diagrams" % len(self['born_diagrams']))
             
         return bornsuccessful
 
