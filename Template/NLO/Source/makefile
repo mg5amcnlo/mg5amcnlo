@@ -49,11 +49,14 @@ setrun.o: run_card.inc
 run_card.inc: ../Cards/run_card.dat
 	../bin/aMCatNLO treatcards_nlo run
 
+param_card.inc: ../Cards/param_card.dat
+	../bin/aMCatNLO treatcards param
+
 $(LIBDIR)libpdf.a: PDF
 	rm -f $(LIBDIR)libpdf.a
 	cd PDF; make	
 
-$(LIBDIR)libmodel.a: MODEL
+$(LIBDIR)libmodel.a: MODEL param_card.inc
 	rm -f $(LIBDIR)libmodel.a
 	cd MODEL; make	
 

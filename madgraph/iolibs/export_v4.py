@@ -2912,7 +2912,7 @@ class UFO_model_to_mg4(object):
     # If you change it, it should be changed accordingly in the subroutine
     # generate_loop_amplitude_call of HelasCallWriter and also in 
     # the UFOExpressionParserMPFortran.
-    mp_prefix = 'MP__'
+    mp_prefix = check_param_card.ParamCard.mp_prefix
     
     def __init__(self, model, output_path, opt=None):
         """ initialization of the objects """

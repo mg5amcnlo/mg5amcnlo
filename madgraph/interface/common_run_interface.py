@@ -232,7 +232,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
         
         if mode in ['param', 'all']: 
-            param_card = check_param_card.ParamCard(opt['param_card'])
+            if os.path.exists(pjoin(self.me_dir, 'Source', 'MODEL', 'mp_coupl.inc')):
+                param_card = check_param_card.ParamCardMP(opt['param_card'])
+            else:
+                param_card = check_param_card.ParamCard(opt['param_card'])
             outfile = pjoin(opt['output_dir'], 'param_card.inc')
             ident_card = pjoin(self.me_dir,'Cards','ident_card.dat')
             if os.path.isfile(pjoin(self.me_dir,'bin','internal','ufomodel','restrict_default.dat')):
