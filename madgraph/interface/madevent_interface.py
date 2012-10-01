@@ -4657,7 +4657,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 comment = param.comment
                 # treat merge parameter
                 if comment.strip().startswith('set of param :'):
-                    all_var = list(re.findall(r'''[^-]1\*(\w*)\b'''))
+                    all_var = list(re.findall(r'''[^-]1\*(\w*)\b''', comment))
                 # just the variable name as comment
                 elif len(comment.split()) == 1:
                     all_var = [comment.strip().lower()]
