@@ -588,8 +588,12 @@ c
 c        count un-identified particle 
 c
 	 if(.not.pass)then
-	    num_notfind=num_notfind+1
+c	    num_notfind=num_notfind+1
             write(*,*)"Un-identified PID:",abs(IDUP(l,1,1))
+            write(*,*) "will consider this particle as a missing particle"
+            num_inv=num_inv+1
+            neutrino(num_inv) = l
+
 	 endif	 
  20    enddo
  

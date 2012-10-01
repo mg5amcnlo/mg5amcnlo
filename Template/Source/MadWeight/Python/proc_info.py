@@ -45,7 +45,7 @@ class Decay_info:
     def read_config(self, file_name, mglabel2pid_dic):
        trappe=open(file_name, 'r')
        buff=trappe.readline()
-       res_patern=re.compile(r'''^\s*(?P<mg_id>[\-,\d*]*)\s*(?P<pid_d1>[\-,\d*]*)\s*(?P<pid_d2>[\-,\d*]*)\s*(?P<mass>[a-zA-Z]*)\s*(?P<width>[a-zA-Z]*)\s*(?P<SorT>[a-zA-Z]*)\s*(?P<pid_m>[\-,\d*]*)''',re.I)
+       res_patern=re.compile(r'''^\s*(?P<mg_id>[\-,\d*]*)\s*(?P<pid_d1>[\-,\d*]*)\s*(?P<pid_d2>[\-,\d*]*)\s*(?P<mass>[a-zA-Z0-9]*)\s*(?P<width>[a-zA-Z0-9]*)\s*(?P<SorT>[a-zA-Z]*)\s*(?P<pid_m>[\-,\d*]*)''',re.I)
 
        topo={}
        while 1:
