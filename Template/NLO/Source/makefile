@@ -42,6 +42,13 @@ $(LIBDIR)libgeneric.a: $(GENERIC)
 	mv libgeneric.a $(LIBDIR)
 	rm -f $(alfas_functions).o 
 
+
+setrun.o: run_card.inc 
+	$(FC) $(FFLAGS) -c -o setrun.o setrun.f
+
+run_card.inc: ../Cards/run_card.dat
+	../bin/aMCatNLO treatcards_nlo run
+
 $(LIBDIR)libpdf.a: PDF
 	rm -f $(LIBDIR)libpdf.a
 	cd PDF; make	

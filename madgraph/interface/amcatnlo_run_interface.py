@@ -45,18 +45,18 @@ sys.path.insert(0, os.path.join(root_path,'bin'))
 # usefull shortcut
 pjoin = os.path.join
 # Special logger for the Cmd Interface
-logger = logging.getLogger('madevent.stdout') # -> stdout
-logger_stderr = logging.getLogger('madevent.stderr') # ->stderr
+logger = logging.getLogger('amcatnlo.stdout') # -> stdout
+logger_stderr = logging.getLogger('amcatnlo.stderr') # ->stderr
  
 try:
     # import from madgraph directory
     import madgraph.interface.extended_cmd as cmd
+    import madgraph.interface.common_run_interface as common_run
     import madgraph.iolibs.files as files
     import madgraph.various.cluster as cluster
     import madgraph.various.misc as misc
     import madgraph.various.gen_crossxhtml as gen_crossxhtml
 
-    import models.check_param_card as check_param_card    
     from madgraph import InvalidCmd, aMCatNLOError
     aMCatNLO = False
 except Exception, error:
@@ -64,6 +64,7 @@ except Exception, error:
         print error
     # import from madevent directory
     import internal.extended_cmd as cmd
+    import internal.common_run_interface as common_run
     import internal.misc as misc    
     from internal import InvalidCmd, MadGraph5Error
     import internal.files as files
@@ -273,15 +274,6 @@ class HelpToCmd(object):
         logger.info('   If FILE belongs to index.html, param_card.dat, run_card.dat')
         logger.info('   the path to the last created/used directory is used')
 
-    def help_set(self):
-        logger.info("syntax: set %s argument" % "|".join(self._set_options))
-        logger.info("-- set options")
-        logger.info("   stdout_level DEBUG|INFO|WARNING|ERROR|CRITICAL")
-        logger.info("     change the default level for printed information")
-        logger.info("   timeout VALUE")
-        logger.info("      (default 20) Seconds allowed to answer questions.")
-        logger.info("      Note that pressing tab always stops the timer.")        
-
     def run_options_help(self, data):
         if data:
             logger.info('-- local options:')
@@ -302,67 +294,6 @@ class HelpToCmd(object):
 #===============================================================================
 class CheckValidForCmd(object):
     """ The Series of check routine for the aMCatNLOCmd"""
-
-    def check_set(self, args):
-        """ check the validity of the line"""
-        
-        if len(args) < 2:
-            self.help_set()
-            raise self.InvalidCmd('set needs an option and an argument')
-
-        if args[0] not in self._set_options + self.options.keys():
-            self.help_set()
-            raise self.InvalidCmd('Possible options for set are %s' % \
-                                  self._set_options)
-        
-        if args[0] in ['stdout_level']:
-            if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL']:
-                raise self.InvalidCmd('output_level needs ' + \
-                                      'a valid level')  
-                
-        if args[0] in ['timeout']:
-            if not args[1].isdigit():
-                raise self.InvalidCmd('timeout values should be a integer')   
-
-
-    def check_open(self, args):
-        """ check the validity of the line """
-        
-        if len(args) != 1:
-            self.help_open()
-            raise self.InvalidCmd('OPEN command requires exactly one argument')
-
-        if args[0].startswith('./'):
-            if not os.path.isfile(args[0]):
-                raise self.InvalidCmd('%s: not such file' % args[0])
-            return True
-
-        # if special : create the path.
-        if not self.me_dir:
-            if not os.path.isfile(args[0]):
-                self.help_open()
-                raise self.InvalidCmd('No MadEvent path defined. Unable to associate this name to a file')
-            else:
-                return True
-            
-        path = self.me_dir
-        if os.path.isfile(os.path.join(path,args[0])):
-            args[0] = os.path.join(path,args[0])
-        elif os.path.isfile(os.path.join(path,'Cards',args[0])):
-            args[0] = os.path.join(path,'Cards',args[0])
-        elif os.path.isfile(os.path.join(path,'HTML',args[0])):
-            args[0] = os.path.join(path,'HTML',args[0])
-        # special for card with _default define: copy the default and open it
-        elif '_card.dat' in args[0]:   
-            name = args[0].replace('_card.dat','_card_default.dat')
-            if os.path.isfile(os.path.join(path,'Cards', name)):
-                files.cp(path + '/Cards/' + name, path + '/Cards/'+ args[0])
-                args[0] = os.path.join(path,'Cards', args[0])
-            else:
-                raise self.InvalidCmd('No default path for this file')
-        elif not os.path.isfile(args[0]):
-            raise self.InvalidCmd('No default path for this file') 
-
 
     def check_run_mcatnlo(self, args, options):
         """Check the validity of the line. args[0] is the event file"""
@@ -502,7 +433,7 @@ class aMCatNLOAlreadyRunning(InvalidCmd):
 #===============================================================================
 # aMCatNLOCmd
 #===============================================================================
-class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
+class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCmd):
     """The command line processor of MadGraph"""    
     
     # Truth values
@@ -540,6 +471,30 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         'delphes' : ['generate_events [OPTIONS]', 'multi_run [OPTIONS]']
     }
     
+    # The three options categories are treated on a different footage when a 
+    # set/save configuration occur. current value are kept in self.options
+    options_configuration = {'pythia8_path': './pythia8',
+                       'madanalysis_path': './MadAnalysis',
+                       'pythia-pgs_path':'./pythia-pgs',
+                       'td_path':'./td',
+                       'delphes_path':'./Delphes',
+                       'exrootanalysis_path':'./ExRootAnalysis',
+                       'MCatNLO-utilities_path':'./MCatNLO-utilities',
+                       'timeout': 60,
+                       'web_browser':None,
+                       'eps_viewer':None,
+                       'text_editor':None,
+                       'fortran_compiler':None,
+                       'auto_update':7,
+                       'cluster_type': 'condor'}
+    
+    options_madgraph= {'stdout_level':None}
+    
+    options_madevent = {'automatic_html_opening':True,
+                         'run_mode':2,
+                         'cluster_queue':'madgraph',
+                         'nb_core': None,
+                         'cluster_temp_path':None}
     
     
     ############################################################################
@@ -575,7 +530,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.run_tag = None
         self.banner = None
         # Load the configuration file
-        self.set_configuration()
+        self.set_configuration(amcatnlo=True)
 
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
@@ -596,161 +551,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         return args
     
-  
-    ############################################################################
-    def set_configuration(self, config_path=None):
-        """ assign all configuration variable from file 
-            ./Cards/mg5_configuration.txt. assign to default if not define """
-            
-        self.options = {'pythia8_path': './pythia8',
-                              'pythia-pgs_path': '../pythia-pgs',
-                              'delphes_path': '../Delphes',
-                              'madanalysis_path': '../MadAnalysis',
-                              'exrootanalysis_path': '../ExRootAnalysis',
-                              'MCatNLO-utilites_path': '../MCatNLO-utilities',
-                              'td_path': '../',
-                              'web_browser':None,
-                              'eps_viewer':None,
-                              'text_editor':None,
-                              'fortran_compiler':None,
-                              'cluster_mode':'pbs',
-                              'automatic_html_opening':True,
-                              'run_mode':0,
-                              'cluster_queue':'madgraph',
-                              'nb_core':None,
-                              'timeout':20}
-        
-        if os.environ.has_key('MADGRAPH_BASE'):
-            config_file = open(os.path.join(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt'))
-        elif not config_path:
-            try:
-                config_file = open(os.path.join(os.environ['HOME'],'.mg5','mg5_configuration.txt'))
-            except:
-                if self.me_dir:
-                    config_file = open(os.path.relpath(
-                          os.path.join(self.me_dir, 'Cards', 'amcatnlo_configuration.txt')))
-                    main = self.me_dir
-                elif not aMCatNLO:
-                    config_file = open(os.path.relpath(
-                          os.path.join(MG5DIR, 'input', 'mg5_configuration.txt')))                    
-                    main = MG5DIR
-        else:
-            config_file = open(config_path)
-            if self.me_dir:
-                main = self.me_dir
-            else:
-                main = MG5DIR
-
-        # read the file and extract information
-        logger.info('load configuration from %s ' % config_file.name)
-        for line in config_file:
-            if '#' in line:
-                line = line.split('#',1)[0]
-            line = line.replace('\n','').replace('\r\n','')
-            try:
-                name, value = line.split('=')
-            except ValueError:
-                pass
-            else:
-                name = name.strip()
-                value = value.strip()
-                self.options[name] = value
-                if value.lower() == "none":
-                    self.options[name] = None
-
-        # Treat each expected input
-        # delphes/pythia/... path
-        for key in self.options:
-            if key.endswith('path'):
-                if self.options[key] in ['None', None]:
-                    self.options[key] = ''
-                    continue
-                path = os.path.join(self.me_dir, self.options[key])
-                if os.path.isdir(path):
-                    self.options[key] = os.path.realpath(path)
-                    continue
-                if os.path.isdir(self.options[key]):
-                    self.options[key] = os.path.realpath(self.options[key])
-                    continue
-                elif not os.path.isdir(self.options[key]):
-                    self.options[key] = ''
-            elif key.startswith('cluster'):
-                pass              
-            elif key == 'automatic_html_opening':
-                if self.options[key] in ['False', 'True']:
-                    self.options[key] =eval(self.options[key])
-            elif key not in ['text_editor','eps_viewer','web_browser']:
-                # Default: try to set parameter
-                try:
-                    self.do_set("%s %s" % (key, self.options[key]))
-                except self.InvalidCmd:
-                    logger.warning("Option %s from config file not understood" \
-                                   % key)
-        
-        # Configure the way to open a file:
-        misc.open_file.configure(self.options)
-          
-        return self.options
     
-    ############################################################################ 
-    def do_open(self, line):
-        """Open a text file/ eps file / html file"""
-        
-        args = self.split_arg(line)
-        # Check Argument validity and modify argument to be the real path
-        self.check_open(args)
-        file_path = args[0]
-        
-        misc.open_file(file_path)
-  
-
-    ############################################################################
-    def do_set(self, line):
-        """Set an option, which will be default for coming generations/outputs
-        """
-
-        args = self.split_arg(line) 
-        # Check the validity of the arguments
-        self.check_set(args)
-
-        if args[0] == "stdout_level":
-            logging.root.setLevel(eval('logging.' + args[1]))
-            logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
-            logger.info('set output information to level: %s' % args[1])
-        elif args[0] == "fortran_compiler":
-            self.options['fortran_compiler'] = args[1]
-        elif args[0] == "run_mode":
-            if not args[1] in [0,1,2,'0','1','2']:
-                raise self.InvalidCmd, 'run_mode should be 0, 1 or 2.'
-            self.cluster_mode = int(args[1])
-            self.options['cluster_mode'] =  self.cluster_mode
-        elif args[0] == 'cluster_type':
-            self.options['cluster_mode'] = args[1]
-            self.cluster = cluster.from_name[args[1]](self.options['cluster_queue'])
-        elif args[0] == 'nb_core':
-            if args[1] == 'None':
-                import multiprocessing
-                self.nb_core = multiprocessing.cpu_count()
-                self.options['nb_core'] = self.nb_core
-                return
-            if not args[1].isdigit():
-                raise self.InvalidCmd('nb_core should be a positive number') 
-            self.nb_core = int(args[1])
-            self.options['nb_core'] = self.nb_core
-        elif args[0] == 'timeout':
-            self.options[args[0]] = int(args[1]) 
-        elif args[0] in self.options:
-            if args[1] in ['None','True','False']:
-                self.options[args[0]] = eval(args[1])
-            elif args[0].endswith('path'):
-                if os.path.exists(args[1]):
-                    self.options[args[0]] = args[1]
-                elif os.path.exists(pjoin(self.me_dir, args[1])):
-                    self.options[args[0]] = pjoin(self.me_dir, args[1])
-                else:
-                    raise self.InvalidCmd('Not a valid path: keep previous value: \'%s\'' % self.options[args[0]])
-            else:
-                self.options[args[0]] = args[1]             
 
     ############################################################################      
     def do_run_mcatnlo(self, line):
@@ -873,11 +674,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if os.path.isdir(pjoin(self.me_dir, 'MCatNLO')):
             #the folder has been exported after installation of MCatNLO-utilities
             return True
-        elif os.path.isdir(self.options['MCatNLO-utilities_path']):
+        elif os.path.isdir(self.options_configuration['MCatNLO-utilities_path']):
             # the folder has been exported before installation of MCatNLO-utilities
             # and they have been installed
             misc.call(['cp -r %s %s' % \
-                     (pjoin(self.options['MCatNLO-utilities_path'], 'MCatNLO'), self.me_dir)],
+                     (pjoin(self.options_configuration['MCatNLO-utilities_path'], 'MCatNLO'), self.me_dir)],
                      shell=True)
             return True
 
@@ -1368,6 +1169,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         p_dirs = [file for file in os.listdir('.') if file.startswith('P') and os.path.isdir(file)]
         # if --nocompile option is specified, check here that all exes exists. 
         # If they exists, return
+
+        # create param_card.inc and run_card.inc
+        self.do_treatcards('', amcatnlo=True)
         if all([os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, exe)) \
                 for p_dir in p_dirs]) and options['nocompile']:
             os.chdir(old_cwd)
