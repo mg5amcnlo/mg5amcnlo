@@ -29,6 +29,7 @@ from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.madevent_interface as me_interface
 import madgraph.interface.amcatnlo_run_interface as run_interface
+import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.interface.Loop_interface as Loop_interface
 import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_helas_objects as fks_helas
@@ -393,8 +394,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         self.check_output(args)
 
         # Remove previous outputs from history
-        self.clean_history(to_remove=['display','open','history','launch','output'],
-                           remove_bef_last='generate')
+        self.clean_history(allow_for_removal = ['output'], keep_switch=True,
+                           remove_bef_last='output')
         
         noclean = '-noclean' in args
         force = '-f' in args 
@@ -533,27 +534,30 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         # check argument validity and normalise argument
         (options, argss) = _launch_parser.parse_args(argss)
         options = options.__dict__
+        options['name'] = ''
         self.check_launch(argss, options)
-        run = run_interface.aMCatNLOCmd(me_dir = pjoin(os.getcwd(), argss[0]))
-        
-        mode = argss[1]
-        if options['multicore']:
-            run.cluster_mode = 2
-        elif options['cluster']:
-            run.cluster_mode = 1
-        else:
-            run.cluster_mode = int(self.options['run_mode'])
-
         if self.options['automatic_html_opening']:
             misc.open_file(os.path.join(os.getcwd(), argss[0], 'crossx.html'))
             self.options['automatic_html_opening'] = False
 
-        run.ask_run_configuration(mode)
-        run.compile(mode, options) 
-        evt_file = run.run(mode, options)
-        if run.check_mcatnlo_dir():
-            run.run_mcatnlo(evt_file)
-        os.chdir(old_cwd)
+        ext_program = launch_ext.aMCatNLOLauncher(argss[0], self, run_mode=argss[1], **options)
+        ext_program.run()
+        
+#        mode = argss[1]
+#        if options['multicore']:
+#            run.cluster_mode = 2
+#        elif options['cluster']:
+#            run.cluster_mode = 1
+#        else:
+ #           run.cluster_mode = int(self.options['run_mode'])
+
+
+#        run.ask_run_configuration(mode)
+#        run.compile(mode, options) 
+#        evt_file = run.run(mode, options)
+#        if run.check_mcatnlo_dir():
+#            run.run_mcatnlo(evt_file)
+#        os.chdir(old_cwd)
                     
    
 class aMCatNLOInterfaceWeb(mg_interface.CheckValidForCmdWeb, aMCatNLOInterface):

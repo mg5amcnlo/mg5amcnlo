@@ -149,7 +149,7 @@ except KeyboardInterrupt:
     pass
 
 try:
-    cmd_line.exec_cmd('quit all', printcmd=False)
+    cmd_line_cmd('quit all', printcmd=False)
     readline.set_history_length(100)
     if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
         os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))

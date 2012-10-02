@@ -49,8 +49,8 @@ sys.path.insert(0, os.path.join(root_path,'bin'))
 # usefull shortcut
 pjoin = os.path.join
 # Special logger for the Cmd Interface
-logger = logging.getLogger('common_run.stdout') # -> stdout
-logger_stderr = logging.getLogger('common_run.stderr') # ->stderr
+logger = logging.getLogger('madgraph.stdout') # -> stdout
+logger_stderr = logging.getLogger('madgraph.stderr') # ->stderr
 
 
 try:

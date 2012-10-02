@@ -45,8 +45,8 @@ sys.path.insert(0, os.path.join(root_path,'bin'))
 # usefull shortcut
 pjoin = os.path.join
 # Special logger for the Cmd Interface
-logger = logging.getLogger('amcatnlo.stdout') # -> stdout
-logger_stderr = logging.getLogger('amcatnlo.stderr') # ->stderr
+logger = logging.getLogger('madgraph.stdout') # -> stdout
+logger_stderr = logging.getLogger('madgraph.stderr') # ->stderr
  
 try:
     # import from madgraph directory
@@ -187,6 +187,7 @@ class CmdExtended(cmd.Cmd):
     
     def stop_on_keyboard_stop(self):
         """action to perform to close nicely on a keyboard interupt"""
+        print 'in amcatnlo_run'
         try:
             if hasattr(self, 'results'):
                 self.update_status('Stop by the user', level=None, makehtml=False, error=True)
@@ -1390,6 +1391,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
     def do_quit(self, line):
         """ """
+        print 'in do_quit'
   
         try:
             os.remove(pjoin(self.me_dir,'RunWeb'))

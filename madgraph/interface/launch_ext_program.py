@@ -263,7 +263,7 @@ class SALauncher(ExtLauncher):
 class aMCatNLOLauncher(ExtLauncher):
     """A class to launch MadEvent run"""
     
-    def __init__(self, running_dir, cmd_int , unit='pb', **option):
+    def __init__(self, running_dir, cmd_int, run_mode='aMC@NLO', unit='pb', **option):
         """ initialize the StandAlone Version"""
 
         ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **option)
@@ -275,6 +275,7 @@ class aMCatNLOLauncher(ExtLauncher):
 #        assert hasattr(self, 'shell')
 
         self.unit = unit
+        self.run_mode = run_mode
         
         if self.cluster:
             self.cluster = 1
@@ -325,7 +326,7 @@ class aMCatNLOLauncher(ExtLauncher):
         launch = self.cmd_int.define_child_cmd_interface(
                      usecmd, interface=False)
         #launch.me_dir = self.running_dir
-        command = 'launch '
+        command = 'launch ' + self.run_mode
 
         if mode == "1":
             command += " -c"
