@@ -3317,31 +3317,35 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Load file with path of the different program:
         import urllib
         path = {}
-        try:
-            data = urllib.urlopen('http://madgraph.phys.ucl.ac.be/package_info.dat')
-        except:
-            raise MadGraph5Error, '''Impossible to connect the server. 
-            Please check your internet connection or retry later'''
-        for line in data: 
-            split = line.split()   
-            path[split[0]] = split[1]
-        
+        # this has to be removed
+        logger.warning('do_install has been modified for the Natal school')
         name = {'td_mac': 'td', 'td_linux':'td', 'Delphes':'Delphes', 
                 'pythia-pgs':'pythia-pgs', 'ExRootAnalysis': 'ExRootAnalysis',
                 'MadAnalysis':'MadAnalysis', 'MCatNLO-utilities':'MCatNLO-utilities'}
         name = name[args[0]]
-        
-        try:
-            os.system('rm -rf %s' % pjoin(MG5DIR, name))
-        except:
-            pass
-        
-        # Load that path
-        logger.info('Downloading %s' % path[args[0]])
-        if sys.platform == "darwin":
-            misc.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
-        else:
-            misc.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
+        if not os.path.exists(pjoin(MG5DIR, 'MCatNLO-utilities.tgz')):
+            logger.warning('downloading')
+            try:
+                data = urllib.urlopen('http://madgraph.phys.ucl.ac.be/package_info.dat')
+            except:
+                raise MadGraph5Error, '''Impossible to connect the server. 
+                Please check your internet connection or retry later'''
+            for line in data: 
+                split = line.split()   
+                path[split[0]] = split[1]
+            
+            try:
+                os.system('rm -rf %s' % pjoin(MG5DIR, name))
+            except:
+                pass
+            
+            # Load that path
+            logger.info('Downloading %s' % path[args[0]])
+            if sys.platform == "darwin":
+                misc.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
+            else:
+                misc.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
+        #the previous block was originally not indented
         # Untar the file
         returncode = misc.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR, 
                                      stdout=open(os.devnull, 'w'))
