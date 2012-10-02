@@ -580,4 +580,6 @@ _launch_parser.add_option("-r", "--reweightonly", default=False, action='store_t
                                  " latest generated event files (see list in SubProcesses/nevents_unweighted)")
 _launch_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip file reweighting")
+_launch_parser.add_option("-s", "--shower", default=False, action='store_true',
+                            help="Showe the events after generation")
 

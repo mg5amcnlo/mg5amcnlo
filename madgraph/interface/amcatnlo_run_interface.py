@@ -620,7 +620,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         mode = 'aMC@' + argss[0]
         self.ask_run_configuration(mode)
         self.compile(mode, options) 
-        self.run(mode, options)
+        evt_file = self.run(mode, options)
+        if self.check_mcatnlo_dir() and options['shower']:
+            self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
         
@@ -648,7 +650,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.ask_run_configuration(mode)
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
-        if self.check_mcatnlo_dir():
+        if self.check_mcatnlo_dir() and options['shower']:
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
@@ -1452,6 +1454,8 @@ _launch_parser.add_option("-r", "--reweightonly", default=False, action='store_t
                                  " latest generated event files (see list in SubProcesses/nevents_unweighted)")
 _launch_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip file reweighting")
+_launch_parser.add_option("-s", "--shower", default=False, action='store_true',
+                            help="Showe the events after generation")
 
 
 _calculate_xsect_usage = "calculate_xsect [ORDER] [options]\n" + \
@@ -1484,3 +1488,5 @@ _generate_events_parser.add_option("-n", "--nocompile", default=False, action='s
                             "or with --tests")
 _generate_events_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip file reweighting")
+_generate_events_parser.add_option("-s", "--shower", default=False, action='store_true',
+                            help="Showe the events after generation")

@@ -269,6 +269,7 @@ class aMCatNLOLauncher(ExtLauncher):
         ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **option)
         #self.executable = os.path.join('.', 'bin','generate_events')
 
+        self.options = option
         assert hasattr(self, 'cluster')
         assert hasattr(self, 'multicore')
         assert hasattr(self, 'name')
@@ -277,9 +278,9 @@ class aMCatNLOLauncher(ExtLauncher):
         self.unit = unit
         self.run_mode = run_mode
         
-        if self.cluster:
+        if self.cluster or option['cluster']:
             self.cluster = 1
-        if self.multicore:
+        if self.multicore or option['multicore']:
             self.cluster = 2
         
         self.cards = []
@@ -326,7 +327,10 @@ class aMCatNLOLauncher(ExtLauncher):
         launch = self.cmd_int.define_child_cmd_interface(
                      usecmd, interface=False)
         #launch.me_dir = self.running_dir
-        command = 'launch ' + self.run_mode
+        option_line = ' '.join([' --%s' % opt for opt in self.options.keys() \
+                if self.options[opt] and not opt in ['cluster', 'multicore']])
+        print 'option line', option_line
+        command = 'launch ' + self.run_mode + ' ' + option_line
 
         if mode == "1":
             command += " -c"
