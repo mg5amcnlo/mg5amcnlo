@@ -491,7 +491,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     
     options_madgraph= {'stdout_level':None}
     
-    options_madevent = {'automatic_html_opening':True,
+    options_madevent = {'automatic_html_opening':False,
                          'run_mode':2,
                          'cluster_queue':'madgraph',
                          'nb_core': None,
