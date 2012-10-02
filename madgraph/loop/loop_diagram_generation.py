@@ -466,6 +466,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 self['process']['orders'][order]=user_orders[order]+2
             else:
                 self['process']['orders'][order]=user_orders[order]
+        if 'WEIGHTED' in user_orders.keys():
+            self['process']['orders']['WEIGHTED']=user_orders['WEIGHTED']+\
+                                     2*min([hierarchy[order] for order in \
+                                     self['process']['perturbation_couplings']])
                 
         ldg_debug_info("Orders used for loop generation",\
                                                       self['process']['orders'])
