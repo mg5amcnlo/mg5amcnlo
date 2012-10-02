@@ -254,14 +254,14 @@ C
         DO J=%(n_initial)d+1,NEXTERNAL	
 		  BUFF=BUFF+P(I,J)
 		ENDDO
-		IF ((BUFF/REF).GT.1.0E-9_16) THEN
+		IF ((BUFF/REF).GT.1.0E-6_16) THEN
 		  STOP 'Four-momentum conservation is not accurate enough.'		  
 		ENDIF
 	  ENDDO
 
 	  DO I=1,NEXTERNAL-1
 	    REF=ABS(P(0,I))+ABS(P(1,I))+ABS(P(2,I))+ABS(P(3,I))
-		IF ((SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF).GT.1.0E-4_16) THEN
+		IF ((SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF).GT.1.0E-2_16) THEN
 		  STOP 'Four-momentum conservation is not accurate enough.'
 		ELSE
 	      P(3,I)=SIGN(SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-MASSES(I)**2)),P(3,I))

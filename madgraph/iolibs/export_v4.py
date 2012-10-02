@@ -1196,6 +1196,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                             self.dir_path+'/bin/internal/madevent_interface.py')
         cp(_file_path+'/interface/extended_cmd.py',
                                   self.dir_path+'/bin/internal/extended_cmd.py')
+        cp(_file_path+'/interface/common_run_interface.py',
+                            self.dir_path+'/bin/internal/common_run_interface.py')
         cp(_file_path+'/various/misc.py', self.dir_path+'/bin/internal/misc.py')        
         cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
         cp(_file_path+'/iolibs/save_load_object.py', 
@@ -2910,7 +2912,7 @@ class UFO_model_to_mg4(object):
     # If you change it, it should be changed accordingly in the subroutine
     # generate_loop_amplitude_call of HelasCallWriter and also in 
     # the UFOExpressionParserMPFortran.
-    mp_prefix = 'MP__'
+    mp_prefix = check_param_card.ParamCard.mp_prefix
     
     def __init__(self, model, output_path, opt=None):
         """ initialization of the objects """
@@ -3116,9 +3118,15 @@ class UFO_model_to_mg4(object):
         writer.writelines(file)
         writer.close()
 
-        if self.opt['export_format'] == 'madevent':
+        if self.opt['export_format'] in ['madevent', 'FKS5_default', 'FKS5_optimized']:
             cp( MG5DIR + '/models/template_files/fortran/makefile_madevent', 
                 self.dir_path + '/makefile')
+            if self.opt['export_format'] in ['FKS5_default', 'FKS5_optimized']:
+                path = pjoin(self.dir_path, 'makefile')
+                text = open(path).read()
+                text = text.replace('madevent','aMCatNLO')
+                open(path, 'w').writelines(text)
+
         else:
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
@@ -3658,7 +3666,7 @@ class UFO_model_to_mg4(object):
     def create_param_read(self):    
         """create param_read"""
         
-        if self.opt['export_format'] == 'madevent':
+        if self.opt['export_format'] in ['madevent', 'FKS5_default', 'FKS5_optimized']:
             fsock = self.open('param_read.inc', format='fortran')
             fsock.writelines(' include \'../param_card.inc\'')
             return

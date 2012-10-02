@@ -40,9 +40,13 @@ import madgraph.various.q_polynomial as q_polynomial
 
 import aloha.create_aloha as create_aloha
 
-import models.sm.write_param_card as write_param_card
+import models.write_param_card as write_param_card
+import models.check_param_card as check_param_card
 from madgraph import MadGraph5Error, MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
+
+pjoin = os.path.join
+
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_fks')
 
@@ -144,10 +148,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                             self.dir_path+'/bin/internal/amcatnlo_run_interface.py')
         cp(_file_path+'/interface/extended_cmd.py',
                                   self.dir_path+'/bin/internal/extended_cmd.py')
+        cp(_file_path+'/interface/common_run_interface.py',
+                            self.dir_path+'/bin/internal/common_run_interface.py')
         cp(_file_path+'/various/misc.py', self.dir_path+'/bin/internal/misc.py')        
         cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
         cp(_file_path+'/iolibs/save_load_object.py', 
                               self.dir_path+'/bin/internal/save_load_object.py') 
+        cp(_file_path+'/iolibs/file_writers.py', 
+                              self.dir_path+'/bin/internal/file_writers.py')
         cp(_file_path+'../models/check_param_card.py', 
                               self.dir_path+'/bin/internal/check_param_card.py')
         cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
@@ -163,6 +171,30 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                  self.dir_path+'/bin/internal/me5_logging.conf') 
         cp(_file_path+'/interface/coloring_logging.py', 
                                  self.dir_path+'/bin/internal/coloring_logging.py') 
+
+
+    def convert_model_to_mg4(self, model, wanted_lorentz = [], 
+                                                         wanted_couplings = []):
+         
+         super(ProcessExporterFortranFKS,self).convert_model_to_mg4(model, 
+                                               wanted_lorentz, wanted_couplings)
+         
+         IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
+         try:
+             shutil.rmtree(pjoin(self.dir_path,'bin','internal','ufomodel'))
+         except OSError as error:
+             pass
+         shutil.copytree(model.get('version_tag').split('##')[0], 
+                               pjoin(self.dir_path,'bin','internal','ufomodel'),
+                               ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
+         if hasattr(model, 'restrict_card'):
+             out_path = pjoin(self.dir_path, 'bin', 'internal','ufomodel',
+                                                         'restrict_default.dat')
+             if isinstance(model.restrict_card, check_param_card.ParamCard):
+                 model.restrict_card.write(out_path)
+             else:
+                 files.cp(model.restrict_card, out_path)
+
 
 
     #===========================================================================
@@ -428,7 +460,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             
         os.chdir(cwd)
         # Generate info page
-        gen_infohtml.make_info_html_nlo(self.dir_path)
+        #gen_infohtml.make_info_html_nlo(self.dir_path)
 
 
         return calls

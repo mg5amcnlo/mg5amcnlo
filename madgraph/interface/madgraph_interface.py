@@ -1838,6 +1838,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
+                       'MCatNLO-utilities_path':'./MCatNLO-utilities',
                        'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
@@ -3389,6 +3390,26 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 text = open(path).read()
                 text = text.replace('FC=g77','FC=gfortran')
                 open(path, 'w').writelines(text)
+
+            elif compiler == 'gfortran' and args[0] =='MCatNLO-utilities':
+                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHep', 'mcfio', 'arch_mcfio')
+                text = open(path).read()
+                text = text.replace('F77=f77','F77=gfortran')
+                open(path, 'w').writelines(text)
+                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHep', 'src', 'stdhep_arch')
+                text = open(path).read()
+                text = text.replace('F77=f77','F77=gfortran')
+                open(path, 'w').writelines(text)
+            elif compiler == 'g77' and args[0] =='MCatNLO-utilities':
+                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHep', 'mcfio', 'arch_mcfio')
+                text = open(path).read()
+                text = text.replace('F77=f77','F77=g77')
+                open(path, 'w').writelines(text)
+                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHep', 'src', 'stdhep_arch')
+                text = open(path).read()
+                text = text.replace('F77=f77','F77=g77')
+                open(path, 'w').writelines(text)
+
                             
         if logger.level <= logging.INFO:
             devnull = open(os.devnull,'w') 
