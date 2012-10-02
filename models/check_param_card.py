@@ -326,8 +326,8 @@ class ParamCard(dict):
                     value =defaultcard[block].get(tuple(lhaid)).value
             else:
                 value =defaultcard[block].get(tuple(lhaid)).value
-            value = str(value).lower()
-            fout.writelines(' %s = %s' % (variable, str(value).replace('e','d')))
+            #value = str(value).lower()
+            fout.writelines(' %s = %s' % (variable, ('%e' % value).replace('e','d')))
             
         
         
@@ -484,10 +484,10 @@ class ParamCardMP(ParamCard):
                     value =defaultcard[block].get(tuple(lhaid)).value
             else:
                 value =defaultcard[block].get(tuple(lhaid)).value
-            value = str(value).lower()
-            fout.writelines(' %s = %s' % (variable, str(value).replace('e','d')))
+            #value = str(value).lower()
+            fout.writelines(' %s = %s' % (variable, ('%e' % value).replace('e','d')))
             fout.writelines(' %s%s = %s_16' % (self.mp_prefix, 
-                variable, str(value)))
+                variable, ('%e' % value)))
 
 
 class ParamCardRule(object):

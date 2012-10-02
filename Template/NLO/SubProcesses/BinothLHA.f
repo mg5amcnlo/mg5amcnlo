@@ -53,8 +53,12 @@ c
       parameter (tolerance = 1d-8)
       integer i,j
       integer nbad, nbadmax
+c statistics for MadLoop      
+      integer nunst, ntot
+      common/ups_stats/nunst, ntot
       parameter (nbadmax = 5)
       double precision pmass(nexternal)
+      logical unstable_point
       include 'pmass.inc'
       data nbad / 0 /
       if (isum_hel.ne.0) then
@@ -86,10 +90,29 @@ c      virt_wgt=virt_wgt+conversion*born_wgt*ao2pi
 c======================================================================
 c check for poles cancellation      
       call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
+      ntot = ntot+1
+      unstable_point = .not. 
+     1       (dabs((single - madfks_single)/double).lt.tolerance .and.
+     1        dabs((double - madfks_double)/double).lt.tolerance) 
+      if (unstable_point) then
+          nunst = nunst+1
+          if (nunst.lt.10) then
+              if (nunst.eq.1) then
+                open(unit=78, file='UPS.log')
+              else
+                open(unit=78, file='UPS.log', access='append')
+              endif
+              do i = 1, nexternal-1
+                write(78,*) i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
+              enddo
+              write(78,*) 'SCALE**2 ', QES2
+              close(78)
+          endif
+      endif
+
+
       if (firsttime) then
-          call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
-          if (dabs(single - madfks_single).lt.tolerance .and.
-     1        dabs(double - madfks_double).lt.tolerance) then
+          if (.not. unstable_point) then
               write(*,*) "---- POLES CANCELLED ----"
               firsttime = .false.
           else
@@ -108,6 +131,8 @@ c check for poles cancellation
               do i = 1, nexternal-1
                 write(*,*) i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
               enddo
+              write(*,*) 
+              write(*,*) " SCALE**2: ", QES2
               
               if (nbad .lt. nbadmax) then
                   nbad = nbad + 1

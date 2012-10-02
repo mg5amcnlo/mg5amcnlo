@@ -105,6 +105,9 @@ c For MINT:
       logical Hevents
       common/SHevents/Hevents
       character*10 dum
+c statistics for MadLoop      
+      integer nunst, ntot
+      common/ups_stats/nunst, ntot
 
 C-----
 C  BEGIN CODE
@@ -112,6 +115,8 @@ C-----
 c
 c     Read process number
 c
+      nunst=0
+      ntot=0
       open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
       read (lun+1,'(a130)',err=11,end=11) buf
       l1=index(buf,'P')
@@ -415,6 +420,10 @@ c$$$      write (*,*) ''
         close(99)
       endif
 
+      write(*,*) "Satisctics from MadLoop:"
+      write(*,*) "Total points tried: ", ntot
+      write(*,*) "Unstable points (check UPS.log for the first 10:) ",
+     1 nunst
       return
  999  write (*,*) 'nevts file not found'
       stop

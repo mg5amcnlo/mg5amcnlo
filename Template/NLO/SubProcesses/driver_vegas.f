@@ -90,12 +90,18 @@ c For tests of virtuals
      &                 total_wgt_sum_min
 
       integer n_mp, n_disc
+c statistics for MadLoop      
+      integer nunst, ntot
+      common/ups_stats/nunst, ntot
+
 C-----
 C  BEGIN CODE
 C-----  
 c
 c     Read process number
 c
+      nunst=0
+      ntot=0
       open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
       read (lun+1,'(a130)',err=11,end=11) buf
       l1=index(buf,'P')
@@ -246,21 +252,14 @@ c
       write (*,*) ''
       write (*,*) ''
       write (*,*) '----------------------------------------------------'
-      write (*,*) 'number of except PS points:',ivirtpointsExcept,
-     &     'out of',ivirtpoints,'points'
-      write (*,*) '   treatment of exceptional PS points:'
-      write (*,*) '      maximum approximation:',
-     &     total_wgt_sum + dsqrt(total_wgt_sum_max)
-      write (*,*) '      minimum approximation:',
-     &     total_wgt_sum - dsqrt(total_wgt_sum_min)
-      write (*,*) '      taking the max/min average:',total_wgt_sum
-      write (*,*) '----------------------------------------------------'
-      write (*,*) ''
 
 c Uncomment for getting CutTools statistics
 c$$$      call ctsstatistics(n_mp,n_disc)
 c$$$      write(*,*) 'n_mp  =',n_mp,'    n_disc=',n_disc
-
+      write(*,*) "Satisctics from MadLoop:"
+      write(*,*) "Total points tried: ", ntot
+      write(*,*) "Unstable points (check UPS.log for the first 10:) ",
+     1 nunst
 
       if(savegrid)call initplot
       call mclear
