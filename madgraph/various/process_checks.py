@@ -438,7 +438,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             FortranExporter.finalize_v4_directory(None,"",False,False,'gfortran')
 
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'))
-        self.fix_MadLoopParamCard(os.path.join(export_dir,'SubProcesses'),
+        self.fix_MadLoopParamCard(os.path.join(export_dir,'Cards'),
                                      mp = gauge_check and loop_optimized_output)
         
         if gauge_check:
@@ -503,7 +503,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         file.write(MLParams)
         file.close()
 
-    def fix_PSPoint_in_check(self, dir_name, read_ps = True, npoints = 1,
+    @classmethod
+    def fix_PSPoint_in_check(cls, dir_name, read_ps = True, npoints = 1,
                              hel_config = -1):
         """Set check_sa.f to be reading PS.input assuming a working dir dir_name.
         if hel_config is different than -1 then check_sa.f is configured so to
@@ -581,41 +582,55 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             output.close()
             if os.path.exists(os.path.join(dir_name,'result.dat')):
                 return self.parse_check_output(file(os.path.join(dir_name,\
-                                                                 'result.dat')))  
+                                                  'result.dat')),format='tuple')  
             else:
                 logging.warning("Error while looking for file %s"%str(os.path\
-                                                  .join(dir_name,'result.dat')))
+                                           .join(dir_name,format='result.dat')))
                 return ((0.0, 0.0, 0.0, 0.0, 0), [])
         except IOError:
             logging.warning("Error while executing ./check in %s" % shell_name)
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
 
-    def parse_check_output(self,output):
+    @classmethod
+    def parse_check_output(cls,output,format='tuple'):
         """Parse the output string and return a pair where first four values are 
         the finite, born, single and double pole of the ME and the fourth is the
         GeV exponent and the second value is a list of 4 momenta for all particles 
-        involved."""
+        involved. Return the answer in two possible formats, 'tuple' or 'dict'."""
 
+        res_dict = {'res_p':[],
+                    'born':0.0,
+                    'finite':0.0,
+                    '1eps':0.0,
+                    '2eps':0.0,
+                    'gev_pow':0,
+                    'export_format':'Default'}
         res_p = []
-        value = [0.0,0.0,0.0,0.0]
-        gev_pow = 0
 
         for line in output:
             splitline=line.split()
             if splitline[0]=='PS':
                 res_p.append([float(s) for s in splitline[1:]])
             elif splitline[0]=='BORN':
-                value[1]=float(splitline[1])
+                res_dict['born']=float(splitline[1])
             elif splitline[0]=='FIN':
-                value[0]=float(splitline[1])
+                res_dict['finite']=float(splitline[1])
             elif splitline[0]=='1EPS':
-                value[2]=float(splitline[1])
+                res_dict['1eps']=float(splitline[1])
             elif splitline[0]=='2EPS':
-                value[3]=float(splitline[1])
+                res_dict['2eps']=float(splitline[1])
             elif splitline[0]=='EXP':
-                gev_pow=int(splitline[1])
+                res_dict['gev_pow']=int(splitline[1])
+            elif splitline[0]=='Export_Format':
+                res_dict['export_format']=splitline[1]
 
-        return ((value[0],value[1],value[2],value[3],gev_pow), res_p)
+        res_dict['res_p'] = res_p
+
+        if format=='tuple':
+            return ((res_dict['finite'],res_dict['born'],res_dict['1eps'],
+                       res_dict['2eps'],res_dict['gev_pow']), res_dict['res_p'])
+        else:
+            return res_dict
     
     def setup_ward_check(self, working_dir, file_names, mp = False):
         """ Modify loop_matrix.f so to have one external massless gauge boson
@@ -681,7 +696,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         """ Same as the mother for now """
         LoopMatrixElementEvaluator.__init__(self,*args, **kwargs)
 
-    def make_and_run(self, dir_name):
+    @classmethod
+    def make_and_run(cls, dir_name):
         """ Compile the check program in the directory dir_name.
         Return the compilation and running time. """
 
@@ -714,6 +730,49 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
         return compilation_time, run_time
         
+    @classmethod    
+    def run_initialization(cls, run_dir, check_sa_dir, infos,\
+                                req_files = ['HelFilter.dat','LoopFilter.dat'],
+                                attempts = [3,15]):
+        """ Run the initialization of the process in 'run_dir' with success 
+        characterized by the creation of the files req_files in this directory.
+        The directory containing the driving source code 'check_sa.f'.
+        The list attempt gives the successive number of PS points the 
+        initialization should be tried with before calling it failed.
+        Returns the number of PS points which were necessary for the init."""
+        
+        to_attempt = copy.copy(attempts)
+        to_attempt.reverse()
+        
+        def need_init():
+            """ True if init not done yet."""
+            return any([not os.path.exists(os.path.join(run_dir,fname)) for \
+                                                       fname in req_files]) or \
+                         not os.path.isfile(os.path.join(run_dir,'check')) or \
+                         not os.access(os.path.join(run_dir,'check'), os.X_OK)
+        
+        curr_attempt = 1
+        while to_attempt!=[] and need_init():
+            curr_attempt = to_attempt.pop()+1
+            # Plus one because the filter are written on the next PS point after
+            # initialization is performed.
+            cls.fix_PSPoint_in_check(check_sa_dir, read_ps = False, 
+                                                         npoints = curr_attempt)
+            compile_time, run_time = cls.make_and_run(run_dir)
+            if compile_time==None:
+                logging.error("Failed at running the process %s."%shell_name)
+                return None
+            # Only set process_compilation time for the first compilation.
+            if 'Process_compilation' not in infos.keys() or \
+                                             infos['Process_compilation']==None:
+                infos['Process_compilation'] = compile_time
+            infos['Initialization'] = run_time
+        
+        if need_init():
+            return None
+        else:
+            return curr_attempt-1
+
     def skip_loop_evaluation_setup(self, dir_name, skip=True):
         """ Edit loop_matrix.f in order to skip the loop evaluation phase.
         Notice this only affects the double precision evaluation which is
@@ -801,7 +860,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         # at generation time, it can be skipped)
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
                                                    read_ps = False, npoints = 4)
-        self.fix_MadLoopParamCard(os.path.join(export_dir,'SubProcesses'),
+        self.fix_MadLoopParamCard(os.path.join(export_dir,'Cards'),
                                                  mp = False, loop_filter = True)
         
         shell_name = None
@@ -811,31 +870,17 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         dir_name = os.path.join(export_dir, 'SubProcesses', shell_name)
         infos['dir_path']=dir_name
 
-        if not os.path.exists(os.path.join(dir_name,'HelFilter.dat')) or not \
-               os.path.exists(os.path.join(dir_name,'LoopFilter.dat')) or not \
-               os.path.isfile(os.path.join(dir_name,'check')) or not \
-               os.access(os.path.join(dir_name,'check'), os.X_OK):
-            compile_time, run_time = self.make_and_run(dir_name)
-            if compile_time==None:
-                logging.error("Failed at running the process %s."%shell_name)
-                return None
-            infos['Process_compilation'] = compile_time
-            
-            if not os.path.exists(os.path.join(dir_name,'HelFilter.dat')) or not \
-                   os.path.exists(os.path.join(dir_name,'LoopFilter.dat')):
-                logger.warning("Could not initialize the process %s"%shell_name+\
-                                " with 4 PS points. Now trying with 15 PS points.")
-                self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
-                                                      read_ps = False, npoints = 15)
-                compile_time, run_time = self.make_and_run(dir_name)
-                if compile_time == None: return None
-                if not os.path.exists(os.path.join(dir_name,'HelFilter.dat')) or \
-                   not os.path.exists(os.path.join(dir_name,'LoopFilter.dat')):
-                    logger.error("Could not initialize the process %s"%shell_name+\
-                                " with 15 PS points.")
-                    return None
-            
-            infos['Initialization'] = run_time
+        attempts = [3,15]
+        nPS_necessary = self.run_initialization(dir_name,
+                                os.path.join(export_dir,'SubProcesses'),infos,\
+                                req_files = ['HelFilter.dat','LoopFilter.dat'],
+                                attempts = attempts)
+        if nPS_necessary == None:
+            logger.error("Could not initialize the process %s"%shell_name+\
+                                            " with %s PS points."%max(attempts))
+        elif nPS_necessary > min(attempts):
+            logger.warning("Could not initialize the process %s"%shell_name+\
+              " with %d PS points. It needed %d."%(min(attempts),nPS_necessary))
 
         return infos
 
@@ -851,9 +896,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                  helas_objects.HelasMatrixElement)) or (reusing and 
                               isinstance(matrix_element, base_objects.Process)))
         if not reusing:
-            proc_name = matrix_element['processes'][0].shell_string()
+            proc_name = matrix_element['processes'][0].shell_string()[2:]
         else:
-            proc_name = matrix_element.shell_string()
+            proc_name = matrix_element.shell_string()[2:]
             
         export_dir=os.path.join(self.mg_root,temp_dir_prefix+"_%s"%proc_name)
         
@@ -996,7 +1041,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             process = matrix_element['processes'][0]
         else:
             process = matrix_element
-        proc_name = process.shell_string()
+        proc_name = process.shell_string()[2:]
         export_dir=os.path.join(self.mg_root,temp_dir_prefix+"_%s"%proc_name)
         if not infos:
             infos = self.setup_process(matrix_element, model,export_dir, reusing)
@@ -1104,6 +1149,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         if progress_bar!=None:
                 progress_bar.start()
         for i in range(nPoints):
+            cards_path = os.path.join(export_dir,'Cards')
             # Pick an eligible PS point with rambo
             p = pick_PS_point(process)
 #            print "I use P_%i="%i,p
@@ -1113,16 +1159,13 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             output_PS_point(dir_path,p,0)
             dp_dict={}
             dp_res=[]
-            dp_res.append(self.get_me_value(1,\
-                              os.path.join(export_dir,'SubProcesses'),dir_path))
+            dp_res.append(self.get_me_value(1,cards_path,dir_path))
             dp_dict['CTModeA']=dp_res[-1]
-            dp_res.append(self.get_me_value(2,\
-                              os.path.join(export_dir,'SubProcesses'),dir_path))
+            dp_res.append(self.get_me_value(2,cards_path,dir_path))
             dp_dict['CTModeB']=dp_res[-1]
             for rotation in range(1,3):
                 output_PS_point(dir_path,p,rotation)
-                dp_res.append(self.get_me_value(1,\
-                              os.path.join(export_dir,'SubProcesses'),dir_path))
+                dp_res.append(self.get_me_value(1,cards_path,dir_path))
                 dp_dict['Rotation%i'%rotation]=dp_res[-1]
             # Make sure all results make sense
             if any([not res for res in dp_res]):
@@ -1134,16 +1177,13 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 Unstable_PS_points.append([i,p])
                 qp_res=[]
                 qp_dict={}
-                qp_res.append(self.get_me_value(4,\
-                                  os.path.join(export_dir,'SubProcesses'),dir_path))
+                qp_res.append(self.get_me_value(4,cards_path,dir_path))
                 qp_dict['CTModeA']=qp_res[-1]
-                qp_res.append(self.get_me_value(5,\
-                                  os.path.join(export_dir,'SubProcesses'),dir_path))
+                qp_res.append(self.get_me_value(5,cards_path,dir_path))
                 qp_dict['CTModeB']=qp_res[-1]
                 for rotation in range(1,3):
                     output_PS_point(dir_path,p,rotation)                
-                    qp_res.append(self.get_me_value(4,\
-                              os.path.join(export_dir,'SubProcesses'),dir_path))
+                    qp_res.append(self.get_me_value(4,cards_path,dir_path))
                     qp_dict['Rotation%i'%rotation]=qp_res[-1]
                 # Make sure all results make sense
                 if any([not res for res in qp_res]):
@@ -1183,7 +1223,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             output.close()
             if os.path.exists(os.path.join(dir_path,'result.dat')):
                 return self.parse_check_output(file(os.path.join(dir_path,\
-                                                           'result.dat')))[0][0]
+                                'result.dat')),format='tuple')[0][0]
             else:
                 logging.warning("Error while looking for file %s"%str(os.path\
                                                   .join(dir_path,'result.dat')))
@@ -1916,7 +1956,7 @@ def output_stability(stability, mg_root, opt, reusing=False):
     logFile.write('Stability check results\n\n')
     logFile.write(res_str)
     res_str += "\n= Stability details of the run are output to the file"+\
-               " stability_%s_%s.log\n"%(mode,process.shell_string())
+                          " stability_%s_%s.log\n"%(mode,process.shell_string())
     if len(EPS)>0:
         logFile.write('\nFull details of the %i EPS encountered.\n'%len(EPS))
         for i, eps in enumerate(EPS):
@@ -1933,25 +1973,35 @@ def output_stability(stability, mg_root, opt, reusing=False):
                                                               for p in ups[1]]))
             logFile.write('\n  DP accuracy :  %.3e\n'%DP_stability[ups[0]])
             logFile.write('  QP accuracy :  %.3e\n'%QP_stability[ups[0]])
-    
+
+    logFile.write('\nData entries for the stability plot.\n')
+    logFile.write('First row is a maximal accuracy delta, second is the '+\
+                  'fraction of events with DP accuracy worse than delta.\n\n')
+    logFile.write('First row is DP, second is QP.\n\n')
+    logFile.writelines('%.3e  '%DP_stability[i]+('NA\n' if QP_stability[i]==-1.0 \
+                             else '%.3e\n'%QP_stability[i]) for i in range(nPS))
+
     # Set the x-range so that it spans [10**-17,10**(min_digit_accuracy)]
-    min_digit_acc=int(math.log(max(DP_stability))/math.log(10))
-    if min_digit_acc>=0:
-        min_digit_acc = min_digit_acc+1
-    accuracies=[10**(-17+(i/5.0)) for i in range(5*(17+min_digit_acc)+1)]
+    if max(DP_stability)>0.0:
+        min_digit_acc=int(math.log(max(DP_stability))/math.log(10))
+        if min_digit_acc>=0:
+            min_digit_acc = min_digit_acc+1
+        accuracies=[10**(-17+(i/5.0)) for i in range(5*(17+min_digit_acc)+1)]
+    else:
+        res_str += '\nPerfect accuracy over all the trial PS points. No plot'+\
+                                                              ' is output then.'
+        logFile.write('Perfect accuracy over all the trial PS points.')
+        logFile.close()
+        return res_str
+
     data_plot=[]
     for acc in accuracies:
         data_plot.append(float(len([d for d in DP_stability if d>acc]))\
                                                       /float(len(DP_stability)))
-    logFile.write('\nData entries for the stability plot.\n')
-    logFile.write('First row is a maximal accuracy delta, second is the '+\
-                  'fraction of events with DP accuracy worse than delta.\n\n')
+        
     logFile.writelines('%.3e  %.3e\n'%(accuracies[i], data_plot[i]) for i in \
                                                          range(len(accuracies)))
     logFile.write('\nList of accuracies recorded for the %i evaluations.\n'%nPS)
-    logFile.write('First row is DP, second is QP.\n\n')
-    logFile.writelines('%.3e  '%DP_stability[i]+('NA\n' if QP_stability[i]==-1.0 \
-                             else '%.3e\n'%QP_stability[i]) for i in range(nPS))
     logFile.close()
     try:
         import matplotlib.pyplot as plt

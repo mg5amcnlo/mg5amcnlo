@@ -188,12 +188,12 @@ class Switcher(object):
     def do_add(self, line, *args, **opts):
         
         argss = cmd.Cmd.split_arg(line)
-        if len(argss)>=1 and argss[0] == 'process':
+        if len(argss)>=1 and argss[0] in ['process','timing','profile']:
             proc_line = ' '.join(argss[1:])
             (type,nlo_mode,orders)=self.extract_process_type(proc_line)
             if type=='NLO':
                 if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCMD( \
-                    'The NLO mode %s is not valid. Please chose one among: %s' \
+                    'The NLO mode %s is not valid. Please choose one among: %s' \
                     % (nlo_mode, ' '.join(valid_nlo_modes)))
                 elif nlo_mode == 'all':
                     self.change_principal_cmd('aMCatNLO')

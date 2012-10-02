@@ -40,7 +40,7 @@ Let's start with the first point, how to generate a process with MadLoop in
 standalone mode. Keep in mind that this means only the loop and born diagrams
 are generated.
 
-mg5> generate g g > d d~ [virt=QCD]
+mgg5>generate g g > d d~ [virt=QCD]
 
 Note that a space is mandatory between the particle names and that '[virt=QCD]' 
 specifies that you want to consider QCD NLO corrections. The keyword option
@@ -53,7 +53,7 @@ the header of your interface will change from 'mg5>' to 'ML5>'.
 generate = """
 You have just generated a new process.
 You can find more information on supported syntax by using:
-ML5> help generate
+ML5>help generate
 To list all defined processes, type
 ML5>display processes
 
@@ -63,14 +63,16 @@ Notice you can add the option 'loop' or 'born' if you only want those diagrams
 to be displayed.
 
 If you want to add a second process, you can use the add process command:
-ML5> add process e+ e- > d d~ [virt=QCD]
+ML5>add process e+ e- > d d~ [virt=QCD]
 But keep in mind that you must still consider only virtual corrections and 
 cannot employ multiparticle labels. Also decay chains are not available for
 loops.
 
 At this stage you can export your processes.
 This is done simply by typing:
-ML5> output MY_FIRST_MADLOOP_RUN
+
+ML5>output MY_FIRST_MADLOOP_RUN
+
 Notice that the standalone output mode (implicit in the above) is the only
 available for MadLoop standalone runs.
 """
@@ -80,13 +82,19 @@ You have seen a list of the already defined processes.
 
 At this stage you can export your processes to different formats. 
 To create a MadLoop standalone output for these, simply type:
-ML5> output MY_FIRST_MADLOOP_RUN
+
+ML5>output MY_FIRST_MADLOOP_RUN
 """
 
 display_diagrams = """
 You have displayed the diagrams.
 Notice you can add the 'born' or 'loop' option to this command to specify the
 class of diagrams to be displayed.
+
+At this stage you can export your processes to different formats. 
+To create a MadLoop standalone output for these, simply type:
+
+ML5>output MY_FIRST_MADLOOP_RUN
 """
 
 add_process = """
@@ -94,7 +102,8 @@ You have added a process to your process list.
 
 At this stage you can export your processes.
 For this, simply type
-ML5> output MY_FIRST_MADLOOP_RUN
+
+ML5>output MY_FIRST_MADLOOP_RUN
 """
 
 output = """
@@ -105,10 +114,12 @@ The code for the evaluation of the squared loop matrix element is in
 'SubProcesses/P0_<shell_proc_name>/'. There, you can compile and edit 
 running parameters from 'MadloopParams.dat' and then run the code with './check'.
 Alternatively, for a simple quick run, type:
-ML5> launch
-This computes the squared matrix element for three successive PS points and
-outputs the result for the third one. For the purpose of this tutorial, you 
-can skip the edition of the param_card and keep the default values.
+
+ML5>launch -f
+
+This computes the squared matrix element for a given PS points.
+For the purpose of this tutorial, the option '-f' is added to automatically skip
+the edition of the cards and phase-space point specification.
 """
 
 launch = """
@@ -118,10 +129,41 @@ The two processes proposed in this tutorial where g g > d d~ and e+ e- > d d~.
 You can check that you get the right double pole normalized with respect to
 the born*(alpha_s/2*pi), namely -26/3 and -8/3 respectively.
 
-This tutorial will soon be complemented with a part describing the various 
-additional 'check' commands solely for MadLoop standalone.
-But for now, you can close this tutorial by typing
+Now this tutorial will introduce you to two checking functionalities for the
+evaluation of the contributions of virtual origin.
+Start by typing:
+
+ML5>check g g > d d~ [virt=QCD]
+
+This will test lorentz and crossing invariance as well as of the gauge 
+invariance check from the ward identity for the initial state gluon.
+You can add an option after check to specify to perform only one definite check.
+Notice that the check functionality is only available for MadLoop standalone
+runs (those with the 'virt=' option).
+"""
+
+check = """
+You have seen the results for the various consistency checks performed on the
+MadGraph5 loop computation.
+You can now use the check command to obtain a full profiling of a given process
+including loop contributions.
+Simply type:
+
+ML5>check profile g g > d d~ [virt=QCD]
+
+Notice that you can replace 'profile' by 'timing' or 'stability' if
+you only want timing or stability benchmarks about this process.
+"""
+
+check_profile = """
+You have seen detailed information about the stability, timings and code size
+of a given process including loop.
+Keep in mind that these check functionalities are only available for MadLoop
+standalone runs.
+
+You just learned the basic commands for the MadLoop runs (i.e. with the 
+'virt=' option). You can close this tutorial by typing
 ML5>tutorial stop
-And if you want to exit MG5, enter
+Or exit MG5 with
 ML5>exit
 """

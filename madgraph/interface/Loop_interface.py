@@ -34,6 +34,7 @@ import madgraph.iolibs.export_v4 as export_v4
 import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
+import madgraph.interface.launch_ext_program as launch_ext
 import aloha
 
 # Special logger for the Cmd Interface
@@ -68,6 +69,28 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         else:
             self._export_format = 'standalone'
 
+    def check_launch(self, args, options):
+        """ Further check that only valid options are given to the MadLoop
+        default launcher."""
+        
+        mg_interface.MadGraphCmd.check_launch(self,args,options)
+        if int(options.cluster) != 0 :
+            return self.InvalidCmd, 'MadLoop standalone runs cannot be '+\
+                                    'performed on a cluster.'
+        
+        if int(options.multicore) != 0 :
+            logger.warning('MadLoop standalone can only run on a single core,'+\
+                                                ' so the -m option is ignored.')
+            options.multicore = '0'
+        
+        if options.laststep != '' :
+            logger.warning('The -laststep option is only used for Madevent.'+\
+                           'Ignoring this option')
+            options.multicore = ''
+        
+        if options.interactive :
+            logger.warning('No interactive mode for MadLoop standalone runs.')
+            options.interactive = False
 
 class CheckLoopWeb(mg_interface.CheckValidForCmdWeb, CheckLoop):
     pass
@@ -115,6 +138,15 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._v4_export_formats = []
         self._export_formats = [ 'matrix', 'standalone' ]
+        if self._curr_model.get('perturbation_couplings') == []:
+            if self._curr_model.get('name') == 'sm':
+                logger.info('Automatically importing the standard model '+\
+                                                       'for loop computations.')
+                self.do_import('model loop_sm')
+            else:
+                logger.warning('The current important model does not allow'+\
+                                       ' for any loop corrections computation.')
+            
         if self.options['loop_optimized_output'] and \
                                            not self.options['gauge']=='Feynman':
             # In the open loops method, in order to have a maximum loop numerator
@@ -220,6 +252,12 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
                 except OSError:
                     raise self.InvalidCmd('Could not remove directory %s.'\
                                                          %str(self._export_dir))     
+
+        if not self._curr_amps[0].get('process').get('has_born') and \
+                                          self.options['loop_optimized_output']:
+            logger.warning('The loop optimized output is not available for '+\
+                     'loop-induced processes. Now setting this option to False.')
+            self.do_set('loop_optimized_output False')
 
         self._curr_exporter = export_v4.ExportV4Factory(self, \
                                                  noclean, output_type='madloop')
@@ -380,15 +418,24 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         """ Check that the type of launch is fine before proceeding with the
         mother function. """
                 
-        argss = self.split_arg(line)
+        args = self.split_arg(line)
         # check argument validity and normalise argument
-        (options, argss) = mg_interface._launch_parser.parse_args(argss)
-        self.check_launch(argss, options)
-        
-        if not argss[0].startswith('standalone'):
-            raise self.InvalidCmd('ML5 can only launch standalone runs.')
-        return mg_interface.MadGraphCmd.do_launch(self, line, *args,**opt)
+        (options, args) = mg_interface._launch_parser.parse_args(args)
 
+        self.check_launch(args, options)
+
+        if not args[0].startswith('standalone'):
+            raise self.InvalidCmd('ML5 can only launch standalone runs.')
+
+        start_cwd = os.getcwd()
+        options = options.__dict__
+        # args is now MODE PATH
+        
+        ext_program = launch_ext.MadLoopLauncher(self, args[1], \
+                                                options=self.options, **options)
+        ext_program.run()
+        os.chdir(start_cwd) #ensure to go to the initial path
+        
     def do_check(self, line, *args,**opt):
         """Check a given process or set of processes"""
 

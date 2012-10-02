@@ -150,7 +150,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # We must change some files to their version for NLO computations
         cpfiles= ["Source/makefile","SubProcesses/makefile",\
                   "SubProcesses/check_sa.f","SubProcesses/MadLoopParamReader.f",
-                  "SubProcesses/MadLoopParams.dat",
+                  "Cards/MadLoopParams.dat",
                   "SubProcesses/MadLoopParams.inc"]
         
         for file in cpfiles:
@@ -474,16 +474,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         linkfiles = ['check_sa.f', 'coupl.inc', 'makefile',
                      'cts_mprec.h', 'cts_mpc.h', 'mp_coupl.inc', 
                      'mp_coupl_same_name.inc',
-                     'MadLoopParamReader.f','MadLoopParams.dat',
+                     'MadLoopParamReader.f',
                      'MadLoopParams.inc']
         
         for file in linkfiles:
             ln('../%s' % file)
 
-        linkfiles = ['mpmodule.mod']
-
-        for file in linkfiles:
-            ln('../../lib/%s' % file)
+        # The mp module
+        ln('../../lib/mpmodule.mod')
+            
+        # For convenience also link the madloop param card
+        ln('../../Cards/MadLoopParams.dat')
 
     def generate_general_replace_dict(self,matrix_element):
         """Generates the entries for the general replacement dictionary used

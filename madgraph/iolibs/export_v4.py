@@ -3122,14 +3122,6 @@ class UFO_model_to_mg4(object):
         else:
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
-            text = open(pjoin(self.dir_path, 'rw_para.f')).read()
-            text = re.sub(r'c\s*call LHA_loadcard','       call LHA_loadcard',text, re.I)
-            fsock = open(pjoin(self.dir_path, 'rw_para.f'), 'w')
-            fsock.write(text)
-            fsock.close()
-            
-     
-
 
     def create_coupl_inc(self):
         """ write coupling.inc """

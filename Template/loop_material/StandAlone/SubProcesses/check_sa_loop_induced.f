@@ -146,6 +146,7 @@
       write (69,'(a3,1x,1e25.15)') 'FIN',MATELEM(1)
       write (69,'(a4,1x,1e25.15)') '1EPS',0.0d0
       write (69,'(a4,1x,1e25.15)') '2EPS',0.0d0
+      write (69,*) 'Export_Format LoopInduced'
       close(69)
       else
           write (*,*) "PS Point #",K," done."

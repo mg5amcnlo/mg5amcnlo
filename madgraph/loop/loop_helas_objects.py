@@ -1701,7 +1701,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             self.relabel_loop_wfs_and_amps_optimized(wfnumber)
             for lwf in [lwf for loopdiag in self.get_loop_diagrams() for \
                                      lwf in loopdiag.get('loop_wavefunctions')]:
-                lwf.set('me_id',wf.get('number'))
+                lwf.set('me_id',lwf.get('number'))
         else:
             self.relabel_loop_wfs_and_amps(wfnumber)
             

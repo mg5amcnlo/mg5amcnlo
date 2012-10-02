@@ -248,6 +248,14 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._v4_export_formats = []
         self._export_formats = [ 'madevent' ]
+        if self._curr_model.get('perturbation_couplings') == []:
+            if self._curr_model.get('name') == 'sm':
+                logger.warning('Automatically importing the standard model '+\
+                                                       'for loop computations.')
+                self.do_import('model loop_sm')
+            else:
+                logger.warning('The current important model does not allow'+\
+                                       ' for any loop corrections computation.')
         if self.options['loop_optimized_output'] and \
                                            not self.options['gauge']=='Feynman':
             # In the open loops method, in order to have a maximum loop numerator
