@@ -69,7 +69,7 @@ class testFKSHelasObjects(unittest.TestCase):
                                'forbidden_s_channels':[],
                                'forbidden_particles':[],
                                'is_decay_chain': False,
-                               'orders': {'QED': 0},
+                               'orders': {'QED': 0, 'WEIGHTED':2},
                                'perturbation_couplings' : ['QCD'],
                                'decay_chains': MG.ProcessList(),
                                'overall_orders': {}}
@@ -81,7 +81,7 @@ class testFKSHelasObjects(unittest.TestCase):
                                'forbidden_s_channels':[],
                                'forbidden_particles':[],
                                'is_decay_chain': False,
-                               'orders': {'QED': 0},
+                               'orders': {'QED': 0, 'WEIGHTED':2 },
                                'perturbation_couplings' : ['QCD'],
                                'decay_chains': MG.ProcessList(),
                                'overall_orders': {}}

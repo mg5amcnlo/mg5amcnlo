@@ -846,6 +846,15 @@ end
             calls = 0
         return calls
 
+    def get_qed_qcd_orders_from_weighted(self, nexternal, weighted):
+        """computes the QED/QCD orders from the knowledge of the n of ext particles
+        and of the weighted orders"""
+        # n vertices = nexternal - 2 =QED + QCD
+        # weighted = 2*QED + QCD
+        QED = weighted - nexternal + 2
+        QCD = weighted - 2 * QED
+        return QED, QCD
+
 
 
     #===============================================================================
@@ -855,13 +864,21 @@ end
     def write_lh_order(self, filename, fksborn):
         """Creates the OLE_order.lh file. This function should be edited according
         to the OLP which is used. NOW FOR NJET"""
-        replace_dict = {}
         orders = fksborn.orders 
+        try:
+            QED=orders['QED']
+            QCD=orders['QCD']
+        except KeyError:
+            QED, QCD = self.get_qed_qcd_orders_from_weighted(\
+                    fksborn.born_matrix_element.get_nexternal_ninitial()[0],
+                    orders['WEIGHTED'])
+
+        replace_dict = {}
         replace_dict['mesq'] = 'CHsummed'
         replace_dict['corr'] = 'QCD'
         replace_dict['irreg'] = 'CDR'
-        replace_dict['aspow'] = orders['QCD']
-        replace_dict['aepow'] = orders['QED']
+        replace_dict['aspow'] = QCD
+        replace_dict['aepow'] = QED
         replace_dict['pdgs'] = fksborn.get_lh_pdg_string()
         replace_dict['symfin'] = 'Yes'
         content = \

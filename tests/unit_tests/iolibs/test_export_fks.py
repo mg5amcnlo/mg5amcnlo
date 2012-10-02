@@ -1015,7 +1015,7 @@ C     FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C     
 C     
 C     BORN AMPLITUDE IS 
-C     Process: g g > t t~ WEIGHTED=2 QED=0 QCD=2 [ QCD ]
+C     Process: g g > t t~ QED=0 QCD=2 [ QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -1237,7 +1237,7 @@ C     Please visit us at https://launchpad.net/madgraph5
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: g g > t t~ WEIGHTED=2 QED=0 QCD=2 [ QCD ]
+C     Process: g g > t t~ QED=0 QCD=2 [ QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -1403,7 +1403,7 @@ C     FOR THE POINT IN PHASE SPACE P(0:3,NEXTERNAL-1)
 C     
 C     
 C     BORN AMPLITUDE IS 
-C     Process: g g > t t~ WEIGHTED=2 QED=0 QCD=2 [ QCD ]
+C     Process: g g > t t~ QED=0 QCD=2 [ QCD ]
 C     spectators: 1 2 
 
 C     
@@ -1516,7 +1516,7 @@ C     Please visit us at https://launchpad.net/madgraph5
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: g g > t t~ WEIGHTED=2 QED=0 QCD=2 [ QCD ]
+C     Process: g g > t t~ QED=0 QCD=2 [ QCD ]
 C     spectators: 1 2 
 
 C     

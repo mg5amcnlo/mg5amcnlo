@@ -348,7 +348,7 @@ class TestFKSProcess(unittest.TestCase):
     mymodel.set('particles', mypartlist)
     mymodel.set('interactions', myinterlist)
     
-    dict = {'legs' : myleglist, 'orders':{'QCD':10, 'QED':0},
+    dict = {'legs' : myleglist, 'orders':{'QCD':2, 'QED':0, 'WEIGHTED':2},
                        'model': mymodel,
                        'id': 1,
                        'required_s_channels':[],
@@ -359,7 +359,7 @@ class TestFKSProcess(unittest.TestCase):
                        'decay_chains': MG.ProcessList(),
                        'overall_orders': {}}
 
-    dict2 = {'legs' : myleglist2, 'orders':{'QCD':10, 'QED':0},
+    dict2 = {'legs' : myleglist2, 'orders':{'QCD':2, 'QED':0, 'WEIGHTED':2},
                        'model': mymodel,
                        'id': 1,
                        'required_s_channels':[],
@@ -370,7 +370,7 @@ class TestFKSProcess(unittest.TestCase):
                        'decay_chains': MG.ProcessList(),
                        'overall_orders': {}}
 
-    dict3 = {'legs' : myleglist3, 'orders':{'QCD':0, 'QED':2},
+    dict3 = {'legs' : myleglist3, 'orders':{'QCD':0, 'QED':2, 'WEIGHTED':4},
                        'model': mymodel,
                        'id': 1,
                        'required_s_channels':[],

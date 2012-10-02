@@ -109,6 +109,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             'particles in the multiparticle definition:\n %s' ) \
                % (procdef.nice_string(), soft_particles_string) )
                     break
+        for procdef in self['process_definitions']:
+            procdef.set('orders', diagram_generation.MultiProcess.find_optimal_process_orders(procdef))
 
         amps = self.get('amplitudes')
         for amp in amps:
@@ -180,8 +182,11 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
         for born in self['born_processes']:
                 myproc = copy.copy(born.born_proc)
+                myproc['orders'] = copy.copy(born.born_proc['orders'])
                 if 'WEIGHTED' in myproc['orders'].keys():
                     del myproc['orders']['WEIGHTED']
+                if 'WEIGHTED' in myproc['squared_orders'].keys():
+                    del myproc['squared_orders']['WEIGHTED']
                 myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
                 logger.info('Generating virtual matrix element for process%s' \
                         % myproc.nice_string().replace('Process', ''))
@@ -222,7 +227,10 @@ class FKSRealProcess(object):
         self.process = copy.copy(born_proc)
         orders = copy.copy(born_proc.get('orders'))
         for order in perturbed_orders:
-            orders[order] +=1
+            try:
+                orders[order] +=1
+            except:
+                pass
             if order == 'QCD':
                 orders['WEIGHTED'] +=1
             else: 
@@ -352,8 +360,8 @@ class FKSProcess(object):
                 if not leg['state']:
                     self.nincoming += 1
             # find the correct qcd/qed orders from born_amp
-            orders = fks_common.find_orders(self.born_amp)
-            self.born_proc['orders'] = orders
+            self.orders = fks_common.find_orders(self.born_amp)
+            #self.born_proc['orders'] = orders
                 
             self.ndirs = 0
             for order in self.born_proc.get('perturbation_couplings'):
@@ -407,6 +415,8 @@ class FKSProcess(object):
         are combined together
         """
 
+        born_proc = copy.copy(self.born_proc)
+        born_proc['orders'] = self.orders
         for i, list in enumerate(self.reals):
             if self.leglist[i]['massless'] and self.leglist[i]['spin'] == 3:
                 ijglu = i + 1
@@ -415,7 +425,7 @@ class FKSProcess(object):
             for l in list:
                 ij = self.leglist[i].get('number')
                 self.real_amps.append(FKSRealProcess( \
-                        self.born_proc, l, ij, ijglu))
+                        born_proc, l, ij, ijglu))
         self.find_reals_to_integrate()
         if combine:
             self.combine_real_amplitudes()

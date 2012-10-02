@@ -526,7 +526,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         if chosen_order_config != {}:
             self.filter_from_order_config('loop_diagrams', \
                                    chosen_order_config,discarded_configurations)
-            # Warn about discarded configurations.
+#            # Warn about discarded configurations.
             if discarded_configurations!=[]:
                 msg = ("The contribution%s of th%s coupling orders "+\
                  "configuration%s %s discarded :%s")%(('s','ese','s','are','\n')\
@@ -536,7 +536,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 msg = msg + "\nManually set the coupling orders to "+\
                   "generate %sthe contribution%s above."%(('any of ','s') if \
                                    len(discarded_configurations)>1 else ('',''))
-                logger.warn(msg)
+                logger.info(msg)
 
         # Now select only the loops corresponding to the perturbative orders
         # asked for.
