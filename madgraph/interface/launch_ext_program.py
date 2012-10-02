@@ -329,7 +329,6 @@ class aMCatNLOLauncher(ExtLauncher):
         #launch.me_dir = self.running_dir
         option_line = ' '.join([' --%s' % opt for opt in self.options.keys() \
                 if self.options[opt] and not opt in ['cluster', 'multicore']])
-        print 'option line', option_line
         command = 'launch ' + self.run_mode + ' ' + option_line
 
         if mode == "1":
