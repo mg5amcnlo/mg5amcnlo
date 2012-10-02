@@ -121,7 +121,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
-                  "SubProcesses/MadLoopParams.dat",
+                  "Cards/MadLoopParams.dat",
                   "SubProcesses/MadLoopParams.inc"]
         
         for file in cpfiles:
@@ -820,12 +820,13 @@ end
 
         linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
-                     'MadLoopParams.dat', 'MadLoopParams.inc']
+                     'MadLoopParams.inc']
 
         os.system("ln -s "+name+"/MadLoopParams.dat ../")
         os.system("ln -s "+name+"/ColorDenomFactors.dat ../")
         os.system("ln -s "+name+"/HelConfigs.dat ../")
         os.system("ln -s "+name+"/ColorNumFactors.dat ../")
+        os.system('ln ../../../Cards/MadLoopParams.dat . ')
 
         for file in linkfiles:
             ln('../../%s' % file)
@@ -1980,7 +1981,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                                        
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
-                  "SubProcesses/MadLoopParams.dat",
+                  "Cards/MadLoopParams.dat",
                   "SubProcesses/MadLoopParams.inc"]
         
         for file in cpfiles:
@@ -2075,8 +2076,9 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
-                     'MadLoopParams.dat', 'MadLoopParams.inc']
+                     'MadLoopParams.inc']
 
+        os.system('ln ../../../Cards/MadLoopParams.dat . ')
         for file in linkfiles:
             ln('../../%s' % file)
 

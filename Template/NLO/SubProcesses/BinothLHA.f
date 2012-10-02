@@ -21,8 +21,9 @@ c
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
-      double precision pi
+      double precision pi, zero
       parameter (pi=3.1415926535897932385d0)
+      parameter (zero=0d0)
       double precision p(0:3,nexternal-1)
       double precision virt_wgt,born_wgt,double,single,virt_wgts(3)
       double precision mu,ao2pi,conversion,alpha_S
@@ -50,8 +51,11 @@ c
       parameter (fksprefact=.true.)
       double precision tolerance, madfks_single, madfks_double
       parameter (tolerance = 1d-8)
+      integer i,j
       integer nbad, nbadmax
       parameter (nbadmax = 5)
+      double precision pmass(nexternal)
+      include 'pmass.inc'
       data nbad / 0 /
       if (isum_hel.ne.0) then
          write (*,*) 'Can only do explicit helicity sum'//
@@ -81,6 +85,7 @@ c      endif
 c      virt_wgt=virt_wgt+conversion*born_wgt*ao2pi
 c======================================================================
 c check for poles cancellation      
+      call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
       if (firsttime) then
           call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
           if (dabs(single - madfks_single).lt.tolerance .and.
@@ -98,6 +103,12 @@ c check for poles cancellation
      1                   "          OLP: ",single
               write(*,*) " FINITE:"
               write(*,*) "          OLP: ",virt_wgt
+              write(*,*) 
+              write(*,*) " MOMENTA (Exyzm): "
+              do i = 1, nexternal-1
+                write(*,*) i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
+              enddo
+              
               if (nbad .lt. nbadmax) then
                   nbad = nbad + 1
                   write(*,*) " Trying another PS point"

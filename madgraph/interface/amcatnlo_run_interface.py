@@ -1391,8 +1391,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
     def do_quit(self, line):
         """ """
-        print 'in do_quit'
-  
         try:
             os.remove(pjoin(self.me_dir,'RunWeb'))
         except:
