@@ -869,10 +869,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         logger.info('                     ... done')
         # create an empty dir where to run
         count = 1
-        while os.path.isdir(pjoin(self.me_dir, 'MCATNLO', 'RUN_%s_%d' % \
+        while os.path.isdir(pjoin(self.me_dir, 'MCatNLO', 'RUN_%s_%d' % \
                         (shower, count))):
             count += 1
-        rundir = pjoin(self.me_dir, 'MCATNLO', 'RUN_%s_%d' % \
+        rundir = pjoin(self.me_dir, 'MCatNLO', 'RUN_%s_%d' % \
                         (shower, count))
         os.mkdir(rundir)
 
