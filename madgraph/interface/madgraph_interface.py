@@ -3399,6 +3399,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'mcfio', 'arch_mcfio')
                 text = open(path).read()
                 text = text.replace('F77=f77','F77=gfortran')
+                text = text.replace('-fdebug-kludge', '')
                 open(path, 'w').writelines(text)
                 path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'stdhep_arch')
                 text = open(path).read()
