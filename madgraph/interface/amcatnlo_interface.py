@@ -536,9 +536,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         options = options.__dict__
         options['name'] = ''
         self.check_launch(argss, options)
-        if self.options['automatic_html_opening']:
-            misc.open_file(os.path.join(os.getcwd(), argss[0], 'crossx.html'))
-            self.options['automatic_html_opening'] = False
+#        if self.options['automatic_html_opening']:
+#            misc.open_file(os.path.join(os.getcwd(), argss[0], 'crossx.html'))
+#            self.options['automatic_html_opening'] = False
 
         ext_program = launch_ext.aMCatNLOLauncher(argss[0], self, run_mode=argss[1], **options)
         ext_program.run()
@@ -580,4 +580,6 @@ _launch_parser.add_option("-r", "--reweightonly", default=False, action='store_t
                                  " latest generated event files (see list in SubProcesses/nevents_unweighted)")
 _launch_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip file reweighting")
+_launch_parser.add_option("-s", "--shower", default=False, action='store_true',
+                            help="Showe the events after generation")
 

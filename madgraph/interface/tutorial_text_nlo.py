@@ -49,7 +49,7 @@ aMC@NLO>display particles
 aMC@NLO>display multiparticles
 
 If you want to add a second process, use the add process command:
-aMC@NLO>add process p p > e+ e- @2
+aMC@NLO>add process p p > e+ e- [QCD] @2
 
 At this stage you can export your processes.
 This is done simply by typing:

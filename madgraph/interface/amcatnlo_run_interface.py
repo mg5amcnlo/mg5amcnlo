@@ -491,7 +491,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     
     options_madgraph= {'stdout_level':None}
     
-    options_madevent = {'automatic_html_opening':True,
+    options_madevent = {'automatic_html_opening':False,
                          'run_mode':2,
                          'cluster_queue':'madgraph',
                          'nb_core': None,
@@ -585,9 +585,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         else:
             self.cluster_mode = int(self.options['run_mode'])
 
-        if self.options['automatic_html_opening']:
+        if self.options_madevent['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.options['automatic_html_opening'] = False
+            self.options_madevent['automatic_html_opening'] = False
 
         mode = argss[0]
         self.ask_run_configuration(mode)
@@ -613,14 +613,16 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         else:
             self.cluster_mode = int(self.options['run_mode'])
 
-        if self.options['automatic_html_opening']:
+        if self.options_madevent['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.options['automatic_html_opening'] = False
+            self.options_madevent['automatic_html_opening'] = False
 
         mode = 'aMC@' + argss[0]
         self.ask_run_configuration(mode)
         self.compile(mode, options) 
-        self.run(mode, options)
+        evt_file = self.run(mode, options)
+        if self.check_mcatnlo_dir() and options['shower']:
+            self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
         
@@ -648,7 +650,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.ask_run_configuration(mode)
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
-        if self.check_mcatnlo_dir():
+        if self.check_mcatnlo_dir() and options['shower']:
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
@@ -867,10 +869,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         logger.info('                     ... done')
         # create an empty dir where to run
         count = 1
-        while os.path.isdir(pjoin(self.me_dir, 'MCATNLO', 'RUN_%s_%d' % \
+        while os.path.isdir(pjoin(self.me_dir, 'MCatNLO', 'RUN_%s_%d' % \
                         (shower, count))):
             count += 1
-        rundir = pjoin(self.me_dir, 'MCATNLO', 'RUN_%s_%d' % \
+        rundir = pjoin(self.me_dir, 'MCatNLO', 'RUN_%s_%d' % \
                         (shower, count))
         os.mkdir(rundir)
 
@@ -1452,6 +1454,8 @@ _launch_parser.add_option("-r", "--reweightonly", default=False, action='store_t
                                  " latest generated event files (see list in SubProcesses/nevents_unweighted)")
 _launch_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip file reweighting")
+_launch_parser.add_option("-s", "--shower", default=False, action='store_true',
+                            help="Showe the events after generation")
 
 
 _calculate_xsect_usage = "calculate_xsect [ORDER] [options]\n" + \
@@ -1484,3 +1488,5 @@ _generate_events_parser.add_option("-n", "--nocompile", default=False, action='s
                             "or with --tests")
 _generate_events_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip file reweighting")
+_generate_events_parser.add_option("-s", "--shower", default=False, action='store_true',
+                            help="Showe the events after generation")
