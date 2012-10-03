@@ -910,8 +910,11 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         dir_name=res_timings['dir_path']
 
         def check_disk_usage(path):
-            return subprocess.check_output(["du -shc %s"%path],shell=True).\
-                                                                     split()[-2]
+            return subprocess.Popen(["du","-shc", path], \
+                            stdout=subprocess.PIPE).communicate()[0].split()[-2]
+            # The above is compatible with python 2.6, not the neater version below
+            #return subprocess.check_output(["du -shc %s"%path],shell=True).\
+            #                                                         split()[-2]
 
         res_timings['du_source']=check_disk_usage(os.path.join(\
                                                  export_dir,'Source','*','*.f'))
