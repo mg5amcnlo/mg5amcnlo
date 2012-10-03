@@ -1759,15 +1759,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 elif self.options.has_key('mg5_path') and self.options['mg5_path']: 
                     path = pjoin(self.options['mg5_path'], self.options[key])
                     if os.path.isdir(path):
-                         self.options[key] = os.path.realpath(path)
-                         continue
+                        self.options[key] = os.path.realpath(path)
+                        continue
                 self.options[key] = None
             elif key.startswith('cluster'):
                 pass              
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
                     self.options[key] =eval(self.options[key])
-            elif key not in ['text_editor','eps_viewer','web_browser']:
+            elif key not in ['text_editor','eps_viewer','web_browser','stdout_level']:
                 # Default: try to set parameter
                 try:
                     self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
@@ -2033,6 +2033,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     ############################################################################      
     def do_generate_events(self, line):
         """ launch the full chain """
+
+
+        
         
         args = self.split_arg(line)
         # Check argument's validity
@@ -2115,6 +2118,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def do_calculate_decay_widths(self, line):
         """ launch decay width calculation and automatic inclusion of
         calculated widths and BRs in the param_card."""
+
         
         args = self.split_arg(line)
         # Check argument's validity

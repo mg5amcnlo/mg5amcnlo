@@ -110,6 +110,7 @@ try:
     logging.config.fileConfig(os.path.join(root_path, 'madgraph', 'interface', '.mg5_logging.conf'))
     logging.root.setLevel(eval('logging.' + options.logging))
     logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
+    logging.getLogger('madevent').setLevel(eval('logging.' + options.logging))
 except:
     pass
 import madgraph.interface.master_interface as interface
