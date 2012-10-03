@@ -3089,7 +3089,7 @@ class UFO_model_to_mg4(object):
     
         
         #copy the library files
-        file_to_link = ['formats.inc', 'lha_read.f','printout.f', \
+        file_to_link = ['formats.inc','printout.f', \
                         'rw_para.f', 'testprog.f']
     
         for filename in file_to_link:
@@ -3109,8 +3109,13 @@ class UFO_model_to_mg4(object):
         if self.opt['export_format'] in ['madloop','madloop_optimized',\
                                                                   'standalone']:
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
+            lha_read_filename='lha_read_mp.f'
         else:
             load_card = ''
+            lha_read_filename='lha_read.f'
+        cp( MG5DIR + '/models/template_files/fortran/' + lha_read_filename, \
+                                       os.path.join(self.dir_path,'lha_read.f'))
+        
         
         file=file%{'includes':'\n      '.join(includes),
                    'load_card':load_card}
