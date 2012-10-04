@@ -1031,7 +1031,7 @@ class LorentzObjectRepresentation(dict):
             new = self[(0,)] + obj * fact
             out = LorentzObjectRepresentation(new, [], [])
             return out
-        
+
         assert(obj.vartype == 4 == self.vartype) # are LorentzObjectRepresentation
         
         if self.lorentz_ind != obj.lorentz_ind or self.spin_ind != obj.spin_ind:

@@ -695,7 +695,6 @@ class ALOHAWriterForFortran(WriteALOHA):
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
         
-        
         def sort_fct(a, b):
             if len(a) < len(b):
                 return -1
@@ -707,7 +706,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 return +1
             
         keys = self.routine.fct.keys()        
-        keys.sort(sort_fct)        
+        keys.sort(sort_fct)
         for name in keys:
             fct, objs = self.routine.fct[name]
             format = ' %s = %s\n' % (name, self.get_fct_format(fct))

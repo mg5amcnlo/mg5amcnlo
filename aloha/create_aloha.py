@@ -197,9 +197,7 @@ in presence of majorana particle/flow violation"""
         """ define a simple output for this AbstractRoutine """
     
         infostr = str(self.lorentz_expr)
-        
-        
-                
+
         output = AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
                                                                         infostr)
         output.contracted = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
