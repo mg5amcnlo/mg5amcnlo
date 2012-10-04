@@ -2241,11 +2241,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     outstr += "  %25s \t:\t%s\n" % (key,value)
                 else:
                     outstr += "  %25s \t:\t%s (user set)\n" % (key,value)
-            for name, log in logging.Logger.manager.loggerDict.items():
-                        try:
-                            print name, log.level
-                        except:
-                            print name, 'not have level'
+
             output.write(outstr)
         elif args[0] in  ["variable"]:
             super(MadGraphCmd, self).do_display(line, output)
@@ -3650,7 +3646,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
     
     
-    def do_save(self, line, check=True, to_keep={}):
+    def do_save(self, line, check=True, to_keep={}, log=True):
         """Not in help: Save information to file"""
 
         args = self.split_arg(line)
