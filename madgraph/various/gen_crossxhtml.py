@@ -397,6 +397,12 @@ class AllResults(dict):
         text = crossxhtml_template % text_dict
         open(pjoin(self.path,'crossx.html'),'w').write(text)
         
+
+class AllResultsNLO(AllResults):
+    """Store the results for a NLO run of a given directory"""
+    pass
+
+
        
 
 class RunResults(list):

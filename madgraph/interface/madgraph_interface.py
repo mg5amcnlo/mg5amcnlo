@@ -338,8 +338,9 @@ class HelpToCmd(cmd.HelpCmd):
 
     def help_tutorial(self):
         logger.info("syntax: tutorial [" + "|".join(self._tutorial_opts) + "]")
-        logger.info("-- start/stop the MG5 tutorial mode")
-        logger.info("-- nlo starts aMC@NLO tutorial mode")
+        logger.info("-- start/stop the MG5 tutorial mode (or stop any other mode)")
+        logger.info("-- nlo: start aMC@NLO tutorial mode")
+        logger.info("-- MadLoop: start MadLoop tutorial mode")
 
     def help_open(self):
         logger.info("syntax: open FILE  ")
@@ -662,6 +663,21 @@ class CheckValidForCmd(cmd.CheckCmd):
                 raise self.InvalidCmd(
                 'wrong process format: restriction should be place after the final states')
         
+
+    def check_tutorial(self, args):
+        """check the validity of the line"""
+        if len(args) == 1:
+            if not args[0] in self._tutorial_opts:
+                self.help_tutorial()
+                raise self.InvalidCmd('Invalid argument for tutorial')
+        elif len(args) == 0:
+            #this means mg5 tutorial
+            args.append('start')
+        else:
+            self.help_tutorial()
+            raise self.InvalidCmd('Too manu arguments for tutorial')
+
+
     
     def check_import(self, args):
         """check the validity of line"""
@@ -2362,19 +2378,21 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Activate/deactivate the tutorial mode."""
 
         args = self.split_arg(line)
-        if len(args) > 0 and args[0] == "stop":
+        self.check_tutorial(args)
+        tutorials = {'start': logger_tuto,
+                     'nlo': logger_tuto_nlo,
+                     'MadLoop': logger_tuto_madloop}
+        try:
+            tutorials[args[0]].setLevel(logging.INFO)
+            for mode in [m for m in tutorials.keys() if m != args[0]]:
+                tutorials[mode].setLevel(logging.ERROR)
+        except KeyError:
             logger_tuto.info("\n\tThanks for using the tutorial!")
             logger_tuto.setLevel(logging.ERROR)
             logger_tuto_nlo.info("\n\tThanks for using the tutorial!")
             logger_tuto_nlo.setLevel(logging.ERROR)
             logger_tuto_madloop.info("\n\tThanks for using MadLoop tutorial!")
             logger_tuto_madloop.setLevel(logging.ERROR)
-        elif len(args) > 0 and args[0] == "nlo":
-            logger_tuto_nlo.setLevel(logging.INFO)
-        elif len(args) > 0 and args[0] == "MadLoop":
-            logger_tuto_madloop.setLevel(logging.INFO)
-        else:
-            logger_tuto.setLevel(logging.INFO)
 
         if not self._mgme_dir:
             logger_tuto.info(\
@@ -3317,35 +3335,33 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Load file with path of the different program:
         import urllib
         path = {}
-        # this has to be removed
-        logger.warning('do_install has been modified for the Natal school')
+
         name = {'td_mac': 'td', 'td_linux':'td', 'Delphes':'Delphes', 
                 'pythia-pgs':'pythia-pgs', 'ExRootAnalysis': 'ExRootAnalysis',
                 'MadAnalysis':'MadAnalysis', 'MCatNLO-utilities':'MCatNLO-utilities'}
         name = name[args[0]]
-        if not os.path.exists(pjoin(MG5DIR, 'MCatNLO-utilities.tgz')):
-            logger.warning('downloading')
-            try:
-                data = urllib.urlopen('http://madgraph.phys.ucl.ac.be/package_info.dat')
-            except:
-                raise MadGraph5Error, '''Impossible to connect the server. 
-                Please check your internet connection or retry later'''
-            for line in data: 
-                split = line.split()   
-                path[split[0]] = split[1]
-            
-            try:
-                os.system('rm -rf %s' % pjoin(MG5DIR, name))
-            except:
-                pass
-            
-            # Load that path
-            logger.info('Downloading %s' % path[args[0]])
-            if sys.platform == "darwin":
-                misc.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
-            else:
-                misc.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
-        #the previous block was originally not indented
+
+        try:
+            data = urllib.urlopen('http://madgraph.phys.ucl.ac.be/package_info.dat')
+        except:
+            raise MadGraph5Error, '''Impossible to connect the server. 
+            Please check your internet connection or retry later'''
+        for line in data: 
+            split = line.split()   
+            path[split[0]] = split[1]
+        
+        try:
+            os.system('rm -rf %s' % pjoin(MG5DIR, name))
+        except:
+            pass
+        
+        # Load that path
+        logger.info('Downloading %s' % path[args[0]])
+        if sys.platform == "darwin":
+            misc.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
+        else:
+            misc.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
+
         # Untar the file
         returncode = misc.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR, 
                                      stdout=open(os.devnull, 'w'))
@@ -4576,7 +4592,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                            self.options['fortran_compiler'])
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
-            self.do_save('options %s' % filename.replace(' ', '\ '), check=False)
+            self.do_save('options %s' % filename.replace(' ', '\ '), check=False, \
+                    to_keep = {'MCatNLO-utilities_path': './MCatNLO-utilities'})
 
             # copy the MCatNLO directory from mcatnlo-utils inside the exported dir
             if os.path.isdir(pjoin(MG5DIR, 'MCatNLO-utilities')):
@@ -4605,7 +4622,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
 
-        if self._export_format == 'madevent':              
+        if self._export_format in ['madevent', 'NLO']:              
             logger.info('Type \"launch\" to generate events from this process, or see')
             logger.info(self._export_dir + '/README')
             logger.info('Run \"open index.html\" to see more information about this process.')

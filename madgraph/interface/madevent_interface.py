@@ -1715,27 +1715,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
 
     ############################################################################
-    def update_status(self, status, level, makehtml=True, force=True, error=False):
-        """ update the index status """
-        
-
-        if makehtml and not force:
-            if hasattr(self, 'next_update') and time.time() < self.next_update:
-                return
-            else:
-                self.next_update = time.time() + 3
-        
-
-        if isinstance(status, str):
-            if '<br>' not  in status:
-                logger.info(status)
-        else:
-            logger.info(' Idle: %s Running: %s Finish: %s' % status[:3])
-        
-        self.last_update = time
-        self.results.update(status, level, makehtml=makehtml, error=error)
-        
-    ############################################################################      
     def do_generate_events(self, line):
         """ launch the full chain """
         

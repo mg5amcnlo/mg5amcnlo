@@ -286,6 +286,9 @@ class Switcher(object):
         
     def check_generate(self, *args, **opts):
         return self.cmd.check_generate(self, *args, **opts)
+
+    def check_tutorial(self, *args, **opts):
+        return self.cmd.check_tutorial(self, *args, **opts)
         
     def check_history(self, *args, **opts):
         return self.cmd.check_history(self, *args, **opts)
@@ -417,6 +420,7 @@ class Switcher(object):
         return self.cmd.do_quit(self, *args, **opts)
         
     def do_save(self, *args, **opts):
+        print args, opts
         return self.cmd.do_save(self, *args, **opts)
         
     def do_set(self, *args, **opts):

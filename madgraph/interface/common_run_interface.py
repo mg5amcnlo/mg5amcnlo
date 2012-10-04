@@ -328,6 +328,27 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 self.options[args[0]] = args[1]             
   
 
+    def update_status(self, status, level, makehtml=True, force=True, error=False):
+        """ update the index status """
+        
+        if makehtml and not force:
+            if hasattr(self, 'next_update') and time.time() < self.next_update:
+                return
+            else:
+                self.next_update = time.time() + 3
+        
+        if isinstance(status, str):
+            if '<br>' not  in status:
+                logger.info(status)
+        else:
+            logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])
+        
+        self.last_update = time
+        self.results.update(status, level, makehtml=makehtml, error=error)
+        
+
+    ############################################################################      
+
 
     ############################################################################
     def set_configuration(self, config_path=None, final=True, initdir=None, amcatnlo=False):
@@ -376,6 +397,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 name = name.strip()
                 value = value.strip()
                 if name.endswith('_path'):
+                    print name
                     path = value
                     if os.path.isdir(path):
                         self.options[name] = os.path.realpath(path)

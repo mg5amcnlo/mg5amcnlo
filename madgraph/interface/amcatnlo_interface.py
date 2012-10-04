@@ -536,9 +536,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         options = options.__dict__
         options['name'] = ''
         self.check_launch(argss, options)
-#        if self.options['automatic_html_opening']:
-#            misc.open_file(os.path.join(os.getcwd(), argss[0], 'crossx.html'))
-#            self.options['automatic_html_opening'] = False
+        if self.options['automatic_html_opening']:
+            misc.open_file(os.path.join(os.getcwd(), argss[0], 'crossx.html'))
+            self.options['automatic_html_opening'] = False
 
         ext_program = launch_ext.aMCatNLOLauncher(argss[0], self, run_mode=argss[1], **options)
         ext_program.run()

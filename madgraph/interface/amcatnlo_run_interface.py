@@ -491,7 +491,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     
     options_madgraph= {'stdout_level':None}
     
-    options_madevent = {'automatic_html_opening':False,
+    options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
                          'cluster_queue':'madgraph',
                          'nb_core': None,
@@ -540,7 +540,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         else:
             model = self.find_model_name()
             process = self.process # define in find_model_name
-            self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
+            print model, process
+            self.results = gen_crossxhtml.AllResultsNLO(model, process, self.me_dir)
         self.results.def_web_mode(self.web)
 
         
@@ -753,25 +754,25 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         if mode == 'LO':
             logger.info('Doing fixed order LO')
-            logger.info('   Cleaning previous results')
+            self.update_status('Cleaning previous results', level=None)
             misc.call(['rm -rf P*/born_G*'], shell=True)
 
-            logger.info('   Computing cross-section')
+            self.update_status('Computing cross-section', level=None)
             self.run_all(job_dict, [['0', 'born', '0']])
             misc.call(['./combine_results_FO.sh born_G*'], shell=True)
             os.chdir(old_cwd)
             return
 
         if mode == 'NLO':
-            logger.info('Doing fixed order NLO')
+            self.update_status('Doing fixed order NLO', level=None)
             logger.info('   Cleaning previous results')
             misc.call(['rm -rf P*/grid_G* P*/novB_G* P*/viSB_G*'], shell=True)
 
-            logger.info('   Setting up grid')
+            self.update_status('Setting up grid', level=None)
             self.run_all(job_dict, [['0', 'grid', '0']])
             misc.call(['./combine_results_FO.sh grid*'], shell=True)
 
-            logger.info('   Computing cross-section')
+            self.update_status('Computing cross-section', level=None)
             self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'grid']])
             misc.call(['./combine_results_FO.sh viSB* novB*'], shell=True)
             os.chdir(old_cwd)
@@ -792,7 +793,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 misc.call(['rm -rf P*/GF* P*/GV*'], shell=True)
 
                 for i, status in enumerate(mcatnlo_status):
-                    logger.info('   %s' % status)
+                    self.update_status('%s' % status, level='parton')
                     self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
                     self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
                     self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]])
@@ -805,7 +806,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 logger.info('   Cleaning previous results')
                 misc.call(['rm -rf P*/GB*'], shell=True)
                 for i, status in enumerate(mcatnlo_status):
-                    logger.info('   %s at LO' % status)
+                    self.update_status('%s at LO' % status, level='parton')
                     self.write_madinMMC_file(
                             pjoin(self.me_dir, 'SubProcesses'), 'born', i) 
                     self.run_all(job_dict, [['2', 'B', '%d' % i]])
@@ -815,8 +816,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         if self.cluster_mode == 1:
             #if cluster run, wait 15 sec so that event files are transferred back
-            logger.info('Waiting while files are transferred back from the cluster nodes')
-            time.sleep(15)
+            self.update_status(
+                    'Waiting while files are transferred back from the cluster nodes',
+                    level='parton')
+            time.sleep(10)
 
         # chancge back to the original pwd
         os.chdir(old_cwd)
@@ -831,7 +834,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if not options['noreweight']:
             self.run_reweight(options['reweightonly'])
 
-        logger.info('   Collecting events')
+        self.update_status('Collecting events', level='parton')
         misc.call(['make collect_events > %s' % \
                 pjoin (self.me_dir, 'log_collect_events.txt')], shell=True)
         misc.call(['echo "1" | ./collect_events > %s' % \
@@ -860,7 +863,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         os.chdir(pjoin(self.me_dir, 'MCatNLO'))
 
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
-        logger.info('   Compiling MCatNLO for %s...' % shower) 
+        self.update_status('   Compiling MCatNLO for %s...' % shower, level='parton') 
         misc.call(['./MCatNLO_MadFKS.inputs > %s 2>&1' % mcatnlo_log], \
                     cwd = os.getcwd(), shell=True)
         exe = 'MCATNLO_%s_EXE' % shower
@@ -876,7 +879,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         (shower, count))
         os.mkdir(rundir)
 
-        logger.info('   Running MCatNLO in %s (this may take some time)...' % rundir)
+        self.update_status('Running MCatNLO in %s (this may take some time)...' % rundir,
+                level='parton')
         os.chdir(rundir)
         misc.call(['mv ../%s ../MCATNLO_%s_input .' % (exe, shower)], shell=True)
         evt_name = os.path.basename(evt_file)
@@ -1008,10 +1012,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             run = 1
             logger.info('     Waiting for submitted jobs to complete (will update each 10s)')
             while idle + run > 0:
-                time.sleep(10)
                 idle, run, finish, fail = self.cluster.control('')
-                logger.info('     Job status: %d idle, %d running, %d failed, %d completed' \
-                        % (idle, run, fail, finish))
+                self.update_status((idle, run, finish), level='parton')
+                time.sleep(10)
             #reset the cluster after completion
             self.cluster.submitted = 0
             self.cluster.submitted_ids = []
@@ -1019,10 +1022,17 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             while self.ijob != self.njobs:
                 time.sleep(10)
 
+
     def run_all(self, job_dict, arg_list):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
         self.njobs = sum(len(jobs) for jobs in job_dict.values()) * len(arg_list)
         self.ijob = 0
+        if self.cluster_mode == 0:
+            self.update_status((self.njobs - 1, 1, 0), level='parton')
+        if self.cluster_mode == 1:
+            self.update_status((self.njobs, 0, 0), level='parton')
+        if self.cluster_mode == 2:
+            self.update_status((self.njobs - self.nb_core, self.nb_core, 0), level='parton')
         for args in arg_list:
             for dir, jobs in job_dict.items():
                 os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
@@ -1048,7 +1058,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             misc.call([exe] + argument, cwd=cwd, stdout=stdout,
                         stderr=subprocess.STDOUT)
             self.ijob += 1
-            logger.info('     Jobs completed: %d/%d' %(self.ijob, self.njobs))
+
+            self.update_status((max([self.njobs - self.ijob - self.nb_core, 0]), 
+                                min([self.nb_core, self.njobs - self.ijob]),
+                                self.ijob), level='parton')
+            #logger.info('     Jobs completed: %d/%d' %(self.ijob, self.njobs))
             
             # release the lock for allowing to launch the next job      
             while not control_thread[1].locked():
@@ -1073,7 +1087,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             #this is for the serial run
             misc.call(['./'+exe] + args, cwd= os.getcwd())
             self.ijob += 1
-            logger.info('     Jobs completed: %d/%d' %(self.ijob, self.njobs))
+            self.update_status((max([self.njobs - self.ijob - 1, 0]), 
+                                min([1, self.njobs - self.ijobs]),
+                                self.ijob), level='parton')
         elif self.cluster_mode == 1:
             #this is for the cluster run
             self.cluster.submit(exe, args)
@@ -1086,9 +1102,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 self.control_thread.append(False) # True if all thread submit 
                                                   #-> waiting mode
             if self.control_thread[2]:
-#                self.update_status((remaining + 1, self.control_thread[0], 
-#                                self.total_jobs - remaining - self.control_thread[0] - 1, run_type), 
-#                                   level=None, force=False)
                 self.control_thread[1].acquire()
                 self.control_thread[0] += 1 # upate the number of running thread
                 thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread))
