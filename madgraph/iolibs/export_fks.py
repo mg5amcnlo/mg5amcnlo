@@ -865,10 +865,16 @@ end
         """Creates the OLE_order.lh file. This function should be edited according
         to the OLP which is used. NOW FOR NJET"""
         orders = fksborn.orders 
-        try:
+        if 'QED' in orders.keys() and 'QCD' in orders.keys():
             QED=orders['QED']
             QCD=orders['QCD']
-        except KeyError:
+        elif 'QED' in orders.keys():
+            QED=orders['QED']
+            QCD=0
+        elif 'QCD' in orders.keys():
+            QED=0
+            QCD=orders['QCD']
+        else:
             QED, QCD = self.get_qed_qcd_orders_from_weighted(\
                     fksborn.born_matrix_element.get_nexternal_ninitial()[0],
                     orders['WEIGHTED'])

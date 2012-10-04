@@ -455,3 +455,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         misc.open_file.configure(self.options)
           
         return self.options
+
+    @staticmethod
+    def find_available_run_name(me_dir):
+        """ find a valid run_name for the current job """
+        
+        name = 'run_%02d'
+        data = [int(s[4:6]) for s in os.listdir(pjoin(me_dir,'Events')) if
+                        s.startswith('run_') and len(s)>5 and s[4:6].isdigit()]
+        return name % (max(data+[0])+1) 

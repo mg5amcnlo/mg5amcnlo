@@ -53,6 +53,7 @@ try:
     import madgraph.interface.extended_cmd as cmd
     import madgraph.interface.common_run_interface as common_run
     import madgraph.iolibs.files as files
+    import madgraph.various.banner as banner_mod
     import madgraph.various.cluster as cluster
     import madgraph.various.misc as misc
     import madgraph.various.gen_crossxhtml as gen_crossxhtml
@@ -65,6 +66,7 @@ except Exception, error:
     # import from madevent directory
     import internal.extended_cmd as cmd
     import internal.common_run_interface as common_run
+    import internal.banner as banner_mod
     import internal.misc as misc    
     from internal import InvalidCmd, MadGraph5Error
     import internal.files as files
@@ -222,19 +224,19 @@ class CmdExtended(cmd.Cmd):
     def nice_user_error(self, error, line):
         """If a ME run is currently running add a link in the html output"""
 
-#        self.add_error_log_in_html()
+        self.add_error_log_in_html()
         cmd.Cmd.nice_user_error(self, error, line)            
         
     def nice_config_error(self, error, line):
         """If a ME run is currently running add a link in the html output"""
 
-#        self.add_error_log_in_html()
+        self.add_error_log_in_html()
         cmd.Cmd.nice_config_error(self, error, line)
 
     def nice_error_handling(self, error, line):
         """If a ME run is currently running add a link in the html output"""
 
-#        self.add_error_log_in_html()            
+        self.add_error_log_in_html()            
         cmd.Cmd.nice_error_handling(self, error, line)
 
         
@@ -509,6 +511,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             me_dir = root_path
         
         self.me_dir = me_dir
+        run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
+        self.run_card = banner_mod.RunCardNLO(run_card)
 
         # usefull shortcut
         self.status = pjoin(self.me_dir, 'status')
@@ -697,14 +701,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     def update_random_seed(self):
         """Update random number seed with the value from the run_card. 
         If this is 0, update the number according to a fresh one"""
-        run_card = pjoin(self.me_dir, 'Cards', 'run_card.dat')
-        if not os.path.exists(run_card):
-            raise aMCatNLOError('%s is not a valid run_card' % run_card)
-        iseed = int(self.read_run_card(run_card)['iseed'])
+        iseed = int(self.run_card['iseed'])
         if iseed != 0:
             misc.call(['echo "r=%d > %s"' \
                     % (iseed, pjoin(self.me_dir, 'SubProcesses', 'randinit'))],
-                    cwd=self.me_dir)
+                    cwd=self.me_dir, shell=True)
         else:
             randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'))
             iseed = int(randinit.read()[2:]) + 1
@@ -718,7 +719,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         """runs aMC@NLO. Returns the name of the event file created"""
         logger.info('Starting run')
 
+        self.run_tag = self.run_card['run_tag']
         self.run_name = self.find_available_run_name(self.me_dir)
+        self.set_run_name(self.run_name, self.run_tag, 'parton')
+
         if mode in ['aMC@NLO', 'aMC@LO']:
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
         old_cwd = os.getcwd()
@@ -746,8 +750,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
         if options['reweightonly']:
-            nevents = int(self.read_run_card(\
-                        pjoin(self.me_dir, 'Cards', 'run_card.dat')['nevents']))
+            nevents = self.run_card['nevents']
             self.reweight_and_collect_events(options, mode, nevents)
             os.chdir(old_cwd)
             return
@@ -779,8 +782,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             return
 
         elif mode in ['aMC@NLO', 'aMC@LO']:
-            shower = self.read_run_card(pjoin(self.me_dir, 'Cards', 'run_card.dat'))['parton_shower']
-            nevents = int(self.read_run_card(pjoin(self.me_dir, 'Cards', 'run_card.dat'))['nevents'])
+            shower = self.run_card['parton_shower']
+            nevents = int(self.run_card['nevents'])
             #shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
             shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q']
             if not shower in shower_list:
@@ -899,6 +902,126 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         os.chdir(oldcwd)
 
 
+    def add_error_log_in_html(self, errortype=None):
+        """If a ME run is currently running add a link in the html output"""
+
+        # Be very carefull to not raise any error here (the traceback 
+        #will be modify in that case.)
+        if hasattr(self, 'results') and hasattr(self.results, 'current') and\
+                self.results.current and 'run_name' in self.results.current and \
+                hasattr(self, 'me_dir'):
+            name = self.results.current['run_name']
+            tag = self.results.current['tag']
+            print self.results.current
+            self.debug_output = pjoin(self.me_dir, '%s_%s_debug.log' % (name,tag))
+            if errortype:
+                self.results.current.debug = errortype
+            else:
+                self.results.current.debug = self.debug_output
+            
+        else:
+            #Force class default
+            self.debug_output = aMCatNLOCmd.debug_output
+        if os.path.exists('ME5_debug') and not 'ME5_debug' in self.debug_output:
+            os.remove('ME5_debug')
+        if not 'ME5_debug' in self.debug_output:
+            os.system('ln -s %s ME5_debug &> /dev/null' % self.debug_output)
+
+
+    ############################################################################
+    def set_run_name(self, name, tag=None, level='parton', reload_card=False):
+        """define the run name, the run_tag, the banner and the results."""
+        print 'TAG            ', tag
+        
+        # when are we force to change the tag new_run:previous run requiring changes
+        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes'],
+                       'pythia': ['pythia','pgs','delphes'],
+                       'pgs': ['pgs'],
+                       'delphes':['delphes'],
+                       'plot':[]}
+        
+        
+
+        if name == self.run_name:        
+            if reload_card:
+                run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
+                self.run_card = banner_mod.RunCardNLO(run_card)
+
+            #check if we need to change the tag
+            if tag:
+                self.run_card['run_tag'] = tag
+                self.run_tag = tag
+                self.results.add_run(self.run_name, self.run_card)
+            else:
+                for tag in upgrade_tag[level]:
+                    if getattr(self.results[self.run_name][-1], tag):
+                        tag = self.get_available_tag()
+                        self.run_card['run_tag'] = tag
+                        self.run_tag = tag
+                        self.results.add_run(self.run_name, self.run_card)                        
+                        break
+            return # Nothing to do anymore
+        
+        # save/clean previous run
+        if self.run_name:
+            self.store_result()
+        # store new name
+        self.run_name = name
+        
+        # Read run_card
+        run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
+        self.run_card = banner_mod.RunCardNLO(run_card)
+
+        new_tag = False
+        # First call for this run -> set the banner
+        self.banner = banner_mod.recover_banner(self.results, level)
+        if tag:
+            self.run_card['run_tag'] = tag
+            new_tag = True
+        elif not self.run_name in self.results and level =='parton':
+            pass # No results yet, so current tag is fine
+        elif not self.run_name in self.results:
+            #This is only for case when you want to trick the interface
+            logger.warning('Trying to run data on unknown run.')
+            self.results.add_run(name, self.run_card)
+            self.results.update('add run %s' % name, 'all', makehtml=False)
+        else:
+            for tag in upgrade_tag[level]:
+                
+                if getattr(self.results[self.run_name][-1], tag):
+                    # LEVEL is already define in the last tag -> need to switch tag
+                    tag = self.get_available_tag()
+                    self.run_card['run_tag'] = tag
+                    new_tag = True
+                    break
+            if not new_tag:
+                # We can add the results to the current run
+                tag = self.results[self.run_name][-1]['tag']
+                self.run_card['run_tag'] = tag # ensure that run_tag is correct                
+             
+                    
+        if name in self.results and not new_tag:
+            self.results.def_current(self.run_name)
+        else:
+            self.results.add_run(self.run_name, self.run_card)
+
+        self.run_tag = self.run_card['run_tag']
+
+        # Return the tag of the previous run having the required data for this
+        # tag/run to working wel.
+        if level == 'parton':
+            return
+        elif level == 'pythia':
+            return self.results[self.run_name][0]['tag']
+        else:
+            for i in range(-1,-len(self.results[self.run_name])-1,-1):
+                tagRun = self.results[self.run_name][i]
+                if tagRun.pythia:
+                    return tagRun['tag']
+            
+            
+
+
     def evt_file_to_mcatnlo(self, evt_file):
         """creates the mcatnlo input script using the values set in the header of the event_file.
         It also checks if the lhapdf library is used"""
@@ -999,7 +1122,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         newfile.close()
 
 
-    def wait_for_complete(self):
+    def wait_for_complete(self, run_type):
         """this function waits for jobs on cluster to complete their run."""
 
         # if running serially nothing to do
@@ -1013,7 +1136,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             logger.info('     Waiting for submitted jobs to complete (will update each 10s)')
             while idle + run > 0:
                 idle, run, finish, fail = self.cluster.control('')
-                self.update_status((idle, run, finish), level='parton')
+                self.update_status((idle, run, finish, run_type), level='parton')
                 time.sleep(10)
             #reset the cluster after completion
             self.cluster.submitted = 0
@@ -1023,32 +1146,32 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 time.sleep(10)
 
 
-    def run_all(self, job_dict, arg_list):
+    def run_all(self, job_dict, arg_list, run_type='monitor'):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
         self.njobs = sum(len(jobs) for jobs in job_dict.values()) * len(arg_list)
         self.ijob = 0
         if self.cluster_mode == 0:
-            self.update_status((self.njobs - 1, 1, 0), level='parton')
+            self.update_status((self.njobs - 1, 1, 0, run_type), level='parton')
         if self.cluster_mode == 1:
-            self.update_status((self.njobs, 0, 0), level='parton')
+            self.update_status((self.njobs, 0, 0, run_type), level='parton')
         if self.cluster_mode == 2:
-            self.update_status((self.njobs - self.nb_core, self.nb_core, 0), level='parton')
+            self.update_status((self.njobs - self.nb_core, self.nb_core, 0, run_type), level='parton')
         for args in arg_list:
             for dir, jobs in job_dict.items():
                 os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
                 for job in jobs:
-                    self.run_exe(job, args)
+                    self.run_exe(job, args, run_type)
                     # print some statistics if running serially
 
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
-        self.wait_for_complete()
+        self.wait_for_complete(run_type)
 
 
-    def run_exe(self, exe, args):
+    def run_exe(self, exe, args, run_type):
         """this basic function launch locally/on cluster exe with args as argument.
         """
 
-        def launch_in_thread(exe, argument, cwd, stdout, control_thread):
+        def launch_in_thread(exe, argument, cwd, stdout, control_thread, run_type):
             """ way to launch for multicore.
             """
 
@@ -1061,7 +1184,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
             self.update_status((max([self.njobs - self.ijob - self.nb_core, 0]), 
                                 min([self.nb_core, self.njobs - self.ijob]),
-                                self.ijob), level='parton')
+                                self.ijob, run_type), level='parton')
             #logger.info('     Jobs completed: %d/%d' %(self.ijob, self.njobs))
             
             # release the lock for allowing to launch the next job      
@@ -1089,7 +1212,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.ijob += 1
             self.update_status((max([self.njobs - self.ijob - 1, 0]), 
                                 min([1, self.njobs - self.ijobs]),
-                                self.ijob), level='parton')
+                                self.ijob, run_type), level='parton')
         elif self.cluster_mode == 1:
             #this is for the cluster run
             self.cluster.submit(exe, args)
@@ -1104,13 +1227,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             if self.control_thread[2]:
                 self.control_thread[1].acquire()
                 self.control_thread[0] += 1 # upate the number of running thread
-                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread))
+                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread, run_type))
             elif self.control_thread[0] <  self.nb_core -1:
                 self.control_thread[0] += 1 # upate the number of running thread 
-                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread))
+                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread, run_type))
             elif self.control_thread[0] ==  self.nb_core -1:
                 self.control_thread[0] += 1 # upate the number of running thread
-                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread))
+                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread, run_type))
                 self.control_thread[2] = True
                 self.control_thread[1].acquire() # Lock the next submission
                                                  # Up to a release
@@ -1202,8 +1325,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             os.remove(pjoin(libdir, 'PDFsets'))
 
         # read the run_card to find if lhapdf is used or not
-        if self.read_run_card(pjoin(self.me_dir, 'Cards','run_card.dat'))['pdlabel'] == \
-                'lhapdf':
+        if self.run_card['pdlabel'] == 'lhapdf':
             self.link_lhapdf(libdir)
         else:
             logger.info('Using built-in libraries for PDFs')
@@ -1306,22 +1428,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if test == 'test_ME':
             file.write(content)
         elif test == 'test_MC':
-            shower = self.read_run_card(
-                    pjoin(self.me_dir, 'Cards', 'run_card.dat'))['parton_shower']
+            shower = self.run_card['parton_shower']
             MC_header = "%s\n " % shower + \
                         "1 \n1 -0.1\n-1 -0.1\n"
             file.write(MC_header + content)
         file.close()
 
-
-    @staticmethod
-    def find_available_run_name(me_dir):
-        """ find a valid run_name for the current job """
-        
-        name = 'run_%02d'
-        data = [int(s[4:6]) for s in os.listdir(pjoin(me_dir,'Events')) if
-                        s.startswith('run_') and len(s)>5 and s[4:6].isdigit()]
-        return name % (max(data+[0])+1) 
 
 
     ############################################################################
@@ -1347,21 +1459,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.process = proc 
         return model
 
-
-    ############################################################################
-    ##  HELPING ROUTINE
-    ############################################################################
-    def read_run_card(self, run_card):
-        """ """
-        output={}
-        for line in file(run_card,'r'):
-            line = line.split('#')[0]
-            line = line.split('!')[0]
-            line = line.split('=')
-            if len(line) != 2:
-                continue
-            output[line[1].strip()] = line[0].replace('\'','').strip()
-        return output
 
 
     ############################################################################
@@ -1392,6 +1489,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             if answer.isdigit():
                 answer = card[int(answer)]
             if answer == 'done':
+                run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
+                self.run_card = banner_mod.RunCardNLO(run_card)
                 return
             if not os.path.isfile(answer):
                 if answer != 'trigger':
@@ -1402,6 +1501,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             else:
                 # detect which card is provided
                 card_name = answer + 'card.dat'
+
 
 
     def do_quit(self, line):
