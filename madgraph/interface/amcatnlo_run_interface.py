@@ -575,7 +575,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         else:
             model = self.find_model_name()
             process = self.process # define in find_model_name
-            print model, process
             self.results = gen_crossxhtml.AllResultsNLO(model, process, self.me_dir)
         self.results.def_web_mode(self.web)
         # check that compiler is gfortran 4.6 or later if virtuals have been exported
@@ -965,7 +964,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     ############################################################################
     def set_run_name(self, name, tag=None, level='parton', reload_card=False):
         """define the run name, the run_tag, the banner and the results."""
-        print 'TAG            ', tag
         
         # when are we force to change the tag new_run:previous run requiring changes
         upgrade_tag = {'parton': ['parton','pythia','pgs','delphes'],
@@ -1425,7 +1423,19 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     misc.call(['make -j%d >> %s 2>&1' % (nb_core, madloop_log)], shell=True)
                     if not os.path.exists(pjoin(this_dir, 'libMadLoop.a')):
                         raise aMCatNLOError('Compilation failed, check %s for details' % madloop_log)
+                #compile and run check_poles if the virtuals have been exported
+                proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
                 os.chdir(this_dir)
+                if not '[real=QCD]' in proc_card:
+                    logger.info('   Compiling check_poles...')
+                    misc.call(['make -j%d check_poles >> %s 2>&1 ' % (nb_core, test_log)], shell=True)
+                    if not os.path.exists(pjoin(this_dir, 'check_poles')):
+                        raise aMCatNLOError('Compilation failed, check %s for details' \
+                                % test_log)
+                    logger.info('   Running check_poles...')
+                    misc.call(['echo %s | ./check_poles >> %s' % ('"100 \\n -1"', test_log)], shell=True) 
+                    self.parse_check_poles_log(os.getcwd())
+                #compile madevent_mintMC/vegas
                 logger.info('   Compiling %s' % exe)
                 misc.call(['make -j%d %s >> %s 2>&1' % (nb_core, exe, amcatnlo_log)], shell=True)
                 os.unsetenv('madloop')
@@ -1438,6 +1448,23 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     raise aMCatNLOError('Compilation failed, check %s for details' % reweight_log)
 
         os.chdir(old_cwd)
+
+    def parse_check_poles_log(self, dir):
+        """reads and parse the check_poles.log file"""
+        content = open(pjoin(dir, 'check_poles.log')).read()
+        npass = 0
+        nfail = 0
+        for line in content.split('\n'):
+            if 'PASSED' in line:
+                npass +=1
+                tolerance = float(line.split()[1])
+            if 'FAILED' in line:
+                nfail +=1
+                tolerance = float(line.split()[1])
+
+        logger.info('   Poles fail to cancel for %d points over %d (tolerance=%2.1e)' \
+                %(nfail, nfail+npass, tolerance))
+
 
 
     def link_lhapdf(self, libdir):

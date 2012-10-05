@@ -374,6 +374,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.draw_feynman_diagrams(matrix_element)
 
         linkfiles = ['BinothLHADummy.f',
+                     'check_poles.f',
                      'MCmasses_HERWIG6.inc',
                      'MCmasses_HERWIGPP.inc',
                      'MCmasses_PYTHIA6Q.inc',
