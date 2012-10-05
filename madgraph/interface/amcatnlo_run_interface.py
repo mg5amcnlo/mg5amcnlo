@@ -76,8 +76,40 @@ except Exception, error:
 
 
 
+
 class aMCatNLOError(Exception):
     pass
+
+
+def check_compiler(options, block=False):
+    """check that the current fortran compiler is gfortran 4.6 or later.
+    If block, stops the execution, otherwise just print a warning"""
+
+    msg = 'In order to be able to run MadGraph @NLO, you need to have ' + \
+            'gfortran 4.6 or later installed.\n%s has been detected'
+    #first check that gfortran is installed
+    if options['fortran_compiler']:
+        compiler = options['fortran_compiler']
+    elif misc.which('gfortran'):
+         compiler = 'gfortran'
+    if compiler != 'gfortran':
+        if block:
+            raise aMCatNLOError(msg % compiler)
+        else:
+            logger.warning(msg % compiler)
+    else:
+        p = misc.Popen('gfortran -dumpversion', stdout=subprocess.PIPE, 
+                stderr=subprocess.PIPE, shell=True)
+        output, error = p.communicate()
+        output = output.replace('\n', '')
+        version = ''.join(output.split('.'))
+        if not version >= '46':
+            if block:
+                raise aMCatNLOError(msg % (compiler + ' ' + output))
+            else:
+                logger.warning(msg % (compiler + ' ' + output))
+            
+
 
 #===============================================================================
 # CmdExtended
@@ -189,7 +221,6 @@ class CmdExtended(cmd.Cmd):
     
     def stop_on_keyboard_stop(self):
         """action to perform to close nicely on a keyboard interupt"""
-        print 'in amcatnlo_run'
         try:
             if hasattr(self, 'results'):
                 self.update_status('Stop by the user', level=None, makehtml=False, error=True)
@@ -547,6 +578,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             print model, process
             self.results = gen_crossxhtml.AllResultsNLO(model, process, self.me_dir)
         self.results.def_web_mode(self.web)
+        # check that compiler is gfortran 4.6 or later if virtuals have been exported
+        proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
+        if not '[real=QCD]' in proc_card:
+            check_compiler(self.options_configuration, block=True)
 
         
     ############################################################################    
@@ -713,15 +748,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'), 'w')
             randinit.write('r=%d' % iseed)
             randinit.close()
+
             
         
     def run(self, mode, options):
         """runs aMC@NLO. Returns the name of the event file created"""
         logger.info('Starting run')
 
-        self.run_tag = self.run_card['run_tag']
-        self.run_name = self.find_available_run_name(self.me_dir)
-        self.set_run_name(self.run_name, self.run_tag, 'parton')
 
         if mode in ['aMC@NLO', 'aMC@LO']:
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
@@ -761,7 +794,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             misc.call(['rm -rf P*/born_G*'], shell=True)
 
             self.update_status('Computing cross-section', level=None)
-            self.run_all(job_dict, [['0', 'born', '0']])
+            self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
             misc.call(['./combine_results_FO.sh born_G*'], shell=True)
             os.chdir(old_cwd)
             return
@@ -772,11 +805,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             misc.call(['rm -rf P*/grid_G* P*/novB_G* P*/viSB_G*'], shell=True)
 
             self.update_status('Setting up grid', level=None)
-            self.run_all(job_dict, [['0', 'grid', '0']])
+            self.run_all(job_dict, [['0', 'grid', '0']], 'Setting up grid')
             misc.call(['./combine_results_FO.sh grid*'], shell=True)
 
             self.update_status('Computing cross-section', level=None)
-            self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'grid']])
+            self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'grid']], \
+                    'Computing cross-section')
             misc.call(['./combine_results_FO.sh viSB* novB*'], shell=True)
             os.chdir(old_cwd)
             return
@@ -796,10 +830,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 misc.call(['rm -rf P*/GF* P*/GV*'], shell=True)
 
                 for i, status in enumerate(mcatnlo_status):
-                    self.update_status('%s' % status, level='parton')
+                    self.update_status(status, level='parton')
                     self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
                     self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
-                    self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]])
+                    self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
 
                     if i < 2:
                         misc.call(['./combine_results.sh %d %d GF* GV*' % (i, nevents)], shell=True)
@@ -812,7 +846,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     self.update_status('%s at LO' % status, level='parton')
                     self.write_madinMMC_file(
                             pjoin(self.me_dir, 'SubProcesses'), 'born', i) 
-                    self.run_all(job_dict, [['2', 'B', '%d' % i]])
+                    self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
 
                     if i < 2:
                         misc.call(['./combine_results.sh %d %d GB*' % (i, nevents)], shell=True)
@@ -1102,7 +1136,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             misc.call(['ln -sf ../../%s .' % exe], shell=True)
             job_dict[path] = [exe]
 
-        self.run_all(job_dict, [[evt, '1']])
+        self.run_all(job_dict, [[evt, '1']], 'Running reweight')
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
 
         #check that the new event files are complete
@@ -1296,6 +1330,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 ' '.join([amcatnlo_log, madloop_log, reweight_log, gensym_log, test_log])], \
                   cwd=self.me_dir, shell=True)
 
+        import multiprocessing
+        nb_core = multiprocessing.cpu_count()
+
         #define which executable/tests to compile
         if mode in ['NLO', 'LO']:
             exe = 'madevent_vegas'
@@ -1332,9 +1369,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             os.unsetenv('lhapdf')
 
         # make Source
-        logger.info('Compiling source...')
+        self.update_status('Compiling source...', level=None)
         os.chdir(pjoin(self.me_dir, 'Source'))
-        misc.call(['make > %s 2>&1' % amcatnlo_log], shell=True)
+        misc.call(['make -j%d > %s 2>&1' % (nb_core, amcatnlo_log)], shell=True)
         if os.path.exists(pjoin(libdir, 'libdhelas.a')) \
           and os.path.exists(pjoin(libdir, 'libgeneric.a')) \
           and os.path.exists(pjoin(libdir, 'libmodel.a')) \
@@ -1344,6 +1381,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             raise aMCatNLOError('Compilation failed, check %s for details' % amcatnlo_log)
 
         # make and run tests (if asked for), gensym and make madevent in each dir
+        self.update_status('Compiling directories...', level=None)
         for p_dir in p_dirs:
             logger.info(p_dir)
             this_dir = pjoin(self.me_dir, 'SubProcesses', p_dir) 
@@ -1351,7 +1389,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             # compile and run tests
             for test in tests:
                 logger.info('   Compiling %s...' % test)
-                misc.call(['make %s >> %s 2>&1 ' % (test, test_log)], shell=True)
+                misc.call(['make -j%d %s >> %s 2>&1 ' % (nb_core, test, test_log)], shell=True)
                 if not os.path.exists(pjoin(this_dir, test)):
                     raise aMCatNLOError('Compilation failed, check %s for details' \
                             % test_log)
@@ -1371,7 +1409,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
             if not options['reweightonly']:
                 logger.info('   Compiling gensym...')
-                misc.call(['make gensym >> %s 2>&1 ' % amcatnlo_log], shell=True)
+                misc.call(['make -j%d gensym >> %s 2>&1 ' % (nb_core, amcatnlo_log)], shell=True)
                 if not os.path.exists(pjoin(this_dir, 'gensym')):
                     raise aMCatNLOError('Compilation failed, check %s for details' % amcatnlo_log)
 
@@ -1384,18 +1422,18 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     logger.info('   Compiling MadLoop library in %s' % v_dir)
                     madloop_dir = pjoin(this_dir, v_dir)
                     os.chdir(madloop_dir)
-                    misc.call(['make >> %s 2>&1' % madloop_log], shell=True)
+                    misc.call(['make -j%d >> %s 2>&1' % (nb_core, madloop_log)], shell=True)
                     if not os.path.exists(pjoin(this_dir, 'libMadLoop.a')):
                         raise aMCatNLOError('Compilation failed, check %s for details' % madloop_log)
                 os.chdir(this_dir)
                 logger.info('   Compiling %s' % exe)
-                misc.call(['make %s >> %s 2>&1' % (exe, amcatnlo_log)], shell=True)
+                misc.call(['make -j%d %s >> %s 2>&1' % (nb_core, exe, amcatnlo_log)], shell=True)
                 os.unsetenv('madloop')
                 if not os.path.exists(pjoin(this_dir, exe)):
                     raise aMCatNLOError('Compilation failed, check %s for details' % amcatnlo_log)
             if mode in ['aMC@NLO', 'aMC@LO'] and not options['noreweight']:
                 logger.info('   Compiling reweight_xsec_events')
-                misc.call(['make reweight_xsec_events >> %s 2>&1' % (reweight_log)], shell=True)
+                misc.call(['make -j%d reweight_xsec_events >> %s 2>&1' % (nb_core, reweight_log)], shell=True)
                 if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
                     raise aMCatNLOError('Compilation failed, check %s for details' % reweight_log)
 
@@ -1491,6 +1529,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             if answer == 'done':
                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
                 self.run_card = banner_mod.RunCardNLO(run_card)
+                self.run_tag = self.run_card['run_tag']
+                self.run_name = self.find_available_run_name(self.me_dir)
+                self.set_run_name(self.run_name, self.run_tag, 'parton')
                 return
             if not os.path.isfile(answer):
                 if answer != 'trigger':

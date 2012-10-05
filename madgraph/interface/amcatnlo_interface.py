@@ -365,6 +365,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
             line = ' '.join(args[1:])
             
         proc_type=self.extract_process_type(line)
+        if proc_type[1] != 'real':
+            run_interface.check_compiler(self.options_configuration, block=False)
         self.validate_model(proc_type[1])
 
         #now generate the amplitudes as usual

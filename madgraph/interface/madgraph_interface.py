@@ -70,6 +70,7 @@ import madgraph.interface.tutorial_text_nlo as tutorial_text_nlo
 import madgraph.interface.tutorial_text_madloop as tutorial_text_madloop
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.interface.madevent_interface as madevent_interface
+import madgraph.interface.amcatnlo_run_interface as amcatnlo_run
 
 import madgraph.various.process_checks as process_checks
 import madgraph.various.banner as banner_module
