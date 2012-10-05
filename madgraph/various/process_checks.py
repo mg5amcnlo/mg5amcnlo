@@ -910,8 +910,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         dir_name=res_timings['dir_path']
 
         def check_disk_usage(path):
-            return subprocess.Popen(["du","-shc", path], \
-                            stdout=subprocess.PIPE).communicate()[0].split()[-2]
+            return subprocess.Popen("du -shc "+str(path), \
+                stdout=subprocess.PIPE, shell=True).communicate()[0].split()[-2]
             # The above is compatible with python 2.6, not the neater version below
             #return subprocess.check_output(["du -shc %s"%path],shell=True).\
             #                                                         split()[-2]
@@ -1408,7 +1408,8 @@ def generate_loop_matrix_element(process_definition, mg_root, reuse):
     # Now generate a process based on the ProcessDefinition given in argument.
     process = process_definition.get_process(isids,fsids)
     
-    proc_dir = os.path.join(mg_root,temp_dir_prefix+"_%s"%process.shell_string())
+    proc_dir = os.path.join(mg_root,temp_dir_prefix+"_%s"%(
+                               '_'.join(process.shell_string().split('_')[1:])))
     if reuse and os.path.isdir(proc_dir):
         logger.info("Reusing directory %s"%str(proc_dir))
         # If reusing, return process instead of matrix element
@@ -2095,8 +2096,9 @@ def output_timings(process, timings, loop_optimized_output):
                                                %f(timings['n_loop_groups'],'%d')
         res_str += "|= Number of loop wfs........ %s\n"\
                                                   %f(timings['n_loop_wfs'],'%d')
-        for i, r in enumerate(timings['loop_wfs_ranks']):
-            res_str += "||= # of loop wfs of rank %d.. %d\n"%(i,r)
+        if timings['loop_wfs_ranks']!=None:
+            for i, r in enumerate(timings['loop_wfs_ranks']):
+                res_str += "||= # of loop wfs of rank %d.. %d\n"%(i,r)
     res_str += "\n= Output disk size =====================\n"
     res_str += "|= Source directory sources.. %s\n"%f(timings['du_source'],'%s')
     res_str += "|= Process sources........... %s\n"%f(timings['du_process'],'%s')    

@@ -35,6 +35,7 @@ import madgraph.iolibs.drawing_eps as draw
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
+import madgraph.loop.loop_helas_objects as loop_helas_objects
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.iolibs.save_load_object as save_load_object
@@ -932,7 +933,7 @@ if __name__ == '__main__':
         gen_line_with_order = gen_line + ' [virt=QCD]'
         cmd.do_generate(gen_line_with_order)
         #Look for decay chains
-        matrix_elements = helas_objects.HelasMultiProcess(cmd._curr_amps)
+        matrix_elements = loop_helas_objects.LoopHelasProcess(cmd._curr_amps)
         matrix_element = matrix_elements.get('matrix_elements')[0]
         diag = matrix_element.get_base_amplitude().get('diagrams')
         diag_content['FULL %s' %gen_line] = {}
