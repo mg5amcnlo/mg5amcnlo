@@ -1,5 +1,8 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.5.1 (XX/10/12)  JA: Fixed symmetry factors in non-grouped MadEvent mode
+                      (bug introduced in v. 1.5.0).
+
 1.5.0 (28/09/12)  OM: Allow MG5 to run in complex mass scheme mode
                       (mg5> set complex_mass True)
                   OM: Allow MG5 to run in feynman Gauge
