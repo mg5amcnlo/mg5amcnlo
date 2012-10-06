@@ -3828,6 +3828,18 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             ext_program = launch_ext.Pythia8Launcher( args[1], self, **options)
 
         elif args[0] == 'aMC@NLO':
+            if options['interactive']:
+                if hasattr(self, 'do_shell'):
+                    ME = amcatnlo_run.aMCatNLOCmdShell(me_dir=args[1], options=self.options)
+                else:
+                     ME = amcatnlo_run.aMCatNLOCmd(me_dir=args[1],options=self.options)
+                     ME.pass_in_web_mode()
+                # transfer interactive configuration
+                config_line = [l for l in self.history if l.strip().startswith('set')]
+                for line in config_line:
+                    ME.exec_cmd(line)
+                stop = self.define_child_cmd_interface(ME)                
+                return stop
             ext_program = launch_ext.aMCatNLOLauncher( args[1], self, **options)
         else:
             os.chdir(start_cwd) #ensure to go to the initial path

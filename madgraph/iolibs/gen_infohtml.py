@@ -418,7 +418,10 @@ class make_info_html_nlo(make_info_html):
             pass
         for match in re.finditer(loop_pat, text):
             pass
-        nb_diag += int(match.groups()[0])
+        try:
+            nb_diag += int(match.groups()[0])
+        except:
+            pass
         
         return nb_diag
 

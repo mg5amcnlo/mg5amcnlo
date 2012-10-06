@@ -57,6 +57,7 @@ try:
     # import from madgraph directory
     import madgraph.various.banner as banner_mod
     import madgraph.various.misc as misc
+    import madgraph.various.cluster as cluster
     import models.check_param_card as check_param_card    
 except Exception, error:
     if __debug__:
@@ -64,6 +65,7 @@ except Exception, error:
     # import from madevent directory
     import internal.banner as banner_mod
     import internal.misc as misc    
+    import internal.cluster as cluster
     import internal.check_param_card as check_param_card
 
 

@@ -532,7 +532,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     
     
     ############################################################################
-    def __init__(self, me_dir = None, *completekey, **stdin):
+    def __init__(self, me_dir = None, options = {}, *completekey, **stdin):
         """ add information to the cmd """
 
         CmdExtended.__init__(self, *completekey, **stdin)
@@ -542,6 +542,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             me_dir = root_path
         
         self.me_dir = me_dir
+        self.options = options        
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = banner_mod.RunCardNLO(run_card)
 
@@ -753,6 +754,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     def run(self, mode, options):
         """runs aMC@NLO. Returns the name of the event file created"""
         logger.info('Starting run')
+        print options
 
 
         if mode in ['aMC@NLO', 'aMC@LO']:
@@ -824,23 +826,26 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     % (shower, ', '.join(shower_list)))
 
             if mode == 'aMC@NLO':
-                logger.info('Doing NLO matched to parton shower')
-                logger.info('   Cleaning previous results')
-                misc.call(['rm -rf P*/GF* P*/GV*'], shell=True)
+                if not options['only_generation']:
+                    logger.info('Doing NLO matched to parton shower')
+                    logger.info('   Cleaning previous results')
+                    misc.call(['rm -rf P*/GF* P*/GV*'], shell=True)
 
                 for i, status in enumerate(mcatnlo_status):
-                    self.update_status(status, level='parton')
-                    self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
-                    self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
-                    self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
+                    if i == 2 or not options['only_generation']:
+                        self.update_status(status, level='parton')
+                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
+                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
+                        self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
 
-                    if i < 2:
+                    if (i < 2 and not options['only_generation'])  or i == 1 :
                         misc.call(['./combine_results.sh %d %d GF* GV*' % (i, nevents)], shell=True)
 
             elif mode == 'aMC@LO':
-                logger.info('Doing LO matched to parton shower')
-                logger.info('   Cleaning previous results')
-                misc.call(['rm -rf P*/GB*'], shell=True)
+                if not options['only_generation']:
+                    logger.info('Doing LO matched to parton shower')
+                    logger.info('   Cleaning previous results')
+                    misc.call(['rm -rf P*/GB*'], shell=True)
                 for i, status in enumerate(mcatnlo_status):
                     self.update_status('%s at LO' % status, level='parton')
                     self.write_madinMMC_file(
@@ -1667,6 +1672,9 @@ _generate_events_parser.add_option("-m", "--multicore", default=False, action='s
 _generate_events_parser.add_option("-n", "--nocompile", default=False, action='store_true',
                             help="Skip compilation. Ignored if no executable is found, " + \
                             "or with --tests")
+_generate_events_parser.add_option("-o", "--only-generation", default=False, action='store_true',
+                            help="Skip grid set up, just generate events starting from" + \
+                            "the last available results")
 _generate_events_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip file reweighting")
 _generate_events_parser.add_option("-s", "--shower", default=False, action='store_true',

@@ -542,6 +542,19 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
             misc.open_file(os.path.join(os.getcwd(), argss[0], 'crossx.html'))
             self.options['automatic_html_opening'] = False
 
+        if options['interactive']:
+            if hasattr(self, 'do_shell'):
+                ME = run_interface.aMCatNLOCmdShell(me_dir=argss[0], options=self.options)
+            else:
+                 ME = run_interface.aMCatNLOCmd(me_dir=argss[0],options=self.options)
+                 ME.pass_in_web_mode()
+            # transfer interactive configuration
+            config_line = [l for l in self.history if l.strip().startswith('set')]
+            for line in config_line:
+                ME.exec_cmd(line)
+            stop = self.define_child_cmd_interface(ME)                
+            return stop
+
         ext_program = launch_ext.aMCatNLOLauncher(argss[0], self, run_mode=argss[1], **options)
         ext_program.run()
         
@@ -573,6 +586,8 @@ _launch_usage = "launch [DIRPATH] [MODE] [options]\n" + \
 _launch_parser = optparse.OptionParser(usage=_launch_usage)
 _launch_parser.add_option("-c", "--cluster", default=False, action='store_true',
                             help="Submit the jobs on the cluster")
+_launch_parser.add_option("-i", "--interactive", default=False, action='store_true',
+                            help="Use interactive consol")
 _launch_parser.add_option("-m", "--multicore", default=False, action='store_true',
                             help="Submit the jobs on multicore mode")
 _launch_parser.add_option("-n", "--nocompile", default=False, action='store_true',
@@ -583,5 +598,5 @@ _launch_parser.add_option("-r", "--reweightonly", default=False, action='store_t
 _launch_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip file reweighting")
 _launch_parser.add_option("-s", "--shower", default=False, action='store_true',
-                            help="Showe the events after generation")
+                            help="Shower the events after generation")
 
