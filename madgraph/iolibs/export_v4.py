@@ -2885,11 +2885,6 @@ class UFO_model_to_mg4(object):
                 part.set('mass', rep_pattern.sub(replace, str(part.get('mass'))))
             if str(part.get('width')) in to_change:
                 part.set('width', rep_pattern.sub(replace, str(part.get('width'))))                
-
-                
-
-
-               
                 
     def refactorize(self, wanted_couplings = []):    
         """modify the couplings to fit with MG4 convention """

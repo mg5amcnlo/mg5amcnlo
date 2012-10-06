@@ -2548,20 +2548,28 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         except:
             pass
         if self.cluster_mode == 1:
-            out = self.cluster.launch_and_wait('../bin/internal/run_combine', 
+            self.cluster.launch_and_wait('../bin/internal/run_combine', 
                                         cwd=pjoin(self.me_dir,'SubProcesses'),
                                         stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'))
         else:
-            out = misc.call(['../bin/internal/run_combine'],
+            misc.call(['../bin/internal/run_combine'],
                          cwd=pjoin(self.me_dir,'SubProcesses'), 
                          stdout=open(pjoin(self.me_dir,'SubProcesses','combine.log'),'w'))
         
         
         output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
         # Store the number of unweighted events for the results object
-        pat = re.compile(r'''\s*Unweighting selected\s*(\d+)\s*events''',re.MULTILINE)
-              
-        nb_event = pat.search(output).groups()[0]
+        pat = re.compile(r'''\s*Unweighting\s*selected\s*(\d+)\s*events''')
+        try:      
+            nb_event = pat.search(output).groups()[0]
+        except AttributeError:
+            time.sleep(10)
+            try:
+                nb_event = pat.search(output).groups()[0]
+            except AttributeError:
+                logger.warning('Fail to read the number of unweighted events in the combine.log file')
+                nb_event = 0
+                
         self.results.add_detail('nb_event', nb_event)
         
         
