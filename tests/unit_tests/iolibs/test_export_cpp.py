@@ -1342,7 +1342,7 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
         goal_file_h = \
 """//==========================================================================
 // This file has been automatically generated for Pythia 8
-#  MadGraph 5 v. 1.5.0, 2012-10-01
+#  MadGraph 5 v. %(version)s, %(date)s
 #  By the MadGraph Development Team
 #  Please visit us at https://launchpad.net/madgraph5
 //==========================================================================
@@ -1401,7 +1401,7 @@ static Parameters_sm* instance;
 
 } // end namespace Pythia8
 #endif // Pythia8_parameters_sm_H
-"""
+"""% misc.get_pkg_info()
 
 
         goal_file_cc = \
