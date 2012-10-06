@@ -2848,6 +2848,8 @@ class UFO_model_to_mg4(object):
                     lower_dict[lower_name] = [param]
                 else:
                     duplicate.add(lower_name)
+                    logger.debug('%s is define both as lower case and upper case.' 
+                                 % lower_name)
         
         if not duplicate:
             return
@@ -2876,9 +2878,13 @@ class UFO_model_to_mg4(object):
         for key in self.model['couplings'].keys():
             for coup in self.model['couplings'][key]:
                 coup.expr = rep_pattern.sub(replace, coup.expr)
-
-
-               
+                
+        # change mass/width
+        for part in self.model['particles']:
+            if str(part.get('mass')) in to_change:
+                part.set('mass', rep_pattern.sub(replace, str(part.get('mass'))))
+            if str(part.get('width')) in to_change:
+                part.set('width', rep_pattern.sub(replace, str(part.get('width'))))                
                 
     def refactorize(self, wanted_couplings = []):    
         """modify the couplings to fit with MG4 convention """

@@ -465,6 +465,7 @@ c     ncode is number of digits needed for the bw coding
       do while (.true.)
          read(35,*,err=99,end=99) xi,j
          if (j .gt. 0) then
+            j=1 ! symmetry factor already read in auto_dsig.f
             k = int(xi*(1+10**(-ncode)))
             npos=int(dlog10(dble(k)))+1
             if ( (xi-k) .eq. 0) then

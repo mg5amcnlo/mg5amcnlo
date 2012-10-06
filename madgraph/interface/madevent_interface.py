@@ -1759,15 +1759,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 elif self.options.has_key('mg5_path') and self.options['mg5_path']: 
                     path = pjoin(self.options['mg5_path'], self.options[key])
                     if os.path.isdir(path):
-                         self.options[key] = os.path.realpath(path)
-                         continue
+                        self.options[key] = os.path.realpath(path)
+                        continue
                 self.options[key] = None
             elif key.startswith('cluster'):
                 pass              
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
                     self.options[key] =eval(self.options[key])
-            elif key not in ['text_editor','eps_viewer','web_browser']:
+            elif key not in ['text_editor','eps_viewer','web_browser','stdout_level']:
                 # Default: try to set parameter
                 try:
                     self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
@@ -2033,6 +2033,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     ############################################################################      
     def do_generate_events(self, line):
         """ launch the full chain """
+
+
+        
         
         args = self.split_arg(line)
         # Check argument's validity
@@ -2115,6 +2118,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def do_calculate_decay_widths(self, line):
         """ launch decay width calculation and automatic inclusion of
         calculated widths and BRs in the param_card."""
+
         
         args = self.split_arg(line)
         # Check argument's validity
@@ -2544,20 +2548,28 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         except:
             pass
         if self.cluster_mode == 1:
-            out = self.cluster.launch_and_wait('../bin/internal/run_combine', 
+            self.cluster.launch_and_wait('../bin/internal/run_combine', 
                                         cwd=pjoin(self.me_dir,'SubProcesses'),
                                         stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'))
         else:
-            out = misc.call(['../bin/internal/run_combine'],
+            misc.call(['../bin/internal/run_combine'],
                          cwd=pjoin(self.me_dir,'SubProcesses'), 
                          stdout=open(pjoin(self.me_dir,'SubProcesses','combine.log'),'w'))
         
         
         output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
         # Store the number of unweighted events for the results object
-        pat = re.compile(r'''\s*Unweighting selected\s*(\d+)\s*events''',re.MULTILINE)
-              
-        nb_event = pat.search(output).groups()[0]
+        pat = re.compile(r'''\s*Unweighting\s*selected\s*(\d+)\s*events''')
+        try:      
+            nb_event = pat.search(output).groups()[0]
+        except AttributeError:
+            time.sleep(10)
+            try:
+                nb_event = pat.search(output).groups()[0]
+            except AttributeError:
+                logger.warning('Fail to read the number of unweighted events in the combine.log file')
+                nb_event = 0
+                
         self.results.add_detail('nb_event', nb_event)
         
         
@@ -4657,7 +4669,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 comment = param.comment
                 # treat merge parameter
                 if comment.strip().startswith('set of param :'):
-                    all_var = list(re.findall(r'''[^-]1\*(\w*)\b'''))
+                    all_var = list(re.findall(r'''[^-]1\*(\w*)\b''', comment))
                 # just the variable name as comment
                 elif len(comment.split()) == 1:
                     all_var = [comment.strip().lower()]

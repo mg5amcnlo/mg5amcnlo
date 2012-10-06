@@ -902,7 +902,8 @@ This will take effect only in a NEW terminal
                                       'a multiparticle name as argument')
         
         if args[0] in ['stdout_level']:
-            if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL']:
+            if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL'] and \
+                                                          not args[1].isdigit():
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')       
         if args[0] in ['gauge']:
@@ -2240,6 +2241,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     outstr += "  %25s \t:\t%s\n" % (key,value)
                 else:
                     outstr += "  %25s \t:\t%s (user set)\n" % (key,value)
+
             output.write(outstr)
         elif args[0] in  ["variable"]:
             super(MadGraphCmd, self).do_display(line, output)
@@ -3342,6 +3344,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if value.lower() == "none":
                     self.options[name] = None
 
+        self.options['stdout_level'] = logging.getLogger('madgraph').level
         if not final:
             return self.options # the return is usefull for unittest
 
@@ -3413,6 +3416,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Ask for editing the parameter and then 
         Execute the code (madevent/standalone/...)
         """
+        
         start_cwd = os.getcwd()
         
         args = self.split_arg(line)
@@ -3642,7 +3646,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
     
     
-    def do_save(self, line, check=True, to_keep={}):
+    def do_save(self, line, check=True, to_keep={}, log=True):
         """Not in help: Save information to file"""
 
         args = self.split_arg(line)
@@ -3739,10 +3743,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
 
         elif args[0] == "stdout_level":
-            logging.root.setLevel(eval('logging.' + args[1]))
-            logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
+            if args[1].isdigit():
+                level = int(args[1])
+            else:
+                level = eval('logging.' + args[1])
+            logging.root.setLevel(level)
+            logging.getLogger('madgraph').setLevel(level)
+            logging.getLogger('madevent').setLevel(level)
             if log:
-                logger.info('set output information to level: %s' % args[1])
+                logger.info('set output information to level: %s' % level)
 
         elif args[0] == "complex_mass_scheme":
             old = self.options[args[0]] 
