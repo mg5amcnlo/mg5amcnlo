@@ -47,6 +47,7 @@ from array import array
 import collections
 from fractions import Fraction
 import numbers
+import re
 import aloha # define mode of writting
 
 class defaultdict(collections.defaultdict):
@@ -121,6 +122,7 @@ class Computation(dict):
     def add_function_expression(self, fct_tag, *args):
         tag = 'FCT%s' % len(self.fct_expr)
         argument = []
+
         for expression in args:
             if isinstance(expression, (MultLorentz, AddVariable, LorentzObject)):
                 expr = expression.expand().get_rep([0])
@@ -129,7 +131,13 @@ class Computation(dict):
                 argument.append(new)
             else:
                 argument.append(expression)
+        for arg in argument:
+            val = re.findall(r'''\bFCT(\d*)\b''', str(arg))
+            for v in val:
+                self.add_tag(('FCT%s' % v,))
+            
         if str(fct_tag)+str(argument) in self.inverted_fct:
+            tag = self.inverted_fct[str(fct_tag)+str(argument)]
             return self.inverted_fct[str(fct_tag)+str(argument)]
         else:
             self.fct_expr[tag] = (fct_tag, argument) 
@@ -420,7 +428,6 @@ class AddVariable(list):
         max_wgt, maxvar = 0, None
         for var in possibility:
             wgt = sum(w**2 for w in correlation[var].values())/len(correlation[var])
-            #print KERNEL.objs[var], maxnb, wgt,sum(w**2 for w in correlation[var].values())/len(correlation[var])
             if wgt > max_wgt:
                 maxvar = var
                 max_wgt = wgt
