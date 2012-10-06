@@ -1,9 +1,17 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.5.1 (XX/10/12)  JA: Fixed symmetry factors in non-grouped MadEvent mode
+1.5.1 (06/10/12)  JA: Fixed symmetry factors in non-grouped MadEvent mode
                       (bug introduced in v. 1.5.0).
                   JA: Fixed phase space integration problem with multibody 
                       decay processes (thanks Kentarou for finding this!).
+                  OM: Fix that standalone output was not reading correctly the param_card
+                      (introduce in 1.5.0)
+                  OM: Fix a crash when trying to load heft
+		  OM: Fix the case when the UFO model contains one mass which has the same name
+		      as another parameter up to the case.
+		  OM: Fix a bug for result lower than 1e-100 those one are now consider as zero
+		  OM: Fix a bug present in the param_card create by width computation where the 
+		      qnumbers data were written as a float (makes pythia6 to crash)
 
 1.5.0 (28/09/12)  OM: Allow MG5 to run in complex mass scheme mode
                       (mg5> set complex_mass True)
