@@ -847,12 +847,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     logger.info('   Cleaning previous results')
                     misc.call(['rm -rf P*/GB*'], shell=True)
                 for i, status in enumerate(mcatnlo_status):
-                    self.update_status('%s at LO' % status, level='parton')
-                    self.write_madinMMC_file(
-                            pjoin(self.me_dir, 'SubProcesses'), 'born', i) 
-                    self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
+                    if i == 2 or not options['only_generation']:
+                        self.update_status('%s at LO' % status, level='parton')
+                        self.write_madinMMC_file(
+                                pjoin(self.me_dir, 'SubProcesses'), 'born', i) 
+                        self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
 
-                    if i < 2:
+                    if (i < 2 and not options['only_generation'])  or i == 1 :
                         misc.call(['./combine_results.sh %d %d GB*' % (i, nevents)], shell=True)
 
         if self.cluster_mode == 1:
