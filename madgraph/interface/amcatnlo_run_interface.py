@@ -951,7 +951,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 hasattr(self, 'me_dir'):
             name = self.results.current['run_name']
             tag = self.results.current['tag']
-            print self.results.current
             self.debug_output = pjoin(self.me_dir, '%s_%s_debug.log' % (name,tag))
             if errortype:
                 self.results.current.debug = errortype
