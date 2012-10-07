@@ -709,12 +709,14 @@ C
 C ARGUMENTS 
 C
       %(real_dp_format)s P(0:3,NEXTERNAL)
+      %(real_dp_format)s PTOT(0:3,NEXTERNAL)	  
 C
 C LOCAL VARIABLES 
 C
       INTEGER I,J
 	  %(real_dp_format)s BUFF,REF
-	  %(real_dp_format)s MASSES(NEXTERNAL-1)	  
+	  %(real_dp_format)s MASSES(NEXTERNAL-1)
+	  %(real_dp_format)s SHIFTX(2),SHIFTY(2)
 C  
 C GLOBAL VARIABLES
 C 
@@ -735,14 +737,19 @@ C
 		  BUFF=BUFF+P(I,J)
 		ENDDO
 		IF ((BUFF/REF).GT.1.0d-6) THEN
-		  STOP 'Four-momentum conservation is not accurate enough.'		  
+		  WRITE(*,*) 'ERROR:: Four-momentum conservation is not accurate enough, ',(BUFF/REF)
+		  CALL WRITE_MOM(P)
+		  STOP
 		ENDIF
 	  ENDDO
 
-	  DO I=1,NEXTERNAL-1
+	  DO I=1,NEXTERNAL-2
 	    REF=ABS(P(0,I))+ABS(P(1,I))+ABS(P(2,I))+ABS(P(3,I))
 		IF ((SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF).GT.1.0d-2) THEN
-		  STOP 'Four-momentum conservation is not accurate enough.'
+		  WRITE(*,*) 'ERROR:: Four-momentum conservation for particle ',I,' is not accurate enough, ',
+     &(SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF)
+		  CALL WRITE_MOM(P)
+		  STOP
 		ELSE
 	      P(3,I)=SIGN(SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-MASSES(I)**2)),P(3,I))
 		ENDIF
@@ -751,15 +758,46 @@ C
 	  DO I=0,3
 	    BUFF=0.0d0 
         DO J=1,%(n_initial)d
-		  BUFF=BUFF+P(I,J)
+		  BUFF=BUFF-P(I,J)
 		ENDDO
-		DO J=%(n_initial)d+1,NEXTERNAL-1
-		  BUFF=BUFF-P(I,J)		
+		DO J=%(n_initial)d+1,NEXTERNAL-2
+		  BUFF=BUFF+P(I,J)		
 		ENDDO
-		P(I,NEXTERNAL)=BUFF
+		PTOT(I)=BUFF
 	  ENDDO
 
 	  END
+
+	  SUBROUTINE WRITE_MOM(P)
+	  IMPLICIT NONE
+	  INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+	  INTEGER I
+C  
+C ARGUMENTS 
+C
+      %(real_dp_format)s P(0:3,NEXTERNAL)
+      write (*,*) " Phase space point:"
+      write (*,*) "--------------------------------------------------",
+     &"---------------------------"
+      write (*,*)  "n        E             px             py         ",
+     &"pz               m "
+      do i=1,nexternal
+         write (*,'(1x,5e25.15)') i, P(0,i),P(1,i),P(2,i),P(3,i), 
+     &dsqrt(dabs(DOT(p(0,i),p(0,i))))
+      enddo
+      write (*,*) "--------------------------------------------------",
+     &"---------------------------"
+	  END
+
+      double precision function dot(p1,p2)
+C****************************************************************************
+C     4-Vector Dot product
+C****************************************************************************
+      implicit none
+      %(real_dp_format)s p1(0:3),p2(0:3)
+      dot=p1(0)*p2(0)-p1(1)*p2(1)-p1(2)*p2(2)-p1(3)*p2(3)
+      end
 
 C Rotate_PS rotates the PS point P_IN (without modifying it)
 C stores the result in P and modifies the global variables
