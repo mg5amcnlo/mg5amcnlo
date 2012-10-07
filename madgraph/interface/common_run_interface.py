@@ -57,6 +57,7 @@ try:
     # import from madgraph directory
     import madgraph.various.banner as banner_mod
     import madgraph.various.misc as misc
+    import madgraph.various.cluster as cluster
     import models.check_param_card as check_param_card    
 except Exception, error:
     if __debug__:
@@ -64,6 +65,7 @@ except Exception, error:
     # import from madevent directory
     import internal.banner as banner_mod
     import internal.misc as misc    
+    import internal.cluster as cluster
     import internal.check_param_card as check_param_card
 
 
@@ -328,6 +330,27 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 self.options[args[0]] = args[1]             
   
 
+    def update_status(self, status, level, makehtml=True, force=True, error=False):
+        """ update the index status """
+        
+        if makehtml and not force:
+            if hasattr(self, 'next_update') and time.time() < self.next_update:
+                return
+            else:
+                self.next_update = time.time() + 3
+        
+        if isinstance(status, str):
+            if '<br>' not  in status:
+                logger.info(status)
+        else:
+            logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])
+        
+        self.last_update = time
+        self.results.update(status, level, makehtml=makehtml, error=error)
+        
+
+    ############################################################################      
+
 
     ############################################################################
     def set_configuration(self, config_path=None, final=True, initdir=None, amcatnlo=False):
@@ -376,6 +399,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 name = name.strip()
                 value = value.strip()
                 if name.endswith('_path'):
+                    print name
                     path = value
                     if os.path.isdir(path):
                         self.options[name] = os.path.realpath(path)
@@ -433,3 +457,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         misc.open_file.configure(self.options)
           
         return self.options
+
+    @staticmethod
+    def find_available_run_name(me_dir):
+        """ find a valid run_name for the current job """
+        
+        name = 'run_%02d'
+        data = [int(s[4:6]) for s in os.listdir(pjoin(me_dir,'Events')) if
+                        s.startswith('run_') and len(s)>5 and s[4:6].isdigit()]
+        return name % (max(data+[0])+1) 

@@ -411,14 +411,17 @@ class make_info_html_nlo(make_info_html):
         nb_diag = 0
                 
         pat = re.compile(r'''Amplitude\(s\) for diagram number (\d+)''' )
-        loop_pat = re.compile(r'''Loop amplitude for loop diagram with ID (\d+)''' )
+        loop_pat = re.compile(r'''for loop diagram number (\d+)''' )
        
         text = open(path).read()
         for match in re.finditer(pat, text):
             pass
         for match in re.finditer(loop_pat, text):
             pass
-        nb_diag += int(match.groups()[0])
+        try:
+            nb_diag += int(match.groups()[0])
+        except:
+            pass
         
         return nb_diag
 

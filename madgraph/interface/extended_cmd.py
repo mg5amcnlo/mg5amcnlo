@@ -1225,7 +1225,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 value, comment = value.split('#',1)
             else:
                 comment = ''    
-            
             if key in to_keep:
                 value = str(to_keep[key])
             else:

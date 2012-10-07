@@ -238,30 +238,6 @@ class CmdExtended(cmd.Cmd):
         except:
             pass
         
-    def add_error_log_in_html(self, errortype=None):
-        """If a ME run is currently running add a link in the html output"""
-
-        # Be very carefull to not raise any error here (the traceback 
-        #will be modify in that case.)
-        if hasattr(self, 'results') and hasattr(self.results, 'current') and\
-                self.results.current and 'run_name' in self.results.current and \
-                hasattr(self, 'me_dir'):
-            name = self.results.current['run_name']
-            tag = self.results.current['tag']
-            self.debug_output = pjoin(self.me_dir, '%s_%s_debug.log' % (name,tag))
-            if errortype:
-                self.results.current.debug = errortype
-            else:
-                self.results.current.debug = self.debug_output
-            
-        else:
-            #Force class default
-            self.debug_output = MadEventCmd.debug_output
-        if os.path.exists('ME5_debug') and not 'ME5_debug' in self.debug_output:
-            os.remove('ME5_debug')
-        if not 'ME5_debug' in self.debug_output:
-            os.system('ln -s %s ME5_debug &> /dev/null' % self.debug_output)
-
     
     def nice_user_error(self, error, line):
         """If a ME run is currently running add a link in the html output"""
@@ -1715,27 +1691,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
 
     ############################################################################
-    def update_status(self, status, level, makehtml=True, force=True, error=False):
-        """ update the index status """
-        
-
-        if makehtml and not force:
-            if hasattr(self, 'next_update') and time.time() < self.next_update:
-                return
-            else:
-                self.next_update = time.time() + 3
-        
-
-        if isinstance(status, str):
-            if '<br>' not  in status:
-                logger.info(status)
-        else:
-            logger.info(' Idle: %s Running: %s Finish: %s' % status[:3])
-        
-        self.last_update = time
-        self.results.update(status, level, makehtml=makehtml, error=error)
-        
-    ############################################################################      
     def do_generate_events(self, line):
         """ launch the full chain """
         
@@ -3225,14 +3180,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     pass        
         
         
-    @staticmethod
-    def find_available_run_name(me_dir):
-        """ find a valid run_name for the current job """
-        
-        name = 'run_%02d'
-        data = [int(s[4:6]) for s in os.listdir(pjoin(me_dir,'Events')) if
-                        s.startswith('run_') and len(s)>5 and s[4:6].isdigit()]
-        return name % (max(data+[0])+1) 
 
     ############################################################################   
     def configure_directory(self):
