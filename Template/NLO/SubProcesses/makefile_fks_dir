@@ -37,6 +37,9 @@ MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o	\
 BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o	\
 	write_event.o
 
+# Files for check_poles
+POLES= $(FILES) cuts.o check_poles.o BinothLHA.o
+
 # Files for tests
 TEST= $(FILES) BinothLHADummy.o cuts.o
 
@@ -73,6 +76,9 @@ test_ME: symmetry_fks_test_ME.o $(TEST)
 
 test_MC: symmetry_fks_test_MC.o $(TEST) 
 	$(FC) $(FFLAGS) -o test_MC symmetry_fks_test_MC.o $(TEST) $(LINKLIBS) $(FJLIBS)
+
+check_poles: $(POLES)
+	$(FC) $(FFLAGS) -o check_poles $(POLES) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_vegas: $(VEGAS) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
