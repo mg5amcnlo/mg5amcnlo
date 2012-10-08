@@ -754,8 +754,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     def run(self, mode, options):
         """runs aMC@NLO. Returns the name of the event file created"""
         logger.info('Starting run')
-        print options
 
+        if not 'only_generation' in options.keys():
+            options['only_generation'] = False
 
         if mode in ['aMC@NLO', 'aMC@LO']:
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
@@ -1678,4 +1679,4 @@ _generate_events_parser.add_option("-o", "--only-generation", default=False, act
 _generate_events_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip file reweighting")
 _generate_events_parser.add_option("-s", "--shower", default=False, action='store_true',
-                            help="Showe the events after generation")
+                            help="Shower the events after generation")

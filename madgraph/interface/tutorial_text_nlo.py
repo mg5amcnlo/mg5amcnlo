@@ -61,7 +61,7 @@ You have seen a list of the already defined processes.
 
 At this stage you can export your processes to different formats. In
 this tutorial, we will explain how to create a valid output for
-MadEvent. This is done simply by typing:
+aMC@NLO. This is done simply by typing:
 aMC@NLO>output MY_FIRST_AMCTANLO_RUN
 """
 
@@ -73,11 +73,11 @@ This is done simply by typing:
 aMC@NLO>output MY_FIRST_AMCATNLO_RUN
 """
 output = """
-If you are following the tutorial, a directory MY_FIRST_MG5_RUN has
+If you are following the tutorial, a directory MY_FIRST_AMCATNLO_RUN has
 been created which can be used in order to run aMC@NLO.
 
 Additionally to the commands in the bin directory (see 
-MY_FIRST_MG5_RUN/README), you can also generate your events/compute the 
+MY_FIRST_AMCATNLO_RUN/README), you can also generate your events/compute the 
 cross-section from this interface. 
 You will generate events to be showered a la MC@NLO, compute the theoretical
 and PDF error on the fly (if asked for in the run_card.dat) and shower the events 
