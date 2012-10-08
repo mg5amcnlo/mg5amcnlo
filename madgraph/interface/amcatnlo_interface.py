@@ -60,6 +60,10 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         if args[0] in ['diagrams', 'processes'] and len(args)>=3 \
                 and args[1] not in ['born','loop','virt','real']:
             raise self.InvalidCmd("Can only display born, loop (virt) or real diagrams, not %s."%args[1])
+        # rename args[1] if it is 'virt'
+        if len(args) > 1:
+            if args[1] == 'virt':
+                args[1] = 'loop' 
 
 
     def check_output(self, args):
@@ -295,20 +299,19 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         if args[0] in ['diagrams', 'processes', 'diagrams_text']:
             get_amps_dict = {'real': self._fks_multi_proc.get_real_amplitudes,
                              'born': self._fks_multi_proc.get_born_amplitudes,
-                             'loop': self._fks_multi_proc.get_virt_amplitudes,
-                             'virt': self._fks_multi_proc.get_virt_amplitudes}
+                             'loop': self._fks_multi_proc.get_virt_amplitudes}
             if args[0] == 'diagrams':
                 if len(args)>=2 and args[1] in get_amps_dict.keys():
                     get_amps = get_amps_dict[args[1]]
                     self._curr_amps = get_amps()
                     #check that if one requests the virt diagrams, there are virt_amplitudes
-                    if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
+                    if args[1] == 'loop' and len(self._curr_amps) == 0:
                         raise self.InvalidCmd('No virtuals have been generated')
-                    self.draw(' '.join(args[2:]))
+                    self.draw(' '.join(args[2:]),type = args[1])
                 else:
-                    self._curr_amps = get_amps_dict['born']() + get_amps_dict['real']() + \
-                                      get_amps_dict['virt']()
-                    self.draw(' '.join(args[1:]))
+                    for diag_type, get_amps in get_amps_dict.items():
+                        self._curr_amps = get_amps()
+                        self.draw(' '.join(args[1:]), type=diag_type)
                 # set _curr_amps back to empty
                 self._curr_amps = diagram_generation.AmplitudeList()
 
@@ -513,7 +516,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
                                      'procdef_mg5.dat')
             if self.options['loop_optimized_output'] and \
                     len(self._curr_matrix_elements.get_virt_matrix_elements()) > 0:
-                print    len(self._curr_matrix_elements.get_virt_matrix_elements()) > 0
                 self._curr_exporter.write_coef_specs_file(\
                         self._curr_matrix_elements.get_virt_matrix_elements())
             if self._generate_info:

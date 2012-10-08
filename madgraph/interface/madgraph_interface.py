@@ -1961,7 +1961,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 
         value = super(MadGraphCmd, self).do_quit(line)
         self.do_install('update --mode=mg5_end')
-        print
 
         return value
         
@@ -2405,8 +2404,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
 
 
-    def draw(self, line,selection='all'):
-        """ draw the Feynman diagram for the given process """
+    def draw(self, line,selection='all',type=''):
+        """ draw the Feynman diagram for the given process.
+        Type refers to born, real or loop"""
 
         args = self.split_arg(line)
         # Check the validity of the arguments
@@ -2433,19 +2433,23 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             filename = pjoin(args[0], 'diagrams_' + \
                                     amp.get('process').shell_string() + ".eps")
             
-            if selection=='all':
+            if selection=='all' and type != 'loop':
                 diags=amp.get('diagrams')
             elif selection=='born':
                 diags=amp.get('born_diagrams')
-            elif selection=='loop':
+            elif selection=='loop' or type == 'loop':
                 diags=base_objects.DiagramList([d for d in 
                         amp.get('loop_diagrams') if d.get('type')>0])
+                if len(diags) > 1000:
+                    logger.warning('Displaying only the first 1000 diagrams')
+                    diags = diags[:1000]
 
             plot = draw.MultiEpsDiagramDrawer(diags,
                                           filename,
                                           model=self._curr_model,
                                           amplitude=amp,
-                                          legend=amp.get('process').input_string())
+                                          legend=amp.get('process').input_string(),
+                                          diagram_type=type)
                                           
 
             logger.info("Drawing " + \

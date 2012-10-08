@@ -268,7 +268,8 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         x, y = self.rescale(x, y)
         #write the text
         self.text += ' %s  %s moveto \n' % (x, y)
-        self.text += '( diagram %s )   show\n' % (number + 1) # +1 python
+        
+        self.text += '(%s diagram %s )   show\n' % (self.diagram_type, number + 1) # +1 python
                                                             #starts to count at
                                                             #zero.
 
@@ -392,7 +393,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
                    'blob_size':0.9}
     
     def __init__(self, diagramlist=None, filename='diagram.eps', \
-                  model=None, amplitude=None, legend=''):
+                  model=None, amplitude=None, legend='',diagram_type=''):
         """Define basic variable and store some global information
         all argument are optional
         diagramlist : are the list of object to draw. item should inherit 
@@ -414,6 +415,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.block_in_page = 0 #ckeep track of the block in a page
         #compute the number of pages
         self.npage = 1
+        self.diagram_type = diagram_type
 
         limit = self.lower_scale * self.nb_col * self.nb_line
         if len(diagramlist) < limit:

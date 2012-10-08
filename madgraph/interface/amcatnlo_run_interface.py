@@ -879,16 +879,19 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         self.update_status('Collecting events', level='parton')
         misc.call(['make collect_events > %s' % \
-                pjoin (self.me_dir, 'log_collect_events.txt')], shell=True)
+                pjoin(self.me_dir, 'log_collect_events.txt')], shell=True)
         misc.call(['echo "1" | ./collect_events > %s' % \
-                pjoin (self.me_dir, 'log_collect_events.txt')], shell=True)
+                pjoin(self.me_dir, 'log_collect_events.txt')], shell=True)
 
-        if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001')):
+        #get filename from collect events
+        filename = open(pjoin(self.me_dir, 'log_collect_events.txt')).read().split()[-1]
+
+        if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', filename)):
             raise aMCatNLOError('An error occurred during event generation. ' + \
                     'The event file has not been created. Check log_collect_events.txt')
         evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
         misc.call(['mv %s %s' % 
-            (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file)], shell=True )
+            (pjoin(self.me_dir, 'SubProcesses', filename), evt_file)], shell=True )
         logger.info('The %s file has been generated.\nIt contains %d %s events to be showered' \
                 % (evt_file, nevents, mode[4:]))
         return evt_file
