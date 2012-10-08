@@ -29,6 +29,10 @@ a) How to generate a process
 b) How to create output for aMC@NLO
 c) How to run the aMC@NLO output
 
+IMPORTANT NOTE: fastjet v3+ is needed for aMC@NLO to run.
+Please update the mg5_configuration file or type
+mg5>set fastjet /path/to/fastjet-config
+
 Let's start with the first point, how to generate a process at NLO:
 mg5>generate p p > e+ ve [QCD]
 Note that a space is mandatory between the particle names and that '[QCD]' 

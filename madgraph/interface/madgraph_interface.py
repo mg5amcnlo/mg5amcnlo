@@ -1866,6 +1866,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_type': 'condor',
                        'cluster_temp_path': None,
                        'cluster_queue': None,
+                       'fastjet':'fastjet-config',
+                       'lhapdf':'lhapdf-config',
                        }
     
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -3710,22 +3712,22 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         continue
 
 
-            if key == 'lhapdf' and self.options[key]:
-                if os.path.isfile(self.options['lhapdf']) or \
-                any([os.path.isfile(os.path.join(path, self.options['lhapdf'])) \
+            if key == 'lhapdf' and self.options_configuration[key]:
+                if os.path.isfile(self.options_configuration['lhapdf']) or \
+                any([os.path.isfile(os.path.join(path, self.options_configuration['lhapdf'])) \
                         for path in os.environ['PATH'].split(':')]):
-                    lhapdf_config = self.options['lhapdf']
+                    lhapdf_config = self.options_configuration['lhapdf']
                 else:
                     lhapdf_config = None
 
                 logger.info('lhapdf-config: %s' % lhapdf_config)
                 self.lhapdf_config = lhapdf_config
 
-            if key == 'fastjet' and self.options[key]:
-                if os.path.isfile(self.options['fastjet']) or \
-                any([os.path.isfile(os.path.join(path, self.options['fastjet'])) \
+            if key == 'fastjet' and self.options_configuration[key]:
+                if os.path.isfile(self.options_configuration['fastjet']) or \
+                any([os.path.isfile(os.path.join(path, self.options_configuration['fastjet'])) \
                         for path in os.environ['PATH'].split(':')]):
-                    fastjet_config = self.options['fastjet']
+                    fastjet_config = self.options_configuration['fastjet']
                 else:
                     fastjet_config = None
 
@@ -4603,9 +4605,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         elif self._export_format in ['NLO']:
             ## write fj_lhapdf_opts file
             fj_lhapdf_file = open(os.path.join(self._export_dir,'Source','fj_lhapdf_opts'),'w')
+            print self.options
             fj_lhapdf_lines = \
-                 ['fastjet_config=%s' % self.fastjet_config,
-                  'lhapdf_config=%s' % self.lhapdf_config]
+                 ['fastjet_config=%s' % self.options['fastjet'],
+                  'lhapdf_config=%s' % self.options['lhapdf']]
             text = '\n'.join(fj_lhapdf_lines) + '\n'
             fj_lhapdf_file.write(text)
             fj_lhapdf_file.close()
