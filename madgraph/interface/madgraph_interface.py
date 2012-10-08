@@ -4604,8 +4604,33 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         elif self._export_format in ['NLO']:
             ## write fj_lhapdf_opts file
+            devnull = os.open(os.devnull, os.O_RDWR)
             fj_lhapdf_file = open(os.path.join(self._export_dir,'Source','fj_lhapdf_opts'),'w')
-            print self.options
+
+            try:
+                res = misc.call([self.options['fastjet'], '--version'], stdout=devnull)
+            except:
+                res = 1
+            if res != 0:
+                logger.warning('The value for fastjet in the current configuration does not ' + \
+                        'correspond to a valid executable.\nPlease set it correctly either in ' + \
+                        'input/mg5_configuration or with "set fastjet /path/to/fastjet-config" ' + \
+                        'and regenrate the process. To avoid regeneration, manually edit the ' + \
+                        ('%s/Source/fj_lhapdf_opts file\n' % self._export_dir) + \
+                        'You will NOT be able to run aMC@NLO otherwise.\n')
+
+            try:
+                res = misc.call([self.options['lhapdf'], '--version'], stdout=devnull)
+            except:
+                res = 1
+            if res != 0:
+                logger.warning('The value for lhapdf in the current configuration does not ' + \
+                        'correspond to a valid executable.\nPlease set it correctly either in ' + \
+                        'input/mg5_configuration or with "set lhapdf /path/to/lhapdf-config" ' + \
+                        'and regenrate the process. \nTo avoid regeneration, manually edit the ' + \
+                        ('%s/Source/fj_lhapdf_opts file.\n' % self._export_dir ) + \
+                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
+
             fj_lhapdf_lines = \
                  ['fastjet_config=%s' % self.options['fastjet'],
                   'lhapdf_config=%s' % self.options['lhapdf']]

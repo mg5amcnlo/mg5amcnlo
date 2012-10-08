@@ -349,7 +349,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
                     print 'Real processes:'
                     print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['real']())
                     print 'Loop processes:'
-                    print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['virt']())
+                    print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['loop']())
                 # set _curr_amps back to empty
                 self._curr_amps = diagram_generation.AmplitudeList()
 
@@ -387,9 +387,14 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
                 raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
                         % ', '.join(myprocdef['perturbation_couplings']))
 
-        self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
+        try:
+            self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,
                                    ignore_six_quark_processes))
+        except: 
+            self._fks_multi_proc = fks_base.FKSMultiProcess(myprocdef,
+                                   collect_mirror_procs,
+                                   ignore_six_quark_processes)
 
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""
