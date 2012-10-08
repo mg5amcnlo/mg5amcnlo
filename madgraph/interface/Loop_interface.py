@@ -138,8 +138,9 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._v4_export_formats = []
         self._export_formats = [ 'matrix', 'standalone' ]
-        if self._curr_model.get('perturbation_couplings') == []:
-            if self._curr_model.get('name') == 'sm':
+        if not self._curr_model or \
+                           self._curr_model.get('perturbation_couplings') == []:
+            if not self._curr_model or self._curr_model.get('name') == 'sm':
                 logger.info('Automatically importing the standard model '+\
                                                        'for loop computations.')
                 self.do_import('model loop_sm')
