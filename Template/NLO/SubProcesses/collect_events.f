@@ -74,7 +74,11 @@ c Every time we find 80 files, collect the events
             call collect_all_evfiles(ioutput,numoffiles,junit,
      #                               nevents,evwgt)
             do i=1,numoffiles
-               close (junit(i))
+               if (istep.eq.0) then
+                  close (junit(i))
+               else
+                  close (junit(i),status='delete')
+               endif
             enddo
             close (ioutput)
             write(98,*) outputfile(1:15),'     ',nevents,'  ',xtotal
@@ -105,7 +109,11 @@ c Also collect events from the rest files
          call collect_all_evfiles(ioutput,numoffiles,junit,
      #                            nevents,evwgt)
          do i=1,numoffiles
-            close (junit(i))
+            if (istep.eq.0) then
+               close (junit(i))
+            else
+               close (junit(i),status='delete')
+            endif
          enddo
          close(ioutput)
          write(98,*) outputfile(1:15),'     ',nevents,'  ',xtotal
