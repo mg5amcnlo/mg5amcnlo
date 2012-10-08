@@ -86,9 +86,20 @@ cross-section from this interface.
 You will generate events to be showered a la MC@NLO, compute the theoretical
 and PDF error on the fly (if asked for in the run_card.dat) and shower the events 
 with the parton_shower MonteCarlo specified in the run_card.dat, generating a file in
-the StdHEP format.
-Please Enter:
+the StdHEP format. 
+Please note that, since shower-specific counterterms have to be included in the
+calculation, the parton level sample you will obtain can only be showered
+with the selected MonteCarlo.
+
+If you want to generate the showered StdHep file, please be sure to have the 
+MCatNLO-utilities installed (otherwise just type "install-MCatNLO-utilities").
+Please enter
+aMC@NLO> launch -s
+
+If you just want to generate the parton level .lhe file, please enter
 aMC@NLO> launch
+
+
 (you can interrupt the computation to continue the tutorial by pressing Ctrl-C)
 """
 
