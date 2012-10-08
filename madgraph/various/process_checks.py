@@ -760,7 +760,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                                          npoints = curr_attempt)
             compile_time, run_time = cls.make_and_run(run_dir)
             if compile_time==None:
-                logging.error("Failed at running the process %s."%shell_name)
+                logging.error("Failed at running the process in %s."%run_dir)
                 return None
             # Only set process_compilation time for the first compilation.
             if 'Process_compilation' not in infos.keys() or \

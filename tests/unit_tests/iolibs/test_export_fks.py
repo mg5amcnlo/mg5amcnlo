@@ -914,53 +914,53 @@ C     ----------
       CALL OXXXXX(P(0,3),MT,NHEL(3),+1*IC(3),W(1,3))
       CALL IXXXXX(P(0,4),MT,NHEL(4),-1*IC(4),W(1,4))
       CALL VXXXXX(P(0,5),ZERO,NHEL(5),+1*IC(5),W(1,5))
-      CALL VVV1_1(W(1,1),W(1,2),GC_9,ZERO,ZERO,W(1,6))
-      CALL FFV1_3(W(1,4),W(1,3),GC_10,ZERO,ZERO,W(1,7))
+      CALL VVV1_1(W(1,1),W(1,2),GC_10,ZERO,ZERO,W(1,6))
+      CALL FFV1_3(W(1,4),W(1,3),GC_11,ZERO,ZERO,W(1,7))
 C     Amplitude(s) for diagram number 1
-      CALL VVV1_0(W(1,6),W(1,7),W(1,5),GC_9,AMP(1))
-      CALL FFV1_1(W(1,3),W(1,5),GC_10,MT,WT,W(1,8))
+      CALL VVV1_0(W(1,6),W(1,7),W(1,5),GC_10,AMP(1))
+      CALL FFV1_1(W(1,3),W(1,5),GC_11,MT,WT,W(1,8))
 C     Amplitude(s) for diagram number 2
-      CALL FFV1_0(W(1,4),W(1,8),W(1,6),GC_10,AMP(2))
-      CALL FFV1_2(W(1,4),W(1,5),GC_10,MT,WT,W(1,9))
+      CALL FFV1_0(W(1,4),W(1,8),W(1,6),GC_11,AMP(2))
+      CALL FFV1_2(W(1,4),W(1,5),GC_11,MT,WT,W(1,9))
 C     Amplitude(s) for diagram number 3
-      CALL FFV1_0(W(1,9),W(1,3),W(1,6),GC_10,AMP(3))
-      CALL FFV1_1(W(1,3),W(1,1),GC_10,MT,WT,W(1,6))
-      CALL FFV1_2(W(1,4),W(1,2),GC_10,MT,WT,W(1,10))
+      CALL FFV1_0(W(1,9),W(1,3),W(1,6),GC_11,AMP(3))
+      CALL FFV1_1(W(1,3),W(1,1),GC_11,MT,WT,W(1,6))
+      CALL FFV1_2(W(1,4),W(1,2),GC_11,MT,WT,W(1,10))
 C     Amplitude(s) for diagram number 4
-      CALL FFV1_0(W(1,10),W(1,6),W(1,5),GC_10,AMP(4))
-      CALL VVV1_1(W(1,2),W(1,5),GC_9,ZERO,ZERO,W(1,11))
+      CALL FFV1_0(W(1,10),W(1,6),W(1,5),GC_11,AMP(4))
+      CALL VVV1_1(W(1,2),W(1,5),GC_10,ZERO,ZERO,W(1,11))
 C     Amplitude(s) for diagram number 5
-      CALL FFV1_0(W(1,4),W(1,6),W(1,11),GC_10,AMP(5))
+      CALL FFV1_0(W(1,4),W(1,6),W(1,11),GC_11,AMP(5))
 C     Amplitude(s) for diagram number 6
-      CALL FFV1_0(W(1,9),W(1,6),W(1,2),GC_10,AMP(6))
-      CALL FFV1_2(W(1,4),W(1,1),GC_10,MT,WT,W(1,6))
-      CALL FFV1_1(W(1,3),W(1,2),GC_10,MT,WT,W(1,12))
+      CALL FFV1_0(W(1,9),W(1,6),W(1,2),GC_11,AMP(6))
+      CALL FFV1_2(W(1,4),W(1,1),GC_11,MT,WT,W(1,6))
+      CALL FFV1_1(W(1,3),W(1,2),GC_11,MT,WT,W(1,12))
 C     Amplitude(s) for diagram number 7
-      CALL FFV1_0(W(1,6),W(1,12),W(1,5),GC_10,AMP(7))
+      CALL FFV1_0(W(1,6),W(1,12),W(1,5),GC_11,AMP(7))
 C     Amplitude(s) for diagram number 8
-      CALL FFV1_0(W(1,6),W(1,3),W(1,11),GC_10,AMP(8))
+      CALL FFV1_0(W(1,6),W(1,3),W(1,11),GC_11,AMP(8))
 C     Amplitude(s) for diagram number 9
-      CALL FFV1_0(W(1,6),W(1,8),W(1,2),GC_10,AMP(9))
-      CALL VVV1_1(W(1,1),W(1,5),GC_9,ZERO,ZERO,W(1,6))
+      CALL FFV1_0(W(1,6),W(1,8),W(1,2),GC_11,AMP(9))
+      CALL VVV1_1(W(1,1),W(1,5),GC_10,ZERO,ZERO,W(1,6))
 C     Amplitude(s) for diagram number 10
-      CALL FFV1_0(W(1,4),W(1,12),W(1,6),GC_10,AMP(10))
+      CALL FFV1_0(W(1,4),W(1,12),W(1,6),GC_11,AMP(10))
 C     Amplitude(s) for diagram number 11
-      CALL FFV1_0(W(1,10),W(1,3),W(1,6),GC_10,AMP(11))
+      CALL FFV1_0(W(1,10),W(1,3),W(1,6),GC_11,AMP(11))
 C     Amplitude(s) for diagram number 12
-      CALL VVV1_0(W(1,6),W(1,2),W(1,7),GC_9,AMP(12))
+      CALL VVV1_0(W(1,6),W(1,2),W(1,7),GC_10,AMP(12))
 C     Amplitude(s) for diagram number 13
-      CALL FFV1_0(W(1,9),W(1,12),W(1,1),GC_10,AMP(13))
+      CALL FFV1_0(W(1,9),W(1,12),W(1,1),GC_11,AMP(13))
 C     Amplitude(s) for diagram number 14
-      CALL FFV1_0(W(1,10),W(1,8),W(1,1),GC_10,AMP(14))
+      CALL FFV1_0(W(1,10),W(1,8),W(1,1),GC_11,AMP(14))
 C     Amplitude(s) for diagram number 15
-      CALL VVV1_0(W(1,1),W(1,11),W(1,7),GC_9,AMP(15))
-      CALL VVVV1_1(W(1,1),W(1,2),W(1,5),GC_11,ZERO,ZERO,W(1,11))
-      CALL VVVV3_1(W(1,1),W(1,2),W(1,5),GC_11,ZERO,ZERO,W(1,7))
-      CALL VVVV4_1(W(1,1),W(1,2),W(1,5),GC_11,ZERO,ZERO,W(1,10))
+      CALL VVV1_0(W(1,1),W(1,11),W(1,7),GC_10,AMP(15))
+      CALL VVVV1_1(W(1,1),W(1,2),W(1,5),GC_12,ZERO,ZERO,W(1,11))
+      CALL VVVV3_1(W(1,1),W(1,2),W(1,5),GC_12,ZERO,ZERO,W(1,7))
+      CALL VVVV4_1(W(1,1),W(1,2),W(1,5),GC_12,ZERO,ZERO,W(1,10))
 C     Amplitude(s) for diagram number 16
-      CALL FFV1_0(W(1,4),W(1,3),W(1,11),GC_10,AMP(16))
-      CALL FFV1_0(W(1,4),W(1,3),W(1,7),GC_10,AMP(17))
-      CALL FFV1_0(W(1,4),W(1,3),W(1,10),GC_10,AMP(18))
+      CALL FFV1_0(W(1,4),W(1,3),W(1,11),GC_11,AMP(16))
+      CALL FFV1_0(W(1,4),W(1,3),W(1,7),GC_11,AMP(17))
+      CALL FFV1_0(W(1,4),W(1,3),W(1,10),GC_11,AMP(18))
       JAMP(1)=-AMP(1)+IMAG1*AMP(3)+IMAG1*AMP(5)-AMP(6)+AMP(15)-AMP(18)
      $ +AMP(16)
       JAMP(2)=-AMP(4)-IMAG1*AMP(5)+IMAG1*AMP(11)+AMP(12)-AMP(15)
@@ -1312,15 +1312,15 @@ C     ----------
           CALL VXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
           CALL OXXXXX(P(0,3),MT,NHEL(3),+1*IC(3),W(1,3))
           CALL IXXXXX(P(0,4),MT,NHEL(4),-1*IC(4),W(1,4))
-          CALL VVV1_1(W(1,1),W(1,2),GC_9,ZERO,ZERO,W(1,5))
+          CALL VVV1_1(W(1,1),W(1,2),GC_10,ZERO,ZERO,W(1,5))
 C         Amplitude(s) for diagram number 1
-          CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_10,AMP(1))
-          CALL FFV1_1(W(1,3),W(1,1),GC_10,MT,WT,W(1,5))
+          CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_11,AMP(1))
+          CALL FFV1_1(W(1,3),W(1,1),GC_11,MT,WT,W(1,5))
 C         Amplitude(s) for diagram number 2
-          CALL FFV1_0(W(1,4),W(1,5),W(1,2),GC_10,AMP(2))
-          CALL FFV1_2(W(1,4),W(1,1),GC_10,MT,WT,W(1,5))
+          CALL FFV1_0(W(1,4),W(1,5),W(1,2),GC_11,AMP(2))
+          CALL FFV1_2(W(1,4),W(1,1),GC_11,MT,WT,W(1,5))
 C         Amplitude(s) for diagram number 3
-          CALL FFV1_0(W(1,5),W(1,3),W(1,2),GC_10,AMP(3))
+          CALL FFV1_0(W(1,5),W(1,3),W(1,2),GC_11,AMP(3))
           DO I=1,NGRAPHS
             IF(IHEL.EQ.-1)THEN
               SAVEAMP(I,HELL)=AMP(I)

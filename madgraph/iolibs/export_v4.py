@@ -2948,6 +2948,8 @@ class UFO_model_to_mg4(object):
                     lower_dict[lower_name] = [param]
                 else:
                     duplicate.add(lower_name)
+                    logger.debug('%s is define both as lower case and upper case.' 
+                                 % lower_name)
         
         if not duplicate:
             return
@@ -2976,9 +2978,13 @@ class UFO_model_to_mg4(object):
         for key in self.model['couplings'].keys():
             for coup in self.model['couplings'][key]:
                 coup.expr = rep_pattern.sub(replace, coup.expr)
-
-
-               
+                
+        # change mass/width
+        for part in self.model['particles']:
+            if str(part.get('mass')) in to_change:
+                part.set('mass', rep_pattern.sub(replace, str(part.get('mass'))))
+            if str(part.get('width')) in to_change:
+                part.set('width', rep_pattern.sub(replace, str(part.get('width'))))                
                 
     def refactorize(self, wanted_couplings = []):    
         """modify the couplings to fit with MG4 convention """
@@ -3095,8 +3101,6 @@ class UFO_model_to_mg4(object):
         for filename in file_to_link:
             cp( MG5DIR + '/models/template_files/fortran/' + filename, \
                                                                 self.dir_path)
-
-
             
         file = open(os.path.join(MG5DIR,\
                               'models/template_files/fortran/rw_para.f')).read()
@@ -3106,7 +3110,7 @@ class UFO_model_to_mg4(object):
             includes.extend(["include \'mp_coupl.inc\'","include \'mp_input.inc\'"])
         # In standalone and madloop we do no use the compiled param card but
         # still parse the .dat one so we must load it.
-        if self.opt['export_format'] in ['madloop','madloop_optimized']:
+        if self.opt['export_format'] in ['standalone', 'madloop','madloop_optimized']:
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read_mp.f'
         else:
@@ -3114,7 +3118,6 @@ class UFO_model_to_mg4(object):
             lha_read_filename='lha_read.f'
         cp( MG5DIR + '/models/template_files/fortran/' + lha_read_filename, \
                                        os.path.join(self.dir_path,'lha_read.f'))
-        
         
         file=file%{'includes':'\n      '.join(includes),
                    'load_card':load_card}
@@ -3131,9 +3134,11 @@ class UFO_model_to_mg4(object):
                 text = text.replace('madevent','aMCatNLO')
                 open(path, 'w').writelines(text)
 
-        else:
+        elif self.opt['export_format'] in ['standalone', 'madloop','madloop_optimized']:
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
+        else:
+            raise MG5Error('Unknown format')
 
     def create_coupl_inc(self):
         """ write coupling.inc """

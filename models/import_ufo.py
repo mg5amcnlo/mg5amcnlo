@@ -589,7 +589,7 @@ class UFOMG5Converter(object):
                                           if helas.name not in self.checked_lor]
                 self.checked_lor.update(set([helas.name for helas in interaction_info.lorentz]))
             elif nb_fermion:
-                if any(p.selfconjugate for p in interaction_info.particles):
+                if any(p.selfconjugate for p in interaction_info.particles if p.spin % 2 == 0):
                     text = "Majorana can not be dealt in 4/6/... fermion interactions"
                     raise InvalidModel, text
         except aloha_fct.WrongFermionFlow, error:

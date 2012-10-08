@@ -349,9 +349,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         self.results.update(status, level, makehtml=makehtml, error=error)
         
 
-    ############################################################################      
-
-
     ############################################################################
     def set_configuration(self, config_path=None, final=True, initdir=None, amcatnlo=False):
         """ assign all configuration variable from file 
@@ -399,7 +396,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 name = name.strip()
                 value = value.strip()
                 if name.endswith('_path'):
-                    print name
                     path = value
                     if os.path.isdir(path):
                         self.options[name] = os.path.realpath(path)
@@ -437,15 +433,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 elif self.options.has_key('mg5_path') and self.options['mg5_path']: 
                     path = pjoin(self.options['mg5_path'], self.options[key])
                     if os.path.isdir(path):
-                         self.options[key] = os.path.realpath(path)
-                         continue
+                        self.options[key] = os.path.realpath(path)
+                        continue
                 self.options[key] = None
             elif key.startswith('cluster'):
                 pass              
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
                     self.options[key] =eval(self.options[key])
-            elif key not in ['text_editor','eps_viewer','web_browser']:
+            elif key not in ['text_editor','eps_viewer','web_browser','stdout_level']:
                 # Default: try to set parameter
                 try:
                     self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)

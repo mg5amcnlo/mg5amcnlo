@@ -39,6 +39,7 @@ except Exception, error:
     import internal.files as files
     
 logger = logging.getLogger('cmdprint.ext_program')
+logger_stderr = logging.getLogger('madevent.misc')
 pjoin = os.path.join
    
 #===============================================================================
@@ -144,6 +145,7 @@ def nice_representation(var, nb_space=0):
 #
 # Decorator for re-running a crashing function automatically.
 #
+wait_once = False
 def multiple_try(nb_try=5, sleep=20):
 
     def deco_retry(f):
@@ -153,7 +155,15 @@ def multiple_try(nb_try=5, sleep=20):
                     return f(*args, **opt)
                 except KeyboardInterrupt:
                     raise
-                except:
+                except Exception, error:
+                    global wait_once
+                    if not wait_once:
+                        text = """Start waiting for update on filesystem. (more info in debug mode)"""
+                        logger.info(text)
+                        logger_stderr.debug('fail to do %s function with %s args. %s try on a max of %s (%s waiting time)' %
+                                 (str(f), ', '.join([str(a) for a in args]), i+1, nb_try, sleep * (i+1)))
+                        logger_stderr.debug('error is %s' % str(error))
+                    wait_once = True
                     time.sleep(sleep * (i+1))
             raise
         return deco_f_retry

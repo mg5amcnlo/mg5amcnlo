@@ -96,12 +96,14 @@ class TestRestrictModel(unittest.TestCase):
     def test_detect_special_parameters(self):
         """ check that detect zero parameters works"""        
         
-        expected = set(['etaWS', 'conjg__CKM13', 'conjg__CKM12', 'conjg__CKM32', 'conjg__CKM31', 'CKM23', 'WT', 'lamWS', 'WTau', 'AWS', 'ymc', 'ymb', 'yme', 'ymm', 'Me', 'MB', 'CKM32', 'CKM31', 'ym', 'CKM13', 'CKM12', 'lamWS__exp__2', 'lamWS__exp__3', 'yc', 'yb', 'ye', 'conjg__CKM21', 'CKM21', 'conjg__CKM23', 'MC', 'MM', 'rhoWS'])
+        expected = set(['I3x32', 'etaWS', 'conjg__CKM3x2', 'CKM1x2', 'WT', 'I1x32', 'I1x33', 'I1x31', 'I2x32', 'CKM3x1', 'I2x13', 'I2x12', 'I3x23', 'I3x22', 'I3x21', 'conjg__CKM2x1', 'lamWS', 'conjg__CKM2x3', 'I2x23', 'AWS', 'CKM1x3', 'conjg__CKM3x1', 'I4x23', 'ymc', 'ymb', 'yme', 'CKM3x2', 'CKM2x3', 'CKM2x1', 'ymm', 'conjg__CKM1x3', 'Me', 'ym', 'I2x22', 'WTau', 'lamWS__exp__2', 'lamWS__exp__3', 'yc', 'yb', 'ye', 'MC', 'MB', 'MM', 'conjg__CKM1x2', 'I3x31', 'rhoWS', 'I4x33', 'I4x13'])
         zero, one = self.model.detect_special_parameters()
         result = set(zero)
+        self.assertEqual(len(result), len(expected))
+
         self.assertEqual(expected, result)
         
-        expected = set(['CKM33', 'conjg__CKM11', 'conjg__CKM33', 'CKM22', 'CKM11', 'conjg__CKM22'])
+        expected = set(['conjg__CKM3x3', 'conjg__CKM2x2', 'CKM1x1', 'CKM2x2', 'CKM3x3', 'conjg__CKM1x1'])
         result = set(one)
         self.assertEqual(expected, result)
 
@@ -153,15 +155,16 @@ class TestRestrictModel(unittest.TestCase):
         zero, iden = self.model.detect_identical_couplings()
         
         # check what is the zero coupling
-        expected = set(['GC_100', 'GC_108', 'GC_109', 'GC_31', 'GC_30', 'GC_32', 'GC_28', 'GC_26', 'GC_27', 'GC_99', 'GC_98', 'GC_97', 'GC_96', 'GC_75', 'GC_74', 'GC_77', 'GC_76', 'GC_71', 'GC_70', 'GC_73', 'GC_72', 'GC_79', 'GC_78', 'GC_88', 'GC_89', 'GC_102', 'GC_103', 'GC_104', 'GC_105', 'GC_106', 'GC_107', 'GC_80', 'GC_81', 'GC_82', 'GC_83', 'GC_84', 'GC_85', 'GC_68', 'GC_69', 'GC_111'])
+        expected = set(['GC_17', 'GC_16', 'GC_15', 'GC_14', 'GC_13', 'GC_19', 'GC_18', 'GC_22', 'GC_30', 'GC_20', 'GC_89', 'GC_88', 'GC_101', 'GC_102', 'GC_103', 'GC_42', 'GC_106', 'GC_107', 'GC_82', 'GC_43', 'GC_84', 'GC_85', 'GC_86', 'GC_105', 'GC_28', 'GC_29', 'GC_48', 'GC_44', 'GC_23', 'GC_46', 'GC_47', 'GC_26', 'GC_24', 'GC_25', 'GC_83', 'GC_87', 'GC_93', 'GC_92', 'GC_91', 'GC_90'])
         result = set(zero)
+        self.assertEqual(len(expected), len(result))
         for name in result:
             self.assertEqual(self.model['coupling_dict'][name], 0)
         
         self.assertEqual(expected, result)        
         
         # check what are the identical coupling
-        expected = [['GC_101', 'GC_33', 'GC_29', 'GC_24', 'GC_25', 'GC_95', 'GC_110'], ['GC_19', 'GC_66'], ['GC_18', 'GC_65'], ['GC_37', 'GC_12'], ['GC_49', 'GC_4'], ['GC_46', 'GC_62']]
+        expected = [['GC_100', 'GC_108', 'GC_49', 'GC_45', 'GC_40', 'GC_41', 'GC_104']]
         expected.sort()
         iden.sort()
         self.assertEqual(expected, iden)
@@ -205,17 +208,15 @@ class TestRestrictModel(unittest.TestCase):
         zero, iden = self.model.detect_identical_couplings()
         
         # Check that All the code/model is the one intended for this test
-        target = ['GC_101', 'GC_33', 'GC_29', 'GC_24', 'GC_25', 'GC_95', 'GC_110']
-
-        assert target in iden, 'test not up-to-date'
+        target = [i for i in iden if len(i)==7][0] 
+        GC = target[0]
+        
         check_content = [['d', 'u', 'w+'], ['s', 'c', 'w+'], ['b', 't', 'w+'], ['u', 'd', 'w+'], ['c', 's', 'w+'], ['t', 'b', 'w+'], ['e-', 've', 'w+'], ['m-', 'vm', 'w+'], ['tt-', 'vt', 'w+'], ['ve', 'e-', 'w+'], ['vm', 'm-', 'w+'], ['vt', 'tt-', 'w+']]
         content =  [[p.get('name') for p in v.get('particles')] \
                for v in self.model.get('interactions') \
                if any([c in target for c in v['couplings'].values()])]
-        [a.sort() for a in check_content+content]
-        check_content.sort()
-        content.sort()
-        assert check_content == content, 'test not up-to-date'      
+
+        self.assertEqual(len(check_content),len(content))#, 'test not up-to-date'      
 
         vertex_id = [v.get('id') \
                for v in self.model.get('interactions') \
@@ -232,12 +233,12 @@ class TestRestrictModel(unittest.TestCase):
         # check now that everything is fine        
         self.model.merge_iden_couplings(target)
         for id in vertex_id:
-            has_33 = False
+            has_GC = False
             for coup in self.model.get_interaction(id)['couplings'].values():
                 self.assertFalse(coup in target[1:])
-                if coup == 'GC_101':
-                    has_101 = True
-            self.assertTrue(has_101, True)
+                if coup == GC:
+                    has_GC = True
+            self.assertTrue(has_GC, True)
 
     def test_remove_couplings(self):
         """ check that the detection of irrelevant interactions works """

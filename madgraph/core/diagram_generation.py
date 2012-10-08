@@ -1431,7 +1431,8 @@ class MultiProcess(base_objects.PhysicsObject):
                                  })
                 fast_proc = \
                           array.array('i',[leg.get('id') for leg in legs])
-                if collect_mirror_procs:
+                if collect_mirror_procs and \
+                        process_definition.get_ninitial() == 2:
                     # Check if mirrored process is already generated
                     mirror_proc = \
                               array.array('i', [fast_proc[1], fast_proc[0]] + \
