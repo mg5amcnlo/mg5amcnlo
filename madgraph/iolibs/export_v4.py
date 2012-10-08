@@ -3113,6 +3113,9 @@ class UFO_model_to_mg4(object):
         if self.opt['export_format'] in ['standalone', 'madloop','madloop_optimized']:
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read_mp.f'
+        elif self.opt['export_format'] == 'standalone':
+            load_card = 'call LHA_loadcard(param_name,npara,param,value)'
+            lha_read_filename='lha_read.f'
         else:
             load_card = ''
             lha_read_filename='lha_read.f'
