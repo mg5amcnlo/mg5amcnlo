@@ -73,12 +73,14 @@ class TestRestrictModel(unittest.TestCase):
     def test_detect_special_parameters(self):
         """ check that detect zero parameters works"""        
         
-        expected = set(['etaWS', 'conjg__CKM13', 'conjg__CKM12', 'conjg__CKM32', 'conjg__CKM31', 'CKM23', 'WT', 'lamWS', 'WTau', 'AWS', 'ymc', 'ymb', 'yme', 'ymm', 'Me', 'MB', 'CKM32', 'CKM31', 'ym', 'CKM13', 'CKM12', 'lamWS__exp__2', 'lamWS__exp__3', 'yc', 'yb', 'ye', 'conjg__CKM21', 'CKM21', 'conjg__CKM23', 'MC', 'MM', 'rhoWS'])
+        expected = set(['I3x32', 'etaWS', 'conjg__CKM3x2', 'CKM1x2', 'WT', 'I1x32', 'I1x33', 'I1x31', 'I2x32', 'CKM3x1', 'I2x13', 'I2x12', 'I3x23', 'I3x22', 'I3x21', 'conjg__CKM2x1', 'lamWS', 'conjg__CKM2x3', 'I2x23', 'AWS', 'CKM1x3', 'conjg__CKM3x1', 'I4x23', 'ymc', 'ymb', 'yme', 'CKM3x2', 'CKM2x3', 'CKM2x1', 'ymm', 'conjg__CKM1x3', 'Me', 'ym', 'I2x22', 'WTau', 'lamWS__exp__2', 'lamWS__exp__3', 'yc', 'yb', 'ye', 'MC', 'MB', 'MM', 'conjg__CKM1x2', 'I3x31', 'rhoWS', 'I4x33', 'I4x13'])
         zero, one = self.model.detect_special_parameters()
         result = set(zero)
+        self.assertEqual(len(result), len(expected))
+
         self.assertEqual(expected, result)
         
-        expected = set(['CKM33', 'conjg__CKM11', 'conjg__CKM33', 'CKM22', 'CKM11', 'conjg__CKM22'])
+        expected = set(['conjg__CKM3x3', 'conjg__CKM2x2', 'CKM1x1', 'CKM2x2', 'CKM3x3', 'conjg__CKM1x1'])
         result = set(one)
         self.assertEqual(expected, result)
 
@@ -130,14 +132,15 @@ class TestRestrictModel(unittest.TestCase):
         zero, iden = self.model.detect_identical_couplings()
         
         # check what is the zero coupling
-        expected = set(['GC_100', 'GC_108', 'GC_109', 'GC_31', 'GC_30', 'GC_32', 'GC_28', 'GC_26', 'GC_27', 'GC_99', 'GC_98', 'GC_97', 'GC_96', 'GC_75', 'GC_74', 'GC_77', 'GC_76', 'GC_71', 'GC_70', 'GC_73', 'GC_72', 'GC_79', 'GC_78', 'GC_88', 'GC_89', 'GC_102', 'GC_103', 'GC_104', 'GC_105', 'GC_106', 'GC_107', 'GC_80', 'GC_81', 'GC_82', 'GC_83', 'GC_84', 'GC_85', 'GC_68', 'GC_69', 'GC_111'])
+        expected = set(['GC_17', 'GC_16', 'GC_15', 'GC_14', 'GC_13', 'GC_19', 'GC_18', 'GC_22', 'GC_30', 'GC_20', 'GC_89', 'GC_88', 'GC_101', 'GC_102', 'GC_103', 'GC_42', 'GC_106', 'GC_107', 'GC_82', 'GC_43', 'GC_84', 'GC_85', 'GC_86', 'GC_105', 'GC_28', 'GC_29', 'GC_48', 'GC_44', 'GC_23', 'GC_46', 'GC_47', 'GC_26', 'GC_24', 'GC_25', 'GC_83', 'GC_87', 'GC_93', 'GC_92', 'GC_91', 'GC_90'])
         result = set(zero)
+        self.assertEqual(len(expected), len(result))
         for name in result:
             self.assertEqual(self.model['coupling_dict'][name], 0)
         
         self.assertEqual(expected, result)        
         # check what are the identical coupling
-        expected = [['GC_101', 'GC_33', 'GC_29', 'GC_24', 'GC_25', 'GC_95', 'GC_110'], ['GC_19', 'GC_66'], ['GC_18', 'GC_65'], ['GC_37', 'GC_12'], ['GC_49', 'GC_4'], ['GC_46', 'GC_62']]
+        expected = [['GC_100', 'GC_108', 'GC_49', 'GC_45', 'GC_40', 'GC_41', 'GC_104']]
         expected.sort()
         iden.sort()
         self.assertEqual(expected, iden)
@@ -145,11 +148,26 @@ class TestRestrictModel(unittest.TestCase):
     def test_locate_couplings(self):
         """ check the creation of the coupling to vertex dict """
         
-        target = ['GC_68', 'GC_59', 'GC_24', 'GC_49']
-        sol = {'GC_68': [20],
-               'GC_59': [11],
-               'GC_24': [42, 43, 44,65, 66, 67],
-               'GC_49': [4]}
+        for candidate in self.model['interactions']:
+            if [p['pdg_code'] for p in candidate['particles']] == [5, 5, 25]:
+                input_bbh = candidate
+                coupling_bbh = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [23, 23, 25, 25]:
+                input_zzhh = candidate
+                coupling_zzhh = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [11, 12, 24]:
+                input_wen = candidate
+                coupling_wen = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [22, 24, 24]:
+                input_aww = candidate
+                coupling_aww = candidate['couplings'][(0,0)]            
+        
+        
+        target = [coupling_bbh, coupling_zzhh, coupling_wen, coupling_aww]
+        sol = {coupling_bbh: [input_bbh['id']],
+               coupling_zzhh: [input_zzhh['id']],
+               coupling_wen: [43, 44, 45, 66, 67, 68],
+               coupling_aww: [input_aww['id']]}
         # b b~ h // z z h h //w- e+ ve // a w+ w-
         
         self.model.locate_coupling()
@@ -166,9 +184,8 @@ class TestRestrictModel(unittest.TestCase):
         zero, iden = self.model.detect_identical_couplings()
         
         # Check that All the code/model is the one intended for this test
-        target = ['GC_101', 'GC_33', 'GC_29', 'GC_24', 'GC_25', 'GC_95', 'GC_110']
-
-        assert target in iden, 'test not up-to-date'
+        target = [i for i in iden if len(i)==7][0] 
+        GC = target[0]
         
         check_content = [['d', 'u', 'w+'], ['s', 'c', 'w+'], ['b', 't', 'w+'], ['u', 'd', 'w+'], ['c', 's', 'w+'], ['t', 'b', 'w+'], ['e-', 've', 'w+'], ['m-', 'vm', 'w+'], ['tt-', 'vt', 'w+'], ['ve', 'e-', 'w+'], ['vm', 'm-', 'w+'], ['vt', 'tt-', 'w+']]
         content =  [[p.get('name') for p in v.get('particles')] \
@@ -193,77 +210,87 @@ class TestRestrictModel(unittest.TestCase):
         # check now that everything is fine        
         self.model.merge_iden_couplings(target)
         for id in vertex_id:
-            has_33 = False
+            has_GC = False
             for coup in self.model.get_interaction(id)['couplings'].values():
                 self.assertFalse(coup in target[1:])
-                if coup == 'GC_101':
-                    has_101 = True
-            self.assertTrue(has_101, True)
+                if coup == GC:
+                    has_GC = True
+            self.assertTrue(has_GC, True)
 
     def test_remove_couplings(self):
         """ check that the detection of irrelevant interactions works """
         
-        # first test case where they are all deleted
-        # check that we have the valid model
-        input = self.model['interactions'][2]  # four gluon
-        input2 = self.model['interactions'][19] # b b~ h
-        self.assertTrue('GC_11' in input['couplings'].values())
-        self.assertTrue('GC_68' in input2['couplings'].values())
-        found_11 = 0
-        found_68 = 0
+        for candidate in self.model['interactions']:
+            if [p['pdg_code'] for p in candidate['particles']] == [5, 5, 25]:
+                input_bbh = candidate
+                coupling_bbh = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [21, 21, 21, 21]:
+                input_4g = candidate
+                coupling_4g = candidate['couplings'][(0,0)]
+        
+        found_bbh = 0
+        found_4g = 0
         for dep,data in self.model['couplings'].items():
             for param in data:
-                if param.name == 'GC_11': found_11 +=1
-                elif param.name == 'GC_68': found_68 +=1
-        self.assertTrue(found_11>0)
-        self.assertTrue(found_68>0)
+                if param.name == coupling_bbh: found_bbh +=1
+                elif param.name == coupling_4g: found_4g +=1
+        self.assertTrue(found_bbh>0)
+        self.assertTrue(found_4g>0)
         
         # make the real test
-        result = self.model.remove_couplings(['GC_11','GC_68'])
+        result = self.model.remove_couplings([coupling_bbh,coupling_4g])
         
         for dep,data in self.model['couplings'].items():
             for param in data:
-                self.assertFalse(param.name in  ['GC_11', 'GC_68'])
+                self.assertFalse(param.name in  [coupling_bbh, coupling_4g])
 
              
     def test_remove_interactions(self):
         """ check that the detection of irrelevant interactions works """
         
+        for candidate in self.model['interactions']:
+            if [p['pdg_code'] for p in candidate['particles']] == [5, 5, 25]:
+                input_bbh = candidate
+                coupling_bbh = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [21, 21, 21, 21]:
+                input_4g = candidate
+                coupling_4g = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [1, 1, 23]:
+                input_ddz = candidate
+                coupling_ddz_1 = candidate['couplings'][(0,0)]
+                coupling_ddz_2 = candidate['couplings'][(0,1)]
+            if [p['pdg_code'] for p in candidate['particles']] == [11, 11, 23]:
+                input_eez = candidate
+                coupling_eez_1 = candidate['couplings'][(0,0)]            
+                coupling_eez_2 = candidate['couplings'][(0,1)]
         
-        # first test case where they are all deleted
-        # check that we have the valid model
-        input = self.model['interactions'][2]  # four gluon
-        input2 = self.model['interactions'][19] # b b~ h
-        self.assertTrue('GC_11' in input['couplings'].values())
-        self.assertTrue('GC_68' in input2['couplings'].values())
-        found_11 = 0
-        found_68 = 0
+        #security                                      
+        found_4g = 0  
+        found_bbh = 0 
         for dep,data in self.model['couplings'].items():
             for param in data:
-                if param.name == 'GC_11': found_11 +=1
-                elif param.name == 'GC_33': found_68 +=1
-        self.assertTrue(found_11>0)
-        self.assertTrue(found_68>0)
+                if param.name == coupling_4g: found_4g +=1
+                elif param.name == coupling_bbh: found_bbh +=1
+        self.assertTrue(found_bbh>0)
+        self.assertTrue(found_4g>0)
         
         # make the real test
         self.model.locate_coupling()
-        result = self.model.remove_interactions(['GC_11','GC_68'])
-        self.assertFalse(input in self.model['interactions'])
-        self.assertFalse(input2 in self.model['interactions'])
+        result = self.model.remove_interactions([coupling_bbh, coupling_4g])
+        self.assertFalse(input_bbh in self.model['interactions'])
+        self.assertFalse(input_4g in self.model['interactions'])
         
     
         # Now test case where some of them are deleted and some not
-        input = self.model['interactions'][20]  # d d~ Z
-        input2 = self.model['interactions'][38] # e+ e- Z
-        self.assertTrue('GC_47' in input['couplings'].values())
-        self.assertTrue('GC_34' in input['couplings'].values())
-        self.assertTrue('GC_34' in input2['couplings'].values())
-        self.assertTrue('GC_48' in input2['couplings'].values())
-        result = self.model.remove_interactions(['GC_34','GC_48'])
-        self.assertTrue('GC_47' in input['couplings'].values())
-        self.assertFalse('GC_34' in input['couplings'].values())
-        self.assertFalse('GC_34' in input2['couplings'].values())
-        self.assertFalse('GC_48' in input2['couplings'].values())
+        if coupling_ddz_1 != coupling_eez_1:
+            coupling_eez_1, coupling_eez_2 = coupling_eez_2, coupling_eez_1
+        assert coupling_ddz_1 == coupling_eez_1
+        
+        result = self.model.remove_interactions([coupling_ddz_1, coupling_ddz_2])
+        self.assertTrue(coupling_eez_2 in input_eez['couplings'].values())
+        self.assertFalse(coupling_eez_1 in input_eez['couplings'].values())
+        self.assertFalse(coupling_ddz_1 in input_ddz['couplings'].values())
+        self.assertFalse(coupling_ddz_2 in input_ddz['couplings'].values())
 
     def test_put_parameters_to_zero(self):
         """check that we remove parameters correctly"""
@@ -305,14 +332,14 @@ class TestRestrictModel(unittest.TestCase):
     def test_restrict_from_a_param_card(self):
         """ check the full restriction chain in one case b b~ h """
         
-        interaction = self.model['interactions'][19]
-        #check sanity of the checks
-        assert [p['pdg_code'] for p in interaction['particles']] == [5, 5, 25], \
-             'Initial model not valid for this test => update the test'
-        assert interaction['couplings'] == {(0,0): 'GC_68'}
-        
+        for candidate in self.model['interactions']:
+            if [p['pdg_code'] for p in candidate['particles']] == [5, 5, 25]:
+                interaction = candidate
+                coupling = interaction['couplings'][(0,0)]
+    
+
         self.model.restrict_model(self.restrict_file)
-        
+
         # check remove interactions
         self.assertFalse(interaction in self.model['interactions'])
         
@@ -324,7 +351,7 @@ class TestRestrictModel(unittest.TestCase):
         # check remove couplings
         for dep,data in self.model['couplings'].items():
             for param in data:
-                self.assertFalse(param.name in  ['GC_68'])
+                self.assertFalse(param.name in  [coupling])
 
         # check masses
         part_b = self.model.get_particle(5)

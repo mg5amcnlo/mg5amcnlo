@@ -444,7 +444,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   timeout VALUE")
         logger.info("      (default 20) Seconds allowed to answer questions.")
         logger.info("      Note that pressing tab always stops the timer.")
-
+        logger.info("   cluster_temp_path PATH")
+        logger.info("      (default None) [Used in Madevent Output]")
+        logger.info("      Allow to perform the run in PATH directory")
+        logger.info("      This allow to not run on the central disk. This is not used")
+        logger.info("      by condor cluster (since condor has it's own way to prevent it).")
+       
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -859,7 +864,7 @@ This will take effect only in a NEW terminal
 
     def check_set(self, args, log=True):
         """ check the validity of the line"""
-        
+
         if len(args) == 1 and args[0] == 'complex_mass_scheme':
             args.append('True')
         
@@ -897,7 +902,8 @@ This will take effect only in a NEW terminal
                                       'a multiparticle name as argument')
         
         if args[0] in ['stdout_level']:
-            if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL']:
+            if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL'] and \
+                                                          not args[1].isdigit():
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')       
         if args[0] in ['gauge']:
@@ -1545,7 +1551,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             else:
                 # directory names
                 second_set = [name for name in self.path_completion(text, '.', only_dirs = True)]
-                return self.list_completion(text, first_set + second_set + ['default'])
+                return self.list_completion(text, second_set + ['default'])
         elif len(args) >2 and args[-1].endswith(os.path.sep):
                 return self.path_completion(text,
                         pjoin(*[a for a in args if a.endswith(os.path.sep)]),
@@ -1764,13 +1770,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
-                       'timeout': 20,
+                       'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
                        'text_editor':None,
                        'fortran_compiler':None,
                        'auto_update':7,
-                       'cluster_type': 'condor'}
+                       'cluster_type': 'condor',
+                       'cluster_temp_path': None,
+                       'cluster_queue': None,
+                       }
     
     options_madgraph= {'group_subprocesses': 'Auto',
                           'ignore_six_quark_processes': False,
@@ -1779,7 +1788,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'stdout_level':None}
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
-                         'cluster_queue':'madgraph',
                          'nb_core': None,
                          }
 
@@ -2233,6 +2241,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     outstr += "  %25s \t:\t%s\n" % (key,value)
                 else:
                     outstr += "  %25s \t:\t%s (user set)\n" % (key,value)
+
             output.write(outstr)
         elif args[0] in  ["variable"]:
             super(MadGraphCmd, self).do_display(line, output)
@@ -2441,8 +2450,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._export_format = None
 
         # Remove previous generations from history
-        self.clean_history(to_remove=['add process'], remove_bef_lb1='generate',
-                           to_keep=['add','import','set','load','define'])
+        self.clean_history(remove_bef_last='generate', keep_switch=True,
+                     allow_for_removal= ['generate', 'add process', 'output'])
+
 
         # Call add process
         args = self.split_arg(line)
@@ -2766,7 +2776,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._model_v4_path = None
             # Clear history, amplitudes and matrix elements when a model is imported
             # Remove previous imports, generations and outputs from history
-            self.clean_history(remove_bef_lb1='import')
+            self.clean_history(remove_bef_last='import', keep_switch=True,
+                        allow_for_removal=['generate', 'add process', 'output'])
             # Reset amplitudes and matrix elements
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -2823,9 +2834,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             process_checks.store_aloha = []
             
         elif args[0] == 'command':
-            # Remove previous imports, generations and outputs from history
-            self.clean_history(to_remove=['import', 'generate', 'add process',
-                                          'open','display','launch'])
 
             if not os.path.isfile(args[1]):
                 raise self.InvalidCmd("Path %s is not a valid pathname" % args[1])
@@ -2862,10 +2870,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
             
         elif args[0] == 'proc_v4':
-            
-            # Remove previous imports, generations and outputs from history
-            self.clean_history(to_remove=['import', 'generate', 'add process',
-                                          'open','display','launch'])
+            self.history = []
 
             if len(args) == 1 and self._export_dir:
                 proc_card = pjoin(self._export_dir, 'Cards', \
@@ -2876,7 +2881,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 # self._export dir are define
                 self.check_for_export_dir(os.path.realpath(proc_card))
             else:
-                raise MadGraph5('No default directory in output')
+                raise MadGraph5Error('No default directory in output')
 
  
             #convert and excecute the card
@@ -3205,8 +3210,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         signal.alarm(timeout)
         to_update = 0
         try:
-#            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_build_nb')
-            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_test_build_nb')
+            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_build_nb')
             signal.alarm(0)
             web_version = int(filetext.read().strip())            
         except (TimeOutError, ValueError, IOError):
@@ -3249,8 +3253,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             fail = 0
             for i in range(data['version_nb'], web_version):
                 try:
-#                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch/build%s.patch' %(i+1))
-                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch_test/build%s.patch' %(i+1))
+                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch/build%s.patch' %(i+1))
+#                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch_test/build%s.patch' %(i+1))
                 except:
                     print 'fail to load patch to build #%s' % (i+1)
                     fail = i
@@ -3340,6 +3344,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if value.lower() == "none":
                     self.options[name] = None
 
+        self.options['stdout_level'] = logging.getLogger('madgraph').level
         if not final:
             return self.options # the return is usefull for unittest
 
@@ -3367,7 +3372,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
-                    self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
+                    self.exec_cmd("set %s %s --no_save" % (key, self.options[key]), 
+                                   printcmd=False, log=False)
                 except MadGraph5Error, error:
                     print error
                     logger.warning("Option %s from config file not understood" \
@@ -3410,6 +3416,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Ask for editing the parameter and then 
         Execute the code (madevent/standalone/...)
         """
+        
         start_cwd = os.getcwd()
         
         args = self.split_arg(line)
@@ -3639,7 +3646,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
     
     
-    def do_save(self, line, check=True, to_keep={}):
+    def do_save(self, line, check=True, to_keep={}, log=True):
         """Not in help: Save information to file"""
 
         args = self.split_arg(line)
@@ -3702,7 +3709,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Set an option, which will be default for coming generations/outputs
         """
 	    # This command is associated to a post_cmd: post_set.
-        
         args = self.split_arg(line)
         
         # Check the validity of the arguments
@@ -3737,10 +3743,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
 
         elif args[0] == "stdout_level":
-            logging.root.setLevel(eval('logging.' + args[1]))
-            logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
+            if args[1].isdigit():
+                level = int(args[1])
+            else:
+                level = eval('logging.' + args[1])
+            logging.root.setLevel(level)
+            logging.getLogger('madgraph').setLevel(level)
+            logging.getLogger('madevent').setLevel(level)
             if log:
-                logger.info('set output information to level: %s' % args[1])
+                logger.info('set output information to level: %s' % level)
 
         elif args[0] == "complex_mass_scheme":
             old = self.options[args[0]] 
@@ -3837,13 +3848,21 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         args = self.split_arg(line)
         # Check the validity of the arguments
-        self.check_set(args, log=False)
+        try:
+            self.check_set(args, log=False)
+        except Exception:
+            return stop
         
         if args[0] in self.options_configuration and '--no_save' not in args:
-            self.exec_cmd('save options --auto')
+            self.exec_cmd('save options --auto', log=False)
         elif args[0] in self.options_madevent:
-            logger.info('This option will be the default in any output that you are going to create in this session.')
-            logger.info('In order to keep this changes permanent please run \'save options\'')
+            if not '--no_save' in line:
+                logger.info('This option will be the default in any output that you are going to create in this session.')
+                logger.info('In order to keep this changes permanent please run \'save options\'')
+        else:
+            #madgraph configuration
+            if not self.history or self.history[-1].split() != line.split():
+                self.history.append('set %s' % line) 
         return stop
 
     def do_open(self, line):
@@ -3864,9 +3883,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self.check_output(args)
 
         # Remove previous outputs from history
-        self.clean_history(to_remove=['display','open','history','launch','output'],
-                           remove_bef_lb1='generate',
-                           keep_last=True)
+        self.clean_history(allow_for_removal = ['output'], keep_switch=True,
+                           remove_bef_last='output')
         
         noclean = '-noclean' in args
         force = '-f' in args 
@@ -3904,6 +3922,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             wanted_lorentz = aloha_fct.guess_routine_from_name(names)
             # Create and write ALOHA Routine
             aloha_model = create_aloha.AbstractALOHAModel(self._curr_model.get('name'))
+            aloha_model.add_Lorentz_object(self._curr_model.get('lorentz'))
             if wanted_lorentz:
                 aloha_model.compute_subset(wanted_lorentz)
             else:

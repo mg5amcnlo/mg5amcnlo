@@ -104,9 +104,7 @@ class ExtLauncher(object):
             """WARNING: If you edit this file don\'t forget to modify 
             consistently the different parameters, especially 
             the width of all particles.""" 
-        
-        fct = lambda q: cmd.raw_path_input(q, allow_arg=['y','n'])     
-                                    
+                                         
         if not self.force:
             if msg:  print msg
             question = 'Do you want to edit file: %(card)s?' % {'card':filename}
@@ -204,6 +202,7 @@ class MELauncher(ExtLauncher):
                 
         import madgraph.interface.madevent_interface as ME
         
+        stdout_level = self.cmd_int.options['stdout_level']
         if self.shell:
             usecmd = ME.MadEventCmdShell(me_dir=self.running_dir, options=self.options)
         else:
@@ -216,6 +215,8 @@ class MELauncher(ExtLauncher):
                 usecmd.exec_cmd(line)
             except:
                 pass
+        usecmd.exec_cmd('set stdout_level %s'  % stdout_level)
+        #ensure that the logger level 
         launch = self.cmd_int.define_child_cmd_interface(
                      usecmd, interface=False)
         #launch.me_dir = self.running_dir

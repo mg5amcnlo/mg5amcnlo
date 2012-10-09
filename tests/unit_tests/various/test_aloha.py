@@ -3059,7 +3059,7 @@ class test_aloha_creation(unittest.TestCase):
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         helas_suite.look_for_multiple_lorentz_interactions()
-        solution = {'FFV2': [('FFV3',), ('FFV4',), ('FFV5',)],'FFS3': [('FFS4',)]}
+        solution = {'FFV2': [('FFV3',), ('FFV4',), ('FFV5',)], 'FFS1': [('FFS3',)]}
         self.assertEqual(solution, helas_suite.multiple_lor)
         
 
@@ -3471,7 +3471,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         from models.mssm.object_library import Lorentz
         FFFF = Lorentz(name = 'FFFF1',
                 spins = [ 2, 2, 2, 2 ],
-                structure = 'Identity(1,2)*Identity(4,3)')
+                structure = 'Identity(2,1)*Identity(4,3)')
         
         builder = create_aloha.AbstractRoutineBuilder(FFFF)
         conjg_builder= builder.define_conjugate_builder()
@@ -4055,7 +4055,7 @@ def FFFF1C1_1(F1,F3,F4,COUP,M2,W2):
         
         FFFF = UFOLorentz(name = 'FFFF1',
                 spins = [ 2, 2, 2, 2 ],
-                structure = 'Identity(1,2)*Identity(4,3)')       
+                structure = 'Identity(2,1)*Identity(4,3)')       
         builder = create_aloha.AbstractRoutineBuilder(FFFF)
         builder.apply_conjugation(1)
         amp = builder.compute_routine(1)
@@ -4085,7 +4085,7 @@ def FFFF1C2_1(F2,F4,F3,COUP,M1,W1):
         
         FFFF = UFOLorentz(name = 'FFFF1',
                 spins = [ 2, 2, 2, 2 ],
-                structure = 'Identity(1,2)*Identity(4,3)')       
+                structure = 'Identity(2,1)*Identity(4,3)')       
         builder = create_aloha.AbstractRoutineBuilder(FFFF)
         builder.apply_conjugation(2)
         amp = builder.compute_routine(1)

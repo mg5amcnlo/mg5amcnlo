@@ -51,7 +51,7 @@
 # Time allowed to answer question (if no answer takes default value)
 # 0: No time limit
 
-#timeout = 20
+#timeout = 60
 
 # Pythia8 Path.
 # Define the path to the pythia8 directory.
@@ -87,6 +87,12 @@
 
 #cluster_type = condor
 #cluster_queue = madgraph
+
+# Path to a node directory to avoid direct writting on the central disk
+#Note that condor cluster avoid direct writting by default (therefore this
+#options didn't modify condor cluster)
+
+#cluster_temp_path = None
 
 # Nb_core to use (None = all) This is use only for multicore run
 

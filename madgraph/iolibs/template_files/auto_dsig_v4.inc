@@ -20,6 +20,7 @@ C CONSTANTS
 C  
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'maxconfigs.inc'
       include 'maxamps.inc'
       DOUBLE PRECISION       CONV
       PARAMETER (CONV=389379.66*1000)  !CONV TO PICOBARNS
@@ -37,16 +38,25 @@ C
 %(pdf_vars)s      
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
       DOUBLE PRECISION DSIGUU,R
+      INTEGER LUN,ICONF,IFACT,NFACT
+      DATA NFACT/1/
+      SAVE NFACT
 C  
 C EXTERNAL FUNCTIONS
 C  
       LOGICAL PASSCUTS
       DOUBLE PRECISION ALPHAS2,REWGT,PDG2PDF
+      INTEGER NEXTUNOPEN
 C  
 C GLOBAL VARIABLES
 C  
       INTEGER          IPSEL
       COMMON /SubProc/ IPSEL
+C     MINCFIG has this config number
+      integer           mincfig, maxcfig
+      common/to_configs/mincfig, maxcfig
+      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
+      COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
 %(define_subdiag_lines)s
       include 'coupl.inc'
       include 'run.inc'
@@ -59,6 +69,22 @@ C BEGIN CODE
 C ----------
       DSIG%(proc_id)s=0D0
 
+      IF(IMODE.EQ.1)THEN
+C       Set up process information from file symfact
+        LUN=NEXTUNOPEN()
+        NFACT=1
+        OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
+        DO WHILE(.TRUE.)
+          READ(LUN,*,ERR=10,END=10) ICONF, IFACT
+          IF(ICONF.EQ.MAPCONFIG(MINCFIG))THEN
+             NFACT=IFACT
+          ENDIF
+        ENDDO
+ 10     CLOSE(LUN)
+        RETURN
+ 20     WRITE(*,*)'Error opening symfact.dat. No symmetry factor used.'
+        RETURN
+      ENDIF
 C   Only run if IMODE is 0
       IF(IMODE.NE.0.AND.IMODE.NE.4) RETURN
 
@@ -69,7 +95,7 @@ C   Only run if IMODE is 0
             RETURN
          ENDIF
          CALL SMATRIX%(proc_id)s(PP,DSIGUU)                                              
-         DSIGUU=DSIGUU*REWGT(PP)
+         DSIGUU=DSIGUU*REWGT(PP)*NFACT
          IF (DSIGUU.LT.1D199) THEN
 c        Select a flavor combination (need to do here for right sign)
             CALL RANMAR(R)

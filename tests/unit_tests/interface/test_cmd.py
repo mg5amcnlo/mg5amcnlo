@@ -53,6 +53,92 @@ class TestValidCmd(unittest.TestCase):
         self.do(' ! cd /tmp; touch tmp_file')
         self.assertTrue(os.path.exists('/tmp/tmp_file'))
     
+    def test_cleaning_history(self):
+        """check that the cleaning of the history command works as expected"""
+        
+        # Test the call present inside do_generate        
+        history="""set cluster_queue 2
+        import model mssm
+        generate p p > go go 
+        add process p p > go go j
+        set gauge Feynman
+        check p p > go go
+        output standalone
+        display particles
+        generate p p > go go"""
+        history = [l.strip() for l in  history.split('\n')]
+        self.cmd.history = history
+        self.cmd.clean_history(remove_bef_last='generate', keep_switch=True,
+                     allow_for_removal= ['generate', 'add process', 'output'])
+
+        goal = """set cluster_queue 2
+        import model mssm
+        set gauge Feynman
+        generate p p > go go"""
+        goal = [l.strip() for l in  goal.split('\n')]
+
+        self.assertEqual(self.cmd.history, goal)
+        
+        # Test the call present in do_import model
+        history="""set cluster_queue 2
+        import model mssm
+        define SW = May The Force Be With You
+        generate p p > go go 
+        import model mssm --modelname
+        add process p p > go go j
+        set gauge Feynman
+        check p p > go go
+        output standalone
+        display particles
+        generate p p > go go
+        import heft"""
+        history = [l.strip() for l in  history.split('\n')]
+        self.cmd.history = history        
+        
+        self.cmd.clean_history(remove_bef_last='import', keep_switch=True,
+                        allow_for_removal=['generate', 'add process', 'output'])
+
+        # Test the call present in do_import model
+        goal="""set cluster_queue 2
+        import model mssm
+        define SW = May The Force Be With You
+        import model mssm --modelname
+        set gauge Feynman
+        import heft""" 
+
+        goal = [l.strip() for l in  goal.split('\n')]
+
+        self.assertEqual(self.cmd.history, goal)
+        
+        
+        # Test the call present in do_output
+        history="""set cluster_queue 2
+        import model mssm
+        define SW = May The Force Be With You
+        generate p p > go go 
+        import model mssm --modelname
+        output standalone
+        launch
+        output"""
+        history = [l.strip() for l in  history.split('\n')]
+        self.cmd.history = history         
+        
+        self.cmd.clean_history(allow_for_removal = ['output'], keep_switch=True,
+                           remove_bef_last='output')
+
+        goal="""set cluster_queue 2
+        import model mssm
+        define SW = May The Force Be With You
+        generate p p > go go 
+        import model mssm --modelname
+        output"""
+        
+        goal = [l.strip() for l in  goal.split('\n')]
+        self.assertEqual(self.cmd.history, goal)
+    
+    
+    
+    
     def test_help_category(self):
         """Check that no help category are introduced by mistake.
            If this test fails, this is due to a un-expected ':' in a command of
