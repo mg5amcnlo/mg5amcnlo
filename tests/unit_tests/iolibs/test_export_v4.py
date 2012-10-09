@@ -1087,15 +1087,15 @@ C     Only run if IMODE is 0
           RETURN
         ENDIF
         CALL SMATRIX(PP,DSIGUU)
+C       Select a flavor combination (need to do here for right sign)
+        CALL RANMAR(R)
+        IPSEL=0
+        DO WHILE (R.GT.0D0 .AND. IPSEL.LT.IPROC)
+          IPSEL=IPSEL+1
+          R=R-DABS(PD(IPSEL))/PD(0)
+        ENDDO
         DSIGUU=DSIGUU*REWGT(PP)*NFACT
         IF (DSIGUU.LT.1D199) THEN
-C         Select a flavor combination (need to do here for right sign)
-          CALL RANMAR(R)
-          IPSEL=0
-          DO WHILE (R.GT.0D0 .AND. IPSEL.LT.IPROC)
-            IPSEL=IPSEL+1
-            R=R-DABS(PD(IPSEL))/PD(0)
-          ENDDO
 C         Set sign of dsig based on sign of PDF and matrix element
           DSIG=DSIGN(PD(0)*CONV*DSIGUU,DSIGUU*PD(IPSEL))
         ELSE
@@ -1960,15 +1960,15 @@ C     Only run if IMODE is 0
         RETURN
       ENDIF
       CALL SMATRIX1(PP,DSIGUU)
+C     Select a flavor combination (need to do here for right sign)
+      CALL RANMAR(R)
+      IPSEL=0
+      DO WHILE (R.GT.0D0 .AND. IPSEL.LT.IPROC)
+        IPSEL=IPSEL+1
+        R=R-DABS(PD(IPSEL))/PD(0)
+      ENDDO
       DSIGUU=DSIGUU*REWGT(PP)*NFACT
       IF (DSIGUU.LT.1D199) THEN
-C       Select a flavor combination (need to do here for right sign)
-        CALL RANMAR(R)
-        IPSEL=0
-        DO WHILE (R.GT.0D0 .AND. IPSEL.LT.IPROC)
-          IPSEL=IPSEL+1
-          R=R-DABS(PD(IPSEL))/PD(0)
-        ENDDO
 C       Set sign of dsig based on sign of PDF and matrix element
         DSIG1=DSIGN(PD(0)*CONV*DSIGUU,DSIGUU*PD(IPSEL))
       ELSE
