@@ -34,6 +34,7 @@ import tests.unit_tests.core.test_drawing as test_drawing
 import madgraph.iolibs.drawing_eps as draw_eps
 import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.files as files
+import madgraph.various.misc as misc
 
 import tests.unit_tests as unittest
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -159,7 +160,7 @@ class TestDrawingS_EPS(unittest.TestCase):
         self.assertTrue(os.path.isfile(position))
 
         # Check if the file is valid
-        if pdf_check:
+        if pdf_check and misc.which('convert'):
             filename, ext = os.path.splitext('position')
             os.system('convert ' + position + ' ' + filename + '.pdf')
 
@@ -207,8 +208,8 @@ if __name__ == '__main__':
     process_diag['w+ w- > w+ w- z z'] = [7,9,10]
     process_diag['OUTPUT: w+ w- > w+ w- z z'] = [7,9,10]
     
-    from madgraph.interface.cmd_interface import MadGraphCmdShell
-    cmd = MadGraphCmdShell()
+    from madgraph.interface.master_interface import MasterCmdS
+    cmd = MasterCmd()
     cmd.exec_cmd('import model %s/models/sm' % root_path)
     #cmd.do_import('model_v4 ' + os.path.join(_file_path, \
     #                                    '../input_files/v4_sm_particles.dat'))

@@ -22,9 +22,6 @@ c     resmap gives potential resonances for diagrams
 c     parameters for qcd jets
       double precision ptclus(nexternal)
       common/cl_jets/ptclus
-c     process (i.e. particle identities) chosen if ickkw=2
-      integer iprocset
-      common/cl_iproc/iprocset
 c     parameters for sudakovs
       double precision m_colfac(-6:21),m_dlog(-6:21),m_slog(-6:21),
      &     m_power(-6:21,3,2),m_qmass(21)

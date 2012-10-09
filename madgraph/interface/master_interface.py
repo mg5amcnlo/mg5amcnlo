@@ -184,7 +184,7 @@ class Switcher(object):
         
     def check_process_format(self, *args, **opts):
         return self.cmd.check_process_format(self, *args, **opts)
-        
+    
     def check_save(self, *args, **opts):
         return self.cmd.check_save(self, *args, **opts)
         
@@ -298,7 +298,7 @@ class Switcher(object):
         
     def do_set(self, *args, **opts):
         return self.cmd.do_set(self, *args, **opts)
-        
+    
     def do_tutorial(self, *args, **opts):
         return self.cmd.do_tutorial(self, *args, **opts)
         
@@ -362,6 +362,18 @@ class Switcher(object):
     def set_configuration(self, *args, **opts):
         return self.cmd.set_configuration(self, *args, **opts)
 
+    def check_customize_model(self, *args, **opts):
+        return self.cmd.check_customize_model(self, *args, **opts)
+
+    def complete_customize_model(self, *args, **opts):
+        return self.cmd.complete_customize_model(self, *args, **opts)
+
+    def do_customize_model(self, *args, **opts):
+        return self.cmd.do_customize_model(self, *args, **opts)
+
+    def help_customize_model(self, *args, **opts):
+        return self.cmd.help_customize_model(self, *args, **opts)
+
 
 class MasterCmd(Switcher, MGcmd.MadGraphCmd, cmd.CmdShell):
 
@@ -376,9 +388,7 @@ class MasterCmd(Switcher, MGcmd.MadGraphCmd, cmd.CmdShell):
             self.debug_link_to_command()      
         
 class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
- 
-    timeout = 1 # time authorize to answer question [0 is no time limit]
-    
+   
     def __init__(self, *arg, **opt):
     
         if os.environ.has_key('_CONDOR_SCRATCH_DIR'):
@@ -391,6 +401,8 @@ class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
         
         #standard initialization
         Switcher.__init__(self, mgme_dir = '', *arg, **opt)
+        
+        self.options['timeout'] = 1 # time authorize to answer question [0 is no time limit]
         
     def change_principal_cmd(self, name):
         if name == 'MadGraph':
@@ -440,7 +452,7 @@ class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
         return Switcher.set_configuration(self, config_path=config_path)
     
 
-    def do_save(self, line, check=True):
+    def do_save(self, line, check=True, **opt):
         """Save information to file"""
         
         if check:
@@ -449,12 +461,17 @@ class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
         
         args = self.split_arg(line)
         if args[0] != 'options':
-            Switcher.do_save(self, line,check)
+            Switcher.do_save(self, line,check, opt)
         else:
             # put default options since 
             # in the web the local file is not used
             # in download the default file is more usefull
             files.cp(pjoin(MG5DIR,'input','mg5_configuration.txt'), args[1])
+            
+    def do_install(self, line):
+        """block all install"""
+        return
+
             
 
 

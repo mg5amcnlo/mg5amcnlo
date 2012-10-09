@@ -71,5 +71,5 @@ VVVV5 = Lorentz(name = 'VVVV5',
 
 FFFF1 = Lorentz(name = 'FFFF1',
                 spins = [ 2, 2, 2, 2 ],
-                structure = 'Identity(1,2)*Identity(4,3)')
+                structure = 'Identity(2,1)*Identity(4,3)')
 

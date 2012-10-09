@@ -740,9 +740,8 @@ C   global variables
 C     Present process number
       INTEGER IMIRROR,IPROC
       COMMON/TO_MIRROR/IMIRROR, IPROC
-      integer              ISPROC 
-      DOUBLE PRECISION PD(0:MAXPROC)
-      COMMON /SubProc/ PD, ISPROC
+      integer              IPSEL
+      COMMON /SubProc/ IPSEL
       INTEGER SUBDIAG(MAXSPROC),IB(2)
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
       data IB/1,2/
@@ -753,6 +752,8 @@ c     q2bck holds the central q2fact scales
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
 
 C   local variables
       integer i, j, idi, idj
@@ -787,8 +788,6 @@ c     ipart gives external particle number chain
       rewgt=1.0d0
       clustered=.false.
 
-      if(ickkw.le.0) goto 100
-
 c   Set mimimum kt scale, depending on highest mult or not
       if(hmult.or.ickkw.eq.1)then
         pt2min=0
@@ -799,22 +798,15 @@ c   Set mimimum kt scale, depending on highest mult or not
      $     write(*,*) 'pt2min set to ',pt2min
 
 c   Set etot, used for non-radiating partons
-      etot=2d0*sqrt(ebeam(1)*ebeam(2))
+      etot=sqrt(stot)
 
 c   Since we use pdf reweighting, need to know particle identities
-      iprocset=1
-      np = isproc
-      xtarget=xran1(iseed)*pd(np)
-      iprocset = 1
-      do while (pd(iprocset) .lt. xtarget .and. iprocset .lt. np)
-         iprocset=iprocset+1
-      enddo
       if (btest(mlevel,1)) then
-         write(*,*) 'Set process number ',iprocset
+         write(*,*) 'Set process number ',ipsel
       endif
 c     Set incoming particle identities
-      ipdgcl(1,igraphs(1),iproc)=idup(1,iprocset,iproc)
-      ipdgcl(2,igraphs(1),iproc)=idup(2,iprocset,iproc)
+      ipdgcl(1,igraphs(1),iproc)=idup(1,ipsel,iproc)
+      ipdgcl(2,igraphs(1),iproc)=idup(2,ipsel,iproc)
       if (btest(mlevel,2)) then
          write(*,*) 'Set particle identities: ',
      $        1,ipdgcl(1,igraphs(1),iproc),
@@ -832,6 +824,8 @@ c     Store pdf information for systematics studies (initial)
             s_qpdf(1,j)=sqrt(q2fact(j))
          enddo
       endif
+
+      if(ickkw.le.0) goto 100
 
 c   Preparing graph particle information (ipart, needed to keep track of
 c   external particle clustering scales)
@@ -1161,7 +1155,7 @@ c     Need to multiply by: initial PDF, alpha_s^n_qcd to get
 c     factor in front of matrix element
          do i=1,2
             s_rwfact=s_rwfact*pdg2pdf(abs(lpp(IB(i))),
-     $           i_pdgpdf(1,i)*sign(1,lpp(IB(j))),
+     $           i_pdgpdf(1,i)*sign(1,lpp(IB(i))),
      $           s_xpdf(1,i),s_qpdf(1,i))
          enddo
          s_rwfact=s_rwfact*asref**n_qcd

@@ -110,6 +110,7 @@ try:
     logging.config.fileConfig(os.path.join(root_path, 'madgraph', 'interface', '.mg5_logging.conf'))
     logging.root.setLevel(eval('logging.' + options.logging))
     logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
+    logging.getLogger('madevent').setLevel(eval('logging.' + options.logging))
 except:
     pass
 import madgraph.interface.master_interface as interface
@@ -127,13 +128,19 @@ try:
             cmd_line.debug_output = os.path.join(os.path.dirname(input_file),'generation.log')
             cmd_line.use_rawinput = False
             cmd_line.run_cmd('import ' + input_file)
+            cmd_line.run_cmd('quit')
         else:
             cmd_line = interface.MasterCmd(mgme_dir = options.mgme_dir)
             cmd_line.use_rawinput = False
             cmd_line.run_cmd('import ' + input_file)
+            cmd_line.run_cmd('quit')
     else:
         # Interactive mode
         if options.web:
+            if not os.environ.has_key('MADGRAPH_DATA'):
+                os.environ['MADGRAPH_DATA'] = root_path
+                os.environ['MADGRAPH_BASE'] = os.path.join(root_path,'input')
+                os.environ['REMOTE_USER'] = 'webmode'
             cmd_line = interface.MasterCmdWeb()
             cmd_line.cmdloop()
         else:

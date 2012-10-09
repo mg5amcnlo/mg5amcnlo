@@ -12,7 +12,7 @@ c
       integer    maxsubprocesses
       parameter (maxsubprocesses=9999)
       integer    cmax_events
-      parameter (cmax_events=500000)
+      parameter (cmax_events=5000000)
       integer    sfnum
       parameter (sfnum=17)   !Unit number for scratch file
       integer    maxexternal
@@ -30,6 +30,7 @@ c
       integer i,j,m,ns,nreq,ievent
       integer kevent,revent,iarray(cmax_events)
       double precision sum, xsec, xerr, goal_wgt,xarray(cmax_events)
+      double precision xdum,rxsec
       integer i4,r8,record_length
       integer iseed
       real xran1
@@ -84,8 +85,8 @@ c $B$ input_file $B$
 c $E$ input_file $E$
 
       open(unit=15,file=filename,status='old',err=21)
-      read(15,*,err=20) xsec,xerr
-      write(*,*) "Results.dat xsec = ",xsec
+      read(15,*,err=20) xsec,xerr,xdum,xdum,xdum,xdum,xdum,xdum,xdum,rxsec
+      write(*,*) "Results.dat xsec = ",rxsec," abs xsec = ",xsec
  20   close(15)
  21   if (nreq .gt. 0 .and. xsec .gt. 0) then
          goal_wgt = xsec/nreq/4d0   !Extra factor of 4 for weighted events
@@ -144,7 +145,7 @@ C $B$ output_file1 $B$ !this is tag for automatic modification by MW
 C $E$ output_file1 $E$ !this is tag for automatic modification by MW
 
       open(unit=15,file=filename,status='unknown',err=98)
-      call writebanner(15,kevent,sum,maxwgt,xerr)
+      call writebanner(15,kevent,rxsec,maxwgt,xsec/kevent,xerr)
       do i=1,kevent
          if(use_syst) then
             read(sfnum,rec=iarray(i)) wgt,n,
@@ -180,11 +181,11 @@ c
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
      &        buff
-            if (wgt .gt. goal_wgt*xran1(iseed)) then
+            if (dabs(wgt) .gt. goal_wgt*xran1(iseed)) then
                keep(i) = .true.
                nunwgt=nunwgt+1
-               if (wgt .gt. goal_wgt) then
-                  xtrunc=xtrunc+wgt-goal_wgt
+               if (dabs(wgt) .gt. goal_wgt) then
+                  xtrunc=xtrunc+dabs(wgt)-goal_wgt
                endif
             else
                keep(i)=.false.
@@ -224,7 +225,7 @@ C $B$ output_file2 $B$ !this is tag for automatic modification by MW
 C $E$ output_file2 $E$ !this is tag for automatic modification by MW
 
       open(unit=15,file=filename,status='unknown',err=99)
-      call writebanner_u(15,nreq,xsec,xtrunc,xerr)
+      call writebanner_u(15,nreq,rxsec,xtrunc,xsec/nreq,xerr)
       ntry = 0
       do i=1,kevent
          if (keep(i) .and. ntry .lt. nreq) then
@@ -238,7 +239,8 @@ C $E$ output_file2 $E$ !this is tag for automatic modification by MW
      &              ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &              ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed, buff
             endif
-            call write_event(15,P,xsec/nreq,n,ic,ievent,sscale,aqcd,aqed,
+            wgt=dsign(xsec/nreq,wgt)
+            call write_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,
      $           buff,buff2)
             ntry=ntry+1
          endif
@@ -255,7 +257,7 @@ C $E$ output_file2 $E$ !this is tag for automatic modification by MW
       end
 
 
-      subroutine writebanner(lunw,nevent,sum,maxwgt,xerr)
+      subroutine writebanner(lunw,nevent,sum,maxwgt,wgt,xerr)
 c**************************************************************************************
 c     Writes out banner information at top of event file
 c**************************************************************************************
@@ -264,7 +266,7 @@ c
 c     Arguments
 c     
       integer lunw,nevent
-      double precision sum,maxwgt,xerr
+      double precision sum,maxwgt,wgt,xerr
 c
 c     Local
 c
@@ -332,7 +334,7 @@ c
       write(lunw,'(a30,i10)')   '#  Number of Events        :  ',nevent
       write(lunw,'(a30,e10.5)') '#  Integrated weight (pb)  :  ',sum
       write(lunw,'(a30,e10.5)') '#  Max wgt                 :  ',maxwgt
-      write(lunw,'(a30,e10.5)') '#  Average wgt             :  ',sum/nevent
+      write(lunw,'(a30,e10.5)') '#  Average wgt             :  ',wgt
       write(lunw,'(a)') '</MGGenerationInfo>'
    
     
@@ -351,7 +353,7 @@ C   Write out compulsory init info
       end
 
 
-      subroutine writebanner_u(lunw,nevent,sum,maxwgt,xerr)
+      subroutine writebanner_u(lunw,nevent,sum,maxwgt,wgt,xerr)
 c**************************************************************************************
 c     Writes out banner information at top of event file
 c**************************************************************************************
@@ -360,7 +362,7 @@ c
 c     Arguments
 c     
       integer lunw,nevent
-      double precision sum,maxwgt,xerr
+      double precision sum,maxwgt,wgt,xerr
 c
 c     Local
 c
@@ -423,22 +425,11 @@ c
 c     Now write out specific information on the event set
 c
 
-c     Reweight the different subprocess group xsecs according to
-c     xsec from results.dat
-      tmpsum=0d0
-      do i=1,nprup
-         tmpsum=tmpsum+xsecup(i)
-      enddo
-      do i=1,nprup
-         xsecup(i)=xsecup(i)*sum/tmpsum
-      enddo
-      
-
       write(lunw,'(a)') '<MGGenerationInfo>'
       write(lunw,'(a30,i10)')   '#  Number of Events        :  ',nevent
       write(lunw,'(a30,e10.5)') '#  Integrated weight (pb)  :  ',sum
       write(lunw,'(a30,e10.5)') '#  Truncated wgt (pb)      :  ',maxwgt
-      write(lunw,'(a30,e10.5)') '#  Unit wgt                :  ',sum/nevent
+      write(lunw,'(a30,e10.5)') '#  Unit wgt                :  ',wgt
       write(lunw,'(a)') '</MGGenerationInfo>'
 
 C   Write out compulsory init info
@@ -492,6 +483,7 @@ c     ncode is number of digits needed for the bw coding
       do while (.true.)
          read(35,*,err=99,end=99) xi,j
          if (j .gt. 0) then
+            j=1 ! symmetry factor already read in auto_dsig.f
             k = int(xi*(1+10**(-ncode)))
             npos=int(dlog10(dble(k)))+1
             if ( (xi-k) .eq. 0) then
@@ -542,7 +534,7 @@ c
       include 'run_config.inc'
       include 'run.inc'
       integer    max_read
-      parameter (max_read = 2000000)
+      parameter (max_read = 5000000)
 c
 c     Arguments
 c
@@ -614,10 +606,10 @@ c
          if (.not. done) then
             revent = revent+1
             wgt = wgt*nj*gsfact                 !symmetry factor * grid factor
-            if (wgt .gt. maxwgt) maxwgt=wgt
-            if (wgt .ge. goal_wgt*xran1(iseed)) then
+            if (dabs(wgt) .gt. maxwgt) maxwgt=dabs(wgt)
+            if (dabs(wgt) .ge. goal_wgt*xran1(iseed)) then
                kevent=kevent+1
-               if (wgt .lt. goal_wgt) wgt = goal_wgt
+               if (dabs(wgt) .lt. goal_wgt) wgt = dsign(goal_wgt,wgt)
                if (use_syst) then
                   write(sfnum,rec=kevent) wgt,n,
      &                 ((ic(i,j),j=1,maxexternal),i=1,7),ievent,
@@ -628,7 +620,7 @@ c
      &              ((ic(i,j),j=1,maxexternal),i=1,7),ievent,
      &              ((p(i,j),i=0,4),j=1,maxexternal),sscale,aqcd,aqed,buff
                endif
-               sum=sum+wgt
+               sum=sum+dabs(wgt)
                found=.false.
                do i=1,nprup
                   if(ievent.eq.lprup(i))then
@@ -641,19 +633,13 @@ c
                   lprup(nprup)=ievent
                   xsecup(nprup)=wgt
                endif
-               tmpsum=0d0
-               do i=1,nprup
-                  tmpsum = tmpsum+xsecup(i)
-               enddo
-               if(abs(sum-tmpsum)/sum .gt. 1e-3)then
-                  print *,'Warning! Sum and xsecup differ: ',sum,tmpsum
-               endif
             endif
          endif
          if (kevent .ge. max_read) then
-            write(*,*) 'Error too many events to read in select_events'
-     $           , kevent
-            write(*,*) 'Reset max_read in Source/select_events.f'
+            write(*,*) 'Error too many events to read in combine_events',
+     $           kevent
+            write(*,*) 'Increase cmax_events and max_read in ',
+     $                 'Source/combine_events.f'
             stop
          endif
       enddo

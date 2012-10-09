@@ -20,6 +20,7 @@ C CONSTANTS
 C  
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'maxconfigs.inc'
       include 'maxamps.inc'
       DOUBLE PRECISION       CONV
       PARAMETER (CONV=389379.66*1000)  !CONV TO PICOBARNS
@@ -33,21 +34,29 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I,ITYPE,LP
+      INTEGER I,ITYPE,LP,IPROC
 %(pdf_vars)s      
-      DOUBLE PRECISION XPQ(-7:7)
-      DOUBLE PRECISION DSIGUU
+      DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
+      DOUBLE PRECISION DSIGUU,R
+      INTEGER LUN,ICONF,IFACT,NFACT
+      DATA NFACT/1/
+      SAVE NFACT
 C  
 C EXTERNAL FUNCTIONS
 C  
       LOGICAL PASSCUTS
       DOUBLE PRECISION ALPHAS2,REWGT,PDG2PDF
+      INTEGER NEXTUNOPEN
 C  
 C GLOBAL VARIABLES
 C  
-      INTEGER              IPROC
-      DOUBLE PRECISION PD(0:MAXPROC)
-      COMMON /SubProc/ PD, IPROC
+      INTEGER          IPSEL
+      COMMON /SubProc/ IPSEL
+C     MINCFIG has this config number
+      integer           mincfig, maxcfig
+      common/to_configs/mincfig, maxcfig
+      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
+      COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
 %(define_subdiag_lines)s
       include 'coupl.inc'
       include 'run.inc'
@@ -60,25 +69,49 @@ C BEGIN CODE
 C ----------
       DSIG%(proc_id)s=0D0
 
+      IF(IMODE.EQ.1)THEN
+C       Set up process information from file symfact
+        LUN=NEXTUNOPEN()
+        NFACT=1
+        OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
+        DO WHILE(.TRUE.)
+          READ(LUN,*,ERR=10,END=10) ICONF, IFACT
+          IF(ICONF.EQ.MAPCONFIG(MINCFIG))THEN
+             NFACT=IFACT
+          ENDIF
+        ENDDO
+ 10     CLOSE(LUN)
+        RETURN
+ 20     WRITE(*,*)'Error opening symfact.dat. No symmetry factor used.'
+        RETURN
+      ENDIF
 C   Only run if IMODE is 0
       IF(IMODE.NE.0.AND.IMODE.NE.4) RETURN
 
 %(passcuts_begin)s
 %(pdf_lines)s
          IF (IMODE.EQ.4)THEN
-            DSIG%(proc_id)s = PD(IPROC)
+            DSIG%(proc_id)s = PD(0)
             RETURN
          ENDIF
          CALL SMATRIX%(proc_id)s(PP,DSIGUU)                                              
-         DSIGUU=DSIGUU*REWGT(PP)
+C     Select a flavor combination (need to do here for right sign)
+         CALL RANMAR(R)
+         IPSEL=0
+         DO WHILE (R.GT.0D0 .AND. IPSEL.LT.IPROC)
+            IPSEL=IPSEL+1
+            R=R-DABS(PD(IPSEL))/PD(0)
+         ENDDO
+         DSIGUU=DSIGUU*REWGT(PP)*NFACT
          IF (DSIGUU.LT.1D199) THEN
-         DSIG%(proc_id)s=%(dsig_line)s
+c           Set sign of dsig based on sign of PDF and matrix element
+            DSIG%(proc_id)s=DSIGN(%(dsig_line)s,DSIGUU*PD(IPSEL))
          ELSE
              write(*,*) "Error in matrix element"
              DSIGUU=0D0
              DSIG%(proc_id)s=0D0
          ENDIF
-        IF(IMODE.EQ.0.AND.DSIG%(proc_id)s.GT.0D0)THEN
+        IF(IMODE.EQ.0.AND.DABS(DSIG%(proc_id)s).GT.0D0)THEN
 C       Call UNWGT to unweight and store events
            CALL UNWGT(PP,DSIG%(proc_id)s*WGT,%(numproc)d)
         ENDIF
