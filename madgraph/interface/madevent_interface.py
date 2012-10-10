@@ -2337,7 +2337,17 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 run_card = self.run_card
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
         
-        if mode in ['param', 'all']: 
+        if mode in ['param', 'all']:
+            model = self.find_model_name()
+            if model == 'mssm' or model.startswith('mssm-'):
+                if not '--param_card=' in line:
+                    param_card = pjoin(self.me_dir, 'Cards','param_card.dat')
+                    mg5_param = pjoin(self.me_dir, 'Source', 'MODEL', 'MG5_param.dat')
+                    check_param_card.convert_to_mg5card(param_card, mg5_param)
+                    check_param_card.check_valid_param_card(mg5_param)
+                    opt['param_card'] = pjoin(self.me_dir, 'Source', 'MODEL', 'MG5_param.dat')            
+            
+            logger.debug('write compile file for card: %s' % opt['param_card']) 
             param_card = check_param_card.ParamCard(opt['param_card'])
             outfile = pjoin(opt['output_dir'], 'param_card.inc')
             ident_card = pjoin(self.me_dir,'Cards','ident_card.dat')
