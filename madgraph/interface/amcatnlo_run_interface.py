@@ -1596,6 +1596,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 #            self.update_status('', level=None)
 #        except Exception, error:         
 #            pass
+        devnull = os.open(os.devnull, os.O_RDWR) 
         try:
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)

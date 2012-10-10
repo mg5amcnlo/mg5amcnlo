@@ -3141,7 +3141,7 @@ class UFO_model_to_mg4(object):
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
         else:
-            raise MG5Error('Unknown format')
+            raise MadGraph5Error('Unknown format')
 
     def create_coupl_inc(self):
         """ write coupling.inc """
@@ -3825,7 +3825,7 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
         else:
             raise Exception, 'Wrong export_v4 format'
     else:
-        raise MG5Error, 'Output type %s not reckognized in ExportV4Factory.'
+        raise MadGraph5Error, 'Output type %s not reckognized in ExportV4Factory.'
     
     
     

@@ -316,6 +316,20 @@ class TestLoopDrawer(unittest.TestCase):
             diagram.find_initial_vertex_position()
             self.assertnozerolength(diagram)
 
+    def test_NLO_draw_gg_ggg(self):
+        for i in range(1500,1600):
+            diagram = copy.deepcopy(self.store_diagram['g g > g g g'][i])
+            structure = self.store_diagram['g g > g g g']['structure']
+            diagram = draw_lib.LoopFeynmanDiagram(diagram, structure, self.model)
+        
+            diagram.load_diagram()
+            diagram.define_level()
+            diagram.find_initial_vertex_position()
+            self.assertnozerolength(diagram)
+            self.assertFalse(diagram._debug_has_intersection())
+
+        
+
     def test_NLO_draw_all_reconstructed_gg_gg(self):
                
         for i in range(200,230):
@@ -904,6 +918,7 @@ if __name__ == '__main__':
 
     process_diag = {}
     process_diag['g g > g g'] = range(85)#[0, 12]
+    process_diag['g g > g g g'] = range(1500, 1600)
     process_diag['u u~ > u u~ g'] =[51]
     process_diag['u u~ > u u~ d d~'] = [139]
     cmd = MasterCmd()

@@ -45,7 +45,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
         """Filter for valid leg property values."""
 
         if name == 'real_matrix_elements':
-            if not isinstance(value, helas_objetcs.HelasMultiProcess):
+            if not isinstance(value, helas_objects.HelasMultiProcess):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list for real_matrix_element " % str(value)                             
     

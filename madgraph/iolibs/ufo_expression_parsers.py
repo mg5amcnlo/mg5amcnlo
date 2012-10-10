@@ -391,7 +391,7 @@ if __name__ == '__main__':
     elif sys.argv[1] == "c++":
         calc = UFOExpressionParserCPP()
     elif sys.argv[1] == "aloha":
-        calc = ALOHAParserCpp()
+        calc = UFOExpressionParserCPP()
     else:
         print "Please specify a parser: fortran, mpfortran or c++"
         print "You gave", sys.argv[1]

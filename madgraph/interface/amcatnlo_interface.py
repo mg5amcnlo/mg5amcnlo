@@ -122,8 +122,8 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             #check if args[0] is path or mode
             if args[0] in ['NLO', 'aMC@NLO', 'aMC@LO'] and self._done_export:
                 args.insert(0, self._done_export[0])
-            elif os.path.isdir(args[0]) or os.path.isdir(pjoin(MG5dir, args[0]))\
-                    or os.path.isdir(pjoin(MG4dir, args[0])):
+            elif os.path.isdir(args[0]) or os.path.isdir(pjoin(MG5DIR, args[0]))\
+                    or os.path.isdir(pjoin(MG4DIR, args[0])):
                 args.append('aMC@NLO')
         mode = args[1]
         

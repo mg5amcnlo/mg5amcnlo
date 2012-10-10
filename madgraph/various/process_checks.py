@@ -57,7 +57,7 @@ import madgraph.various.progressbar as pbar
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_helas_objects as loop_helas_objects
 
-from madgraph import MG5DIR, InvalidCmd
+from madgraph import MG5DIR, InvalidCmd, MadGraph5Error
 
 import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
@@ -1105,7 +1105,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             elif rotation==2:
                 p_out=[[pm[0],-pm[3],pm[2],pm[1]] for pm in p]
             else:
-                raise MadGraphError("Rotation id %i not implemented"%rotation)
+                raise MadGraph5Error("Rotation id %i not implemented"%rotation)
             PSfile = open(os.path.join(dir_path, 'PS.input'), 'w')
             PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in pmom]) \
                                                             for pmom in p_out]))

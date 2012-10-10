@@ -20,6 +20,7 @@ import madgraph.loop.loop_helas_objects as loop_helas_objects
 import madgraph.core.color_ordered_amplitudes as color_ordered_amplitudes
 import aloha.aloha_writers as aloha_writers
 import aloha
+from madgraph import MadGraph5Error
 
 class HelasWriterError(Exception):
     """Class for the error of this module """

@@ -27,6 +27,7 @@ import copy
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.fks.fks_base as fks
+import madgraph.fks.fks_common as fks_common
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.gen_infohtml as gen_infohtml
 import madgraph.iolibs.files as files

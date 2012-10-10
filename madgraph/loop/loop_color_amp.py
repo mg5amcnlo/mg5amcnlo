@@ -59,7 +59,7 @@ class LoopColorBasis(color_amp.ColorBasis):
               [color_algebra.Tr(lcut_numbers[1],lcut_numbers[0])],
               fractions.Fraction(2, 1))
         else:
-            raise ColorBasis.ColorBasisError, \
+            raise color_amp.ColorBasis.ColorBasisError, \
         "L-cut particle has an unsupported color representation %s" % lcut_charge
                 
         # Append it to all color strings for this diagram.
@@ -73,7 +73,7 @@ class LoopColorBasis(color_amp.ColorBasis):
         list_color_dict = []
         
         if not isinstance(amplitude,loop_diagram_generation.LoopAmplitude):
-            raise ColorBasis.ColorBasisError, \
+            raise color_amp.ColorBasis.ColorBasisError, \
               'LoopColorBasis is used with an amplitude which is not a LoopAmplitude'
         for diagram in amplitude.get('loop_diagrams'):
 
@@ -110,7 +110,7 @@ class LoopColorBasis(color_amp.ColorBasis):
         list_color_dict = []
 
         if not isinstance(amplitude,loop_diagram_generation.LoopAmplitude):
-            raise ColorBasis.ColorBasisError, \
+            raise color_amp.ColorBasis.ColorBasisError, \
               'LoopColorBasis is used with an amplitude which is not a LoopAmplitude'
 
         for diagram in amplitude.get('born_diagrams'):
