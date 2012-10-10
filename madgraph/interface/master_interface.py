@@ -191,8 +191,8 @@ class Switcher(object):
     def check_set(self, *args, **opts):
         return self.cmd.check_set(self, *args, **opts)
         
-    def check_stored_line(self, *args, **opts):
-        return self.cmd.check_stored_line(self, *args, **opts)
+    def get_stored_line(self, *args, **opts):
+        return self.cmd.get_stored_line(self, *args, **opts)
         
     def complete_add(self, *args, **opts):
         return self.cmd.complete_add(self, *args, **opts)

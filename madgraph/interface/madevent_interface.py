@@ -4794,14 +4794,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         return self.deal_multiple_categories(possibilities)
            
     def do_set(self, line):
-        """ """
-        
+        """ edit the value of one parameter in the card"""
+
         args = self.split_arg(line.lower())
         start = 0
         if len(args) < 2:
             logger.warning('invalid set command')
             return
-        
+
         card = '' #store which card need to be modify (for name conflict)
         if args[0] in ['run_card', 'param_card']:
             if args[1] == 'default':
@@ -4815,7 +4815,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if len(args) < 3:
                 logger.warning('invalid set command')
                 return
-        
+
         #### RUN CARD
         if args[start] in self.run_card.keys() and card != 'param_card':
             if args[start+1] in self.conflict and card == '':
@@ -4891,9 +4891,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # PARAM_CARD NO BLOCK NAME
         elif args[start] in self.pname2block and card != 'run_card':
             all_var = self.pname2block[args[start]]
-            for bname, lhaid in all_var: 
-                new_line = line.replace(args[start], '%s %s' % 
-                                (bname, ' '.join([ str(i) for i in lhaid])))
+            for bname, lhaid in all_var:
+                new_line = 'param_card %s %s %s' % (bname, 
+                   ' '.join([ str(i) for i in lhaid]), ' '.join(args[start+1:]))
                 self.do_set(new_line)
             if len(all_var) > 1:
                 logger.warning('This variable correspond to more than one parameter in the param_card.')
