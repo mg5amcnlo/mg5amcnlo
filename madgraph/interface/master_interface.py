@@ -58,15 +58,10 @@ class Switcher(object):
         # define the interface
         self.change_principal_cmd(main)
         self.cmd.__init__(self, *args, **opt)       
-       
-
-
-        
-    _valid_nlo_modes = ['all', 'real', 'virt', 'virtsqr','tree']
 
     interface_names= {'MadGraph':('mg5',MGcmd.MadGraphCmd),
                       'Loop':('ML5',LoopCmd.LoopInterface),
-                      'aMCatNLO':('aMC@NLO',amcatnloCmd.aMCatNLOInterface)}
+                      'aMCatNLO':('NLO',amcatnloCmd.aMCatNLOInterface)}
 
     _switch_opts = [interface_names[key][0] for key in interface_names.keys()]
     current_interface = None

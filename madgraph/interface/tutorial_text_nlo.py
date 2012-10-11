@@ -29,6 +29,10 @@ a) How to generate a process
 b) How to create output for aMC@NLO
 c) How to run the aMC@NLO output
 
+IMPORTANT NOTE: fastjet v3+ is needed for aMC@NLO to run.
+Please update the mg5_configuration file or type
+mg5>set fastjet /path/to/fastjet-config
+
 Let's start with the first point, how to generate a process at NLO:
 mg5>generate p p > e+ ve [QCD]
 Note that a space is mandatory between the particle names and that '[QCD]' 
@@ -39,21 +43,21 @@ Couplings different than QCD cannot be perturbed yet.
 generate = """
 You have just generated a new process.
 You can find more information on supported syntax by using:
-aMC@NLO>help generate
+NLO>help generate
 To list all defined processes, type
-aMC@NLO>display processes
+NLO>display processes
 
 If you want to know more about particles and multiparticles present,
 write
-aMC@NLO>display particles
-aMC@NLO>display multiparticles
+NLO>display particles
+NLO>display multiparticles
 
 If you want to add a second process, use the add process command:
-aMC@NLO>add process p p > e+ e- [QCD] @2
+NLO>add process p p > e+ e- [QCD] @2
 
 At this stage you can export your processes.
 This is done simply by typing:
-aMC@NLO>output MY_FIRST_AMCATNLO_RUN
+NLO>output MY_FIRST_AMCATNLO_RUN
 """
 
 display_processes = """
@@ -61,8 +65,8 @@ You have seen a list of the already defined processes.
 
 At this stage you can export your processes to different formats. In
 this tutorial, we will explain how to create a valid output for
-MadEvent. This is done simply by typing:
-aMC@NLO>output MY_FIRST_AMCTANLO_RUN
+aMC@NLO. This is done simply by typing:
+NLO>output MY_FIRST_AMCTANLO_RUN
 """
 
 add_process = """
@@ -70,21 +74,32 @@ You have added a process to your process list.
 
 At this stage you can export your processes.
 This is done simply by typing:
-aMC@NLO>output MY_FIRST_AMCATNLO_RUN
+NLO>output MY_FIRST_AMCATNLO_RUN
 """
 output = """
-If you are following the tutorial, a directory MY_FIRST_MG5_RUN has
+If you are following the tutorial, a directory MY_FIRST_AMCATNLO_RUN has
 been created which can be used in order to run aMC@NLO.
 
 Additionally to the commands in the bin directory (see 
-MY_FIRST_MG5_RUN/README), you can also generate your events/compute the 
+MY_FIRST_AMCATNLO_RUN/README), you can also generate your events/compute the 
 cross-section from this interface. 
 You will generate events to be showered a la MC@NLO, compute the theoretical
 and PDF error on the fly (if asked for in the run_card.dat) and shower the events 
 with the parton_shower MonteCarlo specified in the run_card.dat, generating a file in
-the StdHEP format.
-Please Enter:
-aMC@NLO> launch
+the StdHEP format. 
+Please note that, since shower-specific counterterms have to be included in the
+calculation, the parton level sample you will obtain can only be showered
+with the selected MonteCarlo.
+
+If you want to generate the showered StdHep file, please be sure to have the 
+MCatNLO-utilities installed (otherwise just type "install-MCatNLO-utilities").
+Please enter
+NLO> launch -s
+
+If you just want to generate the parton level .lhe file, please enter
+NLO> launch
+
+
 (you can interrupt the computation to continue the tutorial by pressing Ctrl-C)
 """
 

@@ -2909,9 +2909,7 @@ class UFO_model_to_mg4(object):
     mp_real_format = 'real*16'
     # Warning, it is crucial none of the couplings/parameters of the model
     # starts with this prefix. I should add a check for this.
-    # If you change it, it should be changed accordingly in the subroutine
-    # generate_loop_amplitude_call of HelasCallWriter and also in 
-    # the UFOExpressionParserMPFortran.
+    # You can change it as the global variable to check_param_card.ParamCard
     mp_prefix = check_param_card.ParamCard.mp_prefix
     
     def __init__(self, model, output_path, opt=None):
@@ -3110,9 +3108,12 @@ class UFO_model_to_mg4(object):
             includes.extend(["include \'mp_coupl.inc\'","include \'mp_input.inc\'"])
         # In standalone and madloop we do no use the compiled param card but
         # still parse the .dat one so we must load it.
-        if self.opt['export_format'] in ['standalone', 'madloop','madloop_optimized']:
+        if self.opt['export_format'] in ['madloop','madloop_optimized']:
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read_mp.f'
+        elif self.opt['export_format'] == 'standalone':
+            load_card = 'call LHA_loadcard(param_name,npara,param,value)'
+            lha_read_filename='lha_read.f'
         else:
             load_card = ''
             lha_read_filename='lha_read.f'
@@ -3138,7 +3139,7 @@ class UFO_model_to_mg4(object):
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
         else:
-            raise MG5Error('Unknown format')
+            raise MadGraph5Error('Unknown format')
 
     def create_coupl_inc(self):
         """ write coupling.inc """
@@ -3822,7 +3823,7 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
         else:
             raise Exception, 'Wrong export_v4 format'
     else:
-        raise MG5Error, 'Output type %s not reckognized in ExportV4Factory.'
+        raise MadGraph5Error, 'Output type %s not reckognized in ExportV4Factory.'
     
     
     

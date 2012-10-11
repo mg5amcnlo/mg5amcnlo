@@ -116,7 +116,7 @@ class HelpLoop(mg_interface.HelpToCmd):
         logger.info("   \"born\" or \"loop\" to display only the corresponding diagrams.")
 
 class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd):
-    
+        
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ Special init tasks for the Loop Interface """
 
@@ -138,6 +138,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._v4_export_formats = []
         self._export_formats = [ 'matrix', 'standalone' ]
+        self._nlo_modes_for_completion = ['virt']
         if not self._curr_model or \
                            self._curr_model.get('perturbation_couplings') == []:
             if not self._curr_model or self._curr_model.get('name') == 'sm':

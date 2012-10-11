@@ -60,6 +60,10 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         if args[0] in ['diagrams', 'processes'] and len(args)>=3 \
                 and args[1] not in ['born','loop','virt','real']:
             raise self.InvalidCmd("Can only display born, loop (virt) or real diagrams, not %s."%args[1])
+        # rename args[1] if it is 'virt'
+        if len(args) > 1:
+            if args[1] == 'virt':
+                args[1] = 'loop' 
 
 
     def check_output(self, args):
@@ -118,8 +122,8 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             #check if args[0] is path or mode
             if args[0] in ['NLO', 'aMC@NLO', 'aMC@LO'] and self._done_export:
                 args.insert(0, self._done_export[0])
-            elif os.path.isdir(args[0]) or os.path.isdir(pjoin(MG5dir, args[0]))\
-                    or os.path.isdir(pjoin(MG4dir, args[0])):
+            elif os.path.isdir(args[0]) or os.path.isdir(pjoin(MG5DIR, args[0]))\
+                    or os.path.isdir(pjoin(MG4DIR, args[0])):
                 args.append('aMC@NLO')
         mode = args[1]
         
@@ -225,8 +229,11 @@ class HelpFKS(mg_interface.HelpToCmd):
         _launch_parser.print_help()
 
 class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
+    
     _fks_display_opts = ['real_diagrams', 'born_diagrams', 'virt_diagrams', 
                          'real_processes', 'born_processes', 'virt_processes']
+
+    _nlo_modes_for_completion = ['all','real']
 
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ Special init tasks for the Loop Interface """
@@ -248,6 +255,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         self._curr_amps = diagram_generation.AmplitudeList()
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._v4_export_formats = []
+        self._nlo_modes_for_completion = ['all','real']
         self._export_formats = [ 'madevent' ]
         if self._curr_model.get('perturbation_couplings') == []:
             if self._curr_model.get('name') == 'sm':
@@ -295,20 +303,19 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         if args[0] in ['diagrams', 'processes', 'diagrams_text']:
             get_amps_dict = {'real': self._fks_multi_proc.get_real_amplitudes,
                              'born': self._fks_multi_proc.get_born_amplitudes,
-                             'loop': self._fks_multi_proc.get_virt_amplitudes,
-                             'virt': self._fks_multi_proc.get_virt_amplitudes}
+                             'loop': self._fks_multi_proc.get_virt_amplitudes}
             if args[0] == 'diagrams':
                 if len(args)>=2 and args[1] in get_amps_dict.keys():
                     get_amps = get_amps_dict[args[1]]
                     self._curr_amps = get_amps()
                     #check that if one requests the virt diagrams, there are virt_amplitudes
-                    if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
+                    if args[1] == 'loop' and len(self._curr_amps) == 0:
                         raise self.InvalidCmd('No virtuals have been generated')
-                    self.draw(' '.join(args[2:]))
+                    self.draw(' '.join(args[2:]),type = args[1])
                 else:
-                    self._curr_amps = get_amps_dict['born']() + get_amps_dict['real']() + \
-                                      get_amps_dict['virt']()
-                    self.draw(' '.join(args[1:]))
+                    for diag_type, get_amps in get_amps_dict.items():
+                        self._curr_amps = get_amps()
+                        self.draw(' '.join(args[1:]), type=diag_type)
                 # set _curr_amps back to empty
                 self._curr_amps = diagram_generation.AmplitudeList()
 
@@ -346,7 +353,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
                     print 'Real processes:'
                     print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['real']())
                     print 'Loop processes:'
-                    print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['virt']())
+                    print '\n'.join(amp.nice_string_processes() for amp in get_amps_dict['loop']())
                 # set _curr_amps back to empty
                 self._curr_amps = diagram_generation.AmplitudeList()
 
@@ -384,9 +391,14 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
                 raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
                         % ', '.join(myprocdef['perturbation_couplings']))
 
-        self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
+        try:
+            self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,
                                    ignore_six_quark_processes))
+        except: 
+            self._fks_multi_proc = fks_base.FKSMultiProcess(myprocdef,
+                                   collect_mirror_procs,
+                                   ignore_six_quark_processes)
 
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""
@@ -513,7 +525,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
                                      'procdef_mg5.dat')
             if self.options['loop_optimized_output'] and \
                     len(self._curr_matrix_elements.get_virt_matrix_elements()) > 0:
-                print    len(self._curr_matrix_elements.get_virt_matrix_elements()) > 0
                 self._curr_exporter.write_coef_specs_file(\
                         self._curr_matrix_elements.get_virt_matrix_elements())
             if self._generate_info:

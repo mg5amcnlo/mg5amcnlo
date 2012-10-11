@@ -437,7 +437,7 @@ class LoopDiagram(base_objects.Diagram):
                     # Now we can add the corresponding vertex
                     return base_objects.Vertex({'legs':myleglist,'id':vertID})
         else:
-            raise self.PhysicsObjectError, \
+            raise cls.PhysicsObjectError, \
             "An interaction from the original L-cut diagram could"+\
             " not be found when reconstructing the loop vertices."
 

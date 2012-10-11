@@ -62,7 +62,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list for real_amplitudes " % str(value)                             
         if name == 'real_pdgs':
-            if not isinstance(value, List):
+            if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list for real_amplitudes " % str(value)                             
         return super(FKSMultiProcess,self).filter(name, value)

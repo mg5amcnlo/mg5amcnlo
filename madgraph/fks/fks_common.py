@@ -653,7 +653,7 @@ class FKSLegList(MG.LegList):
                     sorted_leglist.extend(FKSLegList(other_legs))
                 else:
                     list.sort(key = keys[i], reverse=reversing)
-                    soerted_leglist.extend(FKSLegList(list))
+                    sorted_leglist.extend(FKSLegList(list))
 
         for i, l in enumerate(sorted_leglist):
             self[i] = l

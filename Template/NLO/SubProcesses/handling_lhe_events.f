@@ -83,36 +83,36 @@ c
       write(ifile,'(a)') '  <header>'
       write(ifile,250) nevents
       write(ifile,'(a)') '  <MG5ProcCard>'
-      open (unit=71,file=path(1:index(path," ")-1)//'proc_card_mg5.dat'
+      open (unit=92,file=path(1:index(path," ")-1)//'proc_card_mg5.dat'
      &     ,err=99)
       do
-         read(71,'(a)',err=89,end=89) buffer
+         read(92,'(a)',err=89,end=89) buffer
          write(ifile,'(a)') buffer
       enddo
- 89   close(71)
+ 89   close(92)
       write(ifile,'(a)') '  </MG5ProcCard>'
       write(ifile,'(a)') '  <slha>'
-      open (unit=71,file=path(1:index(path," ")-1)//'param_card.dat'
+      open (unit=92,file=path(1:index(path," ")-1)//'param_card.dat'
      &     ,err=98)
       do
-         read(71,'(a)',err=88,end=88) buffer
+         read(92,'(a)',err=88,end=88) buffer
          write(ifile,'(a)') buffer
       enddo
- 88   close(71)
+ 88   close(92)
       write(ifile,'(a)') '  </slha>'
       write(ifile,'(a)') '  <MG5RunCard>'
-      open (unit=71,file=path(1:index(path," ")-1)//'run_card.dat'
+      open (unit=92,file=path(1:index(path," ")-1)//'run_card.dat'
      &     ,err=97)
       do
-         read(71,'(a)',err=87,end=87) buffer
+         read(92,'(a)',err=87,end=87) buffer
 c Replace the random number seed with the one used...
          if (index(buffer,'iseed').ne.0) then
-            open (unit=72,file="randinit",status="old",err=96)
-            read(72,'(a)') buffer2
+            open (unit=93,file="randinit",status="old",err=96)
+            read(93,'(a)') buffer2
             if (index(buffer2,'=').eq.0) goto 96
             buffer2=buffer2(index(buffer2,'=')+1:)
             read(buffer2,*) iseed
-            close(72)
+            close(93)
             write(buffer,'(i11,a)')iseed,' =  iseed'
          endif
          goto 95
@@ -120,7 +120,7 @@ c Replace the random number seed with the one used...
      &        /'banner: not overwriting iseed in event file header.'
  95      write(ifile,'(a)') buffer
       enddo
- 87   close(71)
+ 87   close(92)
       write(ifile,'(a)') '  </MG5RunCard>'
       write(ifile,'(a)') '  <MonteCarloMasses>'
       call fill_MC_mshell_wrap(MonteCarlo,mcmass)

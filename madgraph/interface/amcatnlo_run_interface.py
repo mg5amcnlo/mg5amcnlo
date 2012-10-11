@@ -294,12 +294,12 @@ class HelpToCmd(object):
         """help for generate_events command"""
         _calculate_xsect_parser.print_help()
 
-    def help_run_mcatnlo(self):
-        """help for run_mcatnlo command"""
-        logger.info('syntax: run_mcatnlo EVT_FILE')
-        logger.info('-- do shower/hadronization on parton-level file EVT_FILE')
+    def help_shower(self):
+        """help for shower command"""
+        logger.info('syntax: run_mcatnlo run_name')
+        logger.info('-- do shower/hadronization on parton-level file generated for run run_name')
         logger.info('   all the information (e.g. number of events, MonteCarlo, ...)')
-        logger.info('   are directly read from the header of the file')
+        logger.info('   are directly read from the header of the event file')
 
     
     def help_open(self):
@@ -329,14 +329,15 @@ class HelpToCmd(object):
 class CheckValidForCmd(object):
     """ The Series of check routine for the aMCatNLOCmd"""
 
-    def check_run_mcatnlo(self, args, options):
-        """Check the validity of the line. args[0] is the event file"""
+    def check_shower(self, args, options):
+        """Check the validity of the line. args[0] is the run_directory"""
         if len(args) == 0:
             self.help_run_mcatnlo()
-            raise self.InvalidCmd, 'Invalid syntax, please specify the file to shower'
-        if not os.path.exists(pjoin(os.getcwd(), args[0])):
-            raise self.InvalidCmd, 'file %s does not exists' % \
-                            pjoin(os.getcwd(), args[0])
+            raise self.InvalidCmd, 'Invalid syntax, please specify the run directory'
+        if not os.path.isdir(pjoin(self.me_dir, 'Events', args[0])):
+            raise self.InvalidCmd, 'Directory %s does not exists' % \
+                            pjoin(os.getcwd(), 'Events',  args[0])
+        args[0] = pjoin(self.me_dir, 'Events', args[0])
     
 
     def check_calculate_xsect(self, args, options):
@@ -450,15 +451,15 @@ class CheckValidForCmd(object):
 class CompleteForCmd(CheckValidForCmd):
     """ The Series of help routine for the MadGraphCmd"""
 
-    def complete_run_mcatnlo(self, text, line, begidx, endidx):
+    def complete_shower(self, text, line, begidx, endidx):
         args = self.split_arg(line[0:begidx])
-        bad_files = ['../Events/banner_header.txt']
-        if not text.strip():
-            text = '../Events'
         if len(args) == 1:
-            return [name for name in self.path_completion( text,
-                        '.', only_dirs = False) \
-                                if not name in bad_files]
+            #return valid run_name
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*','events.lhe.gz'))
+            data = [n.rsplit('/',2)[1] for n in data]
+            tmp1 =  self.list_completion(text, data)
+            if not self.run_name:
+                return tmp1
 
 
 class aMCatNLOAlreadyRunning(InvalidCmd):
@@ -595,12 +596,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     
 
     ############################################################################      
-    def do_run_mcatnlo(self, line):
+    def do_shower(self, line):
         """ run the shower on a given parton level file """
         argss = self.split_arg(line)
         # check argument validity and normalise argument
-        self.check_run_mcatnlo(argss, {})
-        evt_file = pjoin(os.getcwd(), argss[0])
+        self.check_shower(argss, {})
+        evt_file = pjoin(os.getcwd(), argss[0], 'events.lhe')
         if self.check_mcatnlo_dir():
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
@@ -717,19 +718,18 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if os.path.isdir(pjoin(self.me_dir, 'MCatNLO')):
             #the folder has been exported after installation of MCatNLO-utilities
             return True
-        elif os.path.isdir(self.options_configuration['MCatNLO-utilities_path']):
+        elif os.path.isdir(self.options['MCatNLO-utilities_path']):
             # the folder has been exported before installation of MCatNLO-utilities
             # and they have been installed
             misc.call(['cp -r %s %s' % \
-                     (pjoin(self.options_configuration['MCatNLO-utilities_path'], 'MCatNLO'), self.me_dir)],
+                     (pjoin(self.options['MCatNLO-utilities_path'], 'MCatNLO'), self.me_dir)],
                      shell=True)
             return True
 
         else:
-            if aMCatNLO:
-                logger.warning('MCatNLO is needed to shower the generated event samples.\n' + \
-                    'You can install it by typing "install MCatNLO-utilities" in the MadGraph' + \
-                    ' shell')
+            logger.warning('MCatNLO is needed to shower the generated event samples.\n' + \
+                'You can install it by typing "install MCatNLO-utilities" in the MadGraph' + \
+                ' shell')
             return False
 
 
@@ -754,8 +754,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     def run(self, mode, options):
         """runs aMC@NLO. Returns the name of the event file created"""
         logger.info('Starting run')
-        print options
 
+        if not 'only_generation' in options.keys():
+            options['only_generation'] = False
 
         if mode in ['aMC@NLO', 'aMC@LO']:
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
@@ -878,17 +879,21 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         self.update_status('Collecting events', level='parton')
         misc.call(['make collect_events > %s' % \
-                pjoin (self.me_dir, 'log_collect_events.txt')], shell=True)
+                pjoin(self.me_dir, 'log_collect_events.txt')], shell=True)
         misc.call(['echo "1" | ./collect_events > %s' % \
-                pjoin (self.me_dir, 'log_collect_events.txt')], shell=True)
+                pjoin(self.me_dir, 'log_collect_events.txt')], shell=True)
 
-        if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001')):
+        #get filename from collect events
+        filename = open(pjoin(self.me_dir, 'log_collect_events.txt')).read().split()[-1]
+
+        if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', filename)):
             raise aMCatNLOError('An error occurred during event generation. ' + \
                     'The event file has not been created. Check log_collect_events.txt')
         evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
         misc.call(['mv %s %s' % 
-            (pjoin(self.me_dir, 'SubProcesses', 'allevents_0_001'), evt_file)], shell=True )
-        logger.info('The %s file has been generated.\nIt contains %d %s events to be showered' \
+            (pjoin(self.me_dir, 'SubProcesses', filename), evt_file)], shell=True )
+        misc.call(['gzip %s' % evt_file], shell=True)
+        logger.info('The %s.gz file has been generated.\nIt contains %d %s events to be showered' \
                 % (evt_file, nevents, mode[4:]))
         return evt_file
 
@@ -896,13 +901,18 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events"""
         logger.info('   Prepairing MCatNLO run')
-        if aMCatNLO:
+        if not hasattr(self, 'run_name') or not self.run_name:
             self.run_name = os.path.split(\
                     os.path.relpath(evt_file, pjoin(self.me_dir, 'Events')))[0]
 
+        try:
+            misc.call(['gunzip %s.gz' % evt_file], shell=True)
+        except:
+            pass
         shower = self.evt_file_to_mcatnlo(evt_file)
         oldcwd = os.getcwd()
         os.chdir(pjoin(self.me_dir, 'MCatNLO'))
+
 
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
         self.update_status('   Compiling MCatNLO for %s...' % shower, level='parton') 
@@ -933,10 +943,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if os.path.exists(pjoin(self.run_name, evt_name + '.hep')):
             hep_file = '%s_%s.hep' % (evt_file[:-4], shower)
             misc.call(['mv %s %s' % (pjoin(self.run_name, evt_name + '.hep'), hep_file)], shell=True) 
+            misc.call(['gzip %s' % evt_file], shell=True)
+            misc.call(['gzip %s' % hep_file], shell=True)
 
-            logger.info(('The file %s has been generated. \nIt contains showered' + \
+            logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
                         ' and hadronized events in the StdHEP format obtained' + \
-                        ' showering the parton-level event file %s.') % \
+                        ' showering the parton-level event file %s.gz') % \
                         (hep_file, evt_file))
         os.chdir(oldcwd)
 
@@ -1592,6 +1604,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 #            self.update_status('', level=None)
 #        except Exception, error:         
 #            pass
+        devnull = os.open(os.devnull, os.O_RDWR) 
         try:
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)
@@ -1678,4 +1691,4 @@ _generate_events_parser.add_option("-o", "--only-generation", default=False, act
 _generate_events_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip file reweighting")
 _generate_events_parser.add_option("-s", "--shower", default=False, action='store_true',
-                            help="Showe the events after generation")
+                            help="Shower the events after generation")

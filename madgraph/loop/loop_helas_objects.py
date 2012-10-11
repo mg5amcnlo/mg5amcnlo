@@ -25,6 +25,7 @@ import math
 
 import aloha
 
+from madgraph import MadGraph5Error
 import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.diagram_generation as diagram_generation

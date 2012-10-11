@@ -57,6 +57,7 @@ try:
     # import from madgraph directory
     import madgraph.various.banner as banner_mod
     import madgraph.various.misc as misc
+    import madgraph.iolibs.files as files
     import madgraph.various.cluster as cluster
     import models.check_param_card as check_param_card    
 except Exception, error:
@@ -67,7 +68,7 @@ except Exception, error:
     import internal.misc as misc    
     import internal.cluster as cluster
     import internal.check_param_card as check_param_card
-
+    import internal.files as files
 
 #===============================================================================
 # HelpToCmd

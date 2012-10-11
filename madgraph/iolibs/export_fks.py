@@ -27,6 +27,7 @@ import copy
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.fks.fks_base as fks
+import madgraph.fks.fks_common as fks_common
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.gen_infohtml as gen_infohtml
 import madgraph.iolibs.files as files
@@ -650,7 +651,7 @@ end
                                     filename,
                                     model=matrix_element.born_matrix_element.\
                                     get('processes')[0].get('model'),
-                                    amplitude=True)
+                                    amplitude=True, diagram_type='born')
         plot.draw()
 
         for n, fksreal in enumerate(matrix_element.real_processes):
@@ -660,7 +661,7 @@ end
                                         filename,
                                         model=fksreal.matrix_element.\
                                         get('processes')[0].get('model'),
-                                        amplitude=True)
+                                        amplitude=True, diagram_type='real')
             plot.draw()
 
 

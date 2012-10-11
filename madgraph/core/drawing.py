@@ -1044,6 +1044,8 @@ class FeynmanDiagram(object):
             t_vertex = self.find_vertex_position_tchannel()
             # Associatie position to level 2 and following (auto-recursive fct)
             self.find_vertex_position_at_level(t_vertex, 2)
+            self.initial_vertex[0].def_position(0, 0)
+            self.initial_vertex[1].def_position(0, 1)
         elif len(self.initial_vertex) == 1:
             #No T-Channel
             self.initial_vertex[0].def_position(0, 0.5)
@@ -1052,7 +1054,7 @@ class FeynmanDiagram(object):
             init_line.inverse_part_antipart()          
             # Associate position to level 1
             init_line.end.def_position(1 / self.nb_level, 0.5)
-            # Associatie position to level 2 and following (auto-recursive fct)
+            # Associate position to level 2 and following (auto-recursive fct)
             self.find_vertex_position_at_level([init_line.end], 2)
         else:
             raise self.FeynamDiagramError, \
@@ -1408,12 +1410,15 @@ class FeynmanDiagram(object):
             for j in range(i + 1, len(self.lineList)):
                 line2 = self.lineList[j]
                 #check if they are a unvalid intersection
-                if line.has_intersection(line2):
+                if line.begin == line2.end or line.begin == line2.begin:
+                    continue
+                elif line.has_intersection(line2):
+                    import logging
+                    logger = logging.getLogger('test')
                     logger.info('intersection for %s %s' % (i, j))
-                    logger.info('line', i, '(', line.start.pos_x, line.start.pos_y, \
-                                     ') (', line.end.pos_x, line.end.pos_y, ')')
-                    logger.info('line', j, '(', line2.start.pos_x, line2.start.pos_y, \
-                                ') (', line2.end.pos_x, line2.end.pos_y, ')')
+                    logger.info('line %s (%s,%s),(%s,%s)' % (i, line.begin.pos_x, line.begin.pos_y,line.end.pos_x, line.end.pos_y))
+                    logger.info('line %s (%s,%s),(%s,%s)' % (j, line2.begin.pos_x, line2.begin.pos_y,line2.end.pos_x, line2.end.pos_y))
+                    
                     return True
         return False
 
@@ -1855,13 +1860,21 @@ class DiagramDrawer(object):
         First, call the method associate the line type [draw_curved_XXXXXX]
         Then finalize line representation by adding his name."""
 
+
+        # if 4 point (or more interaction at the beginning/end of the loop
+        # need to reduce curvature
+        if len(line.begin.lines) > 3 or len(line.end.lines) > 3 :
+            cercle = False
+        else:
+            cercle = True
+
         # Find the type line of the particle [straight, wavy, ...]
         line_type = line.get_info('line')
         # Call the routine associate to this type [self.draw_straight, ...]
         if hasattr(self, 'draw_curved_' + line_type):
-            getattr(self, 'draw_curved_' + line_type)(line)
+            getattr(self, 'draw_curved_' + line_type)(line, cercle)
         else:
-            self.draw_curved_straight(line)
+            self.draw_curved_straight(line, reduce)
             
         # Finalize the line representation with adding the name of the particle
         name = line.get_name()
@@ -2061,16 +2074,32 @@ class LoopFeynmanDiagram(FeynmanDiagram):
                 vertex_at_level.append(vertex)
                 continue
 
+            tmp = []
+            loop_tmp = []
             for line in vertex.lines:
                 if line.begin is vertex and line.end.level == level:
                     if not line.loop_line:
-                        vertex_at_level.append(line.end)
+                        tmp.append(line.end)
                     elif started_loop:
                         continue
                     else:
                         started_loop = True
-                        vertex_at_level += self.find_all_loop_vertex(line.end)
-                                        
+                        loop_tmp = self.find_all_loop_vertex(line.end)
+                elif line.end is vertex and line.begin.level == level:
+                    if not line.loop_line:
+                        tmp.append(line.begin)
+                    elif started_loop:
+                        continue
+                    else:
+                        started_loop = True
+                        loop_tmp = self.find_all_loop_vertex(line.begin)            
+            #order tmp to put external on the bottom/top
+            if loop_tmp:
+                    vertex_at_level += tmp
+                    vertex_at_level += loop_tmp
+            else:
+                vertex_at_level += tmp
+                         
         return vertex_at_level
 
    

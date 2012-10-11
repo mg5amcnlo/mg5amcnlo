@@ -18,8 +18,10 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 import madgraph.loop.loop_helas_objects as loop_helas_objects
 import madgraph.core.color_ordered_amplitudes as color_ordered_amplitudes
+import models.check_param_card as check_param_card
 import aloha.aloha_writers as aloha_writers
 import aloha
+from madgraph import MadGraph5Error
 
 class HelasWriterError(Exception):
     """Class for the error of this module """
@@ -938,6 +940,8 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
     generates the Fortran Helas call based on the Lorentz structure of
     the interaction."""
 
+    mp_prefix = check_param_card.ParamCard.mp_prefix
+
     def __init__(self, argument={}, hel_sum = False):
         """Allow generating a HelasCallWriter from a Model.The hel_sum argument
         specifies if amplitude and wavefunctions must be stored specifying the
@@ -958,7 +962,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
     def generate_loop_amplitude_call(self, loopamp):
         """ Routine for automatic generation of a call to CutTools for loop
         amplitudes."""
-        
+
         call = "CALL LOOP%(numLoopLines)s"
         if (len(loopamp.get('pairing')) != len(loopamp.get('mothers'))):
             call += "%(numMotherWfs)s%(numCouplings)s(%(numeratorNumber)d,"
@@ -970,10 +974,12 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             call = call + "%(MotherID{0})d,".format(i+1)
         for i in range(len(loopamp.get('wavefunctions'))-2):
             call = call + \
-            "DCMPLX(%(LoopMass{0})s),CMPLX(MP__%(LoopMass{0})s,KIND=16),".format(i+1)
+            "DCMPLX(%(LoopMass{0})s),CMPLX({1}%(LoopMass{0})s,KIND=16),"\
+                                                     .format(i+1,self.mp_prefix)
         for i in range(len(loopamp.get('coupling'))):
             call = call + \
-                   "%(LoopCoupling{0})s,MP__%(LoopCoupling{0})s,".format(i+1)
+                   "%(LoopCoupling{0})s,{1}%(LoopCoupling{0})s,"\
+                                                     .format(i+1,self.mp_prefix)
         call = call + "%(LoopRank)d,"
         call = call + "%(LoopSymmetryFactor)d,"
         call = call + "%(ampNumber)d,AMPL(1,%(ampNumber)d),S(%(ampNumber)d))"

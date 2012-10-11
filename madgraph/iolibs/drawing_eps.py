@@ -157,10 +157,14 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x, line.end.pos_y, 'Ffermion')
 
-    def draw_curved_straight(self, line):
+    def draw_curved_straight(self, line, cercle):
         """ADD the EPS code for this fermion line."""
 
-        curvature = 1
+        if not cercle:
+            curvature = 0.4
+        else:
+            curvature = 1
+        
         if (line.begin.pos_x, line.begin.pos_y) == self.curved_part_start:
             curvature *= -1
         
@@ -202,15 +206,16 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
                         line.end.pos_y, line.begin.pos_x,
                         line.begin.pos_y, '0 Fgluon%s' % type)
             
-    def draw_curved_curly(self, line, type=''):
+    def draw_curved_curly(self, line, cercle, type=''):
         """ADD the EPS code for this gluon line."""
 
         dist = math.sqrt((line.begin.pos_x-line.end.pos_x)**2 + \
                                            (line.begin.pos_y-line.end.pos_y)**2)
-        if dist < 0.3:
-            curvature = 1
-        else:
+        if not cercle or dist > 0.3:
             curvature = 0.4
+        else:
+            curvature = 1
+
 
         # Due to the asymmetry in the way to draw the gluon (everything is draw
         #upper or below the line joining the points). We have to put conditions
@@ -268,10 +273,16 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         x, y = self.rescale(x, y)
         #write the text
         self.text += ' %s  %s moveto \n' % (x, y)
-        self.text += '( diagram %s )   show\n' % (number + 1) # +1 python
+        
+        if hasattr(self, 'diagram_type'):
+            self.text += '(%s diagram %s )   show\n' % (self.diagram_type, number + 1) # +1 python
                                                             #starts to count at
                                                             #zero.
-
+        else:
+            self.text += '(diagram %s )   show\n' % (number + 1) # +1 python
+                                                            #starts to count at
+                                                            #zero.
+            
         mystr = " (%s)" % ", ".join(["%s=%d" % (key, self.diagram.diagram['orders'][key]) \
                       for key in sorted(self.diagram.diagram['orders'].keys()) \
                       if key != 'WEIGHTED'])
@@ -392,7 +403,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
                    'blob_size':0.9}
     
     def __init__(self, diagramlist=None, filename='diagram.eps', \
-                  model=None, amplitude=None, legend=''):
+                  model=None, amplitude=None, legend='',diagram_type=''):
         """Define basic variable and store some global information
         all argument are optional
         diagramlist : are the list of object to draw. item should inherit 
@@ -414,6 +425,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.block_in_page = 0 #ckeep track of the block in a page
         #compute the number of pages
         self.npage = 1
+        self.diagram_type = diagram_type
 
         limit = self.lower_scale * self.nb_col * self.nb_line
         if len(diagramlist) < limit:

@@ -25,6 +25,7 @@ import array
 
 import madgraph.core.color_algebra as color_algebra
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.base_objects as base_objects
 
 #===============================================================================
 # ColorBasis
