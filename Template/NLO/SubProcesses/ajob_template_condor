@@ -1,4 +1,8 @@
 #!/bin/bash
+if [ -n "$_CONDOR_SCRATCH_DIR" ]; then
+    CONDOR_INITIAL_DIR=`pwd`
+    cd $_CONDOR_SCRATCH_DIR
+fi
 script=mg1.cmd.$1.$2.$4
 mkdir lib
 mkdir Cards
