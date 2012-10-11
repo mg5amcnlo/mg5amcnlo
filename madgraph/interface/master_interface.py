@@ -66,7 +66,7 @@ class Switcher(object):
 
     interface_names= {'MadGraph':('mg5',MGcmd.MadGraphCmd),
                       'Loop':('ML5',LoopCmd.LoopInterface),
-                      'aMCatNLO':('aMC@NLO',amcatnloCmd.aMCatNLOInterface)}
+                      'aMCatNLO':('NLO',amcatnloCmd.aMCatNLOInterface)}
 
     _switch_opts = [interface_names[key][0] for key in interface_names.keys()]
     current_interface = None

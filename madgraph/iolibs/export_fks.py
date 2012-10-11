@@ -651,7 +651,7 @@ end
                                     filename,
                                     model=matrix_element.born_matrix_element.\
                                     get('processes')[0].get('model'),
-                                    amplitude=True)
+                                    amplitude=True, diagram_type='born')
         plot.draw()
 
         for n, fksreal in enumerate(matrix_element.real_processes):
@@ -661,7 +661,7 @@ end
                                         filename,
                                         model=fksreal.matrix_element.\
                                         get('processes')[0].get('model'),
-                                        amplitude=True)
+                                        amplitude=True, diagram_type='real')
             plot.draw()
 
 

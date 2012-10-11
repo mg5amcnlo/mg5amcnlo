@@ -96,13 +96,13 @@ if '__main__' == __name__:
     try:
         if '-h' in argument or '--help' in argument:
             launch = run.aMCatNLOCmd(me_dir=root_path)
-            launch.exec_cmd('help run_mcatnlo')
+            launch.exec_cmd('help shower')
             sys.exit()
         elif len(argument) > 1 and argument[1] in ['0', '1', '2']:
             argument = treat_old_argument(argument)
         
         launch = run.aMCatNLOCmd(me_dir=root_path)
-        launch.run_cmd('run_mcatnlo %s' % ' '.join(argument[1:]))
+        launch.run_cmd('shower %s' % ' '.join(argument[1:]))
         launch.run_cmd('quit')
     except KeyboardInterrupt:
         try:

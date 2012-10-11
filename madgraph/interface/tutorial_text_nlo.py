@@ -43,21 +43,21 @@ Couplings different than QCD cannot be perturbed yet.
 generate = """
 You have just generated a new process.
 You can find more information on supported syntax by using:
-aMC@NLO>help generate
+NLO>help generate
 To list all defined processes, type
-aMC@NLO>display processes
+NLO>display processes
 
 If you want to know more about particles and multiparticles present,
 write
-aMC@NLO>display particles
-aMC@NLO>display multiparticles
+NLO>display particles
+NLO>display multiparticles
 
 If you want to add a second process, use the add process command:
-aMC@NLO>add process p p > e+ e- [QCD] @2
+NLO>add process p p > e+ e- [QCD] @2
 
 At this stage you can export your processes.
 This is done simply by typing:
-aMC@NLO>output MY_FIRST_AMCATNLO_RUN
+NLO>output MY_FIRST_AMCATNLO_RUN
 """
 
 display_processes = """
@@ -66,7 +66,7 @@ You have seen a list of the already defined processes.
 At this stage you can export your processes to different formats. In
 this tutorial, we will explain how to create a valid output for
 aMC@NLO. This is done simply by typing:
-aMC@NLO>output MY_FIRST_AMCTANLO_RUN
+NLO>output MY_FIRST_AMCTANLO_RUN
 """
 
 add_process = """
@@ -74,7 +74,7 @@ You have added a process to your process list.
 
 At this stage you can export your processes.
 This is done simply by typing:
-aMC@NLO>output MY_FIRST_AMCATNLO_RUN
+NLO>output MY_FIRST_AMCATNLO_RUN
 """
 output = """
 If you are following the tutorial, a directory MY_FIRST_AMCATNLO_RUN has
@@ -94,10 +94,10 @@ with the selected MonteCarlo.
 If you want to generate the showered StdHep file, please be sure to have the 
 MCatNLO-utilities installed (otherwise just type "install-MCatNLO-utilities").
 Please enter
-aMC@NLO> launch -s
+NLO> launch -s
 
 If you just want to generate the parton level .lhe file, please enter
-aMC@NLO> launch
+NLO> launch
 
 
 (you can interrupt the computation to continue the tutorial by pressing Ctrl-C)
