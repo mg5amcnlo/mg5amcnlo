@@ -53,6 +53,7 @@ try:
     import madgraph.interface.extended_cmd as cmd
     import madgraph.interface.common_run_interface as common_run
     import madgraph.iolibs.files as files
+    import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.various.banner as banner_mod
     import madgraph.various.cluster as cluster
     import madgraph.various.misc as misc
@@ -71,6 +72,7 @@ except Exception, error:
     from internal import InvalidCmd, MadGraph5Error
     import internal.files as files
     import internal.cluster as cluster
+    import internal.save_load_object as save_load_object
     import internal.gen_crossxhtml as gen_crossxhtml
     aMCatNLO = True
 
@@ -1582,6 +1584,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         
         # Loop as long as the user is not done.
         answer = 'no'
+        if options['force']:
+            answer='done'
         while answer != 'done':
             question, possible_answer, card = get_question(mode, cards)
             answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
@@ -1659,6 +1663,8 @@ _launch_usage = "launch [MODE] [options]\n" + \
                 "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n"
 
 _launch_parser = optparse.OptionParser(usage=_launch_usage)
+_launch_parser.add_option("-f", "--force", default=False, action='store_true',
+                                help="Use the card present in the directory for the launch, without editing them")
 _launch_parser.add_option("-c", "--cluster", default=False, action='store_true',
                             help="Submit the jobs on the cluster")
 _launch_parser.add_option("-m", "--multicore", default=False, action='store_true',
@@ -1679,6 +1685,8 @@ _calculate_xsect_usage = "calculate_xsect [ORDER] [options]\n" + \
                 "   ORDER can be either LO or NLO (if omitted, it is set to NLO). \n"
 
 _calculate_xsect_parser = optparse.OptionParser(usage=_calculate_xsect_usage)
+_calculate_xsect_parser.add_option("-f", "--force", default=False, action='store_true',
+                                help="Use the card present in the directory for the launch, without editing them")
 _calculate_xsect_parser.add_option("-c", "--cluster", default=False, action='store_true',
                             help="Submit the jobs on the cluster")
 _calculate_xsect_parser.add_option("-m", "--multicore", default=False, action='store_true',
@@ -1695,6 +1703,8 @@ _generate_events_usage = "generate_events [ORDER] [options]\n" + \
                 "   in the run_card.dat\n"
 
 _generate_events_parser = optparse.OptionParser(usage=_generate_events_usage)
+_generate_events_parser.add_option("-f", "--force", default=False, action='store_true',
+                                help="Use the card present in the directory for the launch, without editing them")
 _generate_events_parser.add_option("-c", "--cluster", default=False, action='store_true',
                             help="Submit the jobs on the cluster")
 _generate_events_parser.add_option("-m", "--multicore", default=False, action='store_true',
