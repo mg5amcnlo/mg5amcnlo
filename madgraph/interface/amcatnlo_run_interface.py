@@ -602,6 +602,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         # check argument validity and normalise argument
         self.check_shower(argss, {})
         evt_file = pjoin(os.getcwd(), argss[0], 'events.lhe')
+        self.ask_run_configuration('', {'shower':'only'})
         if self.check_mcatnlo_dir():
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
@@ -631,7 +632,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.options_madevent['automatic_html_opening'] = False
 
         mode = argss[0]
-        self.ask_run_configuration(mode)
+        self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
         self.run(mode, options)
         os.chdir(root_path)
@@ -659,7 +660,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.options_madevent['automatic_html_opening'] = False
 
         mode = 'aMC@' + argss[0]
-        self.ask_run_configuration(mode)
+        self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
         if self.check_mcatnlo_dir() and options['shower']:
@@ -688,7 +689,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.options['automatic_html_opening'] = False
 
         mode = argss[0]
-        self.ask_run_configuration(mode)
+        self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
         if self.check_mcatnlo_dir() and options['shower']:
@@ -708,7 +709,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.check_compile(argss, options)
         
         mode = {'FO': 'NLO', 'MC': 'aMC@NLO'}[argss[0]]
-        self.ask_run_configuration(mode)
+        self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
         os.chdir(root_path)
 
@@ -1544,21 +1545,37 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
 
     ############################################################################
-    def ask_run_configuration(self, mode):
+    def ask_run_configuration(self, mode, options):
         """Ask the question when launching generate_events/multi_run"""
         
-        logger.info('Will run in mode %s' % mode)
-        cards = ['param_card.dat', 'run_card.dat', 'mcatnlo_card.dat']
+        if 'shower' in options.keys():
+            if options['shower'] == True:
+                cards = ['param', 'run', 'shower']
+            elif options['shower'] == 'only':
+                cards = ['shower']
+            else:  
+                cards = ['param', 'run']
+        else:  
+            cards = ['param', 'run']
 
-        def get_question(mode):
+        def get_question(mode, cards):
             # Ask the user if he wants to edit any of the files
             #First create the asking text
-            question = """Do you want to edit one cards (press enter to bypass editing)?
-  1 / param   : param_card.dat (be carefull about parameter consistency, especially widths)
-  2 / run     : run_card.dat\n
-  3 / mcatnlo : mcatnlo_card.dat\n"""
-            possible_answer = ['0','done', 1, 'param', 2, 'run', 3, 'mcatnlo']
-            card = {0:'done', 1:'param', 2:'run', 3:'mcatnlo'}
+            question = "Do you want to edit a card (press enter to bypass editing)?\n" + \
+                       "(be careful about parameter consistency, especially widths)\n"
+            card = {0:'done'}
+            for i, c in enumerate(cards):
+                card[i+1] = c
+            print card
+
+            possible_answer = []
+            for i, c in card.items():
+                if i > 0:
+                    question += '%d / %6s : %s_card.dat\n' % (i, c, c)
+                else:
+                    question += '%d / %6s \n' % (i, c)
+                possible_answer.extend([i,c])
+
             # Add the path options
             question += '  Path to a valid card.\n'
             return question, possible_answer, card
@@ -1566,7 +1583,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         # Loop as long as the user is not done.
         answer = 'no'
         while answer != 'done':
-            question, possible_answer, card = get_question(mode)
+            question, possible_answer, card = get_question(mode, cards)
             answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
             if answer.isdigit():
                 answer = card[int(answer)]
