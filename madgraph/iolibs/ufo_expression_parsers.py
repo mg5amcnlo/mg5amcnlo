@@ -28,6 +28,8 @@ sys.path.append(os.path.join(root_path, os.path.pardir))
 from madgraph import MadGraph5Error
 import vendor.ply.lex as lex
 import vendor.ply.yacc as yacc
+import models.check_param_card as check_param_card
+
 logger = logging.getLogger('madgraph.ufo_parsers')
 
 # PLY lexer class
@@ -262,6 +264,8 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
     """A parser for UFO algebraic expressions, outputting
     Fortran-style code for quadruple precision computation."""
 
+    mp_prefix = check_param_card.ParamCard.mp_prefix
+
     # The following parser expressions need to be defined for each
     # output language/framework
 
@@ -272,7 +276,7 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
     def p_expression_variable(self, p):
         "expression : VARIABLE"
         # All the multiple_precision variables are defined with the prefix _MP_"
-        p[0] = ('mp__'+p[1]).lower()
+        p[0] = (self.mp_prefix+p[1]).lower()
 
     def p_expression_power(self, p):
         'expression : expression POWER expression'
@@ -314,7 +318,7 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
 
     def p_expression_pi(self, p):
         '''expression : PI'''
-        p[0] = 'MP__pi'
+        p[0] = self.mp_prefix+'pi'
 
 class UFOExpressionParserCPP(UFOExpressionParser):
     """A parser for UFO algebraic expressions, outputting

@@ -230,8 +230,11 @@ class HelpFKS(mg_interface.HelpToCmd):
         _launch_parser.print_help()
 
 class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
+    
     _fks_display_opts = ['real_diagrams', 'born_diagrams', 'virt_diagrams', 
                          'real_processes', 'born_processes', 'virt_processes']
+
+    _nlo_modes_for_completion = ['all','real']
 
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ Special init tasks for the Loop Interface """
@@ -253,6 +256,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         self._curr_amps = diagram_generation.AmplitudeList()
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._v4_export_formats = []
+        self._nlo_modes_for_completion = ['all','real']
         self._export_formats = [ 'madevent' ]
         if self._curr_model.get('perturbation_couplings') == []:
             if self._curr_model.get('name') == 'sm':

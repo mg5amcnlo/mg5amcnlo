@@ -2909,9 +2909,7 @@ class UFO_model_to_mg4(object):
     mp_real_format = 'real*16'
     # Warning, it is crucial none of the couplings/parameters of the model
     # starts with this prefix. I should add a check for this.
-    # If you change it, it should be changed accordingly in the subroutine
-    # generate_loop_amplitude_call of HelasCallWriter and also in 
-    # the UFOExpressionParserMPFortran.
+    # You can change it as the global variable to check_param_card.ParamCard
     mp_prefix = check_param_card.ParamCard.mp_prefix
     
     def __init__(self, model, output_path, opt=None):

@@ -1262,9 +1262,8 @@ class CheckValidForCmdWeb(CheckValidForCmd):
 #===============================================================================
 class CompleteForCmd(cmd.CompleteCmd):
     """ The Series of help routine for the MadGraphCmd"""
-    
- 
-    def model_completion(self, text, process):
+     
+    def model_completion(self, text, process, line):
         """ complete the line with model information """
 
         while ',' in process:
@@ -1272,31 +1271,114 @@ class CompleteForCmd(cmd.CompleteCmd):
         args = self.split_arg(process)
         couplings = []
 
+        # Automatically allow for QCD perturbation if in the sm because the
+        # loop_sm would then automatically be loaded
+        pert_couplings_allowed = self._curr_model['perturbation_couplings']
+        if self._curr_model.get('name').startswith('sm'):
+            pert_couplings_allowed = pert_couplings_allowed + ['QCD']
+
         # Force '>' if two initial particles.
         if len(args) == 2 and args[-1] != '>':
                 return self.list_completion(text, '>')
             
         # Add non-particle names
+        syntax = []
+        couplings = []
+        # Remove possible identical names
+        particles = list(set(self._particle_names + self._multiparticles.keys()))
         if len(args) > 0 and args[-1] != '>':
-            couplings = ['>']
+            syntax.append('>')
         if '>' in args and args.index('>') < len(args) - 1:
-            couplings = [c + "=" for c in self._couplings] + \
-                        ['@','$','/','>',',']
-        return self.list_completion(text, self._particle_names + \
-                                    self._multiparticles.keys() + couplings)
+            couplings.extend([c + "=" for c in self._couplings] + ['WEIGHTED='])
+            syntax.extend(['@','$','/','>',','])
+            if '[' not in line and ',' not in line and len(pert_couplings_allowed)>0:
+                syntax.append('[')
+        # If information for the virtuals has been specified already, do not
+        # propose syntax or particles input anymore
+        if '[' in line:
+            syntax = []
+            particles = []
         
+        # The direct completion
+        # return self.list_completion(text, particles+syntax+couplings)
+        
+        # A more elaborate one with categories
+        poss_particles = self.list_completion(text, particles)
+        poss_syntax = self.list_completion(text, syntax)
+        poss_couplings = self.list_completion(text, couplings)
+        possibilities = {}
+        if poss_particles != []: possibilities['Particles']=poss_particles
+        if poss_syntax != []: possibilities['Syntax']=poss_syntax
+        if poss_couplings != []: possibilities['Coupling orders']=poss_couplings
+        if len(possibilities.keys())==1:    
+            return self.list_completion(text, possibilities.values()[0])   
+        else:
+            return self.deal_multiple_categories(possibilities)     
                     
     def complete_generate(self, text, line, begidx, endidx):
-        "Complete the add command"
+        "Complete the generate command"
 
         # Return list of particle names and multiparticle names, as well as
         # coupling orders and allowed symbols
         args = self.split_arg(line[0:begidx])
+
+        if len(args) > 2 and '>' in line and '[' in line and not ']' in line:
+            # We are now editing the loop related options
+            # Automatically allow for QCD perturbation if in the sm because the
+            # loop_sm would then automatically be loaded
+            pert_couplings_allowed = self._curr_model['perturbation_couplings']
+            if self._curr_model.get('name').startswith('sm'):
+                pert_couplings_allowed = pert_couplings_allowed + ['QCD']
+            # Find wether the loop mode is already set or not
+            loop_specs = line[line.index('[')+1:]
+            try:
+                loop_orders = loop_specs[loop_specs.index('=')+1:]
+            except ValueError:
+                loop_orders = loop_specs
+            possibilities = []
+            possible_orders = [order for order in pert_couplings_allowed if \
+                                                      order not in loop_orders]
+            # Simplify obvious loop completion
+            single_completion = ''
+            if len(self._nlo_modes_for_completion)==1:
+                    single_completion = '%s= '%self._nlo_modes_for_completion[0]
+                    if len(possible_orders)==1:
+                        single_completion = single_completion + possible_orders[0] + ' ] '
+            # Automatically add a space if not present after [ or =
+            if text.endswith('['):
+                if single_completion != '':
+                    return self.list_completion(text, ['[ '+single_completion])
+                else:
+                    return self.list_completion(text,['[ '])
+
+            if text.endswith('='):
+                return self.list_completion(text,[' '])
+
+            if args[-1]=='[':
+                possibilities = possibilities + ['%s= '%mode for mode in \
+                                                 self._nlo_modes_for_completion]                    
+                if single_completion != '':
+                    return self.list_completion(text, [single_completion])
+                else:
+                    if len(possible_orders)==1:
+                        return self.list_completion(text, [poss+' %s ] '%\
+                                  possible_orders[0] for poss in possibilities])
+                    return self.list_completion(text, possibilities)
+
+            if len(possible_orders)==1:
+                possibilities.append(possible_orders+' ] ')
+            else:
+                possibilities.extend(possible_orders)
+            if any([(order in loop_orders) for order in pert_couplings_allowed]):
+                possibilities.append(']')
+
+            return self.list_completion(text, possibilities)
+        
         if len(args) > 2 and args[-1] == '@' or args[-1].endswith('='):
             return
 
         try:
-            return self.model_completion(text, ' '.join(args[1:]))
+            return self.model_completion(text, ' '.join(args[1:]),line)
         except Exception as error:
             print error
             
@@ -1355,7 +1437,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.path_completion(text, pjoin(*[a for a in args \
                                                     if a.endswith(os.path.sep)]))
         # autocompletion for particles/couplings
-        model_comp = self.model_completion(text, ' '.join(args[2:]))
+        model_comp = self.model_completion(text, ' '.join(args[2:]),line)
 
         if len(args) == 2:
             return model_comp + self.path_completion(text)
@@ -1373,7 +1455,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         
     def complete_define(self, text, line, begidx, endidx):
         """Complete particle information"""
-        return self.model_completion(text, line[6:])
+        return self.model_completion(text, line[6:],line)
 
     def complete_display(self, text, line, begidx, endidx):
         "Complete the display command"
@@ -1387,7 +1469,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text, ['failed'])
 
         if len(args) == 2 and args[1] == 'particles':
-            return self.model_completion(text, line[begidx:])
+            return self.model_completion(text, line[begidx:],line)
 
     def complete_draw(self, text, line, begidx, endidx):
         "Complete the draw command"
@@ -1645,7 +1727,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         "Complete the import command"
         
         args=self.split_arg(line[0:begidx])
-        
+    
         # Format
         if len(args) == 1:
             opt =  self.list_completion(text, self._import_formats)
@@ -1847,7 +1929,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'loop_optimized_output',
                     'complex_mass_scheme',
                     'gauge']
-    
+    _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
+
     # The three options categories are treated on a different footage when a 
     # set/save configuration occur. current value are kept in self.options
     options_configuration = {'pythia8_path': './pythia8',
@@ -1933,7 +2016,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._mgme_dir = MG4DIR
         self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
         self._comparisons = None
-        
+        self._nlo_modes_for_completion = self._valid_nlo_modes
+
         # Load the configuration file
         self.set_configuration()
 
@@ -1953,6 +2037,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         self._v4_export_formats = ['madevent', 'standalone', 'matrix'] 
         self._export_formats = self._v4_export_formats + ['standalone_cpp', 'pythia8']
+        self._nlo_modes_for_completion = self._valid_nlo_modes
     
     def do_quit(self, line):
         """Do quit"""
@@ -2754,20 +2839,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         perturbation_couplings = ""
         LoopOption= 'tree'
         HasBorn= True
-        valid_nlo_modes = ['all','real','virt','virtsqr','tree']
         if perturbation_couplings_re:
             perturbation_couplings = perturbation_couplings_re.group("pertOrders")
             option=perturbation_couplings_re.group("option")
             if option:
-                if option in valid_nlo_modes:
-                    if option=='virtsqr':
+                if option in self._valid_nlo_modes:
+                    if option=='sqrvirt':
                         LoopOption='virt'
                         HasBorn=False
                     else:
                         LoopOption=option
                 else:
                     raise self.InvalidCmd, "NLO mode %s is not valid. "%option+\
-                       "Valid modes are %s. "%str(valid_nlo_modes)
+                       "Valid modes are %s. "%str(self._valid_nlo_modes)
             else:
                 LoopOption='all'
             line = perturbation_couplings_re.group("proc")+\
