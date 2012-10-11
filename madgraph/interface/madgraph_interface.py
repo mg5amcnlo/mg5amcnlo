@@ -1809,8 +1809,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         # By default, load the UFO Standard Model
         logger.info("Loading default model: sm")
-        self.do_import('model sm')
-        self.history.append('import model sm')
+        self.exec_cmd('import model sm', printcmd=False, precmd=True)
         
         # preloop mother
         CmdExtended.preloop(self)
@@ -2977,7 +2976,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     multipart_name = line.split()[0]
                 if multipart_name not in self._multiparticles:
                     self.do_define(line)
-                    
             except self.InvalidCmd, why:
                 logger_stderr.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
