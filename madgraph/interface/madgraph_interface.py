@@ -2586,16 +2586,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                           cmass_scheme = mass_scheme)
             nb_processes += len(gauge_result)
 
-            
-#        if args[0] in ['lorentz_invariance', 'full']:
-#            lorentz_result = process_checks.check_lorentz(myprocdef,
-#                                          param_card = param_card,
-#                                          mg_root=self._mgme_dir,
-#                                          cuttools=CT_dir,
-#                                          cmass_scheme=mass_scheme,
-#                                          loop_optimization=loop_optimization)
-#            nb_processes += len(lorentz_result)
-
         if args[0] in  ['gauge', 'full'] and \
           len(self._curr_model.get('gauge')) == 2 and \
           not myprocdef.get('perturbation_couplings'):            
@@ -2627,7 +2617,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
             nb_processes += len(gauge_result_no_brs)            
             
-            
         cpu_time2 = time.time()
 
         logger.info("%i checked performed in %0.3f s" \
@@ -2648,20 +2637,20 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
               self.options['loop_optimized_output'] else 'default')+' output:\n'
                 
             text += process_checks.output_timings(myprocdef, timings,
-                                         self.options['loop_optimized_output'])
+                                         process_checks.loop_optimized_output)
         if stability:
             text += 'Stability result for the '+('optimized' if \
               self.options['loop_optimized_output'] else 'default')+' output:\n'
             text += process_checks.output_stability(stability,
                                     mg_root=self._mgme_dir, 
-                                    opt = self.options['loop_optimized_output'])
+                                    opt = process_checks.loop_optimized_output)
         
         if profile_time and profile_stab:
             text += 'Timing result '+('optimized' if \
                     self.options['loop_optimized_output'] else 'default')+':\n'
             text += process_checks.output_profile(myprocdef, profile_stab,
                                    profile_time, self._mgme_dir,
-                                   self.options['loop_optimized_output'],
+                                   process_checks.loop_optimized_output,
                                    reuse) + '\n'
         if gauge_result:
             text += 'Gauge results:\n'
@@ -2680,7 +2669,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._comparisons = comparisons
 
         logger.info(text)
-        if not (reuse and args[0] in ['profile']):
+        if not (reuse and args[0] in ['profile']) and text!='':
             pydoc.pager(text)
         # Restore diagram logger
         for i, logger in enumerate(loggers):

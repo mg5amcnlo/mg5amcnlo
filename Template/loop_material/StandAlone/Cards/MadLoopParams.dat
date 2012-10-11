@@ -38,8 +38,8 @@
 !     not the case, MadLoop outputs a warning. 
 !     Notice that MLStabThres is used only when CTModeRun is negative.
 #MLStabThres
-1.0d-5
-! Default :: 1.0d-5
+1.0d-3
+! Default :: 1.0d-3
 !     You can add other evaluation method to check for the stability in DP and QP.
 !     Below you can chose if you want to use zero, one or two rotations of the PS point 
 !     in QP.

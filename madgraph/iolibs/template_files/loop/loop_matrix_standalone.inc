@@ -331,8 +331,6 @@ DO I=1,NEXTERNAL
   ENDDO
 ENDDO
 
-%(set_reference)s
-
 DO K=1, 3
   BUFFR(K)=0.0d0
   DO I=1,NLOOPAMPS
@@ -349,6 +347,8 @@ c conservation, this subroutine should be written so to have n exactly onshell p
 C CALL IMPROVE_PS_POINT_PRECISION(P)
 
 LSCALE=DSQRT(ABS((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1)+P(3,2))**2))
+
+%(set_reference)s
 
 DO K=1,3
   ANS(K)=0.0d0
@@ -395,7 +395,7 @@ IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)) THEN
   IF (CHECKPHASE) THEN
 C   SET THE HELICITY FILTER
     IF(.NOT.FOUNDHELFILTER) THEN
-      IF(ISZERO(ABS(ANS(1)+ANS(2)+ANS(3)),REF/DBLE(NCOMB),-1)) THEN
+      IF(ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1)) THEN
         IF(NTRY.EQ.1) THEN
 	      GOODHEL(HELPICKED)=.FALSE.
 	    ELSEIF(GOODHEL(HELPICKED)) THEN
@@ -757,7 +757,17 @@ C ----------
         endif
 	  enddo
 
-	  acc=maxval(accuracies,1,mask3)
+C     The technique below is too sensitive, typically to
+C     unstablities in very small poles
+C      ACC=MAXVAL(ACCURACIES,1,MASK3)
+C     The following is used instead
+      ACC = 0.0d0
+      AVG = 0.0d0
+      DO I=1,3
+        ACC = ACC + ACCURACIES(I)*ESTIMATE(I)
+        AVG = AVG + ESTIMATE(I)
+      ENDDO
+      ACC  = ACC / ( AVG / 3.0d0)
 
       end
 

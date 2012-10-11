@@ -302,7 +302,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         newloopselection=base_objects.DiagramList()
         warned=False
         warning_msg = ("Some loop diagrams contributing to this process"+\
-          " are discarded because they are pure (%s)-perturbation.\nMake sure"+\
+          " are discarded because they are not pure (%s)-perturbation.\nMake sure"+\
           " you did not want to include them.")%\
                            ('+'.join(self['process']['perturbation_couplings']))
         for diag in self['loop_diagrams']:
