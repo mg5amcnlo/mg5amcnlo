@@ -56,6 +56,7 @@ import madgraph.various.progressbar as pbar
 
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_helas_objects as loop_helas_objects
+import madgraph.loop.loop_base_objects as loop_base_objects
 
 from madgraph import MG5DIR, InvalidCmd
 
@@ -366,13 +367,6 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
         process = matrix_element.get('processes')[0]
         model = process.get('model')
-
-        # For now, only accept the process if it has a born
-        if not matrix_element.get('processes')[0]['has_born']:
-            if output == "m2":
-                return 0.0, []
-            else:
-                return {'m2': 0.0, output:[]}
             
         if "matrix_elements" not in self.stored_quantities:
             self.stored_quantities['matrix_elements'] = []
@@ -875,6 +869,10 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                 os.path.join(export_dir,'SubProcesses'),infos,\
                                 req_files = ['HelFilter.dat','LoopFilter.dat'],
                                 attempts = attempts)
+        if infos['Process_compilation'] == None:
+            logger.error("Could not compile the process %s,"%shell_name+\
+                              " try to generate it via the 'generate' command.")
+            return None
         if nPS_necessary == None:
             logger.error("Could not initialize the process %s"%shell_name+\
                                             " with %s PS points."%max(attempts))
@@ -905,7 +903,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
         res_timings = self.setup_process(matrix_element, model,export_dir, \
                                                                         reusing)
-        if not res_timings:
+        
+        if res_timings == None:
             return None
         dir_name=res_timings['dir_path']
 
@@ -1419,6 +1418,11 @@ def generate_loop_matrix_element(process_definition, mg_root, reuse):
 
     start=time.time()
     amplitude = loop_diagram_generation.LoopAmplitude(process)
+    # Make sure to disable loop_optimized_output when considering loop induced 
+    # processes
+    if not amplitude.get('process').get('has_born'):
+        global loop_optimized_output
+        loop_optimized_output = False
     timing['Diagrams_generation']=time.time()-start
     timing['n_loops']=len(amplitude.get('loop_diagrams'))
     start=time.time()
@@ -1682,12 +1686,21 @@ def check_process(process, evaluator, quick):
             if newproc.get('perturbation_couplings')==[]:
                 amplitude = diagram_generation.Amplitude(newproc)
             else:
-                amplitude = loop_diagram_generation.LoopAmplitude(newproc)                
+                # Change the cutting method every two times.
+                loop_base_objects.cutting_method = 'optimal' if \
+                                            number_checked%2 == 0 else 'default'
+                amplitude = loop_diagram_generation.LoopAmplitude(newproc)
+                if not amplitude.get('process').get('has_born'):
+                    global loop_optimized_output
+                    loop_optimized_output = False
+                    
         except InvalidCmd:
             result=False
         else:
             result = amplitude.get('diagrams')
-
+        # Make sure to re-initialize the cutting method to the original one.
+        loop_base_objects.cutting_method = 'optimal'
+        
         if not result:
             # This process has no diagrams; go to next process
             logging.info("No diagrams for %s" % \
@@ -1706,10 +1719,16 @@ def check_process(process, evaluator, quick):
             matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                                          optimized_output=loop_optimized_output)
 
-        if matrix_element in process_matrix_elements:
-            # Exactly the same matrix element has been tested
-            # for other permutation of same process
-            continue
+        # The loop diagrams are always the same in the basis, so that the
+        # LoopHelasMatrixElement always look alike. One needs to consider
+        # the crossing no matter what then.
+        if amplitude.get('process').get('has_born'):
+            # But the born diagrams will change depending on the order of the
+            # particles in the process definition
+            if matrix_element in process_matrix_elements:
+                # Exactly the same matrix element has been tested
+                # for other permutation of same process
+                continue
 
         process_matrix_elements.append(matrix_element)
 
@@ -2308,7 +2327,10 @@ def check_gauge_process(process, evaluator):
         if process.get('perturbation_couplings')==[]:
             amplitude = diagram_generation.Amplitude(process)
         else:
-            amplitude = loop_diagram_generation.LoopAmplitude(process) 
+            amplitude = loop_diagram_generation.LoopAmplitude(process)
+            if not amplitude.get('process').get('has_born'):
+                global loop_optimized_output
+                loop_optimized_output = False
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
@@ -2557,7 +2579,10 @@ def check_lorentz_process(process, evaluator):
         if process.get('perturbation_couplings')==[]:
             amplitude = diagram_generation.Amplitude(process)
         else:
-            amplitude = loop_diagram_generation.LoopAmplitude(process)  
+            amplitude = loop_diagram_generation.LoopAmplitude(process)
+            if not amplitude.get('process').get('has_born'):
+                global loop_optimized_output
+                loop_optimized_output = False 
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))

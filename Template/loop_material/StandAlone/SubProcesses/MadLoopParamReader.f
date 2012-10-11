@@ -155,7 +155,7 @@
       CTModeRun=-1
       NRotations_DP=1
       NRotations_QP=0
-      MLStabThres=1.0d-5
+      MLStabThres=1.0d-3
       CTStabThres=1.0d-2
       CTLoopLibrary=3
       CheckCycle=3

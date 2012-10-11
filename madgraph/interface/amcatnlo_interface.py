@@ -251,7 +251,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         self._export_formats = [ 'madevent' ]
         if self._curr_model.get('perturbation_couplings') == []:
             if self._curr_model.get('name') == 'sm':
-                logger.warning('Automatically importing the standard model '+\
+                logger.info('Automatically importing the standard model '+\
                                                        'for loop computations.')
                 self.do_import('model loop_sm')
             else:

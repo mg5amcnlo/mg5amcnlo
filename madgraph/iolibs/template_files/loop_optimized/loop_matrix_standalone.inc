@@ -910,7 +910,17 @@ C ----------
         endif
 	  enddo
 
-	  acc=maxval(accuracies,1,mask3)
+C     The technique below is too sensitive, typically to
+C     unstablities in very small poles
+C      ACC=MAXVAL(ACCURACIES,1,MASK3)
+C     The following is used instead
+      ACC = 0.0d0
+      AVG = 0.0d0
+      DO I=1,3
+        ACC = ACC + ACCURACIES(I)*ESTIMATE(I)
+        AVG = AVG + ESTIMATE(I)
+      ENDDO
+      ACC  = ACC / ( AVG / 3.0d0)
 
       end
 

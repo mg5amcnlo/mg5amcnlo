@@ -37,6 +37,14 @@ class LoopDiagram(base_objects.Diagram):
        if it contains a loop. Also has many additional functions useful only
        for loop computations.
        """
+    
+    # The class variable below select what algorithm is used for choosing where
+    # to cut the loops. The possibilities are:
+    # 'optimal' -> will use choos_optimal_lcut()
+    # 'default' -> will use chose_default_lcut()
+    # In principle it is always 'optimal'. But it can be changed by process_check
+    # for the purpose of the check permutation command.
+    cutting_method = 'optimal'
 
     def default_setup(self):
         """Default values for all properties"""
@@ -362,11 +370,17 @@ class LoopDiagram(base_objects.Diagram):
             #assert(loopVertexList==self['vertices'] and mytype==self['type'])
             
             # Different choices of the loop cut can be made suited for different
-            # optimizations. The default one has no specific property.
-            #canonical_tag=self.choose_default_lcut(self['tag'],process['model'])
-            # The choice below is optimized for recycling the loop wavefunction
-            # in the open loops method.
-            canonical_tag=self.choose_optimal_lcut(self['tag'],struct_rep,process)
+            # optimizations.
+            if self.cutting_method=='default':
+                # The default one has no specific property.
+                canonical_tag=self.choose_default_lcut(self['tag'],process['model'])
+            elif self.cutting_method=='optimal':
+                # The choice below is optimized for recycling the loop wavefunction
+                # in the open loops method.
+                canonical_tag=self.choose_optimal_lcut(self['tag'],struct_rep,process)
+            else:
+                raise MadGraph5Error, 'The cutting method %s is not implemented.'\
+                                                            %self.cutting_method
             # The tag of the diagram is now updated with the canonical tag
             self['tag']=canonical_tag
             # We assign here the loopVertexList to the list of vertices 

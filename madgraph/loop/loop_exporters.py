@@ -425,19 +425,18 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Do not draw the loop diagrams if they are too many.
         # The user can always decide to do it manually, if really needed
         if (len(matrix_element.get('base_amplitude').get('loop_diagrams'))>1000):
-            logger.info("There are more than 1000 loop diagrams,"+\
-                                                   " their drawing is skipped.")
-        else:
-            filename = "loop_matrix.ps"
-            writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
-            plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
-                           get('loop_diagrams'),
-                           filename,
-                           model=matrix_element.get('processes')[0].get('model'),
-                           amplitude='')
-            logger.info("Drawing loop Feynman diagrams for " + \
-                         matrix_element.get('processes')[0].nice_string())
-            plot.draw()
+            logger.info("There are more than 1000 loop diagrams."+\
+                                               "Only the first 1000 are drawn.")
+        filename = "loop_matrix.ps"
+        writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
+        plot = draw.MultiEpsDiagramDrawer(base_objects.DiagramList(
+              matrix_element.get('base_amplitude').get('loop_diagrams')[:1000]),
+              filename,
+              model=matrix_element.get('processes')[0].get('model'),
+              amplitude='')
+        logger.info("Drawing loop Feynman diagrams for " + \
+                     matrix_element.get('processes')[0].nice_string())
+        plot.draw()
 
         if matrix_element.get('processes')[0].get('has_born'):   
             filename = "born_matrix.ps"
@@ -843,17 +842,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # When the user asks for the polarized matrix element we must 
         # multiply back by the helicity averaging factor
         replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
-                      
 
         # These entries are specific for the output for loop-induced processes
         # Also sets here the details of the squaring of the loop ampltiudes
         # with the born or the loop ones.
         if not matrix_element.get('processes')[0].get('has_born'):
-            replace_dict['set_reference']='\n'.join(['! ===',
-              '!  Please specify below the reference value you want to use for'+\
-              ' comparisons.','ref=LSCALE**(-2*NEXTERNAL+8)','! ==='])
+            replace_dict['set_reference']='\n'.join([
+              'C  Please specify below the reference value you want to use for'+\
+              ' comparisons.','ref=LSCALE*(10.0d0**(5*(-2*NEXTERNAL+8)))'])
             replace_dict['loop_induced_setup'] = '\n'.join([
-                             'DUMMY=HELPICKED','HELPICKED=H','MP_DONE=.FALSE.'])
+              'DUMMY=HELPICKED','HELPICKED=H','MP_DONE=.FALSE.',
+              'IF(SKIPLOOPEVAL) THEN','GOTO 1227','ENDIF'])
             replace_dict['loop_induced_finalize'] = \
             """HELPICKED=DUMMY
                DO I=NCTAMPS+1,NLOOPAMPS
@@ -861,16 +860,23 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                  WRITE(*,*) '##W03 WARNING Contribution ',I
                  WRITE(*,*) ' is unstable for helicity ',H
                ENDIF
-               IF(.NOT.ISZERO(ABS(AMPL(2,I))+ABS(AMPL(3,I)),REF,-1,H)) THEN
-                 WRITE(*,*) '##W04 WARNING Contribution ',I
-                 WRITE(*,*) ' for helicity ',H,' has a contribution to the poles'
-               ENDIF
-               ENDDO"""
+C                IF(.NOT.ISZERO(ABS(AMPL(2,I))+ABS(AMPL(3,I)),REF,-1,H)) THEN
+C                  WRITE(*,*) '##W04 WARNING Contribution ',I,' for helicity ',H,' has a contribution to the poles.'
+C                  WRITE(*,*) 'Finite contribution         = ',AMPL(1,I)
+C                  WRITE(*,*) 'single pole contribution    = ',AMPL(2,I)
+C                  WRITE(*,*) 'double pole contribution    = ',AMPL(3,I)
+C                ENDIF
+               ENDDO
+               1227 CONTINUE"""
             replace_dict['loop_helas_calls']=""
             replace_dict['nctamps_or_nloopamps']='nloopamps'
             replace_dict['nbornamps_or_nloopamps']='nloopamps'
             replace_dict['squaring']=\
-                    'ANS(1)=ANS(1)+DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))'        
+                    """ANS(1)=ANS(1)+DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))
+                       IF (J.EQ.1) THEN
+                         ANS(2)=ANS(2)+DBLE(CFTOT*AMPL(2,I))+DIMAG(CFTOT*AMPL(2,I))
+                         ANS(3)=ANS(3)+DBLE(CFTOT*AMPL(3,I))+DIMAG(CFTOT*AMPL(3,I))                         
+                       ENDIF"""      
         else:
             replace_dict['set_reference']='call smatrix(p,ref)'
             replace_dict['loop_induced_helas_calls'] = ""
@@ -892,9 +898,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             actualize_ans.append(\
                "IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.S(I))) THEN")
             actualize_ans.append(\
-                   "WRITE(*,*) '##W03 WARNING Contribution ',I,' is unstable.'")            
-            actualize_ans.extend(["ENDIF","ENDDO"])            
-        replace_dict['actualize_ans']='\n'.join(actualize_ans)
+                   "WRITE(*,*) '##W03 WARNING Contribution ',I,' is unstable.'")
+            actualize_ans.extend(["ENDIF","ENDDO"])
+            replace_dict['actualize_ans']='\n'.join(actualize_ans)
+        else:
+            replace_dict['actualize_ans']=\
+            """IF(.NOT.ISZERO(ABS(ANS(2))+ABS(ANS(3)),REF*(10.0d0**-2),-1,H)) THEN
+                 WRITE(*,*) '##W05 WARNING Found a PS point with a contribution to the single pole.'
+                 WRITE(*,*) 'Finite contribution         = ',ANS(1)
+                 WRITE(*,*) 'single pole contribution    = ',ANS(2)
+                 WRITE(*,*) 'double pole contribution    = ',ANS(3)
+               ENDIF"""
         
         # Write out the color matrix
         (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
@@ -1337,13 +1351,14 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # Also sets here the details of the squaring of the loop ampltiudes
         # with the born or the loop ones.
         if not matrix_element.get('processes')[0].get('has_born'):
-            replace_dict['set_reference']='\n'.join(['! ===',
-              '!  Please specify below the reference value you want to use for'+\
-              ' comparisons.','ref=LSCALE**(-2*NEXTERNAL+8)','! ==='])
+            replace_dict['set_reference']='\n'.join([
+              'C  Please specify below the reference value you want to use for'+\
+              ' comparisons.','ref=LSCALE*(10.0d0**(-2*NEXTERNAL+8))'])
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nctamps'
             replace_dict['squaring']=\
-                    'ANS(1)=ANS(1)+DUMMY*DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))'        
+                    'ANS(1)=ANS(1)+DUMMY*DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))'
+                    
         else:
             replace_dict['set_reference']='call smatrix(p,ref)'
             replace_dict['nctamps_or_nloopamps']='nctamps'
