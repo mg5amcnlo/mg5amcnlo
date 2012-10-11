@@ -478,6 +478,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         self.child = None # sub CMD interface call from this one
         self.mother = None #This CMD interface was called from another one
         self.inputfile = None # input file (in non interactive mode)
+        self.haspiping = not sys.stdin.isatty() # check if mg5 is piped 
         self.stored_line = '' # for be able to treat answer to question in input file 
                               # answer which are not required.
 
@@ -626,6 +627,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             try:
                 line = self.inputfile.next()
             except StopIteration:
+                if self.haspiping:
+                    self.store_line(line)
+                    return None # print the question and use the pipe
                 logger.info(question_instance.question)
                 logger.warning('The answer to the previous question is not set in your input file')
                 logger.warning('Use %s value' % default)
@@ -649,6 +653,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             fct = getattr(question_instance, 'do_%s' % line.split()[0])
             fct(' '.join(line.split()[1:]))
             return self.check_answer_in_input_file(question_instance, default, path)
+        # No valid answer provides
+        elif self.haspiping:
+            self.store_line(line)
+            return None # print the question and use the pipe
         else:
             logger.info(question_instance.question)
             logger.warning('The answer to the previous question is not set in your input file')
