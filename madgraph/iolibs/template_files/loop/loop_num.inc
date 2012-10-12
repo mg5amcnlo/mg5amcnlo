@@ -255,14 +255,18 @@ C
 		  BUFF=BUFF+P(I,J)
 		ENDDO
 		IF ((BUFF/REF).GT.1.0E-6_16) THEN
-		  STOP 'Four-momentum conservation is not accurate enough.'		  
+          WRITE(*,*) 'ERROR:: MP, Four-momentum conservation is not accurate enough, ',(BUFF/REF)
+		  CALL MP_WRITE_MOM(P)
+		  STOP
 		ENDIF
 	  ENDDO
 
 	  DO I=1,NEXTERNAL-1
 	    REF=ABS(P(0,I))+ABS(P(1,I))+ABS(P(2,I))+ABS(P(3,I))
 		IF ((SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF).GT.1.0E-2_16) THEN
-		  STOP 'Four-momentum conservation is not accurate enough.'
+		  WRITE(*,*) 'ERROR:: MP, Onshellness of the momentum of particle ',I,' of mass ',MASSES(I),' is not accurate enough, ', (SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF)
+		  CALL MP_WRITE_MOM(P)
+		  STOP
 		ELSE
 	      P(3,I)=SIGN(SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-MASSES(I)**2)),P(3,I))
 		ENDIF
@@ -279,6 +283,47 @@ C
 		P(I,NEXTERNAL)=BUFF
 	  ENDDO
 
+	  END
+
+	  %(real_mp_format)s function mp_dot(p1,p2)
+C ****************************************************************************
+C     4-Vector Dot product in multiple precision
+C ****************************************************************************
+      implicit none
+      %(real_mp_format)s p1(0:3),p2(0:3)
+      mp_dot=p1(0)*p2(0)-p1(1)*p2(1)-p1(2)*p2(2)-p1(3)*p2(3)
+      return
+      end
+
+	  SUBROUTINE MP_WRITE_MOM(P)
+	  IMPLICIT NONE
+	  INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      %(real_mp_format)s mp_dot
+
+	  INTEGER I,J
+C  
+C ARGUMENTS 
+C
+      %(real_mp_format)s P(0:3,NEXTERNAL),PSUM(0:3)
+	  DO I=0,3  
+        PSUM(I)=0.0e0_16
+        DO J=1,%(n_initial)d
+          PSUM(I)=PSUM(I)+P(I,J)
+        ENDDO
+        DO J=%(n_initial)d+1,NEXTERNAL
+          PSUM(I)=PSUM(I)-P(I,J)
+        ENDDO
+      ENDDO
+      WRITE (*,*) ' Phase space point:'
+      WRITE (*,*) '    ---------------------'
+      WRITE (*,*) '    E | px | py | pz | m '
+      DO I=1,NEXTERNAL
+        WRITE (*,'(1x,5e25.15)') P(0,I),P(1,I),P(2,I),P(3,I),SQRT(ABS(MP_DOT(P(0,I),P(0,I))))
+      ENDDO
+      WRITE (*,*) '    Four-momentum conservation sum:'
+      WRITE (*,'(1x,4e25.15)') PSUM(0),PSUM(1),PSUM(2),PSUM(3)
+      WRITE (*,*) '   ---------------------'
 	  END
 
       SUBROUTINE MPLOOPNUMHEL(Q,RES,H)

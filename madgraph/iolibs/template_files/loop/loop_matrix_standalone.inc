@@ -593,7 +593,7 @@ C
 	  DO I=1,NEXTERNAL-1
 	    REF=ABS(P(0,I))+ABS(P(1,I))+ABS(P(2,I))+ABS(P(3,I))
 		IF ((SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF).GT.1.0d-2) THEN
-		  WRITE(*,*) 'ERROR:: Four-momentum conservation for particle ',I,' is not accurate enough, ', (SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF)
+		  WRITE(*,*) 'ERROR:: Onshellness of the momentum of particle ',I,' of mass ',MASSES(I),' is not accurate enough, ', (SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF)
 		  CALL WRITE_MOM(P)
 		  STOP
 		ELSE
@@ -624,18 +624,29 @@ C
       PARAMETER (NEXTERNAL=%(nexternal)d)
       %(real_dp_format)s mdot
 
-	  INTEGER I
+	  INTEGER I,J
 C  
 C ARGUMENTS 
 C
-      %(real_dp_format)s P(0:3,NEXTERNAL)
-      write (*,*) " Phase space point:"
-      write (*,*) "-----------------------------------------------------------------------------"
-      write (*,*)  "n        E             px             py              pz               m "
-      do i=1,nexternal
-         write (*,'(1x,5e25.15)') i, P(0,i),P(1,i),P(2,i),P(3,i),dsqrt(dabs(mDOT(p(0,i),p(0,i))))
-      enddo
-      write (*,*) "-----------------------------------------------------------------------------"
+      %(real_dp_format)s P(0:3,NEXTERNAL),PSUM(0:3)
+	  DO I=0,3  
+        PSUM(I)=0.0d0
+        DO J=1,%(n_initial)d
+          PSUM(I)=PSUM(I)+P(I,J)
+        ENDDO
+        DO J=%(n_initial)d+1,NEXTERNAL
+          PSUM(I)=PSUM(I)-P(I,J)
+        ENDDO
+      ENDDO
+      WRITE (*,*) ' Phase space point:'
+      WRITE (*,*) '    ---------------------'
+      WRITE (*,*) '    E | px | py | pz | m '
+      DO I=1,NEXTERNAL
+        WRITE (*,'(1x,5e25.15)') P(0,I),P(1,I),P(2,I),P(3,I),DSQRT(DABS(MDOT(P(0,I),P(0,I))))
+      ENDDO
+      WRITE (*,*) '    Four-momentum conservation sum:'
+      WRITE (*,'(1x,4e25.15)') PSUM(0),PSUM(1),PSUM(2),PSUM(3)
+      WRITE (*,*) '   ---------------------'
 	  END
 
       %(real_dp_format)s function mdot(p1,p2)
