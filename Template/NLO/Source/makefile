@@ -21,7 +21,8 @@ COMBINE = combine_events.o  rw_events.o ranmar.o  kin_functions.o open_file.o rw
 
 .f.o: ; $(FC) $(FFLAGS) -c $*.f
 
-all: $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a  $(LIBDIR)libmodel.a
+all: $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a  $(LIBDIR)libmodel.a \
+    param_card.inc
 	rm -f PDF/*.o
 
 scaled.dat:
@@ -42,15 +43,8 @@ $(LIBDIR)libgeneric.a: $(GENERIC)
 	mv libgeneric.a $(LIBDIR)
 	rm -f $(alfas_functions).o 
 
-
 setrun.o: run_card.inc 
 	$(FC) $(FFLAGS) -c -o setrun.o setrun.f
-
-run_card.inc: ../Cards/run_card.dat
-	../bin/aMCatNLO treatcards_nlo run
-
-param_card.inc: ../Cards/param_card.dat
-	../bin/aMCatNLO treatcards param
 
 $(LIBDIR)libpdf.a: PDF
 	rm -f $(LIBDIR)libpdf.a
@@ -62,6 +56,12 @@ $(LIBDIR)libmodel.a: MODEL param_card.inc
 
 genps.inc: nexternal.inc
 	touch genps.inc
+
+run_card.inc: ../Cards/run_card.dat
+	../bin/aMCatNLO treatcards_nlo run
+
+param_card.inc: ../Cards/param_card.dat
+	../bin/aMCatNLO treatcards_nlo param
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o
 	$(FC) $(FFLAGS) -o gen_ximprove gen_ximprove.o ranmar.o rw_routines.o open_file.o
