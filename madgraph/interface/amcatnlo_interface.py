@@ -26,6 +26,7 @@ import subprocess
 
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
+import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.madevent_interface as me_interface
 import madgraph.interface.amcatnlo_run_interface as run_interface
@@ -595,6 +596,8 @@ _launch_usage = "launch [DIRPATH] [MODE] [options]\n" + \
                 "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n"
 
 _launch_parser = optparse.OptionParser(usage=_launch_usage)
+_launch_parser.add_option("-f", "--force", default=False, action='store_true',
+                                help="Use the card present in the directory for the launch, without editing them")
 _launch_parser.add_option("-c", "--cluster", default=False, action='store_true',
                             help="Submit the jobs on the cluster")
 _launch_parser.add_option("-i", "--interactive", default=False, action='store_true',

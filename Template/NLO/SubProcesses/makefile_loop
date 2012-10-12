@@ -30,4 +30,4 @@ clean:
 		@rm -f *.o
 
 cleanlib:
-	rm -f ../$(LOOPLIB) $(LOOPLIB) $(PROG)
+	rm -f ../$(LOOPLIB) $(PROG)
