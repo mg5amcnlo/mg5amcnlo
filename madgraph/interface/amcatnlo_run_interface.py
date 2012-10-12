@@ -956,31 +956,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         os.chdir(oldcwd)
 
 
-    def add_error_log_in_html(self, errortype=None):
-        """If a ME run is currently running add a link in the html output"""
-
-        # Be very carefull to not raise any error here (the traceback 
-        #will be modify in that case.)
-        if hasattr(self, 'results') and hasattr(self.results, 'current') and\
-                self.results.current and 'run_name' in self.results.current and \
-                hasattr(self, 'me_dir'):
-            name = self.results.current['run_name']
-            tag = self.results.current['tag']
-            self.debug_output = pjoin(self.me_dir, '%s_%s_debug.log' % (name,tag))
-            if errortype:
-                self.results.current.debug = errortype
-            else:
-                self.results.current.debug = self.debug_output
-            
-        else:
-            #Force class default
-            self.debug_output = aMCatNLOCmd.debug_output
-        if os.path.exists('ME5_debug') and not 'ME5_debug' in self.debug_output:
-            os.remove('ME5_debug')
-        if not 'ME5_debug' in self.debug_output:
-            os.system('ln -s %s ME5_debug &> /dev/null' % self.debug_output)
-
-
     ############################################################################
     def set_run_name(self, name, tag=None, level='parton', reload_card=False):
         """define the run name, the run_tag, the banner and the results."""
