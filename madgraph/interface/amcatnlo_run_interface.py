@@ -1423,7 +1423,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             content = file.read()
             file.close()
             if 'FAILED' in content:
-                raise aMCatNLOError('Some tests failed, run cannot continue')
+                raise aMCatNLOError('Some tests failed, run cannot continue.\n' + \
+                        'Please check that widths of final state particles (e.g. top) have been' + \
+                        ' set to 0 in the param_card.dat.')
 
             if not options['reweightonly']:
                 logger.info('   Compiling gensym...')
@@ -1597,6 +1599,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 self.run_tag = self.run_card['run_tag']
                 self.run_name = self.find_available_run_name(self.me_dir)
                 self.set_run_name(self.run_name, self.run_tag, 'parton')
+                #self.do_treatcards_nlo('')
                 return
             if not os.path.isfile(answer):
                 if answer != 'trigger':

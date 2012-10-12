@@ -73,9 +73,11 @@ test_Sij: symmetry_fks_test_Sij.o $(TEST)
 
 test_ME: symmetry_fks_test_ME.o $(TEST)
 	$(FC) $(FFLAGS) -o test_ME symmetry_fks_test_ME.o $(TEST) $(LINKLIBS) $(FJLIBS)
+	rm symmetry_fks_test_ME.o
 
 test_MC: symmetry_fks_test_MC.o $(TEST) 
 	$(FC) $(FFLAGS) -o test_MC symmetry_fks_test_MC.o $(TEST) $(LINKLIBS) $(FJLIBS)
+	rm symmetry_fks_test_MC.o
 
 check_poles: $(POLES)
 	$(FC) $(FFLAGS) -o check_poles $(POLES) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)

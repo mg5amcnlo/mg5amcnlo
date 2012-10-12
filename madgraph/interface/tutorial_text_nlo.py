@@ -92,7 +92,7 @@ calculation, the parton level sample you will obtain can only be showered
 with the selected MonteCarlo.
 
 If you want to generate the showered StdHep file, please be sure to have the 
-MCatNLO-utilities installed (otherwise just type "install-MCatNLO-utilities").
+MCatNLO-utilities installed (otherwise just type "install MCatNLO-utilities").
 Please enter
 NLO> launch -s
 
