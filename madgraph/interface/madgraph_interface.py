@@ -411,34 +411,74 @@ class HelpToCmd(cmd.HelpCmd):
 
     def help_generate(self):
 
-        logger.info("syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
-        logger.info("-- generate diagrams for a given process")
-        logger.info("   Syntax example: l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1")
-        logger.info("   Alternative required s-channels can be separated by \"|\":")
+        logger.info("-- generate diagrams for a given process",'$MG:color:BLUE')
+        logger.info("General leading-order syntax:",'$MG:color:BLACK')
+        logger.info(" o generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
+        logger.info(" o Example: generate l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1",'$MG:color:GREEN')
+        logger.info(" > Alternative required s-channels can be separated by \"|\":")
         logger.info("   b b~ > W+ W- | H+ H- > ta+ vt ta- vt~")
-        logger.info("   If no coupling orders are given, MG5 will try to determine")
+        logger.info(" > If no coupling orders are given, MG5 will try to determine")
         logger.info("   orders to ensure maximum number of QCD vertices.")
-        logger.info("   Note that if there are more than one non-QCD coupling type,")
+        logger.info(" > Note that if there are more than one non-QCD coupling type,")
         logger.info("   coupling orders need to be specified by hand.")
-        logger.info("Decay chain syntax:")
-        logger.info("   core process, decay1, (decay2, (decay2', ...)), ...  etc")
-        logger.info("   Example: p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2")
-        logger.info("   Note that identical particles will all be decayed.")
-        logger.info("To generate a second process use the \"add process\" command")
+        logger.info(" > To generate a second process use the \"add process\" command")
+        logger.info("Decay chain syntax:",'$MG:color:BLACK')
+        logger.info(" o core process, decay1, (decay2, (decay2', ...)), ...  etc")
+        logger.info(" o Example: generate p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2",'$MG:color:GREEN')
+        logger.info(" > Note that identical particles will all be decayed.")
+        logger.info("Loop processes syntax:",'$MG:color:BLACK')
+        logger.info(" o core process [ <NLO_mode=> LoopOrder1 LoopOrder2 ... ] SQUAREDCOUPi=ORDERi")        
+        logger.info(" o Example: generate p p > t~ t QED=0 QCD=2 [ all= QCD ] QCD=6",'$MG:color:GREEN')
+        logger.info(" > Notice that in this format, decay chains are not allowed.")
+        logger.info(" > The LoopOrder(s) defined specify the kind of loops to consider (only QCD for now).")
+        logger.info(" > The coupling restrictions before '[' restrict the orders of born *amplitudes*.")
+        logger.info("   So that in the example above QCD=2 restricts the born amplitude to have at")   
+        logger.info("   most QCD=2 and loop amplitudes at most QCD=2+2 (because QCD loops are considered)")             
+        logger.info(" > The coupling restrictions after ']' restrict the orders of the matrix element, ")
+        logger.info("   namely the squared amplitudes. In the example above QCD=6 correspond to born") 
+        logger.info("   amplitudes with QCD=2 squared against loop amplitudes with QCD=4, adding up to 6.")
+        logger.info(" > The optional <NLO_mode=> can be any of the following ('all=' by default if absent):")                    
+        logger.info("     all=   : Generate all the real-emission and loop diagrams, ready for aMC@NLO runs.")                    
+        logger.info("     virt=  : Generate only the loop diagrams, read for MadLoop standalone checks/runs.")                    
+        logger.info("     real=  : Generate only the real-emission diagrams, for use with alternative OLP. ")                    
+        logger.info(" > For processes without born amplitudes (i.e. loop-induced like g g > z), please use ")                    
+        logger.info("   the 'virt=' nlo mode. aMC@NLO cannot integrate these processes, but standalone MadLoop5")                    
+        logger.info("   can still handle these.")                    
 
     def help_add(self):
 
-        logger.info("syntax: add process INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2")
-        logger.info("-- generate diagrams for a process and add to existing processes")
-        logger.info("   Syntax example: l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1")
-        logger.info("   Alternative required s-channels can be separated by \"|\":")
+        logger.info("-- generate diagrams for a process and add to existing processes",'$MG:color:BLUE')
+        logger.info("General leading-order syntax:",'$MG:color:BLACK')
+        logger.info(" o add INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
+        logger.info(" o Example: add process l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1",'$MG:color:GREEN')
+        logger.info(" > Alternative required s-channels can be separated by \"|\":")
         logger.info("   b b~ > W+ W- | H+ H- > ta+ vt ta- vt~")
-        logger.info("   If no coupling orders are given, MG5 will try to determine")
+        logger.info(" > If no coupling orders are given, MG5 will try to determine")
         logger.info("   orders to ensure maximum number of QCD vertices.")
-        logger.info("Decay chain syntax:")
-        logger.info("   core process, decay1, (decay2, (decay2', ...)), ...  etc")
-        logger.info("   Example: p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2")
-        logger.info("   Note that identical particles will all be decayed.")
+        logger.info(" > Note that if there are more than one non-QCD coupling type,")
+        logger.info("   coupling orders need to be specified by hand.")
+        logger.info("Decay chain syntax:",'$MG:color:BLACK')
+        logger.info(" o core process, decay1, (decay2, (decay2', ...)), ...  etc")
+        logger.info(" o Example: add process p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2",'$MG:color:GREEN')
+        logger.info(" > Note that identical particles will all be decayed.")
+        logger.info("Loop processes syntax:",'$MG:color:BLACK')
+        logger.info(" o core process [ <NLO_mode=> LoopOrder1 LoopOrder2 ... ] SQUAREDCOUPi=ORDERi")        
+        logger.info(" o Example: add process p p > t~ t QED=0 QCD=2 [ all= QCD ] QCD=6",'$MG:color:GREEN')
+        logger.info(" > Notice that in this format, decay chains are not allowed.")
+        logger.info(" > The LoopOrder(s) defined specify the kind of loops to consider (only QCD for now).")
+        logger.info(" > The coupling restrictions before '[' restrict the orders of born *amplitudes*.")
+        logger.info("   So that in the example above QCD=2 restricts the born amplitude to have at")   
+        logger.info("   most QCD=2 and loop amplitudes at most QCD=2+2 (because QCD loops are considered)")             
+        logger.info(" > The coupling restrictions after ']' restrict the orders of the matrix element, ")
+        logger.info("   namely the squared amplitudes. In the example above QCD=6 correspond to born") 
+        logger.info("   amplitudes with QCD=2 squared against loop amplitudes with QCD=4, adding up to 6.")
+        logger.info(" > The optional <NLO_mode=> can be any of the following ('all=' by default if absent):")                    
+        logger.info("     all=   : Generate all the real-emission and loop diagrams, ready for aMC@NLO runs.")                    
+        logger.info("     virt=  : Generate only the loop diagrams, read for MadLoop standalone checks/runs.")                    
+        logger.info("     real=  : Generate only the real-emission diagrams, for use with alternative OLP. ")                    
+        logger.info(" > For processes without born amplitudes (i.e. loop-induced like g g > z), please use ")                    
+        logger.info("   the 'virt=' nlo mode. aMC@NLO cannot integrate these processes, but standalone MadLoop5")                    
+        logger.info("   can still handle these.")
 
     def help_define(self):
         logger.info("syntax: define multipart_name [=] part_name_list")
@@ -1263,8 +1303,68 @@ class CheckValidForCmdWeb(CheckValidForCmd):
 class CompleteForCmd(cmd.CompleteCmd):
     """ The Series of help routine for the MadGraphCmd"""
      
-    def model_completion(self, text, process, line):
+    def nlo_completion(self,args,text,line):
+        """ complete the nlo settings within square brackets """
+
+        # We are now editing the loop related options
+        # Automatically allow for QCD perturbation if in the sm because the
+        # loop_sm would then automatically be loaded
+
+        pert_couplings_allowed = self._curr_model['perturbation_couplings']
+        if self._curr_model.get('name').startswith('sm'):
+            pert_couplings_allowed = pert_couplings_allowed + ['QCD']
+        # Find wether the loop mode is already set or not
+        loop_specs = line[line.index('[')+1:]
+        try:
+            loop_orders = loop_specs[loop_specs.index('=')+1:]
+        except ValueError:
+            loop_orders = loop_specs
+        possibilities = []
+        possible_orders = [order for order in pert_couplings_allowed if \
+                                                  order not in loop_orders]
+        # Simplify obvious loop completion
+        single_completion = ''
+        if len(self._nlo_modes_for_completion)==1:
+                single_completion = '%s= '%self._nlo_modes_for_completion[0]
+                if len(possible_orders)==1:
+                    single_completion = single_completion + possible_orders[0] + ' ] '
+        # Automatically add a space if not present after [ or =
+        if text.endswith('['):
+            if single_completion != '':
+                return self.list_completion(text, ['[ '+single_completion])
+            else:
+                return self.list_completion(text,['[ '])
+
+        if text.endswith('='):
+            return self.list_completion(text,[' '])
+
+        if args[-1]=='[':
+            possibilities = possibilities + ['%s= '%mode for mode in \
+                                             self._nlo_modes_for_completion]                    
+            if single_completion != '':
+                return self.list_completion(text, [single_completion])
+            else:
+                if len(possible_orders)==1:
+                    return self.list_completion(text, [poss+' %s ] '%\
+                              possible_orders[0] for poss in possibilities])
+                return self.list_completion(text, possibilities)
+
+        if len(possible_orders)==1:
+            possibilities.append(possible_orders[0]+' ] ')
+        else:
+            possibilities.extend(possible_orders)
+        if any([(order in loop_orders) for order in pert_couplings_allowed]):
+            possibilities.append(']')
+        return self.list_completion(text, possibilities)
+ 
+    def model_completion(self, text, process, line, advanced = True):
         """ complete the line with model information """
+
+        # First check if we are within squared brackets so that specific 
+        # input for NLO settings must be completed
+        args = self.split_arg(process)
+        if len(args) > 2 and '>' in line and '[' in line and not ']' in line:
+            return self.nlo_completion(args,text,line)
 
         while ',' in process:
             process = process[process.index(',')+1:]
@@ -1277,16 +1377,18 @@ class CompleteForCmd(cmd.CompleteCmd):
         if self._curr_model.get('name').startswith('sm'):
             pert_couplings_allowed = pert_couplings_allowed + ['QCD']
 
+        # Remove possible identical names
+        particles = list(set(self._particle_names + self._multiparticles.keys()))
+        n_part_entered = len([1 for a in args if a in particles])
+
         # Force '>' if two initial particles.
-        if len(args) == 2 and args[-1] != '>':
+        if n_part_entered == 2 and args[-1] != '>':
                 return self.list_completion(text, '>')
             
         # Add non-particle names
         syntax = []
         couplings = []
-        # Remove possible identical names
-        particles = list(set(self._particle_names + self._multiparticles.keys()))
-        if len(args) > 0 and args[-1] != '>':
+        if len(args) > 0 and args[-1] != '>' and n_part_entered > 0:
             syntax.append('>')
         if '>' in args and args.index('>') < len(args) - 1:
             couplings.extend([c + "=" for c in self._couplings] + ['WEIGHTED='])
@@ -1298,22 +1400,29 @@ class CompleteForCmd(cmd.CompleteCmd):
         if '[' in line:
             syntax = []
             particles = []
+            # But still allow for defining the process id
+            couplings.append('@')
         
-        # The direct completion
-        # return self.list_completion(text, particles+syntax+couplings)
-        
-        # A more elaborate one with categories
-        poss_particles = self.list_completion(text, particles)
-        poss_syntax = self.list_completion(text, syntax)
-        poss_couplings = self.list_completion(text, couplings)
-        possibilities = {}
-        if poss_particles != []: possibilities['Particles']=poss_particles
-        if poss_syntax != []: possibilities['Syntax']=poss_syntax
-        if poss_couplings != []: possibilities['Coupling orders']=poss_couplings
-        if len(possibilities.keys())==1:    
-            return self.list_completion(text, possibilities.values()[0])   
+        if not advanced:
+            # The direct completion (might be needed for some completion using
+            # this function but adding some other completions (like in check)).
+            # For those, it looks ok in the advanced mode on my mac, but if
+            # someone sees wierd result on Linux systems, then use the 
+            # default completion for these features.
+            return self.list_completion(text, particles+syntax+couplings)
         else:
-            return self.deal_multiple_categories(possibilities)     
+            # A more elaborate one with categories
+            poss_particles = self.list_completion(text, particles)
+            poss_syntax = self.list_completion(text, syntax)
+            poss_couplings = self.list_completion(text, couplings)
+            possibilities = {}
+            if poss_particles != []: possibilities['Particles']=poss_particles
+            if poss_syntax != []: possibilities['Syntax']=poss_syntax
+            if poss_couplings != []: possibilities['Coupling orders']=poss_couplings
+            if len(possibilities.keys())==1:    
+                return self.list_completion(text, possibilities.values()[0])   
+            else:
+                return self.deal_multiple_categories(possibilities)     
                     
     def complete_generate(self, text, line, begidx, endidx):
         "Complete the generate command"
@@ -1321,60 +1430,9 @@ class CompleteForCmd(cmd.CompleteCmd):
         # Return list of particle names and multiparticle names, as well as
         # coupling orders and allowed symbols
         args = self.split_arg(line[0:begidx])
-
-        if len(args) > 2 and '>' in line and '[' in line and not ']' in line:
-            # We are now editing the loop related options
-            # Automatically allow for QCD perturbation if in the sm because the
-            # loop_sm would then automatically be loaded
-            pert_couplings_allowed = self._curr_model['perturbation_couplings']
-            if self._curr_model.get('name').startswith('sm'):
-                pert_couplings_allowed = pert_couplings_allowed + ['QCD']
-            # Find wether the loop mode is already set or not
-            loop_specs = line[line.index('[')+1:]
-            try:
-                loop_orders = loop_specs[loop_specs.index('=')+1:]
-            except ValueError:
-                loop_orders = loop_specs
-            possibilities = []
-            possible_orders = [order for order in pert_couplings_allowed if \
-                                                      order not in loop_orders]
-            # Simplify obvious loop completion
-            single_completion = ''
-            if len(self._nlo_modes_for_completion)==1:
-                    single_completion = '%s= '%self._nlo_modes_for_completion[0]
-                    if len(possible_orders)==1:
-                        single_completion = single_completion + possible_orders[0] + ' ] '
-            # Automatically add a space if not present after [ or =
-            if text.endswith('['):
-                if single_completion != '':
-                    return self.list_completion(text, ['[ '+single_completion])
-                else:
-                    return self.list_completion(text,['[ '])
-
-            if text.endswith('='):
-                return self.list_completion(text,[' '])
-
-            if args[-1]=='[':
-                possibilities = possibilities + ['%s= '%mode for mode in \
-                                                 self._nlo_modes_for_completion]                    
-                if single_completion != '':
-                    return self.list_completion(text, [single_completion])
-                else:
-                    if len(possible_orders)==1:
-                        return self.list_completion(text, [poss+' %s ] '%\
-                                  possible_orders[0] for poss in possibilities])
-                    return self.list_completion(text, possibilities)
-
-            if len(possible_orders)==1:
-                possibilities.append(possible_orders+' ] ')
-            else:
-                possibilities.extend(possible_orders)
-            if any([(order in loop_orders) for order in pert_couplings_allowed]):
-                possibilities.append(']')
-
-            return self.list_completion(text, possibilities)
         
-        if len(args) > 2 and args[-1] == '@' or args[-1].endswith('='):
+        if len(args) > 2 and args[-1] == '@' or ( args[-1].endswith('=') and \
+                            (not '[' in line or ('[' in line and ']' in line))):
             return
 
         try:
@@ -1429,9 +1487,6 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) == 1:
             return self.list_completion(text, self._check_opts)
 
-        
-
-
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text, pjoin(*[a for a in args \
@@ -1440,9 +1495,12 @@ class CompleteForCmd(cmd.CompleteCmd):
         model_comp = self.model_completion(text, ' '.join(args[2:]),line)
 
         if len(args) == 2:
-            return model_comp + self.path_completion(text)
+            if args[-1] in ['timing','profile','stability']:
+                return model_comp
+            else:
+                return model_comp + self.path_completion(text)
 
-        if len(args) > 2:
+        elif len(args) > 2:
             return model_comp
             
         
@@ -2016,7 +2074,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._mgme_dir = MG4DIR
         self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
         self._comparisons = None
-        self._nlo_modes_for_completion = self._valid_nlo_modes
+        self._nlo_modes_for_completion = ['all','virt','real']
 
         # Load the configuration file
         self.set_configuration()
@@ -2037,7 +2095,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         self._v4_export_formats = ['madevent', 'standalone', 'matrix'] 
         self._export_formats = self._v4_export_formats + ['standalone_cpp', 'pythia8']
-        self._nlo_modes_for_completion = self._valid_nlo_modes
+        self._nlo_modes_for_completion = ['all','virt','real']
     
     def do_quit(self, line):
         """Do quit"""
