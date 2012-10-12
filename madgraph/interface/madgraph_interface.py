@@ -2976,6 +2976,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     multipart_name = line.split()[0]
                 if multipart_name not in self._multiparticles:
                     self.do_define(line)
+                    self.exec_cmd('define %s' % line, printcmd=False, precmd=True)
             except self.InvalidCmd, why:
                 logger_stderr.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
@@ -3370,23 +3371,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
-                    self.exec_cmd("set %s %s --no_save" % (key, self.options[key]), 
-                                   printcmd=False, log=False)
+                    self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
                 except MadGraph5Error, error:
                     print error
                     logger.warning("Option %s from config file not understood" \
                                    % key)
-            elif key == 'stdout_level':
-                if self.options[key] != None:
-                    # Default: try to set parameter
-                    try:
-                        self.do_set("%s %s" % (key, self.options[key]), log=False)
-                    except MadGraph5Error, error:
-                        print error
-                        logger.warning("Option %s from config file not understood" \
-                                       % key)
                 else:
-                    self.options[key] = logger.level                
+                    if key in self.options_madgraph:
+                        self.history.append('set %s %s' % (key, self.options[key]))             
         
         # Configure the way to open a file:
         launch_ext.open_file.configure(self.options)
@@ -3433,10 +3425,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 else:
                      ME = madevent_interface.MadEventCmd(me_dir=args[1],options=self.options)
                      ME.pass_in_web_mode()
-                # transfer interactive configuration
-                config_line = [l for l in self.history if l.strip().startswith('set')]
-                for line in config_line:
-                    ME.exec_cmd(line)
                 stop = self.define_child_cmd_interface(ME)                
                 return stop
             

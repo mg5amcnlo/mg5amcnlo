@@ -450,6 +450,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     history_header = ""
     
     _display_opts = ['options','variable']
+    helporder = ['Documented commands']
     
     class InvalidCmd(Exception):
         """expected error for wrong command"""
@@ -1079,7 +1080,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     do_exit = do_quit
 
     def do_help(self, line):
-        """ propose some usefull possible action """
+        """Not in help: propose some usefull possible action """
                 
         # if they are an argument use the default help
         if line:
@@ -1116,11 +1117,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 
 
         self.stdout.write("%s\n"%str(self.doc_leader))
-        tag = "Documented commands"
-        header = "%s (type help <topic>):" % tag
-        self.print_topics(header, cmds[tag],   15,80)
+        for tag in self.helporder:
+            header = "%s (type help <topic>):" % tag
+            self.print_topics(header, cmds[tag],   15,80)
         for name, item in cmds.items():
-            if name == "Documented commands":
+            if name in self.helporder:
                 continue
             if name == "Not in help":
                 continue

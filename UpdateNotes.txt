@@ -3,15 +3,18 @@ Update notes for MadGraph 5 (in reverse time order)
 1.5.2 (11/10/12)  OM: Fix Bug for mssm model. The param_card was not read properly
                       for this model. (introduce in 1.5.0)
                   OM: If the code is run with an input file (./bin/mg5 cmd.cmd)
-                      All question not answered in the file with be answered by the 
+                      All question not answered in the file will be answered by the 
                       default value. Running with piping data is not affected by this.
                       i.e. running ./bin/mg5 cmd.cmd < answer_to_question 
                        or echo 'answer_to_question' | ./bin/mg5 cmd.cmd      
                       are not affected by this change and will work as expected.
-                  OM: Fixing a bug preventing to use the set MH 125 command in a
+                  OM: Fixing a bug preventing to use the "set MH 125" command in a
                       script file.
                   JA: Fixed a bug in format of results.dat file for impossible
                       configurations in processes with conflicting BWs.
+                  OM: Adding command "launch" in madevent interface which is the
+                      exact equivalent to the launch command in the MG5 interface
+                      in madevent output.
 
 1.5.1 (06/10/12)  JA: Fixed symmetry factors in non-grouped MadEvent mode
                       (bug introduced in v. 1.5.0).
