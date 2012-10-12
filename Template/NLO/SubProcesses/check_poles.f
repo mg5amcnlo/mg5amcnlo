@@ -41,7 +41,6 @@ cc
       include 'q_es.inc'
       double precision pmass(nexternal), pmass_rambo(nexternal)
       integer nfail
-      include 'pmass.inc'
       
 
 C-----
@@ -52,6 +51,7 @@ C-----
       call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
+      include 'pmass.inc'
       
       write(*,*)' Insert the number of points to test'
       read(*,*) npoints
