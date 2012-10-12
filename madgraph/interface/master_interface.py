@@ -415,7 +415,6 @@ class Switcher(object):
         return self.cmd.do_quit(self, *args, **opts)
         
     def do_save(self, *args, **opts):
-        print args, opts
         return self.cmd.do_save(self, *args, **opts)
         
     def do_set(self, *args, **opts):

@@ -4681,12 +4681,26 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             fj_lhapdf_file = open(os.path.join(self._export_dir,'Source','fj_lhapdf_opts'),'w')
 
             try:
-                res = misc.call([self.options['fastjet'], '--version'], stdout=devnull)
+                p = subprocess.Popen([self.options['fastjet'], '--version'], stdout=subprocess.PIPE, 
+                stderr=subprocess.PIPE)
+                output, error = p.communicate()
+                res = 0
             except:
                 res = 1
-            if res != 0:
-                logger.warning('The value for fastjet in the current configuration does not ' + \
-                        'correspond to a valid executable.\nPlease set it correctly either in ' + \
+                pass
+
+            if res != 0 or error:
+                logger.warning('The value for "fastjet" in the current configuration does not ' + \
+                        'correspond to a valid executable.\nPlease make sure you have FastJet ' + \
+                        'v3 or greater installed, then set the variable correctly either in ' + \
+                        'input/mg5_configuration or with "set fastjet /path/to/fastjet-config" ' + \
+                        'and regenrate the process. To avoid regeneration, manually edit the ' + \
+                        ('%s/Source/fj_lhapdf_opts file\n' % self._export_dir) + \
+                        'You will NOT be able to run aMC@NLO otherwise.\n')
+            elif int(output.split('.')[0]) < 3:
+                logger.warning('The value for "fastjet" in the current configuration is not ' + \
+                        'v3 or greater. Please install FastJet v3+, then set the variable ' + \
+                        'correctly either in ' + \
                         'input/mg5_configuration or with "set fastjet /path/to/fastjet-config" ' + \
                         'and regenrate the process. To avoid regeneration, manually edit the ' + \
                         ('%s/Source/fj_lhapdf_opts file\n' % self._export_dir) + \

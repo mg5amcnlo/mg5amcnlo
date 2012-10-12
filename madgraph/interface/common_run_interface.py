@@ -211,6 +211,7 @@ class CheckValidForCmd(object):
 #===============================================================================
 class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 
+    debug_output = 'ME5_debug'
 
     def do_treatcards_nlo(self,line):
         """this is for creating the correct run_card.inc from the nlo format run_card"""
@@ -349,7 +350,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             
         else:
             #Force class default
-            self.debug_output = aMCatNLOCmd.debug_output
+            self.debug_output = CommonRunCmd.debug_output
         if os.path.exists('ME5_debug') and not 'ME5_debug' in self.debug_output:
             os.remove('ME5_debug')
         if not 'ME5_debug' in self.debug_output:

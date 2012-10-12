@@ -87,20 +87,44 @@ C-----
               p_born(2,1) = 0d0
               p_born(3,1) = 0d0
           elseif (nincoming.eq.2) then
-              call rambo(0, nexternal-nincoming-1, energy, 
-     1         pmass_rambo, prambo)
-              p_born(0,1) = energy/2d0
-              p_born(1,1) = 0d0
-              p_born(2,1) = 0d0
-              p_born(3,1) = energy/2d0
-              if (pmass(1) > 0d0) 
-     1           p_born(3,1) = dsqrt(pmass(1)**2+energy**2/4d0)
-              p_born(0,2) = energy/2
-              p_born(1,2) = 0d0
-              p_born(2,2) = 0d0
-              p_born(3,2) = -energy/2d0
-              if (pmass(2) > 0d0) 
-     1           p_born(3,2) = -dsqrt(pmass(2)**2+energy**2/4d0)
+              if (nexternal - nincoming - 1 .eq.1) then
+                  ! deal with the case of only one particle in the final
+                  ! state
+                  p_born(0,1) = pmass(3)/2d0
+                  p_born(1,1) = 0d0
+                  p_born(2,1) = 0d0
+                  p_born(3,1) = pmass(3)/2d0
+                  if (pmass(1) > 0d0) 
+     1               p_born(3,1) = dsqrt(pmass(3)**2/4d0 - pmass(1)**2)
+                  p_born(0,2) = pmass(3)/2d0
+                  p_born(1,2) = 0d0
+                  p_born(2,2) = 0d0
+                  p_born(3,2) = -pmass(3)/2d0
+                  if (pmass(2) > 0d0) 
+     1               p_born(3,2) = -dsqrt(pmass(3)**2/4d0 - pmass(1)**2)
+
+                  prambo(0,1) = pmass(3)
+                  prambo(1,1) = 0d0
+                  prambo(2,1) = 0d0
+                  prambo(3,1) = 0d0
+
+              else
+                    
+                  call rambo(0, nexternal-nincoming-1, energy, 
+     1             pmass_rambo, prambo)
+                  p_born(0,1) = energy/2d0
+                  p_born(1,1) = 0d0
+                  p_born(2,1) = 0d0
+                  p_born(3,1) = energy/2d0
+                  if (pmass(1) > 0d0) 
+     1               p_born(3,1) = dsqrt(energy**2/4d0 - pmass(1)**2)
+                  p_born(0,2) = energy/2
+                  p_born(1,2) = 0d0
+                  p_born(2,2) = 0d0
+                  p_born(3,2) = -energy/2d0
+                  if (pmass(2) > 0d0) 
+     1               p_born(3,2) = -dsqrt(energy**2/4d0 - pmass(1)**2)
+              endif
           else
               write(*,*) 'INVALID NUMBER OF INCOMING PARTICLES', 
      1          nincoming

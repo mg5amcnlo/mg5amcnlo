@@ -1545,7 +1545,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             card = {0:'done'}
             for i, c in enumerate(cards):
                 card[i+1] = c
-            print card
 
             possible_answer = []
             for i, c in card.items():
@@ -1631,7 +1630,8 @@ _compile_usage = "compile [MODE] [options]\n" + \
                 "   or MC for matching with parton-shower monte-carlos. \n" + \
                 "   (if omitted, it is set to MC)\n"
 _compile_parser = optparse.OptionParser(usage=_compile_usage)
-
+_compile_parser.add_option("-f", "--force", default=False, action='store_true',
+                                help="Use the card present in the directory for the launch, without editing them")
 _compile_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip compiling reweight executable")
 
