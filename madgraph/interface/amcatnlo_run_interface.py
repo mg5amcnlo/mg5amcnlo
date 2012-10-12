@@ -298,10 +298,7 @@ class HelpToCmd(object):
 
     def help_shower(self):
         """help for shower command"""
-        logger.info('syntax: run_mcatnlo run_name')
-        logger.info('-- do shower/hadronization on parton-level file generated for run run_name')
-        logger.info('   all the information (e.g. number of events, MonteCarlo, ...)')
-        logger.info('   are directly read from the header of the event file')
+        _shower_parser.print_help()
 
     
     def help_open(self):
@@ -334,7 +331,7 @@ class CheckValidForCmd(object):
     def check_shower(self, args, options):
         """Check the validity of the line. args[0] is the run_directory"""
         if len(args) == 0:
-            self.help_run_mcatnlo()
+            self.help_shower()
             raise self.InvalidCmd, 'Invalid syntax, please specify the run directory'
         if not os.path.isdir(pjoin(self.me_dir, 'Events', args[0])):
             raise self.InvalidCmd, 'Directory %s does not exists' % \
@@ -601,10 +598,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     def do_shower(self, line):
         """ run the shower on a given parton level file """
         argss = self.split_arg(line)
+        (options, argss) = _generate_events_parser.parse_args(argss)
         # check argument validity and normalise argument
-        self.check_shower(argss, {})
+        options = options.__dict__
+        self.check_shower(argss, options)
+        options['shower'] = 'only'
         evt_file = pjoin(os.getcwd(), argss[0], 'events.lhe')
-        self.ask_run_configuration('', {'shower':'only'})
+        self.ask_run_configuration('', options)
         if self.check_mcatnlo_dir():
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
@@ -1672,6 +1672,14 @@ _calculate_xsect_parser.add_option("-m", "--multicore", default=False, action='s
 _calculate_xsect_parser.add_option("-n", "--nocompile", default=False, action='store_true',
                             help="Skip compilation. Ignored if no executable is found, " + \
                             "or with --tests")
+
+_shower_usage = 'shower run_name [options]\n' + \
+        '-- do shower/hadronization on parton-level file generated for run run_name\n' + \
+        '   all the information (e.g. number of events, MonteCarlo, ...\n' + \
+        '   are directly read from the header of the event file\n'
+_shower_parser = optparse.OptionParser(usage=_shower_usage)
+_shower_parser.add_option("-f", "--force", default=False, action='store_true',
+                                help="Use the shower_card present in the directory for the launch, without editing")
 
 
 _generate_events_usage = "generate_events [ORDER] [options]\n" + \
