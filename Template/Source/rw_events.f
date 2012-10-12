@@ -1,4 +1,4 @@
-      subroutine read_event(lun,P,wgt,nexternal,ic,ievent,sscale,aqcd,aqed,buff,buff2,done)
+      subroutine read_event(lun,P,wgt,nexternal,ic,ievent,sscale,aqcd,aqed,buff,buff2,nclus,buffclus,done)
 c********************************************************************
 c     Reads one event from data file #lun
 c     ic(*,1) = Particle ID
@@ -24,6 +24,9 @@ c
       integer ievent
       character*(*) buff
       character*(*) buff2
+      integer nclus
+      character*(clus_bufflen) buffclus(*)
+
 c
 c     Local
 c
@@ -72,6 +75,20 @@ c     Systematics info
          backspace(lun)
          buff2=''
       endif
+c     Clustering info
+      read(lun,'(a)',end=99,err=99) buffclus(1)
+      if(buffclus(1).ne.'<clustering>') then
+         buffclus(1)=' '
+         backspace(lun)
+         nclus=0
+      else
+         i=1
+         do while(buffclus(i).ne.'</clustering>')
+            i=i+1
+            read(lun,'(a)',end=99,err=99) buffclus(i)
+         enddo
+         nclus=i
+      endif
       return
  99   done=.true.
       return
@@ -79,7 +96,7 @@ c     Systematics info
       end
 
       subroutine write_event(lun,P,wgt,nexternal,ic,ievent,scale,aqcd,
-     $     aqed,buff,buff2)
+     $     aqed,buff,buff2,nclus,buffclus)
 c********************************************************************
 c     Writes one event from data file #lun according to LesHouches
 c     ic(1,*) = Particle ID
@@ -91,6 +108,9 @@ c     ic(6,*) = ISTUP   -1=initial state +1=final  +2=decayed
 c     ic(7,*) = Helicity
 c********************************************************************
       implicit none
+
+      include 'maxparticles.inc'
+      include 'run_config.inc'
 c
 c     parameters
 c
@@ -105,6 +125,8 @@ c
       double precision aqcd, aqed, scale
       character*300 buff
       character*(*) buff2
+      integer nclus
+      character*(clus_bufflen) buffclus(*)
 c
 c     Local
 c
@@ -127,6 +149,9 @@ c      aqcd = g*g/4d0/pi
       enddo
       if(buff(1:1).eq.'#') write(lun,'(a)') buff(1:len_trim(buff))
       if(buff2(1:1).eq.'#') write(lun,'(a)') buff2(1:len_trim(buff2))
+      do i=1,nclus
+         write(lun,'(a)') buffclus(i)
+      enddo
       write(lun,'(a)') '</event>'
       return
  51   format(i9,5i5,5e19.11,f3.0,f4.0)
