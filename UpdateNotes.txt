@@ -10,6 +10,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       are not affected by this change and will work as expected.
                   OM: Fixing a bug preventing to use the set MH 125 command in a
                       script file.
+                  JA: Fixed a bug in format of results.dat file for impossible
+                      configurations in processes with conflicting BWs.
 
 1.5.1 (06/10/12)  JA: Fixed symmetry factors in non-grouped MadEvent mode
                       (bug introduced in v. 1.5.0).
