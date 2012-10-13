@@ -4956,16 +4956,23 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.run_card[name] = value
         
     def setP(self, block, lhaid, value):
-        if value == 'default':
-            default = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
-            value = default[block].param_dict[lhaid].value
+        if isinstance(value, str):
+            value = value.lower()
+            if value == 'default':
+                default = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
+                value = default[block].param_dict[lhaid].value
         
-        if value.lower() == 'auto':
-            value = 'Auto'
-            if block != 'decay':
-                logger.warning('Invalid input: \'Auto\' value only valid for DECAY')
-                return
-        
+            elif value == 'auto':
+                value = 'Auto'
+                if block != 'decay':
+                    logger.warning('Invalid input: \'Auto\' value only valid for DECAY')
+                    return
+            else:
+                try:
+                    value = float(value)
+                except ValueError:
+                    logger.warning('Invalid input: \'%s\' not valid intput.'% value)
+                    
         logger.info('modify param_card information BLOCK %s with id %s set to %s' %\
                     (block, lhaid, value))
         self.param_card[block].param_dict[lhaid].value = value
