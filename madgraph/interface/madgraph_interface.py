@@ -198,7 +198,7 @@ class CmdExtended(cmd.Cmd):
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
         "*           Type 'tutorial' to learn how MG5 works         *\n" + \
-        "*      Type 'tutorial nlo' to learn how aMC@NLO works      *\n" + \
+        "*      Type 'tutorial NLO' to learn how aMC@NLO works      *\n" + \
         "*    Type 'tutorial MadLoop' to learn how MadLoop works    *\n" + \
         "*                                                          *\n" + \
         "************************************************************")
@@ -266,8 +266,8 @@ class HelpToCmd(cmd.HelpCmd):
     """ The Series of help routine for the MadGraphCmd"""    
     
     def help_save(self):
-        logger.info("syntax: save %s FILENAME" % "|".join(self._save_opts))
-        logger.info("-- save information as file FILENAME")
+        logger.info("syntax: save %s FILENAME" % "|".join(self._save_opts),'$MG:color:BLUE')
+        logger.info("-- save information as file FILENAME",'$MG:color:BLACK')
         logger.info("   FILENAME is optional for saving 'options'.")
         logger.info('   By default it uses ./input/mg5_configuration.txt')
         logger.info('   If you put "global" for FILENAME it will use ~/.mg5/mg5_configuration.txt')
@@ -275,15 +275,15 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info('   to read the local options files.')
 
     def help_load(self):
-        logger.info("syntax: load %s FILENAME" % "|".join(self._save_opts))
-        logger.info("-- load information from file FILENAME")
+        logger.info("syntax: load %s FILENAME" % "|".join(self._save_opts),'$MG:color:BLUE')
+        logger.info("-- load information from file FILENAME",'$MG:color:BLACK')
 
     def help_import(self):
         logger.info("syntax: import " + "|".join(self._import_formats) + \
-              " FILENAME")
-        logger.info("-- imports file(s) in various formats")
+              " FILENAME",'$MG:color:BLUE')
+        logger.info("-- imports file(s) in various formats",'$MG:color:GREEN')
         logger.info("")
-        logger.info("   import model MODEL[-RESTRICTION] [--modelname]:")
+        logger.info("   import model MODEL[-RESTRICTION] [--modelname]:",'$MG:color:BLACK')
         logger.info("      Import a UFO model.")
         logger.info("      MODEL should be a valid UFO model name")
         logger.info("      Model restrictions are specified by MODEL-RESTRICTION")
@@ -292,45 +292,46 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("        Specify model_name-full to get unrestricted model.")
         logger.info("      '--modelname' keeps the original particle names for the model")
         logger.info("")
-        logger.info("   import model_v4 MODEL [--modelname] :")
+        logger.info("   import model_v4 MODEL [--modelname] :",'$MG:color:BLACK')
         logger.info("      Import an MG4 model.")
         logger.info("      Model should be the name of the model")
         logger.info("      or the path to theMG4 model directory")
         logger.info("      '--modelname' keeps the original particle names for the model")
         logger.info("")
         logger.info("   import proc_v4 [PATH] :"  )
-        logger.info("      Execute MG5 based on a proc_card.dat in MG4 format.")
+        logger.info("      Execute MG5 based on a proc_card.dat in MG4 format.",'$MG:color:BLACK')
         logger.info("      Path to the proc_card is optional if you are in a")
         logger.info("      madevent directory")
         logger.info("")
-        logger.info("   import command PATH :")
+        logger.info("   import command PATH :",'$MG:color:BLACK')
         logger.info("      Execute the list of command in the file at PATH")
         logger.info("")
-        logger.info("   import banner PATH  [--no_launch]:")
+        logger.info("   import banner PATH  [--no_launch]:",'$MG:color:BLACK')
         logger.info("      Rerun the exact same run define in the valid banner.")
  
     def help_install(self):
-        logger.info("syntax: install " + "|".join(self._install_opts))
+        logger.info("syntax: install " + "|".join(self._install_opts),'$MG:color:BLUE')
         logger.info("-- Download the last version of the program and install it")
-        logger.info("   localy in the current Madgraph version. In order to have")
-        logger.info("   a sucessfull instalation, you will need to have up-to-date")
+        logger.info("   locally in the current Madgraph version. In order to have")
+        logger.info("   a successful installation, you will need to have an up-to-date")
         logger.info("   F77 and/or C and Root compiler.")
         logger.info(" ")
-        logger.info("   \"install update\" check if your MG5 installation is the latest one.")
+        logger.info("   \"install update\"",'$MG:color:BLACK')
+        logger.info("   check if your MG5 installation is the latest one.")
         logger.info("   If not it load the difference between your current version and the latest one,")
         logger.info("   and apply it to the code. Two options are available for this command:")
         logger.info("     -f: didn't ask for confirmation if it founds an update.")
         logger.info("     --timeout=: Change the maximum time allowed to reach the server.")
         
     def help_display(self):
-        logger.info("syntax: display " + "|".join(self._display_opts))
+        logger.info("syntax: display " + "|".join(self._display_opts),'$MG:color:BLUE')
         logger.info("-- display a the status of various internal state variables")
         logger.info("   for particles/interactions you can specify the name or id of the")
         logger.info("   particles/interactions to receive more details information.")
-        logger.info("   Example: display particles e+.")
-        logger.info("   For \"checks\", can specify only to see failed checks.")
-        logger.info("   For \"diagrams\", you can specify where the file will be written.")
-        logger.info("   Example: display diagrams ./")
+        logger.info("   Example: display particles e+.",'$MG:color:GREEN')
+        logger.info(" > For \"checks\", can specify only to see failed checks.")
+        logger.info(" > For \"diagrams\", you can specify where the file will be written.")
+        logger.info("   Example: display diagrams ./",'$MG:color:GREEN')
         
         
     def help_launch(self):
@@ -338,30 +339,33 @@ class HelpToCmd(cmd.HelpCmd):
         _launch_parser.print_help()
 
     def help_tutorial(self):
-        logger.info("syntax: tutorial [" + "|".join(self._tutorial_opts) + "]")
+        logger.info("syntax: tutorial [" + "|".join(self._tutorial_opts) + "]",'$MG:color:BLUE')
         logger.info("-- start/stop the MG5 tutorial mode (or stop any other mode)")
-        logger.info("-- nlo: start aMC@NLO tutorial mode")
+        logger.info("-- NLO: start aMC@NLO tutorial mode")
         logger.info("-- MadLoop: start MadLoop tutorial mode")
 
     def help_open(self):
-        logger.info("syntax: open FILE  ")
-        logger.info("-- open a file with the appropriate editor.")
+        logger.info("syntax: open FILE  ",'$MG:color:BLUE')
+        logger.info("-- open a file with the appropriate editor.",'$MG:color:BLACK')
         logger.info('   If FILE belongs to index.html, param_card.dat, run_card.dat')
         logger.info('   the path to the last created/used directory is used')
         logger.info('   The program used to open those files can be chosen in the')
         logger.info('   configuration file ./input/mg5_configuration.txt')
         
     def help_customize_model(self):
-        logger.info("syntax: customize_model --save=NAME")
-        logger.info("--  Open an invite where you options to tweak the model.")
+        logger.info("syntax: customize_model --save=NAME",'$MG:color:BLUE')
+        logger.info("--  Open an invite where you options to tweak the model.",'$MG:color:BLACK')
         logger.info("    If you specify the option --save=NAME, this tweak will be")
         logger.info("    available for future import with the command 'import model XXXX-NAME'")
         
     def help_output(self):
         logger.info("syntax: output [" + "|".join(self._export_formats) + \
-                    "] [path|.|auto] [options]")
-        logger.info("-- Output any generated process(es) to file.")
-        logger.info("   mode: Default mode is madevent. Default path is \'.\' or auto.")
+                    "] [path|.|auto] [options]",'$MG:color:BLUE')
+        logger.info("-- Output any generated process(es) to file.",'$MG:color:BLACK')
+        logger.info("   Default mode is madevent. Default path is \'.\' or auto.")
+        logger.info("   mode:",'$MG:color:BLACK')
+        logger.info("   - For MadLoop and aMC@NLO runs, there is only one mode and")
+        logger.info("     it is set by default.")                
         logger.info("   - If mode is madevent, create a MadEvent process directory.")
         logger.info("   - If mode is standalone, create a Standalone directory")
         logger.info("   - If mode is matrix, output the matrix.f files for all")
@@ -377,24 +381,25 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("     valid options for aloha output are:")
         logger.info("      --format=Fortran|Python|Cpp : defining the output language")
         logger.info("      --output= : defining output directory")
-        logger.info("   path: The path of the process directory.")
+        logger.info("   path: The path of the process directory.",'$MG:color:BLACK')
         logger.info("     If you put '.' as path, your pwd will be used.")
         logger.info("     If you put 'auto', an automatic directory PROC_XX_n will be created.")
-        logger.info("   options:")
+        logger.info("   options:",'$MG:color:BLACK')
         logger.info("      -f: force cleaning of the directory if it already exists")
         logger.info("      -d: specify other MG/ME directory")
         logger.info("      -noclean: no cleaning performed in \"path\".")
         logger.info("      -nojpeg: no jpeg diagrams will be generated.")
         logger.info("      -name: the postfix of the main file in pythia8 mode.")
-        logger.info("   Examples:")
-        logger.info("       output")
-        logger.info("       output standalone MYRUN -f")
-        logger.info("       output pythia8 ../pythia8/ -name qcdprocs")
+        logger.info("   Examples:",'$MG:color:GREEN')
+        logger.info("       output",'$MG:color:GREEN')
+        logger.info("       output standalone MYRUN -f",'$MG:color:GREEN')
+        logger.info("       output pythia8 ../pythia8/ -name qcdprocs",'$MG:color:GREEN')
         
     def help_check(self):
 
-        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition")
-        logger.info("-- check a process or set of processes. Options:")
+        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition",'$MG:color:BLUE')
+        logger.info("-- check a process or set of processes.",'$MG:color:BLACK')
+        logger.info("Options:",'$MG:color:BLACK')
         logger.info("full: Perform all three checks described below:")
         logger.info("   permutation, gauge and lorentz_invariance.")
         logger.info("permutation: Check that the model and MG5 are working")
@@ -407,6 +412,11 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   invariant by comparing the amplitiude in different frames")        
         logger.info("If param_card is given, that param_card is used instead")
         logger.info("   of the default values for the model.")
+        logger.info("Options for loop processes only:",'$MG:color:BLACK')
+        logger.info("timing: Generate and output a process and returns detailed")        
+        logger.info("   information about the code and a timing benchmark.")
+        logger.info("timing: Generate and output a process and returns detailed")        
+        logger.info("   information about the code and a timing benchmark.")          
         logger.info("For process syntax, please see help generate")
 
     def help_generate(self):
@@ -442,14 +452,14 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("     virt=  : Generate only the loop diagrams, read for MadLoop standalone checks/runs.")                    
         logger.info("     real=  : Generate only the real-emission diagrams, for use with alternative OLP. ")                    
         logger.info(" > For processes without born amplitudes (i.e. loop-induced like g g > z), please use ")                    
-        logger.info("   the 'virt=' nlo mode. aMC@NLO cannot integrate these processes, but standalone MadLoop5")                    
+        logger.info("   the 'virt=' NLO mode. aMC@NLO cannot integrate these processes, but standalone MadLoop5")                    
         logger.info("   can still handle these.")                    
 
     def help_add(self):
 
         logger.info("-- generate diagrams for a process and add to existing processes",'$MG:color:BLUE')
         logger.info("General leading-order syntax:",'$MG:color:BLACK')
-        logger.info(" o add INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
+        logger.info(" o add process INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
         logger.info(" o Example: add process l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1",'$MG:color:GREEN')
         logger.info(" > Alternative required s-channels can be separated by \"|\":")
         logger.info("   b b~ > W+ W- | H+ H- > ta+ vt ta- vt~")
@@ -477,13 +487,13 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("     virt=  : Generate only the loop diagrams, read for MadLoop standalone checks/runs.")                    
         logger.info("     real=  : Generate only the real-emission diagrams, for use with alternative OLP. ")                    
         logger.info(" > For processes without born amplitudes (i.e. loop-induced like g g > z), please use ")                    
-        logger.info("   the 'virt=' nlo mode. aMC@NLO cannot integrate these processes, but standalone MadLoop5")                    
+        logger.info("   the 'virt=' NLO mode. aMC@NLO cannot integrate these processes, but standalone MadLoop5")                    
         logger.info("   can still handle these.")
 
     def help_define(self):
-        logger.info("syntax: define multipart_name [=] part_name_list")
-        logger.info("-- define a multiparticle")
-        logger.info("   Example: define p = g u u~ c c~ d d~ s s~ b b~")
+        logger.info("-- define a multiparticle",'$MG:color:BLUE')
+        logger.info("Syntax:  define multipart_name [=] part_name_list")
+        logger.info("Example: define p = g u u~ c c~ d d~ s s~ b b~",'$MG:color:GREEN')
         
 
     def help_set(self):
@@ -632,7 +642,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd("\"check\" requires a process.")
 
         param_card = None
-        if os.path.isfile(args[1]):
+        if args[0] not in ['stability','profile','timing'] and os.path.isfile(args[1]):
             param_card = args.pop(1)
 
         if args[0] in ['stability','profile','timing'] and len(args)>1:
@@ -642,6 +652,9 @@ class CheckValidForCmd(cmd.CheckCmd):
                 else:    
                     args.insert(1, '-no_reuse')
 
+        if args[0] in ['timing'] and os.path.isfile(args[2]):
+            param_card = args.pop(2)
+
         if args[0] in ['stability', 'profile'] and len(args)>1:
             # If the first argument after 'stability' is not the integer
             # specifying the desired statistics (i.e. number of points), then
@@ -650,7 +663,10 @@ class CheckValidForCmd(cmd.CheckCmd):
                 int(args[2])
             except ValueError:
                 args.insert(2, '100')
-
+            
+        if args[0] in ['stability', 'profile'] and os.path.isfile(args[3]):
+            param_card = args.pop(3)
+                
         if args[0] not in self._check_opts:
             args.insert(0, 'full')
 
@@ -1972,7 +1988,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'checks', 'parameters', 'options', 'coupling_order','variable']
     _add_opts = ['process']
     _save_opts = ['model', 'processes', 'options']
-    _tutorial_opts = ['nlo', 'start', 'stop', 'MadLoop']
+    _tutorial_opts = ['NLO', 'start', 'stop', 'MadLoop']
     _switch_opts = ['mg5','aMC@NLO','ML5']
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation', 
                    'gauge','lorentz', 'brs']
@@ -2527,7 +2543,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         args = self.split_arg(line)
         self.check_tutorial(args)
         tutorials = {'start': logger_tuto,
-                     'nlo': logger_tuto_nlo,
+                     'NLO': logger_tuto_nlo,
                      'MadLoop': logger_tuto_madloop}
         try:
             tutorials[args[0]].setLevel(logging.INFO)
@@ -2536,7 +2552,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         except KeyError:
             logger_tuto.info("\n\tThanks for using the tutorial!")
             logger_tuto.setLevel(logging.ERROR)
-            logger_tuto_nlo.info("\n\tThanks for using the tutorial!")
+            logger_tuto_nlo.info("\n\tThanks for using the NLO tutorial!")
             logger_tuto_nlo.setLevel(logging.ERROR)
             logger_tuto_madloop.info("\n\tThanks for using MadLoop tutorial!")
             logger_tuto_madloop.setLevel(logging.ERROR)
@@ -2681,6 +2697,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         if args[0] in ['timing']:
             timings = process_checks.check_timing(myprocdef,
+                                                  param_card = param_card,
                                                   mg_root=self._mgme_dir,
                                                   cuttools=CT_dir,
                                                   cmass_scheme = mass_scheme,
@@ -2688,6 +2705,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         if args[0] in ['stability']:
             stability = process_checks.check_stability(myprocdef,
+                                                  param_card = param_card,
                                                   mg_root=self._mgme_dir,
                                                   cuttools=CT_dir,
                                                   cmass_scheme = mass_scheme,
@@ -2698,6 +2716,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # In this case timing and stability will be checked one after the
             # other without re-generating the process.
             profile_time, profile_stab = process_checks.check_profile(myprocdef,
+                                                  param_card = param_card,
                                                   mg_root=self._mgme_dir,
                                                   cuttools=CT_dir,
                                                   cmass_scheme = mass_scheme,

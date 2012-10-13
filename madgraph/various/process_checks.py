@@ -60,6 +60,8 @@ import madgraph.loop.loop_base_objects as loop_base_objects
 
 from madgraph import MG5DIR, InvalidCmd, MadGraph5Error
 
+from madgraph.iolibs.files import cp
+
 import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
 from aloha.template_files.wavefunctions import \
@@ -796,7 +798,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         file.write(loop_matrix)
         file.close()
 
-    def setup_process(self, matrix_element, model, export_dir, reusing = False):
+    def setup_process(self, matrix_element, model, export_dir, reusing = False,
+                                                             param_card = None):
         """ Output the matrix_element in argument and perform the initialization
         while providing some details about the output in the dictionary returned. 
         Returns None if anything fails"""
@@ -850,6 +853,11 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             FortranExporter.finalize_v4_directory(None,"",False,False,'gfortran')
             infos['HELAS_MODEL_compilation'] = time.time()-start
         
+        # Copy the parameter card if provided
+        if param_card != None:
+            cp(os.path.join(param_card),\
+                              os.path.join(export_dir,'Cards','param_card.dat'))
+        
         # First Initialize filters (in later versions where this will be done
         # at generation time, it can be skipped)
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
@@ -882,7 +890,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
         return infos
 
-    def time_matrix_element(self, matrix_element, model, reusing = False):
+    def time_matrix_element(self, matrix_element, model, reusing = False,
+                                                             param_card = None):
         """ Output the matrix_element in argument and give detail information
         about the timing for its output and running"""
         
@@ -899,10 +908,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             proc_name = matrix_element.shell_string()[2:]
             
         export_dir=os.path.join(self.mg_root,temp_dir_prefix+"_%s"%proc_name)
-        
-        
+
         res_timings = self.setup_process(matrix_element, model,export_dir, \
-                                                                        reusing)
+                                                            reusing, param_card)
         
         if res_timings == None:
             return None
@@ -1009,7 +1017,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 #===============================================================================
 
     def check_matrix_element_stability(self, matrix_element, model, nPoints,
-                                                 infos = None, reusing = False):
+                              infos = None, reusing = False, param_card = None):
         """ Output the matrix_element in argument, run in for nPoints and return
         a dictionary containing the stability information on each of these points.
         If infos are provided, then the matrix element output is skipped and 
@@ -1046,7 +1054,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         proc_name = process.shell_string()[2:]
         export_dir=os.path.join(self.mg_root,temp_dir_prefix+"_%s"%proc_name)
         if not infos:
-            infos = self.setup_process(matrix_element, model,export_dir, reusing)
+            infos = self.setup_process(matrix_element, model,export_dir, \
+                                                            reusing, param_card)
             if not infos:
                 return None            
         dir_path=infos['dir_path']
@@ -1445,7 +1454,7 @@ def generate_loop_matrix_element(process_definition, mg_root, reuse):
 #===============================================================================
 # check profile for loop process (timings + stability in one go)
 #===============================================================================
-def check_profile(process_definition, mg_root="",cuttools="",
+def check_profile(process_definition, param_card = None, mg_root="",cuttools="",
                               cmass_scheme = False, nPoints=100, reuse = False):
     """For a single loop process, check both its timings and then its stability
     in one go without regenerating it."""
@@ -1457,7 +1466,8 @@ def check_profile(process_definition, mg_root="",cuttools="",
     reusing = isinstance(matrix_element, base_objects.Process)
     myProfiler = LoopMatrixElementTimer(mg_root=mg_root, cuttools_dir=cuttools, 
                                        model=model, cmass_scheme = cmass_scheme)
-    timing2 = myProfiler.time_matrix_element(matrix_element, model, reusing)
+    timing2 = myProfiler.time_matrix_element(matrix_element, \
+                                                     model, reusing, param_card)
     
     if timing2 == None:
         return None, None
@@ -1466,7 +1476,7 @@ def check_profile(process_definition, mg_root="",cuttools="",
     timing = dict(timing1.items()+timing2.items())
 
     stability = myProfiler.check_matrix_element_stability(matrix_element, 
-                           model,nPoints=nPoints, infos=timing, reusing=reusing)
+     model,nPoints=nPoints, infos=timing, reusing=reusing,param_card=param_card)
     if stability == None:
         return None, None
     else:
@@ -1475,7 +1485,7 @@ def check_profile(process_definition, mg_root="",cuttools="",
 #===============================================================================
 # check_timing for loop processes
 #===============================================================================
-def check_stability(process_definition, mg_root="",cuttools="",
+def check_stability(process_definition, param_card = None, mg_root="",cuttools="",
                                 cmass_scheme = False, nPoints=100, reuse=False):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
@@ -1489,7 +1499,7 @@ def check_stability(process_definition, mg_root="",cuttools="",
                            cuttools_dir=cuttools, model=model, 
                            cmass_scheme = cmass_scheme)
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
-                                          model,nPoints=nPoints,reusing=reusing)
+                    model,nPoints=nPoints,reusing=reusing,param_card=param_card)
     
     if stability == None:
         return None
@@ -1499,7 +1509,7 @@ def check_stability(process_definition, mg_root="",cuttools="",
 #===============================================================================
 # check_timing for loop processes
 #===============================================================================
-def check_timing(process_definition, mg_root="",cuttools="",
+def check_timing(process_definition, param_card= None, mg_root="",cuttools="",
                                            cmass_scheme = False, reuse = False):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
@@ -1510,7 +1520,8 @@ def check_timing(process_definition, mg_root="",cuttools="",
     reusing = isinstance(matrix_element, base_objects.Process)
     myTimer = LoopMatrixElementTimer(mg_root=mg_root, cuttools_dir=cuttools, 
                                        model=model, cmass_scheme = cmass_scheme)
-    timing2 = myTimer.time_matrix_element(matrix_element, model, reusing)
+    timing2 = myTimer.time_matrix_element(matrix_element, model, reusing, \
+                                                                     param_card)
     
     if timing2 == None:
         return None
