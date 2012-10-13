@@ -2975,7 +2975,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 else:
                     multipart_name = line.split()[0]
                 if multipart_name not in self._multiparticles:
-                    self.do_define(line)
+                    #self.do_define(line)
                     self.exec_cmd('define %s' % line, printcmd=False, precmd=True)
             except self.InvalidCmd, why:
                 logger_stderr.warning('impossible to set default multiparticles %s because %s' %
