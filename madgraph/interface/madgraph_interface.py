@@ -298,8 +298,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("      or the path to theMG4 model directory")
         logger.info("      '--modelname' keeps the original particle names for the model")
         logger.info("")
-        logger.info("   import proc_v4 [PATH] :"  )
-        logger.info("      Execute MG5 based on a proc_card.dat in MG4 format.",'$MG:color:BLACK')
+        logger.info("   import proc_v4 [PATH] :",'$MG:color:BLACK')
+        logger.info("      Execute MG5 based on a proc_card.dat in MG4 format.")
         logger.info("      Path to the proc_card is optional if you are in a")
         logger.info("      madevent directory")
         logger.info("")
@@ -399,25 +399,51 @@ class HelpToCmd(cmd.HelpCmd):
 
         logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition",'$MG:color:BLUE')
         logger.info("-- check a process or set of processes.",'$MG:color:BLACK')
-        logger.info("Options:",'$MG:color:BLACK')
-        logger.info("full: Perform all three checks described below:")
+        logger.info("General options:",'$MG:color:BLACK')
+        logger.info("o full:",'$MG:color:GREEN')
+        logger.info("   Perform all four checks described below:")
         logger.info("   permutation, gauge and lorentz_invariance.")
-        logger.info("permutation: Check that the model and MG5 are working")
-        logger.info("   properly by generating permutations of the process and")
-        logger.info("   checking that the resulting matrix elements give the")
-        logger.info("   same value.")
-        logger.info("gauge: Check that processes with massless gauge bosons")
-        logger.info("   are gauge invariant")
-        logger.info("lorentz_invariance: Check that the amplitude is lorentz")
-        logger.info("   invariant by comparing the amplitiude in different frames")        
-        logger.info("If param_card is given, that param_card is used instead")
-        logger.info("   of the default values for the model.")
+        logger.info("o permutation:",'$MG:color:GREEN')
+        logger.info("   Check that the model and MG5 are working properly")
+        logger.info("   by generating permutations of the process and checking")
+        logger.info("   that the resulting matrix elements give the same value.")
+        logger.info("o gauge:",'$MG:color:GREEN')
+        logger.info("   Check that processes with massless gauge bosons are")
+        logger.info("   gauge invariant (comparing Feynman and unitary gauges)")
+        logger.info("   This check if for now not available for loop processes.")
+        logger.info("o brs:",'$MG:color:GREEN')
+        logger.info("   Check that the ward identities are satisfied if the ")
+        logger.info("   process has at least one massless gauge boson as an")
+        logger.info("   external particle.")
+        logger.info("o lorentz_invariance:",'$MG:color:GREEN')
+        logger.info("   Check that the amplitude is lorentz invariant by")
+        logger.info("   comparing the amplitiude in different frames")
+        logger.info("Comments",'$MG:color:GREEN')         
+        logger.info(" > If param_card is given, that param_card is used ")
+        logger.info("   instead of the default values for the model.")
+        logger.info(" > Except for the 'gauge' test, all checks above are also")
+        logger.info("   available for loop processes with ML5 ('virt=' mode)")
+        logger.info("Example: check full p p > j j",'$MG:color:GREEN')
         logger.info("Options for loop processes only:",'$MG:color:BLACK')
-        logger.info("timing: Generate and output a process and returns detailed")        
+        logger.info("o timing:",'$MG:color:GREEN')
+        logger.info("   Generate and output a process and returns detailed")        
         logger.info("   information about the code and a timing benchmark.")
-        logger.info("timing: Generate and output a process and returns detailed")        
-        logger.info("   information about the code and a timing benchmark.")          
-        logger.info("For process syntax, please see help generate")
+        logger.info("o stability:",'$MG:color:GREEN')
+        logger.info("   Generate and output a process and returns detailed")        
+        logger.info("   statistics about the numerical stability of the code.")
+        logger.info("o profile:",'$MG:color:GREEN')
+        logger.info("   Performs both the timing and stability analysis at once")
+        logger.info("   and outputs the result in a log file without prompting")
+        logger.info("   it to the user.")
+        logger.info("Comments",'$MG:color:GREEN')
+        logger.info(" > These checks are only available for ML5 ('virt=' mode)")
+        logger.info(" > For the 'profile' and 'stability' checks, you can chose") 
+        logger.info("   how many PS points should be used for the statistic by")  
+        logger.info("   specifying it as an integer just before the [param_card]")        
+        logger.info("   optional argument.")
+        logger.info(" > Notice multiparticle labels cannot be used with these checks.")
+        logger.info(" > For process syntax, please see help generate.")
+        logger.info("Example: check profile g g > t t~",'$MG:color:GREEN')
 
     def help_generate(self):
 
@@ -497,41 +523,51 @@ class HelpToCmd(cmd.HelpCmd):
         
 
     def help_set(self):
-        logger.info("syntax: set %s argument|default" % "|".join(self._set_options))
-        logger.info("-- set options for generation or output.")
-        logger.info("   group_subprocesses True/False/Auto: ")
-        logger.info("     (default Auto) Smart grouping of subprocesses into ")
-        logger.info("     directories, mirroring of initial states, and ")
-        logger.info("     combination of integration channels.")
-        logger.info("     Example: p p > j j j w+ gives 5 directories and 184 channels")
-        logger.info("     (cf. 65 directories and 1048 channels for regular output)")
-        logger.info("     Auto means False for decay computation and True for") 
-        logger.info("     collisions.")
-        logger.info("   ignore_six_quark_processes multi_part_label")
-        logger.info("     (default none) ignore processes with at least 6 of any")
-        logger.info("     of the quarks given in multi_part_label.")
-        logger.info("     These processes give negligible contribution to the")
-        logger.info("     cross section but have subprocesses/channels.")
-        logger.info("   stdout_level DEBUG|INFO|WARNING|ERROR|CRITICAL")
-        logger.info("     change the default level for printed information")
-        logger.info("   fortran_compiler NAME")
-        logger.info("      (default None) Force a specific fortran compiler.")
-        logger.info("      If None, it tries first g77 and if not present gfortran.")
-        logger.info("   loop_optimized_output True|False")
-        logger.info("      Abandon the JAMP structure in order to bring considerable")
-        logger.info("      improvement in running time.")
-        logger.info("   gauge unitary|Feynman")        
-        logger.info("      (default unitary) choose the gauge.")
-        logger.info("   complex_mass_scheme True|False")        
-        logger.info("      (default False) Set complex mass scheme.")
-        logger.info("   timeout VALUE")
-        logger.info("      (default 20) Seconds allowed to answer questions.")
-        logger.info("      Note that pressing tab always stops the timer.")
-        logger.info("   cluster_temp_path PATH")
-        logger.info("      (default None) [Used in Madevent Output]")
-        logger.info("      Allow to perform the run in PATH directory")
-        logger.info("      This allow to not run on the central disk. This is not used")
-        logger.info("      by condor cluster (since condor has it's own way to prevent it).")
+        logger.info("-- set options for generation or output.",'$MG:color:BLUE')
+        logger.info("syntax: set <option_name> <option_value>",'$MG:color:BLACK')
+        logger.info("Possible options are: ")
+        for opts in [self._set_options[i*3:(i+1)*3] for i in \
+                                          range((len(self._set_options)//4)+1)]:
+            logger.info("%s"%(','.join(opts)),'$MG:color:GREEN')
+        logger.info("Details of each option:")
+        logger.info("group_subprocesses True/False/Auto: ",'$MG:color:BLACK')
+        logger.info(" > (default Auto) Smart grouping of subprocesses into ")
+        logger.info("   directories, mirroring of initial states, and ")
+        logger.info("   combination of integration channels.")
+        logger.info(" > Example: p p > j j j w+ gives 5 directories and 184 channels",'$MG:color:GREEN')
+        logger.info("   (cf. 65 directories and 1048 channels for regular output)",'$MG:color:GREEN')
+        logger.info(" > Auto means False for decay computation and True for collisions.") 
+        logger.info("ignore_six_quark_processes multi_part_label",'$MG:color:BLACK')
+        logger.info(" > (default none) ignore processes with at least 6 of any")
+        logger.info("   of the quarks given in multi_part_label.")
+        logger.info(" > These processes give negligible contribution to the")
+        logger.info("   cross section but have subprocesses/channels.")
+        logger.info("stdout_level DEBUG|INFO|WARNING|ERROR|CRITICAL",'$MG:color:BLACK')
+        logger.info(" > change the default level for printed information")
+        logger.info("fortran_compiler NAME",'$MG:color:BLACK')
+        logger.info(" > (default None) Force a specific fortran compiler.")
+        logger.info("   If None, it tries first g77 and if not present gfortran")
+        logger.info("   but loop output use gfortran.")
+        logger.info("loop_optimized_output True|False",'$MG:color:BLACK')
+        logger.info(" > Exploits the open loop thechnique for considerable")
+        logger.info("   improvement.")
+        logger.info(" > CP relations among helicites are detected and the helicity")
+        logger.info("   filter has more potential.")
+        logger.info("gauge unitary|Feynman",'$MG:color:BLACK')        
+        logger.info(" > (default unitary) choose the gauge of the non QCD part.")
+        logger.info(" > For loop processes, only Feynman gauge is employable.")        
+        logger.info("complex_mass_scheme True|False",'$MG:color:BLACK')        
+        logger.info(" > (default False) Set complex mass scheme.")
+        logger.info(" > Complex mass scheme is not yet supported for loop processes.")
+        logger.info("timeout VALUE",'$MG:color:BLACK')
+        logger.info(" > (default 20) Seconds allowed to answer questions.")
+        logger.info(" > Note that pressing tab always stops the timer.")
+        logger.info("cluster_temp_path PATH",'$MG:color:BLACK')
+        logger.info(" > (default None) [Used in Madevent Output]")
+        logger.info(" > Allow to perform the run in PATH directory")
+        logger.info(" > This allow to not run on the central disk. ")
+        logger.info(" > This is not used by condor cluster (since condor has")
+        logger.info("   its own way to prevent it).")
        
 #===============================================================================
 # CheckValidForCmd
@@ -1319,13 +1355,16 @@ class CheckValidForCmdWeb(CheckValidForCmd):
 class CompleteForCmd(cmd.CompleteCmd):
     """ The Series of help routine for the MadGraphCmd"""
      
-    def nlo_completion(self,args,text,line):
-        """ complete the nlo settings within square brackets """
+    def nlo_completion(self,args,text,line,allowed_loop_mode=None):
+        """ complete the nlo settings within square brackets. It uses the
+         allowed_loop_mode for the proposed mode if specified, otherwise, it 
+         uses self._nlo_modes_for_completion"""
 
         # We are now editing the loop related options
         # Automatically allow for QCD perturbation if in the sm because the
         # loop_sm would then automatically be loaded
-
+        nlo_modes = allowed_loop_mode if not allowed_loop_mode is None else \
+                                                  self._nlo_modes_for_completion
         pert_couplings_allowed = self._curr_model['perturbation_couplings']
         if self._curr_model.get('name').startswith('sm'):
             pert_couplings_allowed = pert_couplings_allowed + ['QCD']
@@ -1338,10 +1377,11 @@ class CompleteForCmd(cmd.CompleteCmd):
         possibilities = []
         possible_orders = [order for order in pert_couplings_allowed if \
                                                   order not in loop_orders]
+            
         # Simplify obvious loop completion
         single_completion = ''
-        if len(self._nlo_modes_for_completion)==1:
-                single_completion = '%s= '%self._nlo_modes_for_completion[0]
+        if len(nlo_modes)==1:
+                single_completion = '%s= '%nlo_modes[0]
                 if len(possible_orders)==1:
                     single_completion = single_completion + possible_orders[0] + ' ] '
         # Automatically add a space if not present after [ or =
@@ -1355,8 +1395,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text,[' '])
 
         if args[-1]=='[':
-            possibilities = possibilities + ['%s= '%mode for mode in \
-                                             self._nlo_modes_for_completion]                    
+            possibilities = possibilities + ['%s= '%mode for mode in nlo_modes]                    
             if single_completion != '':
                 return self.list_completion(text, [single_completion])
             else:
@@ -1373,19 +1412,27 @@ class CompleteForCmd(cmd.CompleteCmd):
             possibilities.append(']')
         return self.list_completion(text, possibilities)
  
-    def model_completion(self, text, process, line, advanced = True):
-        """ complete the line with model information """
+    def model_completion(self, text, process, line, categories = True, \
+                                                      allowed_loop_mode = None):
+        """ complete the line with model information. If categories is True,
+        it will use completion with categories. If allowed_loop_mode is 
+        specified, it will only complete with these loop modes."""
 
         # First check if we are within squared brackets so that specific 
         # input for NLO settings must be completed
         args = self.split_arg(process)
         if len(args) > 2 and '>' in line and '[' in line and not ']' in line:
-            return self.nlo_completion(args,text,line)
+            return self.nlo_completion(args,text,line, allowed_loop_mode = \
+                                                              allowed_loop_mode)
 
         while ',' in process:
             process = process[process.index(',')+1:]
         args = self.split_arg(process)
         couplings = []
+        
+        # Do no complete the @ for the process number.
+        if args[-1]=='@':
+            return
 
         # Automatically allow for QCD perturbation if in the sm because the
         # loop_sm would then automatically be loaded
@@ -1419,10 +1466,10 @@ class CompleteForCmd(cmd.CompleteCmd):
             # But still allow for defining the process id
             couplings.append('@')
         
-        if not advanced:
+        if not categories:
             # The direct completion (might be needed for some completion using
             # this function but adding some other completions (like in check)).
-            # For those, it looks ok in the advanced mode on my mac, but if
+            # For those, it looks ok in the categorie mode on my mac, but if
             # someone sees wierd result on Linux systems, then use the 
             # default completion for these features.
             return self.list_completion(text, particles+syntax+couplings)
@@ -1508,15 +1555,24 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.path_completion(text, pjoin(*[a for a in args \
                                                     if a.endswith(os.path.sep)]))
         # autocompletion for particles/couplings
-        model_comp = self.model_completion(text, ' '.join(args[2:]),line)
+        model_comp = self.model_completion(text, ' '.join(args[2:]),line,
+                                  categories = True, allowed_loop_mode=['virt'])
+
+        model_comp_and_path = self.deal_multiple_categories(\
+          {'Process completion': self.model_completion(text, ' '.join(args[2:]),
+          line, categories = False, allowed_loop_mode=['virt']), 
+          'Param_card.dat path completion:':self.path_completion(text)})
 
         if len(args) == 2:
-            if args[-1] in ['timing','profile','stability']:
+            return model_comp_and_path
+        elif len(args) == 3:
+            try:
+                int(args[2])
+            except ValueError:
                 return model_comp
             else:
-                return model_comp + self.path_completion(text)
-
-        elif len(args) > 2:
+                return model_comp_and_path
+        elif len(args) > 3:
             return model_comp
             
         
