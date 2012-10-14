@@ -388,6 +388,11 @@ class Amplitude(base_objects.PhysicsObject):
         chains, we need to ensure that BC... combine first, giving A=A
         as a final vertex. This case is defined by the Process
         property is_decay_chain = True.
+        This function can also be called by the generate_diagram function
+        of LoopAmplitudes, in which case the generated diagrams here must not
+        be directly assigned to the 'diagrams' attributed but returned as a
+        DiagramList by the function. This is controlled by the argument
+        returndiag.
         """
 
         process = self.get('process')
@@ -975,7 +980,10 @@ class Amplitude(base_objects.PhysicsObject):
         return vert_ids
                           
     def trim_diagrams(self, decay_ids=[], diaglist=None):
-        """Reduce the number of legs and vertices used in memory."""
+        """Reduce the number of legs and vertices used in memory.
+        When called by a diagram generation initiated by LoopAmplitude, 
+        this function should no trim the diagrams in the attribute 'diagrams'
+        but rather a given list in the 'diaglist' argument."""
 
         legs = []
         vertices = []

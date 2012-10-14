@@ -31,7 +31,7 @@ import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.madevent_interface as me_interface
 import madgraph.interface.amcatnlo_run_interface as run_interface
 import madgraph.interface.launch_ext_program as launch_ext
-import madgraph.interface.Loop_interface as Loop_interface
+import madgraph.interface.loop_interface as Loop_interface
 import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_helas_objects as fks_helas
 import madgraph.iolibs.export_fks as export_fks

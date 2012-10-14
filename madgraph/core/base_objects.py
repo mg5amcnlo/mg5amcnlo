@@ -539,7 +539,7 @@ class Interaction(PhysicsObject):
         # The type of interactions can be 'base', 'UV' or 'R2'.
         # For 'UV' or 'R2', one can always specify the loop it corresponds
         # to by a tag in the second element of the list. If the tag is an
-        # empty list, then the R2/UV interaction will be reckognized only
+        # empty list, then the R2/UV interaction will be recognized only
         # based on the nature of the identity of the particles branching
         # off the loop and the loop orders. 
         # Otherwise, the tag can be specified and it will be used when 
@@ -548,8 +548,8 @@ class Interaction(PhysicsObject):
         # The format is [(lp1ID,int1ID),(lp1ID,int1ID),(lp1ID,int1ID),etc...]
         # Example of a tag for the following loop
         #
-        #             ___34_____   The ';' line is a u-quark with ID 21
-        #          45/   ;         The '|' line is a gluon with ID 1
+        #             ___34_____   The ';' line is a gluon with ID 21
+        #          45/   ;         The '|' line is a d-quark with ID 1
         #     ------<    ;         The numbers are the interactions ID
         #            \___;______   The tag for this loop would be:
         #                12          ((21,34),(1,45),(1,12))
@@ -568,12 +568,28 @@ class Interaction(PhysicsObject):
         #       ((1,12),(21,34),(1,45))
         # PS: Notice that in the UFO model, the tag-information is limited to 
         # the minimally relevant one which are the loop particles specified in
-        # in the attribute below.
-        # 'loop_particles' is the list of all the loops giving this same
-        # counterterm contribution. Each loop being represented by a list of the 
-        # PDG of the particles (not repeated) constituting it. If the loop particles
-        # are not specified then MG5 will account for this counterterm only once
-        # per concerned vertex.
+        # in the attribute below. In this case, 'loop_particles' is the list of 
+        # all the loops giving this same counterterm contribution. 
+        # Each loop being represented by a set of the PDG of the particles 
+        # (not repeated) constituting it. In the example above, it would simply
+        # be (1,21). In the UFO, if the loop particles are not specified then
+        # MG5 will account for this counterterm only once per concerned vertex.
+        # Taking the example of the three gluon vertex counterterm, one can
+        # possibly have in the ufo:
+        #                VertexB = blabla, loop_particles = (b)
+        #                VertexT = blabla, loop_particles = (t)
+        # or 
+        #                VertexALL = blabla, loop_particles = ()
+        # In the first case UFO specifies the specific counterterm to the three-
+        # gluon loop with the bottom running in (VertexB) and with the top running
+        # in (VertexT). So MG5 will associate these counterterm vertices once to
+        # each of the two loop.
+        # In the case where UFO defined VertexALL, then whenever MG5 encounters
+        # a triangle three-gluon loop (say the bottom one), it will associate to
+        # it the vertex VertexALL but will not do so again when encountering the 
+        # same loop with the top quark running in. This, because it assumes that
+        # the UFO vertexALL comprises all contributions already.
+        
         self['loop_particles']=[[]]
         self['type'] = 'base'
         self['perturbation_type'] = None
@@ -907,7 +923,7 @@ class Model(PhysicsObject):
         self['coupling_orders'] = None
         self['expansion_order'] = None
         self['version_tag'] = None # position of the directory (for security)
-	self['gauge'] = [0, 1]
+        self['gauge'] = [0, 1]
 
     def filter(self, name, value):
         """Filter for model property values"""

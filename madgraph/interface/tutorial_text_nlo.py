@@ -13,7 +13,7 @@
 #
 ################################################################################
 
-tutorial_nlo = """
+tutorial_NLO = """
 You have entered tutorial mode. This will introduce you to the main
 syntax options of aMC@NLO. Most of the syntax corresponds to the MadGraph one 
 
