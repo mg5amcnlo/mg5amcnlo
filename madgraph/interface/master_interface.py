@@ -59,9 +59,9 @@ class Switcher(object):
         self.change_principal_cmd(main)
         self.cmd.__init__(self, *args, **opt)       
 
-    interface_names= {'MadGraph':('mg5',MGcmd.MadGraphCmd),
-                      'Loop':('ML5',LoopCmd.LoopInterface),
-                      'aMCatNLO':('NLO',amcatnloCmd.aMCatNLOInterface)}
+    interface_names= {'MadGraph':('MG5',MGcmd.MadGraphCmd),
+                      'MadLoop':('ML5',LoopCmd.LoopInterface),
+                      'aMC@NLO':('aMC@NLO',amcatnloCmd.aMCatNLOInterface)}
 
     _switch_opts = [interface_names[key][0] for key in interface_names.keys()]
     current_interface = None
@@ -191,11 +191,11 @@ class Switcher(object):
                     'The NLO mode %s is not valid. Please choose one among: %s' \
                     % (nlo_mode, ' '.join(valid_nlo_modes)))
                 elif nlo_mode == 'all':
-                    self.change_principal_cmd('aMCatNLO')
+                    self.change_principal_cmd('aMC@NLO')
                 elif nlo_mode == 'real':
-                    self.change_principal_cmd('aMCatNLO')
-                elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
-                    self.change_principal_cmd('Loop')
+                    self.change_principal_cmd('aMC@NLO')
+                elif nlo_mode == 'virt' or nlo_mode == 'sqrvirt':
+                    self.change_principal_cmd('MadLoop')
                     
         return self.cmd.do_add(self, line, *args, **opts)
         
@@ -209,11 +209,11 @@ class Switcher(object):
                 'The NLO mode %s is not valid. Please chose one among: %s' \
                 % (nlo_mode, ' '.join(valid_nlo_modes)))
             elif nlo_mode == 'all':
-                self.change_principal_cmd('aMCatNLO')
+                self.change_principal_cmd('aMC@NLO')
             elif nlo_mode == 'real':
-                self.change_principal_cmd('aMCatNLO')
-            elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
-                self.change_principal_cmd('Loop')
+                self.change_principal_cmd('aMC@NLO')
+            elif nlo_mode == 'virt' or nlo_mode == 'sqrvirt':
+                self.change_principal_cmd('MadLoop')
         else:
             self.change_principal_cmd('MadGraph')
         
@@ -232,9 +232,9 @@ class Switcher(object):
                     % (nlo_mode, ' '.join(self._valid_nlo_modes)))
                 elif nlo_mode == 'all' or nlo_mode == 'real':
                     self._fks_multi_proc = fks_base.FKSMultiProcess()
-                    self.change_principal_cmd('aMCatNLO')
+                    self.change_principal_cmd('aMC@NLO')
                 elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
-                    self.change_principal_cmd('Loop')
+                    self.change_principal_cmd('MadLoop')
             else:
                 self.change_principal_cmd('MadGraph')
                 
@@ -245,11 +245,11 @@ class Switcher(object):
         if self._curr_model:
             if isinstance(self._curr_model, loop_base_objects.LoopModel) and \
                self._curr_model['perturbation_couplings']!=[] and \
-               self.current_interface not in ['aMCatNLO','Loop']:
-                self.change_principal_cmd('aMCatNLO')
+               self.current_interface not in ['aMC@NLO','MadLoop']:
+                self.change_principal_cmd('aMC@NLO')
             if (not isinstance(self._curr_model, loop_base_objects.LoopModel) or \
                self._curr_model['perturbation_couplings']==[]) and \
-               self.current_interface in ['Loop']:
+               self.current_interface in ['MadLoop']:
                 self.change_principal_cmd('MadGraph')                
         return
 
@@ -399,7 +399,7 @@ class Switcher(object):
     def do_launch(self, line, *args, **opts):
         argss = cmd.Cmd.split_arg(line)
         if len(argss)>=2 and argss[1] in  ['NLO', 'aMC@NLO', 'aMC@LO']:
-            self.change_principal_cmd('aMCatNLO')
+            self.change_principal_cmd('aMC@NLO')
         return self.cmd.do_launch(self, line, *args, **opts)
         
     def do_load(self, *args, **opts):
@@ -415,7 +415,6 @@ class Switcher(object):
         return self.cmd.do_quit(self, *args, **opts)
         
     def do_save(self, *args, **opts):
-        print args, opts
         return self.cmd.do_save(self, *args, **opts)
         
     def do_set(self, *args, **opts):

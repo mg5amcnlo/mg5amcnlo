@@ -211,6 +211,7 @@ class CheckValidForCmd(object):
 #===============================================================================
 class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 
+    debug_output = 'ME5_debug'
 
     def do_treatcards_nlo(self,line):
         """this is for creating the correct run_card.inc from the nlo format run_card"""
@@ -329,6 +330,33 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                     raise self.InvalidCmd('Not a valid path: keep previous value: \'%s\'' % self.options[args[0]])
             else:
                 self.options[args[0]] = args[1]             
+
+
+    def add_error_log_in_html(self, errortype=None):
+        """If a ME run is currently running add a link in the html output"""
+
+        # Be very carefull to not raise any error here (the traceback 
+        #will be modify in that case.)
+        if hasattr(self, 'results') and hasattr(self.results, 'current') and\
+                self.results.current and 'run_name' in self.results.current and \
+                hasattr(self, 'me_dir'):
+            name = self.results.current['run_name']
+            tag = self.results.current['tag']
+            self.debug_output = pjoin(self.me_dir, '%s_%s_debug.log' % (name,tag))
+            if errortype:
+                self.results.current.debug = errortype
+            else:
+                self.results.current.debug = self.debug_output
+            
+        else:
+            #Force class default
+            self.debug_output = CommonRunCmd.debug_output
+        if os.path.exists('ME5_debug') and not 'ME5_debug' in self.debug_output:
+            os.remove('ME5_debug')
+        if not 'ME5_debug' in self.debug_output:
+            os.system('ln -s %s ME5_debug &> /dev/null' % self.debug_output)
+
+
   
 
     def update_status(self, status, level, makehtml=True, force=True, error=False):

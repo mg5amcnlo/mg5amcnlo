@@ -298,10 +298,7 @@ class HelpToCmd(object):
 
     def help_shower(self):
         """help for shower command"""
-        logger.info('syntax: run_mcatnlo run_name')
-        logger.info('-- do shower/hadronization on parton-level file generated for run run_name')
-        logger.info('   all the information (e.g. number of events, MonteCarlo, ...)')
-        logger.info('   are directly read from the header of the event file')
+        _shower_parser.print_help()
 
     
     def help_open(self):
@@ -334,7 +331,7 @@ class CheckValidForCmd(object):
     def check_shower(self, args, options):
         """Check the validity of the line. args[0] is the run_directory"""
         if len(args) == 0:
-            self.help_run_mcatnlo()
+            self.help_shower()
             raise self.InvalidCmd, 'Invalid syntax, please specify the run directory'
         if not os.path.isdir(pjoin(self.me_dir, 'Events', args[0])):
             raise self.InvalidCmd, 'Directory %s does not exists' % \
@@ -601,10 +598,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     def do_shower(self, line):
         """ run the shower on a given parton level file """
         argss = self.split_arg(line)
+        (options, argss) = _generate_events_parser.parse_args(argss)
         # check argument validity and normalise argument
-        self.check_shower(argss, {})
+        options = options.__dict__
+        self.check_shower(argss, options)
+        options['shower'] = 'only'
         evt_file = pjoin(os.getcwd(), argss[0], 'events.lhe')
-        self.ask_run_configuration('', {'shower':'only'})
+        self.ask_run_configuration('', options)
         if self.check_mcatnlo_dir():
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
@@ -954,31 +954,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         ' showering the parton-level event file %s.gz') % \
                         (hep_file, evt_file))
         os.chdir(oldcwd)
-
-
-    def add_error_log_in_html(self, errortype=None):
-        """If a ME run is currently running add a link in the html output"""
-
-        # Be very carefull to not raise any error here (the traceback 
-        #will be modify in that case.)
-        if hasattr(self, 'results') and hasattr(self.results, 'current') and\
-                self.results.current and 'run_name' in self.results.current and \
-                hasattr(self, 'me_dir'):
-            name = self.results.current['run_name']
-            tag = self.results.current['tag']
-            self.debug_output = pjoin(self.me_dir, '%s_%s_debug.log' % (name,tag))
-            if errortype:
-                self.results.current.debug = errortype
-            else:
-                self.results.current.debug = self.debug_output
-            
-        else:
-            #Force class default
-            self.debug_output = aMCatNLOCmd.debug_output
-        if os.path.exists('ME5_debug') and not 'ME5_debug' in self.debug_output:
-            os.remove('ME5_debug')
-        if not 'ME5_debug' in self.debug_output:
-            os.system('ln -s %s ME5_debug &> /dev/null' % self.debug_output)
 
 
     ############################################################################
@@ -1570,7 +1545,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             card = {0:'done'}
             for i, c in enumerate(cards):
                 card[i+1] = c
-            print card
 
             possible_answer = []
             for i, c in card.items():
@@ -1656,7 +1630,8 @@ _compile_usage = "compile [MODE] [options]\n" + \
                 "   or MC for matching with parton-shower monte-carlos. \n" + \
                 "   (if omitted, it is set to MC)\n"
 _compile_parser = optparse.OptionParser(usage=_compile_usage)
-
+_compile_parser.add_option("-f", "--force", default=False, action='store_true',
+                                help="Use the card present in the directory for the launch, without editing them")
 _compile_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip compiling reweight executable")
 
@@ -1697,6 +1672,14 @@ _calculate_xsect_parser.add_option("-m", "--multicore", default=False, action='s
 _calculate_xsect_parser.add_option("-n", "--nocompile", default=False, action='store_true',
                             help="Skip compilation. Ignored if no executable is found, " + \
                             "or with --tests")
+
+_shower_usage = 'shower run_name [options]\n' + \
+        '-- do shower/hadronization on parton-level file generated for run run_name\n' + \
+        '   all the information (e.g. number of events, MonteCarlo, ...\n' + \
+        '   are directly read from the header of the event file\n'
+_shower_parser = optparse.OptionParser(usage=_shower_usage)
+_shower_parser.add_option("-f", "--force", default=False, action='store_true',
+                                help="Use the shower_card present in the directory for the launch, without editing")
 
 
 _generate_events_usage = "generate_events [ORDER] [options]\n" + \

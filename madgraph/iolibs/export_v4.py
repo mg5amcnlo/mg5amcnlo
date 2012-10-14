@@ -2453,8 +2453,6 @@ c           This is dummy particle used in multiparticle vertices
 
         return True
 
-
-
 #===============================================================================
 # ProcessExporterFortranMEGroup
 #===============================================================================

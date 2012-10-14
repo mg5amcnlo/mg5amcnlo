@@ -117,7 +117,7 @@
 
 !     Some loop contributions my be zero for some helicities which are however
 !     contributing. In order to save their computing time, you can chose here to try
-!     to filter them out. As the gain is minimal, this option is turned off by default.
+!     to filter them out. The gain is typically minimal, so feel free to turn this off.
 #UseLoopFilter
 .TRUE.
 ! Default :: .TRUE.

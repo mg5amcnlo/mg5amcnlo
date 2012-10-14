@@ -606,19 +606,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
         under SU(3)"""
         return self.get('particle').get('ghost') and self.get('color')!=1
 
-    def is_anticommutating(self):
-        """ Return if this wavefunction comes from a particle whose creation and
-        annihilation operators are anticommutating. 
-        One might think to put QCD ghosts here. (but ghost relative signs
-        proved to be correct without ghost flow tracking so far, assuming the
-        function calculate_fermion_flow is modified accordingly.)"""
-        return self.is_fermion()
-        
-    def is_commutating(self):
-        """ Return if this wavefunction comes from a particle whose creation and
-        annihilation operators are commutating. """
-        return not self.is_anticommutating()
-
     def is_fermion(self):
         return self.get('spin') % 2 == 0
 
@@ -982,25 +969,25 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         # End recursion if external wavefunction
         if not self.get('mothers'):
-            if self.is_anticommutating():
+            if self.is_fermion():
                 return [self.get('number_external'), []]
             else:
                 return []
 
         # Pick out fermion mother
         fermion_mother = None
-        if self.is_anticommutating():
+        if self.is_fermion():
             fermion_mother = self.find_mother_fermion()
 
         other_fermions = [wf for wf in self.get('mothers') if \
-                          wf.is_anticommutating() and wf != fermion_mother]
+                          wf.is_fermion() and wf != fermion_mother]
 
         # Pick out bosons
-        bosons = filter(lambda wf: wf.is_commutating(), self.get('mothers'))
+        bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
 
         fermion_number_list = []
 
-        if self.is_anticommutating():
+        if self.is_fermion():
             # Fermions return the result N from their mother
             # and the list from bosons, so [N,[n1,n2,...]]
             mother_list = fermion_mother.get_fermion_order()
@@ -1019,7 +1006,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             # Bosons return a list [n1,n2,...]
             fermion_number_list.extend(boson.get_fermion_order())
 
-        if self.is_anticommutating():
+        if self.is_fermion():
             return [mother_list[0], fermion_number_list]
 
         return fermion_number_list
@@ -1160,7 +1147,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         """Return the fermion mother which is fermion flow connected to
         this fermion"""
 
-        if not self.is_anticommutating():
+        if not self.is_fermion():
             return None
 
         part_number = self.find_outgoing_number()
@@ -2185,11 +2172,11 @@ class HelasAmplitude(base_objects.PhysicsObject):
         to this amplitude"""
 
         # Pick out fermion mothers
-        fermions = [wf for wf in self.get('mothers') if wf.is_anticommutating()]
+        fermions = [wf for wf in self.get('mothers') if wf.is_fermion()]
         assert len(fermions) % 2 == 0
 
         # Pick out bosons
-        bosons = filter(lambda wf: wf.is_commutating(), self.get('mothers'))
+        bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
 
         fermion_number_list = []
 
@@ -4314,7 +4301,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         # If fermion, partner is the corresponding fermion flow partner
         partner = None
-        if isinstance(arg, HelasWavefunction) and arg.is_anticommutating():
+        if isinstance(arg, HelasWavefunction) and arg.is_fermion():
             # Fermion case, just pick out the fermion flow partner
             if my_index % 2 == 0:
                 # partner is after arg
@@ -4331,7 +4318,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         # Reorder fermions pairwise according to incoming/outgoing
         for i in range(0, len(sorted_mothers), 2):
-            if sorted_mothers[i].is_anticommutating():
+            if sorted_mothers[i].is_fermion():
                 # This is a fermion, order between this fermion and its brother
                 if sorted_mothers[i].get_spin_state_number() > 0 and \
                    sorted_mothers[i + 1].get_spin_state_number() < 0:
