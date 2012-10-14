@@ -370,31 +370,32 @@ class HelpCmd(object):
     """Extension of the cmd object for only the help command"""
 
     def help_quit(self):
-        logger.info("syntax: quit")
-        logger.info("-- terminates the application")
+        logger.info("-- terminates the application",'$MG:color:BLUE')
+        logger.info("syntax: quit",'$MG:color:BLACK')
     
     help_EOF = help_quit
 
     def help_history(self):
-        logger.info("syntax: history [FILEPATH|clean|.] ")
-        logger.info("   If FILEPATH is \'.\' and \'output\' is done,")
+        logger.info("-- interact with the command history.",'$MG:color:BLUE')
+        logger.info("syntax: history [FILEPATH|clean|.] ",'$MG:color:BLACK')
+        logger.info(" > If FILEPATH is \'.\' and \'output\' is done,")
         logger.info("   Cards/proc_card_mg5.dat will be used.")
-        logger.info("   If FILEPATH is omitted, the history will be output to stdout.")
+        logger.info(" > If FILEPATH is omitted, the history will be output to stdout.")
         logger.info("   \"clean\" will remove all entries from the history.")
         
     def help_help(self):
-        logger.info("syntax: help")
-        logger.info("-- access to the in-line help" )
+        logger.info("-- access to the in-line help",'$MG:color:BLUE')
+        logger.info("syntax: help",'$MG:color:BLACK')
 
     def help_save(self):
         """help text for save"""
-        logger.info("syntax: save [options]  [FILEPATH]") 
-        logger.info("-- save options configuration to filepath.")
+        logger.info("-- save options configuration to filepath.",'$MG:color:BLUE')
+        logger.info("syntax: save [options]  [FILEPATH]",'$MG:color:BLACK') 
         
     def help_display(self):
         """help for display command"""
-        logger.info("syntax: display " + "|".join(self._display_opts))
-        logger.info("-- display a the status of various internal state variables")          
+        logger.info("-- display a the status of various internal state variables",'$MG:color:BLUE')          
+        logger.info("syntax: display " + "|".join(self._display_opts),'$MG:color:BLACK')
         
 class CompleteCmd(object):
     """Extension of the cmd object for only the complete command"""
@@ -1285,9 +1286,8 @@ class CmdShell(Cmd):
 
     def help_shell(self):
         """help for the shell"""
-        
-        logger.info("syntax: shell CMD (or ! CMD)")
-        logger.info("-- run the shell command CMD and catch output")
+        logger.info("-- run the shell command CMD and catch output",'$MG:color:BLUE')        
+        logger.info("syntax: shell CMD (or ! CMD)",'$MG:color:BLACK')
 
 
 
