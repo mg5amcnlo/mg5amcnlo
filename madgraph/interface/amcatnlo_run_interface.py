@@ -721,7 +721,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if os.path.isdir(pjoin(self.me_dir, 'MCatNLO')):
             #the folder has been exported after installation of MCatNLO-utilities
             return True
-        elif os.path.isdir(self.options['MCatNLO-utilities_path']):
+        elif self.options['MCatNLO-utilities_path']:
+            # if the option is not none, the path should already exist
             # the folder has been exported before installation of MCatNLO-utilities
             # and they have been installed
             misc.call(['cp -r %s %s' % \
@@ -896,16 +897,16 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         misc.call(['mv %s %s' % 
             (pjoin(self.me_dir, 'SubProcesses', filename), evt_file)], shell=True )
         misc.call(['gzip %s' % evt_file], shell=True)
-        logger.info('The %s.gz file has been generated.\nIt contains %d %s events to be showered' \
-                % (evt_file, nevents, mode[4:]))
+        logger.info('The %s.gz file has been generated.\nIt contains %d %s events to be showered.\n' \
+                % (evt_file, nevents, mode[4:]) + \
+                'Please remember that you need to shower the events in order to get physical results')
         return evt_file
 
 
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events"""
         logger.info('   Prepairing MCatNLO run')
-        if not hasattr(self, 'run_name') or not self.run_name:
-            self.run_name = os.path.split(\
+        self.run_name = os.path.split(\
                     os.path.relpath(evt_file, pjoin(self.me_dir, 'Events')))[0]
 
         try:

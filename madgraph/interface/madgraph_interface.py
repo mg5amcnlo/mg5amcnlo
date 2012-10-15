@@ -4986,7 +4986,7 @@ _draw_parser.add_option("", "--add_gap", default=0, type='float', \
 
 # LAUNCH PROGRAM
 _launch_usage = "launch [DIRPATH] [options]\n" + \
-         "-- execute the madevent/standalone/standalone_cpp/pythia8 output present in DIRPATH\n" + \
+         "-- execute the madevent/standalone/standalone_cpp/pythia8/NLO output present in DIRPATH\n" + \
          "   By default DIRPATH is the latest created directory \n" + \
          "   (for pythia8, it should be the Pythia 8 main directory) \n" + \
          "   Example: launch PROC_sm_1 --name=run2 \n" + \

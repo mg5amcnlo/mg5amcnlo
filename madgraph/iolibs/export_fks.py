@@ -26,6 +26,7 @@ import copy
 
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
+import madgraph.core.base_objects as base_objects
 import madgraph.fks.fks_base as fks
 import madgraph.fks.fks_common as fks_common
 import madgraph.iolibs.drawing_eps as draw
@@ -503,20 +504,20 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                                                     proc[0] == 'P']
 
         devnull = os.open(os.devnull, os.O_RDWR)
-#        # Convert the poscript in jpg files (if authorize)
-#        if makejpg:
-#            logger.info("Generate jpeg diagrams")
-#            for Pdir in P_dir_list:
-#                os.chdir(Pdir)
-#                subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
-#                                stdout = devnull)
-#                os.chdir(os.path.pardir)
+        # Convert the poscript in jpg files (if authorize)
+        if makejpg:
+            logger.info("Generate jpeg diagrams")
+            for Pdir in P_dir_list:
+                os.chdir(Pdir)
+                subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+                                stdout = devnull)
+                os.chdir(os.path.pardir)
 #
-#        logger.info("Generate web pages")
-#        # Create the WebPage using perl script
-#
-#        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')], \
-#                                                                stdout = devnull)
+        logger.info("Generate web pages")
+        # Create the WebPage using perl script
+
+        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')], \
+                                                                stdout = devnull)
 
         os.chdir(os.path.pardir)
 #
@@ -536,17 +537,18 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             output_file.write(text)
             output_file.close()
 
-#        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
-#                        stdout = devnull)
+        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
+                        stdout = devnull)
 
-#        # Run "make" to generate madevent.tar.gz file
-#        if os.path.exists(os.path.join('SubProcesses', 'subproc.mg')):
-#            if os.path.exists('madevent.tar.gz'):
-#                os.remove('madevent.tar.gz')
-#            misc.compile(mode='None')
+        # Run "make" to generate madevent.tar.gz file
+        if os.path.exists(pjoin('SubProcesses', 'subproc.mg')):
+            if os.path.exists('amcatnlo.tar.gz'):
+                os.remove('amcatnlo.tar.gz')
+            subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'make_amcatnlo_tar')],
+                        stdout = devnull)
 #
-#        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
-#                        stdout = devnull)
+        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
+                        stdout = devnull)
 
         #return to the initial dir
         os.chdir(old_pos)               
@@ -797,17 +799,15 @@ end
                            len(matrix_element.get_all_amplitudes()))
 
         filename = "loop_matrix.ps"
-#        Not ready yet
         writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
-#        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
-#                                             get('loop_diagrams'),
-#                                          filename,
-#                                          model=matrix_element.get('processes')[0].\
-#                                             get('model'),
-#                                          amplitude='')
-#        logger.info("Generating loop Feynman diagrams for " + \
-#                     matrix_element.get('processes')[0].nice_string())
-#        plot.draw()
+        plot = draw.MultiEpsDiagramDrawer(base_objects.DiagramList(
+              matrix_element.get('base_amplitude').get('loop_diagrams')[:1000]),
+              filename,
+              model=matrix_element.get('processes')[0].get('model'),
+              amplitude='')
+        logger.info("Drawing loop Feynman diagrams for " + \
+                     matrix_element.get('processes')[0].nice_string())
+        plot.draw()
 
         filename = "born_matrix.ps"
         plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
@@ -2076,17 +2076,15 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                            len(matrix_element.get_all_amplitudes()))
 
         filename = "loop_matrix.ps"
-#        Not ready yet
         writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
-#        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
-#                                             get('loop_diagrams'),
-#                                          filename,
-#                                          model=matrix_element.get('processes')[0].\
-#                                             get('model'),
-#                                          amplitude='')
-#        logger.info("Generating loop Feynman diagrams for " + \
-#                     matrix_element.get('processes')[0].nice_string())
-#        plot.draw()
+        plot = draw.MultiEpsDiagramDrawer(base_objects.DiagramList(
+              matrix_element.get('base_amplitude').get('loop_diagrams')[:1000]),
+              filename,
+              model=matrix_element.get('processes')[0].get('model'),
+              amplitude='')
+        logger.info("Drawing loop Feynman diagrams for " + \
+                     matrix_element.get('processes')[0].nice_string())
+        plot.draw()
 
         filename = "born_matrix.ps"
         plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
