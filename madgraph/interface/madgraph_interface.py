@@ -1809,8 +1809,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         # By default, load the UFO Standard Model
         logger.info("Loading default model: sm")
-        self.do_import('model sm')
-        self.history.append('import model sm')
+        self.exec_cmd('import model sm', printcmd=False, precmd=True)
         
         # preloop mother
         CmdExtended.preloop(self)
@@ -1941,6 +1940,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def do_define(self, line, log=True):
         """Define a multiparticle"""
 
+        self.avoid_history_duplicate('define %s' % line, ['define'])
         if self._use_lower_part_names:
             # Particle names lowercase
             line = line.lower()
@@ -2842,10 +2842,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 #self._export dir are define
                 self.check_for_export_dir(args[1])
                 # Execute the card
-                self.use_rawinput = False
                 self.import_command_file(args[1])
-                self.use_rawinput = True
-                
+                            
         elif args[0] == 'banner':
             type = madevent_interface.MadEventCmd.detect_card_type(args[1])    
             if type != 'banner':
@@ -2976,8 +2974,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 else:
                     multipart_name = line.split()[0]
                 if multipart_name not in self._multiparticles:
-                    self.do_define(line)
-                    
+                    #self.do_define(line)
+                    self.exec_cmd('define %s' % line, printcmd=False, precmd=True)
             except self.InvalidCmd, why:
                 logger_stderr.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
@@ -3142,7 +3140,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def install_update(self, args, wget):
         """ check if the current version of mg5 is up-to-date. 
         and allow user to install the latest version of MG5 """
-        
+
         # load options
         mode = [arg.split('=',1)[1] for arg in args if arg.startswith('--mode=')]
         if mode:
@@ -3196,7 +3194,17 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 continue
             sline = line.split()
             data[sline[0]] = int(sline[1])
-            
+
+        #check validity of the file
+        if 'version_nb' not in data:
+            if mode == 'userrequest':
+                error_text = 'This version of MG5 doesn\'t support auto-update. (Invalid information)'
+                raise self.ConfigurationError(error_text)
+            return
+        elif 'last_check' not in data:
+            data['last_check'] = time.time()
+        
+        #check if we need to update.
         if time.time() - data['last_check'] < update_delay:
             return
         
@@ -3264,10 +3272,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 p= subprocess.Popen(['patch', '-p1'], stdin=subprocess.PIPE, 
                                                                   cwd=MG5DIR)
                 p.communicate(text)
-                
-            logger.info('Checking current version. (type ctrl-c to bypass the check)')
-            subprocess.call([os.path.join('tests','test_manager.py')],
-                                                                  cwd=MG5DIR)
             
             fsock = open(os.path.join(MG5DIR,'input','.autoupdate'),'w')
             if not fail:
@@ -3276,6 +3280,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 fsock.write("version_nb   %s\n" % fail)
             fsock.write("last_check   %s\n" % int(time.time()))
             fsock.close()
+            logger.info('Checking current version. (type ctrl-c to bypass the check)')
+            subprocess.call([os.path.join('tests','test_manager.py')],
+                                                                  cwd=MG5DIR)
+            
             print 'new version installed, please relaunch mg5'
             sys.exit(0)
         elif answer == 'n':
@@ -3359,7 +3367,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 pythia8_dir = pjoin(MG5DIR, self.options['pythia8_path'])
                 if not os.path.isfile(pjoin(pythia8_dir, 'include', 'Pythia.h')):
                     if not os.path.isfile(pjoin(self.options['pythia8_path'], 'include', 'Pythia.h')):
-                       self.options['pythia8_path'] = None
+                        self.options['pythia8_path'] = None
                     else:
                         continue
                     
@@ -3372,23 +3380,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
-                    self.exec_cmd("set %s %s --no_save" % (key, self.options[key]), 
-                                   printcmd=False, log=False)
+                    self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
                 except MadGraph5Error, error:
                     print error
                     logger.warning("Option %s from config file not understood" \
                                    % key)
-            elif key == 'stdout_level':
-                if self.options[key] != None:
-                    # Default: try to set parameter
-                    try:
-                        self.do_set("%s %s" % (key, self.options[key]), log=False)
-                    except MadGraph5Error, error:
-                        print error
-                        logger.warning("Option %s from config file not understood" \
-                                       % key)
                 else:
-                    self.options[key] = logger.level                
+                    if key in self.options_madgraph:
+                        self.history.append('set %s %s' % (key, self.options[key]))             
         
         # Configure the way to open a file:
         launch_ext.open_file.configure(self.options)
@@ -3433,12 +3432,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if hasattr(self, 'do_shell'):
                     ME = madevent_interface.MadEventCmdShell(me_dir=args[1], options=self.options)
                 else:
-                     ME = madevent_interface.MadEventCmd(me_dir=args[1],options=self.options)
-                     ME.pass_in_web_mode()
-                # transfer interactive configuration
-                config_line = [l for l in self.history if l.strip().startswith('set')]
-                for line in config_line:
-                    ME.exec_cmd(line)
+                    ME = madevent_interface.MadEventCmd(me_dir=args[1],options=self.options)
+                    ME.pass_in_web_mode()
                 stop = self.define_child_cmd_interface(ME)                
                 return stop
             
@@ -3708,7 +3703,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def do_set(self, line, log=True):
         """Set an option, which will be default for coming generations/outputs
         """
-	    # This command is associated to a post_cmd: post_set.
+        # Be carefull:        
+        # This command is associated to a post_cmd: post_set.
         args = self.split_arg(line)
         
         # Check the validity of the arguments
@@ -3862,7 +3858,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         else:
             #madgraph configuration
             if not self.history or self.history[-1].split() != line.split():
-                self.history.append('set %s' % line) 
+                self.history.append('set %s' % line)
+                self.avoid_history_duplicate('set %s' % args[0], ['define', 'set']) 
         return stop
 
     def do_open(self, line):

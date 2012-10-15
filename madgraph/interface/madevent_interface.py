@@ -65,7 +65,7 @@ try:
     import madgraph.various.combine_runs as combine_runs
 
     import models.check_param_card as check_param_card    
-    from madgraph import InvalidCmd, MadGraph5Error
+    from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT = False
 except Exception, error:
     if __debug__:
@@ -355,7 +355,7 @@ class HelpToCmd(object):
         
         logger.info("-- session options:")
         logger.info("      Note that those options will be kept for the current session")      
-        logger.info("      --cluster : Submit to the  cluster. Current cluster: %s" % self.options['cluster_mode'])
+        logger.info("      --cluster : Submit to the  cluster. Current cluster: %s" % self.options['cluster_type'])
         logger.info("      --multicore : Run in multi-core configuration")
         logger.info("      --nb_core=X : limit the number of core to use to X.")
         
@@ -372,15 +372,13 @@ class HelpToCmd(object):
     def help_calculate_decay_widths(self):
         
         if self.ninitial != 1:
-            logger.warning("This command is only valid for prcesses of type A > B C.")
+            logger.warning("This command is only valid for processes of type A > B C.")
             logger.warning("This command can not be run in current context.")
             logger.warning("")
         
         logger.info("syntax: calculate_decay_widths [run_name] [options])")
         logger.info("-- Calculate decay widths and enter widths and BRs in param_card")
         logger.info("   for a series of processes of type A > B C ...")
-        logger.info("   Note that you want to do \"set group_subprocesses False\"")
-        logger.info("   before generating the processes.")
         self.run_options_help([('-f', 'Use default for all questions.'),
                                ('--accuracy=', 'accuracy (for each partial decay width).'\
                                 + ' Default is 0.01.')])
@@ -402,7 +400,20 @@ class HelpToCmd(object):
         logger.info("-- evaluate the different channel associate to the process")
         self.run_options_help([("--" + key,value[-1]) for (key,value) in \
                                self._survey_options.items()])
+     
+    def help_launch(self):
+        """exec generate_events for 2>N and calculate_width for 1>N"""
+        logger.info("syntax: launch [run_name] [options])")
+        logger.info("    --alias for either generate_events/calculate_decay_widths")
+        logger.info("      depending of the number of particles in the initial state.")
         
+        if self.ninitial == 1:
+            logger.info("For this directory this is equivalent to calculate_decay_widths")
+            self.help_calculate_decay_widths()
+        else:
+            logger.info("For this directory this is equivalent to $generate_events")
+            self.help_generate_events()
+                 
     def help_refine(self):
         logger.info("syntax: refine require_precision [max_channel] [--run_options]")
         logger.info("-- refine the LAST run to achieve a given precision.")
@@ -1368,6 +1379,14 @@ class CompleteForCmd(CheckValidForCmd):
         opts = self._run_options + self._generate_options
         return  self.list_completion(text, opts, line)
 
+    def complete_launch(self, *args, **opts):
+
+        if self.ninitial == 1:
+            return self.complete_calculate_decay_widths(*args, **opts)
+        else:
+            return self.complete_generate_events(*args, **opts)
+
+
     def complete_calculate_decay_widths(self, text, line, begidx, endidx):
         """ Complete the calculate_decay_widths command"""
         
@@ -1550,6 +1569,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                          'nb_core': None,
                          'cluster_temp_path':None}
     
+    helporder = ['Main Command', 'Documented commands', 'Require MG5 directory',
+                   'Advanced commands']
     
     ############################################################################
     def __init__(self, me_dir = None, options={}, *completekey, **stdin):
@@ -1996,18 +2017,19 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
  
     def post_set(self, stop, line):
         """Check if we need to save this in the option file"""
-        
-        args = self.split_arg(line)
-        # Check the validity of the arguments
-        self.check_set(args)
-        
-        if args[0] in self.options_configuration and '--no_save' not in args:
-            self.exec_cmd('save options --auto')
-        elif args[0] in self.options_madevent:
-            logger.info('This option will be the default in any output that you are going to create in this session.')
-            logger.info('In order to keep this changes permanent please run \'save options\'')
-        return stop
-
+        try:
+            args = self.split_arg(line)
+            # Check the validity of the arguments
+            self.check_set(args)
+            
+            if args[0] in self.options_configuration and '--no_save' not in args:
+                self.exec_cmd('save options --auto')
+            elif args[0] in self.options_madevent:
+                logger.info('This option will be the default in any output that you are going to create in this session.')
+                logger.info('In order to keep this changes permanent please run \'save options\'')
+            return stop
+        except self.InvalidCmd:
+            return stop
 
     ############################################################################
     def update_status(self, status, level, makehtml=True, force=True, error=False):
@@ -2032,7 +2054,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
     ############################################################################      
     def do_generate_events(self, line):
-        """ launch the full chain """
+        """Main commands: launch the full chain """
 
 
         
@@ -2041,8 +2063,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Check argument's validity
         mode = self.check_generate_events(args)
         self.ask_run_configuration(mode)
-        #check that the param_card doesn't have a auto for the width
-        self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat'))
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
@@ -2093,7 +2113,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             # pythia launches pgs/delphes if needed
             self.store_result()
             
-            
+    
+    def do_launch(self, line, *args, **opt):
+        """Main commands:exec generate_events for 2>N and calculate_width for 1>N"""
+        if self.ninitial == 1:
+            self.do_calculate_decay_widths(line, *args, **opt)
+        else:
+            self.do_generate_events(line, *args, **opt)
             
     def print_results_in_shell(self, data):
         """Have a nice results prints in the shell,
@@ -2116,7 +2142,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     
     ############################################################################      
     def do_calculate_decay_widths(self, line):
-        """ launch decay width calculation and automatic inclusion of
+        """Main commands:launch decay width calculation and automatic inclusion of
         calculated widths and BRs in the param_card."""
 
         
@@ -2337,7 +2363,17 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 run_card = self.run_card
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
         
-        if mode in ['param', 'all']: 
+        if mode in ['param', 'all']:
+            model = self.find_model_name()
+            if model == 'mssm' or model.startswith('mssm-'):
+                if not '--param_card=' in line:
+                    param_card = pjoin(self.me_dir, 'Cards','param_card.dat')
+                    mg5_param = pjoin(self.me_dir, 'Source', 'MODEL', 'MG5_param.dat')
+                    check_param_card.convert_to_mg5card(param_card, mg5_param)
+                    check_param_card.check_valid_param_card(mg5_param)
+                    opt['param_card'] = pjoin(self.me_dir, 'Source', 'MODEL', 'MG5_param.dat')            
+            
+            logger.debug('write compile file for card: %s' % opt['param_card']) 
             param_card = check_param_card.ParamCard(opt['param_card'])
             outfile = pjoin(opt['output_dir'], 'param_card.inc')
             ident_card = pjoin(self.me_dir,'Cards','ident_card.dat')
@@ -2616,7 +2652,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         args = self.split_arg(line)
         # check the argument and return those in a dictionary format
         args = self.check_compute_widths(args)
-                
+        
+        warning_text = """Be carefull automatic computation of the width is 
+ONLY valid if all three (or more) body decay are negligeable. In doubt use a 
+calculator."""
+        
+        logger.warning(warning_text)
+        logger.info('In a future version of MG5 those mode will also be taken into account')
         if args['input']:
             files.cp(args['input'], pjoin(self.me_dir, 'Cards'))
         elif not args['force']: 
@@ -2651,7 +2693,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                    (particle.get('name'), ' '.join([p.get('name') for p in mode]), value))
                     value = 0
                 elif value < 0:
-                    raise Exception, 'Partial width for %s > %s negative: %s automatically set to zero' % \
+                    raise Exception, 'Partial width for %s > %s negative: %s' % \
                                    (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
                 decay_info[particle.get('pdg_code')].append([decay_to, value])
                           
@@ -3815,7 +3857,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         fsock.writelines('r=%s\n' % self.random)
 
     def do_quit(self, line):
-        """ """
+        """Not in help: exit """
   
         try:
             os.remove(pjoin(self.me_dir,'RunWeb'))
@@ -4150,6 +4192,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if answer.isdigit():
                 answer = card[int(answer)]
             if answer == 'done':
+                #check that the param_card doesn't have a auto for the width
+                self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
                 return
             if not os.path.isfile(answer):
                 if answer != 'trigger':
@@ -4794,14 +4838,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         return self.deal_multiple_categories(possibilities)
            
     def do_set(self, line):
-        """ """
-        
+        """ edit the value of one parameter in the card"""
+
         args = self.split_arg(line.lower())
         start = 0
         if len(args) < 2:
             logger.warning('invalid set command')
             return
-        
+
         card = '' #store which card need to be modify (for name conflict)
         if args[0] in ['run_card', 'param_card']:
             if args[1] == 'default':
@@ -4815,7 +4859,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if len(args) < 3:
                 logger.warning('invalid set command')
                 return
-        
+
         #### RUN CARD
         if args[start] in self.run_card.keys() and card != 'param_card':
             if args[start+1] in self.conflict and card == '':
@@ -4826,19 +4870,19 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if args[start+1] == 'default':
                 default = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
                 if args[start] in default.keys():
-                    self.run_card[args[start]] = default[args[start]]
+                    self.setR(args[start],default[args[start]]) 
                 else:
                     del self.run_card[args[start]]
             elif  args[start+1] in ['t','.true.']:
-                self.run_card[args[start]] = '.true.'
+                self.setR(args[start], '.true.')
             elif  args[start+1] in ['f','.false.']:
-                self.run_card[args[start]] = '.false.'            
+                self.setR(args[start], '.false.')
             else:
                 try:
                     val = eval(args[start+1])
                 except NameError:
                     val = args[start+1]
-                self.run_card[args[start]] = val
+                self.setR(args[start], val)
             self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'),
                               pjoin(self.me_dir,'Cards','run_card_default.dat'))
             
@@ -4875,14 +4919,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     text += "You need to match this expression for external program (such pythia)."
                     logger.warning(text)
                 
-                if args[-1] == 'default':
-                    default = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
-                    self.param_card[args[start]].param_dict[key].value = \
-                                      default[args[start]].param_dict[key].value
-                elif args[-1] == 'auto':
-                    self.param_card[args[start]].param_dict[key].value = 'Auto'
+                if args[-1].lower() in ['default', 'auto']:
+                    self.setP(args[start], key, args[-1])   
                 else:
-                    self.param_card[args[start]].param_dict[key].value = float(args[-1])
+                    try:
+                        value = float(args[-1])
+                    except:
+                        logger.warning('Invalid input: Expected number and not \'%s\'' \
+                                                                     % args[-1])
+                        return
+                    self.setP(args[start], key, value)
             else:
                 logger.warning('invalid set command')
                 return                   
@@ -4891,9 +4937,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # PARAM_CARD NO BLOCK NAME
         elif args[start] in self.pname2block and card != 'run_card':
             all_var = self.pname2block[args[start]]
-            for bname, lhaid in all_var: 
-                new_line = line.replace(args[start], '%s %s' % 
-                                (bname, ' '.join([ str(i) for i in lhaid])))
+            for bname, lhaid in all_var:
+                new_line = 'param_card %s %s %s' % (bname, 
+                   ' '.join([ str(i) for i in lhaid]), ' '.join(args[start+1:]))
                 self.do_set(new_line)
             if len(all_var) > 1:
                 logger.warning('This variable correspond to more than one parameter in the param_card.')
@@ -4904,7 +4950,34 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         else:
             logger.warning('invalid set command')
             return            
+    
+    def setR(self, name, value):
+        logger.info('modify parameter %s of the run_card.dat to %s' % (name, value))
+        self.run_card[name] = value
         
+    def setP(self, block, lhaid, value):
+        if isinstance(value, str):
+            value = value.lower()
+            if value == 'default':
+                default = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
+                value = default[block].param_dict[lhaid].value
+        
+            elif value == 'auto':
+                value = 'Auto'
+                if block != 'decay':
+                    logger.warning('Invalid input: \'Auto\' value only valid for DECAY')
+                    return
+            else:
+                try:
+                    value = float(value)
+                except ValueError:
+                    logger.warning('Invalid input: \'%s\' not valid intput.'% value)
+                    
+        logger.info('modify param_card information BLOCK %s with id %s set to %s' %\
+                    (block, lhaid, value))
+        self.param_card[block].param_dict[lhaid].value = value
+        
+      
     def help_set(self):
         '''help message for set'''
         
