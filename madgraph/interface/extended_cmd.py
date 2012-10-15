@@ -980,7 +980,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
         # Read the lines of the file and execute them
         commandline = open(filepath).readlines()
+        oldinputfile = self.inputfile
+        oldraw = self.use_rawinput
         self.inputfile = (l for l in commandline) # make a generator
+        self.use_rawinput = False
         # Note using "for line in open(filepath)" is not safe since the file
         # filepath can be overwritten during the run (leading to weird results)
         # Note also that we need a generator and not a list.
@@ -996,7 +999,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # If a child was open close it
         if self.child:
             self.child.exec_cmd('quit')        
-                
+        self.inputfile = oldinputfile
+        self.use_rawinput = oldraw       
         return
     
     def get_history_header(self):

@@ -2054,7 +2054,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
     ############################################################################      
     def do_generate_events(self, line):
-        """Main Command: launch the full chain """
+        """Main commands: launch the full chain """
 
 
         
@@ -2063,8 +2063,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Check argument's validity
         mode = self.check_generate_events(args)
         self.ask_run_configuration(mode)
-        #check that the param_card doesn't have a auto for the width
-        self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat'))
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
@@ -2117,7 +2115,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             
     
     def do_launch(self, line, *args, **opt):
-        """Main Command:exec generate_events for 2>N and calculate_width for 1>N"""
+        """Main commands:exec generate_events for 2>N and calculate_width for 1>N"""
         if self.ninitial == 1:
             self.do_calculate_decay_widths(line, *args, **opt)
         else:
@@ -2144,7 +2142,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     
     ############################################################################      
     def do_calculate_decay_widths(self, line):
-        """Main Command:launch decay width calculation and automatic inclusion of
+        """Main commands:launch decay width calculation and automatic inclusion of
         calculated widths and BRs in the param_card."""
 
         
@@ -4194,6 +4192,8 @@ calculator."""
             if answer.isdigit():
                 answer = card[int(answer)]
             if answer == 'done':
+                #check that the param_card doesn't have a auto for the width
+                self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
                 return
             if not os.path.isfile(answer):
                 if answer != 'trigger':

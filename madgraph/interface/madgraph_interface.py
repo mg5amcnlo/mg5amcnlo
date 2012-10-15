@@ -2841,10 +2841,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 #self._export dir are define
                 self.check_for_export_dir(args[1])
                 # Execute the card
-                self.use_rawinput = False
                 self.import_command_file(args[1])
-                self.use_rawinput = True
-                
+                            
         elif args[0] == 'banner':
             type = madevent_interface.MadEventCmd.detect_card_type(args[1])    
             if type != 'banner':
