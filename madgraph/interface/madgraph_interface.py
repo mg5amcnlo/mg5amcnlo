@@ -91,10 +91,10 @@ logger = logging.getLogger('cmdprint') # -> stdout
 logger_stderr = logging.getLogger('fatalerror') # ->stderr
 logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in  
                                             #order to learn MG5
-logger_tuto_nlo = logging.getLogger('tutorial aMC@NLO') # -> stdout include instruction in  
+logger_tuto_nlo = logging.getLogger('tutorial_aMCatNLO') # -> stdout include instruction in  
                                                         #order to learn aMC@NLO
 
-logger_tuto_madloop = logging.getLogger('tutorial MadLoop') # -> stoud for MadLoop tuto
+logger_tuto_madloop = logging.getLogger('tutorial_MadLoop') # -> stoud for MadLoop tuto
 
 #===============================================================================
 # CmdExtended
