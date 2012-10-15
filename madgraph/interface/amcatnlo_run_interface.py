@@ -483,7 +483,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     # survey options, dict from name to type, default value, and help text
     # Variables to store object information
     web = False
-    prompt = 'aMC@NLO>'
+    prompt = 'aMC@NLO_run>'
     cluster_mode = 0
     queue  = 'madgraph'
     nb_core = None
