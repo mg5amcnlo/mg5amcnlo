@@ -17,7 +17,6 @@
 import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 import madgraph.loop.loop_helas_objects as loop_helas_objects
-import madgraph.core.color_ordered_amplitudes as color_ordered_amplitudes
 import models.check_param_card as check_param_card
 import aloha.aloha_writers as aloha_writers
 import aloha
