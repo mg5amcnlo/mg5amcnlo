@@ -92,7 +92,10 @@ events with the parton_shower MonteCarlo specified in the run_card.dat,
 generating a file in the StdHEP format. 
 Please note that, since shower-specific counterterms have to be included in the
 calculation, the parton level sample you will obtain can only be showered
-with the selected MonteCarlo.
+with the selected MonteCarlo. 
+Note also that, because of the way they have been generated, the parton-level
+events in the .lhe file are UNPHYSICAL. They lead to physical results only 
+after shower.
 
 If you want to generate the showered StdHep file, please be sure to have the 
 MCatNLO-utilities installed (otherwise just type "install MCatNLO-utilities").

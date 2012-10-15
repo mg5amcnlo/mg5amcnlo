@@ -319,9 +319,9 @@ class aMCatNLOLauncher(ExtLauncher):
         import madgraph.interface.amcatnlo_run_interface as run_int
         
         if hasattr(self, 'shell'):
-            usecmd = run_int.aMCatNLOCmdShell(me_dir=self.running_dir)
+            usecmd = run_int.aMCatNLOCmdShell(me_dir=self.running_dir, options = self.cmd_int.options)
         else:
-            usecmd = run_int.aMCatNLOCmd(me_dir=self.running_dir)
+            usecmd = run_int.aMCatNLOCmd(me_dir=self.running_dir, options = self.cmd_int.options)
         
         #Check if some configuration were overwritten by a command. If so use it    
         set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]

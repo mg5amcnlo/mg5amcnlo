@@ -132,17 +132,21 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                 self.generate_virtuals()
             
             elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real']:
-                raise fks_common.FKSProcessError(), \
+                raise fks_common.FKSProcessError(\
                    "Not a valid NLO_mode for a FKSMultiProcess: %s" % \
-                   self['process_definitions'][0].get('NLO_mode')
+                   self['process_definitions'][0].get('NLO_mode'))
 
             # now get the total number of diagrams
             n_diag_born = sum([len(amp.get('diagrams')) 
                      for amp in self.get_born_amplitudes()])
             n_diag_real = sum([len(amp.get('diagrams')) 
                      for amp in self.get_real_amplitudes()])
-            n_diag_virt = sum([len(amp.get('diagrams')) 
+            n_diag_virt = sum([len(amp.get('loop_diagrams')) 
                      for amp in self.get_virt_amplitudes()])
+
+            if n_diag_virt == 0 and n_diag_real ==0:
+                raise fks_common.FKSProcessError(
+                        'This process does not have any correction up to NLO in QCD')
 
             logger.info(('Generated %d subprocesses with %d real emission diagrams, ' + \
                         '%d born diagrams and %d virtual diagrams') % \
@@ -285,16 +289,16 @@ class FKSRealProcess(object):
         """Returns leg corresponding to i fks.
         An error is raised if the fks_infos list has more than one entry"""
         if len(self.fks_infos) > 1:
-            raise fks_common.FKSProcessError(), \
-                    'get_leg_i should only be called before combining processes'
+            raise fks_common.FKSProcessError(\
+                    'get_leg_i should only be called before combining processes')
         return self.process.get('legs')[self.fks_infos[0]['i'] - 1]
 
     def get_leg_j(self): #test written
         """Returns leg corresponding to j fks.
         An error is raised if the fks_infos list has more than one entry"""
         if len(self.fks_infos) > 1:
-            raise fks_common.FKSProcessError(), \
-                    'get_leg_j should only be called before combining processes'
+            raise fks_common.FKSProcessError(\
+                    'get_leg_j should only be called before combining processes')
         return self.process.get('legs')[self.fks_infos[0]['j'] - 1]
 
 
@@ -333,8 +337,8 @@ class FKSProcess(object):
         self.virt_amp = None
 
         if not remove_reals in [True, False]:
-            raise fks_common.FKSProcessError(), \
-                    'Not valid type for remove_reals in FKSProcess'
+            raise fks_common.FKSProcessError(\
+                    'Not valid type for remove_reals in FKSProcess')
         
         if start_proc:
             if isinstance(start_proc, MG.Process):
@@ -344,8 +348,8 @@ class FKSProcess(object):
                 self.born_proc = fks_common.sort_proc(start_proc.get('process'))
                 self.born_amp = diagram_generation.Amplitude(self.born_proc)
             else:
-                raise fks_common.FKSProcessError(), \
-                    'Not valid start_proc in FKSProcess'
+                raise fks_common.FKSProcessError(\
+                    'Not valid start_proc in FKSProcess')
 
             logger.info("Generating FKS-subtracted matrix elements for born process%s" \
                 % self.born_proc.nice_string().replace('Process', '')) 
@@ -458,8 +462,8 @@ class FKSProcess(object):
                 real_m = self.real_amps[m]
                 real_n = self.real_amps[n]
                 if len(real_m.fks_infos) > 1 or len(real_m.fks_infos) > 1:
-                    raise fks_common.FKSProcessError(), \
-                    'find_reals_to_integrate should only be called before combining processes'
+                    raise fks_common.FKSProcessError(\
+                    'find_reals_to_integrate should only be called before combining processes')
 
                 i_m = real_m.fks_infos[0]['i']
                 j_m = real_m.fks_infos[0]['j']

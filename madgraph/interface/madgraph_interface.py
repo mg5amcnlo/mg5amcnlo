@@ -91,10 +91,10 @@ logger = logging.getLogger('cmdprint') # -> stdout
 logger_stderr = logging.getLogger('fatalerror') # ->stderr
 logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in  
                                             #order to learn MG5
-logger_tuto_nlo = logging.getLogger('tutorial aMC@NLO') # -> stdout include instruction in  
+logger_tuto_nlo = logging.getLogger('tutorial_aMCatNLO') # -> stdout include instruction in  
                                                         #order to learn aMC@NLO
 
-logger_tuto_madloop = logging.getLogger('tutorial MadLoop') # -> stoud for MadLoop tuto
+logger_tuto_madloop = logging.getLogger('tutorial_MadLoop') # -> stoud for MadLoop tuto
 
 #===============================================================================
 # CmdExtended
@@ -4985,7 +4985,7 @@ _draw_parser.add_option("", "--add_gap", default=0, type='float', \
 
 # LAUNCH PROGRAM
 _launch_usage = "launch [DIRPATH] [options]\n" + \
-         "-- execute the madevent/standalone/standalone_cpp/pythia8 output present in DIRPATH\n" + \
+         "-- execute the madevent/standalone/standalone_cpp/pythia8/NLO output present in DIRPATH\n" + \
          "   By default DIRPATH is the latest created directory \n" + \
          "   (for pythia8, it should be the Pythia 8 main directory) \n" + \
          "   Example: launch PROC_sm_1 --name=run2 \n" + \

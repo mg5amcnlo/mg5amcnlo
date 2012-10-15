@@ -180,12 +180,12 @@ until($listpos>$#incard){
 #
 #    Download code
 #
-  if (!-e "./madevent.tar.gz") {
+  if (!-e "./amcatnlo.tar.gz") {
       print PAGE "<td ALIGN=center>";
       print PAGE  "Code Download </a> </td>\n";
       print PAGE "<td ALIGN=center> Not Available </td> \n";
   }else { 
-      print PAGE "<td ALIGN=center><a href=madevent.tar.gz>";
+      print PAGE "<td ALIGN=center><a href=amcatnlo.tar.gz>";
       print PAGE  "Code Download </a> </td>\n";
       print PAGE "<td ALIGN=center> Available </td> \n";
   }
@@ -211,7 +211,7 @@ until($listpos>$#incard){
     print PAGE "<td ALIGN=center> \n ";
     print PAGE  "On-line Event Generation\n";
     print PAGE "<td ALIGN=center> ";
-    print PAGE "<a href=\"README\">Only available from the web</a></td> \n";
+    print PAGE "<a href=\"README\">Not available yet, use shell interface</a></td> \n";
   }     
 
 #
@@ -219,9 +219,12 @@ until($listpos>$#incard){
 # 
   print PAGE "</tr><tr> \n";
 
-  print PAGE "<td ALIGN=center><a href=\"crossx.html\"> \n ";
-  print PAGE  "Results and Event Database </a> \n";
-  print PAGE "<td ALIGN=center> ";
+# MZ 
+#  print PAGE "<td ALIGN=center><a href=\"crossx.html\"> \n ";
+#  print PAGE  "Results and Event Database </a> \n";
+#  print PAGE "<td ALIGN=center> ";
+
+  print PAGE  "<td ALIGN=center>Results and Event Database <td ALIGN=center> \n";
 
   $nfound = 0;
   chdir("./HTML");
@@ -231,12 +234,14 @@ until($listpos>$#incard){
     $nfound = $nfound + 1;
   }
   } 
-  if ($nfound == "0") {
-	  print PAGE "No runs available </td> \n";
-  }else { 
-	  print PAGE "$nfound "; 
-	  print PAGE " runs available </td> \n";
-  }
+  print PAGE "HTML monitoring not available yet </td> \n";
+# MZ
+#  if ($nfound == "0") {
+#	  print PAGE "No runs available </td> \n";
+#  }else { 
+#	  print PAGE "$nfound "; 
+#	  print PAGE " runs available </td> \n";
+#  }
   }
   print PAGE "</tr> \n";
   

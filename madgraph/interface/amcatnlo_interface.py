@@ -78,6 +78,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         """ check the validity of the line"""
           
         self._export_format = 'NLO'
+        forbidden_formats = ['madevent', 'standalone']
 
         if not self._fks_multi_proc:
             text = 'No processes generated. Please generate a process first.'
@@ -88,6 +89,11 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             raise self.InvalidCmd(text)
 
         if args and args[0][0] != '-':
+            if args[0] in forbidden_formats:
+                text = 'You generated a NLO process, which cannot be exported in %s mode.\n' % args[0]
+                text+= 'Please use the command "output DIR_NAME".\n'
+                raise self.InvalidCmd(text)
+
             # This is a path
             path = args.pop(0)
             # Check for special directory treatment
