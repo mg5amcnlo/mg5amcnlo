@@ -13,7 +13,8 @@
 #
 ################################################################################
 
-tutorial_NLO = """
+
+tutorial_aMCatNLO = """
 You have entered tutorial mode. This will introduce you to the main
 syntax options of aMC@NLO. Most of the syntax corresponds to the MadGraph one 
 
@@ -39,6 +40,8 @@ Note that a space is mandatory between the particle names and that '[QCD]'
 specifies that you want to consider QCD NLO corrections. 
 Couplings different than QCD cannot be perturbed yet.
 """
+
+tutorial = tutorial_aMCatNLO
 
 generate = """
 You have just generated a new process.
@@ -84,9 +87,9 @@ Additionally to the commands in the bin directory (see
 MY_FIRST_AMCATNLO_RUN/README), you can also generate your events/compute the 
 cross-section from this interface. 
 You will generate events to be showered a la MC@NLO, compute the theoretical
-and PDF error on the fly (if asked for in the run_card.dat) and shower the events 
-with the parton_shower MonteCarlo specified in the run_card.dat, generating a file in
-the StdHEP format. 
+and PDF error on the fly (if asked for in the run_card.dat) and shower the 
+events with the parton_shower MonteCarlo specified in the run_card.dat, 
+generating a file in the StdHEP format. 
 Please note that, since shower-specific counterterms have to be included in the
 calculation, the parton level sample you will obtain can only be showered
 with the selected MonteCarlo.
@@ -105,13 +108,17 @@ NLO> launch
 
 open_index = output
 
-launch = """This step ends the tutorial of the basic commands of aMCatNLO. You can
-always use the help to see the options available for different
+launch = """This step ends the tutorial of the basic commands of aMCatNLO.
+You can always use the help to see the options available for different
 commands. For example, if you want to know how to launch on multicore/cluster
 just type
 aMC@NLO>help launch
 
-In order to close this tutorial, enter
+To learn more about MadLoop standalone checks and runs, you can now follow
+its tutorial with:
+aMC@NLO>tutorial MadLoop
+
+To simply close this tutorial, enter
 aMC@NLO>tutorial stop
 If you want to exit MG5, enter
 aMC@NLO>exit

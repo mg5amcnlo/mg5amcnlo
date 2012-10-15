@@ -58,6 +58,14 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         if args[0]=='diagrams' and len(args)>=3 and args[1] not in ['born','loop']:
             raise self.InvalidCmd("Can only display born or loop diagrams, not %s."%args[1])
 
+    def check_tutorial(self, args):
+        """check the validity of the line"""
+        if len(args) == 0:
+            #this means mg5 tutorial
+            args.append('MadLoop')
+        else:
+            return mg_interface.CheckValidForCmd.check_tutorial(self,args)
+
     def check_output(self, args):
         """ Check the arguments of the output command in the context
         of the Loop interface."""
@@ -139,11 +147,19 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         self._v4_export_formats = []
         self._export_formats = [ 'matrix', 'standalone' ]
         self._nlo_modes_for_completion = ['virt']
+        self._curr_fortran_model = None
+        self._curr_cpp_model = None
+        self._curr_exporter = None
         if not self._curr_model or \
                            self._curr_model.get('perturbation_couplings') == []:
             if not self._curr_model or self._curr_model.get('name') == 'sm':
                 logger.info('Automatically importing the standard model '+\
                                                        'for loop computations.')
+                # So that we don't load the model twice
+                if self.options['loop_optimized_output'] and \
+                                           not self.options['gauge']=='Feynman':
+                    self._curr_model = None
+                    mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
                 self.do_import('model loop_sm')
             else:
                 logger.warning('The current important model does not allow'+\
@@ -152,7 +168,9 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         if self.options['loop_optimized_output'] and \
                                            not self.options['gauge']=='Feynman':
             # In the open loops method, in order to have a maximum loop numerator
-            # rank of 1, one must work in the Feynman gauge
+            # rank of 1, one must work in the Feynman gauge. Anyway irrelevant for
+            # now as we only handle QCD perturbations and SU(3) is always in the
+            # Feynman gauge, no matter what.
             mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
         # Set where to look for CutTools installation.
         # In further versions, it will be set in the same manner as _mgme_dir so that

@@ -1377,8 +1377,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     }))
 
             if init_mothers[0].get('number_external') == startleg and \
-                   not init_mothers[0].get('leg_state') and \
-                   ninitial > 1:
+                   not init_mothers[0].get('leg_state') and ninitial > 1:
                 # If this is t-channel going towards external leg 1,
                 # mother_leg is resulting wf
                 legs.append(mother_leg)
@@ -3954,7 +3953,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                               self.get('diagrams')[0].get('wavefunctions'))
 
         external_wfs.sort(lambda w1, w2: w1.get('number_external') - \
-             w1.get('number_external'))
+             w2.get('number_external'))
 
         i = 1
         while i < len(external_wfs):

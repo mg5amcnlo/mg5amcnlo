@@ -50,6 +50,8 @@ You will notice that MG5 recognizes you want to use standalone MadLoop because
 the header of your interface will change from 'mg5>' to 'ML5>'. 
 """
 
+tutorial = tutorial_MadLoop
+
 generate = """
 You have just generated a new process.
 You can find more information on supported syntax by using:
@@ -112,7 +114,7 @@ been created under your MadGraph5 installation directory.
 
 The code for the evaluation of the squared loop matrix element is in 
 'SubProcesses/P0_<shell_proc_name>/'. There, you can compile and edit 
-running parameters from 'MadloopParams.dat' and then run the code with './check'.
+running parameters from 'MadloopParams.dat' and then run the code with './check'
 Alternatively, for a simple quick run, type:
 
 ML5>launch -f

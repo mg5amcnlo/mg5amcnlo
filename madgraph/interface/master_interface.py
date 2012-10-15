@@ -41,7 +41,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madgraph_interface as MGcmd
-import madgraph.interface.Loop_interface as LoopCmd
+import madgraph.interface.loop_interface as LoopCmd
 import madgraph.interface.amcatnlo_interface as amcatnloCmd
 import madgraph.fks.fks_base as fks_base
 
