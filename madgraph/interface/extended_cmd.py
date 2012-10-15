@@ -326,8 +326,9 @@ class BasicCmd(cmd.Cmd):
         
         completion = [a.replace(' ','\ ') for a in completion]
         return completion
-    
-    
+
+
+
 
 class CheckCmd(object):
     """Extension of the cmd object for only the check command"""
@@ -449,6 +450,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     history_header = ""
     
     _display_opts = ['options','variable']
+    helporder = ['Documented commands']
     
     class InvalidCmd(Exception):
         """expected error for wrong command"""
@@ -477,6 +479,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         self.child = None # sub CMD interface call from this one
         self.mother = None #This CMD interface was called from another one
         self.inputfile = None # input file (in non interactive mode)
+        self.haspiping = not sys.stdin.isatty() # check if mg5 is piped 
         self.stored_line = '' # for be able to treat answer to question in input file 
                               # answer which are not required.
 
@@ -540,6 +543,147 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 if hasattr(self,'post_%s' %cmd):
                     stop = getattr(self, 'post_%s' % cmd)(stop, subline)
         return stop
+
+    def define_child_cmd_interface(self, obj_instance, interface=True):
+        """Define a sub cmd_interface"""
+
+        # We are in a file reading mode. So we need to redirect the cmd
+        self.child = obj_instance
+        self.child.mother = self
+
+        if self.use_rawinput and interface:
+            # We are in interactive mode -> simply call the child
+            obj_instance.cmdloop()
+            stop = obj_instance.postloop()
+            return stop
+        if self.inputfile:
+            # we are in non interactive mode -> so pass the line information
+            obj_instance.inputfile = self.inputfile
+        
+        if not interface:
+            return self.child
+ 
+    #===============================================================================
+    # Ask a question with nice options handling
+    #===============================================================================    
+    def ask(self, question, default, choices=[], path_msg=None, 
+            timeout = True, fct_timeout=None, ask_class=None):
+        """ ask a question with some pre-define possibility
+            path info is
+        """
+        if path_msg:
+            path_msg = [path_msg]
+        else:
+            path_msg = []
+            
+        if timeout:
+            try:
+                timeout = self.options['timeout']
+            except:
+                pass
+                    
+        # add choice info to the question
+        if choices + path_msg:
+            question += ' ['
+            question += "\033[%dm%s\033[0m, " % (4, default)    
+            for data in choices[:9] + path_msg:
+                if default == data:
+                    continue
+                else:
+                    question += "%s, " % data
+                    
+            if len(choices) > 9:
+                question += '... , ' 
+            question = question[:-2]+']'
+        if ask_class:
+            obj = ask_class  
+        elif path_msg:
+            obj = OneLinePathCompletion
+        else:
+            obj = SmartQuestion
+
+        question_instance = obj(allow_arg=choices, default=default, 
+                                                          mother_interface=self)
+        question_instance.question = question
+
+        answer = self.check_answer_in_input_file(question_instance, default, path_msg)
+        if answer is not None:
+            return answer
+        
+        value =   Cmd.timed_input(question, default, timeout=timeout,
+                                 fct=question_instance, fct_timeout=fct_timeout)
+
+        return value
+ 
+    
+    def check_answer_in_input_file(self, question_instance, default, path=False):
+        """Questions can have answer in output file (or not)"""
+
+        if not self.inputfile:
+            return None# interactive mode
+
+        line = self.get_stored_line()
+        # line define if a previous answer was not answer correctly 
+        if not line:
+            try:
+                line = self.inputfile.next()
+            except StopIteration:
+                if self.haspiping:
+                    self.store_line(line)
+                    return None # print the question and use the pipe
+                logger.info(question_instance.question)
+                logger.warning('The answer to the previous question is not set in your input file')
+                logger.warning('Use %s value' % default)
+                return str(default)
+            
+        line = line.replace('\n','').strip()
+        if '#' in line: 
+            line = line.split('#')[0]
+        if not line:
+            # Comment or empty line, pass to the next one
+            return self.check_answer_in_input_file(question_instance, default, path)
+        options = question_instance.allow_arg
+        if line in options:
+            return line
+        elif path and os.path.exists(line):
+            return line
+        elif hasattr(question_instance, 'do_%s' % line.split()[0]):
+            #This is a command line, exec it and check next line
+            
+            logger.info(line)
+            fct = getattr(question_instance, 'do_%s' % line.split()[0])
+            fct(' '.join(line.split()[1:]))
+            return self.check_answer_in_input_file(question_instance, default, path)
+        # No valid answer provides
+        elif self.haspiping:
+            self.store_line(line)
+            return None # print the question and use the pipe
+        else:
+            logger.info(question_instance.question)
+            logger.warning('The answer to the previous question is not set in your input file')
+            logger.warning('Use %s value' % default)
+            self.store_line(line)
+            return str(default)
+
+    def store_line(self, line):
+        """store a line of the input file which should be executed by the higher mother"""
+        
+        if self.mother:
+            self.mother.store_line(line)
+        else:
+            self.stored_line = line
+
+    def get_stored_line(self):
+        """return stored line and clean it"""
+        if self.mother:
+            value = self.mother.get_stored_line()
+            self.mother.stored_line = None
+        else:
+            value = self.stored_line
+            self.stored_line = None    
+        return value
+
+
 
     def nice_error_handling(self, error, line):
         """ """ 
@@ -635,16 +779,42 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if self.history:
             self.history.pop()
         return False
+    
+    def onecmd_orig(self, line, **opt):
+        """Interpret the argument as though it had been typed in response
+        to the prompt.
+
+        The return value is a flag indicating whether interpretation of
+        commands by the interpreter should stop.
+        
+        This allow to pass extra argument for internal call.
+        """
+        
+        cmd, arg, line = self.parseline(line)
+        if not line:
+            return self.emptyline()
+        if cmd is None:
+            return self.default(line)
+        self.lastcmd = line
+        if cmd == '':
+            return self.default(line)
+        else:
+            try:
+                func = getattr(self, 'do_' + cmd)
+            except AttributeError:
+                return self.default(line)
+            return func(arg, **opt)
 
 
-    def onecmd(self, line):
+    def onecmd(self, line, **opt):
         """catch all error and stop properly command accordingly"""
         
         try:
-            return cmd.Cmd.onecmd(self, line)
+            return self.onecmd_orig(line, **opt)
         except self.InvalidCmd as error:            
             if __debug__:
                 self.nice_error_handling(error, line)
+                self.history.pop()
             else:
                 self.nice_user_error(error, line)
         except self.ConfigurationError as error:
@@ -664,7 +834,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         pass # dummy function
             
     def exec_cmd(self, line, errorhandling=False, printcmd=True, 
-                                                 precmd=False, postcmd=True):
+                                     precmd=False, postcmd=True, **opt):
         """for third party call, call the line with pre and postfix treatment
         without global error handling """
 
@@ -678,9 +848,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if precmd:
             line = current_interface.precmd(line)
         if errorhandling:
-            stop = current_interface.onecmd(line)
+            stop = current_interface.onecmd(line, **opt)
         else:
-            stop = cmd.Cmd.onecmd(current_interface, line)
+            stop = Cmd.onecmd_orig(current_interface, line, **opt)
         if postcmd:
             stop = current_interface.postcmd(stop, line)
         return stop      
@@ -701,6 +871,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # Faulty command
         logger.warning("Command \"%s\" not recognized, please try again" % \
                                                                 line.split()[0])
+        self.history.pop()
         
 
 
@@ -739,43 +910,92 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if self.log:
             logger.info("History written to " + output_file.name)
 
+    def avoid_history_duplicate(self, line, no_break=[]):
+        """remove all line in history (but the last) starting with line.
+        up to the point when a line didn't start by something in no_break.
+        (reading in reverse order)"""
+        
+        new_history = []
+        for i in range(1, len(self.history)+1):
+            cur_line = self.history[-i]
+            if i == 1:
+                new_history.append(cur_line)
+            elif not any((cur_line.startswith(text) for text in no_break)):
+                to_add = self.history[:-i+1]
+                to_add.reverse()
+                new_history += to_add
+                break
+            elif cur_line.startswith(line):
+                continue
+            else:
+                new_history.append(cur_line)
+            
+        new_history.reverse()
+        self.history = new_history
+        
+        
     def clean_history(self, to_keep=['set','add','load'],
-                            remove_bef_lb1=None,
-                            to_remove=['open','display','launch'],
-                            keep_last=False):
+                            remove_bef_last=None,
+                            to_remove=['open','display','launch', 'check'],
+                            allow_for_removal=None,
+                            keep_switch=False):
         """Remove command in arguments from history.
-        to_keep is a set of line to always keep
-        to_remove is a set of line to always remove
-        remove_bef_lb1 remove up to first occurrence.
-        keep_last ensure to keep the last entry.
+        All command before the last occurrence of  'remove_bef_last'
+        (including it) will be removed (but if another options tells the opposite).                
+        'to_keep' is a set of line to always keep.
+        'to_remove' is a set of line to always remove (don't care about remove_bef_ 
+        status but keep_switch acts.).
+        if 'allow_for_removal' is define only the command in that list can be 
+        remove of the history for older command that remove_bef_lb1. all parameter
+        present in to_remove are always remove even if they are not part of this 
+        list.
+        keep_switch force to keep the statement remove_bef_??? which changes starts
+        the removal mode.
         """
         
+        #check consistency
+        if __debug__ and allow_for_removal:
+            for arg in to_keep:
+                assert arg not in allow_for_removal
+            
     
         nline = -1
-        last = 0
+        removal = False
+        #looping backward
         while nline > -len(self.history):
+            switch  = False # set in True when removal pass in True
 
-            if remove_bef_lb1 and self.history[nline].startswith(remove_bef_lb1):
-                if last:
-                    last = 2
-                    self.history.pop(nline)
-                    continue
-                else:
-                    last=1
-            if nline == -1 and keep_last:
-                nline -=1
+            #check if we need to pass in removal mode
+            if not removal and remove_bef_last:
+                    if self.history[nline].startswith(remove_bef_last):
+                        removal = True
+                        switch = True  
+
+            # if this is the switch and is protected pass to the next element
+            if switch and keep_switch:
+                nline -= 1
                 continue
+
+            # remove command in to_remove (whatever the status of removal)
             if any([self.history[nline].startswith(arg) for arg in to_remove]):
                 self.history.pop(nline)
                 continue
-            if last == 2:
-                if not any([self.history[nline].startswith(arg) for arg in to_keep]):
-                  self.history.pop(nline)
-                  continue
-                else:
-                    nline -= 1  
-            else:
-                nline -= 1
+            
+            # Only if removal mode is active!
+            if removal:
+                if allow_for_removal:
+                    # Only a subset of command can be removed
+                    if any([self.history[nline].startswith(arg) 
+                                                 for arg in allow_for_removal]):
+                        self.history.pop(nline)
+                        continue
+                elif not any([self.history[nline].startswith(arg) for arg in to_keep]):
+                    # All command have to be remove but protected
+                    self.history.pop(nline)
+                    continue
+            
+            # update the counter to pass to the next element
+            nline -= 1
                 
     def import_command_file(self, filepath):
         # remove this call from history
@@ -784,7 +1004,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
         # Read the lines of the file and execute them
         commandline = open(filepath).readlines()
+        oldinputfile = self.inputfile
+        oldraw = self.use_rawinput
         self.inputfile = (l for l in commandline) # make a generator
+        self.use_rawinput = False
         # Note using "for line in open(filepath)" is not safe since the file
         # filepath can be overwritten during the run (leading to weird results)
         # Note also that we need a generator and not a list.
@@ -800,32 +1023,14 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # If a child was open close it
         if self.child:
             self.child.exec_cmd('quit')        
-                
+        self.inputfile = oldinputfile
+        self.use_rawinput = oldraw       
         return
     
     def get_history_header(self):
         """Default history header"""
         
         return self.history_header
-
-    def define_child_cmd_interface(self, obj_instance, interface=True):
-        """Define a sub cmd_interface"""
-
-        # We are in a file reading mode. So we need to redirect the cmd
-        self.child = obj_instance
-        self.child.mother = self
-
-        if self.use_rawinput and interface:
-            # We are in interactive mode -> simply call the child
-            obj_instance.cmdloop()
-            stop = obj_instance.postloop()
-            return stop
-        if self.inputfile:
-            # we are in non interactive mode -> so pass the line information
-            obj_instance.inputfile = self.inputfile
-        
-        if not interface:
-            return self.child
     
     def postloop(self):
         """ """
@@ -876,97 +1081,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         return result
 
 
-    #===============================================================================
-    # Ask a question with nice options handling
-    #===============================================================================    
-    def ask(self, question, default, choices=[], path_msg=None, 
-            timeout = True, fct_timeout=None, ask_class=None):
-        """ ask a question with some pre-define possibility
-            path info is
-        """
+
         
-        if path_msg:
-            path_msg = [path_msg]
-        else:
-            path_msg = []
-            
-        if timeout:
-            try:
-                timeout = self.options['timeout']
-            except:
-                pass
-                    
-        # add choice info to the question
-        if choices + path_msg:
-            question += ' ['
-            question += "\033[%dm%s\033[0m, " % (4, default)    
-            for data in choices[:9] + path_msg:
-                if default == data:
-                    continue
-                else:
-                    question += "%s, " % data
-                    
-            if len(choices) > 9:
-                question += '... , ' 
-            question = question[:-2]+']'
-        if ask_class:
-            obj = ask_class  
-        elif path_msg:
-            obj = OneLinePathCompletion
-        else:
-            obj = SmartQuestion
 
-        question_instance = obj(allow_arg=choices, default=default, 
-                                                          mother_interface=self)
-        answer = self.check_answer_in_input_file(choices, path_msg)
-        if answer is not None:
-            return answer
-        
-        value =   Cmd.timed_input(question, default, timeout=timeout,
-                                 fct=question_instance, fct_timeout=fct_timeout)
-
-        return value
-        
-    def check_answer_in_input_file(self, options, path=False):
-        """Questions can have answer in output file (or not)"""
-
-        if self.check_stored_line():
-            return None # already one line not correctly answer 
-
-        if not self.inputfile:
-            return None# interactive mode
-
-        try:
-            line = self.inputfile.next()
-        except StopIteration:
-            return None
-        line = line.replace('\n','').strip()
-        if '#' in line: 
-            line = line.split('#')[0]
-        if not line:
-            return self.check_answer_in_input_file(options, path)
-
-        if line in options:
-            return line
-        elif path and os.path.exists(line):
-            return line
-        else:
-            self.store_line(line)
-            return None
-
-    def store_line(self, line):
-        """store a line of the input file which should be executed by the higher mother"""
-        
-        if self.mother:
-            self.mother.store_line(line)
-        else:
-            self.stored_line = line
-
-    def check_stored_line(self):
-        if self.mother:
-            return self.mother.check_stored_line()
-        else:
-            return self.stored_line
 
     # Quit
     def do_quit(self, line):
@@ -990,12 +1107,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     do_EOF = do_quit
     do_exit = do_quit
 
-
-     
-    
-
     def do_help(self, line):
-        """ propose some usefull possible action """
+        """Not in help: propose some usefull possible action """
                 
         # if they are an argument use the default help
         if line:
@@ -1032,11 +1145,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 
 
         self.stdout.write("%s\n"%str(self.doc_leader))
-        tag = "Documented commands"
-        header = "%s (type help <topic>):" % tag
-        self.print_topics(header, cmds[tag],   15,80)
+        for tag in self.helporder:
+            header = "%s (type help <topic>):" % tag
+            self.print_topics(header, cmds[tag],   15,80)
         for name, item in cmds.items():
-            if name == "Documented commands":
+            if name in self.helporder:
                 continue
             if name == "Not in help":
                 continue

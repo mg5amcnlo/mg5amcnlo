@@ -286,8 +286,8 @@ c     ncode is number of digits needed for the code
                enddo
                do j=1,nexternal-3
 c                  write(*,*) 'Width',prwidth(-j,i),j,i
-                  nbw=nbw+1
                   if (prwidth(-j,i) .gt. 0d0 .and. sprop(1,-j,i).ne.0) then
+                     nbw=nbw+1
                      write(*,*) 'Got bw',-nbw,j
 c                    JA 4/8/11 don't treat forced BW differently
                      if(lconflict(-j)) then

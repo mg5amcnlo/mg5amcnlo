@@ -202,6 +202,7 @@ class MELauncher(ExtLauncher):
                 
         import madgraph.interface.madevent_interface as ME
         
+        stdout_level = self.cmd_int.options['stdout_level']
         if self.shell:
             usecmd = ME.MadEventCmdShell(me_dir=self.running_dir, options=self.options)
         else:
@@ -211,9 +212,11 @@ class MELauncher(ExtLauncher):
         set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
         for line in set_cmd:
             try:
-                usecmd.exec_cmd(line)
+                usecmd.do_set(line[3:], log=False)
             except:
                 pass
+        usecmd.do_set('stdout_level %s'  % stdout_level,log=False)
+        #ensure that the logger level 
         launch = self.cmd_int.define_child_cmd_interface(
                      usecmd, interface=False)
         #launch.me_dir = self.running_dir

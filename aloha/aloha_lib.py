@@ -372,14 +372,6 @@ class AddVariable(list):
     __radd__ = __add__
     __rmul__ = __mul__ 
 
-    #def __pow__(self, obj):
-    #    
-    #    assert isinstance(obj, int)
-    #    
-    #    tmp = self
-    #    for i in range(obj-1):
-    ##       tmp = tmp * self
-    #    return tmp
 
     def __div__(self, obj):
         return self.__mul__(1/obj)
@@ -388,7 +380,7 @@ class AddVariable(list):
 
     def __rdiv__(self, obj):
         return self.__rmult__(1/obj)
-            
+
     def __str__(self):
         text = ''
         if self.prefactor != 1:

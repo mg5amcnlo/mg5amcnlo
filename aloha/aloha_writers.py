@@ -349,6 +349,7 @@ class WriteALOHA:
         if number:
             total = sum(number)
             file_str.write('+ %s' % self.change_number_format(total))
+
         file_str.write(')')
         return file_str.getvalue()
                 

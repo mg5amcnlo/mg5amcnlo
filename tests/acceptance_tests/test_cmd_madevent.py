@@ -137,6 +137,55 @@ class TestMECmdShell(unittest.TestCase):
         
         
         self.assertEqual(cmd, os.getcwd())
+        
+    def test_group_subprocess(self):
+        """check that both u u > u u gives the same result"""
+        
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            pass
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.exec_cmd('set automatic_html_opening False --save')
+        mg_cmd.exec_cmd(' generate u u > u u')
+        mg_cmd.exec_cmd('output /tmp/MGPROCESS/')
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            pass
+        
+        mg_cmd.exec_cmd('set group_subprocesses False')
+        mg_cmd.exec_cmd('generate u u > u u')
+        mg_cmd.exec_cmd('output /tmp/MGPROCESS')
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        self.do('generate_events -f')        
+        
+        val2 = self.cmd_line.results.current['cross']
+        err2 = self.cmd_line.results.current['error']        
+        
+        self.assertTrue(abs(val2 - val1) / (err1 + err2) < 5)
+        target = 1278400
+        self.assertTrue(abs(val2 - target) / (err2) < 5)
+        #check precision
+        self.assertTrue(err2 / val2 < 0.005)
+        self.assertTrue(err1 / val1 < 0.005)
+        
+        
+    
+        
+        
+        
+        
 
     def load_result(self, run_name):
         
@@ -196,8 +245,8 @@ class TestMEfromfile(unittest.TestCase):
 
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_mssm_generation')],
-                         cwd=pjoin(_file_path, os.path.pardir)
-                        ,stdout=devnull,stderr=devnull)
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=devnull,stderr=devnull)
 
         
         self.check_parton_output(cross=4.541638, error=0.035)

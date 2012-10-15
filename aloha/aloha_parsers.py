@@ -214,7 +214,7 @@ class ALOHAExpressionParser(UFOExpressionParser):
         else:
              new = aloha_lib.KERNEL.add_function_expression('pow', eval(p[1]), eval(p[3]))
              p[0] = str(new)
-            
+
 
     def p_expression_variable(self, p):
         "expression : VARIABLE"

@@ -2,6 +2,7 @@ from __future__ import division
 import xml.etree.ElementTree as ET
 import math
 import os
+import shutil
 import logging
 
 logger = logging.getLogger('madgraph.models') # -> stdout
@@ -29,7 +30,7 @@ class Parameter (object):
             comment = param.comment
             format = param.format
 
-        self.lhablock = block        
+        self.lhablock = block
         if lhacode:
             self.lhacode = lhacode
         else:
@@ -94,6 +95,8 @@ class Parameter (object):
                 return 'DECAY %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
             elif self.lhablock == 'decay':
                 return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
+            elif self.lhablock and self.lhablock.startswith('qnumbers'):
+                return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
             else:
                 return '      %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'str':
@@ -262,6 +265,7 @@ class ParamCard(dict):
                 else:
                     cur_block = self['decay']
                 param = Parameter()
+                param.set_block(cur_block.name)
                 param.load_str(line[6:])
                 cur_block.append(param)
                 continue
@@ -284,6 +288,7 @@ class ParamCard(dict):
                 cur_block.append(param)
             else:
                 param = Parameter()
+                param.set_block(cur_block.name)
                 param.load_str(line)
                 cur_block.append(param)
                     

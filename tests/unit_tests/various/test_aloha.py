@@ -3059,7 +3059,7 @@ class test_aloha_creation(unittest.TestCase):
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         helas_suite.look_for_multiple_lorentz_interactions()
-        solution = {'FFV2': [('FFV3',), ('FFV4',), ('FFV5',)],'FFS3': [('FFS4',)]}
+        solution = {'FFV2': [('FFV3',), ('FFV4',), ('FFV5',)], 'FFS1': [('FFS3',)]}
         self.assertEqual(solution, helas_suite.multiple_lor)
         
 

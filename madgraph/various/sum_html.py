@@ -16,7 +16,7 @@ from __future__ import division
 import os
 import math
 import logging
-
+import re
 logger = logging.getLogger('madevent.stdout') # -> stdout
 
 pjoin = os.path.join
@@ -56,7 +56,15 @@ class OneResult(object):
         for line in open(filepath):
             i+=1
             if i == 1:
-                data = [float(d) for d in line.split()]
+                def secure_float(d):
+                    try:
+                        return float(d)
+                    except ValueError:
+                        if re.search(r'''[+-]?[\d.]*-\d*''', d):
+                            return 0.0
+                        return 
+                    
+                data = [secure_float(d) for d in line.split()]
                 self.axsec, self.xerru, self.xerrc, self.nevents, self.nw,\
                          self.maxit, self.nunwgt, self.luminosity, self.wgt, self.xsec = data[:10]
                 if self.mfactor > 1:
@@ -68,11 +76,11 @@ class OneResult(object):
                 l, sec, err, eff, maxwgt, asec = line.split()
             except:
                 return
-            self.ysec_iter.append(float(sec))
-            self.yerr_iter.append(float(err))
-            self.yasec_iter.append(float(asec))
-            self.eff_iter.append(float(eff))
-            self.maxwgt_iter.append(float(maxwgt))
+            self.ysec_iter.append(secure_float(sec))
+            self.yerr_iter.append(secure_float(err))
+            self.yasec_iter.append(secure_float(asec))
+            self.eff_iter.append(secure_float(eff))
+            self.maxwgt_iter.append(secure_float(maxwgt))
         
         
     def set_mfactor(self, value):
@@ -131,7 +139,7 @@ class Combine_results(list, OneResult):
         self.maxit = len(self.yerr_iter)  # 
         self.nunwgt = sum([one.nunwgt for one in self])  
         self.wgt = 0
-        self.luminosity = min([one.luminosity for one in self])
+        self.luminosity = min([0]+[one.luminosity for one in self])
         
         
         
@@ -370,6 +378,9 @@ def make_all_html_results(cmd):
             name = 'G' + name
             if float(mfactor) < 0:
                 continue
+            if os.path.exists(pjoin(P_path, 'ajob.no_ps.log')):
+                continue
+                                  
             P_comb.add_results(name, pjoin(P_path,name,'results.dat'), mfactor)
         P_comb.compute_values()
         P_text += P_comb.get_html(run, unit)
