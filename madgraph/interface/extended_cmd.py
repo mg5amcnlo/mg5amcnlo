@@ -910,6 +910,30 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if self.log:
             logger.info("History written to " + output_file.name)
 
+    def avoid_history_duplicate(self, line, no_break=[]):
+        """remove all line in history (but the last) starting with line.
+        up to the point when a line didn't start by something in no_break.
+        (reading in reverse order)"""
+        
+        new_history = []
+        for i in range(1, len(self.history)+1):
+            cur_line = self.history[-i]
+            if i == 1:
+                new_history.append(cur_line)
+            elif not any((cur_line.startswith(text) for text in no_break)):
+                to_add = self.history[:-i+1]
+                to_add.reverse()
+                new_history += to_add
+                break
+            elif cur_line.startswith(line):
+                continue
+            else:
+                new_history.append(cur_line)
+            
+        new_history.reverse()
+        self.history = new_history
+        
+        
     def clean_history(self, to_keep=['set','add','load'],
                             remove_bef_last=None,
                             to_remove=['open','display','launch', 'check'],
@@ -967,8 +991,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                         continue
                 elif not any([self.history[nline].startswith(arg) for arg in to_keep]):
                     # All command have to be remove but protected
-                     self.history.pop(nline)
-                     continue
+                    self.history.pop(nline)
+                    continue
             
             # update the counter to pass to the next element
             nline -= 1
