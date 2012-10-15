@@ -91,10 +91,10 @@ logger = logging.getLogger('cmdprint') # -> stdout
 logger_stderr = logging.getLogger('fatalerror') # ->stderr
 logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in  
                                             #order to learn MG5
-logger_tuto_nlo = logging.getLogger('tutorial_nlo') # -> stdout include instruction in  
+logger_tuto_nlo = logging.getLogger('tutorial aMC@NLO') # -> stdout include instruction in  
                                                         #order to learn aMC@NLO
 
-logger_tuto_madloop = logging.getLogger('tutorial_madloop') # -> stoud for MadLoop tuto
+logger_tuto_madloop = logging.getLogger('tutorial MadLoop') # -> stoud for MadLoop tuto
 
 #===============================================================================
 # CmdExtended
@@ -198,7 +198,7 @@ class CmdExtended(cmd.Cmd):
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
         "*           Type 'tutorial' to learn how MG5 works         *\n" + \
-        "*      Type 'tutorial NLO' to learn how aMC@NLO works      *\n" + \
+        "*    Type 'tutorial aMCatNLO' to learn how aMC@NLO works   *\n" + \
         "*    Type 'tutorial MadLoop' to learn how MadLoop works    *\n" + \
         "*                                                          *\n" + \
         "************************************************************")
@@ -373,7 +373,7 @@ class HelpToCmd(cmd.HelpCmd):
     def help_tutorial(self):
         logger.info("syntax: tutorial [" + "|".join(self._tutorial_opts) + "]",'$MG:color:BLUE')
         logger.info("-- start/stop the MG5 tutorial mode (or stop any other mode)")
-        logger.info("-- NLO: start aMC@NLO tutorial mode")
+        logger.info("-- aMCatNLO: start aMC@NLO tutorial mode")
         logger.info("-- MadLoop: start MadLoop tutorial mode")
 
     def help_open(self):
@@ -2076,7 +2076,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'checks', 'parameters', 'options', 'coupling_order','variable']
     _add_opts = ['process']
     _save_opts = ['model', 'processes', 'options']
-    _tutorial_opts = ['NLO', 'start', 'stop', 'MadLoop']
+    _tutorial_opts = ['aMCatNLO', 'start', 'stop', 'MadLoop']
     _switch_opts = ['mg5','aMC@NLO','ML5']
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation', 
                    'gauge','lorentz', 'brs']
@@ -2631,7 +2631,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         args = self.split_arg(line)
         self.check_tutorial(args)
         tutorials = {'start': logger_tuto,
-                     'NLO': logger_tuto_nlo,
+                     'aMCatNLO': logger_tuto_nlo,
                      'MadLoop': logger_tuto_madloop}
         try:
             tutorials[args[0]].setLevel(logging.INFO)
@@ -2640,7 +2640,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         except KeyError:
             logger_tuto.info("\n\tThanks for using the tutorial!")
             logger_tuto.setLevel(logging.ERROR)
-            logger_tuto_nlo.info("\n\tThanks for using the NLO tutorial!")
+            logger_tuto_nlo.info("\n\tThanks for using the aMC@NLO tutorial!")
             logger_tuto_nlo.setLevel(logging.ERROR)
             logger_tuto_madloop.info("\n\tThanks for using MadLoop tutorial!")
             logger_tuto_madloop.setLevel(logging.ERROR)
@@ -4026,7 +4026,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Ask for editing the parameter and then 
         Execute the code (madevent/standalone/...)
         """
-        
         start_cwd = os.getcwd()
         
         args = self.split_arg(line)
@@ -4037,9 +4036,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # args is now MODE PATH
 
         if args[0].startswith('standalone'):
-            if os.path.isfile(os.path.join(args[1],'Cards','MadLoopParams.dat')) \
-                and not os.path.isfile(os.path.join(args[1],'SubProcesses',\
-                                                              'check_poles.f')):
+            if os.path.isfile(os.path.join(os.getcwd(),args[1],'Cards',\
+              'MadLoopParams.dat')) and not os.path.isfile(os.path.join(\
+              os.getcwd(),args[1],'SubProcesses','check_poles.f')):
                 ext_program = launch_ext.MadLoopLauncher(self, args[1], \
                                                 options=self.options, **options)
             else:
@@ -4418,7 +4417,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     aloha.unitary_gauge = False
                 aloha_lib.KERNEL.clean()
                 self.options[args[0]] = args[1]
-                if log: logger.info('Pass to gauge %s.' % args[1])
+                if log: logger.info('Passing to gauge %s.' % args[1])
                 return
             
             # They are a valid model
@@ -4449,7 +4448,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._curr_exporter = None
             self._done_export = False
             import_ufo._import_once = []
-            logger.info('Pass to gauge %s.' % args[1])
+            logger.info('Passing to gauge %s.' % args[1])
             
             if able_to_mod:
                 self.do_import('model %s' % model_name)

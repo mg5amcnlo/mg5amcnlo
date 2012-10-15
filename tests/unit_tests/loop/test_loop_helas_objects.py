@@ -605,7 +605,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         myloopamplitude.generate_diagrams()
         
         #print "CT interaction considered=",self.myloopmodel.get_interaction(8)
-        #self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc,selection=[(17,17)],verbose=True)
+        #self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc,selection=[(152,155)],verbose=True)
         self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
         
     def test_helas_diagrams_gg_ggg(self):

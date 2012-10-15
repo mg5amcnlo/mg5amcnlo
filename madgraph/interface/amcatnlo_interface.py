@@ -66,6 +66,13 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             if args[1] == 'virt':
                 args[1] = 'loop' 
 
+    def check_tutorial(self, args):
+        """check the validity of the line"""
+        if len(args) == 0:
+            #this means mg5 tutorial
+            args.append('aMCatNLO')
+        else:
+            return mg_interface.CheckValidForCmd.check_tutorial(self,args)
 
     def check_output(self, args):
         """ check the validity of the line"""
@@ -268,6 +275,11 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
             if self._curr_model.get('name') == 'sm':
                 logger.info('Automatically importing the standard model '+\
                                                        'for loop computations.')
+                # So that we don't load the model twice
+                if self.options['loop_optimized_output'] and \
+                                           not self.options['gauge']=='Feynman':
+                    self._curr_model = None
+                    mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
                 self.do_import('model loop_sm')
             else:
                 logger.warning('The current important model does not allow'+\
@@ -556,6 +568,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         options = options.__dict__
         options['name'] = ''
         self.check_launch(argss, options)
+        if not os.path.isdir(os.path.join(os.getcwd(), argss[0], 'Events')):
+            self.do_switch('ML5')
+            return mg_interface.MadGraphCmd.do_launch(self,line)
         if self.options['automatic_html_opening']:
             misc.open_file(os.path.join(os.getcwd(), argss[0], 'crossx.html'))
             self.options['automatic_html_opening'] = False

@@ -99,7 +99,8 @@ class LoopExporterFortran(object):
             return 0
 
         if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
-            logger.info('Compiling CutTools')
+            logger.info('Compiling CutTools. This has to be done only once and'+\
+                              ' can take a couple of minutes.','$MG:color:BLUE')
             misc.compile(cwd=self.cuttools_dir, job_specs = False)
 
         if os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):            

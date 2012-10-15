@@ -1110,7 +1110,6 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 except KeyError:
                     # The structure has not been encountered yet, we must
                     # scan it
-                    # Not done yet
                     struct_infos, wfNumber = \
                       process_struct(sID, diag_wfs, wfNumber)
                     if optimization:
@@ -1299,10 +1298,8 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                             # Update the last_loop_wfs list with the loop wf
                             # we just created. 
                             new_last_loop_wfs.append(wf)
-
                             # Add color index and store new copy of color_lists
-                            new_color_list = copy.copy(color_list)+\
-                                               copy.copy(structcolorlist)
+                            new_color_list = copy.copy(structcolorlist)
                             new_color_list.append(coupl_key[0])
                             new_color_lists.append(new_color_list)
                 
@@ -1545,7 +1542,14 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
 
         for amp in self.get_all_amplitudes():
             amp.set('mothers', helas_objects.HelasMatrixElement.sorted_mothers(amp))
+            # Not really necessary as the color indices of the amplitudes should be 
+            # correct. It is however cleaner like this. For debugging purposes we
+            # leave here an assert.
+            gen_colors = amp.get('color_indices')
             amp.set('color_indices', amp.get_color_indices())
+            assert (amp.get('color_indices')==gen_colors), \
+              "Error in the treatment of color in the loop helas diagram "+\
+              "generation. It could be harmless, but report this bug to be sure."
 
         for loopdiag in self.get_loop_diagrams():
             for loopamp in loopdiag.get_loop_amplitudes():
