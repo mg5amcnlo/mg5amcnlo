@@ -622,7 +622,7 @@ c      if (xo .gt. 0) call setgrid(-i,xo,a,1)
 
       write(*,*),'Impossible BW configuration'
       open(unit=66,file='results.dat',status='unknown')
-      write(66,'(3e12.5,2i9,i5,i9,e10.3)')0.,0.,0.,0,0,1,0,0.
-      write(66,'(i4,4e15.5)') 1,0.,0.,0.,0.
+      write(66,'(3e12.5,2i9,i5,i9,3e10.3)')0.,0.,0.,0,0,1,0,0.,0.,0.
+      write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
       close(66)
       end

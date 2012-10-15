@@ -763,6 +763,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             options['only_generation'] = False
 
         if mode in ['aMC@NLO', 'aMC@LO']:
+            print self.me_dir, 'Events', self.run_name
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
         old_cwd = os.getcwd()
 
