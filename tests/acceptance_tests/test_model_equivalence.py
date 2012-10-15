@@ -352,7 +352,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
                 #try:
                     self.assertAlmostEqual(singlevalue,
                                            solutions[variable][i],
-                                           places=7,
+                                           places=6,
                         msg='fail to be equal for param %s : %s != %s' % \
                             (variable, singlevalue, solutions[variable][i]))
                 #except Exception as error:
