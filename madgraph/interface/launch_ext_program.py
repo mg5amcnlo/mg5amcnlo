@@ -148,9 +148,15 @@ class MadLoopLauncher(ExtLauncher):
             if ans == 'y':
                 if not os.path.isfile(os.path.join(dir_path,'PS.input')):
                     PSfile = open(os.path.join(dir_path,'PS.input'), 'w')
-                    
-                    PSfile.write('\n'.join([' '.join(['%.16E'%0.0 for pi in range(4)]) \
-                                                                 for pmom in range(1)]))
+                    if not os.path.isfile(os.path.join(dir_path,'result.dat')):
+                        PSfile.write('\n'.join([' '.join(['%.16E'%0.0 for \
+                                        pi in range(4)]) for pmom in range(1)]))
+                    else:
+                        default_ps = process_checks.LoopMatrixElementEvaluator.\
+                            parse_check_output(file(os.path.join(dir_path,\
+                                          'result.dat')),format='dict')['res_p']
+                        PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi \
+                                             in pmom]) for pmom in default_ps]))                     
                     PSfile.write("\n\nEach line number 'i' like the above one sets"+\
                             " the momentum of particle number i, \nordered like in"+\
                             " the process definition. The format is (E,px,py,pz).")
@@ -170,10 +176,6 @@ class MadLoopLauncher(ExtLauncher):
                 curr_path = os.path.join(sub_path, path)
                 infos = {}
                 attempts = [3,15]
-                # Ask if the user wants to edit the PS point.
-                self.treat_input_file('PS.input', default='n', 
-                  msg='Phase-space point for process %s.'%shell_name,\
-                                                             dir_path=curr_path)
                 logger.info("Initializing process %s."%shell_name)
                 nps = evaluator.run_initialization(curr_path, sub_path, infos,
                                 req_files = ['HelFilter.dat','LoopFilter.dat'],
@@ -185,6 +187,10 @@ class MadLoopLauncher(ExtLauncher):
                     logger.warning(("Could not initialize the process %s"+\
                                    " with %d PS points. It needed %d.")\
                                       %(shell_name,min(attempts),nps))
+                # Ask if the user wants to edit the PS point.
+                self.treat_input_file('PS.input', default='n', 
+                  msg='Phase-space point for process %s.'%shell_name,\
+                                                             dir_path=curr_path)
                 evaluator.fix_PSPoint_in_check(sub_path, 
                   read_ps = os.path.isfile(os.path.join(curr_path, 'PS.input')),
                   npoints = 1)

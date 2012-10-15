@@ -336,7 +336,39 @@ class HelpToCmd(cmd.HelpCmd):
         
     def help_launch(self):
         """help for launch command"""
-        _launch_parser.print_help()
+        # Using the built-in parser help is not convenient when one wants to use
+        # color schemes.
+        #_launch_parser.print_help()
+        logger.info("syntax: launch <dir_path> <options>",'$MG:color:BLUE')
+        logger.info("-- execute the aMC@NLO/madevent/standalone/pythia8 output present in dir_path",'$MG:color:BLACK')
+        logger.info("By default, dir_path points to the last created directory.")
+        logger.info("(for pythia8, it should be the Pythia 8 main directory)")
+        logger.info("")        
+        logger.info("Launch on madevent/pythia8/standalone outputs:",'$MG:color:BLACK')
+        logger.info(" o Example: launch PROC_sm_1 --name=run2",'$MG:color:GREEN')        
+        logger.info(" o Example: launch ../pythia8",'$MG:color:GREEN')        
+        logger.info(" > Options:")        
+        logger.info("     -h, --help            show this help message and exit")        
+        logger.info("     -f, --force           Use the card present in the directory in order")        
+        logger.info("                           to launch the different program")        
+        logger.info("     -n NAME, --name=NAME  Provide a name to the run (for madevent run)")        
+        logger.info("     -c, --cluster         submit the job on the cluster")        
+        logger.info("     -m, --multicore       submit the job on multicore core")        
+        logger.info("     -i, --interactive     Use Interactive Console [if available]")        
+        logger.info("     -s LASTSTEP, --laststep=LASTSTEP")        
+        logger.info("                           last program run in MadEvent run.")
+        logger.info("                           [auto|parton|pythia|pgs|delphes]")        
+        logger.info("")    
+        logger.info("Launch on MadLoop standalone output:",'$MG:color:BLACK')
+        logger.info(" o Example: launch PROC_loop_sm_1 -f",'$MG:color:GREEN')    
+        logger.info(" > Simple check of a single Phase-space points.")    
+        logger.info(" > You will be asked whether you want to edit the MadLoop ")    
+        logger.info("   and model param card as well as the PS point, unless ")    
+        logger.info("   the -f option is specified. All other options are ")    
+        logger.info("   irrelevant for this kind of launch.")    
+        logger.info("")    
+        logger.info("Launch on aMC@NLO output:",'$MG:color:BLACK')
+        logger.info("   Marco, please fill in this section",'$MG:color:BLUE')
 
     def help_tutorial(self):
         logger.info("syntax: tutorial [" + "|".join(self._tutorial_opts) + "]",'$MG:color:BLUE')
@@ -4005,7 +4037,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # args is now MODE PATH
 
         if args[0].startswith('standalone'):
-            ext_program = launch_ext.SALauncher(self, args[1], options=self.options, **options)
+            if os.path.isfile(os.path.join(args[1],'Cards','MadLoopParams.dat')) \
+                and not os.path.isfile(os.path.join(args[1],'SubProcesses',\
+                                                              'check_poles.f')):
+                ext_program = launch_ext.MadLoopLauncher(self, args[1], \
+                                                options=self.options, **options)
+            else:
+                ext_program = launch_ext.SALauncher(self, args[1], \
+                                                options=self.options, **options)
         elif args[0] == 'madevent':
             if options['interactive']:
                 if hasattr(self, 'do_shell'):
