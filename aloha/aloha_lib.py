@@ -55,7 +55,6 @@ class defaultdict(collections.defaultdict):
     def __call__(self, *args):
         return defaultdict(int)
 
-
 class Computation(dict):
     """ a class to encapsulate all computation. Limit side effect """
     
@@ -120,9 +119,7 @@ class Computation(dict):
         return new
     
     def add_function_expression(self, fct_tag, *args):
-        tag = 'FCT%s' % len(self.fct_expr)
         argument = []
-
         for expression in args:
             if isinstance(expression, (MultLorentz, AddVariable, LorentzObject)):
                 expr = expression.expand().get_rep([0])
@@ -138,13 +135,17 @@ class Computation(dict):
             
         if str(fct_tag)+str(argument) in self.inverted_fct:
             tag = self.inverted_fct[str(fct_tag)+str(argument)]
-            return self.inverted_fct[str(fct_tag)+str(argument)]
+            v = tag.split('(')[1][:-1]
+            self.add_tag(('FCT%s' % v,))
+            return tag
         else:
+            id = len(self.fct_expr)
+            tag = 'FCT%s' % id
+            self.inverted_fct[str(fct_tag)+str(argument)] = 'FCT(%s)' % id
             self.fct_expr[tag] = (fct_tag, argument) 
             self.reduced_expr2[tag] = (fct_tag, argument)
             self.add_tag((tag,))
-            self.inverted_fct[str(fct_tag)+str(argument)] = 'FCT(%s)' % (len(self.fct_expr) -1)
-            return 'FCT(%s)' % (len(self.fct_expr) -1)
+            return 'FCT(%s)' % id
         
 KERNEL = Computation()
 
