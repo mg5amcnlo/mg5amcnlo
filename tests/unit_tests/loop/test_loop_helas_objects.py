@@ -652,6 +652,54 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         
         self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
 
+    def test_helas_diagrams_gg_wpwmttx(self):
+        """Test the generation of all the helas diagrams for the loop process 
+           gg > w+w-tt~ for which Fabio got an error in the color keys at
+           helas generation time.
+        """
+
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':24,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-24,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':True}))
+
+        myleglist.append(base_objects.Leg({'id':-6,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{'WEIGHTE':6},
+                                        'squared_orders':{}})
+    
+        myamplitude = diagram_generation.Amplitude()
+        myamplitude.set('process', myproc)
+        myamplitude.generate_diagrams()
+        self.check_HME_individual_diag_sanity(myamplitude,myproc)
+        
+        # Skip the lengthy check for the equivalent NLO process
+        return
+        
+        myloopproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{'WEIGHTED':6},
+                                        'perturbation_couplings':['QCD',],
+                                        'squared_orders':{}})
+    
+        myloopamplitude = loop_diagram_generation.LoopAmplitude()
+        myloopamplitude.set('process', myloopproc)
+        myloopamplitude.generate_diagrams()
+        
+        #print "CT interaction considered=",self.myloopmodel.get_interaction(8)
+        #self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc,selection=[(152,155)],verbose=True)
+        self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
+
     def test_helas_diagrams_gd_gd(self):
         """Test the generation of all the helas diagrams for the loop process 
            gd > gd.
