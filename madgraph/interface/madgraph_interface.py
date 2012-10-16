@@ -2082,7 +2082,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 'MCatNLO-utilities','update']
-    _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
+    _v4_export_formats = ['madevent', 'standalone', 'standalone_ms', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
@@ -2196,7 +2196,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._curr_amps = diagram_generation.AmplitudeList()
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()    
 
-        self._v4_export_formats = ['madevent', 'standalone', 'matrix'] 
+        self._v4_export_formats = ['madevent', 'standalone','standalone_ms', 'matrix'] 
         self._export_formats = self._v4_export_formats + ['standalone_cpp', 'pythia8']
         self._nlo_modes_for_completion = ['all','virt','real']
     
@@ -4577,14 +4577,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 shutil.rmtree(self._export_dir)
 
         # Make a Template Copy
-        if self._export_format in ['madevent', 'standalone', 'matrix']:
+        if self._export_format in ['madevent', 'standalone','standalone_ms', 'matrix']:
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
-        if self._export_format in ['madevent', 'standalone']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_ms']:
             self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
 
         # Reset _done_export, since we have new directory
@@ -4681,7 +4681,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         calls = 0
 
         path = self._export_dir
-        if self._export_format in ['standalone_cpp', 'madevent', 'standalone']:
+        if self._export_format in ['standalone_cpp', 'madevent', 'standalone', 'standalone_ms']:
             path = pjoin(path, 'SubProcesses')
             
         cpu_time1 = time.time()
@@ -4751,7 +4751,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         self._curr_matrix_elements.get_matrix_elements()
 
         # Fortran MadGraph Standalone
-        if self._export_format == 'standalone':
+        if self._export_format in ['standalone', 'standalone_ms']:
             for me in matrix_elements:
                 calls = calls + \
                         self._curr_exporter.generate_subprocess_directory_v4(\
@@ -4812,7 +4812,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
         
-        if self._export_format in ['madevent', 'standalone', 'NLO']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_ms', 'NLO']:
             # For v4 models, copy the model/HELAS information.
             if self._model_v4_path:
                 logger.info('Copy %s model files to directory %s' % \
@@ -4918,7 +4918,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False, 
                          to_keep={'mg5_path':MG5DIR})
 
-        if self._export_format in ['madevent', 'standalone']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_ms']:
             
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,

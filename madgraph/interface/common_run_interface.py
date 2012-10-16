@@ -70,6 +70,12 @@ except Exception, error:
     import internal.check_param_card as check_param_card
     import internal.files as files
 
+try:
+    os.sys.path.append("../MadSpin")
+    import decay
+except: 
+    pass
+
 #===============================================================================
 # HelpToCmd
 #===============================================================================
@@ -491,3 +497,118 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         data = [int(s[4:6]) for s in os.listdir(pjoin(me_dir,'Events')) if
                         s.startswith('run_') and len(s)>5 and s[4:6].isdigit()]
         return name % (max(data+[0])+1) 
+    
+
+   ############################################################################      
+    def do_decay_events(self,line):
+        """
+        decay events with spin correlations
+        """
+        
+        logger.info("This functionality allows for the decay of  resonances")
+        logger.info("in a .lhe file, keeping track of the spin correlation effets.")
+        logger.info("BE AWARE OF THE CURRENT LIMITATIONS:")
+        logger.info("  (1) exclusive decay channel only, ")
+        logger.info("      YOU CANNOT USE MULTI-PARTICLE TAG")
+        logger.info("  (2) the overall branching fraction must")
+        logger.info("      specified by the user (otherwise the")
+        logger.info("      is not rescaled)")
+        logger.info("  (3) only decay channels with splitting of the type")
+        logger.info("      A -> B(stable) + C(unstable)")
+        logger.info("      have been tested so far")
+        logger.info("  (4) when entering the decay chain structure,")
+        logger.info("      please note that the reading module is ")
+        logger.info("      CASE SENSITIVE")
+
+        evt_file=self.ask("Enter the input file", None,path_msg=" ")
+        
+        try:
+            misc.call(['gunzip %s' % evt_file], shell=True)
+            evt_file=evt_file.replace(".gz","")
+        except:
+            pass
+        
+        print evt_file
+        try:
+            inputfile = open(evt_file, 'r')       
+        except:
+            print "cannot open the file"
+        
+         #    load the tools
+        decay_tools=decay.decay_misc()
+        
+#
+# Read the banner from the input event file
+#
+        logger.info("Extracting the banner ...")
+        mybanner=decay.Banner(inputfile)
+        mybanner.ReadBannerFromFile()
+        mybanner.proc["generate"], proc_option=decay_tools.format_proc_line(\
+                                        mybanner.proc["generate"])
+        logger.info("process: "+mybanner.proc["generate"])
+        logger.info("options: "+proc_option)
+
+# Read the final state of the production process:
+#     "_full" means with the complete decay chain syntax 
+#     "_compact" means without the decay chain syntax 
+        final_state_full=\
+             mybanner.proc["generate"][mybanner.proc["generate"].find(">")+1:]
+        final_state_compact, prod_branches=\
+             decay_tools.get_final_state_compact(final_state_full)
+
+        decay_processes={}
+
+# Ask the user which particle should be decayed
+        particle_index=2
+        to_decay={}
+        for particle in final_state_compact.split():
+            particle_index+=1
+            do_decay=self.ask("decay the "+str(particle)+" ?", "yes",["yes","no"])
+            if do_decay=="yes":
+                to_decay[particle_index]=particle
+                decay_processes[particle_index]=\
+                decay_tools.reorder_branch(raw_input("Enter the decay chain \n"))
+
+        logger.info("An estimation of the maximum weight is needed for the unweighting ")
+        answer=raw_input("Enter the maximum weight, or enter a negative number if unknown \n")
+        max_weight=-1
+        try:
+            answer=answer.replace("\n","") 
+            if float(answer)>0:
+                max_weight=float(answer)
+            else:
+                max_weight=-1
+                logger.info("The maximum weight will be evaluated")
+        except: 
+            pass
+    
+#        answer=self.ask("Include Breit Wigner effects ?", "yes",["yes","no"])
+
+#        if (answer=="yes"): 
+        BW_effects=1
+#        else:
+#            BW_effects=0
+
+
+# by default set the branching fraction to 1
+        branching_fraction=1.0
+        
+        answer=raw_input( "Branching fraction ? (type a negative number is unknown ) \n")
+
+        try:
+            if float(answer) >0.0: branching_fraction=float(answer)
+        except: 
+            pass
+
+        current_dir=os.getcwd()
+        os.chdir("../MadSpin")
+        generate_all=decay.decay_all_events(inputfile,mybanner,to_decay,decay_processes,\
+                 prod_branches, proc_option, max_weight, BW_effects,branching_fraction)
+        os.chdir(current_dir)
+        
+        misc.call(['gzip %s' % evt_file], shell=True)
+        decayed_evt_file=evt_file.replace('.lhe', '_decayed.lhe')
+        shutil.move('../MadSpin/decayed_events.lhe', decayed_evt_file)
+        misc.call(['gzip %s' % decayed_evt_file], shell=True)
+        logger.info("Decayed events have been written in %s" % decayed_evt_file)
+

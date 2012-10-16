@@ -1087,6 +1087,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         if not isinstance(writer, writers.FortranWriter):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
+            
+        if not self.opt.has_key('sa_for_decay'):
+            self.opt['sa_for_decay']=False
 
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
@@ -1139,13 +1142,22 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         color_data_lines = self.get_color_data_lines(matrix_element)
         replace_dict['color_data_lines'] = "\n".join(color_data_lines)
 
+        if self.opt['sa_for_decay'] :
+            amp2_lines = self.get_amp2_lines(matrix_element, [] )
+            replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
 
         # Extract JAMP lines
         jamp_lines = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
-        file = open(pjoin(_file_path, \
+        if not self.opt['sa_for_decay'] :
+            file = open(pjoin(_file_path, \
                           'iolibs/template_files/matrix_standalone_v4.inc')).read()
+        else:
+            file = open(pjoin(_file_path, \
+                          'iolibs/template_files/matrix_standalone_ms_v4.inc')).read()
+            
+
         file = file % replace_dict
 
         # Write the file
@@ -3114,7 +3126,7 @@ class UFO_model_to_mg4(object):
         if self.opt['export_format'] in ['madloop','madloop_optimized']:
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read_mp.f'
-        elif self.opt['export_format'] == 'standalone':
+        elif self.opt['export_format'] in ['standalone', 'standalone_ms']:
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read.f'
         else:
@@ -3138,7 +3150,7 @@ class UFO_model_to_mg4(object):
                 text = text.replace('madevent','aMCatNLO')
                 open(path, 'w').writelines(text)
 
-        elif self.opt['export_format'] in ['standalone', 'madloop','madloop_optimized']:
+        elif self.opt['export_format'] in ['standalone', 'standalone_ms', 'madloop','madloop_optimized']:
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
         else:
@@ -3809,15 +3821,17 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
     
         assert group_subprocesses in [True, False]
         
-        
-        opt = {'clean': not noclean, 
+        opt = {'clean': not noclean,
                'complex_mass': cmd.options['complex_mass_scheme'],
                'export_format':cmd._export_format,
-               'mp': False,
-               'model': cmd._curr_model.get('name')}
+               'mp': False,  'sa_for_decay':False, 'model': cmd._curr_model.get('name') }
+
+        if cmd._export_format=='standalone_ms':
+            opt['sa_for_decay'] = True        
     
-        if cmd._export_format in ['standalone', 'matrix']:
+        if cmd._export_format in ['standalone', 'matrix','standalone_ms']:
             return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt)
+        
         elif cmd._export_format in ['madevent'] and group_subprocesses:
             return  ProcessExporterFortranMEGroup(cmd._mgme_dir, cmd._export_dir,
                                                                             opt)
