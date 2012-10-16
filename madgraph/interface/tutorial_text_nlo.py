@@ -94,16 +94,17 @@ Please note that, since shower-specific counterterms have to be included in the
 calculation, the parton level sample you will obtain can only be showered
 with the selected MonteCarlo. 
 Note also that, because of the way they have been generated, the parton-level
-events in the .lhe file are UNPHYSICAL. They lead to physical results only 
-after shower.
+events in the .lhe file are UNPHYSICAL. 
+In order to obtain physical results, please use the .hep file
 
-If you want to generate the showered StdHep file, please be sure to have the 
-MCatNLO-utilities installed (otherwise just type "install MCatNLO-utilities").
+Please note that, in order to generate the showered .hep file, you must have 
+the MCatNLO-utilities package installed 
+(otherwise just type "install MCatNLO-utilities").
 Please enter
-NLO> launch -s
+NLO> launch 
 
 If you just want to generate the parton level .lhe file, please enter
-NLO> launch
+NLO> launch -p
 
 
 (you can interrupt the computation to continue the tutorial by pressing Ctrl-C)

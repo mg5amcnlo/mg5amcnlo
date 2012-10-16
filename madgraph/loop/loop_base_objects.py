@@ -186,24 +186,6 @@ class LoopDiagram(base_objects.Diagram):
               model['interaction_dict'][vert['id']]['type']])
         else:
             return self['CT_vertices']
-        
-    def get_loop_orders(self,model):
-        """ Return a dictionary with one key per type of order appearing in the
-            interactions building the loop flow. The corresponding values are
-            the number of type this order appear in the diagram. """
-        
-        loop_orders = {}
-        for vertex in self['vertices']:
-            # We do not count the identity vertex
-            if vertex['id']!=0 and len([1 for leg in vertex['legs'] if \
-                leg['loop_line']])==2:
-                vertex_orders = model.get_interaction(vertex['id'])['orders']
-                for order in vertex_orders.keys():
-                    if order in loop_orders.keys():
-                        loop_orders[order]+=vertex_orders[order]
-                    else:
-                        loop_orders[order]=vertex_orders[order]
-        return loop_orders
 
     def is_fermion_loop(self, model):
         """ Return none if there is no loop or if a tag has not yet been set and

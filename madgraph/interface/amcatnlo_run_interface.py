@@ -560,7 +560,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             raise aMCatNLOAlreadyRunning, message
         else:
             misc.call(['touch %s' % pjoin(me_dir,'RunWeb')], cwd=me_dir, shell=True)
-            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
+            misc.call([pjoin('./', self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir, shell=True)
         
         self.to_store = []
         self.run_name = None
@@ -602,7 +602,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         # check argument validity and normalise argument
         options = options.__dict__
         self.check_shower(argss, options)
-        options['shower'] = 'only'
+        options['parton'] = 'onlyshower'
         evt_file = pjoin(os.getcwd(), argss[0], 'events.lhe')
         self.ask_run_configuration('', options)
         if self.check_mcatnlo_dir():
@@ -665,7 +665,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
-        if self.check_mcatnlo_dir() and options['shower']:
+        if self.check_mcatnlo_dir() and not options['parton']:
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
@@ -694,7 +694,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
-        if self.check_mcatnlo_dir() and options['shower']:
+        if self.check_mcatnlo_dir() and not options['parton']:
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
@@ -763,6 +763,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             options['only_generation'] = False
 
         if mode in ['aMC@NLO', 'aMC@LO']:
+            print self.me_dir, 'Events', self.run_name
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
         old_cwd = os.getcwd()
 
@@ -897,9 +898,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         misc.call(['mv %s %s' % 
             (pjoin(self.me_dir, 'SubProcesses', filename), evt_file)], shell=True )
         misc.call(['gzip %s' % evt_file], shell=True)
-        logger.info('The %s.gz file has been generated.\nIt contains %d %s events to be showered.\n' \
-                % (evt_file, nevents, mode[4:]) + \
-                'Please remember that you need to shower the events in order to get physical results')
+        logger.info('The %s.gz file has been generated.\nIt contains %d %s events to be showered with %s.\n' \
+                % (evt_file, nevents, mode[4:], self.run_card['parton_shower']))
         return evt_file
 
 
@@ -1460,8 +1460,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 nfail +=1
                 tolerance = float(line.split()[1])
 
-        logger.info('   Poles fail to cancel for %d points over %d (tolerance=%2.1e)' \
-                %(nfail, nfail+npass, tolerance))
+        logger.info('   Poles succesfully cancel for %d points over %d (tolerance=%2.1e)' \
+                %(npass, nfail+npass, tolerance))
 
 
 
@@ -1528,15 +1528,15 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     def ask_run_configuration(self, mode, options):
         """Ask the question when launching generate_events/multi_run"""
         
-        if 'shower' in options.keys():
-            if options['shower'] == True:
+        if 'parton' in options.keys():
+            if options['parton'] == False:
                 cards = ['param', 'run', 'shower']
-            elif options['shower'] == 'only':
+            elif options['parton'] == 'onlyshower':
                 cards = ['shower']
             else:  
                 cards = ['param', 'run']
         else:  
-            cards = ['param', 'run']
+            cards = ['param', 'run', 'shower']
 
         def get_question(mode, cards):
             # Ask the user if he wants to edit any of the files
@@ -1655,8 +1655,9 @@ _launch_parser.add_option("-r", "--reweightonly", default=False, action='store_t
                                  " latest generated event files (see list in SubProcesses/nevents_unweighted)")
 _launch_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip file reweighting")
-_launch_parser.add_option("-s", "--shower", default=False, action='store_true',
-                            help="Showe the events after generation")
+_launch_parser.add_option("-p", "--parton", default=False, action='store_true',
+                            help="Stop the run after the parton level file generation (you need " + \
+                                    "to shower the file in order to get physical results)")
 
 
 _calculate_xsect_usage = "calculate_xsect [ORDER] [options]\n" + \
@@ -1704,5 +1705,6 @@ _generate_events_parser.add_option("-o", "--only-generation", default=False, act
                             "the last available results")
 _generate_events_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip file reweighting")
-_generate_events_parser.add_option("-s", "--shower", default=False, action='store_true',
-                            help="Shower the events after generation")
+_generate_events_parser.add_option("-p", "--parton", default=False, action='store_true',
+                            help="Stop the run after the parton level file generation (you need " + \
+                                    "to shower the file in order to get physical results)")

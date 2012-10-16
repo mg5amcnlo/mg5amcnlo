@@ -1261,7 +1261,7 @@ def evaluate_helicities(process, param_card = None, mg_root="",
     evaluator = MatrixElementEvaluator(process.get('model'), param_card,
                auth_skipping = False, reuse = True, cmass_scheme = cmass_scheme)
     
-    amplitude = diagram_generation.Amplitude(newproc)
+    amplitude = diagram_generation.Amplitude(process)
     matrix_element = helas_objects.HelasMatrixElement(amplitude,gen_color=False)
     
     cumulative_helEvals = []

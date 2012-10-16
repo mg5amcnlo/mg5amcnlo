@@ -95,7 +95,7 @@ class LoopExporterFortran(object):
         try:
             os.chdir(targetPath)
         except os.error:
-            logger.error('Could not cd to directory %s' % dirpath)
+            logger.error('Could not cd to directory %s' % targetPath)
             return 0
 
         if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
@@ -587,7 +587,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             calls, loop_matrix = self.write_loopmatrix(None,matrix_element,\
                                                           LoopFortranModel)
             files.append(loop_matrix)
-            files.append(write_born_amps_and_wfs(None,matrix_element,\
+            files.append(self.write_born_amps_and_wfs(None,matrix_element,\
                                                         LoopFortranModel))
             file = "\n".join(files)
             writer.writelines(file)

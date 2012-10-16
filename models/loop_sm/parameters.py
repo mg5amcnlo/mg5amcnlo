@@ -54,7 +54,7 @@ MU_R = Parameter(name = 'MU_R',
               value = 91.188,
               texname = '\\text{\\mu_r}',
               lhablock = 'LOOP',
-              lhacode = [ 666 ])
+              lhacode = [ 1 ])
 
 # User-defined parameters.
 aEWM1 = Parameter(name = 'aEWM1',

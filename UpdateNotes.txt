@@ -1,5 +1,23 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.5.2 (11/10/12)  OM: Fix Bug for mssm model. The param_card was not read properly
+                      for this model. (introduce in 1.5.0)
+                  OM: If the code is run with an input file (./bin/mg5 cmd.cmd)
+                      All question not answered in the file will be answered by the 
+                      default value. Running with piping data is not affected by this.
+                      i.e. running ./bin/mg5 cmd.cmd < answer_to_question 
+                       or echo 'answer_to_question' | ./bin/mg5 cmd.cmd      
+                      are not affected by this change and will work as expected.
+                  OM: Fixing a bug preventing to use the "set MH 125" command in a
+                      script file.
+                  JA: Fixed a bug in format of results.dat file for impossible
+                      configurations in processes with conflicting BWs.
+                  OM: Adding command "launch" in madevent interface which is the
+                      exact equivalent to the launch command in the MG5 interface
+                      in madevent output.
+                  OM: Secure the auto-update, since we receive some report of incomplete
+                      version file information.
+
 1.5.1 (06/10/12)  JA: Fixed symmetry factors in non-grouped MadEvent mode
                       (bug introduced in v. 1.5.0).
                   JA: Fixed phase space integration problem with multibody 
@@ -7,11 +25,13 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Fix that standalone output was not reading correctly the param_card
                       (introduce in 1.5.0)
                   OM: Fix a crash when trying to load heft
-		  OM: Fix the case when the UFO model contains one mass which has the same name
-		      as another parameter up to the case.
-		  OM: Fix a bug for result lower than 1e-100 those one are now consider as zero
-		  OM: Fix a bug present in the param_card create by width computation where the 
-		      qnumbers data were written as a float (makes pythia6 to crash)
+                  OM: Fix the case when the UFO model contains one mass which 
+                      has the same name as another parameter up to the case.
+                  OM: Fix a bug for result lower than 1e-100 those one are now 
+                      consider as zero.
+                  OM: Fix a bug present in the param_card create by width computation 
+                      computation where the qnumbers data were written as a float 
+                      (makes Pythia 6 crash).
 
 1.5.0 (28/09/12)  OM: Allow MG5 to run in complex mass scheme mode
                       (mg5> set complex_mass True)

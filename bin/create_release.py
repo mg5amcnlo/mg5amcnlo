@@ -163,8 +163,8 @@ try:
                                'madgraph', 'aloha',
                                os.path.join('models', '*.py')], cwd = filepath)
 except:
-    info.error("Error while trying to run epydoc. Do you have it installed?")
-    info.error("Execution cancelled.")
+    logging.error("Error while trying to run epydoc. Do you have it installed?")
+    logging.error("Execution cancelled.")
     sys.exit()
 
 if status1:
