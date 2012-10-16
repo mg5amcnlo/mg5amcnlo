@@ -956,15 +956,19 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
             logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
                         ' and hadronized events in the StdHEP format obtained' + \
-                        ' showering the parton-level event file %s.gz') % \
-                        (hep_file, evt_file))
+                        ' showering the parton-level event file %s.gz with %s') % \
+                        (hep_file, evt_file, shower))
         #this is for hw++
-        elif os.path.exists(pjoin(self.run_name, 'MCATNLO_HERWIGPP.hepmc')):
-            hep_file = '%s_%s.hep' % (evt_file[:-4], shower)
+        elif os.path.exists(pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc')):
+            hep_file = '%s_%s.hepmc' % (evt_file[:-4], shower)
             misc.call(['mv %s %s' % \
-                (pjoin(self.run_name, 'MCATNLO_HERWIGPP.hepmc'), hep_file)], shell=True) 
+                (pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc'), hep_file)], shell=True) 
             misc.call(['gzip %s' % evt_file], shell=True)
             misc.call(['gzip %s' % hep_file], shell=True)
+            logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
+                        ' and hadronized events in the HEPMC format obtained' + \
+                        ' showering the parton-level event file %s.gz with %s') % \
+                        (hep_file, evt_file, shower))
 
         else:
             raise aMCatNLOError('No file has been generated, an error occurred')
