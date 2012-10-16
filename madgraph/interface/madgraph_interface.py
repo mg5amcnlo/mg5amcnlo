@@ -3966,9 +3966,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 else:
                     lhapdf_config = None
 
-                logger.info('lhapdf-config: %s' % lhapdf_config)
-                self.lhapdf_config = lhapdf_config
-
             if key == 'fastjet' and self.options_configuration[key]:
                 if os.path.isfile(self.options_configuration['fastjet']) or \
                 any([os.path.isfile(os.path.join(path, self.options_configuration['fastjet'])) \
@@ -3976,10 +3973,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     fastjet_config = self.options_configuration['fastjet']
                 else:
                     fastjet_config = None
-
-                logger.info('fastjet-config: %s' % fastjet_config)
-                self.fastjet_config = fastjet_config
-
                     
             elif key.endswith('path'):
                 pass
@@ -4464,6 +4457,39 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     logger.info('set loop optimized output to %s' % args[1])
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             self.options[args[0]] = eval(args[1])
+
+        elif args[0] == 'fastjet':
+            try:
+                p = subprocess.Popen([args[1], '--version'], stdout=subprocess.PIPE, 
+                stderr=subprocess.PIPE)
+                output, error = p.communicate()
+                res = 0
+                logger.info('set fastjet_config to %s' % args[1])
+                self.options[args[0]] = args[1]
+            except:
+                res = 1
+
+            if res != 0 or error:
+                logger.warning('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
+                        'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n' + \
+                        'You will NOT be able to run aMC@NLO otherwise.\n')
+            elif int(output.split('.')[0]) < 3:
+                logger.warning('%s is not ' + \
+                        'v3 or greater. Please install FastJet v3+.' % args[1] + \
+                        'You will NOT be able to run aMC@NLO otherwise.\n')
+
+        elif args[0] == 'lhapdf':
+            try:
+                res = misc.call([args[1], '--version'], stdout=devnull)
+                logger.info('set lhapdf_config to %s' % args[1])
+                self.options[args[0]] = args[1]
+            except:
+                res = 1
+            if res != 0:
+                logger.warning('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
+                        'executable. Please enter the full PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
+                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
+
         
         elif args[0] in ['timeout', 'auto_update']:
                 self.options[args[0]] = int(args[1]) 
