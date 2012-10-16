@@ -629,9 +629,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         else:
             self.cluster_mode = int(self.options['run_mode'])
 
-        if self.options_madevent['automatic_html_opening']:
-            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.options_madevent['automatic_html_opening'] = False
+#        if self.options_madevent['automatic_html_opening']:
+#            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+#            self.options_madevent['automatic_html_opening'] = False
 
         mode = argss[0]
         self.ask_run_configuration(mode, options)
@@ -657,9 +657,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         else:
             self.cluster_mode = int(self.options['run_mode'])
 
-        if self.options_madevent['automatic_html_opening']:
-            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.options_madevent['automatic_html_opening'] = False
+#        if self.options_madevent['automatic_html_opening']:
+#            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+#            self.options_madevent['automatic_html_opening'] = False
 
         mode = 'aMC@' + argss[0]
         self.ask_run_configuration(mode, options)
@@ -686,9 +686,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         else:
             self.cluster_mode = int(self.options['run_mode'])
 
-        if self.options['automatic_html_opening']:
-            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.options['automatic_html_opening'] = False
+#        if self.options['automatic_html_opening']:
+#            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+#            self.options['automatic_html_opening'] = False
 
         mode = argss[0]
         self.ask_run_configuration(mode, options)
@@ -939,6 +939,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 level='parton')
         os.chdir(rundir)
         misc.call(['mv ../%s ../MCATNLO_%s_input .' % (exe, shower)], shell=True)
+        #link the hwpp exe in the rundir
+        if shower == 'HERWIGPP':
+            misc.call(['ln -s %s %s' % \
+                (pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)], shell=True)
         evt_name = os.path.basename(evt_file)
         misc.call(['ln -s %s %s' % (os.path.split(evt_file)[0], self.run_name)], shell=True)
         misc.call(['./%s < MCATNLO_%s_input > amcatnlo_run.log 2>&1' % \
@@ -954,6 +958,17 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         ' and hadronized events in the StdHEP format obtained' + \
                         ' showering the parton-level event file %s.gz') % \
                         (hep_file, evt_file))
+        #this is for hw++
+        elif os.path.exists(pjoin(self.run_name, 'MCATNLO_HERWIGPP.hepmc')):
+            hep_file = '%s_%s.hep' % (evt_file[:-4], shower)
+            misc.call(['mv %s %s' % \
+                (pjoin(self.run_name, 'MCATNLO_HERWIGPP.hepmc'), hep_file)], shell=True) 
+            misc.call(['gzip %s' % evt_file], shell=True)
+            misc.call(['gzip %s' % hep_file], shell=True)
+
+        else:
+            raise aMCatNLOError('No file has been generated, an error occurred')
+
         os.chdir(oldcwd)
 
 
@@ -1089,6 +1104,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 lines[i]='NEVENTS=%d' % nevents
             if lines[i].startswith('MCMODE'):
                 lines[i]='MCMODE=%s' % shower
+            #the following variables are actually relevant only if running hw++
+            if lines[i].startswith('HWPPPATH'):
+                lines[i]='HWPPPATH=%s' % self.options['hwpp_path']
+            if lines[i].startswith('THEPEGPATH'):
+                lines[i]='THEPEGPATH=%s' % self.options['thepeg_path']
+            if lines[i].startswith('HEPMCPATH'):
+                lines[i]='HEPMCPATH=%s' % self.options['hepmc_path']
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'MCatNLO_MadFKS.inputs'), 'w')
         output.write('\n'.join(lines))

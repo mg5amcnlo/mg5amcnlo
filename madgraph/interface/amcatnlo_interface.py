@@ -150,6 +150,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             path = pjoin(MG4DIR,args[0])
         else:    
             raise self.InvalidCmd, '%s is not a valid directory' % args[0]
+        args[0] = path
                 
         # inform where we are for future command
         self._done_export = [path, mode]
@@ -571,9 +572,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         if not os.path.isdir(os.path.join(os.getcwd(), argss[0], 'Events')):
             self.do_switch('ML5')
             return mg_interface.MadGraphCmd.do_launch(self,line)
-        if self.options['automatic_html_opening']:
-            misc.open_file(os.path.join(os.getcwd(), argss[0], 'crossx.html'))
-            self.options['automatic_html_opening'] = False
+#        if self.options['automatic_html_opening']:
+#            misc.open_file(os.path.join(os.getcwd(), argss[0], 'crossx.html'))
+#            self.options['automatic_html_opening'] = False
 
         if options['interactive']:
             if hasattr(self, 'do_shell'):
