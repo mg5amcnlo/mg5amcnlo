@@ -2102,6 +2102,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
                        'MCatNLO-utilities_path':'./MCatNLO-utilities',
+                       'hwpp_path':'./',
+                       'thepeg_path':'./',
+                       'hepmc_path':'./',
                        'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
@@ -3949,21 +3952,21 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         continue
 
 
-            if key == 'lhapdf' and self.options_configuration[key]:
-                if os.path.isfile(self.options_configuration['lhapdf']) or \
-                any([os.path.isfile(os.path.join(path, self.options_configuration['lhapdf'])) \
-                        for path in os.environ['PATH'].split(':')]):
-                    lhapdf_config = self.options_configuration['lhapdf']
-                else:
-                    lhapdf_config = None
-
-            if key == 'fastjet' and self.options_configuration[key]:
-                if os.path.isfile(self.options_configuration['fastjet']) or \
-                any([os.path.isfile(os.path.join(path, self.options_configuration['fastjet'])) \
-                        for path in os.environ['PATH'].split(':')]):
-                    fastjet_config = self.options_configuration['fastjet']
-                else:
-                    fastjet_config = None
+#            if key == 'lhapdf' and self.options_configuration[key]:
+#                if os.path.isfile(self.options_configuration['lhapdf']) or \
+#                any([os.path.isfile(os.path.join(path, self.options_configuration['lhapdf'])) \
+#                        for path in os.environ['PATH'].split(':')]):
+#                    lhapdf_config = self.options_configuration['lhapdf']
+#                else:
+#                    lhapdf_config = None
+#
+#            if key == 'fastjet' and self.options_configuration[key]:
+#                if os.path.isfile(self.options_configuration['fastjet']) or \
+#                any([os.path.isfile(os.path.join(path, self.options_configuration['fastjet'])) \
+#                        for path in os.environ['PATH'].split(':')]):
+#                    fastjet_config = self.options_configuration['fastjet']
+#                else:
+#                    fastjet_config = None
                     
             elif key.endswith('path'):
                 pass
@@ -4455,7 +4458,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 stderr=subprocess.PIPE)
                 output, error = p.communicate()
                 res = 0
-                logger.info('set fastjet_config to %s' % args[1])
+                logger.info('set fastjet to %s' % args[1])
                 self.options[args[0]] = args[1]
             except:
                 res = 1
@@ -4472,7 +4475,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         elif args[0] == 'lhapdf':
             try:
                 res = misc.call([args[1], '--version'], stdout=devnull)
-                logger.info('set lhapdf_config to %s' % args[1])
+                logger.info('set lhapdf to %s' % args[1])
                 self.options[args[0]] = args[1]
             except:
                 res = 1
@@ -4481,7 +4484,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         'executable. Please enter the full PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
-        
+        elif args[0] in ['hwpp_path', 'thepeg_path', 'hepmc_path']:
+            print 'MZ, CORRECT', args
+            if os.path.isdir(args[1]):
+                self.options[args[0]] = args[1]
+                logger.info('set %s to %s' % (args[0], args[1]))
+            else:
+                logger.warning('set %s :%s is not a valid path' % (args[0], args[1]))
+       
         elif args[0] in ['timeout', 'auto_update']:
                 self.options[args[0]] = int(args[1]) 
         
