@@ -2729,30 +2729,6 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
     else:
         raise InvalidCmd("processes is of non-supported format")
 
-    assert False
-    assert processes, "No processes given"
-
-    model = processes[0].get('model')
-
-    # Initialize matrix element evaluation
-    evaluator = MatrixElementEvaluator(model, param_card,
-                                       auth_skipping = True, reuse = False)
-
-    comparison_results = []
-    comparison_explicit_flip = []
-
-    # For each process, make sure we have set up leg numbers:
-    for process in processes:
-        # Get process result
-        result = check_gauge_process(process, evaluator)
-        if result:
-            comparison_results.append(result)
-        
-        
-            
-    return comparison_results
-
-
 def get_value(process, evaluator, p=None):
     """Return the value/momentum for a phase space point"""
 

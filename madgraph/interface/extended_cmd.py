@@ -244,7 +244,7 @@ class BasicCmd(cmd.Cmd):
         try:
             return self.completion_matches[state]
         except IndexError, error:
-            #if __debug__:
+            # if __debug__:
             #    logger.error('\n Completion ERROR:')
             #    logger.error( error)
             return None    
