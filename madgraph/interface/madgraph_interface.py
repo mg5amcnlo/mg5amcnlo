@@ -3633,6 +3633,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text = open(path).read()
             text = text.replace('MBITS=32','MBITS=64')
             open(path, 'w').writelines(text)
+        elif args[0] == "MCatNLO-utilities" and sys.maxsize > 2**32:
+            path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'make_opts')
+            text = open(path).read()
+            text = text.replace('MBITS=32','MBITS=64')
+            open(path, 'w').writelines(text)
             
         # Compile the file
         # Check for F77 compiler
@@ -3657,24 +3662,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 open(path, 'w').writelines(text)
 
             elif compiler == 'gfortran' and args[0] =='MCatNLO-utilities':
-                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'mcfio', 'arch_mcfio')
+                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'make_opts')
                 text = open(path).read()
-                text = text.replace('F77=f77','F77=gfortran')
-                text = text.replace('-fdebug-kludge', '')
-                open(path, 'w').writelines(text)
-                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'stdhep_arch')
-                text = open(path).read()
-                text = text.replace('F77=f77','F77=gfortran')
-                open(path, 'w').writelines(text)
-            elif compiler == 'g77' and args[0] =='MCatNLO-utilities':
-                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'mcfio', 'arch_mcfio')
-                text = open(path).read()
-                text = text.replace('F77=f77','F77=g77')
-                open(path, 'w').writelines(text)
-                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'stdhep_arch')
-                text = open(path).read()
-                text = text.replace('F77=f77','F77=g77')
-                open(path, 'w').writelines(text)
+                text = text.replace('FC=g77','FC=gfortran')
+                open(path, 'w').writelines(text)    
 
                             
         if logger.level <= logging.INFO:
