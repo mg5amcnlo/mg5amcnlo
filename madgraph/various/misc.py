@@ -210,8 +210,19 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True ,**opt):
             error_msg += 'Please install g++ (which is part of the gcc package)  on your computer and retry.'
             raise MadGraph5Error, error_msg
 
+        # Check if this is due to the need of gfortran 4.6 for quadruple precision
+        if any(tag.upper() in out.upper() for tag in ['real(kind=16)','real*16',
+            'complex*32']) and mode == 'fortran' and not \
+                             ''.join(get_gfortran_version().split('.')) >= '46':
+            if not which('gfortran'):
+                raise MadGraph5Error, 'The fortran compiler gfortran v4.6 or later '+\
+                  'is required to compile %s.\nPlease install it and retry.'%cwd
+            else:
+                logger_stderr.error('ERROR, you could not compile %s because'%cwd+\
+             ' your version of gfortran is older than 4.6. MadGraph will carry on,'+\
+                              ' but will not be able to compile an executable.')
+                return p.returncode
         # Other reason
-
         error_text = 'A compilation Error occurs '
         if cwd:
             error_text += 'when trying to compile %s.\n' % cwd
@@ -223,6 +234,19 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True ,**opt):
 
         raise MadGraph5Error, error_text
     return p.returncode
+
+def get_gfortran_version():
+    """ Returns the gfortran version as a string.
+        Returns '0' if it failed."""
+    try:    
+        p = Popen('gfortran -dumpversion', stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE, shell=True)
+        output, error = p.communicate()
+        version_finder=re.compile(r"(?P<version>(\d.)*\d)")
+        version = version_finder.search(output).group('version')
+        return version
+    except:
+        return '0'
 
 def mod_compilator(directory, new='gfortran', current=None):
     #define global regular expression

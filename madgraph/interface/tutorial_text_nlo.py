@@ -16,7 +16,7 @@
 
 tutorial_aMCatNLO = """
 You have entered tutorial mode. This will introduce you to the main
-syntax options of aMC@NLO. Most of the syntax corresponds to the MadGraph one 
+syntax options of aMC@NLO. Most of the syntax is identical to the MadGraph one 
 
 As in MadGraph, to learn more about the different options for a command, 
 you can use
@@ -106,8 +106,17 @@ aMC@NLO> launch
 If you just want to generate the parton level .lhe file, please enter
 aMC@NLO> launch -p
 
-
 (you can interrupt the computation to continue the tutorial by pressing Ctrl-C)
+
+At any time, you can access more commands/options for running aMC@NLO by switching to an interactive interface aMC@NLO_run for a given output folder 'MyFolder'.
+You can do so by typing:
+aMC@NLO> launch -i MyFolder
+
+Please see MY_FIRST_AMCATNLO_RUN/README to know about the available commands.
+To know the possible options/modes for each command, simply tipe
+aMC@NLO_run> help COMMAND
+from the aMC@NLO_run interface
+
 """
 
 open_index = output

@@ -448,7 +448,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                                  get('model'),
                                               amplitude='')
             logger.info("Generating born Feynman diagrams for " + \
-                         matrix_element.get('processes')[0].nice_string())
+                         matrix_element.get('processes')[0].nice_string(\
+                                                          print_weighted=False))
             plot.draw()
 
         if not matrix_element.get('processes')[0].get('has_born'):
