@@ -520,7 +520,23 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         logger.info("      please note that the reading module is ")
         logger.info("      CASE SENSITIVE")
 
-        evt_file=self.ask("Enter the input file", None,path_msg=" ")
+        # load the name of the event file
+        args = self.split_arg(line) 
+        if len(args) == 0:
+            if self.run_name:
+                args.insert(0, self.results.lastrun)
+            elif self.results.lastrun:
+                args.insert(0, self.results.lastrun)
+            else:
+                raise self.InvalidCmd('No run name currently define. Please add this information.')             
+        
+        print args
+        if len(args) >= 1:
+            if args[0] != self.run_name and\
+             not os.path.exists(pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz')):
+                raise self.InvalidCmd('No events file corresponding to %s run. '% args[0])
+            evt_file=pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz')
+
         
         try:
             misc.call(['gunzip %s' % evt_file], shell=True)
@@ -611,4 +627,25 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         shutil.move('../MadSpin/decayed_events.lhe', decayed_evt_file)
         misc.call(['gzip %s' % decayed_evt_file], shell=True)
         logger.info("Decayed events have been written in %s" % decayed_evt_file)
+        
+        
+    def check_decay_events(self, args):
+        """Check the argument for decay_events command
+        syntax: decay_events [NAME] 
+        """
+                
+        if len(args) == 0 and not self.run_name:
+            if self.results.lastrun:
+                args.insert(0, self.results.lastrun)
+            else:
+                raise self.InvalidCmd('No run name currently define. Please add this information.')             
+        
+        if len(args) >= 1:
+            if args[0] != self.run_name and\
+             not os.path.exists(pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz')):
+                raise self.InvalidCmd('No events file corresponding to %s run. '% args[0])
+            self.run_name=pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz')
+
+        if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'unweighted_events.lhe.gz')):
+            raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
 
