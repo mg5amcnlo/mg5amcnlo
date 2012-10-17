@@ -13,7 +13,7 @@
 ################################################################################
 import subprocess
 import logging
-import hashlib
+import vendor.md5 as md5
 import os
 import time
 import re
@@ -534,7 +534,7 @@ class PBSCluster(Cluster):
         """Submit a job prog to a PBS cluster"""
         
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
-        me_dir = hashlib.md5(me_dir).hexdigest()[-14:]
+        me_dir = md5.digest(me_dir)[-14:]
         if not me_dir[0].isalpha():
             me_dir = 'a' + me_dir[1:]
         
@@ -604,10 +604,10 @@ class PBSCluster(Cluster):
         status = misc.Popen([cmd], stdout=subprocess.PIPE)
 
         if me_dir.endswith('/'):
-           me_dir = me_dir[:-1]    
-        me_dir = hashlib.md5(me_dir).hexdigest()[-14:]
+            me_dir = me_dir[:-1]    
+        me_dir = md5.digest(me_dir)[-14:]
         if not me_dir[0].isalpha():
-                  me_dir = 'a' + me_dir[1:]
+            me_dir = 'a' + me_dir[1:]
 
         idle, run, fail = 0, 0, 0
         for line in status.stdout:
@@ -656,7 +656,7 @@ class SGECluster(Cluster):
         """Submit a job prog to an SGE cluster"""
 
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
-        me_dir = hashlib.md5(me_dir).hexdigest()[-10:]
+        me_dir = md5.digest(me_dir)[-10:]
         if not me_dir[0].isalpha():
             me_dir = 'a' + me_dir[1:]
 
@@ -750,7 +750,7 @@ class SGECluster(Cluster):
 
         if me_dir.endswith('/'):
            me_dir = me_dir[:-1]    
-        me_dir = hashlib.md5(me_dir).hexdigest()[-10:]
+        me_dir = md5.digest(me_dir)[-10:]
         if not me_dir[0].isalpha():
             me_dir = 'a' + me_dir[1:]
 
@@ -791,7 +791,7 @@ class LSFCluster(Cluster):
         """Submit the job prog to an LSF cluster"""
         
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
-        me_dir = hashlib.md5(me_dir).hexdigest()[-14:]
+        me_dir = md5.digest(me_dir)[-14:]
         if not me_dir[0].isalpha():
             me_dir = 'a' + me_dir[1:]
         
