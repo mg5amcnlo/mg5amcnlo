@@ -633,6 +633,7 @@ _launch_parser.add_option("-r", "--reweightonly", default=False, action='store_t
                                  " latest generated event files (see list in SubProcesses/nevents_unweighted)")
 _launch_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip file reweighting")
-_launch_parser.add_option("-s", "--shower", default=False, action='store_true',
-                            help="Shower the events after generation")
+_launch_parser.add_option("-p", "--parton", default=False, action='store_true',
+                            help="Stop the run after the parton level file generation (you need " + \
+                                    "to shower the file in order to get physical results)")
 

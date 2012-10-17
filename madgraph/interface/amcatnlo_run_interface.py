@@ -620,6 +620,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         options = options.__dict__
         options['reweightonly'] = False
         options['noreweight'] = False
+        options['parton'] = True
         self.check_calculate_xsect(argss, options)
         
         if options['multicore']:
@@ -633,6 +634,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 #            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
 #            self.options_madevent['automatic_html_opening'] = False
 
+        
         mode = argss[0]
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
