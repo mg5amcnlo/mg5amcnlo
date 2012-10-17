@@ -845,7 +845,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
 
                     if (i < 2 and not options['only_generation'])  or i == 1 :
-                        misc.call(['./combine_results.sh %d %d GF* GV*' % (i, nevents)], shell=True)
+                        p = misc.Popen(['./combine_results.sh %d %d GF* GV*' % (i, nevents)],
+                                stdout=subprocess.PIPE, shell=True)
+                        output = p.communicate()
+                        self.cross_sect_dict = self.read_results(output)
+                        self.print_summary(step = i)
 
             elif mode == 'aMC@LO':
                 if not options['only_generation']:
@@ -860,7 +864,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
 
                     if (i < 2 and not options['only_generation'])  or i == 1 :
-                        misc.call(['./combine_results.sh %d %d GB*' % (i, nevents)], shell=True)
+                        p = misc.Popen(['./combine_results.sh %d %d GF* GV*' % (i, nevents)],
+                                stdout=subprocesses.PIPE, shell=True)
+                        output = p.communicate()
+                        self.cross_sect_dict = self.read_results(output)
+                        self.print_summary(step = i)
 
         if self.cluster_mode == 1:
             #if cluster run, wait 15 sec so that event files are transferred back
@@ -873,6 +881,66 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         os.chdir(old_cwd)
 
         return self.reweight_and_collect_events(options, mode, nevents)
+
+    def read_results(self, output):
+        """extract results (cross-section, absolute cross-section and errors)
+        from output, which should be formatted as
+            Found 4 correctly terminated jobs 
+            random seed found in 'randinit' is 33
+            Integrated abs(cross-section)
+            7.94473937e+03 +- 2.9953e+01  (3.7702e-01%)
+            Found 4 correctly terminated jobs 
+            Integrated cross-section
+            6.63392298e+03 +- 3.7669e+01  (5.6782e-01%)
+        returning the cross_sect_dict"""
+        res = {}
+        pat = re.compile(\
+'''Found (\d+) correctly terminated jobs 
+random seed found in 'randinit' is (\d+)
+Integrated abs\(cross-section\)
+.*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
+Found (\d+) correctly terminated jobs 
+Integrated cross-section
+.*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)''')
+        match = re.search(pat, output[0])
+        if not match or output[1]:
+            raise aMCatNLOError('An error occurred during the collection of results')
+        if int(match.groups()[0]) != self.njobs:
+            raise aMCatNLOError('Not all jobs terminated successfully')
+        return {'randinit' : int(match.groups()[1]),
+                'xseca' : float(match.groups()[2]),
+                'erra' : float(match.groups()[3]),
+                'xsect' : float(match.groups()[6]),
+                'errt' : float(match.groups()[7])}
+
+
+    def print_summary(self, step):
+        """print a summary of the results contained in self.cross_sect_dict.
+        step corresponds to the mintMC step, if =2 (i.e. after event generation)
+        some additional infos are printed"""
+        status = ['Determining the number of unweighted events per channel',
+                  'Updating the number of unweighted events per channel',
+                  'Summary:']
+        message = status[step] + \
+    """
+    Random seed: %(randinit)d
+    Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb
+    Total abs(cross-section): %(xseca)8.3e +- %(erra)6.1e pb
+    """ % self.cross_sect_dict
+        if step == 2:
+            neg_frac = (self.cross_sect_dict['xseca'] - self.cross_sect_dict['xsect'])/\
+                   (2. * self.cross_sect_dict['xseca'])
+            ev_wgt = self.cross_sect_dict['xseca'] / int(self.run_card['nevents'])
+            message = message + \
+    """
+    abs(weight) per event: %8.3e
+    Fraction of negative weights: %4.2f
+    """ % (ev_wgt, neg_frac)
+        logger.info(message)
+
+
+
+
 
 
     def reweight_and_collect_events(self, options, mode, nevents):
@@ -900,6 +968,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         misc.call(['gzip %s' % evt_file], shell=True)
         logger.info('The %s.gz file has been generated.\nIt contains %d %s events to be showered with %s.\n' \
                 % (evt_file, nevents, mode[4:], self.run_card['parton_shower']))
+        self.print_summary(step = 2)
         return evt_file
 
 
