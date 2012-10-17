@@ -502,8 +502,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 
    ############################################################################      
     def do_decay_events(self,line):
-        """
-        decay events with spin correlations
+        """Require MG5 directory: decay events with spin correlations
         """
         
         # First need to load MadSpin
@@ -590,7 +589,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         list_branches={}
         while 1: 
             decaybranch=self.ask('New branch: (if you are done, type enter) \n','done')
-            if decaybranch=='Done':break
+            if decaybranch=='done' or decaybranch='':break
             decay_process, init_part=\
                 decay_tools.reorder_branch(decaybranch)
             list_branches[init_part]=decay_process
