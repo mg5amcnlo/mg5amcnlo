@@ -108,9 +108,9 @@ aMC@NLO> launch -p
 
 (you can interrupt the computation to continue the tutorial by pressing Ctrl-C)
 
-If you want to have more commands/options available, you can switch to the
-interactive aMC@NLO running interface by typing
-aMC@NLO> launch -i
+At any time, you can access more commands/options for running aMC@NLO by switching to an interactive interface aMC@NLO_run for a given output folder 'MyFolder'.
+You can do so by typing:
+aMC@NLO> launch -i MyFolder
 
 Please see MY_FIRST_AMCATNLO_RUN/README to know about the available commands.
 To know the possible options/modes for each command, simply tipe

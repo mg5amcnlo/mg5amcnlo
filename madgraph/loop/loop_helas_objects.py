@@ -2121,12 +2121,12 @@ class LoopHelasProcess(helas_objects.HelasMultiProcess):
             list_color_basis.append(loop_col_basis)
             logger.info(\
               "Processing color information for %s" % \
-              matrix_element.get('processes')[0].nice_string().\
+              matrix_element.get('processes')[0].nice_string(print_weighted=False).\
                              replace('Process', 'loop process'))
         else: # Found identical color
             logger.info(\
               "Reusing existing color information for %s" % \
-              matrix_element.get('processes')[0].nice_string().\
+              matrix_element.get('processes')[0].nice_string(print_weighted=False).\
                                  replace('Process', 'loop process'))
             
         if new_amp['process']['has_born']:
@@ -2147,12 +2147,12 @@ class LoopHelasProcess(helas_objects.HelasMultiProcess):
                 list_color_basis.append(born_col_basis)
                 logger.info(\
                   "Processing color information for %s" % \
-                  matrix_element.get('processes')[0].nice_string().\
+                  matrix_element.get('processes')[0].nice_string(print_weighted=False).\
                              replace('Process', 'born process'))
             else: # Found identical color
                 logger.info(\
                   "Reusing existing color information for %s" % \
-                  matrix_element.get('processes')[0].nice_string().\
+                  matrix_element.get('processes')[0].nice_string(print_weighted=False).\
                                     replace('Process', 'born process'))                 
             loopborn_matrices_key=(loop_col_basis_index,born_col_basis_index)
         else:
