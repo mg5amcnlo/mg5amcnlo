@@ -60,6 +60,7 @@ try:
     import madgraph.iolibs.files as files
     import madgraph.various.cluster as cluster
     import models.check_param_card as check_param_card
+    from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT=False    
 except Exception, error:
     if __debug__:
@@ -70,6 +71,7 @@ except Exception, error:
     import internal.cluster as cluster
     import internal.check_param_card as check_param_card
     import internal.files as files
+    from internal import InvalidCmd, MadGraph5Error
     MADEVENT=True
 #try:
 #    os.sys.path.append("../MadSpin")
@@ -220,6 +222,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 
     debug_output = 'ME5_debug'
 
+        
+    
     def do_treatcards_nlo(self,line):
         """this is for creating the correct run_card.inc from the nlo format run_card"""
         return self.do_treatcards(line, amcatnlo=True)
@@ -500,7 +504,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         return name % (max(data+[0])+1) 
     
 
-   ############################################################################      
+    ############################################################################      
     def do_decay_events(self,line):
         """Require MG5 directory: decay events with spin correlations
         """
@@ -537,24 +541,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 
         # load the name of the event file
         args = self.split_arg(line) 
-        self.check_decay_events(args)
-
-        evt_file=pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe.gz')
-
+        self.check_decay_events(args) 
+        # args now alway content the path to the valid files
+        evt_file = args[0] 
+        if evt_file.endswith('.gz'):
+            misc.call(['gunzip', evt_file])
+            evt_file = evt_file.replace(".gz","")
         
-        try:
-            misc.call(['gunzip %s' % evt_file], shell=True)
-            evt_file=evt_file.replace(".gz","")
-        except:
-            pass
-        
-        print evt_file
         try:
             inputfile = open(evt_file, 'r')       
-        except:
-            print "cannot open the file"
+        except Exception:
+            raise MadGraph5Error, "cannot open event file %s" % evt_file
         
-         #    load the tools
+        #    load the tools
         decay_tools=decay.decay_misc()
         
 #
@@ -666,8 +665,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             return
 
         if args[0] != self.run_name:
-            if not os.path.exists(pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz'))\
-            and not os.path.exists(pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe')):
-                raise self.InvalidCmd('No events file corresponding to %s run. '% args[0])
-        self.run_name=args[0]
+            self.run_name=args[0]
+        
+        if self.mode == 'madevent':
+            possible_path = [
+                pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz'),
+                pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe')]
+        else:
+            possible_path = [
+                           pjoin(self.me_dir,'Events',args[0], 'events.lhe.gz'),
+                           pjoin(self.me_dir,'Events',args[0], 'events.lhe')]
+
+        for path in possible_path:
+            print 'check', path
+            if os.path.exists(path):
+                correct_path = path
+                print 'find path'
+                break
+        else:
+            raise self.InvalidCmd('No events file corresponding to %s run. ' % args[0])
+        args[0] = correct_path
         

@@ -1434,13 +1434,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         """ add information to the cmd """
 
         CmdExtended.__init__(self, *completekey, **stdin)
-        
+
         # Define current MadEvent directory
         if me_dir is None and MADEVENT:
             me_dir = root_path
         
         self.me_dir = me_dir
         self.options = options        
+        self.mode = 'madevent' # usefull for code within common_run
+        
         
         # usefull shortcut
         self.status = pjoin(self.me_dir, 'status')

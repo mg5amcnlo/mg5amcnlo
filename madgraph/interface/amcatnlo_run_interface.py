@@ -536,6 +536,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         """ add information to the cmd """
 
         CmdExtended.__init__(self, *completekey, **stdin)
+        common_run.CommonRunCmd.__init__(self)
         
         # Define current aMCatNLO directory
         if me_dir is None and aMCatNLO:
@@ -545,6 +546,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.options = options        
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = banner_mod.RunCardNLO(run_card)
+        self.mode = 'aMCatNLO'
 
         # usefull shortcut
         self.status = pjoin(self.me_dir, 'status')
