@@ -560,7 +560,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             raise aMCatNLOAlreadyRunning, message
         else:
             misc.call(['touch %s' % pjoin(me_dir,'RunWeb')], cwd=me_dir, shell=True)
-            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
+            misc.call([pjoin('./', self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir, shell=True)
         
         self.to_store = []
         self.run_name = None
@@ -602,7 +602,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         # check argument validity and normalise argument
         options = options.__dict__
         self.check_shower(argss, options)
-        options['shower'] = 'only'
+        options['parton'] = 'onlyshower'
         evt_file = pjoin(os.getcwd(), argss[0], 'events.lhe')
         self.ask_run_configuration('', options)
         if self.check_mcatnlo_dir():
@@ -620,6 +620,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         options = options.__dict__
         options['reweightonly'] = False
         options['noreweight'] = False
+        options['parton'] = True
         self.check_calculate_xsect(argss, options)
         
         if options['multicore']:
@@ -629,10 +630,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         else:
             self.cluster_mode = int(self.options['run_mode'])
 
-        if self.options_madevent['automatic_html_opening']:
-            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.options_madevent['automatic_html_opening'] = False
+#        if self.options_madevent['automatic_html_opening']:
+#            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+#            self.options_madevent['automatic_html_opening'] = False
 
+        
         mode = argss[0]
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
@@ -657,15 +659,15 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         else:
             self.cluster_mode = int(self.options['run_mode'])
 
-        if self.options_madevent['automatic_html_opening']:
-            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.options_madevent['automatic_html_opening'] = False
+#        if self.options_madevent['automatic_html_opening']:
+#            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+#            self.options_madevent['automatic_html_opening'] = False
 
         mode = 'aMC@' + argss[0]
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
-        if self.check_mcatnlo_dir() and options['shower']:
+        if self.check_mcatnlo_dir() and not options['parton']:
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
@@ -686,15 +688,15 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         else:
             self.cluster_mode = int(self.options['run_mode'])
 
-        if self.options['automatic_html_opening']:
-            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.options['automatic_html_opening'] = False
+#        if self.options['automatic_html_opening']:
+#            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+#            self.options['automatic_html_opening'] = False
 
         mode = argss[0]
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
-        if self.check_mcatnlo_dir() and options['shower']:
+        if self.check_mcatnlo_dir() and not options['parton']:
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
@@ -763,7 +765,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             options['only_generation'] = False
 
         if mode in ['aMC@NLO', 'aMC@LO']:
-            print self.me_dir, 'Events', self.run_name
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
         old_cwd = os.getcwd()
 
@@ -777,6 +778,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             except TypeError:
                 self.nb_core = multiprocessing.cpu_count()
             logger.info('Using %d cores' % self.nb_core)
+            self.cluster = cluster.MultiCore(self.nb_core)
         self.update_random_seed()
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
         #find and keep track of all the jobs
@@ -845,7 +847,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
 
                     if (i < 2 and not options['only_generation'])  or i == 1 :
-                        misc.call(['./combine_results.sh %d %d GF* GV*' % (i, nevents)], shell=True)
+                        p = misc.Popen(['./combine_results.sh %d %d GF* GV*' % (i, nevents)],
+                                stdout=subprocess.PIPE, shell=True)
+                        output = p.communicate()
+                        self.cross_sect_dict = self.read_results(output)
+                        self.print_summary(step = i)
 
             elif mode == 'aMC@LO':
                 if not options['only_generation']:
@@ -860,7 +866,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
 
                     if (i < 2 and not options['only_generation'])  or i == 1 :
-                        misc.call(['./combine_results.sh %d %d GB*' % (i, nevents)], shell=True)
+                        p = misc.Popen(['./combine_results.sh %d %d GF* GV*' % (i, nevents)],
+                                stdout=subprocesses.PIPE, shell=True)
+                        output = p.communicate()
+                        self.cross_sect_dict = self.read_results(output)
+                        self.print_summary(step = i)
 
         if self.cluster_mode == 1:
             #if cluster run, wait 15 sec so that event files are transferred back
@@ -873,6 +883,66 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         os.chdir(old_cwd)
 
         return self.reweight_and_collect_events(options, mode, nevents)
+
+    def read_results(self, output):
+        """extract results (cross-section, absolute cross-section and errors)
+        from output, which should be formatted as
+            Found 4 correctly terminated jobs 
+            random seed found in 'randinit' is 33
+            Integrated abs(cross-section)
+            7.94473937e+03 +- 2.9953e+01  (3.7702e-01%)
+            Found 4 correctly terminated jobs 
+            Integrated cross-section
+            6.63392298e+03 +- 3.7669e+01  (5.6782e-01%)
+        returning the cross_sect_dict"""
+        res = {}
+        pat = re.compile(\
+'''Found (\d+) correctly terminated jobs 
+random seed found in 'randinit' is (\d+)
+Integrated abs\(cross-section\)
+.*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
+Found (\d+) correctly terminated jobs 
+Integrated cross-section
+.*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)''')
+        match = re.search(pat, output[0])
+        if not match or output[1]:
+            raise aMCatNLOError('An error occurred during the collection of results')
+        if int(match.groups()[0]) != self.njobs:
+            raise aMCatNLOError('Not all jobs terminated successfully')
+        return {'randinit' : int(match.groups()[1]),
+                'xseca' : float(match.groups()[2]),
+                'erra' : float(match.groups()[3]),
+                'xsect' : float(match.groups()[6]),
+                'errt' : float(match.groups()[7])}
+
+
+    def print_summary(self, step):
+        """print a summary of the results contained in self.cross_sect_dict.
+        step corresponds to the mintMC step, if =2 (i.e. after event generation)
+        some additional infos are printed"""
+        status = ['Determining the number of unweighted events per channel',
+                  'Updating the number of unweighted events per channel',
+                  'Summary:']
+        message = status[step] + \
+    """
+    Random seed: %(randinit)d
+    Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb
+    Total abs(cross-section): %(xseca)8.3e +- %(erra)6.1e pb
+    """ % self.cross_sect_dict
+        if step == 2:
+            neg_frac = (self.cross_sect_dict['xseca'] - self.cross_sect_dict['xsect'])/\
+                   (2. * self.cross_sect_dict['xseca'])
+            ev_wgt = self.cross_sect_dict['xseca'] / int(self.run_card['nevents'])
+            message = message + \
+    """
+    abs(weight) per event: %8.3e
+    Fraction of negative weights: %4.2f
+    """ % (ev_wgt, neg_frac)
+        logger.info(message)
+
+
+
+
 
 
     def reweight_and_collect_events(self, options, mode, nevents):
@@ -898,9 +968,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         misc.call(['mv %s %s' % 
             (pjoin(self.me_dir, 'SubProcesses', filename), evt_file)], shell=True )
         misc.call(['gzip %s' % evt_file], shell=True)
-        logger.info('The %s.gz file has been generated.\nIt contains %d %s events to be showered.\n' \
-                % (evt_file, nevents, mode[4:]) + \
-                'Please remember that you need to shower the events in order to get physical results')
+        logger.info('The %s.gz file has been generated.\nIt contains %d %s events to be showered with %s.\n' \
+                % (evt_file, nevents, mode[4:], self.run_card['parton_shower']))
+        self.print_summary(step = 2)
         return evt_file
 
 
@@ -940,6 +1010,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 level='parton')
         os.chdir(rundir)
         misc.call(['mv ../%s ../MCATNLO_%s_input .' % (exe, shower)], shell=True)
+        #link the hwpp exe in the rundir
+        if shower == 'HERWIGPP':
+            misc.call(['ln -s %s %s' % \
+                (pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)], shell=True)
         evt_name = os.path.basename(evt_file)
         misc.call(['ln -s %s %s' % (os.path.split(evt_file)[0], self.run_name)], shell=True)
         misc.call(['./%s < MCATNLO_%s_input > amcatnlo_run.log 2>&1' % \
@@ -953,8 +1027,23 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
             logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
                         ' and hadronized events in the StdHEP format obtained' + \
-                        ' showering the parton-level event file %s.gz') % \
-                        (hep_file, evt_file))
+                        ' showering the parton-level event file %s.gz with %s') % \
+                        (hep_file, evt_file, shower))
+        #this is for hw++
+        elif os.path.exists(pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc')):
+            hep_file = '%s_%s.hepmc' % (evt_file[:-4], shower)
+            misc.call(['mv %s %s' % \
+                (pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc'), hep_file)], shell=True) 
+            misc.call(['gzip %s' % evt_file], shell=True)
+            misc.call(['gzip %s' % hep_file], shell=True)
+            logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
+                        ' and hadronized events in the HEPMC format obtained' + \
+                        ' showering the parton-level event file %s.gz with %s') % \
+                        (hep_file, evt_file, shower))
+
+        else:
+            raise aMCatNLOError('No file has been generated, an error occurred')
+
         os.chdir(oldcwd)
 
 
@@ -1090,6 +1179,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 lines[i]='NEVENTS=%d' % nevents
             if lines[i].startswith('MCMODE'):
                 lines[i]='MCMODE=%s' % shower
+            #the following variables are actually relevant only if running hw++
+            if lines[i].startswith('HWPPPATH'):
+                lines[i]='HWPPPATH=%s' % self.options['hwpp_path']
+            if lines[i].startswith('THEPEGPATH'):
+                lines[i]='THEPEGPATH=%s' % self.options['thepeg_path']
+            if lines[i].startswith('HEPMCPATH'):
+                lines[i]='HEPMCPATH=%s' % self.options['hepmc_path']
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'MCatNLO_MadFKS.inputs'), 'w')
         output.write('\n'.join(lines))
@@ -1157,23 +1253,14 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         # if running serially nothing to do
         if self.cluster_mode == 0:
             return
-
-        # if running on cluster just use the control function of the module
-        elif self.cluster_mode == 1:
-            idle = 1
-            run = 1
-            logger.info('     Waiting for submitted jobs to complete (will update each 10s)')
-            while idle + run > 0:
-                idle, run, finish, fail = self.cluster.control('')
-                self.update_status((idle, run, finish, run_type), level='parton')
-                time.sleep(10)
-            #reset the cluster after completion
-            self.cluster.submitted = 0
-            self.cluster.submitted_ids = []
-        elif self.cluster_mode == 2:
-            while self.ijob != self.njobs:
-                time.sleep(10)
-
+        else:
+            #logger.info('     Waiting for submitted jobs to complete')
+            update_status = lambda i, r, f: self.update_status((i, r, f, run_type), level='parton')
+            try:
+                self.cluster.wait(self.me_dir, update_status)
+            except:
+                self.cluster.remove()
+                raise
 
     def run_all(self, job_dict, arg_list, run_type='monitor'):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
@@ -1181,94 +1268,44 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.ijob = 0
         if self.cluster_mode == 0:
             self.update_status((self.njobs - 1, 1, 0, run_type), level='parton')
-        if self.cluster_mode == 1:
-            self.update_status((self.njobs, 0, 0, run_type), level='parton')
-        if self.cluster_mode == 2:
-            self.update_status((self.njobs - self.nb_core, self.nb_core, 0, run_type), level='parton')
         for args in arg_list:
             for dir, jobs in job_dict.items():
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
                 for job in jobs:
-                    self.run_exe(job, args, run_type)
+                    self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', dir) )
                     # print some statistics if running serially
 
-        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
         self.wait_for_complete(run_type)
+        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
 
 
-    def run_exe(self, exe, args, run_type):
+    def run_exe(self, exe, args, run_type, cwd=None):
         """this basic function launch locally/on cluster exe with args as argument.
         """
-
-        def launch_in_thread(exe, argument, cwd, stdout, control_thread, run_type):
-            """ way to launch for multicore.
-            """
-
-            start = time.time()
-            if (cwd and os.path.exists(pjoin(cwd, exe))) or os.path.exists(exe):
-                exe = './' + exe
-            misc.call([exe] + argument, cwd=cwd, stdout=stdout,
-                        stderr=subprocess.STDOUT)
-            self.ijob += 1
-
-            self.update_status((max([self.njobs - self.ijob - self.nb_core, 0]), 
-                                min([self.nb_core, self.njobs - self.ijob]),
-                                self.ijob, run_type), level='parton')
-            #logger.info('     Jobs completed: %d/%d' %(self.ijob, self.njobs))
-            
-            # release the lock for allowing to launch the next job      
-            while not control_thread[1].locked():
-                # check that the status is locked to avoid coincidence unlock
-                if not control_thread[2]:
-                    # Main is not yet locked
-                    control_thread[0] -= 1
-                    return 
-                time.sleep(1)
-            control_thread[0] -= 1 # upate the number of running thread
-            control_thread[1].release()
-
+        
         # first test that exe exists:
-        if not os.path.exists(exe):
+        execpath = None
+        if cwd and os.path.exists(pjoin(cwd, exe)):
+            execpath = pjoin(cwd, exe)
+        elif not cwd and os.path.exists(exe):
+            execpath = exe
+        else:
             raise aMCatNLOError('Cannot find executable %s in %s' \
                 % (exe, os.getcwd()))
+
         # check that the executable has exec permissions
-        if not os.access(exe, os.X_OK):
-            misc.call(['chmod +x %s' % exe], shell=True)
+        if not os.access(execpath, os.X_OK):
+            misc.call(['chmod', '+x', exe], cwd=cwd)
         # finally run it
         if self.cluster_mode == 0:
             #this is for the serial run
-            misc.call(['./'+exe] + args, cwd= os.getcwd())
+            misc.call(['./'+exe] + args, cwd=cwd)
             self.ijob += 1
             self.update_status((max([self.njobs - self.ijob - 1, 0]), 
                                 min([1, self.njobs - self.ijobs]),
                                 self.ijob, run_type), level='parton')
-        elif self.cluster_mode == 1:
-            #this is for the cluster run
-            self.cluster.submit(exe, args)
-        elif self.cluster_mode == 2:
-            #this is for the multicore run
-            import thread
-            if not hasattr(self, 'control_thread'):
-                self.control_thread = [0] # [used_thread]
-                self.control_thread.append(thread.allocate_lock()) # The lock
-                self.control_thread.append(False) # True if all thread submit 
-                                                  #-> waiting mode
-            if self.control_thread[2]:
-                self.control_thread[1].acquire()
-                self.control_thread[0] += 1 # upate the number of running thread
-                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread, run_type))
-            elif self.control_thread[0] <  self.nb_core -1:
-                self.control_thread[0] += 1 # upate the number of running thread 
-                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread, run_type))
-            elif self.control_thread[0] ==  self.nb_core -1:
-                self.control_thread[0] += 1 # upate the number of running thread
-                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread, run_type))
-                self.control_thread[2] = True
-                self.control_thread[1].acquire() # Lock the next submission
-                                                 # Up to a release
-
-
-
+        else:
+            #this is for the cluster/multicore run
+            self.cluster.submit(exe, args, cwd=cwd)
 
 
     def write_madinMMC_file(self, path, run_mode, mint_mode):
@@ -1461,8 +1498,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 nfail +=1
                 tolerance = float(line.split()[1])
 
-        logger.info('   Poles fail to cancel for %d points over %d (tolerance=%2.1e)' \
-                %(nfail, nfail+npass, tolerance))
+        logger.info('   Poles succesfully cancel for %d points over %d (tolerance=%2.1e)' \
+                %(npass, nfail+npass, tolerance))
 
 
 
@@ -1529,15 +1566,15 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     def ask_run_configuration(self, mode, options):
         """Ask the question when launching generate_events/multi_run"""
         
-        if 'shower' in options.keys():
-            if options['shower'] == True:
+        if 'parton' in options.keys():
+            if options['parton'] == False:
                 cards = ['param', 'run', 'shower']
-            elif options['shower'] == 'only':
+            elif options['parton'] == 'onlyshower':
                 cards = ['shower']
             else:  
                 cards = ['param', 'run']
         else:  
-            cards = ['param', 'run']
+            cards = ['param', 'run', 'shower']
 
         def get_question(mode, cards):
             # Ask the user if he wants to edit any of the files
@@ -1587,7 +1624,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 # detect which card is provided
                 card_name = answer + 'card.dat'
 
-
+        run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
+        self.run_card = banner_mod.RunCardNLO(run_card)
+        self.run_tag = self.run_card['run_tag']
+        self.run_name = self.find_available_run_name(self.me_dir)
+        self.set_run_name(self.run_name, self.run_tag, 'parton')
+        #self.do_treatcards_nlo('')
+        return
 
     def do_quit(self, line):
         """ """
@@ -1656,8 +1699,9 @@ _launch_parser.add_option("-r", "--reweightonly", default=False, action='store_t
                                  " latest generated event files (see list in SubProcesses/nevents_unweighted)")
 _launch_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip file reweighting")
-_launch_parser.add_option("-s", "--shower", default=False, action='store_true',
-                            help="Showe the events after generation")
+_launch_parser.add_option("-p", "--parton", default=False, action='store_true',
+                            help="Stop the run after the parton level file generation (you need " + \
+                                    "to shower the file in order to get physical results)")
 
 
 _calculate_xsect_usage = "calculate_xsect [ORDER] [options]\n" + \
@@ -1705,5 +1749,6 @@ _generate_events_parser.add_option("-o", "--only-generation", default=False, act
                             "the last available results")
 _generate_events_parser.add_option("-R", "--noreweight", default=False, action='store_true',
                             help="Skip file reweighting")
-_generate_events_parser.add_option("-s", "--shower", default=False, action='store_true',
-                            help="Shower the events after generation")
+_generate_events_parser.add_option("-p", "--parton", default=False, action='store_true',
+                            help="Stop the run after the parton level file generation (you need " + \
+                                    "to shower the file in order to get physical results)")

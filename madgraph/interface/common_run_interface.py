@@ -59,7 +59,8 @@ try:
     import madgraph.various.misc as misc
     import madgraph.iolibs.files as files
     import madgraph.various.cluster as cluster
-    import models.check_param_card as check_param_card    
+    import models.check_param_card as check_param_card
+    MADEVENT=False    
 except Exception, error:
     if __debug__:
         print error
@@ -69,12 +70,12 @@ except Exception, error:
     import internal.cluster as cluster
     import internal.check_param_card as check_param_card
     import internal.files as files
-
-try:
-    os.sys.path.append("../MadSpin")
-    import decay
-except: 
-    pass
+    MADEVENT=True
+#try:
+#    os.sys.path.append("../MadSpin")
+#    import decay
+#except: 
+#    pass
 
 #===============================================================================
 # HelpToCmd
@@ -505,6 +506,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         decay events with spin correlations
         """
         
+        # First need to load MadSpin
+        
+        # Check that MG5 directory is present .
+        if MADEVENT and not self.options['mg5_path']:
+            raise self.InvalidCmd, '''The module decay_events requires that MG5 is installed on the system.
+            You can install it and set its path in ./Cards/me5_configuration.txt'''
+        elif MADEVENT:
+            sys.path.append(self.options['mg5_path'])
+        try:
+            import MadSpin.decay as decay
+        except:
+            raise self.ConfigurationError, '''Can\'t load MadSpin
+            The variable mg5_path might not be correctly configured.'''
+        
+        
         logger.info("This functionality allows for the decay of  resonances")
         logger.info("in a .lhe file, keeping track of the spin correlation effets.")
         logger.info("BE AWARE OF THE CURRENT LIMITATIONS:")
@@ -522,20 +538,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 
         # load the name of the event file
         args = self.split_arg(line) 
-        if len(args) == 0:
-            if self.run_name:
-                args.insert(0, self.results.lastrun)
-            elif self.results.lastrun:
-                args.insert(0, self.results.lastrun)
-            else:
-                raise self.InvalidCmd('No run name currently define. Please add this information.')             
-        
-        print args
-        if len(args) >= 1:
-            if args[0] != self.run_name and\
-             not os.path.exists(pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz')):
-                raise self.InvalidCmd('No events file corresponding to %s run. '% args[0])
-            evt_file=pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz')
+        self.check_decay_events(args)
+
+        evt_file=pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe.gz')
 
         
         try:
@@ -564,6 +569,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         logger.info("process: "+mybanner.proc["generate"])
         logger.info("options: "+proc_option)
 
+        if not mybanner.proc.has_key('model'):
+            logger.info('No model found in the banner, set the model to sm')
+            mybanner.proc['model']='sm'
 # Read the final state of the production process:
 #     "_full" means with the complete decay chain syntax 
 #     "_compact" means without the decay chain syntax 
@@ -574,19 +582,38 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 
         decay_processes={}
 
-# Ask the user which particle should be decayed
+
+        logger.info('Please enter the definition of each branch  ')
+        logger.info('associated with the decay channel you want to consider')
+        logger.info('Please use the mg5 syntax, e.g. ')
+        logger.info(' A > B C , ( C > D E , E > F G )')
+        list_branches={}
+        while 1: 
+            decaybranch=self.ask('New branch: (if you are done, type enter) \n','done')
+            if decaybranch=='Done':break
+            decay_process, init_part=\
+                decay_tools.reorder_branch(decaybranch)
+            list_branches[init_part]=decay_process
+            del decay_process, init_part    
+        
+        if len(list_branches)==0:
+            logger.info("Nothing to decay ...")
+            return
+# Ask the user which particle should be decayed        
         particle_index=2
         to_decay={}
         for particle in final_state_compact.split():
             particle_index+=1
-            do_decay=self.ask("decay the "+str(particle)+" ?", "yes",["yes","no"])
-            if do_decay=="yes":
+            if list_branches.has_key(str(particle)):
                 to_decay[particle_index]=particle
-                decay_processes[particle_index]=\
-                decay_tools.reorder_branch(raw_input("Enter the decay chain \n"))
+                decay_processes[particle_index]=list_branches[str(particle)]
 
+        if len(to_decay)==0:
+            logger.info("Nothing to decay ...")
+            return
+            
         logger.info("An estimation of the maximum weight is needed for the unweighting ")
-        answer=raw_input("Enter the maximum weight, or enter a negative number if unknown \n")
+        answer=self.ask("Enter the maximum weight, or enter a negative number if unknown \n",-1.0)
         max_weight=-1
         try:
             answer=answer.replace("\n","") 
@@ -597,19 +624,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 logger.info("The maximum weight will be evaluated")
         except: 
             pass
-    
-#        answer=self.ask("Include Breit Wigner effects ?", "yes",["yes","no"])
-
-#        if (answer=="yes"): 
+     
         BW_effects=1
-#        else:
-#            BW_effects=0
-
 
 # by default set the branching fraction to 1
         branching_fraction=1.0
         
-        answer=raw_input( "Branching fraction ? (type a negative number is unknown ) \n")
+        answer=self.ask( "Branching fraction ? (type a negative number is unknown ) \n",-1.0)
 
         try:
             if float(answer) >0.0: branching_fraction=float(answer)
@@ -629,23 +650,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         logger.info("Decayed events have been written in %s" % decayed_evt_file)
         
         
-    def check_decay_events(self, args):
+    def check_decay_events(self,args):
         """Check the argument for decay_events command
-        syntax: decay_events [NAME] 
+        syntax: decay_events [NAME]
+        Note that other option are already remove at this point
         """
-                
-        if len(args) == 0 and not self.run_name:
-            if self.results.lastrun:
+        
+        if len(args) == 0:
+            if self.run_name:
+                args.insert(0, self.results.lastrun)
+            elif self.results.lastrun:
                 args.insert(0, self.results.lastrun)
             else:
-                raise self.InvalidCmd('No run name currently define. Please add this information.')             
-        
-        if len(args) >= 1:
-            if args[0] != self.run_name and\
-             not os.path.exists(pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz')):
+                raise self.InvalidCmd('No run name currently define. Please add this information.')
+            return
+
+        if args[0] != self.run_name:
+            if not os.path.exists(pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz'))\
+            and not os.path.exists(pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe')):
                 raise self.InvalidCmd('No events file corresponding to %s run. '% args[0])
-            self.run_name=pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz')
-
-        if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'unweighted_events.lhe.gz')):
-            raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
-
+        self.run_name=args[0]
+        

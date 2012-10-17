@@ -1542,15 +1542,17 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
 
         for amp in self.get_all_amplitudes():
             amp.set('mothers', helas_objects.HelasMatrixElement.sorted_mothers(amp))
-            # Not really necessary as the color indices of the amplitudes should be 
-            # correct. It is however cleaner like this. For debugging purposes we
-            # leave here an assert.
+            # Not really necessary for the LoopHelasAmplitude as the color 
+            # indices of the amplitudes should be correct. It is however 
+            # cleaner like this. For debugging purposes we leave here an assert.
             gen_colors = amp.get('color_indices')
             amp.set('color_indices', amp.get_color_indices())
-            assert (amp.get('color_indices')==gen_colors), \
-              "Error in the treatment of color in the loop helas diagram "+\
-              "generation. It could be harmless, but report this bug to be sure."
-
+            if isinstance(amp,LoopHelasAmplitude):
+                assert (amp.get('color_indices')==gen_colors), \
+                  "Error in the treatment of color in the loop helas diagram "+\
+                  "generation. It could be harmless, but report this bug to be sure."+\
+                  " The different keys are %s vs %s."%(str(gen_colors),\
+                                                      str(amp.get('color_indices')))
         for loopdiag in self.get_loop_diagrams():
             for loopamp in loopdiag.get_loop_amplitudes():
                 loopamp.set_mothers_and_pairing()

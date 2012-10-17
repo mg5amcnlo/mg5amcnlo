@@ -2102,6 +2102,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
                        'MCatNLO-utilities_path':'./MCatNLO-utilities',
+                       'hwpp_path':'./',
+                       'thepeg_path':'./',
+                       'hepmc_path':'./',
                        'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
@@ -3633,6 +3636,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text = open(path).read()
             text = text.replace('MBITS=32','MBITS=64')
             open(path, 'w').writelines(text)
+        elif args[0] == "MCatNLO-utilities" and sys.maxsize > 2**32:
+            path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'make_opts')
+            text = open(path).read()
+            text = text.replace('MBITS=32','MBITS=64')
+            open(path, 'w').writelines(text)
             
         # Compile the file
         # Check for F77 compiler
@@ -3657,24 +3665,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 open(path, 'w').writelines(text)
 
             elif compiler == 'gfortran' and args[0] =='MCatNLO-utilities':
-                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'mcfio', 'arch_mcfio')
+                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'make_opts')
                 text = open(path).read()
-                text = text.replace('F77=f77','F77=gfortran')
-                text = text.replace('-fdebug-kludge', '')
-                open(path, 'w').writelines(text)
-                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'stdhep_arch')
-                text = open(path).read()
-                text = text.replace('F77=f77','F77=gfortran')
-                open(path, 'w').writelines(text)
-            elif compiler == 'g77' and args[0] =='MCatNLO-utilities':
-                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'mcfio', 'arch_mcfio')
-                text = open(path).read()
-                text = text.replace('F77=f77','F77=g77')
-                open(path, 'w').writelines(text)
-                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'stdhep_arch')
-                text = open(path).read()
-                text = text.replace('F77=f77','F77=g77')
-                open(path, 'w').writelines(text)
+                text = text.replace('FC=g77','FC=gfortran')
+                open(path, 'w').writelines(text)    
 
                             
         if logger.level <= logging.INFO:
@@ -3958,28 +3952,21 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         continue
 
 
-            if key == 'lhapdf' and self.options_configuration[key]:
-                if os.path.isfile(self.options_configuration['lhapdf']) or \
-                any([os.path.isfile(os.path.join(path, self.options_configuration['lhapdf'])) \
-                        for path in os.environ['PATH'].split(':')]):
-                    lhapdf_config = self.options_configuration['lhapdf']
-                else:
-                    lhapdf_config = None
-
-                logger.info('lhapdf-config: %s' % lhapdf_config)
-                self.lhapdf_config = lhapdf_config
-
-            if key == 'fastjet' and self.options_configuration[key]:
-                if os.path.isfile(self.options_configuration['fastjet']) or \
-                any([os.path.isfile(os.path.join(path, self.options_configuration['fastjet'])) \
-                        for path in os.environ['PATH'].split(':')]):
-                    fastjet_config = self.options_configuration['fastjet']
-                else:
-                    fastjet_config = None
-
-                logger.info('fastjet-config: %s' % fastjet_config)
-                self.fastjet_config = fastjet_config
-
+#            if key == 'lhapdf' and self.options_configuration[key]:
+#                if os.path.isfile(self.options_configuration['lhapdf']) or \
+#                any([os.path.isfile(os.path.join(path, self.options_configuration['lhapdf'])) \
+#                        for path in os.environ['PATH'].split(':')]):
+#                    lhapdf_config = self.options_configuration['lhapdf']
+#                else:
+#                    lhapdf_config = None
+#
+#            if key == 'fastjet' and self.options_configuration[key]:
+#                if os.path.isfile(self.options_configuration['fastjet']) or \
+#                any([os.path.isfile(os.path.join(path, self.options_configuration['fastjet'])) \
+#                        for path in os.environ['PATH'].split(':')]):
+#                    fastjet_config = self.options_configuration['fastjet']
+#                else:
+#                    fastjet_config = None
                     
             elif key.endswith('path'):
                 pass
@@ -4464,7 +4451,47 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     logger.info('set loop optimized output to %s' % args[1])
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             self.options[args[0]] = eval(args[1])
-        
+
+        elif args[0] == 'fastjet':
+            try:
+                p = subprocess.Popen([args[1], '--version'], stdout=subprocess.PIPE, 
+                stderr=subprocess.PIPE)
+                output, error = p.communicate()
+                res = 0
+                logger.info('set fastjet to %s' % args[1])
+                self.options[args[0]] = args[1]
+            except:
+                res = 1
+
+            if res != 0 or error:
+                logger.warning('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
+                        'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n' + \
+                        'You will NOT be able to run aMC@NLO otherwise.\n')
+            elif int(output.split('.')[0]) < 3:
+                logger.warning('%s is not ' + \
+                        'v3 or greater. Please install FastJet v3+.' % args[1] + \
+                        'You will NOT be able to run aMC@NLO otherwise.\n')
+
+        elif args[0] == 'lhapdf':
+            try:
+                res = misc.call([args[1], '--version'], stdout=devnull)
+                logger.info('set lhapdf to %s' % args[1])
+                self.options[args[0]] = args[1]
+            except:
+                res = 1
+            if res != 0:
+                logger.warning('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
+                        'executable. Please enter the full PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
+                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
+
+        elif args[0] in ['hwpp_path', 'thepeg_path', 'hepmc_path']:
+            print 'MZ, CORRECT', args
+            if os.path.isdir(args[1]):
+                self.options[args[0]] = args[1]
+                logger.info('set %s to %s' % (args[0], args[1]))
+            else:
+                logger.warning('set %s :%s is not a valid path' % (args[0], args[1]))
+       
         elif args[0] in ['timeout', 'auto_update']:
                 self.options[args[0]] = int(args[1]) 
         

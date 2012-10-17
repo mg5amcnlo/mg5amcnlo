@@ -1261,7 +1261,7 @@ def evaluate_helicities(process, param_card = None, mg_root="",
     evaluator = MatrixElementEvaluator(process.get('model'), param_card,
                auth_skipping = False, reuse = True, cmass_scheme = cmass_scheme)
     
-    amplitude = diagram_generation.Amplitude(newproc)
+    amplitude = diagram_generation.Amplitude(process)
     matrix_element = helas_objects.HelasMatrixElement(amplitude,gen_color=False)
     
     cumulative_helEvals = []
@@ -2728,30 +2728,6 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
 #        pass
     else:
         raise InvalidCmd("processes is of non-supported format")
-
-    assert False
-    assert processes, "No processes given"
-
-    model = processes[0].get('model')
-
-    # Initialize matrix element evaluation
-    evaluator = MatrixElementEvaluator(model, param_card,
-                                       auth_skipping = True, reuse = False)
-
-    comparison_results = []
-    comparison_explicit_flip = []
-
-    # For each process, make sure we have set up leg numbers:
-    for process in processes:
-        # Get process result
-        result = check_gauge_process(process, evaluator)
-        if result:
-            comparison_results.append(result)
-        
-        
-            
-    return comparison_results
-
 
 def get_value(process, evaluator, p=None):
     """Return the value/momentum for a phase space point"""

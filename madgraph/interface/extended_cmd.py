@@ -244,7 +244,7 @@ class BasicCmd(cmd.Cmd):
         try:
             return self.completion_matches[state]
         except IndexError, error:
-            #if __debug__:
+            # if __debug__:
             #    logger.error('\n Completion ERROR:')
             #    logger.error( error)
             return None    
@@ -1438,6 +1438,8 @@ class SmartQuestion(BasicCmd):
                 return True
             elif line and hasattr(self, 'do_%s' % line.split()[0]):
                 return self.reask()
+            elif len(self.allow_arg)==0:
+                return True
             else: 
                 raise Exception
         except Exception:

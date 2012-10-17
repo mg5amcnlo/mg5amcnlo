@@ -46,21 +46,21 @@ tutorial = tutorial_aMCatNLO
 generate = """
 You have just generated a new process.
 You can find more information on supported syntax by using:
-NLO>help generate
+aMC@NLO>help generate
 To list all defined processes, type
-NLO>display processes
+aMC@NLO>display processes
 
 If you want to know more about particles and multiparticles present,
 write
-NLO>display particles
-NLO>display multiparticles
+aMC@NLO>display particles
+aMC@NLO>display multiparticles
 
 If you want to add a second process, use the add process command:
-NLO>add process p p > e+ e- [QCD] @2
+aMC@NLO>add process p p > e+ e- [QCD] @2
 
 At this stage you can export your processes.
 This is done simply by typing:
-NLO>output MY_FIRST_AMCATNLO_RUN
+aMC@NLO>output MY_FIRST_AMCATNLO_RUN
 """
 
 display_processes = """
@@ -69,7 +69,7 @@ You have seen a list of the already defined processes.
 At this stage you can export your processes to different formats. In
 this tutorial, we will explain how to create a valid output for
 aMC@NLO. This is done simply by typing:
-NLO>output MY_FIRST_AMCTANLO_RUN
+aMC@NLO>output MY_FIRST_AMCTANLO_RUN
 """
 
 add_process = """
@@ -77,7 +77,7 @@ You have added a process to your process list.
 
 At this stage you can export your processes.
 This is done simply by typing:
-NLO>output MY_FIRST_AMCATNLO_RUN
+aMC@NLO>output MY_FIRST_AMCATNLO_RUN
 """
 output = """
 If you are following the tutorial, a directory MY_FIRST_AMCATNLO_RUN has
@@ -94,16 +94,17 @@ Please note that, since shower-specific counterterms have to be included in the
 calculation, the parton level sample you will obtain can only be showered
 with the selected MonteCarlo. 
 Note also that, because of the way they have been generated, the parton-level
-events in the .lhe file are UNPHYSICAL. They lead to physical results only 
-after shower.
+events in the .lhe file are UNPHYSICAL. 
+In order to obtain physical results, please use the .hep file
 
-If you want to generate the showered StdHep file, please be sure to have the 
-MCatNLO-utilities installed (otherwise just type "install MCatNLO-utilities").
+Please note that, in order to generate the showered .hep file, you must have 
+the MCatNLO-utilities package installed 
+(otherwise just type "install MCatNLO-utilities").
 Please enter
-NLO> launch -s
+aMC@NLO> launch 
 
 If you just want to generate the parton level .lhe file, please enter
-NLO> launch
+aMC@NLO> launch -p
 
 
 (you can interrupt the computation to continue the tutorial by pressing Ctrl-C)

@@ -27,6 +27,8 @@ import copy
 import logging
 import array
 
+from madgraph import InvalidCmd
+
 logger = logging.getLogger('madgraph.fks_base')
 
 
@@ -83,9 +85,18 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
         self['real_amplitudes'] = diagram_generation.AmplitudeList()
         self['pdgs'] = []
-
-        super(FKSMultiProcess, self).__init__(*arguments)   
-
+        
+        try:
+            # Now generating the borns for the first time.
+            super(FKSMultiProcess, self).__init__(*arguments)
+        except:
+            # If no born, then this process most likely does not have any.
+            raise InvalidCmd, "Born diagrams could not be generated for the "+\
+               self['process_definitions'][0].nice_string().replace('Process',\
+               'process')+". Notice that aMC@NLO does not handle loop-induced"+\
+               " processes yet, but you can still use MadLoop if you want to "+\
+               "only generate them."+\
+               " For this, use the 'virt=' mode, without multiparticle labels." 
         #check process definition(s):
         # a process such as g g > g g will lead to real emissions 
         #   (e.g: u g > u g g ) which will miss some corresponding born,
