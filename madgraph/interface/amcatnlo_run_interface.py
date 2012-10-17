@@ -689,6 +689,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 #            self.options['automatic_html_opening'] = False
 
         mode = argss[0]
+        if mode in ['LO', 'NLO']:
+            options['parton'] = True
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
@@ -760,8 +762,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if not 'only_generation' in options.keys():
             options['only_generation'] = False
 
-        if mode in ['aMC@NLO', 'aMC@LO']:
-            os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+        os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
         old_cwd = os.getcwd()
 
         if self.cluster_mode == 1:
@@ -793,6 +794,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             os.chdir(old_cwd)
             return
 
+        devnull = os.open(os.devnull, os.O_RDWR) 
         if mode == 'LO':
             logger.info('Doing fixed order LO')
             self.update_status('Cleaning previous results', level=None)
@@ -800,7 +802,16 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
             self.update_status('Computing cross-section', level=None)
             self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
-            misc.call(['./combine_results_FO.sh born_G*'], shell=True)
+            p = misc.Popen(['./combine_results_FO.sh viSB* novB*'], \
+                                stdout=subprocess.PIPE, shell=True)
+            output = p.communicate()
+            self.cross_sect_dict = self.read_results(output, mode)
+            self.print_summary(1, mode)
+            misc.call(['./combine_plots_FO.sh born_G*'], stdout=devnull, shell=True)
+            misc.call(['cp MADatNLO.top res.txt %s' % \
+                    pjoin(self.me_dir, 'Events', self.run_name)], shell=True)
+            logger.info('The results of this run and the TopDrawer file with the plots' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             os.chdir(old_cwd)
             return
 
@@ -811,12 +822,26 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
             self.update_status('Setting up grid', level=None)
             self.run_all(job_dict, [['0', 'grid', '0']], 'Setting up grid')
-            misc.call(['./combine_results_FO.sh grid*'], shell=True)
+            p = misc.Popen(['./combine_results_FO.sh grid*'], \
+                                stdout=subprocess.PIPE, shell=True)
+            output = p.communicate()
+            self.cross_sect_dict = self.read_results(output, mode)
+            self.print_summary(0, mode)
 
             self.update_status('Computing cross-section', level=None)
             self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'grid']], \
                     'Computing cross-section')
-            misc.call(['./combine_results_FO.sh viSB* novB*'], shell=True)
+            p = misc.Popen(['./combine_results_FO.sh viSB* novB*'], \
+                                stdout=subprocess.PIPE, shell=True)
+            output = p.communicate()
+            self.cross_sect_dict = self.read_results(output, mode)
+            self.print_summary(1, mode)
+
+            misc.call(['./combine_plots_FO.sh viSB* novB*'], stdout=devnull, shell=True)
+            misc.call(['cp MADatNLO.top res.txt %s' % \
+                    pjoin(self.me_dir, 'Events', self.run_name)], shell=True)
+            logger.info('The results of this run and the TopDrawer file with the plots' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             os.chdir(old_cwd)
             return
 
@@ -846,8 +871,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         p = misc.Popen(['./combine_results.sh %d %d GF* GV*' % (i, nevents)],
                                 stdout=subprocess.PIPE, shell=True)
                         output = p.communicate()
-                        self.cross_sect_dict = self.read_results(output)
-                        self.print_summary(step = i)
+                        misc.call(['cp res_%d_abs.txt res_%d_tot.txt %s' % \
+                           (i, i, pjoin(self.me_dir, 'Events', self.run_name))], shell=True)
+                        self.cross_sect_dict = self.read_results(output, mode)
+                        self.print_summary(i, mode)
 
             elif mode == 'aMC@LO':
                 if not options['only_generation']:
@@ -865,8 +892,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         p = misc.Popen(['./combine_results.sh %d %d GF* GV*' % (i, nevents)],
                                 stdout=subprocesses.PIPE, shell=True)
                         output = p.communicate()
-                        self.cross_sect_dict = self.read_results(output)
-                        self.print_summary(step = i)
+                        misc.call(['cp res_%d_abs.txt res_%d_tot.txt %s' % \
+                           (i, i, pjoin(self.me_dir, 'Events', self.run_name))], shell=True)
+                        self.cross_sect_dict = self.read_results(output, mode)
+                        self.print_summary(i, mode)
 
         if self.cluster_mode == 1:
             #if cluster run, wait 15 sec so that event files are transferred back
@@ -880,7 +909,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         return self.reweight_and_collect_events(options, mode, nevents)
 
-    def read_results(self, output):
+    def read_results(self, output, mode):
         """extract results (cross-section, absolute cross-section and errors)
         from output, which should be formatted as
             Found 4 correctly terminated jobs 
@@ -890,9 +919,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             Found 4 correctly terminated jobs 
             Integrated cross-section
             6.63392298e+03 +- 3.7669e+01  (5.6782e-01%)
-        returning the cross_sect_dict"""
+        for aMC@NLO/aMC@LO, and as
+
+        for NLO/LO
+        The cross_sect_dict is returned"""
         res = {}
-        pat = re.compile(\
+        if mode in ['aMC@LO', 'aMC@NLO']:
+            pat = re.compile(\
 '''Found (\d+) correctly terminated jobs 
 random seed found in 'randinit' is (\d+)
 Integrated abs\(cross-section\)
@@ -900,58 +933,79 @@ Integrated abs\(cross-section\)
 Found (\d+) correctly terminated jobs 
 Integrated cross-section
 .*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)''')
+        else:
+            pat = re.compile(\
+'''Found (\d+) correctly terminated jobs 
+.*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)''')
+            pass
+
         match = re.search(pat, output[0])
         if not match or output[1]:
             raise aMCatNLOError('An error occurred during the collection of results')
         if int(match.groups()[0]) != self.njobs:
             raise aMCatNLOError('Not all jobs terminated successfully')
-        return {'randinit' : int(match.groups()[1]),
-                'xseca' : float(match.groups()[2]),
-                'erra' : float(match.groups()[3]),
-                'xsect' : float(match.groups()[6]),
-                'errt' : float(match.groups()[7])}
+        if mode in ['aMC@LO', 'aMC@NLO']:
+            return {'randinit' : int(match.groups()[1]),
+                    'xseca' : float(match.groups()[2]),
+                    'erra' : float(match.groups()[3]),
+                    'xsect' : float(match.groups()[6]),
+                    'errt' : float(match.groups()[7])}
+        else:
+            return {'xsect' : float(match.groups()[1]),
+                    'errt' : float(match.groups()[2])}
 
-
-    def print_summary(self, step):
+    def print_summary(self, step, mode):
         """print a summary of the results contained in self.cross_sect_dict.
         step corresponds to the mintMC step, if =2 (i.e. after event generation)
         some additional infos are printed"""
-        status = ['Determining the number of unweighted events per channel',
-                  'Updating the number of unweighted events per channel',
-                  'Summary:']
-        if step != 2:
-            message = status[step] + '\n\n      Intermediate results:' \
-    """
-      Random seed: %(randinit)d
-      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb
-      Total abs(cross-section): %(xseca)8.3e +- %(erra)6.1e pb
-    """ % self.cross_sect_dict
-        else:
-            # find process name
-            proc_card_lines = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read().split('\n')
-            for line in proc_card_lines:
-                if line.startswith('generate'):
-                    process = line.replace('generate ', '')
-            lpp = {'0':'l', '1':'p', '-1':'pbar'}
-            proc_info = """
-      Process %s
-      Run at %s-%s collider (%s + %s GeV)""" % \
-            (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp1']], 
-                    self.run_card['ebeam1'], self.run_card['ebeam2'])
-    
-            message = '\n    ' + status[step] + proc_info + \
-    """
-      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb
-""" % self.cross_sect_dict
-            neg_frac = (self.cross_sect_dict['xseca'] - self.cross_sect_dict['xsect'])/\
-                   (2. * self.cross_sect_dict['xseca'])
-            message = message + \
-"""      Number of events generated: %s
-      Parton shower to be used: %s
-      Fraction of negative weights: %4.2f""" % \
-                    (self.run_card['nevents'],
-                     self.run_card['parton_shower'],
-                     neg_frac)
+        # find process name
+        proc_card_lines = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read().split('\n')
+        for line in proc_card_lines:
+            if line.startswith('generate'):
+                process = line.replace('generate ', '')
+        lpp = {'0':'l', '1':'p', '-1':'pbar'}
+        proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
+        (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp1']], 
+                self.run_card['ebeam1'], self.run_card['ebeam2'])
+        if mode in ['aMC@NLO', 'aMC@LO']:
+            status = ['Determining the number of unweighted events per channel',
+                      'Updating the number of unweighted events per channel',
+                      'Summary:']
+            if step != 2:
+                message = status[step] + '\n\n      Intermediate results:' + \
+                    ('\n      Random seed: %(randinit)d' + \
+                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' + \
+                     '\n      Total abs(cross-section): %(xseca)8.3e +- %(erra)6.1e pb \n') \
+                     % self.cross_sect_dict
+            else:
+        
+                message = '\n      ' + status[step] + proc_info + \
+                          '\n      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb' % \
+                        self.cross_sect_dict
+                neg_frac = (self.cross_sect_dict['xseca'] - self.cross_sect_dict['xsect'])/\
+                       (2. * self.cross_sect_dict['xseca'])
+                message = message + \
+                    ('\n      Number of events generated: %s' + \
+                     '\n      Parton shower to be used: %s' + \
+                     '\n      Fraction of negative weights: %4.2f') % \
+                        (self.run_card['nevents'],
+                         self.run_card['parton_shower'],
+                         neg_frac)
+
+        elif mode in ['NLO', 'LO']:
+            status = ['Results after grid setup (correspond roughly to LO):',
+                      'Final results and run summary:']
+            if step == 0:
+                message = '\n      ' + status[step] + \
+                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb\n' % \
+                             self.cross_sect_dict
+            elif step == 1:
+                message = '\n      ' + status[step] + proc_info + \
+                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb\n' % \
+                             self.cross_sect_dict
+
+
+
         logger.info(message)
 
 
@@ -980,7 +1034,7 @@ Integrated cross-section
         misc.call(['mv %s %s' % 
             (pjoin(self.me_dir, 'SubProcesses', filename), evt_file)], shell=True )
         misc.call(['gzip %s' % evt_file], shell=True)
-        self.print_summary(step = 2)
+        self.print_summary(2, mode)
         logger.info('The %s.gz file has been generated.\n' \
                 % (evt_file))
         return evt_file
