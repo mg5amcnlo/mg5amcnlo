@@ -979,7 +979,7 @@ Integrated cross-section
             (pjoin(self.me_dir, 'SubProcesses', filename), evt_file)], shell=True )
         misc.call(['gzip %s' % evt_file], shell=True)
         self.print_summary(step = 2)
-        logger.info('The %s.gz file has been generated.\nIt contains %d %s events to be showered with %s\n.' \
+        logger.info('The %s.gz file has been generated.\nIt contains %d %s events to be showered with %s.\n' \
                 % (evt_file, nevents, mode[4:], self.run_card['parton_shower']))
         return evt_file
 
