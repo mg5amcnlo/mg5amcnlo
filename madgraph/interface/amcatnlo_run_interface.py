@@ -763,7 +763,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             options['only_generation'] = False
 
         if mode in ['aMC@NLO', 'aMC@LO']:
-            print self.me_dir, 'Events', self.run_name
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
         old_cwd = os.getcwd()
 
@@ -777,6 +776,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             except TypeError:
                 self.nb_core = multiprocessing.cpu_count()
             logger.info('Using %d cores' % self.nb_core)
+            self.cluster = cluster.MultiCore(self.nb_core)
         self.update_random_seed()
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
         #find and keep track of all the jobs
@@ -1182,23 +1182,14 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         # if running serially nothing to do
         if self.cluster_mode == 0:
             return
-
-        # if running on cluster just use the control function of the module
-        elif self.cluster_mode == 1:
-            idle = 1
-            run = 1
-            logger.info('     Waiting for submitted jobs to complete (will update each 10s)')
-            while idle + run > 0:
-                idle, run, finish, fail = self.cluster.control('')
-                self.update_status((idle, run, finish, run_type), level='parton')
-                time.sleep(10)
-            #reset the cluster after completion
-            self.cluster.submitted = 0
-            self.cluster.submitted_ids = []
-        elif self.cluster_mode == 2:
-            while self.ijob != self.njobs:
-                time.sleep(10)
-
+        else:
+            #logger.info('     Waiting for submitted jobs to complete')
+            update_status = lambda i, r, f: self.update_status((i, r, f, run_type), level='parton')
+            try:
+                self.cluster.wait(self.me_dir, update_status)
+            except:
+                self.cluster.remove()
+                raise
 
     def run_all(self, job_dict, arg_list, run_type='monitor'):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
@@ -1206,94 +1197,44 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.ijob = 0
         if self.cluster_mode == 0:
             self.update_status((self.njobs - 1, 1, 0, run_type), level='parton')
-        if self.cluster_mode == 1:
-            self.update_status((self.njobs, 0, 0, run_type), level='parton')
-        if self.cluster_mode == 2:
-            self.update_status((self.njobs - self.nb_core, self.nb_core, 0, run_type), level='parton')
         for args in arg_list:
             for dir, jobs in job_dict.items():
-                os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
                 for job in jobs:
-                    self.run_exe(job, args, run_type)
+                    self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', dir) )
                     # print some statistics if running serially
 
-        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
         self.wait_for_complete(run_type)
+        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
 
 
-    def run_exe(self, exe, args, run_type):
+    def run_exe(self, exe, args, run_type, cwd=None):
         """this basic function launch locally/on cluster exe with args as argument.
         """
-
-        def launch_in_thread(exe, argument, cwd, stdout, control_thread, run_type):
-            """ way to launch for multicore.
-            """
-
-            start = time.time()
-            if (cwd and os.path.exists(pjoin(cwd, exe))) or os.path.exists(exe):
-                exe = './' + exe
-            misc.call([exe] + argument, cwd=cwd, stdout=stdout,
-                        stderr=subprocess.STDOUT)
-            self.ijob += 1
-
-            self.update_status((max([self.njobs - self.ijob - self.nb_core, 0]), 
-                                min([self.nb_core, self.njobs - self.ijob]),
-                                self.ijob, run_type), level='parton')
-            #logger.info('     Jobs completed: %d/%d' %(self.ijob, self.njobs))
-            
-            # release the lock for allowing to launch the next job      
-            while not control_thread[1].locked():
-                # check that the status is locked to avoid coincidence unlock
-                if not control_thread[2]:
-                    # Main is not yet locked
-                    control_thread[0] -= 1
-                    return 
-                time.sleep(1)
-            control_thread[0] -= 1 # upate the number of running thread
-            control_thread[1].release()
-
+        
         # first test that exe exists:
-        if not os.path.exists(exe):
+        execpath = None
+        if cwd and os.path.exists(pjoin(cwd, exe)):
+            execpath = pjoin(cwd, exe)
+        elif not cwd and os.path.exists(exe):
+            execpath = exe
+        else:
             raise aMCatNLOError('Cannot find executable %s in %s' \
                 % (exe, os.getcwd()))
+
         # check that the executable has exec permissions
-        if not os.access(exe, os.X_OK):
-            misc.call(['chmod +x %s' % exe], shell=True)
+        if not os.access(execpath, os.X_OK):
+            misc.call(['chmod', '+x', exe], cwd=cwd)
         # finally run it
         if self.cluster_mode == 0:
             #this is for the serial run
-            misc.call(['./'+exe] + args, cwd= os.getcwd())
+            misc.call(['./'+exe] + args, cwd=cwd)
             self.ijob += 1
             self.update_status((max([self.njobs - self.ijob - 1, 0]), 
                                 min([1, self.njobs - self.ijobs]),
                                 self.ijob, run_type), level='parton')
-        elif self.cluster_mode == 1:
-            #this is for the cluster run
-            self.cluster.submit(exe, args)
-        elif self.cluster_mode == 2:
-            #this is for the multicore run
-            import thread
-            if not hasattr(self, 'control_thread'):
-                self.control_thread = [0] # [used_thread]
-                self.control_thread.append(thread.allocate_lock()) # The lock
-                self.control_thread.append(False) # True if all thread submit 
-                                                  #-> waiting mode
-            if self.control_thread[2]:
-                self.control_thread[1].acquire()
-                self.control_thread[0] += 1 # upate the number of running thread
-                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread, run_type))
-            elif self.control_thread[0] <  self.nb_core -1:
-                self.control_thread[0] += 1 # upate the number of running thread 
-                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread, run_type))
-            elif self.control_thread[0] ==  self.nb_core -1:
-                self.control_thread[0] += 1 # upate the number of running thread
-                thread.start_new_thread(launch_in_thread,(exe, args, os.getcwd(), None, self.control_thread, run_type))
-                self.control_thread[2] = True
-                self.control_thread[1].acquire() # Lock the next submission
-                                                 # Up to a release
-
-
-
+        else:
+            #this is for the cluster/multicore run
+            self.cluster.submit(exe, args, cwd=cwd)
 
 
     def write_madinMMC_file(self, path, run_mode, mint_mode):
@@ -1612,7 +1553,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 # detect which card is provided
                 card_name = answer + 'card.dat'
 
-
+        run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
+        self.run_card = banner_mod.RunCardNLO(run_card)
+        self.run_tag = self.run_card['run_tag']
+        self.run_name = self.find_available_run_name(self.me_dir)
+        self.set_run_name(self.run_name, self.run_tag, 'parton')
+        #self.do_treatcards_nlo('')
+        return
 
     def do_quit(self, line):
         """ """

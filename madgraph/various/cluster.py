@@ -28,7 +28,9 @@ except Exception, error:
         print  str(error)
     from internal import MadGraph5Error
     import internal.misc as misc
-    
+
+pjoin = os.path.join
+   
 class ClusterManagmentError(MadGraph5Error):
     pass
 
@@ -195,7 +197,133 @@ class Cluster(object):
         logger.warning("""This cluster didn't support job removal, 
     the jobs are still running on the cluster.""")
 
+class MultiCore(Cluster):
+    """ class for dealing with the submission in multiple node"""
+    
+    def __init__(self, nb_core, **opt):
+        """Init the cluster"""
+        import thread
+                
+        self.submitted = 0
+        self.finish = 0
+        self.nb_core = nb_core
+        self.update_fct = None
 
+        # initialize the thread controler
+        self.need_waiting = False
+        self.nb_used = 0
+        self.lock = thread.allocate_lock()
+        self.done = 0 
+        self.waiting_submission = []
+        self.pids = []
+        
+    def adding_jobs_to_submit(self, nb):
+        self.idle += nb
+        #self.remaining += nb
+    
+    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
+               log=None):
+        """submit a job on multicore machine"""
+        import thread
+        
+        if self.need_waiting:
+            self.waiting_submission.append((prog, argument,cwd, stdout))
+            # check that none submission is already finished
+            if self.nb_used <  self.nb_core:
+                arg = self.waiting_submission.pop(0)
+                self.nb_used += 1 # udpate the number of running thread
+                thread.start_new_thread(self.launch, arg)              
+            #self.lock.acquire() # wait for release
+            #thread.start_new_thread(self.launch, (prog, argument, cwd, stdout))
+        elif self.nb_used <  self.nb_core -1:
+            self.nb_used += 1 # upate the number of running thread
+            thread.start_new_thread(self.launch, (prog, argument, cwd, stdout))
+        elif self.nb_used ==  self.nb_core -1:
+            self.nb_used += 1 # upate the number of running thread
+            thread.start_new_thread(self.launch, (prog, argument, cwd, stdout))
+            self.need_waiting = True
+            #self.lock.acquire() # Lock the next submission Up to a release
+        
+    def launch(self, exe, argument, cwd, stdout):
+        """ way to launch for multicore."""
+        
+        def end(self, pid):
+            self.nb_used -= 1
+            self.done +=1
+            self.pids.remove(pid)
+
+        try:  
+            if (cwd and os.path.exists(pjoin(cwd, exe))) or os.path.exists(exe):
+                exe = './' + exe
+            proc = misc.Popen([exe] + argument, cwd=cwd, stdout=stdout, 
+                                                           stderr=subprocess.STDOUT)
+            pid = proc.pid
+            self.pids.append(pid)
+            proc.wait()
+            # release the lock for allowing to launch the next job      
+            while not self.lock.locked():
+                # check that the status is locked to avoid coincidence unlock
+                if not self.need_waiting:
+                    # Main is not yet locked
+                    end(self, pid)
+                    return 
+                time.sleep(1)
+            end(self, pid)
+            self.lock.release()
+        except Exception, error:
+            print error, os.getcwd()
+            self.remove()
+            pass
+          
+
+    def wait(self, me_dir, update_status):
+        """Wait that all thread finish"""
+        try:
+            import thread
+            
+            self.need_waiting = True
+            self.lock.acquire()
+            while self.waiting_submission or self.nb_used:
+                if update_status:
+                    update_status(len(self.waiting_submission), self.nb_used, self.done) 
+                self.lock.acquire()
+                if self.waiting_submission:
+                    arg = self.waiting_submission.pop(0)
+                    thread.start_new_thread(self.launch, arg)
+    
+                    self.nb_used += 1 # upate the number of running thread
+                    
+            if update_status:
+                update_status(len(self.waiting_submission), self.nb_used, self.done) 
+                
+            # reset variable for next submission
+            self.need_waiting = False
+            self.lock.release()
+            self.done = 0
+            self.pids = []
+        except KeyboardInterrupt:
+            self.remove()
+            raise
+
+            
+    def remove(self, *args):
+        """Ensure that all thread are killed"""
+        for pid in list(self.pids):
+            out = os.system('kill -9 %s &> /dev/null' % pid)
+            if out == 0:
+                try:
+                    self.pids.remove(pid)
+                except:
+                    pass
+        time.sleep(1) # waiting if some were submitting at the time of ctrl-c
+        for pid in list(self.pids):
+            out = os.system('kill -15 %s &> /dev/null' % pid)
+            if out == 0:
+                try:
+                    self.pids.remove(pid)
+                except:
+                    pass
+                    
 class CondorCluster(Cluster):
     """Basic class for dealing with cluster submission"""
     

@@ -200,6 +200,9 @@ class CmdExtended(cmd.Cmd):
     def stop_on_keyboard_stop(self):
         """action to perform to close nicely on a keyboard interupt"""
         try:
+            if hasattr(self, 'cluster'):
+                logger.info('rm jobs on queue')
+                self.cluster.remove()
             if hasattr(self, 'results'):
                 self.update_status('Stop by the user', level=None, makehtml=False, error=True)
                 self.add_error_log_in_html(KeyboardInterrupt)
@@ -1535,6 +1538,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if self.cluster_mode == 2 and not self.nb_core:
             import multiprocessing
             self.nb_core = multiprocessing.cpu_count()
+        if self.cluster_mode == 2:
+            self.cluster = cluster.MultiCore(self.nb_core)
             
         if self.cluster_mode == 1 and not hasattr(self, 'cluster'):
             opt = self.options
@@ -3082,30 +3087,7 @@ calculator."""
         elif (cwd and os.path.exists(pjoin(cwd, exe))) and not \
                                             os.access(pjoin(cwd, exe), os.X_OK):
             os.system('chmod +x %s ' % pjoin(cwd, exe))
-            
-        def launch_in_thread(exe, argument, cwd, stdout, control_thread):
-            """ way to launch for multicore"""
-
-            start = time.time()
-            if (cwd and os.path.exists(pjoin(cwd, exe))) or os.path.exists(exe):
-                exe = './' + exe
-            misc.call([exe] + argument, cwd=cwd, stdout=stdout,
-                        stderr=subprocess.STDOUT, **opt)
-            #logger.info('%s run in %f s' % (exe, time.time() -start))
-            
-            # release the lock for allowing to launch the next job      
-            while not control_thread[1].locked():
-                # check that the status is locked to avoid coincidence unlock
-                if not control_thread[2]:
-                    # Main is not yet locked
-                    control_thread[0] -= 1
-                    return 
-                time.sleep(1)
-            control_thread[0] -= 1 # upate the number of running thread
-            control_thread[1].release()
-
-        
-        
+                    
         if mode == 0:
             self.update_status((remaining, 1, 
                                 self.total_jobs - remaining -1, run_type), level=None, force=False)
@@ -3171,29 +3153,8 @@ calculator."""
                 self.cluster.submit(exe, stdout=stdout, cwd=cwd)
 
         elif mode == 2:
-            import thread
-            if not hasattr(self, 'control_thread'):
-                self.control_thread = [0] # [used_thread]
-                self.control_thread.append(thread.allocate_lock()) # The lock
-                self.control_thread.append(False) # True if all thread submit 
-                                                  #-> waiting mode
-
-            if self.control_thread[2]:
-                self.update_status((remaining + 1, self.control_thread[0], 
-                                self.total_jobs - remaining - self.control_thread[0] - 1, run_type), 
-                                   level=None, force=False)
-                self.control_thread[1].acquire()
-                self.control_thread[0] += 1 # upate the number of running thread
-                thread.start_new_thread(launch_in_thread,(exe, argument, cwd, stdout, self.control_thread))
-            elif self.control_thread[0] <  self.nb_core -1:
-                self.control_thread[0] += 1 # upate the number of running thread
-                thread.start_new_thread(launch_in_thread,(exe, argument, cwd, stdout, self.control_thread))
-            elif self.control_thread[0] ==  self.nb_core -1:
-                self.control_thread[0] += 1 # upate the number of running thread
-                thread.start_new_thread(launch_in_thread,(exe, argument, cwd, stdout, self.control_thread))
-                self.control_thread[2] = True
-                self.control_thread[1].acquire() # Lock the next submission
-                                                 # Up to a release
+            self.cluster.submit(exe, stdout=stdout, cwd=cwd)
+            
             
     ############################################################################
     def find_madevent_mode(self):
@@ -3214,7 +3175,7 @@ calculator."""
         
         if mode is None:
             mode = self.cluster_mode
-        if mode == 1:
+        if mode > 0:
             if html:
                 update_status = lambda idle, run, finish: \
                     self.update_status((idle, run, finish, run_type), level=None)
@@ -3225,43 +3186,16 @@ calculator."""
             except Exception, error:
                 logger.info(error)
                 if not self.force:
-                    ans = self.ask('Cluster Error detected. Do you want to clean the queue?',
-                             default = 'y', answers=['y','n'])
+                    ans = self.ask('Error detected. Do you want to clean the queue?',
+                             default = 'y', choices=['y','n'])
                 else:
                     ans = 'y'
                 if ans:
                     self.cluster.remove()
                 raise
-                    
-        if mode == 2:
-            # Wait that all thread finish
-            if not self.control_thread[2]:
-#                time.sleep(1)
-                nb = self.control_thread[0]
-                while self.control_thread[0]:
-                    time.sleep(5)
-                    if nb != self.control_thread[0] and html:
-                        self.update_status((0, self.control_thread[0], 
-                                           self.total_jobs - self.control_thread[0], run_type), 
-                                           level=None, force=False)
-                        nb = self.control_thread[0]
-                try:
-                    del self.next_update
-                except:
-                    pass
-            else:    
-                for i in range(0,self.nb_core):
-                    if html:
-                        self.update_status((0, self.control_thread[0], 
-                                           self.total_jobs - self.control_thread[0], run_type), 
-                                           level=None, force=False)
-                    self.control_thread[1].acquire()
-                self.control_thread[2] = False
-                self.control_thread[1].release()
-                try:
-                    del self.next_update
-                except:
-                    pass        
+            except KeyboardInterrupt, error:
+                self.cluster.remove()
+                raise                            
         
         
 
