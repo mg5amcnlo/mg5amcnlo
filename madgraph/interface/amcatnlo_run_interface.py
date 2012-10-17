@@ -328,7 +328,7 @@ class CheckValidForCmd(object):
         """Check the validity of the line. args[0] is the run_directory"""
         if len(args) == 0:
             self.help_shower()
-            raise self.InvalidCmd, 'Invalid syntax, please specify the run directory'
+            raise self.InvalidCmd, 'Invalid syntax, please specify the run name'
         if not os.path.isdir(pjoin(self.me_dir, 'Events', args[0])):
             raise self.InvalidCmd, 'Directory %s does not exists' % \
                             pjoin(os.getcwd(), 'Events',  args[0])
