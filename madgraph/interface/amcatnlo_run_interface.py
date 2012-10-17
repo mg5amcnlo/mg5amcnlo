@@ -100,16 +100,12 @@ def check_compiler(options, block=False):
         else:
             logger.warning(msg % compiler)
     else:
-        p = misc.Popen('gfortran -dumpversion', stdout=subprocess.PIPE, 
-                stderr=subprocess.PIPE, shell=True)
-        output, error = p.communicate()
-        output = output.replace('\n', '')
-        version = ''.join(output.split('.'))
-        if not version >= '46':
+        curr_version = misc.get_gfortran_version()
+        if not ''.join(curr_version.split('.')) >= '46':
             if block:
-                raise aMCatNLOError(msg % (compiler + ' ' + output))
+                raise aMCatNLOError(msg % (compiler + ' ' + curr_version))
             else:
-                logger.warning(msg % (compiler + ' ' + output))
+                logger.warning(msg % (compiler + ' ' + curr_version))
             
 
 

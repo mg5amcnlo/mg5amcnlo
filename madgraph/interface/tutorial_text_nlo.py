@@ -16,7 +16,7 @@
 
 tutorial_aMCatNLO = """
 You have entered tutorial mode. This will introduce you to the main
-syntax options of aMC@NLO. Most of the syntax corresponds to the MadGraph one 
+syntax options of aMC@NLO. Most of the syntax is identical to the MadGraph one 
 
 As in MadGraph, to learn more about the different options for a command, 
 you can use
