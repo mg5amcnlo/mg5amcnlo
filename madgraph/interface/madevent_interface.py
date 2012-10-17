@@ -35,7 +35,6 @@ import sys
 import traceback
 import time
 
-
 try:
     import readline
     GNU_SPLITTING = ('GNU' in readline.__doc__)
