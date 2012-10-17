@@ -1461,11 +1461,11 @@ class CompleteForCmd(cmd.CompleteCmd):
             process = process[process.index(',')+1:]
         args = self.split_arg(process)
         couplings = []
-        
-        # Do no complete the @ for the process number.
-        if args[-1]=='@':
-            return
 
+        # Do no complete the @ for the process number.
+        if len(args) > 1 and args[-1]=='@':
+            return
+        
         # Automatically allow for QCD perturbation if in the sm because the
         # loop_sm would then automatically be loaded
         pert_couplings_allowed = self._curr_model['perturbation_couplings']
@@ -4481,7 +4481,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             except:
                 res = 1
             if res != 0:
-                logger.warning('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
+                logger.info('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
                         'executable. Please enter the full PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
