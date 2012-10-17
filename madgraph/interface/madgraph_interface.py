@@ -4474,7 +4474,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         elif args[0] == 'lhapdf':
             try:
-                res = misc.call([args[1], '--version'], stdout=devnull)
+                res = misc.call([args[1], '--version'], stdout=subprocess.PIPE,
+                                                             stderr=subprocess.PIPE)
                 logger.info('set lhapdf to %s' % args[1])
                 self.options[args[0]] = args[1]
             except:
@@ -4902,11 +4903,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         'You will NOT be able to run aMC@NLO otherwise.\n')
 
             try:
-                res = misc.call([self.options['lhapdf'], '--version'], stdout=devnull)
+                res = misc.call([self.options['lhapdf'], '--version'], \
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             except:
                 res = 1
             if res != 0:
-                logger.warning('The value for lhapdf in the current configuration does not ' + \
+                logger.info('The value for lhapdf in the current configuration does not ' + \
                         'correspond to a valid executable.\nPlease set it correctly either in ' + \
                         'input/mg5_configuration or with "set lhapdf /path/to/lhapdf-config" ' + \
                         'and regenrate the process. \nTo avoid regeneration, manually edit the ' + \
@@ -4936,7 +4938,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 os.system('cp -r %s %s' % \
                         (pjoin(MG5DIR, 'MCatNLO-utilities', 'MCatNLO'), self._export_dir))
             else:
-                logger.warning('MCatNLO-utilities is not installed. \nIf you want to shower events ' + \
+                logger.info('MCatNLO-utilities is not installed. \nIf you want to shower events ' + \
                         'with MC@NLO please install it by typing "install MCatNLO-utilities"')
 
         elif self._export_format == 'madevent':          

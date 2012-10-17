@@ -129,8 +129,8 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             # Pop the amplitude to save memory space
             proc = fksprocs.pop(0)
             logger.info("Generating Helas calls for FKS process %s" % \
-                         proc.born_amp.get('process').nice_string().\
-                                           replace('Process', 'process'))
+              proc.born_amp.get('process').nice_string(print_weighted = False).\
+                                                  replace('Process', 'process'))
             matrix_element_list = [FKSHelasProcess(proc, self['real_matrix_elements'],
                                                            fksmulti['real_amplitudes'],
                                                           loop_optimized = self.loop_optimized,
@@ -171,7 +171,8 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                             col_index = list_colorize.index(colorize_obj)
                             logger.info(\
                               "Reusing existing color information for %s" % \
-                              matrix_element.born_matrix_element.get('processes')[0].nice_string().\
+                              matrix_element.born_matrix_element.get('processes')\
+                              [0].nice_string(print_weighted=False).\
                                                  replace('Process', 'process'))
                         except ValueError:
                             # If not, create color basis and color
@@ -185,7 +186,8 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
                             logger.info(\
                               "Processing color information for %s" % \
-                              matrix_element.born_matrix_element.get('processes')[0].nice_string().\
+                              matrix_element.born_matrix_element.\
+                              get('processes')[0].nice_string(print_weighted=False).\
                                              replace('Process', 'process'))
                         matrix_element.born_matrix_element.set('color_basis',
                                            list_color_basis[col_index])

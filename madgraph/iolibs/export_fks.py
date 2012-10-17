@@ -806,7 +806,7 @@ end
               model=matrix_element.get('processes')[0].get('model'),
               amplitude='')
         logger.info("Drawing loop Feynman diagrams for " + \
-                     matrix_element.get('processes')[0].nice_string())
+                     matrix_element.get('processes')[0].nice_string(print_weighted=False))
         plot.draw()
 
         filename = "born_matrix.ps"
@@ -817,7 +817,7 @@ end
                                              get('model'),
                                           amplitude='')
         logger.info("Generating born Feynman diagrams for " + \
-                     matrix_element.get('processes')[0].nice_string())
+                     matrix_element.get('processes')[0].nice_string(print_weighted=False))
         plot.draw()
 
         linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
@@ -2083,7 +2083,8 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
               model=matrix_element.get('processes')[0].get('model'),
               amplitude='')
         logger.info("Drawing loop Feynman diagrams for " + \
-                     matrix_element.get('processes')[0].nice_string())
+                     matrix_element.get('processes')[0].nice_string(\
+                                                          print_weighted=False))
         plot.draw()
 
         filename = "born_matrix.ps"
@@ -2094,7 +2095,8 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                                              get('model'),
                                           amplitude='')
         logger.info("Generating born Feynman diagrams for " + \
-                     matrix_element.get('processes')[0].nice_string())
+                     matrix_element.get('processes')[0].nice_string(\
+                                                          print_weighted=False))
         plot.draw()
 
         linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',

@@ -49,10 +49,10 @@ generate_events, or, for an existing run, use bin/run_pythia and
 bin/run_pgs.
 
 
-To use LHAPDF with MadGraph/MadEvent
+To use LHAPDF with aMC@NLO
 ------------------------------------
 
-Please follow the steps below to run MadEvent with LHAPDF support:
+Please follow the steps below to run aMC@NLO with LHAPDF support:
 
 1) Download and compile LHAPDF
 

@@ -4758,12 +4758,12 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             col_index = -1
             logger.info(\
               "Processing color information for %s" % \
-              matrix_element.get('processes')[0].nice_string().\
+              matrix_element.get('processes')[0].nice_string(print_weighted=False).\
                              replace('Process', 'process'))
         else: # Found identical color
             logger.info(\
               "Reusing existing color information for %s" % \
-              matrix_element.get('processes')[0].nice_string().\
+              matrix_element.get('processes')[0].nice_string(print_weighted=False).\
                                  replace('Process', 'process'))
 
         matrix_element.set('color_basis',

@@ -46,7 +46,7 @@ tutorial = tutorial_aMCatNLO
 generate = """
 You have just generated a new process.
 You can find more information on supported syntax by using:
-NLO>help generate
+aMC@NLO>help generate
 To list all defined processes, type
 aMC@NLO>display processes
 
