@@ -1,12 +1,7 @@
 #!/bin/bash
 script=ajob1.$1.$2.$3.$4
-rm -f wait.$script >& /dev/null
-touch run.$script
-echo $script
 TAGTAGTAGTAGTAGTAGTAG  for i in 1 ; do
-    echo $i
-    echo $i >& run.$script
-    if [[ $1 == '0' || $1 == '1' ]]; then
+    if [[ $1 == '0' ]]; then
         j=$2\_G$i
         if [[ ! -e $j ]]; then
             mkdir $j
@@ -22,7 +17,7 @@ TAGTAGTAGTAGTAGTAGTAG  for i in 1 ; do
                     cp -f ../$4\_G$i/grid.MC_integer . >/dev/null 2>&1
                 fi
             else
-                echo "Cannot find direcotry ../$4\_G$i/" > log.txt
+                echo "Cannot find directory ../$4\_G$i/" > log.txt
                 exit
             fi
         fi
@@ -61,15 +56,7 @@ TAGTAGTAGTAGTAGTAGTAG  for i in 1 ; do
         echo $i >> input_app.txt
         tail -n 4 ../../madin.$2 >> input_app.txt
         T="$(date +%s)"
-        time ../madevent_vegas > log.txt <input_app.txt
-        T="$(($(date +%s)-T))"
-        echo "Time in seconds: ${T}" >>log.txt
-    elif [[ $1 == '1' ]]; then
-        head -n 5 ../../madinM.$2 >& input_app.txt
-        echo $i >> input_app.txt
-        tail -n 3 ../../madinM.$2 >> input_app.txt
-        T="$(date +%s)"
-        time ../madevent_mint > log.txt <input_app.txt
+        ../madevent_vegas > log.txt <input_app.txt
         T="$(($(date +%s)-T))"
         echo "Time in seconds: ${T}" >>log.txt
     elif [[ $1 == '2' ]]; then
@@ -83,13 +70,12 @@ TAGTAGTAGTAGTAGTAGTAG  for i in 1 ; do
             tail -n 3 madinM1 >> input_app.txt
         fi
         T="$(date +%s)"
-        time ../madevent_mintMC > log.txt <input_app.txt
+        ../madevent_mintMC > log.txt <input_app.txt
         T="$(($(date +%s)-T))"
         echo "Time in seconds: ${T}" >>log.txt
         cp -f log.txt log_MINT$3.txt
     fi
     cd ../
 done
-rm -f run.$script
-touch done.$script
+
 

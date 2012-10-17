@@ -2211,9 +2211,11 @@ class Process(PhysicsObject):
                 'forbidden_particles', 'is_decay_chain', 'decay_chains',
                 'perturbation_couplings', 'has_born', 'NLO_mode']
 
-    def nice_string(self, indent=0):
+    def nice_string(self, indent=0, print_weighted = True):
         """Returns a nicely formated string about current process
-        content"""
+        content. Since the WEIGHTED order is automatically set and added to 
+        the user-defined list of orders, it can be ommitted for some info
+        displays."""
 
         mystr = " " * indent + "Process: "
         prevleg = None
@@ -2239,7 +2241,7 @@ class Process(PhysicsObject):
         # Add orders
         if self['orders']:
             mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
-                       for key in self['orders']]) + ' '
+              for key in self['orders'] if print_weighted or key!='WEIGHTED']) + ' '
 
         # Add perturbation_couplings
         if self['perturbation_couplings']:
@@ -2253,7 +2255,7 @@ class Process(PhysicsObject):
         # Add squared orders
         if self['perturbation_couplings'] and self['squared_orders']:
             mystr = mystr + " ".join([key + '=' + repr(self['squared_orders'][key]) \
-                       for key in self['squared_orders']]) + ' ' 
+              for key in self['squared_orders'] if print_weighted or key!='WEIGHTED']) + ' ' 
 
         # Add forbidden s-channels
         if self['forbidden_onsh_s_channels']:

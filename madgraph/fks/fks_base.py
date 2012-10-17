@@ -204,7 +204,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                     del myproc['squared_orders']['WEIGHTED']
                 myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
                 logger.info('Generating virtual matrix element for process%s' \
-                        % myproc.nice_string().replace('Process', ''))
+                        % myproc.nice_string(print_weighted = False).replace(\
+                                                                 'Process', ''))
                 myamp = loop_diagram_generation.LoopAmplitude(myproc)
                 if myamp.get('diagrams'):
                     born.virt_amp = myamp
@@ -363,7 +364,8 @@ class FKSProcess(object):
                     'Not valid start_proc in FKSProcess')
 
             logger.info("Generating FKS-subtracted matrix elements for born process%s" \
-                % self.born_proc.nice_string().replace('Process', '')) 
+                % self.born_proc.nice_string(print_weighted=False).replace(\
+                                                                 'Process', '')) 
 
 #            self.model = self.born_proc['model']
             self.leglist = fks_common.to_fks_legs(

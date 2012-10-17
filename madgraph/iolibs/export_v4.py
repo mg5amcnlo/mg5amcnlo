@@ -3788,11 +3788,11 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
               'loop_dir': os.path.join(cmd._mgme_dir,'Template','loop_material'),
               'cuttools_dir': cmd._cuttools_dir}
         if not cmd.options['loop_optimized_output']:
-            logger.info("Exporting in MadFKS format, starting from born process")
+            logger.info("Writing out the aMC@NLO code, starting from born process")
             ExporterClass = export_fks.ProcessExporterFortranFKS
             options['export_format']='FKS5_default'
         else:
-            logger.info("Exporting in MadFKS format, starting from "+\
+            logger.info("Writing out the aMC@NLO code, starting from "+\
                                            "born process using optimized Loops")
             ExporterClass = export_fks.ProcessOptimizedExporterFortranFKS
             options['export_format']='FKS5_optimized'
