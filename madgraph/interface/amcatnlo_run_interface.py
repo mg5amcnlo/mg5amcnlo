@@ -328,7 +328,7 @@ class CheckValidForCmd(object):
         """Check the validity of the line. args[0] is the run_directory"""
         if len(args) == 0:
             self.help_shower()
-            raise self.InvalidCmd, 'Invalid syntax, please specify the run directory'
+            raise self.InvalidCmd, 'Invalid syntax, please specify the run name'
         if not os.path.isdir(pjoin(self.me_dir, 'Events', args[0])):
             raise self.InvalidCmd, 'Directory %s does not exists' % \
                             pjoin(os.getcwd(), 'Events',  args[0])
@@ -920,11 +920,11 @@ Integrated cross-section
                   'Updating the number of unweighted events per channel',
                   'Summary:']
         if step != 2:
-            message = status[step] + '\n\n    Intermediate results:' \
+            message = status[step] + '\n\n      Intermediate results:' \
     """
-    Random seed: %(randinit)d
-    Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb
-    Total abs(cross-section): %(xseca)8.3e +- %(erra)6.1e pb
+      Random seed: %(randinit)d
+      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb
+      Total abs(cross-section): %(xseca)8.3e +- %(erra)6.1e pb
     """ % self.cross_sect_dict
         else:
             # find process name
@@ -934,23 +934,25 @@ Integrated cross-section
                     process = line.replace('generate ', '')
             lpp = {'0':'l', '1':'p', '-1':'pbar'}
             proc_info = """
-    Process %s
-    Run at %s-%s collider (%s + %s GeV)""" % \
+      Process %s
+      Run at %s-%s collider (%s + %s GeV)""" % \
             (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp1']], 
                     self.run_card['ebeam1'], self.run_card['ebeam2'])
     
             message = '\n    ' + status[step] + proc_info + \
     """
-    Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb
+      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb
 """ % self.cross_sect_dict
             neg_frac = (self.cross_sect_dict['xseca'] - self.cross_sect_dict['xsect'])/\
                    (2. * self.cross_sect_dict['xseca'])
-            ev_wgt = self.cross_sect_dict['xseca'] / int(self.run_card['nevents'])
             message = message + \
-    """    Fraction of negative weights: %4.2f""" % (neg_frac)
+"""      Number of events generated: %s
+      Parton shower to be used: %s
+      Fraction of negative weights: %4.2f""" % \
+                    (self.run_card['nevents'],
+                     self.run_card['parton_shower'],
+                     neg_frac)
         logger.info(message)
-
-
 
 
 
@@ -979,8 +981,8 @@ Integrated cross-section
             (pjoin(self.me_dir, 'SubProcesses', filename), evt_file)], shell=True )
         misc.call(['gzip %s' % evt_file], shell=True)
         self.print_summary(step = 2)
-        logger.info('The %s.gz file has been generated.\nIt contains %d %s events to be showered with %s\n.' \
-                % (evt_file, nevents, mode[4:], self.run_card['parton_shower']))
+        logger.info('The %s.gz file has been generated.\n' \
+                % (evt_file))
         return evt_file
 
 
