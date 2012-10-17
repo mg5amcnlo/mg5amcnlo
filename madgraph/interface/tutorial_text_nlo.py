@@ -106,8 +106,17 @@ aMC@NLO> launch
 If you just want to generate the parton level .lhe file, please enter
 aMC@NLO> launch -p
 
-
 (you can interrupt the computation to continue the tutorial by pressing Ctrl-C)
+
+If you want to have more commands/options available, you can switch to the
+interactive aMC@NLO running interface by typing
+aMC@NLO> launch -i
+
+Please see MY_FIRST_AMCATNLO_RUN/README to know about the available commands.
+To know the possible options/modes for each command, simply tipe
+aMC@NLO_run> help COMMAND
+from the aMC@NLO_run interface
+
 """
 
 open_index = output
