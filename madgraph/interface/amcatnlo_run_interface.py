@@ -923,21 +923,35 @@ Integrated cross-section
         status = ['Determining the number of unweighted events per channel',
                   'Updating the number of unweighted events per channel',
                   'Summary:']
-        message = status[step] + \
+        if step != 2:
+            message = status[step] + '\n\n    Intermediate results:' \
     """
     Random seed: %(randinit)d
     Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb
     Total abs(cross-section): %(xseca)8.3e +- %(erra)6.1e pb
     """ % self.cross_sect_dict
-        if step == 2:
+        else:
+            # find process name
+            proc_card_lines = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read().split('\n')
+            for line in proc_card_lines:
+                if line.startswith('generate'):
+                    process = line.replace('generate ', '')
+            lpp = {'0':'l', '1':'p', '-1':'pbar'}
+            proc_info = """
+    Process %s
+    Run at %s-%s collider (%s + %s GeV)""" % \
+            (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp1']], 
+                    self.run_card['ebeam1'], self.run_card['ebeam2'])
+    
+            message = '\n    ' + status[step] + proc_info + \
+    """
+    Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb
+""" % self.cross_sect_dict
             neg_frac = (self.cross_sect_dict['xseca'] - self.cross_sect_dict['xsect'])/\
                    (2. * self.cross_sect_dict['xseca'])
             ev_wgt = self.cross_sect_dict['xseca'] / int(self.run_card['nevents'])
             message = message + \
-    """
-    abs(weight) per event: %8.3e
-    Fraction of negative weights: %4.2f
-    """ % (ev_wgt, neg_frac)
+    """    Fraction of negative weights: %4.2f""" % (neg_frac)
         logger.info(message)
 
 
@@ -968,9 +982,9 @@ Integrated cross-section
         misc.call(['mv %s %s' % 
             (pjoin(self.me_dir, 'SubProcesses', filename), evt_file)], shell=True )
         misc.call(['gzip %s' % evt_file], shell=True)
-        logger.info('The %s.gz file has been generated.\nIt contains %d %s events to be showered with %s.\n' \
-                % (evt_file, nevents, mode[4:], self.run_card['parton_shower']))
         self.print_summary(step = 2)
+        logger.info('The %s.gz file has been generated.\nIt contains %d %s events to be showered with %s\n.' \
+                % (evt_file, nevents, mode[4:], self.run_card['parton_shower']))
         return evt_file
 
 
