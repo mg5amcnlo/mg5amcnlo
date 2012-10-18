@@ -46,14 +46,14 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
    
         
     if  [[ ! -e randinit ]] ; then
-    	if [[ ! -e ../randinit ]] ; then
+    	if [[ -e ../randinit ]] ; then
 			ln -sf ../randinit .
 		else
 			ln -sf ../../randinit .
 		fi
     fi
     if  [[ ! -e symfact.dat ]] ; then
-    	if [[ ! -e ../symfact.dat ]] ; then
+    	if [[  -e ../symfact.dat ]] ; then
 			ln -sf ../symfact.dat .
 		else
 			ln -sf ../../symfact.dat .    
