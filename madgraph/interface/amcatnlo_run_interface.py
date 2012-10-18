@@ -1535,7 +1535,8 @@ Integrated cross-section
                         raise aMCatNLOError('Compilation failed, check %s for details' \
                                 % test_log)
                     logger.info('   Running check_poles...')
-                    misc.call(['echo %s | ./check_poles >> %s' % ('"100 \\n -1"', test_log)], shell=True) 
+                    open('./check_poles.input', 'w').write('100 \n 1\n') 
+                    misc.call(['./check_poles <check_poles.input >> %s' % (test_log)], shell=True) 
                     self.parse_check_poles_log(os.getcwd())
                 #compile madevent_mintMC/vegas
                 logger.info('   Compiling %s' % exe)
