@@ -563,6 +563,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.run_tag = None
         self.banner = None
         # Load the configuration file
+
         self.set_configuration(amcatnlo=True)
 
         # load the current status of the directory
@@ -585,7 +586,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         """split argument and"""
         
         args = CmdExtended.split_arg(line)
-
         return args
     
     
@@ -1571,6 +1571,7 @@ Integrated cross-section
 
     def link_lhapdf(self, libdir):
         """links lhapdf into libdir"""
+        print self.options
         logger.info('Using LHAPDF interface for PDFs')
         lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
                 shell = True, stdout = subprocess.PIPE).stdout.read().strip()

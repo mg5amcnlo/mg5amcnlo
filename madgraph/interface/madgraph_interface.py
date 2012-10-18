@@ -4247,13 +4247,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             param_card.write(path)
             self._curr_model['name'] += '-%s' % name
         
-        
-        
-        
-        
-        
-        
-        
     
     
     def do_save(self, line, check=True, to_keep={}, log=True):
@@ -4486,7 +4479,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
         elif args[0] in ['hwpp_path', 'thepeg_path', 'hepmc_path']:
-            print 'MZ, CORRECT', args
             if os.path.isdir(args[1]):
                 self.options[args[0]] = args[1]
                 logger.info('set %s to %s' % (args[0], args[1]))
@@ -4931,7 +4923,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False, \
-                    to_keep = {'MCatNLO-utilities_path': './MCatNLO-utilities'})
+                    to_keep = {'MCatNLO-utilities_path': './MCatNLO-utilities',
+                               'lhapdf': self.options['lhapdf'],
+                               'fastjet': self.options['fastjet']})
 
             # copy the MCatNLO directory from mcatnlo-utils inside the exported dir
             if os.path.isdir(pjoin(MG5DIR, 'MCatNLO-utilities')):
