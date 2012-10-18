@@ -94,13 +94,14 @@ def check_compiler(options, block=False):
         compiler = options['fortran_compiler']
     elif misc.which('gfortran'):
          compiler = 'gfortran'
-    if compiler != 'gfortran':
+    if 'gfortran' not in compiler:
         if block:
             raise aMCatNLOError(msg % compiler)
         else:
             logger.warning(msg % compiler)
     else:
-        curr_version = misc.get_gfortran_version()
+        print "HHHH compiler=",compiler
+        curr_version = misc.get_gfortran_version(compiler)
         if not ''.join(curr_version.split('.')) >= '46':
             if block:
                 raise aMCatNLOError(msg % (compiler + ' ' + curr_version))
@@ -577,7 +578,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         # check that compiler is gfortran 4.6 or later if virtuals have been exported
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
         if not '[real=QCD]' in proc_card:
-            check_compiler(self.options_configuration, block=True)
+            check_compiler(self.options, block=True)
 
         
     ############################################################################    
@@ -1535,7 +1536,7 @@ Integrated cross-section
                         raise aMCatNLOError('Compilation failed, check %s for details' \
                                 % test_log)
                     logger.info('   Running check_poles...')
-                    misc.call(['echo %s | ./check_poles >> %s' % ('"100 \\n -1"', test_log)], shell=True) 
+                    misc.call(['echo %s | ./check_poles >> %s' % (r'"100 \n -1"', test_log)], shell=True) 
                     self.parse_check_poles_log(os.getcwd())
                 #compile madevent_mintMC/vegas
                 logger.info('   Compiling %s' % exe)
