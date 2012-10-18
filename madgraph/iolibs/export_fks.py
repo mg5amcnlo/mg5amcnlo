@@ -463,7 +463,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             
         os.chdir(cwd)
         # Generate info page
-        gen_infohtml.make_info_html_nlo(self.dir_path)
+        #gen_infohtml.make_info_html_nlo(self.dir_path)
 
 
         return calls

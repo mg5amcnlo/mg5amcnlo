@@ -93,14 +93,15 @@ def check_compiler(options, block=False):
     if options['fortran_compiler']:
         compiler = options['fortran_compiler']
     elif misc.which('gfortran'):
-         compiler = 'gfortran'
-    if compiler != 'gfortran':
+        compiler = 'gfortran'
+        
+    if 'gfortran' not in compiler:
         if block:
             raise aMCatNLOError(msg % compiler)
         else:
             logger.warning(msg % compiler)
     else:
-        curr_version = misc.get_gfortran_version()
+        curr_version = misc.get_gfortran_version(compiler)
         if not ''.join(curr_version.split('.')) >= '46':
             if block:
                 raise aMCatNLOError(msg % (compiler + ' ' + curr_version))
@@ -563,6 +564,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.run_tag = None
         self.banner = None
         # Load the configuration file
+
         self.set_configuration(amcatnlo=True)
 
         # load the current status of the directory
@@ -576,8 +578,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.results.def_web_mode(self.web)
         # check that compiler is gfortran 4.6 or later if virtuals have been exported
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
+
         if not '[real=QCD]' in proc_card:
-            check_compiler(self.options_configuration, block=True)
+            check_compiler(self.options, block=True)
 
         
     ############################################################################    
@@ -585,7 +588,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         """split argument and"""
         
         args = CmdExtended.split_arg(line)
-
         return args
     
     
@@ -666,6 +668,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
+    ############################################################################
+    def do_treatcards(self, line, amcatnlo=True):
+        """this is for creating the correct run_card.inc from the nlo format"""
+        return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
         
     ############################################################################      
     def do_launch(self, line):
@@ -1624,7 +1630,8 @@ Integrated cross-section
                         raise aMCatNLOError('Compilation failed, check %s for details' \
                                 % test_log)
                     logger.info('   Running check_poles...')
-                    misc.call(['echo %s | ./check_poles >> %s' % ('"100 \\n -1"', test_log)], shell=True) 
+                    open('./check_poles.input', 'w').write('100 \n 1\n') 
+                    misc.call(['./check_poles <check_poles.input >> %s' % (test_log)], shell=True) 
                     self.parse_check_poles_log(os.getcwd())
                 #compile madevent_mintMC/vegas
                 logger.info('   Compiling %s' % exe)
@@ -1660,6 +1667,7 @@ Integrated cross-section
 
     def link_lhapdf(self, libdir):
         """links lhapdf into libdir"""
+        print self.options
         logger.info('Using LHAPDF interface for PDFs')
         lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
                 shell = True, stdout = subprocess.PIPE).stdout.read().strip()
