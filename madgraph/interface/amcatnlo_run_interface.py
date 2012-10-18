@@ -890,7 +890,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
                     if (i < 2 and not options['only_generation'])  or i == 1 :
                         p = misc.Popen(['./combine_results.sh %d %d GF* GV*' % (i, nevents)],
-                                stdout=subprocesses.PIPE, shell=True)
+                                stdout=subprocess.PIPE, shell=True)
                         output = p.communicate()
                         misc.call(['cp res_%d_abs.txt res_%d_tot.txt %s' % \
                            (i, i, pjoin(self.me_dir, 'Events', self.run_name))], shell=True)
@@ -1371,9 +1371,97 @@ Integrated cross-section
                                 self.ijob, run_type), level='parton')
         else:
             #this is for the cluster/multicore run
-            self.cluster.submit(exe, args, cwd=cwd)
+            if 'ajob' not  in exe:
+                self.cluster.submit(exe, args, cwd=cwd)
+                return 
+                           
+            # use local disk if possible => need to stands what are the 
+            # input/output files
+            keep_fourth_arg = False
+            output_files = []
+            input_files = [pjoin(self.me_dir, 'MGMEVersion.txt'),
+                           pjoin(self.me_dir, 'SubProcesses', 'randinit'),
+                           pjoin(self.me_dir, 'SubProcesses', 'symfact.dat'),
+                           pjoin(self.me_dir, 'SubProcesses', 'iproc.dat')]
+            
+            # File for the loop (might be not present if MadLoop is not use)
+            if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
+                to_add = ['MadLoopParams.dat', 'ColorDenomFactors.dat', 
+                                         'ColorNumFactors.dat','HelConfigs.dat']
+                for name in to_add:
+                    input_files.append(pjoin(cwd, name))
+            print '1390*************', args
+            
 
+            Ire = re.compile("for i in ([\d\s]*) ; do")
+            try : 
+                fsock = open(exe)
+            except:
+                fsock = open(pjoin(cwd,exe))
+            text = fsock.read()
+            data = Ire.findall(text)
+            subdir = ' '.join(data).split()
+                     
+            if args[0] == '0':
+                # MADEVENT VEGAS MODE
+                input_files.append(pjoin(cwd, 'madevent_vegas'))
+                input_files.append(pjoin(self.me_dir, 'SubProcesses','madin.%s' % args[1]))
+                #j=$2\_G$i
+                for i in subdir:
+                    current = '%s_%s' % (args[1],i)
+                    input_files.append(pjoin(cwd, current))
+                    output_files.append(current)
+                    if len(args) == 4 and args[3] in ['H','S','V','B','F']:
+                        # use a grid train on another part
+                        base = '%s_%s' % (args[3],i)
+                        files.ln(pjoin(cwd,base,'mint_grids'), name = 'preset_mint_grids', 
+                                                starting_dir=pjoin(cwd,current))
+                        files.ln(pjoin(cwd,base,'grid.MC_integer'), 
+                                                starting_dir=pjoin(cwd,current))
+                    elif len(args) ==4:
+                        keep_fourth_arg = True
+                    
+            elif args[0] == '2':
+                # MINTMC MODE
+                input_files.append(pjoin(cwd, 'madevent_mintMC'))
+                if args[2] in ['0','2']:
+                    input_files.append(pjoin(self.me_dir, 'SubProcesses','madinMMC_%s.2' % args[1]))
 
+                for i in subdir:
+                    current = 'G%s%s' % (args[1], i)
+                    input_files.append(pjoin(cwd, current))
+                    output_files.append(current)
+                    if len(args) == 4:
+                        # use a grid train on another part
+                        base = '%s_%s' % (args[3],i)   
+            else:
+                raise MadGraph5Error, 'not valid argument'
+  
+            #Find the correct PDF input file
+            if hasattr(self, 'pdffile'):
+                input_files.append(self.pdffile)
+            else:
+                for line in open(pjoin(self.me_dir,'Source','PDF','pdf_list.txt')):
+                    data = line.split()
+                    if len(data) < 4:
+                        continue
+                    if data[0].lower() == self.run_card['pdlabel'].lower():
+                        self.pdffile = pjoin(self.me_dir, 'lib', 'Pdfdata', data[2])
+                        input_files.append(self.pdffile) 
+                        break
+                else:
+                    # possible when using lhapdf
+                    self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
+                    input_files.append(self.pdffile) 
+                    
+            
+            if len(args) == 4 and not keep_fourth_arg:
+                args = args[:3]
+            
+            #submitting
+            self.cluster.submit2(exe, args, cwd=cwd, 
+                         input_files=input_files, output_files=output_files)
+            
     def write_madinMMC_file(self, path, run_mode, mint_mode):
         """writes the madinMMC_?.2 file"""
         #check the validity of the arguments
