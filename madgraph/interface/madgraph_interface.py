@@ -7,7 +7,7 @@
 # high-energy processes in the Standard Model and beyond.
 #
 # It is subject to the MadGraph license which should accompany this 
-# distribution./sw/bin/gfortran_4.4_old
+# distribution.
 #
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #

@@ -288,9 +288,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
             if log: logger.info('set output information to level: %s' % args[1])
         elif args[0] == "fortran_compiler":
+            if args[1] == 'None':
+                args[1] = None
             self.options['fortran_compiler'] = args[1]
             current = misc.detect_current_compiler(pjoin(self.me_dir,'Source','make_opts'))
-            if current != args[1] and args[1] != 'None':
+            if current != args[1] and args[1] != None:
                 misc.mod_compilator(self.me_dir, args[1], current)
         elif args[0] == "run_mode":
             if not args[1] in [0,1,2,'0','1','2']:

@@ -93,7 +93,8 @@ def check_compiler(options, block=False):
     if options['fortran_compiler']:
         compiler = options['fortran_compiler']
     elif misc.which('gfortran'):
-         compiler = 'gfortran'
+        compiler = 'gfortran'
+        
     if 'gfortran' not in compiler:
         if block:
             raise aMCatNLOError(msg % compiler)
@@ -577,6 +578,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.results.def_web_mode(self.web)
         # check that compiler is gfortran 4.6 or later if virtuals have been exported
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
+
         if not '[real=QCD]' in proc_card:
             check_compiler(self.options, block=True)
 
