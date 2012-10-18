@@ -605,7 +605,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
- 
 
     ############################################################################      
     def do_calculate_xsect(self, line):
@@ -767,7 +766,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'])
+            self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'],
+                                              self.options['cluster_temp_path'])
         if self.cluster_mode == 2:
             import multiprocessing
             try:
@@ -775,7 +775,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             except TypeError:
                 self.nb_core = multiprocessing.cpu_count()
             logger.info('Using %d cores' % self.nb_core)
-            self.cluster = cluster.MultiCore(self.nb_core)
+            self.cluster = cluster.MultiCore(self.nb_core, 
+                                     temp_dir=self.options['cluster_temp_path'])
         self.update_random_seed()
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
         #find and keep track of all the jobs
@@ -1381,8 +1382,8 @@ Integrated cross-section
             output_files = []
             input_files = [pjoin(self.me_dir, 'MGMEVersion.txt'),
                            pjoin(self.me_dir, 'SubProcesses', 'randinit'),
-                           pjoin(self.me_dir, 'SubProcesses', 'symfact.dat'),
-                           pjoin(self.me_dir, 'SubProcesses', 'iproc.dat')]
+                           pjoin(cwd, 'symfact.dat'),
+                           pjoin(cwd, 'iproc.dat')]
             
             # File for the loop (might be not present if MadLoop is not use)
             if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
@@ -1445,14 +1446,14 @@ Integrated cross-section
                     data = line.split()
                     if len(data) < 4:
                         continue
-                    if data[0].lower() == self.run_card['pdlabel'].lower():
+                    if data[1].lower() == self.run_card['pdlabel'].lower():
                         self.pdffile = pjoin(self.me_dir, 'lib', 'Pdfdata', data[2])
                         input_files.append(self.pdffile) 
                         break
                 else:
                     # possible when using lhapdf
                     self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
-                    input_files.append(self.pdffile) 
+                    input_files.append(self.pdffile)
                     
             
             if len(args) == 4 and not keep_fourth_arg:

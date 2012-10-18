@@ -109,10 +109,11 @@ class Cluster(object):
                 'arguments': ' '.join(argument)}
         
         # writing a new script for the submission
-        new_prog = os.path.join(os.path.dirname(prog), temp_file_name)
+        new_prog = temp_file_name
         open(new_prog, 'w').write(text % dico)
         misc.Popen(['chmod','+x',new_prog],cwd=cwd)
         
+        print (new_prog, argument, cwd, stdout, stderr, log)
         return self.submit(new_prog, argument, cwd, stdout, stderr, log)
         
 
@@ -200,10 +201,15 @@ class Cluster(object):
 class MultiCore(Cluster):
     """ class for dealing with the submission in multiple node"""
     
-    def __init__(self, nb_core, **opt):
+    job_id = '$'
+    
+    def __init__(self, nb_core, *args, **opt):
         """Init the cluster"""
         import thread
-                
+        
+        super(MultiCore, self).__init__(self, *args, **opt)
+        
+        
         self.submitted = 0
         self.finish = 0
         self.nb_core = nb_core
@@ -253,8 +259,9 @@ class MultiCore(Cluster):
             self.pids.remove(pid)
 
         try:  
-            if (cwd and os.path.exists(pjoin(cwd, exe))) or os.path.exists(exe):
+            if os.path.exists(exe):
                 exe = './' + exe
+            print exe
             proc = misc.Popen([exe] + argument, cwd=cwd, stdout=stdout, 
                                                            stderr=subprocess.STDOUT)
             pid = proc.pid
