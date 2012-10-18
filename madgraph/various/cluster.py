@@ -13,7 +13,6 @@
 ################################################################################
 import subprocess
 import logging
-import vendor.md5 as md5
 import os
 import time
 import re
@@ -534,7 +533,7 @@ class PBSCluster(Cluster):
         """Submit a job prog to a PBS cluster"""
         
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
-        me_dir = md5.digest(me_dir)[-14:]
+        me_dir = misc.digest(me_dir)[-14:]
         if not me_dir[0].isalpha():
             me_dir = 'a' + me_dir[1:]
         
@@ -605,7 +604,7 @@ class PBSCluster(Cluster):
 
         if me_dir.endswith('/'):
             me_dir = me_dir[:-1]    
-        me_dir = md5.digest(me_dir)[-14:]
+        me_dir = misc.digest(me_dir)[-14:]
         if not me_dir[0].isalpha():
             me_dir = 'a' + me_dir[1:]
 
@@ -656,7 +655,7 @@ class SGECluster(Cluster):
         """Submit a job prog to an SGE cluster"""
 
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
-        me_dir = md5.digest(me_dir)[-10:]
+        me_dir = misc.digest(me_dir)[-10:]
         if not me_dir[0].isalpha():
             me_dir = 'a' + me_dir[1:]
 
@@ -750,7 +749,7 @@ class SGECluster(Cluster):
 
         if me_dir.endswith('/'):
            me_dir = me_dir[:-1]    
-        me_dir = md5.digest(me_dir)[-10:]
+        me_dir = misc.digest(me_dir)[-10:]
         if not me_dir[0].isalpha():
             me_dir = 'a' + me_dir[1:]
 
@@ -791,7 +790,7 @@ class LSFCluster(Cluster):
         """Submit the job prog to an LSF cluster"""
         
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
-        me_dir = md5.digest(me_dir)[-14:]
+        me_dir = misc.digest(me_dir)[-14:]
         if not me_dir[0].isalpha():
             me_dir = 'a' + me_dir[1:]
         
