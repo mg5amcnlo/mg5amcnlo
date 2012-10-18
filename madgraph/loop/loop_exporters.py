@@ -79,10 +79,12 @@ class LoopExporterFortran(object):
         else: 
             self.opt = {'clean': False, 'complex_mass':False,
                         'export_format':'madloop', 'mp':True,
-                        'loop_dir':'', 'cuttools_dir':''}
+                        'loop_dir':'', 'cuttools_dir':'', 
+                        'fortran_compiler':'gfortran'}
 
         self.loop_dir = self.opt['loop_dir']
         self.cuttools_dir = self.opt['cuttools_dir']
+        self.fortran_compiler = self.opt['fortran_compiler']
 
         super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)
         
@@ -101,6 +103,12 @@ class LoopExporterFortran(object):
         if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
             logger.info('Compiling CutTools. This has to be done only once and'+\
                               ' can take a couple of minutes.','$MG:color:BLUE')
+            current = misc.detect_current_compiler(os.path.join(\
+                                                  self.cuttools_dir,'makefile'))
+            if current != self.fortran_compiler and \
+                                              not self.fortran_compiler is None:
+                misc.mod_compilator(self.cuttools_dir, self.fortran_compiler,\
+                                                                        current)
             misc.compile(cwd=self.cuttools_dir, job_specs = False)
 
         if os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):            
