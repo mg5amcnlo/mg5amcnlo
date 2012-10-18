@@ -7,7 +7,7 @@
 # high-energy processes in the Standard Model and beyond.
 #
 # It is subject to the MadGraph license which should accompany this 
-# distribution./sw/bin/gfortran_4.4_old
+# distribution.
 #
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
@@ -3951,23 +3951,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     else:
                         continue
 
-
-#            if key == 'lhapdf' and self.options_configuration[key]:
-#                if os.path.isfile(self.options_configuration['lhapdf']) or \
-#                any([os.path.isfile(os.path.join(path, self.options_configuration['lhapdf'])) \
-#                        for path in os.environ['PATH'].split(':')]):
-#                    lhapdf_config = self.options_configuration['lhapdf']
-#                else:
-#                    lhapdf_config = None
-#
-#            if key == 'fastjet' and self.options_configuration[key]:
-#                if os.path.isfile(self.options_configuration['fastjet']) or \
-#                any([os.path.isfile(os.path.join(path, self.options_configuration['fastjet'])) \
-#                        for path in os.environ['PATH'].split(':')]):
-#                    fastjet_config = self.options_configuration['fastjet']
-#                else:
-#                    fastjet_config = None
-                    
             elif key.endswith('path'):
                 pass
             elif key in ['run_mode', 'auto_update']:
@@ -4247,13 +4230,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             param_card.write(path)
             self._curr_model['name'] += '-%s' % name
         
-        
-        
-        
-        
-        
-        
-        
     
     
     def do_save(self, line, check=True, to_keep={}, log=True):
@@ -4483,10 +4459,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if res != 0:
                 logger.info('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
                         'executable. Please enter the full PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
-                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
+                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n',
+                        '$MG:color:BLUE')
 
         elif args[0] in ['hwpp_path', 'thepeg_path', 'hepmc_path']:
-            print 'MZ, CORRECT', args
             if os.path.isdir(args[1]):
                 self.options[args[0]] = args[1]
                 logger.info('set %s to %s' % (args[0], args[1]))
@@ -4931,7 +4907,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False, \
-                    to_keep = {'MCatNLO-utilities_path': './MCatNLO-utilities'})
+                    to_keep = {'MCatNLO-utilities_path': './MCatNLO-utilities',
+                               'lhapdf': self.options['lhapdf'],
+                               'fastjet': self.options['fastjet']})
 
             # copy the MCatNLO directory from mcatnlo-utils inside the exported dir
             if os.path.isdir(pjoin(MG5DIR, 'MCatNLO-utilities')):
@@ -4939,7 +4917,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         (pjoin(MG5DIR, 'MCatNLO-utilities', 'MCatNLO'), self._export_dir))
             else:
                 logger.info('MCatNLO-utilities is not installed. \nIf you want to shower events ' + \
-                        'with MC@NLO please install it by typing "install MCatNLO-utilities"')
+                        'with MC@NLO please install it by typing "install MCatNLO-utilities"',
+                        '$MG:color:BLUE')
 
         elif self._export_format == 'madevent':          
             # Create configuration file [path to executable] for madevent

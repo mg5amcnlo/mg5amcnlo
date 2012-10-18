@@ -2802,7 +2802,7 @@ class ParserReflect(object):
 
     # Compute a signature over the grammar
     def signature(self):
-        import vendor.md5 as md5
+        import madgraph.various.misc as md5
         text = StringIO()
         if self.start:
             text.write(self.start.encode('latin-1'))

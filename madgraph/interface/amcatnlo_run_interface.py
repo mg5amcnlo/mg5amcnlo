@@ -93,14 +93,14 @@ def check_compiler(options, block=False):
     if options['fortran_compiler']:
         compiler = options['fortran_compiler']
     elif misc.which('gfortran'):
-         compiler = 'gfortran'
+        compiler = 'gfortran'
+        
     if 'gfortran' not in compiler:
         if block:
             raise aMCatNLOError(msg % compiler)
         else:
             logger.warning(msg % compiler)
     else:
-        print "HHHH compiler=",compiler
         curr_version = misc.get_gfortran_version(compiler)
         if not ''.join(curr_version.split('.')) >= '46':
             if block:
@@ -533,38 +533,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         """ add information to the cmd """
 
         CmdExtended.__init__(self, *completekey, **stdin)
-        
-        # Define current aMCatNLO directory
-        if me_dir is None and aMCatNLO:
-            me_dir = root_path
-        
-        self.me_dir = me_dir
-        self.options = options        
+        common_run.CommonRunCmd.__init__(self, me_dir, options)
+       
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = banner_mod.RunCardNLO(run_card)
-
-        # usefull shortcut
-        self.status = pjoin(self.me_dir, 'status')
-        self.error =  pjoin(self.me_dir, 'error')
-        self.dirbin = pjoin(self.me_dir, 'bin', 'internal')
-
-        # Check that the directory is not currently running
-        if os.path.exists(pjoin(me_dir,'RunWeb')): 
-            message = '''Another instance of madevent is currently running.
-            Please wait that all instance of madevent are closed. If no
-            instance is running, you can delete the file
-            %s and try again.''' % pjoin(me_dir,'RunWeb')
-            raise aMCatNLOAlreadyRunning, message
-        else:
-            misc.call(['touch %s' % pjoin(me_dir,'RunWeb')], cwd=me_dir, shell=True)
-            misc.call([pjoin('./', self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir, shell=True)
-        
-        self.to_store = []
-        self.run_name = None
-        self.run_tag = None
-        self.banner = None
-        # Load the configuration file
-        self.set_configuration(amcatnlo=True)
 
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
@@ -577,6 +549,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.results.def_web_mode(self.web)
         # check that compiler is gfortran 4.6 or later if virtuals have been exported
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
+
         if not '[real=QCD]' in proc_card:
             check_compiler(self.options, block=True)
 
@@ -586,7 +559,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         """split argument and"""
         
         args = CmdExtended.split_arg(line)
-
         return args
     
     
@@ -668,7 +640,16 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
-        
+    ############################################################################
+    def do_treatcards(self, line, amcatnlo=True):
+        """this is for creating the correct run_card.inc from the nlo format"""
+        return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
+    
+    ############################################################################
+    def set_configuration(self, amcatnlo=True, **opt):
+        """this is for creating the correct run_card.inc from the nlo format"""
+        return super(aMCatNLOCmd,self).set_configuration(amcatnlo=amcatnlo, **opt)
+    
     ############################################################################      
     def do_launch(self, line):
         """ launch the full chain """
@@ -891,7 +872,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
                     if (i < 2 and not options['only_generation'])  or i == 1 :
                         p = misc.Popen(['./combine_results.sh %d %d GF* GV*' % (i, nevents)],
-                                stdout=subprocesses.PIPE, shell=True)
+                                stdout=subprocess.PIPE, shell=True)
                         output = p.communicate()
                         misc.call(['cp res_%d_abs.txt res_%d_tot.txt %s' % \
                            (i, i, pjoin(self.me_dir, 'Events', self.run_name))], shell=True)
@@ -1340,7 +1321,8 @@ Integrated cross-section
                 for job in jobs:
                     self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', dir) )
                     # print some statistics if running serially
-
+        if self.cluster_mode == 2:
+            time.sleep(1) # security to allow all jobs to be launched
         self.wait_for_complete(run_type)
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
 
@@ -1536,7 +1518,8 @@ Integrated cross-section
                         raise aMCatNLOError('Compilation failed, check %s for details' \
                                 % test_log)
                     logger.info('   Running check_poles...')
-                    misc.call(['echo %s | ./check_poles >> %s' % (r'"100 \n -1"', test_log)], shell=True) 
+                    open('./check_poles.input', 'w').write('100 \n 1\n') 
+                    misc.call(['./check_poles <check_poles.input >> %s' % (test_log)], shell=True) 
                     self.parse_check_poles_log(os.getcwd())
                 #compile madevent_mintMC/vegas
                 logger.info('   Compiling %s' % exe)
@@ -1572,6 +1555,7 @@ Integrated cross-section
 
     def link_lhapdf(self, libdir):
         """links lhapdf into libdir"""
+        print self.options
         logger.info('Using LHAPDF interface for PDFs')
         lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
                 shell = True, stdout = subprocess.PIPE).stdout.read().strip()

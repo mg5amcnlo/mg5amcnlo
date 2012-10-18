@@ -398,7 +398,10 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
                 # remaining ones have the same mass 
                 # (otherwise the real emission final state will not be degenerate
                 # with the born one
-            masslist.remove('zero')
+            try:
+                masslist.remove('zero')
+            except:
+                continue
             if len(set(masslist)) == 1 and not \
                     any( [ p['pdg_code'] in ghost_list for p in ii['particles']]) :
                 qcd_inter.append(ii)

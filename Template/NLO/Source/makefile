@@ -58,10 +58,10 @@ genps.inc: nexternal.inc
 	touch genps.inc
 
 run_card.inc: ../Cards/run_card.dat
-	../bin/aMCatNLO treatcards_nlo run
+	../bin/aMCatNLO treatcards run
 
 param_card.inc: ../Cards/param_card.dat
-	../bin/aMCatNLO treatcards_nlo param
+	../bin/aMCatNLO treatcards param
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o
 	$(FC) $(FFLAGS) -o gen_ximprove gen_ximprove.o ranmar.o rw_routines.o open_file.o
