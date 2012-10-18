@@ -1416,7 +1416,8 @@ Integrated cross-section
                 #j=$2\_G$i
                 for i in subdir:
                     current = '%s_%s' % (args[1],i)
-                    input_files.append(pjoin(cwd, current))
+                    if os.path.exists(pjoin(cwd,current)):
+                        input_files.append(pjoin(cwd, current))
                     output_files.append(current)
                     if len(args) == 4 and args[3] in ['H','S','V','B','F']:
                         # use a grid train on another part
@@ -1436,7 +1437,8 @@ Integrated cross-section
 
                 for i in subdir:
                     current = 'G%s%s' % (args[1], i)
-                    input_files.append(pjoin(cwd, current))
+                    if os.path.exists(pjoin(cwd,current)):
+                        input_files.append(pjoin(cwd, current))
                     output_files.append(current)
                     if len(args) == 4:
                         # use a grid train on another part

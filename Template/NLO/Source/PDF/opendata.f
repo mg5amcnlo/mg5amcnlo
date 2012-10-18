@@ -40,18 +40,22 @@ c     first try in the current directory
       open(IU,file=tempname,status='old',ERR=10)
       return
 
- 10   tempname=dir//Tablefile
+ 10   tempname=up//Tablefile
       open(IU,file=tempname,status='old',ERR=20)
       return
 
- 20   tempname=lib//tempname
+ 20   tempname=dir//Tablefile
       open(IU,file=tempname,status='old',ERR=30)
+      return
 
- 30   continue
+ 30   tempname=lib//tempname
+      open(IU,file=tempname,status='old',ERR=40)
+
+ 40   continue
       do i=0,6
-         open(IU,file=tempname,status='old',ERR=40)
+         open(IU,file=tempname,status='old',ERR=50)
          return
- 40      tempname=up//tempname
+ 50      tempname=up//tempname
          if (i.eq.6)then
             write(*,*) 'Error: PDF file ',Tablefile,' not found'
             stop

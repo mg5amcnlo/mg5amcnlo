@@ -1352,8 +1352,7 @@ class CompleteForCmd(CheckValidForCmd):
     complete_delphes = complete_pgs        
 
 
-class MadEventAlreadyRunning(InvalidCmd):
-    pass
+
 
 #===============================================================================
 # MadEventCmd
@@ -1433,45 +1432,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         """ add information to the cmd """
 
         CmdExtended.__init__(self, *completekey, **stdin)
+        common_run.CommonRunCmd.__init__(self, me_dir, options)
         
-        # Define current MadEvent directory
-        if me_dir is None and MADEVENT:
-            me_dir = root_path
-        
-        self.me_dir = me_dir
-        self.options = options        
-        
-        # usefull shortcut
-        self.status = pjoin(self.me_dir, 'status')
-        self.error =  pjoin(self.me_dir, 'error')
-        self.dirbin = pjoin(self.me_dir, 'bin', 'internal')
-        
-        # Check that the directory is not currently running
-        if os.path.exists(pjoin(me_dir,'RunWeb')): 
-            message = '''Another instance of madevent is currently running.
-            Please wait that all instance of madevent are closed. If no
-            instance is running, you can delete the file
-            %s and try again.''' % pjoin(me_dir,'RunWeb')
-            raise MadEventAlreadyRunning, message
-        else:
-            pid = os.getpid()
-            fsock = open(pjoin(me_dir,'RunWeb'),'w')
-            fsock.write(`pid`)
-            fsock.close()
-            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
-      
-        self.to_store = []
-        self.run_name = None
-        self.run_tag = None
-        self.banner = None
 
-        # Get number of initial states
-        nexternal = open(pjoin(me_dir,'Source','nexternal.inc')).read()
-        found = re.search("PARAMETER\s*\(NINCOMING=(\d)\)", nexternal)
-        self.ninitial = int(found.group(1))
-        
-        # Load the configuration file
-        self.set_configuration()
         self.nb_refine=0
         if self.web:
             os.system('touch %s' % pjoin(self.me_dir,'Online'))
