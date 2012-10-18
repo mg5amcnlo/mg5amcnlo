@@ -213,10 +213,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 
     debug_output = 'ME5_debug'
 
-    def do_treatcards_nlo(self,line):
-        """this is for creating the correct run_card.inc from the nlo format run_card"""
-        return self.do_treatcards(line, amcatnlo=True)
-
 
     ############################################################################      
     def do_treatcards(self, line, amcatnlo=False):

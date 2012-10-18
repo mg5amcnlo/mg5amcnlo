@@ -100,7 +100,6 @@ def check_compiler(options, block=False):
         else:
             logger.warning(msg % compiler)
     else:
-        print "HHHH compiler=",compiler
         curr_version = misc.get_gfortran_version(compiler)
         if not ''.join(curr_version.split('.')) >= '46':
             if block:
@@ -668,6 +667,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
+    ############################################################################
+    def do_treatcards(self, line, amcatnlo=True):
+        """this is for creating the correct run_card.inc from the nlo format"""
+        return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
         
     ############################################################################      
     def do_launch(self, line):
