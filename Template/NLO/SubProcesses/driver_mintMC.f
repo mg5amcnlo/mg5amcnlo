@@ -1126,7 +1126,7 @@ c reweighting
       external dlum
       integer maxproc_found,maxproc_found_first,iproc_save(fks_configs)
      $     ,i,j,ii,jj,k,kk,proc_map(0:fks_configs,0:fks_configs)
-      save maxproc_found
+      save maxproc_found,iproc_save
       logical unweight,firsttime
       data firsttime /.true./
       integer nFKSprocess_save,ifound,nFKSprocess_soft
