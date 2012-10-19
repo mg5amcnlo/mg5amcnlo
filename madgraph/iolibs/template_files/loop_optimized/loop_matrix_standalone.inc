@@ -481,21 +481,27 @@ C   SET THE LOOP FILTER
         ENDIF
   	  ENDDO
     ENDIF
-  ELSEIF (.NOT.HELDOUBLECHECKED)THEN
+  ELSEIF (.NOT.HELDOUBLECHECKED.AND.NTRY.NE.0)THEN
 C   DOUBLE CHECK THE HELICITY FILTER
     IF ((GOODHEL(HELPICKED).EQ.-HELOFFSET).AND.(.NOT.ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1))) THEN
-	  write(*,*) '##E03 Helicity filter could not be successfully double checked.'
-	  write(*,*) 'One reason for this is that you have changed sensible parameters which affected what are the zero helicity configurations.'
-	  write(*,*) 'Please regenerate the filter by removing HelFilter.dat and rerunning SLOOPMATRIX over a couple of PS points.'
-	  STOP
+	  write(*,*) '##W15 Helicity filter could not be successfully double checked.'
+	  write(*,*) 'One reason for this is that you might have changed sensible parameters which affected what are the zero helicity configurations.'
+	  write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
+	  NTRY=0
+	  OPEN(29,FILE='HelFilter.dat',err=348)
+348   CONTINUE
+      CLOSE(29,STATUS='delete')
 	ELSEIF (GOODHEL(HELPICKED).LT.-HELOFFSET.AND.(ISSAME(ANS,HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF).EQ.0)) THEN
-	  write(*,*) '##E03 Helicity filter could not be successfully double checked.'
-	  write(*,*) 'One reason for this is that you have changed sensible parameters which affected the dependent helicity relationships.'
-	  write(*,*) 'Please regenerate the filter by removing HelFilter.dat and rerunning SLOOPMATRIX over a couple of PS points.'
-	  STOP
+	  write(*,*) '##W15 Helicity filter could not be successfully double checked.'
+	  write(*,*) 'One reason for this is that you might have changed sensible parameters which affected the helicity dependance relations.'
+	  write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
+	  NTRY=0
+	  OPEN(30,FILE='HelFilter.dat',err=349)
+349   CONTINUE
+      CLOSE(30,STATUS='delete')
 	ENDIF
 C   SET HELDOUBLECHECKED TO .TRUE. WHEN DONE
-	IF (HELPICKED.EQ.NCOMB) THEN
+	IF (HELPICKED.EQ.NCOMB.AND.NTRY.NE.0) THEN
 	  DONEHELDOUBLECHECK=.TRUE.
 	ENDIF
   ENDIF

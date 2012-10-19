@@ -160,7 +160,7 @@
       CTLoopLibrary=3
       CheckCycle=3
       MaxAttempts=10
-      UseLoopFilter=.True.
+      UseLoopFilter=.False.
       DoubleCheckHelicityFilter=.True.
       LoopInitStartOver=.False.
       ZeroThres=1.0d-9

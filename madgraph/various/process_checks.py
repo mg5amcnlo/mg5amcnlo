@@ -725,11 +725,29 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             return None, None
 
         return compilation_time, run_time
+    
+    @classmethod
+    def get_MadLoop_Params(cls,MLCardPath):
+        """ Return a dictionary of the parameter of the MadLoopParamCard.
+        The key is the name of the parameter and the value is the corresponding
+        string read from the card."""
+        
+        res = {}
+        # Not elegant, but the file is small anyway, so no big deal.
+        MLCard_lines = open(MLCardPath).readlines()
+        try:
+            for i, line in enumerate(MLCard_lines):
+                if line.startswith('#'):
+                    res[line.split()[0][1:]]=MLCard_lines[i+1].split()[0]
+            return res
+        except IndexError:
+            raise MadGraph5Error, 'The MadLoop param card %s is '%MLCardPath+\
+                                                           'not well formatted.'
         
     @classmethod    
     def run_initialization(cls, run_dir, check_sa_dir, infos,\
-                                req_files = ['HelFilter.dat','LoopFilter.dat'],
-                                attempts = [3,15]):
+                            req_files = ['HelFilter.dat','LoopFilter.dat'],
+                            attempts = [3,15]):
         """ Run the initialization of the process in 'run_dir' with success 
         characterized by the creation of the files req_files in this directory.
         The directory containing the driving source code 'check_sa.f'.
@@ -739,11 +757,24 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
         to_attempt = copy.copy(attempts)
         to_attempt.reverse()
+        my_req_files = copy.copy(req_files)
+        
+        # Make sure that LoopFilter really is needed.
+        MLCardPath = os.path.join(check_sa_dir,os.pardir,'Cards',\
+                                                            'MadLoopParams.dat')
+        if not os.path.isfile(MLCardPath):
+            raise MadGraph5Error, 'Could not find MadLoopParams.dat at %s.'\
+                                                                     %MLCardPath
+        if 'FALSE' in cls.get_MadLoop_Params(MLCardPath)['UseLoopFilter'].upper():
+            try:
+                my_req_files.pop(my_req_files.index('LoopFilter.dat'))
+            except ValueError:
+                pass
         
         def need_init():
             """ True if init not done yet."""
             return any([not os.path.exists(os.path.join(run_dir,fname)) for \
-                                                       fname in req_files]) or \
+                                                    fname in my_req_files]) or \
                          not os.path.isfile(os.path.join(run_dir,'check')) or \
                          not os.access(os.path.join(run_dir,'check'), os.X_OK)
         
