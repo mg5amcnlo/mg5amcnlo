@@ -29,7 +29,9 @@ def load_model(name):
         __import__(model_pos)
         return sys.modules[model_pos]
     elif path_split[-1] in sys.modules:
-        if not sys.modules[path_split[-1]].__file__.startswith(os.sep.join(path_split[:-1])):
+        model_path = os.path.realpath(os.sep.join(path_split))
+        sys_path = os.path.realpath(os.path.dirname(sys.modules[path_split[-1]].__file__))
+        if sys_path != model_path:
             raise Exception, 'name %s already consider as a python library cann\'t be reassigned' % \
                 path_split[-1] 
 

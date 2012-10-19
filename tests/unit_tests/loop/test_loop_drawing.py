@@ -45,6 +45,7 @@ from madgraph import MadGraph5Error
 _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
+pjoin = os.path.join
 
 #===============================================================================
 # LoopDiagramDrawer Test
@@ -55,7 +56,8 @@ class TestLoopDrawer(unittest.TestCase):
     def setUp(self):
         if not hasattr(self, 'cmd'):
             TestLoopDrawer.cmd = MasterCmd()
-            TestLoopDrawer.cmd.do_import('model loop_SM_QCD' )
+            model_path = pjoin(_file_path, '../../input_files','LoopSMTest')
+            TestLoopDrawer.cmd.do_import('model %s' % model_path)
             TestLoopDrawer.model = TestLoopDrawer.cmd._curr_model
             try:
                 TestLoopDrawer.store_diagram = pickle.load(open(os.path.join(_file_path, \
