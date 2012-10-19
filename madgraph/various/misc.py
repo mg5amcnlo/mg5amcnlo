@@ -269,7 +269,7 @@ def detect_current_compiler(path):
     
 #    comp = re.compile("^\s*FC\s*=\s*(\w+)\s*")
 #   The regular expression below allows for compiler definition with absolute path
-    comp = re.compile("^\s*FC\s*=\s*([\w\/\\.]+)\s*")
+    comp = re.compile("^\s*FC\s*=\s*([\w\/\\.\-]+)\s*")
     for line in open(path):
         if comp.search(line):
             compiler = comp.search(line).groups()[0]

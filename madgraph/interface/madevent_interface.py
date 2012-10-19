@@ -1502,7 +1502,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.nb_core = multiprocessing.cpu_count()
         if self.cluster_mode == 2:
             self.cluster = cluster.MultiCore(self.nb_core, 
-                                             temp_dir=opt['cluster_temp_path'])
+                                     temp_dir=self.options['cluster_temp_path'])
             
         if self.cluster_mode == 1 and not hasattr(self, 'cluster'):
             opt = self.options
