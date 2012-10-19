@@ -1228,12 +1228,13 @@ Integrated cross-section
             if lines[i].startswith('MCMODE'):
                 lines[i]='MCMODE=%s' % shower
             #the following variables are actually relevant only if running hw++
-            if lines[i].startswith('HWPPPATH'):
-                lines[i]='HWPPPATH=%s' % self.options['hwpp_path']
-            if lines[i].startswith('THEPEGPATH'):
-                lines[i]='THEPEGPATH=%s' % self.options['thepeg_path']
-            if lines[i].startswith('HEPMCPATH'):
-                lines[i]='HEPMCPATH=%s' % self.options['hepmc_path']
+            if shower == 'HERWIGPP':
+                if lines[i].startswith('HWPPPATH'):
+                    lines[i]='HWPPPATH=%s' % self.options['hwpp_path']
+                if lines[i].startswith('THEPEGPATH'):
+                    lines[i]='THEPEGPATH=%s' % self.options['thepeg_path']
+                if lines[i].startswith('HEPMCPATH'):
+                    lines[i]='HEPMCPATH=%s' % self.options['hepmc_path']
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'MCatNLO_MadFKS.inputs'), 'w')
         output.write('\n'.join(lines))
