@@ -975,11 +975,11 @@ c
 c
 c Generate xi_i_fks
 c
+      xjactmp=1.d0
       if( icountevts.eq.-100 .and.
      &     ((.not.colltest) .or. 
      &     (colltest.and.xi_i_fks_fix.eq.-2.d0)) .and.
      &      (.not.softtest)  )then
-         xjactmp=1.d0
          xitmp1=x(1)
 c Map regions (0,A) and (A,1) in xitmp1 onto regions (0,rat_xi) and (rat_xi,1)
 c in xi_i_hat respectively. The parameter A is free, but it appears to be 
