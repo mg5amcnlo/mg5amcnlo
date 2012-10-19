@@ -23,7 +23,8 @@ C
       common/pborn/p_born
       double precision pswgt
       double precision virt_wgts(3), fks_double, fks_single
-      double precision double, single, finite, born
+      double precision double, single, finite
+      double complex born(2)
       logical calculatedborn
       common/ccalculatedborn/calculatedborn
       logical fksprefact
@@ -138,7 +139,6 @@ C-----
           enddo
 
           call sborn(p_born, born)
-
           call sloopmatrix(p_born, virt_wgts) 
 
           finite = virt_wgts(1)/dble(ngluons)
@@ -154,6 +154,7 @@ C-----
 
           call getpoles(p, mu_r**2, fks_double, fks_single, fksprefact)
 
+          
           if ( double.ne.0d0 ) then
              if ((dabs((double-fks_double)/double).gt.tolerance).or. 
      1            (dabs((single-fks_single)/single).gt.tolerance)) then
@@ -181,7 +182,7 @@ C-----
 
           write(60,*) 'MU_R    = ', ren_scale
           write(60,*) 'ALPHA_S = ', G**2/4d0/pi
-          write(60,*) 'BORN                 ', born
+          write(60,*) 'BORN                 ', real(born(1))
           write(60,*) 'SINGLE POLE (MadFKS) ', fks_single 
           write(60,*) 'DOUBLE POLE (MadFKS) ', fks_double 
           write(60,*) 'SINGLE POLE (MadLoop)', single 
