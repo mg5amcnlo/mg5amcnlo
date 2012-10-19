@@ -1004,6 +1004,7 @@ c insert here further importance samplings
       elseif( icountevts.eq.-100 .and.
      &        (colltest.and.xi_i_fks_fix.ne.-2.d0) .and.
      &        (.not.softtest)  )then
+         xjactmp=0.d0
          if(xi_i_fks_fix.lt.xiimax)then
             xi_i_fks=xi_i_fks_fix
          else
@@ -1012,6 +1013,7 @@ c insert here further importance samplings
          isolsign=1
       elseif( (icountevts.eq.-100) .and.
      &        softtest )then
+         xjactmp=0.d0
          if(xi_i_fks_fix.lt.xiimax)then
             xi_i_fks=xi_i_fks_fix
          else
@@ -1021,6 +1023,7 @@ c insert here further importance samplings
          endif
          isolsign=1
       elseif(icountevts.eq.0)then
+         xjactmp=0.d0
          xi_i_fks=xi_i_fks_matrix(icountevts)
          isolsign=1
       else

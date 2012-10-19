@@ -373,7 +373,7 @@ class make_info_html_nlo(make_info_html):
                             id = ''
                         line_dict['type'] = type
                         line_dict['id'] = str(id)     
-                        line_dict['diag'] = self.get_diagram_nb_from_file(proc, file)
+                        line_dict['diag'] = self.get_diagram_nb_from_file(proc, file.replace('.f', '.ps'))
                         line_dict['subproc'] = sum([len(data) for data in names])
                         self.rep_rule['nb_diag'] += line_dict['diag'] * line_dict['subproc']
                         self.rep_rule['nb_gen_diag'] += line_dict['diag']
@@ -410,13 +410,10 @@ class make_info_html_nlo(make_info_html):
         path = os.path.join(self.dir, 'SubProcesses', proc, filename)
         nb_diag = 0
                 
-        pat = re.compile(r'''Amplitude\(s\) for diagram number (\d+)''' )
-        loop_pat = re.compile(r'''for loop diagram number (\d+)''' )
+        pat = re.compile(r'''diagram (\d+)''' )
        
         text = open(path).read()
         for match in re.finditer(pat, text):
-            pass
-        for match in re.finditer(loop_pat, text):
             pass
         try:
             nb_diag += int(match.groups()[0])

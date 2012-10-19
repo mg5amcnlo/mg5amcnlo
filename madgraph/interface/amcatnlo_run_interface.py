@@ -871,7 +871,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
 
                     if (i < 2 and not options['only_generation'])  or i == 1 :
-                        p = misc.Popen(['./combine_results.sh %d %d GF* GV*' % (i, nevents)],
+                        p = misc.Popen(['./combine_results.sh %d %d GB*' % (i, nevents)],
                                 stdout=subprocess.PIPE, shell=True)
                         output = p.communicate()
                         misc.call(['cp res_%d_abs.txt res_%d_tot.txt %s' % \
@@ -1228,12 +1228,13 @@ Integrated cross-section
             if lines[i].startswith('MCMODE'):
                 lines[i]='MCMODE=%s' % shower
             #the following variables are actually relevant only if running hw++
-            if lines[i].startswith('HWPPPATH'):
-                lines[i]='HWPPPATH=%s' % self.options['hwpp_path']
-            if lines[i].startswith('THEPEGPATH'):
-                lines[i]='THEPEGPATH=%s' % self.options['thepeg_path']
-            if lines[i].startswith('HEPMCPATH'):
-                lines[i]='HEPMCPATH=%s' % self.options['hepmc_path']
+            if shower == 'HERWIGPP':
+                if lines[i].startswith('HWPPPATH'):
+                    lines[i]='HWPPPATH=%s' % self.options['hwpp_path']
+                if lines[i].startswith('THEPEGPATH'):
+                    lines[i]='THEPEGPATH=%s' % self.options['thepeg_path']
+                if lines[i].startswith('HEPMCPATH'):
+                    lines[i]='HEPMCPATH=%s' % self.options['hepmc_path']
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'MCatNLO_MadFKS.inputs'), 'w')
         output.write('\n'.join(lines))

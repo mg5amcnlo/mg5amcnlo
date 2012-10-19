@@ -232,6 +232,47 @@ class CompleteFKS(mg_interface.CompleteForCmd):
                        if name not in forbidden_names]
             return self.list_completion(text, content)
 
+
+    def complete_launch(self, text, line, begidx, endidx):
+        """ complete the launch command"""
+        args = self.split_arg(line[0:begidx])
+
+        # Directory continuation
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        pjoin(*[a for a in args if a.endswith(os.path.sep)]),
+                                        only_dirs = True)
+        # Format
+        if len(args) == 1:
+            out = {'Path from ./': self.path_completion(text, '.', only_dirs = True)}
+            if MG5DIR != os.path.realpath('.'):
+                out['Path from %s' % MG5DIR] =  self.path_completion(text,
+                                     MG5DIR, only_dirs = True, relative=False)
+            if MG4DIR and MG4DIR != os.path.realpath('.') and MG4DIR != MG5DIR:
+                out['Path from %s' % MG4DIR] =  self.path_completion(text,
+                                     MG4DIR, only_dirs = True, relative=False)
+
+        if len(args) == 2:
+            modes = ['aMC@NLO', 'NLO', 'aMC@LO', 'LO']
+            return self.list_completion(text, modes, line)
+            
+        #option
+        if len(args) >= 3:
+            out={}
+
+        if line[0:begidx].endswith('--laststep='):
+            opt = ['parton', 'pythia', 'pgs','delphes','auto']
+            out['Options'] = self.list_completion(text, opt, line)
+        else:
+
+            opt = ['-f', '-c', '-m', '-i', '-n', '-r', '-R', '-p',
+                    '--force', '--cluster', '--multicore', '--interactive',
+                    '--nocompile', '--reweightonly', '--noreweight', '--parton']
+            out['Options'] = self.list_completion(text, opt, line)
+        
+
+        return self.deal_multiple_categories(out)
+
 class HelpFKS(mg_interface.HelpToCmd):
 
     def help_display(self):   

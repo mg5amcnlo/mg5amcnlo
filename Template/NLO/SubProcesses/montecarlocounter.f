@@ -4339,7 +4339,7 @@ c OUTPUTS:  ileg,xm12,xm22,xtk,xuk,xq1q,xq2q,qMC
       double precision sh,xi_i_fks,y_ij_fks,yitmp,xij
       double precision xm12,xm22,xtk,xuk,xq1q,xq2q,qMC
       double precision beta1,beta2,eps1,eps2,w1,w2,zeta1,zeta2
-      double precision en_fks,en_fks_sister,z
+      double precision en_fks,en_fks_sister,z,qMCarg
       integer ileg,j,i,nfinal
       logical extra
       double precision xs,xs2,xq1c,xq2c,xw1,xw2,dot
@@ -4496,7 +4496,15 @@ c since they never enter isr formulae in MC functions
                zeta1=( (2*sh-(sh-w1)*eps2)*w2+
      #                 (sh-w1)*((w1+w2)*beta2-eps2*w1) )/
      #                 ( (sh-w1)*beta2*(2*sh-(sh-w1)*eps2+(sh-w1)*beta2) )
-               qMC=sqrt(zeta1*((1-zeta1)*w1-zeta1*xm12))
+               qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
+               if (qMCarg.lt.-tiny) then
+                  write (*,*)
+     $                 'Error in xiz_driver: sqrt of a negative number'
+                  stop
+               elseif (qMCarg.lt.0d0) then
+                  qMCarg=0d0
+               endif
+               qMC=sqrt(qMCarg)
             elseif(MonteCarlo.eq.'PYTHIA6Q')then
                qMC=sqrt(w1+xm12)
             elseif(MonteCarlo.eq.'PYTHIA6PT')then

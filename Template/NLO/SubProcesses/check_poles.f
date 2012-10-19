@@ -23,7 +23,8 @@ C
       common/pborn/p_born
       double precision pswgt
       double precision virt_wgts(3), fks_double, fks_single
-      double precision double, single, finite, born
+      double precision double, single, finite
+      double complex born(2)
       logical calculatedborn
       common/ccalculatedborn/calculatedborn
       logical fksprefact
@@ -153,16 +154,35 @@ C-----
 
           call getpoles(p, mu_r**2, fks_double, fks_single, fksprefact)
 
-          if ((dabs((double-fks_double)/double).gt.tolerance).or. 
-     1        (dabs((single-fks_single)/single).gt.tolerance)) then
-              nfail = nfail + 1
-              write(60,*) 'FAILED', tolerance
+          
+          if ( double.ne.0d0 ) then
+             if ((dabs((double-fks_double)/double).gt.tolerance).or. 
+     1            (dabs((single-fks_single)/single).gt.tolerance)) then
+                nfail = nfail + 1
+                write(60,*) 'FAILED', tolerance
+             else
+                write(60,*) 'PASSED', tolerance
+             endif
+          elseif ( fks_double.ne.0d0 ) then
+             if ((dabs((double-fks_double)/fks_double).gt.tolerance).or. 
+     1            (dabs((single-fks_single)/single).gt.tolerance)) then
+                nfail = nfail + 1
+                write(60,*) 'FAILED', tolerance
+             else
+                write(60,*) 'PASSED', tolerance
+             endif
           else
-              write(60,*) 'PASSED', tolerance
+             if (dabs((single-fks_single)/single).gt.tolerance) then
+                nfail = nfail + 1
+                write(60,*) 'FAILED', tolerance
+             else
+                write(60,*) 'PASSED', tolerance
+             endif
           endif
+
           write(60,*) 'MU_R    = ', ren_scale
           write(60,*) 'ALPHA_S = ', G**2/4d0/pi
-          write(60,*) 'BORN                 ', born
+          write(60,*) 'BORN                 ', real(born(1))
           write(60,*) 'SINGLE POLE (MadFKS) ', fks_single 
           write(60,*) 'DOUBLE POLE (MadFKS) ', fks_double 
           write(60,*) 'SINGLE POLE (MadLoop)', single 
