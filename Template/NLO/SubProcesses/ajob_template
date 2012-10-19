@@ -107,11 +107,11 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
             echo "$runnumber" >& moffset.dat
         fi
         if [[ $3 == '0' || $3 == '2' ]]; then
-            head -n 6 $input_template >& input_app.txt
+            head -n 6 $input_template > input_app.txt
             echo $i >> input_app.txt
             tail -n 3 $input_template >> input_app.txt
         elif [[ $3 == '1' ]]; then
-            head -n 6 $input_template >& input_app.txt
+            head -n 6 $input_template > input_app.txt
             echo $i >> input_app.txt
             tail -n 3 $input_template >> input_app.txt
         fi

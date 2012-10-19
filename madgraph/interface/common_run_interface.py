@@ -300,6 +300,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             self.cluster_mode = int(args[1])
             self.options['run_mode'] =  self.cluster_mode
         elif args[0] in  ['cluster_type', 'cluster_queue', 'cluster_temp_path']:
+            if args[1] == 'None':
+                args[1] = None
             self.options[args[0]] = args[1]
             opt = self.options
             self.cluster = cluster.from_name[opt['cluster_type']](\

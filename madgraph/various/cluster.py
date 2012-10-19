@@ -72,16 +72,18 @@ class Cluster(object):
                 log=None, input_files=[], output_files=[]):
         """How to make one submission. Return status id on the cluster.
         NO SHARE DISK"""
-        
-        if not hasattr(self, 'temp_dir'):
-            return self.submit(prog, argument, cwd, stdout, stderr, log)
-            
+
         if cwd is None:
             cwd = os.getcwd()
         if not os.path.exists(prog):
             prog = os.path.join(cwd, prog)
+        
+        if not hasattr(self, 'temp_dir') or not self.temp_dir:
+            return self.submit(prog, argument, cwd, stdout, stderr, log)
+        
 
-        temp_file_name = "sub." + os.path.basename(prog)
+
+        temp_file_name = "sub." + os.path.basename(prog) + '.'.join(argument)
         text = """#!/bin/bash
         MYTMP=%(tmpdir)s/run$%(job_id)s
         MYPWD=%(cwd)s
@@ -99,7 +101,7 @@ class Cluster(object):
         do
             cp -r $MYTMP/$i $MYPWD
         done
-        #rm -rf $MYTMP
+        rm -rf $MYTMP
         """
         
         dico = {'tmpdir' : self.temp_dir, 'script': os.path.basename(prog),
@@ -229,8 +231,8 @@ class MultiCore(Cluster):
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
                log=None):
         """submit a job on multicore machine"""
-        import thread
         
+        import thread
         if self.need_waiting:
             self.waiting_submission.append((prog, argument,cwd, stdout))
             # check that none submission is already finished
@@ -251,7 +253,7 @@ class MultiCore(Cluster):
         
     def launch(self, exe, argument, cwd, stdout):
         """ way to launch for multicore."""
-        
+
         def end(self, pid):
             self.nb_used -= 1
             self.done +=1

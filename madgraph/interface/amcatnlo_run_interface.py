@@ -1397,8 +1397,6 @@ Integrated cross-section
                                          'ColorNumFactors.dat','HelConfigs.dat']
                 for name in to_add:
                     input_files.append(pjoin(cwd, name))
-            print '1390*************', args
-            
 
             Ire = re.compile("for i in ([\d\s]*) ; do")
             try : 
