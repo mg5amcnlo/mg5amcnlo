@@ -138,6 +138,7 @@ C-----
           enddo
 
           call sborn(p_born, born)
+
           call sloopmatrix(p_born, virt_wgts) 
 
           finite = virt_wgts(1)/dble(ngluons)
@@ -153,13 +154,31 @@ C-----
 
           call getpoles(p, mu_r**2, fks_double, fks_single, fksprefact)
 
-          if ((dabs((double-fks_double)/double).gt.tolerance).or. 
-     1        (dabs((single-fks_single)/single).gt.tolerance)) then
-              nfail = nfail + 1
-              write(60,*) 'FAILED', tolerance
+          if ( double.ne.0d0 ) then
+             if ((dabs((double-fks_double)/double).gt.tolerance).or. 
+     1            (dabs((single-fks_single)/single).gt.tolerance)) then
+                nfail = nfail + 1
+                write(60,*) 'FAILED', tolerance
+             else
+                write(60,*) 'PASSED', tolerance
+             endif
+          elseif ( fks_double.ne.0d0 ) then
+             if ((dabs((double-fks_double)/fks_double).gt.tolerance).or. 
+     1            (dabs((single-fks_single)/single).gt.tolerance)) then
+                nfail = nfail + 1
+                write(60,*) 'FAILED', tolerance
+             else
+                write(60,*) 'PASSED', tolerance
+             endif
           else
-              write(60,*) 'PASSED', tolerance
+             if (dabs((single-fks_single)/single).gt.tolerance) then
+                nfail = nfail + 1
+                write(60,*) 'FAILED', tolerance
+             else
+                write(60,*) 'PASSED', tolerance
+             endif
           endif
+
           write(60,*) 'MU_R    = ', ren_scale
           write(60,*) 'ALPHA_S = ', G**2/4d0/pi
           write(60,*) 'BORN                 ', born
