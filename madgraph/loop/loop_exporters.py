@@ -105,10 +105,10 @@ class LoopExporterFortran(object):
                               ' can take a couple of minutes.','$MG:color:BLUE')
             current = misc.detect_current_compiler(os.path.join(\
                                                   self.cuttools_dir,'makefile'))
-            if current != self.fortran_compiler and \
-                                              not self.fortran_compiler is None:
-                misc.mod_compilator(self.cuttools_dir, self.fortran_compiler,\
-                                                                        current)
+            new = 'gfortran' if self.fortran_compiler is None else \
+                                                           self.fortran_compiler
+            if current != new:
+                misc.mod_compilator(self.cuttools_dir, new,current)
             misc.compile(cwd=self.cuttools_dir, job_specs = False)
 
         if os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):            
