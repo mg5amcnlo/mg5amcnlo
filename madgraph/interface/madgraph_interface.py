@@ -368,7 +368,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   irrelevant for this kind of launch.")    
         logger.info("")    
         logger.info("Launch on aMC@NLO output:",'$MG:color:BLACK')
-        logger.info("   Marco, please fill in this section",'$MG:color:BLUE')
+        launch [DIRPATH] [MODE] [options]
+        logger.info(" > launch <dir_path> <mode> <options>",'$MG:color:BLUE')
+        logger.info(" o Example: launch MyProc aMC@NLO -f -p",'$MG:color:GREEN')    
 
     def help_tutorial(self):
         logger.info("syntax: tutorial [" + "|".join(self._tutorial_opts) + "]",'$MG:color:BLUE')
@@ -1683,7 +1685,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             out['Options'] = self.list_completion(text, opt, line)
         else:
             opt = ['--cluster', '--multicore', '-i', '--name=', '-f','-m', '-n', 
-               '--interactive', '--laststep=parton', '--laststep=pythia',
+               '-p','--parton','--interactive', '--laststep=parton', '--laststep=pythia',
                '--laststep=pgs', '--laststep=delphes','--laststep=auto']
             out['Options'] = self.list_completion(text, opt, line)
         
@@ -4399,7 +4401,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self.options[args[0]] = args[1]
 
             #re-init all variable
-            model_name = self._curr_model.get('name')
+            model_name = self._curr_model.get('version_tag').split('##')[0]
             self._curr_model = None
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()

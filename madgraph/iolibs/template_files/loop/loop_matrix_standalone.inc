@@ -425,10 +425,13 @@ C   SET THE LOOP FILTER
     ENDIF
   ELSEIF (.NOT.HELDOUBLECHECKED)THEN
     IF ((.NOT.GOODHEL(HELPICKED)).AND.(.NOT.ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1))) THEN
-	  write(*,*) '##E03 Helicity filter could not be successfully double checked.'
+	  write(*,*) '##W15 Helicity filter could not be successfully double checked.'
 	  write(*,*) 'One reason for this is that you have changed sensible parameters which affected what are the zero helicity configurations.'
-	  write(*,*) 'Please regenerate the filter by removing HelFilter.dat and rerunning SLOOPMATRIX over a couple of PS points.'
-	  STOP
+	  write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
+	  NTRY=0
+	  OPEN(30,FILE='HelFilter.dat',err=349)
+349   CONTINUE
+      CLOSE(30,STATUS='delete')
 	ENDIF
 C   SET HELDOUBLECHECKED TO .TRUE. WHEN DONE
 	IF (HELPICKED.EQ.NCOMB) THEN
