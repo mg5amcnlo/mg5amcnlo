@@ -89,6 +89,9 @@
           else if (buff .eq. '#LoopInitStartOver') then
              read(666,*,end=999) LoopInitStartOver
 
+          else if (buff .eq. '#ImprovePSPoint') then
+             read(666,*,end=999) ImprovePSPoint
+
           else
              write(*,*) 'The parameter name ',buff(2:),
      &' is not reckognized.'
@@ -132,6 +135,7 @@
       write(*,*) ' > CheckCycle                = ',CheckCycle
       write(*,*) ' > MaxAttempts               = ',MaxAttempts
       write(*,*) ' > UseLoopFilter             = ',UseLoopFilter
+      write(*,*) ' > ImprovePSPoint            = ',ImprovePSPoint
       write(*,*) ' > DoubleCheckHelicityFilter = ',
      &DoubleCheckHelicityFilter
       write(*,*) ' > LoopInitStartOver         = ',LoopInitStartOver
@@ -164,5 +168,6 @@
       DoubleCheckHelicityFilter=.True.
       LoopInitStartOver=.False.
       ZeroThres=1.0d-9
+      ImprovePSPoint=.True.
 
       end
