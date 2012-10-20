@@ -73,14 +73,16 @@ class LoopExporterTest(unittest.TestCase):
                                   {'clean':False, 'complex_mass':False, 
                                    'export_format':'madloop','mp':True,
                                    'loop_dir':_loop_file_path,
-                                   'cuttools_dir':_cuttools_file_path})
+                                   'cuttools_dir':_cuttools_file_path,
+                                   'fortran_compiler':'gfortran'})
     
     loopOptimizedExporter = loop_exporters.LoopProcessOptimizedExporterFortranSA(\
                                   _mgme_file_path, _proc_file_path,
                                   {'clean':False, 'complex_mass':False, 
                                    'export_format':'madloop','mp':True,
                                    'loop_dir':_loop_file_path,
-                                   'cuttools_dir':_cuttools_file_path})
+                                   'cuttools_dir':_cuttools_file_path,
+                                   'fortran_compiler':'gfortran'})
 
     def setUp(self):
         """load the NLO toy model"""

@@ -19,7 +19,7 @@ C
 	  %(real_format)s THRS_CLOSE
 	  PARAMETER (THRS_CLOSE=1.0%(exp_letter)s-02%(mp_specifier)s)
 	  %(real_format)s THRS_TEST
-	  PARAMETER (THRS_TEST=1.0%(exp_letter)s-17%(mp_specifier)s)	  
+	  PARAMETER (THRS_TEST=1.0%(exp_letter)s-15%(mp_specifier)s)	  
 C  
 C ARGUMENTS 
 C

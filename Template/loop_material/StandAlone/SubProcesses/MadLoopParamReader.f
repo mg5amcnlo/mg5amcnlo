@@ -168,6 +168,6 @@
       DoubleCheckHelicityFilter=.True.
       LoopInitStartOver=.False.
       ZeroThres=1.0d-9
-      ImprovePSPoint=True
+      ImprovePSPoint=.True.
 
       end
