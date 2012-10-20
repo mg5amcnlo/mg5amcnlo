@@ -1356,9 +1356,7 @@ Integrated cross-section
         else:
             #this is for the cluster/multicore run
             if 'ajob' not  in exe:
-                self.cluster.submit(exe, args, cwd=cwd)
-                return 
-                           
+                self.cluster.submit(exe, args, cwd=cwd)  
             # use local disk if possible => need to stands what are the 
             # input/output files
             keep_fourth_arg = False
@@ -1390,7 +1388,38 @@ Integrated cross-section
                 input_files.append(pjoin(self.me_dir, 'SubProcesses','madin.%s' % args[1]))
                 #j=$2\_G$i
                 for i in subdir:
-                    current = '%s_%s' % (args[1],i)
+                    current = '%s_G%s' % (args[1],i)
+                    if os.path.exists(pjoin(cwd,current)):
+                        input_files.append(pjoin(cwd, current))
+                    output_files.append(current)
+                    if len(args) == 4:
+                        # use a grid train on another part
+                        base = '%s_G%s' % (args[3],i)
+                        if args[0] == '0':
+                            to_move = [n for n in os.listdir(pjoin(cwd, base)) 
+                                                          if n.endswith('.sv1')]
+                            to_move.append('grid.MC_integer')
+                        elif args[0] == '1':
+                            to_move = ['mint_grids', 'grid.MC_integer']
+                        else: 
+                            to_move  = []
+                        if not os.path.exists(pjoin(cwd,current)):
+                            os.mkdir(pjoin(cwd,current))
+                            input_files.append(pjoin(cwd, current))
+                        for name in to_move:
+                            files.ln(pjoin(cwd,base, name), 
+                                            starting_dir=pjoin(cwd,current))
+                        files.ln(pjoin(cwd,base, 'grid.MC_integer'), 
+                                            starting_dir=pjoin(cwd,current))
+                                  
+            elif args[0] == '2':
+                # MINTMC MODE
+                input_files.append(pjoin(cwd, 'madevent_mintMC'))
+                if args[2] in ['0','2']:
+                    input_files.append(pjoin(self.me_dir, 'SubProcesses','madinMMC_%s.2' % args[1]))
+
+                for i in subdir:
+                    current = 'G%s%s' % (args[1], i)
                     if os.path.exists(pjoin(cwd,current)):
                         input_files.append(pjoin(cwd, current))
                     output_files.append(current)
@@ -1404,20 +1433,7 @@ Integrated cross-section
                     elif len(args) ==4:
                         keep_fourth_arg = True
                     
-            elif args[0] == '2':
-                # MINTMC MODE
-                input_files.append(pjoin(cwd, 'madevent_mintMC'))
-                if args[2] in ['0','2']:
-                    input_files.append(pjoin(self.me_dir, 'SubProcesses','madinMMC_%s.2' % args[1]))
-
-                for i in subdir:
-                    current = 'G%s%s' % (args[1], i)
-                    if os.path.exists(pjoin(cwd,current)):
-                        input_files.append(pjoin(cwd, current))
-                    output_files.append(current)
-                    if len(args) == 4:
-                        # use a grid train on another part
-                        base = '%s_%s' % (args[3],i)   
+  
             else:
                 raise MadGraph5Error, 'not valid argument'
   

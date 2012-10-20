@@ -267,16 +267,22 @@ class MultiCore(Cluster):
             pid = proc.pid
             self.pids.append(pid)
             proc.wait()
-            # release the lock for allowing to launch the next job      
+            # release the lock for allowing to launch the next job
+            security = 0       
             while not self.lock.locked():
                 # check that the status is locked to avoid coincidence unlock
                 if not self.need_waiting:
                     # Main is not yet locked
                     end(self, pid)
+                    return
+                elif security > 300:
+                    end(self, pid)
                     return 
+                security += 1
                 time.sleep(1)
-            end(self, pid)
             self.lock.release()
+            end(self, pid)
+
         except Exception, error:
             print error, os.getcwd()
             self.remove()
@@ -305,7 +311,13 @@ class MultiCore(Cluster):
                 
             # reset variable for next submission
             self.need_waiting = False
-            self.lock.release()
+            security = 0 
+            while not self.lock.locked() and security < 10:
+                # check that the status is locked to avoid coincidence unlock
+                security +=1
+                time.sleep(10)
+            if security < 10:
+                self.lock.release()
             self.done = 0
             self.pids = []
         except KeyboardInterrupt:
