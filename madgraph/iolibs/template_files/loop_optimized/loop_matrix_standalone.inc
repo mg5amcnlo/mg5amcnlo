@@ -19,7 +19,7 @@ C ----------
       CALL SLOOPMATRIX(P,ANS)
 	  END
 
-      SUBROUTINE SLOOPMATRIX(P_IN,ANS)
+      SUBROUTINE SLOOPMATRIX(P_USER,ANS)
 C  
 %(info_lines)s
 C
@@ -67,7 +67,7 @@ C     This parameter is designed for the check timing command of MG5
 C  
 C ARGUMENTS 
 C  
-      %(real_dp_format)s P_IN(0:3,NEXTERNAL)
+      %(real_dp_format)s P_USER(0:3,NEXTERNAL)
       %(real_dp_format)s ANS(3)
 C  
 C LOCAL VARIABLES 
@@ -140,12 +140,19 @@ C
 	  DATA MP_DONE/.FALSE./
 	  common/MP_DONE/MP_DONE
 
+C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
+C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT USED ANYWHERE ELSE
 	  %(real_dp_format)s PS(0:3,NEXTERNAL)
 	  common/PSPOINT/PS
+C     AGAIN BELOW, MP_PS IS THE FIXED (POSSIBLY IMPROVED) MP PS POINT AND MP_P IS THE ONE WHICH CAN BE MODIFIED (I.E. ROTATED ETC.) FOR STABILITY PURPOSE
+	  %(real_mp_format)s MP_PS(0:3,NEXTERNAL),MP_P(0:3,NEXTERNAL)
+	  common/MP_PSPOINT/MP_PS,MP_P
 
 	  %(real_dp_format)s LSCALE
 	  INTEGER CTMODE	  
       common/CT/LSCALE,CTMODE
+	  LOGICAL MP_PS_SET
+	  DATA MP_PS_SET/.FALSE./
 
 C     The parameter below sets the convention for the helicity filter
 C     For a given helicity, the attached integer 'i' means
@@ -276,6 +283,8 @@ C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
   ENDIF
 ENDIF
 
+MP_DONE=.FALSE.
+MP_PS_SET=.FALSE.
 STAB_INDEX=0
 DOING_QP_EVALS=.FALSE.
 EVAL_DONE(1)=.TRUE.
@@ -332,8 +341,18 @@ ENDIF
 
 DO I=1,NEXTERNAL
   DO J=0,3
-    P(J,I)=P_IN(J,I)
-    PS(J,I)=P_IN(J,I)
+    PS(J,I)=P_USER(J,I)
+  ENDDO
+ENDDO
+
+IF (ImprovePSPoint) THEN
+  C Make the input PS more precise (exact onshell and energy-momentum conservation)
+  CALL IMPROVE_PS_POINT_PRECISION(PS)
+ENDIF
+
+DO I=1,NEXTERNAL
+  DO J=0,3
+    P(J,I)=PS(J,I)
   ENDDO
 ENDDO
 
@@ -348,11 +367,10 @@ ENDDO
 
 200 CONTINUE
 
-C This improvement seems to yield problems for some PS point of d d~ > w+ w- g
-C So it is safer to remove it for double precision.
-C Instead of having n-1 particles exactly onshell and perfect energy-momentum
-c conservation, this subroutine should be written so to have n exactly onshell part.
-C CALL IMPROVE_PS_POINT_PRECISION(P)
+IF (.NOT.MP_PS_SET.AND.(CTMODE.EQ.0.OR.CTMODE.GE.4)) THEN
+  CALL SET_MP_PS(P_USER)
+  MP_PS_SET = .TRUE.
+ENDIF
 
 LSCALE=DSQRT(ABS((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1)+P(3,2))**2))
 
@@ -367,12 +385,10 @@ DO K=1,3
 ENDDO
 
 C Check if we directly go to multiple precision
-IF (CTMODE.GE.4) THEN
-  CALL MP_COMPUTE_LOOP_COEFS(P,BUFFR_BIS)
+IF (.NOT.MP_DONE.AND.CTMODE.GE.4) THEN
+  CALL MP_COMPUTE_LOOP_COEFS(MP_P,BUFFR_BIS)
   MP_DONE=.TRUE.
   goto 300 
-ELSE
-  MP_DONE=.FALSE.
 ENDIF
 
 DO H=1,NCOMB
@@ -569,17 +585,20 @@ C BEGINNING OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
   
   IF(.NOT.EVAL_DONE(3).AND. ((DOING_QP_EVALS.AND.NRotations_QP.GE.1).OR.((.NOT.DOING_QP_EVALS).AND.NRotations_DP.GE.1)) ) THEN
 	EVAL_DONE(3)=.TRUE.
-	CALL ROTATE_PS(P_IN,P,1)
+	CALL ROTATE_PS(PS,P,1)
+	IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,1)
 	goto 200
   ENDIF
 
   IF(.NOT.EVAL_DONE(4).AND. ((DOING_QP_EVALS.AND.NRotations_QP.GE.2).OR.((.NOT.DOING_QP_EVALS).AND.NRotations_DP.GE.2)) ) THEN
 	EVAL_DONE(4)=.TRUE.
-	CALL ROTATE_PS(P_IN,P,2)
+	CALL ROTATE_PS(PS,P,2)
+	IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,2)
 	goto 200
   ENDIF
 
-  CALL ROTATE_PS(P_IN,P,0)
+  CALL ROTATE_PS(PS,P,0)
+  IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,0)
 
 C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 
@@ -599,6 +618,9 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	    DO I=1,NEXTERNAL
           WRITE (*,'(i2,1x,4e27.17)') i, P(0,i),P(1,i),P(2,i),P(3,i) 
         ENDDO
+	  ENDIF
+	  IF(NEPS.EQ.10) THEN
+	    WRITE(*,*) 'Further output of the details of these unstable PS points will now be suppressed.'
 	  ENDIF
     ENDIF
   ELSE
@@ -703,181 +725,6 @@ C         Be loser for helicity comparison, so bring a factor 100
       ENDDO
 	  END
 
-	  SUBROUTINE IMPROVE_PS_POINT_PRECISION(P)
-C  
-C CONSTANTS 
-C 
-	  INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
-	  %(real_dp_format)s     ZERO
-	  PARAMETER (ZERO=0.0d0)
-C  
-C ARGUMENTS 
-C
-      %(real_dp_format)s P(0:3,NEXTERNAL)
-      %(real_dp_format)s PTOT(0:3)
-C
-C LOCAL VARIABLES 
-C
-      INTEGER I,J
-	  %(real_dp_format)s BUFF,REF
-	  %(real_dp_format)s MASSES(NEXTERNAL-1)
-	  %(real_dp_format)s SHIFTX(2),SHIFTY(2)
-C  
-C GLOBAL VARIABLES
-C 
-      include 'coupl.inc'
-
-	  %(masses_def)s
-
-	  DO I=0,3
-	    REF=ZERO
-		BUFF=ZERO
-		DO J=1,NEXTERNAL
-		  REF=REF+ABS(P(I,J))
-		ENDDO
-        DO J=1,%(n_initial)d		
-		  BUFF=BUFF-P(I,J)
-		ENDDO
-        DO J=%(n_initial)d+1,NEXTERNAL	
-		  BUFF=BUFF+P(I,J)
-		ENDDO
-		IF ((BUFF/REF).GT.1.0d-6) THEN
-		  WRITE(*,*) 'ERROR:: Four-momentum conservation is not accurate enough, ',(BUFF/REF)
-		  CALL WRITE_MOM(P)
-		  STOP
-		ENDIF
-	  ENDDO
-
-	  DO I=1,NEXTERNAL-1
-	    REF=ABS(P(0,I))+ABS(P(1,I))+ABS(P(2,I))+ABS(P(3,I))
-		IF ((SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF).GT.1.0d-2) THEN
-		  WRITE(*,*) 'ERROR:: Onshellness of the momentum of particle ',I,' of mass ',MASSES(I),' is not accurate enough, ', (SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF)
-		  CALL WRITE_MOM(P)
-		  STOP
-		ELSE
-	      P(3,I)=SIGN(SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-MASSES(I)**2)),P(3,I))
-		ENDIF
-	  ENDDO
-
-	  DO I=0,3
-	    BUFF=0.0d0 
-        DO J=1,%(n_initial)d
-		  BUFF=BUFF+P(I,J)
-		ENDDO
-		DO J=%(n_initial)d+1,NEXTERNAL-1
-		  BUFF=BUFF-P(I,J)		
-		ENDDO
-		PTOT(I)=BUFF
-	  ENDDO
-
-	  DO I=0,3
-	    P(I,NEXTERNAL)=PTOT(I)
-	  ENDDO
-
-	  END
-
-	  SUBROUTINE WRITE_MOM(P)
-	  IMPLICIT NONE
-	  INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
-      %(real_dp_format)s mdot
-
-	  INTEGER I,J
-C  
-C ARGUMENTS 
-C
-      %(real_dp_format)s P(0:3,NEXTERNAL),PSUM(0:3)
-	  DO I=0,3  
-        PSUM(I)=0.0d0
-        DO J=1,%(n_initial)d
-          PSUM(I)=PSUM(I)+P(I,J)
-        ENDDO
-        DO J=%(n_initial)d+1,NEXTERNAL
-          PSUM(I)=PSUM(I)-P(I,J)
-        ENDDO
-      ENDDO
-      WRITE (*,*) ' Phase space point:'
-      WRITE (*,*) '    ---------------------'
-      WRITE (*,*) '    E | px | py | pz | m '
-      DO I=1,NEXTERNAL
-        WRITE (*,'(1x,5e25.15)') P(0,I),P(1,I),P(2,I),P(3,I),DSQRT(DABS(MDOT(P(0,I),P(0,I))))
-      ENDDO
-      WRITE (*,*) '    Four-momentum conservation sum:'
-      WRITE (*,'(1x,4e25.15)') PSUM(0),PSUM(1),PSUM(2),PSUM(3)
-      WRITE (*,*) '   ---------------------'
-	  END
-
-      %(real_dp_format)s function mdot(p1,p2)
-C ****************************************************************************
-C     4-Vector Dot product
-C ****************************************************************************
-      implicit none
-      %(real_dp_format)s p1(0:3),p2(0:3)
-      mdot=p1(0)*p2(0)-p1(1)*p2(1)-p1(2)*p2(2)-p1(3)*p2(3)
-      return
-      end
-
-C Rotate_PS rotates the PS point P_IN (without modifying it)
-C stores the result in P and modifies the global variables
-C PS and MP_DONE accordingly.
-
-	  SUBROUTINE ROTATE_PS(P_IN,P,ROTATION)
-C  
-C CONSTANTS 
-C 
-	  INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
-C  
-C ARGUMENTS 
-C
-      %(real_dp_format)s P_IN(0:3,NEXTERNAL),P(0:3,NEXTERNAL)
-	  INTEGER ROTATION
-C
-C LOCAL VARIABLES 
-C
-      INTEGER I,J
-C  
-C GLOBAL VARIABLES
-C 
-	  LOGICAL MP_DONE
-	  common/MP_DONE/MP_DONE
-
-	  %(real_dp_format)s PS(0:3,NEXTERNAL)
-	  common/PSPOINT/PS
-
-C ----------
-C BEGIN CODE
-C ----------
-
-      DO I=1,NEXTERNAL
-C rotation=1 => (xp=z,yp=-x,zp=-y)
-		IF(ROTATION.EQ.1) THEN
-		  P(0,I)=P_IN(0,I)
-		  P(1,I)=P_IN(3,I)
-		  P(2,I)=-P_IN(1,I)
-		  P(3,I)=-P_IN(2,I)
-C rotation=2 => (xp=-z,yp=y,zp=x)
-		ELSEIF(ROTATION.EQ.2) THEN
-		  P(0,I)=P_IN(0,I)
-		  P(1,I)=-P_IN(3,I)
-		  P(2,I)=P_IN(2,I)
-		  P(3,I)=P_IN(1,I)
-		ELSE
-		  P(0,I)=P_IN(0,I)
-		  P(1,I)=P_IN(1,I)
-		  P(2,I)=P_IN(2,I)
-		  P(3,I)=P_IN(3,I)
-		ENDIF
-		DO J=0,3
-		  PS(J,I)=P(J,I)
-		ENDDO
-	  ENDDO
-
-	  MP_DONE = .FALSE.
-
-	  END
-
       SUBROUTINE compute_accuracy(fulllist, length, acc, estimate)
       implicit none
 C  
@@ -934,10 +781,10 @@ C     The following is used instead
       ACC = 0.0d0
       AVG = 0.0d0
       DO I=1,3
-        ACC = ACC + ACCURACIES(I)*ESTIMATE(I)
+        ACC = ACC + ACCURACIES(I)*ABS(ESTIMATE(I))
         AVG = AVG + ESTIMATE(I)
       ENDDO
-      ACC  = ACC / ( AVG / 3.0d0)
+      ACC  = ACC / ( ABS(AVG) / 3.0d0)
 
       end
 
@@ -960,5 +807,28 @@ C     The following is used instead
 	    WRITE(*,*) 'ERROR:: Increase hardcoded maxstabilitylength.'
 		STOP
 	  ENDIF
+
+	  END
+
+C THIS SUBROUTINE SIMPLY SET THE GLOBAL PS CONFIGURATION GLOBAL VARIABLES FROM A GIVEN VARIABLE IN DOUBLE PRECISION
+	  SUBROUTINE SET_MP_PS(P)
+
+	    INTEGER    NEXTERNAL
+        PARAMETER (NEXTERNAL=%(nexternal)d)
+	    %(real_mp_format)s MP_PS(0:3,NEXTERNAL),MP_P(0:3,NEXTERNAL)
+	    common/MP_PSPOINT/MP_PS,MP_P
+  	    %(real_dp_format)s P(0:3,NEXTERNAL)
+
+	    DO I=1,NEXTERNAL
+	      DO J=0,3
+    	    MP_PS(J,I)=P(J,I) 
+    	  ENDDO
+  	    ENDDO
+  	    CALL MP_IMPROVE_PS_POINT_PRECISION(MP_PS)
+  	    DO I=1,NEXTERNAL
+    	  DO J=0,3
+      	  	MP_P(J,I)=MP_PS(J,I) 
+    	  ENDDO
+  	  	ENDDO
 
 	  END
