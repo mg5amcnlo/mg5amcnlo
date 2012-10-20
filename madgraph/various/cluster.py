@@ -232,6 +232,11 @@ class MultiCore(Cluster):
                log=None):
         """submit a job on multicore machine"""
         
+        if cwd is None:
+            cwd = os.getcwd()
+        if not os.path.exists(prog):
+            prog = os.path.join(cwd, prog)
+        
         import thread
         if self.need_waiting:
             self.waiting_submission.append((prog, argument,cwd, stdout))

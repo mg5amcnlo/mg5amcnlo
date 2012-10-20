@@ -2116,6 +2116,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_queue': None,
                        'fastjet':'fastjet-config',
                        'lhapdf':'lhapdf-config',
+                       'cluster_temp_path':None
                        }
     
     options_madgraph= {'group_subprocesses': 'Auto',
