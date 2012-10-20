@@ -630,12 +630,10 @@ c Add the new s-channel
 c
             itree(1,-1)=i_fks
             itree(2,-1)=j_fks
-c This is only relevant if the j_fks mass is non-zero; fill it anyway
-c always. We can use here the j_fks label, because j_fks of Born is the
-c same as fks_mother label
-            sprop_tree(-1)=sprop(j_fks,iconfig)
-            pmass_tree(-1)=pmass(j_fks,iconfig)
-            pwidth_tree(-1)=pwidth(j_fks,iconfig)
+c This will never be an on-shell s-channel. Hence, give it some bogus values:
+            sprop_tree(-1)=0
+            pmass_tree(-1)=0d0
+            pwidth_tree(-1)=0d0
 c
 c We have to make sure that the fks_mother (which is equal to the j_fks
 c label of the Born) is replaced by the new s-channel

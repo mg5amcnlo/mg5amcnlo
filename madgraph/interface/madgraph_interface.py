@@ -4400,7 +4400,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self.options[args[0]] = args[1]
 
             #re-init all variable
-            model_name = self._curr_model.get('name')
+            model_name = self._curr_model.get('version_tag').split('##')[0]
             self._curr_model = None
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
