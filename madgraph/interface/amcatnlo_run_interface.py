@@ -1356,7 +1356,7 @@ Integrated cross-section
         else:
             #this is for the cluster/multicore run
             if 'ajob' not  in exe:
-                self.cluster.submit(exe, args, cwd=cwd)  
+                return self.cluster.submit(exe, args, cwd=cwd)  
             # use local disk if possible => need to stands what are the 
             # input/output files
             keep_fourth_arg = False
@@ -1435,7 +1435,7 @@ Integrated cross-section
                     
   
             else:
-                raise MadGraph5Error, 'not valid argument'
+                raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
   
             #Find the correct PDF input file
             if hasattr(self, 'pdffile'):
