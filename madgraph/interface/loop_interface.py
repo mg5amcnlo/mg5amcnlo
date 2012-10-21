@@ -128,7 +128,52 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
     """ An additional layer between MadGraphInterface and LoopInterface as well
     as aMCatNLO interface, to put the common feature of these two here."""
 
+    def do_set(self, line, log=True):
+        """Set the loop optimized output while correctly switching to the
+        Feynman gauge if necessary.
+        """
 
+        mg_interface.MadGraphCmd.do_set(self,line,log)
+        
+        args = self.split_arg(line)
+        self.check_set(args)
+
+        if args[0] == 'loop_optimized_output' and eval(args[1]) and \
+                                           not self.options['gauge']=='Feynman':
+            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
+
+    def validate_model(self, loop_type='virtual', stop=True):
+        """ Upgrade the model sm to loop_sm if needed """
+
+        if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
+           self._curr_model['perturbation_couplings']==[]:
+            if loop_type == 'real':
+                    logger.info(\
+                      "Beware that real corrections are generated from a tree-level model.")     
+            else:
+                if self._curr_model['name'].split('-')[0]=='sm':
+                    # So that we don't load the model twice
+                    restrict_card = self._curr_model.get('restrict_card')
+                    if self.options['loop_optimized_output'] and \
+                                               not self.options['gauge']=='Feynman':
+                        self._curr_model = None
+                        mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
+                    logger.info(\
+                      "The default sm model does not allow to generate"+
+                      " loop processes. MG5 now loads 'loop_sm' instead.")
+                    self.do_import("model loop_sm-%s"%restrict_card)
+                elif stop:
+                    raise MadGraph5Error(
+                      "The model %s cannot handle loop processes"\
+                      %self._curr_model['name'])    
+                    
+        if loop_type != 'real' and self.options['loop_optimized_output'] and \
+                                           not self.options['gauge']=='Feynman':
+            # In the open loops method, in order to have a maximum loop numerator
+            # rank of 1, one must work in the Feynman gauge. Anyway irrelevant for
+            # now as we only handle QCD perturbations and SU(3) is always in the
+            # Feynman gauge, no matter what.
+            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
 
 class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         
@@ -154,28 +199,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         self._v4_export_formats = []
         self._export_formats = [ 'matrix', 'standalone' ]
         self._nlo_modes_for_completion = ['virt']
-        if not self._curr_model or \
-                           self._curr_model.get('perturbation_couplings') == []:
-            if not self._curr_model or self._curr_model.get('name') == 'sm':
-                logger.info('Automatically importing the standard model '+\
-                                                       'for loop computations.')
-                # So that we don't load the model twice
-                if self.options['loop_optimized_output'] and \
-                                           not self.options['gauge']=='Feynman':
-                    self._curr_model = None
-                    mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
-                self.do_import('model loop_sm')
-            else:
-                logger.warning('The current important model does not allow'+\
-                                       ' for any loop corrections computation.')
-            
-        if self.options['loop_optimized_output'] and \
-                                           not self.options['gauge']=='Feynman':
-            # In the open loops method, in order to have a maximum loop numerator
-            # rank of 1, one must work in the Feynman gauge. Anyway irrelevant for
-            # now as we only handle QCD perturbations and SU(3) is always in the
-            # Feynman gauge, no matter what.
-            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
+        self.validate_model()
         # Set where to look for CutTools installation.
         # In further versions, it will be set in the same manner as _mgme_dir so that
         # the user can chose its own CutTools distribution.
@@ -186,24 +210,10 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                              self._cuttools_dir)
             self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
     
-    def do_set(self, line, log=True):
-        """Set the loop optimized output while correctly switching to the
-        Feynman gauge if necessary.
-        """
-
-        mg_interface.MadGraphCmd.do_set(self,line,log)
-        
-        args = self.split_arg(line)
-        self.check_set(args)
-
-        if args[0] == 'loop_optimized_output' and eval(args[1]) and \
-                                           not self.options['gauge']=='Feynman':
-            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
-    
     def do_generate(self, line, *args,**opt):
 
         # Check args validity
-        self.model_validity()    
+        self.validate_model()    
         # Extract process from process definition
         if ',' in line:
             myprocdef, line = self.extract_decay_chain_process(line)
@@ -465,7 +475,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 
         argss = self.split_arg(line, *args,**opt)
         # Check args validity
-        self.model_validity()
+        self.validate_model()
         param_card = self.check_check(argss)
         # For the stability check the user can specify the statistics (i.e
         # number of trial PS points) as a second argument
@@ -490,7 +500,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         
         # Check the validity of the arguments
         self.check_add(args)
-        self.model_validity()
+        self.validate_model()
 
         if args[0] == 'process':            
             # Rejoin line
@@ -586,20 +596,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                     raise self.InvalidCmd(
                         "Perturbation order %s is not among" % pert_order + \
                         " the perturbation orders allowed for by the loop model.")
-
-    def model_validity(self):
-        """ Upgrade the model sm to loop_sm if needed """
-    
-        if self._curr_model['perturbation_couplings']==[]:
-            if self._curr_model['name']=='sm':
-                logger.warning(\
-                  "The default sm model does not allow to generate"+
-                  " loop processes. MG5 now loads 'loop_sm' instead.")
-                mg_interface.MadGraphCmd.do_import(self,"model loop_sm")
-            else:
-                raise self.InvalidCmd(
-                  "The model %s cannot handle loop processes"\
-                  %self._curr_model['name'])
    
 class LoopInterfaceWeb(mg_interface.CheckValidForCmdWeb, LoopInterface):
     pass

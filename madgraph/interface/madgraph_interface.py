@@ -1473,7 +1473,10 @@ class CompleteForCmd(cmd.CompleteCmd):
         
         # Automatically allow for QCD perturbation if in the sm because the
         # loop_sm would then automatically be loaded
-        pert_couplings_allowed = self._curr_model['perturbation_couplings']
+        if isinstance(self._curr_model(loop_base_objects.LoopModel)):
+            pert_couplings_allowed = self._curr_model['perturbation_couplings']
+        else:
+            pert_couplings_allowed = []        
         if self._curr_model.get('name').startswith('sm'):
             pert_couplings_allowed = pert_couplings_allowed + ['QCD']
 

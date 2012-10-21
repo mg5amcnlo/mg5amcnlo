@@ -166,28 +166,6 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             raise self.InvalidCmd, 'option -r (--reweightonly) needs mode "aMC@NLO" or "aMC@LO"'
 
 
-
-    def validate_model(self, loop_type):
-        """ Upgrade the model sm to loop_sm if needed """
-
-        if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
-           self._curr_model['perturbation_couplings']==[]:
-            if loop_type == 'real':
-                    logger.warning(\
-                      "Beware that real corrections are generated from a tree-level model.")     
-            else:
-                if self._curr_model['name']=='sm':
-                    logger.info(\
-                      "The default sm model does not allow to generate"+
-                      " loop processes. MG5 now loads 'loop_sm' instead.")
-                    restrict_card = self._curr_model.get('restrict_card')
-                    mg_interface.MadGraphCmd.do_import(self,"model loop_sm-%s"\
-                                                                 %restrict_card)
-                else:
-                    raise MadGraph5Error(
-                      "The model %s cannot handle loop processes"\
-                      %self._curr_model['name'])            
-
 class CheckFKSWeb(mg_interface.CheckValidForCmdWeb, CheckFKS):
     pass
 
@@ -314,24 +292,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         self._v4_export_formats = []
         self._nlo_modes_for_completion = ['all','real']
         self._export_formats = [ 'madevent' ]
-        if self._curr_model.get('perturbation_couplings') == []:
-            if self._curr_model.get('name') == 'sm':
-                logger.info('Automatically importing the standard model '+\
-                                                       'for loop computations.')
-                # So that we don't load the model twice
-                if self.options['loop_optimized_output'] and \
-                                           not self.options['gauge']=='Feynman':
-                    self._curr_model = None
-                    mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
-                self.do_import('model loop_sm')
-            else:
-                logger.warning('The current important model does not allow'+\
-                                       ' for any loop corrections computation.')
-        if self.options['loop_optimized_output'] and \
-                                               self.options['gauge']!='Feynman':
-            # In the open loops method, in order to have a maximum loop numerator
-            # rank of 1, one must work in the Feynman gauge
-            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
+        # Do not force NLO model as the user might have asked for reals only.
+        # It will anyway be forced later if he attempts virt= or all=.
+        self.validate_model(loop_type='virtual', stop=False)
         # Set where to look for CutTools installation.
         # In further versions, it will be set in the same manner as _mgme_dir so that
         # the user can chose its own CutTools distribution.
@@ -341,20 +304,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                            'Using default CutTools instead.') % \
                              self._cuttools_dir)
             self._cuttools_dir=str(pjoin(self._mgme_dir,'vendor','CutTools'))
-
-    def do_set(self, line, log=True):
-        """Set the loop optimized output while correctly switching to the
-        Feynman gauge if necessary.
-        """
-
-        mg_interface.MadGraphCmd.do_set(self,line,log)
-        
-        args = self.split_arg(line)
-        self.check_set(args)
-
-        if args[0] == 'loop_optimized_output' and eval(args[1]) and \
-                                           not self.options['gauge']=='Feynman':
-            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
 
     def do_display(self, line, output=sys.stdout):
         # if we arrive here it means that a _fks_display_opts has been chosen
