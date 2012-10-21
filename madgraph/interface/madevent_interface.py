@@ -2115,7 +2115,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     ############################################################################      
     def do_refine(self, line):
         """Advanced commands: launch survey for the current process """
-        devnull = os.open(os.devnull, os.O_RDWR)  
+        devnull = open(os.devnull, 'w')  
         self.nb_refine += 1
         args = self.split_arg(line)
         # Check argument's validity
@@ -2125,7 +2125,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if len(args) == 2:
             max_process = args[1]
         else:
-             max_process = 5
+            max_process = 5
 
         # initialize / remove lhapdf mode
         self.configure_directory()
@@ -2195,6 +2195,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.results.add_detail('error', error)   
 
         self.update_status('finish refine', 'parton', makehtml=False)
+        devnull.close()
         
     ############################################################################ 
     def do_combine_events(self, line):
@@ -2336,7 +2337,7 @@ calculator."""
 
         run = self.run_name
         tag = self.run_card['run_tag']
-        devnull = os.open(os.devnull, os.O_RDWR)
+        devnull = open(os.devnull, 'w')
 
         if not os.path.exists(pjoin(self.me_dir, 'Events', run)):
             os.mkdir(pjoin(self.me_dir, 'Events', run))
@@ -2399,6 +2400,7 @@ calculator."""
                 misc.call(['gzip', output], stdout=devnull, stderr=devnull, 
                                                                      cwd=O_path) 
         self.update_status('End Parton', level='parton', makehtml=False)
+        devnull.close()
 
     ############################################################################ 
     def do_create_gridpack(self, line):
@@ -3420,9 +3422,13 @@ calculator."""
         except Exception, error:         
             pass
         try:
-            devnull = os.open(os.devnull, os.O_RDWR) 
+            devnull = open(os.devnull, 'w') 
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)
+        except:
+            pass
+        try:
+            devnull.close()
         except:
             pass
 
