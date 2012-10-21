@@ -1425,7 +1425,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                          'nb_core': None,
                          'cluster_temp_path':None}
     
-    helporder = ['Main Command', 'Documented commands', 'Require MG5 directory',
+    helporder = ['Main commands', 'Documented commands', 'Require MG5 directory',
                    'Advanced commands']
     
     ############################################################################

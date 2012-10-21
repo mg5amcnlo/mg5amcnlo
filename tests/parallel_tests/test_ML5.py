@@ -8,6 +8,7 @@ import unittest
 
 
 from madgraph import MG5DIR
+from madgraph.iolibs.files import cp
 
 #Look for MG5/MG4 path
 _mg5_path = os.sep.join(os.path.realpath(__file__).split(os.sep)[:-3])
@@ -68,6 +69,12 @@ class ML5Test(unittest.TestCase):
     """ A class to test ML5 versus runs from older versions or ML4 """
 
     test_model_name = 'loop_sm-parallel_test'
+
+    def setUp(self):
+        """ Here we just copy the hidden restrict_card to a regular one.
+        And we don't bother making it hidden again after the test."""
+        cp(os.path.join(_mg5_path,'models','loop_sm','.restrict_parallel_test.dat'),
+           os.path.join(_mg5_path,'models','loop_sm','restrict_parallel_test.dat'))
 
     @staticmethod
     def create_pickle(my_proc_list, pickle_file, runner, ref_runner=None,
