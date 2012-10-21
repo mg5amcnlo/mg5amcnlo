@@ -254,6 +254,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         self.banner = None
         # Load the configuration file
         self.set_configuration()
+        self.configure_run_mode(self.options['run_mode'])
         
         
         # Get number of initial states
@@ -431,6 +432,28 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             else:
                 self.options[args[0]] = args[1]             
 
+    def configure_run_mode(self, run_mode):
+        """change the way to submit job 0: single core, 1: cluster, 2: multicore"""
+        
+        self.cluster_mode = run_mode
+        
+        if run_mode == 2:
+            if not self.nb_core:
+                import multiprocessing
+                self.nb_core = multiprocessing.cpu_count()
+            nb_core =self.nb_core
+        elif run_mode == 0:
+            nb_core = 1 
+            
+        if run_mode in [0, 2]:
+            self.cluster = cluster.MultiCore(nb_core, 
+                                     temp_dir=self.options['cluster_temp_path'])
+            
+        if self.cluster_mode == 1:
+            opt = self.options
+            cluster_name = opt['cluster_type']
+            self.cluster = cluster.from_name[cluster_name](opt['cluster_queue'],
+                                                        opt['cluster_temp_path'])
 
     def add_error_log_in_html(self, errortype=None):
         """If a ME run is currently running add a link in the html output"""
@@ -459,7 +482,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 
   
 
-    def update_status(self, status, level, makehtml=True, force=True, error=False):
+    def update_status(self, status, level, makehtml=True, force=True, 
+                      error=False, starttime = None):
         """ update the index status """
         
         if makehtml and not force:
@@ -471,7 +495,22 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         if isinstance(status, str):
             if '<br>' not  in status:
                 logger.info(status)
-        else:
+        elif starttime:
+            running_time = time.time()-starttime
+            if running_time < 1e-3:
+                running_time = ''
+            elif running_time < 10:
+                running_time = '[ %.2gs ]' % running_time
+            elif 60 > running_time >= 10:
+                running_time = '[ %.3gs ]' % running_time
+            elif 3600 > running_time >= 60:
+                running_time = '[ %im %is ]' % (running_time // 60, int(running_time % 60))
+            else:
+                running_time = '[ %ih %im ]' % (running_time // 3600, (running_time//60 % 60))
+                
+            logger.info(' Idle: %s,  Running: %s,  Completed: %s %s' % \
+                       (status[0], status[1], status[2], running_time))
+        else: 
             logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])
         
         self.last_update = time
