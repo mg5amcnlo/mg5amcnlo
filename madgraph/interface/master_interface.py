@@ -250,7 +250,7 @@ class Switcher(object):
             if (not isinstance(self._curr_model, loop_base_objects.LoopModel) or \
                self._curr_model['perturbation_couplings']==[]) and \
                self.current_interface in ['MadLoop']:
-                self.change_principal_cmd('MadGraph')                
+                self.change_principal_cmd('MadGraph')
         return
 
     # Dummy functions, not triggering any switch of interfaces

@@ -177,15 +177,16 @@ class CheckFKS(mg_interface.CheckValidForCmd):
                       "Beware that real corrections are generated from a tree-level model.")     
             else:
                 if self._curr_model['name']=='sm':
-                    logger.warning(\
+                    logger.info(\
                       "The default sm model does not allow to generate"+
                       " loop processes. MG5 now loads 'loop_sm' instead.")
-                    mg_interface.MadGraphCmd.do_import(self,"model loop_sm")
+                    restrict_card = self._curr_model.get('restrict_card')
+                    mg_interface.MadGraphCmd.do_import(self,"model loop_sm-%s"\
+                                                                 %restrict_card)
                 else:
                     raise MadGraph5Error(
                       "The model %s cannot handle loop processes"\
                       %self._curr_model['name'])            
-    pass
 
 class CheckFKSWeb(mg_interface.CheckValidForCmdWeb, CheckFKS):
     pass
@@ -284,7 +285,7 @@ class HelpFKS(mg_interface.HelpToCmd):
         """help for launch command"""
         _launch_parser.print_help()
 
-class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
+class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoopInterface):
     
     _fks_display_opts = ['real_diagrams', 'born_diagrams', 'virt_diagrams', 
                          'real_processes', 'born_processes', 'virt_processes']
@@ -327,7 +328,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
                 logger.warning('The current important model does not allow'+\
                                        ' for any loop corrections computation.')
         if self.options['loop_optimized_output'] and \
-                                           not self.options['gauge']=='Feynman':
+                                               self.options['gauge']!='Feynman':
             # In the open loops method, in order to have a maximum loop numerator
             # rank of 1, one must work in the Feynman gauge
             mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')

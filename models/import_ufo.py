@@ -1058,7 +1058,9 @@ class RestrictModel(model_reader.ModelReader):
         """
 
         self.restrict_card = param_card
-
+        finder = re.compile('restrict\_(.*).dat')
+        self.set('restrict_card',\
+                           finder.search(os.path.basename(param_card)).group(1))
         # Reset particle dict to ensure synchronized particles and interactions
         self.set('particles', self.get('particles'))
 
