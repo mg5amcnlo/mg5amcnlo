@@ -151,9 +151,10 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                     logger.info(\
                       "Beware that real corrections are generated from a tree-level model.")     
             else:
-                if self._curr_model['name'].split('-')[0]=='sm':
+                model_path = self._curr_model.get('version_tag').split('##')[0]
+                model_name = self._curr_model.get('name')
+                if model_name.split('-')[0]=='sm':
                     # So that we don't load the model twice
-                    restrict_card = self._curr_model.get('restrict_card')
                     if self.options['loop_optimized_output'] and \
                                                not self.options['gauge']=='Feynman':
                         self._curr_model = None
@@ -161,11 +162,12 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                     logger.info(\
                       "The default sm model does not allow to generate"+
                       " loop processes. MG5 now loads 'loop_sm' instead.")
-                    self.do_import("model loop_sm-%s"%restrict_card)
+                    mpath=os.path.join(os.path.dirname(os.path.join(model_path)),
+                                                            'loop_'+model_name)
+                    self.do_import("model %s"%str(mpath))
                 elif stop:
                     raise MadGraph5Error(
-                      "The model %s cannot handle loop processes"\
-                      %self._curr_model['name'])    
+                      "The model %s cannot handle loop processes"%model_name)    
                     
         if loop_type != 'real' and self.options['loop_optimized_output'] and \
                                            not self.options['gauge']=='Feynman':

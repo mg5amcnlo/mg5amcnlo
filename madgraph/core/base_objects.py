@@ -907,7 +907,6 @@ class Model(PhysicsObject):
     def default_setup(self):
 
         self['name'] = ""
-        self['restrict_card'] = "default"
         self['particles'] = ParticleList()
         self['interactions'] = InteractionList()
         self['parameters'] = None
@@ -929,7 +928,7 @@ class Model(PhysicsObject):
     def filter(self, name, value):
         """Filter for model property values"""
 
-        if name in ['name','restrict_card']:
+        if name in ['name']:
             if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a string" %type(value)

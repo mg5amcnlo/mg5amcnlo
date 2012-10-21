@@ -3372,6 +3372,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         self._curr_model.set_parameters_and_couplings()
                 if self.options['gauge']=='unitary':
                     if isinstance(self._curr_model,loop_base_objects.LoopModel) and \
+                         self._curr_model.get('perturbation_couplings')!=[] and \
                                            self.options['gauge']=='unitary' and \
                                           self.options['loop_optimized_output']:
                         logger.info('Change the gauge to Feynman because '+\
@@ -4410,7 +4411,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             #re-init all variable
             model_name = self._curr_model.get('version_tag').split('##')[0]
-            restrict_card = self._curr_model.get('restrict_card')
             self._curr_model = None
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -4425,8 +4425,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 # We don't want to go through the MasterCommand again
                 # because it messes with the interface switching when
                 # importing a loop model from MG5
-                MadGraphCmd.do_import(self,'model %s-%s' %(model_name,\
-                                                                 restrict_card))
+                MadGraphCmd.do_import(self,'model %s' %model_name)
             elif log:
                 logger.info('Note that you have to reload the model') 
 
