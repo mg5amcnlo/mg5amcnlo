@@ -1077,7 +1077,7 @@ class Model(PhysicsObject):
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['name','restrict_card', 'particles', 'parameters', 'interactions',
+        return ['name', 'particles', 'parameters', 'interactions',
                 'couplings','lorentz', 'gauge']
 
     def get_particle(self, id):

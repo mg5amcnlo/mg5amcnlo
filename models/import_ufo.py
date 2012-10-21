@@ -157,7 +157,7 @@ def import_full_model(model_path, decay=False):
             logger.info('failed to load model from pickle file. Try importing UFO from File')
         else:
             # We don't care about the restrict_card for this comparison
-            if model.has_key('version_tag') and \
+            if model.has_key('version_tag') and not model.get('version_tag') is None and \
               model.get('version_tag').startswith(os.path.realpath(model_path)) and \
               model.get('version_tag').endswith('##' + str(misc.get_pkg_info())):
                 _import_once.append((model_path, aloha.unitary_gauge))

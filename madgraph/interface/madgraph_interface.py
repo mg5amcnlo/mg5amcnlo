@@ -368,7 +368,6 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   irrelevant for this kind of launch.")    
         logger.info("")    
         logger.info("Launch on aMC@NLO output:",'$MG:color:BLACK')
-        launch [DIRPATH] [MODE] [options]
         logger.info(" > launch <dir_path> <mode> <options>",'$MG:color:BLUE')
         logger.info(" o Example: launch MyProc aMC@NLO -f -p",'$MG:color:GREEN')    
 
@@ -1399,7 +1398,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         # loop_sm would then automatically be loaded
         nlo_modes = allowed_loop_mode if not allowed_loop_mode is None else \
                                                   self._nlo_modes_for_completion
-        if isinstance(self._curr_model(loop_base_objects.LoopModel)):
+        if isinstance(self._curr_model,loop_base_objects.LoopModel):
             pert_couplings_allowed = self._curr_model['perturbation_couplings']
         else:
             pert_couplings_allowed = []
@@ -1473,7 +1472,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         
         # Automatically allow for QCD perturbation if in the sm because the
         # loop_sm would then automatically be loaded
-        if isinstance(self._curr_model(loop_base_objects.LoopModel)):
+        if isinstance(self._curr_model,loop_base_objects.LoopModel):
             pert_couplings_allowed = self._curr_model['perturbation_couplings']
         else:
             pert_couplings_allowed = []        
