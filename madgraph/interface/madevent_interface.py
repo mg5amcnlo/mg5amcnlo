@@ -956,7 +956,8 @@ class CheckValidForCmd(object):
             self.help_pgs()
             raise self.InvalidCmd('''No file file pythia_events.hep currently available
             Please specify a valid run_name''')
-                              
+        
+        lock = None                    
         if len(arg) == 1:
             prev_tag = self.set_run_name(arg[0], tag, 'pgs')
             if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'%s_pythia_events.hep.gz' % prev_tag)):
@@ -964,13 +965,15 @@ class CheckValidForCmd(object):
             else:
                 input_file = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
                 output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
-                self.launch_job('gunzip',stdout=open(output_file,'w'), 
-                                 argument=['-c', input_file], mode=2)
+                lock = cluster.asyncrone_launch('gunzip',stdout=open(output_file,'w'), 
+                                                    argument=['-c', input_file])
+
         else:
             if tag: 
                 self.run_card['run_tag'] = tag
             self.set_run_name(self.run_name, tag, 'pgs')
-            
+        
+        return lock
 
     def check_delphes(self, arg):
         """Check the argument for pythia command
@@ -1009,7 +1012,8 @@ class CheckValidForCmd(object):
             self.help_pgs()
             raise self.InvalidCmd('''No file file pythia_events.hep currently available
             Please specify a valid run_name''')
-                              
+        
+        lock = None                
         if len(arg) == 1:
             prev_tag = self.set_run_name(arg[0], tag, 'delphes')
             if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)):
@@ -1019,12 +1023,14 @@ class CheckValidForCmd(object):
             else:
                 input_file = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
                 output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
-                self.launch_job('gunzip',stdout=open(output_file,'w'), 
-                                 argument=['-c', input_file], mode=2)
+                lock = cluster.asyncrone_launch('gunzip',stdout=open(output_file,'w'), 
+                                                    argument=['-c', input_file])
         else:
             if tag:
                 self.run_card['run_tag'] = tag
-            self.set_run_name(self.run_name, tag, 'delphes')               
+            self.set_run_name(self.run_name, tag, 'delphes')
+            
+        return lock               
 
     def check_display(self, args):
         """check the validity of line
@@ -2032,7 +2038,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     ############################################################################      
     def do_refine(self, line):
         """Advanced commands: launch survey for the current process """
-        devnull = os.open(os.devnull, os.O_RDWR)  
+        devnull = open(os.devnull, 'w')  
         self.nb_refine += 1
         args = self.split_arg(line)
         # Check argument's validity
@@ -2042,7 +2048,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if len(args) == 2:
             max_process = args[1]
         else:
-             max_process = 5
+            max_process = 5
 
         # initialize / remove lhapdf mode
         self.configure_directory()
@@ -2112,6 +2118,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.results.add_detail('error', error)   
 
         self.update_status('finish refine', 'parton', makehtml=False)
+        devnull.close()
         
     ############################################################################ 
     def do_combine_events(self, line):
@@ -2126,15 +2133,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
         except:
             pass
-        if self.cluster_mode == 1:
-            self.cluster.launch_and_wait('../bin/internal/run_combine', 
+        self.cluster.launch_and_wait('../bin/internal/run_combine', 
                                         cwd=pjoin(self.me_dir,'SubProcesses'),
                                         stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'))
-        else:
-            misc.call(['../bin/internal/run_combine'],
-                         cwd=pjoin(self.me_dir,'SubProcesses'), 
-                         stdout=open(pjoin(self.me_dir,'SubProcesses','combine.log'),'w'))
-        
         
         output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
         # Store the number of unweighted events for the results object
@@ -2253,7 +2254,7 @@ calculator."""
 
         run = self.run_name
         tag = self.run_card['run_tag']
-        devnull = os.open(os.devnull, os.O_RDWR)
+        devnull = open(os.devnull, 'w')
 
         if not os.path.exists(pjoin(self.me_dir, 'Events', run)):
             os.mkdir(pjoin(self.me_dir, 'Events', run))
@@ -2316,6 +2317,7 @@ calculator."""
                 misc.call(['gzip', output], stdout=devnull, stderr=devnull, 
                                                                      cwd=O_path) 
         self.update_status('End Parton', level='parton', makehtml=False)
+        devnull.close()
 
     ############################################################################ 
     def do_create_gridpack(self, line):
@@ -2376,19 +2378,11 @@ calculator."""
         
         ## LAUNCHING PYTHIA
         tag = self.run_tag
-        
-        if self.cluster_mode == 1:
-            pythia_log = pjoin(self.me_dir, 'Events', self.run_name , '%s_pythia.log' % tag)
-            self.cluster.launch_and_wait('../bin/internal/run_pythia', 
+        pythia_log = pjoin(self.me_dir, 'Events', self.run_name , '%s_pythia.log' % tag)
+        self.cluster.launch_and_wait('../bin/internal/run_pythia', 
                         argument= [pythia_src], stdout= pythia_log,
                         stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
-        else:
-            pythia_log = open(pjoin(self.me_dir, 'Events',  self.run_name , '%s_pythia.log' % tag), 'w')
-            misc.call(['../bin/internal/run_pythia', pythia_src],
-                           stdout=pythia_log,
-                           stderr=subprocess.STDOUT,
-                           cwd=pjoin(self.me_dir,'Events'))
 
         if not os.path.exists(pjoin(self.me_dir,'Events','pythia.done')):
             if self.cluster_mode == 1:
@@ -2445,7 +2439,6 @@ calculator."""
         
         # Creating LHE file
         self.run_hep2lhe(banner_path)
-
         if int(self.run_card['ickkw']):
             misc.call(['gzip','-f','beforeveto.tree'], 
                                                 cwd=pjoin(self.me_dir,'Events'))
@@ -2822,12 +2815,14 @@ calculator."""
     def monitor(self, run_type='monitor', mode=None, html=False):
         """ monitor the progress of running job """
         
+        starttime = time.time()
         if mode is None:
             mode = self.cluster_mode
         if mode > 0:
             if html:
                 update_status = lambda idle, run, finish: \
-                    self.update_status((idle, run, finish, run_type), level=None)
+                    self.update_status((idle, run, finish, run_type), level=None,
+                                       starttime=starttime)
             else:
                 update_status = lambda idle, run, finish: None
             try:    
@@ -3106,9 +3101,13 @@ calculator."""
         except Exception, error:         
             pass
         try:
-            devnull = os.open(os.devnull, os.O_RDWR) 
+            devnull = open(os.devnull, 'w') 
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)
+        except:
+            pass
+        try:
+            devnull.close()
         except:
             pass
 
@@ -3164,7 +3163,7 @@ calculator."""
                 self.update_status('GENERATE SUDAKOF GRID', level='parton')
                 
                 for i in range(-2,6):
-                    self.launch_job('%s/gensudgrid ' % self.dirbin, 
+                    self.cluster.submit('%s/gensudgrid ' % self.dirbin, 
                                     arguments = [i],
                                     cwd=self.me_dir, 
                                     stdout=open(pjoin(self.me_dir, 'gensudgrid%s.log' % i,'w')))

@@ -226,6 +226,16 @@ class MultiCore(Cluster):
     def adding_jobs_to_submit(self, nb):
         self.idle += nb
         #self.remaining += nb
+        
+    def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
+                                                         stderr=None, log=None):
+        """launch one job and wait for it"""    
+        if isinstance(stdout, str):
+            stdout = open(stdout, 'w')
+        if isinstance(stderr, str):
+            stdout = open(stderr, 'w')        
+        return misc.call([prog] + argument, stdout=stdout, stderr=stderr, cwd=cwd) 
+    
     
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
                log=None):
@@ -233,7 +243,7 @@ class MultiCore(Cluster):
         
         if cwd is None:
             cwd = os.getcwd()
-        if not os.path.exists(prog):
+        if not os.path.exists(prog) and not misc.which(prog):
             prog = os.path.join(cwd, prog)
         
         import thread
@@ -319,7 +329,7 @@ class MultiCore(Cluster):
             while not self.lock.locked() and security < 10:
                 # check that the status is locked to avoid coincidence unlock
                 security +=1
-                time.sleep(10)
+                time.sleep(1)
             if security < 10:
                 self.lock.release()
             self.done = 0
@@ -1046,6 +1056,18 @@ class GECluster(Cluster):
             return
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+
+def asyncrone_launch(exe, cwd=None, stdout=None, argument = [], **opt):
+    """start a computation and not wait for it to finish.
+       this fonction returns a lock which is locked as long as the job is 
+       running."""
+
+    mc = MultiCore(1)
+    mc.submit(exe, argument, cwd, stdout, **opt)
+    mc.need_waiting = True
+    mc.lock.acquire()
+    return mc.lock
+
 
 from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 
              'lsf': LSFCluster, 'ge':GECluster}

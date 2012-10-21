@@ -287,6 +287,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         self.banner = None
         # Load the configuration file
         self.set_configuration()
+        self.configure_run_mode(self.options['run_mode'])
         
         
         # Get number of initial states
@@ -299,15 +300,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
     def split_arg(self, line, error=True):
         """split argument and remove run_options"""
         
-        args = cmd.Cmd.split_arg(line)
-        
+        args = CmdExtended.split_arg(line)
         for arg in args[:]:
             if not arg.startswith('-'):
                 continue
             elif arg == '-c':
-                self.cluster_mode = 1
+                self.configure_run_mode(1)
             elif arg == '-m':
-                self.cluster_mode = 2
+                self.configure_run_mode(2)
             elif arg == '-f':
                 self.force = True
             elif not arg.startswith('--'):
@@ -316,35 +316,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 else:
                     continue
             elif arg.startswith('--cluster'):
-                self.cluster_mode = 1
+                self.configure_run_mode(1)
             elif arg.startswith('--multicore'):
-                self.cluster_mode = 2
+                self.configure_run_mode(2)
             elif arg.startswith('--nb_core'):
-                self.cluster_mode = 2
                 self.nb_core = int(arg.split('=',1)[1])
+                self.configure_run_mode(2)
             elif arg.startswith('--web'):
                 self.pass_in_web_mode()
-                self.cluster_mode = 1
+                self.configure_run_mode(1)
             else:
                 continue
             args.remove(arg)
 
-        if args and args[0] in ["run_mode", "cluster_mode", "cluster_queue", 
-                                "cluster_temp_path", "nb_core"]:
-            return args
-
-        if self.cluster_mode == 2 and not self.nb_core:
-            import multiprocessing
-            self.nb_core = multiprocessing.cpu_count()
-        if self.cluster_mode == 2:
-            self.cluster = cluster.MultiCore(self.nb_core, 
-                                     temp_dir=self.options['cluster_temp_path'])
-            
-        if self.cluster_mode == 1 and not hasattr(self, 'cluster'):
-            opt = self.options
-            cluster_name = opt['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](opt['cluster_queue'],
-                                                        opt['cluster_temp_path'])
         return args
     
     ############################################################################      
@@ -665,6 +649,101 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             #out.writelines('<LesHouchesEvents version=\"1.0\">\n')    
             out.writelines('<!--\n')
             out.writelines('# Warning! Never use this file for detector studies!\n')
+            out.writelines('-->\n<!--\n')
+            out.writelines(open(banner_path).read().replace('<LesHouchesEvents version="1.0">',''))
+            out.writelines('\n-->\n')
+            out.close()
+            
+            self.cluster.launch_and_wait(self.dirbin+'/run_hep2lhe', 
+                                         argument= [pydir],
+                                        cwd=pjoin(self.me_dir,'Events'))
+
+            logger.info('Warning! Never use this pythia lhe file for detector studies!')
+            # Creating ROOT file
+            if eradir and misc.is_executable(pjoin(eradir, 'ExRootLHEFConverter')):
+                self.update_status('Creating Pythia LHE Root File', level='pythia')
+                try:
+                    misc.call([eradir+'/ExRootLHEFConverter', 
+                             'pythia_events.lhe', 
+                             pjoin(self.run_name, '%s_pythia_lhe_events.root' % tag)],
+                            cwd=pjoin(self.me_dir,'Events'))              
+                except:
+                    pass
+
+    ############################################################################    
+    def split_arg(self, line, error=True):
+        """split argument and remove run_options"""
+        
+        args = cmd.Cmd.split_arg(line)
+        
+        for arg in args[:]:
+            if not arg.startswith('-'):
+                continue
+            elif arg == '-c':
+                self.cluster_mode = 1
+            elif arg == '-m':
+                self.cluster_mode = 2
+            elif arg == '-f':
+                self.force = True
+            elif not arg.startswith('--'):
+                if error:
+                    raise self.InvalidCmd('%s argument cannot start with - symbol' % arg)
+                else:
+                    continue
+            elif arg.startswith('--cluster'):
+                self.cluster_mode = 1
+            elif arg.startswith('--multicore'):
+                self.cluster_mode = 2
+            elif arg.startswith('--nb_core'):
+                self.cluster_mode = 2
+                self.nb_core = int(arg.split('=',1)[1])
+            elif arg.startswith('--web'):
+                self.pass_in_web_mode()
+                self.cluster_mode = 1
+            else:
+                continue
+            args.remove(arg)
+
+        if args and args[0] in ["run_mode", "cluster_mode", "cluster_queue", 
+                                "cluster_temp_path", "nb_core"]:
+            return args
+
+        if self.cluster_mode == 2 and not self.nb_core:
+            import multiprocessing
+            self.nb_core = multiprocessing.cpu_count()
+        if self.cluster_mode == 2:
+            self.cluster = cluster.MultiCore(self.nb_core, 
+                                     temp_dir=self.options['cluster_temp_path'])
+            
+        if self.cluster_mode == 1 and not hasattr(self, 'cluster'):
+            opt = self.options
+            cluster_name = opt['cluster_type']
+            self.cluster = cluster.from_name[cluster_name](opt['cluster_queue'],
+                                                        opt['cluster_temp_path'])
+        return args
+    
+        if misc.is_executable(pjoin(pydir, 'hep2lhe')):
+            self.update_status('Creating Pythia LHE File', level='pythia')
+            # Write the banner to the LHE file
+            out = open(pjoin(self.me_dir,'Events','pythia_events.lhe'), 'w')
+            #out.writelines('<LesHouchesEvents version=\"1.0\">\n')    
+            out.writelines('<!--\n')
+            out.writelines('# Warning! Never use this file for detector studies!\n')
+            out.writelines('-->\n<!--\n')
+            out.writelines(open(banner_path).read().replace('<LesHouchesEvents version="1.0">',''))
+            out.writelines('\n-->\n')
+            out.close()
+            
+            self.cluster.launch_and_wait(self.dirbin+'/run_hep2lhe', 
+                                         argument= [pydir],
+                                        cwd=pjoin(self.me_dir,'Events'))
+        if misc.is_executable(pjoin(pydir, 'hep2lhe')):
+            self.update_status('Creating Pythia LHE File', level='pythia')
+            # Write the banner to the LHE file
+            out = open(pjoin(self.me_dir,'Events','pythia_events.lhe'), 'w')
+            #out.writelines('<LesHouchesEvents version=\"1.0\">\n')    
+            out.writelines('<!--\n')
+            out.writelines('# Warning! Never use this file for detector studies!\n')
             out.writelines('-->\n')
             if (banner_path):
                 out.writelines('<!--\n')
@@ -714,7 +793,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         # This might launch a gunzip in another thread. After the question
         # This thread need to be wait for completion. (This allow to have the 
         # question right away and have the computer working in the same time)
-        self.check_pgs(args) 
+        # if lock is define this a locker for the completion of the thread
+        lock = self.check_pgs(args) 
 
         # Check that the pgs_card exists. If not copy the default 
         if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
@@ -730,9 +810,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             self.ask_edit_cards(['pgs'], args)
             
         self.update_status('prepare PGS run', level=None)  
-        # Wait that the gunzip of the files is finished (if any)
-        if hasattr(self, 'control_thread') and self.control_thread[0]:
-            self.monitor(mode=2)
 
         pgsdir = pjoin(self.options['pythia-pgs_path'], 'src')
         eradir = self.options['exrootanalysis_path']
@@ -759,7 +836,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         ########################################################################
         # now pass the event to a detector simulator and reconstruct objects
         ########################################################################
-        
+        if lock:
+            lock.acquire()
         # Prepare the output file with the banner
         ff = open(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 'w')
         text = open(banner_path).read()
@@ -774,16 +852,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             os.remove(pjoin(self.me_dir, 'Events', 'pgs.done'))
         except:
             pass
-        if self.cluster_mode == 1:
-            pgs_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_pgs.log" % tag)
-            self.cluster.launch_and_wait('../bin/internal/run_pgs', 
+        pgs_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_pgs.log" % tag)
+        self.cluster.launch_and_wait('../bin/internal/run_pgs', 
                             argument=[pgsdir], cwd=pjoin(self.me_dir,'Events'),
                             stdout=pgs_log, stderr=subprocess.STDOUT)
-        else:
-            pgs_log = open(pjoin(self.me_dir, 'Events', self.run_name,"%s_pgs.log" % tag),'w')
-            misc.call([self.dirbin+'/run_pgs', pgsdir], stdout= pgs_log,
-                                               stderr=subprocess.STDOUT,
-                                               cwd=pjoin(self.me_dir, 'Events')) 
         
         if not os.path.exists(pjoin(self.me_dir, 'Events', 'pgs.done')):
             logger.error('Fail to create LHCO events')
@@ -828,7 +900,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             args.remove('--no_default')
         else:
             no_default = False
-        self.check_delphes(args) 
+        # Check all arguments
+        # This might launch a gunzip in another thread. After the question
+        # This thread need to be wait for completion. (This allow to have the 
+        # question right away and have the computer working in the same time)
+        # if lock is define this a locker for the completion of the thread
+        lock = self.check_delphes(args) 
         self.update_status('prepare delphes run', level=None)
                 
         # Check that the delphes_card exists. If not copy the default and
@@ -849,8 +926,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             
         self.update_status('Running Delphes', level=None)  
         # Wait that the gunzip of the files is finished (if any)
-        if hasattr(self, 'control_thread') and self.control_thread[0]:
-            self.monitor(mode=2)        
+        if lock:
+            lock.acquire()
 
 
  
@@ -862,18 +939,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         
         cross = self.results[self.run_name].get_current_info()['cross']
                     
-        if self.cluster_mode == 1:
-            delphes_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag)
-            self.cluster.launch_and_wait('../bin/internal/run_delphes', 
+        delphes_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag)
+        self.cluster.launch_and_wait('../bin/internal/run_delphes', 
                         argument= [delphes_dir, self.run_name, tag, str(cross)],
                         stdout=delphes_log, stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
-        else:
-            delphes_log = open(pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag),'w')
-            misc.call(['../bin/internal/run_delphes', delphes_dir, 
-                                self.run_name, tag, str(cross)],
-                                stdout= delphes_log, stderr=subprocess.STDOUT,
-                                cwd=pjoin(self.me_dir,'Events'))
                 
         if not os.path.exists(pjoin(self.me_dir, 'Events', 
                                 self.run_name, '%s_delphes_events.lhco' % tag)):
@@ -997,6 +1067,28 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             else:
                 self.options[args[0]] = args[1]             
 
+    def configure_run_mode(self, run_mode):
+        """change the way to submit job 0: single core, 1: cluster, 2: multicore"""
+        
+        self.cluster_mode = run_mode
+        
+        if run_mode == 2:
+            if not self.nb_core:
+                import multiprocessing
+                self.nb_core = multiprocessing.cpu_count()
+            nb_core =self.nb_core
+        elif run_mode == 0:
+            nb_core = 1 
+            
+        if run_mode in [0, 2]:
+            self.cluster = cluster.MultiCore(nb_core, 
+                                     temp_dir=self.options['cluster_temp_path'])
+            
+        if self.cluster_mode == 1:
+            opt = self.options
+            cluster_name = opt['cluster_type']
+            self.cluster = cluster.from_name[cluster_name](opt['cluster_queue'],
+                                                        opt['cluster_temp_path'])
 
     def add_error_log_in_html(self, errortype=None):
         """If a ME run is currently running add a link in the html output"""
@@ -1025,7 +1117,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 
   
 
-    def update_status(self, status, level, makehtml=True, force=True, error=False):
+    def update_status(self, status, level, makehtml=True, force=True, 
+                      error=False, starttime = None):
         """ update the index status """
         
         if makehtml and not force:
@@ -1037,7 +1130,22 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         if isinstance(status, str):
             if '<br>' not  in status:
                 logger.info(status)
-        else:
+        elif starttime:
+            running_time = time.time()-starttime
+            if running_time < 1e-3:
+                running_time = ''
+            elif running_time < 10:
+                running_time = '[ %.2gs ]' % running_time
+            elif 60 > running_time >= 10:
+                running_time = '[ %.3gs ]' % running_time
+            elif 3600 > running_time >= 60:
+                running_time = '[ %im %is ]' % (running_time // 60, int(running_time % 60))
+            else:
+                running_time = '[ %ih %im ]' % (running_time // 3600, (running_time//60 % 60))
+                
+            logger.info(' Idle: %s,  Running: %s,  Completed: %s %s' % \
+                       (status[0], status[1], status[2], running_time))
+        else: 
             logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])
         
         self.last_update = time
