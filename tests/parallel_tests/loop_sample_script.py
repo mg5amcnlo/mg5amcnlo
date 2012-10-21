@@ -59,12 +59,12 @@ if '__main__' == __name__:
     logging.basicConfig(level=logging.INFO)
 
     my_proc_list = []
-    my_proc_list.append(('g g > g g g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}))    
+#    my_proc_list.append(('g g > g g g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}))    
 # Just to check that th general setup is ok, let's try some trivial processes
 #    my_proc_list.append(('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
 #    my_proc_list.append(('d g > d g',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
 #    my_proc_list.append(('g g > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
-#    my_proc_list.append(('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}))
+    my_proc_list.append(('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}))
 ## Check higgs massive tt~ processes
 #    my_proc_list.append(('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2}))
 #    my_proc_list.append(('g g > t t~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))

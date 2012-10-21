@@ -8,6 +8,7 @@ import unittest
 
 
 from madgraph import MG5DIR
+from madgraph.iolibs.files import cp
 
 #Look for MG5/MG4 path
 _mg5_path = os.sep.join(os.path.realpath(__file__).split(os.sep)[:-3])
@@ -21,6 +22,7 @@ ML4_processes_short = [('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0
                        ('g g > t t~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
                        ('d~ d > g a',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}),
                        ('d~ d > g z',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2})]
+
 ML4_processes_long =  [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2}), 
                        ('g g > h h t t~',{'QCD':2,'QED':2},['QCD'],{'QCD':6,'QED':4}),
                        ('d d~ > w+ w- g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}),
@@ -66,11 +68,17 @@ ML5_processes_long =  [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':
 class ML5Test(unittest.TestCase):
     """ A class to test ML5 versus runs from older versions or ML4 """
 
-    test_model_name = 'loop_sm-no_widths'
+    test_model_name = 'loop_sm-parallel_test'
+
+    def setUp(self):
+        """ Here we just copy the hidden restrict_card to a regular one.
+        And we don't bother making it hidden again after the test."""
+        cp(os.path.join(_mg5_path,'models','loop_sm','.restrict_parallel_test.dat'),
+           os.path.join(_mg5_path,'models','loop_sm','restrict_parallel_test.dat'))
 
     @staticmethod
     def create_pickle(my_proc_list, pickle_file, runner, ref_runner=None,
-                      model = 'loop_sm-no_widths', energy = 2000):
+                      model = 'loop_sm-parallel_test', energy = 2000):
         """ Create a pickle with name 'pickle_file' on the specified processes
         and also possibly using the PS points provided by the reference runner """
         
@@ -89,7 +97,7 @@ class ML5Test(unittest.TestCase):
         my_comp.cleanup()
         
 
-    def compare_processes(self, my_proc_list = [], model = 'loop_sm-no_widths',
+    def compare_processes(self, my_proc_list = [], model = 'loop_sm-parallel_test',
                       pickle_file = "", energy = 2000, tolerance = 1e-06, filename = ""):
         """ A helper function to compare processes. """
         
@@ -124,8 +132,9 @@ class ML5Test(unittest.TestCase):
         my_comp.run_comparison(my_proc_list,
                            model=model,
                            energy=energy)
+        
         # Print the output
-        my_comp.output_result(filename=filename+'.log')
+        my_comp.output_result(filename=os.path.join(_mg5_path,filename+'.log'))
 
         # Assert that all process comparisons passed the tolerance cut
         my_comp.assert_processes(self, tolerance)

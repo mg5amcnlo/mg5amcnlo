@@ -368,7 +368,6 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   irrelevant for this kind of launch.")    
         logger.info("")    
         logger.info("Launch on aMC@NLO output:",'$MG:color:BLACK')
-        launch [DIRPATH] [MODE] [options]
         logger.info(" > launch <dir_path> <mode> <options>",'$MG:color:BLUE')
         logger.info(" o Example: launch MyProc aMC@NLO -f -p",'$MG:color:GREEN')    
 
@@ -1399,7 +1398,10 @@ class CompleteForCmd(cmd.CompleteCmd):
         # loop_sm would then automatically be loaded
         nlo_modes = allowed_loop_mode if not allowed_loop_mode is None else \
                                                   self._nlo_modes_for_completion
-        pert_couplings_allowed = self._curr_model['perturbation_couplings']
+        if isinstance(self._curr_model,loop_base_objects.LoopModel):
+            pert_couplings_allowed = self._curr_model['perturbation_couplings']
+        else:
+            pert_couplings_allowed = []
         if self._curr_model.get('name').startswith('sm'):
             pert_couplings_allowed = pert_couplings_allowed + ['QCD']
         # Find wether the loop mode is already set or not
@@ -1470,7 +1472,10 @@ class CompleteForCmd(cmd.CompleteCmd):
         
         # Automatically allow for QCD perturbation if in the sm because the
         # loop_sm would then automatically be loaded
-        pert_couplings_allowed = self._curr_model['perturbation_couplings']
+        if isinstance(self._curr_model,loop_base_objects.LoopModel):
+            pert_couplings_allowed = self._curr_model['perturbation_couplings']
+        else:
+            pert_couplings_allowed = []        
         if self._curr_model.get('name').startswith('sm'):
             pert_couplings_allowed = pert_couplings_allowed + ['QCD']
 
@@ -2847,16 +2852,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             gauge = str(self.options['gauge'])
             line = " ".join(args[1:])
             myprocdef = self.extract_process(line)
-            model_name = self._curr_model['name']
             if gauge == 'unitarity':
                 myprocdef_unit = myprocdef
                 self.do_set('gauge Feynman', log=False)
-                self.do_import('model %s' % model_name)
                 myprocdef_feyn = self.extract_process(line)
             else:
                 myprocdef_feyn = myprocdef
                 self.do_set('gauge unitary', log=False)
-                self.do_import('model %s' % model_name)
                 myprocdef_unit = self.extract_process(line)            
             
             gauge_result_no_brs = process_checks.check_unitary_feynman(
@@ -2868,7 +2870,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
-            self.do_import('model %s' % model_name)
             
             nb_processes += len(gauge_result_no_brs)            
             
@@ -3334,7 +3335,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # Import files
     def do_import(self, line):
         """Import files with external formats"""
-
         args = self.split_arg(line)
         # Check argument's validity
         self.check_import(args)
@@ -3370,17 +3370,27 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     if hasattr(self._curr_model, 'set_parameters_and_couplings'):
                         self._curr_model.set_parameters_and_couplings()
                 if self.options['gauge']=='unitary':
+                    if isinstance(self._curr_model,loop_base_objects.LoopModel) and \
+                         self._curr_model.get('perturbation_couplings')!=[] and \
+                                           self.options['gauge']=='unitary' and \
+                                          self.options['loop_optimized_output']:
+                        logger.info('Change the gauge to Feynman because '+\
+                          'the loop optimized output requires to work in this gauge')
+                        if 1 not in self._curr_model.get('gauge') :
+                            raise self.InvalidCmd(' Could not load this loop '+\
+                              'model in the loop_optimized output mode because'+\
+                                      ' it does not support the Feynman gauge.')
+                        self.do_set('gauge Feynman', log=False)
+                        return
                     if 0 not in self._curr_model.get('gauge') :
                         logger.warning('Change the gauge to Feynman since the model does not allow unitary gauge') 
                         self.do_set('gauge Feynman', log=False)
-                        self.do_import(line)
                         return                        
                 else:
                     if 1 not in self._curr_model.get('gauge') :
                         logger.warning('Change the gauge to unitary since the model does not allow Feynman gauge')
                         self._curr_model = None
                         self.do_set('gauge unitary', log= False)
-                        self.do_import(line)
                         return 
                 
                 self._curr_fortran_model = \
@@ -4369,7 +4379,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.exec_cmd('import model %s' % self._curr_model.get('name'))
 
         elif args[0] == "gauge":
-            
             # Treat the case where they are no model loaded
             if not self._curr_model:
                 if args[1] == 'unitary':
@@ -4412,7 +4421,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             logger.info('Passing to gauge %s.' % args[1])
             
             if able_to_mod:
-                self.do_import('model %s' % model_name)
+                # We don't want to go through the MasterCommand again
+                # because it messes with the interface switching when
+                # importing a loop model from MG5
+                MadGraphCmd.do_import(self,'model %s' %model_name)
             elif log:
                 logger.info('Note that you have to reload the model') 
 
