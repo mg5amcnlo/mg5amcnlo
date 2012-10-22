@@ -1075,7 +1075,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
             self.update_status('Computing cross-section', level=None)
             self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
-            p = misc.Popen(['./combine_results_FO.sh viSB* novB*'], \
+            p = misc.Popen(['./combine_results_FO.sh born_G* '], \
                                 stdout=subprocess.PIPE, shell=True)
             output = p.communicate()
             self.cross_sect_dict = self.read_results(output, mode)
@@ -1944,7 +1944,7 @@ Integrated cross-section
                 nfail +=1
                 tolerance = float(line.split()[1])
 
-        logger.info('   Poles succesfully cancel for %d points over %d (tolerance=%2.1e)' \
+        logger.info('   Poles successfully cancel for %d points over %d (tolerance=%2.1e)' \
                 %(npass, nfail+npass, tolerance))
 
 

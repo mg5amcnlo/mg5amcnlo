@@ -52,7 +52,7 @@ _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
 #===============================================================================
-# IOImportV4Test
+# IOExportFKSTest
 #===============================================================================
 class IOExportFKSTest(unittest.TestCase,
                      test_file_writers.CheckFileCreate):

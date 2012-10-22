@@ -42,6 +42,7 @@ import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.interface.master_interface as cmd_interface
 
 import me_comparator
+from madgraph.iolibs.files import mv
 
 from madgraph import MadGraph5Error, MG5DIR
 
@@ -51,8 +52,8 @@ class LoopPickleRunner(me_comparator.PickleRunner):
     # Simulate a run
     def run(self, proc_list, model, energy=1000, PSpoints=[], **opts):
         
-        # Make sure the comparison is valid            
-        if self.energy != energy or self.model!=model:
+        # Make sure the comparison is valid (for now, ignore the restrict card)
+        if self.energy != energy or self.model.split('-')[0]!=model.split('-')[0]:
             return [((0.0, 0.0, 0.0, 0.0, 0), [])] * len(proc_list)
         
         res=[]
@@ -141,10 +142,8 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         proc_card_file = open(proc_card_location, 'w')
         proc_card_file.write(self.format_mg5_proc_card(proc_list, model))
         proc_card_file.close()
-
         logging.info("proc_card.dat file for %i processes successfully created in %s" % \
                      (len(proc_list), os.path.join(dir_name, 'Cards')))
-
         # Run mg5
         logging.info("Running mg5")
         proc_card = open(proc_card_location, 'r').read()
@@ -163,8 +162,8 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         if hasattr(self, 'store_proc_card'):
             self.new_proc_list = '\n'.join(new_proc_list)
 
-        # Remove the temporary proc_card
-        os.remove(proc_card_location)
+        # Move the proc_card to the created folder
+        mv(proc_card_location,os.path.join(dir_name,'Cards','proc_card_mg5.dat'))
         if self.non_zero:
             self.fix_PSPoint_in_check(dir_name,PSpoints!=[])
             self.fix_MadLoopParamCard(dir_name)
@@ -202,7 +201,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
             v5_string += 'add process ' + proc + ' ' + born_couplings + \
                          ' [virt=' + perturbations + '] ' + squared_couplings + \
                          (' @%i\n'%i)
-        v5_string += "output standalone %s -f\n" % \
+        v5_string += "output standalone %s -f\n"%\
                      os.path.join(self.mg5_path, self.temp_dir_name)
         return v5_string
 
@@ -222,10 +221,10 @@ class LoopMG5Runner(me_comparator.MG5Runner):
 
         # If directory doesn't exist, skip and return 0
         if not shell_name:
-            logging.info("Directory hasn't been created for process %s" %proc)
+            logging.info("Directory hasn't been created for process %s"%str(proc))
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
 
-        if verbose: logging.info("Working on process %s in dir %s" % (proc, shell_name))
+        if verbose: logging.info("Working on process %s in dir %s"%(str(proc), shell_name))
         
         dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
         # Run make
@@ -235,7 +234,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
                         stdout=devnull, stderr=devnull)
                         
         if retcode != 0:
-            logging.info("Error while executing make in %s" % shell_name)
+            logging.info("Error while executing make in %s"%shell_name)
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
 
         # If a PS point is specified, write out the corresponding PS.input
@@ -323,11 +322,11 @@ class LoopMG5Runner(me_comparator.MG5Runner):
     def fix_MadLoopParamCard(dir_name,mp=False):
         """ Set parameters in MadLoopParams.dat suited for these checks."""
 
-        file = open(os.path.join(dir_name,'SubProcesses','MadLoopParams.dat'), 'r')
+        file = open(os.path.join(dir_name,'Cards','MadLoopParams.dat'), 'r')
         MLParams = file.read()
         file.close()
         mode = 4 if mp else 1
-        file = open(os.path.join(dir_name,'SubProcesses','MadLoopParams.dat'), 'w')
+        file = open(os.path.join(dir_name,'Cards','MadLoopParams.dat'), 'w')
         MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%mode, MLParams)
         MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%mode, MLParams)
         MLParams = re.sub(r"#UseLoopFilter\n\S+","#UseLoopFilter\n.FALSE.", 
