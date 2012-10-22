@@ -122,7 +122,7 @@ class Cluster(object):
         if not self.submitted_ids:
             raise NotImplemented, 'No implementation of how to control the job status to cluster \'%s\'' % self.name
         idle, run, fail = 0, 0, 0
-        for id in self.submitted_ids[:]:
+        for pid in self.submitted_ids[:]:
             status = self.control_one_job(id)
             if status == 'I':
                 idle += 1
@@ -130,13 +130,13 @@ class Cluster(object):
                 run += 1
             elif status == 'F':
                 self.finish +=1
-                self.submitted_ids.remove(id)
+                self.submitted_ids.remove(pid)
             else:
                 fail += 1
 
         return idle, run, self.finish, fail
 
-    def control_one_job(self, id):
+    def control_one_job(self, pid):
         """ control the status of a single job with it's cluster id """
         raise NotImplemented, 'No implementation of how to control the job status to cluster \'%s\'' % self.name
 
@@ -167,9 +167,9 @@ class Cluster(object):
             #We are suppose to send the output to stdout
             special_output = True
             stderr = stdout + '.err'
-        id = self.submit(prog, argument, cwd, stdout, stderr, log)
+        pid = self.submit(prog, argument, cwd, stdout, stderr, log)
         while 1:        
-            status = self.control_one_job(id)
+            status = self.control_one_job(pid)
             if not status in ['R','I']:
                 time.sleep(30) #security to ensure that the file are really written on the disk
                 break
@@ -240,30 +240,26 @@ class MultiCore(Cluster):
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
                log=None):
         """submit a job on multicore machine"""
-        
+
         if cwd is None:
             cwd = os.getcwd()
         if not os.path.exists(prog) and not misc.which(prog):
             prog = os.path.join(cwd, prog)
         
         import thread
-        if self.need_waiting:
+        if self.waiting_submission or self.nb_used == self.nb_core:
             self.waiting_submission.append((prog, argument,cwd, stdout))
             # check that none submission is already finished
             if self.nb_used <  self.nb_core:
                 arg = self.waiting_submission.pop(0)
                 self.nb_used += 1 # udpate the number of running thread
                 thread.start_new_thread(self.launch, arg)              
-            #self.lock.acquire() # wait for release
-            #thread.start_new_thread(self.launch, (prog, argument, cwd, stdout))
         elif self.nb_used <  self.nb_core -1:
             self.nb_used += 1 # upate the number of running thread
             thread.start_new_thread(self.launch, (prog, argument, cwd, stdout))
         elif self.nb_used ==  self.nb_core -1:
             self.nb_used += 1 # upate the number of running thread
             thread.start_new_thread(self.launch, (prog, argument, cwd, stdout))
-            self.need_waiting = True
-            #self.lock.acquire() # Lock the next submission Up to a release
         
     def launch(self, exe, argument, cwd, stdout):
         """ way to launch for multicore."""
@@ -283,8 +279,8 @@ class MultiCore(Cluster):
             proc.wait()
             # release the lock for allowing to launch the next job
             security = 0       
+            # check that the status is locked to avoid coincidence unlock
             while not self.lock.locked():
-                # check that the status is locked to avoid coincidence unlock
                 if not self.need_waiting:
                     # Main is not yet locked
                     end(self, pid)
@@ -305,9 +301,17 @@ class MultiCore(Cluster):
 
     def wait(self, me_dir, update_status):
         """Wait that all thread finish"""
-        try:
-            import thread
-            
+        import thread
+
+        while self.nb_used < self.nb_core:
+            if self.waiting_submission:
+                arg = self.waiting_submission.pop(0)
+                thread.start_new_thread(self.launch, arg)
+                self.nb_used += 1 # update the number of running thread
+            else:
+                break
+                    
+        try:            
             self.need_waiting = True
             self.lock.acquire()
             while self.waiting_submission or self.nb_used:
@@ -317,8 +321,7 @@ class MultiCore(Cluster):
                 if self.waiting_submission:
                     arg = self.waiting_submission.pop(0)
                     thread.start_new_thread(self.launch, arg)
-    
-                    self.nb_used += 1 # upate the number of running thread
+                    self.nb_used += 1 # update the number of running thread
                     
             if update_status:
                 update_status(len(self.waiting_submission), self.nb_used, self.done) 

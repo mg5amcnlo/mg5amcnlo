@@ -23,19 +23,20 @@ import subprocess
 import sys
 import StringIO
 import sys
+import optparse
 import time
 
 try:
     # Use in MadGraph
     import madgraph
-    from madgraph import MadGraph5Error
+    from madgraph import MadGraph5Error, InvalidCmd
     import madgraph.iolibs.files as files
 except Exception, error:
     if __debug__:
         print error
     # Use in MadEvent
     import internal as madgraph
-    from internal import MadGraph5Error
+    from internal import MadGraph5Error, InvalidCmd
     import internal.files as files
     
 logger = logging.getLogger('cmdprint.ext_program')
@@ -322,6 +323,7 @@ def check_system_error(value=1):
             try:
                 return f(arg, *args, **opt)
             except OSError, error:
+                logger.debug('try to recover from %s' % error)
                 if isinstance(arg, list):
                     prog =  arg[0]
                 else:
@@ -603,6 +605,17 @@ def is_executable(path):
         return os.access(path, os.X_OK)
     except:
         return False        
+
+
+class OptionParser(optparse.OptionParser):
+    """Option Peaser which raise an error instead as calling exit"""
+    
+    def exit(self, status=0, msg=None):
+        if msg:
+            raise InvalidCmd, msg
+        else:
+            raise InvalidCmd
+
 
 ################################################################################
 # TAIL FUNCTION

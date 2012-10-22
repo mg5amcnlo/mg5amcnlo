@@ -609,7 +609,7 @@ _launch_usage = "launch [DIRPATH] [MODE] [options]\n" + \
                 "   By default DIRPATH is the latest created directory\n" + \
                 "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n"
 
-_launch_parser = optparse.OptionParser(usage=_launch_usage)
+_launch_parser = misc.OptionParser(usage=_launch_usage)
 _launch_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory for the launch, without editing them")
 _launch_parser.add_option("-c", "--cluster", default=False, action='store_true',
