@@ -1549,7 +1549,7 @@ Integrated cross-section
                 nfail +=1
                 tolerance = float(line.split()[1])
 
-        logger.info('   Poles succesfully cancel for %d points over %d (tolerance=%2.1e)' \
+        logger.info('   Poles successfully cancel for %d points over %d (tolerance=%2.1e)' \
                 %(npass, nfail+npass, tolerance))
 
 
