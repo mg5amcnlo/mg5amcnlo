@@ -279,10 +279,15 @@ in presence of majorana particle/flow violation"""
                     else:
                         spin_id = id
                     nb_spinor += 1
-                    if id %2:
+                    if not self.spin32_massless and id %2:
                         lorentz *= Spin3halfPropagatorout(id, 'I2', spin_id,'I3', outgoing)
-                    else:
+                    elif not self.spin32_massless :
                         lorentz *= Spin3halfPropagatorin('I2', id, 'I3', spin_id, outgoing)                      
+                    elif id %2:
+                        lorentz *= Spin3halfPropagatorMasslessOut(id, 'I2', spin_id,'I3', outgoing)
+                    else :
+                        lorentz *= Spin3halfPropagatorMasslessIn('I2', id, 'I3', spin_id, outgoing)                      
+          
                 elif spin == 5 :
                     #lorentz *= 1 # delayed evaluation (fastenize the code)
                     if self.spin2_massless:
@@ -447,6 +452,7 @@ class CombineRoutineBuilder(AbstractRoutineBuilder):
         self.lorentz_expr = ' + '.join(self.lorentz_expr)
         self.routine_kernel = None
         self.spin2_massless = False
+        self.spin32massless = False
         self.contracted = {}
         self.fct = {}
 
@@ -594,6 +600,8 @@ class AbstractALOHAModel(dict):
             # add information for spin2mass
             if 5 in lorentz.spins and self.massless_spin2 is not None:
                 builder.spin2_massless = self.massless_spin2
+            if 4 in lorentz.spins and self.massless_spin32 is not None:
+                builder.spin32_massless = self.massless_spin32
             self.compute_aloha(builder)
 
             if lorentz.name in self.multiple_lor:
@@ -686,6 +694,9 @@ class AbstractALOHAModel(dict):
             # add information for spin2mass
             if 5 in lorentz.spins and self.massless_spin2 is not None:
                 builder.spin2_massless = self.massless_spin2 
+            if 4 in lorentz.spins and self.massless_spin32 is not None:
+                builder.spin32_massless = self.massless_spin32
+
             
             for conjg in request[l_name]:
                 #ensure that routines are in rising order (for symetries)
@@ -729,7 +740,9 @@ class AbstractALOHAModel(dict):
                 # add information for spin2mass
                 if 5 in l_lorentz[0].spins and self.massless_spin2 is not None:
                     builder.spin2_massless = self.massless_spin2 
-            
+                if 4 in l_lorentz[0].spins and self.massless_spin32 is not None:
+                    builder.spin32_massless = self.massless_spin32 
+                               
                 for conjg in request[list_l_name[0]]:
                     #ensure that routines are in rising order (for symetries)
                     def sorting(a,b):
