@@ -1,6 +1,8 @@
 #!/bin/bash
 script=ajob1.$1.$2.$3.$4
-TAGTAGTAGTAGTAGTAGTAG  for i in 1 ; do
+TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
+    
+    runnumber=0
     if [[ $1 == '0' ]]; then
         j=$2\_G$i
         if [[ ! -e $j ]]; then
@@ -20,7 +22,7 @@ TAGTAGTAGTAGTAGTAGTAG  for i in 1 ; do
                 echo "Cannot find directory ../$4\_G$i/" > log.txt
                 exit
             fi
-        fi
+    	fi
     elif [[ $1 == '2' ]]; then
         j=G$2$i
         if [[ ! -e $j ]]; then
@@ -28,52 +30,100 @@ TAGTAGTAGTAGTAGTAGTAG  for i in 1 ; do
         fi
         cd $j
         if [[ "$4" != "" ]]; then
-            if [[ -e ../G$4$i ]]; then
-                cp -f ../G$4$i/mint_grids ./preset_mint_grids
-                cp -f ../G$4$i/grid.MC_integer . >/dev/null 2>&1
+            if [[ "$4" == "H" ||"$4" == "S" || "$4" == "V" || "$4" == "B" || "$4" == "F" ]]; then
+                if [[ -e ../G$4$i ]]; then
+                    cp -af ../G$4$i/mint_grids ./preset_mint_grids
+                    cp -af ../G$4$i/grid.MC_integer . >/dev/null 2>&1
+                else
+                    echo "Cannot find direcotry ../G$4$i/" > log.txt
+                    exit
+                fi
             else
-                echo "Cannot find direcotry ../G$4$i/" > log.txt
-                exit
+                runnumber=$4
             fi
         fi
     fi
-    ln -sf ../../randinit .
-    ln -sf ../symfact.dat .
-    if [[ -e ../MadLoopParams.dat ]]; then
+   
+        
+    if  [[ ! -e randinit ]] ; then
+    	if [[ -e ../randinit ]] ; then
+			ln -sf ../randinit .
+		else
+			ln -sf ../../randinit .
+		fi
+    fi
+    if  [[ ! -e symfact.dat ]] ; then
+    	if [[  -e ../symfact.dat ]] ; then
+			ln -sf ../symfact.dat .
+		else
+			ln -sf ../../symfact.dat .    
+		fi
+
+    fi
+    if  [[ ! -e MadLoopParams.dat ]] ; then
 	ln -sf ../MadLoopParams.dat .
     fi
-    if [[ -e ../ColorDenomFactors.dat ]]; then
+    if  [[ ! -e ColorDenomFactors.dat ]] ; then
 	ln -sf ../ColorDenomFactors.dat .
     fi
-    if [[ -e ../HelConfigs.dat ]]; then
+    if  [[ ! -e HelConfigs.dat ]] ; then
 	ln -sf ../HelConfigs.dat .
     fi
-    if [[ -e ../ColorNumFactors.dat ]]; then
+    if  [[ ! -e ColorNumFactors.dat ]] ; then
 	ln -sf ../ColorNumFactors.dat .
     fi
+    
+#   check where is the basic file for the creation of input_app.txt
+#       
+ 	if [[ $1 == '0' ]]; then
+ 		if  [[  -e ../madin.$2 ]] ; then
+ 			input_template=../madin.$2
+ 		else
+ 			input_template=../../madin.$2
+ 		fi 
+    elif [[ $1 == '2' ]]; then
+    	if [[ $3 == '0' || $3 == '2' ]]; then
+    		if  [[  -e ../madinMMC_$2.2 ]] ; then
+ 				input_template=../madinMMC_$2.2
+ 			else
+ 				input_template=../../madinMMC_$2.2
+ 			fi
+ 		else
+			input_template=./madinM1
+    	fi
+    fi
+    
     if [[ $1 == '0' ]]; then
-        head -n 5 ../../madin.$2 >& input_app.txt
+        head -n 5 $input_template >& input_app.txt
         echo $i >> input_app.txt
-        tail -n 4 ../../madin.$2 >> input_app.txt
+        tail -n 4 $input_template >> input_app.txt
         T="$(date +%s)"
-        ../madevent_vegas > log.txt <input_app.txt
+        ../madevent_vegas > log.txt <input_app.txt 2>&1
         T="$(($(date +%s)-T))"
         echo "Time in seconds: ${T}" >>log.txt
     elif [[ $1 == '2' ]]; then
+        if [[ $runnumber != 0 ]]; then
+            mv -f nevts__$runnumber nevts
+            echo "$runnumber" >& moffset.dat
+        fi
         if [[ $3 == '0' || $3 == '2' ]]; then
-            head -n 6 ../../madinMMC_$2.2 >& input_app.txt
+            head -n 6 $input_template > input_app.txt
             echo $i >> input_app.txt
-            tail -n 3 ../../madinMMC_$2.2 >> input_app.txt
-        elif [[ $3 == '1' ]] ; then
-            head -n 6 madinM1 >& input_app.txt
+            tail -n 3 $input_template >> input_app.txt
+        elif [[ $3 == '1' ]]; then
+            head -n 6 $input_template > input_app.txt
             echo $i >> input_app.txt
-            tail -n 3 madinM1 >> input_app.txt
+            tail -n 3 $input_template >> input_app.txt
         fi
         T="$(date +%s)"
-        ../madevent_mintMC > log.txt <input_app.txt
+        ../madevent_mintMC > log.txt <input_app.txt 2>&1
         T="$(($(date +%s)-T))"
         echo "Time in seconds: ${T}" >>log.txt
-        cp -f log.txt log_MINT$3.txt
+        cp -af log.txt log_MINT$3.txt
+    fi
+    if [[ $1 == '2' && $runnumber != 0 ]]; then
+        mv events.lhe events_$runnumber.lhe
+        mv log.txt log_MINT$3_$runnumber.txt
     fi
     cd ../
 done

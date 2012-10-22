@@ -488,8 +488,6 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   b b~ > W+ W- | H+ H- > ta+ vt ta- vt~")
         logger.info(" > If no coupling orders are given, MG5 will try to determine")
         logger.info("   orders to ensure maximum number of QCD vertices.")
-        logger.info(" > Note that if there are more than one non-QCD coupling type,")
-        logger.info("   coupling orders need to be specified by hand.")
         logger.info(" > To generate a second process use the \"add process\" command")
         logger.info("Decay chain syntax:",'$MG:color:BLACK')
         logger.info(" o core process, decay1, (decay2, (decay2', ...)), ...  etc")
@@ -798,7 +796,7 @@ class CheckValidForCmd(cmd.CheckCmd):
                 raise self.InvalidCmd('Invalid argument for tutorial')
         elif len(args) == 0:
             #this means mg5 tutorial
-            args.append('start')
+            args.append('MadGraph5')
         else:
             self.help_tutorial()
             raise self.InvalidCmd('Too manu arguments for tutorial')
@@ -2083,7 +2081,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'checks', 'parameters', 'options', 'coupling_order','variable']
     _add_opts = ['process']
     _save_opts = ['model', 'processes', 'options']
-    _tutorial_opts = ['aMCatNLO', 'start', 'stop', 'MadLoop']
+    _tutorial_opts = ['aMCatNLO', 'stop', 'MadLoop', 'MadGraph5']
     _switch_opts = ['mg5','aMC@NLO','ML5']
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation', 
                    'gauge','lorentz', 'brs']
@@ -2123,6 +2121,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_queue': None,
                        'fastjet':'fastjet-config',
                        'lhapdf':'lhapdf-config',
+                       'cluster_temp_path':None
                        }
     
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -2640,7 +2639,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         args = self.split_arg(line)
         self.check_tutorial(args)
-        tutorials = {'start': logger_tuto,
+        tutorials = {'MadGraph5': logger_tuto,
                      'aMCatNLO': logger_tuto_nlo,
                      'MadLoop': logger_tuto_madloop}
         try:
@@ -2701,7 +2700,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         amp.get('loop_diagrams') if d.get('type')>0])
                 if len(diags) > 1000:
                     logger.warning('Displaying only the first 1000 diagrams')
-                    diags = diags[:1000]
+                    diags = base_objects.DiagramList(diags[:1000])
 
             plot = draw.MultiEpsDiagramDrawer(diags,
                                           filename,
