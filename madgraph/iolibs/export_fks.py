@@ -117,6 +117,16 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # We must link the CutTools to the Library folder of the active Template
         self.link_CutTools(os.path.join(dir_path, 'lib'))
 
+        # Duplicate run_card and plot_card
+        for card in ['plot_card']:
+            try:
+                shutil.copy(pjoin(self.dir_path, 'Cards',
+                                         card + '.dat'),
+                           pjoin(self.dir_path, 'Cards',
+                                        card + '_default.dat'))
+            except IOError:
+                logger.warning("Failed to copy " + card + ".dat to default")
+
         cwd = os.getcwd()
         dirpath = os.path.join(self.dir_path, 'SubProcesses')
         try:

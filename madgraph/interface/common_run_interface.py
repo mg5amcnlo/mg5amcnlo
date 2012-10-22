@@ -829,9 +829,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         
         tag = self.run_tag
         # Update the banner with the pgs card        
-        self.banner.add(pjoin(self.me_dir, 'Cards','pgs_card.dat'))
-        banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, self.run_tag))
-        self.banner.write(banner_path)            
+        if os.path.exists(pjoin(self.me_dir, 'Source', 'banner_header.txt')):
+            self.banner.add(pjoin(self.me_dir, 'Cards','pgs_card.dat'))
+            banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, self.run_tag))
+            self.banner.write(banner_path)
 
         ########################################################################
         # now pass the event to a detector simulator and reconstruct objects
@@ -840,12 +841,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             lock.acquire()
         # Prepare the output file with the banner
         ff = open(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 'w')
-        text = open(banner_path).read()
-        text = '#%s' % text.replace('\n','\n#')
-        dico = self.results[self.run_name].get_current_info()
-        text +='\n##  Integrated weight (pb)  : %.4g' % dico['cross']
-        text +='\n##  Number of Event         : %s\n' % dico['nb_event']
-        ff.writelines(text)
+        if os.path.exists(pjoin(self.me_dir, 'Source', 'banner_header.txt')):
+            text = open(banner_path).read()
+            text = '#%s' % text.replace('\n','\n#')
+            dico = self.results[self.run_name].get_current_info()
+            text +='\n##  Integrated weight (pb)  : %.4g' % dico['cross']
+            text +='\n##  Number of Event         : %s\n' % dico['nb_event']
+            ff.writelines(text)
         ff.close()
 
         try: 
@@ -931,9 +933,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
  
         delphes_dir = self.options['delphes_path']
         tag = self.run_tag
-        self.banner.add(pjoin(self.me_dir, 'Cards','delphes_card.dat'))
-        self.banner.add(pjoin(self.me_dir, 'Cards','delphes_trigger.dat'))
-        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag)))
+        if os.path.exists(pjoin(self.me_dir, 'Source', 'banner_header.txt')):
+            self.banner.add(pjoin(self.me_dir, 'Cards','delphes_card.dat'))
+            self.banner.add(pjoin(self.me_dir, 'Cards','delphes_trigger.dat'))
+            self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag)))
         
         cross = self.results[self.run_name].get_current_info()['cross']
                     

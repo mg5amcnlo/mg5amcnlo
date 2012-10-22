@@ -280,7 +280,8 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
     def setUp(self):
         """ creating the full model from scratch """
         CheckFileCreate.setUp(self)
-        os.system('cp %s %s' % (pjoin(MG5DIR,'Template','Source','make_opts'), '/tmp'))
+        os.system('cp %s %s' % (pjoin(MG5DIR,'Template', 'LO','Source',
+                                      'make_opts'), '/tmp'))
         
         CheckFileCreate.clean_files(self)
         
