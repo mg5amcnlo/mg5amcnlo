@@ -526,7 +526,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         
         
         self.text += 'showpage\n'
-        self.text += '%%' + 'Page: %s %s \n' % (self.curr_page, self.curr_page)
+        self.text += '%%' + 'Page: %s %s \n' % (self.curr_page+1, self.curr_page+1)
         self.text += '%%PageBoundingBox:-20 -20 600 800\n'
         self.text += '%%PageFonts: Helvetica\n'
         self.text += ' 50         770  moveto\n'
