@@ -784,7 +784,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
             self.update_status('Computing cross-section', level=None)
             self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
-            p = misc.Popen(['./combine_results_FO.sh viSB* novB*'], \
+            p = misc.Popen(['./combine_results_FO.sh born_G* '], \
                                 stdout=subprocess.PIPE, shell=True)
             output = p.communicate()
             self.cross_sect_dict = self.read_results(output, mode)
