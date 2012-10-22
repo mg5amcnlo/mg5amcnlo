@@ -540,7 +540,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             not os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')):
             return False
 
-        if int(self.run_card['ickkw']) and mode == 'Pythia':
+        if 'ickkw' in self.run_card and int(self.run_card['ickkw']) and \
+                mode == 'Pythia':
             self.update_status('Create matching plots for Pythia', level='pythia')
             # recover old data if none newly created
             if not os.path.exists(pjoin(self.me_dir,'Events','events.tree')):
@@ -577,7 +578,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 output = pjoin(self.me_dir, 'HTML',self.run_name, 
                               'plots_pythia_%s.html' % tag)                                   
             elif mode == 'PGS':
-                event_path = pjoin(self.me_dir, 'Events', 'pgs_events.lhco')
+                event_path = pjoin(self.me_dir, 'Events', self.run_name, 
+                                   '%s_pgs_events.lhco' % tag)
                 output = pjoin(self.me_dir, 'HTML',self.run_name, 
                               'plots_pgs_%s.html' % tag)  
             elif mode == 'Delphes':
@@ -650,7 +652,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             out.writelines('<!--\n')
             out.writelines('# Warning! Never use this file for detector studies!\n')
             out.writelines('-->\n<!--\n')
-            out.writelines(open(banner_path).read().replace('<LesHouchesEvents version="1.0">',''))
+            if banner_path:
+                out.writelines(open(banner_path).read().replace('<LesHouchesEvents version="1.0">',''))
             out.writelines('\n-->\n')
             out.close()
             
@@ -730,7 +733,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             out.writelines('<!--\n')
             out.writelines('# Warning! Never use this file for detector studies!\n')
             out.writelines('-->\n<!--\n')
-            out.writelines(open(banner_path).read().replace('<LesHouchesEvents version="1.0">',''))
+            if banner_path:
+                out.writelines(open(banner_path).read().replace('<LesHouchesEvents version="1.0">',''))
             out.writelines('\n-->\n')
             out.close()
             
@@ -821,10 +825,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             logger.info('No PGS executable -- running make')
             misc.compile(cwd=pgsdir)
         
-
-            
-
-            
         self.update_status('Running PGS', level='pgs')
         
         tag = self.run_tag
@@ -879,14 +879,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 logger.warning('fail to produce Root output [problem with ExRootAnalysis')
         if os.path.exists(pjoin(self.me_dir, 'Events', 'pgs_events.lhco')):
             # Creating plots
-            self.create_plot('PGS')
             files.mv(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 
                     pjoin(self.me_dir, 'Events', self.run_name, '%s_pgs_events.lhco' % tag))
+            self.create_plot('PGS')
             misc.call(['gzip','-f', pjoin(self.me_dir, 'Events', 
                                                 self.run_name, '%s_pgs_events.lhco' % tag)])
 
-
-        
         self.update_status('finish', level='pgs', makehtml=False)
 
     ############################################################################

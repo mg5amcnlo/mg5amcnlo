@@ -430,8 +430,8 @@ class CheckValidForCmd(object):
             else:
                 input_file = filenames[0]
                 output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
-                self.launch_job('gunzip',stdout=open(output_file,'w'), 
-                                 argument=['-c', input_file], mode=2)
+                lock = cluster.asyncrone_launch('gunzip',stdout=open(output_file,'w'), 
+                                                    argument=['-c', input_file])
         else:
             if tag: 
                 self.run_card['run_tag'] = tag
@@ -487,8 +487,8 @@ class CheckValidForCmd(object):
             else:
                 input_file = filenames[0]
                 output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
-                self.launch_job('gunzip',stdout=open(output_file,'w'), 
-                                 argument=['-c', input_file], mode=2)
+                lock = cluster.asyncrone_launch('gunzip',stdout=open(output_file,'w'), 
+                                                    argument=['-c', input_file])
         else:
             if tag:
                 self.run_card['run_tag'] = tag
@@ -2078,86 +2078,6 @@ Integrated cross-section
         self.set_run_name(self.run_name, self.run_tag, 'parton')
         #self.do_treatcards_nlo('')
         return
-
-    def launch_job(self,exe, cwd=None, stdout=None, argument = [], remaining=0, 
-                    run_type='', mode=None, **opt):
-        """ """
-        argument = [str(arg) for arg in argument]
-        if mode is None:
-            mode = self.cluster_mode
-        
-        # ensure that exe is executable
-        if os.path.exists(exe) and not os.access(exe, os.X_OK):
-            os.system('chmod +x %s ' % exe)
-
-        elif (cwd and os.path.exists(pjoin(cwd, exe))) and not \
-                                            os.access(pjoin(cwd, exe), os.X_OK):
-            os.system('chmod +x %s ' % pjoin(cwd, exe))
-                    
-        if mode != 1:
-            self.update_status((remaining, 1, 
-                                self.total_jobs - remaining -1, run_type), level=None, force=False)
-            start = time.time()
-            #os.system('cd %s; ./%s' % (cwd,exe))
-            status = misc.call(['./'+exe] + argument, cwd=cwd, 
-                                                           stdout=stdout, **opt)
-            logger.info('%s run in %f s' % (exe, time.time() -start))
-            if status:
-                raise MadGraph5Error, '%s didn\'t stop properly. Stop all computation' % exe
-
-
-        elif mode == 1:
-            # For condor cluster, create the input/output files
-            if 'ajob' in exe: 
-                input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
-                               pjoin(self.me_dir, 'SubProcesses','randinit')]
-                output_files = []
-                
-                #Find the correct PDF input file
-                if self.pdffile:
-                    input_files.append(self.pdffile)
-                else:
-                    for line in open(pjoin(self.me_dir,'Source','PDF','pdf_list.txt')):
-                        data = line.split()
-                        if len(data) < 4:
-                            continue
-                        if data[1].lower() == self.run_card['pdlabel'].lower():
-                            self.pdffile = pjoin(self.me_dir, 'lib', 'Pdfdata', data[2])
-                            input_files.append(self.pdffile) 
-                            break
-                    else:
-                        # possible when using lhapdf
-                        self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
-                        input_files.append(self.pdffile) 
-                        
-                
-                #Find the correct ajob
-                Gre = re.compile("\s*j=(G[\d\.\w]+)")
-                Ire = re
-                try : 
-                    fsock = open(exe)
-                except:
-                    fsock = open(pjoin(cwd,exe))
-                text = fsock.read()
-                output_files = Gre.findall(text)
-                if not output_files:
-                    Ire = re.compile("for i in ([\d\s]*) ; do")
-                    data = Ire.findall(text)
-                    data = ' '.join(data).split()
-                    for nb in data:
-                        output_files.append('G%s' % nb)
-                else:
-                    for G in output_files:
-                        if os.path.isdir(pjoin(cwd,G)):
-                            input_files.append(G)
-                
-                #submitting
-                self.cluster.submit2(exe, stdout=stdout, cwd=cwd, 
-                             input_files=input_files, output_files=output_files)
-            
-            else:
-                self.cluster.submit(exe, stdout=stdout, cwd=cwd)
-
 
     def do_quit(self, line):
         """ """
