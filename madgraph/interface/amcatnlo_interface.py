@@ -294,7 +294,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         self._export_formats = [ 'madevent' ]
         # Do not force NLO model as the user might have asked for reals only.
         # It will anyway be forced later if he attempts virt= or all=.
-        self.validate_model(loop_type='virtual', stop=False)
+        self.validate_model(loop_type='real_init', stop=False)
         # Set where to look for CutTools installation.
         # In further versions, it will be set in the same manner as _mgme_dir so that
         # the user can chose its own CutTools distribution.
@@ -397,7 +397,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 raise MadGraph5Error("Decay processes cannot be perturbed")
         else:
             myprocdef = mg_interface.MadGraphCmd.extract_process(self,line)
-        self.proc_validity(myprocdef,'aMCatNLO')
+        self.proc_validity(myprocdef,'aMCatNLO_%s'%proc_type[1])
 
         if myprocdef['perturbation_couplings']!=['QCD']:
                 raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \

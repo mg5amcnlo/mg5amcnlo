@@ -220,7 +220,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         
         miss_order = [ p_order for p_order in proc['perturbation_couplings'] if \
                   p_order not in self._curr_model.get('perturbation_couplings')]
-        if len(miss_order)>0:
+        if len(miss_order)>0 and not 'real' in mode:
             raise self.InvalidCmd(
                     "Perturbation orders %s not among"%str(miss_order) + \
                     " the perturbation orders allowed for by the loop model.")
@@ -257,9 +257,15 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
 
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
            self._curr_model['perturbation_couplings']==[]:
-            if loop_type == 'real':
+            if loop_type.startswith('real'):
+                if loop_type == 'real':
                     logger.info(\
-                      "Beware that real corrections are generated from a tree-level model.")     
+                      "Beware that real corrections are generated from a tree-level model.")
+                if loop_type == 'real_init' and \
+                               self._curr_model.get('name').split('-')[0]!='sm':
+                    logger.info(\
+                      "You are entering aMC@NLO with a model which does not "+\
+                                                   " support loop corrections.")
             else:
                 model_path = self._curr_model.get('version_tag').split('##')[0]
                 model_name = self._curr_model.get('name')
@@ -279,7 +285,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                     raise MadGraph5Error(
                       "The model %s cannot handle loop processes"%model_name)    
                     
-        if loop_type != 'real' and self.options['loop_optimized_output'] and \
+        if not loop_type.startswith('real') and self.options['loop_optimized_output'] and \
                                            not self.options['gauge']=='Feynman':
             # In the open loops method, in order to have a maximum loop numerator
             # rank of 1, one must work in the Feynman gauge. Anyway irrelevant for
@@ -321,18 +327,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                            'Using default CutTools instead.') % \
                              self._cuttools_dir)
             self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
-    
-    def do_generate(self, line, *args,**opt):
-
-        # Check args validity
-        self.validate_model()    
-        # Extract process from process definition
-        if ',' in line:
-            myprocdef, line = self.extract_decay_chain_process(line)
-        else:
-            myprocdef = self.extract_process(line)
-                
-        mg_interface.MadGraphCmd.do_generate(self, line, *args,**opt)
     
     def do_display(self,line, *argss, **opt):
         """ Display born or loop diagrams, otherwise refer to the default display
@@ -626,11 +620,11 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
 
             # Extract process from process definition
+            self.validate_model('virtual')
             if ',' in line:
                 myprocdef, line = self.extract_decay_chain_process(line)
             else:
                 myprocdef = self.extract_process(line)
-            self.validate_model('virtual')
             self.proc_validity(myprocdef,'ML5')
 
             cpu_time1 = time.time()
