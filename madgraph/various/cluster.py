@@ -71,16 +71,18 @@ class Cluster(object):
                 log=None, input_files=[], output_files=[]):
         """How to make one submission. Return status id on the cluster.
         NO SHARE DISK"""
-        
-        if not hasattr(self, 'temp_dir'):
-            return self.submit(prog, argument, cwd, stdout, stderr, log)
-            
+
         if cwd is None:
             cwd = os.getcwd()
         if not os.path.exists(prog):
             prog = os.path.join(cwd, prog)
+        
+        if not hasattr(self, 'temp_dir') or not self.temp_dir:
+            return self.submit(prog, argument, cwd, stdout, stderr, log)
+        
 
-        temp_file_name = "sub." + os.path.basename(prog)
+
+        temp_file_name = "sub." + os.path.basename(prog) + '.'.join(argument)
         text = """#!/bin/bash
         MYTMP=%(tmpdir)s/run$%(job_id)s
         MYPWD=%(cwd)s
@@ -108,7 +110,7 @@ class Cluster(object):
                 'arguments': ' '.join(argument)}
         
         # writing a new script for the submission
-        new_prog = os.path.join(os.path.dirname(prog), temp_file_name)
+        new_prog = pjoin(cwd, temp_file_name)
         open(new_prog, 'w').write(text % dico)
         misc.Popen(['chmod','+x',new_prog],cwd=cwd)
         
@@ -199,10 +201,15 @@ class Cluster(object):
 class MultiCore(Cluster):
     """ class for dealing with the submission in multiple node"""
     
-    def __init__(self, nb_core, **opt):
+    job_id = '$'
+    
+    def __init__(self, nb_core, *args, **opt):
         """Init the cluster"""
         import thread
-                
+        
+        super(MultiCore, self).__init__(self, *args, **opt)
+        
+        
         self.submitted = 0
         self.finish = 0
         self.nb_core = nb_core
@@ -219,12 +226,27 @@ class MultiCore(Cluster):
     def adding_jobs_to_submit(self, nb):
         self.idle += nb
         #self.remaining += nb
+        
+    def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
+                                                         stderr=None, log=None):
+        """launch one job and wait for it"""    
+        if isinstance(stdout, str):
+            stdout = open(stdout, 'w')
+        if isinstance(stderr, str):
+            stdout = open(stderr, 'w')        
+        return misc.call([prog] + argument, stdout=stdout, stderr=stderr, cwd=cwd) 
+    
     
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
                log=None):
         """submit a job on multicore machine"""
-        import thread
         
+        if cwd is None:
+            cwd = os.getcwd()
+        if not os.path.exists(prog) and not misc.which(prog):
+            prog = os.path.join(cwd, prog)
+        
+        import thread
         if self.need_waiting:
             self.waiting_submission.append((prog, argument,cwd, stdout))
             # check that none submission is already finished
@@ -245,30 +267,36 @@ class MultiCore(Cluster):
         
     def launch(self, exe, argument, cwd, stdout):
         """ way to launch for multicore."""
-        
+
         def end(self, pid):
             self.nb_used -= 1
             self.done +=1
             self.pids.remove(pid)
 
         try:  
-            if (cwd and os.path.exists(pjoin(cwd, exe))) or os.path.exists(exe):
+            if os.path.exists(exe) and not exe.startswith('/'):
                 exe = './' + exe
             proc = misc.Popen([exe] + argument, cwd=cwd, stdout=stdout, 
                                                            stderr=subprocess.STDOUT)
             pid = proc.pid
             self.pids.append(pid)
             proc.wait()
-            # release the lock for allowing to launch the next job      
+            # release the lock for allowing to launch the next job
+            security = 0       
             while not self.lock.locked():
                 # check that the status is locked to avoid coincidence unlock
                 if not self.need_waiting:
                     # Main is not yet locked
                     end(self, pid)
+                    return
+                elif security > 300:
+                    end(self, pid)
                     return 
+                security += 1
                 time.sleep(1)
-            end(self, pid)
             self.lock.release()
+            end(self, pid)
+
         except Exception, error:
             print error, os.getcwd()
             self.remove()
@@ -297,7 +325,13 @@ class MultiCore(Cluster):
                 
             # reset variable for next submission
             self.need_waiting = False
-            self.lock.release()
+            security = 0 
+            while not self.lock.locked() and security < 10:
+                # check that the status is locked to avoid coincidence unlock
+                security +=1
+                time.sleep(1)
+            if security < 10:
+                self.lock.release()
             self.done = 0
             self.pids = []
         except KeyboardInterrupt:
@@ -1022,6 +1056,18 @@ class GECluster(Cluster):
             return
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+
+def asyncrone_launch(exe, cwd=None, stdout=None, argument = [], **opt):
+    """start a computation and not wait for it to finish.
+       this fonction returns a lock which is locked as long as the job is 
+       running."""
+
+    mc = MultiCore(1)
+    mc.submit(exe, argument, cwd, stdout, **opt)
+    mc.need_waiting = True
+    mc.lock.acquire()
+    return mc.lock
+
 
 from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 
              'lsf': LSFCluster, 'ge':GECluster}

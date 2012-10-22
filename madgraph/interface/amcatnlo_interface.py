@@ -134,7 +134,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
                 raise self.InvalidCmd, '%s is not a valid mode, please use "LO", "NLO", "aMC@NLO" or "aMC@LO"' % args[1]
         else:
             #check if args[0] is path or mode
-            if args[0] in ['NLO', 'aMC@NLO', 'aMC@LO'] and self._done_export:
+            if args[0] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO'] and self._done_export:
                 args.insert(0, self._done_export[0])
             elif os.path.isdir(args[0]) or os.path.isdir(pjoin(MG5DIR, args[0]))\
                     or os.path.isdir(pjoin(MG4DIR, args[0])):

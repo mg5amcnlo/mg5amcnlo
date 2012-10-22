@@ -170,6 +170,7 @@ class PhysicsObjectList(list):
             "Object %s is not a valid object for the current list" % repr(object)
 
         list.append(self, object)
+        
 
     def is_valid_element(self, obj):
         """Test if object obj is a valid element for the list."""
