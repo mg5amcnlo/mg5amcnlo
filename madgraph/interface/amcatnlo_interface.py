@@ -397,6 +397,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 raise MadGraph5Error("Decay processes cannot be perturbed")
         else:
             myprocdef = mg_interface.MadGraphCmd.extract_process(self,line)
+        self.proc_validity(myprocdef,'aMCatNLO')
 
         if myprocdef['perturbation_couplings']!=['QCD']:
                 raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
