@@ -59,6 +59,9 @@ class Testtopo(unittest.TestCase):
 
     def test_topottx(self):
 
+        path_for_me=pjoin(MG5DIR, 'tests','unit_tests','madspin')
+        shutil.copyfile(pjoin(MG5DIR, 'tests','input_files','param_card_sm.dat'),\
+		pjoin(path_for_me,'param_card.dat'))
         curr_dir=os.getcwd()
         os.chdir('/tmp')
         temp_dir=os.getcwd()
@@ -67,9 +70,9 @@ class Testtopo(unittest.TestCase):
         process_full=process_prod+", ( t > b w+ , w+ > mu+ vm ), "
         process_full+="( t~ > b~ w- , w- > mu- vm~ ) "
         decay_tools=madspin.decay_misc()
-        topo=decay_tools.generate_fortran_me([process_prod],"sm",0, mgcmd)
-        decay_tools.generate_fortran_me([process_full],"sm", 1,mgcmd)
-
+        topo=decay_tools.generate_fortran_me([process_prod],"sm",0, mgcmd, path_for_me)
+        decay_tools.generate_fortran_me([process_full],"sm", 1,mgcmd, path_for_me)
+	decay_name, prod_name = decay_tools.compile_fortran_me(path_for_me)
 
 
         topo_test={1: {'branchings': [{'index_propa': -1, 'type': 's',\
@@ -82,94 +85,15 @@ class Testtopo(unittest.TestCase):
                  'get_id': {}, 'get_momentum': {}, 'get_mass2': {}}}
         
         self.assertEqual(topo,topo_test)
-        list_prod=os.listdir("production_me/SubProcesses")
-        counter=0
-        for direc in list_prod:
-            if direc[0]=="P":
-                counter+=1
-                prod_name=direc[string.find(direc,"_")+1:]
-                old_path=pjoin(temp_dir,'production_me','SubProcesses',direc)
-                new_path=pjoin(temp_dir,'production_me','SubProcesses',prod_name)
-                if os.path.isdir(new_path): shutil.rmtree(new_path)
-                os.rename(old_path, new_path)
-                #shutil.rmtree('production_me/SubProcesses/'+direc)
-                
-                file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'driver_prod.f')
-                shutil.copyfile(file_madspin, new_path+"/check_sa.f")  
-                
-                file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'makefile_ms')
-                shutil.copyfile(file_madspin, new_path+"/makefile") 
-                
-                file=pjoin(MG5DIR, 'tests', 'input_files', 'param_card_sm.dat')
-                shutil.copyfile(file,"production_me/Cards/param_card.dat",) 
-
-                if not os.path.isfile("parameters.inc"):
-                    file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'initialize.f')
-                    shutil.copyfile(file_madspin,new_path+"/initialize.f")
-                    
-                    file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'lha_read_ms.f')
-                    shutil.copyfile(file_madspin, "production_me/Source/MODEL/lha_read.f" )
-
-                    os.chdir(pjoin(temp_dir,'production_me','Source','MODEL'))
-                    try:
-                        os.remove('*.o')
-                    except:
-                        pass
-                    misc.compile(cwd=pjoin(temp_dir,'production_me','Source','MODEL'), mode='fortran')
-#                    misc.call(' make > /dev/null ')
-                    os.chdir(new_path)
-                    misc.compile(arg=['init'],cwd=new_path,mode='fortran')
-                    misc.call('./init')
-                    shutil.copyfile('parameters.inc', '../../../parameters.inc')
-                    os.chdir(temp_dir)
-                    
-
-                shutil.copyfile('production_me/Source/MODEL/input.inc',new_path+'/input.inc') 
-                misc.compile(cwd=new_path, mode='fortran')
-                
-                
-        list_full=os.listdir("full_me/SubProcesses")
-
-        first=1
-        for direc in list_full:
-            if direc[0]=="P":
-                
-                counter+=1
-                decay_name=direc[string.find(direc,"_")+1:]
-                
-                old_path=pjoin(temp_dir,'full_me','SubProcesses',direc)
-                new_path=pjoin(temp_dir,'full_me','SubProcesses',decay_name)
-                if os.path.isdir(new_path): shutil.rmtree(new_path)
-                os.rename(old_path, new_path)               
-                
-                file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'driver_full.f')
-                shutil.copyfile(file_madspin, new_path+"/check_sa.f")  
-
-                file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'makefile_ms')
-                shutil.copyfile(file_madspin, new_path+"/makefile") 
-                
-                shutil.copyfile('full_me/Source/MODEL/input.inc',new_path+'/input.inc') 
-                misc.compile(arg=['check'], cwd=new_path, mode='fortran')
-
-                file=pjoin(MG5DIR, 'tests', 'input_files', 'param_card_sm.dat')
-                shutil.copyfile(file,"full_me/Cards/param_card.dat")                 
-                
-                if(os.path.getsize("parameters.inc")<10): 
-                    print "Parameters of the model were not written correctly !"
-                    os.system("rm parameters.inc")
-                if first:
-                    first=0
-                    decay_pattern=direc[string.find(direc,"_")+1:]
-                    decay_pattern=decay_pattern[string.find(decay_pattern,"_")+1:]
-                    decay_pattern=decay_pattern[string.find(decay_pattern,"_")+1:]
-
+  
 
         p_string='0.5000000E+03  0.0000000E+00  0.0000000E+00  0.5000000E+03  \n'
         p_string+='0.5000000E+03  0.0000000E+00  0.0000000E+00 -0.5000000E+03 \n'
         p_string+='0.5000000E+03  0.1040730E+03  0.4173556E+03 -0.1872274E+03 \n'
         p_string+='0.5000000E+03 -0.1040730E+03 -0.4173556E+03  0.1872274E+03 \n'        
 
-        os.chdir("production_me/SubProcesses/"+prod_name)
+       
+        os.chdir(pjoin(path_for_me,'production_me','SubProcesses',prod_name))
         executable_prod="./check"
         external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
         prod_values=external.communicate(input=p_string)[0] 
@@ -187,7 +111,7 @@ class Testtopo(unittest.TestCase):
         p_string+='0.5422284E+02 -0.3112810E+02 -0.7926714E+01  0.4368438E+02\n'
         p_string+='0.2144550E+03 -0.2705652E+02 -0.9850424E+02  0.1885624E+03\n'
 
-        os.chdir("full_me/SubProcesses/"+decay_name)
+        os.chdir(pjoin(path_for_me,'full_me','SubProcesses',decay_name))
         executable_decay="./check"
         external = Popen(executable_decay, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
         decay_value=external.communicate(input=p_string)[0] 
@@ -195,8 +119,10 @@ class Testtopo(unittest.TestCase):
         decay_value_test=['3.8420345719455465E-017']
         for i in range(len(decay_value)): 
             self.assertAlmostEqual(eval(decay_value[i]),eval(decay_value_test[i]))
-        os.chdir(temp_dir)
-#        shutil.rmtree('production_me')
-#        shutil.rmtree('full_me')
+        os.chdir(curr_dir)
+        shutil.rmtree(pjoin(path_for_me,'production_me'))
+        shutil.rmtree(pjoin(path_for_me,'full_me'))
+        os.remove(pjoin(path_for_me,'param_card.dat'))
+        os.remove(pjoin(path_for_me,'parameters.inc'))
 
         

@@ -650,7 +650,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             raise self.ConfigurationError, '''Can\'t load MadSpin
             The variable mg5_path might not be correctly configured.'''
         
-        
         logger.info("This functionality allows for the decay of  resonances")
         logger.info("in a .lhe file, keeping track of the spin correlation effets.")
         logger.info("BE AWARE OF THE CURRENT LIMITATIONS:")
@@ -763,11 +762,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         except: 
             pass
 
+        path_me=self.me_dir
         current_dir=os.getcwd()
         try:
-            os.chdir("../MadSpin")
+#            os.chdir("../MadSpin")
             generate_all=decay.decay_all_events(inputfile,mybanner,to_decay,decay_processes,\
-                 prod_branches, proc_option, max_weight, BW_effects,branching_fraction)
+                 prod_branches, proc_option, max_weight, BW_effects,branching_fraction, \
+                 path_me)
         except Exception:
             os.chdir(current_dir)
             raise
@@ -775,7 +776,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         
         misc.call(['gzip %s' % evt_file], shell=True)
         decayed_evt_file=evt_file.replace('.lhe', '_decayed.lhe')
-        shutil.move('../MadSpin/decayed_events.lhe', decayed_evt_file)
+        shutil.move(pjoin(path_me,'decayed_events.lhe'), decayed_evt_file)
         misc.call(['gzip %s' % decayed_evt_file], shell=True)
         logger.info("Decayed events have been written in %s" % decayed_evt_file)
         

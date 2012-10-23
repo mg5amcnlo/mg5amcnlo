@@ -301,10 +301,12 @@ class Banner:
             if string.find(line,"slha")>-1:self.ReadParam()
             if string.find(line,"MGRunCard")>-1:self.ReadRun()
 
-        if len(self.proc)!=len(self.proc_keys): 
-            logger.warning('Some parameters have not been read in the proc card')
-        if len(self.param)!=len(self.param_keys): 
-            logger.warning('Some parameters have not been read in the param card')
+        if "model" not in self.proc.keys():
+            logger.warning('The model was not found in the banner, assuming the Standard Model')
+#        if len(self.proc)!=len(self.proc_keys):     
+#            logger.warning('Some parameters have not been read in the proc card')
+#        if len(self.param)!=len(self.param_keys): 
+#            logger.warning('Some parameters have not been read in the param card')
 
     def GetProcValue(self,line,keyword):
         """Extract a parameter from a line in the Proc Card"""
@@ -604,7 +606,7 @@ class dc_branch(dict):
                     print mA
                     print " "
                     print 
-                    crash
+                    raise "Could not generate the 2-body decay"
 #             record the angles for the reshuffling phase, 
 #             in case the point passes the reweighting creteria
                 self["tree"][res]["costh"]=decay_mom.costh
@@ -1650,7 +1652,7 @@ class decay_misc:
 
         return topologies
 
-    def generate_fortran_me(self,processes,base_model,mode, mgcmd):
+    def generate_fortran_me(self,processes,base_model,mode, mgcmd,path_me):
         """Given a process and a model, use the standanlone module of mg5
          to generate a fortran executable for the evaluation of the 
          corresponding matrix element
@@ -1669,10 +1671,10 @@ class decay_misc:
 
         # output the result in Fortran format:
         if mode==0: # production process
-            mgcmd.exec_cmd("output standalone_ms production_me -f")
+            mgcmd.exec_cmd("output standalone_ms %s -f" % pjoin(path_me,'production_me') )
         
         elif mode==1: # full process
-            mgcmd.exec_cmd("output standalone_ms full_me -f")
+            mgcmd.exec_cmd("output standalone_ms %s -f" % pjoin(path_me,'full_me'))
           
 
         
@@ -1739,63 +1741,63 @@ class decay_misc:
 
         return full_proc_line, decay_struct
 
-    def compile_fortran_me(self):
+    def compile_fortran_me(self,path_me):
         """ Compile the fortran executables associated with the evalutation of the 
                 matrix elements
                 Returns the directory names of the new decay & production matrix elements
         """
 
-        list_prod=os.listdir("production_me/SubProcesses")
+        list_prod=os.listdir(pjoin(path_me,"production_me/SubProcesses"))
         counter=0
         logger.info("""Finalizing production me's """)
+        curr_dir=os.getcwd()
  
         for direc in list_prod:
             if direc[0]=="P":
                 counter+=1
                 prod_name=direc[string.find(direc,"_")+1:]
                 
-                old_path=pjoin(MG5DIR,'MadSpin','production_me','SubProcesses',direc)
-                new_path=pjoin(MG5DIR,'MadSpin','production_me','SubProcesses',prod_name)
+                old_path=pjoin(path_me,'production_me','SubProcesses',direc)
+                new_path=pjoin(path_me,'production_me','SubProcesses',prod_name)
                 if os.path.isdir(new_path): shutil.rmtree(new_path)
                 os.rename(old_path, new_path)
 
                 file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'driver_prod.f')
-                shutil.copyfile(file_madspin, new_path+"/check_sa.f")  
+                shutil.copyfile(file_madspin, pjoin(new_path,"check_sa.f"))  
                 
                 file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'makefile_ms')
-                shutil.copyfile(file_madspin, new_path+"/makefile") 
+                shutil.copyfile(file_madspin, pjoin(new_path,"makefile") )
 
-                file=pjoin(MG5DIR, 'MadSpin','Cards', 'param_card.dat')
-                shutil.copyfile(file,"production_me/Cards/param_card.dat") 
+                file=pjoin(path_me, 'param_card.dat')
+                shutil.copyfile(file,pjoin(path_me,"production_me","Cards","param_card.dat")) 
                 
-                if not os.path.isfile("parameters.inc"):
-
+                if not os.path.isfile( pjoin( path_me,'parameters.inc' ) ):
+                    
                     file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'initialize.f')
-                    shutil.copyfile(file_madspin,new_path+"/initialize.f")
+                    shutil.copyfile(file_madspin,pjoin(new_path,"initialize.f"))
                     
                     file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'lha_read_ms.f')
-                    shutil.copyfile(file_madspin, "production_me/Source/MODEL/lha_read.f" )                    
+                    shutil.copyfile(file_madspin, pjoin(path_me,"production_me","Source","MODEL","lha_read.f" ))                    
 
-                    os.chdir(pjoin(MG5DIR,'MadSpin','production_me','Source','MODEL'))
+                    os.chdir(pjoin(path_me,'production_me','Source','MODEL'))
                     try:
                        os.remove('*.o')
                     except:
                        pass
-                    misc.compile(cwd=pjoin(MG5DIR,'MadSpin','production_me','Source','MODEL'), mode='fortran')
-
+                    misc.compile(cwd=pjoin(path_me,'production_me','Source','MODEL'), mode='fortran')
                     os.chdir(new_path)
                     misc.compile(arg=['init'],cwd=new_path,mode='fortran')
                     misc.call('./init')
                     shutil.copyfile('parameters.inc', '../../../parameters.inc')
-                    os.chdir(pjoin(MG5DIR,'MadSpin'))
+                    os.chdir(curr_dir)
                     
 
-                shutil.copyfile('production_me/Source/MODEL/input.inc',new_path+'/input.inc') 
+                shutil.copyfile(pjoin(path_me,'production_me','Source','MODEL','input.inc'),pjoin(new_path,'input.inc')) 
                 misc.compile(cwd=new_path, mode='fortran')
 
 
  
-        list_full=os.listdir("full_me/SubProcesses")
+        list_full=os.listdir(pjoin(path_me,"full_me","SubProcesses"))
 
         first=1
         logger.info("""Finalizing decay chain me's """)
@@ -1806,8 +1808,8 @@ class decay_misc:
                 decay_name=direc[string.find(direc,"_")+1:]
       
                 
-                old_path=pjoin(MG5DIR,'MadSpin','full_me','SubProcesses',direc)
-                new_path=pjoin(MG5DIR,'MadSpin','full_me','SubProcesses',decay_name)
+                old_path=pjoin(path_me,'full_me','SubProcesses',direc)
+                new_path=pjoin(path_me, 'full_me','SubProcesses',decay_name)
 
 
                 if os.path.isdir(new_path): shutil.rmtree(new_path)
@@ -1815,22 +1817,22 @@ class decay_misc:
                 
                 
                 file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'driver_full.f')
-                shutil.copyfile(file_madspin, new_path+"/check_sa.f")  
+                shutil.copyfile(file_madspin, pjoin(new_path,"check_sa.f")  )
 
 
                 file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'makefile_ms')
-                shutil.copyfile(file_madspin, new_path+"/makefile") 
+                shutil.copyfile(file_madspin, pjoin(new_path,"makefile") )
                                 
-                shutil.copyfile('full_me/Source/MODEL/input.inc',new_path+'/input.inc') 
+                shutil.copyfile(pjoin(path_me,'full_me','Source','MODEL','input.inc'),pjoin(new_path,'input.inc'))
                 misc.compile(arg=['check'], cwd=new_path, mode='fortran')
 
                 file=pjoin(MG5DIR, 'MadSpin','Cards', 'param_card.dat')
-                shutil.copyfile(file,"full_me/Cards/param_card.dat") 
+                shutil.copyfile(file,pjoin(path_me,"full_me","Cards","param_card.dat")) 
 
                 
-                if(os.path.getsize("parameters.inc")<10): 
+                if(os.path.getsize(pjoin(path_me,"parameters.inc"))<10): 
                     print "Parameters of the model were not written correctly !"
-                    os.system("rm parameters.inc")
+                    os.remove(pjoin(path_me,"parameters.inc"))
                 if first:
 
                     first=0
@@ -1841,6 +1843,7 @@ class decay_misc:
 
         if counter!=2: 
             logger.warning('Expected 1 decay me and 1 prod me, got smth. else')
+        os.chdir(curr_dir)
         return decay_name, prod_name
 
     def restore_light_parton_masses(self,topo,event):
@@ -1963,10 +1966,11 @@ class decay_misc:
                 # sanity check
                 if pid2mass[pid]<1e-6:
                     logger.warning('A decaying particle has a mass of less than 1e-6 GeV')
-                if abs((pid2mass[pid]-math.sqrt(topo["get_mass2"][part]))/pid2mass[pid])>1.0 :
-                    logger.warning('Mass after BW smearing affected by more than 100 % (1)') 
-                    logger.warning('Pole mass: '+str(pid2mass[pid]))
-                    logger.warning('Virtual mass: '+str(math.sqrt(topo["get_mass2"][part])))
+# for debugg purposes:
+#                if abs((pid2mass[pid]-math.sqrt(topo["get_mass2"][part]))/pid2mass[pid])>1.0 :
+#                    logger.warning('Mass after BW smearing affected by more than 100 % (1)') 
+#                    logger.warning('Pole mass: '+str(pid2mass[pid]))
+#                    logger.warning('Virtual mass: '+str(math.sqrt(topo["get_mass2"][part])))
                                        
                 #print topo["get_mass2"]         
 
@@ -1984,16 +1988,17 @@ class decay_misc:
                         old_mass=topo["branchings"][-2]["m2"]
                         topo["branchings"][-2]["m2"]=math.sqrt(topo["get_mass2"][part])
                         #sanity check
-                        if abs(old_mass-topo["branchings"][-2]["m2"])>1e-10:
-                            if abs((old_mass-topo["branchings"][-2]["m2"])/old_mass)>1.0 :
-                                logger.warning('Mass after BW smearing affected by more than 100 % (2)')
-                                logger.warning('Previous value: '+ str(old_mass))
-                                logger.warning('New mass: '+ str((topo["branchings"][-2]["m2"])))
-                                try:
-                                    pid=topo["get_id"][part]
-                                    logger.warning('pole mass: %s' % pid2mass[pid])
-                                except Exception:
-                                    pass
+
+#                        if abs(old_mass-topo["branchings"][-2]["m2"])>1e-10:
+#                            if abs((old_mass-topo["branchings"][-2]["m2"])/old_mass)>1.0 :
+#                                logger.warning('Mass after BW smearing affected by more than 100 % (2)')
+#                                logger.warning('Previous value: '+ str(old_mass))
+#                                logger.warning('New mass: '+ str((topo["branchings"][-2]["m2"])))
+#                                try:
+#                                    pid=topo["get_id"][part]
+#                                    logger.warning('pole mass: %s' % pid2mass[pid])
+#                                except Exception:
+#                                    pass
         return weight
 
     def modify_param_card(self,pid2widths):
@@ -2164,10 +2169,12 @@ class decay_misc:
 class decay_all_events:
     
     def __init__(self,inputfile,mybanner,to_decay,decay_processes,\
-                 prod_branches,proc_option, max_weight, BW_effects,branching_fraction):
+                 prod_branches,proc_option, max_weight, BW_effects,\
+                 branching_fraction,path_me):
 
 
         mgcmd=Cmd.MasterCmd()
+        curr_dir=os.getcwd()
         logging.getLogger('madgraph').setLevel(50)
         logging.getLogger('madevent').setLevel(50)
         logging.getLogger('cmdprint').setLevel(50)
@@ -2177,14 +2184,17 @@ class decay_all_events:
         
 # Remove old stuff from previous runs
 # so that the current run is not confused
-        if os.path.isfile("parameters.inc"):
-            os.system("rm parameters.inc")
+        if os.path.isfile(pjoin(path_me,"parameters.inc")):
+            os.remove(pjoin(path_me,"parameters.inc"))
+            
+        if os.path.isfile(pjoin(path_me,"param_card.dat")):
+            os.remove(pjoin(path_me,"param_card.dat"))
 
-        if os.path.isdir("production_me"):
-            shutil.rmtree("production_me")
+        if os.path.isdir(pjoin(path_me,"production_me")):
+            shutil.rmtree(pjoin(path_me,"production_me"))
 
-        if os.path.isdir("full_me"):
-            shutil.rmtree("full_me")
+        if os.path.isdir(pjoin(path_me,"full_me")):
+            shutil.rmtree(pjoin(path_me,"full_me"))
         decay_tools=decay_misc()
 
         logger.info('model:     '+ mybanner.proc["model"])
@@ -2215,7 +2225,7 @@ class decay_all_events:
 # now we can write the param_card.dat:
 # Note that the width of each resonance in the    
 # decay chain should be >0 , we will check that later on
-        param=open(pjoin(MG5DIR,'MadSpin','Cards','param_card.dat'),"w")
+        param=open(pjoin(path_me,'param_card.dat'),"w")
         param.write(param_card)
         param.close()
 
@@ -2308,10 +2318,10 @@ class decay_all_events:
 #
                     topologies[tag_production]=\
                         decay_tools.generate_fortran_me([extended_prod_process+proc_option],\
-                            mybanner.proc["model"], 0,mgcmd)
+                            mybanner.proc["model"], 0,mgcmd,path_me)
                     decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
-                                                    mybanner.proc["model"], 1,mgcmd)
-                    decay_name, prod_name=decay_tools.compile_fortran_me()
+                                                    mybanner.proc["model"], 1,mgcmd,path_me)
+                    decay_name, prod_name=decay_tools.compile_fortran_me(path_me)
                     decay_path[tag_production]=decay_name
                     production_path[tag_production]=prod_name
                     logger.info('Done.')
@@ -2328,12 +2338,12 @@ class decay_all_events:
 #            since we don't know yet which topology should be used.    
 #            so light quarks and gluons in the final state may have a small mass
 
-                os.chdir(pjoin(MG5DIR,'MadSpin','production_me',\
+                os.chdir(pjoin(path_me,'production_me',\
                                'SubProcesses',production_path[tag_production]))
                 executable_prod="./check"
                 external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
                 prod_values=external.communicate(input=p_str)[0]
-                os.chdir(pjoin(MG5DIR,'MadSpin'))
+                os.chdir(curr_dir)
                 prod_values=prod_values.replace("\n", "")
                 prod_values=prod_values.split()
                 mg5_me_prod = float(prod_values[0])
@@ -2419,23 +2429,23 @@ class decay_all_events:
                     p_full, p_full_str=decayed_event.give_momenta()    
 
 #     start with production weight: 
-                    os.chdir(pjoin(MG5DIR,'MadSpin','production_me',\
+                    os.chdir(pjoin(path_me,'production_me',\
                                'SubProcesses',production_path[tag_production]))
                     executable_prod="./check"
                     external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
                     prod_values=external.communicate(input=p_str)[0]
-                    os.chdir(pjoin(MG5DIR,'MadSpin'))
+                    os.chdir(curr_dir)
                     prod_values=prod_values.replace("\n", "")
                     prod_values=prod_values.split()
                     mg5_me_prod = float(prod_values[0])
 #     then decayed weight:
-                    os.chdir(pjoin(MG5DIR,'MadSpin','full_me','SubProcesses',\
+                    os.chdir(pjoin(path_me,'full_me','SubProcesses',\
                                    decay_path[tag_production]))
                     executable_prod="./check"
                     external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
                     mg5_me_full = float(external.communicate(input=p_full_str)[0])
                     mg5_me_full=mg5_me_full*BW_weight_prod*BW_weight_decay
-                    os.chdir(pjoin(MG5DIR,'MadSpin'))
+                    os.chdir(curr_dir)
 
                     if(not mg5_me_full>0 or not mg5_me_prod >0 ):
                         logger.warning('WARNING: NEGATIVE MATRIX ELEMENT !!')
@@ -2465,7 +2475,7 @@ class decay_all_events:
         logger.info(' ' )
         logger.info('Decaying the events... ')
         inputfile.seek(0)
-        outputfile = open(pjoin(MG5DIR,'MadSpin','decayed_events.lhe'), 'w')
+        outputfile = open(pjoin(path_me,'decayed_events.lhe'), 'w')
         curr_event=Event(inputfile)
         old_banner=mybanner.whole_banner
         pos=old_banner.find("</header>")
@@ -2513,22 +2523,22 @@ class decay_all_events:
                 decay_struct[tag_production]=new_decay_struct
                 topologies[tag_production]=decay_tools.generate_fortran_me(\
                         [extended_prod_process+proc_option],\
-                         mybanner.proc["model"], 0, mgcmd)
+                         mybanner.proc["model"], 0, mgcmd,path_me)
                 decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
-                        mybanner.proc["model"], 1, mgcmd)
-                decay_name, prod_name=decay_tools.compile_fortran_me()
+                        mybanner.proc["model"], 1, mgcmd,path_me)
+                decay_name, prod_name=decay_tools.compile_fortran_me(path_me)
                 production_path[tag_production]=prod_name
                 decay_path[tag_production]=decay_name
                 logger.info( ' Done.')
 
 # First evaluate production matrix element
             p, p_str=curr_event.give_momenta()    
-            os.chdir(pjoin(MG5DIR,'MadSpin','production_me','SubProcesses',\
+            os.chdir(pjoin(path_me,'production_me','SubProcesses',\
                            production_path[tag_production]))
             executable_prod="./check"
             external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
             prod_values=external.communicate(input=p_str)[0]
-            os.chdir(pjoin(MG5DIR,'MadSpin'))
+            os.chdir(curr_dir)
             prod_values=prod_values.replace("\n", "")
             prod_values=prod_values.split()
             mg5_me_prod = float(prod_values[0])
@@ -2583,7 +2593,7 @@ class decay_all_events:
 #        Now evaluate the matrix elements ...
 #            start with production weight: 
 
-                os.chdir(pjoin(MG5DIR,'MadSpin','production_me',\
+                os.chdir(pjoin(path_me,'production_me',\
                                'SubProcesses',production_path[tag_production]))
                 executable_prod="./check"        
                 external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
@@ -2592,15 +2602,14 @@ class decay_all_events:
                 prod_values=prod_values.replace("\n", "")
                 prod_values=prod_values.split()
                 mg5_me_prod = float(prod_values[0])
-
-                os.chdir(pjoin(MG5DIR,'MadSpin'))
+                os.chdir(curr_dir)
 #            then decayed weight:
-                os.chdir(pjoin(MG5DIR,'MadSpin','full_me','SubProcesses',decay_path[tag_production]))
+                os.chdir(pjoin(path_me,'full_me','SubProcesses',decay_path[tag_production]))
                 executable_prod="./check"
                 external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
                 mg5_me_full = float(external.communicate(input=p_full_str)[0])
                 mg5_me_full=mg5_me_full*BW_weight_prod*BW_weight_decay
-                os.chdir(pjoin(MG5DIR,'MadSpin'))
+                os.chdir(curr_dir)
 
                 if(not mg5_me_full>0 or not mg5_me_prod >0 ):
                     logger.warning('NEGATIVE MATRIX ELEMENT !!')
@@ -2645,9 +2654,9 @@ class decay_all_events:
         logger.info('Average number of trial points per production event: '\
             +str(float(trial_nb_all_events)/float(event_nb)))
         logger.info('Number of subprocesses '+str(len(decay_path)))
-        os.system("rm -rf production_me")
-        os.system("rm -rf full_me")
-        os.system("rm parameters.inc")
+        shutil.rmtree(pjoin(path_me,'production_me'))
+        shutil.rmtree(pjoin(path_me,'full_me'))
+        os.remove(pjoin(path_me,'parameters.inc'))
 
 
 if __name__=="__main__":
@@ -2729,5 +2738,5 @@ if __name__=="__main__":
     if float(answer) >0.0: branching_fraction=float(answer)
 
     generate_all=decay_all_events(inputfile,mybanner,to_decay,decay_processes,\
-                prod_branches,proc_option, max_weight, BW_effects,branching_fraction)
+                prod_branches,proc_option, max_weight, BW_effects,branching_fraction, '.')
 
