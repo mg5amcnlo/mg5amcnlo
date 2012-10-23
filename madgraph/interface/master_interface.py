@@ -396,11 +396,29 @@ class Switcher(object):
     def do_install(self, *args, **opts):
         self.cmd.do_install(self, *args, **opts)
         
-    def do_launch(self, line, *args, **opts):
-        argss = cmd.Cmd.split_arg(line)
-        if len(argss)>=2 and argss[1] in  ['NLO', 'aMC@NLO', 'aMC@LO']:
-            self.change_principal_cmd('aMC@NLO')
-        return self.cmd.do_launch(self, line, *args, **opts)
+    def do_launch(self, line, *argss, **opts):
+        args = cmd.Cmd.split_arg(line)
+        # check if a path is given
+        if len(args) >=1:
+            if os.path.isdir(args[0]):
+                path = os.path.realpath(args[0])
+            elif os.path.isdir(pjoin(MG5DIR,args[0])):
+                path = pjoin(MG5DIR,args[0])
+            elif  MG4DIR and os.path.isdir(pjoin(MG4DIR,args[0])):
+                path = pjoin(MG4DIR,args[0])
+            else:
+                path=None
+        # if there is a path, find what output has been done
+            if path:
+                type = self.cmd.find_output_type(self, path) 
+                if type in ['standalone', 'standalone_cpp', 'pythia8', 'madevent']:
+                    self.change_principal_cmd('MadGraph')
+                elif type == 'aMC@NLO':
+                    self.change_principal_cmd('aMC@NLO')
+                elif type == 'MadLoop':
+                    self.change_principal_cmd('MadLoop')
+
+        return self.cmd.do_launch(self, line, *argss, **opts)
         
     def do_load(self, *args, **opts):
         return self.cmd.do_load(self, *args, **opts)

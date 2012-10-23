@@ -1,50 +1,60 @@
-##### HERWIG6
-LHSOFT=.FALSE.                 # Underlying event on (.TRUE.) or off (.FALSE.)
-MODBOS_1=5                     # Gauge boson decay modes
-MODBOS_2=5                     # Gauge boson decay modes
-MAXPR_HW=2                     # Number of events to be printed out
-ERR_FR_HW=0.01                 # Tolerated fraction of errors
-IS_BB_HW=.FALSE.               # .TRUE. if it is b-bbar production
-RNDEVSEED1_HW=0                # First random seed (0 for default)
-RNDEVSEED2_HW=0                # Second random seed (0 for default)
-LAMBDAHERW=-1                  # Lambda_5; negative for default
-B_STABLE_HW=.FALSE.            # .TRUE. to let weakly-decaying B hadrons stable
-PI_STABLE_HW=.TRUE.            # .TRUE. if one wants Pi0 stable
-WP_STABLE_HW=.FALSE.           # .TRUE. if one wants W+ stable
-WM_STABLE_HW=.FALSE.           # .TRUE. if one wants W- stable
-Z_STABLE_HW=.FALSE.            # .TRUE. if one wants Z0 stable
-TAUP_STABLE_HW=.FALSE.         # .TRUE. if one wants tau+ stable
-TAUM_STABLE_HW=.FALSE.         # .TRUE. if one wants tau- stable
-MUP_STABLE_HW=.FALSE.          # .TRUE. if one wants mu+ stable
-MUM_STABLE_HW=.FALSE.          # .TRUE. if one wants mu- stable
-H_STABLE_HW=.FALSE.            # .TRUE. if one wants Higgs stable
+################################################################################
+#                                                                               
+# This file contains the settings for partons showers to be used in aMC@NLO     
+#   mind the format:   variable = name           #         comment              
+#                                                                               
+################################################################################
+#
+# SHOWER SETTINGS:
+#
+ue_enabled = T      # underlying event on (T)/ off (F) (is MSTP(81) 0/1 for PY6)
+hadronize  = T      # hadronization on/off (is MSTP(111) 0/1 for PY6) 
+maxprint   = 2      # maximum number of events to be printed in the log
+maxerrs    = 0.01   # maximum tolerated fraction of errors
+b_stable   = F      # b hadrons are stable
+pi_stable  = T      # pi0's are stable
+wp_stable  = F      # w+'s are stable
+wm_stable  = F      # w-'s are stable
+z_stable   = F      # z0's are stable
+h_stable   = F      # Higgs bosons are stable
+tap_stable = F      # tau+'s are stable
+tam_stable = F      # tau-'s are stable
+mup_stable = F      # mu+'s are stable
+mum_stable = F      # mu-'s are stable
+rnd_seed   = 0      # random seed (0 is default)
+rnd_seed2  = 0      # 2nd random seed (only for HW6, 0 is default)
+lambda_5   = -1     # lambda_5 value, -1 for default (only for HW6/PY6)
+is_4lep    = F      # true if it is 4 lepton production (only for PY6)
+is_bbar    = F      # true if it is b-b~ production (only for HW6)
+modbos_1   = 5      # decay mode for the first Boson (only for HW6)
+modbos_2   = 5      # decay mode for the second Boson (only for HW6)
+################################################################################
+#
+# HERWIG++ PATHS
+# The following lines need to be set only for Herwig++. Use the absolute paths
+# to the directories where the packages are installed, containing lib/, include/,
+# and share/ subfolders
+#
+################################################################################
+HWPPPATH   = None   # Path to the dir where Herwig++ is installed
+THEPEGPATH = None   # Path to the dir where ThePeg is installed
+HEPMCPATH  = None   # Path to the dir where HepMC is installed
+################################################################################
+#
+# EXTRA LIBRARIES/ANALYSES
+# The following lines need to be changed if the user does not want to create the
+# StdHEP/HEPMC file, but to directly run his/her own analyse.
+# Please note that this works only for HW6 and PY6, and that the analysis should
+# be in the HWAnalyzer/ (or PYAnalyzer/) folder. 
+# Please use files in those folders as examples.
+#
+################################################################################
+EXTRALIBS   = stdhep Fmcfio         # Needed extra-libraries (not LHAPDF). 
+                                    #   Default: "stdhep Fmcfio"
+EXTRAPATHS  = ../lib                # Path to the extra-libraries. 
+                                    #   Default: "../lib"
+INCLUDEPATHS=                       # Path to the dirs containing header files neede by C++.
+                                    # Directory names are separated by white spaces
+ANALYSE     =                       # User's analysis and histogramming routines 
+                                    # (please use .o as extension and use spaces to separate files)
 
-
-##### HERWIGPP
-UE_HWPP=.FALSE.                # Underlying event on (.TRUE.) or off (.FALSE.)
-HADRONIZE_HWPP=.TRUE.          # Hadronization on (.TRUE.) or off (.FALSE.)
-B_STABLE_HWPP=.FALSE.          # .TRUE. to let weakly-decaying B hadrons stable
-PI_STABLE_HWPP=.TRUE.          # .TRUE. if one wants Pi0 stable
-MAXPR_HWPP=2                   # Number of events to be printed out
-ERR_FR_HWPP=0.01               # Tolerated fraction of errors
-RNDEVSEED_HWPP=0               # Random seed (if negative it's reset to 0)
-
-
-##### PYTHIA6Q
-MSTP_81=0                      # Underlying event on (1) or off (0)
-MSTP_111=1                     # Hadronization on (1) or off (0)
-MAXPR_PY=2                     # Number of events to be printed out
-ERR_FR_PY=0.01                 # Tolerated fraction of errors
-IS_4L_PY=.FALSE.               # .TRUE. if it is four-lepton production
-RNDEVSEED_PY=0                 # Random seed (0 for default)
-LAMBDAPYTH=-1                  # Lambda_5; negative for default
-B_STABLE_PY=.FALSE.            # .TRUE. to let weakly-decaying B hadrons stable
-PI_STABLE_PY=.TRUE.            # .TRUE. if one wants Pi0 stable
-WP_STABLE_PY=.FALSE.           # .TRUE. if one wants W+ stable
-WM_STABLE_PY=.FALSE.           # .TRUE. if one wants W- stable
-Z_STABLE_PY=.FALSE.            # .TRUE. if one wants Z0 stable
-TAUP_STABLE_PY=.FALSE.         # .TRUE. if one wants tau+ stable
-TAUM_STABLE_PY=.FALSE.         # .TRUE. if one wants tau- stable
-MUP_STABLE_PY=.FALSE.          # .TRUE. if one wants mu+ stable
-MUM_STABLE_PY=.FALSE.          # .TRUE. if one wants mu- stable
-H_STABLE_PY=.FALSE.            # .TRUE. if one wants Higgs stable

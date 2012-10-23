@@ -58,6 +58,7 @@ try:
     import madgraph.various.cluster as cluster
     import madgraph.various.misc as misc
     import madgraph.various.gen_crossxhtml as gen_crossxhtml
+    import madgraph.various.shower_card as shower_card
 
     from madgraph import InvalidCmd, aMCatNLOError
     aMCatNLO = False
@@ -74,6 +75,7 @@ except Exception, error:
     import internal.cluster as cluster
     import internal.save_load_object as save_load_object
     import internal.gen_crossxhtml as gen_crossxhtml
+    import internal.shower_card as shower_card
     aMCatNLO = True
 
 
@@ -486,20 +488,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     nb_core = None
     
     next_possibility = {
-        'start': ['generate_events [OPTIONS]', 'multi_run [OPTIONS]',
-                  'calculate_decay_widths [OPTIONS]',
+        'start': ['generate_events [OPTIONS]', 'calculate_crossx [OPTIONS]', 'launch [OPTIONS]',
                   'help generate_events'],
-        'generate_events': ['generate_events [OPTIONS]', 'multi_run [OPTIONS]', 'pythia', 'pgs','delphes'],
-        'calculate_decay_widths': ['calculate_decay_widths [OPTIONS]',
-                                   'generate_events [OPTIONS]'],
-        'multi_run': ['generate_events [OPTIONS]', 'multi_run [OPTIONS]'],
-        'survey': ['refine'],
-        'refine': ['combine_events'],
-        'combine_events': ['store'],
-        'store': ['pythia'],
-        'pythia': ['pgs', 'delphes'],
-        'pgs': ['generate_events [OPTIONS]', 'multi_run [OPTIONS]'],
-        'delphes' : ['generate_events [OPTIONS]', 'multi_run [OPTIONS]']
+        'generate_events': ['generate_events [OPTIONS]', 'shower'],
+        'launch': ['launch [OPTIONS]', 'shower'],
+        'shower' : ['generate_events [OPTIONS]']
     }
     
     # The three options categories are treated on a different footage when a 
@@ -1036,6 +1029,8 @@ Integrated cross-section
         shower = self.evt_file_to_mcatnlo(evt_file)
         oldcwd = os.getcwd()
         os.chdir(pjoin(self.me_dir, 'MCatNLO'))
+        shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
+        self.shower_card.write_card(shower, shower_card_path)
 
 
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
@@ -1054,6 +1049,7 @@ Integrated cross-section
         rundir = pjoin(self.me_dir, 'MCatNLO', 'RUN_%s_%d' % \
                         (shower, count))
         os.mkdir(rundir)
+        misc.call(['cp %s %s' % (shower_card_path, rundir)], shell=True)
 
         self.update_status('Running MCatNLO in %s (this may take some time)...' % rundir,
                 level='parton')
@@ -1068,30 +1064,64 @@ Integrated cross-section
         misc.call(['./%s < MCATNLO_%s_input > amcatnlo_run.log 2>&1' % \
                     (exe, shower)], cwd = os.getcwd(), shell=True)
         #copy the showered stdhep file back in events
-        if os.path.exists(pjoin(self.run_name, evt_name + '.hep')):
-            hep_file = '%s_%s.hep' % (evt_file[:-4], shower)
-            misc.call(['mv %s %s' % (pjoin(self.run_name, evt_name + '.hep'), hep_file)], shell=True) 
-            misc.call(['gzip %s' % evt_file], shell=True)
-            misc.call(['gzip %s' % hep_file], shell=True)
+        if not self.shower_card['analyse']:
+            if os.path.exists(pjoin(self.run_name, evt_name + '.hep')):
+                hep_file = '%s_%s.hep' % (evt_file[:-4], shower)
+                misc.call(['mv %s %s' % (pjoin(self.run_name, evt_name + '.hep'), hep_file)], shell=True) 
+                misc.call(['gzip %s' % evt_file], shell=True)
+                misc.call(['gzip %s' % hep_file], shell=True)
 
-            logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
-                        ' and hadronized events in the StdHEP format obtained' + \
-                        ' showering the parton-level event file %s.gz with %s') % \
-                        (hep_file, evt_file, shower))
-        #this is for hw++
-        elif os.path.exists(pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc')):
-            hep_file = '%s_%s.hepmc' % (evt_file[:-4], shower)
-            misc.call(['mv %s %s' % \
-                (pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc'), hep_file)], shell=True) 
-            misc.call(['gzip %s' % evt_file], shell=True)
-            misc.call(['gzip %s' % hep_file], shell=True)
-            logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
-                        ' and hadronized events in the HEPMC format obtained' + \
-                        ' showering the parton-level event file %s.gz with %s') % \
-                        (hep_file, evt_file, shower))
+                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
+                            ' and hadronized events in the StdHEP format obtained' + \
+                            ' showering the parton-level event file %s.gz with %s') % \
+                            (hep_file, evt_file, shower))
+            #this is for hw++
+            elif os.path.exists(pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc')):
+                hep_file = '%s_%s.hepmc' % (evt_file[:-4], shower)
+                misc.call(['mv %s %s' % \
+                    (pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc'), hep_file)], shell=True) 
+                misc.call(['gzip %s' % evt_file], shell=True)
+                misc.call(['gzip %s' % hep_file], shell=True)
+                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
+                            ' and hadronized events in the HEPMC format obtained' + \
+                            ' showering the parton-level event file %s.gz with %s') % \
+                            (hep_file, evt_file, shower))
 
+            else:
+                raise aMCatNLOError('No file has been generated, an error occurred')
         else:
-            raise aMCatNLOError('No file has been generated, an error occurred')
+            topfiles = [n for n in os.listdir(pjoin(rundir)) \
+                                            if n.lower().endswith('.top')]
+            if not topfiles:
+                raise aMCatNLOError('No .top file has been generated, an error occurred')
+
+            filename = 'plot_%s_%d_' % (shower, 1)
+            count = 1
+            while os.path.exists(pjoin(self.me_dir, 'Events', 
+                self.run_name, '%s0.top' % filename)):
+                count += 1
+                filename = 'plot_%s_%d_' % (shower, count)
+            plotfiles = [] 
+            for i, file in enumerate(topfiles):
+                plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
+                          '%s%d.top' % (filename, i))
+                misc.call(['mv %s %s' % \
+                    (pjoin(rundir, file), plotfile)], shell=True) 
+
+                plotfiles.append(plotfile)
+
+            files = 'files'
+            have = 'have'
+            if len(plotfiles) == 1:
+                files = 'file'
+                have = 'has'
+
+            misc.call(['gzip %s' % evt_file], shell=True)
+            logger.info(('The %s %s %s been generated, with histograms in the' + \
+                    ' TopDrawer format, obtained by showering the parton-level' + \
+                    ' file %s.gz with %s') % (files, ', '.join(plotfiles), have, \
+                    evt_file, shower))
+
 
         os.chdir(oldcwd)
 
@@ -1229,13 +1259,6 @@ Integrated cross-section
             if lines[i].startswith('MCMODE'):
                 lines[i]='MCMODE=%s' % shower
             #the following variables are actually relevant only if running hw++
-            if shower == 'HERWIGPP':
-                if lines[i].startswith('HWPPPATH'):
-                    lines[i]='HWPPPATH=%s' % self.options['hwpp_path']
-                if lines[i].startswith('THEPEGPATH'):
-                    lines[i]='THEPEGPATH=%s' % self.options['thepeg_path']
-                if lines[i].startswith('HEPMCPATH'):
-                    lines[i]='HEPMCPATH=%s' % self.options['hepmc_path']
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'MCatNLO_MadFKS.inputs'), 'w')
         output.write('\n'.join(lines))
@@ -1764,6 +1787,8 @@ Integrated cross-section
             if answer == 'done':
                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
                 self.run_card = banner_mod.RunCardNLO(run_card)
+                shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
+                self.shower_card = shower_card.ShowerCard(shower_card_path)
                 self.run_tag = self.run_card['run_tag']
                 self.run_name = self.find_available_run_name(self.me_dir)
                 self.set_run_name(self.run_name, self.run_tag, 'parton')
