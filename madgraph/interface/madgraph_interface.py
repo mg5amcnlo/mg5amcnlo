@@ -368,7 +368,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   irrelevant for this kind of launch.")    
         logger.info("")    
         logger.info("Launch on aMC@NLO output:",'$MG:color:BLACK')
-        logger.info("   Marco, please fill in this section",'$MG:color:BLUE')
+        logger.info(" > launch <dir_path> <mode> <options>",'$MG:color:BLUE')
+        logger.info(" o Example: launch MyProc aMC@NLO -f -p",'$MG:color:GREEN')    
 
     def help_tutorial(self):
         logger.info("syntax: tutorial [" + "|".join(self._tutorial_opts) + "]",'$MG:color:BLUE')
@@ -487,8 +488,6 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   b b~ > W+ W- | H+ H- > ta+ vt ta- vt~")
         logger.info(" > If no coupling orders are given, MG5 will try to determine")
         logger.info("   orders to ensure maximum number of QCD vertices.")
-        logger.info(" > Note that if there are more than one non-QCD coupling type,")
-        logger.info("   coupling orders need to be specified by hand.")
         logger.info(" > To generate a second process use the \"add process\" command")
         logger.info("Decay chain syntax:",'$MG:color:BLACK')
         logger.info(" o core process, decay1, (decay2, (decay2', ...)), ...  etc")
@@ -797,7 +796,7 @@ class CheckValidForCmd(cmd.CheckCmd):
                 raise self.InvalidCmd('Invalid argument for tutorial')
         elif len(args) == 0:
             #this means mg5 tutorial
-            args.append('start')
+            args.append('MadGraph5')
         else:
             self.help_tutorial()
             raise self.InvalidCmd('Too manu arguments for tutorial')
@@ -1397,7 +1396,10 @@ class CompleteForCmd(cmd.CompleteCmd):
         # loop_sm would then automatically be loaded
         nlo_modes = allowed_loop_mode if not allowed_loop_mode is None else \
                                                   self._nlo_modes_for_completion
-        pert_couplings_allowed = self._curr_model['perturbation_couplings']
+        if isinstance(self._curr_model,loop_base_objects.LoopModel):
+            pert_couplings_allowed = self._curr_model['perturbation_couplings']
+        else:
+            pert_couplings_allowed = []
         if self._curr_model.get('name').startswith('sm'):
             pert_couplings_allowed = pert_couplings_allowed + ['QCD']
         # Find wether the loop mode is already set or not
@@ -1461,14 +1463,17 @@ class CompleteForCmd(cmd.CompleteCmd):
             process = process[process.index(',')+1:]
         args = self.split_arg(process)
         couplings = []
-        
-        # Do no complete the @ for the process number.
-        if args[-1]=='@':
-            return
 
+        # Do no complete the @ for the process number.
+        if len(args) > 1 and args[-1]=='@':
+            return
+        
         # Automatically allow for QCD perturbation if in the sm because the
         # loop_sm would then automatically be loaded
-        pert_couplings_allowed = self._curr_model['perturbation_couplings']
+        if isinstance(self._curr_model,loop_base_objects.LoopModel):
+            pert_couplings_allowed = self._curr_model['perturbation_couplings']
+        else:
+            pert_couplings_allowed = []        
         if self._curr_model.get('name').startswith('sm'):
             pert_couplings_allowed = pert_couplings_allowed + ['QCD']
 
@@ -1683,7 +1688,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             out['Options'] = self.list_completion(text, opt, line)
         else:
             opt = ['--cluster', '--multicore', '-i', '--name=', '-f','-m', '-n', 
-               '--interactive', '--laststep=parton', '--laststep=pythia',
+               '-p','--parton','--interactive', '--laststep=parton', '--laststep=pythia',
                '--laststep=pgs', '--laststep=delphes','--laststep=auto']
             out['Options'] = self.list_completion(text, opt, line)
         
@@ -2076,7 +2081,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'checks', 'parameters', 'options', 'coupling_order','variable']
     _add_opts = ['process']
     _save_opts = ['model', 'processes', 'options']
-    _tutorial_opts = ['aMCatNLO', 'start', 'stop', 'MadLoop']
+    _tutorial_opts = ['aMCatNLO', 'stop', 'MadLoop', 'MadGraph5']
     _switch_opts = ['mg5','aMC@NLO','ML5']
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation', 
                    'gauge','lorentz', 'brs']
@@ -2116,6 +2121,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_queue': None,
                        'fastjet':'fastjet-config',
                        'lhapdf':'lhapdf-config',
+                       'cluster_temp_path':None
                        }
     
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -2633,7 +2639,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         args = self.split_arg(line)
         self.check_tutorial(args)
-        tutorials = {'start': logger_tuto,
+        tutorials = {'MadGraph5': logger_tuto,
                      'aMCatNLO': logger_tuto_nlo,
                      'MadLoop': logger_tuto_madloop}
         try:
@@ -2694,7 +2700,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         amp.get('loop_diagrams') if d.get('type')>0])
                 if len(diags) > 1000:
                     logger.warning('Displaying only the first 1000 diagrams')
-                    diags = diags[:1000]
+                    diags = base_objects.DiagramList(diags[:1000])
 
             plot = draw.MultiEpsDiagramDrawer(diags,
                                           filename,
@@ -2845,16 +2851,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             gauge = str(self.options['gauge'])
             line = " ".join(args[1:])
             myprocdef = self.extract_process(line)
-            model_name = self._curr_model['name']
             if gauge == 'unitarity':
                 myprocdef_unit = myprocdef
                 self.do_set('gauge Feynman', log=False)
-                self.do_import('model %s' % model_name)
                 myprocdef_feyn = self.extract_process(line)
             else:
                 myprocdef_feyn = myprocdef
                 self.do_set('gauge unitary', log=False)
-                self.do_import('model %s' % model_name)
                 myprocdef_unit = self.extract_process(line)            
             
             gauge_result_no_brs = process_checks.check_unitary_feynman(
@@ -2866,7 +2869,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
-            self.do_import('model %s' % model_name)
             
             nb_processes += len(gauge_result_no_brs)            
             
@@ -3332,7 +3334,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # Import files
     def do_import(self, line):
         """Import files with external formats"""
-
         args = self.split_arg(line)
         # Check argument's validity
         self.check_import(args)
@@ -3368,17 +3369,27 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     if hasattr(self._curr_model, 'set_parameters_and_couplings'):
                         self._curr_model.set_parameters_and_couplings()
                 if self.options['gauge']=='unitary':
+                    if isinstance(self._curr_model,loop_base_objects.LoopModel) and \
+                         self._curr_model.get('perturbation_couplings')!=[] and \
+                                           self.options['gauge']=='unitary' and \
+                                          self.options['loop_optimized_output']:
+                        logger.info('Change the gauge to Feynman because '+\
+                          'the loop optimized output requires to work in this gauge')
+                        if 1 not in self._curr_model.get('gauge') :
+                            raise self.InvalidCmd(' Could not load this loop '+\
+                              'model in the loop_optimized output mode because'+\
+                                      ' it does not support the Feynman gauge.')
+                        self.do_set('gauge Feynman', log=False)
+                        return
                     if 0 not in self._curr_model.get('gauge') :
                         logger.warning('Change the gauge to Feynman since the model does not allow unitary gauge') 
                         self.do_set('gauge Feynman', log=False)
-                        self.do_import(line)
                         return                        
                 else:
                     if 1 not in self._curr_model.get('gauge') :
                         logger.warning('Change the gauge to unitary since the model does not allow Feynman gauge')
                         self._curr_model = None
                         self.do_set('gauge unitary', log= False)
-                        self.do_import(line)
                         return 
                 
                 self._curr_fortran_model = \
@@ -3951,23 +3962,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     else:
                         continue
 
-
-#            if key == 'lhapdf' and self.options_configuration[key]:
-#                if os.path.isfile(self.options_configuration['lhapdf']) or \
-#                any([os.path.isfile(os.path.join(path, self.options_configuration['lhapdf'])) \
-#                        for path in os.environ['PATH'].split(':')]):
-#                    lhapdf_config = self.options_configuration['lhapdf']
-#                else:
-#                    lhapdf_config = None
-#
-#            if key == 'fastjet' and self.options_configuration[key]:
-#                if os.path.isfile(self.options_configuration['fastjet']) or \
-#                any([os.path.isfile(os.path.join(path, self.options_configuration['fastjet'])) \
-#                        for path in os.environ['PATH'].split(':')]):
-#                    fastjet_config = self.options_configuration['fastjet']
-#                else:
-#                    fastjet_config = None
-                    
             elif key.endswith('path'):
                 pass
             elif key in ['run_mode', 'auto_update']:
@@ -4247,13 +4241,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             param_card.write(path)
             self._curr_model['name'] += '-%s' % name
         
-        
-        
-        
-        
-        
-        
-        
     
     
     def do_save(self, line, check=True, to_keep={}, log=True):
@@ -4391,7 +4378,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.exec_cmd('import model %s' % self._curr_model.get('name'))
 
         elif args[0] == "gauge":
-            
             # Treat the case where they are no model loaded
             if not self._curr_model:
                 if args[1] == 'unitary':
@@ -4422,7 +4408,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self.options[args[0]] = args[1]
 
             #re-init all variable
-            model_name = self._curr_model.get('name')
+            model_name = self._curr_model.get('version_tag').split('##')[0]
             self._curr_model = None
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -4434,7 +4420,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             logger.info('Passing to gauge %s.' % args[1])
             
             if able_to_mod:
-                self.do_import('model %s' % model_name)
+                # We don't want to go through the MasterCommand again
+                # because it messes with the interface switching when
+                # importing a loop model from MG5
+                MadGraphCmd.do_import(self,'model %s' %model_name)
             elif log:
                 logger.info('Note that you have to reload the model') 
 
@@ -4481,12 +4470,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             except:
                 res = 1
             if res != 0:
-                logger.warning('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
+                logger.info('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
                         'executable. Please enter the full PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
-                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
+                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n',
+                        '$MG:color:BLUE')
 
         elif args[0] in ['hwpp_path', 'thepeg_path', 'hepmc_path']:
-            print 'MZ, CORRECT', args
             if os.path.isdir(args[1]):
                 self.options[args[0]] = args[1]
                 logger.info('set %s to %s' % (args[0], args[1]))
@@ -4931,7 +4920,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False, \
-                    to_keep = {'MCatNLO-utilities_path': './MCatNLO-utilities'})
+                    to_keep = {'MCatNLO-utilities_path': './MCatNLO-utilities',
+                               'lhapdf': self.options['lhapdf'],
+                               'fastjet': self.options['fastjet']})
 
             # copy the MCatNLO directory from mcatnlo-utils inside the exported dir
             if os.path.isdir(pjoin(MG5DIR, 'MCatNLO-utilities')):
@@ -4939,7 +4930,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         (pjoin(MG5DIR, 'MCatNLO-utilities', 'MCatNLO'), self._export_dir))
             else:
                 logger.info('MCatNLO-utilities is not installed. \nIf you want to shower events ' + \
-                        'with MC@NLO please install it by typing "install MCatNLO-utilities"')
+                        'with MC@NLO please install it by typing "install MCatNLO-utilities"',
+                        '$MG:color:BLUE')
 
         elif self._export_format == 'madevent':          
             # Create configuration file [path to executable] for madevent

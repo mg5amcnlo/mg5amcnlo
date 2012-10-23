@@ -73,11 +73,6 @@ except Exception, error:
     import internal.files as files
     from internal import InvalidCmd, MadGraph5Error
     MADEVENT=True
-#try:
-#    os.sys.path.append("../MadSpin")
-#    import decay
-#except: 
-#    pass
 
 #===============================================================================
 # HelpToCmd
@@ -214,6 +209,8 @@ class CheckValidForCmd(object):
                         
         return mode, opt 
 
+class MadEventAlreadyRunning(InvalidCmd):
+    pass
 
 #===============================================================================
 # CommonRunCmd
@@ -222,17 +219,58 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 
     debug_output = 'ME5_debug'
 
+    def __init__(self, me_dir, options):
+        """common"""
         
-    
-    def do_treatcards_nlo(self,line):
-        """this is for creating the correct run_card.inc from the nlo format run_card"""
-        return self.do_treatcards(line, amcatnlo=True)
+        # Define current MadEvent directory
+        if me_dir is None and MADEVENT:
+            me_dir = root_path
+        
+        self.me_dir = me_dir
+        self.options = options  
+        
+        # usefull shortcut
+        self.status = pjoin(self.me_dir, 'status')
+        self.error =  pjoin(self.me_dir, 'error')
+        self.dirbin = pjoin(self.me_dir, 'bin', 'internal')
+        
+        # Check that the directory is not currently running
+        if os.path.exists(pjoin(me_dir,'RunWeb')): 
+            message = '''Another instance of madevent is currently running.
+            Please wait that all instance of madevent are closed. If no
+            instance is running, you can delete the file
+            %s and try again.''' % pjoin(me_dir,'RunWeb')
+            raise MadEventAlreadyRunning, message
+        else:
+            pid = os.getpid()
+            fsock = open(pjoin(me_dir,'RunWeb'),'w')
+            fsock.write(`pid`)
+            fsock.close()
+            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
+        
+        self.to_store = []
+        self.run_name = None
+        self.run_tag = None
+        self.banner = None
+        # Load the configuration file
+        self.set_configuration()
+        self.configure_run_mode(self.options['run_mode'])
+        
+        
+        # Get number of initial states
+        nexternal = open(pjoin(self.me_dir,'Source','nexternal.inc')).read()
+        found = re.search("PARAMETER\s*\(NINCOMING=(\d)\)", nexternal)
+        self.ninitial = int(found.group(1))
 
 
     ############################################################################      
     def do_treatcards(self, line, amcatnlo=False):
         """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
 
+        keepwidth = False
+        if '--keepwidth' in line:
+            keepwidth = True
+            line = line.replace('--keepwidth', '')
         args = self.split_arg(line)
         mode,  opt  = self.check_treatcards(args)
 
@@ -266,8 +304,56 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 subprocess.call(['python', 'write_param_card.py'], 
                              cwd=pjoin(self.me_dir,'bin','internal','ufomodel'))
                 default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
+                
+            if amcatnlo and not keepwidth:
+                # force particle in final states to have zero width
+                pids = self.get_pid_final_states()
+                # check those which are charged under qcd
+                if not MADEVENT and pjoin(self.me_dir,'bin') not in sys.path:
+                        sys.path.append(pjoin(self.me_dir,'bin'))                    
+                import internal.ufomodel as ufomodel
+                zero = ufomodel.parameters.ZERO
+                no_width = [p for p in ufomodel.all_particles 
+                        if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
+                           and p.color != 1 and p.width != zero]
+
+                done = []
+                for part in no_width:
+                    if abs(part.pdg_code) in done:
+                        continue
+                    done.append(abs(part.pdg_code))
+                    param = param_card['decay'].get((part.pdg_code,))
+                    
+                    if  param.value != 0:
+                        logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.'''
+                                    % part.name,'$MG:color:BLACK')
+                        param.value = 0
+                
+                
+                
             param_card.write_inc_file(outfile, ident_card, default)
 
+
+    ############################################################################ 
+    def get_pid_final_states(self):
+        """Find the pid of all particles in the final states"""
+        pids = set()
+        subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
+                                                                 'subproc.mg'))]
+        nb_init = self.ninitial
+        pat = re.compile(r'''DATA \(IDUP\(I,\d+\),I=1,\d+\)/([\+\-\d,\s]*)/''', re.I)
+        for Pdir in subproc:
+            text = open(pjoin(Pdir, 'born_leshouche.inc')).read()
+            group = pat.findall(text)
+            for particles in group:
+                particles = particles.split(',')
+                pids.update(set(particles[nb_init:]))
+        
+        return pids
+                
+                
+                
+        
   
     ############################################################################ 
     def do_open(self, line):
@@ -303,9 +389,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
             if log: logger.info('set output information to level: %s' % args[1])
         elif args[0] == "fortran_compiler":
+            if args[1] == 'None':
+                args[1] = None
             self.options['fortran_compiler'] = args[1]
             current = misc.detect_current_compiler(pjoin(self.me_dir,'Source','make_opts'))
-            if current != args[1] and args[1] != 'None':
+            if current != args[1] and args[1] != None:
                 misc.mod_compilator(self.me_dir, args[1], current)
         elif args[0] == "run_mode":
             if not args[1] in [0,1,2,'0','1','2']:
@@ -313,6 +401,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             self.cluster_mode = int(args[1])
             self.options['run_mode'] =  self.cluster_mode
         elif args[0] in  ['cluster_type', 'cluster_queue', 'cluster_temp_path']:
+            if args[1] == 'None':
+                args[1] = None
             self.options[args[0]] = args[1]
             opt = self.options
             self.cluster = cluster.from_name[opt['cluster_type']](\
@@ -342,6 +432,28 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             else:
                 self.options[args[0]] = args[1]             
 
+    def configure_run_mode(self, run_mode):
+        """change the way to submit job 0: single core, 1: cluster, 2: multicore"""
+        
+        self.cluster_mode = run_mode
+        
+        if run_mode == 2:
+            if not self.nb_core:
+                import multiprocessing
+                self.nb_core = multiprocessing.cpu_count()
+            nb_core =self.nb_core
+        elif run_mode == 0:
+            nb_core = 1 
+            
+        if run_mode in [0, 2]:
+            self.cluster = cluster.MultiCore(nb_core, 
+                                     temp_dir=self.options['cluster_temp_path'])
+            
+        if self.cluster_mode == 1:
+            opt = self.options
+            cluster_name = opt['cluster_type']
+            self.cluster = cluster.from_name[cluster_name](opt['cluster_queue'],
+                                                        opt['cluster_temp_path'])
 
     def add_error_log_in_html(self, errortype=None):
         """If a ME run is currently running add a link in the html output"""
@@ -370,7 +482,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 
   
 
-    def update_status(self, status, level, makehtml=True, force=True, error=False):
+    def update_status(self, status, level, makehtml=True, force=True, 
+                      error=False, starttime = None, update_results=False):
         """ update the index status """
         
         if makehtml and not force:
@@ -382,18 +495,32 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         if isinstance(status, str):
             if '<br>' not  in status:
                 logger.info(status)
-        else:
+        elif starttime:
+            running_time = time.time()-starttime
+            if running_time < 1e-3:
+                running_time = ''
+            elif running_time < 10:
+                running_time = '[ %.2gs ]' % running_time
+            elif 60 > running_time >= 10:
+                running_time = '[ %.3gs ]' % running_time
+            elif 3600 > running_time >= 60:
+                running_time = '[ %im %is ]' % (running_time // 60, int(running_time % 60))
+            else:
+                running_time = '[ %ih %im ]' % (running_time // 3600, (running_time//60 % 60))
+                
+            logger.info(' Idle: %s,  Running: %s,  Completed: %s %s' % \
+                       (status[0], status[1], status[2], running_time))
+        else: 
             logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])
         
-        self.last_update = time
-        self.results.update(status, level, makehtml=makehtml, error=error)
+        if update_results:
+            self.results.update(status, level, makehtml=makehtml, error=error)
         
 
     ############################################################################
     def set_configuration(self, config_path=None, final=True, initdir=None, amcatnlo=False):
         """ assign all configuration variable from file 
             ./Cards/mg5_configuration.txt. assign to default if not define """
-
         if not hasattr(self, 'options') or not self.options:  
             self.options = dict(self.options_configuration)
             self.options.update(self.options_madgraph)
@@ -401,24 +528,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         if not config_path:
             if os.environ.has_key('MADGRAPH_BASE'):
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
-                self.set_configuration(config_path, final)
+                self.set_configuration(config_path=config_path, final=final)
                 return
             if 'HOME' in os.environ:
                 config_path = pjoin(os.environ['HOME'],'.mg5', 
                                                         'mg5_configuration.txt')
                 if os.path.exists(config_path):
-                    self.set_configuration(config_path, final=False)
+                    self.set_configuration(config_path=config_path,  final=False)
             if amcatnlo:
                 me5_config = pjoin(self.me_dir, 'Cards', 'amcatnlo_configuration.txt')
             else:
                 me5_config = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
-            self.set_configuration(me5_config, final=False, initdir=self.me_dir)
+            self.set_configuration(config_path=me5_config, final=False, initdir=self.me_dir)
                 
             if self.options.has_key('mg5_path'):
                 MG5DIR = self.options['mg5_path']
                 config_file = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
-                self.set_configuration(config_file, final=False,initdir=MG5DIR)
-            return self.set_configuration(me5_config, final,initdir=self.me_dir)
+                self.set_configuration(config_path=config_file, final=False,initdir=MG5DIR)
+            return self.set_configuration(config_path=me5_config, final=final,initdir=self.me_dir)
 
         config_file = open(config_path)
 

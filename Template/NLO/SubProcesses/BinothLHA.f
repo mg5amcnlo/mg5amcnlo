@@ -91,9 +91,18 @@ c======================================================================
 c check for poles cancellation      
       call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
       ntot = ntot+1
-      unstable_point = .not. 
-     1       (dabs((single - madfks_single)/double).lt.tolerance .and.
-     1        dabs((double - madfks_double)/double).lt.tolerance) 
+      if ( double.ne.0d0 ) then
+         unstable_point = .not. 
+     1        (dabs((single - madfks_single)/single).lt.tolerance .and.
+     1         dabs((double - madfks_double)/double).lt.tolerance) 
+      elseif ( madfks_double.ne.0d0 ) then
+         unstable_point = .not. 
+     1        (dabs((single - madfks_single)/single).lt.tolerance .and.
+     1         dabs((double - madfks_double)/double).lt.tolerance) 
+      else
+         unstable_point = .not. 
+     1        (dabs((single - madfks_single)/single).lt.tolerance) 
+      endif
       if (unstable_point) then
           nunst = nunst+1
           if (nunst.lt.10) then

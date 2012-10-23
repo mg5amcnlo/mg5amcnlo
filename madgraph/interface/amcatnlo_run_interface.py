@@ -93,14 +93,15 @@ def check_compiler(options, block=False):
     if options['fortran_compiler']:
         compiler = options['fortran_compiler']
     elif misc.which('gfortran'):
-         compiler = 'gfortran'
-    if compiler != 'gfortran':
+        compiler = 'gfortran'
+        
+    if 'gfortran' not in compiler:
         if block:
             raise aMCatNLOError(msg % compiler)
         else:
             logger.warning(msg % compiler)
     else:
-        curr_version = misc.get_gfortran_version()
+        curr_version = misc.get_gfortran_version(compiler)
         if not ''.join(curr_version.split('.')) >= '46':
             if block:
                 raise aMCatNLOError(msg % (compiler + ' ' + curr_version))
@@ -532,40 +533,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         """ add information to the cmd """
 
         CmdExtended.__init__(self, *completekey, **stdin)
-        common_run.CommonRunCmd.__init__(self)
-        
-        # Define current aMCatNLO directory
-        if me_dir is None and aMCatNLO:
-            me_dir = root_path
-        
-        self.me_dir = me_dir
-        self.options = options        
+        common_run.CommonRunCmd.__init__(self, me_dir, options)
+
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = banner_mod.RunCardNLO(run_card)
         self.mode = 'aMCatNLO'
-
-        # usefull shortcut
-        self.status = pjoin(self.me_dir, 'status')
-        self.error =  pjoin(self.me_dir, 'error')
-        self.dirbin = pjoin(self.me_dir, 'bin', 'internal')
-
-        # Check that the directory is not currently running
-        if os.path.exists(pjoin(me_dir,'RunWeb')): 
-            message = '''Another instance of madevent is currently running.
-            Please wait that all instance of madevent are closed. If no
-            instance is running, you can delete the file
-            %s and try again.''' % pjoin(me_dir,'RunWeb')
-            raise aMCatNLOAlreadyRunning, message
-        else:
-            misc.call(['touch %s' % pjoin(me_dir,'RunWeb')], cwd=me_dir, shell=True)
-            misc.call([pjoin('./', self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir, shell=True)
-        
-        self.to_store = []
-        self.run_name = None
-        self.run_tag = None
-        self.banner = None
-        # Load the configuration file
-        self.set_configuration(amcatnlo=True)
 
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
@@ -578,8 +550,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.results.def_web_mode(self.web)
         # check that compiler is gfortran 4.6 or later if virtuals have been exported
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
+
         if not '[real=QCD]' in proc_card:
-            check_compiler(self.options_configuration, block=True)
+            check_compiler(self.options, block=True)
 
         
     ############################################################################    
@@ -587,7 +560,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         """split argument and"""
         
         args = CmdExtended.split_arg(line)
-
         return args
     
     
@@ -607,7 +579,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
- 
 
     ############################################################################      
     def do_calculate_xsect(self, line):
@@ -669,7 +640,16 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
-        
+    ############################################################################
+    def do_treatcards(self, line, amcatnlo=True):
+        """this is for creating the correct run_card.inc from the nlo format"""
+        return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
+    
+    ############################################################################
+    def set_configuration(self, amcatnlo=True, **opt):
+        """this is for creating the correct run_card.inc from the nlo format"""
+        return super(aMCatNLOCmd,self).set_configuration(amcatnlo=amcatnlo, **opt)
+    
     ############################################################################      
     def do_launch(self, line):
         """ launch the full chain """
@@ -769,7 +749,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'])
+            self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'],
+                                              self.options['cluster_temp_path'])
         if self.cluster_mode == 2:
             import multiprocessing
             try:
@@ -777,7 +758,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             except TypeError:
                 self.nb_core = multiprocessing.cpu_count()
             logger.info('Using %d cores' % self.nb_core)
-            self.cluster = cluster.MultiCore(self.nb_core)
+            self.cluster = cluster.MultiCore(self.nb_core, 
+                                     temp_dir=self.options['cluster_temp_path'])
         self.update_random_seed()
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
         #find and keep track of all the jobs
@@ -804,7 +786,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
             self.update_status('Computing cross-section', level=None)
             self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
-            p = misc.Popen(['./combine_results_FO.sh viSB* novB*'], \
+            p = misc.Popen(['./combine_results_FO.sh born_G* '], \
                                 stdout=subprocess.PIPE, shell=True)
             output = p.communicate()
             self.cross_sect_dict = self.read_results(output, mode)
@@ -891,8 +873,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
 
                     if (i < 2 and not options['only_generation'])  or i == 1 :
-                        p = misc.Popen(['./combine_results.sh %d %d GF* GV*' % (i, nevents)],
-                                stdout=subprocesses.PIPE, shell=True)
+                        p = misc.Popen(['./combine_results.sh %d %d GB*' % (i, nevents)],
+                                stdout=subprocess.PIPE, shell=True)
                         output = p.communicate()
                         misc.call(['cp res_%d_abs.txt res_%d_tot.txt %s' % \
                            (i, i, pjoin(self.me_dir, 'Events', self.run_name))], shell=True)
@@ -1248,12 +1230,13 @@ Integrated cross-section
             if lines[i].startswith('MCMODE'):
                 lines[i]='MCMODE=%s' % shower
             #the following variables are actually relevant only if running hw++
-            if lines[i].startswith('HWPPPATH'):
-                lines[i]='HWPPPATH=%s' % self.options['hwpp_path']
-            if lines[i].startswith('THEPEGPATH'):
-                lines[i]='THEPEGPATH=%s' % self.options['thepeg_path']
-            if lines[i].startswith('HEPMCPATH'):
-                lines[i]='HEPMCPATH=%s' % self.options['hepmc_path']
+            if shower == 'HERWIGPP':
+                if lines[i].startswith('HWPPPATH'):
+                    lines[i]='HWPPPATH=%s' % self.options['hwpp_path']
+                if lines[i].startswith('THEPEGPATH'):
+                    lines[i]='THEPEGPATH=%s' % self.options['thepeg_path']
+                if lines[i].startswith('HEPMCPATH'):
+                    lines[i]='HEPMCPATH=%s' % self.options['hepmc_path']
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'MCatNLO_MadFKS.inputs'), 'w')
         output.write('\n'.join(lines))
@@ -1318,17 +1301,15 @@ Integrated cross-section
     def wait_for_complete(self, run_type):
         """this function waits for jobs on cluster to complete their run."""
 
-        # if running serially nothing to do
-        if self.cluster_mode == 0:
-            return
-        else:
-            #logger.info('     Waiting for submitted jobs to complete')
-            update_status = lambda i, r, f: self.update_status((i, r, f, run_type), level='parton')
-            try:
-                self.cluster.wait(self.me_dir, update_status)
-            except:
-                self.cluster.remove()
-                raise
+        starttime = time.time()
+        #logger.info('     Waiting for submitted jobs to complete')
+        update_status = lambda i, r, f: self.update_status((i, r, f, run_type), 
+                      starttime=starttime, level='parton', update_results=False)
+        try:
+            self.cluster.wait(self.me_dir, update_status)
+        except:
+            self.cluster.remove()
+            raise
 
     def run_all(self, job_dict, arg_list, run_type='monitor'):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
@@ -1341,7 +1322,8 @@ Integrated cross-section
                 for job in jobs:
                     self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', dir) )
                     # print some statistics if running serially
-
+        if self.cluster_mode == 2:
+            time.sleep(1) # security to allow all jobs to be launched
         self.wait_for_complete(run_type)
         os.chdir(pjoin(self.me_dir, 'SubProcesses'))
 
@@ -1373,9 +1355,113 @@ Integrated cross-section
                                 self.ijob, run_type), level='parton')
         else:
             #this is for the cluster/multicore run
-            self.cluster.submit(exe, args, cwd=cwd)
+            if 'ajob' not  in exe:
+                return self.cluster.submit(exe, args, cwd=cwd)  
+            # use local disk if possible => need to stands what are the 
+            # input/output files
+            keep_fourth_arg = False
+            output_files = []
+            input_files = [pjoin(self.me_dir, 'MGMEVersion.txt'),
+                           pjoin(self.me_dir, 'SubProcesses', 'randinit'),
+                           pjoin(cwd, 'symfact.dat'),
+                           pjoin(cwd, 'iproc.dat')]
+            
+            # File for the loop (might be not present if MadLoop is not use)
+            if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
+                to_add = ['MadLoopParams.dat', 'ColorDenomFactors.dat', 
+                                         'ColorNumFactors.dat','HelConfigs.dat']
+                for name in to_add:
+                    input_files.append(pjoin(cwd, name))
 
+            Ire = re.compile("for i in ([\d\s]*) ; do")
+            try : 
+                fsock = open(exe)
+            except:
+                fsock = open(pjoin(cwd,exe))
+            text = fsock.read()
+            data = Ire.findall(text)
+            subdir = ' '.join(data).split()
+                     
+            if args[0] == '0':
+                # MADEVENT VEGAS MODE
+                input_files.append(pjoin(cwd, 'madevent_vegas'))
+                input_files.append(pjoin(self.me_dir, 'SubProcesses','madin.%s' % args[1]))
+                #j=$2\_G$i
+                for i in subdir:
+                    current = '%s_G%s' % (args[1],i)
+                    if os.path.exists(pjoin(cwd,current)):
+                        input_files.append(pjoin(cwd, current))
+                    output_files.append(current)
+                    if len(args) == 4:
+                        # use a grid train on another part
+                        base = '%s_G%s' % (args[3],i)
+                        if args[0] == '0':
+                            to_move = [n for n in os.listdir(pjoin(cwd, base)) 
+                                                          if n.endswith('.sv1')]
+                            to_move.append('grid.MC_integer')
+                        elif args[0] == '1':
+                            to_move = ['mint_grids', 'grid.MC_integer']
+                        else: 
+                            to_move  = []
+                        if not os.path.exists(pjoin(cwd,current)):
+                            os.mkdir(pjoin(cwd,current))
+                            input_files.append(pjoin(cwd, current))
+                        for name in to_move:
+                            files.ln(pjoin(cwd,base, name), 
+                                            starting_dir=pjoin(cwd,current))
+                        files.ln(pjoin(cwd,base, 'grid.MC_integer'), 
+                                            starting_dir=pjoin(cwd,current))
+                                  
+            elif args[0] == '2':
+                # MINTMC MODE
+                input_files.append(pjoin(cwd, 'madevent_mintMC'))
+                if args[2] in ['0','2']:
+                    input_files.append(pjoin(self.me_dir, 'SubProcesses','madinMMC_%s.2' % args[1]))
 
+                for i in subdir:
+                    current = 'G%s%s' % (args[1], i)
+                    if os.path.exists(pjoin(cwd,current)):
+                        input_files.append(pjoin(cwd, current))
+                    output_files.append(current)
+                    if len(args) == 4 and args[3] in ['H','S','V','B','F']:
+                        # use a grid train on another part
+                        base = '%s_%s' % (args[3],i)
+                        files.ln(pjoin(cwd,base,'mint_grids'), name = 'preset_mint_grids', 
+                                                starting_dir=pjoin(cwd,current))
+                        files.ln(pjoin(cwd,base,'grid.MC_integer'), 
+                                                starting_dir=pjoin(cwd,current))
+                    elif len(args) ==4:
+                        keep_fourth_arg = True
+                    
+  
+            else:
+                raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
+  
+            #Find the correct PDF input file
+            if hasattr(self, 'pdffile'):
+                input_files.append(self.pdffile)
+            else:
+                for line in open(pjoin(self.me_dir,'Source','PDF','pdf_list.txt')):
+                    data = line.split()
+                    if len(data) < 4:
+                        continue
+                    if data[1].lower() == self.run_card['pdlabel'].lower():
+                        self.pdffile = pjoin(self.me_dir, 'lib', 'Pdfdata', data[2])
+                        input_files.append(self.pdffile) 
+                        break
+                else:
+                    # possible when using lhapdf
+                    self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
+                    input_files.append(self.pdffile)
+                    
+            
+            if len(args) == 4 and not keep_fourth_arg:
+                args = args[:3]
+            
+            #submitting
+            self.cluster.submit2(exe, args, cwd=cwd, 
+                         input_files=input_files, output_files=output_files)
+            
     def write_madinMMC_file(self, path, run_mode, mint_mode):
         """writes the madinMMC_?.2 file"""
         #check the validity of the arguments
@@ -1537,7 +1623,8 @@ Integrated cross-section
                         raise aMCatNLOError('Compilation failed, check %s for details' \
                                 % test_log)
                     logger.info('   Running check_poles...')
-                    misc.call(['echo %s | ./check_poles >> %s' % ('"100 \\n -1"', test_log)], shell=True) 
+                    open('./check_poles.input', 'w').write('100 \n -1\n') 
+                    misc.call(['./check_poles <check_poles.input >> %s' % (test_log)], shell=True) 
                     self.parse_check_poles_log(os.getcwd())
                 #compile madevent_mintMC/vegas
                 logger.info('   Compiling %s' % exe)
@@ -1566,13 +1653,14 @@ Integrated cross-section
                 nfail +=1
                 tolerance = float(line.split()[1])
 
-        logger.info('   Poles succesfully cancel for %d points over %d (tolerance=%2.1e)' \
+        logger.info('   Poles successfully cancel for %d points over %d (tolerance=%2.1e)' \
                 %(npass, nfail+npass, tolerance))
 
 
 
     def link_lhapdf(self, libdir):
         """links lhapdf into libdir"""
+        print self.options
         logger.info('Using LHAPDF interface for PDFs')
         lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
                 shell = True, stdout = subprocess.PIPE).stdout.read().strip()

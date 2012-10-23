@@ -45,6 +45,7 @@ from madgraph import MadGraph5Error
 _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
+pjoin = os.path.join
 
 #===============================================================================
 # LoopDiagramDrawer Test
@@ -55,7 +56,8 @@ class TestLoopDrawer(unittest.TestCase):
     def setUp(self):
         if not hasattr(self, 'cmd'):
             TestLoopDrawer.cmd = MasterCmd()
-            TestLoopDrawer.cmd.do_import('model loop_SM_QCD' )
+            model_path = pjoin(_file_path, '../../input_files','LoopSMTest')
+            TestLoopDrawer.cmd.do_import('model %s' % model_path)
             TestLoopDrawer.model = TestLoopDrawer.cmd._curr_model
             try:
                 TestLoopDrawer.store_diagram = pickle.load(open(os.path.join(_file_path, \
@@ -75,6 +77,24 @@ class TestLoopDrawer(unittest.TestCase):
             a = (line.begin.pos_x, line.begin.pos_y ) 
             b= (line.end.pos_x, line.end.pos_y )
             self.assertNotEqual(a,b)
+
+    def assertnocrossing(self, diagram):
+        """check that all line have a non zero length"""
+        
+        for i, line1 in enumerate(diagram.lineList):
+            if i == len(diagram.lineList):
+                continue
+            for line2 in diagram.lineList[i+1:]:
+                if line1.begin in [line2.end, line2.begin] and line1.end in [line2.end, line2.begin]:
+                    continue
+                
+                
+                self.assertFalse(line1.has_intersection(line2),'(%s,%s),(%s,%s) with (%s,%s),(%s,%s)' %\
+                                 (line1.begin.pos_x, line1.begin.pos_y,
+                                  line1.end.pos_x, line1.end.pos_y,
+                                  line2.begin.pos_x, line2.begin.pos_y,
+                                  line2.end.pos_x, line2.end.pos_y) )
+
             
 
     def test_loop_convert_diagram(self):
@@ -226,7 +246,12 @@ class TestLoopDrawer(unittest.TestCase):
         diagram = draw_lib.LoopFeynmanDiagram(diagram, structure, self.model)
 #        diagram.load_diagram()
         self.assertFalse(diagram.need_to_flip())        
-        
+        # Same test but for d d~ > e+ e- mu+ mu-:
+        diagram = copy.deepcopy(self.store_diagram['FULL d d~ > e+ e- mu+ mu-'][42])
+        diagram = draw_lib.LoopFeynmanDiagram(diagram, structure, self.model)
+        diagram.load_diagram()
+        diagram.define_level()
+        self.assertTrue(diagram.need_to_flip())
         
     def test_level_with_flipping_triangle(self):
 
@@ -261,6 +286,9 @@ class TestLoopDrawer(unittest.TestCase):
         for line in diagram.lineList:
             self.assertNotEquals(line.begin, None)
             self.assertNotEquals(line.end, None)
+        
+        
+
         
 
     # The test below is 'commented' out as it is no longer compatible with 
@@ -339,8 +367,18 @@ class TestLoopDrawer(unittest.TestCase):
             if diagram is None:
                 continue # counter term are not drawn
             self.assertnozerolength(diagram)
-
-
+            self.assertnocrossing(diagram)
+            
+    def test_NLO_draw_all_reconstructed_dd_eemm(self):
+               
+        for i in range(72):
+            diagram = copy.deepcopy(self.store_diagram['FULL d d~ > e+ e- mu+ mu-'][i])
+            Drawer = draw_lib.DiagramDrawer()
+            diagram = Drawer.convert_diagram(diagram, self.model) 
+            if diagram is None:
+                continue # counter term are not drawn
+            self.assertnozerolength(diagram)
+            self.assertnocrossing(diagram)
 
     def test_NLO_draw_uux_guux(self):
         for i in range(51,52):
@@ -602,26 +640,7 @@ class LoopDiagramDrawerTest(unittest.TestCase):
         
         # Now the drawing test on myloopamplitude['loop_diagrams']
         return myloopamplitude['loop_diagrams']
-     
-    def notest_find_all_loop_particles(self):
-        """ check if we can find the loop particles at a given position """
-        
-        opt = draw_lib.DrawOption({'external':1, 'horizontal':0, 'max_size':0})
-        penta_diagram = base_objects.Diagram(self.penta_diagram_dict)  
-        penta_drawing = draw_lib.FeynmanDiagramNLO(penta_diagram, _model, opt)
-        
-        penta_drawing.load_diagram()
-        penta_drawing.define_level()
-        
-        #start position
-        vertex_at_2 = [vertex for vertex in penta_drawing.vertexList \
-                                                             if vertex.level==2]
-        
-        self.assertEqual(penta_drawing.find_all_loop_vertex(vertex_at_2[0]), \
-                                                                    vertex_at_2)
-        vertex_at_2.reverse()
-        self.assertEqual(penta_drawing.find_all_loop_vertex(vertex_at_2[0]), \
-                                                                    vertex_at_2)        
+            
         
         
 #    def do_draw(self):
@@ -915,14 +934,14 @@ if __name__ == '__main__':
 
     # For debugging it's interesting to store problematic diagram in one file.
     #Those one are generated with cmd and store in files with pickle module.
-
+    model_path = pjoin(_file_path, '../../input_files','LoopSMTest')
     process_diag = {}
     process_diag['g g > g g'] = range(85)#[0, 12]
     process_diag['g g > g g g'] = range(1500, 1600)
     process_diag['u u~ > u u~ g'] =[51]
     process_diag['u u~ > u u~ d d~'] = [139]
     cmd = MasterCmd()
-    cmd.do_import('model loop_SM_QCD' )
+    cmd.do_import('model %s' % model_path )
     # Create the diagrams
     diag_content = {}
     for gen_line, pos_list in process_diag.items():
@@ -940,14 +959,17 @@ if __name__ == '__main__':
     # register the full amplitutde
     process_diag = {}
     process_diag['g g > g g'] = range(200,230)#[0, 12]
+    process_diag['d d~ > e+ e- mu+ mu-'] = range(72)
     cmd = MasterCmd()
-    cmd.do_import('model loop_SM_QCD' )
+    cmd.do_import('model %s' % model_path )
     # Create the diagrams
     for gen_line, pos_list in process_diag.items():
         print gen_line, ':',
         gen_line_with_order = gen_line + ' [virt=QCD]'
         cmd.do_generate(gen_line_with_order)
         #Look for decay chains
+        amplitude = cmd._curr_amps[0]
+        print len(amplitude.get('diagrams'))
         matrix_elements = loop_helas_objects.LoopHelasProcess(cmd._curr_amps)
         matrix_element = matrix_elements.get('matrix_elements')[0]
         diag = matrix_element.get_base_amplitude().get('diagrams')

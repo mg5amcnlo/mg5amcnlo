@@ -170,6 +170,7 @@ class PhysicsObjectList(list):
             "Object %s is not a valid object for the current list" % repr(object)
 
         list.append(self, object)
+        
 
     def is_valid_element(self, obj):
         """Test if object obj is a valid element for the list."""
@@ -928,11 +929,11 @@ class Model(PhysicsObject):
     def filter(self, name, value):
         """Filter for model property values"""
 
-        if name == 'name':
+        if name in ['name']:
             if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
-                    "Object of type %s is not a string" % \
-                                                            type(value)
+                    "Object of type %s is not a string" %type(value)
+
         elif name == 'particles':
             if not isinstance(value, ParticleList):
                 raise self.PhysicsObjectError, \
@@ -1077,8 +1078,8 @@ class Model(PhysicsObject):
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['name', 'particles', 'parameters', 'interactions', 'couplings',
-                'lorentz', 'gauge']
+        return ['name', 'particles', 'parameters', 'interactions',
+                'couplings','lorentz', 'gauge']
 
     def get_particle(self, id):
         """Return the particle corresponding to the id"""

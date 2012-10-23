@@ -46,11 +46,7 @@ c-----
          close(lun+1)
       endif
       open (unit=lun, file = fname, status='unknown')
-      if (run_cluster.eq.1) then
-         open (unit=lun+1,file="../ajob_template_condor",status="old")
-      else
-         open (unit=lun+1,file="../ajob_template",status="old")
-      endif
+      open (unit=lun+1,file="../ajob_template",status="old")
       found_tag=.false.
       do while (.true.) 
          read(lun+1,15,err=99,end=99) buff

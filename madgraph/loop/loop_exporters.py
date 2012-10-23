@@ -47,7 +47,7 @@ import madgraph.various.process_checks as process_checks
 import madgraph.various.progressbar as pbar
 import madgraph.core.color_amp as color_amp
 import madgraph.iolibs.helas_call_writers as helas_call_writers
-
+import models.check_param_card as check_param_card
 
 import aloha.create_aloha as create_aloha
 import models.write_param_card as param_writer
@@ -79,10 +79,12 @@ class LoopExporterFortran(object):
         else: 
             self.opt = {'clean': False, 'complex_mass':False,
                         'export_format':'madloop', 'mp':True,
-                        'loop_dir':'', 'cuttools_dir':''}
+                        'loop_dir':'', 'cuttools_dir':'', 
+                        'fortran_compiler':'gfortran'}
 
         self.loop_dir = self.opt['loop_dir']
         self.cuttools_dir = self.opt['cuttools_dir']
+        self.fortran_compiler = self.opt['fortran_compiler']
 
         super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)
         
@@ -101,6 +103,12 @@ class LoopExporterFortran(object):
         if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
             logger.info('Compiling CutTools. This has to be done only once and'+\
                               ' can take a couple of minutes.','$MG:color:BLUE')
+            current = misc.detect_current_compiler(os.path.join(\
+                                                  self.cuttools_dir,'makefile'))
+            new = 'gfortran' if self.fortran_compiler is None else \
+                                                           self.fortran_compiler
+            if current != new:
+                misc.mod_compilator(self.cuttools_dir, new,current)
             misc.compile(cwd=self.cuttools_dir, job_specs = False)
 
         if os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):            
@@ -192,7 +200,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Prepend 'MP_' to all the helas calls in helas_calls_list.
         # Might look like a brutal unsafe implementation, but it is not as 
         # these calls are built from the properties of the HELAS objects and
-        # wether they are evaluated in double or quad precision is none of 
+        # whether they are evaluated in double or quad precision is none of 
         # their business but only relevant to the output algorithm.
         # Also the cast to complex masses DCMPLX(*) must be replaced by
         # CMPLX(*,KIND=16)
@@ -581,18 +589,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                   "\n common/MP_AMPS/AMP"
         
         if writer:
-            files=[]
-            files.append(self.write_loop_num(None,matrix_element,\
-                                                         LoopFortranModel))
-            files.append(self.write_CT_interface(None,matrix_element))
-            calls, loop_matrix = self.write_loopmatrix(None,matrix_element,\
-                                                          LoopFortranModel)
-            files.append(loop_matrix)
-            files.append(self.write_born_amps_and_wfs(None,matrix_element,\
-                                                        LoopFortranModel))
-            file = "\n".join(files)
-            writer.writelines(file)
-            return calls
+            raise MadGraph5Error, 'Matrix output mode no longer supported.'
         
         else:
             filename = 'loop_matrix.f'
@@ -602,6 +599,10 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             filename = 'CT_interface.f'
             self.write_CT_interface(writers.FortranWriter(filename),\
                                     matrix_element)
+            
+            filename = 'improve_ps.f'
+            calls = self.write_improve_ps(writers.FortranWriter(filename),
+                                                                 matrix_element)
             
             filename = 'loop_num.f'
             self.write_loop_num(writers.FortranWriter(filename),\
@@ -619,6 +620,45 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         function is used when called from the command interface """
         
         return self.generate_loop_subprocess(matrix_element,fortran_model)
+
+
+    def write_improve_ps(self, writer, matrix_element):
+        """ Write out the improve_ps subroutines which modify the PS point
+        given in input and slightly deform it to achieve exact onshellness on
+        all external particles as well as perfect energy-momentum conservation""" 
+        replace_dict = copy.copy(self.general_replace_dict)
+        
+        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
+        replace_dict['ninitial']=ninitial
+        mass_list=matrix_element.get_external_masses()[:-2]
+        mp_variable_prefix = check_param_card.ParamCard.mp_prefix
+
+        # First the double precision version of it
+        replace_dict['real_format']=replace_dict['real_dp_format']
+        replace_dict['mp_prefix']=''
+        replace_dict['exp_letter']='d'
+        replace_dict['mp_specifier']=''
+        replace_dict['coupl_inc_name']='coupl.inc'
+        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
+                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
+        
+        file_dp = open(os.path.join(self.template_dir,'improve_ps.inc')).read()
+        file_dp=file_dp%replace_dict
+        # Now the mp version of it
+        replace_dict['real_format']=replace_dict['real_mp_format']
+        replace_dict['mp_prefix']='MP_'
+        replace_dict['exp_letter']='e'
+        replace_dict['mp_specifier']='_16'
+        replace_dict['coupl_inc_name']='mp_coupl.inc'
+        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(prefix)s%(m)s'\
+                            %{'i':i+1,'m':m, 'prefix':mp_variable_prefix} for \
+                                                  i, m in enumerate(mass_list)])
+        file_mp = open(os.path.join(self.template_dir,'improve_ps.inc')).read()
+        file_mp=file_mp%replace_dict
+        file = file_dp + \
+              '\n\nC Now the multiple precision version of IMPROVE_PS(P)\n\n' +\
+               file_mp
+        writer.writelines(file)
 
     def write_loop_num(self, writer, matrix_element,fortran_model):
         """ Create the file containing the core subroutine called by CutTools
@@ -655,16 +695,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         else:
             replace_dict['dp_squaring']='RES=BUFF'
             replace_dict['mp_squaring']='QPRES=BUFF'                       
-       
-        # Setup here the details for the phase-space point four-momentum
-        # conservation improvement
-        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
-        replace_dict['n_initial']=ninitial
-        # The last momenta is fixed by the others and the last two particles
-        # are the L-cut ones, so -3.
-        mass_list=matrix_element.get_external_masses()[:-3]
-        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
-                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
+
         # Prepend MP_ to all helas calls.
         self.turn_to_mp_calls(loop_helas_calls)
         replace_dict['mp_loop_helas_calls'] = "\n".join(loop_helas_calls)
@@ -942,17 +973,7 @@ C                ENDIF
         if matrix_element.get('processes')[0].get('has_born'):
             toBeRepaced='loop_helas_calls'
         else:
-            toBeRepaced='loop_induced_helas_calls'            
-
-        # Setup here the details for the phase-space point four-momentum
-        # conservation improvement
-        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
-        replace_dict['n_initial']=ninitial
-        # The last momenta is fixed by the others and the last two particles
-        # are the L-cut ones, so -3.
-        mass_list=matrix_element.get_external_masses()[:-3]
-        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
-                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
+            toBeRepaced='loop_induced_helas_calls'
 
         # Decide here wether we need to split the loop_matrix.f file or not.
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>1000)):
@@ -1136,8 +1157,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                   "\n common/MP_AMPS/AMP"
         
         if writer:
-            raise MadGraph5Error, "The 'matrix' format output is disabled in "+\
-                                                           "the optimized mode."
+            raise MadGraph5Error, 'Matrix output mode no longer supported.'
+
         else:
                         
             filename = 'loop_matrix.f'
@@ -1148,6 +1169,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             calls = self.write_polynomial_subroutines(
                                           writers.FortranWriter(filename),
                                           matrix_element)
+            
+            filename = 'improve_ps.f'
+            calls = self.write_improve_ps(writers.FortranWriter(filename),
+                                                                 matrix_element)
             
             filename = 'CT_interface.f'
             self.write_CT_interface(writers.FortranWriter(filename),\
@@ -1280,15 +1305,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         replace_dict['mp_coef_merging']='\n'.join(coef_merging)
         
-        # Now stuff for the multiple precision ps point improver
-        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
-        replace_dict['n_initial']=ninitial
-        # The last momenta is fixed by the others and the last two particles
-        # are the L-cut ones, so -3.
-        mass_list=matrix_element.get_external_masses()[:-3]
-        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
-                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
-        
         file = file % replace_dict
  
         # Write the file
@@ -1411,16 +1427,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         file = open(os.path.join(self.template_dir,\
                                            'loop_matrix_standalone.inc')).read()
-
-        # Setup here the details for the phase-space point four-momentum
-        # conservation improvement
-        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
-        replace_dict['n_initial']=ninitial
-        # The last momenta is fixed by the others and the last two particles
-        # are the L-cut ones, so -3.
-        mass_list=matrix_element.get_external_masses()[:-3]
-        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
-                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
 
         # Decide here wether we need to split the loop_matrix.f file or not.
         # 200 is reasonable but feel free to change it.

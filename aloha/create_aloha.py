@@ -770,6 +770,9 @@ class AbstractALOHAModel(dict):
         for outgoing, tag in routines:
             symmetric = self.has_symmetries(symmetry, outgoing, valid_output=routines)
             realname = name + ''.join(tag)
+            if (realname, outgoing) in self:
+                continue # already computed
+            
             if symmetric:
                 self.get(realname, symmetric).add_symmetry(outgoing)
             else:

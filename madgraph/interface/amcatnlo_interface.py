@@ -134,7 +134,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
                 raise self.InvalidCmd, '%s is not a valid mode, please use "LO", "NLO", "aMC@NLO" or "aMC@LO"' % args[1]
         else:
             #check if args[0] is path or mode
-            if args[0] in ['NLO', 'aMC@NLO', 'aMC@LO'] and self._done_export:
+            if args[0] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO'] and self._done_export:
                 args.insert(0, self._done_export[0])
             elif os.path.isdir(args[0]) or os.path.isdir(pjoin(MG5DIR, args[0]))\
                     or os.path.isdir(pjoin(MG4DIR, args[0])):
@@ -165,27 +165,6 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         if mode == 'NLO' and options['reweightonly']:
             raise self.InvalidCmd, 'option -r (--reweightonly) needs mode "aMC@NLO" or "aMC@LO"'
 
-
-
-    def validate_model(self, loop_type):
-        """ Upgrade the model sm to loop_sm if needed """
-
-        if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
-           self._curr_model['perturbation_couplings']==[]:
-            if loop_type == 'real':
-                    logger.warning(\
-                      "Beware that real corrections are generated from a tree-level model.")     
-            else:
-                if self._curr_model['name']=='sm':
-                    logger.warning(\
-                      "The default sm model does not allow to generate"+
-                      " loop processes. MG5 now loads 'loop_sm' instead.")
-                    mg_interface.MadGraphCmd.do_import(self,"model loop_sm")
-                else:
-                    raise MadGraph5Error(
-                      "The model %s cannot handle loop processes"\
-                      %self._curr_model['name'])            
-    pass
 
 class CheckFKSWeb(mg_interface.CheckValidForCmdWeb, CheckFKS):
     pass
@@ -232,6 +211,47 @@ class CompleteFKS(mg_interface.CompleteForCmd):
                        if name not in forbidden_names]
             return self.list_completion(text, content)
 
+
+    def complete_launch(self, text, line, begidx, endidx):
+        """ complete the launch command"""
+        args = self.split_arg(line[0:begidx])
+
+        # Directory continuation
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        pjoin(*[a for a in args if a.endswith(os.path.sep)]),
+                                        only_dirs = True)
+        # Format
+        if len(args) == 1:
+            out = {'Path from ./': self.path_completion(text, '.', only_dirs = True)}
+            if MG5DIR != os.path.realpath('.'):
+                out['Path from %s' % MG5DIR] =  self.path_completion(text,
+                                     MG5DIR, only_dirs = True, relative=False)
+            if MG4DIR and MG4DIR != os.path.realpath('.') and MG4DIR != MG5DIR:
+                out['Path from %s' % MG4DIR] =  self.path_completion(text,
+                                     MG4DIR, only_dirs = True, relative=False)
+
+        if len(args) == 2:
+            modes = ['aMC@NLO', 'NLO', 'aMC@LO', 'LO']
+            return self.list_completion(text, modes, line)
+            
+        #option
+        if len(args) >= 3:
+            out={}
+
+        if line[0:begidx].endswith('--laststep='):
+            opt = ['parton', 'pythia', 'pgs','delphes','auto']
+            out['Options'] = self.list_completion(text, opt, line)
+        else:
+
+            opt = ['-f', '-c', '-m', '-i', '-n', '-r', '-R', '-p',
+                    '--force', '--cluster', '--multicore', '--interactive',
+                    '--nocompile', '--reweightonly', '--noreweight', '--parton']
+            out['Options'] = self.list_completion(text, opt, line)
+        
+
+        return self.deal_multiple_categories(out)
+
 class HelpFKS(mg_interface.HelpToCmd):
 
     def help_display(self):   
@@ -243,7 +263,7 @@ class HelpFKS(mg_interface.HelpToCmd):
         """help for launch command"""
         _launch_parser.print_help()
 
-class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
+class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoopInterface):
     
     _fks_display_opts = ['real_diagrams', 'born_diagrams', 'virt_diagrams', 
                          'real_processes', 'born_processes', 'virt_processes']
@@ -272,24 +292,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
         self._v4_export_formats = []
         self._nlo_modes_for_completion = ['all','real']
         self._export_formats = [ 'madevent' ]
-        if self._curr_model.get('perturbation_couplings') == []:
-            if self._curr_model.get('name') == 'sm':
-                logger.info('Automatically importing the standard model '+\
-                                                       'for loop computations.')
-                # So that we don't load the model twice
-                if self.options['loop_optimized_output'] and \
-                                           not self.options['gauge']=='Feynman':
-                    self._curr_model = None
-                    mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
-                self.do_import('model loop_sm')
-            else:
-                logger.warning('The current important model does not allow'+\
-                                       ' for any loop corrections computation.')
-        if self.options['loop_optimized_output'] and \
-                                           not self.options['gauge']=='Feynman':
-            # In the open loops method, in order to have a maximum loop numerator
-            # rank of 1, one must work in the Feynman gauge
-            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
+        # Do not force NLO model as the user might have asked for reals only.
+        # It will anyway be forced later if he attempts virt= or all=.
+        self.validate_model(loop_type='real_init', stop=False)
         # Set where to look for CutTools installation.
         # In further versions, it will be set in the same manner as _mgme_dir so that
         # the user can chose its own CutTools distribution.
@@ -299,20 +304,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
                            'Using default CutTools instead.') % \
                              self._cuttools_dir)
             self._cuttools_dir=str(pjoin(self._mgme_dir,'vendor','CutTools'))
-
-    def do_set(self, line, log=True):
-        """Set the loop optimized output while correctly switching to the
-        Feynman gauge if necessary.
-        """
-
-        mg_interface.MadGraphCmd.do_set(self,line,log)
-        
-        args = self.split_arg(line)
-        self.check_set(args)
-
-        if args[0] == 'loop_optimized_output' and eval(args[1]) and \
-                                           not self.options['gauge']=='Feynman':
-            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
 
     def do_display(self, line, output=sys.stdout):
         # if we arrive here it means that a _fks_display_opts has been chosen
@@ -393,7 +384,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
             
         proc_type=self.extract_process_type(line)
         if proc_type[1] != 'real':
-            run_interface.check_compiler(self.options_configuration, block=False)
+            run_interface.check_compiler(self.options, block=False)
         self.validate_model(proc_type[1])
 
         #now generate the amplitudes as usual
@@ -406,6 +397,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd
                 raise MadGraph5Error("Decay processes cannot be perturbed")
         else:
             myprocdef = mg_interface.MadGraphCmd.extract_process(self,line)
+        self.proc_validity(myprocdef,'aMCatNLO_%s'%proc_type[1])
 
         if myprocdef['perturbation_couplings']!=['QCD']:
                 raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \

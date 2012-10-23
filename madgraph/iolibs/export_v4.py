@@ -3769,7 +3769,8 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
               'export_format':'madloop', 
               'mp':True,
               'loop_dir': os.path.join(cmd._mgme_dir, 'Template/loop_material'),
-              'cuttools_dir': cmd._cuttools_dir}
+              'cuttools_dir': cmd._cuttools_dir,
+              'fortran_compiler':cmd.options['fortran_compiler']}
 
             if not cmd.options['loop_optimized_output']:
                 ExporterClass=loop_exporters.LoopProcessExporterFortranSA
@@ -3798,7 +3799,8 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
               #use MP for HELAS only if there are virtual amps 
               'mp':len(cmd._fks_multi_proc.get_virt_amplitudes()) > 0,
               'loop_dir': os.path.join(cmd._mgme_dir,'Template','loop_material'),
-              'cuttools_dir': cmd._cuttools_dir}
+              'cuttools_dir': cmd._cuttools_dir,
+              'fortran_compiler':cmd.options['fortran_compiler']}
         if not cmd.options['loop_optimized_output']:
             logger.info("Writing out the aMC@NLO code, starting from born process")
             ExporterClass = export_fks.ProcessExporterFortranFKS

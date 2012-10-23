@@ -50,6 +50,16 @@
 0
 ! Default :: 0
 
+!     By default, MadLoop is allowed to slightly deform the Phase-Space point in input
+!     so to insure perfect onshellness of the external particles and perfect energy-momentum
+!     conservation. The deformation is minimal and such that it leaves the input PS point 
+!     unchanged if it already satisfies the physical condiditions mentionned above.
+!     Notice that this controls only the double precision behavior. For multiple precision,
+!     this slight deformation is applied anyway (Otherwise multiple precision is pointless.)
+#ImprovePSPoint
+.TRUE.
+! Default :: .TRUE.
+
 !     =================================================================================
 !     The parameters below set two CutTools internal parameters accessible to the user. 
 !     =================================================================================
@@ -117,10 +127,10 @@
 
 !     Some loop contributions may be zero for some helicities which are however
 !     contributing. In order to save their computing time, you can chose here to try
-!     to filter them out. The gain is typically minimal, so feel free to turn this off.
+!     to filter them out. The gain is typically minimal, so it is turned off by default.
 #UseLoopFilter
-.TRUE.
-! Default :: .TRUE.
+.FALSE.
+! Default :: .FALSE.
 
 !     This decides wether consecutive consistency for the loop filtering setup is also 
 !     required.

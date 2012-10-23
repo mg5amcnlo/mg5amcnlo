@@ -98,7 +98,10 @@ def import_model(model_name, decay=False):
     model = import_full_model(model_path, decay) 
     # restore the model name
     if restrict_name:
-        model["name"] += '-' + restrict_name 
+        model["name"] += '-' + restrict_name
+    path = os.path.dirname(os.path.realpath(model_path))
+    path = os.path.join(path, model.get('name'))
+    model.set('version_tag', os.path.realpath(path) +'##'+ str(misc.get_pkg_info()))
     
     #restrict it if needed       
     if restrict_file:
@@ -120,7 +123,6 @@ def import_model(model_name, decay=False):
             keep_external=False
         model.restrict_model(restrict_file, rm_parameter=not decay,
                                             keep_external=keep_external)
-        
     return model
 
 _import_once = []
@@ -147,7 +149,6 @@ def import_full_model(model_path, decay=False):
     else:
         pickle_name = 'model_Feynman.pkl'
         
-    
     if files.is_uptodate(os.path.join(model_path, pickle_name), files_list):
         try:
             model = save_load_object.load_from_file( \
@@ -155,8 +156,10 @@ def import_full_model(model_path, decay=False):
         except Exception, error:
             logger.info('failed to load model from pickle file. Try importing UFO from File')
         else:
-            # check path is correct 
-            if model.has_key('version_tag') and model.get('version_tag') == os.path.realpath(model_path) + str(misc.get_pkg_info()):
+            # We don't care about the restrict_card for this comparison
+            if model.has_key('version_tag') and not model.get('version_tag') is None and \
+              model.get('version_tag').startswith(os.path.realpath(model_path)) and \
+              model.get('version_tag').endswith('##' + str(misc.get_pkg_info())):
                 _import_once.append((model_path, aloha.unitary_gauge))
                 return model
 
@@ -170,7 +173,6 @@ def import_full_model(model_path, decay=False):
     
     if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
     model.set('name', os.path.split(model_path)[-1])
-    model.set('version_tag', os.path.realpath(model_path) +'##'+ str(misc.get_pkg_info()))
 
     # Load the Parameter/Coupling in a convinient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main()
@@ -1058,7 +1060,6 @@ class RestrictModel(model_reader.ModelReader):
         """
 
         self.restrict_card = param_card
-
         # Reset particle dict to ensure synchronized particles and interactions
         self.set('particles', self.get('particles'))
 

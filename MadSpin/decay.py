@@ -1648,29 +1648,34 @@ class decay_misc:
                 mode=0 : production part 
                 mode=1 : process fully decayed
         """
-
-        commandline="set stdout_level CRITICAL "
-        mgcmd.exec_cmd(commandline)
-
-        commandline="import model "+base_model
-        mgcmd.exec_cmd(commandline)
-
-        mgcmd.exec_cmd("set group_subprocesses False")
-
-        commandline="generate "+processes[0]
-        mgcmd.exec_cmd(commandline)
-
-# output the result in Fortran format:
-        if mode==0: # production process
-            mgcmd.exec_cmd("output standalone_ms production_me -f")
+        level = mgcmd.options['stdout_level']
+        try:
+            commandline="set stdout_level CRITICAL "
+            mgcmd.exec_cmd(commandline)
+    
+            commandline="import model "+base_model
+            mgcmd.exec_cmd(commandline)
+    
+            mgcmd.exec_cmd("set group_subprocesses False")
+    
+            commandline="generate "+processes[0]
+            mgcmd.exec_cmd(commandline)
+    
+            # output the result in Fortran format:
+            if mode==0: # production process
+                mgcmd.exec_cmd("output standalone_ms production_me -f")
+            
+            elif mode==1: # full process
+                mgcmd.exec_cmd("output standalone_ms full_me -f")
+        except:
+            commandline="set stdout_level %s " % level
+            mgcmd.exec_cmd(commandline)
+            raise
         
-        elif mode==1: # full process
-            mgcmd.exec_cmd("output standalone_ms full_me -f")
-
-        commandline="set stdout_level INFO "
-        mgcmd.exec_cmd(commandline)
-
-# now extract the information about the topologies
+        commandline="set stdout_level %s " % level
+        mgcmd.exec_cmd(commandline)  
+              
+        # now extract the information about the topologies
         if mode==0:
             me_list=mgcmd._curr_matrix_elements.get_matrix_elements()
             if(len(me_list)!=1): 

@@ -2181,6 +2181,7 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         right_side = 0
         side_weight = 0 # if side is positive need to switch
         nb_T_channel = 0
+        nb_S_channel = 0 
 
         
         binding_side = {}
@@ -2193,8 +2194,10 @@ class LoopFeynmanDiagram(FeynmanDiagram):
                             and line.get('state') == False])
             
             
+            
             nb_Tloop = len([line for line in vertex.get('legs') if line.get('loop_line') 
                             and line.get('state')]) 
+            nb_S_channel += nb_Tloop
 
 
             line = vertex['legs'][-1]
@@ -2217,6 +2220,14 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         
         if not nb_T_channel:
             return False
+        # Note that the number of T_channel/S_channel has a factor 2 compare to  
+        # the number of particles in the loop.
+        
+        # Ensure that the triangle are always correct:
+        if nb_S_channel == 2:
+            return True 
+        elif nb_T_channel == 2:
+            return False 
         
         # See the depth of each side 
         for pdg, list_struct_id, vertex_id in self.diagram['tag']:

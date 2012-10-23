@@ -116,7 +116,6 @@ def which(program):
             exe_file = os.path.join(path, program)
             if is_exe(exe_file):
                 return exe_file
-
     return None
 
 #===============================================================================
@@ -235,11 +234,11 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True ,**opt):
         raise MadGraph5Error, error_text
     return p.returncode
 
-def get_gfortran_version():
+def get_gfortran_version(compiler='gfortran'):
     """ Returns the gfortran version as a string.
         Returns '0' if it failed."""
     try:    
-        p = Popen('gfortran -dumpversion', stdout=subprocess.PIPE, 
+        p = Popen(compiler+' -dumpversion', stdout=subprocess.PIPE, 
                     stderr=subprocess.PIPE, shell=True)
         output, error = p.communicate()
         version_finder=re.compile(r"(?P<version>(\d.)*\d)")
@@ -268,7 +267,9 @@ def mod_compilator(directory, new='gfortran', current=None):
 def detect_current_compiler(path):
     """find the current compiler for the current directory"""
     
-    comp = re.compile("^\s*FC\s*=\s*(\w+)\s*")
+#    comp = re.compile("^\s*FC\s*=\s*(\w+)\s*")
+#   The regular expression below allows for compiler definition with absolute path
+    comp = re.compile("^\s*FC\s*=\s*([\w\/\\.\-]+)\s*")
     for line in open(path):
         if comp.search(line):
             compiler = comp.search(line).groups()[0]
@@ -602,4 +603,49 @@ def is_executable(path):
         return os.access(path, os.X_OK)
     except:
         return False        
+
+################################################################################
+# TAIL FUNCTION
+################################################################################
+class digest:
+
+    def test_all(self):
+        try:
+            return self.test_hashlib()
+        except:
+            pass
+        try:
+            return self.test_md5()
+        except:
+            pass
+        try:
+            return self.test_zlib()
+        except:
+            pass
+                
+    def test_hashlib(self):
+        import hashlib
+        def digest(text):
+            """using mg5 for the hash"""
+            t = hashlib.md5()
+            t.update(text)
+            return t.hexdigest()
+        return digest
+    
+    def test_md5(self):
+        import md5
+        def digest(text):
+            """using mg5 for the hash"""
+            t = md5.md5()
+            t.update(text)
+            return t.hexdigest()
+        return digest
+    
+    def test_zlib(self):
+        import zlib
+        def digest(text):
+            return zlib.adler32(text)
+        
+digest = digest().test_all()
+
 

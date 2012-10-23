@@ -898,6 +898,16 @@ class TestFKSCommon(unittest.TestCase):
         self.assertEqual(dict['soft_particles'], res_soft)
         self.assertEqual(dict['interactions'], res_int)
 
+
+    def test_find_pert_particles_interactionsi_mssm(self):
+        """ for the mssm, the soft_particles should be the same as for the sm"""
+        dict_mssm = fks_common.find_pert_particles_interactions(\
+                import_ufo.import_model('mssm'))
+        dict_sm = fks_common.find_pert_particles_interactions(\
+                import_ufo.import_model('mssm'))
+        self.assertEqual(dict_sm['soft_particles'], dict_mssm['soft_particles'])
+
+
     def test_find_particles_interactions_no_ghosts(self):
         """tests that interactions involving ghosts are NOT returned by the
         find_particles_interactions function when using a loop model"""

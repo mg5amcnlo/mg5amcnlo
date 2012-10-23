@@ -62,7 +62,6 @@ class Testtopo(unittest.TestCase):
         curr_dir=os.getcwd()
         os.chdir('/tmp')
         temp_dir=os.getcwd()
-
         mgcmd=Cmd.MasterCmd()
         process_prod=" g g > t t~ "
         process_full=process_prod+", ( t > b w+ , w+ > mu+ vm ), "
@@ -70,6 +69,8 @@ class Testtopo(unittest.TestCase):
         decay_tools=madspin.decay_misc()
         topo=decay_tools.generate_fortran_me([process_prod],"sm",0, mgcmd)
         decay_tools.generate_fortran_me([process_full],"sm", 1,mgcmd)
+
+
 
         topo_test={1: {'branchings': [{'index_propa': -1, 'type': 's',\
                 'index_d2': 3, 'index_d1': 4}], 'get_id': {}, 'get_momentum': {}, \
@@ -81,7 +82,6 @@ class Testtopo(unittest.TestCase):
                  'get_id': {}, 'get_momentum': {}, 'get_mass2': {}}}
         
         self.assertEqual(topo,topo_test)
-               
         list_prod=os.listdir("production_me/SubProcesses")
         counter=0
         for direc in list_prod:
@@ -112,9 +112,9 @@ class Testtopo(unittest.TestCase):
 
                     os.chdir(pjoin(temp_dir,'production_me','Source','MODEL'))
                     try:
-                       os.remove('*.o')
+                        os.remove('*.o')
                     except:
-                       pass
+                        pass
                     misc.compile(cwd=pjoin(temp_dir,'production_me','Source','MODEL'), mode='fortran')
 #                    misc.call(' make > /dev/null ')
                     os.chdir(new_path)
@@ -193,7 +193,8 @@ class Testtopo(unittest.TestCase):
         decay_value=external.communicate(input=p_string)[0] 
         decay_value=decay_value.split()
         decay_value_test=['3.8420345719455465E-017']
-        self.assertEqual(decay_value,decay_value_test)
+        for i in range(len(decay_value)): 
+            self.assertAlmostEqual(eval(decay_value[i]),eval(decay_value_test[i]))
         os.chdir(temp_dir)
 #        shutil.rmtree('production_me')
 #        shutil.rmtree('full_me')

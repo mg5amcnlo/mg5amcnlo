@@ -4,7 +4,7 @@ LIBDIR = ../../lib/
 PROG   = check
 LINKLIBS =  -L$(LIBDIR) -lcts -ldhelas -lmodel
 LIBS =  $(LIBDIR)libcts.$(libext) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)
-PROCESS= check_sa.o loop_matrix.o \
+PROCESS= check_sa.o loop_matrix.o improve_ps.o\
 		 $(patsubst %.f,%.o,$(wildcard born_matrix.f)) \
 		 loop_num.o CT_interface.o \
 		 $(patsubst %.f,%.o,$(wildcard polynomial.f)) \
@@ -17,7 +17,6 @@ PROCESS= check_sa.o loop_matrix.o \
 		 $(patsubst %.f,%.o,$(wildcard coef_construction_*.f)) \
 		 $(patsubst %.f,%.o,$(wildcard loop_CT_calls_*.f)) \
 		 $(patsubst %.f,%.o,$(wildcard mp_coef_construction_*.f))
-
 
 $(PROG):  $(PROCESS) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
