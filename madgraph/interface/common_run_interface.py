@@ -497,7 +497,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 logger.info(status)
         elif starttime:
             running_time = time.time()-starttime
-            if running_time < 1e-3:
+            if running_time < 1e-2:
                 running_time = ''
             elif running_time < 10:
                 running_time = '[ %.2gs ]' % running_time
@@ -764,9 +764,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             pass
 
         current_dir=os.getcwd()
-        os.chdir("../MadSpin")
-        generate_all=decay.decay_all_events(inputfile,mybanner,to_decay,decay_processes,\
+        try:
+            os.chdir("../MadSpin")
+            generate_all=decay.decay_all_events(inputfile,mybanner,to_decay,decay_processes,\
                  prod_branches, proc_option, max_weight, BW_effects,branching_fraction)
+        except Exception:
+            os.chdir(current_dir)
+            raise
         os.chdir(current_dir)
         
         misc.call(['gzip %s' % evt_file], shell=True)

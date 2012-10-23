@@ -1318,9 +1318,9 @@ Integrated cross-section
         if self.cluster_mode == 0:
             self.update_status((self.njobs - 1, 1, 0, run_type), level='parton')
         for args in arg_list:
-            for dir, jobs in job_dict.items():
+            for Pdir, jobs in job_dict.items():
                 for job in jobs:
-                    self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', dir) )
+                    self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
                     # print some statistics if running serially
         if self.cluster_mode == 2:
             time.sleep(1) # security to allow all jobs to be launched
@@ -1341,7 +1341,6 @@ Integrated cross-section
         else:
             raise aMCatNLOError('Cannot find executable %s in %s' \
                 % (exe, os.getcwd()))
-
         # check that the executable has exec permissions
         if not os.access(execpath, os.X_OK):
             misc.call(['chmod', '+x', exe], cwd=cwd)
@@ -1356,7 +1355,9 @@ Integrated cross-section
         else:
             #this is for the cluster/multicore run
             if 'ajob' not  in exe:
-                return self.cluster.submit(exe, args, cwd=cwd)  
+                return self.cluster.submit(exe, args, cwd=cwd)
+              
+
             # use local disk if possible => need to stands what are the 
             # input/output files
             keep_fourth_arg = False
@@ -1436,7 +1437,7 @@ Integrated cross-section
   
             else:
                 raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
-  
+
             #Find the correct PDF input file
             if hasattr(self, 'pdffile'):
                 input_files.append(self.pdffile)
@@ -1457,7 +1458,6 @@ Integrated cross-section
             
             if len(args) == 4 and not keep_fourth_arg:
                 args = args[:3]
-            
             #submitting
             self.cluster.submit2(exe, args, cwd=cwd, 
                          input_files=input_files, output_files=output_files)
@@ -1579,6 +1579,7 @@ Integrated cross-section
                 if not os.path.exists(pjoin(this_dir, test)):
                     raise aMCatNLOError('Compilation failed, check %s for details' \
                             % test_log)
+            for test in tests:
                 logger.info('   Running %s...' % test)
                 self.write_test_input(test)
                 input = pjoin(self.me_dir, '%s_input.txt' % test)
@@ -1660,7 +1661,6 @@ Integrated cross-section
 
     def link_lhapdf(self, libdir):
         """links lhapdf into libdir"""
-        print self.options
         logger.info('Using LHAPDF interface for PDFs')
         lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
                 shell = True, stdout = subprocess.PIPE).stdout.read().strip()
@@ -1830,7 +1830,7 @@ _compile_usage = "compile [MODE] [options]\n" + \
                 "   MODE can be either FO, for fixed-order computations, \n" + \
                 "   or MC for matching with parton-shower monte-carlos. \n" + \
                 "   (if omitted, it is set to MC)\n"
-_compile_parser = optparse.OptionParser(usage=_compile_usage)
+_compile_parser = misc.OptionParser(usage=_compile_usage)
 _compile_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory for the launch, without editing them")
 _compile_parser.add_option("-R", "--noreweight", default=False, action='store_true',
@@ -1841,7 +1841,7 @@ _launch_usage = "launch [MODE] [options]\n" + \
                 "-- execute aMC@NLO \n" + \
                 "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n"
 
-_launch_parser = optparse.OptionParser(usage=_launch_usage)
+_launch_parser = misc.OptionParser(usage=_launch_usage)
 _launch_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory for the launch, without editing them")
 _launch_parser.add_option("-c", "--cluster", default=False, action='store_true',
@@ -1864,7 +1864,7 @@ _calculate_xsect_usage = "calculate_xsect [ORDER] [options]\n" + \
                 "-- calculate cross-section up to ORDER.\n" + \
                 "   ORDER can be either LO or NLO (if omitted, it is set to NLO). \n"
 
-_calculate_xsect_parser = optparse.OptionParser(usage=_calculate_xsect_usage)
+_calculate_xsect_parser = misc.OptionParser(usage=_calculate_xsect_usage)
 _calculate_xsect_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory for the launch, without editing them")
 _calculate_xsect_parser.add_option("-c", "--cluster", default=False, action='store_true',
@@ -1879,7 +1879,7 @@ _shower_usage = 'shower run_name [options]\n' + \
         '-- do shower/hadronization on parton-level file generated for run run_name\n' + \
         '   all the information (e.g. number of events, MonteCarlo, ...\n' + \
         '   are directly read from the header of the event file\n'
-_shower_parser = optparse.OptionParser(usage=_shower_usage)
+_shower_parser = misc.OptionParser(usage=_shower_usage)
 _shower_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the shower_card present in the directory for the launch, without editing")
 
@@ -1890,7 +1890,7 @@ _generate_events_usage = "generate_events [ORDER] [options]\n" + \
                 "   The number of events and the specific parton shower MC can be specified \n" + \
                 "   in the run_card.dat\n"
 
-_generate_events_parser = optparse.OptionParser(usage=_generate_events_usage)
+_generate_events_parser = misc.OptionParser(usage=_generate_events_usage)
 _generate_events_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory for the launch, without editing them")
 _generate_events_parser.add_option("-c", "--cluster", default=False, action='store_true',

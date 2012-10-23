@@ -46,8 +46,8 @@ import models.import_ufo as import_ufo
 #from time import strftime
 #from madgraph.interface.madgraph_interface import MadGraphCmd
 import madgraph.interface.master_interface as Cmd
-logger = logging.getLogger('madgraph.stdout') # -> stdout
-logger_stderr = logging.getLogger('madgraph.stderr') # ->stderr
+logger = logging.getLogger('decay.stdout') # -> stdout
+logger_stderr = logging.getLogger('decay.stderr') # ->stderr
 
 import random 
 import math
@@ -1648,32 +1648,25 @@ class decay_misc:
                 mode=0 : production part 
                 mode=1 : process fully decayed
         """
-        level = mgcmd.options['stdout_level']
-        try:
-            commandline="set stdout_level CRITICAL "
-            mgcmd.exec_cmd(commandline)
-    
-            commandline="import model "+base_model
-            mgcmd.exec_cmd(commandline)
-    
-            mgcmd.exec_cmd("set group_subprocesses False")
-    
-            commandline="generate "+processes[0]
-            mgcmd.exec_cmd(commandline)
-    
-            # output the result in Fortran format:
-            if mode==0: # production process
-                mgcmd.exec_cmd("output standalone_ms production_me -f")
-            
-            elif mode==1: # full process
-                mgcmd.exec_cmd("output standalone_ms full_me -f")
-        except:
-            commandline="set stdout_level %s " % level
-            mgcmd.exec_cmd(commandline)
-            raise
+
+
+        commandline="import model "+base_model
+        mgcmd.exec_cmd(commandline)
+
+        mgcmd.exec_cmd("set group_subprocesses False")
+
+        commandline="generate "+processes[0]
+        mgcmd.exec_cmd(commandline)
+
+        # output the result in Fortran format:
+        if mode==0: # production process
+            mgcmd.exec_cmd("output standalone_ms production_me -f")
         
-        commandline="set stdout_level %s " % level
-        mgcmd.exec_cmd(commandline)  
+        elif mode==1: # full process
+            mgcmd.exec_cmd("output standalone_ms full_me -f")
+          
+
+        
               
         # now extract the information about the topologies
         if mode==0:
@@ -1987,8 +1980,8 @@ class decay_misc:
                             logger.warning('New mass: '+ str((topo["branchings"][-2]["m2"])))
                             try:
                                 pid=topo["get_id"][part]
-                                logger.warning('pole mass: ', str(pid2mass[pid]))
-                            except:
+                                logger.warning('pole mass: %s' % pid2mass[pid])
+                            except Exception:
                                 pass
         return weight
 
@@ -2164,6 +2157,13 @@ class decay_all_events:
 
 
         mgcmd=Cmd.MasterCmd()
+        logging.getLogger('madgraph').setLevel(50)
+        logging.getLogger('madevent').setLevel(50)
+        logging.getLogger('cmdprint').setLevel(50)
+        logging.getLogger('decay').setLevel(20)
+        logging.root.setLevel(50)
+        
+        
 # Remove old stuff from previous runs
 # so that the current run is not confused
         if os.path.isfile("parameters.inc"):
@@ -2328,7 +2328,7 @@ class decay_all_events:
                 prod_values=prod_values.split()
                 mg5_me_prod = float(prod_values[0])
 
-                tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
+                tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
 
                 logger.info(' ')
                 logger.info('Event '+str(ev+1)+' : ')

@@ -596,6 +596,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if len(choices) > 9:
                 question += '... , ' 
             question = question[:-2]+']'
+        else:
+            question += "[\033[%dm%s\033[0m] " % (4, default)    
         if ask_class:
             obj = ask_class  
         elif path_msg:
