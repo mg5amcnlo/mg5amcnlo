@@ -1177,6 +1177,10 @@ class production_topo(dict):
             self["get_momentum"][d1]=decay2body.momd1.copy()
             self["get_momentum"][d2]=decay2body.momd2.copy()
 
+#    Need a special treatment for the 2 > 1 processes:
+        if len(self["get_mass2"])==3:
+            self["shat"]=self["get_mass2"][3]
+
 #    Finally, compute the initial momenta
 #    First generate initial momenta in the CMS frame
 #    Then boost
@@ -1201,6 +1205,11 @@ class production_topo(dict):
 
         self["get_momentum"][1]=decay2body.momd1
         self["get_momentum"][2]=decay2body.momd2
+
+#    Need a special treatment for the 2 > 1 processes:
+        if len(self["get_momentum"])==3:
+            self["get_momentum"][3]=momentum(Etot,0.0,0.0,pztot)
+        
         return 1
 
     def extract_angles(self):
@@ -1738,7 +1747,7 @@ class decay_misc:
 
         list_prod=os.listdir("production_me/SubProcesses")
         counter=0
-        print "Finalizing production me's "
+        logger.info("""Finalizing production me's """)
  
         for direc in list_prod:
             if direc[0]=="P":
@@ -1789,7 +1798,7 @@ class decay_misc:
         list_full=os.listdir("full_me/SubProcesses")
 
         first=1
-        print "Finalizing decay chain me's "
+        logger.info("""Finalizing decay chain me's """)
         for direc in list_full:
             if direc[0]=="P":
                 
@@ -1849,15 +1858,15 @@ class decay_misc:
 #    need to check if last branch is a t-branching. If it is, 
 #    we need to update the value of branch["m2"]
 #    since this will be used in the reshuffling procedure
-
-        if topo["branchings"][-1]["type"]=="t":
-            if topo["branchings"][-2]["type"]!="t":
-                logger.warning('last branching is t-channel')
-                logger.warning('but last-but-one branching is not t-channel')
-            else:
-                part=topo["branchings"][-1]["index_d2"]
-                if part >0: # reset the mass only if "part" is an external particle
-                    topo["branchings"][-2]["m2"]=math.sqrt(topo["get_mass2"][part])
+        if len(topo["branchings"])>0:  # Exclude 2>1 topologies
+            if topo["branchings"][-1]["type"]=="t":
+                if topo["branchings"][-2]["type"]!="t":
+                    logger.warning('last branching is t-channel')
+                    logger.warning('but last-but-one branching is not t-channel')
+                else:
+                    part=topo["branchings"][-1]["index_d2"]
+                    if part >0: # reset the mass only if "part" is an external particle
+                        topo["branchings"][-2]["m2"]=math.sqrt(topo["get_mass2"][part])
 
     def reorder_branch(self,branch):
         """ branch is a sting with the definition of a decay chain
@@ -1903,15 +1912,15 @@ class decay_misc:
 #    need to check if last branch is a t-branching. If it is, 
 #    we need to update the value of branch["m2"]
 #    since this will be used in the reshuffling procedure
-
-        if topo["branchings"][-1]["type"]=="t":
-            if topo["branchings"][-2]["type"]!="t":
-                logger.info('last branching is t-channel')
-                logger.info('but last-but-one branching is not t-channel')
-            else:
-                part=topo["branchings"][-1]["index_d2"] 
-                if part >0: # reset the mass only if "part" is an external particle
-                    topo["branchings"][-2]["m2"]=math.sqrt(topo["get_mass2"][part])
+        if len(topo["branchings"])>0:  # Exclude 2>1 topologies
+            if topo["branchings"][-1]["type"]=="t":
+                if topo["branchings"][-2]["type"]!="t":
+                    logger.info('last branching is t-channel')
+                    logger.info('but last-but-one branching is not t-channel')
+                else:
+                    part=topo["branchings"][-1]["index_d2"] 
+                    if part >0: # reset the mass only if "part" is an external particle
+                        topo["branchings"][-2]["m2"]=math.sqrt(topo["get_mass2"][part])
 
 
     def transpole(self,pole,width):
@@ -1963,26 +1972,28 @@ class decay_misc:
 
 #    need to check if last branch is a t-branching. If it is, 
 #    we need to update the value of branch["m2"]
-        if topo["branchings"][-1]["type"]=="t":
-            if topo["branchings"][-2]["type"]!="t":
-                logger.info('last branching is t-channel')
-                logger.info('but last-but-one branching is not t-channel')
-            else:
-                part=topo["branchings"][-1]["index_d2"] 
-                if part >0: # reset the mass only if "part" refers to an external particle 
-                    old_mass=topo["branchings"][-2]["m2"]
-                    topo["branchings"][-2]["m2"]=math.sqrt(topo["get_mass2"][part])
-                    #sanity check
-                    if abs(old_mass-topo["branchings"][-2]["m2"])>1e-10:
-                        if abs((old_mass-topo["branchings"][-2]["m2"])/old_mass)>1.0 :
-                            logger.warning('Mass after BW smearing affected by more than 100 % (2)')
-                            logger.warning('Previous value: '+ str(old_mass))
-                            logger.warning('New mass: '+ str((topo["branchings"][-2]["m2"])))
-                            try:
-                                pid=topo["get_id"][part]
-                                logger.warning('pole mass: %s' % pid2mass[pid])
-                            except Exception:
-                                pass
+
+        if len(topo["branchings"])>0:  # Exclude 2>1 topologies
+            if topo["branchings"][-1]["type"]=="t":
+                if topo["branchings"][-2]["type"]!="t":
+                    logger.info('last branching is t-channel')
+                    logger.info('but last-but-one branching is not t-channel')
+                else:
+                    part=topo["branchings"][-1]["index_d2"] 
+                    if part >0: # reset the mass only if "part" refers to an external particle 
+                        old_mass=topo["branchings"][-2]["m2"]
+                        topo["branchings"][-2]["m2"]=math.sqrt(topo["get_mass2"][part])
+                        #sanity check
+                        if abs(old_mass-topo["branchings"][-2]["m2"])>1e-10:
+                            if abs((old_mass-topo["branchings"][-2]["m2"])/old_mass)>1.0 :
+                                logger.warning('Mass after BW smearing affected by more than 100 % (2)')
+                                logger.warning('Previous value: '+ str(old_mass))
+                                logger.warning('New mass: '+ str((topo["branchings"][-2]["m2"])))
+                                try:
+                                    pid=topo["get_id"][part]
+                                    logger.warning('pole mass: %s' % pid2mass[pid])
+                                except Exception:
+                                    pass
         return weight
 
     def modify_param_card(self,pid2widths):
@@ -2286,8 +2297,7 @@ class decay_all_events:
                     logger.info('Re-interpreted as    ')
                     logger.info(extended_prod_process+proc_option)
                     logger.info( tag_production)
-                    logger.info( ' -> need to generate the corresponding \
-                            fortran matrix element ... ')
+                    logger.info( ' -> need to generate the corresponding fortran matrix element ... ')
                     set_of_processes.append(tag_production)
 #             me_prod_mg5format.append(prod_process)
                     new_full_proc_line, new_decay_struct=\
@@ -2368,7 +2378,7 @@ class decay_all_events:
                                             topologies[tag_production][tag_topo], \
                                             to_decay.values(),pid2label_dict, pid2width,pid2mass, \
                                             curr_event.shat)
-
+                            
                             succeed=topologies[tag_production][tag_topo].reshuffle_momenta()
                             # sanlity check
                             for part in topologies[tag_production][tag_topo]['get_momentum'].keys():
@@ -2493,8 +2503,7 @@ class decay_all_events:
                 logger.info('Re-interpreted as    ')
                 logger.info(extended_prod_process+proc_option)
                 logger.info( tag_production)
-                logger.info( ' -> need to generate the corresponding \
-                            fortran matrix element ... ')
+                logger.info( ' -> need to generate the corresponding fortran matrix element ... ')
                 set_of_processes.append(tag_production)
 #            me_prod_mg5format.append(prod_process)
                 new_full_proc_line, new_decay_struct=\

@@ -1441,6 +1441,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         common_run.CommonRunCmd.__init__(self, me_dir, options)
         
 
+        self.mode = 'madevent'
         self.nb_refine=0
         if self.web:
             os.system('touch %s' % pjoin(self.me_dir,'Online'))
