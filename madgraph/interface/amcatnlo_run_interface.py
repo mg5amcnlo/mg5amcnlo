@@ -1863,7 +1863,13 @@ _compile_parser.add_option("-R", "--noreweight", default=False, action='store_tr
 
 _launch_usage = "launch [MODE] [options]\n" + \
                 "-- execute aMC@NLO \n" + \
-                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n"
+                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n" + \
+                "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
+                "     computation of the total cross-section and the filling of parton-level histograms \n" + \
+                "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \
+                "     If mode is set to aMC@LO/aMC@NLO, after the cross-section computation, a .lhe \n" + \
+                "     event file is generated which will be showered with the MonteCarlo specified \n" + \
+                "     in the run_card.dat\n"
 
 _launch_parser = misc.OptionParser(usage=_launch_usage)
 _launch_parser.add_option("-f", "--force", default=False, action='store_true',
