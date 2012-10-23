@@ -593,7 +593,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             
         if not os.path.exists(event_path):
             if os.path.exists(event_path+'.gz'):
-                os.system('gzip -f %s.gz ' % event_path)
+                os.system('gunzip -f %s.gz ' % event_path)
             else:
                 raise self.InvalidCmd, 'Events file %s does not exits' % event_path
         
@@ -829,10 +829,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         
         tag = self.run_tag
         # Update the banner with the pgs card        
+        banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, self.run_tag))
         if os.path.exists(pjoin(self.me_dir, 'Source', 'banner_header.txt')):
             self.banner.add(pjoin(self.me_dir, 'Cards','pgs_card.dat'))
-            banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, self.run_tag))
             self.banner.write(banner_path)
+        else:
+            open(banner_path, 'w').close()
 
         ########################################################################
         # now pass the event to a detector simulator and reconstruct objects
