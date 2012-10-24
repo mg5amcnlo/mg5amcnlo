@@ -314,7 +314,7 @@ class HelpToCmd(object):
         
         logger.info("-- session options:")
         logger.info("      Note that those options will be kept for the current session")      
-        logger.info("      --cluster : Submit to the  cluster. Current cluster: %s" % self.options['cluster_mode'])
+        logger.info("      --cluster : Submit to the  cluster. Current cluster: %s" % self.options['cluster'])
         logger.info("      --multicore : Run in multi-core configuration")
         logger.info("      --nb_core=X : limit the number of core to use to X.")
         
