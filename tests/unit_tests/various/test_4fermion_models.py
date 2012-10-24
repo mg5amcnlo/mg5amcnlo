@@ -67,7 +67,7 @@ class Models4FermionTest(unittest.TestCase):
                                            'model':base_model})
 
             evaluator = process_checks.MatrixElementEvaluator(base_model,
-                                                              reuse = False)
+                                                                  reuse = False)
             evaluator.full_model = full_model
             
             if not p:

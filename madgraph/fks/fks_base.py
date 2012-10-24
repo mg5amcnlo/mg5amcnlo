@@ -139,7 +139,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
         if amps:
             if self['process_definitions'][0].get('NLO_mode') == 'all':
-                logger.info('Generating virtual matrix elements:')
+                logger.info('Generating virtual matrix elements using MadLoop:')
                 self.generate_virtuals()
             
             elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real']:
@@ -203,7 +203,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                 if 'WEIGHTED' in myproc['squared_orders'].keys():
                     del myproc['squared_orders']['WEIGHTED']
                 myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
-                logger.info('Generating virtual matrix element for process%s' \
+                logger.info('Generating virtual matrix element with MadLoop for process%s' \
                         % myproc.nice_string(print_weighted = False).replace(\
                                                                  'Process', ''))
                 myamp = loop_diagram_generation.LoopAmplitude(myproc)

@@ -2763,13 +2763,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # run the check
         cpu_time1 = time.time()
         # Run matrix element generation check on processes
-        mass_scheme = self.options['complex_mass_scheme']
         # The loop optimization output flag is passed as a global to 
         # process_checks because I am fed up with passing it through each single
         # damn little function of process_checks.
-        # We really need to put the MasterInterface as a global of the madgraph
-        # module to stop this annoying gimmicks we are now playing with the 
-        # user options... damn.
         old_process_checks_loop_opt = process_checks.loop_optimized_output
         
         process_checks.loop_optimized_output = self.options['loop_optimized_output']
@@ -2792,54 +2788,48 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if args[0] in ['timing']:
             timings = process_checks.check_timing(myprocdef,
                                                   param_card = param_card,
-                                                  mg_root=self._mgme_dir,
                                                   cuttools=CT_dir,
-                                                  cmass_scheme = mass_scheme,
-                                                  reuse = reuse)        
+                                                  reuse = reuse,
+                                                  cmd = self)        
 
         if args[0] in ['stability']:
             stability = process_checks.check_stability(myprocdef,
                                                   param_card = param_card,
-                                                  mg_root=self._mgme_dir,
                                                   cuttools=CT_dir,
-                                                  cmass_scheme = mass_scheme,
                                                   nPoints=stab_statistics,
-                                                  reuse = reuse)
+                                                  reuse = reuse,
+                                                  cmd = self)
 
         if args[0] in ['profile']:
             # In this case timing and stability will be checked one after the
             # other without re-generating the process.
             profile_time, profile_stab = process_checks.check_profile(myprocdef,
                                                   param_card = param_card,
-                                                  mg_root=self._mgme_dir,
                                                   cuttools=CT_dir,
-                                                  cmass_scheme = mass_scheme,
                                                   nPoints=stab_statistics,
-                                                  reuse = reuse)
+                                                  reuse = reuse,
+                                                  cmd = self)
 
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
                                             param_card = param_card,
                                             quick = True,
-                                            mg_root=self._mgme_dir,
                                             cuttools=CT_dir,
-                                            cmass_scheme = mass_scheme)
+                                            cmd = self)
             nb_processes += len(comparisons[0])
 
         if args[0] in ['lorentz', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
                                           param_card = param_card,
-                                          mg_root=self._mgme_dir,
                                           cuttools=CT_dir,
-                                          cmass_scheme = mass_scheme)
+                                          cmd = self)
             nb_processes += len(lorentz_result)
             
         if args[0] in  ['brs', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
                                           param_card = param_card,
-                                          mg_root=self._mgme_dir,
                                           cuttools=CT_dir,
-                                          cmass_scheme = mass_scheme)
+                                          cmd = self)
             nb_processes += len(gauge_result)
 
         if args[0] in  ['gauge', 'full'] and \
@@ -2860,9 +2850,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
-                                                mg_root=self._mgme_dir,
-                                                cuttools=self._cuttools_dir,
-                                                cmass_scheme = mass_scheme)
+                                                cuttools=CT_dir,
+                                                cmd = self)
             
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
@@ -2876,7 +2865,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                       (cpu_time2 - cpu_time1)))
 
         if args[0] not in ['timing','stability', 'profile']:
-            if mass_scheme:
+            if self.options['complex_mass_scheme']:
                 text = "Note that Complex mass scheme gives gauge/lorentz invariant\n"
                 text+= "results only for stable particles in final states.\n\n"
             else:
