@@ -34,6 +34,7 @@ class TestShowerCard(unittest.TestCase):
 #
 # SHOWER SETTINGS:
 #
+nevents    = -1     # number of events to shower. If negative, shower all events
 ue_enabled = T      # underlying event on (T)/ off (F) (is MSTP(81) for PY6)
 hadronize  = T      # hadronization on/off (is MSTP(111) for PY6) 
 maxprint   = 2      # maximum number of events to be printed in the log
@@ -97,6 +98,7 @@ ANALYSE     =                       # User's analysis and histogramming routines
 #
 # SHOWER SETTINGS:
 #
+nevents    = -1     # number of events to shower. If negative, shower all events
 ue_enabled = T      # underlying event on (T)/ off (F) (is MSTP(81) for PY6)
 hadronize  = T      # hadronization on/off (is MSTP(111) for PY6) 
 maxprint   = 2      # maximum number of events to be printed in the log
@@ -153,7 +155,8 @@ ANALYSE     =myanalyse.o            # User's analysis and histogramming routines
     def test_shower_card_hwpp(self):
         """test that the hwpp card is correctly written"""
         goal = \
-"""UE_HWPP=.TRUE.
+"""NEVENTS=-1
+UE_HWPP=.TRUE.
 HADRONIZE_HWPP=.TRUE.
 MAXPR_HWPP=2
 ERR_FR_HWPP=0.010
@@ -185,7 +188,8 @@ HWPPUTI=""
     def test_shower_card_hwpp_analyse(self):
         """test that the hwpp card is correctly written"""
         goal = \
-"""UE_HWPP=.TRUE.
+"""NEVENTS=-1
+UE_HWPP=.TRUE.
 HADRONIZE_HWPP=.TRUE.
 MAXPR_HWPP=2
 ERR_FR_HWPP=0.010
@@ -217,7 +221,8 @@ HWPPUTI="myanalyse.o"
     def test_shower_card_hw6(self):
         """test that the hw6 card is correctly written"""
         goal = \
-"""LHSOFT=.TRUE.
+"""NEVENTS=-1
+LHSOFT=.TRUE.
 MAXPR_HW=2
 ERR_FR_HW=0.010
 B_STABLE_HW=.FALSE.
@@ -253,7 +258,8 @@ HWUTI="mcatnlo_hwan_stdhep.o"
     def test_shower_card_hw6_analyse(self):
         """test that the hw6 card is correctly written"""
         goal = \
-"""LHSOFT=.TRUE.
+"""NEVENTS=-1
+LHSOFT=.TRUE.
 MAXPR_HW=2
 ERR_FR_HW=0.010
 B_STABLE_HW=.FALSE.
@@ -289,7 +295,8 @@ HWUTI="myanalyse.o"
     def test_shower_card_py6(self):
         """test that the py6 card is correctly written"""
         goal = \
-"""MSTP_81=1
+"""NEVENTS=-1
+MSTP_81=1
 MSTP_111=1
 MAXPR_PY=2
 ERR_FR_PY=0.010
@@ -323,7 +330,8 @@ PYUTI="mcatnlo_pyan_stdhep.o"
     def test_shower_card_py6_analyse(self):
         """test that the py6 card is correctly written"""
         goal = \
-"""MSTP_81=1
+"""NEVENTS=-1
+MSTP_81=1
 MSTP_111=1
 MAXPR_PY=2
 ERR_FR_PY=0.010
