@@ -1057,10 +1057,13 @@ Integrated cross-section
         misc.call(['mv ../%s ../MCATNLO_%s_input .' % (exe, shower)], shell=True)
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
-            misc.call(['ln -s %s %s' % \
+            try:
+                misc.call(['ln -s %s %s' % \
                 (pjoin(self.shower_card['hwpppath'], 'bin', 'Herwig++'), rundir)], shell=True)
+            except:
+                raise aMCatNLOError('The Herwig++ path set in the shower_card is not valid.')
 
-            if os.path.exitsts(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so')):
+            if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so')):
                 misc.call(['mv %s %s' % \
                     (pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)], 
                                                                                      shell=True)
