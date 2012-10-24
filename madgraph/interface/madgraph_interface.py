@@ -2107,9 +2107,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
                        'MCatNLO-utilities_path':'./MCatNLO-utilities',
-                       'hwpp_path':'./',
-                       'thepeg_path':'./',
-                       'hepmc_path':'./',
                        'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
@@ -4449,7 +4446,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 res = 0
                 logger.info('set fastjet to %s' % args[1])
                 self.options[args[0]] = args[1]
-            except:
+            except Exception:
                 res = 1
 
             if res != 0 or error:
@@ -4467,21 +4464,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                              stderr=subprocess.PIPE)
                 logger.info('set lhapdf to %s' % args[1])
                 self.options[args[0]] = args[1]
-            except:
+            except Exception:
                 res = 1
             if res != 0:
                 logger.info('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
                         'executable. Please enter the full PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
-                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n',
-                        '$MG:color:BLUE')
+                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
-        elif args[0] in ['hwpp_path', 'thepeg_path', 'hepmc_path']:
-            if os.path.isdir(args[1]):
-                self.options[args[0]] = args[1]
-                logger.info('set %s to %s' % (args[0], args[1]))
-            else:
-                logger.warning('set %s :%s is not a valid path' % (args[0], args[1]))
-       
         elif args[0] in ['timeout', 'auto_update']:
                 self.options[args[0]] = int(args[1]) 
         
@@ -4986,7 +4975,7 @@ _draw_usage = "draw FILEPATH [options]\n" + \
          "-- draw the diagrams in eps format\n" + \
          "   Files will be FILEPATH/diagrams_\"process_string\".eps \n" + \
          "   Example: draw plot_dir . \n"
-_draw_parser = optparse.OptionParser(usage=_draw_usage)
+_draw_parser = misc.OptionParser(usage=_draw_usage)
 _draw_parser.add_option("", "--horizontal", default=False,
                    action='store_true', help="force S-channel to be horizontal")
 _draw_parser.add_option("", "--external", default=0, type='float',
@@ -5008,7 +4997,7 @@ _launch_usage = "launch [DIRPATH] [options]\n" + \
          "   (for pythia8, it should be the Pythia 8 main directory) \n" + \
          "   Example: launch PROC_sm_1 --name=run2 \n" + \
          "   Example: launch ../pythia8 \n"
-_launch_parser = optparse.OptionParser(usage=_launch_usage)
+_launch_parser = misc.OptionParser(usage=_launch_usage)
 _launch_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory in order to launch the different program")
 _launch_parser.add_option("-n", "--name", default='', type='str',

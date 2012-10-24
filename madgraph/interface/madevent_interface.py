@@ -2714,7 +2714,6 @@ calculator."""
         
         self.to_store = []
             
-        
     def launch_job(self,exe, cwd=None, stdout=None, argument = [], remaining=0, 
                     run_type='', mode=None, **opt):
         """ """

@@ -43,6 +43,7 @@ import os
 import math
 import madgraph.core.drawing as draw
 import madgraph.core.base_objects as base_objects
+import madgraph.loop.loop_base_objects as loop_objects
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 
@@ -427,6 +428,10 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.npage = 1
         self.diagram_type = diagram_type
 
+        diagramlist = [d for d in diagramlist if not (isinstance(d, loop_objects.LoopUVCTDiagram) or \
+                (isinstance(d, loop_objects.LoopDiagram) and d.get('type') < 0))]
+        diagramlist = base_objects.DiagramList(diagramlist)
+
         limit = self.lower_scale * self.nb_col * self.nb_line
         if len(diagramlist) < limit:
             self.npage += len(diagramlist) // (self.nb_col * self.nb_line)
@@ -526,7 +531,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         
         
         self.text += 'showpage\n'
-        self.text += '%%' + 'Page: %s %s \n' % (self.curr_page, self.curr_page)
+        self.text += '%%' + 'Page: %s %s \n' % (self.curr_page+1, self.curr_page+1)
         self.text += '%%PageBoundingBox:-20 -20 600 800\n'
         self.text += '%%PageFonts: Helvetica\n'
         self.text += ' 50         770  moveto\n'

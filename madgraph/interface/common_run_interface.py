@@ -1121,7 +1121,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
   
 
     def update_status(self, status, level, makehtml=True, force=True, 
-                      error=False, starttime = None):
+                      error=False, starttime = None, update_results=False):
         """ update the index status """
         
         if makehtml and not force:
@@ -1135,7 +1135,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 logger.info(status)
         elif starttime:
             running_time = time.time()-starttime
-            if running_time < 1e-3:
+            if running_time < 1e-2:
                 running_time = ''
             elif running_time < 10:
                 running_time = '[ %.2gs ]' % running_time
@@ -1151,8 +1151,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         else: 
             logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])
         
-        self.last_update = time
-        self.results.update(status, level, makehtml=makehtml, error=error)
+        if update_results:
+            self.results.update(status, level, makehtml=makehtml, error=error)
         
 
     ############################################################################

@@ -58,6 +58,7 @@ try:
     import madgraph.various.cluster as cluster
     import madgraph.various.misc as misc
     import madgraph.various.gen_crossxhtml as gen_crossxhtml
+    import madgraph.various.shower_card as shower_card
 
     from madgraph import InvalidCmd, aMCatNLOError
     aMCatNLO = False
@@ -74,6 +75,7 @@ except Exception, error:
     import internal.cluster as cluster
     import internal.save_load_object as save_load_object
     import internal.gen_crossxhtml as gen_crossxhtml
+    import internal.shower_card as shower_card
     aMCatNLO = True
 
 
@@ -679,20 +681,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     nb_core = None
     
     next_possibility = {
-        'start': ['generate_events [OPTIONS]', 'multi_run [OPTIONS]',
-                  'calculate_decay_widths [OPTIONS]',
+        'start': ['generate_events [OPTIONS]', 'calculate_crossx [OPTIONS]', 'launch [OPTIONS]',
                   'help generate_events'],
-        'generate_events': ['generate_events [OPTIONS]', 'multi_run [OPTIONS]', 'pythia', 'pgs','delphes'],
-        'calculate_decay_widths': ['calculate_decay_widths [OPTIONS]',
-                                   'generate_events [OPTIONS]'],
-        'multi_run': ['generate_events [OPTIONS]', 'multi_run [OPTIONS]'],
-        'survey': ['refine'],
-        'refine': ['combine_events'],
-        'combine_events': ['store'],
-        'store': ['pythia'],
-        'pythia': ['pgs', 'delphes'],
-        'pgs': ['generate_events [OPTIONS]', 'multi_run [OPTIONS]'],
-        'delphes' : ['generate_events [OPTIONS]', 'multi_run [OPTIONS]']
+        'generate_events': ['generate_events [OPTIONS]', 'shower'],
+        'launch': ['launch [OPTIONS]', 'shower'],
+        'shower' : ['generate_events [OPTIONS]']
     }
     
     # The three options categories are treated on a different footage when a 
@@ -1326,6 +1319,8 @@ Integrated cross-section
         shower = self.evt_file_to_mcatnlo(evt_file)
         oldcwd = os.getcwd()
         os.chdir(pjoin(self.me_dir, 'MCatNLO'))
+        shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
+        self.shower_card.write_card(shower, shower_card_path)
 
 
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
@@ -1344,6 +1339,7 @@ Integrated cross-section
         rundir = pjoin(self.me_dir, 'MCatNLO', 'RUN_%s_%d' % \
                         (shower, count))
         os.mkdir(rundir)
+        misc.call(['cp %s %s' % (shower_card_path, rundir)], shell=True)
 
         self.update_status('Running MCatNLO in %s (this may take some time)...' % rundir,
                 level='parton')
@@ -1358,30 +1354,64 @@ Integrated cross-section
         misc.call(['./%s < MCATNLO_%s_input > amcatnlo_run.log 2>&1' % \
                     (exe, shower)], cwd = os.getcwd(), shell=True)
         #copy the showered stdhep file back in events
-        if os.path.exists(pjoin(self.run_name, evt_name + '.hep')):
-            hep_file = '%s_%s.hep' % (evt_file[:-4], shower)
-            misc.call(['mv %s %s' % (pjoin(self.run_name, evt_name + '.hep'), hep_file)], shell=True) 
-            misc.call(['gzip %s' % evt_file], shell=True)
-            misc.call(['gzip %s' % hep_file], shell=True)
+        if not self.shower_card['analyse']:
+            if os.path.exists(pjoin(self.run_name, evt_name + '.hep')):
+                hep_file = '%s_%s.hep' % (evt_file[:-4], shower)
+                misc.call(['mv %s %s' % (pjoin(self.run_name, evt_name + '.hep'), hep_file)], shell=True) 
+                misc.call(['gzip %s' % evt_file], shell=True)
+                misc.call(['gzip %s' % hep_file], shell=True)
 
-            logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
-                        ' and hadronized events in the StdHEP format obtained' + \
-                        ' showering the parton-level event file %s.gz with %s') % \
-                        (hep_file, evt_file, shower))
-        #this is for hw++
-        elif os.path.exists(pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc')):
-            hep_file = '%s_%s.hepmc' % (evt_file[:-4], shower)
-            misc.call(['mv %s %s' % \
-                (pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc'), hep_file)], shell=True) 
-            misc.call(['gzip %s' % evt_file], shell=True)
-            misc.call(['gzip %s' % hep_file], shell=True)
-            logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
-                        ' and hadronized events in the HEPMC format obtained' + \
-                        ' showering the parton-level event file %s.gz with %s') % \
-                        (hep_file, evt_file, shower))
+                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
+                            ' and hadronized events in the StdHEP format obtained' + \
+                            ' showering the parton-level event file %s.gz with %s') % \
+                            (hep_file, evt_file, shower))
+            #this is for hw++
+            elif os.path.exists(pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc')):
+                hep_file = '%s_%s.hepmc' % (evt_file[:-4], shower)
+                misc.call(['mv %s %s' % \
+                    (pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc'), hep_file)], shell=True) 
+                misc.call(['gzip %s' % evt_file], shell=True)
+                misc.call(['gzip %s' % hep_file], shell=True)
+                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
+                            ' and hadronized events in the HEPMC format obtained' + \
+                            ' showering the parton-level event file %s.gz with %s') % \
+                            (hep_file, evt_file, shower))
 
+            else:
+                raise aMCatNLOError('No file has been generated, an error occurred')
         else:
-            raise aMCatNLOError('No file has been generated, an error occurred')
+            topfiles = [n for n in os.listdir(pjoin(rundir)) \
+                                            if n.lower().endswith('.top')]
+            if not topfiles:
+                raise aMCatNLOError('No .top file has been generated, an error occurred')
+
+            filename = 'plot_%s_%d_' % (shower, 1)
+            count = 1
+            while os.path.exists(pjoin(self.me_dir, 'Events', 
+                self.run_name, '%s0.top' % filename)):
+                count += 1
+                filename = 'plot_%s_%d_' % (shower, count)
+            plotfiles = [] 
+            for i, file in enumerate(topfiles):
+                plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
+                          '%s%d.top' % (filename, i))
+                misc.call(['mv %s %s' % \
+                    (pjoin(rundir, file), plotfile)], shell=True) 
+
+                plotfiles.append(plotfile)
+
+            files = 'files'
+            have = 'have'
+            if len(plotfiles) == 1:
+                files = 'file'
+                have = 'has'
+
+            misc.call(['gzip %s' % evt_file], shell=True)
+            logger.info(('The %s %s %s been generated, with histograms in the' + \
+                    ' TopDrawer format, obtained by showering the parton-level' + \
+                    ' file %s.gz with %s') % (files, ', '.join(plotfiles), have, \
+                    evt_file, shower))
+
 
         os.chdir(oldcwd)
 
@@ -1519,13 +1549,6 @@ Integrated cross-section
             if lines[i].startswith('MCMODE'):
                 lines[i]='MCMODE=%s' % shower
             #the following variables are actually relevant only if running hw++
-            if shower == 'HERWIGPP':
-                if lines[i].startswith('HWPPPATH'):
-                    lines[i]='HWPPPATH=%s' % self.options['hwpp_path']
-                if lines[i].startswith('THEPEGPATH'):
-                    lines[i]='THEPEGPATH=%s' % self.options['thepeg_path']
-                if lines[i].startswith('HEPMCPATH'):
-                    lines[i]='HEPMCPATH=%s' % self.options['hepmc_path']
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'MCatNLO_MadFKS.inputs'), 'w')
         output.write('\n'.join(lines))
@@ -1590,17 +1613,15 @@ Integrated cross-section
     def wait_for_complete(self, run_type):
         """this function waits for jobs on cluster to complete their run."""
 
-        # if running serially nothing to do
-        if self.cluster_mode == 0:
-            return
-        else:
-            #logger.info('     Waiting for submitted jobs to complete')
-            update_status = lambda i, r, f: self.update_status((i, r, f, run_type), level='parton')
-            try:
-                self.cluster.wait(self.me_dir, update_status)
-            except:
-                self.cluster.remove()
-                raise
+        starttime = time.time()
+        #logger.info('     Waiting for submitted jobs to complete')
+        update_status = lambda i, r, f: self.update_status((i, r, f, run_type), 
+                      starttime=starttime, level='parton', update_results=False)
+        try:
+            self.cluster.wait(self.me_dir, update_status)
+        except:
+            self.cluster.remove()
+            raise
 
     def run_all(self, job_dict, arg_list, run_type='monitor'):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
@@ -1609,9 +1630,9 @@ Integrated cross-section
         if self.cluster_mode == 0:
             self.update_status((self.njobs - 1, 1, 0, run_type), level='parton')
         for args in arg_list:
-            for dir, jobs in job_dict.items():
+            for Pdir, jobs in job_dict.items():
                 for job in jobs:
-                    self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', dir) )
+                    self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
                     # print some statistics if running serially
         if self.cluster_mode == 2:
             time.sleep(1) # security to allow all jobs to be launched
@@ -1632,7 +1653,6 @@ Integrated cross-section
         else:
             raise aMCatNLOError('Cannot find executable %s in %s' \
                 % (exe, os.getcwd()))
-
         # check that the executable has exec permissions
         if not os.access(execpath, os.X_OK):
             misc.call(['chmod', '+x', exe], cwd=cwd)
@@ -1648,6 +1668,7 @@ Integrated cross-section
             #this is for the cluster/multicore run
             if 'ajob' not  in exe:
                 return self.cluster.submit(exe, args, cwd=cwd)  
+
             # use local disk if possible => need to stands what are the 
             # input/output files
             keep_fourth_arg = False
@@ -1727,7 +1748,7 @@ Integrated cross-section
   
             else:
                 raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
-  
+
             #Find the correct PDF input file
             if hasattr(self, 'pdffile'):
                 input_files.append(self.pdffile)
@@ -1748,7 +1769,7 @@ Integrated cross-section
             
             if len(args) == 4 and not keep_fourth_arg:
                 args = args[:3]
-            
+
             #submitting
             self.cluster.submit2(exe, args, cwd=cwd, 
                          input_files=input_files, output_files=output_files)
@@ -1870,6 +1891,7 @@ Integrated cross-section
                 if not os.path.exists(pjoin(this_dir, test)):
                     raise aMCatNLOError('Compilation failed, check %s for details' \
                             % test_log)
+            for test in tests:
                 logger.info('   Running %s...' % test)
                 self.write_test_input(test)
                 input = pjoin(self.me_dir, '%s_input.txt' % test)
@@ -1951,7 +1973,6 @@ Integrated cross-section
 
     def link_lhapdf(self, libdir):
         """links lhapdf into libdir"""
-        print self.options
         logger.info('Using LHAPDF interface for PDFs')
         lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
                 shell = True, stdout = subprocess.PIPE).stdout.read().strip()
@@ -2056,6 +2077,8 @@ Integrated cross-section
             if answer == 'done':
                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
                 self.run_card = banner_mod.RunCardNLO(run_card)
+                shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
+                self.shower_card = shower_card.ShowerCard(shower_card_path)
                 self.run_tag = self.run_card['run_tag']
                 self.run_name = self.find_available_run_name(self.me_dir)
                 self.set_run_name(self.run_name, self.run_tag, 'parton')
@@ -2121,7 +2144,7 @@ _compile_usage = "compile [MODE] [options]\n" + \
                 "   MODE can be either FO, for fixed-order computations, \n" + \
                 "   or MC for matching with parton-shower monte-carlos. \n" + \
                 "   (if omitted, it is set to MC)\n"
-_compile_parser = optparse.OptionParser(usage=_compile_usage)
+_compile_parser = misc.OptionParser(usage=_compile_usage)
 _compile_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory for the launch, without editing them")
 _compile_parser.add_option("-R", "--noreweight", default=False, action='store_true',
@@ -2130,9 +2153,15 @@ _compile_parser.add_option("-R", "--noreweight", default=False, action='store_tr
 
 _launch_usage = "launch [MODE] [options]\n" + \
                 "-- execute aMC@NLO \n" + \
-                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n"
+                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n" + \
+                "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
+                "     computation of the total cross-section and the filling of parton-level histograms \n" + \
+                "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \
+                "     If mode is set to aMC@LO/aMC@NLO, after the cross-section computation, a .lhe \n" + \
+                "     event file is generated which will be showered with the MonteCarlo specified \n" + \
+                "     in the run_card.dat\n"
 
-_launch_parser = optparse.OptionParser(usage=_launch_usage)
+_launch_parser = misc.OptionParser(usage=_launch_usage)
 _launch_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory for the launch, without editing them")
 _launch_parser.add_option("-c", "--cluster", default=False, action='store_true',
@@ -2155,7 +2184,7 @@ _calculate_xsect_usage = "calculate_xsect [ORDER] [options]\n" + \
                 "-- calculate cross-section up to ORDER.\n" + \
                 "   ORDER can be either LO or NLO (if omitted, it is set to NLO). \n"
 
-_calculate_xsect_parser = optparse.OptionParser(usage=_calculate_xsect_usage)
+_calculate_xsect_parser = misc.OptionParser(usage=_calculate_xsect_usage)
 _calculate_xsect_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory for the launch, without editing them")
 _calculate_xsect_parser.add_option("-c", "--cluster", default=False, action='store_true',
@@ -2170,7 +2199,7 @@ _shower_usage = 'shower run_name [options]\n' + \
         '-- do shower/hadronization on parton-level file generated for run run_name\n' + \
         '   all the information (e.g. number of events, MonteCarlo, ...\n' + \
         '   are directly read from the header of the event file\n'
-_shower_parser = optparse.OptionParser(usage=_shower_usage)
+_shower_parser = misc.OptionParser(usage=_shower_usage)
 _shower_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the shower_card present in the directory for the launch, without editing")
 
@@ -2181,7 +2210,7 @@ _generate_events_usage = "generate_events [ORDER] [options]\n" + \
                 "   The number of events and the specific parton shower MC can be specified \n" + \
                 "   in the run_card.dat\n"
 
-_generate_events_parser = optparse.OptionParser(usage=_generate_events_usage)
+_generate_events_parser = misc.OptionParser(usage=_generate_events_usage)
 _generate_events_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory for the launch, without editing them")
 _generate_events_parser.add_option("-c", "--cluster", default=False, action='store_true',

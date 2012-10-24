@@ -128,6 +128,116 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
     """ An additional layer between MadGraphInterface and LoopInterface as well
     as aMCatNLO interface, to put the common feature of these two here."""
 
+    def rate_proc_difficulty(self, proc, mode):
+        """ Gives an integer more or less representing the difficulty of the process.
+        For now it is very basic and such that "difficult" processes start at 
+        a value of about 30."""
+        
+        def pdg_difficulty(pdg):
+            """ Gives a score from the pdg of a leg to state how it increases the
+            difficulty of the process """
+            # For now, it is only based on the color charge. One can change that
+            # of course.
+            part=self._curr_model.get_particle(pdg)
+            if abs(part.get_color())==1:
+                return 2
+            elif abs(part.get_color())==3:
+                return 3
+            elif abs(part.get_color())==6:
+                return 4
+            elif abs(part.get_color())==8:
+                return 6
+
+        score = 0
+        for leg in proc.get('legs'):
+            if isinstance(leg,base_objects.MultiLeg):
+                score += max([pdg_difficulty(id) for id in leg['ids']])
+                # add one if it has more than one particle
+                if len(leg['ids'])>1:
+                    score += 1
+            else:
+                score += pdg_difficulty(leg.get('id'))
+        
+        # No integration planned right away if only virtual, remove 6
+        if proc['NLO_mode']=='virt':
+            score = score - 6
+        # Only reals, then again remove 6
+        if proc['NLO_mode']=='real':
+            score = score - 6
+        # If tree only then it is easy
+        if proc['NLO_mode']=='tree':
+            return 0
+        return score
+    
+    def proc_validity(self, proc, mode):
+        """ Check that the process or processDefinition describes a process that 
+        ML5 can handle. Mode specifies who called the function,
+        typically ML5, ML5_check or aMCatNLO. This allows to relieve some limitation
+        depending on the functionality."""
+
+        tool = 'MadLoop' if mode.startswith('ML5') else 'aMC@NLO'
+        # The threshold for the triggering of the 'Warning difficult process'
+        # message.
+        difficulty_threshold = 30
+        # Check that we have something    
+        if not proc:
+            raise self.InvalidCmd("Empty or wrong format process, please try again.")
+        
+        # Check that we have the same number of initial states as
+        # existing processes
+        if self._curr_amps and self._curr_amps[0].get_ninitial() != \
+            proc.get_ninitial():
+            raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
+            
+        if proc.get_ninitial()==1:
+            raise self.InvalidCmd("At this stage %s cannot handle decay process."%tool+\
+                                  "\nIt is however a straight-forward extension which "+\
+                                  "will come out with the next release.")                           
+
+        if isinstance(proc, base_objects.ProcessDefinition) and mode.startswith('ML5'):
+            if proc.has_multiparticle_label():
+                raise self.InvalidCmd(
+                  "When running ML5 standalone, multiparticle labels cannot be"+\
+                  " employed. Please use the FKS5 interface instead.")
+        
+        if proc['decay_chains']:
+            raise self.InvalidCmd(
+                  "ML5 cannot yet decay a core process including loop corrections.")
+        
+        if proc.are_decays_perturbed():
+            raise self.InvalidCmd(
+                  "The processes defining the decay of the core process cannot"+\
+                  " include loop corrections.")
+        
+        if not proc['perturbation_couplings'] and mode.startswith('ML5'):
+            raise self.InvalidCmd(
+                "Please perform tree-level generations within default MG5 interface.")
+        
+        if proc['perturbation_couplings'] and not \
+           isinstance(self._curr_model,loop_base_objects.LoopModel):
+            raise self.InvalidCmd(
+                "The current model does not allow for loop computations.")
+        
+        miss_order = [ p_order for p_order in proc['perturbation_couplings'] if \
+                  p_order not in self._curr_model.get('perturbation_couplings')]
+        if len(miss_order)>0 and not 'real' in mode:
+            raise self.InvalidCmd(
+                    "Perturbation orders %s not among"%str(miss_order) + \
+                    " the perturbation orders allowed for by the loop model.")
+        proc_diff = self.rate_proc_difficulty(proc, mode)
+        logger.debug('Process difficulty estimation: %d'%proc_diff)
+        if proc_diff >= difficulty_threshold:
+            msg = """
+  The %s you attempt to generate 
+  appears to be of challenging difficulty.
+  It had probably never been tried by the authors and hence we cannot 
+  guarantee a correct behavior of the code in this context. Please visit
+  http://amcatnlo.web.cern.ch/amcatnlo/ for a list of processes we have 
+  validated. If your process does not appear and you have successfully
+  studied it with MadGraph5 v2.0, please report it.
+"""
+            logger.warning(msg%proc.nice_string().replace('Process:','process'))
+
     def do_set(self, line, log=True):
         """Set the loop optimized output while correctly switching to the
         Feynman gauge if necessary.
@@ -147,9 +257,15 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
 
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
            self._curr_model['perturbation_couplings']==[]:
-            if loop_type == 'real':
+            if loop_type.startswith('real'):
+                if loop_type == 'real':
                     logger.info(\
-                      "Beware that real corrections are generated from a tree-level model.")     
+                      "Beware that real corrections are generated from a tree-level model.")
+                if loop_type == 'real_init' and \
+                               self._curr_model.get('name').split('-')[0]!='sm':
+                    logger.info(\
+                      "You are entering aMC@NLO with a model which does not "+\
+                                                   " support loop corrections.")
             else:
                 model_path = self._curr_model.get('version_tag').split('##')[0]
                 model_name = self._curr_model.get('name')
@@ -169,7 +285,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                     raise MadGraph5Error(
                       "The model %s cannot handle loop processes"%model_name)    
                     
-        if loop_type != 'real' and self.options['loop_optimized_output'] and \
+        if not loop_type.startswith('real') and self.options['loop_optimized_output'] and \
                                            not self.options['gauge']=='Feynman':
             # In the open loops method, in order to have a maximum loop numerator
             # rank of 1, one must work in the Feynman gauge. Anyway irrelevant for
@@ -211,19 +327,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                            'Using default CutTools instead.') % \
                              self._cuttools_dir)
             self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
-    
-    def do_generate(self, line, *args,**opt):
-
-        # Check args validity
-        self.validate_model()    
-        # Extract process from process definition
-        if ',' in line:
-            myprocdef, line = self.extract_decay_chain_process(line)
-        else:
-            myprocdef = self.extract_process(line)
-        self.proc_validity(myprocdef)
-                
-        mg_interface.MadGraphCmd.do_generate(self, line, *args,**opt)
     
     def do_display(self,line, *argss, **opt):
         """ Display born or loop diagrams, otherwise refer to the default display
@@ -490,7 +593,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         # Now make sure the process is acceptable
         proc = " ".join(argss[1:])
         myprocdef = self.extract_process(proc)
-        self.proc_validity(myprocdef)
+        self.validate_model('virtual')
+        self.proc_validity(myprocdef,'ML5_check')
         
         return mg_interface.MadGraphCmd.do_check(self, line, *args,**opt)
     
@@ -516,12 +620,12 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
 
             # Extract process from process definition
+            self.validate_model('virtual')
             if ',' in line:
                 myprocdef, line = self.extract_decay_chain_process(line)
             else:
                 myprocdef = self.extract_process(line)
-                
-            self.proc_validity(myprocdef)
+            self.proc_validity(myprocdef,'ML5')
 
             cpu_time1 = time.time()
 
@@ -553,51 +657,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                               amp in myproc.get('amplitudes')])
             logger.info("Process generated in %0.3f s" % \
                   (cpu_time2 - cpu_time1))
-
-    def proc_validity(self, proc):
-        """ Check that the process or processDefinition describes a process that 
-        ML5 can handle"""
-
-        # Check that we have something    
-        if not proc:
-            raise self.InvalidCmd("Empty or wrong format process, please try again.")
-        
-        # Check that we have the same number of initial states as
-        # existing processes
-        if self._curr_amps and self._curr_amps[0].get_ninitial() != \
-            proc.get_ninitial():
-            raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
-            
-
-        if isinstance(proc, base_objects.ProcessDefinition):
-            if proc.has_multiparticle_label():
-                raise self.InvalidCmd(
-                  "When running ML5 standalone, multiparticle labels cannot be"+\
-                  " employed. Please use the FKS5 interface instead.")
-        
-        if proc['decay_chains']:
-            raise self.InvalidCmd(
-                  "ML5 cannot yet decay a core process including loop corrections.")
-        
-        if proc.are_decays_perturbed():
-            raise self.InvalidCmd(
-                  "The processes defining the decay of the core process cannot"+\
-                  " include loop corrections.")
-        
-        if not proc['perturbation_couplings']:
-            raise self.InvalidCmd(
-                "Please perform tree-level generations within default MG5 interface.")
-        
-        if proc['perturbation_couplings'] and not \
-           isinstance(self._curr_model,loop_base_objects.LoopModel):
-            raise self.InvalidCmd(
-                "The current model does not allow for loop computations.")
-        else:
-            for pert_order in proc['perturbation_couplings']:
-                if pert_order not in self._curr_model['perturbation_couplings']:
-                    raise self.InvalidCmd(
-                        "Perturbation order %s is not among" % pert_order + \
-                        " the perturbation orders allowed for by the loop model.")
    
 class LoopInterfaceWeb(mg_interface.CheckValidForCmdWeb, LoopInterface):
     pass
