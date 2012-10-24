@@ -1228,15 +1228,13 @@ Integrated cross-section
         """creates the mcatnlo input script using the values set in the header of the event_file.
         It also checks if the lhapdf library is used"""
         file = open(evt_file)
-        nevents = 0
         shower = ''
         pdlabel = ''
         itry = 0
+        nevents = self.shower_card['nevents']
         while True:
             line = file.readline()
             #print line
-            if not nevents and 'nevents' in line.split():
-                nevents = int(line.split()[0])
             if not shower and 'parton_shower' in line.split():
                 shower = line.split()[0]
             if not pdlabel and 'pdlabel' in line.split():
