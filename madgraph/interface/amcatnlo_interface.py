@@ -413,7 +413,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                                    ignore_six_quark_processes)
 
     def do_output(self, line):
-        """Initialize a new Template or reinitialize one"""
+        """Main commands: Initialize a new Template or reinitialize one"""
 
         args = self.split_arg(line)
         # Check Argument validity
@@ -552,7 +552,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
 
     def do_launch(self, line):
-        """Ask for editing the parameters and then execute the code (NLO or aMC@(N)LO)
+        """Main commands: Ask for editing the parameters and then execute the code (NLO or aMC@(N)LO)
         """
         old_cwd = os.getcwd()
         argss = self.split_arg(line)

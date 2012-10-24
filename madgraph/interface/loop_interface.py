@@ -345,7 +345,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             mg_interface.MadGraphCmd.do_display(self,line,*argss,**opt)
 
     def do_output(self, line):
-        """Initialize a new Template or reinitialize one"""
+        """Main commands:Initialize a new Template or reinitialize one"""
 
         args = self.split_arg(line)
         # Check Argument validity
@@ -554,7 +554,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             logger.info('Output to directory ' + self._export_dir + ' done.')
 
     def do_launch(self, line, *args,**opt):
-        """ Check that the type of launch is fine before proceeding with the
+        """Main commands: Check that the type of launch is fine before proceeding with the
         mother function. """
                 
         args = self.split_arg(line)

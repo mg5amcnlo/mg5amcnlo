@@ -574,7 +574,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
     ############################################################################      
     def do_calculate_xsect(self, line):
-        """ calculates LO/NLO cross-section, using madevent_vegas """
+        """Main commands: calculates LO/NLO cross-section, using madevent_vegas """
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _generate_events_parser.parse_args(argss)
@@ -605,7 +605,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         
     ############################################################################      
     def do_generate_events(self, line):
-        """ generate events """
+        """Main commands: generate events """
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _generate_events_parser.parse_args(argss)
@@ -634,7 +634,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
     ############################################################################
     def do_treatcards(self, line, amcatnlo=True):
-        """this is for creating the correct run_card.inc from the nlo format"""
+        """Advanced commands: this is for creating the correct run_card.inc from the nlo format"""
         return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
     
     ############################################################################
@@ -644,7 +644,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     
     ############################################################################      
     def do_launch(self, line):
-        """ launch the full chain """
+        """Main commands: launch the full chain """
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _launch_parser.parse_args(argss)
@@ -675,7 +675,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
     ############################################################################      
     def do_compile(self, line):
-        """ just compile the executables """
+        """Advanced commands: just compile the executables """
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _compile_parser.parse_args(argss)
