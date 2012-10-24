@@ -1364,8 +1364,8 @@ Integrated cross-section
             raise aMCatNLOError('Cannot find executable %s in %s' \
                 % (exe, os.getcwd()))
         # check that the executable has exec permissions
-        if not os.access(execpath, os.X_OK):
-            misc.call(['chmod', '+x', exe], cwd=cwd)
+        if self.cluster_mode == 1 and not os.access(execpath, os.X_OK):
+            subprocess.call(['chmod', '+x', exe], cwd=cwd)
         # finally run it
         if self.cluster_mode == 0:
             #this is for the serial run
@@ -1379,7 +1379,6 @@ Integrated cross-section
             if 'ajob' not  in exe:
                 return self.cluster.submit(exe, args, cwd=cwd)
               
-
             # use local disk if possible => need to stands what are the 
             # input/output files
             keep_fourth_arg = False
@@ -1785,15 +1784,7 @@ Integrated cross-section
             if answer.isdigit():
                 answer = card[int(answer)]
             if answer == 'done':
-                run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-                self.run_card = banner_mod.RunCardNLO(run_card)
-                shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
-                self.shower_card = shower_card.ShowerCard(shower_card_path)
-                self.run_tag = self.run_card['run_tag']
-                self.run_name = self.find_available_run_name(self.me_dir)
-                self.set_run_name(self.run_name, self.run_tag, 'parton')
-                #self.do_treatcards_nlo('')
-                return
+                break
             if not os.path.isfile(answer):
                 if answer != 'trigger':
                     path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
@@ -1809,6 +1800,8 @@ Integrated cross-section
         self.run_tag = self.run_card['run_tag']
         self.run_name = self.find_available_run_name(self.me_dir)
         self.set_run_name(self.run_name, self.run_tag, 'parton')
+        shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
+        self.shower_card = shower_card.ShowerCard(shower_card_path)
         #self.do_treatcards_nlo('')
         return
 

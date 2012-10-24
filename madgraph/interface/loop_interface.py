@@ -232,7 +232,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
   appears to be of challenging difficulty.
   It had probably never been tried by the authors and hence we cannot 
   guarantee a correct behavior of the code in this context. Please visit
-  http://amcatnlo.web.cern.ch/amcatnlo/ for a list of processes we have 
+  http://amcatnlo.cern.ch/list.htm for a list of processes we have 
   validated. If your process does not appear and you have successfully
   studied it with MadGraph5 v2.0, please report it.
 """
