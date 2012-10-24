@@ -62,7 +62,7 @@ class ShowerCard(dict):
             'modbos_2' : {'HERWIG6':'modbos_2'},
             'maxerrs' : {'HERWIG6':'err_fr_hw', 'PYTHIA6': 'err_fr_py', 'HERWIGPP': 'err_fr_hwpp'},
             'lambda_5' : {'HERWIG6':'lambdaherw', 'PYTHIA6': 'lambdapyth'},
-            'analyse' : {'HERWIG6':'hwuti', 'PYTHIA6':'pyuti'}}
+            'analyse' : {'HERWIG6':'hwuti', 'PYTHIA6':'pyuti', 'HERWIGPP':'hwpputi'}}
     stdhep_dict = {'HERWIG6':'mcatnlo_hwan_stdhep.o', 'PYTHIA6':'mcatnlo_pyan_stdhep.o'}
     
     def __init__(self, card=None, testing=False):

@@ -174,8 +174,41 @@ HEPMCPATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
+HWPPUTI=""
 """
         text = self.card.write_card('HERWIGPP', '')
+        for a, b in zip(text.split('\n'), goal.split('\n')):
+            self.assertEqual(a,b)
+        self.assertEqual(text, goal)
+
+
+    def test_shower_card_hwpp_analyse(self):
+        """test that the hwpp card is correctly written"""
+        goal = \
+"""UE_HWPP=.TRUE.
+HADRONIZE_HWPP=.TRUE.
+MAXPR_HWPP=2
+ERR_FR_HWPP=0.010
+B_STABLE_HWPP=.FALSE.
+PI_STABLE_HWPP=.TRUE.
+WP_STABLE_HWPP=.FALSE.
+WM_STABLE_HWPP=.FALSE.
+Z_STABLE_HWPP=.FALSE.
+H_STABLE_HWPP=.FALSE.
+TAUP_STABLE_HWPP=.FALSE.
+TAUM_STABLE_HWPP=.FALSE.
+MUP_STABLE_HWPP=.FALSE.
+MUM_STABLE_HWPP=.FALSE.
+RNDEVSEED_HWPP=0
+HWPPPATH=
+THEPEGPATH=
+HEPMCPATH=
+EXTRALIBS="stdhep Fmcfio"
+EXTRAPATHS="../lib"
+INCLUDEPATHS=
+HWPPUTI="myanalyse.o"
+"""
+        text = self.card_analyse.write_card('HERWIGPP', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
             self.assertEqual(a,b)
         self.assertEqual(text, goal)
