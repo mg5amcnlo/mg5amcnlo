@@ -7,7 +7,7 @@
 #
 # SHOWER SETTINGS:
 #
-ue_enabled = T      # underlying event on (T)/ off (F) (is MSTP(81) 0/1 for PY6)
+ue_enabled = F      # underlying event on (T)/ off (F) (is MSTP(81) 0/1 for PY6)
 hadronize  = T      # hadronization on/off (is MSTP(111) 0/1 for PY6) 
 maxprint   = 2      # maximum number of events to be printed in the log
 maxerrs    = 0.01   # maximum tolerated fraction of errors
