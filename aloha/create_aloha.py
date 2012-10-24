@@ -452,7 +452,7 @@ class CombineRoutineBuilder(AbstractRoutineBuilder):
         self.lorentz_expr = ' + '.join(self.lorentz_expr)
         self.routine_kernel = None
         self.spin2_massless = False
-        self.spin32massless = False
+        self.spin32_massless = False
         self.contracted = {}
         self.fct = {}
 
@@ -497,8 +497,8 @@ class AbstractALOHAModel(dict):
         self.symmetries = {}
         self.multiple_lor = {}
         
-        # check the mass of spin2 (if any)
-        self.massless_spin2 = self.has_massless_spin2()
+        # check the mass of spin2 / spin32 (if any)
+        self.massless_spin2, self.spin32_massless = self.has_massless_spin()
         
         if write_dir:
             self.main(write_dir,format=format)
@@ -592,7 +592,7 @@ class AbstractALOHAModel(dict):
                 continue 
             
             if lorentz.structure == 'external':
-                for i in range(len(lorent.spins)):
+                for i in range(len(lorentz.spins)):
                     self.external_routines.append('%s_%s' % (lorentz.name, i))
                 continue
             
@@ -600,8 +600,8 @@ class AbstractALOHAModel(dict):
             # add information for spin2mass
             if 5 in lorentz.spins and self.massless_spin2 is not None:
                 builder.spin2_massless = self.massless_spin2
-            if 4 in lorentz.spins and self.massless_spin32 is not None:
-                builder.spin32_massless = self.massless_spin32
+            if 4 in lorentz.spins and self.spin32_massless is not None:
+                builder.spin32_massless = self.spin32_massless
             self.compute_aloha(builder)
 
             if lorentz.name in self.multiple_lor:
@@ -694,8 +694,8 @@ class AbstractALOHAModel(dict):
             # add information for spin2mass
             if 5 in lorentz.spins and self.massless_spin2 is not None:
                 builder.spin2_massless = self.massless_spin2 
-            if 4 in lorentz.spins and self.massless_spin32 is not None:
-                builder.spin32_massless = self.massless_spin32
+            if 4 in lorentz.spins and self.spin32_massless is not None:
+                builder.spin32_massless = self.spin32_massless
 
             
             for conjg in request[l_name]:
@@ -740,8 +740,8 @@ class AbstractALOHAModel(dict):
                 # add information for spin2mass
                 if 5 in l_lorentz[0].spins and self.massless_spin2 is not None:
                     builder.spin2_massless = self.massless_spin2 
-                if 4 in l_lorentz[0].spins and self.massless_spin32 is not None:
-                    builder.spin32_massless = self.massless_spin32 
+                if 4 in l_lorentz[0].spins and self.spin32_massless is not None:
+                    builder.spin32_massless = self.spin32_massless
                                
                 for conjg in request[list_l_name[0]]:
                     #ensure that routines are in rising order (for symetries)
@@ -906,17 +906,23 @@ class AbstractALOHAModel(dict):
                 if info not in self.multiple_lor[main]:
                     self.multiple_lor[main].append(info)
                 
-    def has_massless_spin2(self):
+    def has_massless_spin(self):
         """Search if the spin2 particles are massless or not"""
         
-        massless = None
+        massless2, massless32 = None, None
         for particle in self.model.all_particles:
             if particle.spin == 5:
-                if massless is None:
-                    massless = (particle.mass == 'Zero')
-                elif massless != (particle.mass == 'Zero'):
+                if massless2 is None:
+                    massless2 = (particle.mass == 'Zero')
+                elif massless2 != (particle.mass == 'Zero'):
                     raise ALOHAERROR, 'All spin 2 should be massive or massless'
-        return massless     
+            if particle.spin == 4:
+                if massless32 is None:
+                    massless32 = (particle.mass == 'Zero')
+                elif massless32 != (particle.mass == 'Zero'):
+                    raise ALOHAERROR, 'All spin 3/2 should be massive or massless'                
+            
+        return massless2, massless32     
                     
     def has_symmetries(self, l_name, outgoing, out=None, valid_output=None):
         """ This returns out if no symmetries are available, otherwise it finds 
