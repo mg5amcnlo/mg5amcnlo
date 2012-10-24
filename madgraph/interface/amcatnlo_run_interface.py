@@ -1059,6 +1059,11 @@ Integrated cross-section
         if shower == 'HERWIGPP':
             misc.call(['ln -s %s %s' % \
                 (pjoin(self.shower_card['hwpppath'], 'bin', 'Herwig++'), rundir)], shell=True)
+
+            if os.path.exitsts(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so')):
+                misc.call(['mv %s %s' % \
+                    (pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)], 
+                                                                                     shell=True)
         evt_name = os.path.basename(evt_file)
         misc.call(['ln -s %s %s' % (os.path.split(evt_file)[0], self.run_name)], shell=True)
         misc.call(['./%s < MCATNLO_%s_input > amcatnlo_run.log 2>&1' % \
