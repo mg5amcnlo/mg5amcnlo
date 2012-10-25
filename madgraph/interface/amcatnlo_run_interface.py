@@ -1378,7 +1378,7 @@ Integrated cross-section
             misc.call(['./'+exe] + args, cwd=cwd)
             self.ijob += 1
             self.update_status((max([self.njobs - self.ijob - 1, 0]), 
-                                min([1, self.njobs - self.ijobs]),
+                                min([1, self.njobs - self.ijob]),
                                 self.ijob, run_type), level='parton')
         else:
             #this is for the cluster/multicore run
