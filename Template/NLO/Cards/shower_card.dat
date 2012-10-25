@@ -34,7 +34,7 @@ modbos_2   = 5      # decay mode for the second Boson (only for HW6)
 # HERWIG++ PATHS
 # The following lines need to be set only for Herwig++. Use the absolute paths
 # to the directories where the packages are installed, containing lib/, include/,
-# and share/ subfolders
+# and share/ subfolders. "None" and an empty value are equivalent
 #
 ################################################################################
 HWPPPATH   = None   # Path to the dir where Herwig++ is installed
@@ -48,6 +48,7 @@ HEPMCPATH  = None   # Path to the dir where HepMC is installed
 # Please note that this works only for HW6 and PY6, and that the analysis should
 # be in the HWAnalyzer/ (or PYAnalyzer/) folder. 
 # Please use files in those folders as examples.
+# "None" and an empty value are equivalent.
 #
 ################################################################################
 EXTRALIBS   = stdhep Fmcfio         # Needed extra-libraries (not LHAPDF). 

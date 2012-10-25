@@ -106,7 +106,10 @@ class ShowerCard(dict):
                     raise ShowerCardError('%s is not a valid directory' % \
                             (value))
             elif key in self.string_vars:
-                self[key] = value
+                if value.lower() == 'none':
+                    self[key] = ''
+                else:
+                    self[key] = value
             elif key in self.int_vars:
                 try:
                     self[key] = int(value)

@@ -81,7 +81,7 @@ EXTRALIBS   = stdhep Fmcfio         # Needed extra-libraries (not LHAPDF).
                                     #   Default: "stdhep Fmcfio"
 EXTRAPATHS  = ../lib                # Path to the extra-libraries. 
                                     #   Default: "../lib"
-INCLUDEPATHS=                       # Path to the dirs containing header files neede by C++.
+INCLUDEPATHS=none                       # Path to the dirs containing header files neede by C++.
                                     # Directory names are separated by white spaces
 ANALYSE     =                       # User's analysis and histogramming routines 
                                     # (please use .o as extension and use spaces to separate files)
