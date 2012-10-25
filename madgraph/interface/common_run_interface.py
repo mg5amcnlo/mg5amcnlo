@@ -497,7 +497,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 logger.info(status)
         elif starttime:
             running_time = time.time()-starttime
-            if running_time < 1e-3:
+            if running_time < 1e-2:
                 running_time = ''
             elif running_time < 10:
                 running_time = '[ %.2gs ]' % running_time

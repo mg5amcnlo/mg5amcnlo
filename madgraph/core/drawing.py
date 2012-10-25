@@ -1709,7 +1709,7 @@ class DiagramDrawer(object):
 
         #if already a valid diagram. nothing to do
         if isinstance(diagram, FeynmanDiagram):
-            return
+            return diagram
         
         if amplitude is None:
             amplitude = self.amplitude
@@ -2341,7 +2341,7 @@ class LoopFeynmanDiagram(FeynmanDiagram):
                     self.start_level_loop = level
                     
                 else:
-                     next.def_level(self.start_level_loop + 1)
+                    next.def_level(self.start_level_loop + 1)
             else:
                 # Define level
                 next.def_level(level + direction)

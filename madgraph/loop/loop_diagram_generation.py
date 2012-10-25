@@ -288,6 +288,55 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 discarded_configurations.append(diag_config)
         self[diags] = newdiagselection
 
+    def user_filter(self, model, structs):
+        """ User-defined user-filter. By default it is not called, but the expert
+        user can turn it on and code here is own filter. Some default examples
+        are provided here.
+        The tagging of the loop diagrams must be performed before using this 
+        user loop filter"""
+        
+        new_diag_selection = base_objects.DiagramList()
+        discarded_diags = base_objects.DiagramList()
+        for diag in self['loop_diagrams']:
+            if diag.get('tag')==[]:
+                raise MadGraph5Error, "Before using the user_filter, please "+\
+                       "make sure that the loop diagrams have been tgged first."
+            valid_diag = True
+            
+            # Ex. 1: Chose the topology, i.e. number of loop line.
+            #        Notice that here particles and antiparticles are not 
+            #        differentiated and always the particle PDG is returned.
+            #        In this example, only boxes are selected.
+            if len(diag.get_loop_lines_pdgs())!=4:
+                valid_diag=False
+            
+            # Ex. 2: Use the pdgs of the particles directly attached to the loop.
+            #        In this example, we forbid the Z to branch off the loop.
+            if 23 in diag.get_pdgs_attached_to_loop(structs):
+                valid_diag=False
+            
+            # Ex. 3: Filter based on the mass of the particles running in the
+            #        loop. It shows how to access the particles properties from
+            #        the PDG. 
+            #        In this example, only massive parts. are allowed in the loop.
+            if 'ZERO' in [model.get_particle(pdg).get('mass') for pdg in \
+                                                    diag.get_loop_lines_pdgs()]:
+                valid_diag=False
+            
+            # If you need any more advanced function for your filter and cannot
+            # figure out how to implement them. Just contact the authors.
+            
+            if valid_diag:
+                new_diag_selection.append(diag)
+            else:
+                discarded_diags.append(diag)
+                
+        self['loop_diagrams'] = new_diag_selection
+        warn_msg = """
+    The user-defined loop diagrams filter is turned on and discarded %d loops."""\
+    %len(discarded_diags)
+        logger.warning(warn_msg)
+
     def filter_loop_for_perturbative_orders(self):
         """ Filter the loop diagrams to make sure they belong to the class
         of coupling orders perturbed. """
@@ -542,10 +591,6 @@ class LoopAmplitude(diagram_generation.Amplitude):
                                    len(discarded_configurations)>1 else ('',''))
                 logger.info(msg)
 
-        # Now select only the loops corresponding to the perturbative orders
-        # asked for.
-        self.filter_loop_for_perturbative_orders()
-
         # The loop diagrams are filtered according to the 'squared_order' 
         # specification
         if self['process']['has_born']:
@@ -585,6 +630,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 tag_selected.append(diag['canonical_tag'])
         self['loop_diagrams']=loop_basis
 
+        # Now select only the loops corresponding to the perturbative orders
+        # asked for.
+        self.filter_loop_for_perturbative_orders()
+
         # If there is no born neither loop diagrams after filtering, return now.
         if not self['process']['has_born'] and not self['loop_diagrams']:
             return False
@@ -592,6 +641,11 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Set the necessary UV/R2 CounterTerms for each loop diagram generated
         self.setLoopCT_vertices()
         
+        # Apply here some user-defined filter.
+        # For expert only, you can uncomment this and edit your own filter
+        # following the examples provided in the user_filter() function.
+        # self.user_filter(self['process']['model'],self['structure_repository'])
+
         # Give some info about the run
         nLoopDiag = 0
         nCT={'UV':0,'R2':0}
