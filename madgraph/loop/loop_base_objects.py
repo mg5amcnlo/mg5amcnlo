@@ -1002,6 +1002,21 @@ class LoopDiagram(base_objects.Diagram):
 
         return revTag
 
+    
+    # Helper functions for the user_filter in the loop diagram generation. They
+    # are not used by any other part of MadLoop.
+            
+    def get_loop_lines_pdgs(self):
+        """ Returns the pdgs of the lines running in the loop while not 
+        differentiating the particles from the anti-particles """
+        
+        return [abs(tag_elem[0].get('id')) for tag_elem in self['tag']]
+                
+    def get_pdgs_attached_to_loop(self,structs):
+        """ Returns the pdgs of the lines directly branching off the loop."""
+        
+        return [structs.get_struct(struct_ID).get('binding_leg').get('id') \
+                       for tag_elem in self['tag'] for struct_ID in tag_elem[1]]
 
 #===============================================================================
 # LoopDiagram
@@ -1099,7 +1114,7 @@ class LoopUVCTDiagram(base_objects.Diagram):
             res=res+'UVCT type: '+self['type']
             
         return res
-            
+    
 #===============================================================================
 # LoopModel
 #===============================================================================
