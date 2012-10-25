@@ -2142,6 +2142,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _curr_cpp_model = None
     _curr_exporter = None
     _done_export = False
+    
+    helporder = ['Main commands', 'Documented commands']
 
     def preloop(self):
         """Initializing before starting the main loop"""
@@ -2207,7 +2209,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._nlo_modes_for_completion = ['all','virt','real']
     
     def do_quit(self, line):
-        """Do quit"""
+        """Not in help: Do quit"""
 
         if self._done_export and \
                     os.path.exists(pjoin(self._done_export[0],'RunWeb')):
@@ -2926,7 +2928,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     
     # Generate a new amplitude
     def do_generate(self, line):
-        """Generate an amplitude for a given process"""
+        """Main commands: Generate an amplitude for a given process"""
 
         # Reset amplitudes
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -3319,7 +3321,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     # Import files
     def do_import(self, line):
-        """Import files with external formats"""
+        """Main commands: Import files with external formats"""
         args = self.split_arg(line)
         # Check argument's validity
         self.check_import(args)
@@ -3989,7 +3991,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             return
 
     def do_launch(self, line):
-        """Ask for editing the parameter and then 
+        """Main commands: Ask for editing the parameter and then 
         Execute the code (madevent/standalone/...)
         """
         start_cwd = os.getcwd()
@@ -4503,7 +4505,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         launch_ext.open_file(file_path)
                  
     def do_output(self, line):
-        """Initialize a new Template or reinitialize one"""
+        """Main commands: Initialize a new Template or reinitialize one"""
 
         args = self.split_arg(line)
         # Check Argument validity

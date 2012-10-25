@@ -218,6 +218,9 @@ class MadEventAlreadyRunning(InvalidCmd):
 class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 
     debug_output = 'ME5_debug'
+    helporder = ['Main commands', 'Documented commands', 'Require MG5 directory',
+                   'Advanced commands']
+
 
     def __init__(self, me_dir, options):
         """common"""

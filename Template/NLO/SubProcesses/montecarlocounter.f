@@ -1453,7 +1453,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
-                  call AP_reduced(m_type,i_type,one,z(npartner),ap)
+                  call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
                   xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
                   call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
@@ -4536,7 +4536,15 @@ c$$$c do !!
                zeta2=( (2*sh-(sh-w2)*eps1)*w1+
      #                 (sh-w2)*((w1+w2)*beta1-eps1*w2) )/
      #                 ( (sh-w2)*beta1*(2*sh-(sh-w2)*eps1+(sh-w2)*beta1) )
-               qMC=sqrt(zeta2*(1-zeta2)*w2)
+               qMCarg=zeta2*((1-zeta2)*w2)
+               if (qMCarg.lt.-tiny) then
+                  write (*,*)
+     $                 'Error in xiz_driver: sqrt of a negative number'
+                  stop
+               elseif (qMCarg.lt.0d0) then
+                  qMCarg=0d0
+               endif
+               qMC=sqrt(qMCarg)
             elseif(MonteCarlo.eq.'PYTHIA6Q')then
                qMC=sqrt(w2)
             elseif(MonteCarlo.eq.'PYTHIA6PT')then
@@ -5181,6 +5189,8 @@ c outgoing parton #3 (massive)
         endif
 c outgoing parton #4 (massless)
       elseif(ileg.eq.4)then
+        w1=-xq1q+xq2q-xtk
+        w2=-xq2q+xq1q-xuk
         if(1-x.lt.tiny)then
           zHWPP=1-(1-x)*(1+yj)*s/(2*(s-xm12))
         elseif(1-yj.lt.tiny)then
@@ -5238,6 +5248,8 @@ c outgoing parton #3 (massive)
         endif
 c outgoing parton #4 (massless)
       elseif(ileg.eq.4)then
+        w1=-xq1q+xq2q-xtk
+        w2=-xq2q+xq1q-xuk
         if(1-x.lt.tiny)then
           xiHWPP=(1-yj)*(s-xm12)**2/(s*(1+yj))
         elseif(1-yj.lt.tiny)then

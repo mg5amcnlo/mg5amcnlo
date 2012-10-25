@@ -32,7 +32,7 @@ class ShowerCard(dict):
                     'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar']
     path_vars = ['hwpppath', 'thepegpath', 'hepmcpath']
     string_vars = ['extralibs', 'extrapaths', 'includepaths', 'analyse']
-    int_vars = ['maxprint', 'rnd_seed', 'rnd_seed2', 'modbos_1', 'modbos_2']
+    int_vars = ['maxprint','nevents','rnd_seed', 'rnd_seed2', 'modbos_1', 'modbos_2']
     float_vars = ['maxerrs', 'lambda_5']
 
     # names_dict has the following structure:
@@ -42,6 +42,7 @@ class ShowerCard(dict):
     # used / written for thar mc
     names_dict = {\
             'ue_enabled' : {'HERWIG6':'lhsoft', 'PYTHIA6': 'mstp_81', 'HERWIGPP': 'ue_hwpp'},
+            'nevents' : {'HERWIG6':'nevents', 'PYTHIA6': 'nevents', 'HERWIGPP': 'nevents'},
             'hadronize' : {'PYTHIA6': 'mstp_111', 'HERWIGPP': 'hadronize_hwpp'},
             'b_stable' : {'HERWIG6':'b_stable_hw', 'PYTHIA6': 'b_stable_py', 'HERWIGPP': 'b_stable_hwpp'},
             'pi_stable' : {'HERWIG6':'pi_stable_hw', 'PYTHIA6': 'pi_stable_py', 'HERWIGPP': 'pi_stable_hwpp'},
@@ -62,7 +63,7 @@ class ShowerCard(dict):
             'modbos_2' : {'HERWIG6':'modbos_2'},
             'maxerrs' : {'HERWIG6':'err_fr_hw', 'PYTHIA6': 'err_fr_py', 'HERWIGPP': 'err_fr_hwpp'},
             'lambda_5' : {'HERWIG6':'lambdaherw', 'PYTHIA6': 'lambdapyth'},
-            'analyse' : {'HERWIG6':'hwuti', 'PYTHIA6':'pyuti'}}
+            'analyse' : {'HERWIG6':'hwuti', 'PYTHIA6':'pyuti', 'HERWIGPP':'hwpputi'}}
     stdhep_dict = {'HERWIG6':'mcatnlo_hwan_stdhep.o', 'PYTHIA6':'mcatnlo_pyan_stdhep.o'}
     
     def __init__(self, card=None, testing=False):

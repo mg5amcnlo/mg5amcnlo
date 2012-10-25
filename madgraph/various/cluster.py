@@ -223,10 +223,6 @@ class MultiCore(Cluster):
         self.waiting_submission = []
         self.pids = []
         
-    def adding_jobs_to_submit(self, nb):
-        self.idle += nb
-        #self.remaining += nb
-        
     def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
                                                          stderr=None, log=None):
         """launch one job and wait for it"""    
@@ -240,7 +236,6 @@ class MultiCore(Cluster):
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
                log=None):
         """submit a job on multicore machine"""
-
         if cwd is None:
             cwd = os.getcwd()
         if not os.path.exists(prog) and not misc.which(prog):
@@ -250,7 +245,7 @@ class MultiCore(Cluster):
         if self.waiting_submission or self.nb_used == self.nb_core:
             self.waiting_submission.append((prog, argument,cwd, stdout))
             # check that none submission is already finished
-            if self.nb_used <  self.nb_core:
+            while self.nb_used <  self.nb_core and self.waiting_submission:
                 arg = self.waiting_submission.pop(0)
                 self.nb_used += 1 # udpate the number of running thread
                 thread.start_new_thread(self.launch, arg)              
@@ -258,15 +253,16 @@ class MultiCore(Cluster):
             self.nb_used += 1 # upate the number of running thread
             thread.start_new_thread(self.launch, (prog, argument, cwd, stdout))
         elif self.nb_used ==  self.nb_core -1:
-            self.nb_used += 1 # upate the number of running thread
+            self.nb_used += 1 # upate the number of running thread            
             thread.start_new_thread(self.launch, (prog, argument, cwd, stdout))
+        
         
     def launch(self, exe, argument, cwd, stdout):
         """ way to launch for multicore."""
 
         def end(self, pid):
             self.nb_used -= 1
-            self.done +=1
+            self.done += 1
             self.pids.remove(pid)
 
         try:  
@@ -294,7 +290,6 @@ class MultiCore(Cluster):
             end(self, pid)
 
         except Exception, error:
-            print error, os.getcwd()
             self.remove()
             pass
           
@@ -302,6 +297,8 @@ class MultiCore(Cluster):
     def wait(self, me_dir, update_status):
         """Wait that all thread finish"""
         import thread
+
+        total_job = self.done + self.nb_used + len(self.waiting_submission)
 
         while self.nb_used < self.nb_core:
             if self.waiting_submission:
@@ -316,16 +313,29 @@ class MultiCore(Cluster):
             self.lock.acquire()
             while self.waiting_submission or self.nb_used:
                 if update_status:
-                    update_status(len(self.waiting_submission), self.nb_used, self.done) 
+                    update_status(len(self.waiting_submission), self.nb_used, self.done)
                 self.lock.acquire()
                 if self.waiting_submission:
                     arg = self.waiting_submission.pop(0)
                     thread.start_new_thread(self.launch, arg)
                     self.nb_used += 1 # update the number of running thread
-                    
+                                    
+            while total_job > self.done:
+                logger.debug('Some jobs have been lost. Try to recover')
+                #something bad happens
+                if not len(self.pids):
+                    # The job is not running 
+                    logger.critical('Some jobs have been lost in the multicore treatment.')
+                    logger.critical('The results might be incomplete. (Trying to continue anyway)')
+                    break
+                elif update_status:
+                    update_status(len(self.waiting_submission), len(self.pids) ,
+                                                                      self.done)
+                self.lock.acquire()
+                  
             if update_status:
-                update_status(len(self.waiting_submission), self.nb_used, self.done) 
-                
+                update_status(len(self.waiting_submission), self.nb_used, self.done)             
+            
             # reset variable for next submission
             self.need_waiting = False
             security = 0 
@@ -344,16 +354,19 @@ class MultiCore(Cluster):
             
     def remove(self, *args):
         """Ensure that all thread are killed"""
+        logger.info('remove job currently running')
         for pid in list(self.pids):
-            out = os.system('kill -9 %s &> /dev/null' % pid)
+            out = os.system('CPIDS=$(pgrep -P %s); kill -TERM $CPIDS &> /dev/null' % pid )
             if out == 0:
                 try:
                     self.pids.remove(pid)
                 except:
                     pass
+            #out = os.system('kill -9 %s &> /dev/null' % pid)
+
         time.sleep(1) # waiting if some were submitting at the time of ctrl-c
         for pid in list(self.pids):
-            out = os.system('kill -15 %s &> /dev/null' % pid)
+            out = os.system('CPIDS=$(pgrep -P %s); kill -TERM $CPIDS &> /dev/null' % pid )
             if out == 0:
                 try:
                     self.pids.remove(pid)

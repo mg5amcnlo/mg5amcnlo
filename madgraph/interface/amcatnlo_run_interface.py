@@ -574,7 +574,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
     ############################################################################      
     def do_calculate_xsect(self, line):
-        """ calculates LO/NLO cross-section, using madevent_vegas """
+        """Main commands: calculates LO/NLO cross-section, using madevent_vegas """
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _generate_events_parser.parse_args(argss)
@@ -605,7 +605,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         
     ############################################################################      
     def do_generate_events(self, line):
-        """ generate events """
+        """Main commands: generate events """
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _generate_events_parser.parse_args(argss)
@@ -634,7 +634,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
     ############################################################################
     def do_treatcards(self, line, amcatnlo=True):
-        """this is for creating the correct run_card.inc from the nlo format"""
+        """Advanced commands: this is for creating the correct run_card.inc from the nlo format"""
         return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
     
     ############################################################################
@@ -644,7 +644,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     
     ############################################################################      
     def do_launch(self, line):
-        """ launch the full chain """
+        """Main commands: launch the full chain """
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _launch_parser.parse_args(argss)
@@ -675,7 +675,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
     ############################################################################      
     def do_compile(self, line):
-        """ just compile the executables """
+        """Advanced commands: just compile the executables """
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _compile_parser.parse_args(argss)
@@ -1057,8 +1057,16 @@ Integrated cross-section
         misc.call(['mv ../%s ../MCATNLO_%s_input .' % (exe, shower)], shell=True)
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
-            misc.call(['ln -s %s %s' % \
-                (pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)], shell=True)
+            try:
+                misc.call(['ln -s %s %s' % \
+                (pjoin(self.shower_card['hwpppath'], 'bin', 'Herwig++'), rundir)], shell=True)
+            except:
+                raise aMCatNLOError('The Herwig++ path set in the shower_card is not valid.')
+
+            if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so')):
+                misc.call(['mv %s %s' % \
+                    (pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)], 
+                                                                                     shell=True)
         evt_name = os.path.basename(evt_file)
         misc.call(['ln -s %s %s' % (os.path.split(evt_file)[0], self.run_name)], shell=True)
         misc.call(['./%s < MCATNLO_%s_input > amcatnlo_run.log 2>&1' % \
@@ -1223,15 +1231,13 @@ Integrated cross-section
         """creates the mcatnlo input script using the values set in the header of the event_file.
         It also checks if the lhapdf library is used"""
         file = open(evt_file)
-        nevents = 0
         shower = ''
         pdlabel = ''
         itry = 0
+        nevents = self.shower_card['nevents']
         while True:
             line = file.readline()
             #print line
-            if not nevents and 'nevents' in line.split():
-                nevents = int(line.split()[0])
             if not shower and 'parton_shower' in line.split():
                 shower = line.split()[0]
             if not pdlabel and 'pdlabel' in line.split():
@@ -1364,8 +1370,8 @@ Integrated cross-section
             raise aMCatNLOError('Cannot find executable %s in %s' \
                 % (exe, os.getcwd()))
         # check that the executable has exec permissions
-        if not os.access(execpath, os.X_OK):
-            misc.call(['chmod', '+x', exe], cwd=cwd)
+        if self.cluster_mode == 1 and not os.access(execpath, os.X_OK):
+            subprocess.call(['chmod', '+x', exe], cwd=cwd)
         # finally run it
         if self.cluster_mode == 0:
             #this is for the serial run
@@ -1379,7 +1385,6 @@ Integrated cross-section
             if 'ajob' not  in exe:
                 return self.cluster.submit(exe, args, cwd=cwd)
               
-
             # use local disk if possible => need to stands what are the 
             # input/output files
             keep_fourth_arg = False
@@ -1785,15 +1790,7 @@ Integrated cross-section
             if answer.isdigit():
                 answer = card[int(answer)]
             if answer == 'done':
-                run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-                self.run_card = banner_mod.RunCardNLO(run_card)
-                shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
-                self.shower_card = shower_card.ShowerCard(shower_card_path)
-                self.run_tag = self.run_card['run_tag']
-                self.run_name = self.find_available_run_name(self.me_dir)
-                self.set_run_name(self.run_name, self.run_tag, 'parton')
-                #self.do_treatcards_nlo('')
-                return
+                break
             if not os.path.isfile(answer):
                 if answer != 'trigger':
                     path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
@@ -1809,6 +1806,8 @@ Integrated cross-section
         self.run_tag = self.run_card['run_tag']
         self.run_name = self.find_available_run_name(self.me_dir)
         self.set_run_name(self.run_name, self.run_tag, 'parton')
+        shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
+        self.shower_card = shower_card.ShowerCard(shower_card_path)
         #self.do_treatcards_nlo('')
         return
 
