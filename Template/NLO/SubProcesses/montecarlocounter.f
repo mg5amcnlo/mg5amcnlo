@@ -2098,8 +2098,13 @@ c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=m
                stop
             endif
             lambdaabc=sqrt((ma**2-mbeff**2-mceff**2)**2-4*mbeff**2*mceff**2)
-            zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma**2)/2
-            zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma**2)/2
+            if(ma.ne.0d0)then
+               zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma**2)/2
+               zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma**2)/2
+            else
+               zplus =1d0
+               zminus=0d0
+            endif
             if(z(npartner).lt.zminus.or.
      &         z(npartner).gt.zplus)lzone(npartner)=.false.
          endif
@@ -3537,8 +3542,13 @@ c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=m
                stop
             endif
             lambdaabc=sqrt((ma**2-mbeff**2-mceff**2)**2-4*mbeff**2*mceff**2)
-            zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma**2)/2
-            zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma**2)/2
+            if(ma.ne.0d0)then
+               zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma**2)/2
+               zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma**2)/2
+            else
+               zplus =1d0
+               zminus=0d0
+            endif
             if(z(npartner).lt.zminus.or.
      &           z(npartner).gt.zplus)lzone(npartner)=.false.
          else
