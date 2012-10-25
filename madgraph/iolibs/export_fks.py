@@ -14,6 +14,7 @@
 ################################################################################
 """Methods and classes to export matrix elements to fks format."""
 
+from distutils import dir_util
 import fractions
 import glob
 import logging
@@ -81,6 +82,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
             shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
+            # distutils.dir_util.copy_tree since dir_path already exists
+            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template', 'Common'),
+                               dir_path)
         elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
             if not mgme_dir:
                 raise MadGraph5Error, \
@@ -112,6 +116,16 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         # We must link the CutTools to the Library folder of the active Template
         self.link_CutTools(os.path.join(dir_path, 'lib'))
+
+        # Duplicate run_card and plot_card
+        for card in ['plot_card']:
+            try:
+                shutil.copy(pjoin(self.dir_path, 'Cards',
+                                         card + '.dat'),
+                           pjoin(self.dir_path, 'Cards',
+                                        card + '_default.dat'))
+            except IOError:
+                logger.warning("Failed to copy " + card + ".dat to default")
 
         cwd = os.getcwd()
         dirpath = os.path.join(self.dir_path, 'SubProcesses')
@@ -1965,6 +1979,9 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
             shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
+            # distutils.dir_util.copy_tree since dir_path already exists
+            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template', 'Common'),
+                               dir_path)
         elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
             if not mgme_dir:
                 raise MadGraph5Error, \

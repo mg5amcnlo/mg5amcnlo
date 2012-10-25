@@ -39,7 +39,9 @@ $delphesdir/LHCO_Only delphes.root
 if [ -e delphes_events.lhco ]; then
 # write the delphes banner
     sed -e "s/^/#/g" ${run}/${run}_${tag}_banner.txt > ${run}/${tag}_delphes_events.lhco
-    echo "##  Integrated weight (pb)  : ${cross}" >> ${run}/${tag}_delphes_events.lhco
+    if [ ${cross} != "0" ];then
+	echo "##  Integrated weight (pb)  : ${cross}" >> ${run}/${tag}_delphes_events.lhco
+    fi
     cat delphes_events.lhco >> ${run}/${tag}_delphes_events.lhco
     rm -f delphes_events.lhco
 fi
