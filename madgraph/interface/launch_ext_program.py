@@ -43,8 +43,7 @@ class ExtLauncher(object):
     
     force = False
     
-    def __init__(self, cmd, running_dir, card_dir='', 
-                 **options):
+    def __init__(self, cmd, running_dir, card_dir='', **options):
         """ initialize an object """
         
         self.running_dir = running_dir
@@ -105,9 +104,7 @@ class ExtLauncher(object):
             """WARNING: If you edit this file don\'t forget to modify 
             consistently the different parameters, especially 
             the width of all particles.""" 
-        
-        fct = lambda q: cmd.raw_path_input(q, allow_arg=['y','n'])     
-                                    
+                                         
         if not self.force:
             if msg:  print msg
             question = 'Do you want to edit file: %(card)s?' % {'card':filename}
@@ -162,6 +159,7 @@ class MELauncher(ExtLauncher):
         #self.executable = os.path.join('.', 'bin','generate_events')
         self.pythia = cmd_int.options['pythia-pgs_path']
         self.delphes = cmd_int.options['delphes_path'],
+        self.options = cmd_int.options
 
         assert hasattr(self, 'cluster')
         assert hasattr(self, 'multicore')
@@ -204,18 +202,21 @@ class MELauncher(ExtLauncher):
                 
         import madgraph.interface.madevent_interface as ME
         
+        stdout_level = self.cmd_int.options['stdout_level']
         if self.shell:
-            usecmd = ME.MadEventCmdShell(me_dir=self.running_dir)
+            usecmd = ME.MadEventCmdShell(me_dir=self.running_dir, options=self.options)
         else:
-            usecmd = ME.MadEventCmd(me_dir=self.running_dir)
-        
+            usecmd = ME.MadEventCmd(me_dir=self.running_dir, options=self.options)
+            usecmd.pass_in_web_mode()
         #Check if some configuration were overwritten by a command. If so use it    
         set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
         for line in set_cmd:
             try:
-                usecmd.exec_cmd(line)
+                usecmd.do_set(line[3:], log=False)
             except:
                 pass
+        usecmd.do_set('stdout_level %s'  % stdout_level,log=False)
+        #ensure that the logger level 
         launch = self.cmd_int.define_child_cmd_interface(
                      usecmd, interface=False)
         #launch.me_dir = self.running_dir

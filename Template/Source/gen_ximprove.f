@@ -47,6 +47,8 @@ c
       common /to_split/split_channels
       integer ncode,npos
       character*20 formstr
+      logical file_exists
+      character*30 filename
 
 c-----
 c  Begin Code
@@ -87,7 +89,7 @@ c        Allow all the way down to a single iteration for gridruns
          call get_int8(npara,param,value," gseed "  ,iseed  ,4321   )
          call get_integer(npara,param,value," ngran "  ,ngran  , -1)
          if (ngran.eq.-1) ngran = 1
-         write(*,*) "Running on Grid to generate ",nreq," additional events"
+         write(*,*) "Running on Grid to generate ",nreq," events"
          write(*,*) "   with granularity equal to ",ngran
 c
 c     TJS 3/13/2008
@@ -101,8 +103,8 @@ c
          iseed = iseed * 31300       
          ij=1802 + mod(iseed,30081)      
          kl=9373 + (iseed/30081) + ioffset
-c         write(*,'($a,i6,a3,i6)') 'Using random seed offsets',jconfig," : ",ioffset
-c         write(*,*) ' with seed', iseed
+         write(*,'($a,i6,a3,i6)') 'Using random seed offset: ',ioffset
+         write(*,*) ' with seed', iseed
          do while (ij .gt. 31328)
             ij = ij - 31328
          enddo
@@ -110,7 +112,7 @@ c         write(*,*) ' with seed', iseed
             kl = kl - 30081
          enddo
          write(*,*) "Using random seeds",ij,kl
-        call rmarin(ij,kl)         
+        call rmarin(ij,kl)
       endif
       open(unit=15,file=symfile,status='old',err=999)
       errtot=0d0
@@ -150,7 +152,7 @@ c
 c     Read in integration data from run
 c
             open(unit=25,file=fname,status='old',err=95)
-            read(25,*) xsec(i),xerru(i),xerrc(i),nevents(i),nw(i),maxit,
+            read(25,*,err=94,end=94) xsec(i),xerru(i),xerrc(i),nevents(i),nw(i),maxit,
      &           nunwgt(i),xlum(i)
             if (xsec(i) .eq. 0d0) xlum(i)=1d99     !zero cross section
             xlum(i) = xlum(i)/1000   !convert to fb^-1 
@@ -187,6 +189,15 @@ c            tmax
 c            xtot = xtot+ xsec(i)*mfact(i)
 c            eff(i)= xerr(i)*sqrt(real(nevents(i)))/xsec(i)
 c            errtot = errtot+(mfact(i)*xerr(i))**2
+            goto 95
+ 94         continue
+c        There was an error reading an existing results.dat file
+c        Stop generation with error message
+            filename='../../error'
+            INQUIRE(FILE="../../RunWeb", EXIST=file_exists)
+            if(.not.file_exists) filename = '../' // filename
+            open(unit=26,file=filename,status='unknown')
+            write(26,*) 'Bad results.dat file for channel ',xi
  95         close(25)
 c            write(*,*) i,maxit,xsec(i), eff(i)
          else
@@ -344,8 +355,7 @@ c         write(26,20) 'rm -f moffset.dat'
          write(26,'(5x,3a)')'echo "',gn(io(i))(2:ip-1),
      $        '" >>input_sg.txt'
          write(26,20) '../madevent >> $k <input_sg.txt'
-         write(26,20) 'mv ftn26 ftn25'
-c         write(26,20) 'rm ftn26'
+         write(26,20) 'rm ftn25 ftn26'
          write(26,20) 'cat $k >> log.txt'
          write(26,20) 'cd ../'
       endif

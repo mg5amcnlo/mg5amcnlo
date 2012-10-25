@@ -30,13 +30,16 @@ try:
     import madgraph
     from madgraph import MadGraph5Error
     import madgraph.iolibs.files as files
-except:
+except Exception, error:
+    if __debug__:
+        print error
     # Use in MadEvent
     import internal as madgraph
     from internal import MadGraph5Error
     import internal.files as files
     
 logger = logging.getLogger('cmdprint.ext_program')
+logger_stderr = logging.getLogger('madevent.misc')
 pjoin = os.path.join
    
 #===============================================================================
@@ -139,6 +142,32 @@ def nice_representation(var, nb_space=0):
 
     return outstr
 
+#
+# Decorator for re-running a crashing function automatically.
+#
+wait_once = False
+def multiple_try(nb_try=5, sleep=20):
+
+    def deco_retry(f):
+        def deco_f_retry(*args, **opt):
+            for i in range(nb_try):
+                try:
+                    return f(*args, **opt)
+                except KeyboardInterrupt:
+                    raise
+                except Exception, error:
+                    global wait_once
+                    if not wait_once:
+                        text = """Start waiting for update on filesystem. (more info in debug mode)"""
+                        logger.info(text)
+                        logger_stderr.debug('fail to do %s function with %s args. %s try on a max of %s (%s waiting time)' %
+                                 (str(f), ', '.join([str(a) for a in args]), i+1, nb_try, sleep * (i+1)))
+                        logger_stderr.debug('error is %s' % str(error))
+                    wait_once = True
+                    time.sleep(sleep * (i+1))
+            raise
+        return deco_f_retry
+    return deco_retry
 
 #===============================================================================
 # Compiler which returns smart output error in case of trouble
@@ -147,7 +176,7 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
     """compile a given directory"""
 
     try:
-        p = subprocess.Popen(['make'] + arg, stdout=subprocess.PIPE, 
+        p = subprocess.Popen(['make','-j2'] + arg, stdout=subprocess.PIPE, 
                              stderr=subprocess.STDOUT, cwd=cwd, **opt)
         (out, err) = p.communicate()
     except OSError, error:
@@ -194,6 +223,72 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
         raise MadGraph5Error, error_text
     return p.returncode
 
+def mod_compilator(directory, new='gfortran', current=None):
+    #define global regular expression
+    if type(directory)!=list:
+        directory=[directory]
+
+    #search file
+    file_to_change=find_makefile_in_dir(directory)
+    for name in file_to_change:
+        text = open(name,'r').read()
+        if new == 'g77' and current is None:
+            current = 'gfortran'
+        elif new == 'gfortran' and current is None:
+            current = 'g77'
+        pattern = re.compile(current)
+        text= pattern.sub(new, text)
+        open(name,'w').write(text)
+
+def detect_current_compiler(path):
+    """find the current compiler for the current directory"""
+    
+    comp = re.compile("^\s*FC\s*=\s*(\w+)\s*")
+    for line in open(path):
+        if comp.search(line):
+            compiler = comp.search(line).groups()[0]
+            return compiler
+
+def find_makefile_in_dir(directory):
+    """ return a list of all file starting with makefile in the given directory"""
+
+    out=[]
+    #list mode
+    if type(directory)==list:
+        for name in directory:
+            out+=find_makefile_in_dir(name)
+        return out
+
+    #single mode
+    for name in os.listdir(directory):
+        if os.path.isdir(directory+'/'+name):
+            out+=find_makefile_in_dir(directory+'/'+name)
+        elif os.path.isfile(directory+'/'+name) and name.lower().startswith('makefile'):
+            out.append(directory+'/'+name)
+        elif os.path.isfile(directory+'/'+name) and name.lower().startswith('make_opt'):
+            out.append(directory+'/'+name)
+    return out
+
+def rm_old_compile_file():
+
+    # remove all the .o files
+    os.path.walk('.', rm_file_extension, '.o')
+    
+    # remove related libraries
+    libraries = ['libblocks.a', 'libgeneric_mw.a', 'libMWPS.a', 'libtools.a', 'libdhelas3.a',
+                 'libdsample.a', 'libgeneric.a', 'libmodel.a', 'libpdf.a', 'libdhelas3.so', 'libTF.a', 
+                 'libdsample.so', 'libgeneric.so', 'libmodel.so', 'libpdf.so']
+    lib_pos='./lib'
+    [os.remove(os.path.join(lib_pos, lib)) for lib in libraries \
+                                 if os.path.exists(os.path.join(lib_pos, lib))]
+
+
+def rm_file_extension( ext, dirname, names):
+
+    [os.remove(os.path.join(dirname, name)) for name in names if name.endswith(ext)]
+
+
+
 # Control
 def check_system_error(value=1):
     def deco_check(f):
@@ -235,8 +330,10 @@ def Popen(arg, *args, **opt):
     """nice way to call an external program with nice error treatment"""
     return subprocess.Popen(arg, *args, **opt)
 
-                
-
+@multiple_try()
+def mult_try_open(filepath, *args, **opt):
+    """try to open a file with multiple try to ensure that filesystem is sync"""  
+    return open(filepath, *args, ** opt)
 
 
 ################################################################################

@@ -1890,6 +1890,7 @@ class UFOModelConverterCPP(object):
         template_cc_files = self.read_aloha_template_files(ext = 'cc')
 
         aloha_model = create_aloha.AbstractALOHAModel(self.model.get('name'))
+        aloha_model.add_Lorentz_object(self.model.get('lorentz'))
         
         if self.wanted_lorentz:
             aloha_model.compute_subset(self.wanted_lorentz)
@@ -1898,7 +1899,7 @@ class UFOModelConverterCPP(object):
             
         for abstracthelas in dict(aloha_model).values():
             h_rout, cc_rout = abstracthelas.write(output_dir=None, language='CPP', 
-                                                              compiler_cmd=False)
+                                                              mode='no_include')
 
             template_h_files.append(h_rout)
             template_cc_files.append(cc_rout)

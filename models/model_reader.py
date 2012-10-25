@@ -63,13 +63,6 @@ class ModelReader(base_objects.Model):
         
         # Read in param_card
         if param_card:
-            
-            # Check that param_card exists
-            if not os.path.isfile(param_card):
-                raise MadGraph5Error, \
-                      "No such file %s" % param_card
-            
-
             # Create a dictionary from LHA block name and code to parameter name
             parameter_dict = {}
             for param in external_parameters:
@@ -80,15 +73,27 @@ class ModelReader(base_objects.Model):
                     parameter_dict[param.lhablock.lower()] = dictionary
                 dictionary[tuple(param.lhacode)] = param
                 
-            param_card = card_reader.ParamCard(param_card)
+            if isinstance(param_card, basestring):
+                # Check that param_card exists
+                if not os.path.isfile(param_card):
+                    raise MadGraph5Error, "No such file %s" % param_card
+                param_card = card_reader.ParamCard(param_card)
+            assert isinstance(param_card, card_reader.ParamCard)
+                
+           
             
             key = [k for k in param_card.keys() if not k.startswith('qnumbers ')
                                             and not k.startswith('decay_table')]
             
             if set(key) != set(parameter_dict.keys()):
-                raise MadGraph5Error, '''Invalid restriction card (not same block)
-                %s != %s
-                ''' % (set(key), set(parameter_dict.keys()))
+                msg = '''Invalid restriction card (not same block)
+    %s != %s.
+    Missing block: %s
+    Unknown block : %s''' % (set(key), set(parameter_dict.keys()),
+                             ','.join(set(parameter_dict.keys()).difference(set(key))),
+                             ','.join(set(key).difference(set(parameter_dict.keys()))))
+                
+                raise MadGraph5Error, msg
             for block in key:
                 for id in parameter_dict[block]:
                     try:
@@ -100,21 +105,17 @@ class ModelReader(base_objects.Model):
                             value = '0.0' 
                         if scale and parameter_dict[block][id].name == 'aS':
                             runner = Alphas_Runner(value, nloop=2)
-                            print 'as old:', value, 'new', 
                             value = runner(scale)
-                            print value
                         exec("locals()[\'%s\'] = %s" % (parameter_dict[block][id].name,
                                           value))
                         parameter_dict[block][id].value = float(value)
-                    
+           
         else:
             # No param_card, use default values
             for param in external_parameters:
                 if scale and parameter_dict[block][id].name == 'aS':
                     runner = Alphas_Runner(value, nloop=3)
-                    print 'as old:', value, 'new', 
                     value = runner(scale)
-                    print value
                 exec("locals()[\'%s\'] = %s" % (param.name, param.value))
                     
         # Define all functions used
@@ -164,7 +165,6 @@ class ModelReader(base_objects.Model):
                                                              coup.expr))
 
         # Set parameter and coupling dictionaries
-
         self.set('parameter_dict', dict([(param.name, param.value) \
                                         for param in external_parameters + \
                                          derived_parameters]))
@@ -212,7 +212,11 @@ class Alphas_Runner(object):
     def __call__(self, scale):
         """Evaluation of strong coupling constant alpha_S at scale 'scale'."""
         assert scale > 0
-        if scale < self.cmass:
+        
+        
+        if scale < 0.188775276209:
+            return 0
+        elif scale < self.cmass:
             t = 2 * math.log(scale/self.cmass)
             return self.newton1(t, self.amc, 3)
         elif scale < self.bmass:
@@ -239,7 +243,6 @@ class Alphas_Runner(object):
         Evolution is performed using Newton's method,
         with a precision given by tol."""        
         
-        print 'input new1',t, alphas, nf
         nloop = self.nloop
         tol = 5e-4
         arg = nf-3
@@ -251,12 +254,10 @@ class Alphas_Runner(object):
             f = lambda AS: 1.0/AS+0.5*c1*math.log((c2*AS**2)/(1+c1*AS+c2*AS**2)) \
                  -(c1**2-2*c2)/d*math.atan((2*c2*AS+c1)/d)
         
-        print b0,t,alphas
         a_out = alphas / (1 + alphas * b0 * t)
         if nloop == 1:
             return a_out
-        
-        print alphas, b0, t, alphas*b0*t
+
         a_out = alphas/(1+b0*alphas*t+c1*alphas*math.log(1+alphas*b0*t))
         if a_out < 0:
             a_out = 0.3

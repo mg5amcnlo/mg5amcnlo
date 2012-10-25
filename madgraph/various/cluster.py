@@ -22,8 +22,12 @@ logger = logging.getLogger('madgraph.cluster')
 
 try:
     from madgraph import MadGraph5Error
-except:
+    import madgraph.various.misc as misc
+except Exception, error:
+    if __debug__:
+        print  str(error)
     from internal import MadGraph5Error
+    import internal.misc as misc
     
 class ClusterManagmentError(MadGraph5Error):
     pass
@@ -31,20 +35,8 @@ class ClusterManagmentError(MadGraph5Error):
 class NotImplemented(MadGraph5Error):
     pass
 
-def multiple_try(nb_try=5, sleep=20):
 
-    def deco_retry(f):
-        def deco_f_retry(*args, **opt):
-            for i in range(nb_try):
-                try:
-                    return f(*args, **opt)
-                except KeyboardInterrupt:
-                    raise
-                except:
-                    time.sleep(sleep * (i+1))
-            raise
-        return deco_f_retry
-    return deco_retry
+multiple_try = misc.multiple_try
 
 def check_interupt(error=KeyboardInterrupt):
 
@@ -62,17 +54,65 @@ class Cluster(object):
     """Basic Class for all cluster type submission"""
     name = 'mother class'
 
-    def __init__(self, cluster_queue=None):
+    def __init__(self, cluster_queue=None, temp_dir=None):
         """Init the cluster"""
         self.submitted = 0
         self.submitted_ids = []
         self.finish = 0
         self.cluster_queue = cluster_queue
-        
+        self.temp_dir = temp_dir
     
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
         """How to make one submission. Return status id on the cluster."""
         raise NotImplemented, 'No implementation of how to submit a job to cluster \'%s\'' % self.name
+
+    def submit2(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
+                log=None, input_files=[], output_files=[]):
+        """How to make one submission. Return status id on the cluster.
+        NO SHARE DISK"""
+        
+        if not hasattr(self, 'temp_dir'):
+            return self.submit(prog, argument, cwd, stdout, stderr, log)
+            
+        if cwd is None:
+            cwd = os.getcwd()
+        if not os.path.exists(prog):
+            prog = os.path.join(cwd, prog)
+
+        temp_file_name = "sub." + os.path.basename(prog)
+        text = """#!/bin/bash
+        MYTMP=%(tmpdir)s/run$%(job_id)s
+        MYPWD=%(cwd)s
+        mkdir -p $MYTMP
+        cd $MYPWD
+        input_files=( %(input_files)s )
+        for i in ${input_files[@]}
+        do
+            cp -r $i $MYTMP
+        done
+        cd $MYTMP
+        bash ./%(script)s %(arguments)s
+        output_files=( %(output_files)s )
+        for i in ${output_files[@]}
+        do
+            cp -r $MYTMP/$i $MYPWD
+        done
+        rm -rf $MYTMP
+        """
+        
+        dico = {'tmpdir' : self.temp_dir, 'script': os.path.basename(prog),
+                'cwd': cwd, 'job_id': self.job_id,
+                'input_files': ' '.join(input_files + [prog]),
+                'output_files': ' '.join(output_files),
+                'arguments': ' '.join(argument)}
+        
+        # writing a new script for the submission
+        new_prog = os.path.join(os.path.dirname(prog), temp_file_name)
+        open(new_prog, 'w').write(text % dico)
+        misc.Popen(['chmod','+x',new_prog],cwd=cwd)
+        
+        return self.submit(new_prog, argument, cwd, stdout, stderr, log)
+        
 
     def control(self, me_dir=None):
         """Check the status of job associated to directory me_dir. return (idle, run, finish, fail)"""
@@ -119,7 +159,7 @@ class Cluster(object):
                                                          stderr=None, log=None):
         """launch one job on the cluster and wait for it"""
         
-        special_output = False # tag for concatanate the error with the output.
+        special_output = False # tag for concatenate the error with the output.
         if stderr == -2 and stdout: 
             #We are suppose to send the output to stdout
             special_output = True
@@ -128,7 +168,7 @@ class Cluster(object):
         while 1:        
             status = self.control_one_job(id)
             if not status in ['R','I']:
-                time.sleep(20) #security to ensure that the file are really written on the disk
+                time.sleep(30) #security to ensure that the file are really written on the disk
                 break
             time.sleep(30)
         
@@ -155,20 +195,23 @@ class Cluster(object):
         logger.warning("""This cluster didn't support job removal, 
     the jobs are still running on the cluster.""")
 
+
 class CondorCluster(Cluster):
     """Basic class for dealing with cluster submission"""
     
     name = 'condor'
+    job_id = 'CONDOR_ID'
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
-        """Submit the """
+        """Submit a job prog to a Condor cluster"""
         
         text = """Executable = %(prog)s
                   output = %(stdout)s
                   error = %(stderr)s
                   log = %(log)s
                   %(argument)s
+                  environment = CONDOR_ID=$(Cluster).$(Process)
                   Universe = vanilla
                   notification = Error
                   Initialdir = %(cwd)s
@@ -203,6 +246,82 @@ class CondorCluster(Cluster):
                 'requirement': requirement}
 
         open('submit_condor','w').write(text % dico)
+        a = misc.Popen(['condor_submit','submit_condor'], stdout=subprocess.PIPE)
+        output = a.stdout.read()
+        #Submitting job(s).
+        #Logging submit event(s).
+        #1 job(s) submitted to cluster 2253622.
+        pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
+        try:
+            id = pat.search(output).groups()[0]
+        except:
+            raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
+                                                                        % output 
+        self.submitted += 1
+        self.submitted_ids.append(id)
+        return id
+
+    @multiple_try()
+    def submit2(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
+                log=None, input_files=[], output_files=[]):
+        """Submit the job on the cluster NO SHARE DISK
+           input/output file should be give relative to cwd
+        """
+        
+        text = """Executable = %(prog)s
+                  output = %(stdout)s
+                  error = %(stderr)s
+                  log = %(log)s
+                  %(argument)s
+                  should_transfer_files = YES
+                  when_to_transfer_output = ON_EXIT
+                  transfer_input_files = %(input_files)s
+                  %(output_files)s
+                  Universe = vanilla
+                  notification = Error
+                  Initialdir = %(cwd)s
+                  %(requirement)s
+                  getenv=True
+                  queue 1
+               """
+        
+        if self.cluster_queue not in ['None', None]:
+            requirement = 'Requirements = %s=?=True' % self.cluster_queue
+        else:
+            requirement = ''
+
+        if cwd is None:
+            cwd = os.getcwd()
+        if stdout is None:
+            stdout = '/dev/null'
+        if stderr is None:
+            stderr = '/dev/null'
+        if log is None:
+            log = '/dev/null'
+        if not os.path.exists(prog):
+            prog = os.path.join(cwd, prog)
+        if argument:
+            argument = 'Arguments = %s' % ' '.join(argument)
+        else:
+            argument = ''
+        # input/output file treatment
+        if input_files:
+            input_files = ','.join(input_files)
+        else: 
+            input_files = ''
+        if output_files:
+            output_files = 'transfer_output_files = %s' % ','.join(output_files)
+        else:
+            output_files = ''
+        
+        
+
+        dico = {'prog': prog, 'cwd': cwd, 'stdout': stdout, 
+                'stderr': stderr,'log': log,'argument': argument,
+                'requirement': requirement, 'input_files':input_files, 
+                'output_files':output_files}
+
+        open('submit_condor','w').write(text % dico)
         a = subprocess.Popen(['condor_submit','submit_condor'], stdout=subprocess.PIPE)
         output = a.stdout.read()
         #Submitting job(s).
@@ -217,12 +336,16 @@ class CondorCluster(Cluster):
         self.submitted += 1
         self.submitted_ids.append(id)
         return id
+
+
+
+
     
     @multiple_try(nb_try=10, sleep=10)
     def control_one_job(self, id):
         """ control the status of a single job with it's cluster id """
         cmd = 'condor_q '+str(id)+" -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
-        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE, 
+        status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE, 
                                                          stderr=subprocess.PIPE)
         
         error = status.stderr.read()
@@ -240,7 +363,7 @@ class CondorCluster(Cluster):
             return 0, 0, 0, 0
         
         cmd = "condor_q " + ' '.join(self.submitted_ids) + " -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
-        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE, 
+        status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE, 
                                                          stderr=subprocess.PIPE)
         error = status.stderr.read()
         if status.returncode or error:
@@ -267,19 +390,20 @@ class CondorCluster(Cluster):
             return
         cmd = "condor_rm %s" % ' '.join(self.submitted_ids)
         
-        status = subprocess.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
         
 class PBSCluster(Cluster):
     """Basic class for dealing with cluster submission"""
     
     name = 'pbs'
+    job_id = 'PBS_JOBID'
     idle_tag = ['Q']
     running_tag = ['T','E','R']
     complete_tag = ['C']
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
-        """Submit the prog to the cluser"""
+        """Submit a job prog to a PBS cluster"""
         
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
         me_dir = hashlib.md5(me_dir).hexdigest()[-14:]
@@ -312,7 +436,7 @@ class PBSCluster(Cluster):
         if self.cluster_queue and self.cluster_queue != 'None':
             command.extend(['-q', self.cluster_queue])
 
-        a = subprocess.Popen(command, stdout=subprocess.PIPE, 
+        a = misc.Popen(command, stdout=subprocess.PIPE, 
                                       stderr=subprocess.STDOUT,
                                       stdin=subprocess.PIPE, cwd=cwd)
             
@@ -329,7 +453,8 @@ class PBSCluster(Cluster):
     def control_one_job(self, id):
         """ control the status of a single job with it's cluster id """
         cmd = 'qstat '+str(id)
-        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+        status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,
+                                  stderr=open(os.devnull,'w'))
         
         for line in status.stdout:
             line = line.strip()
@@ -348,7 +473,7 @@ class PBSCluster(Cluster):
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
         cmd = "qstat"
-        status = subprocess.Popen([cmd], stdout=subprocess.PIPE)
+        status = misc.Popen([cmd], stdout=subprocess.PIPE)
 
         if me_dir.endswith('/'):
            me_dir = me_dir[:-1]    
@@ -378,7 +503,7 @@ class PBSCluster(Cluster):
         if not self.submitted_ids:
             return
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
-        status = subprocess.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
 
 
 class SGECluster(Cluster):
@@ -386,6 +511,7 @@ class SGECluster(Cluster):
     # Class written by Arian Abrahantes.
 
     name = 'sge'
+    job_id = 'JOB_ID'
     idle_tag = ['qw', 'hqw','hRqw','w']
     running_tag = ['r','t','Rr','Rt']
 
@@ -399,7 +525,7 @@ class SGECluster(Cluster):
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
-        """Submit the prog to the cluser"""
+        """Submit a job prog to an SGE cluster"""
 
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
         me_dir = hashlib.md5(me_dir).hexdigest()[-10:]
@@ -451,7 +577,7 @@ class SGECluster(Cluster):
         if self.cluster_queue and self.cluster_queue != 'None':
             command.extend(['-q', self.cluster_queue])
 
-        a = subprocess.Popen(command, stdout=subprocess.PIPE,
+        a = misc.Popen(command, stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT,
                              stdin=subprocess.PIPE, cwd=cwd)
 
@@ -471,7 +597,7 @@ class SGECluster(Cluster):
         """ control the status of a single job with it's cluster id """
         #cmd = 'qstat '+str(id)
         cmd = 'qstat '
-        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+        status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE)
         for line in status.stdout:
             #print "!==",line
             #line = line.strip()
@@ -492,7 +618,7 @@ class SGECluster(Cluster):
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
         cmd = "qstat "
-        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+        status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE)
 
         if me_dir.endswith('/'):
            me_dir = me_dir[:-1]    
@@ -523,17 +649,18 @@ class SGECluster(Cluster):
         if not self.submitted_ids:
             return
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
-        status = subprocess.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
 
 
 class LSFCluster(Cluster):
     """Basic class for dealing with cluster submission"""
     
     name = 'lsf'
+    job_id = 'LSB_JOBID'
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
-        """Submit the """
+        """Submit the job prog to an LSF cluster"""
         
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
         me_dir = hashlib.md5(me_dir).hexdigest()[-14:]
@@ -565,7 +692,7 @@ class LSFCluster(Cluster):
         if self.cluster_queue and self.cluster_queue != 'None':
             command.extend(['-q', self.cluster_queue])
 
-        a = subprocess.Popen(command, stdout=subprocess.PIPE, 
+        a = misc.Popen(command, stdout=subprocess.PIPE, 
                                       stderr=subprocess.STDOUT,
                                       stdin=subprocess.PIPE, cwd=cwd)
             
@@ -589,7 +716,7 @@ class LSFCluster(Cluster):
         """ control the status of a single job with it's cluster id """
         
         cmd = 'bjobs '+str(id)
-        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+        status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE)
         
         for line in status.stdout:
             line = line.strip().upper()
@@ -616,7 +743,7 @@ class LSFCluster(Cluster):
             return 0, 0, 0, 0
         
         cmd = "bjobs " + ' '.join(self.submitted_ids) 
-        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+        status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE)
 
         idle, run, fail = 0, 0, 0
         for line in status.stdout:
@@ -646,18 +773,19 @@ class LSFCluster(Cluster):
         if not self.submitted_ids:
             return
         cmd = "bdel %s" % ' '.join(self.submitted_ids)
-        status = subprocess.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
 
 class GECluster(Cluster):
     """Class for dealing with cluster submission on a GE cluster"""
     
     name = 'ge'
+    job_id = 'JOB_ID'
     idle_tag = ['qw']
     running_tag = ['r']
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
-        """Submit the prog to the cluser"""
+        """Submit a job prog to a GE cluster"""
         
         text = ""
         if cwd is None:
@@ -680,7 +808,7 @@ class GECluster(Cluster):
         tmp_submit = os.path.join(cwd, 'tmp_submit')
         open(tmp_submit,'w').write(text)
 
-        a = subprocess.Popen(['qsub','-o', stdout,
+        a = misc.Popen(['qsub','-o', stdout,
                                      '-e', stderr,
                                      tmp_submit],
                                      stdout=subprocess.PIPE, 
@@ -703,7 +831,7 @@ class GECluster(Cluster):
     def control_one_job(self, id):
         """ control the status of a single job with it's cluster id """
         cmd = 'qstat | grep '+str(id)
-        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+        status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE)
         if not status:
             return 'F'
         #874516 0.00000 test.sh    alwall       qw    03/04/2012 22:30:35                                    1
@@ -735,7 +863,7 @@ class GECluster(Cluster):
         ongoing = []
         for statusflag in ['p', 'r', 'sh']:
             cmd = 'qstat -s %s' % statusflag
-            status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+            status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE)
             #874516 0.00000 test.sh    alwall       qw    03/04/2012 22:30:35                                    1
             pat = re.compile("^(\d+)")
             for line in status.stdout.read().split('\n'):
@@ -766,7 +894,7 @@ class GECluster(Cluster):
         if not self.submitted_ids:
             return
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
-        status = subprocess.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
 
 from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 
              'lsf': LSFCluster, 'ge':GECluster}

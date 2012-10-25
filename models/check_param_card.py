@@ -2,6 +2,15 @@ from __future__ import division
 import xml.etree.ElementTree as ET
 import math
 import os
+import shutil
+import logging
+
+logger = logging.getLogger('madgraph.models') # -> stdout
+
+try:
+    import madgraph.iolibs.file_writers as file_writers
+except:
+    import internal.file_writers as file_writers
 
 class InvalidParamCard(Exception):
     """ a class for invalid param_card """
@@ -21,7 +30,7 @@ class Parameter (object):
             comment = param.comment
             format = param.format
 
-        self.lhablock = block        
+        self.lhablock = block
         if lhacode:
             self.lhacode = lhacode
         else:
@@ -82,14 +91,18 @@ class Parameter (object):
         """ return a SLAH string """
 
         if self.format == 'float':
-            if self.lhablock == 'decay':
+            if self.lhablock == 'decay' and not isinstance(self.value,basestring):
                 return 'DECAY %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+            elif self.lhablock == 'decay':
+                return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
+            elif self.lhablock and self.lhablock.startswith('qnumbers'):
+                return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
             else:
                 return '      %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'str':
-             return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+            return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'decay_table':
-             return '      %e %s # %s' % ( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
+            return '      %e %s # %s' % ( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
         
         else:
             if self.lhablock == 'decay':
@@ -109,12 +122,20 @@ class Block(list):
         self.param_dict={}
         list.__init__(self)
 
-    def get(self, lhacode):
+    def get(self, lhacode, default=None):
         """return the parameter associate to the lhacode"""
         if not self.param_dict:
             self.create_param_dict()
-        return self.param_dict[tuple(lhacode)]
-
+            
+        try:
+            return self.param_dict[tuple(lhacode)]
+        except KeyError:
+            if default is None:
+                raise
+            else:
+                return Parameter(block=self, lhacode=lhacode, value=default,
+                                                           comment='not define')
+        
     def remove(self, lhacode):
         """ remove a parameter """
         list.remove(self, self.get(lhacode))
@@ -125,8 +146,12 @@ class Block(list):
         
         assert isinstance(obj, Parameter)
         assert not obj.lhablock or obj.lhablock == self.name
-        assert tuple(obj.lhacode) not in self.param_dict, \
-                                  '%s already define in %s' % (obj.lhacode,self)
+        
+        if tuple(obj.lhacode) in self.param_dict:
+            if self.param_dict[tuple(obj.lhacode)].value != obj.value:
+                raise InvalidParamCard, '%s %s is already define to %s impossible to assign %s' % \
+                    (self.name, obj.lhacode, self.param_dict[tuple(obj.lhacode)].value, obj.value)
+            return
         
         list.append(self, obj)
         # update the dictionary of key
@@ -240,9 +265,13 @@ class ParamCard(dict):
                 else:
                     cur_block = self['decay']
                 param = Parameter()
+                param.set_block(cur_block.name)
                 param.load_str(line[6:])
                 cur_block.append(param)
                 continue
+
+            if cur_block is None:
+                continue            
                     
             if cur_block.name == 'decay':
                 # This is a decay table
@@ -251,8 +280,7 @@ class ParamCard(dict):
                 self['decay'].decay_table[id] = cur_block
             
             
-            if cur_block is None:
-                continue
+
             
             if cur_block.name.startswith('decay_table'):
                 param = Parameter()
@@ -260,9 +288,10 @@ class ParamCard(dict):
                 cur_block.append(param)
             else:
                 param = Parameter()
+                param.set_block(cur_block.name)
                 param.load_str(line)
                 cur_block.append(param)
-                
+                    
         return self
     
     def write(self, outpath):
@@ -278,6 +307,34 @@ class ParamCard(dict):
             file(outpath,'w').write(text)
         else:
             outpath.write(text) # for test purpose
+            
+            
+    def write_inc_file(self, outpath, identpath, default):
+        """ write a fortran file which hardcode the param value"""
+        
+        fout = file_writers.FortranWriter(outpath)
+        defaultcard = ParamCard(default)
+        for line in open(identpath):
+            if line.startswith('c  ') or line.startswith('ccccc'):
+                continue
+            split = line.split()
+            if len(split) < 3:
+                continue
+            block = split[0]
+            lhaid = [int(i) for i in split[1:-1]]
+            variable = split[-1]
+            if block in self:
+                try:
+                    value = self[block].get(tuple(lhaid)).value
+                except KeyError:
+                    value =defaultcard[block].get(tuple(lhaid)).value
+            else:
+                value =defaultcard[block].get(tuple(lhaid)).value
+            value = str(value).lower()
+            fout.writelines(' %s = %s' % (variable, str(value).replace('e','d')))
+            
+        
+        
                 
     def append(self, object):
         """add an object to this"""
@@ -344,7 +401,6 @@ class ParamCard(dict):
         
         parameter = Parameter(block=block, lhacode=lha, value=value, 
                               comment=comment)
-
         try:
             new_block = self[block]
         except KeyError:
@@ -360,7 +416,14 @@ class ParamCard(dict):
 
         # Find the current block/parameter
         old_block = self[old_block]
-        parameter = old_block.get(old_lha)
+        try:
+            parameter = old_block.get(old_lha)
+        except:
+            if lhacode is not None:
+                lhacode=old_lha
+            self.add_param(block, lhacode, value, comment)
+            return
+        
 
         # Update the parameter
         if block:
@@ -643,6 +706,11 @@ class ParamCardRule(object):
         
         # check identical
         for block, id1, id2, comment in self.identical:
+            if block not in card:
+                logger.warning('''Param card is not complete: Block %s is simply missing.
+                We will use model default for all missing value! Please cross-check that
+                this correspond to your expectation.''' % block)
+                continue
             value2 = float(card[block].get(id2).value)
             try:
                 param = card[block].get(id1)
@@ -932,25 +1000,71 @@ def convert_to_mg5card(path, outputpath=None ):
     card.add_param('upmns', [3,3], 1.0)
 
     # Te
-    ye = card['ye'].get([3, 3]).value
-    ae = card['ae'].get([3, 3]).value
+    ye = card['ye'].get([1, 1], default=0).value
+    ae = card['ae'].get([1, 1], default=0).value
+    card.mod_param('ae', [1,1], 'te', [1,1], value= ae * ye, comment='T_e(Q) DRbar')
+    if ae * ye:
+        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
+Parameter ae [1, 1] times ye [1,1] should be 0'''
+    card.remove_param('ae', [1,1])
+    #2
+    ye = card['ye'].get([2, 2], default=0).value
+    
+    ae = card['ae'].get([2, 2], default=0).value
+    card.mod_param('ae', [2,2], 'te', [2,2], value= ae * ye, comment='T_mu(Q) DRbar')
+    if ae * ye:
+        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
+Parameter ae [2, 2] times ye [2,2] should be 0'''
+    card.remove_param('ae', [2,2])
+    #3
+    ye = card['ye'].get([3, 3], default=0).value
+    ae = card['ae'].get([3, 3], default=0).value
     card.mod_param('ae', [3,3], 'te', [3,3], value= ae * ye, comment='T_tau(Q) DRbar')
-    card.check_and_remove('ae', [1,1], 0)
-    card.check_and_remove('ae', [2,2], 0)
     
     # Tu
+    yu = card['yu'].get([1, 1], default=0).value
+    au = card['au'].get([1, 1], default=0).value
+    card.mod_param('au', [1,1], 'tu', [1,1], value= au * yu, comment='T_u(Q) DRbar')
+    if au * yu:
+        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
+Parameter au [1, 1] times yu [1,1] should be 0'''
+    card.remove_param('au', [1,1])
+    #2
+    ye = card['yu'].get([2, 2], default=0).value
+    
+    ae = card['au'].get([2, 2], default=0).value
+    card.mod_param('au', [2,2], 'tu', [2,2], value= au * yu, comment='T_c(Q) DRbar')
+    if au * yu:
+        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
+Parameter au [2, 2] times yu [2,2] should be 0'''
+    card.remove_param('au', [2,2])
+    #3
     yu = card['yu'].get([3, 3]).value
     au = card['au'].get([3, 3]).value
     card.mod_param('au', [3,3], 'tu', [3,3], value= au * yu, comment='T_t(Q) DRbar')
-    card.check_and_remove('au', [1,1], 0)
-    card.check_and_remove('au', [2,2], 0)
     
     # Td
+    yd = card['yd'].get([1, 1], default=0).value
+    ad = card['ad'].get([1, 1], default=0).value
+    card.mod_param('ad', [1,1], 'td', [1,1], value= ad * yd, comment='T_d(Q) DRbar')
+    if ad * yd:
+        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
+Parameter ad [1, 1] times yd [1,1] should be 0'''
+    card.remove_param('ad', [1,1])
+    #2
+    ye = card['yd'].get([2, 2], default=0).value
+    
+    ae = card['ad'].get([2, 2], default=0).value
+    card.mod_param('ad', [2,2], 'td', [2,2], value= ad * yd, comment='T_s(Q) DRbar')
+    if ad * yd:
+        raise InvalidParamCard, '''This card is not suitable to be converted to MSSM UFO model
+Parameter ad [2, 2] times yd [2,2] should be 0'''
+    card.remove_param('ad', [2,2])
+    #3
     yd = card['yd'].get([3, 3]).value
     ad = card['ad'].get([3, 3]).value
     card.mod_param('ad', [3,3], 'td', [3,3], value= ad * yd, comment='T_b(Q) DRbar')
-    card.check_and_remove('ad', [1,1], 0)
-    card.check_and_remove('ad', [2,2], 0)
+
     
     # MSL2 
     value = card['msoft'].get([31]).value

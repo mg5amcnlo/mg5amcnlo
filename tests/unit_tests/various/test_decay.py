@@ -799,18 +799,19 @@ class Test_DecayModel(unittest.TestCase):
                                   '../input_files/param_card_mssm.dat')
         decay_mssm.read_param_card(param_path)
 
-        goal_groups = [[1,2,3,4,11,12,13,14, 15, 16,21,22, 
-                        23, 24, 25, 35, 36, 37], # 15 and from 23 are calculated
+        goal_groups = [[1,2,3,4,11,12,13,14, 15, 16,21,22, 23, 24, 25, 35, 36, 37], # 15 and from 23 are calculated
                        # others are massless default
-                       [1000001, 1000002, 1000003, 1000004, 1000011, 1000012, 1000013, 1000014, 1000015, 1000016, 1000021, 1000022, 1000023, 1000024, 1000025, 1000035, 1000037, 2000001, 2000002, 2000003, 2000004, 2000011, 2000013, 2000015], [1000005, 1000006, 2000005, 2000006], [5, 6]]
+                       [1000001, 1000002, 1000003, 1000004, 1000011, 1000012, 1000013, 1000014, 1000015, 1000016, 1000021, 1000022, 1000023, 1000024, 1000025, 1000035, 1000037, 2000001, 2000002, 2000003, 2000004, 2000011, 2000013, 2000015],
+                       [1000005, 1000006, 2000005, 2000006], 
+                       [5, 6]]
         goal_stable_particle_ids = set([(1,2,3,4,11,12,13,14,16,21,22),
                                         (5,),
                                         (1000022,)])
-
         for i, group in enumerate(decay_mssm.get('decay_groups')):
-            self.assertEqual(sorted([p.get('pdg_code') for p in group]),
-                             goal_groups[i])
-
+            pdg = sorted([p.get('pdg_code') for p in group])
+            self.assertTrue( pdg in goal_groups)
+        self.assertEqual(len(goal_groups), i+1)
+            
         # Test if all useless interactions are deleted.
         for inter in decay_mssm['reduced_interactions']:
             self.assertTrue(len(inter['particles']))
@@ -1166,7 +1167,8 @@ class Test_DecayModel(unittest.TestCase):
         # Test for running_internals
         temp_aS = 100
         decay_objects.aS = temp_aS
-        Ru11_old = decay_objects.Ru11
+        #Ru11_old = decay_objects.Ru11
+        Ru11_old = decay_objects.RUU1x1
         # coupling of no running dependence
         try:
             coup0 = model['couplings'][('aEWM1',)][0]
@@ -1188,7 +1190,7 @@ class Test_DecayModel(unittest.TestCase):
 
         # Test for parameters
         # Ru11 should not change
-        self.assertAlmostEqual(decay_objects.Ru11, Ru11_old)
+        self.assertAlmostEqual(decay_objects.RUU1x1, Ru11_old)
         # G should change
         self.assertAlmostEqual(decay_objects.G, \
                                    2*cmath.sqrt(temp_aS)*cmath.sqrt(cmath.pi))
@@ -1200,8 +1202,7 @@ class Test_DecayModel(unittest.TestCase):
                                    -decay_objects.G)
         # copying the expr of 
         self.assertAlmostEqual(eval('decay_objects.'+coup_both.name), \
-                                   (-2*decay_objects.ee*complex(0,1)*decay_objects.G*decay_objects.I1233)/3. - (2*decay_objects.ee*complex(0,1)*decay_objects.G*decay_objects.I1333)/3.)
-
+                                   (-2*decay_objects.ee*complex(0,1)*decay_objects.G*decay_objects.I12x33)/3. - (2*decay_objects.ee*complex(0,1)*decay_objects.G*decay_objects.I13x33)/3.)
 
 #===============================================================================
 # Test_Channel
@@ -1908,16 +1909,23 @@ class Test_Channel(unittest.TestCase):
         #print channel_1.get_apx_fnrule(24, E_mean+MW, True, self.my_testmodel)
 
         # couplings: h > w w (GC_32);  w > e ve (GC_17)
-        #print abs(decay_objects.GC_17) **2
-        #print abs(decay_objects.GC_32) **2
+        hww, wev = None, None
+        for candidate in full_sm_base['interactions']:
+            if [p['pdg_code'] for p in candidate['particles']] == [24, 24, 25]:
+                hww = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [12,11,24]:
+                wev = candidate['couplings'][(0,0)]
+
+        
+
         #print self.my_testmodel.get_interaction(7), self.my_testmodel.get_interaction(63)
         self.assertAlmostEqual(
             channel_1.get_apx_matrixelement_sq(self.my_testmodel),
             ((E_mean**2*4*(1-2*(2*E_mean/MW)**2+(2*E_mean/MW)**4)\
                   /(((2*E_mean)**2-MW **2)**2))*\
                  (1+(1/MW*(E_mean+MW))**2)*\
-                 abs(decay_objects.GC_17) **2*\
-                 abs(decay_objects.GC_32) **2)
+                 abs(getattr(decay_objects,wev)) **2*\
+                 abs(getattr(decay_objects,hww)) **2)
             )
 
         tau = full_sm.get_particle(15)
@@ -1933,7 +1941,7 @@ class Test_Channel(unittest.TestCase):
                                ((MTAU/3) **3 *8*3*MTAU*
                                 (1-2*(2*MTAU/(3*MW))**2 +(2*MTAU/(3*MW))**4)/ \
                                     ((2*MTAU/3) ** 2 - MW **2) **2 *\
-                                    abs(decay_objects.GC_17) **4))
+                                    abs(getattr(decay_objects,wev)) **4))
 
         # Test for off-shell estimation of matrix element
         h_ww_wtb = higgs.get_channels(3, False)[0]
@@ -1953,8 +1961,8 @@ class Test_Channel(unittest.TestCase):
                                                                est = True)*\
                                    h_ww_wtb.get_apx_fnrule(25, MH_new,
                                                            True, full_sm)*\
-                                   abs(decay_objects.GC_32) **2 *\
-                                   abs(decay_objects.GC_17) **2)
+                                   abs(getattr(decay_objects,hww)) **2 *\
+                                   abs(getattr(decay_objects,wev)) **2)
 
         # Test of phase space area calculation
         #print 'Tau decay ps_area', tau_qdecay.get_apx_psarea(full_sm)
@@ -2671,9 +2679,12 @@ class Test_AbstractModel(unittest.TestCase):
         """ Test the add_particles from the generate_abstract_model."""
         
         # The gen_abtmodel should automatically generate abstract particles
-        self.my_testmodel_new = decay_objects.DecayModel(self.my_testmodel_base,
-                                                         force=True)
-        param_path = os.path.join(_file_path,'../input_files/param_card_full_sm.dat')
+
+        sm_path = import_ufo.find_ufo_path('sm')
+        full_sm_base = import_ufo.import_full_model(sm_path)
+        self.my_testmodel_new = decay_objects.DecayModel(full_sm_base, True)
+        param_path = os.path.join(_file_path,
+                                  '../input_files/param_card_full_sm.dat')
         self.my_testmodel_new.read_param_card(param_path)
         
 
@@ -2715,7 +2726,7 @@ class Test_AbstractModel(unittest.TestCase):
     def test_setup_interactions(self):
         """ Test the sets_interactions and get_interaction_type. """
 
-        normal_sm_base = import_ufo.import_model('mssm')
+        normal_sm_base = import_ufo.import_model('sm-full')
         normal_sm = decay_objects.DecayModel(normal_sm_base,
                                              force=True)
         param_path = os.path.join(_file_path,'../../models/sm/restrict_ckm.dat')
@@ -3264,23 +3275,31 @@ class Test_AbstractModel(unittest.TestCase):
                           # w, z boson
                           'MSV1_00':'MW', 'MSV1_01':'MW',
                           'MSV1_02':'MZ', 'MSV1_03':'MZ'})
+        
+        coupling = {}
+        for candidate in self.my_testmodel['interactions']:
+            coupling[tuple([p['pdg_code'] for p in candidate['particles']])] = \
+                                candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [11,11,23]:
+                second_z = candidate['couplings'][(0,1)]
+      
         self.assertEqual(ab_amp['ab2real_dicts'][-1]['coup_dict'],
                          {# type: s > vv
                           #         : h > w+ w-
-                          'G0010000':'GC_32',
+                          'G0010000': coupling[(24,24,25)],
                           #         : h > z z
-                          'G0010001':'GC_33',
+                          'G0010001': coupling[(23,23,25)],
                           # type: v > ff
                           #         : w+ > e+ ve
-                          'G0060000':'GC_17',
+                          'G0060000': coupling[(12,11,24)],
                           #         : w- > e- ve~
-                          'G0060001':'GC_17',
+                          'G0060001': coupling[(12,11,24)],
                           #         : z > ve ve~
-                          'G0060002':'GC_29',
+                          'G0060002': coupling[(12,12,23)],
                           #         : z > e+ e- (lorentz=0)
-                          'G0060003':'GC_22',
+                          'G0060003': coupling[(11,11,23)],
                           #         : z > e+ e- (lorentz=1)
-                          'G0060103':'GC_25'
+                          'G0060103':second_z
                           })
 
         #----------------------

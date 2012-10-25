@@ -200,6 +200,14 @@ class ParamCardWriter(object):
         if param.value.imag != 0:
             raise ParamCardWriterError, 'All External Parameter should be real'
     
+
+        # avoid to keep special value used to avoid restriction
+        if param.value == 9.999999e-1:
+            param.value = 1
+        elif param.value == 0.000001e-99:
+            param.value = 0
+    
+    
         lhacode=' '.join(['%3s' % key for key in param.lhacode])
         if lhablock != 'DECAY':
             text = """  %s %e # %s \n""" % (lhacode, param.value.real, info) 
@@ -212,8 +220,8 @@ class ParamCardWriter(object):
         """writing the requested LHA parameter"""
 
         if lhablock == 'MASS':
-           data = self.dep_mass 
-           prefix = " "
+            data = self.dep_mass 
+            prefix = " "
         elif lhablock == 'DECAY':
             data = self.dep_width
             prefix = "DECAY "
@@ -221,17 +229,26 @@ class ParamCardWriter(object):
             return
         
         text = ""
+        def sort(el1, el2):
+            (p1,n) =el1
+            (p2,n) = el2
+            if (p1["pdg_code"] -p2["pdg_code"]) > 0:
+                return 1
+            else:
+                return -1 
+        
+        data.sort(sort)
         for part, param in data:
             if self.model['parameter_dict'][param.name].imag:
-            	raise ParamCardWriterError, 'All Mass/Width Parameter should be real'
+                raise ParamCardWriterError, 'All Mass/Width Parameter should be real'
             value = complex(self.model['parameter_dict'][param.name]).real
             text += """%s %s %f # %s : %s \n""" %(prefix, part["pdg_code"], 
                         value, part["name"], param.expr)  
         
         # Add duplicate parameter
         if lhablock == 'MASS':
-           data = self.duplicate_mass 
-           name = 'mass'
+            data = self.duplicate_mass 
+            name = 'mass'
         elif lhablock == 'DECAY':
             data = self.duplicate_width
             name = 'width'

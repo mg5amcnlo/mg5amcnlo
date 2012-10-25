@@ -99,14 +99,14 @@ class TestMECmdShell(unittest.TestCase):
         data = text.split('DECAY  23')[1].split('DECAY',1)[0]
         self.assertEqual("""1.492240e+00
 #  BR             NDA  ID1    ID2   ...
-   2.493165e-01   2    3  -3
-   2.493165e-01   2    1  -1
-   1.944158e-01   2    4  -4
-   1.944158e-01   2    2  -2
-   5.626776e-02   2    -11  11
-   5.626776e-02   2    -13  13
+   2.493165e-01   2    3  -3 # 0.37204
+   2.493165e-01   2    1  -1 # 0.37204
+   1.944158e-01   2    4  -4 # 0.290115
+   1.944158e-01   2    2  -2 # 0.290115
+   5.626776e-02   2    -11  11 # 0.083965
+   5.626776e-02   2    -13  13 # 0.083965
 #
-#      PDG        Width""", data.strip())
+#      PDG        Width""".split('\n'), data.strip().split('\n'))
         
     def test_creating_matched_plot(self):
         """test that the creation of matched plot works"""
@@ -137,6 +137,55 @@ class TestMECmdShell(unittest.TestCase):
         
         
         self.assertEqual(cmd, os.getcwd())
+        
+    def test_group_subprocess(self):
+        """check that both u u > u u gives the same result"""
+        
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            pass
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.exec_cmd('set automatic_html_opening False --save')
+        mg_cmd.exec_cmd(' generate u u > u u')
+        mg_cmd.exec_cmd('output /tmp/MGPROCESS/')
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            pass
+        
+        mg_cmd.exec_cmd('set group_subprocesses False')
+        mg_cmd.exec_cmd('generate u u > u u')
+        mg_cmd.exec_cmd('output /tmp/MGPROCESS')
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        self.do('generate_events -f')        
+        
+        val2 = self.cmd_line.results.current['cross']
+        err2 = self.cmd_line.results.current['error']        
+        
+        self.assertTrue(abs(val2 - val1) / (err1 + err2) < 5)
+        target = 1278400
+        self.assertTrue(abs(val2 - target) / (err2) < 5)
+        #check precision
+        self.assertTrue(err2 / val2 < 0.005)
+        self.assertTrue(err1 / val1 < 0.005)
+        
+        
+    
+        
+        
+        
+        
 
     def load_result(self, run_name):
         
@@ -197,7 +246,7 @@ class TestMEfromfile(unittest.TestCase):
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_mssm_generation')],
                          cwd=pjoin(_file_path, os.path.pardir),
-                         stdout=devnull,stderr=devnull)
+                        stdout=devnull,stderr=devnull)
 
         
         self.check_parton_output(cross=4.541638, error=0.035)
@@ -267,7 +316,7 @@ class TestMEfromPdirectory(unittest.TestCase):
         result = save_load_object.load_from_file('/tmp/MGPROCESS/HTML/results.pkl')
         return result[run_name]
 
-    def check_parton_output(self, run_name='run_01', target_event=100, cross=0, error=9e99):
+    def check_parton_output(self, run_name='run_01', target_event=100, cross=0):
         """Check that parton output exists and reach the targert for event"""
                 
         # check that the number of event is fine:
@@ -275,7 +324,7 @@ class TestMEfromPdirectory(unittest.TestCase):
         self.assertEqual(int(data[0]['nb_event']), target_event)
         self.assertTrue('lhe' in data[0].parton)
         if cross:
-            self.assertTrue(abs(cross - float(data[0]['cross']))/error < 3)
+            self.assertTrue(abs(cross - float(data[0]['cross']))/float(data[0]['error']) < 3)
 
 
         
@@ -298,6 +347,6 @@ class TestMEfromPdirectory(unittest.TestCase):
             output = None
         id = subprocess.call(['./bin/madevent','cmd.cmd'], stdout=output, stderr=output)
         self.assertEqual(id, 0)
-        self.check_parton_output(cross=946.58, error=1e-2)
+        self.check_parton_output(cross=947.9)
         os.chdir(cmd)
         

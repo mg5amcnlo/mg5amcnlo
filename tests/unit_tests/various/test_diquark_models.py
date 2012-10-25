@@ -103,7 +103,6 @@ class TestColorSextetModel(unittest.TestCase):
         comparison_results, used_lorentz = \
                             process_checks.check_processes(myproc,
                                                            quick=True)
-
         self.assertTrue(comparison_results[0]['passed'])
 
     def disabled_test_gu_to_ux_six(self):

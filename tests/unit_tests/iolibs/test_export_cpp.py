@@ -1300,562 +1300,6 @@ double CPPProcess::matrix_uux_gogo()
         #print open(self.give_pos('test.cc')).read()
         self.assertFileContains('test.cc', goal_string)
 
-    def test_write_cpp_four_fermion_vertex(self):
-        """Testing process u u > t t g with fermion flow (u~t)(u~t)
-        """
-
-        # Set up model
-
-        mypartlist = base_objects.ParticleList()
-        myinterlist = base_objects.InteractionList()
-
-        # A u quark and its antiparticle
-        mypartlist.append(base_objects.Particle({'name':'u',
-                      'antiname':'u~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'u',
-                      'antitexname':'\bar u',
-                      'line':'straight',
-                      'charge':2. / 3.,
-                      'pdg_code':2,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        u = mypartlist[len(mypartlist) - 1]
-        antiu = copy.copy(u)
-        antiu.set('is_part', False)
-
-        # A t quark and its antiparticle
-        mypartlist.append(base_objects.Particle({'name':'t',
-                      'antiname':'t~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'MT',
-                      'width':'WT',
-                      'texname':'t',
-                      'antitexname':'\bar t',
-                      'line':'straight',
-                      'charge':2. / 3.,
-                      'pdg_code':6,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        t = mypartlist[len(mypartlist) - 1]
-        antit = copy.copy(t)
-        antit.set('is_part', False)
-
-        # A gluon
-        mypartlist.append(base_objects.Particle({'name':'g',
-                      'antiname':'g',
-                      'spin':3,
-                      'color':8,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'g',
-                      'antitexname':'g',
-                      'line':'curly',
-                      'charge':0.,
-                      'pdg_code':21,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-
-        g = mypartlist[len(mypartlist) - 1]
-
-        # Gluon couplings to quarks
-        myinterlist.append(base_objects.Interaction({
-                      'id': 1,
-                      'particles': base_objects.ParticleList(\
-                                            [antiu, \
-                                             u, \
-                                             g]),
-                      'color': [color.ColorString([color.T(2, 1, 0)])],
-                      'lorentz':['FFV1'],
-                      'couplings':{(0, 0):'GG'},
-                      'orders':{'QCD':1}}))
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 2,
-                      'particles': base_objects.ParticleList(\
-                                            [antit, \
-                                             t, \
-                                             g]),
-                      'color': [color.ColorString([color.T(2, 1, 0)])],
-                      'lorentz':['FFV1'],
-                      'couplings':{(0, 0):'GG'},
-                      'orders':{'QCD':1}}))
-
-        # Four fermion vertex
-        myinterlist.append(base_objects.Interaction({
-                      'id': 3,
-                      'particles': base_objects.ParticleList(\
-                                            [antiu,
-                                             t,
-                                             antiu,
-                                             t]),
-                      'color': [color.ColorString([color.T(1, 0),
-                                                   color.T(3, 2)])],
-                      'lorentz':['FFFF1'],
-                      'couplings':{(0, 0):'GEFF'},
-                      'orders':{'NP':2}}))
-
-        mybasemodel = base_objects.Model()
-        mybasemodel.set('particles', mypartlist)
-        mybasemodel.set('interactions', myinterlist)
-
-        myleglist = base_objects.LegList()
-
-        myleglist.append(base_objects.Leg({'id':2,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':2,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':6,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':6,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':True}))
-
-        myproc = base_objects.Process({'legs':myleglist,
-                                       'model':mybasemodel})
-        
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
-
-        matrix_element = helas_objects.HelasMultiProcess(myamplitude)
-        matrix_element.get('matrix_elements')[0].set('has_mirror_process',
-                                                     True)
-
-        goal_string = \
-"""//==========================================================================
-// This file has been automatically generated for Pythia 8
-// MadGraph 5 v. %(version)s, %(date)s
-// By the MadGraph Development Team
-// Please visit us at https://launchpad.net/madgraph5
-//==========================================================================
-
-#ifndef Pythia8_Sigma__uu_ttg_H
-#define Pythia8_Sigma__uu_ttg_H
-
-#include <complex> 
-
-#include "SigmaProcess.h"
-#include "Parameters_.h"
-
-using namespace std; 
-
-namespace Pythia8 
-{
-//==========================================================================
-// A class for calculating the matrix elements for
-// Process: u u > t t g
-//--------------------------------------------------------------------------
-
-class Sigma__uu_ttg : public Sigma3Process 
-{
-  public:
-
-    // Constructor.
-    Sigma__uu_ttg() {}
-
-    // Initialize process.
-    virtual void initProc(); 
-
-    // Calculate flavour-independent parts of cross section.
-    virtual void sigmaKin(); 
-
-    // Evaluate sigmaHat(sHat).
-    virtual double sigmaHat(); 
-
-    // Select flavour, colour and anticolour.
-    virtual void setIdColAcol(); 
-
-    // Evaluate weight for decay angles.
-    virtual double weightDecay(Event& process, int iResBeg, int iResEnd); 
-
-    // Info on the subprocess.
-    virtual string name() const {return "u u > t t g ()";}
-
-    virtual int code() const {return 10000;}
-
-    virtual string inFlux() const {return "qq";}
-    int id3Mass() const {return 6;}
-    int id4Mass() const {return 6;}
-    virtual int resonanceA() const {return 6;}
-    // Tell Pythia that sigmaHat returns the ME^2
-    virtual bool convertM2() const {return true;}
-
-  private:
-
-    // Private functions to calculate the matrix element for all subprocesses
-    // Calculate wavefunctions
-    void calculate_wavefunctions(const int perm[], const int hel[]); 
-    static const int nwavefuncs = 9; 
-    std::complex<double> w[nwavefuncs][18]; 
-    static const int namplitudes = 4; 
-    std::complex<double> amp[namplitudes]; 
-    double matrix_uu_ttg(); 
-
-    // Constants for array limits
-    static const int nexternal = 5; 
-    static const int nprocesses = 2; 
-
-    // Store the matrix element value from sigmaKin
-    double matrix_element[nprocesses]; 
-
-    // Color flows, used when selecting color
-    double * jamp2[nprocesses]; 
-
-    // Pointer to the model parameters
-    Parameters_ * pars; 
-
-}; 
-
-}  // end namespace Pythia
-
-#endif  // Pythia8_Sigma__uu_ttg_H
-""" % misc.get_pkg_info()
-
-        exporter = export_cpp.ProcessExporterPythia8(matrix_element,
-                                                     self.mycppwriter)
-
-        exporter.write_process_h_file(\
-                  writers.CPPWriter(self.give_pos('test.h')))
-
-        #print open(self.give_pos('test.h')).read()
-        self.assertFileContains('test.h', goal_string)
-
-        goal_string = \
-"""//==========================================================================
-// This file has been automatically generated for Pythia 8 by
-// MadGraph 5 v. %(version)s, %(date)s
-// By the MadGraph Development Team
-// Please visit us at https://launchpad.net/madgraph5
-//==========================================================================
-
-#include "Sigma__uu_ttg.h"
-#include "HelAmps_.h"
-
-using namespace Pythia8_; 
-
-namespace Pythia8 
-{
-
-//==========================================================================
-// Class member functions for calculating the matrix elements for
-// Process: u u > t t g
-
-//--------------------------------------------------------------------------
-// Initialize process.
-
-void Sigma__uu_ttg::initProc() 
-{
-  // Instantiate the model class and set parameters that stay fixed during run
-  pars = Parameters_::getInstance(); 
-  pars->setIndependentParameters(particleDataPtr, couplingsPtr, slhaPtr); 
-  pars->setIndependentCouplings(); 
-  // Set massive/massless matrix elements for c/b/mu/tau
-  mcME = 0.; 
-  mbME = 0.; 
-  mmuME = 0.; 
-  mtauME = 0.; 
-  jamp2[0] = new double[3]; 
-}
-
-//--------------------------------------------------------------------------
-// Evaluate |M|^2, part independent of incoming flavour.
-
-void Sigma__uu_ttg::sigmaKin() 
-{
-  // Set the parameters which change event by event
-  pars->setDependentParameters(particleDataPtr, couplingsPtr, slhaPtr, alpS); 
-  pars->setDependentCouplings(); 
-  // Reset color flows
-  for(int i = 0; i < 3; i++ )
-    jamp2[0][i] = 0.; 
-
-  // Local variables and constants
-  const int ncomb = 32; 
-  static bool goodhel[ncomb] = {ncomb * false}; 
-  static int ntry = 0, sum_hel = 0, ngood = 0; 
-  static int igood[ncomb]; 
-  static int jhel; 
-  double t[nprocesses]; 
-  // Helicities for the process
-  static const int helicities[ncomb][nexternal] = {{-1, -1, -1, -1, -1}, {-1,
-      -1, -1, -1, 1}, {-1, -1, -1, 1, -1}, {-1, -1, -1, 1, 1}, {-1, -1, 1, -1,
-      -1}, {-1, -1, 1, -1, 1}, {-1, -1, 1, 1, -1}, {-1, -1, 1, 1, 1}, {-1, 1,
-      -1, -1, -1}, {-1, 1, -1, -1, 1}, {-1, 1, -1, 1, -1}, {-1, 1, -1, 1, 1},
-      {-1, 1, 1, -1, -1}, {-1, 1, 1, -1, 1}, {-1, 1, 1, 1, -1}, {-1, 1, 1, 1,
-      1}, {1, -1, -1, -1, -1}, {1, -1, -1, -1, 1}, {1, -1, -1, 1, -1}, {1, -1,
-      -1, 1, 1}, {1, -1, 1, -1, -1}, {1, -1, 1, -1, 1}, {1, -1, 1, 1, -1}, {1,
-      -1, 1, 1, 1}, {1, 1, -1, -1, -1}, {1, 1, -1, -1, 1}, {1, 1, -1, 1, -1},
-      {1, 1, -1, 1, 1}, {1, 1, 1, -1, -1}, {1, 1, 1, -1, 1}, {1, 1, 1, 1, -1},
-      {1, 1, 1, 1, 1}};
-  // Denominators: spins, colors and identical particles
-  const int denominators[nprocesses] = {72, 72}; 
-
-  ntry = ntry + 1; 
-
-  // Reset the matrix elements
-  for(int i = 0; i < nprocesses; i++ )
-  {
-    matrix_element[i] = 0.; 
-    t[i] = 0.; 
-  }
-
-  // Define permutation
-  int perm[nexternal]; 
-  for(int i = 0; i < nexternal; i++ )
-  {
-    perm[i] = i; 
-  }
-
-  // For now, call setupForME() here
-  id1 = 2; 
-  id2 = 2; 
-  if( !setupForME())
-  {
-    return; 
-  }
-
-  if (sum_hel == 0 || ntry < 10)
-  {
-    // Calculate the matrix element for all helicities
-    for(int ihel = 0; ihel < ncomb; ihel++ )
-    {
-      if (goodhel[ihel] || ntry < 2)
-      {
-        calculate_wavefunctions(perm, helicities[ihel]); 
-        t[0] = matrix_uu_ttg(); 
-        // Mirror initial state momenta for mirror process
-        perm[0] = 1; 
-        perm[1] = 0; 
-        // Calculate wavefunctions
-        calculate_wavefunctions(perm, helicities[ihel]); 
-        // Mirror back
-        perm[0] = 0; 
-        perm[1] = 1; 
-        // Calculate matrix elements
-        t[1] = matrix_uu_ttg(); 
-        double tsum = 0; 
-        for(int iproc = 0; iproc < nprocesses; iproc++ )
-        {
-          matrix_element[iproc] += t[iproc]; 
-          tsum += t[iproc]; 
-        }
-        // Store which helicities give non-zero result
-        if (tsum != 0. && !goodhel[ihel])
-        {
-          goodhel[ihel] = true; 
-          ngood++; 
-          igood[ngood] = ihel; 
-        }
-      }
-    }
-    jhel = 0; 
-    sum_hel = min(sum_hel, ngood); 
-  }
-  else
-  {
-    // Only use the "good" helicities
-    for(int j = 0; j < sum_hel; j++ )
-    {
-      jhel++; 
-      if (jhel >= ngood)
-        jhel = 0; 
-      double hwgt = double(ngood)/double(sum_hel); 
-      int ihel = igood[jhel]; 
-      calculate_wavefunctions(perm, helicities[ihel]); 
-      t[0] = matrix_uu_ttg(); 
-      // Mirror initial state momenta for mirror process
-      perm[0] = 1; 
-      perm[1] = 0; 
-      // Calculate wavefunctions
-      calculate_wavefunctions(perm, helicities[ihel]); 
-      // Mirror back
-      perm[0] = 0; 
-      perm[1] = 1; 
-      // Calculate matrix elements
-      t[1] = matrix_uu_ttg(); 
-      for(int iproc = 0; iproc < nprocesses; iproc++ )
-      {
-        matrix_element[iproc] += t[iproc] * hwgt; 
-      }
-    }
-  }
-
-  for (int i = 0; i < nprocesses; i++ )
-    matrix_element[i] /= denominators[i]; 
-
-
-
-}
-
-//--------------------------------------------------------------------------
-// Evaluate |M|^2, including incoming flavour dependence.
-
-double Sigma__uu_ttg::sigmaHat() 
-{
-  // Select between the different processes
-  if(id1 == 2 && id2 == 2)
-  {
-    // Add matrix elements for processes with beams (2, 2)
-    return matrix_element[0] + matrix_element[1]; 
-  }
-  else
-  {
-    // Return 0 if not correct initial state assignment
-    return 0.; 
-  }
-}
-
-//--------------------------------------------------------------------------
-// Select identity, colour and anticolour.
-
-void Sigma__uu_ttg::setIdColAcol() 
-{
-  if(id1 == 2 && id2 == 2)
-  {
-    // Pick one of the flavor combinations (6, 6, 21)
-    int flavors[1][3] = {{6, 6, 21}}; 
-    vector<double> probs; 
-    double sum = matrix_element[0]; 
-    probs.push_back(matrix_element[0]/sum); 
-    int choice = rndmPtr->pick(probs); 
-    id3 = flavors[choice][0]; 
-    id4 = flavors[choice][1]; 
-    id5 = flavors[choice][2]; 
-  }
-  setId(id1, id2, id3, id4, id5); 
-  // Pick color flow
-  int ncolor[1] = {3}; 
-  if(id1 == 2 && id2 == 2 && id3 == 6 && id4 == 6 && id5 == 21)
-  {
-    vector<double> probs; 
-    double sum = jamp2[0][0] + jamp2[0][1] + jamp2[0][2]; 
-    for(int i = 0; i < ncolor[0]; i++ )
-      probs.push_back(jamp2[0][i]/sum); 
-    int ic = rndmPtr->pick(probs); 
-    static int colors[3][10] = {{3, 0, 1, 0, 1, 0, 2, 0, 3, 2}, {2, 0, 3, 0, 1,
-        0, 2, 0, 3, 1}, {3, 0, 2, 0, 1, 0, 2, 0, 3, 1}};
-    setColAcol(colors[ic][0], colors[ic][1], colors[ic][2], colors[ic][3],
-        colors[ic][4], colors[ic][5], colors[ic][6], colors[ic][7],
-        colors[ic][8], colors[ic][9]);
-  }
-  else if(id1 == 2 && id2 == 2 && id3 == 6 && id4 == 6 && id5 == 21)
-  {
-    vector<double> probs; 
-    double sum = jamp2[0][0] + jamp2[0][1] + jamp2[0][2]; 
-    for(int i = 0; i < ncolor[0]; i++ )
-      probs.push_back(jamp2[0][i]/sum); 
-    int ic = rndmPtr->pick(probs); 
-    static int colors[3][10] = {{1, 0, 3, 0, 1, 0, 2, 0, 3, 2}, {3, 0, 2, 0, 1,
-        0, 2, 0, 3, 1}, {2, 0, 3, 0, 1, 0, 2, 0, 3, 1}};
-    setColAcol(colors[ic][0], colors[ic][1], colors[ic][2], colors[ic][3],
-        colors[ic][4], colors[ic][5], colors[ic][6], colors[ic][7],
-        colors[ic][8], colors[ic][9]);
-  }
-}
-
-//--------------------------------------------------------------------------
-// Evaluate weight for angles of decay products in process
-
-double Sigma__uu_ttg::weightDecay(Event& process, int iResBeg, int iResEnd) 
-{
-  // Just use isotropic decay (default)
-  return 1.; 
-}
-
-//==========================================================================
-// Private class member functions
-
-//--------------------------------------------------------------------------
-// Evaluate |M|^2 for each subprocess
-
-void Sigma__uu_ttg::calculate_wavefunctions(const int perm[], const int hel[])
-{
-  // Calculate wavefunctions for all processes
-  double p[nexternal][4]; 
-  int i; 
-
-  // Convert Pythia 4-vectors to double[]
-  for(i = 0; i < nexternal; i++ )
-  {
-    p[i][0] = pME[i].e(); 
-    p[i][1] = pME[i].px(); 
-    p[i][2] = pME[i].py(); 
-    p[i][3] = pME[i].pz(); 
-  }
-
-  // Calculate all wavefunctions
-  ixxxxx(p[perm[0]], mME[0], hel[0], +1, w[0]); 
-  ixxxxx(p[perm[1]], mME[1], hel[1], +1, w[1]); 
-  oxxxxx(p[perm[2]], mME[2], hel[2], +1, w[2]); 
-  oxxxxx(p[perm[3]], mME[3], hel[3], +1, w[3]); 
-  vxxxxx(p[perm[4]], mME[4], hel[4], +1, w[4]); 
-  FFV1_2(w[0], w[4], pars->GG, pars->zero, pars->zero, w[5]); 
-  FFFF1_2(w[0], w[1], w[2], pars->GEFF, pars->MT, pars->WT, w[6]); 
-  FFFF1_2(w[0], w[1], w[3], pars->GEFF, pars->MT, pars->WT, w[7]); 
-  FFFF1_1(w[2], w[0], w[3], pars->GEFF, pars->zero, pars->zero, w[8]); 
-
-  // Calculate all amplitudes
-  // Amplitude(s) for diagram number 0
-  FFFF1_0(w[1], w[2], w[5], w[3], pars->GEFF, amp[0]); 
-  FFV1_0(w[6], w[3], w[4], pars->GG, amp[1]); 
-  FFV1_0(w[7], w[2], w[4], pars->GG, amp[2]); 
-  FFV1_0(w[1], w[8], w[4], pars->GG, amp[3]); 
-
-
-}
-double Sigma__uu_ttg::matrix_uu_ttg() 
-{
-  int i, j; 
-  // Local variables
-  const int ngraphs = 4; 
-  const int ncolor = 3; 
-  std::complex<double> ztemp; 
-  std::complex<double> jamp[ncolor]; 
-  // The color matrix;
-  static const double denom[ncolor] = {1, 1, 1}; 
-  static const double cf[ncolor][ncolor] = {{12, 0, 4}, {0, 12, 4}, {4, 4,
-      12}};
-
-  // Calculate color flows
-  jamp[0] = +amp[0] + amp[1]; 
-  jamp[1] = +amp[3]; 
-  jamp[2] = -amp[2]; 
-
-  // Sum and square the color flows to get the matrix element
-  double matrix = 0; 
-  for(i = 0; i < ncolor; i++ )
-  {
-    ztemp = 0.; 
-    for(j = 0; j < ncolor; j++ )
-      ztemp = ztemp + cf[i][j] * jamp[j]; 
-    matrix = matrix + real(ztemp * conj(jamp[i]))/denom[i]; 
-  }
-
-  // Store the leading color flows for choice of color
-  for(i = 0; i < ncolor; i++ )
-    jamp2[0][i] += real(jamp[i] * conj(jamp[i])); 
-
-  return matrix; 
-}
-
-
-}  // end namespace Pythia
-"""% misc.get_pkg_info()
-
-
-        exporter.write_process_cc_file(\
-                  writers.CPPWriter(self.give_pos('test.cc')))
-
-        self.assertFileContains('test.cc', goal_string)
-
-
     def disabled_test_write_process_files(self):
         """Test writing the .h  and .cc Pythia file for a matrix element"""
 
@@ -1866,7 +1310,6 @@ double Sigma__uu_ttg::matrix_uu_ttg()
         
         print "Please try compiling the file /tmp/Sigma_sm_qqx_qqx.cc:"
         print "cd /tmp; g++ -c -I $PATH_TO_PYTHIA8/include Sigma_sm_qqx_qqx.cc.cc"
-
 
 
 #===============================================================================
@@ -1897,54 +1340,69 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
         """Test writing the Pythia model parameter files"""
 
         goal_file_h = \
-"""//==========================================================================\n
-// This file has been automatically generated for Pythia 8\n
+"""//==========================================================================
+// This file has been automatically generated for Pythia 8
 #  MadGraph 5 v. %(version)s, %(date)s
-#  By the MadGraph Development Team\n
-#  Please visit us at https://launchpad.net/madgraph5\n
-//==========================================================================\n\n
-#ifndef Pythia8_parameters_sm_H\n
-#define Pythia8_parameters_sm_H\n\n
-#include <complex>\n\n
-#include "ParticleData.h"\n
-#include "StandardModel.h"\n
-#include "SusyLesHouches.h"\n\n
-using namespace std;\n\n
-namespace Pythia8 {\n\n
-class Parameters_sm\n
-{\n
-public:\n\n
-static Parameters_sm* getInstance();\n\n
-// Model parameters independent of aS\n
-double WTau,WH,WW,WZ,WT,MTA,MM,Me,MH,MZ,MB,MT,MC,ymtau,ymm,yme,ymt,ymb,ymc,etaWS,rhoWS,AWS,lamWS,Gf,aEWM1,ZERO,lamWS__exp__2,lamWS__exp__3,MZ__exp__2,MZ__exp__4,sqrt__2,MH__exp__2,aEW,MW,sqrt__aEW,ee,MW__exp__2,sw2,cw,sqrt__sw2,sw,g1,gw,v,v__exp__2,lam,yb,yc,ye,ym,yt,ytau,muH,gw__exp__2,cw__exp__2,ee__exp__2,sw__exp__2;\n
-std::complex<double> CKM1x1,CKM1x2,complexi,CKM1x3,CKM2x1,CKM2x2,CKM2x3,CKM3x1,CKM3x2,CKM3x3,conjg__CKM1x1,conjg__CKM1x2,conjg__CKM1x3,conjg__CKM2x1,conjg__CKM2x2,conjg__CKM2x3,conjg__CKM3x1,conjg__CKM3x2,conjg__CKM3x3;\n
-// Model parameters dependent on aS\n
-double aS,sqrt__aS,G,G__exp__2;\n
-// Model couplings independent of aS\n
-std::complex<double> GC_1,GC_2,GC_3,GC_7,GC_8,GC_9,GC_10,GC_11,GC_12,GC_13,GC_14,GC_15,GC_16,GC_17,GC_18,GC_19,GC_20,GC_21,GC_22,GC_23,GC_24,GC_25,GC_26,GC_27,GC_28,GC_29,GC_30,GC_31,GC_32,GC_33,GC_34,GC_35,GC_36,GC_37,GC_38,GC_39,GC_40,GC_41,GC_42,GC_43,GC_44,GC_45,GC_46,GC_47,GC_48;\n
-// Model couplings dependent on aS\n
-std::complex<double> GC_6,GC_5,GC_4;\n\n
-// Set parameters that are unchanged during the run\n
-void setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr);\n
-// Set couplings that are unchanged during the run\n
-void setIndependentCouplings();\n
-// Set parameters that are changed event by event\n
-void setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS);\n
-// Set couplings that are changed event by event\n
-void setDependentCouplings();\n\n
-// Print parameters that are unchanged during the run\n
-void printIndependentParameters();\n
-// Print couplings that are unchanged during the run\n
-void printIndependentCouplings();\n
-// Print parameters that are changed event by event\n
-void printDependentParameters();\n
-// Print couplings that are changed event by event\n
-void printDependentCouplings();\n\n\n
-  private:\n
-static Parameters_sm* instance;\n
-};\n\n
-} // end namespace Pythia8\n
-#endif // Pythia8_parameters_sm_H\n""" % misc.get_pkg_info()
+#  By the MadGraph Development Team
+#  Please visit us at https://launchpad.net/madgraph5
+//==========================================================================
+
+#ifndef Pythia8_parameters_sm_H
+#define Pythia8_parameters_sm_H
+
+#include <complex>
+
+#include "ParticleData.h"
+#include "StandardModel.h"
+#include "SusyLesHouches.h"
+
+using namespace std;
+
+namespace Pythia8 {
+
+class Parameters_sm
+{
+public:
+
+static Parameters_sm* getInstance();
+
+// Model parameters independent of aS
+double WTau,WH,WT,WW,WZ,MTA,MM,Me,MH,MB,MT,MC,MZ,ymtau,ymm,yme,ymt,ymb,ymc,etaWS,rhoWS,AWS,lamWS,Gf,aEWM1,ZERO,lamWS__exp__2,lamWS__exp__3,MZ__exp__2,MZ__exp__4,sqrt__2,MH__exp__2,aEW,MW,sqrt__aEW,ee,MW__exp__2,sw2,cw,sqrt__sw2,sw,g1,gw,vev,vev__exp__2,lam,yb,yc,ye,ym,yt,ytau,muH,ee__exp__2,sw__exp__2,cw__exp__2;
+std::complex<double> CKM1x1,CKM1x2,complexi,CKM1x3,CKM2x1,CKM2x2,CKM2x3,CKM3x1,CKM3x2,CKM3x3,conjg__CKM1x3,conjg__CKM2x3,conjg__CKM3x3,conjg__CKM2x1,conjg__CKM3x1,conjg__CKM2x2,conjg__CKM3x2,conjg__CKM1x1,conjg__CKM1x2,I1x31,I1x32,I1x33,I2x12,I2x13,I2x22,I2x23,I2x32,I2x33,I3x21,I3x22,I3x23,I3x31,I3x32,I3x33,I4x13,I4x23,I4x33;
+// Model parameters dependent on aS
+double aS,sqrt__aS,G,G__exp__2;
+// Model couplings independent of aS
+std::complex<double> GC_1,GC_2,GC_3,GC_4,GC_5,GC_6,GC_7,GC_8,GC_9,GC_13,GC_14,GC_15,GC_16,GC_17,GC_18,GC_19,GC_20,GC_21,GC_22,GC_23,GC_24,GC_25,GC_26,GC_27,GC_28,GC_29,GC_30,GC_31,GC_32,GC_33,GC_34,GC_35,GC_36,GC_37,GC_38,GC_39,GC_40,GC_41,GC_42,GC_43,GC_44,GC_45,GC_46,GC_47,GC_48,GC_49,GC_50,GC_51,GC_52,GC_53,GC_54,GC_55,GC_56,GC_57,GC_58,GC_59,GC_60,GC_61,GC_62,GC_63,GC_64,GC_65,GC_66,GC_67,GC_68,GC_69,GC_70,GC_71,GC_72,GC_73,GC_74,GC_75,GC_76,GC_77,GC_78,GC_79,GC_80,GC_81,GC_82,GC_83,GC_84,GC_85,GC_86,GC_87,GC_88,GC_89,GC_90,GC_91,GC_92,GC_93,GC_94,GC_95,GC_96,GC_97,GC_98,GC_99,GC_100,GC_101,GC_102,GC_103,GC_104,GC_105,GC_106,GC_107,GC_108;
+// Model couplings dependent on aS
+std::complex<double> GC_12,GC_11,GC_10;
+
+// Set parameters that are unchanged during the run
+void setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr);
+// Set couplings that are unchanged during the run
+void setIndependentCouplings();
+// Set parameters that are changed event by event
+void setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS);
+// Set couplings that are changed event by event
+void setDependentCouplings();
+
+// Print parameters that are unchanged during the run
+void printIndependentParameters();
+// Print couplings that are unchanged during the run
+void printIndependentCouplings();
+// Print parameters that are changed event by event
+void printDependentParameters();
+// Print couplings that are changed event by event
+void printDependentCouplings();
+
+
+  private:
+static Parameters_sm* instance;
+};
+
+} // end namespace Pythia8
+#endif // Pythia8_parameters_sm_H
+"""% misc.get_pkg_info()
+
 
         goal_file_cc = \
 """//==========================================================================
@@ -1965,26 +1423,26 @@ namespace Pythia8 {
 
     // Function to get static instance - only one instance per program
     Parameters_sm* Parameters_sm::getInstance(){
-\tif (instance == 0)
-\t    instance = new Parameters_sm();
+    if (instance == 0)
+        instance = new Parameters_sm();
 
     return instance;
     }
 
     void Parameters_sm::setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr){
-\tWTau=pd->mWidth(15);
+    WTau=pd->mWidth(15);
 WH=pd->mWidth(25);
+WT=pd->mWidth(6);
 WW=pd->mWidth(24);
 WZ=pd->mWidth(23);
-WT=pd->mWidth(6);
 MTA=pd->m0(15);
 MM=pd->m0(13);
 Me=pd->m0(11);
 MH=pd->m0(25);
-MZ=pd->m0(23);
 MB=pd->m0(5);
 MT=pd->m0(6);
 MC=pd->m0(4);
+MZ=pd->m0(23);
 ymtau=pd->mRun(15, pd->m0(24));
 ymm=pd->mRun(13, pd->m0(24));
 yme=pd->mRun(11, pd->m0(24));
@@ -2022,15 +1480,15 @@ MZ__exp__2 = pow(MZ,2.);
 MZ__exp__4 = pow(MZ,4.);
 sqrt__2 = sqrt(2.);
 MH__exp__2 = pow(MH,2.);
+conjg__CKM1x3 = conj(CKM1x3);
+conjg__CKM2x3 = conj(CKM2x3);
+conjg__CKM3x3 = conj(CKM3x3);
+conjg__CKM2x1 = conj(CKM2x1);
+conjg__CKM3x1 = conj(CKM3x1);
+conjg__CKM2x2 = conj(CKM2x2);
+conjg__CKM3x2 = conj(CKM3x2);
 conjg__CKM1x1 = conj(CKM1x1);
 conjg__CKM1x2 = conj(CKM1x2);
-conjg__CKM1x3 = conj(CKM1x3);
-conjg__CKM2x1 = conj(CKM2x1);
-conjg__CKM2x2 = conj(CKM2x2);
-conjg__CKM2x3 = conj(CKM2x3);
-conjg__CKM3x1 = conj(CKM3x1);
-conjg__CKM3x2 = conj(CKM3x2);
-conjg__CKM3x3 = conj(CKM3x3);
 aEW = 1./aEWM1;
 MW = sqrt(MZ__exp__2/2.+sqrt(MZ__exp__4/4.-(aEW*M_PI*MZ__exp__2)/(Gf*sqrt__2)));
 sqrt__aEW = sqrt(aEW);
@@ -2042,96 +1500,173 @@ sqrt__sw2 = sqrt(sw2);
 sw = sqrt__sw2;
 g1 = ee/cw;
 gw = ee/sw;
-v = (2.*MW*sw)/ee;
-v__exp__2 = pow(v,2.);
-lam = MH__exp__2/(2.*v__exp__2);
-yb = (ymb*sqrt__2)/v;
-yc = (ymc*sqrt__2)/v;
-ye = (yme*sqrt__2)/v;
-ym = (ymm*sqrt__2)/v;
-yt = (ymt*sqrt__2)/v;
-ytau = (ymtau*sqrt__2)/v;
-muH = sqrt(lam*v__exp__2);
-gw__exp__2 = pow(gw,2.);
-cw__exp__2 = pow(cw,2.);
+vev = (2.*MW*sw)/ee;
+vev__exp__2 = pow(vev,2.);
+lam = MH__exp__2/(2.*vev__exp__2);
+yb = (ymb*sqrt__2)/vev;
+yc = (ymc*sqrt__2)/vev;
+ye = (yme*sqrt__2)/vev;
+ym = (ymm*sqrt__2)/vev;
+yt = (ymt*sqrt__2)/vev;
+ytau = (ymtau*sqrt__2)/vev;
+muH = sqrt(lam*vev__exp__2);
+I1x31 = yb*conjg__CKM1x3;
+I1x32 = yb*conjg__CKM2x3;
+I1x33 = yb*conjg__CKM3x3;
+I2x12 = yc*conjg__CKM2x1;
+I2x13 = yt*conjg__CKM3x1;
+I2x22 = yc*conjg__CKM2x2;
+I2x23 = yt*conjg__CKM3x2;
+I2x32 = yc*conjg__CKM2x3;
+I2x33 = yt*conjg__CKM3x3;
+I3x21 = CKM2x1*yc;
+I3x22 = CKM2x2*yc;
+I3x23 = CKM2x3*yc;
+I3x31 = CKM3x1*yt;
+I3x32 = CKM3x2*yt;
+I3x33 = CKM3x3*yt;
+I4x13 = CKM1x3*yb;
+I4x23 = CKM2x3*yb;
+I4x33 = CKM3x3*yb;
 ee__exp__2 = pow(ee,2.);
 sw__exp__2 = pow(sw,2.);
+cw__exp__2 = pow(cw,2.);
     }
     void Parameters_sm::setIndependentCouplings(){
-\tGC_1 = -(ee*complexi)/3.;
+    GC_1 = -(ee*complexi)/3.;
 GC_2 = (2.*ee*complexi)/3.;
 GC_3 = -(ee*complexi);
-GC_7 = cw*complexi*gw;
-GC_8 = -(complexi*gw__exp__2);
-GC_9 = cw__exp__2*complexi*gw__exp__2;
-GC_10 = -6.*complexi*lam;
-GC_11 = (ee__exp__2*complexi)/(2.*sw__exp__2);
-GC_12 = (ee*complexi)/(sw*sqrt__2);
-GC_13 = (CKM1x1*ee*complexi)/(sw*sqrt__2);
-GC_14 = (CKM1x2*ee*complexi)/(sw*sqrt__2);
-GC_15 = (CKM1x3*ee*complexi)/(sw*sqrt__2);
-GC_16 = (CKM2x1*ee*complexi)/(sw*sqrt__2);
-GC_17 = (CKM2x2*ee*complexi)/(sw*sqrt__2);
-GC_18 = (CKM2x3*ee*complexi)/(sw*sqrt__2);
-GC_19 = (CKM3x1*ee*complexi)/(sw*sqrt__2);
-GC_20 = (CKM3x2*ee*complexi)/(sw*sqrt__2);
-GC_21 = (CKM3x3*ee*complexi)/(sw*sqrt__2);
-GC_22 = -(cw*ee*complexi)/(2.*sw);
-GC_23 = (cw*ee*complexi)/(2.*sw);
-GC_24 = -(ee*complexi*sw)/(6.*cw);
-GC_25 = (ee*complexi*sw)/(2.*cw);
-GC_26 = complexi*gw*sw;
-GC_27 = -2.*cw*complexi*gw__exp__2*sw;
-GC_28 = complexi*gw__exp__2*sw__exp__2;
-GC_29 = (cw*ee*complexi)/(2.*sw)+(ee*complexi*sw)/(2.*cw);
-GC_30 = ee__exp__2*complexi+(cw__exp__2*ee__exp__2*complexi)/(2.*sw__exp__2)+(ee__exp__2*complexi*sw__exp__2)/(2.*cw__exp__2);
-GC_31 = -6.*complexi*lam*v;
-GC_32 = (ee__exp__2*complexi*v)/(2.*sw__exp__2);
-GC_33 = ee__exp__2*complexi*v+(cw__exp__2*ee__exp__2*complexi*v)/(2.*sw__exp__2)+(ee__exp__2*complexi*sw__exp__2*v)/(2.*cw__exp__2);
-GC_34 = -((complexi*yb)/sqrt__2);
-GC_35 = -((complexi*yc)/sqrt__2);
-GC_36 = -((complexi*ye)/sqrt__2);
-GC_37 = -((complexi*ym)/sqrt__2);
-GC_38 = -((complexi*yt)/sqrt__2);
-GC_39 = -((complexi*ytau)/sqrt__2);
-GC_40 = (ee*complexi*conjg__CKM1x1)/(sw*sqrt__2);
-GC_41 = (ee*complexi*conjg__CKM1x2)/(sw*sqrt__2);
-GC_42 = (ee*complexi*conjg__CKM1x3)/(sw*sqrt__2);
-GC_43 = (ee*complexi*conjg__CKM2x1)/(sw*sqrt__2);
-GC_44 = (ee*complexi*conjg__CKM2x2)/(sw*sqrt__2);
-GC_45 = (ee*complexi*conjg__CKM2x3)/(sw*sqrt__2);
-GC_46 = (ee*complexi*conjg__CKM3x1)/(sw*sqrt__2);
-GC_47 = (ee*complexi*conjg__CKM3x2)/(sw*sqrt__2);
-GC_48 = (ee*complexi*conjg__CKM3x3)/(sw*sqrt__2);
+GC_4 = ee*complexi;
+GC_5 = ee__exp__2*complexi;
+GC_6 = 2.*ee__exp__2*complexi;
+GC_7 = -ee__exp__2/(2.*cw);
+GC_8 = (ee__exp__2*complexi)/(2.*cw);
+GC_9 = ee__exp__2/(2.*cw);
+GC_13 = I1x31;
+GC_14 = I1x32;
+GC_15 = I1x33;
+GC_16 = -I2x12;
+GC_17 = -I2x13;
+GC_18 = -I2x22;
+GC_19 = -I2x23;
+GC_20 = -I2x32;
+GC_21 = -I2x33;
+GC_22 = I3x21;
+GC_23 = I3x22;
+GC_24 = I3x23;
+GC_25 = I3x31;
+GC_26 = I3x32;
+GC_27 = I3x33;
+GC_28 = -I4x13;
+GC_29 = -I4x23;
+GC_30 = -I4x33;
+GC_31 = -2.*complexi*lam;
+GC_32 = -4.*complexi*lam;
+GC_33 = -6.*complexi*lam;
+GC_34 = (ee__exp__2*complexi)/(2.*sw__exp__2);
+GC_35 = -((ee__exp__2*complexi)/sw__exp__2);
+GC_36 = (cw__exp__2*ee__exp__2*complexi)/sw__exp__2;
+GC_37 = -ee/(2.*sw);
+GC_38 = -(ee*complexi)/(2.*sw);
+GC_39 = (ee*complexi)/(2.*sw);
+GC_40 = (ee*complexi)/(sw*sqrt__2);
+GC_41 = (CKM1x1*ee*complexi)/(sw*sqrt__2);
+GC_42 = (CKM1x2*ee*complexi)/(sw*sqrt__2);
+GC_43 = (CKM1x3*ee*complexi)/(sw*sqrt__2);
+GC_44 = (CKM2x1*ee*complexi)/(sw*sqrt__2);
+GC_45 = (CKM2x2*ee*complexi)/(sw*sqrt__2);
+GC_46 = (CKM2x3*ee*complexi)/(sw*sqrt__2);
+GC_47 = (CKM3x1*ee*complexi)/(sw*sqrt__2);
+GC_48 = (CKM3x2*ee*complexi)/(sw*sqrt__2);
+GC_49 = (CKM3x3*ee*complexi)/(sw*sqrt__2);
+GC_50 = -(cw*ee*complexi)/(2.*sw);
+GC_51 = (cw*ee*complexi)/(2.*sw);
+GC_52 = -((cw*ee*complexi)/sw);
+GC_53 = (cw*ee*complexi)/sw;
+GC_54 = -ee__exp__2/(2.*sw);
+GC_55 = -(ee__exp__2*complexi)/(2.*sw);
+GC_56 = ee__exp__2/(2.*sw);
+GC_57 = (-2.*cw*ee__exp__2*complexi)/sw;
+GC_58 = -(ee*complexi*sw)/(6.*cw);
+GC_59 = (ee*complexi*sw)/(2.*cw);
+GC_60 = -(cw*ee)/(2.*sw)-(ee*sw)/(2.*cw);
+GC_61 = -(cw*ee*complexi)/(2.*sw)+(ee*complexi*sw)/(2.*cw);
+GC_62 = (cw*ee*complexi)/(2.*sw)+(ee*complexi*sw)/(2.*cw);
+GC_63 = (cw*ee__exp__2*complexi)/sw-(ee__exp__2*complexi*sw)/cw;
+GC_64 = -(ee__exp__2*complexi)+(cw__exp__2*ee__exp__2*complexi)/(2.*sw__exp__2)+(ee__exp__2*complexi*sw__exp__2)/(2.*cw__exp__2);
+GC_65 = ee__exp__2*complexi+(cw__exp__2*ee__exp__2*complexi)/(2.*sw__exp__2)+(ee__exp__2*complexi*sw__exp__2)/(2.*cw__exp__2);
+GC_66 = -(ee__exp__2*vev)/(2.*cw);
+GC_67 = (ee__exp__2*vev)/(2.*cw);
+GC_68 = -2.*complexi*lam*vev;
+GC_69 = -6.*complexi*lam*vev;
+GC_70 = -(ee__exp__2*vev)/(4.*sw__exp__2);
+GC_71 = -(ee__exp__2*complexi*vev)/(4.*sw__exp__2);
+GC_72 = (ee__exp__2*complexi*vev)/(2.*sw__exp__2);
+GC_73 = (ee__exp__2*vev)/(4.*sw__exp__2);
+GC_74 = -(ee__exp__2*vev)/(2.*sw);
+GC_75 = (ee__exp__2*vev)/(2.*sw);
+GC_76 = -(ee__exp__2*vev)/(4.*cw)-(cw*ee__exp__2*vev)/(4.*sw__exp__2);
+GC_77 = (ee__exp__2*vev)/(4.*cw)-(cw*ee__exp__2*vev)/(4.*sw__exp__2);
+GC_78 = -(ee__exp__2*vev)/(4.*cw)+(cw*ee__exp__2*vev)/(4.*sw__exp__2);
+GC_79 = (ee__exp__2*vev)/(4.*cw)+(cw*ee__exp__2*vev)/(4.*sw__exp__2);
+GC_80 = -(ee__exp__2*complexi*vev)/2.-(cw__exp__2*ee__exp__2*complexi*vev)/(4.*sw__exp__2)-(ee__exp__2*complexi*sw__exp__2*vev)/(4.*cw__exp__2);
+GC_81 = ee__exp__2*complexi*vev+(cw__exp__2*ee__exp__2*complexi*vev)/(2.*sw__exp__2)+(ee__exp__2*complexi*sw__exp__2*vev)/(2.*cw__exp__2);
+GC_82 = -(yb/sqrt__2);
+GC_83 = -((complexi*yb)/sqrt__2);
+GC_84 = -((complexi*yc)/sqrt__2);
+GC_85 = yc/sqrt__2;
+GC_86 = -ye;
+GC_87 = ye;
+GC_88 = -(ye/sqrt__2);
+GC_89 = -((complexi*ye)/sqrt__2);
+GC_90 = -ym;
+GC_91 = ym;
+GC_92 = -(ym/sqrt__2);
+GC_93 = -((complexi*ym)/sqrt__2);
+GC_94 = -((complexi*yt)/sqrt__2);
+GC_95 = yt/sqrt__2;
+GC_96 = -ytau;
+GC_97 = ytau;
+GC_98 = -(ytau/sqrt__2);
+GC_99 = -((complexi*ytau)/sqrt__2);
+GC_100 = (ee*complexi*conjg__CKM1x1)/(sw*sqrt__2);
+GC_101 = (ee*complexi*conjg__CKM1x2)/(sw*sqrt__2);
+GC_102 = (ee*complexi*conjg__CKM1x3)/(sw*sqrt__2);
+GC_103 = (ee*complexi*conjg__CKM2x1)/(sw*sqrt__2);
+GC_104 = (ee*complexi*conjg__CKM2x2)/(sw*sqrt__2);
+GC_105 = (ee*complexi*conjg__CKM2x3)/(sw*sqrt__2);
+GC_106 = (ee*complexi*conjg__CKM3x1)/(sw*sqrt__2);
+GC_107 = (ee*complexi*conjg__CKM3x2)/(sw*sqrt__2);
+GC_108 = (ee*complexi*conjg__CKM3x3)/(sw*sqrt__2);
     }
     void Parameters_sm::setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS){
-\taS = alpS;
+    aS = alpS;
 sqrt__aS = sqrt(aS);
 G = 2.*sqrt__aS*sqrt(M_PI);
 G__exp__2 = pow(G,2.);
     }
     void Parameters_sm::setDependentCouplings(){
-\tGC_6 = complexi*G__exp__2;
-GC_5 = complexi*G;
-GC_4 = -G;
+    GC_12 = complexi*G__exp__2;
+GC_11 = complexi*G;
+GC_10 = -G;
     }
 
     // Routines for printing out parameters
     void Parameters_sm::printIndependentParameters(){
-\tcout << "sm model parameters independent of event kinematics:" << endl;
-\tcout << setw(20) << "WTau " << "= " << setiosflags(ios::scientific) << setw(10) << WTau << endl;
+    cout << "sm model parameters independent of event kinematics:" << endl;
+    cout << setw(20) << "WTau " << "= " << setiosflags(ios::scientific) << setw(10) << WTau << endl;
 cout << setw(20) << "WH " << "= " << setiosflags(ios::scientific) << setw(10) << WH << endl;
+cout << setw(20) << "WT " << "= " << setiosflags(ios::scientific) << setw(10) << WT << endl;
 cout << setw(20) << "WW " << "= " << setiosflags(ios::scientific) << setw(10) << WW << endl;
 cout << setw(20) << "WZ " << "= " << setiosflags(ios::scientific) << setw(10) << WZ << endl;
-cout << setw(20) << "WT " << "= " << setiosflags(ios::scientific) << setw(10) << WT << endl;
 cout << setw(20) << "MTA " << "= " << setiosflags(ios::scientific) << setw(10) << MTA << endl;
 cout << setw(20) << "MM " << "= " << setiosflags(ios::scientific) << setw(10) << MM << endl;
 cout << setw(20) << "Me " << "= " << setiosflags(ios::scientific) << setw(10) << Me << endl;
 cout << setw(20) << "MH " << "= " << setiosflags(ios::scientific) << setw(10) << MH << endl;
-cout << setw(20) << "MZ " << "= " << setiosflags(ios::scientific) << setw(10) << MZ << endl;
 cout << setw(20) << "MB " << "= " << setiosflags(ios::scientific) << setw(10) << MB << endl;
 cout << setw(20) << "MT " << "= " << setiosflags(ios::scientific) << setw(10) << MT << endl;
 cout << setw(20) << "MC " << "= " << setiosflags(ios::scientific) << setw(10) << MC << endl;
+cout << setw(20) << "MZ " << "= " << setiosflags(ios::scientific) << setw(10) << MZ << endl;
 cout << setw(20) << "ymtau " << "= " << setiosflags(ios::scientific) << setw(10) << ymtau << endl;
 cout << setw(20) << "ymm " << "= " << setiosflags(ios::scientific) << setw(10) << ymm << endl;
 cout << setw(20) << "yme " << "= " << setiosflags(ios::scientific) << setw(10) << yme << endl;
@@ -2161,15 +1696,15 @@ cout << setw(20) << "MZ__exp__2 " << "= " << setiosflags(ios::scientific) << set
 cout << setw(20) << "MZ__exp__4 " << "= " << setiosflags(ios::scientific) << setw(10) << MZ__exp__4 << endl;
 cout << setw(20) << "sqrt__2 " << "= " << setiosflags(ios::scientific) << setw(10) << sqrt__2 << endl;
 cout << setw(20) << "MH__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << MH__exp__2 << endl;
+cout << setw(20) << "conjg__CKM1x3 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM1x3 << endl;
+cout << setw(20) << "conjg__CKM2x3 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM2x3 << endl;
+cout << setw(20) << "conjg__CKM3x3 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM3x3 << endl;
+cout << setw(20) << "conjg__CKM2x1 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM2x1 << endl;
+cout << setw(20) << "conjg__CKM3x1 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM3x1 << endl;
+cout << setw(20) << "conjg__CKM2x2 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM2x2 << endl;
+cout << setw(20) << "conjg__CKM3x2 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM3x2 << endl;
 cout << setw(20) << "conjg__CKM1x1 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM1x1 << endl;
 cout << setw(20) << "conjg__CKM1x2 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM1x2 << endl;
-cout << setw(20) << "conjg__CKM1x3 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM1x3 << endl;
-cout << setw(20) << "conjg__CKM2x1 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM2x1 << endl;
-cout << setw(20) << "conjg__CKM2x2 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM2x2 << endl;
-cout << setw(20) << "conjg__CKM2x3 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM2x3 << endl;
-cout << setw(20) << "conjg__CKM3x1 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM3x1 << endl;
-cout << setw(20) << "conjg__CKM3x2 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM3x2 << endl;
-cout << setw(20) << "conjg__CKM3x3 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM3x3 << endl;
 cout << setw(20) << "aEW " << "= " << setiosflags(ios::scientific) << setw(10) << aEW << endl;
 cout << setw(20) << "MW " << "= " << setiosflags(ios::scientific) << setw(10) << MW << endl;
 cout << setw(20) << "sqrt__aEW " << "= " << setiosflags(ios::scientific) << setw(10) << sqrt__aEW << endl;
@@ -2181,8 +1716,8 @@ cout << setw(20) << "sqrt__sw2 " << "= " << setiosflags(ios::scientific) << setw
 cout << setw(20) << "sw " << "= " << setiosflags(ios::scientific) << setw(10) << sw << endl;
 cout << setw(20) << "g1 " << "= " << setiosflags(ios::scientific) << setw(10) << g1 << endl;
 cout << setw(20) << "gw " << "= " << setiosflags(ios::scientific) << setw(10) << gw << endl;
-cout << setw(20) << "v " << "= " << setiosflags(ios::scientific) << setw(10) << v << endl;
-cout << setw(20) << "v__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << v__exp__2 << endl;
+cout << setw(20) << "vev " << "= " << setiosflags(ios::scientific) << setw(10) << vev << endl;
+cout << setw(20) << "vev__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << vev__exp__2 << endl;
 cout << setw(20) << "lam " << "= " << setiosflags(ios::scientific) << setw(10) << lam << endl;
 cout << setw(20) << "yb " << "= " << setiosflags(ios::scientific) << setw(10) << yb << endl;
 cout << setw(20) << "yc " << "= " << setiosflags(ios::scientific) << setw(10) << yc << endl;
@@ -2191,22 +1726,39 @@ cout << setw(20) << "ym " << "= " << setiosflags(ios::scientific) << setw(10) <<
 cout << setw(20) << "yt " << "= " << setiosflags(ios::scientific) << setw(10) << yt << endl;
 cout << setw(20) << "ytau " << "= " << setiosflags(ios::scientific) << setw(10) << ytau << endl;
 cout << setw(20) << "muH " << "= " << setiosflags(ios::scientific) << setw(10) << muH << endl;
-cout << setw(20) << "gw__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << gw__exp__2 << endl;
-cout << setw(20) << "cw__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << cw__exp__2 << endl;
+cout << setw(20) << "I1x31 " << "= " << setiosflags(ios::scientific) << setw(10) << I1x31 << endl;
+cout << setw(20) << "I1x32 " << "= " << setiosflags(ios::scientific) << setw(10) << I1x32 << endl;
+cout << setw(20) << "I1x33 " << "= " << setiosflags(ios::scientific) << setw(10) << I1x33 << endl;
+cout << setw(20) << "I2x12 " << "= " << setiosflags(ios::scientific) << setw(10) << I2x12 << endl;
+cout << setw(20) << "I2x13 " << "= " << setiosflags(ios::scientific) << setw(10) << I2x13 << endl;
+cout << setw(20) << "I2x22 " << "= " << setiosflags(ios::scientific) << setw(10) << I2x22 << endl;
+cout << setw(20) << "I2x23 " << "= " << setiosflags(ios::scientific) << setw(10) << I2x23 << endl;
+cout << setw(20) << "I2x32 " << "= " << setiosflags(ios::scientific) << setw(10) << I2x32 << endl;
+cout << setw(20) << "I2x33 " << "= " << setiosflags(ios::scientific) << setw(10) << I2x33 << endl;
+cout << setw(20) << "I3x21 " << "= " << setiosflags(ios::scientific) << setw(10) << I3x21 << endl;
+cout << setw(20) << "I3x22 " << "= " << setiosflags(ios::scientific) << setw(10) << I3x22 << endl;
+cout << setw(20) << "I3x23 " << "= " << setiosflags(ios::scientific) << setw(10) << I3x23 << endl;
+cout << setw(20) << "I3x31 " << "= " << setiosflags(ios::scientific) << setw(10) << I3x31 << endl;
+cout << setw(20) << "I3x32 " << "= " << setiosflags(ios::scientific) << setw(10) << I3x32 << endl;
+cout << setw(20) << "I3x33 " << "= " << setiosflags(ios::scientific) << setw(10) << I3x33 << endl;
+cout << setw(20) << "I4x13 " << "= " << setiosflags(ios::scientific) << setw(10) << I4x13 << endl;
+cout << setw(20) << "I4x23 " << "= " << setiosflags(ios::scientific) << setw(10) << I4x23 << endl;
+cout << setw(20) << "I4x33 " << "= " << setiosflags(ios::scientific) << setw(10) << I4x33 << endl;
 cout << setw(20) << "ee__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << ee__exp__2 << endl;
 cout << setw(20) << "sw__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << sw__exp__2 << endl;
+cout << setw(20) << "cw__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << cw__exp__2 << endl;
     }
     void Parameters_sm::printIndependentCouplings(){
-\tcout << "sm model couplings independent of event kinematics:" << endl;
-\tcout << setw(20) << "GC_1 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_1 << endl;
+    cout << "sm model couplings independent of event kinematics:" << endl;
+    cout << setw(20) << "GC_1 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_1 << endl;
 cout << setw(20) << "GC_2 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_2 << endl;
 cout << setw(20) << "GC_3 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_3 << endl;
+cout << setw(20) << "GC_4 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_4 << endl;
+cout << setw(20) << "GC_5 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_5 << endl;
+cout << setw(20) << "GC_6 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_6 << endl;
 cout << setw(20) << "GC_7 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_7 << endl;
 cout << setw(20) << "GC_8 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_8 << endl;
 cout << setw(20) << "GC_9 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_9 << endl;
-cout << setw(20) << "GC_10 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_10 << endl;
-cout << setw(20) << "GC_11 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_11 << endl;
-cout << setw(20) << "GC_12 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_12 << endl;
 cout << setw(20) << "GC_13 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_13 << endl;
 cout << setw(20) << "GC_14 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_14 << endl;
 cout << setw(20) << "GC_15 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_15 << endl;
@@ -2243,29 +1795,85 @@ cout << setw(20) << "GC_45 " << "= " << setiosflags(ios::scientific) << setw(10)
 cout << setw(20) << "GC_46 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_46 << endl;
 cout << setw(20) << "GC_47 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_47 << endl;
 cout << setw(20) << "GC_48 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_48 << endl;
+cout << setw(20) << "GC_49 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_49 << endl;
+cout << setw(20) << "GC_50 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_50 << endl;
+cout << setw(20) << "GC_51 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_51 << endl;
+cout << setw(20) << "GC_52 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_52 << endl;
+cout << setw(20) << "GC_53 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_53 << endl;
+cout << setw(20) << "GC_54 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_54 << endl;
+cout << setw(20) << "GC_55 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_55 << endl;
+cout << setw(20) << "GC_56 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_56 << endl;
+cout << setw(20) << "GC_57 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_57 << endl;
+cout << setw(20) << "GC_58 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_58 << endl;
+cout << setw(20) << "GC_59 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_59 << endl;
+cout << setw(20) << "GC_60 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_60 << endl;
+cout << setw(20) << "GC_61 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_61 << endl;
+cout << setw(20) << "GC_62 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_62 << endl;
+cout << setw(20) << "GC_63 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_63 << endl;
+cout << setw(20) << "GC_64 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_64 << endl;
+cout << setw(20) << "GC_65 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_65 << endl;
+cout << setw(20) << "GC_66 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_66 << endl;
+cout << setw(20) << "GC_67 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_67 << endl;
+cout << setw(20) << "GC_68 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_68 << endl;
+cout << setw(20) << "GC_69 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_69 << endl;
+cout << setw(20) << "GC_70 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_70 << endl;
+cout << setw(20) << "GC_71 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_71 << endl;
+cout << setw(20) << "GC_72 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_72 << endl;
+cout << setw(20) << "GC_73 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_73 << endl;
+cout << setw(20) << "GC_74 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_74 << endl;
+cout << setw(20) << "GC_75 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_75 << endl;
+cout << setw(20) << "GC_76 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_76 << endl;
+cout << setw(20) << "GC_77 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_77 << endl;
+cout << setw(20) << "GC_78 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_78 << endl;
+cout << setw(20) << "GC_79 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_79 << endl;
+cout << setw(20) << "GC_80 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_80 << endl;
+cout << setw(20) << "GC_81 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_81 << endl;
+cout << setw(20) << "GC_82 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_82 << endl;
+cout << setw(20) << "GC_83 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_83 << endl;
+cout << setw(20) << "GC_84 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_84 << endl;
+cout << setw(20) << "GC_85 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_85 << endl;
+cout << setw(20) << "GC_86 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_86 << endl;
+cout << setw(20) << "GC_87 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_87 << endl;
+cout << setw(20) << "GC_88 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_88 << endl;
+cout << setw(20) << "GC_89 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_89 << endl;
+cout << setw(20) << "GC_90 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_90 << endl;
+cout << setw(20) << "GC_91 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_91 << endl;
+cout << setw(20) << "GC_92 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_92 << endl;
+cout << setw(20) << "GC_93 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_93 << endl;
+cout << setw(20) << "GC_94 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_94 << endl;
+cout << setw(20) << "GC_95 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_95 << endl;
+cout << setw(20) << "GC_96 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_96 << endl;
+cout << setw(20) << "GC_97 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_97 << endl;
+cout << setw(20) << "GC_98 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_98 << endl;
+cout << setw(20) << "GC_99 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_99 << endl;
+cout << setw(20) << "GC_100 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_100 << endl;
+cout << setw(20) << "GC_101 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_101 << endl;
+cout << setw(20) << "GC_102 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_102 << endl;
+cout << setw(20) << "GC_103 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_103 << endl;
+cout << setw(20) << "GC_104 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_104 << endl;
+cout << setw(20) << "GC_105 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_105 << endl;
+cout << setw(20) << "GC_106 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_106 << endl;
+cout << setw(20) << "GC_107 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_107 << endl;
+cout << setw(20) << "GC_108 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_108 << endl;
     }
     void Parameters_sm::printDependentParameters(){
-\tcout << "sm model parameters dependent on event kinematics:" << endl;
-\tcout << setw(20) << "aS " << "= " << setiosflags(ios::scientific) << setw(10) << aS << endl;
+    cout << "sm model parameters dependent on event kinematics:" << endl;
+    cout << setw(20) << "aS " << "= " << setiosflags(ios::scientific) << setw(10) << aS << endl;
 cout << setw(20) << "sqrt__aS " << "= " << setiosflags(ios::scientific) << setw(10) << sqrt__aS << endl;
 cout << setw(20) << "G " << "= " << setiosflags(ios::scientific) << setw(10) << G << endl;
 cout << setw(20) << "G__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << G__exp__2 << endl;
     }
     void Parameters_sm::printDependentCouplings(){
-\tcout << "sm model couplings dependent on event kinematics:" << endl;
-\tcout << setw(20) << "GC_6 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_6 << endl;
-cout << setw(20) << "GC_5 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_5 << endl;
-cout << setw(20) << "GC_4 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_4 << endl;
+    cout << "sm model couplings dependent on event kinematics:" << endl;
+    cout << setw(20) << "GC_12 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_12 << endl;
+cout << setw(20) << "GC_11 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_11 << endl;
+cout << setw(20) << "GC_10 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_10 << endl;
     }
 
 } // end namespace Pythia8
 """ % misc.get_pkg_info()
 
         file_h, file_cc = self.model_builder.generate_parameters_class_files()
-
-        self.assertEqual([l for l in file_h.split('\n') if l.strip()], 
-                         [l for l in goal_file_h.split('\n') if l.strip()])
-
-        self.assertEqual([l.strip() for l in file_cc.split('\n') if l.strip()], 
-                          [l.strip() for l in goal_file_cc.split('\n') if l.strip()])
+        self.assertEqual(file_h.split('\n'), goal_file_h.split('\n'))
+        self.assertEqual(file_cc.replace('\t', '    ').split('\n'), goal_file_cc.replace('\t', '    ').split('\n'))
 

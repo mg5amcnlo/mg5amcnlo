@@ -44,8 +44,7 @@ $(LIBDIR)libpdf.$(libext): PDF
 	cd PDF; make	
 $(LIBDIR)libcernlib.$(libext): CERNLIB
 	cd CERNLIB; make	
-$(LIBDIR)libmodel.$(libext): MODEL
-	cd MODEL; make	
+%(model)s
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o
 	$(FC) $(FFLAGS) -o $@ $^
@@ -53,8 +52,6 @@ $(BINDIR)combine_events: $(COMBINE) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libpdf.
 	$(FC) $(FFLAGS) -o $@ $(COMBINE) -L$(LIBDIR) -lmodel -lpdf $(lhapdf)
 $(BINDIR)gensudgrid: $(GENSUDGRID) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libcernlib.$(libext)
 	$(FC) $(FFLAGS) -o $@ $(GENSUDGRID) -L$(LIBDIR) -lmodel -lpdf -lcernlib $(lhapdf)
-$(BINDIR)combine_runs: combine_runs.o rw_events.o
-	$(FC) $(FFLAGS) -o $@ $^
 
 # Dependencies
 
@@ -64,8 +61,10 @@ setrun.o: setrun.f nexternal.inc leshouche.inc genps.inc
 gen_ximprove.o: gen_ximprove.f run_config.inc
 combine_events.o: combine_events.f run_config.inc
 select_events.o: select_events.f run_config.inc
-setrun.o: setrun.f nexternal.inc leshouche.inc
+setrun.o: setrun.f nexternal.inc leshouche.inc run_card.inc
 
+run_card.inc:
+	../bin/madevent treatcards run
 clean:
 	$(RM) *.o $(LIBRARIES) $(BINARIES)
 	cd PDF; make clean; cd ..

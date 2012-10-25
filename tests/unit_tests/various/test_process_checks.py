@@ -199,7 +199,9 @@ class TestMatrixElementChecker(unittest.TestCase):
         """Test that check process fails for wrong color-Lorentz."""
 
         # Change 4g interaction so color and lorentz don't agree
-        gggg = self.base_model.get_interaction(4)
+        id = [int.get('id') for int in self.base_model.get('interactions')
+               if [p['pdg_code'] for p in int['particles']] == [21,21,21,21]][0]
+        gggg = self.base_model.get_interaction(id)
         assert [p['pdg_code'] for p in gggg['particles']] == [21,21,21,21]
         gggg.set('lorentz', ['VVVV1', 'VVVV4', 'VVVV3'])
 
@@ -216,7 +218,7 @@ class TestMatrixElementChecker(unittest.TestCase):
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.base_model})
-
+        process_checks.clean_added_globals(process_checks.ADDED_GLOBAL)
         comparison = process_checks.check_processes(myproc)[0][0]
 
         self.assertFalse(comparison['passed'])
