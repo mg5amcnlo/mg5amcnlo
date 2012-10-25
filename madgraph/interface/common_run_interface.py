@@ -297,7 +297,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 
 
     ############################################################################    
-    def split_arg(self, line, error=True):
+    def split_arg(self, line, error=False):
         """split argument and remove run_options"""
         
         args = cmd.Cmd.split_arg(line)
@@ -565,8 +565,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                      pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'))
                         
 
-
-          
         if not event_path:
             if mode == 'parton':
                 event_path = pjoin(self.me_dir, 'Events','unweighted_events.lhe')
@@ -627,6 +625,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             shutil.move(pjoin(self.me_dir, 'HTML',self.run_name ,'plots.html'),
                                                                          output)
 
+            logger.info("Plots for %s level generated, see %s" % \
+                         (mode, output))
         except OSError, error:
             logger.error('fail to create plot: %s. Please check that MadAnalysis is correctly installed.' % error)
         
