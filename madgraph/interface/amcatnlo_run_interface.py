@@ -2092,7 +2092,28 @@ Integrated cross-section
                 self.exec_cmd('open %s' % path)                    
             else:
                 # detect which card is provided
-                card_name = answer + 'card.dat'
+                card_name = self.detect_card_type(answer)
+                if card_name == 'unknown':
+                    card_name = self.ask('Fail to determine the type of the file. Please specify the format',
+                   'param_card.dat', choices=['param_card.dat', 'run_card.dat','pythia_card.dat','pgs_card.dat',
+                    'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
+                if card_name != 'banner':
+                    logger.info('copy %s as %s' % (answer, card_name))
+                    files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
+                    #if card_name == 'param_card.dat':
+                    #    self.check_param_card(pjoin(self.me_dir, 'Cards', card_name))                        
+                elif card_name == 'banner':
+                    banner_mod.split_banner(answer, self.me_dir, proc_card=False)
+                    logger.info('Splitting the banner in it\'s component')
+                    if auto:
+                        # Re-compute the current mode
+                        mode = 'parton'
+                        for level in ['delphes','pgs','pythia']:
+                            if os.path.exists(pjoin(self.me_dir,'Cards','%s_card.dat' % level)):
+                                mode = level
+                                break
+                    else:
+                        self.clean_pointless_card(mode)
 
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = banner_mod.RunCardNLO(run_card)

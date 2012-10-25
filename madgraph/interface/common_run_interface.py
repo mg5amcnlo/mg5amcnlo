@@ -500,10 +500,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
            pgs_card.dat
            delphes_card.dat
            delphes_trigger.dat
+           shower_card.dat
         """
         
         text = open(path).read()
-        text = re.findall('(<MGVersion>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|MSTP|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY)', text, re.I)
+        text = re.findall('(<MGVersion>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY)', text, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text:
             return 'banner'
@@ -515,14 +516,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             return 'pgs_card.dat'
         elif 'muon eta coverage' in text:
             return 'pgs_card.dat'
-        elif 'mstp' in text:
+        elif 'mstp' in text and not 'herwig++' in text:
             return 'pythia_card.dat'
         elif 'begin minpts' in text:
             return 'plot_card.dat'
-        elif 'gridpack' in text and 'ebeam1' in text:
+        elif ('gridpack' in text and 'ebeam1' in text) or \
+                ('qes_over_ref' in text and 'ebeam1' in text):
             return 'run_card.dat'
         elif 'block' in text and 'decay' in text: 
             return 'param_card.dat'
+        elif 'herwig++' in text:
+            return 'shower_card.dat'
         else:
             return 'unknown'
 
