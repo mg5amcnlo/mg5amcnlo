@@ -2858,7 +2858,7 @@ calculator."""
             return
         else:
             self.configured = time.time()
-        self.update_status('compile directory', level=None)
+        self.update_status('compile directory', level=None, update_results=True)
         if self.options['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
             self.options['automatic_html_opening'] = False
