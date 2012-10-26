@@ -676,7 +676,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 try:
                     misc.call([eradir+'/ExRootLHEFConverter', 
                              'pythia_events.lhe', 
-                             pjoin(self.run_name, '%s_pythia_lhe_events.root' % tag)],
+                             pjoin(self.run_name, '%s_pythia_lhe_events.root' % self.run_tag)],
                             cwd=pjoin(self.me_dir,'Events'))              
                 except:
                     pass
@@ -1026,10 +1026,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
   
 
     def update_status(self, status, level, makehtml=True, force=True, 
-                      error=False, starttime = None, update_results=False):
+                      error=False, starttime = None, update_results=True):
         """ update the index status """
         
-        if makehtml and not force:
+        if makehtml or not force:
             if hasattr(self, 'next_update') and time.time() < self.next_update:
                 return
             else:

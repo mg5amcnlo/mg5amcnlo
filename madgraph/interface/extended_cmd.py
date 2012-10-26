@@ -1146,8 +1146,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 if tag in cmds:
                     cmds[tag].append(cmdname)
                 else:
-                    cmds[tag] = [cmdname]
-                print cmdname, tag, doc 
+                    cmds[tag] = [cmdname] 
                     
         self.stdout.write("%s\n"%str(self.doc_leader))
         for tag in self.helporder:
