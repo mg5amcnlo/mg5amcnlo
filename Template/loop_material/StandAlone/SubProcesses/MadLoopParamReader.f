@@ -105,7 +105,11 @@
       goto 998      
 
   676 continue
-
+      write(*,*) '##E00 Error:: MadLoop parameter file ',fileName,
+     &' could not be found or is malformed. Please specify it.'
+      stop 
+C     Below is the code if one desires to let the code continue with
+C     a non existing or malformed parameter file
       write(*,*) '##I01 INFO :: The file ',fileName,' could not be ',
      & ' open or did not contain the necessary information. The ',
      & ' default MadLoop parameters will be used.'

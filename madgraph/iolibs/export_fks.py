@@ -201,7 +201,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
              shutil.rmtree(pjoin(self.dir_path,'bin','internal','ufomodel'))
          except OSError as error:
              pass
-         shutil.copytree(model.get('version_tag').split('##')[0], 
+         # Notice that what is below is not safe for path including '-'.
+         shutil.copytree(model.get('version_tag').split('##')[0].split('-')[0], 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
          if hasattr(model, 'restrict_card'):
