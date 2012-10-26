@@ -236,6 +236,8 @@ class MultiCore(Cluster):
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
                log=None):
         """submit a job on multicore machine"""
+        
+        self.submitted +=1
         if cwd is None:
             cwd = os.getcwd()
         if not os.path.exists(prog) and not misc.which(prog):
@@ -259,6 +261,7 @@ class MultiCore(Cluster):
         
     def launch(self, exe, argument, cwd, stdout):
         """ way to launch for multicore."""
+        import thread
 
         def end(self, pid):
             self.nb_used -= 1
@@ -276,29 +279,51 @@ class MultiCore(Cluster):
             # release the lock for allowing to launch the next job
             security = 0       
             # check that the status is locked to avoid coincidence unlock
-            while not self.lock.locked():
-                if not self.need_waiting:
-                    # Main is not yet locked
-                    end(self, pid)
-                    return
-                elif security > 300:
-                    end(self, pid)
-                    return 
-                security += 1
-                time.sleep(1)
-            self.lock.release()
+            while 1:
+                while not self.lock.locked():
+                    if not self.need_waiting:
+                        # Main is not yet locked
+                        end(self, pid)
+                        return
+                    elif security > 60:
+                        end(self, pid)
+                        return 
+                    security += 1
+                    time.sleep(1)
+                try:
+                    self.lock.release()
+                except thread.error:
+                    continue
+                break
             end(self, pid)
 
         except Exception, error:
+            logger.critical('one core fails with %s' % error)
             self.remove()
-            pass
+            raise
+
+            
           
 
     def wait(self, me_dir, update_status):
-        """Wait that all thread finish"""
+        """Wait that all thread finish
+        self.nb_used and self.done are update via each jobs (thread and local)
+        self.submitted is the nb of times that submitted has been call (local)
+        remaining is the nb of job that we still have to wait. (local)
+        self.pids is the list of the BASH pid of the submitted jobs. (thread)
+        
+        WARNING: In principle all those value are coherent but since some are
+        modified in various thread, those data can be corrupted. (not the local 
+        one). Nb_used in particular shouldn't be trusted too much.
+        This code check in different ways that all jobs have finished.
+
+        In principle, the statement related to  '#security #X' are not used.
+        In practise they are times to times.
+        """
+        
         import thread
 
-        total_job = self.done + self.nb_used + len(self.waiting_submission)
+        remaining = self.submitted - self.done
 
         while self.nb_used < self.nb_core:
             if self.waiting_submission:
@@ -311,17 +336,56 @@ class MultiCore(Cluster):
         try:            
             self.need_waiting = True
             self.lock.acquire()
+            no_in_queue = 0
+            secure_mode = False # forbid final acauire if in securemode
             while self.waiting_submission or self.nb_used:
                 if update_status:
                     update_status(len(self.waiting_submission), self.nb_used, self.done)
+                # security#1 that all job expected to be launched since 
+                # we enter in this function are indeed launched.
+                if len(self.waiting_submission) == 0 == remaining :
+                    self.done = self.submitted
+                    break
+                
+                # security #2: nb_used >0 but nothing remains as BASH PID
+                if len(self.waiting_submission) == 0 and len(self.pids) == 0:
+                    if self.submitted == self.done:
+                        break
+                    logger.debug('Found too many jobs. Recovering')
+                    time.sleep(5)
+                    no_in_queue += 1
+                    if no_in_queue > 3:
+                        logger.debug('Still too many jobs. Continue')
+                        break
+                    continue
+                
+                # security #3: if nb_used not reliable pass in secure mode
+                if not secure_mode and len(self.waiting_submission) != 0:
+                    if self.nb_used != self.nb_core:
+                        if self.nb_used != len(self.pids):
+                            secure_mode = True
+                # security #4: nb_used not reliable use secure mode to finish the run
+                if secure_mode and not self.waiting_submission:
+                    self.need_waiting = False
+                    if self.lock.locked():
+                        self.lock.release()
+                    break
+                
+                # Wait for core to finish               
                 self.lock.acquire()
+                remaining -=1    # update remaining job
+                #submit next one
                 if self.waiting_submission:
                     arg = self.waiting_submission.pop(0)
                     thread.start_new_thread(self.launch, arg)
                     self.nb_used += 1 # update the number of running thread
-                                    
-            while total_job > self.done:
-                logger.debug('Some jobs have been lost. Try to recover')
+            
+            # security #5: checked that self.nb_used is not lower than expected
+            #This is the most current problem.
+            no_in_queue = 0
+            while self.submitted > self.done:
+                if no_in_queue == 0:
+                    logger.debug('Some jobs have been lost. Try to recover')
                 #something bad happens
                 if not len(self.pids):
                     # The job is not running 
@@ -331,22 +395,63 @@ class MultiCore(Cluster):
                 elif update_status:
                     update_status(len(self.waiting_submission), len(self.pids) ,
                                                                       self.done)
-                self.lock.acquire()
-                  
+                # waiting that those jobs ends.
+                if not secure_mode:
+                    self.lock.acquire()
+                else:
+                    no_in_queue += 1
+                    try:
+                        time.sleep(5)
+                        if no_in_queue > 5 * 3600.0 / 5:
+                            break
+                    except:
+                        logger.warning('CTRL-C assumes that all jobs are done. Continue the code')
+                        self.pids = [] # avoid security 6
+                        break
+                    
+            # security #6. check that queue is empty. don't
+            no_in_queue = 0
+            while len(self.pids):
+                self.need_waiting = False
+                if self.lock.locked():
+                        self.lock.release()
+                secure_mode = True
+                if no_in_queue == 0 : 
+                    logger.warning('Some jobs have been lost. Try to recover.')
+                    logger.warning('Hitting ctrl-c will consider that all jobs are done and continue the code.')
+                try:
+                    #something very bad happens
+                    if update_status:
+                        update_status(len(self.waiting_submission), len(self.pids) ,
+                                                                      self.done)
+                    time.sleep(5)
+                    no_in_queue += 1
+                    if no_in_queue > 5 * 3600.0 / 5:
+                            break
+                except KeyboardInterrupt:
+                    break
+                
+            # print a last time the status (forcing 0 for the running)  
             if update_status:
-                update_status(len(self.waiting_submission), self.nb_used, self.done)             
+                self.next_update = 0
+                update_status(len(self.waiting_submission), 0, self.done)             
             
             # reset variable for next submission
             self.need_waiting = False
             security = 0 
             while not self.lock.locked() and security < 10:
                 # check that the status is locked to avoid coincidence unlock
+                if secure_mode:
+                    security = 10
                 security +=1
                 time.sleep(1)
             if security < 10:
                 self.lock.release()
             self.done = 0
+            self.nb_used = 0
+            self.submitted = 0
             self.pids = []
+            
         except KeyboardInterrupt:
             self.remove()
             raise
@@ -709,12 +814,9 @@ class SGECluster(Cluster):
         if not me_dir[0].isalpha():
             me_dir = 'a' + me_dir[1:]
 
-        text = ""
         if cwd is None:
-           #cwd = os.getcwd()
-           cwd = self.def_get_path(os.getcwd())
-        else: 
-           text = " cd %s;" % cwd
+            #cwd = os.getcwd()
+            cwd = self.def_get_path(os.getcwd())
         cwd1 = self.def_get_path(cwd)
         text = " cd %s;" % cwd1
         if stdout is None:

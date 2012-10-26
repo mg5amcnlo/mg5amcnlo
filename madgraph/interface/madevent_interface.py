@@ -2819,7 +2819,7 @@ calculator."""
             if html:
                 update_status = lambda idle, run, finish: \
                     self.update_status((idle, run, finish, run_type), level=None,
-                                       starttime=starttime)
+                                       force=False, starttime=starttime)
             else:
                 update_status = lambda idle, run, finish: None
             try:    

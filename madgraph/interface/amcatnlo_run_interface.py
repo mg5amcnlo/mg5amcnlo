@@ -1000,6 +1000,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 ' shell')
             return False
 
+    def update_status(self, status, level, makehtml=False, force=True, 
+                      error=False, starttime = None, update_results=False):
+        
+        common_run.CommonRunCmd.update_status(self, status, level, makehtml, 
+                                        force, error, starttime, update_results)
+
 
     def update_random_seed(self):
         """Update random number seed with the value from the run_card. 
