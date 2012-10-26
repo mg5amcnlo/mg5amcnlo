@@ -1232,6 +1232,7 @@ Integrated cross-section
         some additional infos are printed"""
         # find process name
         proc_card_lines = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read().split('\n')
+        process = ''
         for line in proc_card_lines:
             if line.startswith('generate'):
                 process = line.replace('generate ', '')
@@ -1911,7 +1912,6 @@ Integrated cross-section
                 #this can be improved/better written to handle the output
                 misc.call(['./%s < %s | tee -a %s | grep "Fraction of failures"' \
                         % (test, input, test_log)], shell=True)
-                misc.call(['rm -f %s' % input], shell=True)
             #check that none of the tests failed
             file = open(test_log)
             content = file.read()
@@ -2080,7 +2080,7 @@ Integrated cross-section
         
         # Loop as long as the user is not done.
         answer = 'no'
-        if options['force']:
+        if options['force'] or self.force:
             answer='done'
         while answer != 'done':
             question, possible_answer, card = get_question(mode, cards)
