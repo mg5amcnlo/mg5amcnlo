@@ -266,8 +266,10 @@ class MultiCore(Cluster):
         def end(self, pid):
             self.nb_used -= 1
             self.done += 1
-            self.pids.remove(pid)
-
+            try:
+                self.pids.remove(pid)
+            except:
+                pass
         try:  
             if os.path.exists(exe) and not exe.startswith('/'):
                 exe = './' + exe
@@ -298,7 +300,7 @@ class MultiCore(Cluster):
             end(self, pid)
 
         except Exception, error:
-            logger.critical('one core fails with %s' % error)
+            #logger.critical('one core fails with %s' % error)
             self.remove()
             raise
 
@@ -460,8 +462,11 @@ class MultiCore(Cluster):
     def remove(self, *args):
         """Ensure that all thread are killed"""
         logger.info('remove job currently running')
+        print self.pids
         for pid in list(self.pids):
-            out = os.system('CPIDS=$(pgrep -P %s); kill -TERM $CPIDS &> /dev/null' % pid )
+            out = os.system('CPIDS=$(pgrep -P %(pid)s); kill -15 $CPIDS >& /dev/null' \
+                            % {'pid':pid} )
+            out = os.system('kill -15 %(pid)s >& /dev/null' % {'pid':pid} )            
             if out == 0:
                 try:
                     self.pids.remove(pid)
@@ -471,7 +476,8 @@ class MultiCore(Cluster):
 
         time.sleep(1) # waiting if some were submitting at the time of ctrl-c
         for pid in list(self.pids):
-            out = os.system('CPIDS=$(pgrep -P %s); kill -TERM $CPIDS &> /dev/null' % pid )
+            out = os.system('CPIDS=$(pgrep -P %s); kill -15 $CPIDS >& /dev/null' % pid )
+            out = os.system('kill -15 %(pid)s >& /dev/null' % {'pid':pid} ) 
             if out == 0:
                 try:
                     self.pids.remove(pid)
