@@ -1397,7 +1397,8 @@ Integrated cross-section
             topfiles = [n for n in os.listdir(pjoin(rundir)) \
                                             if n.lower().endswith('.top')]
             if not topfiles:
-                raise aMCatNLOError('No .top file has been generated, an error occurred')
+                logger.warning('No .top file has been generated. For the results of your ' +\
+                               'run, please check inside %s' % rundir)
 
             filename = 'plot_%s_%d_' % (shower, 1)
             count = 1
