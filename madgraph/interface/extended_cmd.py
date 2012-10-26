@@ -623,19 +623,24 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             return None# interactive mode
 
         line = self.get_stored_line()
+        print 'get store line returns: %s' % line
         # line define if a previous answer was not answer correctly 
         if not line:
             try:
                 line = self.inputfile.next()
+                print 'next line returns: %s' % line
             except StopIteration:
+                print 'get EOF: current line: %s' % line
                 if self.haspiping:
+                    logger.debug('piping')
                     self.store_line(line)
                     return None # print the question and use the pipe
-                logger.info(question_instance.question)
+                logger.debug(question_instance.question)
                 logger.warning('The answer to the previous question is not set in your input file')
                 logger.warning('Use %s value' % default)
                 return str(default)
-            
+        
+        print 'GET line,', line
         line = line.replace('\n','').strip()
         if '#' in line: 
             line = line.split('#')[0]
@@ -659,6 +664,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             self.store_line(line)
             return None # print the question and use the pipe
         else:
+            print 'invalid value for the questions -> put as not answered', line
             logger.info(question_instance.question)
             logger.warning('The answer to the previous question is not set in your input file')
             logger.warning('Use %s value' % default)
@@ -1018,8 +1024,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if line:
                 self.exec_cmd(line, precmd=True)
             if self.stored_line: # created by intermediate question
-                self.exec_cmd(self.stored_line, precmd=True)
-                self.stored_line = ''
+                line, self.stored_line  = self.stored_line, None
+                self.exec_cmd(line, precmd=True)
+
         # If a child was open close it
         if self.child:
             self.child.exec_cmd('quit')        

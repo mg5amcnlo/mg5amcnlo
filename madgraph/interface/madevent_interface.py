@@ -272,10 +272,18 @@ class CmdExtended(cmd.Cmd):
 
         self.add_error_log_in_html()
         cmd.Cmd.nice_config_error(self, error, line)
+        
+        
+        try:
+            debug_file = open(self.debug_output, 'a')
+            debug_file.write(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')))
+            debug_file.close()
+        except:
+            pass 
+            
 
     def nice_error_handling(self, error, line):
         """If a ME run is currently running add a link in the html output"""
-        
 
         if isinstance(error, ZeroResult):
             self.add_error_log_in_html(error)
@@ -307,7 +315,12 @@ class CmdExtended(cmd.Cmd):
         else:
             self.add_error_log_in_html()            
             cmd.Cmd.nice_error_handling(self, error, line)
-
+            try:
+                debug_file = open(self.debug_output, 'a')
+                debug_file.write(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')))
+                debug_file.close()
+            except:
+                pass
         
         
 #===============================================================================
@@ -4675,9 +4688,7 @@ class GridPackCmd(MadEventCmd):
             pass
         
         bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
-        misc.call([pjoin(bindir, 'combine_runs')], 
-                                          cwd=pjoin(self.me_dir,'SubProcesses'),
-                                          stdout=devnull)
+        combine_runs.CombineRuns(self.me_dir)
         
         #update html output
         cross, error = sum_html.make_all_html_results(self)
