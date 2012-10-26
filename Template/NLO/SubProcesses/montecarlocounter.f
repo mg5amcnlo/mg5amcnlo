@@ -1795,7 +1795,7 @@ c      include "fks.inc"
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_partner(0:3),p_born_fksfather(0:3),
      # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
-     # xmrec2,www,massmax,massmin,delta_scale
+     # xmrec2,www,massmax,massmin,delta_scale,ma2
       parameter(delta_scale=10d0)
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
@@ -2069,27 +2069,34 @@ c strictly page 354 of hep-ph/0603175
                xmrec2=xm12
                www=-q2q+q1q-uk
             endif
+            ma2=xmm2+www
 c Recall that xm22 = 0 if ileg = 4
-            if((xmm2+www)/s.lt.-tiny)then
+            if(ma2/s.lt.-tiny)then
                write(*,*)'error A in xmcsubt_PY6Q'
                stop
-            elseif((xmm2+www)/s.lt.0d0)then
-               xmm2=-www
+            elseif(ma2/s.lt.0d0)then
+               ma2=0d0
             endif
-            ma=sqrt(xmm2+www)
+            if(www.lt.-tiny)then
+               write(*,*)'error C in xmcsubt_PY6Q'
+               stop
+            elseif(www.lt.0d0)then
+               www=0d0
+            endif
+            ma=sqrt(ma2)
             mbeff=sqrt(xmm2)
             mceff=0d0
             en_fks=sqrt(s)*(1-x)/2.d0
             en_mother=en_fks+sqrt(xmm2+veckn_ev**2)
 c The following constraint is deduced by imposing (p1+p2-kmother)**2=krecoil**2 and
 c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=ma**2
-            if(abs(en_mother-(s-xmrec2+ma**2)/(2*sqrt(s)))/en_mother.ge.tiny)then
+            if(abs(en_mother-(s-xmrec2+ma2)/(2*sqrt(s)))/en_mother.ge.tiny)then
                write(*,*)'error B in xmcsubt_PY6Q'
-               write(*,*)en_mother,(s-xmrec2+ma**2)/(2*sqrt(s))
+               write(*,*)en_mother,(s-xmrec2+ma2)/(2*sqrt(s))
                stop
             endif
             if(ma.le.en_mother)then
-               betaa=sqrt(1-ma**2/en_mother**2)
+               betaa=sqrt(1-ma2/en_mother**2)
             elseif(ma.le.en_mother*(1+tiny))then
                betaa=1d0
             else
@@ -2097,10 +2104,10 @@ c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=m
                write(*,*)ma,en_mother
                stop
             endif
-            lambdaabc=sqrt((ma**2-mbeff**2-mceff**2)**2-4*mbeff**2*mceff**2)
+            lambdaabc=sqrt((ma2-mbeff**2-mceff**2)**2-4*mbeff**2*mceff**2)
             if(ma.ne.0d0)then
-               zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma**2)/2
-               zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma**2)/2
+               zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma2)/2
+               zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma2)/2
             else
                zplus =1d0
                zminus=0d0
@@ -3237,7 +3244,7 @@ c      include "fks.inc"
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_partner(0:3),p_born_fksfather(0:3),
      # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
-     # xmrec2,www,massmax,massmin,delta_scale
+     # xmrec2,www,massmax,massmin,delta_scale,ma2
       parameter(delta_scale=10d0)
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
@@ -3513,23 +3520,30 @@ c are the same as for PY6Q
                xmrec2=xm12
                www=-q2q+q1q-uk
             endif
+            ma2=xmm2+www
 c Recall that xm22 = 0 if ileg = 4
-            if((xmm2+www)/s.lt.-tiny)then
+            if(ma2/s.lt.-tiny)then
                write(*,*)'error A in xmcsubt_PY8'
                stop
-            elseif((xmm2+www)/s.lt.0d0)then
-               xmm2=-www
+            elseif(ma2/s.lt.0d0)then
+               ma2=0d0
             endif
-            ma=sqrt(xmm2+www)
+            if(www.lt.-tiny)then
+               write(*,*)'error C in xmcsubt_PY8'
+               stop
+            elseif(www.lt.0d0)then
+               www=0d0
+            endif
+            ma=sqrt(ma2)
             mbeff=sqrt(xmm2)
             mceff=0d0
             en_fks=sqrt(s)*(1-x)/2.d0
             en_mother=en_fks+sqrt(xmm2+veckn_ev**2)
 c The following constraint is deduced by imposing (p1+p2-kmother)**2=krecoil**2 and
 c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=ma**2
-            if(abs(en_mother-(s-xmrec2+ma**2)/(2*sqrt(s)))/en_mother.ge.tiny)then
+            if(abs(en_mother-(s-xmrec2+ma2)/(2*sqrt(s)))/en_mother.ge.tiny)then
                write(*,*)'error B in xmcsubt_PY8'
-               write(*,*)en_mother,(s-xmrec2+ma**2)/(2*sqrt(s))
+               write(*,*)en_mother,(s-xmrec2+ma2)/(2*sqrt(s))
                stop
             endif
             if(ma.le.en_mother)then
@@ -3541,10 +3555,10 @@ c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=m
                write(*,*)ma,en_mother
                stop
             endif
-            lambdaabc=sqrt((ma**2-mbeff**2-mceff**2)**2-4*mbeff**2*mceff**2)
+            lambdaabc=sqrt((ma2-mbeff**2-mceff**2)**2-4*mbeff**2*mceff**2)
             if(ma.ne.0d0)then
-               zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma**2)/2
-               zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma**2)/2
+               zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma2)/2
+               zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma2)/2
             else
                zplus =1d0
                zminus=0d0
