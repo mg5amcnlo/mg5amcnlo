@@ -64,7 +64,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
         logger.info('Generating real emission matrix-elements...')
         self['real_matrix_elements'] = self.generate_matrix_elements(
                 copy.copy(fksmulti['real_amplitudes']), combine_matrix_elements = False)
-
+        
         self['matrix_elements'] = self.generate_matrix_elements_fks(
                                 fksmulti, 
                                 gen_color, decay_ids)
@@ -125,9 +125,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
         matrix_elements = FKSHelasProcessList()
 
-        while fksprocs:
-            # Pop the amplitude to save memory space
-            proc = fksprocs.pop(0)
+        for proc in fksprocs:
             logger.info("Generating Helas calls for FKS process %s" % \
               proc.born_amp.get('process').nice_string(print_weighted = False).\
                                                   replace('Process', 'process'))

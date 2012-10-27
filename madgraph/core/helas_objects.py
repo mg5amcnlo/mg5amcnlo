@@ -3102,7 +3102,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def reuse_outdated_wavefunctions(self, helas_diagrams):
         """change the wavefunctions id used in the writer to minimize the 
            memory used by the wavefunctions."""
-        
+           
         if not self.optimization:
             for diag in helas_diagrams:
                 for wf in diag['wavefunctions']:
@@ -4819,9 +4819,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         # which allows to reorder the final state particles in the right way
         # for maximal process combination
         permutations = []
-        while amplitudes:
-            # Pop the amplitude to save memory space
-            amplitude = amplitudes.pop(0)
+        for amplitude in amplitudes:
             if isinstance(amplitude, diagram_generation.DecayChainAmplitude):
                 # Might get multiple matrix elements from this amplitude
                 matrix_element_list = HelasDecayChainProcess(amplitude).\

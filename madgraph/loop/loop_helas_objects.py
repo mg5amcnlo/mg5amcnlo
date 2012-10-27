@@ -599,6 +599,15 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                                                       group[1][0].get('number'))
         self.update_loop_group_ids()
 
+    def reuse_outdated_wavefunctions(self, helas_diagrams):
+        """ Make sure never to use this optimization in the loop context."""
+        # But just make sure that me_id is simply the number.
+        for diag in helas_diagrams:
+            for wf in diag['wavefunctions']:
+                wf.set('me_id',wf.get('number'))
+                
+        return helas_diagrams
+
     def update_loop_group_ids(self):
         """ Make sure that the attribute 'loop_group_id' of all loop amplitudes
         in the 'loop_groups' list is correct given the order of 'loop_groups'"""
@@ -1684,7 +1693,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         instead use a labeling which is optimal for the output of the loop process.
         Also we tag all the LoopHelasAmplitude which are identical with the same
         'number' attribute."""
-
+        
         # Number the LoopHelasAmplitude depending of the type of output
         if self.optimized_output:
             self.relabel_loop_amplitudes_optimized()

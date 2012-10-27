@@ -437,7 +437,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         if self._export_format in ['NLO']:
             self._curr_exporter = export_v4.ExportV4Factory(\
                                           self, noclean, output_type='amcatnlo')
-            
         # check if a dir with the same name already exists
         if not force and not noclean and os.path.isdir(self._export_dir)\
                and self._export_format in ['NLO']:
@@ -448,7 +447,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                                                 timeout=self.options['timeout'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
-    
+
         # Make a Template Copy
         if self._export_format in ['NLO']:
             self._curr_exporter.copy_fkstemplate()
@@ -467,7 +466,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
         # Reset _export_dir, so we don't overwrite by mistake later
         self._export_dir = None
-
 
     # Export a matrix element  
     def export(self, nojpeg = False, main_file_name = ""):
@@ -500,7 +498,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                              fks_helas.FKSHelasMultiProcess(\
                                 self._fks_multi_proc, 
                                 loop_optimized= self.options['loop_optimized_output'])
-
+                    
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
                                   get_matrix_elements()])
@@ -516,7 +514,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # Start of the actual routine
 
         ndiags, cpu_time = generate_matrix_elements(self)
-
         calls = 0
 
         path = self._export_dir
