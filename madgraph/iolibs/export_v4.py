@@ -1247,7 +1247,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
              shutil.rmtree(pjoin(self.dir_path,'bin','internal','ufomodel'))
          except OSError as error:
              pass
-         shutil.copytree(model.get('version_tag').split('##')[0], 
+         # This is not safe if there is a '##' or '-' in the path.
+         shutil.copytree(model.get('version_tag').split('##')[0].split('-')[0], 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
          if hasattr(model, 'restrict_card'):

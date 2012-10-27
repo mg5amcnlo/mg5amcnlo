@@ -1013,14 +1013,19 @@ C                ENDIF
         # For now, we can use the exact same treatment as for tree-level
         # computations by redefining here a regular HelasMatrixElementf or the
         # born process.
-        
+        # It is important to make a deepcopy, as we don't want any possible 
+        # treatment on the objects of the bornME to have border effects on
+        # the content of the LoopHelasMatrixElement object.
         bornME = helas_objects.HelasMatrixElement()
         for prop in bornME.keys():
-            bornME.set(prop,matrix_element.get(prop))
+            bornME.set(prop,copy.deepcopy(matrix_element.get(prop)))
         bornME.set('base_amplitude',None,force=True)
-        bornME.set('diagrams',matrix_element.get_born_diagrams())        
-        bornME.set('color_basis',matrix_element.get('born_color_basis'))
-        bornME.set('color_matrix',color_amp.ColorMatrix(bornME.get('color_basis')))
+        bornME.set('diagrams',copy.deepcopy(\
+                                            matrix_element.get_born_diagrams()))        
+        bornME.set('color_basis',copy.deepcopy(\
+                                        matrix_element.get('born_color_basis')))
+        bornME.set('color_matrix',copy.deepcopy(\
+                              color_amp.ColorMatrix(bornME.get('color_basis'))))
         # This is to decide wether once to reuse old wavefunction to store new
         # ones (provided they are not used further in the code.)
         bornME.optimization = True
