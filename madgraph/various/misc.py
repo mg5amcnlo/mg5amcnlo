@@ -65,6 +65,35 @@ def parse_info_str(fsock):
 
 
 #===============================================================================
+# mute_logger (designed to be a decorator)
+#===============================================================================
+def mute_logger(names=['madgraph','aloha','cmdprint','madevent'], levels=[50,50,50,50]):
+    """change the logger level and restore those at their initial value at the
+    end of the function decorated."""
+    def control_logger(f):
+        def restore_old_levels(names, levels):
+            for name, level in zip(names, levels):
+                log_module = logging.getLogger(name)
+                log_module.setLevel(level)            
+        
+        def f_with_no_logger(self, *args, **opt):
+            old_levels = []
+            for name, level in zip(names, levels):
+                log_module = logging.getLogger(name)
+                old_levels.append(level)
+                log_model.setLevel(level)
+            try:
+                out = f(self, *args, **opt)
+                restore_old_levels(names, old_levels)
+                return out
+            except:
+                restore_old_levels(names, old_levels)
+                raise
+            
+        return f_with_no_logger
+    return control_logger
+
+#===============================================================================
 # get_pkg_info
 #===============================================================================
 def get_pkg_info(info_str=None):

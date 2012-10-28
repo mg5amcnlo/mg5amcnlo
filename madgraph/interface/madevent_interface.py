@@ -2671,16 +2671,15 @@ calculator."""
                                                               'param_card.dat'))
         
         # find UFO particles linked to the require names. 
-        decay_info = {}        
+        decay_info = {}   
         for pid in args['particles']:
-            print type(model), 
             particle = model.get_particle(pid)
-            print type(particle)
             decay_info[pid] = []
             mass = abs(eval(str(particle.get('mass')), data).real)
             data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 
                                             'param_card.dat'), scale= mass)
             total = 0
+            
             for mode, expr in particle.partial_widths.items():
                 tmp_mass = mass    
                 for p in mode:
@@ -2701,31 +2700,59 @@ calculator."""
                                    (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
                 decay_info[particle.get('pdg_code')].append([decay_to, value])
                 total += value
-            print 'particle %s has decay (1->2 FR):' % pid,total
-                
+        
+        self.update_width_in_param_card(decay_info, args['input'], args['output'])
+        
         #
         # add info from decay module
         #
-        import decay.decay_objects as decay_objects
+        import mg5decay.decay_objects as decay_objects
         new_model = decay_objects.DecayModel(model)
         new_model.read_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
         new_model.find_vertexlist()
         new_model.find_all_channels(2)
+        to_refine = {}
         for pid in args['particles']:
             particle = new_model.get_particle(pid)
-            if particle.get('apx_decaywidth_err') > 0.001: 
-                print pid, particle.get('apx_decaywidth'),'+-',particle.get('apx_decaywidth_err')
-                print type(particle.get('apx_decaywidth_err'))
+            level = 2
+            while particle.get('apx_decaywidth_err') > 0.001:
+                level += 1
                 particle.find_channels_nextlevel(new_model)
                 particle.update_decay_attributes(False, True, True, new_model)
-                print particle.decaytable_string()
-            print pid, particle.get('apx_decaywidth'),'+-',particle.get('apx_decaywidth_err')
-               
-        #print new_model.find_all_channels_smart(0.0001)
-        #print new_model['decaywidth_list']
-        #print new_model.write_decay_table(pjoin(self.me_dir, 'Cards','param_card.dat'))             
-        self.update_width_in_param_card(decay_info, args['input'], args['output'])
+            if level != 2:
+                to_refine[pid] = level
         
+        if to_refine:
+            decay_info = self.get_partial_width_mg5(to_refine, decay_info, args['output'])
+            self.update_width_in_param_card(decay_info, args['input'], args['output'])
+    
+    #@misc.mute_logger()
+    def get_partial_width_mg5(self, particles, decay_info, card):
+        """use the decay package to compute the additional partial width"""
+    
+        from madgraph.interface.master_interface import MasterCmd   
+        
+        cmd = MasterCmd()
+        cmd.exec_cmd('import model %s' % pjoin(self.me_dir,'bin','internal','ufomodel'))
+        cmd.exec_cmd('set automatic_html_opening False --no_save')
+        for particle, level in particles.items():
+            print 'calculate width for %s' % particle
+            cmd.do_calculate_width('%s %s' % (particle, level),
+                                   skip_2body=True)
+            decay_dir = pjoin(self.me_dir, 'decay_width_%s' % particle)
+            cmd.exec_cmd('output %s -f' % decay_dir)
+            files.cp(card, pjoin(decay_dir, 'Cards', 'param_card.dat'))
+            files.cp(pjoin(self.me_dir, 'Cards','run_card.dat'), pjoin(decay_dir, 'Cards', 'run_card.dat'))
+            # Need to write the correct param_card in the correct place !!!
+            cmd.exec_cmd('launch -n decay -f')
+            param = check_param_card.ParamCard(pjoin(decay_dir, 'Events', 'decay','param_card.dat'))
+            for partial_width in param['decay'].decay_table[particle]:
+                decay_info[particle].append([partial_width.lhacode[1:], partial_width.value])
+        
+        return decay_info
+        #decay_info[particle.get('pdg_code')].append([decay_to, value])
+    
+    
     ############################################################################ 
     def do_store_events(self, line):
         """Advanced commands: Launch store events"""
@@ -4724,8 +4751,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         cmd.OneLinePathCompletion.__init__(self, *args, **opt)
         self.me_dir = self.mother_interface.me_dir
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
-        self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
         default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
+        try:
+            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
+        except Exception:
+            logger.error('Invalid param_card replace it by the default one')
+            files.cp(pjoin(self.me_dir,'Cards','param_card_default.dat'),pjoin(self.me_dir,'Cards','param_card.dat'))
+            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
+            
     
         self.pname2block = {}
         self.conflict = []

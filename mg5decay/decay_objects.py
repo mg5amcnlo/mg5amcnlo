@@ -63,7 +63,7 @@ ZERO = 0
 # Logger for decay_module
 #===============================================================================
 
-logger = logging.getLogger('decay.decay_objects')
+logger = logging.getLogger('madgraph.decay_objects')
 
 
 #===============================================================================

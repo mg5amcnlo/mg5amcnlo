@@ -4116,16 +4116,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             cpu_time2 = time.time()
 
             # Temporary output for calculate_width debug
-            print "Debug: matrix elements generated."
-            i = 3
-            print '(id, number) of legs in process #%d:' %i
-            all_legs = [p['legs'] for p in self._curr_matrix_elements.get_matrix_elements()[i]['processes']]
-            print [[(l['id'], l['number']) for l in leglist] \
-                       for leglist in all_legs]
-            print '(id, number) from get_decay_legs:'
-            leglist_decay = [p.get_legs_with_decays() for p in self._curr_matrix_elements.get_matrix_elements()[i]['processes']]
-            print [[(l['id'], l['number']) for l in leglist] \
-                       for leglist in leglist_decay]
+            try:
+                print "Debug: matrix elements generated. (mg interface l 4120)"
+                i = 3
+                print '(id, number) of legs in process #%d:' %i
+                all_legs = [p['legs'] for p in self._curr_matrix_elements.get_matrix_elements()[i]['processes']]
+                print [[(l['id'], l['number']) for l in leglist] \
+                           for leglist in all_legs]
+                print '(id, number) from get_decay_legs:'
+                leglist_decay = [p.get_legs_with_decays() for p in self._curr_matrix_elements.get_matrix_elements()[i]['processes']]
+                print [[(l['id'], l['number']) for l in leglist] \
+                           for leglist in leglist_decay]
+            except:
+                pass
 
             return ndiags, cpu_time2 - cpu_time1
 
@@ -4341,8 +4344,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 last_action_2 = 'none'
        
     # Calculate decay width
-    def do_calculate_width(self, line):
-        """Generate amplitudes for decay width calculation, with fixed
+    def do_calculate_width(self, line, skip_2body=False, model=None):
+        """Not in help: Generate amplitudes for decay width calculation, with fixed
            number of final particles (called level)
            syntax; calculate_width part_name level param_path           
            args; part_name level param_path
@@ -4357,7 +4360,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
            calculate_width h 2 [path]
            N.B. param_card must be given so that the program knows which channel
            is on shell and which is not.
+           
+           special argument: skip_2body allow to not consider those decay (use FR)
+                             model: use the model pass in argument.
+           
         """
+
+        if model:
+            self._curr_model = model
 
         args = self.split_arg(line)
         #check the validity of the arguments
@@ -4377,27 +4387,33 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._export_format = None
 
         # Remove previous generations from history
-        self.clean_history(to_remove=['add process'], remove_bef_lb1='generate',
-                           to_keep=['add','import','set','load'])
+        self.clean_history(to_remove=['add process'], remove_bef_last='generate',
+                           to_keep=['add','import','set','load'],
+                           allow_for_removal=['add process','generate','output'])
 
 
         # Setup before find_channels
-        self._curr_decaymodel = decay_objects.DecayModel(self._curr_model,
+        if not model:
+            self._curr_decaymodel = decay_objects.DecayModel(self._curr_model,
                                                          True)        
-        self._curr_decaymodel.read_param_card(param_card_path)
+            self._curr_decaymodel.read_param_card(param_card_path)
+        else:
+            self._curr_decaymodel = model
+            
         part = self._curr_decaymodel.get_particle(pid)
 
         # Find channels as requested
         if level //1 == level and level >1:
             level = int(level)
             self._curr_decaymodel.find_channels(part, level)
-            print "find decay of %s to %d-body decays" \
-                % (part.get('name'),level)
+            logger.info("find decay of %s to %d-body decays" % (part.get('name'),level))
             
-            self._curr_amps = part.get_amplitudes(2)
+            if not skip_2body:
+                self._curr_amps = part.get_amplitudes(2)
+                
             for l in range(3, level+1):
                 self._curr_amps.extend(part.get_amplitudes(l))
-            print self._curr_amps.nice_string()
+            #logger.info(self._curr_amps.nice_string())
 
         # Set _generate_info
         if len(self._curr_amps) > 0:
@@ -4407,7 +4423,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             #print self._generate_info
         else:
             print "No decay is found"
-        
 
 class MadGraphCmdWeb(CheckValidForCmdWeb,MadGraphCmd):
     """Temporary parser"""
