@@ -94,9 +94,6 @@ class TestMECmdShell(unittest.TestCase):
         # test the hep event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6.hep.gz'))
         
-        text = open('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt').read()
-        # check for the correct total cross-section
-        self.assertTrue("5.51648351e+03 +- 3.1224e+01" in text)
 
 
     def test_generate_events_lo_py6_stdhep(self):
@@ -116,9 +113,6 @@ class TestMECmdShell(unittest.TestCase):
         # test the hep event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q.hep.gz'))
         
-        text = open('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt').read()
-        # check for the correct total cross-section
-        self.assertTrue("5.51648351e+03 +- 3.1224e+01" in text)
 
         
     def test_generate_events_nlo_hw6_stdhep(self):
@@ -134,9 +128,6 @@ class TestMECmdShell(unittest.TestCase):
         # test the hep event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6.hep.gz'))
         
-        text = open('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt').read()
-        # check for the correct total cross-section
-        self.assertTrue("6.64659781e+03 +- 3.7758e+01" in text)
 
     def test_generate_events_nlo_py6_stdhep(self):
         """test the param_card created is correct"""
@@ -155,9 +146,6 @@ class TestMECmdShell(unittest.TestCase):
         # test the hep event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q.hep.gz'))
         
-        text = open('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt').read()
-        # check for the correct total cross-section
-        self.assertTrue("6.68336708e+03 +- 3.6889e+01" in text)
         
 
     def test_calculate_xsect_nlo(self):
@@ -171,9 +159,6 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the plot file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
-        text = open('/tmp/MGPROCESS/Events/run_01/res.txt').read()
-        # check for the correct total cross-section
-        self.assertTrue("6.62125958e+03 +- 2.7262e+01" in text)
 
 
     def test_calculate_xsect_lo(self):
@@ -187,9 +172,6 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the plot file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
-        text = open('/tmp/MGPROCESS/Events/run_01/res.txt').read()
-        # check for the correct total cross-section
-        self.assertTrue("6.62125958e+03 +- 2.7262e+01" in text)
         
 
     def load_result(self, run_name):
