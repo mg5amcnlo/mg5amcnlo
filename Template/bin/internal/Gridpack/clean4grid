@@ -53,7 +53,7 @@ if [[ -d Source ]]; then
     cd Source
     rm -f *.o >& /dev/null
     rm -f *.f >& /dev/null
-    rm -f *.inc >& /dev/null
+#    rm -f *.inc >& /dev/null
     rm -f DHELAS/*.F >& /dev/null
     rm -f DHELAS/*.f >& /dev/null
     rm -f DHELAS/*.o >& /dev/null
