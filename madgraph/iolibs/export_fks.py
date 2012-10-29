@@ -844,7 +844,7 @@ end
         os.system("ln -s "+name+"/ColorDenomFactors.dat ../")
         os.system("ln -s "+name+"/HelConfigs.dat ../")
         os.system("ln -s "+name+"/ColorNumFactors.dat ../")
-        os.system('ln ../../../Cards/MadLoopParams.dat . ')
+        os.system('ln -s ../../../Cards/MadLoopParams.dat . ')
 
         for file in linkfiles:
             ln('../../%s' % file)
@@ -2122,7 +2122,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
                      'MadLoopParams.inc']
 
-        os.system('ln ../../../Cards/MadLoopParams.dat . ')
+        os.system('ln -s ../../../Cards/MadLoopParams.dat . ')
         for file in linkfiles:
             ln('../../%s' % file)
 
