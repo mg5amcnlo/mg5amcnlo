@@ -2746,8 +2746,9 @@ calculator."""
             # Need to write the correct param_card in the correct place !!!
             cmd.exec_cmd('launch -n decay -f')
             param = check_param_card.ParamCard(pjoin(decay_dir, 'Events', 'decay','param_card.dat'))
-            for partial_width in param['decay'].decay_table[particle]:
-                decay_info[particle].append([partial_width.lhacode[1:], partial_width.value])
+            width = param['decay'].get((particle,)).value
+            for BR in param['decay'].decay_table[particle]:
+                decay_info[particle].append([BR.lhacode[1:], BR.value * width])
         
         return decay_info
         #decay_info[particle.get('pdg_code')].append([decay_to, value])
