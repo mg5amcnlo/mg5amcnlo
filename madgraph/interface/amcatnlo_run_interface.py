@@ -1979,8 +1979,11 @@ Integrated cross-section
                 nfail +=1
                 tolerance = float(line.split()[1])
 
-        logger.info('   Poles successfully cancel for %d points over %d (tolerance=%2.1e)' \
-                %(npass, nfail+npass, tolerance))
+        if float(nfail)/float(nfail+npass) > 0.1:
+            raise aMCatNLOError('Poles do not cancel, run cannot continue')
+        else:
+            logger.info('   Poles successfully cancel for %d points over %d (tolerance=%2.1e)' \
+                    %(npass, nfail+npass, tolerance))
 
 
 

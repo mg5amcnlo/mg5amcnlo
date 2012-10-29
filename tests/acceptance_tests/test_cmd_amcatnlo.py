@@ -66,6 +66,10 @@ class TestMECmdShell(unittest.TestCase):
         interface.onecmd('output /tmp/MGPROCESS/ -f')
         if not os.path.exists(pjoin(_file_path, os.path.pardir, 'MCatNLO-utilities')):
             interface.onecmd('install MCatNLO-utilities')
+            self.assertTrue(os.path.exists(\
+                    pjoin(_file_path, os.path.pardir, 'MCatNLO-utilities','MCatNLO','lib','libstdhep.a')))
+            self.assertTrue(os.path.exists(\
+                    pjoin(_file_path, os.path.pardir, 'MCatNLO-utilities','MCatNLO','lib','libFmcfio.a')))
         
         self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '/tmp/MGPROCESS')
         self.cmd_line.exec_cmd('set automatic_html_opening False')
