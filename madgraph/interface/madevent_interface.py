@@ -898,8 +898,13 @@ class CheckValidForCmd(object):
             The variable mg5_path should not be correctly configure.'''
             
         # Import model
-        model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
+        if not MADEVENT:
+            modelname = self.find_model_name()
+            model = import_ufo.import_model(modelname, decay=True)
+        else:
+            model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
                                         decay=True)
+            
         if not hasattr(model.get('particles')[0], 'partial_widths'):
             raise self.InvalidCmd, 'The UFO model does not include widths information. Impossible to compute widths automatically'
             
@@ -2662,16 +2667,17 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """Require MG5 directory: Compute automatically the widths of a set 
         of particles"""
 
-        args = self.split_arg(line)
-        # check the argument and return those in a dictionary format
-        args = self.check_compute_widths(args)
-        
         warning_text = """Be carefull automatic computation of the width is 
 ONLY valid if all three (or more) body decay are negligeable. In doubt use a 
 calculator."""
         
         logger.warning(warning_text)
         logger.info('In a future version of MG5 those mode will also be taken into account')
+      
+        args = self.split_arg(line)
+        # check the argument and return those in a dictionary format
+        args = self.check_compute_widths(args)
+        
         if args['input']:
             files.cp(args['input'], pjoin(self.me_dir, 'Cards'))
         elif not args['force']: 
@@ -3508,7 +3514,7 @@ calculator."""
                 text = fsock.read()
                 output_files = Gre.findall(text)
                 if not output_files:
-                    Ire = re.compile("for i in ([\d\s]*) ; do")
+                    Ire = re.compile("for i in ([\d\.\s]*) ; do")
                     data = Ire.findall(text)
                     data = ' '.join(data).split()
                     for nb in data:
@@ -4747,6 +4753,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         self.pname2block[var].append((bname, lha_id))
                     else:
                         self.pname2block[var] = [(bname, lha_id)]
+        
                     
         # check for conflict with run_card
         for var in self.pname2block:                
@@ -4776,6 +4783,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'block':'all', 'param_card':'default'}
             elif args[1] in self.param_card.keys():
                 allowed = {'block':args[1]}
+            elif args[1] == 'width':
+                allowed = {'block': 'decay'}
             else:
                 allowed = {'value':''}
         else:
@@ -4820,6 +4829,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if 'block' in allowed.keys():
             if allowed['block'] == 'all':
                 allowed_block = [i for i in self.param_card.keys() if 'qnumbers' not in i]
+                allowed_block.append('width')
                 possibilities['Param Card Block' ] = \
                                        self.list_completion(text, allowed_block)
             elif isinstance(allowed['block'], basestring):
@@ -4854,7 +4864,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         args = self.split_arg(line.lower())
         start = 0
         if len(args) < 2:
-            logger.warning('invalid set command')
+            logger.warning('invalid set command %s' % line)
             return
 
         card = '' #store which card need to be modify (for name conflict)
@@ -4868,7 +4878,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 card = args[0]
             start=1
             if len(args) < 3:
-                logger.warning('invalid set command')
+                logger.warning('invalid set command: %s' % line)
                 return
 
         #### RUN CARD
@@ -4898,7 +4908,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                               pjoin(self.me_dir,'Cards','run_card_default.dat'))
             
         ### PARAM_CARD WITH BLOCK NAME
-        elif args[start] in self.param_card and card != 'run_card':
+        elif (args[start] in self.param_card or args[start] == 'width') \
+                                                         and card != 'run_card':
+            if args[start] == 'width':
+                args[start] = 'decay'
+                
             if args[start+1] in self.conflict and card == '':
                 text = 'ambiguous name (present in both param_card and run_card. Please specify'
                 logger.warning(text)
@@ -4919,7 +4933,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 try:
                     key = tuple([int(i) for i in args[start+1:-1]])
                 except ValueError:
-                    logger.warning('invalid set command')
+                    logger.warning('invalid set command %s' % line)
                     return 
 
             if key in self.param_card[args[start]].param_dict:
@@ -4941,7 +4955,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         return
                     self.setP(args[start], key, value)
             else:
-                logger.warning('invalid set command')
+                logger.warning('invalid set command %s' % line)
                 return                   
             self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
         
@@ -4959,7 +4973,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning('all listed variables have been modified')
         #INVALID
         else:
-            logger.warning('invalid set command')
+            logger.warning('invalid set command %s' % line)
             return            
     
     def setR(self, name, value):

@@ -623,14 +623,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             return None# interactive mode
 
         line = self.get_stored_line()
-        print 'get store line returns: %s' % line
         # line define if a previous answer was not answer correctly 
         if not line:
             try:
                 line = self.inputfile.next()
-                print 'next line returns: %s' % line
             except StopIteration:
-                print 'get EOF: current line: %s' % line
                 if self.haspiping:
                     logger.debug('piping')
                     self.store_line(line)
@@ -640,7 +637,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 logger.warning('Use %s value' % default)
                 return str(default)
         
-        print 'GET line,', line
         line = line.replace('\n','').strip()
         if '#' in line: 
             line = line.split('#')[0]
