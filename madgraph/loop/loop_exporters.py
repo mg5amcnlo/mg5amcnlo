@@ -1053,7 +1053,7 @@ C                ENDIF
 
         # Extract helas calls
         born_amps_and_wfs_calls = fortran_model.get_born_ct_helas_calls(\
-                                               matrix_element, include_CT=False)
+                                                matrix_element, include_CT=True)
         
         # Turn these HELAS calls to the multiple-precision version of the HELAS
         # subroutines.

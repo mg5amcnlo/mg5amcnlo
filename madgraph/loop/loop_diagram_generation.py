@@ -1,5 +1,5 @@
-################################################################################
 #
+################################################################################
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
 # This file is a part of the MadGraph 5 project, an application which 
@@ -295,6 +295,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
         The tagging of the loop diagrams must be performed before using this 
         user loop filter"""
         
+        # By default the user filter does nothing, if you want to turn it on
+        # and edit it then remove the print statement below.
+        return
+
         new_diag_selection = base_objects.DiagramList()
         discarded_diags = base_objects.DiagramList()
         for diag in self['loop_diagrams']:
@@ -325,7 +329,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
             
             # If you need any more advanced function for your filter and cannot
             # figure out how to implement them. Just contact the authors.
-            
+
             if valid_diag:
                 new_diag_selection.append(diag)
             else:
@@ -642,9 +646,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
         self.setLoopCT_vertices()
         
         # Apply here some user-defined filter.
-        # For expert only, you can uncomment this and edit your own filter
-        # following the examples provided in the user_filter() function.
-        # self.user_filter(self['process']['model'],self['structure_repository'])
+        # For expert only, you can edit your own filter by modifying the
+        # user_filter() function which by default does nothing but in which you
+        # will find examples of common filters.
+        self.user_filter(self['process']['model'],self['structure_repository'])
 
         # Give some info about the run
         nLoopDiag = 0
