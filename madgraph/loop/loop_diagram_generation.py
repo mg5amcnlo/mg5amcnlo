@@ -621,10 +621,12 @@ class LoopAmplitude(diagram_generation.Amplitude):
         for diag in self['loop_diagrams']:
             diag.tag(self['structure_repository'],len(self['process']['legs'])+1\
                                 ,len(self['process']['legs'])+2,self['process'])
-            # Make sure not to consider wave-function renormalization, tadpoles, 
+            # Make sure not to consider wave-function renormalization, vanishing tadpoles, 
             # or redundant diagrams
+	    # HSS 19/09/2012
+	    # is_tadpole()-> is_vanishing_tadpole(self['process']['model'])
             if not diag.is_wf_correction(self['structure_repository'], \
-                       self['process']['model']) and not diag.is_tadpole() and \
+                       self['process']['model']) and not diag.is_vanishing_tadpole(self['process']['model']) and \
                                       diag['canonical_tag'] not in tag_selected:
                 loop_basis.append(diag)
                 tag_selected.append(diag['canonical_tag'])
@@ -746,7 +748,11 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Reset the l-cut particle list
         self.lcutpartemployed=[]
 
-        return loopsuccessful
+	# HSS 19/09/2012
+	return totloopsuccessful
+        # return loopsuccessful
+	# HSS
+
 
     def setUVCT(self):
         """ Scan all born diagrams and add for each all the corresponding UV 
@@ -1023,16 +1029,20 @@ class LoopAmplitude(diagram_generation.Amplitude):
       
         looplegs=[leg for leg in legs if leg['loop_line']]
         
-        # Get rid of all tadpoles
-        if(len([1 for leg in looplegs if leg['depth']==0])==2):
-            return []
+        # Get rid of all vanishing tadpoles
+	# HSS 19/09/2012
+        #Ease the access to the model
+        model=self['process']['model']
+	exlegs=[leg for leg in looplegs if leg['depth']==0]
+        if(len(exlegs)==2):
+	    if(any([part['mass'].lower()=='zero' for pdg,part in model.get('particle_dict').items() if pdg==abs(exlegs[0]['id'])])):
+            	return []
+        #if(len([1 for leg in looplegs if leg['depth']==0])==2):
+        #    return []
+	# HSS
 
         # Correctly propagate the loopflow
         loopline=(len(looplegs)==1)    
-
-        #Ease the access to the model
-        model=self['process']['model']
-
         mylegs = []
         for i, (leg_id, vert_id) in enumerate(leg_vert_ids):
             # We can now create the set of possible merged legs.
@@ -1051,7 +1061,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
                         # Check that the PDG of the outter particle in the 
                         # wavefunction renormalization bubble is equal to the
                         # one of the inner particle.
-                        if leg_id in depths:
+			# HSS 19/09/2012
+                        # if leg_id in depths:
+			# HSS
                             continue
                 
                 # If depth is not 0 because of being an external leg and not 
@@ -1090,16 +1102,26 @@ class LoopAmplitude(diagram_generation.Amplitude):
         looplegs=[leg for leg in legs if leg['loop_line']]
         nonlooplegs=[leg for leg in legs if not leg['loop_line']] 
 
-        # Get rid of all tadpoles
-        if(len([1 for leg in looplegs if leg['depth']==0])==2):
-            return []
+        # Get rid of all vanishing tadpoles
+	# HSS 19/09/2012
+	model=self['process']['model']
+	exlegs=[leg for leg in looplegs if leg['depth']==0]
+        if(len(exlegs)==2):
+	    if(any([part['mass'].lower()=='zero' for pdg,part in model.get('particle_dict').items() if pdg==abs(exlegs[0]['id'])])):
+            	return []
+        #if(len([1 for leg in looplegs if leg['depth']==0])==2):
+        #    return []
+	# HSS
+
 
         # Get rid of some wave-function renormalization diagrams already during
         # diagram generation already.In a similar manner as in get_combined_legs.
         if(len(legs)==3 and len(looplegs)==2):
             depths=(looplegs[0]['depth'],looplegs[1]['depth'])                    
             if (0 in depths) and (-1 not in depths) and depths!=(0,0):
-                if nonlooplegs[0]['id'] in depths:
+		# HSS 19/09/2012
+                # if nonlooplegs[0]['id'] in depths:
+		# HSS
                     return []
 
         return vert_ids

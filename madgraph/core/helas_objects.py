@@ -615,6 +615,23 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def is_majorana(self):
         return self.is_fermion() and self.get('self_antipart')
 
+    # HSS 28/09/2012
+    def incr_rank(self):
+	"""To check whether the associated 3-boson interaction should increase a rank. Now, it is only suitable for the SM."""
+	# make sure the interaction is a 3-boson one
+	if self.is_fermion():return False
+	if len([wf for wf in self.get('mothers')])!=2:return False
+	if len([wf for wf in self.get('mothers') if wf.is_boson()])!=2:return False
+
+	if self.get('spin')==1:
+	   scalar_num=1
+	else:
+	   scalar_num=0
+	scalar_num=scalar_num+len([wf for wf in self.get('mothers') if wf.get('spin')==1 and not wf.get('particle').get('ghost')])
+	return scalar_num % 2 != 1
+    # HSS
+
+
     def get_interaction_q_power(self):
         """ Returns the power of the loop momentum q brought by the interaction
         and propagator from which this loop wavefunction originates. This 
@@ -631,9 +648,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # lorentz structure but just use an SM ad-hoc rule that only 
         # the feynman rules for a three point vertex with only bosons bring
         # in one power of q.
-        if self.is_boson() and len([w for w in self.get('mothers') \
-                                                           if w.is_boson()])==2:
+	# HSS, 22/10/2012
+        # if self.is_boson() and len([w for w in self.get('mothers') \
+        #                                                   if w.is_boson()])==2:
+	if self.incr_rank():
             rank=rank+1
+	# HSS
         return rank
         
     def get_rank(self):
@@ -1453,9 +1473,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 'legs': legs})
 
             # Add s- and t-channels going down towards leg 1
+	    # HSS, 24/09/2012
+	    # legs[1]-> legs[-2]. Why is legs[1] ?
+	    # Thanks to Johan for confirming !
             mother_s, tchannels = \
-                      init_mothers1.get_s_and_t_channels(ninitial, legs[1],
+                      init_mothers1.get_s_and_t_channels(ninitial, legs[-2],
                                                          reverse_t_ch)
+	    # HSS	
             schannels.extend(mother_s)
 
             # Add vertex
@@ -2461,6 +2485,18 @@ class HelasAmplitude(base_objects.PhysicsObject):
         HelasWavefunctions on same footing."""
 
         return 0
+
+    # HSS 28/09/2012
+    def incr_rank(self):
+	"""To check whether the associated 3-boson interaction should increase a rank. Now, it is only suitable for the SM."""
+	# make sure the interaction is a 3-boson one
+	if len([wf for wf in self.get('mothers')])!=3:return False
+	if len([wf for wf in self.get('mothers') if wf.is_boson()])!=3:return False
+
+	scalar_num=len([wf for wf in self.get('mothers') if wf.get('spin')==1 and not wf.get('particle').get('ghost')])
+	return scalar_num % 2 != 1
+    # HSS
+
 
     def get_conjugate_index(self):
         """Return the index of the particle that should be conjugated."""
@@ -3974,9 +4010,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Gives (number or external particles, number of
         incoming particles)"""
 
-        external_wfs = filter(lambda wf: wf.get('leg_state') != \
-                              'intermediate',
-                              self.get_all_wavefunctions())
+	# HSS 25/09/2012
+	external_wfs = filter(lambda wf: not wf.get('mothers'),self.get_all_wavefunctions())
+        #external_wfs = filter(lambda wf: wf.get('leg_state') != \
+        #                      'intermediate',
+        #                      self.get_all_wavefunctions())
+	# HSS
 
         return (len(set([wf.get('number_external') for wf in \
                          external_wfs])),
@@ -4185,8 +4224,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # Compare bulk process properties (number of external legs,
         # identity factors, number of diagrams, number of wavefunctions
         # initial leg, final state legs
+	# HSS 25/09/2012
+	# len(decay1.get('processes')[0].get("legs"))!=len(decay1.get('processes')[0].get("legs"))
+	# correct the second decay1 as decay2
         if len(decay1.get('processes')[0].get("legs")) != \
-           len(decay1.get('processes')[0].get("legs")) or \
+           len(decay2.get('processes')[0].get("legs")) or \
            len(decay1.get('diagrams')) != len(decay2.get('diagrams')) or \
            decay1.get('identical_particle_factor') != \
            decay2.get('identical_particle_factor') or \
