@@ -1371,7 +1371,12 @@ Integrated cross-section
         #copy the showered stdhep file back in events
         if not self.shower_card['analyse']:
             if os.path.exists(pjoin(self.run_name, evt_name + '.hep')):
-                hep_file = '%s_%s.hep' % (evt_file[:-4], shower)
+                hep_file = '%s_%s_0.hep' % (evt_file[:-4], shower)
+                count = 0
+                while os.path.exists(hep_file + '.gz'):
+                    count +=1
+                    hep_file = '%s_%s_%d.hep' % (evt_file[:-4], shower, count)
+
                 misc.call(['mv %s %s' % (pjoin(self.run_name, evt_name + '.hep'), hep_file)], shell=True) 
                 misc.call(['gzip %s' % evt_file], shell=True)
                 misc.call(['gzip %s' % hep_file], shell=True)
@@ -1382,7 +1387,12 @@ Integrated cross-section
                             (hep_file, evt_file, shower))
             #this is for hw++
             elif os.path.exists(pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc')):
-                hep_file = '%s_%s.hepmc' % (evt_file[:-4], shower)
+                hep_file = '%s_%s_0.hepmc' % (evt_file[:-4], shower)
+                count = 0
+                while os.path.exists(hep_file + '.gz'):
+                    count +=1
+                    hep_file = '%s_%s_%d.hepmc' % (evt_file[:-4], shower, count)
+
                 misc.call(['mv %s %s' % \
                     (pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc'), hep_file)], shell=True) 
                 misc.call(['gzip %s' % evt_file], shell=True)
