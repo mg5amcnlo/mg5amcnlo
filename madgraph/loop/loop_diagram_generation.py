@@ -297,7 +297,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         
         # By default the user filter does nothing, if you want to turn it on
         # and edit it then remove the print statement below.
-        return
+        #return
 
         new_diag_selection = base_objects.DiagramList()
         discarded_diags = base_objects.DiagramList()
@@ -311,21 +311,21 @@ class LoopAmplitude(diagram_generation.Amplitude):
             #        Notice that here particles and antiparticles are not 
             #        differentiated and always the particle PDG is returned.
             #        In this example, only boxes are selected.
-            if len(diag.get_loop_lines_pdgs())!=4:
+            if len(diag.get_loop_lines_pdgs())!=2:
                 valid_diag=False
             
             # Ex. 2: Use the pdgs of the particles directly attached to the loop.
             #        In this example, we forbid the Z to branch off the loop.
-            if 23 in diag.get_pdgs_attached_to_loop(structs):
-                valid_diag=False
+            #if 23 in diag.get_pdgs_attached_to_loop(structs):
+            #    valid_diag=False
             
             # Ex. 3: Filter based on the mass of the particles running in the
             #        loop. It shows how to access the particles properties from
             #        the PDG. 
             #        In this example, only massive parts. are allowed in the loop.
-            if 'ZERO' in [model.get_particle(pdg).get('mass') for pdg in \
-                                                    diag.get_loop_lines_pdgs()]:
-                valid_diag=False
+            #if 'ZERO' in [model.get_particle(pdg).get('mass') for pdg in \
+            #                                        diag.get_loop_lines_pdgs()]:
+            #    valid_diag=False
             
             # If you need any more advanced function for your filter and cannot
             # figure out how to implement them. Just contact the authors.
@@ -798,7 +798,6 @@ class LoopAmplitude(diagram_generation.Amplitude):
         
         UVCTsuccessful, UVCTdiagrams = \
           super(LoopAmplitude, self).generate_diagrams(True)
-        
         for UVCTdiag in UVCTdiagrams:
             if UVCTdiag.get_order('UVCT_SPECIAL')==1:
                 newUVCTDiag = loop_base_objects.LoopUVCTDiagram({\
