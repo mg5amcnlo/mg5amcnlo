@@ -798,7 +798,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         
         UVCTsuccessful, UVCTdiagrams = \
           super(LoopAmplitude, self).generate_diagrams(True)
-        
+
         for UVCTdiag in UVCTdiagrams:
             if UVCTdiag.get_order('UVCT_SPECIAL')==1:
                 newUVCTDiag = loop_base_objects.LoopUVCTDiagram({\
