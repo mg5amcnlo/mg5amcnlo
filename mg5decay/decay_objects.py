@@ -508,14 +508,16 @@ class DecayParticle(base_objects.Particle):
         
 
     def get_vertexlist(self, partnum ,onshell):
-        """Return the n-body decay vertexlist.
-           partnum = n.
+        """Return the n-body on/offshell decay vertexlist. 
+           If there is no such vertex, return None.
+        
+           partnum = number of final particles.
            If onshell=false, return the on-shell list and vice versa.
         """
         #check the validity of arguments
         self.check_vertex_condition(partnum, onshell)
         
-        return self.get('decay_vertexlist')[(partnum, onshell)]
+        return self.get('decay_vertexlist').get((partnum, onshell), [])
 
     def set_vertexlist(self, partnum ,onshell, value, model = {}):
         """Set the n_body_decay_vertexlist,
@@ -792,8 +794,7 @@ class DecayParticle(base_objects.Particle):
 
         # If vertexlist has not been found before, run model.find_vertexlist
         if not model['vertexlist_found']:
-            logger.info("Vertexlist of this model has not been searched."+ \
-                "Automatically run the model.find_vertexlist()")
+            logger.info("Vertexlist of this model has not been searched. Searching it automatically...")
             model.find_vertexlist()
 
         # Find stable particles of this model
@@ -1371,10 +1372,12 @@ class DecayModel(model_reader.ModelReader):
         self['ab_model'].generate_ab_amplitudes(part.get_amplitudes(clevel))
 
             
-    def find_vertexlist(self):
+    def find_vertexlist(self, force=False):
         """ Check whether the interaction is able to decay from mother_part.
             Set the 'decay_vertexlist' of the corresponding particles.
-            Utilize in finding all the decay table of the whole model
+            Utilize in finding all the decay table of the whole model.
+            Note: only construct VertexList with particle as mother,
+                  fix the antiparticle vertices by conj_int_dict.
         """
 
         # Return if self['vertexlist_found'] is True.\
@@ -1392,29 +1395,30 @@ class DecayModel(model_reader.ModelReader):
         #vertexlist_dict = {}
 
         for part in self.get('particles'):
+            """
             # Initialized the decay_vertexlist
             part['decay_vertexlist'] = {(2, False) : base_objects.VertexList(),
                                         (2, True)  : base_objects.VertexList(),
                                         (3, False) : base_objects.VertexList(),
                                         (3, True)  : base_objects.VertexList()}
-
+                                        """
             if not part.get('is_stable'):
                 #All valid initial particles (mass != 0 and is_part == True)
                 ini_list.append(part.get_pdg_code())
-            #for partnum in [2, 3]:
-            #    for onshell in [False, True]:
-            #        vertexlist_dict[(part.get_pdg_code(), partnum,onshell)] = \
-            #            base_objects.VertexList()
+
 
         #Prepare the vertexlist        
         for inter in self['interactions']:
+
             #Calculate the particle number
             partnum = len(inter['particles']) - 1
-            
+
             temp_legs = base_objects.LegList()
             total_mass = 0
             validity = False
+
             for num, part in enumerate(inter['particles']):
+
                 #Check if the interaction contains valid initial particle
                 if part.get_anti_pdg_code() in ini_list:
                     validity = True
@@ -1428,15 +1432,17 @@ class DecayModel(model_reader.ModelReader):
                 continue
 
             for num, part in enumerate(inter['particles']):
-                #Get anti_pdg_code (pid for incoming particle)
+
+                # Get anti_pdg_code (pid for incoming particle)
                 pid = part.get_anti_pdg_code()
-                #Exclude invalid initial particle
+
+                # Exclude illegal initial particle
                 if not pid in ini_list:
                     continue
 
-                #Exclude initial particle appears in final particles
-                #i.e. radiation is excluded.
-                #count the number of abs(pdg_code)
+                # Exclude initial particle appears in final particles
+                # i.e. radiation is excluded.
+                # count the number of abs(pdg_code)
                 pid_list = [p.get('pdg_code') for p in inter.get('particles')]
                 if pid_list.count(abs(pid)) > 1:
                     continue
@@ -1458,16 +1464,27 @@ class DecayModel(model_reader.ModelReader):
                 temp_vertex = base_objects.Vertex({'id': inter.get('id'),
                                                    'legs':temp_legs_new})
 
-                #Record the vertex with key = (interaction_id, part_id)
-                if temp_vertex not in \
-                        self.get_particle(pid).get_vertexlist(partnum, onshell):
-                    try:
-                        self.get_particle(pid)['decay_vertexlist'][(\
-                                partnum, onshell)].append(temp_vertex)
-                    except KeyError:
-                        self.get_particle(pid)['decay_vertexlist'][(\
-                                partnum, onshell)] = base_objects.VertexList(\
-                            [temp_vertex])
+
+                # Record the vertex with key = (interaction_id, part_id)
+                try:
+                    # Raise error if this vertex appears already
+                    # (indication of mother appears in final state)
+                    if temp_vertex in self.get_particle(pid)['decay_vertexlist'][(partnum, onshell)] and not force:
+
+                        raise self.PhysicsObjectError,\
+                            "found duplicated %d-point vertices in %s" \
+                            % (partnum+1, self.get_particle(pid)['name'])
+
+                    self.get_particle(pid)['decay_vertexlist'][(\
+                            partnum, onshell)].append(temp_vertex)
+
+                # Create VertexList if necessary
+                except KeyError:
+                    self.get_particle(pid)['decay_vertexlist'][(\
+                            partnum, onshell)] = base_objects.VertexList(\
+                        [temp_vertex])
+
+
                         
         # Set the property vertexlist_found as True and for all particles
         self['vertexlist_found'] = True
@@ -1481,6 +1498,12 @@ class DecayModel(model_reader.ModelReader):
 
         for inter in self['interactions']:
             pids = [p.get_pdg_code() for p in inter['particles']]
+            conj_pids = [p.get_anti_pdg_code() for p in inter['particles']]
+
+            # Skip searching if the interaction is self-conjugate
+            if sorted(pids) == sorted(conj_pids):
+                continue
+
             found = False
             for item in interlist:
                 if sorted(item[1]) == sorted(pids) and \
@@ -1489,9 +1512,10 @@ class DecayModel(model_reader.ModelReader):
                     self['conj_int_dict'][inter['id']] = item[0]
                     found = True
                     break
-            if not found:
-                logger.debug('No CP conjugate found for interaction #%d' %inter['id'])
 
+            if not found:
+                logger.warning('No CP conjugate found for interaction #%d' %inter['id'])
+            
         #fdata = open(os.path.join(MG5DIR, 'models', self['name'], 'vertexlist_dict.dat'), 'w')
         #fdata.write(str(vertexlist_dict))
         #fdata.close()

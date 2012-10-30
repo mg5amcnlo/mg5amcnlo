@@ -326,6 +326,9 @@ class Test_DecayParticle(unittest.TestCase):
         self.assertEqual(temp_part.get_vertexlist(2, False),
                          templist)
 
+        # Test the result for keys don't exist
+        self.assertEqual(temp_part.get_vertexlist(4, True),
+                         [])
 
         # Reset the on-shell '2_body_decay_vertexlist'
         templist.extend(templist)
@@ -766,25 +769,132 @@ class Test_DecayModel(unittest.TestCase):
 
         # Test the exception of get_max_vertexorder
         self.assertEqual(None, self.my_testmodel.get_max_vertexorder())
-        self.my_testmodel.find_vertexlist()
-        self.my_testmodel.get('particle_dict')[5]['charge'] = 8
-        full_vertexlist = import_vertexlist.full_vertexlist_newindex
 
+
+        # Test find vertex exception when vertices are repeated
+        # (vertices already be stored in DecayParicles in the 1st search)
+        self.my_testmodel.find_vertexlist()
+        self.my_testmodel['vertexlist_found'] = False
+        self.assertRaises(decay_objects.DecayModel.PhysicsObjectError,
+                          self.my_testmodel.find_vertexlist)
+
+        # Ignore it by specifying it in argument.
+        self.my_testmodel['vertexlist_found'] = False
+        self.my_testmodel.find_vertexlist(True)
+
+        # Reset everything
+        self.my_testmodel['vertexlist_found'] = False
+        for p in self.my_testmodel['particles']:
+            p['decay_vertexlist'] = {}
+
+
+
+        # Test find vertexlist
+        self.my_testmodel.find_vertexlist()
+        empty = []
+
+        # General test by comparing to import_vertexlist
+        full_vertexlist = import_vertexlist.full_vertexlist_newindex
         for part in self.my_testmodel.get('particles'):
             for partnum in [2, 3]:
                 for onshell in [True, False]:
                     #print part.get_pdg_code(), partnum, onshell
-                    self.assertEqual(part.get_vertexlist(partnum, onshell),
-                                     full_vertexlist[(part.get_pdg_code(),
-                                                      partnum, onshell)])
+                    # Use get(key, default) to prevent keys do not exist
+                    result = part.get_vertexlist(partnum, onshell)
+                    goal = full_vertexlist.get((part.get_pdg_code(),
+                                                partnum, onshell), empty)
+
+                    self.assertEqual(result, goal)
+
+
+        # Specific test to top, w+, photon (very similar to another 
+        # test_find_vertexlist in DecayParticle)
+        tquark = decay_objects.DecayParticle(self.my_testmodel.get_particle(6),
+                                             True)
+        wboson_p = decay_objects.DecayParticle(\
+            self.my_testmodel.get_particle(24), True)
+        photon = decay_objects.DecayParticle(self.my_testmodel.get_particle(22),
+                                             True)
+
+        # Get vertex list
+        # t > b w+ (t~ b w+)
+        top_vlist_2_on = base_objects.VertexList()        
+        # w+ > t b~
+        w_vlist_2_on = base_objects.VertexList()
+        # w+ > e+ ve        
+        w_vlist_2_off = base_objects.VertexList()
+
+        for index, vertex in import_vertexlist.full_vertexlist.items():
+            legs_set = set([l['id'] for l in vertex['legs']])
+            if legs_set == set([5, 24, 6]) :
+                top_vlist_2_on.append(vertex)
+            elif legs_set == set([-11, 12, 24]):
+                w_vlist_2_on.append(vertex)
+            elif legs_set == set([-5, 6, 24]):
+                w_vlist_2_off.append(vertex)
         
-        self.assertEqual(2, self.my_testmodel.get_max_vertexorder())
+        rightlist_top = [empty, top_vlist_2_on, empty, empty]
+        rightlist_w =[w_vlist_2_off, w_vlist_2_on, empty, empty] 
+        rightlist_a =[empty, empty, empty, empty]
+
+        i=0
+        for partnum in [2,3]:
+            for onshell in [False, True]:
+                self.assertEqual(tquark.get_vertexlist(partnum, onshell),
+                                 rightlist_top[i])
+                self.assertEqual(wboson_p.get_vertexlist(partnum, onshell),
+                                 rightlist_w[i])
+                self.assertEqual(photon.get_vertexlist(partnum, onshell),
+                                 rightlist_a[i])
+                i +=1
+
+
+        # Test vertices with higher number of final particles (higher order)
+        #      Exceptions when vertices are repeated.
+        # Create 5-pt interaction
+        for interaction in self.my_testmodel.get('interactions'):
+            pids = set([p.get_pdg_code() for p in interaction.get('particles')])
+            if pids == set([-6, 24, 5]):
+                new_inter = copy.deepcopy(interaction)
+
+        # new_inter = -6, 24, 5, 5, 5
+        new_inter['id'] = 1000
+        new_inter['particles'].append(self.my_testmodel.get_particle(5))
+        new_inter['particles'].append(self.my_testmodel.get_particle(5))
+        self.my_testmodel['interactions'].append(new_inter)
+
+        # Reset everything
+        self.my_testmodel['vertexlist_found'] = False
+        self.my_testmodel.reset_dictionaries()
+        for p in self.my_testmodel['particles']:
+            p['decay_vertexlist'] = {}
+
+        # Set goal vertex
+        goal_vertex = copy.deepcopy(top_vlist_2_on[0])
+        goal_vertex['id'] = 1000
+        goal_vertex['legs'].insert(-1, base_objects.Leg({'id':5}))
+        goal_vertex['legs'].insert(-1, base_objects.Leg({'id':5}))
+        
+        # Test for both onshell and off-shell cases
+        self.my_testmodel.find_vertexlist()
+        # redefine tquark to
+        tquark = decay_objects.DecayParticle(self.my_testmodel.get_particle(6),
+                                             True)
+        self.assertEqual(tquark.get_vertexlist(4, True), 
+                         base_objects.VertexList([goal_vertex]))
+        self.assertEqual(tquark.get_vertexlist(4, False), empty)
+        
+
+
+        # Test miscellaneous properties setup in find_vertexlist
+        # Test get_max_vertexorder
+        self.assertEqual(4, self.my_testmodel.get_max_vertexorder())
         self.my_testmodel['max_vertexorder'] = 0
-        self.assertEqual(2, self.my_testmodel.get('max_vertexorder'))
+        self.assertEqual(4, self.my_testmodel.get('max_vertexorder'))
 
 
         # Test the get from particle
-        self.assertEqual(2, 
+        self.assertEqual(4, 
                         self.my_testmodel.get_particle(6).get_max_vertexorder())
 
 
@@ -801,6 +911,7 @@ class Test_DecayModel(unittest.TestCase):
             pids_2 = [p.get_anti_pdg_code() \
                           for p in self.my_testmodel.get_interaction(conj_key)['particles']]
             self.assertEqual(sorted(pids_1), sorted(pids_2) )
+
 
 
     def test_find_mssm_decay_groups(self):
