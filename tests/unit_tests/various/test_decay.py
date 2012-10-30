@@ -54,16 +54,22 @@ class Test_DecayParticle(unittest.TestCase):
     def setUp(self):
 
         #Import a model from my_testmodel
-        self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base, True)
+
+        self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base, 
+                                                     True)
         param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
         self.my_testmodel.read_param_card(param_path)
-        #print len(self.my_testmodel_base.get('interactions')), len(self.my_testmodel.get('interactions'))
+        #print len(self.my_testmodel_base.get('interactions')), 
+        #len(self.my_testmodel.get('interactions'))
+
 
         # Simplify the model
+
         particles = self.my_testmodel.get('particles')
         #print 'Here\n', self.my_testmodel['particles']
         interactions = self.my_testmodel.get('interactions')
         inter_list = copy.copy(interactions)
+        
         no_want_pid = [1, 2, 3, 4, 13, 14, 15, 16, 21, 23]
         for pid in no_want_pid:
             particles.remove(self.my_testmodel.get_particle(pid))
@@ -74,39 +80,61 @@ class Test_DecayParticle(unittest.TestCase):
                 interactions.remove(inter)
 
         # Set a new name
+
         self.my_testmodel.set('name', 'my_smallsm')
         self.my_testmodel.set('particles', particles)
         self.my_testmodel.set('interactions', interactions)
 
+
         #Setup the vertexlist for my_testmodel and save this model
+
         import_vertexlist.make_vertexlist(self.my_testmodel)
-        #save_model.save_model(os.path.join(MG5DIR, 'tests/input_files', self.my_testmodel['name']), self.my_testmodel)
+        #save_model.save_model(os.path.join(MG5DIR, 'tests/input_files', 
+        #self.my_testmodel['name']), self.my_testmodel)
+
 
         # Setup vertexlist for test
+
         full_vertexlist = import_vertexlist.full_vertexlist
-        # (54, 24): t b~ w-; (66,24): ve e- w-
-        self.my_2bodyvertexlist = base_objects.VertexList([
-                full_vertexlist[(54, 24)], full_vertexlist[(66, 24)]])
-        fake_vertex = copy.deepcopy(full_vertexlist[(54, 24)])
+
+        # Take w+ > t b~ and w+ > e+ ve (correct ones)
+        #      w- > t~ b and t~ > w- b~ (wrong initial particle)
+        self.my_2bodyvertexlist = base_objects.VertexList()
+        self.my_2bodyvertexlist_wrongini = base_objects.VertexList()
+        self.my_3bodyvertexlist = base_objects.VertexList()
+        self.my_3bodyvertexlist_wrongini = base_objects.VertexList()
+        self.my_3bodyvertexlist_radiactive = base_objects.VertexList()
+
+        for index, vertex in full_vertexlist.items():
+            legs_set = set([l['id'] for l in vertex['legs']])
+            if legs_set == set([-5, 6, 24]) :
+                self.my_2bodyvertexlist.append(vertex)
+            elif legs_set == set([-11, 12, 24]):
+                self.my_2bodyvertexlist.append(vertex)
+            elif legs_set == set([-6, 5, -24]):
+                self.my_2bodyvertexlist_wrongini.append(vertex)
+            elif legs_set == set([-5, -24, -6]):
+                self.my_2bodyvertexlist_wrongini.append(vertex)
+
+        # Artificial 3-body vertices
+        fake_vertex = copy.deepcopy(self.my_2bodyvertexlist[0])
         fake_vertex['legs'].append(base_objects.Leg({'id':22}))
-        fake_vertex2 = copy.deepcopy(full_vertexlist[(66, 24)])
+        fake_vertex2 = copy.deepcopy(self.my_2bodyvertexlist[1])
         fake_vertex2['legs'].append(base_objects.Leg({'id': 11}))
-        self.my_3bodyvertexlist = base_objects.VertexList([
-                fake_vertex, fake_vertex2])
+        self.my_3bodyvertexlist.extend([fake_vertex, fake_vertex2])
 
-        # (33, -24): t~ b w+; (54,-6): b~ w- t
-        self.my_2bodyvertexlist_wrongini = base_objects.VertexList([
-                full_vertexlist[(33, -24)], full_vertexlist[(54, -6)]])
-        fake_vertex3 = copy.deepcopy(full_vertexlist[(33, -24 )])
+        # Artificial 3-body vertices with wrong initial particle
+        fake_vertex3 = copy.deepcopy(self.my_2bodyvertexlist_wrongini[0])
         fake_vertex3['legs'].append(base_objects.Leg({'id':12}))
-        self.my_3bodyvertexlist_wrongini = base_objects.VertexList([
-                fake_vertex3])
+        self.my_3bodyvertexlist_wrongini.append(fake_vertex3)
 
-        fake_vertex4 = copy.deepcopy(full_vertexlist[(54, 24 )])
+        # Artificial 3-body vertices with radiation
+        fake_vertex4 = copy.deepcopy(self.my_2bodyvertexlist[0])
         fake_vertex4['legs'].append(base_objects.Leg({'id':24}))
-        self.my_3bodyvertexlist_radiactive = base_objects.VertexList([
-                fake_vertex4])
+        self.my_3bodyvertexlist_radiactive.append(fake_vertex4)
+
         
+        # Testing particle
         self.mydict = {'name':'w+',
                       'antiname':'w-',
                       'spin':3,
@@ -146,20 +174,20 @@ class Test_DecayParticle(unittest.TestCase):
         
         mypart2 = decay_objects.DecayParticle()
 
-        #To avoid the error raised when setting the vertexlist
-        #because of the wrong particle id.
+        # To avoid the error raised when setting the vertexlist
+        # because of the wrong particle id.
         mypart2.set('pdg_code', self.mydict['pdg_code'])
         for key in self.mydict:
-            #Test for the __init__ assign values as mydict
+            # Test for the __init__ assign values as mydict
             self.assertEqual(self.mydict[key], self.mypart[key])
 
-            #Test the set function
+            # Test the set function
             mypart2.set(key, self.mydict[key])
             #print key, mypart2[key]
             self.assertEqual(mypart2[key], self.mydict[key])
 
         for key in self.mypart:
-            #Test the get function return the value as in mypart
+            # Test the get function return the value as in mypart
             # Note: for apx_decaywidth_err, .get will call 
             # estimate_decaywidth_error to recalculate
             # so the result will be one for zero width
@@ -173,19 +201,19 @@ class Test_DecayParticle(unittest.TestCase):
         myWrongdict = self.mydict
         myWrongdict['Wrongkey'] = 'wrongvalue'
 
-        #Test __init__
+        # Test __init__
         self.assertRaises(AssertionError, decay_objects.DecayParticle,myNondict)
         # Do not check if the input dict has wrong dict!
         #self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
         #                  decay_objects.DecayParticle, myWrongdict)
                           
-        #Test get
+        # Test get
         self.assertRaises(AssertionError, self.mypart.get, myNondict)
 
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
                           self.mypart.get, 'WrongParameter')
                           
-        #Test set
+        # Test set
         self.assertRaises(AssertionError, self.mypart.set, myNondict, 1)
 
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
@@ -288,41 +316,49 @@ class Test_DecayParticle(unittest.TestCase):
     def test_getsetvertexlist_correct(self):
         """Test the get and set for vertexlist is correct"""
         temp_part = self.mypart
-        #Reset the off-shell '2_body_decay_vertexlist'
+
+        # Reset the off-shell '2_body_decay_vertexlist'
         templist = self.my_2bodyvertexlist
         templist.extend(templist)
         temp_part.set_vertexlist(2, False, templist)
-        #Test for equality from get_vertexlist
-        self.assertEqual(temp_part.get_vertexlist(2, False), \
-                             templist)
 
-        #Reset the on-shell '2_body_decay_vertexlist'
+        # Test for equality from get_vertexlist
+        self.assertEqual(temp_part.get_vertexlist(2, False),
+                         templist)
+
+
+        # Reset the on-shell '2_body_decay_vertexlist'
         templist.extend(templist)
         temp_part.set_vertexlist(2, True, templist)
-        #Test for equality from get_vertexlist
-        self.assertEqual(temp_part.get_vertexlist(2, True), \
-                             templist)
 
-        #Reset the off-shell '3_body_decay_vertexlist'
+        # Test for equality from get_vertexlist
+        self.assertEqual(temp_part.get_vertexlist(2, True),
+                         templist)
+
+
+        # Reset the off-shell '3_body_decay_vertexlist'
         templist = self.my_3bodyvertexlist
         templist.extend(templist)
         temp_part.set_vertexlist(3, False, templist)
-        #Test for equality from get_vertexlist
-        self.assertEqual(temp_part.get_vertexlist(3, False), \
-                             templist)
 
-        #Reset the on-shell '3_body_decay_vertexlist'
+        # Test for equality from get_vertexlist
+        self.assertEqual(temp_part.get_vertexlist(3, False),
+                         templist)
+
+
+        # Reset the on-shell '3_body_decay_vertexlist'
         templist.extend(templist)
         temp_part.set_vertexlist(3, True, templist)
-        #Test for equality from get_vertexlist
-        self.assertEqual(temp_part.get_vertexlist(3, True), \
-                             templist)
+
+        # Test for equality from get_vertexlist
+        self.assertEqual(temp_part.get_vertexlist(3, True),
+                         templist)
 
     def test_getsetvertexlist_exceptions(self):
         """Test for the exceptions raised by the get_ or set_vertexlist"""
 
-        #Test of get_ and set_vertexlist
-        #Test the exceptions raised from partnum and onshell
+        # Test of get_ and set_vertexlist
+        # Test the exceptions raised from partnum and onshell
         for wrongpartnum in ['string', 1.5]:
             self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
                               self.mypart.get_vertexlist, wrongpartnum, True)
@@ -339,8 +375,8 @@ class Test_DecayParticle(unittest.TestCase):
 
         
 
-        #Test the exceptions raised from value in set_vertexlist
-        #Test for non vertexlist objects
+        # Test the exceptions raised from value in set_vertexlist
+        # Test for non vertexlist objects
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
                           self.mypart.set_vertexlist,
                           2, True, ['not', 'Vertexlist'], self.my_testmodel)
@@ -353,9 +389,9 @@ class Test_DecayParticle(unittest.TestCase):
                           self.mypart.set_vertexlist,
                           3, True, self.my_2bodyvertexlist, self.my_testmodel)
 
-        #Test for vertexlist not consistent with initial particle
-        #for both number and id
-        #Use the vertexlist from test_getsetvertexlist_exceptions
+        # Test for vertexlist not consistent with initial particle
+        # for both number and id
+        # Use the vertexlist from test_getsetvertexlist_exceptions
 
         Wrong_vertexlist = [self.my_2bodyvertexlist_wrongini,
                             self.my_3bodyvertexlist_wrongini,
@@ -403,13 +439,14 @@ class Test_DecayParticle(unittest.TestCase):
     def test_find_vertexlist(self):
         """ Test for the find_vertexlist function and 
             the get_max_vertexorder"""
-        #undefine object: my_testmodel, mypart, extra_part
         
-        #Test validity of arguments
-        #Test if the calling particle is in the model
+        # Test validity of arguments
+        # Test if the calling particle is in the model
         extra_part = copy.copy(self.mypart)
         extra_part.set('pdg_code', 2)
         extra_part.set('name', 'u')
+
+
         # Test the return of get_max_vertexorder if  vertexlist_found = False
         self.assertEqual(None, extra_part.get_max_vertexorder())
 
@@ -417,70 +454,71 @@ class Test_DecayParticle(unittest.TestCase):
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
                           extra_part.find_vertexlist, self.my_testmodel)
 
-        #Test if option is boolean
+
+        # Test if option is boolean
         wronglist=[ 'a', 5, {'key': 9}, [1,5]]
         for wrongarg in wronglist:
             self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
                               self.mypart.find_vertexlist, self.my_testmodel,\
                               wrongarg)
 
-        #Import the vertexlist from import_vertexlist
-        full_vertexlist = import_vertexlist.full_vertexlist
 
-        #Test the correctness of vertexlist by t quark
-        tquark = decay_objects.DecayParticle(self.my_testmodel.get_particle(6),True)
+        # Test find_vertexlist in t quark, w+ boson, photon
+
+        tquark = decay_objects.DecayParticle(self.my_testmodel.get_particle(6),
+                                             True)
         tquark.find_vertexlist(self.my_testmodel)
 
-        #Name convention: 'pdg_code'+'particle #'+'on-shell' (0: offshell, 1:onshell)
-
-        my_vertexlist620 = base_objects.VertexList()
-        # t > b w+ (t~ b w+)
-        my_vertexlist621 = base_objects.VertexList([full_vertexlist[(33, 6)]])
-        my_vertexlist630 = base_objects.VertexList()
-        my_vertexlist631 = base_objects.VertexList()
-        rightlist6 = [my_vertexlist620, my_vertexlist621, my_vertexlist630, my_vertexlist631]
-
-        #Test the find_vertexlist for W+
-        wboson_p = decay_objects.DecayParticle(self.my_testmodel.get_particle(24), True)
+        wboson_p = decay_objects.DecayParticle(\
+            self.my_testmodel.get_particle(24), True)
         wboson_p.find_vertexlist(self.my_testmodel)
-        #List must follow the order of interaction id so as to be consistent
-        #with the find_vertexlist function
-        # w+ > t b~
-        my_vertexlist2420 = base_objects.VertexList([full_vertexlist[(54, 24)]])
-        # w+ > e+ ve
-        my_vertexlist2421 = base_objects.VertexList([full_vertexlist[(66, 24)]])
-        my_vertexlist2430 = base_objects.VertexList()
-        my_vertexlist2431 = base_objects.VertexList()
-        #List of the total decay vertex list for W+
-        rightlist24 =[my_vertexlist2420, my_vertexlist2421, my_vertexlist2430, my_vertexlist2431]
 
-        #Test the find_vertexlist for A (photon)
-        photon = decay_objects.DecayParticle(self.my_testmodel.get_particle(22), True)
+        # photon is known as stable after stable particles are found internally
+        # in find_vertexlist
+        photon = decay_objects.DecayParticle(self.my_testmodel.get_particle(22),
+                                             True)
         photon.find_vertexlist(self.my_testmodel)
-        #vertex is in the order of interaction id
-        my_vertexlist2220 = base_objects.VertexList()
-        my_vertexlist2221 = base_objects.VertexList()
-        my_vertexlist2230 = base_objects.VertexList()
-        my_vertexlist2231 = base_objects.VertexList()
-        #List of the total decay vertex list for photon
-        rightlist22 =[my_vertexlist2220, my_vertexlist2221, my_vertexlist2230, my_vertexlist2231]
+
+        # Get vertex list
+        blank_vlist = base_objects.VertexList()
+        # t > b w+ (t~ b w+)
+        top_vlist_2_on = base_objects.VertexList()        
+        # w+ > t b~
+        w_vlist_2_on = base_objects.VertexList()
+        # w+ > e+ ve        
+        w_vlist_2_off = base_objects.VertexList()
+
+        for index, vertex in import_vertexlist.full_vertexlist.items():
+            legs_set = set([l['id'] for l in vertex['legs']])
+            if legs_set == set([5, 24, 6]) :
+                top_vlist_2_on.append(vertex)
+            elif legs_set == set([-11, 12, 24]):
+                w_vlist_2_on.append(vertex)
+            elif legs_set == set([-5, 6, 24]):
+                w_vlist_2_off.append(vertex)
+        
+        rightlist_top = [blank_vlist, top_vlist_2_on, blank_vlist, blank_vlist]
+        rightlist_w =[w_vlist_2_off, w_vlist_2_on, blank_vlist, blank_vlist] 
+        rightlist_a =[blank_vlist, blank_vlist, blank_vlist, blank_vlist]
 
         i=0
         for partnum in [2,3]:
             for onshell in [False, True]:
                 self.assertEqual(tquark.get_vertexlist(partnum, onshell),
-                                 rightlist6[i])
+                                 rightlist_top[i])
                 self.assertEqual(wboson_p.get_vertexlist(partnum, onshell),
-                                 rightlist24[i])
+                                 rightlist_w[i])
                 self.assertEqual(photon.get_vertexlist(partnum, onshell),
-                                 rightlist22[i])
+                                 rightlist_a[i])
                 i +=1
 
-        # Test for correct get_max_vertexorder()
+
+        # Test get_max_vertexorder()
         self.assertEqual(0, photon.get_max_vertexorder())
         self.assertEqual(2, tquark.get_max_vertexorder())
         self.mypart['vertexlist_found'] = True
         self.assertEqual(3, self.mypart.get_max_vertexorder())
+
 
     def test_setget_channel(self):
         """ Test of the get_channel set_channel functions (and the underlying
@@ -493,18 +531,26 @@ class Test_DecayParticle(unittest.TestCase):
                  base_objects.Leg({'id':25, 'number':1, 'state': False}),
                  base_objects.Leg({'id':25, 'number':2})])})
 
-        # h > t t~
-        vert_1 = copy.deepcopy(full_vertexlist[(62, 25)])
+        for index, vertex in import_vertexlist.full_vertexlist.items():
+            legs_set = set([l['id'] for l in vertex['legs']])
+            # h > t t~
+            if legs_set == set([-6, 6, 25]) :
+                vert_1 = copy.deepcopy(vertex)
+            # t > b w+ = (t~ b w+)
+            elif legs_set == set([-5, -24, -6]):
+                vert_2 = copy.deepcopy(vertex)
+            # t~ > b~ w- = (t b~ w-)
+            elif legs_set == set([5, 24, 6]):
+                vert_3 = copy.deepcopy(vertex)
+
         vert_1['legs'][0]['number'] = 2
         vert_1['legs'][1]['number'] = 3
         vert_1['legs'][2]['number'] = 2
-        # t > b w+ = (t~ b w+)
-        vert_2 = copy.deepcopy(full_vertexlist[(54, -6)])
+
         vert_2['legs'][0]['number'] = 2
         vert_2['legs'][1]['number'] = 4
         vert_2['legs'][2]['number'] = 2
-        # t~ > b~ w- = (t b~ w-)
-        vert_3 = copy.deepcopy(full_vertexlist[(33, 6)])
+
         vert_3['legs'][0]['number'] = 3
         vert_3['legs'][1]['number'] = 5
         vert_3['legs'][2]['number'] = 3
@@ -514,6 +560,7 @@ class Test_DecayParticle(unittest.TestCase):
                                            vert_3, vert_2, 
                                            vert_1, vert_0])})
         channellist = decay_objects.ChannelList([h_tt_bbww])
+
 
         # Test set and get
         higgs = self.my_testmodel.get_particle(25)
@@ -525,7 +572,9 @@ class Test_DecayParticle(unittest.TestCase):
         higgs.set_channels(4, True, [h_tt_bbww])
         self.assertEqual(higgs.get_channels(4, True), channellist)
 
+
         # Test for exceptions
+
         # Wrong final particle number
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError, 
                           higgs.set_channels, 'non_int', True, [h_tt_bbww])
@@ -551,6 +600,7 @@ class Test_DecayParticle(unittest.TestCase):
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError, 
                           higgs.set_channels, 3, False, [h_tt_bbww],
                           self.my_testmodel)
+
 
     def test_get_max_level(self):
         """ Test the get_max_level function. """
@@ -590,6 +640,8 @@ class Test_DecayParticleList(unittest.TestCase):
         #Test the conversion in generate_dict
         for num, part in decay_partlist.generate_dict().items():
             self.assertTrue(isinstance(part, decay_objects.DecayParticle))
+
+
 #===============================================================================
 # TestDecayModel
 #===============================================================================
@@ -649,6 +701,7 @@ class Test_DecayModel(unittest.TestCase):
 
         self.my_testmodel.set('vertexlist_found', True)
         self.assertEqual(self.my_testmodel.get('vertexlist_found'), True)
+
         self.my_testmodel.set('vertexlist_found', False)
         self.assertRaises(self.my_testmodel.PhysicsObjectError,
                           self.my_testmodel.filter, 'max_vertexorder', 'a')
@@ -663,39 +716,48 @@ class Test_DecayModel(unittest.TestCase):
         """Test if the DecayModel can convert the assign particle into
            decay particle"""
 
-        #Test the particle is DecayParticle during generator stage
-        #Test the default_setup first
+        # Test the particle is DecayParticle during generator stage
+        # Test the default_setup first
         temp_model = decay_objects.DecayModel()
         self.assertTrue(isinstance(temp_model.get('particles'),
                               decay_objects.DecayParticleList))
 
-        #Test the embeded set in __init__
+
+        # Test the embeded set in __init__
         self.assertTrue(isinstance(self.decay_model.get('particles'), 
                                    decay_objects.DecayParticleList))
 
-        #Test the conversion into DecayParticle explicitly
-        #by the set function
+
+        # Test the conversion into DecayParticle explicitly
+        # by the set function
         mg5_particlelist = self.base_model['particles']
 
         result = self.decay_model.set('particles', mg5_particlelist, True)
 
-        #Using ParticleList to set should be fine, the result is converted
-        #into DecayParticleList.
+
+        # Using ParticleList to set should be fine, the result is converted
+        # into DecayParticleList.
         self.assertTrue(result)
         self.assertTrue(isinstance(self.decay_model['particles'],
                               decay_objects.DecayParticleList))
 
-        #particle_dict should contain DecayParticle
+
+        # particle_dict should contain DecayParticle
         self.assertTrue(isinstance(self.decay_model.get('particle_dict')[6],
                                    decay_objects.DecayParticle))
 
-        #Test if the set function returns correctly when assign a bad value
-        try:
-            self.assertFalse(self.decay_model.set('particles', 'NotParticleList'))
-        except:
-            self.assertRaises(AssertionError, self.decay_model.set, 'particles', 'NotParticleList')
 
-        #Test if the particls in interaction is converted to DecayParticle
+        # Test if the set function returns correctly when assign a bad value
+        try:
+            self.assertFalse(self.decay_model.set('particles', 
+                                                  'NotParticleList'))
+        except:
+            self.assertRaises(AssertionError, 
+                              self.decay_model.set, 
+                              'particles', 'NotParticleList')
+
+
+        # Test if the particls in interaction is converted to DecayParticle
         self.assertTrue(isinstance(self.decay_model['interactions'][-1]['particles'], decay_objects.DecayParticleList))
                         
 
@@ -719,14 +781,18 @@ class Test_DecayModel(unittest.TestCase):
         self.assertEqual(2, self.my_testmodel.get_max_vertexorder())
         self.my_testmodel['max_vertexorder'] = 0
         self.assertEqual(2, self.my_testmodel.get('max_vertexorder'))
+
+
         # Test the get from particle
         self.assertEqual(2, 
                         self.my_testmodel.get_particle(6).get_max_vertexorder())
+
 
         # Test the assignment of vertexlist_found property
         self.assertTrue(self.my_testmodel.get('vertexlist_found'))
         self.assertTrue(all([p.get('vertexlist_found') for p in \
                                 self.my_testmodel.get('particles')]))
+
 
         # Test for the CP conjugation dict
         for key, conj_key in self.my_testmodel['conj_int_dict'].items():
@@ -735,6 +801,21 @@ class Test_DecayModel(unittest.TestCase):
             pids_2 = [p.get_anti_pdg_code() \
                           for p in self.my_testmodel.get_interaction(conj_key)['particles']]
             self.assertEqual(sorted(pids_1), sorted(pids_2) )
+
+
+    def test_find_mssm_decay_groups(self):
+        """Test finding the decay groups of the MSSM"""
+
+        mssm = import_ufo.import_model('mssm')
+        decay_mssm = decay_objects.DecayModel(mssm, True)
+        decay_mssm.find_decay_groups()
+        goal_groups = [[25, 35, 36, 37],
+                       [1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000011, 1000012, 1000013, 1000014, 1000015, 1000016, 1000021, 1000022, 1000023, 1000024, 1000025, 1000035, 1000037, 2000001, 2000002, 2000003, 2000004, 2000005, 2000006, 2000011, 2000013, 2000015]]
+
+        # find_decay_groups_general should be run automatically
+        for i, group in enumerate(decay_mssm['decay_groups']):
+            self.assertEqual(sorted([p.get('pdg_code') for p in group]),
+                             goal_groups[i])
 
     def test_find_mssm_decay_groups_modified_mssm(self):
         """Test finding the decay groups of the MSSM"""
@@ -751,6 +832,7 @@ class Test_DecayModel(unittest.TestCase):
 
         interactions = mssm.get('interactions')
         inter_list = copy.copy(interactions)
+
         for interaction in inter_list:
             if any([p.get('pdg_code') in no_want_particle_codes for p in \
                         interaction.get('particles')]):
@@ -776,19 +858,7 @@ class Test_DecayModel(unittest.TestCase):
                                   for group in decay_mssm['decay_groups']]),
                          goal_groups)
 
-    def test_find_mssm_decay_groups(self):
-        """Test finding the decay groups of the MSSM"""
 
-        mssm = import_ufo.import_model('mssm')
-        decay_mssm = decay_objects.DecayModel(mssm, True)
-        decay_mssm.find_decay_groups()
-        goal_groups = [[25, 35, 36, 37],
-                       [1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000011, 1000012, 1000013, 1000014, 1000015, 1000016, 1000021, 1000022, 1000023, 1000024, 1000025, 1000035, 1000037, 2000001, 2000002, 2000003, 2000004, 2000005, 2000006, 2000011, 2000013, 2000015]]
-
-        # find_decay_groups_general should be run automatically
-        for i, group in enumerate(decay_mssm['decay_groups']):
-            self.assertEqual(sorted([p.get('pdg_code') for p in group]),
-                             goal_groups[i])
     def test_find_mssm_decay_groups_general(self):
         """Test finding the decay groups of the MSSM"""
 
@@ -799,8 +869,9 @@ class Test_DecayModel(unittest.TestCase):
                                   '../input_files/param_card_mssm.dat')
         decay_mssm.read_param_card(param_path)
 
-        goal_groups = [[1,2,3,4,11,12,13,14, 15, 16,21,22, 23, 24, 25, 35, 36, 37], # 15 and from 23 are calculated
-                       # others are massless default
+        # In first group, 15 and from 23 are calculated,
+        # others are massless default.
+        goal_groups = [[1,2,3,4,11,12,13,14, 15, 16,21,22, 23, 24, 25, 35, 36, 37], 
                        [1000001, 1000002, 1000003, 1000004, 1000011, 1000012, 1000013, 1000014, 1000015, 1000016, 1000021, 1000022, 1000023, 1000024, 1000025, 1000035, 1000037, 2000001, 2000002, 2000003, 2000004, 2000011, 2000013, 2000015],
                        [1000005, 1000006, 2000005, 2000006], 
                        [5, 6]]
@@ -826,6 +897,7 @@ class Test_DecayModel(unittest.TestCase):
     def test_find_mssm_decay_groups_modified_mssm_general(self):
         """Test finding the decay groups of the MSSM using general way.
            Test to get decay_groups and stable_particles from get."""
+
         # Setup the mssm with parameters read in.
         mssm = import_ufo.import_model('mssm')
         decay_mssm = decay_objects.DecayModel(mssm, True)
@@ -934,9 +1006,11 @@ class Test_DecayModel(unittest.TestCase):
                               for group in mssm_decay_groups]),
                          goal_groups)
  
+
         # Test if all useless interactions are deleted.
         for inter in decay_mssm['reduced_interactions']:
             self.assertTrue(len(inter['particles']))
+
 
         # Test stable particles
         # Reset the decay_groups, test the auto-run of find_decay_groups_general
@@ -945,6 +1019,7 @@ class Test_DecayModel(unittest.TestCase):
 
         self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in plist])) for plist in decay_mssm['stable_particles']]), goal_stable_particle_ids)
         
+
         # Test the assignment of is_stable to particles
         goal_stable_pid = [1,2,3,4,5,11,12,13,14,16,21,22,1000012,1000014,
                            1000015, 2000001, 2000003, 2000011]
@@ -952,6 +1027,7 @@ class Test_DecayModel(unittest.TestCase):
                                      for p in decay_mssm.get('particles') \
                                      if p.get('is_stable')]), goal_stable_pid)
         self.assertTrue(decay_mssm.get_particle(-goal_stable_pid[0]).get('is_stable'))
+
 
         # Test the advance search of stable particles
         for p in decay_mssm['particles']:
@@ -968,6 +1044,8 @@ class Test_DecayModel(unittest.TestCase):
                                         (1000012,),(1000014,),(1000015,),
                                         (2000001,),( 2000003,),( 2000011,)])
         self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in plist])) for plist in decay_mssm['stable_particles']]), goal_stable_particles_ad)
+
+
         
     def test_find_full_sm_decay_groups(self):
         """ Test the algorithm in find stable particle in full sm.
@@ -1057,6 +1135,7 @@ class Test_DecayModel(unittest.TestCase):
                                      if p.get('is_stable')]), goal_stable_pid_2)
 
 
+
     def test_find_full_sm_decay_groups_advance(self):
         """ Test the algorithm in find_stable_particles_advance in full sm.
             First, test the full sm with massive neutrinos.
@@ -1114,8 +1193,17 @@ class Test_DecayModel(unittest.TestCase):
                                      if p.get('is_stable')]), goal_stable_pid_2)
             
 
+
     def test_running_couplings(self):
-        """ Test the running coupling constants in DecayModel."""
+        """ Test the running coupling constants in DecayModel.
+            param_card uses:
+            Block SMINPUTS 
+            1 1.279340e+02 # aEWM1 
+            2 1.166370e-05 # Gf 
+            3 1.180000e-01 # aS 
+            4 9.118760e+01 # MMZ 
+            """
+
 
         # Read mssm
         model_base = import_ufo.import_model('mssm')
@@ -1189,17 +1277,24 @@ class Test_DecayModel(unittest.TestCase):
 
 
         # Test for parameters
+
         # Ru11 should not change
         self.assertAlmostEqual(decay_objects.RUU1x1, Ru11_old)
+
         # G should change
         self.assertAlmostEqual(decay_objects.G, \
                                    2*cmath.sqrt(temp_aS)*cmath.sqrt(cmath.pi))
+
+
         # Test for couplings
+
         # GC_365 should not change
         self.assertAlmostEqual(eval('decay_objects.'+coup0.name), coup0_old)
+
         # Both of GC_114 ('aS',) and GC_15 ('aEWSM1', 'aS') should change
         self.assertAlmostEqual(eval('decay_objects.'+coup_aS.name), \
                                    -decay_objects.G)
+
         # copying the expr of 
         self.assertAlmostEqual(eval('decay_objects.'+coup_both.name), \
                                    (-2*decay_objects.ee*complex(0,1)*decay_objects.G*decay_objects.I12x33)/3. - (2*decay_objects.ee*complex(0,1)*decay_objects.G*decay_objects.I13x33)/3.)
@@ -1216,6 +1311,7 @@ class Test_Channel(unittest.TestCase):
 
     def setUp(self):
         """ Set up necessary objects for the test"""
+
         #Import a model from my_testmodel
         self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base, True)
         param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
@@ -1246,23 +1342,42 @@ class Test_Channel(unittest.TestCase):
 
         #Setup the vertexlist for my_testmodel and save this model (optional)
         import_vertexlist.make_vertexlist(self.my_testmodel)
-        
+        # Report results
+        #import_vertexlist
+
         # Save files to check vertices number
         # check input_files/model_name/interaction.py for vertex number
         #save_model.save_model(os.path.join(MG5DIR, 'tests/input_files', 
         #                      self.my_testmodel['name']), self.my_testmodel)
     
         full_vertexlist = import_vertexlist.full_vertexlist
+
+        # Get vertices
+        for index, vertex in full_vertexlist.items():
+            legs_set = set([l['id'] for l in vertex['legs']])
+            if legs_set == set([-6, 6, 25]) :
+                # h > t t~
+                vert_1 = copy.deepcopy(vertex)
+            elif legs_set == set([5, 24, 6]):
+                # t~ > b~ w- (decay of antiparticle)
+                # t > b w+ 
+                vert_2 = copy.deepcopy(vertex)
+                vert_3 = copy.deepcopy(vertex)
+                vert_6 = copy.deepcopy(vertex)
+            elif legs_set == set([-11, 12, 24]):
+                # w- > e- v~ (decay of antiparticle)
+                # w+ > e+ v
+                vert_4 = copy.deepcopy(vertex)
+                vert_5 = copy.deepcopy(vertex)
+
+
         # h > t t~ > b b~ w+ w-
-        # h > t t~
-        vert_1 = copy.deepcopy(full_vertexlist[(62, 25)])
         vert_1['legs'][0]['number'] = 2
         vert_1['legs'][1]['number'] = 3
         vert_1['legs'][2]['number'] = 1
         vert_1['legs'][2]['state'] = False
 
         # t~ > b~ w- (decay of antiparticle)
-        vert_2 = copy.deepcopy(full_vertexlist[(33, 6)])
         vert_2['legs'][0]['number'] = 2
         vert_2['legs'][1]['number'] = 4
         vert_2['legs'][2]['number'] = 2
@@ -1272,13 +1387,11 @@ class Test_Channel(unittest.TestCase):
         vert_2['id'] = self.my_testmodel['conj_int_dict'][33]
 
         # t > b w+
-        vert_3 = copy.deepcopy(full_vertexlist[(33, 6)])
         vert_3['legs'][0]['number'] = 3
         vert_3['legs'][1]['number'] = 5
         vert_3['legs'][2]['number'] = 3
 
         # w- > e- v~ (decay of antiparticle)
-        vert_4 = copy.deepcopy(full_vertexlist[(66, 24)])
         vert_4['legs'][0]['number'] = 4
         vert_4['legs'][1]['number'] = 6
         vert_4['legs'][2]['number'] = 4
@@ -1288,7 +1401,6 @@ class Test_Channel(unittest.TestCase):
         vert_4['id'] = self.my_testmodel['conj_int_dict'][66]
 
         # w+ > e+ v
-        vert_5 = copy.deepcopy(full_vertexlist[(66, 24)])
         vert_5['legs'][0]['number'] = 5
         vert_5['legs'][1]['number'] = 7
         vert_5['legs'][2]['number'] = 5
@@ -1304,7 +1416,6 @@ class Test_Channel(unittest.TestCase):
         #pic.draw()
 
         # t > b w+
-        vert_6 = copy.deepcopy(full_vertexlist[(33, 6)])
         vert_6['legs'][0]['number'] = 2
         vert_6['legs'][1]['number'] = 3
         vert_6['legs'][2]['number'] = 1
@@ -1720,17 +1831,32 @@ class Test_Channel(unittest.TestCase):
             self.assertEqual(c['vertices'][-1]['legs'][-1]['state'], False)
             self.assertEqual(c.get_initial_id(), 6)
 
+
         # Create two equivalent channels,
         # check whether if only one of them is found.
-        # h > z (z > e e~)
+
+        # Get vertices
+        for index, vertex in import_vertexlist.full_vertexlist.items():
+            legs_set = set([l['id'] for l in vertex['legs']])
+            if legs_set == set([23, 23, 25]) :
+                # h > z z
+                vert_1 = copy.deepcopy(vertex)
+            elif legs_set == set([11, -11, 23]):
+                # z > e- e+ 
+                vert_2 = copy.deepcopy(vertex)
+            elif legs_set == set([24, -24, 25]):
+                # h > w+ w-
+                vert_3 = copy.deepcopy(vertex)
+            elif legs_set == set([-11, 12, 24]):
+                # w+ > e+ ve
+                vert_4 = copy.deepcopy(vertex)
+
+        # 1.) h > z (z > e e~)
         vert_0 = self.h_tt_bbmmvv.get('vertices')[-1] 
-        vert_1 = import_vertexlist.full_vertexlist[(13, 25)]
         vert_1['legs'][0]['number'] = 2
         vert_1['legs'][1]['number'] = 3
         vert_1['legs'][2]['number'] = 1
         vert_1['legs'][2]['state'] = False
-
-        vert_2 = import_vertexlist.full_vertexlist[(40, 23)]
         #print vert_1, vert_2
 
         channel_a = decay_objects.Channel({'vertices': base_objects.VertexList(\
@@ -1747,14 +1873,12 @@ class Test_Channel(unittest.TestCase):
         channel_b['has_idpart']=True
         #print channel_a.nice_string(), '\n', channel_b.nice_string()
 
-        # Create two equivalent channels
-        # h > w+ w- > e+ ve~ e- ve
-        vert_3 = import_vertexlist.full_vertexlist[(7, 25)]
+
+        # 2.) h > w+ w- > e+ ve~ e- ve
         vert_3['legs'][0]['number'] = 2
         vert_3['legs'][1]['number'] = 3
         vert_3['legs'][2]['number'] = 1
         vert_3['legs'][2]['state'] = False
-        vert_4 = import_vertexlist.full_vertexlist[(66, 24)]
 
         channel_c = decay_objects.Channel({'vertices': base_objects.VertexList(\
                     [vert_3])})
@@ -1772,16 +1896,17 @@ class Test_Channel(unittest.TestCase):
         channel_c.calculate_orders(self.my_testmodel)
         channel_d.calculate_orders(self.my_testmodel)
         
+
         # Test of find_channels
         # The program should run find_stable_particles automatically.
         self.my_testmodel.find_channels(self.my_testmodel.get_particle(5), 3)
         self.assertFalse(self.my_testmodel.get_particle(5).get_channels(3, True))
         self.assertTrue(self.my_testmodel['stable_particles'])
 
+
         higgs.find_channels(3, self.my_testmodel)
         higgs.find_channels_nextlevel(self.my_testmodel)
         result1 = higgs.get_channels(3, True)
-        
         #print result1.nice_string()
 
 
@@ -1829,7 +1954,11 @@ class Test_Channel(unittest.TestCase):
 
                                            
     def test_apx_decaywidth(self):
-        """ Test for the approximation of decay rate"""
+        """ Test for the approximation of decay rate, including
+            get_apx_fnrule, get_apx_matrixelement_sq (onshell and offshell),
+            get_apx_psarea"""
+
+        # Import SM
 
         full_sm_base = import_ufo.import_model('sm')
         full_sm = decay_objects.DecayModel(full_sm_base, True)
@@ -1838,6 +1967,7 @@ class Test_Channel(unittest.TestCase):
         #                                   full_sm['name']), full_sm)
 
         higgs = self.my_testmodel.get_particle(25)
+
         # Set the higgs mass < Z-boson mass so that identicle particles appear
         # in final state
         MH_new = 91
@@ -1845,110 +1975,156 @@ class Test_Channel(unittest.TestCase):
         higgs.find_channels(4, self.my_testmodel)
 
 
-        # Test of the symmetric factor
-        #print higgs.get_channels(3, False).nice_string()
-        #print higgs.get_channels(4, True).nice_string()
-        h_zz_llll_1 = higgs.get_channels(4, True)[5]
-        h_zz_llll_2 = higgs.get_channels(4, True)[6]
-        # higgs > w (w > l vl)
-        channel_1 = higgs.get_channels(3, True)[0]
-        #print 'h_zz_llll_symm:', h_zz_llll_1.nice_string(), '\n',\
-        #    'h_zz_llll_no_symm:', h_zz_llll_2.nice_string(), '\n',\
-        #    'channel_1:', channel_1.nice_string()
+        # Choose h > w- e+ ve
 
-        h_zz_llll_1.get_apx_psarea(self.my_testmodel)
-        h_zz_llll_2.get_apx_psarea(self.my_testmodel)
-        self.assertEqual(4, h_zz_llll_1['s_factor'])
-        self.assertEqual(1, h_zz_llll_2['s_factor'])
+        for c in higgs.get_channels(3, True):
+            final_ids = set([l.get('id') for l in c.get_final_legs()])
+            if final_ids == set([-11, 12, -24]):
+                h_ww_weve = c
+        #print h_ww_weve.nice_string()
+
+        # Choose h > w- e+ ve, h > w- t b~
+
+        for c in higgs.get_channels(3, False):
+            final_ids = set([l.get('id') for l in c.get_final_legs()])
+            if final_ids == set([-5, 5, 23]):
+                h_zz_zbb = c
+            # Distiguish h > ww > w t b~ from h > tt~ > t w b~
+            if final_ids == set([-5, 6, -24]) \
+                    and abs(c['vertices'][-1]['legs'][0]['id']) == 24:
+                h_ww_wtb = c
+        #print h_ww_wtb.nice_string(), h_zz_zbb.nice_string()
+
+
+        # Choose h > 2e+ 2e-, h > vt~ vt b b~
+        """print higgs.get_channels(3, True).nice_string()
+        print higgs.get_channels(4, True).nice_string()"""
+
+        for c in higgs.get_channels(4, True):
+            final_ids = set([l.get('id') for l in c.get_final_legs()])
+            #print final_ids
+            if final_ids == set([11, -11, 11, -11]):
+                h_zz_2epairs = c
+            if final_ids == set([14, -14, 5, -5]):
+                h_zz_bbvtvt  = c
+        #print h_zz_bbvtvt.nice_string(), h_zz_2epairs.nice_string()
+        
+        
+        # Test of the symmetric factor
+
+        h_zz_2epairs.get_apx_psarea(self.my_testmodel)
+        h_zz_bbvtvt.get_apx_psarea(self.my_testmodel)
+        self.assertEqual(4, h_zz_2epairs['s_factor'])
+        self.assertEqual(1, h_zz_bbvtvt['s_factor'])
 
 
         # Test of the get_apx_fnrule
 
-        MW = channel_1.get('final_mass_list')[-1]
-        #print channel_1.get('final_mass_list')
-        #print channel_1.get_apx_matrixelement_sq(self.my_testmodel)
+        MW = h_ww_weve.get('final_mass_list')[-1]
+        #print h_ww_weve.get('final_mass_list')
+        #print h_ww_weve.get_apx_matrixelement_sq(self.my_testmodel)
         #print 'Vertor boson, onshell:', \
-        #    channel_1.get_apx_fnrule(24, 0.5,
+        #    h_ww_weve.get_apx_fnrule(24, 0.5,
         #                            False, self.my_testmodel)
         q_offshell = 10
         q_offshell_2 = 88
         q_onshell = 200
-        self.assertAlmostEqual(channel_1.get_apx_fnrule(24, q_onshell, 
+
+        # Spin 1
+        self.assertAlmostEqual(h_ww_weve.get_apx_fnrule(24, q_onshell, 
                                                   True, self.my_testmodel),
                          (1+1/(MW ** 2)*q_onshell **2))
-        self.assertAlmostEqual(channel_1.get_apx_fnrule(24, q_offshell, 
+        self.assertAlmostEqual(h_ww_weve.get_apx_fnrule(24, q_offshell, 
                                                   False, self.my_testmodel),
                           ((1-2*((q_offshell/MW) ** 2)+(q_offshell/MW) ** 4)/ \
                                ((q_offshell**2-MW **2)**2)))
         # Fermion
-        self.assertEqual(channel_1.get_apx_fnrule(11, q_onshell, 
+        self.assertEqual(h_ww_weve.get_apx_fnrule(11, q_onshell, 
                                                   True, self.my_testmodel),
                          q_onshell*2)
-        self.assertEqual(channel_1.get_apx_fnrule(6, q_onshell, 
+        self.assertEqual(h_ww_weve.get_apx_fnrule(6, q_onshell, 
                                                   True, self.my_testmodel),
                          q_onshell*2)
-        self.assertAlmostEqual(channel_1.get_apx_fnrule(6, q_offshell, 
+        self.assertAlmostEqual(h_ww_weve.get_apx_fnrule(6, q_offshell, 
                                                   False, self.my_testmodel),
                          q_offshell**2/(q_offshell ** 2 - decay_objects.MT **2)\
                              ** 2)
         # Scalar
-        self.assertEqual(channel_1.get_apx_fnrule(25, q_onshell, 
+        self.assertEqual(h_ww_weve.get_apx_fnrule(25, q_onshell, 
                                                   True, self.my_testmodel),
                          1)
 
-        self.assertAlmostEqual(channel_1.get_apx_fnrule(25, q_offshell_2, 
+        self.assertAlmostEqual(h_ww_weve.get_apx_fnrule(25, q_offshell_2, 
                                                   False, self.my_testmodel),
                                1/(q_offshell_2 ** 2 - MH_new ** 2)**2, 5)
+
+
 
         # Test of matrix element square calculation
 
         E_mean = (MH_new-MW)/3
 
-        #print channel_1.get_apx_fnrule(-24, 2*E_mean, False, full_sm)
-        #print self.my_testmodel.get_interaction(7), self.my_testmodel.get_interaction(66)
-        #print channel_1.get_apx_fnrule(24, E_mean+MW, True, self.my_testmodel)
+        """
+        print h_ww_weve.get_apx_fnrule(-24, 2*E_mean, False, full_sm)
+        print self.my_testmodel.get_interaction(7), 
+        self.my_testmodel.get_interaction(66)
+        print h_ww_weve.get_apx_fnrule(24, E_mean+MW, True, self.my_testmodel)
+        """
 
-        # couplings: h > w w (GC_32);  w > e ve (GC_17)
-        hww, wev = None, None
+        g_hww, g_wev = None, None
         for candidate in full_sm_base['interactions']:
             if [p['pdg_code'] for p in candidate['particles']] == [24, 24, 25]:
-                hww = candidate['couplings'][(0,0)]
+                g_hww = candidate['couplings'][(0,0)]
             if [p['pdg_code'] for p in candidate['particles']] == [12,11,24]:
-                wev = candidate['couplings'][(0,0)]
+                g_wev = candidate['couplings'][(0,0)]
 
         
 
-        #print self.my_testmodel.get_interaction(7), self.my_testmodel.get_interaction(63)
+        #print self.my_testmodel.get_interaction(7), 
+        #self.my_testmodel.get_interaction(63)
         self.assertAlmostEqual(
-            channel_1.get_apx_matrixelement_sq(self.my_testmodel),
+            h_ww_weve.get_apx_matrixelement_sq(self.my_testmodel),
             ((E_mean**2*4*(1-2*(2*E_mean/MW)**2+(2*E_mean/MW)**4)\
                   /(((2*E_mean)**2-MW **2)**2))*\
                  (1+(1/MW*(E_mean+MW))**2)*\
-                 abs(getattr(decay_objects,wev)) **2*\
-                 abs(getattr(decay_objects,hww)) **2)
+                 abs(getattr(decay_objects,g_wev)) **2*\
+                 abs(getattr(decay_objects,g_hww)) **2)
             )
 
+
+        # Test color multiplicity
+
+        # Choose hadronic decay and leptonic decay of tau
         tau = full_sm.get_particle(15)
-        tau.find_channels(3, full_sm)
-        tau_qdecay = tau.get_channels(3, True)[0]
-        tau_ldecay = tau.get_channels(3, True)[2]
-        #print tau_qdecay.nice_string()
-        self.assertAlmostEqual(tau_qdecay.get_apx_decaywidth(full_sm)/ \
-                                   tau_ldecay.get_apx_decaywidth(full_sm), 3)
         MTAU = abs(eval('decay_objects.' + tau.get('mass')))
+        tau.find_channels(3, full_sm)
+        for c in tau.get_channels(3, True):
+            final_ids = set([l.get('id') for l in c.get_final_legs()])
+            #print final_ids
+            if final_ids == set([-2, 1, 16]):
+                tau_qdecay = c
+            if final_ids == set([-14, 13, 16]):
+                tau_ldecay = c
+        """print tau_qdecay.nice_string(), tau_ldecay.nice_string()"""
+
+
+        # width of hadronic decay ~ 3* leptonic
+        self.assertAlmostEqual(tau_qdecay.get_apx_decaywidth(full_sm),
+                               3*tau_ldecay.get_apx_decaywidth(full_sm))
+
         # Using the coupling constant of w > e ve
         self.assertAlmostEqual(tau_qdecay.get_apx_matrixelement_sq(full_sm),
                                ((MTAU/3) **3 *8*3*MTAU*
                                 (1-2*(2*MTAU/(3*MW))**2 +(2*MTAU/(3*MW))**4)/ \
                                     ((2*MTAU/3) ** 2 - MW **2) **2 *\
-                                    abs(getattr(decay_objects,wev)) **4))
+                                    abs(getattr(decay_objects,g_wev)) **4))
+
+
 
         # Test for off-shell estimation of matrix element
-        h_ww_wtb = higgs.get_channels(3, False)[0]
+
+        # matrix element: replacing some of the energy into E_est_mean
         E_est_mean = MH_new/4
-        # h_ww_wtb.get_apx_decaywidth_nextlevel(full_sm)
-        #print h_ww_wtb.nice_string()
-        # coupl: as the onshell case
         self.assertAlmostEqual(h_ww_wtb.get_apx_matrixelement_sq(full_sm),
                                h_ww_wtb.get_apx_fnrule(5, E_est_mean,
                                                        True, full_sm)* \
@@ -1961,38 +2137,57 @@ class Test_Channel(unittest.TestCase):
                                                                est = True)*\
                                    h_ww_wtb.get_apx_fnrule(25, MH_new,
                                                            True, full_sm)*\
-                                   abs(getattr(decay_objects,hww)) **2 *\
-                                   abs(getattr(decay_objects,wev)) **2)
+                                   abs(getattr(decay_objects,g_hww)) **2 *\
+                                   abs(getattr(decay_objects,g_wev)) **2)
+
+        
 
         # Test of phase space area calculation
+
+        # On-shell phase space area
         #print 'Tau decay ps_area', tau_qdecay.get_apx_psarea(full_sm)
         self.assertAlmostEqual(tau_qdecay.calculate_apx_psarea(1.777, [0,0]),
                                 1/(8*math.pi))
         self.assertAlmostEqual(tau_qdecay.calculate_apx_psarea(1.777, [0,0,0]),
                                0.000477383, 5)
-        self.assertAlmostEqual(channel_1.get_apx_psarea(full_sm), 0.0042786859,5)
+        self.assertAlmostEqual(h_ww_weve.get_apx_psarea(full_sm), 
+                               0.0042786859,5)
 
-        # Test for estimation of off-shell case
+        # Estimation for off-shell case
         self.assertAlmostEqual(h_ww_wtb.get_apx_psarea(full_sm),
                                 1/512/math.pi **3 * 0.8 * MH_new **2)
 
 
-        # Test of decay width
+
+        # Test of decay width = matrix element * phase space are
+
+        # tau hadronic decay
         self.assertAlmostEqual(tau_qdecay.get_apx_decaywidth(full_sm),
                                (0.5/1.777)*tau_qdecay.get_apx_psarea(full_sm)*\
                                    tau_qdecay.get_apx_matrixelement_sq(full_sm))
 
 
-        # Test of the estimated further decay width of off shell channel
-        # Channels impossible for next-level decay
+
+        # Test of the estimated higher level width for off-shell channel
+
+        # Channels with no next-level decay
         self.assertEqual(h_ww_wtb.get_apx_decaywidth_nextlevel(full_sm), 0.)
-        # Channels possible for next-level decay
+
+        # find all channels, width of particles are updated automatically,
+        # couplings are also ran according to mother particles.
         full_sm.find_all_channels(3)
-        h_zz_zbb = higgs.get_channels(3, False)[2]
-        #print "h_zz_zbb:", h_zz_zbb.nice_string()
         WZ = full_sm.get_particle(23).get('apx_decaywidth')
         WW = full_sm.get_particle(24).get('apx_decaywidth')
 
+        # Offshell case: Brett-Wigner correction of propagator
+
+        self.assertAlmostEqual(h_ww_weve.get_apx_fnrule(24, q_offshell, 
+                                                 False, full_sm),
+                               ((1-2*((q_offshell/MW) ** 2)+(q_offshell/MW) ** 4)/ \
+                             (((q_offshell**2-MW **2)**2+MW**2*WW**2)))
+                               )
+
+        # Channels with next-level decay: h > z b b~
         ratio = (1+ WZ*abs(decay_objects.MZ)/MH_new*\
                      (1/4/math.pi)*MH_new **3 *0.8/ \
                      h_zz_zbb.get_apx_fnrule(23, decay_objects.MZ,
@@ -2009,21 +2204,15 @@ class Test_Channel(unittest.TestCase):
 
 
 
-        # Test of the Brett-Wigner correction of propagator
-        self.assertAlmostEqual(channel_1.get_apx_fnrule(24, q_offshell, 
-                                                 False, full_sm),
-                               ((1-2*((q_offshell/MW) ** 2)+(q_offshell/MW) ** 4)/ \
-                             (((q_offshell**2-MW **2)**2+MW**2*WW**2)))
-                               )
-
-
+        """ MSSM test
         model_base = import_ufo.import_model('mssm')
-        param_path = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
+        param_path = os.path.join(_file_path,
+        '../input_files/param_card_mssm.dat')
         model = decay_objects.DecayModel(model_base, force=True)
         model.read_param_card(param_path)
         model.find_all_channels(2)
 
-        channel_2 = copy.deepcopy(channel_1)
+        channel_2 = copy.deepcopy(h_ww_weve)
         channel_2['vertices'][0]['legs'][0]['id'] = -1000024
         channel_2['vertices'][0]['legs'][1]['id'] = 1000024
         channel_2['vertices'][0]['legs'][2]['id'] = 23
@@ -2041,6 +2230,7 @@ class Test_Channel(unittest.TestCase):
         #print channel_2.get_apx_decaywidth(model)
         #print channel_2.get_apx_decaywidth_nextlevel(model)
         #print channel_2.nice_string()
+        """
 
     def test_colormultiplicity(self):
         """ Test the color_multiplicity_def of the DecayModel object and
@@ -2261,9 +2451,19 @@ class Test_DecayAmplitude(unittest.TestCase):
         self.my_testmodel.find_all_channels(4)
         #print higgs.get_channels(4, True).nice_string()
         #print t.get_channels(2,True)[0]
-        # Process No. 6 & 10
-        h_mmvv_1 = higgs.get_channels(4, True)[6-1]
-        h_mmvv_2 = higgs.get_channels(4, True)[10-1]
+
+        # Get channels: h > ww > e+ e- ve ve~
+        #               h > zz > e+ e- e+ e-
+        for c in higgs.get_channels(4, True):
+            final_ids = set([l['id'] for l in c.get_final_legs()])
+            if final_ids == set([11, -11, 12, -12]):
+                # w mediated, not z
+                if abs(c['vertices'][0]['legs'][-1]['id']) == 24:
+                    h_mmvv_1 = c
+            if final_ids == set([11, -11, 11, -11]):
+                # z mediated
+                if abs(c['vertices'][0]['legs'][-1]['id']) == 23:
+                    h_mmvv_2 = c
 
 
         # Test the initialization
@@ -2309,6 +2509,7 @@ class Test_DecayAmplitude(unittest.TestCase):
         goal_width += h_mmvv_2.get('apx_decaywidth')
         amplt_h_mmvv.get('diagrams').append(h_mmvv_2)
 
+
         # Test if the reset works.
         amplt_h_mmvv.reset_width_br()
         self.assertEqual(amplt_h_mmvv['apx_decaywidth'], 0.)
@@ -2322,10 +2523,10 @@ class Test_DecayAmplitude(unittest.TestCase):
         # WARNING should show for getting br from zero-width particle.
         amplt_h_mmvv.get('apx_br')
 
+
         # Test for non-self-conjugate mother
         self.assertEqual(amplt_t_bw.get('apx_br'), 1.)
         
-
 
         # Test for exceptions in set get of Amplitude
         wrong_prop_list = {'process': [1, 'a', base_objects.Diagram()],
@@ -2342,6 +2543,7 @@ class Test_DecayAmplitude(unittest.TestCase):
         higgs.set('decay_amplitudes', {4: my_amplist})
         self.assertEqual(higgs.get('decay_amplitudes'), {4: my_amplist})
 
+
         # Test for exceptions
         valuelist = ['nondict', {'a': my_amplist}, {4: base_objects.Process()}]
         for value in valuelist:
@@ -2355,10 +2557,12 @@ class Test_DecayAmplitude(unittest.TestCase):
         self.assertEqual(higgs.get_amplitudes(4), 
                          decay_objects.DecayAmplitudeList())
 
+
         # Test the set from normal list of Amplitude
         higgs.set_amplitudes(4, [amplt_h_mmvv])
         self.assertEqual(higgs.get_amplitudes(4), my_amplist)
         self.assertEqual(higgs.get_amplitudes(6), None)
+
 
         # Test for exceptions
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
@@ -2378,6 +2582,7 @@ class Test_DecayAmplitude(unittest.TestCase):
         self.assertEqual(higgs.get_amplitude([-12, -12, 11, 12]),
                          None)
 
+
         # Test for exception
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
                           higgs.get_amplitude,
@@ -2385,6 +2590,7 @@ class Test_DecayAmplitude(unittest.TestCase):
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
                           higgs.get_amplitude,
                           ['a', 1.23])
+
 
     def test_group_channels2amplitudes(self):
         """ Test the group_channels_2_amplitudes function."""
@@ -2394,13 +2600,35 @@ class Test_DecayAmplitude(unittest.TestCase):
         decay_objects.MH = 50
 
         # Set channels and amplitude
+
         self.my_testmodel.find_all_channels(4)
         #print higgs.get_channels(4, True).nice_string()
-        h_mmvv_1 = higgs.get_channels(4, True)[0]
-        h_mmvv_2 = higgs.get_channels(4, True)[9]
-        amplt_h_mmvv = decay_objects.DecayAmplitude(h_mmvv_1,
+
+        # Get channels: h > ww > e+ e- ve ve~
+        #               h > zz > e+ e- ve ve~
+        #               h > zz > e+ e- e+ e-
+        for c in higgs.get_channels(4, True):
+            final_ids = set([l['id'] for l in c.get_final_legs()])
+            if final_ids == set([13, -13, 14, -14]):
+                # w mediated, not z
+                if abs(c['vertices'][0]['legs'][-1]['id']) == 24:
+                    h_mmvv_1 = c
+                # z mediated
+                elif abs(c['vertices'][0]['legs'][-1]['id']) == 23:
+                    h_mmvv_2 = c
+            if final_ids == set([11, -11, 11, -11]):
+                h_epairs = c
+
+
+        #print h_mmvv_1.nice_string(), h_mmvv_2.nice_string()
+        amplt_h_mmvv = decay_objects.DecayAmplitude(h_mmvv_1, self.my_testmodel)
+        amplt_h_mmvv.add_std_diagram(h_mmvv_2)
+        amplt_h_epairs = decay_objects.DecayAmplitude(h_epairs, 
                                                       self.my_testmodel)
-        # Test for exceptions in arguments.
+
+
+        # Test for exceptions
+
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
                           higgs.group_channels_2_amplitudes,
                           'a', self.my_testmodel)
@@ -2408,15 +2636,20 @@ class Test_DecayAmplitude(unittest.TestCase):
                           higgs.group_channels_2_amplitudes,
                           3, 'a')
 
+
         # Test if the group works
+
         higgs.find_channels(4, self.my_testmodel)
         higgs.group_channels_2_amplitudes(4, self.my_testmodel)
         #print higgs.get_amplitudes(4).nice_string()
 
-        # Grouping will calculate the decaywidth but not the apx_br
+        # Group function will calculate the decaywidth but not the apx_br
+        # fix it manually to compare with automatic result
         amplt_h_mmvv.get('apx_decaywidth')
+        amplt_h_epairs.get('apx_decaywidth')
 
         self.assertTrue(amplt_h_mmvv in higgs.get_amplitudes(4))
+        self.assertTrue(amplt_h_epairs in higgs.get_amplitudes(4))
 
 
     def test_decaytable_string(self):
@@ -2462,8 +2695,10 @@ class Test_DecayAmplitude(unittest.TestCase):
                          amp_list[0])
         self.assertFalse(amp_list.get_amplitude([-11, 11, 6, -6]))
 
+
     def test_add_std_diagram(self):
         """ Test the add_std_diagram of DecayAmplitude."""
+
         # Setup higgs and lower its mass
         higgs = self.my_testmodel.get_particle(25)
         decay_objects.MH = 50
