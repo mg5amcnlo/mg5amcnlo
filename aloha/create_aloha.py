@@ -279,14 +279,14 @@ in presence of majorana particle/flow violation"""
                     else:
                         spin_id = id
                     nb_spinor += 1
-                    if not self.spin32_massless and id %2:
+                    if not (self.spin32_massless) and (spin_id % 2):
                         lorentz *= Spin3halfPropagatorout(id, 'I2', spin_id,'I3', outgoing)
-                    elif not self.spin32_massless :
-                        lorentz *= Spin3halfPropagatorin('I2', id, 'I3', spin_id, outgoing)                      
-                    elif id %2:
+                    elif not self.spin32_massless and not (spin_id % 2):
+                        lorentz *= Spin3halfPropagatorin('I2', id, 'I3', spin_id, outgoing)
+                    elif spin_id %2:
                         lorentz *= Spin3halfPropagatorMasslessOut(id, 'I2', spin_id,'I3', outgoing)
                     else :
-                        lorentz *= Spin3halfPropagatorMasslessIn('I2', id, 'I3', spin_id, outgoing)                      
+                        lorentz *= Spin3halfPropagatorMasslessIn('I2', id, 'I3', spin_id, outgoing)
           
                 elif spin == 5 :
                     #lorentz *= 1 # delayed evaluation (fastenize the code)
