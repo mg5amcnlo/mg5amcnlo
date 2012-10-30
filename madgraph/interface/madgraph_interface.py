@@ -1157,7 +1157,8 @@ This will take effect only in a NEW terminal
                 
     def check_output(self, args):
         """ check the validity of the line"""
-          
+        
+        
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
         else:

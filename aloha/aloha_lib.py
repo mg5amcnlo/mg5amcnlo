@@ -963,6 +963,13 @@ class LorentzObjectRepresentation(dict):
         #store the representation
         if self.lorentz_ind or self.spin_ind:
             dict.__init__(self, representation) 
+        elif isinstance(representation,dict):
+            if len(representation) == 0:
+                self[(0,)] = 0
+            elif len(representation) == 1 and (0,) in representation:
+                self[(0,)] = representation[(0,)]
+            else:
+                raise self.LorentzObjectRepresentationError("There is no key of (0,) in representation.")                    
         else:
             self[(0,)] = representation
 

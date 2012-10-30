@@ -364,7 +364,7 @@ in presence of majorana particle/flow violation"""
             P_obj = aloha_object.P(lorentz_ind, P.particle)
             new_expr = sign*(P_Lid + P_obj)
             lorentz = lorentz.replace(id, new_expr)
-            
+
         # Compute the variable from which we need to split the expression
         var_veto =  ['PL_0', 'PL_1', 'PL_2', 'PL_3']
         spin = aloha_writers.WriteALOHA.type_to_variable[self.spins[l_in-1]]
@@ -381,7 +381,7 @@ in presence of majorana particle/flow violation"""
             expr = expr.simplify()
             coeff_expr[key] = expr.factorize()
         coeff_expr.tag = set(aloha_lib.KERNEL.use_tag)
-        
+
         return coeff_expr
                         
     def define_lorentz_expr(self, lorentz_expr):
@@ -589,7 +589,7 @@ class AbstractALOHAModel(dict):
                 continue 
             
             if lorentz.structure == 'external':
-                for i in range(len(lorent.spins)):
+                for i in range(len(lorentz.spins)):
                     self.external_routines.append('%s_%s' % (lorentz.name, i))
                 continue
             
