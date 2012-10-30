@@ -177,6 +177,7 @@ class WriteALOHA:
 
         conjugate = [2*(int(c[1:])-1) for c in self.tag if c[0] == 'C']
         
+
         for index,spin in enumerate(self.particles):
             if self.offshell == index + 1:
                 continue
@@ -391,7 +392,8 @@ class WriteALOHA:
                 call_arg.append('%s%d' % (spin2, index2 +1)) 
             else:
                 call_arg.append('%s%d' % (spin, index +1)) 
-                
+        
+        
         return call_arg
 
     
@@ -864,7 +866,6 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
     """routines for writing out Fortran"""
 
     def __init__(self, abstract_routine, dirpath):
-
         
         ALOHAWriterForFortran.__init__(self, abstract_routine, dirpath)
         # position of the outgoing in particle list        
@@ -884,9 +885,6 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
 
-
-        OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
-                                                              self.offshell)
         if not 'Coup(1)' in self.routine.infostr:
             coup = True
         else:
@@ -895,7 +893,8 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         rank = self.routine.expr.get_max_rank()
         poly_object = q_polynomial.Polynomial(rank)
         nb_coeff = q_polynomial.get_number_of_coefs_for_rank(rank)
-        size = self.type_to_size[OffShellParticle[0]] - 2
+        size = self.type_to_size[self.particles[self.l_id-1]] - 2
+        
         for K in range(size):
             for J in range(nb_coeff):
                 data = poly_object.get_coef_at_position(J)
@@ -989,13 +988,14 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
             
             if index in conjugate:
                 index2, spin2 = index+1, self.particles[index+1]
-                call_arg.append(('complex','%s%d' % (spin2, index2 +1))) 
+                call_arg.append(('complex','%s%d' % (spin2, index2 +1)))
                 #call_arg.append('%s%d' % (spin, index +1)) 
             elif index-1 in conjugate:
                 index2, spin2 = index-1, self.particles[index-1]
-                call_arg.append(('complex','%s%d' % (spin2, index2 +1))) 
+                call_arg.append(('complex','%s%d' % (spin2, index2 +1)))
             else:
                 call_arg.append(('complex','%s%d' % (spin, index +1)))
+            self.declaration.add(('list_complex', call_arg[-1][-1])) 
         
         # couplings
         if couplings is None:
