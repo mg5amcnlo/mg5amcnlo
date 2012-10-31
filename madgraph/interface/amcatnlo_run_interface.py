@@ -1367,7 +1367,7 @@ Integrated cross-section
                 raise aMCatNLOError('The Herwig++ path set in the shower_card is not valid.')
 
             if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so')):
-                misc.call(['mv %s %s' % \
+                misc.call(['cp %s %s' % \
                     (pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)], 
                                                                                      shell=True)
         evt_name = os.path.basename(evt_file)
