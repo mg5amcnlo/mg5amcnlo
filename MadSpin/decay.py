@@ -522,6 +522,8 @@ class dc_branch(dict):
 
         index2mom[-1]={}
         index2mom[-1]["momentum"]=mom_init
+        if index2mom[-1]['momentum'].m < 1e-3:
+            logger.debug('Decaying particle with m> 1e-3 GeV in generate_momenta')
         index2mom[-1]["pid"]=self.label2pid[self["m_index2label"][-1]]
         index2mom[-1]["status"]=2
         weight=1.0
@@ -538,6 +540,8 @@ class dc_branch(dict):
 #         -> we just need to read the value here
 
             mA=index2mom[res]["momentum"].m
+            if mA < 1.0e-3:
+                logger.debug('Warning: decaying parting with m<1 MeV in generate_momenta ')
             #print index2mom[res]["momentum"].px
             #print index2mom[res]["momentum"].py
             #print index2mom[res]["momentum"].pz
@@ -592,21 +596,13 @@ class dc_branch(dict):
 
 
                 if (mA<mB+mC):
+                    logger.debug('mA<mB+mC in generate_momenta')
+                    logger.debug('mA = %s' % mA)
                     return 0, 0 # If that happens, throw away the DC phase-space point ...
                         # I don't expect this to be inefficient, since there is a BW cut
 
             if ran==1:
-                try:
-                    decay_mom=generate_2body_decay(index2mom[res]["momentum"],mA, mB,mC)
-                except:
-                    print index2mom[res]["momentum"].px
-                    print index2mom[res]["momentum"].py
-                    print index2mom[res]["momentum"].pz
-                    print index2mom[res]["momentum"].E
-                    print mA
-                    print " "
-                    print 
-                    raise "Could not generate the 2-body decay"
+                decay_mom=generate_2body_decay(index2mom[res]["momentum"],mA, mB,mC)
 #             record the angles for the reshuffling phase, 
 #             in case the point passes the reweighting creteria
                 self["tree"][res]["costh"]=decay_mom.costh
@@ -893,7 +889,7 @@ class production_topo(dict):
         self["branchings"].append(branch)
 
 
-    def topo2event(self,event):
+    def topo2event(self,event,to_decay):
         """This routine is typically called and the end of the reshuffling phase.
              The momenta in the topology were reshuffled in a previous step, and now they are copied 
              back to the production event in this routine 
@@ -901,6 +897,9 @@ class production_topo(dict):
 #     start with external legs
         for part in range(1,len(event.particle)+1):
             event.particle[part]["momentum"]=self["get_momentum"][part].copy()
+            if part in to_decay:
+                if event.particle[part]["momentum"].m < 1.0e-3:
+                    logger.debug('Decaying particle with a mass of less than 1 MeV in topo2event')
 #            print part 
 #            print self["get_momentum"][part].nice_string()
 #            print event.particle[part]["momentum"].nice_string()
@@ -932,7 +931,7 @@ class production_topo(dict):
 #            except:
 #                print "topology not yet dressed" 
 
-    def dress_topo_from_event(self,event):
+    def dress_topo_from_event(self,event,to_decay):
         """ event has been read from the production events file,
                 use these momenta to dress the topology
         """
@@ -942,6 +941,13 @@ class production_topo(dict):
             self["get_momentum"][part]=event.particle[part]["momentum"].copy()
             self["get_mass2"][part]=event.particle[part]["mass"]**2
             self["get_id"][part]=event.particle[part]["pid"]
+            if part in to_decay :
+                if self["get_momentum"][part].m<1e-3:
+                    logger.debug\
+                    ('decaying particle with m < 1MeV in dress_topo_from_event (1)')
+                if self["get_mass2"][part]<1e-3:
+                    logger.debug\
+                    ('decaying particle with m < 1MeV in dress_topo_from_event (2)')
 
 #    now fill also intermediate legs
 #    Don't care about the pid of intermediate legs
@@ -1357,7 +1363,7 @@ class decay_misc:
                     mom_init=curr_event.particle[part]["momentum"].copy()
                     # sanity check
                     if mom_init.m<1e-6:
-                        logger.warning('Decaying particle with mass less than 1e-6 GeV (2)')
+                        logger.debug('Decaying particle with mass less than 1e-6 GeV in decay_one_event')
                     decay_products, jac=decay_struct[part].generate_momenta(mom_init,\
                                         ran, pid2width,pid2mass,resonnances,BW_effects)
 
@@ -1944,7 +1950,7 @@ class decay_misc:
         return y, jac
 
 
-    def generate_BW_masses(self,topo, to_decay, pid2name, pid2width, pid2mass,s):
+    def generate_BW_masses (self,topo, to_decay, pid2name, pid2width, pid2mass,s):
         """Generate the BW masses of the particles to be decayed in the production event    """    
 
         weight=1.0
@@ -1965,12 +1971,12 @@ class decay_misc:
                 topo["get_mass2"][part]=virtualmass2
                 # sanity check
                 if pid2mass[pid]<1e-6:
-                    logger.warning('A decaying particle has a mass of less than 1e-6 GeV')
+                    logger.debug('A decaying particle has a mass of less than 1e-6 GeV')
 # for debugg purposes:
-#                if abs((pid2mass[pid]-math.sqrt(topo["get_mass2"][part]))/pid2mass[pid])>1.0 :
-#                    logger.warning('Mass after BW smearing affected by more than 100 % (1)') 
-#                    logger.warning('Pole mass: '+str(pid2mass[pid]))
-#                    logger.warning('Virtual mass: '+str(math.sqrt(topo["get_mass2"][part])))
+                if abs((pid2mass[pid]-math.sqrt(topo["get_mass2"][part]))/pid2mass[pid])>1.0 :
+                    logger.debug('Mass after BW smearing affected by more than 100 % (1)') 
+                    logger.debug('Pole mass: '+str(pid2mass[pid]))
+                    logger.debug('Virtual mass: '+str(math.sqrt(topo["get_mass2"][part])))
                                        
                 #print topo["get_mass2"]         
 
@@ -1980,8 +1986,8 @@ class decay_misc:
         if len(topo["branchings"])>0:  # Exclude 2>1 topologies
             if topo["branchings"][-1]["type"]=="t":
                 if topo["branchings"][-2]["type"]!="t":
-                    logger.info('last branching is t-channel')
-                    logger.info('but last-but-one branching is not t-channel')
+                    logger.debug('last branching is t-channel')
+                    logger.debug('but last-but-one branching is not t-channel')
                 else:
                     part=topo["branchings"][-1]["index_d2"] 
                     if part >0: # reset the mass only if "part" refers to an external particle 
@@ -1989,16 +1995,16 @@ class decay_misc:
                         topo["branchings"][-2]["m2"]=math.sqrt(topo["get_mass2"][part])
                         #sanity check
 
-#                        if abs(old_mass-topo["branchings"][-2]["m2"])>1e-10:
-#                            if abs((old_mass-topo["branchings"][-2]["m2"])/old_mass)>1.0 :
-#                                logger.warning('Mass after BW smearing affected by more than 100 % (2)')
-#                                logger.warning('Previous value: '+ str(old_mass))
-#                                logger.warning('New mass: '+ str((topo["branchings"][-2]["m2"])))
-#                                try:
-#                                    pid=topo["get_id"][part]
-#                                    logger.warning('pole mass: %s' % pid2mass[pid])
-#                                except Exception:
-#                                    pass
+                        if abs(old_mass-topo["branchings"][-2]["m2"])>1e-10:
+                            if abs((old_mass-topo["branchings"][-2]["m2"])/old_mass)>1.0 :
+                                logger.debug('Mass after BW smearing affected by more than 100 % (2)')
+                                logger.debug('Previous value: '+ str(old_mass))
+                                logger.debug('New mass: '+ str((topo["branchings"][-2]["m2"])))
+                                try:
+                                    pid=topo["get_id"][part]
+                                    logger.debug('pole mass: %s' % pid2mass[pid])
+                                except Exception:
+                                    pass
         return weight
 
     def modify_param_card(self,pid2widths):
@@ -2173,6 +2179,10 @@ class decay_all_events:
                  branching_fraction,path_me):
 
 
+
+        
+
+
         mgcmd=Cmd.MasterCmd()
         curr_dir=os.getcwd()
         logging.getLogger('madgraph').setLevel(50)
@@ -2201,6 +2211,15 @@ class decay_all_events:
         model_path=mybanner.proc["model"]
         base_model = import_ufo.import_model(model_path)
         base_model.pass_particles_name_in_mg_default() 
+        
+        for part in decay_processes:
+            list_symbol=decay_processes[part].split()
+            for item in list_symbol:
+                if item =="," or item==")" or item=="(" or item==">": 
+                    continue
+                elif item not in [ particle['name'] for particle in base_model['particles'] ] \
+                    and item not in [ particle['antiname'] for particle in base_model['particles'] ]:
+                    raise Exception, "No particle "+item+ " in the model "+mybanner.proc["model"]
 
 
 # we will need a dictionary pid > label
@@ -2371,7 +2390,7 @@ class decay_all_events:
 #        4. reshuffle the momenta in the production event
 #        5. pass the info to curr_event
 
-                topologies[tag_production][tag_topo].dress_topo_from_event(curr_event)
+                topologies[tag_production][tag_topo].dress_topo_from_event(curr_event,to_decay)
                 topologies[tag_production][tag_topo].extract_angles()
  
                 if BW_effects:
@@ -2394,7 +2413,8 @@ class decay_all_events:
                             for part in topologies[tag_production][tag_topo]['get_momentum'].keys():
                                 if part in to_decay and \
                                 topologies[tag_production][tag_topo]['get_momentum'][part].m<1.0:
-                                    logger.warning('Mass of a particle to decay is less than 1 GeV')
+                                    logger.debug('Mass of a particle to decay is less than 1 GeV')
+                                    logger.debug('in reshuffling loop')
                             # end sanity check
                             if succeed: break
                             if try_reshuffle==10:
@@ -2402,7 +2422,7 @@ class decay_all_events:
                                 logger.warning( ' So let us try with another topology')
                                 tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
                                 topologies[tag_production][tag_topo].dress_topo_from_event(\
-                                                                                    curr_event)
+                                                                                    curr_event,to_decay)
                                 topologies[tag_production][tag_topo].extract_angles()
                                 decay_tools.set_light_parton_massless(topologies\
                                                             [tag_production][tag_topo])
@@ -2410,7 +2430,7 @@ class decay_all_events:
                     else: 
                         BW_weight_prod=1.0
 
-                    topologies[tag_production][tag_topo].topo2event(curr_event)
+                    topologies[tag_production][tag_topo].topo2event(curr_event,to_decay)
 
 #             if dec==0:
 #                 print "Event after reshuffling:"
@@ -2462,7 +2482,7 @@ class decay_all_events:
                 if(max_weight<probe_weight[ev]): max_weight=probe_weight[ev]
                 if(min_weight>probe_weight[ev]): min_weight=probe_weight[ev]
             logger.info(' ')
-            logger.info( '     maximum weight that we got is '+str(max_weight))
+            logger.info('     maximum weight that we got is '+str(max_weight))
             logger.info('     with a fluctuation of '+str(max_weight-min_weight))
             logger.info('     -> add 2x this fluctuation to the max. weight ')
             max_weight=3.0*max_weight-2.0*min_weight
@@ -2547,7 +2567,7 @@ class decay_all_events:
             tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
 
 #    dress the topology with momenta and extract the canonical numbers 
-            topologies[tag_production][tag_topo].dress_topo_from_event(curr_event)
+            topologies[tag_production][tag_topo].dress_topo_from_event(curr_event,to_decay)
             topologies[tag_production][tag_topo].extract_angles()
 
             if BW_effects:
@@ -2572,7 +2592,7 @@ class decay_all_events:
 #                        print "Event: "+str(event_nb)
 #                        topologies[tag_production][tag_topo].print_topo()
                             tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
-                            topologies[tag_production][tag_topo].dress_topo_from_event(curr_event)
+                            topologies[tag_production][tag_topo].dress_topo_from_event(curr_event,to_decay)
                             topologies[tag_production][tag_topo].extract_angles()
                             decay_tools.set_light_parton_massless(topologies[tag_production][tag_topo])
                             try_reshuffle=0
@@ -2580,7 +2600,7 @@ class decay_all_events:
                 else:
                     BW_weight_prod=1.0
 
-                topologies[tag_production][tag_topo].topo2event(curr_event)
+                topologies[tag_production][tag_topo].topo2event(curr_event,to_decay)
                 decayed_event, BW_weight_decay=decay_tools.decay_one_event(curr_event,decay_struct[tag_production], \
                                             pid2color_dict, to_decay, pid2width, pid2mass, resonances,BW_effects)
 
@@ -2631,7 +2651,7 @@ class decay_all_events:
                     if not succeed:
                         logger.info('Warning: unable to restore masses of light partons')
                         break
-                    topologies[tag_production][tag_topo].topo2event(curr_event)
+                    topologies[tag_production][tag_topo].topo2event(curr_event,to_decay)
                     curr_event.reset_resonances() # re-evaluate the momentum of each resonance in prod. event
                     decayed_event, BW_weight_decay=decay_tools.decay_one_event(curr_event,decay_struct[tag_production], \
                                             pid2color_dict, to_decay, pid2width, pid2mass, resonances,BW_effects,ran=0)

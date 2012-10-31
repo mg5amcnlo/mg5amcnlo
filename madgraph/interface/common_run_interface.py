@@ -647,6 +647,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         try:
             import MadSpin.decay as decay
         except:
+            print self.options['mg5_path']
+            print sys.path
             raise self.ConfigurationError, '''Can\'t load MadSpin
             The variable mg5_path might not be correctly configured.'''
         
