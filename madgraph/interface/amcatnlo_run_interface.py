@@ -1327,6 +1327,12 @@ Integrated cross-section
         oldcwd = os.getcwd()
         os.chdir(pjoin(self.me_dir, 'MCatNLO'))
         shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
+	ldlibrarypath = os.environ['LD_LIBRARY_PATH']
+	for path in self.shower_card['extrapaths'].split():
+	    ldlibrarypath += ':%s' % path
+	if shower == 'HERWIGPP':
+	    ldlibrarypath += ':%s' % pjoin(self.shower_card['hepmcpath'], 'lib')
+	os.putenv('LD_LIBRARY_PATH', ldlibrarypath)
         self.shower_card.write_card(shower, shower_card_path)
 
 
@@ -1411,32 +1417,33 @@ Integrated cross-section
                 logger.warning('No .top file has been generated. For the results of your ' +\
                                'run, please check inside %s' % rundir)
 
-            filename = 'plot_%s_%d_' % (shower, 1)
-            count = 1
-            while os.path.exists(pjoin(self.me_dir, 'Events', 
-                self.run_name, '%s0.top' % filename)):
-                count += 1
-                filename = 'plot_%s_%d_' % (shower, count)
-            plotfiles = [] 
-            for i, file in enumerate(topfiles):
-                plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
-                          '%s%d.top' % (filename, i))
-                misc.call(['mv %s %s' % \
-                    (pjoin(rundir, file), plotfile)], shell=True) 
+	    else:    
+                filename = 'plot_%s_%d_' % (shower, 1)
+                count = 1
+                while os.path.exists(pjoin(self.me_dir, 'Events', 
+                    self.run_name, '%s0.top' % filename)):
+                    count += 1
+                    filename = 'plot_%s_%d_' % (shower, count)
+                plotfiles = [] 
+                for i, file in enumerate(topfiles):
+                    plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
+                              '%s%d.top' % (filename, i))
+                    misc.call(['mv %s %s' % \
+                        (pjoin(rundir, file), plotfile)], shell=True) 
 
-                plotfiles.append(plotfile)
+                    plotfiles.append(plotfile)
 
-            files = 'files'
-            have = 'have'
-            if len(plotfiles) == 1:
-                files = 'file'
-                have = 'has'
+                files = 'files'
+                have = 'have'
+                if len(plotfiles) == 1:
+                    files = 'file'
+                    have = 'has'
 
-            misc.call(['gzip %s' % evt_file], shell=True)
-            logger.info(('The %s %s %s been generated, with histograms in the' + \
-                    ' TopDrawer format, obtained by showering the parton-level' + \
-                    ' file %s.gz with %s') % (files, ', '.join(plotfiles), have, \
-                    evt_file, shower))
+                misc.call(['gzip %s' % evt_file], shell=True)
+                logger.info(('The %s %s %s been generated, with histograms in the' + \
+                        ' TopDrawer format, obtained by showering the parton-level' + \
+                        ' file %s.gz with %s') % (files, ', '.join(plotfiles), have, \
+                        evt_file, shower))
 
 
         os.chdir(oldcwd)
