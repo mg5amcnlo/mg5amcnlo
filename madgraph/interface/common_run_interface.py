@@ -130,7 +130,26 @@ class HelpToCmd(object):
         self.run_options_help([('-f','answer all question by default'),
                                ('--tag=', 'define the tag for the delphes run'),
                                ('--no_default', 'not run if delphes_card not present')]) 
-       
+    
+    def help_decay_events(self, skip_syntax=False):
+        if not skip_syntax:
+            logger.info("syntax: decay_events [RUN]")
+        logger.info("This functionality allows for the decay of  resonances")
+        logger.info("in a .lhe file, keeping track of the spin correlation effets.")
+        logger.info("BE AWARE OF THE CURRENT LIMITATIONS:")
+        logger.info("  (1) exclusive decay channel only, ")
+        logger.info("      YOU CANNOT USE MULTI-PARTICLE TAG")
+        logger.info("  (2) the overall branching fraction must")
+        logger.info("      specified by the user (otherwise the cross-section")
+        logger.info("      is not rescaled)")
+        logger.info("  (3) only decay channels with splitting of the type")
+        logger.info("      A -> B(stable) + C(unstable)")
+        logger.info("      have been tested so far")
+        logger.info("  (4) when entering the decay chain structure,")
+        logger.info("      please note that the reading module is ")
+        logger.info("      CASE SENSITIVE")
+
+
 
 class CheckValidForCmd(object):
     """ The Series of check routines in common between amcatnlo_run and 
@@ -1195,20 +1214,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             raise self.ConfigurationError, '''Can\'t load MadSpin
             The variable mg5_path might not be correctly configured.'''
         
-        logger.info("This functionality allows for the decay of  resonances")
-        logger.info("in a .lhe file, keeping track of the spin correlation effets.")
-        logger.info("BE AWARE OF THE CURRENT LIMITATIONS:")
-        logger.info("  (1) exclusive decay channel only, ")
-        logger.info("      YOU CANNOT USE MULTI-PARTICLE TAG")
-        logger.info("  (2) the overall branching fraction must")
-        logger.info("      specified by the user (otherwise the")
-        logger.info("      is not rescaled)")
-        logger.info("  (3) only decay channels with splitting of the type")
-        logger.info("      A -> B(stable) + C(unstable)")
-        logger.info("      have been tested so far")
-        logger.info("  (4) when entering the decay chain structure,")
-        logger.info("      please note that the reading module is ")
-        logger.info("      CASE SENSITIVE")
+        self.help_decay_events(skip_syntax=True)
 
         # load the name of the event file
         args = self.split_arg(line) 
@@ -1325,6 +1331,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         misc.call(['gzip %s' % decayed_evt_file], shell=True)
         logger.info("Decayed events have been written in %s" % decayed_evt_file)
     
+    def complete_decay_events(self, text, line, begidx, endidx):
+        args = self.split_arg(line[0:begidx], error=False)
+        if len(args) == 1:
+            return self.complete_plot(text, line, begidx, endidx)
+        else:
+            return
         
     def check_decay_events(self,args):
         """Check the argument for decay_events command

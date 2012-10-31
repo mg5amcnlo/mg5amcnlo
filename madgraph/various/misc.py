@@ -265,6 +265,39 @@ def mod_compilator(directory, new='gfortran', current=None):
         text= pattern.sub(new, text)
         open(name,'w').write(text)
 
+
+#===============================================================================
+# mute_logger (designed to be a decorator)
+#===============================================================================
+def mute_logger(names=['madgraph','ALOHA','cmdprint','madevent'], levels=[50,50,50,50]):
+    """change the logger level and restore those at their initial value at the
+    end of the function decorated."""
+    def control_logger(f):
+        def restore_old_levels(names, levels):
+            for name, level in zip(names, levels):
+                log_module = logging.getLogger(name)
+                log_module.setLevel(level)            
+        
+        def f_with_no_logger(self, *args, **opt):
+            old_levels = []
+            for name, level in zip(names, levels):
+                log_module = logging.getLogger(name)
+                old_levels.append(log_module.level)
+                log_module.setLevel(level)
+            try:
+                out = f(self, *args, **opt)
+                restore_old_levels(names, old_levels)
+                return out
+            except:
+                restore_old_levels(names, old_levels)
+                raise
+            
+        return f_with_no_logger
+    return control_logger
+
+
+
+
 def detect_current_compiler(path):
     """find the current compiler for the current directory"""
     

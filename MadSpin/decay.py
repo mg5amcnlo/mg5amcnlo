@@ -1658,6 +1658,7 @@ class decay_misc:
 
         return topologies
 
+    @misc.mute_logger()
     def generate_fortran_me(self,processes,base_model,mode, mgcmd,path_me):
         """Given a process and a model, use the standanlone module of mg5
          to generate a fortran executable for the evaluation of the 
@@ -2174,6 +2175,7 @@ class decay_misc:
 
 class decay_all_events:
     
+    @misc.mute_logger()
     def __init__(self,inputfile,mybanner,to_decay,decay_processes,\
                  prod_branches,proc_option, max_weight, BW_effects,\
                  branching_fraction,path_me):
@@ -2185,12 +2187,6 @@ class decay_all_events:
 
         mgcmd=Cmd.MasterCmd()
         curr_dir=os.getcwd()
-        logging.getLogger('madgraph').setLevel(50)
-        logging.getLogger('madevent').setLevel(50)
-        logging.getLogger('cmdprint').setLevel(50)
-        logging.getLogger('decay').setLevel(20)
-        logging.root.setLevel(50)
-        
         
 # Remove old stuff from previous runs
 # so that the current run is not confused
