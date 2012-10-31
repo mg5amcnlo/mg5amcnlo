@@ -96,7 +96,7 @@ class TestMECmdShell(unittest.TestCase):
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
         # test the hep event file exists
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6.hep.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz'))
         
 
 
@@ -115,7 +115,7 @@ class TestMECmdShell(unittest.TestCase):
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
         # test the hep event file exists
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q.hep.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q_0.hep.gz'))
         
 
         
@@ -130,7 +130,7 @@ class TestMECmdShell(unittest.TestCase):
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
         # test the hep event file exists
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6.hep.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz'))
         
 
     def test_generate_events_nlo_py6_stdhep(self):
@@ -148,7 +148,7 @@ class TestMECmdShell(unittest.TestCase):
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
         # test the hep event file exists
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q.hep.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q_0.hep.gz'))
         
         
 
