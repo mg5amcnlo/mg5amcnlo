@@ -5,6 +5,8 @@ C
 C CONSTANTS
 C  
       %(nbornamps_decl)s
+	  INTEGER    NLOOPAMPS, NCTAMPS
+      PARAMETER (NLOOPAMPS=%(nloopamps)d, NCTAMPS=%(nctamps)d)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS
@@ -25,6 +27,9 @@ C
 C GLOBAL VARIABLES
 C  
       include 'mp_coupl_same_name.inc'
+
+      %(complex_mp_format)s AMPL(3,NCTAMPS)
+	  common/MP_AMPL/AMPL
 
 	  %(mp_born_amps_decl)s
 	  %(complex_mp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)

@@ -451,7 +451,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     history_header = ""
     
     _display_opts = ['options','variable']
-    helporder = ['Documented commands']
     
     class InvalidCmd(Exception):
         """expected error for wrong command"""
@@ -483,7 +482,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         self.haspiping = not sys.stdin.isatty() # check if mg5 is piped 
         self.stored_line = '' # for be able to treat answer to question in input file 
                               # answer which are not required.
-
+        if not hasattr(self, 'helporder'):
+            self.helporder = ['Documented commands']
         
         
     def precmd(self, line):
@@ -874,6 +874,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # Faulty command
         logger.warning("Command \"%s\" not recognized, please try again" % \
                                                                 line.split()[0])
+        if line.strip() in ['q', '.q', 'stop']:
+            logger.info("If you want to quit mg5 please type \"exit\".")
+        
         self.history.pop()
         
 
@@ -1090,7 +1093,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
     # Quit
     def do_quit(self, line):
-        """ exit the mainloop() """
+        """Not in help: exit the mainloop() """
         
         if self.child:
             self.child.exec_cmd('quit ' + line, printcmd=False)
@@ -1136,6 +1139,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 if not doc:
                     doc = getattr(self, name).__doc__
                 if not doc:
+                    print 'no infor on ', name
                     tag = "Documented commands"
                 elif ':' in doc:
                     tag = doc.split(':',1)[0]
@@ -1144,11 +1148,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 if tag in cmds:
                     cmds[tag].append(cmdname)
                 else:
-                    cmds[tag] = [cmdname]
-                
-
+                    cmds[tag] = [cmdname] 
+                    
         self.stdout.write("%s\n"%str(self.doc_leader))
         for tag in self.helporder:
+            if tag not in cmds:
+                continue
             header = "%s (type help <topic>):" % tag
             self.print_topics(header, cmds[tag],   15,80)
         for name, item in cmds.items():

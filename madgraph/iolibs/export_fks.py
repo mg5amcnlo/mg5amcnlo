@@ -14,6 +14,7 @@
 ################################################################################
 """Methods and classes to export matrix elements to fks format."""
 
+from distutils import dir_util
 import fractions
 import glob
 import logging
@@ -81,6 +82,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
             shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
+            # distutils.dir_util.copy_tree since dir_path already exists
+            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template', 'Common'),
+                               dir_path)
         elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
             if not mgme_dir:
                 raise MadGraph5Error, \
@@ -112,6 +116,16 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         # We must link the CutTools to the Library folder of the active Template
         self.link_CutTools(os.path.join(dir_path, 'lib'))
+
+        # Duplicate run_card and plot_card
+        for card in ['plot_card']:
+            try:
+                shutil.copy(pjoin(self.dir_path, 'Cards',
+                                         card + '.dat'),
+                           pjoin(self.dir_path, 'Cards',
+                                        card + '_default.dat'))
+            except IOError:
+                logger.warning("Failed to copy " + card + ".dat to default")
 
         cwd = os.getcwd()
         dirpath = os.path.join(self.dir_path, 'SubProcesses')
@@ -153,6 +167,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         cp(_file_path+'/interface/common_run_interface.py',
                             self.dir_path+'/bin/internal/common_run_interface.py')
         cp(_file_path+'/various/misc.py', self.dir_path+'/bin/internal/misc.py')        
+        cp(_file_path+'/various/shower_card.py', self.dir_path+'/bin/internal/shower_card.py')        
         cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
         cp(_file_path+'/iolibs/save_load_object.py', 
                               self.dir_path+'/bin/internal/save_load_object.py') 
@@ -186,7 +201,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
              shutil.rmtree(pjoin(self.dir_path,'bin','internal','ufomodel'))
          except OSError as error:
              pass
-         shutil.copytree(model.get('version_tag').split('##')[0], 
+         # Notice that what is below is not safe for path including '-'.
+         shutil.copytree(model.get('version_tag').split('##')[0].split('-')[0], 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
          if hasattr(model, 'restrict_card'):
@@ -828,7 +844,7 @@ end
         os.system("ln -s "+name+"/ColorDenomFactors.dat ../")
         os.system("ln -s "+name+"/HelConfigs.dat ../")
         os.system("ln -s "+name+"/ColorNumFactors.dat ../")
-        os.system('ln ../../../Cards/MadLoopParams.dat . ')
+        os.system('ln -s ../../../Cards/MadLoopParams.dat . ')
 
         for file in linkfiles:
             ln('../../%s' % file)
@@ -1964,6 +1980,9 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
             shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
+            # distutils.dir_util.copy_tree since dir_path already exists
+            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template', 'Common'),
+                               dir_path)
         elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
             if not mgme_dir:
                 raise MadGraph5Error, \
@@ -2103,7 +2122,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
                      'MadLoopParams.inc']
 
-        os.system('ln ../../../Cards/MadLoopParams.dat . ')
+        os.system('ln -s ../../../Cards/MadLoopParams.dat . ')
         for file in linkfiles:
             ln('../../%s' % file)
 

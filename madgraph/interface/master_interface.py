@@ -44,6 +44,7 @@ import madgraph.interface.madgraph_interface as MGcmd
 import madgraph.interface.loop_interface as LoopCmd
 import madgraph.interface.amcatnlo_interface as amcatnloCmd
 import madgraph.fks.fks_base as fks_base
+import madgraph.iolibs.files as files
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
@@ -189,7 +190,7 @@ class Switcher(object):
             if type=='NLO':
                 if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCMD( \
                     'The NLO mode %s is not valid. Please choose one among: %s' \
-                    % (nlo_mode, ' '.join(valid_nlo_modes)))
+                    % (nlo_mode, ' '.join(self._valid_nlo_modes)))
                 elif nlo_mode == 'all':
                     self.change_principal_cmd('aMC@NLO')
                 elif nlo_mode == 'real':
@@ -207,7 +208,7 @@ class Switcher(object):
         if type=='NLO':
             if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCMD(\
                 'The NLO mode %s is not valid. Please chose one among: %s' \
-                % (nlo_mode, ' '.join(valid_nlo_modes)))
+                % (nlo_mode, ' '.join(self._valid_nlo_modes)))
             elif nlo_mode == 'all':
                 self.change_principal_cmd('aMC@NLO')
             elif nlo_mode == 'real':
@@ -252,6 +253,22 @@ class Switcher(object):
                self.current_interface in ['MadLoop']:
                 self.change_principal_cmd('MadGraph')
         return
+    
+    def do_output(self, line, *args, **opts):
+        """ treat output aloha in order to use always the one in MG5 """
+        if line.strip().startswith('aloha'):
+            MGcmd.MadGraphCmd.do_output(self, line, *args, **opts)
+        else:
+            self.cmd.do_output(self, line, *args, **opts)
+    
+    def check_output(self, arg, *args, **opts):
+        if arg and arg[0] == 'aloha':
+            MGcmd.MadGraphCmd.check_output(self, arg, *args, **opts)
+        else:
+            self.cmd.check_output(self, arg, *args, **opts)
+            
+    
+        
 
     # Dummy functions, not triggering any switch of interfaces
             
@@ -302,9 +319,6 @@ class Switcher(object):
         
     def check_open(self, *args, **opts):
         return self.cmd.check_open(self, *args, **opts)
-        
-    def check_output(self, *args, **opts):
-        return self.cmd.check_output(self, *args, **opts)
         
     def check_process_format(self, *args, **opts):
         return self.cmd.check_process_format(self, *args, **opts)
@@ -373,6 +387,7 @@ class Switcher(object):
         return self.cmd.complete_tutorial(self, *args, **opts)
 
     def do_switch(self, *args, **opts):
+        """Not in help """
         return self.cmd.do_switch(self, *args, **opts)
       
     def do_EOF(self, *args, **opts):
@@ -396,20 +411,35 @@ class Switcher(object):
     def do_install(self, *args, **opts):
         self.cmd.do_install(self, *args, **opts)
         
-    def do_launch(self, line, *args, **opts):
-        argss = cmd.Cmd.split_arg(line)
-        if len(argss)>=2 and argss[1] in  ['NLO', 'aMC@NLO', 'aMC@LO']:
-            self.change_principal_cmd('aMC@NLO')
-        return self.cmd.do_launch(self, line, *args, **opts)
+    def do_launch(self, line, *argss, **opts):
+        args = cmd.Cmd.split_arg(line)
+        # check if a path is given
+        if len(args) >=1:
+            if os.path.isdir(args[0]):
+                path = os.path.realpath(args[0])
+            elif os.path.isdir(pjoin(MG5DIR,args[0])):
+                path = pjoin(MG5DIR,args[0])
+            elif  MG4DIR and os.path.isdir(pjoin(MG4DIR,args[0])):
+                path = pjoin(MG4DIR,args[0])
+            else:
+                path=None
+        # if there is a path, find what output has been done
+            if path:
+                type = self.cmd.find_output_type(self, path) 
+                if type in ['standalone', 'standalone_cpp', 'pythia8', 'madevent']:
+                    self.change_principal_cmd('MadGraph')
+                elif type == 'aMC@NLO':
+                    self.change_principal_cmd('aMC@NLO')
+                elif type == 'MadLoop':
+                    self.change_principal_cmd('MadLoop')
+
+        return self.cmd.do_launch(self, line, *argss, **opts)
         
     def do_load(self, *args, **opts):
         return self.cmd.do_load(self, *args, **opts)
         
     def do_open(self, *args, **opts):
         return self.cmd.do_open(self, *args, **opts)
-        
-    def do_output(self, *args, **opts):
-        return self.cmd.do_output(self, *args, **opts)
         
     def do_quit(self, *args, **opts):
         return self.cmd.do_quit(self, *args, **opts)
@@ -505,7 +535,7 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
             self.cmd= self.interface_names[main][1]
             self.current_interface=main
         else:
-            raise MadGraph5Error, 'Type of interface not valid: %s' % name  
+            raise MadGraph5Error, 'Type of interface not valid: %s' % main  
         self.cmd.__init__(self, *args, **opt)     
         self.current_interface = main  
         
@@ -514,7 +544,7 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
         return self.list_completion(text,self._switch_opts)
         
     def do_switch(self, line):
-        """ Allow to switch to any given interface from command line """
+        """Not in help: Allow to switch to any given interface from command line """
         interface_quick_name=dict([(self.interface_names[name][0],name) for name \
                                    in self.interface_names.keys()])
         args = cmd.Cmd.split_arg(line)

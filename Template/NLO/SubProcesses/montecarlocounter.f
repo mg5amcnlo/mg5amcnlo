@@ -1453,7 +1453,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
-                  call AP_reduced(m_type,i_type,one,z(npartner),ap)
+                  call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
                   xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
                   call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
@@ -1795,7 +1795,7 @@ c      include "fks.inc"
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_partner(0:3),p_born_fksfather(0:3),
      # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
-     # xmrec2,www,massmax,massmin,delta_scale
+     # xmrec2,www,massmax,massmin,delta_scale,ma2
       parameter(delta_scale=10d0)
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
@@ -2069,27 +2069,34 @@ c strictly page 354 of hep-ph/0603175
                xmrec2=xm12
                www=-q2q+q1q-uk
             endif
+            ma2=xmm2+www
 c Recall that xm22 = 0 if ileg = 4
-            if((xmm2+www)/s.lt.-tiny)then
+            if(ma2/s.lt.-tiny)then
                write(*,*)'error A in xmcsubt_PY6Q'
                stop
-            elseif((xmm2+www)/s.lt.0d0)then
-               xmm2=-www
+            elseif(ma2/s.lt.0d0)then
+               ma2=0d0
             endif
-            ma=sqrt(xmm2+www)
+            if(www.lt.-tiny)then
+               write(*,*)'error C in xmcsubt_PY6Q'
+               stop
+            elseif(www.lt.0d0)then
+               www=0d0
+            endif
+            ma=sqrt(ma2)
             mbeff=sqrt(xmm2)
             mceff=0d0
             en_fks=sqrt(s)*(1-x)/2.d0
             en_mother=en_fks+sqrt(xmm2+veckn_ev**2)
 c The following constraint is deduced by imposing (p1+p2-kmother)**2=krecoil**2 and
 c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=ma**2
-            if(abs(en_mother-(s-xmrec2+ma**2)/(2*sqrt(s)))/en_mother.ge.tiny)then
+            if(abs(en_mother-(s-xmrec2+ma2)/(2*sqrt(s)))/en_mother.ge.tiny)then
                write(*,*)'error B in xmcsubt_PY6Q'
-               write(*,*)en_mother,(s-xmrec2+ma**2)/(2*sqrt(s))
+               write(*,*)en_mother,(s-xmrec2+ma2)/(2*sqrt(s))
                stop
             endif
             if(ma.le.en_mother)then
-               betaa=sqrt(1-ma**2/en_mother**2)
+               betaa=sqrt(1-ma2/en_mother**2)
             elseif(ma.le.en_mother*(1+tiny))then
                betaa=1d0
             else
@@ -2097,9 +2104,14 @@ c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=m
                write(*,*)ma,en_mother
                stop
             endif
-            lambdaabc=sqrt((ma**2-mbeff**2-mceff**2)**2-4*mbeff**2*mceff**2)
-            zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma**2)/2
-            zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma**2)/2
+            lambdaabc=sqrt((ma2-mbeff**2-mceff**2)**2-4*mbeff**2*mceff**2)
+            if(ma.ne.0d0)then
+               zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma2)/2
+               zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma2)/2
+            else
+               zplus =1d0
+               zminus=0d0
+            endif
             if(z(npartner).lt.zminus.or.
      &         z(npartner).gt.zplus)lzone(npartner)=.false.
          endif
@@ -3232,7 +3244,7 @@ c      include "fks.inc"
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_partner(0:3),p_born_fksfather(0:3),
      # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
-     # xmrec2,www,massmax,massmin,delta_scale
+     # xmrec2,www,massmax,massmin,delta_scale,ma2
       parameter(delta_scale=10d0)
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
@@ -3508,23 +3520,30 @@ c are the same as for PY6Q
                xmrec2=xm12
                www=-q2q+q1q-uk
             endif
+            ma2=xmm2+www
 c Recall that xm22 = 0 if ileg = 4
-            if((xmm2+www)/s.lt.-tiny)then
+            if(ma2/s.lt.-tiny)then
                write(*,*)'error A in xmcsubt_PY8'
                stop
-            elseif((xmm2+www)/s.lt.0d0)then
-               xmm2=-www
+            elseif(ma2/s.lt.0d0)then
+               ma2=0d0
             endif
-            ma=sqrt(xmm2+www)
+            if(www.lt.-tiny)then
+               write(*,*)'error C in xmcsubt_PY8'
+               stop
+            elseif(www.lt.0d0)then
+               www=0d0
+            endif
+            ma=sqrt(ma2)
             mbeff=sqrt(xmm2)
             mceff=0d0
             en_fks=sqrt(s)*(1-x)/2.d0
             en_mother=en_fks+sqrt(xmm2+veckn_ev**2)
 c The following constraint is deduced by imposing (p1+p2-kmother)**2=krecoil**2 and
 c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=ma**2
-            if(abs(en_mother-(s-xmrec2+ma**2)/(2*sqrt(s)))/en_mother.ge.tiny)then
+            if(abs(en_mother-(s-xmrec2+ma2)/(2*sqrt(s)))/en_mother.ge.tiny)then
                write(*,*)'error B in xmcsubt_PY8'
-               write(*,*)en_mother,(s-xmrec2+ma**2)/(2*sqrt(s))
+               write(*,*)en_mother,(s-xmrec2+ma2)/(2*sqrt(s))
                stop
             endif
             if(ma.le.en_mother)then
@@ -3536,9 +3555,14 @@ c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=m
                write(*,*)ma,en_mother
                stop
             endif
-            lambdaabc=sqrt((ma**2-mbeff**2-mceff**2)**2-4*mbeff**2*mceff**2)
-            zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma**2)/2
-            zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma**2)/2
+            lambdaabc=sqrt((ma2-mbeff**2-mceff**2)**2-4*mbeff**2*mceff**2)
+            if(ma.ne.0d0)then
+               zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma2)/2
+               zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma2)/2
+            else
+               zplus =1d0
+               zminus=0d0
+            endif
             if(z(npartner).lt.zminus.or.
      &           z(npartner).gt.zplus)lzone(npartner)=.false.
          else
@@ -4536,7 +4560,15 @@ c$$$c do !!
                zeta2=( (2*sh-(sh-w2)*eps1)*w1+
      #                 (sh-w2)*((w1+w2)*beta1-eps1*w2) )/
      #                 ( (sh-w2)*beta1*(2*sh-(sh-w2)*eps1+(sh-w2)*beta1) )
-               qMC=sqrt(zeta2*(1-zeta2)*w2)
+               qMCarg=zeta2*((1-zeta2)*w2)
+               if (qMCarg.lt.-tiny) then
+                  write (*,*)
+     $                 'Error in xiz_driver: sqrt of a negative number'
+                  stop
+               elseif (qMCarg.lt.0d0) then
+                  qMCarg=0d0
+               endif
+               qMC=sqrt(qMCarg)
             elseif(MonteCarlo.eq.'PYTHIA6Q')then
                qMC=sqrt(w2)
             elseif(MonteCarlo.eq.'PYTHIA6PT')then
@@ -5181,6 +5213,8 @@ c outgoing parton #3 (massive)
         endif
 c outgoing parton #4 (massless)
       elseif(ileg.eq.4)then
+        w1=-xq1q+xq2q-xtk
+        w2=-xq2q+xq1q-xuk
         if(1-x.lt.tiny)then
           zHWPP=1-(1-x)*(1+yj)*s/(2*(s-xm12))
         elseif(1-yj.lt.tiny)then
@@ -5238,6 +5272,8 @@ c outgoing parton #3 (massive)
         endif
 c outgoing parton #4 (massless)
       elseif(ileg.eq.4)then
+        w1=-xq1q+xq2q-xtk
+        w2=-xq2q+xq1q-xuk
         if(1-x.lt.tiny)then
           xiHWPP=(1-yj)*(s-xm12)**2/(s*(1+yj))
         elseif(1-yj.lt.tiny)then

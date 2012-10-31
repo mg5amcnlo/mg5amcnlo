@@ -76,11 +76,12 @@ class CheckFKS(mg_interface.CheckValidForCmd):
 
     def check_output(self, args):
         """ check the validity of the line"""
-          
+                  
         self._export_format = 'NLO'
         forbidden_formats = ['madevent', 'standalone']
+        
 
-        if not self._fks_multi_proc:
+        if not hasattr(self, '_fks_multi_proc') or not self._fks_multi_proc:
             text = 'No processes generated. Please generate a process first.'
             raise self.InvalidCmd(text)
 
@@ -291,7 +292,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._v4_export_formats = []
         self._nlo_modes_for_completion = ['all','real']
-        self._export_formats = [ 'madevent' ]
+        self._export_formats = [ 'madevent', 'aloha' ]
         # Do not force NLO model as the user might have asked for reals only.
         # It will anyway be forced later if he attempts virt= or all=.
         self.validate_model(loop_type='real_init', stop=False)
@@ -413,7 +414,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                                    ignore_six_quark_processes)
 
     def do_output(self, line):
-        """Initialize a new Template or reinitialize one"""
+        """Main commands: Initialize a new Template or reinitialize one"""
 
         args = self.split_arg(line)
         # Check Argument validity
@@ -437,7 +438,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         if self._export_format in ['NLO']:
             self._curr_exporter = export_v4.ExportV4Factory(\
                                           self, noclean, output_type='amcatnlo')
-            
         # check if a dir with the same name already exists
         if not force and not noclean and os.path.isdir(self._export_dir)\
                and self._export_format in ['NLO']:
@@ -448,7 +448,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                                                 timeout=self.options['timeout'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
-    
+
         # Make a Template Copy
         if self._export_format in ['NLO']:
             self._curr_exporter.copy_fkstemplate()
@@ -467,7 +467,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
         # Reset _export_dir, so we don't overwrite by mistake later
         self._export_dir = None
-
 
     # Export a matrix element  
     def export(self, nojpeg = False, main_file_name = ""):
@@ -500,7 +499,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                              fks_helas.FKSHelasMultiProcess(\
                                 self._fks_multi_proc, 
                                 loop_optimized= self.options['loop_optimized_output'])
-
+                    
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
                                   get_matrix_elements()])
@@ -516,7 +515,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # Start of the actual routine
 
         ndiags, cpu_time = generate_matrix_elements(self)
-
         calls = 0
 
         path = self._export_dir
@@ -552,7 +550,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
 
     def do_launch(self, line):
-        """Ask for editing the parameters and then execute the code (NLO or aMC@(N)LO)
+        """Main commands: Ask for editing the parameters and then execute the code (NLO or aMC@(N)LO)
         """
         old_cwd = os.getcwd()
         argss = self.split_arg(line)
@@ -607,7 +605,13 @@ class aMCatNLOInterfaceWeb(mg_interface.CheckValidForCmdWeb, aMCatNLOInterface):
 _launch_usage = "launch [DIRPATH] [MODE] [options]\n" + \
                 "-- execute the aMC@NLO output present in DIRPATH\n" + \
                 "   By default DIRPATH is the latest created directory\n" + \
-                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n"
+                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n" + \
+                "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
+                "     computation of the total cross-section and the filling of parton-level histograms \n" + \
+                "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \
+                "     If mode is set to aMC@LO/aMC@NLO, after the cross-section computation, a .lhe \n" + \
+                "     event file is generated which will be showered with the MonteCarlo specified \n" + \
+                "     in the run_card.dat\n"
 
 _launch_parser = misc.OptionParser(usage=_launch_usage)
 _launch_parser.add_option("-f", "--force", default=False, action='store_true',

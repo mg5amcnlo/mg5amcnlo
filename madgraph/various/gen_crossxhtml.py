@@ -818,7 +818,8 @@ class OneTagResults(dict):
             except:
                 pass
                 
-        elif (self.pgs or self.delphes) and not self['nb_event']:
+        elif (self.pgs or self.delphes) and not self['nb_event'] and \
+             len(runresults) > 1:
             if runresults[-2]['cross_pythia'] and runresults[-2]['cross']:
                 self['cross'] = runresults[-2]['cross_pythia']
                 self['error'] = runresults[-2]['error_pythia']

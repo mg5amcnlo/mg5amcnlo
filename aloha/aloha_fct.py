@@ -156,8 +156,8 @@ def guess_routine_from_name(names):
     output =[]
     for name in names:
         if name.startswith('MP_'):
-           name = name[3:]
-           tags = ['MP_']
+            name = name[3:]
+            tags = ['MP_']
         else: 
             tags = []
         

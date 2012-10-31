@@ -10,6 +10,7 @@ c intermediate resonances. It also boosts the events to the lab frame
       include "reweight0.inc"
       include "nFKSconfigs.inc"
       include "leshouche_info.inc"
+      include "run.inc"
 
 c Arguments
       double precision p_born(0:3,nexternal-1),pp(0:3,nexternal)
@@ -427,6 +428,24 @@ c
                pb(4,i)=xmcmass(i+1)
             endif
          enddo
+c In some rare cases (due to numerical inaccuracies in the boost) the
+c energy of the incoming partons can be larger than the beam energy This
+c is, of course, non-physical, so we use the non-boosted events
+         if (pb(0,1).gt.ebeam(1).or.pb(0,2).gt.ebeam(2)) then
+            write (*,*) 'WARNING: boost from center-of-momentum to '/
+     &           /'laboratory frame too extreme. Use the center-of-mo'/
+     &           /'mentum momenta instead.',pb(0,1),pb(0,2),ebeam(1)
+     &           ,ebeam(2)
+            do i=1,nexpart
+               do j=0,3
+                  if (Hevents) then
+                     pb(j,i)=pp(j,i)
+                  else
+                     pb(j,i)=p_born(j,i)
+                  endif
+               enddo
+            enddo
+         endif
       endif
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC

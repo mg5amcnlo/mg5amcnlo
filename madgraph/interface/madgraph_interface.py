@@ -1157,7 +1157,8 @@ This will take effect only in a NEW terminal
                 
     def check_output(self, args):
         """ check the validity of the line"""
-          
+        
+        
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
         else:
@@ -2107,9 +2108,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
                        'MCatNLO-utilities_path':'./MCatNLO-utilities',
-                       'hwpp_path':'./',
-                       'thepeg_path':'./',
-                       'hepmc_path':'./',
                        'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
@@ -2145,6 +2143,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _curr_cpp_model = None
     _curr_exporter = None
     _done_export = False
+    
+    helporder = ['Main commands', 'Documented commands']
 
     def preloop(self):
         """Initializing before starting the main loop"""
@@ -2210,7 +2210,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._nlo_modes_for_completion = ['all','virt','real']
     
     def do_quit(self, line):
-        """Do quit"""
+        """Not in help: Do quit"""
 
         if self._done_export and \
                     os.path.exists(pjoin(self._done_export[0],'RunWeb')):
@@ -2766,13 +2766,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # run the check
         cpu_time1 = time.time()
         # Run matrix element generation check on processes
-        mass_scheme = self.options['complex_mass_scheme']
         # The loop optimization output flag is passed as a global to 
         # process_checks because I am fed up with passing it through each single
         # damn little function of process_checks.
-        # We really need to put the MasterInterface as a global of the madgraph
-        # module to stop this annoying gimmicks we are now playing with the 
-        # user options... damn.
         old_process_checks_loop_opt = process_checks.loop_optimized_output
         
         process_checks.loop_optimized_output = self.options['loop_optimized_output']
@@ -2795,54 +2791,48 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if args[0] in ['timing']:
             timings = process_checks.check_timing(myprocdef,
                                                   param_card = param_card,
-                                                  mg_root=self._mgme_dir,
                                                   cuttools=CT_dir,
-                                                  cmass_scheme = mass_scheme,
-                                                  reuse = reuse)        
+                                                  reuse = reuse,
+                                                  cmd = self)        
 
         if args[0] in ['stability']:
             stability = process_checks.check_stability(myprocdef,
                                                   param_card = param_card,
-                                                  mg_root=self._mgme_dir,
                                                   cuttools=CT_dir,
-                                                  cmass_scheme = mass_scheme,
                                                   nPoints=stab_statistics,
-                                                  reuse = reuse)
+                                                  reuse = reuse,
+                                                  cmd = self)
 
         if args[0] in ['profile']:
             # In this case timing and stability will be checked one after the
             # other without re-generating the process.
             profile_time, profile_stab = process_checks.check_profile(myprocdef,
                                                   param_card = param_card,
-                                                  mg_root=self._mgme_dir,
                                                   cuttools=CT_dir,
-                                                  cmass_scheme = mass_scheme,
                                                   nPoints=stab_statistics,
-                                                  reuse = reuse)
+                                                  reuse = reuse,
+                                                  cmd = self)
 
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
                                             param_card = param_card,
                                             quick = True,
-                                            mg_root=self._mgme_dir,
                                             cuttools=CT_dir,
-                                            cmass_scheme = mass_scheme)
+                                            cmd = self)
             nb_processes += len(comparisons[0])
 
         if args[0] in ['lorentz', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
                                           param_card = param_card,
-                                          mg_root=self._mgme_dir,
                                           cuttools=CT_dir,
-                                          cmass_scheme = mass_scheme)
+                                          cmd = self)
             nb_processes += len(lorentz_result)
             
         if args[0] in  ['brs', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
                                           param_card = param_card,
-                                          mg_root=self._mgme_dir,
                                           cuttools=CT_dir,
-                                          cmass_scheme = mass_scheme)
+                                          cmd = self)
             nb_processes += len(gauge_result)
 
         if args[0] in  ['gauge', 'full'] and \
@@ -2863,9 +2853,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
-                                                mg_root=self._mgme_dir,
-                                                cuttools=self._cuttools_dir,
-                                                cmass_scheme = mass_scheme)
+                                                cuttools=CT_dir,
+                                                cmd = self)
             
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
@@ -2879,7 +2868,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                       (cpu_time2 - cpu_time1)))
 
         if args[0] not in ['timing','stability', 'profile']:
-            if mass_scheme:
+            if self.options['complex_mass_scheme']:
                 text = "Note that Complex mass scheme gives gauge/lorentz invariant\n"
                 text+= "results only for stable particles in final states.\n\n"
             else:
@@ -2940,7 +2929,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     
     # Generate a new amplitude
     def do_generate(self, line):
-        """Generate an amplitude for a given process"""
+        """Main commands: Generate an amplitude for a given process"""
 
         # Reset amplitudes
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -3333,7 +3322,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     # Import files
     def do_import(self, line):
-        """Import files with external formats"""
+        """Main commands: Import files with external formats"""
         args = self.split_arg(line)
         # Check argument's validity
         self.check_import(args)
@@ -4003,7 +3992,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             return
 
     def do_launch(self, line):
-        """Ask for editing the parameter and then 
+        """Main commands: Ask for editing the parameter and then 
         Execute the code (madevent/standalone/...)
         """
         start_cwd = os.getcwd()
@@ -4474,13 +4463,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         'executable. Please enter the full PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
-        elif args[0] in ['hwpp_path', 'thepeg_path', 'hepmc_path']:
-            if os.path.isdir(args[1]):
-                self.options[args[0]] = args[1]
-                logger.info('set %s to %s' % (args[0], args[1]))
-            else:
-                logger.warning('set %s :%s is not a valid path' % (args[0], args[1]))
-       
         elif args[0] in ['timeout', 'auto_update']:
                 self.options[args[0]] = int(args[1]) 
         
@@ -4524,7 +4506,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         launch_ext.open_file(file_path)
                  
     def do_output(self, line):
-        """Initialize a new Template or reinitialize one"""
+        """Main commands: Initialize a new Template or reinitialize one"""
 
         args = self.split_arg(line)
         # Check Argument validity

@@ -15,6 +15,7 @@
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
+from distutils import dir_util
 import fractions
 import glob
 import logging
@@ -90,6 +91,9 @@ class ProcessExporterFortran(object):
                         os.path.basename(self.dir_path))
             shutil.copytree(pjoin(self.mgme_dir, 'Template/LO'),
                             self.dir_path, True)
+            # distutils.dir_util.copy_tree since dir_path already exists
+            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
+                               self.dir_path)
             # Duplicate run_card and plot_card
             for card in ['run_card', 'plot_card']:
                 try:
@@ -1255,7 +1259,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
              shutil.rmtree(pjoin(self.dir_path,'bin','internal','ufomodel'))
          except OSError as error:
              pass
-         shutil.copytree(model.get('version_tag').split('##')[0], 
+         # This is not safe if there is a '##' or '-' in the path.
+         shutil.copytree(model.get('version_tag').split('##')[0].split('-')[0], 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
          if hasattr(model, 'restrict_card'):

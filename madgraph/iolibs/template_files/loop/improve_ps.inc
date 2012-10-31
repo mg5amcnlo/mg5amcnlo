@@ -5,11 +5,13 @@ C
 	  INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
 	  INTEGER    NINITIAL
-      PARAMETER (NINITIAL=%(ninitial)d)	  
+      PARAMETER (NINITIAL=%(ninitial)d)
 	  %(real_format)s ZERO
 	  PARAMETER (ZERO=0.0%(exp_letter)s+00%(mp_specifier)s)
+	  %(real_format)s MP__ZERO
+	  PARAMETER (MP__ZERO=ZERO)	  
 	  %(real_format)s ONE
-	  PARAMETER (ONE=2.0%(exp_letter)s+00%(mp_specifier)s)
+	  PARAMETER (ONE=1.0%(exp_letter)s+00%(mp_specifier)s)
 	  %(real_format)s TWO
 	  PARAMETER (TWO=2.0%(exp_letter)s+00%(mp_specifier)s)
 	  %(real_format)s THRES_ONSHELL
@@ -48,7 +50,6 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-
 	  ERRCODE = 0
 
 C WE FIRST CHECK THAT THE INPUT PS POINT IS REASONABLY PHYSICAL
