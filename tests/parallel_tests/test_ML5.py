@@ -158,20 +158,20 @@ class ML5Test(unittest.TestCase):
                            ML4, ref_runner=None, model=self.test_model_name,energy=2000) 
 
 
-    def test_short_sm_vs_stored_ML5(self):
+    def test_short_ML5_sm_vs_stored_ML5(self):
         self.compare_processes(ML5_processes_short, model = self.test_model_name,
           pickle_file = 'ml5_parallel_test.pkl',filename = 'ptest_short_ml5_vs_old_ml5')
 
     # The test below is a bit lengthy, so only run it when you want full proof check of ML5.
-    def test_long_sm_vs_stored_ML5(self):
+    def test_long_ML5_sm_vs_stored_ML5(self):
         self.compare_processes(ML5_processes_long, model = self.test_model_name,
           pickle_file = 'ml5_parallel_test.pkl',filename = 'ptest_long_ml5_vs_old_ml5')
     # In principle since previous version of ML5 has been validated against ML4, it is not 
     # necessary to test both against ML4 and the old ML5.
-    def test_short_sm_vs_stored_ML4(self):
+    def test_short_ML5_sm_vs_stored_ML4(self):
         self.compare_processes(ML4_processes_short, model = self.test_model_name,
           pickle_file = 'ml4_parallel_test.pkl',filename = 'ptest_short_ml5_vs_ml4')
 
-    def test_long_sm_vs_stored_ML4(self):
+    def test_long_ML5_sm_vs_stored_ML4(self):
         self.compare_processes(ML4_processes_long, model = self.test_model_name,
           pickle_file = 'ml4_parallel_test.pkl',filename = 'ptest_long_ml5_vs_ml4')

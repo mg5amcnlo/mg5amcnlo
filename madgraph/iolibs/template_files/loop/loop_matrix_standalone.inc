@@ -104,7 +104,8 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I,J,K,H,DUMMY
+      INTEGER I,J,K,H
+	  INTEGER HELPICKED_BU
 C P is the actual PS POINT used for the computation, and can be rotated for the stability test purposes.
 	  %(real_dp_format)s P(0:3,NEXTERNAL) 
 C DP_RES STORES THE DOUBLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
@@ -360,8 +361,11 @@ DO K=1, 3
   ENDDO
 ENDDO
 
-
 200 CONTINUE
+
+IF (CTMODE.EQ.0.OR.CTMODE.GE.4) THEN
+  CALL MP_UPDATE_AS_PARAM()
+ENDIF
 
 IF (.NOT.MP_PS_SET.AND.(CTMODE.EQ.0.OR.CTMODE.GE.4)) THEN
   CALL SET_MP_PS(P_USER)
@@ -383,8 +387,22 @@ DO H=1,NCOMB
   DO I=1,NEXTERNAL
     NHEL(I)=HELC(I,H)
   ENDDO
-  %(loop_induced_setup)s
+C Check if we are in multiple precision and compute wfs and amps accordingly if needed   
+  IF (CTMODE.GE.4) THEN
+C   Force that only current helicity is used in the routine below
+C   This should always be done, even if MP_DONE is True
+C   because the AMPL of the R2 MUST be recomputed for loop induced.
+C   (because they are not saved for each hel configuration)
+C   (This is not optimal unlike what is done int the loop optimized output)
+	HELPICKED_BU = HELPICKED
+    HELPICKED = H
+    CALL MP_BORN_AMPS_AND_WFS(MP_P)
+    HELPICKED = HELPICKED_BU
+    GOTO 300	
+  ENDIF
   %(born_ct_helas_calls)s
+300 continue
+  %(loop_induced_setup)s  
   %(loop_induced_helas_calls)s
   %(loop_induced_finalize)s
   DO I=1,%(nctamps_or_nloopamps)s
@@ -396,6 +414,11 @@ DO H=1,NCOMB
   ENDDO
   ENDIF
 ENDDO
+
+C WHEN CTMODE IS >=4, then the MP computation of wfs and amps is automatically done.
+IF (CTMODE.GE.4) THEN
+  MP_DONE = .TRUE.
+ENDIF
 
 IF(SKIPLOOPEVAL) THEN
   GOTO 1226
