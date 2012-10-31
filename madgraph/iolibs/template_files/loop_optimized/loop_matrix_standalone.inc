@@ -385,10 +385,14 @@ DO K=1,3
 ENDDO
 
 C Check if we directly go to multiple precision
-IF (.NOT.MP_DONE.AND.CTMODE.GE.4) THEN
-  CALL MP_COMPUTE_LOOP_COEFS(MP_P,BUFFR_BIS)
-  MP_DONE=.TRUE.
-  goto 300 
+IF (CTMODE.GE.4) THEN
+  IF (.NOT.MP_DONE) THEN
+    CALL MP_COMPUTE_LOOP_COEFS(MP_P,BUFFR_BIS)
+  ENDIF
+C Even if MP_DONE is .TRUE. we should anyway skip the
+C double precision evaluation as it as already been
+c computed in quadruple precision.
+  goto 300
 ENDIF
 
 DO H=1,NCOMB

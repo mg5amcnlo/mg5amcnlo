@@ -92,6 +92,9 @@ C ----------
 C BEGIN CODE
 C ----------
 
+C To be on the safe side, we always update the MP params here.
+C It can be redundant as this routine can be called a couple of times for the same PS point during the stability checks.
+C But it is really not time consuming and I would rather be safe.
 CALL MP_UPDATE_AS_PARAM()
 
 C AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
