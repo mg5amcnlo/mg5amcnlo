@@ -1,5 +1,10 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+2.0.0.beta1(31/10/12) aMCatNLO Team: First public (beta) version of aMCatNLO.
+                        In order to learn aMCatNLO, please do "tutorial aMCatNLO"
+                        Please also visit: http://amcatnlo.cern.ch/list.htm for more
+                        information.
+
 1.5.2 (11/10/12)  OM: Fix Bug for mssm model. The param_card was not read properly
                       for this model. (introduce in 1.5.0)
                   OM: If the code is run with an input file (./bin/mg5 cmd.cmd)
