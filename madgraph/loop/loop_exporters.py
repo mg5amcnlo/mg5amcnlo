@@ -102,7 +102,7 @@ class LoopExporterFortran(object):
 
         if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
             logger.info('Compiling CutTools. This has to be done only once and'+\
-                              ' can take a couple of minutes.','$MG:color:BLUE')
+                              ' can take a couple of minutes.','$MG:color:BLACK')
             current = misc.detect_current_compiler(os.path.join(\
                                                   self.cuttools_dir,'makefile'))
             new = 'gfortran' if self.fortran_compiler is None else \

@@ -929,12 +929,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         options['parton'] = True
         self.check_calculate_xsect(argss, options)
         
-        if options['multicore']:
-            self.cluster_mode = 2
-        elif options['cluster']:
-            self.cluster_mode = 1
-        else:
-            self.cluster_mode = int(self.options['run_mode'])
+#        if options['multicore']:
+#            self.cluster_mode = 2
+#        elif options['cluster']:
+#            self.cluster_mode = 1
+#        else:
+#            self.cluster_mode = int(self.options['run_mode'])
 
 #        if self.options_madevent['automatic_html_opening']:
 #            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
@@ -958,12 +958,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         options['reweightonly'] = False
         self.check_generate_events(argss, options)
         
-        if options['multicore']:
-            self.cluster_mode = 2
-        elif options['cluster']:
-            self.cluster_mode = 1
-        else:
-            self.cluster_mode = int(self.options['run_mode'])
+#        if options['multicore']:
+#            self.cluster_mode = 2
+#        elif options['cluster']:
+#            self.cluster_mode = 1
+#        else:
+#            self.cluster_mode = int(self.options['run_mode'])
 
 #        if self.options_madevent['automatic_html_opening']:
 #            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
@@ -995,13 +995,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         (options, argss) = _launch_parser.parse_args(argss)
         options = options.__dict__
         self.check_launch(argss, options)
-        
-        if options['multicore']:
-            self.cluster_mode = 2
-        elif options['cluster']:
-            self.cluster_mode = 1
-        else:
-            self.cluster_mode = int(self.options['run_mode'])
+#        if options['multicore']:
+#            self.cluster_mode = 2
+#        elif options['cluster']:
+#            self.cluster_mode = 1
+#        else:
+#            self.cluster_mode = int(self.options['run_mode'])
 
 #        if self.options['automatic_html_opening']:
 #            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
