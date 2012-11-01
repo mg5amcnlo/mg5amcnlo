@@ -287,7 +287,7 @@ C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
   ENDDO
   IF(BOOTANDSTOP) THEN
     WRITE(*,*) 'Stopped by user request.'
-    STOP
+    stop 1
   ENDIF
 ENDIF
 
@@ -605,7 +605,7 @@ c    ENDDO
 	  NATTEMPTS=NATTEMPTS+1
 	  IF(NATTEMPTS.EQ.MAXATTEMPTS) THEN
 	    WRITE(*,*) '##E01 ERROR Could not initialize the filters in ',MAXATTEMPTS,' trials'
-		STOP
+		STOP 1
 	  ENDIF
 	ENDIF
   ENDIF
@@ -739,7 +739,7 @@ C ----------
 	  IF(abs(reference_value).eq.0.0d0) then
 	    IsZero=.FALSE.
 		write(*,*) '##E02 ERRROR Reference value for comparison is zero.'
-		STOP
+		STOP 1
 	  else
 	    IsZero=((abs(toTest)/abs(reference_value)).lt.ZEROTHRES)
 	  endif
@@ -890,7 +890,7 @@ C     The following is used instead
 
 	  IF(N_DP_EVALS.GT.20.OR.N_QP_EVALS.GT.20) THEN
 	    WRITE(*,*) 'ERROR:: Increase hardcoded maxstabilitylength.'
-		STOP
+		stop 1
 	  ENDIF
 
 	  END
