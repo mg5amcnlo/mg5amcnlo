@@ -1836,14 +1836,17 @@ class decay_misc:
                 shutil.copyfile(file_madspin, pjoin(new_path,"makefile") )
                                 
                 shutil.copyfile(pjoin(path_me,'full_me','Source','MODEL','input.inc'),pjoin(new_path,'input.inc'))
+
+                # in case there are new DHELAS routines, we need to recompile                
+                misc.compile(arg=['clean'], cwd=pjoin(path_me,"full_me","Source","DHELAS"), mode='fortran')
+                misc.compile( cwd=pjoin(path_me,"full_me","Source"), mode='fortran')
+                
+                # now we can compile check
                 misc.compile(arg=['check'], cwd=new_path, mode='fortran')
 
                 file=pjoin(path_me, 'param_card.dat')
                 shutil.copyfile(file,pjoin(path_me,"full_me","Cards","param_card.dat")) 
 
-                # in case there are new DHELAS routines, we need to recompile                
-                misc.compile(arg=['clean'], cwd=pjoin(path_me,"full_me","Source","DHELAS"), mode='fortran')
-                misc.compile( cwd=pjoin(path_me,"full_me","Source"), mode='fortran')
                 
                 
                 if(os.path.getsize(pjoin(path_me,"parameters.inc"))<10): 
