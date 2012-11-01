@@ -1265,7 +1265,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             
         if len(args) == 0:
             args.append(base)
-        self.write_configuration(args[0], base, basedir)
+        self.write_configuration(args[0], base, basedir, self.options)
         
     def write_configuration(self, filepath, basefile, basedir, to_keep):
         """Write the configuration file"""

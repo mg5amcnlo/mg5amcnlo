@@ -2383,10 +2383,7 @@ calculator."""
                         cwd=pjoin(self.me_dir,'Events'))
 
         if not os.path.exists(pjoin(self.me_dir,'Events','pythia.done')):
-            if self.cluster_mode == 1:
-                logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log)
-            else:
-                logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log.name)
+            logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log)
             return
         else:
             os.remove(pjoin(self.me_dir,'Events','pythia.done'))

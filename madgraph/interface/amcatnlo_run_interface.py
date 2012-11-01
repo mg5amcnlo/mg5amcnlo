@@ -607,6 +607,61 @@ class CheckValidForCmd(object):
 class CompleteForCmd(CheckValidForCmd):
     """ The Series of help routine for the MadGraphCmd"""
 
+    def complete_launch(self, text, line, begidx, endidx):
+        """auto-completion for launch command"""
+        
+        args = self.split_arg(line[0:begidx])
+        if len(args) == 1:
+            #return mode
+            return self.list_completion(text,['LO','NLO','aMC@NLO', 'aMC@LO'],line)
+        elif len(args) == 2 and line[begidx-1] == '@':
+            return self.list_completion(text,['LO','NLO'],line)
+        else:
+            opts = []
+            for opt in _launch_parser.option_list:
+                opts += opt._long_opts + opt._short_opts
+            return self.list_completion(text, opts, line)
+            
+    def complete_compile(self, text, line, begidx, endidx):
+        """auto-completion for launch command"""
+        
+        args = self.split_arg(line[0:begidx])
+        if len(args) == 1:
+            #return mode
+            return self.list_completion(text,['FO','MC'],line)
+        else:
+            opts = []
+            for opt in _compile_parser.option_list:
+                opts += opt._long_opts + opt._short_opts
+            return self.list_completion(text, opts, line)        
+
+    def complete_calculate_xsect(self, text, line, begidx, endidx):
+        """auto-completion for launch command"""
+        
+        args = self.split_arg(line[0:begidx])
+        if len(args) == 1:
+            #return mode
+            return self.list_completion(text,['LO','NLO'],line)
+        else:
+            opts = []
+            for opt in _calculate_xsect_parser.option_list:
+                opts += opt._long_opts + opt._short_opts
+            return self.list_completion(text, opts, line) 
+
+    def complete_generate_events(self, text, line, begidx, endidx):
+        """auto-completion for launch command"""
+        
+        args = self.split_arg(line[0:begidx])
+        if len(args) == 1:
+            #return mode
+            return self.list_completion(text,['LO','NLO'],line)
+        else:
+            opts = []
+            for opt in _generate_events_parser.option_list:
+                opts += opt._long_opts + opt._short_opts
+            return self.list_completion(text, opts, line) 
+
+
     def complete_shower(self, text, line, begidx, endidx):
         args = self.split_arg(line[0:begidx])
         if len(args) == 1:
@@ -1327,12 +1382,12 @@ Integrated cross-section
         oldcwd = os.getcwd()
         os.chdir(pjoin(self.me_dir, 'MCatNLO'))
         shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
-	ldlibrarypath = os.environ['LD_LIBRARY_PATH']
-	for path in self.shower_card['extrapaths'].split():
-	    ldlibrarypath += ':%s' % path
-	if shower == 'HERWIGPP':
-	    ldlibrarypath += ':%s' % pjoin(self.shower_card['hepmcpath'], 'lib')
-	os.putenv('LD_LIBRARY_PATH', ldlibrarypath)
+        ldlibrarypath = os.environ['LD_LIBRARY_PATH']
+        for path in self.shower_card['extrapaths'].split():
+            ldlibrarypath += ':%s' % path
+        if shower == 'HERWIGPP':
+            ldlibrarypath += ':%s' % pjoin(self.shower_card['hepmcpath'], 'lib')
+        os.putenv('LD_LIBRARY_PATH', ldlibrarypath)
         self.shower_card.write_card(shower, shower_card_path)
 
 
@@ -1342,6 +1397,7 @@ Integrated cross-section
                     cwd = os.getcwd(), shell=True)
         exe = 'MCATNLO_%s_EXE' % shower
         if not os.path.exists(exe):
+            print open(mcatnlo_log).read()
             raise aMCatNLOError('Compilation failed, check %s for details' % mcatnlo_log)
         logger.info('                     ... done')
         # create an empty dir where to run
@@ -2130,15 +2186,15 @@ Integrated cross-section
                 elif card_name == 'banner':
                     banner_mod.split_banner(answer, self.me_dir, proc_card=False)
                     logger.info('Splitting the banner in it\'s component')
-                    if auto:
-                        # Re-compute the current mode
-                        mode = 'parton'
-                        for level in ['delphes','pgs','pythia']:
-                            if os.path.exists(pjoin(self.me_dir,'Cards','%s_card.dat' % level)):
-                                mode = level
-                                break
-                    else:
-                        self.clean_pointless_card(mode)
+                    #if 0:
+                    #    # Re-compute the current mode
+                    #    mode = 'parton'
+                    #    for level in ['delphes','pgs','pythia']:
+                    #        if os.path.exists(pjoin(self.me_dir,'Cards','%s_card.dat' % level)):
+                    #            mode = level
+                    #            break
+                    #else:
+                    #    self.clean_pointless_card(mode)
 
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = banner_mod.RunCardNLO(run_card)
