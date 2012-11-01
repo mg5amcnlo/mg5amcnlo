@@ -1778,6 +1778,11 @@ class decay_misc:
                 file=pjoin(path_me, 'param_card.dat')
                 shutil.copyfile(file,pjoin(path_me,"production_me","Cards","param_card.dat")) 
                 
+                # in case there are new DHELAS routines, we need to recompile 
+                misc.compile(arg=['clean'], cwd=pjoin(path_me,"production_me","Source", "DHELAS"), mode='fortran')
+                misc.compile( cwd=pjoin(path_me,"production_me","Source"), mode='fortran')
+
+
                 if not os.path.isfile( pjoin( path_me,'parameters.inc' ) ):
                     
                     file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'initialize.f')
@@ -1833,9 +1838,13 @@ class decay_misc:
                 shutil.copyfile(pjoin(path_me,'full_me','Source','MODEL','input.inc'),pjoin(new_path,'input.inc'))
                 misc.compile(arg=['check'], cwd=new_path, mode='fortran')
 
-                file=pjoin(MG5DIR, 'MadSpin','Cards', 'param_card.dat')
+                file=pjoin(path_me, 'param_card.dat')
                 shutil.copyfile(file,pjoin(path_me,"full_me","Cards","param_card.dat")) 
 
+                # in case there are new DHELAS routines, we need to recompile                
+                misc.compile(arg=['clean'], cwd=pjoin(path_me,"full_me","Source","DHELAS"), mode='fortran')
+                misc.compile( cwd=pjoin(path_me,"full_me","Source"), mode='fortran')
+                
                 
                 if(os.path.getsize(pjoin(path_me,"parameters.inc"))<10): 
                     print "Parameters of the model were not written correctly !"
@@ -2008,13 +2017,13 @@ class decay_misc:
                                     pass
         return weight
 
-    def modify_param_card(self,pid2widths):
+    def modify_param_card(self,pid2widths,path_me):
         """Modify the param_card w/r to what is read from the banner:
              if the value of a width is set to zero in the banner, 
              it is automatically set to its default value in this code
         """
 
-        param_card=open(pjoin(MG5DIR,'MadSpin','Cards','param_card.dat'), 'r')
+        param_card=open(pjoin(path_me,'param_card.dat'), 'r')
         new_param_card=""
         while 1:
             line=param_card.readline()
@@ -2030,7 +2039,7 @@ class decay_misc:
             new_param_card+=line
 
         param_card.close()
-        param_card=open(pjoin(MG5DIR,'MadSpin','Cards','param_card.dat'), 'w')
+        param_card=open(pjoin(path_me, 'param_card.dat'), 'w')
         param_card.write(new_param_card) 
         param_card.close()
 
@@ -2272,7 +2281,7 @@ class decay_all_events:
 # now we need to modify the values of the width
 # in param_card.dat, since this is where the input 
 # parameters will be read when evaluating matrix elements
-        decay_tools.modify_param_card(pid2width)
+        decay_tools.modify_param_card(pid2width,path_me)
 
 # consider the possibility of several production process
         set_of_processes=[]
