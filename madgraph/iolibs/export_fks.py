@@ -403,7 +403,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'cuts.f',
                      'cuts.inc',
                      'dbook.inc',
-                     'driver_mint.f',
                      'driver_mintMC.f',
                      'driver_vegas.f',
                      'driver_reweight.f',

@@ -1382,14 +1382,18 @@ Integrated cross-section
         oldcwd = os.getcwd()
         os.chdir(pjoin(self.me_dir, 'MCatNLO'))
         shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
-        ldlibrarypath = os.environ['LD_LIBRARY_PATH']
+
+        if 'LD_LIBRARY_PATH' in os.environ.keys():
+            ldlibrarypath = os.environ['LD_LIBRARY_PATH']
+        else:
+            ldlibrarypath = ''
         for path in self.shower_card['extrapaths'].split():
             ldlibrarypath += ':%s' % path
         if shower == 'HERWIGPP':
             ldlibrarypath += ':%s' % pjoin(self.shower_card['hepmcpath'], 'lib')
         os.putenv('LD_LIBRARY_PATH', ldlibrarypath)
-        self.shower_card.write_card(shower, shower_card_path)
 
+        self.shower_card.write_card(shower, shower_card_path)
 
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
         self.update_status('   Compiling MCatNLO for %s...' % shower, level='parton') 
