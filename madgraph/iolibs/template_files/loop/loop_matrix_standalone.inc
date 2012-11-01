@@ -105,7 +105,8 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER I,J,K,H
-	  INTEGER HELPICKED_BU
+	  INTEGER HELPICKED_BU, CTMODEINIT_BU
+	  %(real_dp_format)s MLSTABTHRES_BU
 C P is the actual PS POINT used for the computation, and can be rotated for the stability test purposes.
 	  %(real_dp_format)s P(0:3,NEXTERNAL) 
 C DP_RES STORES THE DOUBLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
@@ -213,6 +214,10 @@ C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT USED ANYWHE
 	  INTEGER HELC(NEXTERNAL,NCOMB)
 	  common/HELCONFIGS/HELC
 
+	  %(real_dp_format)s PREC,USER_STAB_PREC
+	  DATA USER_STAB_PREC/-1.0d0/	  
+	  COMMON/USER_STAB_PREC/USER_STAB_PREC
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -291,6 +296,16 @@ EVAL_DONE(1)=.TRUE.
 DO I=2,MAXSTABILITYLENGTH
   EVAL_DONE(I)=.FALSE.
 ENDDO
+
+IF (USER_STAB_PREC.GT.0.0d0) THEN
+  MLSTABTHRES_BU=MLSTABTHRES
+  MLSTABTHRES=USER_STAB_PREC
+C In the initialization, I cannot perform stability test and therefore guarantee any precision
+C I therefore chose quad precision directly
+  CTMODEINIT_BU=CTMODEINIT
+  CTMODEINIT=4
+ENDIF
+
 IF(DONEHELDOUBLECHECK) THEN
   HELDOUBLECHECKED=.TRUE.
   DONEHELDOUBLECHECK=.FALSE.
@@ -596,6 +611,12 @@ ENDIF
 
  9999 continue
 
+C Reinitialize the default threshold if it was specified by the user
+IF (USER_STAB_PREC.GT.0.0d0) THEN
+  MLSTABTHRES=MLSTABTHRES_BU
+  CTMODEINIT=CTMODEINIT_BU  
+ENDIF
+
 END
 
       SUBROUTINE compute_accuracy(fulllist, length, acc, estimate)
@@ -707,3 +728,61 @@ C THIS SUBROUTINE SIMPLY SET THE GLOBAL PS CONFIGURATION GLOBAL VARIABLES FROM A
 
 	  END
 
+      SUBROUTINE SLOOPMATRIXHEL_THRES(P,HEL,ANS,PREC)
+      IMPLICIT NONE
+C  
+C CONSTANTS
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+C  
+C ARGUMENTS 
+C  
+      %(real_dp_format)s P(0:3,NEXTERNAL)
+      %(real_dp_format)s ANS(3)
+	  INTEGER HEL
+	  %(real_dp_format)s PREC
+C
+C GLOBAL VARIABLES
+C
+	  %(real_dp_format)s USER_STAB_PREC
+	  COMMON/USER_STAB_PREC/USER_STAB_PREC
+
+C ----------
+C BEGIN CODE
+C ----------
+      USER_STAB_PREC = PREC
+      CALL SLOOPMATRIXHEL(P,HEL,ANS)
+C Reset it to default value not to affect next runs
+	  USER_STAB_PREC = -1.0d0
+	  
+	  END
+
+      SUBROUTINE SLOOPMATRIX_THRES(P,ANS,PREC)
+      IMPLICIT NONE
+C  
+C CONSTANTS
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+C  
+C ARGUMENTS 
+C  
+      %(real_dp_format)s P(0:3,NEXTERNAL)
+      %(real_dp_format)s ANS(3)
+	  %(real_dp_format)s PREC
+C
+C GLOBAL VARIABLES
+C
+	  %(real_dp_format)s USER_STAB_PREC
+	  COMMON/USER_STAB_PREC/USER_STAB_PREC
+
+C ----------
+C BEGIN CODE
+C ----------
+      USER_STAB_PREC = PREC
+      CALL SLOOPMATRIX(P,ANS)
+C Reset it to default value not to affect next runs
+	  USER_STAB_PREC = -1.0d0
+	  
+	  END
