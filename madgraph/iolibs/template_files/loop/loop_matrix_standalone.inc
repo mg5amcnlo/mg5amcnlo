@@ -459,10 +459,23 @@ C   SET THE HELICITY FILTER
         IF(NTRY.EQ.1) THEN
 	      GOODHEL(HELPICKED)=.FALSE.
 	    ELSEIF(GOODHEL(HELPICKED)) THEN
-	      WRITE(*,*) '##W02 WARNING Inconsistent helicity ',HELPICKED,' filter setting, starting over.'
-	      NTRY=0
+		  WRITE(*,*) '##W02A WARNING Inconsistent helicity ',HELPICKED
+		  IF(HELINITSTARTOVER) THEN
+	        WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the helicity filter setup.'
+	        NTRY=0
+		  ENDIF
 	    ENDIF
-      ENDIF
+      ELSE
+	    IF(.NOT.GOODHEL(HELPICKED)) THEN
+		  WRITE(*,*) '##W02B WARNING Inconsistent helicity ',HELPICKED
+		  IF(HELINITSTARTOVER) THEN
+	        WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the helicity filter setup.'
+	        NTRY=0
+		  ELSE
+		    GOODHEL(HELPICKED)=.TRUE.
+		  ENDIF
+		ENDIF
+	  ENDIF
     ENDIF
 
 C   SET THE LOOP FILTER
@@ -494,7 +507,8 @@ C   SET THE LOOP FILTER
       CLOSE(30,STATUS='delete')
 	ENDIF
 C   SET HELDOUBLECHECKED TO .TRUE. WHEN DONE
-	IF (HELPICKED.EQ.NCOMB) THEN
+C   even if it failed we do not want to redo the check afterwards if HELINITSTARTOVER=.FALSE.
+    IF (HELPICKED.EQ.NCOMB.AND.(NTRY.NE.0.OR..NOT.HELINITSTARTOVER)) THEN
       DONEHELDOUBLECHECK=.TRUE.
 	ENDIF
   ENDIF

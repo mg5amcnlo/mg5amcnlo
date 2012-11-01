@@ -75,6 +75,8 @@ C
       INTEGER I,J,K,H,DUMMY
 	  INTEGER CTMODEINIT_BU
 	  %(real_dp_format)s MLSTABTHRES_BU
+	  INTEGER NEWHELREF	  
+	  LOGICAL HEL_INCONSISTENT	  
       %(real_dp_format)s P(0:3,NEXTERNAL)	  
 C DP_RES STORES THE DOUBLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
 C THE STAB_STAGE COUNTER I CORRESPONDANCE GOES AS FOLLOWS
@@ -468,18 +470,24 @@ C SAVE RESULT OF EACH INDEPENDENT HELICITY FOR COMPARISON DURING THE HELICITY FI
   IF (CHECKPHASE) THEN
 C   SET THE HELICITY FILTER
     IF(.NOT.FOUNDHELFILTER) THEN
+	  HEL_INCONSISTENT=.FALSE.
       IF(ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1)) THEN
         IF(NTRY.EQ.1) THEN
 	      GOODHEL(HELPICKED)=-HELOFFSET
 	    ELSEIF(GOODHEL(HELPICKED).NE.-HELOFFSET) THEN
-	      WRITE(*,*) '##W02 WARNING Inconsistent vanishing helicity ',HELPICKED,' filter setting, starting over.'
-	      NTRY=0
-	    ENDIF
+		  WRITE(*,*) '##W02A WARNING Inconsistent helicity ',HELPICKED
+		  IF(HELINITSTARTOVER) THEN
+	        WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the helicity filter setup.'
+	        NTRY=0
+		  ELSE
+		    HEL_INCONSISTENT=.TRUE.
+		  ENDIF
+		ENDIF
       ELSE
 	    DO H=1,HELPICKED-1
 		  IF(GOODHEL(H).GT.-HELOFFSET) THEN
 C           Be looser for helicity check, bring a factor 100
-		    DUMMY=ISSAME(ANS,HELSAVED(1,H),REF)
+		    DUMMY=ISSAME(ANS,HELSAVED(1,H),REF,.FALSE.)
 		    IF(DUMMY.NE.0) THEN
 		      IF(NTRY.EQ.1) THEN
 C               Set the matching helicity to be contributing once more
@@ -488,13 +496,42 @@ C               Use an offset to clearly show it is linked to an other one and t
 			    GOODHEL(HELPICKED)=-H-HELOFFSET
 C             Make sure we have paired this hel config to the same one last PS point
 			  ELSEIF(GOODHEL(HELPICKED).NE.(-H-HELOFFSET)) THEN
-	      	    WRITE(*,*) '##W02 WARNING Inconsistent matching helicity ',HELPICKED,' filter setting, starting over.'
-	      	    NTRY=0
+			    WRITE(*,*) '##W02B WARNING Inconsistent helicity ',HELPICKED
+		        IF(HELINITSTARTOVER) THEN
+	              WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the helicity filter setup.'
+	              NTRY=0
+		        ELSE
+				  HEL_INCONSISTENT=.TRUE. 
+				ENDIF
 			  ENDIF
-			  EXIT
 			ENDIF
 		  ENDIF
 		ENDDO
+	  ENDIF
+	  IF(HEL_INCONSISTENT) THEN
+C This helicity has unstable filter so we will always compute it by itself.
+C We therefore also need to remove it from the multiplicative factor of the corresponding helicity.
+	    IF(GOODHEL(HELPICKED).LT.-HELOFFSET) THEN
+	      GOODHEL(-GOODHEL(HELPICKED)-HELOFFSET)=GOODHEL(-GOODHEL(HELPICKED)-HELOFFSET)-1
+	    ENDIF
+C If several helicities were matched to that one, we need to chose another one as reference and redirect the others to this new one
+C Of course if it is one, then we do not need to do anything (because with HELINITSTARTOVER=.FALSE. we only support exactly identical Hels.)
+	    IF(GOODHEL(HELPICKED).GT.-HELOFFSET.AND.GOODHEL(HELPICKED).NE.1) THEN
+		  NEWHELREF=-1
+		  DO H=1,NCOMB
+		    IF (GOODHEL(H).EQ.(-HELOFFSET-HELPICKED)) THEN
+			  IF (NEWHELREF.EQ.-1) THEN
+			    NEWHELREF=H
+				GOODHEL(H)=GOODHEL(HELPICKED)-1
+			  ELSE
+				GOODHEL(H)=-NEWHELREF-HELOFFSET
+			  ENDIF
+			ENDIF
+		  ENDDO
+		ENDIF
+C In all cases, from now on this helicity will be computed independantly of the others.
+C In particular, it is the only thing to do if the helicity was flagged not contributing.
+		GOODHEL(HELPICKED)=1
 	  ENDIF
     ENDIF
 
@@ -531,7 +568,7 @@ C   DOUBLE CHECK THE HELICITY FILTER
 	  ENDIF
 	ENDIF
 	IF (GOODHEL(HELPICKED).LT.-HELOFFSET.AND.NTRY.NE.0) THEN
-	  IF(ISSAME(ANS,HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF).EQ.0) THEN
+	  IF(ISSAME(ANS,HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
 	    write(*,*) '##W15 Helicity filter could not be successfully double checked.'
 	    write(*,*) 'One reason for this is that you might have changed sensible parameters which affected the helicity dependance relations.'
 	    write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
@@ -542,7 +579,8 @@ C   DOUBLE CHECK THE HELICITY FILTER
 	  ENDIF
 	ENDIF
 C   SET HELDOUBLECHECKED TO .TRUE. WHEN DONE
-	IF (HELPICKED.EQ.NCOMB.AND.NTRY.NE.0) THEN
+C   even if it failed we do not want to redo the check afterwards if HELINITSTARTOVER=.FALSE.
+    IF (HELPICKED.EQ.NCOMB.AND.(NTRY.NE.0.OR..NOT.HELINITSTARTOVER)) THEN
 	  DONEHELDOUBLECHECK=.TRUE.
 	ENDIF
   ENDIF
@@ -714,32 +752,46 @@ C ----------
 
 	  end
 
-      integer function ISSAME(resA,resB,ref)
+      integer function ISSAME(resA,resB,ref,useMax)
 	  IMPLICIT NONE
 C     This function compares the result from two different helicity configuration A and B
 C     It returns 0 if they are not related and (+/-wgt) if A=(+/-wgt)*B.
-C     For now, the only wgt implemented is the integer 1.
-C  
+C     For now, the only wgt implemented is the integer 1 or -1.
+C     If useMax is .TRUE., it uses all implemented weights no matter what is HELINITSTARTOVER
+C   
 C CONSTANTS
 C
-      integer N_WGT_TO_TRY
-	  parameter (N_WGT_TO_TRY=2)
+      integer MAX_WGT_TO_TRY
+	  parameter (MAX_WGT_TO_TRY=2)
 C  
 C ARGUMENTS 
 C  
 	  %(real_dp_format)s resA(3), resB(3)
 	  %(real_dp_format)s ref
+	  logical useMax
 C  
 C LOCAL VARIABLES
 C
       LOGICAL ISZERO
       integer I,J
-      integer WGT_TO_TRY(N_WGT_TO_TRY)
+	  integer N_WGT_TO_TRY
+      integer WGT_TO_TRY(MAX_WGT_TO_TRY)
 	  data WGT_TO_TRY/1,-1/
+C
+C INCLUDES
+C
+	  include 'MadLoopParams.inc'
 C ----------
 C BEGIN CODE
 C ----------
       ISSAME=0
+
+C If the helicity can be constructed progressively while allowing inconsistency, then we only allow for weight one comparisons.
+	  IF (.NOT.HELINITSTARTOVER.AND..NOT.USEMAX) THEN
+	    N_WGT_TO_TRY=1
+	  ELSE
+	    N_WGT_TO_TRY=MAX_WGT_TO_TRY
+	  ENDIF
 
 	  DO I=1,N_WGT_TO_TRY
 	    DO J=1,3
