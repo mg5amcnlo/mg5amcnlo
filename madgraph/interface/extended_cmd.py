@@ -184,7 +184,7 @@ class BasicCmd(cmd.Cmd):
          If a command has not been entered, then complete against command list.
          Otherwise try to call complete_<command> to get list of completions.
         """
-        print "state=",state
+
         if state == 0:
             import readline
             origline = readline.get_line_buffer()
