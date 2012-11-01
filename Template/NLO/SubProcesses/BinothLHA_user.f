@@ -49,7 +49,7 @@ c
       logical fksprefact
       parameter (fksprefact=.true.)
       double precision tolerance, madfks_single, madfks_double
-      parameter (tolerance = 1d-8)
+      parameter (tolerance = 1d-6)
       integer nbad, nbadmax
       parameter (nbadmax = 5)
       data nbad / 0 /

@@ -139,7 +139,7 @@ C-----
           enddo
 
           call sborn(p_born, born)
-          call sloopmatrix(p_born, virt_wgts) 
+          call sloopmatrix_thres(p_born,virt_wgts,tolerance/100d0) 
 
           finite = virt_wgts(1)/dble(ngluons)
           single = virt_wgts(2)/dble(ngluons)

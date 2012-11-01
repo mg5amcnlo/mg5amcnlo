@@ -50,7 +50,7 @@ c
       logical fksprefact
       parameter (fksprefact=.true.)
       double precision tolerance, madfks_single, madfks_double
-      parameter (tolerance = 1d-8)
+      parameter (tolerance = 1d-6)
       integer i,j
       integer nbad, nbadmax
 c statistics for MadLoop      
@@ -72,9 +72,13 @@ c Ellis-Sexton scale)
       call update_as_param()
       alpha_S=g**2/(4d0*PI)
       ao2pi= alpha_S/(2d0*PI)
-      if (firsttime) write(*,*) "alpha_s value used for the virtuals"/
+      if (firsttime) then
+          write(*,*) "alpha_s value used for the virtuals"/
      &     /" is (for the first PS point): ", alpha_S
-      call sloopmatrix(p, virt_wgts)
+          call sloopmatrix_thres(p, virt_wgts, tolerance/100d0)
+      else
+          call sloopmatrix(p, virt_wgts)
+      endif
       virt_wgt= virt_wgts(1)/dble(ngluons)
       single  = virt_wgts(2)/dble(ngluons)
       double  = virt_wgts(3)/dble(ngluons)
