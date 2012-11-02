@@ -49,11 +49,13 @@ c
      &     ivirtpointsExcept
       logical fksprefact
       parameter (fksprefact=.true.)
-      double precision tolerance, madfks_single, madfks_double
-      parameter (tolerance = 1d-6)
+      double precision run_tolerance, madfks_single, madfks_double
+      parameter (run_tolerance = 1d-4)
+      double precision tolerance
       integer i,j
       integer nbad, nbadmax
-c statistics for MadLoop      
+c statistics for MadLoop
+      double precision avgPoleRes(2),PoleDiff(2)
       integer nunst, ntot
       common/ups_stats/nunst, ntot
       parameter (nbadmax = 5)
@@ -75,8 +77,10 @@ c Ellis-Sexton scale)
       if (firsttime) then
           write(*,*) "alpha_s value used for the virtuals"/
      &     /" is (for the first PS point): ", alpha_S
+          tolerance=1d-6          
           call sloopmatrix_thres(p, virt_wgts, tolerance/100d0)
       else
+          tolerance=run_tolerance
           call sloopmatrix(p, virt_wgts)
       endif
       virt_wgt= virt_wgts(1)/dble(ngluons)
@@ -95,17 +99,17 @@ c======================================================================
 c check for poles cancellation      
       call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
       ntot = ntot+1
-      if ( double.ne.0d0 ) then
-         unstable_point = .not. 
-     1        (dabs((single - madfks_single)/single).lt.tolerance .and.
-     1         dabs((double - madfks_double)/double).lt.tolerance) 
-      elseif ( madfks_double.ne.0d0 ) then
-         unstable_point = .not. 
-     1        (dabs((single - madfks_single)/single).lt.tolerance .and.
-     1         dabs((double - madfks_double)/double).lt.tolerance) 
+      avgPoleRes(1)=(single+madfks_single)/2.0d0
+      avgPoleRes(2)=(double+madfks_double)/2.0d0
+      PoleDiff(1)=dabs(single - madfks_single)
+      PoleDiff(2)=dabs(double - madfks_double)
+      if ((dabs(avgPoleRes(1))+dabs(avgPoleRes(2))).ne.0d0) then
+           unstable_point = .not.
+     1        (((PoleDiff(1)+PoleDiff(2))/
+     1        (dabs(avgPoleRes(1))+dabs(avgPoleRes(2)))).lt.tolerance)
       else
-         unstable_point = .not. 
-     1        (dabs((single - madfks_single)/single).lt.tolerance) 
+           unstable_point = .not.
+     1        ((PoleDiff(1)+PoleDiff(2)).lt.tolerance)
       endif
       if (unstable_point) then
           nunst = nunst+1
@@ -115,10 +119,18 @@ c check for poles cancellation
               else
                 open(unit=78, file='UPS.log', access='append')
               endif
+              write(78,*) '===== UPS #',nunst,' ====='
+              write(78,*) 'mu_r    =',mu_r           
+              write(78,*) 'alpha_S =',alpha_S
+              write(78,*) '1/eps**2 expected from MadFKS=',madfks_double
+              write(78,*) '1/eps**2 obtained in MadLoop =',double
+              write(78,*) '1/eps    expected from MadFKS=',madfks_single
+              write(78,*) '1/eps    obtained in MadLoop =',single
+              write(78,*) 'finite   obtained in MadLoop =',virt_wgt
               do i = 1, nexternal-1
-                write(78,*) i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
+                write(78,'(i2,1x,5e25.15)') 
+     1 i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
               enddo
-              write(78,*) 'SCALE**2 ', QES2
               close(78)
           endif
       endif
