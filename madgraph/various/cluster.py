@@ -222,6 +222,7 @@ class MultiCore(Cluster):
         self.done = 0 
         self.waiting_submission = []
         self.pids = []
+        self.fail_msg = None
         
     def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
                                                          stderr=None, log=None):
@@ -262,7 +263,6 @@ class MultiCore(Cluster):
     def launch(self, exe, argument, cwd, stdout):
         """ way to launch for multicore."""
         import thread
-
         def end(self, pid):
             self.nb_used -= 1
             self.done += 1
@@ -270,6 +270,8 @@ class MultiCore(Cluster):
                 self.pids.remove(pid)
             except:
                 pass
+            
+        fail_msg = None
         try:  
             if os.path.exists(exe) and not exe.startswith('/'):
                 exe = './' + exe
@@ -278,6 +280,13 @@ class MultiCore(Cluster):
             pid = proc.pid
             self.pids.append(pid)
             proc.wait()
+            if proc.returncode not in [0, 143, -15]:
+                fail_msg = 'program %s launch ends with non zero status: %s. Stop all computation' % \
+                        (' '.join([exe]+argument), proc.returncode)
+                #self.fail_msg = fail_msg
+                logger.warning(fail_msg)
+                self.remove(fail_msg)
+            
             # release the lock for allowing to launch the next job
             security = 0       
             # check that the status is locked to avoid coincidence unlock
@@ -298,6 +307,7 @@ class MultiCore(Cluster):
                     continue
                 break
             end(self, pid)
+
 
         except Exception, error:
             #logger.critical('one core fails with %s' % error)
@@ -341,6 +351,10 @@ class MultiCore(Cluster):
             no_in_queue = 0
             secure_mode = False # forbid final acauire if in securemode
             while self.waiting_submission or self.nb_used:
+                if self.fail_msg:
+                    msg,  self.fail_msg = self.fail_msg, None
+                    self.remove()
+                    raise Exception, msg
                 if update_status:
                     update_status(len(self.waiting_submission), self.nb_used, self.done)
                 # security#1 that all job expected to be launched since 
@@ -381,11 +395,19 @@ class MultiCore(Cluster):
                     arg = self.waiting_submission.pop(0)
                     thread.start_new_thread(self.launch, arg)
                     self.nb_used += 1 # update the number of running thread
-            
+
+            if self.fail_msg:
+                msg,  self.fail_msg = self.fail_msg, None
+                self.remove()
+                raise Exception, msg            
             # security #5: checked that self.nb_used is not lower than expected
             #This is the most current problem.
             no_in_queue = 0
             while self.submitted > self.done:
+                if self.fail_msg:
+                    msg,  self.fail_msg = self.fail_msg, None
+                    self.remove()
+                    raise Exception, msg
                 if no_in_queue == 0:
                     logger.debug('Some jobs have been lost. Try to recover')
                 #something bad happens
@@ -414,6 +436,10 @@ class MultiCore(Cluster):
             # security #6. check that queue is empty. don't
             no_in_queue = 0
             while len(self.pids):
+                if self.fail_msg:
+                    msg,  self.fail_msg = self.fail_msg, None
+                    self.remove()
+                    raise Exception, msg
                 self.need_waiting = False
                 if self.lock.locked():
                         self.lock.release()
@@ -457,16 +483,21 @@ class MultiCore(Cluster):
         except KeyboardInterrupt:
             self.remove()
             raise
-
+        if self.fail_msg:
+            msg,  self.fail_msg = self.fail_msg, None
+            self.remove()
+            raise Exception, msg 
             
-    def remove(self, *args):
+    def remove(self, error=None):
         """Ensure that all thread are killed"""
         logger.info('remove job currently running')
-        print self.pids
+        self.waiting_submission = []
+        if error:
+            self.fail_msg = error
         for pid in list(self.pids):
-            out = os.system('CPIDS=$(pgrep -P %(pid)s); kill -15 $CPIDS >& /dev/null' \
+            out = os.system('CPIDS=$(pgrep -P %(pid)s); kill -15 $CPIDS > /dev/null 2>&1' \
                             % {'pid':pid} )
-            out = os.system('kill -15 %(pid)s >& /dev/null' % {'pid':pid} )            
+            out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )            
             if out == 0:
                 try:
                     self.pids.remove(pid)
@@ -476,8 +507,8 @@ class MultiCore(Cluster):
 
         time.sleep(1) # waiting if some were submitting at the time of ctrl-c
         for pid in list(self.pids):
-            out = os.system('CPIDS=$(pgrep -P %s); kill -15 $CPIDS >& /dev/null' % pid )
-            out = os.system('kill -15 %(pid)s >& /dev/null' % {'pid':pid} ) 
+            out = os.system('CPIDS=$(pgrep -P %s); kill -15 $CPIDS > /dev/null 2>&1' % pid )
+            out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} ) 
             if out == 0:
                 try:
                     self.pids.remove(pid)
