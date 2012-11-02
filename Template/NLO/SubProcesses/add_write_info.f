@@ -636,8 +636,7 @@ c accidentally overwriting something).
                pmass_tree(j-1)=pmass(j,iconfig)
                pwidth_tree(j-1)=pwidth(j,iconfig)
                do i=1,2
-                  itree(1,j-1)=iforest(1,j,iconfig)
-                  itree(2,j-1)=iforest(2,j,iconfig)
+                  itree(i,j-1)=iforest(i,j,iconfig)
 c Also update the internal references
                   if ( itree(i,j-1).lt. 0 ) then
                      itree(i,j-1)=itree(i,j-1)-1
