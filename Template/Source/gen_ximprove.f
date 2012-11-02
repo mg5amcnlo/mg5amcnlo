@@ -465,8 +465,8 @@ c         write(lun,20) 'cp $k log.txt'
 c      endif
 c      write(lun,20) 'cd ../'
 c      write(lun,15) 'end'
-      write(lun,15) 'rm -f run.$script >&/dev/null'
-      write(lun,15) 'touch done.$script >&/dev/null'
+c      write(lun,15) 'rm -f run.$script >&/dev/null'
+c      write(lun,15) 'touch done.$script >&/dev/null'
  15   format(a)
  20   format(5x,a)
  25   format(10x,a)
