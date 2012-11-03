@@ -79,10 +79,13 @@ class Cluster(object):
         
         if not hasattr(self, 'temp_dir') or not self.temp_dir:
             return self.submit(prog, argument, cwd, stdout, stderr, log)
-        
 
-
+        if cwd is None:
+            cwd = os.getcwd()
+        if not os.path.exists(prog):
+            prog = os.path.join(cwd, prog)
         temp_file_name = "sub." + os.path.basename(prog) + '.'.join(argument)
+
         text = """#!/bin/bash
         MYTMP=%(tmpdir)s/run$%(job_id)s
         MYPWD=%(cwd)s
@@ -1004,7 +1007,7 @@ class LSFCluster(Cluster):
         command = ['bsub','-o', stdout,
                    '-J', me_dir, 
                    '-e', stderr]
-
+        
         if self.cluster_queue and self.cluster_queue != 'None':
             command.extend(['-q', self.cluster_queue])
 

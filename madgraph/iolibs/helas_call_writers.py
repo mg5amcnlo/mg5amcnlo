@@ -1581,7 +1581,7 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
     def format_coupling(call):
         """Format the coupling so any minus signs are put in front"""
 
-        return call.replace('pars->-', '-pars')
+        return call.replace('pars->-', '-pars->')
         
 
 #===============================================================================

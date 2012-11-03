@@ -287,7 +287,7 @@ C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
   ENDDO
   IF(BOOTANDSTOP) THEN
     WRITE(*,*) 'Stopped by user request.'
-    stop 1
+    stop
   ENDIF
 ENDIF
 

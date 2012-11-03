@@ -1041,7 +1041,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         elif starttime:
             running_time = time.time()-starttime
             if running_time < 1e-2:
-                running_time = ''
+                running_time = '[current time: %02dh%02d]' % (time.localtime().tm_hour, time.localtime().tm_min) 
             elif running_time < 10:
                 running_time = '[ %.2gs ]' % running_time
             elif 60 > running_time >= 10:
