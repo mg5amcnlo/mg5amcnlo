@@ -206,6 +206,35 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             return (new_vertex[1],)
         # We should not get here
         assert(False)
+
+
+class IdentifyMETagFKS(IdentifyMETag):
+    """on top of what IdentifyMETag, the diagram tags also have the charge 
+    difference along the fermionic flow in them for initial state legs."""
+
+    def __init__(self, diagram, model = None, ninitial = 2):
+        self.diagram = diagram
+        super(IdentifyMETagFKS, self).__init__(diagram, model, ninitial)
+
+    @staticmethod
+    def link_from_leg(leg, model):
+        """Returns the end link for a leg needed to identify matrix
+        elements: ((leg numer, state, spin, self_antipart, mass,
+        width, color, decay and is_part), number)."""
+
+        part = model.get_particle(leg.get('id'))
+
+        # For legs with decay chains defined, include leg id (don't combine)
+        if leg.get('onshell'): id = leg.get('id')
+        else: id = 0
+        # For FS legs, don't care about number (but do for IS legs)
+        if leg.get('state'): number = 0
+        else: number = leg.get('number')
+        # Include also onshell, since this specifies forbidden s-channel
+        return [((number, id, part.get('spin'), leg.get('onshell'),
+                  part.get('is_part'), part.get('self_antipart'),
+                  part.get('mass'), part.get('width'), part.get('color')),
+                 leg.get('number'))]
         
 #===============================================================================
 # HelasWavefunction

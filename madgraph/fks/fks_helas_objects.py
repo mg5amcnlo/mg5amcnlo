@@ -319,15 +319,24 @@ class FKSHelasProcess(object):
         color links"""
                     
         if self.born_matrix_element != other.born_matrix_element:
+         #   print 'MZ', self.born_matrix_element['processes'][0].nice_string(), '!=', other.born_matrix_element['processes'][0].nice_string()
             return False
+        print 'MZ', self.born_matrix_element['processes'][0].nice_string(), '==', other.born_matrix_element['processes'][0].nice_string()
+        print 'SELF'
+        self.born_matrix_element.calculate_fermionfactors()
+        print 'OTHER'
+        other.born_matrix_element.calculate_fermionfactors()
+
         reals2 = copy.copy(other.real_processes)
         for real in  self.real_processes:
             try:
                 reals2.remove(real)
             except:
                 return False  
-
-        return True
+        if not reals2:
+            return True
+        else: 
+            return False
     
     def add_process(self, other): #test written
         """adds processes from born and reals of other to itself. Note that 
