@@ -63,6 +63,7 @@ class DiagramTag(object):
         """Initialize with a diagram. Create DiagramTagChainLinks according to
         the diagram, and figure out if we need to shift the central vertex."""
 
+        print diagram.get_flow_charge_diff(model)
         # wf_dict keeps track of the intermediate particles
         leg_dict = {}
         # Create the chain which will be the diagram tag
