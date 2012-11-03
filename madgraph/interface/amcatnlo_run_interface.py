@@ -1294,6 +1294,51 @@ Integrated cross-section
         proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
         (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp1']], 
                 self.run_card['ebeam1'], self.run_card['ebeam2'])
+        
+        # Gather some basic statistics for the run and extracted from the log files.
+        # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
+        # > Errors is a list of tuples with this format (log_file,nErrors)
+        stats = {'UPS':{}, 'Errors':[]}
+        if mode in ['aMC@NLO', 'aMC@LO']: 
+            log_GV_files =  glob.glob(pjoin(self.me_dir, \
+                                    'SubProcesses', 'P*','GV*','log_MINT*.txt'))
+            all_log_files = glob.glob(pjoin(self.me_dir, \
+                                          'SubProcesses', 'P*','G*','log*.txt'))
+        elif mode in ['NLO', 'LO']:
+            log_GV_files =  glob.glob(pjoin(self.me_dir, \
+                                    'SubProcesses', 'P*','viSB_G*','log*.txt'))
+            all_log_files = sum([glob.glob(pjoin(self.me_dir,'SubProcesses', 'P*',
+              '%sG*'%foldName,'log*.txt')) for foldName in ['grid_','novB_',\
+                                                                   'viSB_']],[])
+        else:
+            raise aMCatNLOError, 'Running mode %s not supported.'%mode
+        # Recuperate the fraction of unstable PS points found in the runs for the
+        # virtuals
+        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<nPS>\d+).*"+\
+                      r"Unstable points \(check UPS\.log for the first 10\:\)"+\
+                                                r"\s+(?P<nUPS>\d+).*",re.DOTALL)
+        for gv_log in log_GV_files:
+            logfile=open(gv_log,'r')             
+            UPS_stats = re.search(UPS_stat_finder,logfile.read())
+            logfile.close()
+            if not UPS_stats is None:
+                channel_name = '/'.join(gv_log.split('/')[-5:-1])
+                try:
+                    stats['UPS'][channel_name][0] += int(UPS_stats.group('nPS'))
+                    stats['UPS'][channel_name][1] += int(UPS_stats.group('nUPS'))
+                except KeyError:
+                    stats['UPS'][channel_name] = [int(UPS_stats.group('nPS')),
+                                                   int(UPS_stats.group('nUPS'))]
+        # Find the number of potential errors found in all log files
+        for log in all_log_files:
+            logfile=open(log,'r')
+            nErrors = len(re.findall(re.compile(r"\bERROR\b",\
+                                                re.IGNORECASE), logfile.read()))
+            logfile.close()
+            if nErrors != 0:
+                stats['Errors'].append((str(log),nErrors))
+            
+        
         if mode in ['aMC@NLO', 'aMC@LO']:
             status = ['Determining the number of unweighted events per channel',
                       'Updating the number of unweighted events per channel',
@@ -1324,16 +1369,50 @@ Integrated cross-section
                       'Final results and run summary:']
             if step == 0:
                 message = '\n      ' + status[step] + \
-                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb\n' % \
+                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
                              self.cross_sect_dict
             elif step == 1:
                 message = '\n      ' + status[step] + proc_info + \
-                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb\n' % \
+                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
                              self.cross_sect_dict
-
-
-
-        logger.info(message)
+        
+        # Now display the general statistics
+        nTotUPS = sum([chan[1] for chan in stats['UPS'].values()],0)
+        nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
+        UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
+             float(chan[1][1]*100)/chan[1][0]) for chan in stats['UPS'].items()]
+        if len(stats['UPS'].keys())>0:
+            message += '\n      Number of loop ME evaluations: %d'%nTotPS
+            if nTotUPS==0:
+                message += '\n      No unstable PS point detected'
+            else:
+                maxUPS = max(UPSfracs, key = lambda w: w[1])
+                message += '\n      Total number of unstable PS point detected:'+\
+                             ' %d (%4.2f%%)'%(nTotUPS,float(100*nTotUPS)/nTotPS)
+                message += '\n      Maximum fraction of UPS points in '+\
+                      'channel %s (%4.2f%%)'%maxUPS
+                message += '\n      Please report this to the authors while '+\
+                                                            'providing the file'
+                message += '\n      %s'%str(pjoin(os.path.dirname(self.me_dir),
+                                                           maxUPS[0],'UPS.log'))
+            
+        nErrors = sum([err[1] for err in stats['Errors']],0)
+        if nErrors != 0:
+            message += '\n\n      WARNING:: A total of %d error%s ha%s been '\
+              %(nErrors,'s' if nErrors>1 else '','ve' if nErrors>1 else 's')+\
+              'found in the following log file%s:'%('s' if \
+                                                 len(stats['Errors'])>1 else '')
+            for error in stats['Errors'][:3]:
+                log_name = '/'.join(error[0].split('/')[-5:])
+                message += '\n       > %d error%s in %s'%\
+                                   (error[1],'s' if error[1]>1 else '',log_name)
+            if len(stats['Errors'])>3:
+                nRemainingErrors = sum([err[1] for err in stats['Errors']][3:],0)
+                nRemainingLogs = len(stats['Errors'])-3
+                message += '\n      And another %d error%s in %d other log file%s'%\
+                           (nRemainingErrors, 's' if nRemainingErrors>1 else '',
+                               nRemainingLogs, 's ' if nRemainingLogs>1 else '')
+        logger.info(message+'\n')
 
 
 
