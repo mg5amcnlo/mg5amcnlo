@@ -81,8 +81,13 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             IdentifyMETag.dec_number += 1
         if not identical_particle_factor:
             identical_particle_factor = process.identical_particle_factor()
-        sorted_tags = sorted([IdentifyMETag(d, model, ninitial) for d in \
-                                  amplitude.get('diagrams')])
+        if process.get('perturbation_couplings') and \
+                process.get('NLO_mode') not in ['virt', 'loop']:
+            sorted_tags = sorted([IdentifyMETagFKS(d, model, ninitial) for d in \
+                                      amplitude.get('diagrams')])
+        else:
+            sorted_tags = sorted([IdentifyMETag(d, model, ninitial) for d in \
+                                      amplitude.get('diagrams')])
         # Do not use this for loop diagrams as for now the HelasMultiProcess
         # always contain only exactly one loop amplitude.
         if sorted_tags and not isinstance(amplitude, \
@@ -213,28 +218,15 @@ class IdentifyMETagFKS(IdentifyMETag):
     difference along the fermionic flow in them for initial state legs."""
 
     def __init__(self, diagram, model = None, ninitial = 2):
-        self.diagram = diagram
+        self.flow_charge_diff = diagram.get_flow_charge_diff(model)
         super(IdentifyMETagFKS, self).__init__(diagram, model, ninitial)
 
-    @staticmethod
-    def link_from_leg(leg, model):
-        """Returns the end link for a leg needed to identify matrix
-        elements: ((leg numer, state, spin, self_antipart, mass,
-        width, color, decay and is_part), number)."""
+    def __eq__(self, other):
+        return super(IdentifyMETag, self).__eq__(other) and \
+                self.flow_charge_diff == other.flow_charge_diff
 
-        part = model.get_particle(leg.get('id'))
 
-        # For legs with decay chains defined, include leg id (don't combine)
-        if leg.get('onshell'): id = leg.get('id')
-        else: id = 0
-        # For FS legs, don't care about number (but do for IS legs)
-        if leg.get('state'): number = 0
-        else: number = leg.get('number')
-        # Include also onshell, since this specifies forbidden s-channel
-        return [((number, id, part.get('spin'), leg.get('onshell'),
-                  part.get('is_part'), part.get('self_antipart'),
-                  part.get('mass'), part.get('width'), part.get('color')),
-                 leg.get('number'))]
+
         
 #===============================================================================
 # HelasWavefunction
