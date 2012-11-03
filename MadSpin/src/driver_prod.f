@@ -62,7 +62,7 @@ c      call setpara('param_card.dat')  !first call to setup the paramaters
 
 c      read phase-space point
 
-      do i=1,nexternal
+1      do i=1,nexternal
          read (*,*) P(0,i),P(1,i),P(2,i),P(3,i) 
       enddo
 
@@ -79,19 +79,25 @@ c
       do i=1,n_max_cg
       amp2(i)=0d0
       enddo
-
+      call coup()
       CALL SMATRIX(P,MATELEM)
 c
 
 c      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)	
 c      write (*,*) "-----------------------------------------------------------------------------"
-
+       if (MATELEM.eq.0d0)then
+            write(*,*) -(n_max_cg + 1)
+            write(*,*) P, GC_100
+       else
+            write(*,*) n_max_cg
+       endif
        write(*,*) MATELEM
 
       do i=1,n_max_cg
       write(*,*) amp2(i)
       enddo
-
+      call flush()
+      goto 1
 
       end
 	

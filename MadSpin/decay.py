@@ -32,6 +32,7 @@ import re
 import os
 import shutil
 import logging
+import time
 pjoin = os.path.join
 from subprocess import Popen, PIPE, STDOUT
 
@@ -1850,8 +1851,9 @@ class decay_misc:
                 
                 
                 if(os.path.getsize(pjoin(path_me,"parameters.inc"))<10): 
-                    print "Parameters of the model were not written correctly !"
-                    os.remove(pjoin(path_me,"parameters.inc"))
+                    logger.warning("Parameters of the model were not written correctly !")
+                    logger.critical('line 1842 of decays has been modified')
+                    #os.remove(pjoin(path_me,"parameters.inc"))
                 if first:
 
                     first=0
@@ -2191,6 +2193,10 @@ class decay_all_events:
     def __init__(self,inputfile,mybanner,to_decay,decay_processes,\
                  prod_branches,proc_option, max_weight, BW_effects,\
                  branching_fraction,path_me):
+        
+        self.calculator = {}
+        self.calculator_nbcall = {}
+        self.path_me = path_me
 
 
 
@@ -2314,7 +2320,7 @@ class decay_all_events:
             curr_event=Event(inputfile)
             probe_weight=[]
 
-
+            starttime = time.time()
             for ev in range(5):
                 probe_weight.append(0.0)
                 curr_event.get_next_event()
@@ -2365,12 +2371,9 @@ class decay_all_events:
 #            since we don't know yet which topology should be used.    
 #            so light quarks and gluons in the final state may have a small mass
 
-                os.chdir(pjoin(path_me,'production_me',\
-                               'SubProcesses',production_path[tag_production]))
-                executable_prod="./check"
-                external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
-                prod_values=external.communicate(input=p_str)[0]
-                os.chdir(curr_dir)
+                
+                prod_values = self.calculate_matrix_element('prod', 
+                                         production_path[tag_production], p_str)
                 prod_values=prod_values.replace("\n", "")
                 prod_values=prod_values.split()
                 mg5_me_prod = float(prod_values[0])
@@ -2378,7 +2381,8 @@ class decay_all_events:
                 tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
 
                 logger.info(' ')
-                logger.info('Event '+str(ev+1)+' : ')
+                running_time = misc.format_timer(time.time()-starttime)
+                logger.info('Event %s %s: ' % (ev+1, running_time))
 #     print "Shat: "+str(curr_event.shat)
                 logger.info('Number of production topologies : '\
                             +str(len(topologies[tag_production].keys())))
@@ -2456,22 +2460,19 @@ class decay_all_events:
                     p, p_str=curr_event.give_momenta()    
                     p_full, p_full_str=decayed_event.give_momenta()    
 
-#     start with production weight: 
-                    os.chdir(pjoin(path_me,'production_me',\
-                               'SubProcesses',production_path[tag_production]))
-                    executable_prod="./check"
-                    external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
-                    prod_values=external.communicate(input=p_str)[0]
-                    os.chdir(curr_dir)
+#     start with production weight:
+                    prod_values =self.calculate_matrix_element('prod',
+                                         production_path[tag_production], p_str)
+
                     prod_values=prod_values.replace("\n", "")
                     prod_values=prod_values.split()
                     mg5_me_prod = float(prod_values[0])
 #     then decayed weight:
-                    os.chdir(pjoin(path_me,'full_me','SubProcesses',\
-                                   decay_path[tag_production]))
-                    executable_prod="./check"
-                    external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
-                    mg5_me_full = float(external.communicate(input=p_full_str)[0])
+                    prod_values =self.calculate_matrix_element('full',
+                                         decay_path[tag_production], p_full_str)
+
+                    mg5_me_full = float(prod_values)
+                    #mg5_me_full = float(external.communicate(input=p_full_str)[0])
                     mg5_me_full=mg5_me_full*BW_weight_prod*BW_weight_decay
                     os.chdir(curr_dir)
 
@@ -2520,10 +2521,13 @@ class decay_all_events:
 
         event_nb=0
         trial_nb_all_events=0
+        starttime = time.time()
         while 1:
             if (curr_event.get_next_event()=="no_event"): break
             event_nb+=1
-            if (math.fmod(event_nb,50)==0): logger.info('Event nb '+ str(event_nb))
+            if (event_nb % 50==0): 
+                running_time = misc.format_timer(time.time()-starttime)
+                logger.info('Event nb %s %s' % (event_nb, running_time))
             trial_nb=0
 
 #        if event_nb>10: break
@@ -2560,13 +2564,9 @@ class decay_all_events:
                 logger.info( ' Done.')
 
 # First evaluate production matrix element
-            p, p_str=curr_event.give_momenta()    
-            os.chdir(pjoin(path_me,'production_me','SubProcesses',\
-                           production_path[tag_production]))
-            executable_prod="./check"
-            external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
-            prod_values=external.communicate(input=p_str)[0]
-            os.chdir(curr_dir)
+            p, p_str=curr_event.give_momenta()
+            prod_values = self.calculate_matrix_element('prod', 
+                                         production_path[tag_production], p_str)
             prod_values=prod_values.replace("\n", "")
             prod_values=prod_values.split()
             mg5_me_prod = float(prod_values[0])
@@ -2620,24 +2620,16 @@ class decay_all_events:
  
 #        Now evaluate the matrix elements ...
 #            start with production weight: 
-
-                os.chdir(pjoin(path_me,'production_me',\
-                               'SubProcesses',production_path[tag_production]))
-                executable_prod="./check"        
-                external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
-
-                prod_values=external.communicate(input=p_str)[0]
+                prod_values = self.calculate_matrix_element('prod', 
+                                         production_path[tag_production], p_str)
                 prod_values=prod_values.replace("\n", "")
                 prod_values=prod_values.split()
                 mg5_me_prod = float(prod_values[0])
-                os.chdir(curr_dir)
 #            then decayed weight:
-                os.chdir(pjoin(path_me,'full_me','SubProcesses',decay_path[tag_production]))
-                executable_prod="./check"
-                external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
-                mg5_me_full = float(external.communicate(input=p_full_str)[0])
+                prod_values = self.calculate_matrix_element('full', 
+                                         decay_path[tag_production], p_full_str)
+                mg5_me_full = float(prod_values)
                 mg5_me_full=mg5_me_full*BW_weight_prod*BW_weight_decay
-                os.chdir(curr_dir)
 
                 if(not mg5_me_full>0 or not mg5_me_prod >0 ):
                     logger.warning('NEGATIVE MATRIX ELEMENT !!')
@@ -2685,6 +2677,69 @@ class decay_all_events:
         shutil.rmtree(pjoin(path_me,'production_me'))
         shutil.rmtree(pjoin(path_me,'full_me'))
         os.remove(pjoin(path_me,'parameters.inc'))
+
+
+
+    def calculate_matrix_element(self, mode, production, stdin_text):
+        """routine to return the matrix element"""
+        tmpdir = ''
+        if (mode, production) in self.calculator:
+            external = self.calculator[(mode, production)]
+            self.calculator_nbcall[(mode, production)] += 1
+        else:
+            logger.debug('we have %s calculator ready' % len(self.calculator))
+            if mode == 'prod':
+                tmpdir = pjoin(self.path_me,'production_me', 'SubProcesses',
+                           production)
+            else:
+                tmpdir = pjoin(self.path_me,'full_me', 'SubProcesses',
+                           production)
+            executable_prod="./check"
+            external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, 
+                                                      stderr=STDOUT, cwd=tmpdir)
+            self.calculator[(mode, production)] = external 
+            self.calculator_nbcall[(mode, production)] = 1       
+
+                    
+        
+        external.stdin.write(stdin_text)
+        
+        if mode == 'prod':
+            info = int(external.stdout.readline())
+            nb_output = abs(info)+1
+        else:
+            info = 1
+            nb_output = 1
+            
+        prod_values = ' '.join([external.stdout.readline() for i in range(nb_output)])
+        if info < 0:
+            print 'ZERO DETECTED'
+            print prod_values
+            print stdin_text
+            os.system('lsof -p %s' % external.pid)
+            return ' '.join(prod_values.split()[-1*(nb_output-1):])
+        
+        if len(self.calculator) > 100:
+            logger.debug('more than 100 calculator. Perform cleaning')
+            nb_calls = self.calculator_nbcall.values()
+            nb_calls.sort()
+            cut = max([nb_calls[len(nb_calls)//2], 0.001 * nb_calls[-1]])
+            for key, external in list(self.calculator.items()):
+                nb = self.calculator_nbcall[key]
+                if nb < cut:
+                    external.stdin.close()
+                    external.stdout.close()
+                    external.terminate()
+                    del self.calculator[key]
+                    del self.calculator_nbcall[key]
+                else:
+                    self.calculator_nbcall[key] = self.calculator_nbcall[key] //10
+        
+        
+        return prod_values
+        
+    
+
 
 
 if __name__=="__main__":

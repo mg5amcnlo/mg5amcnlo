@@ -1058,18 +1058,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             if '<br>' not  in status:
                 logger.info(status)
         elif starttime:
-            running_time = time.time()-starttime
-            if running_time < 1e-2:
-                running_time = ''
-            elif running_time < 10:
-                running_time = '[ %.2gs ]' % running_time
-            elif 60 > running_time >= 10:
-                running_time = '[ %.3gs ]' % running_time
-            elif 3600 > running_time >= 60:
-                running_time = '[ %im %is ]' % (running_time // 60, int(running_time % 60))
-            else:
-                running_time = '[ %ih %im ]' % (running_time // 3600, (running_time//60 % 60))
-                
+            running_time = misc.format_timer(time.time()-starttime)
             logger.info(' Idle: %s,  Running: %s,  Completed: %s %s' % \
                        (status[0], status[1], status[2], running_time))
         else: 

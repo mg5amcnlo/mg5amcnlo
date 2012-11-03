@@ -62,7 +62,7 @@ c      call setpara('param_card.dat')  !first call to setup the paramaters
 
 c      read phase-space point
 
-      do i=1,nexternal
+1      do i=1,nexternal
          read (*,*) P(0,i),P(1,i),P(2,i),P(3,i) 
       enddo
 
@@ -83,7 +83,8 @@ c      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)
 c      write (*,*) "-----------------------------------------------------------------------------"
 
        write(*,*) MATELEM
-
+       call flush()
+       goto 1
 
       end
 	

@@ -598,39 +598,39 @@ class open_file(object):
         
         
     def open_program(self, program, file_path, mac_check=True, background=False):
-      """ open a file with a given program """
+        """ open a file with a given program """
+        
+        if mac_check==True and sys.platform == 'darwin':
+            return self.open_mac_program(program, file_path)
+        
+        # Shell program only                                                                                                                                                                 
+        if program:
+            arguments = program.split() # allow argument in program definition
+            arguments.append(file_path)
+        
+            if not background:
+                subprocess.call(arguments)
+            else:
+                import thread
+                thread.start_new_thread(subprocess.call,(arguments,))
+        else:
+            logger.warning('Not able to open file %s since no program configured.' % file_path + \
+                                'Please set one in ./input/mg5_configuration.txt')
 
-      if mac_check==True and sys.platform == 'darwin':
-          return self.open_mac_program(program, file_path)
-
-      # Shell program only                                                                                                                                                                 
-      if program:
-          arguments = program.split() # allow argument in program definition
-          arguments.append(file_path)
-
-          if not background:
-              subprocess.call(arguments)
-          else:
-              import thread
-              thread.start_new_thread(subprocess.call,(arguments,))
-      else:
-          logger.warning('Not able to open file %s since no program configured.' % file_path + \
-                              'Please set one in ./input/mg5_configuration.txt')
-    
     def open_mac_program(self, program, file_path):
-      """ open a text with the text editor """
-      
-      if not program:
-          # Ask to mac manager
-          os.system('open %s' % file_path)
-      elif which(program):
-          # shell program
-          arguments = program.split() # Allow argument in program definition
-          arguments.append(file_path)
-          subprocess.call(arguments)
-      else:
-         # not shell program
-         os.system('open -a %s %s' % (program, file_path))
+        """ open a text with the text editor """
+        
+        if not program:
+            # Ask to mac manager
+            os.system('open %s' % file_path)
+        elif which(program):
+            # shell program
+            arguments = program.split() # Allow argument in program definition
+            arguments.append(file_path)
+            subprocess.call(arguments)
+        else:
+            # not shell program
+            os.system('open -a %s %s' % (program, file_path))
 
 def is_executable(path):
     """ check if a path is executable"""
@@ -638,6 +638,21 @@ def is_executable(path):
         return os.access(path, os.X_OK)
     except:
         return False        
+
+def format_timer(running_time):
+    """ return a nicely string representing the time elapsed."""
+    if running_time < 1e-2:
+        running_time = ''
+    elif running_time < 10:
+        running_time = '[ %.2gs ]' % running_time
+    elif 60 > running_time >= 10:
+        running_time = '[ %.3gs ]' % running_time
+    elif 3600 > running_time >= 60:
+        running_time = '[ %im %is ]' % (running_time // 60, int(running_time % 60))
+    else:
+        running_time = '[ %ih %im ]' % (running_time // 3600, (running_time//60 % 60))
+    return running_time
+    
 
 
 class OptionParser(optparse.OptionParser):
@@ -691,7 +706,9 @@ class digest:
         import zlib
         def digest(text):
             return zlib.adler32(text)
-        
+    
 digest = digest().test_all()
+
+
 
 
