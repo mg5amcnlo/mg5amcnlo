@@ -1475,7 +1475,7 @@ class Test_Channel(unittest.TestCase):
                 vert_2 = copy.deepcopy(vertex)
                 vert_3 = copy.deepcopy(vertex)
                 vert_6 = copy.deepcopy(vertex)
-            elif legs_set == set([-11, 12, 24]):
+            elif legs_set == set([-13, 14, 24]):
                 # w- > e- v~ (decay of antiparticle)
                 # w+ > e+ v
                 vert_4 = copy.deepcopy(vertex)
@@ -1509,7 +1509,7 @@ class Test_Channel(unittest.TestCase):
         vert_4['legs'][0]['id'] = -vert_4['legs'][0]['id']
         vert_4['legs'][1]['id'] = -vert_4['legs'][1]['id']
         vert_4['legs'][2]['id'] = -vert_4['legs'][2]['id']
-        vert_4['id'] = self.my_testmodel['conj_int_dict'][66]
+        vert_4['id'] = self.my_testmodel['conj_int_dict'][vert_4['id']]
 
         # w+ > e+ v
         vert_5['legs'][0]['number'] = 5
@@ -1545,6 +1545,7 @@ class Test_Channel(unittest.TestCase):
         self.h_tt_bbmmvv['ini_pid'] = 0
         self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
                           self.h_tt_bbmmvv.get_initial_id)
+
         # After ini_pid is found, no model is needed.
         self.assertEqual(self.h_tt_bbmmvv.get_anti_initial_id(), 25)
         self.assertEqual(self.h_tt_bbmmvv.get_initial_id(self.my_testmodel), 25)
@@ -1569,6 +1570,14 @@ class Test_Channel(unittest.TestCase):
                                                 vertexlist[3]['legs'][0]])
         self.assertEqual(self.h_tt_bbmmvv.get_final_legs(), goal_final_legs)
 
+        # Test get_final_legs with force argument
+        # Change final_legs manually
+        self.h_tt_bbmmvv['final_legs'].append(vertexlist[3]['legs'][0])
+        goal_final_legs.append(vertexlist[3]['legs'][0])
+        self.assertEqual(self.h_tt_bbmmvv.get_final_legs(), goal_final_legs)
+        self.assertEqual(self.h_tt_bbmmvv.get_final_legs(True), 
+                         goal_final_legs[:-1])
+
     def test_get_onshell(self):
         """ test the get_onshell function"""
         vertexlist = self.h_tt_bbmmvv.get('vertices')
@@ -1587,7 +1596,7 @@ class Test_Channel(unittest.TestCase):
     def test_initial_setups(self):
         """ test the intial_setups function"""
 
-        self.h_tt_bbmmvv.initial_setups(self.my_testmodel)
+        self.h_tt_bbmmvv.initial_setups(self.my_testmodel, True)
         # Test for existence of various properties
         self.assertTrue(self.h_tt_bbmmvv['onshell'])
         self.assertTrue(self.h_tt_bbmmvv['ini_pid'])
@@ -1626,21 +1635,41 @@ class Test_Channel(unittest.TestCase):
                                               base_objects.VertexList(\
                                               vertexlist[1:])})
         # run initial setups
-        h_tt_bwbmuvm.initial_setups(self.my_testmodel)
-        self.h_tt_bbmmvv.initial_setups(self.my_testmodel)
+        h_tt_bwbmuvm.initial_setups(self.my_testmodel, True)
+        self.h_tt_bbmmvv.initial_setups(self.my_testmodel, True)
 
         #print [l['id'] for l in h_tt_bbww.get_final_legs()]
         # decay of w+ > mu+ vm
-        w_muvm = self.my_testmodel.get_particle(24).get_vertexlist(2, True)[0]
+        for v in self.my_testmodel.get_particle(24).get_vertexlist(2, True):
+            if set([l['id'] for l in v['legs']]) == set([24, -13, 14]):
+                w_muvm = v
 
         # Connect h > w+ w- b b~ with w+ > mu+ vm 
         new_channel = higgs.connect_channel_vertex(h_tt_bbww, 3, w_muvm,
                                                    self.my_testmodel)
+
         #print 'c1:', new_channel.nice_string(),\
         #    '\nc2:', h_tt_bwbmuvm.nice_string(), '\n'
         #print self.h_tt_bbmmvv.nice_string()
         self.assertEqual(new_channel, h_tt_bwbmuvm)
         
+        # Test the change of legs in mother channel doesn't change resulting
+        # channel
+
+        # Change final_legs in new_channel
+        for index, l in enumerate(new_channel['final_legs']):
+            if l['id'] == 24:
+                l_index = index
+                l_num = l['number']
+                l['number'] = 7
+        #print new_channel.get_final_legs()
+
+        self.assertFalse(new_channel.get_final_legs()\
+                             == h_tt_bwbmuvm.get_final_legs())
+        # reset final_legs to be normal one
+        new_channel['final_legs'][l_index]['number'] = l_num
+
+        # Test of further connection
         #print [l['id'] for l in h_tt_bwbmuvm.get_final_legs()]
         new_channel = higgs.connect_channel_vertex(h_tt_bwbmuvm, 3, w_muvm,
                                                    self.my_testmodel)
@@ -2762,6 +2791,12 @@ class Test_DecayAmplitude(unittest.TestCase):
         self.assertTrue(amplt_h_mmvv in higgs.get_amplitudes(4))
         self.assertTrue(amplt_h_epairs in higgs.get_amplitudes(4))
 
+        # Test that all the final_legs has the same number
+        for amp in higgs.get_amplitudes(4):
+            final_list = set([(l['number'], l['id']) for l in amp['process']['legs'][1:]])
+            for dia in amp['diagrams']:
+                self.assertEqual(set([(l['number'], l['id']) for l in dia.get_final_legs()]), final_list)
+
 
     def test_decaytable_string(self):
         """ Test the decaytable_string """
@@ -2821,15 +2856,36 @@ class Test_DecayAmplitude(unittest.TestCase):
         # Construct new amplitude
         std_amp = decay_objects.DecayAmplitude(h_eeveve['diagrams'][0], 
                                           self.my_testmodel)
-        std_amp.add_std_diagram(h_eeveve['diagrams'][1])
+
+        # Modify the number of legs in second diagram
+        new_diagram = copy.deepcopy(h_eeveve['diagrams'][1])
+        for vert in new_diagram['vertices']:
+            for leg in vert['legs']:
+                # Swap number 2 and 4
+                old_number = leg['number']
+                if old_number == 2:
+                    leg['number'] = 4
+                if old_number == 4:
+                    leg['number'] = 2
+        new_diagram.initial_setups(self.my_testmodel, True)
+
+        #print 'dia1:', h_eeveve['diagrams'][0].nice_string(),\
+        #    '\ndia2(old):', h_eeveve['diagrams'][1].nice_string()
+        #print 'dia2 new:', new_diagram.nice_string()
+
+
+        # Add diagram (with a different number assignment) to std_amp
+        std_amp.add_std_diagram(new_diagram)
+        #print std_amp['diagrams'][0].nice_string()
+        #print std_amp['diagrams'][1].nice_string()
 
         # Test final legs
         list_a = sorted(std_amp['diagrams'][0].get_final_legs(), 
                         key=lambda l: l['id'])
-        number_a = [l['number'] for l in list_a]
+        number_a = [(l['number'], l['id']) for l in list_a]
         list_b = sorted(std_amp['diagrams'][1].get_final_legs(), 
                         key=lambda l: l['id'])
-        number_b = [l['number'] for l in list_b]
+        number_b = [(l['number'], l['id']) for l in list_b]
         self.assertEqual(number_a, number_b)
 
         # Test all legs,

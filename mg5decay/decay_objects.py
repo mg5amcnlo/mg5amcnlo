@@ -748,9 +748,9 @@ class DecayParticle(base_objects.Particle):
                 self['decay_amplitudes'][partnum] = value
         elif isinstance(value, list) and \
                 all([isinstance(a, DecayAmplitude) for a in value]):
-            value_transform = DecayAmplitudeList(value)
-            if self.check_amplitudes(partnum, value_transform):
-                self['decay_amplitudes'][partnum] = value_transform
+            new_value = DecayAmplitudeList(value)
+            if self.check_amplitudes(partnum, new_value):
+                self['decay_amplitudes'][partnum] = new_value
         else:
             raise self.PhysicsObjectError, \
                 "The input must be a list of decay amplitudes."
@@ -857,12 +857,13 @@ class DecayParticle(base_objects.Particle):
                             "No channel search will not proceed.")
             return
 
-        # The initial vertex (identical vertex).
+        # The initial vertex (identical vertex).-> Not used anymore
+        """
         ini_vert = base_objects.Vertex({'id': 0, 'legs': base_objects.LegList([\
                    base_objects.Leg({'id':self.get_anti_pdg_code(), 
                                      'number':1, 'state': False}),
                    base_objects.Leg({'id':self.get_pdg_code(), 'number':2})])})
-
+        """           
         connect_channel_vertex = self.connect_channel_vertex
         check_repeat = self.check_repeat
 
@@ -886,7 +887,7 @@ class DecayParticle(base_objects.Particle):
                 temp_channel['vertices'].append(temp_vert)
 
                 # Run initial setups for the new channel
-                temp_channel.initial_setups(model)
+                temp_channel.initial_setups(model, True)
 
                 # Setup the 'has_idpart' property
                 if Channel.check_idlegs(temp_vert):
@@ -935,6 +936,7 @@ class DecayParticle(base_objects.Particle):
                         temp_c = self.connect_channel_vertex(sub_c, index, 
                                                              vert, model)
                         temp_c_o = temp_c.get_onshell(model)
+
                         # Append this channel if it is new
                         if not self.check_repeat(clevel,
                                                  temp_c_o, temp_c):
@@ -975,7 +977,7 @@ class DecayParticle(base_objects.Particle):
         # Find the correct vertex id for decays of antiparticles
         # Using dict in model.conj_int_dict
         if sub_channel.get_final_legs()[index]['id'] < 0:
-            new_vertex['id'] = model['conj_int_dict'][new_vertex['id']]
+            new_vertex['id'] = model['conj_int_dict'][vertex['id']]
             for leg in new_vertex['legs']:
                 leg['id']  = model.get_particle(leg['id']).get_anti_pdg_code()
 
@@ -997,10 +999,11 @@ class DecayParticle(base_objects.Particle):
         # New vertex is first
         new_channel['vertices'].append(new_vertex)
         # Then extend the vertices of the old channel
-        new_channel['vertices'].extend(sub_channel['vertices'])
+        # deepcopy is necessary to get new legs
+        new_channel['vertices'].extend(copy.deepcopy(sub_channel['vertices']))
 
         # Setup properties of new_channel (This slows the time)
-        new_channel.initial_setups(model)
+        new_channel.initial_setups(model, True)
 
         # The 'has_idpart' property of descendent of a channel 
         # must derive from the mother channel and the vertex
@@ -1050,6 +1053,7 @@ class DecayParticle(base_objects.Particle):
         for channel in self.get_channels(clevel, True):
             
             found = False
+
             # Record the final particle id.
             final_pid = sorted([l.get('id') for l in channel.get_final_legs()])
         
@@ -1060,7 +1064,8 @@ class DecayParticle(base_objects.Particle):
                 # Do not include the first leg (initial id)
                 if sorted([l.get('id') for l in amplt['process']['legs'][1:]])\
                         == final_pid:
-                    amplt['diagrams'].append(channel)
+
+                    amplt.add_std_diagram(channel)
                     found = True
                     break
 
@@ -1391,17 +1396,7 @@ class DecayModel(model_reader.ModelReader):
         # Valid initial particle list
         ini_list = []
 
-        #Dict to store all the vertexlist (for conveniece only, removable!)
-        #vertexlist_dict = {}
-
         for part in self.get('particles'):
-            """
-            # Initialized the decay_vertexlist
-            part['decay_vertexlist'] = {(2, False) : base_objects.VertexList(),
-                                        (2, True)  : base_objects.VertexList(),
-                                        (3, False) : base_objects.VertexList(),
-                                        (3, True)  : base_objects.VertexList()}
-                                        """
             if not part.get('is_stable'):
                 #All valid initial particles (mass != 0 and is_part == True)
                 ini_list.append(part.get_pdg_code())
@@ -1436,7 +1431,8 @@ class DecayModel(model_reader.ModelReader):
                 # Get anti_pdg_code (pid for incoming particle)
                 pid = part.get_anti_pdg_code()
 
-                # Exclude illegal initial particle
+                # Exclude illegal initial particle 
+                # (including unstable antiparticles)
                 if not pid in ini_list:
                     continue
 
@@ -1450,7 +1446,8 @@ class DecayModel(model_reader.ModelReader):
                 ini_mass = abs(eval(part.get('mass')))
                 onshell = ini_mass > (total_mass - ini_mass)
 
-                #Create new legs for the sort later
+                # Create new legs for the sort later,
+                # turn pid of inital particle into anti-one
                 temp_legs_new = copy.deepcopy(temp_legs)
                 temp_legs_new[num]['id'] = pid
 
@@ -1514,7 +1511,7 @@ class DecayModel(model_reader.ModelReader):
                     break
 
             if not found:
-                logger.warning('No CP conjugate found for interaction #%d' %inter['id'])
+                logger.warning('No hermitian conjugate is found for interaction #%d' %inter['id'])
             
         #fdata = open(os.path.join(MG5DIR, 'models', self['name'], 'vertexlist_dict.dat'), 'w')
         #fdata.write(str(vertexlist_dict))
@@ -3146,13 +3143,13 @@ class Channel(base_objects.Diagram):
 
         return mystr
 
-    def initial_setups(self, model):
+    def initial_setups(self, model, force):
         """ Setup useful properties for a new channel.
             N.B. 'has_idpart' is not implemented because there is a faster way
             to get it from connect_channel_vertex. """
 
         self.get_initial_id(model)
-        self.get_final_legs()
+        self.get_final_legs(force)
         self.get_onshell(model)
         self.calculate_orders(model)
 
@@ -3173,12 +3170,16 @@ class Channel(base_objects.Diagram):
             raise self.PhysicsObjectError, "No model is provided to get initial id."
 
 
-    def get_final_legs(self):
+    def get_final_legs(self, force=False):
         """ Return a list of the final state legs."""
+
+        # Reset leglist of force = True
+        if force:
+            self['final_legs'] = base_objects.LegList()
 
         if not self['final_legs']:
             for vert in self.get('vertices'):
-                for leg in vert.get('legs'):
+                for leg in vert.get('legs')[:-1]:
                     if not leg.get('number') in [l.get('number') \
                                                  for l in self['final_legs']]\
                                                  and leg.get('number') > 1:
@@ -4114,9 +4115,11 @@ class DecayAmplitude(diagram_generation.Amplitude):
             self['diagrams'].append(new_dia)
             return
 
+
         # non_std_number: number of new_dia
         non_std_numbers = [(l.get('id'),l.get('number')) \
                                for l in new_dia.get_final_legs()]
+
         # initial leg
         non_std_numbers.append((new_dia.get_initial_id(model), 1))
         non_std_numbers.sort(id_num_cmp)
