@@ -96,7 +96,15 @@ class Testtopo(unittest.TestCase):
         os.chdir(pjoin(path_for_me,'production_me','SubProcesses',prod_name))
         executable_prod="./check"
         external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
-        prod_values=external.communicate(input=p_string)[0] 
+ 
+        external.stdin.write(p_string)
+
+        info = int(external.stdout.readline())
+        nb_output = abs(info)+1
+
+
+        prod_values = ' '.join([external.stdout.readline() for i in range(nb_output)])
+
         prod_values=prod_values.split()
         prod_values_test=['0.59366146660637686', '7.5713552297679376', '12.386583104018380', '34.882849897228873']
         self.assertEqual(prod_values,prod_values_test)               
@@ -114,7 +122,11 @@ class Testtopo(unittest.TestCase):
         os.chdir(pjoin(path_for_me,'full_me','SubProcesses',decay_name))
         executable_decay="./check"
         external = Popen(executable_decay, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
-        decay_value=external.communicate(input=p_string)[0] 
+        external.stdin.write(p_string)
+
+        nb_output =1 
+        decay_value = ' '.join([external.stdout.readline() for i in range(nb_output)])
+
         decay_value=decay_value.split()
         decay_value_test=['3.8420345719455465E-017']
         for i in range(len(decay_value)): 

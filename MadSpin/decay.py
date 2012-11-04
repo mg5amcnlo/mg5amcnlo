@@ -2746,6 +2746,18 @@ if __name__=="__main__":
 
 # This is the main program
 
+    import sys
+    curr_dir=os.getcwd() 
+    root_path = os.path.dirname(os.path.realpath( __file__ ))
+    sys.path.insert(0, root_path)
+
+    import logging.config
+    import src.coloring_logging
+
+    logging.config.fileConfig(os.path.join(curr_dir, 'src', 'me5_logging.conf'))
+    logging.root.setLevel(eval('logging.' + 'DEBUG'))
+    logging.getLogger('madgraph').setLevel(eval('logging.' + 'DEBUG'))
+
 #    load the tools
     decay_tools=decay_misc()
 #
@@ -2820,6 +2832,8 @@ if __name__=="__main__":
     answer=raw_input( "Branching fraction ? (type a negative number is unknown ) \n")
     if float(answer) >0.0: branching_fraction=float(answer)
 
+
+
     generate_all=decay_all_events(inputfile,mybanner,to_decay,decay_processes,\
-                prod_branches,proc_option, max_weight, BW_effects,branching_fraction, '.')
+                prod_branches,proc_option, max_weight, BW_effects,branching_fraction, curr_dir)
 

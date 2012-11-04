@@ -87,7 +87,7 @@ c      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)
 c      write (*,*) "-----------------------------------------------------------------------------"
        if (MATELEM.eq.0d0)then
             write(*,*) -(n_max_cg + 1)
-            write(*,*) P, GC_100
+            write(*,*) P
        else
             write(*,*) n_max_cg
        endif
