@@ -1390,22 +1390,22 @@ Integrated cross-section
         nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
         UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
              float(chan[1][1]*100)/chan[1][0]) for chan in stats['UPS'].items()]
-        if len(stats['UPS'].keys())>0:
-            if nTotUPS!=0:
-                message += '\n      Number of loop ME evaluations: %d'%nTotPS
-                maxUPS = max(UPSfracs, key = lambda w: w[1])
-                message += '\n      Total number of unstable PS point detected:'+\
+        maxUPS = max(UPSfracs, key = lambda w: w[1])        
+        if len(stats['UPS'].keys())>0 and maxUPS[1]>0.1:
+            message += '\n      Number of loop ME evaluations: %d'%nTotPS
+            message += '\n      Total number of unstable PS point detected:'+\
                              ' %d (%4.2f%%)'%(nTotUPS,float(100*nTotUPS)/nTotPS)
-                message += '\n      Maximum fraction of UPS points in '+\
+            message += '\n      Maximum fraction of UPS points in '+\
                       'channel %s (%4.2f%%)'%maxUPS
-                message += '\n      Please report this to the authors while '+\
+            message += '\n      Please report this to the authors while '+\
                                                             'providing the file'
-                message += '\n      %s'%str(pjoin(os.path.dirname(self.me_dir),
+            message += '\n      %s'%str(pjoin(os.path.dirname(self.me_dir),
                                                            maxUPS[0],'UPS.log'))
         logger.info(message+'\n')            
         nErrors = sum([err[1] for err in stats['Errors']],0)
+        message = '\n      Number of loop ME evaluations: %d'%nTotPS
         if nErrors != 0:
-            message = '\n\n      WARNING:: A total of %d error%s ha%s been '\
+            message += '\n\n      WARNING:: A total of %d error%s ha%s been '\
               %(nErrors,'s' if nErrors>1 else '','ve' if nErrors>1 else 's')+\
               'found in the following log file%s:'%('s' if \
                                                  len(stats['Errors'])>1 else '')
@@ -1419,7 +1419,7 @@ Integrated cross-section
                 message += '\n      And another %d error%s in %d other log file%s'%\
                            (nRemainingErrors, 's' if nRemainingErrors>1 else '',
                                nRemainingLogs, 's ' if nRemainingLogs>1 else '')
-            logger.debug(message+'\n')
+        logger.debug(message+'\n')
 
 
 
