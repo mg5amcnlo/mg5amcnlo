@@ -449,7 +449,20 @@ the file and returns last line in an internal buffer."""
         else:
             raise StopIteration
 
-
+def format_timer(running_time):
+    """ return a nicely string representing the time elapsed."""
+    if running_time < 2e-2:
+        running_time = running_time = 'current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min) 
+    elif running_time < 10:
+        running_time = ' %.2gs ' % running_time
+    elif 60 > running_time >= 10:
+        running_time = ' %.3gs ' % running_time
+    elif 3600 > running_time >= 60:
+        running_time = ' %im %is ' % (running_time // 60, int(running_time % 60))
+    else:
+        running_time = ' %ih %im ' % (running_time // 3600, (running_time//60 % 60))
+    return running_time
+    
 
 
 #

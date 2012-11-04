@@ -773,6 +773,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     def __init__(self, me_dir = None, options = {}, *completekey, **stdin):
         """ add information to the cmd """
 
+        self.start_time = 0
         CmdExtended.__init__(self, *completekey, **stdin)
         common_run.CommonRunCmd.__init__(self, me_dir, options)
        
@@ -920,6 +921,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     ############################################################################      
     def do_calculate_xsect(self, line):
         """Main commands: calculates LO/NLO cross-section, using madevent_vegas """
+        
+        self.start_time = time.time()
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _generate_events_parser.parse_args(argss)
@@ -951,6 +954,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     ############################################################################      
     def do_generate_events(self, line):
         """Main commands: generate events """
+        
+        self.start_time = time.time()
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _generate_events_parser.parse_args(argss)
@@ -990,6 +995,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     ############################################################################      
     def do_launch(self, line):
         """Main commands: launch the full chain """
+        
+        self.start_time = time.time()
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _launch_parser.parse_args(argss)
@@ -1359,10 +1366,12 @@ Integrated cross-section
                 message = message + \
                     ('\n      Number of events generated: %s' + \
                      '\n      Parton shower to be used: %s' + \
-                     '\n      Fraction of negative weights: %4.2f') % \
+                     '\n      Fraction of negative weights: %4.2f' + \
+                     '\n      Total running time : %s') % \
                         (self.run_card['nevents'],
                          self.run_card['parton_shower'],
-                         neg_frac)
+                         neg_frac, 
+                         misc.format_timer(time.time()-self.start_time))
 
         elif mode in ['NLO', 'LO']:
             status = ['Results after grid setup (correspond roughly to LO):',
@@ -1382,10 +1391,8 @@ Integrated cross-section
         UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
              float(chan[1][1]*100)/chan[1][0]) for chan in stats['UPS'].items()]
         if len(stats['UPS'].keys())>0:
-            message += '\n      Number of loop ME evaluations: %d'%nTotPS
-            if nTotUPS==0:
-                message += '\n      No unstable PS point detected'
-            else:
+            if nTotUPS!=0:
+                message += '\n      Number of loop ME evaluations: %d'%nTotPS
                 maxUPS = max(UPSfracs, key = lambda w: w[1])
                 message += '\n      Total number of unstable PS point detected:'+\
                              ' %d (%4.2f%%)'%(nTotUPS,float(100*nTotUPS)/nTotPS)
@@ -1397,7 +1404,7 @@ Integrated cross-section
                                                            maxUPS[0],'UPS.log'))
             
         nErrors = sum([err[1] for err in stats['Errors']],0)
-        if nErrors != 0:
+        if __debug__ and  nErrors != 0:
             message += '\n\n      WARNING:: A total of %d error%s ha%s been '\
               %(nErrors,'s' if nErrors>1 else '','ve' if nErrors>1 else 's')+\
               'found in the following log file%s:'%('s' if \
