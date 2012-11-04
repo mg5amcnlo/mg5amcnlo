@@ -1402,10 +1402,10 @@ Integrated cross-section
                                                             'providing the file'
                 message += '\n      %s'%str(pjoin(os.path.dirname(self.me_dir),
                                                            maxUPS[0],'UPS.log'))
-            
+        logger.info(message+'\n')            
         nErrors = sum([err[1] for err in stats['Errors']],0)
-        if __debug__ and  nErrors != 0:
-            message += '\n\n      WARNING:: A total of %d error%s ha%s been '\
+        if nErrors != 0:
+            message = '\n\n      WARNING:: A total of %d error%s ha%s been '\
               %(nErrors,'s' if nErrors>1 else '','ve' if nErrors>1 else 's')+\
               'found in the following log file%s:'%('s' if \
                                                  len(stats['Errors'])>1 else '')
@@ -1419,7 +1419,7 @@ Integrated cross-section
                 message += '\n      And another %d error%s in %d other log file%s'%\
                            (nRemainingErrors, 's' if nRemainingErrors>1 else '',
                                nRemainingLogs, 's ' if nRemainingLogs>1 else '')
-        logger.info(message+'\n')
+            logger.debug(message+'\n')
 
 
 
