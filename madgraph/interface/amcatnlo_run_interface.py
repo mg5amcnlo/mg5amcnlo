@@ -1385,12 +1385,18 @@ Integrated cross-section
                      '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
                              self.cross_sect_dict
         
+        if (mode in ['NLO', 'LO'] and step!=1) or \
+           (mode in ['aMC@NLO', 'aMC@LO'] and step!=2):
+            logger.info(message+'\n')
+            return
+
         # Now display the general statistics
         nTotUPS = sum([chan[1] for chan in stats['UPS'].values()],0)
         nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
         UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
              float(chan[1][1]*100)/chan[1][0]) for chan in stats['UPS'].items()]
-        maxUPS = max(UPSfracs, key = lambda w: w[1])        
+        maxUPS = max(UPSfracs, key = lambda w: w[1])
+        debug_msg = ""
         if len(stats['UPS'].keys())>0 and maxUPS[1]>0.1:
             message += '\n      Number of loop ME evaluations: %d'%nTotPS
             message += '\n      Total number of unstable PS point detected:'+\
@@ -1401,25 +1407,26 @@ Integrated cross-section
                                                             'providing the file'
             message += '\n      %s'%str(pjoin(os.path.dirname(self.me_dir),
                                                            maxUPS[0],'UPS.log'))
+        else:
+            debug_msg += '\n      Number of loop ME evaluations: %d'%nTotPS
         logger.info(message+'\n')            
         nErrors = sum([err[1] for err in stats['Errors']],0)
-        message = '\n      Number of loop ME evaluations: %d'%nTotPS
         if nErrors != 0:
-            message += '\n\n      WARNING:: A total of %d error%s ha%s been '\
+            debug_msg += '\n      WARNING:: A total of %d error%s ha%s been '\
               %(nErrors,'s' if nErrors>1 else '','ve' if nErrors>1 else 's')+\
               'found in the following log file%s:'%('s' if \
                                                  len(stats['Errors'])>1 else '')
             for error in stats['Errors'][:3]:
                 log_name = '/'.join(error[0].split('/')[-5:])
-                message += '\n       > %d error%s in %s'%\
+                debug_msg += '\n       > %d error%s in %s'%\
                                    (error[1],'s' if error[1]>1 else '',log_name)
             if len(stats['Errors'])>3:
                 nRemainingErrors = sum([err[1] for err in stats['Errors']][3:],0)
                 nRemainingLogs = len(stats['Errors'])-3
-                message += '\n      And another %d error%s in %d other log file%s'%\
+                debug_msg += '\n      And another %d error%s in %d other log file%s'%\
                            (nRemainingErrors, 's' if nRemainingErrors>1 else '',
                                nRemainingLogs, 's ' if nRemainingLogs>1 else '')
-        logger.debug(message+'\n')
+        logger.debug(debug_msg)
 
 
 
@@ -2072,17 +2079,24 @@ Integrated cross-section
                 self.write_test_input(test)
                 input = pjoin(self.me_dir, '%s_input.txt' % test)
                 #this can be improved/better written to handle the output
-                misc.call(['./%s < %s | tee -a %s | grep "Fraction of failures"' \
-                        % (test, input, test_log)], shell=True)
-            #check that none of the tests failed
-            file = open(test_log)
-            content = file.read()
-            file.close()
-            if 'FAILED' in content:
-                raise aMCatNLOError('Some tests failed, run cannot continue.\n' + \
+                p = misc.Popen(['./%s < %s | tee -a %s | grep "Fraction of failures"'\
+                         % (test, input, test_log)],stdout=subprocess.PIPE, shell=True)
+                output = p.communicate()
+                #check that none of the tests failed
+                file = open(test_log)
+                content = file.read()
+                file.close()
+                if 'FAILED' in content:
+                    logger.info('Output of the failing test:\n'+output[0][:-1],'$MG:color:BLACK')
+                    raise aMCatNLOError('Some tests failed, run cannot continue.\n' + \
                         'Please check that widths of final state particles (e.g. top) have been' + \
                         ' set to 0 in the param_card.dat.')
-
+                else:
+                    logger.info('   Passed.')
+                    logger.debug('\n'+output[0][:-1])
+#                misc.call(['./%s < %s | tee -a %s | grep "Fraction of failures"' \
+#                        % (test, input, test_log)], shell=True)
+                
             if not options['reweightonly']:
                 logger.info('   Compiling gensym...')
                 misc.call(['make -j%d gensym >> %s 2>&1 ' % (nb_core, amcatnlo_log)], shell=True)
