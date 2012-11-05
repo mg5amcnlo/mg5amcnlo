@@ -253,7 +253,9 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         elif p[1] == 're': p[0] = 'dble' + p[2]
         elif p[1] == 'im': p[0] = 'dimag' + p[2]
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
-        elif p[1] == 'complexconjugate': p[0] = 'conjg' + p[2]
+	# HSS, 5/11/2012
+        elif p[1] == 'complexconjugate': p[0] = 'conjg(DCMPLX' + p[2]+')'
+	# HSS
         elif p[1] == 'reglog': p[0] = 'reglog(DCMPLX' + p[2] +')'
 
     def p_expression_pi(self, p):
@@ -313,7 +315,9 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
         elif p[1] == 're': p[0] = 'real' + p[2]
         elif p[1] == 'im': p[0] = 'imag' + p[2]
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
-        elif p[1] == 'complexconjugate': p[0] = 'conjg' + p[2]
+	# HSS,5/11/2012
+        elif p[1] == 'complexconjugate': p[0] = 'conjg(CMPLX' + p[2]+',KIND=16))'
+	# HSS
         elif p[1] == 'reglog': p[0] = 'mp_reglog(CMPLX(' + p[2] +',KIND=16))'
 
     def p_expression_pi(self, p):

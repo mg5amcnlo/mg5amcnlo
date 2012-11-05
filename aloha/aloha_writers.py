@@ -443,7 +443,9 @@ class ALOHAWriterForFortran(WriteALOHA):
                    'im': 'imag(%s)',
                    'cmath.sqrt':'sqrt(dble(%s))', 
                    'sqrt': 'sqrt(dble(%s))',
-                   'complexconjugate': 'conjg(%s)',
+		   # HSS,5/11/2012
+                   'complexconjugate': 'conjg(dcmplx(%s))',
+		   # HSS
                    '/' : '{0}/(%s)'.format(one),
                    'pow': '(%s)**(%s)',
                    'log': 'log(dble(%s))',
@@ -697,8 +699,22 @@ class ALOHAWriterForFortran(WriteALOHA):
         keys.sort(sort_fct)
         for name in keys:
             fct, objs = self.routine.fct[name]
-            format = ' %s = %s\n' % (name, self.get_fct_format(fct))
-            try:
+	    # HSS , 5/11/2012
+	    #if fct=='complexconjugate':
+	    #	try:
+	    #	    obj = eval(objs[0])
+	    #	except:
+	    #	    format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
+	    #	else:
+	    #	    if isinstance(obj,complex):
+	    #		format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
+	    #	    else:
+	    #		format = ' %s = %s;\n' % (name, '%s')
+	    #else:
+	    #	format = ' %s = %s\n' % (name, self.get_fct_format(fct))
+            # HSS
+	    format = ' %s = %s\n' % (name, self.get_fct_format(fct))
+	    try:
                 text = format % ','.join([self.write_obj(obj) for obj in objs])
             except TypeError:
                 text = format % tuple([self.write_obj(obj) for obj in objs])
@@ -1261,7 +1277,9 @@ class ALOHAWriterForCPP(WriteALOHA):
                    'im': 'imag(%s)',
                    'cmath.sqrt':'sqrt(%s)', 
                    'sqrt': 'sqrt(%s)',
-                   'complexconjugate': 'conj(%s)',
+		   # HSS, 5/11/2012
+                   'complexconjugate': 'conj(dcmplx(%s))',
+		   # HSS
                    '/' : '{0}/%s'.format(one) 
                    }
             
@@ -1452,7 +1470,21 @@ class ALOHAWriterForCPP(WriteALOHA):
                 out.write(' %s = %s;\n' % (name, self.write_obj(obj)))
                 
         for name, (fct, objs) in self.routine.fct.items():
-            format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
+	    # HSS, 5/11/2012
+	    #if fct=='complexconjugate':
+	    #	try:
+	    #	    obj = eval(objs[0])
+	    #	except:
+	    #	    format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
+	    #	else:
+	    #	    if isinstance(obj,complex):
+	    #		format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
+	    #	    else:
+	    #		format = ' %s = %s;\n' % (name, '%s')
+	    #else:
+            #	format = ' %s = %s;\n' % (name, self.get_fct_format(fct))	
+            # HSS
+	    format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
             out.write(format % ','.join([self.write_obj(obj) for obj in objs]))
         
 
