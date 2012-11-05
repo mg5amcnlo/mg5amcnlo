@@ -1861,12 +1861,17 @@ Integrated cross-section
                            pjoin(cwd, 'symfact.dat'),
                            pjoin(cwd, 'iproc.dat')]
             
-            # File for the loop (might be not present if MadLoop is not use)
+            # File for the loop (might not be present if MadLoop is not used)
             if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
                 to_add = ['MadLoopParams.dat', 'ColorDenomFactors.dat', 
                                          'ColorNumFactors.dat','HelConfigs.dat']
                 for name in to_add:
                     input_files.append(pjoin(cwd, name))
+
+                to_check = ['HelFilter.dat','LoopFilter.dat']
+                for name in to_check:
+                    if os.path.exists(pjoin(cwd, name)):
+                        input_files.append(pjoin(cwd, name))
 
             Ire = re.compile("for i in ([\d\s]*) ; do")
             try : 
@@ -2125,7 +2130,7 @@ Integrated cross-section
                         raise aMCatNLOError('Compilation failed, check %s for details' \
                                 % test_log)
                     logger.info('   Running check_poles...')
-                    open('./check_poles.input', 'w').write('100 \n -1\n') 
+                    open('./check_poles.input', 'w').write('20 \n -1\n') 
                     misc.call(['./check_poles <check_poles.input >> %s' % (test_log)], shell=True) 
                     self.parse_check_poles_log(os.getcwd())
                 #compile madevent_mintMC/vegas

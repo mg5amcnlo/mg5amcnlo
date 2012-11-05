@@ -51,7 +51,7 @@ c
       parameter (fksprefact=.true.)
       double precision run_tolerance, madfks_single, madfks_double
       parameter (run_tolerance = 1d-4)
-      double precision tolerance
+      double precision tolerance, acc_found
       integer i,j
       integer nbad, nbadmax
 c statistics for MadLoop
@@ -77,8 +77,8 @@ c Ellis-Sexton scale)
       if (firsttime) then
           write(*,*) "alpha_s value used for the virtuals"/
      &     /" is (for the first PS point): ", alpha_S
-          tolerance=1d-6          
-          call sloopmatrix_thres(p, virt_wgts, tolerance/100d0)
+          tolerance=1d-5
+          call sloopmatrix_thres(p, virt_wgts, tolerance, acc_found)
       else
           tolerance=run_tolerance
           call sloopmatrix(p, virt_wgts)
@@ -96,7 +96,10 @@ c         firsttime_conversion=.false.
 c      endif
 c      virt_wgt=virt_wgt+conversion*born_wgt*ao2pi
 c======================================================================
-c check for poles cancellation      
+c check for poles cancellation
+c If MadLoop was still in initialization mode, then skip the check
+c and it will use the next one for that purpose
+      if (acc_found.gt.0.0d0) goto 111
       call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
       ntot = ntot+1
       avgPoleRes(1)=(single+madfks_single)/2.0d0
@@ -173,6 +176,7 @@ c check for poles cancellation
          virtmin=min(virtmin,virt_wgt/born_wgt/ao2pi)
          virtsum=virtsum+virt_wgt/born_wgt/ao2pi
       endif
+111   continue
       return
       end
 
