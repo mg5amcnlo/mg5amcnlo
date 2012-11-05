@@ -600,7 +600,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                                                   'result.dat')),format='tuple')  
             else:
                 logging.warning("Error while looking for file %s"%str(os.path\
-                                           .join(dir_name,format='result.dat')))
+                                           .join(dir_name,'result.dat')))
                 return ((0.0, 0.0, 0.0, 0.0, 0), [])
         except IOError:
             logging.warning("Error while executing ./check in %s" % shell_name)
