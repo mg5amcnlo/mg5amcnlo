@@ -12,7 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-
 """Definitions of all basic objects used in the core code: particle, 
 interaction, model, leg, vertex, process, ..."""
 
@@ -1999,6 +1998,47 @@ class Diagram(PhysicsObject):
             return 1
         else:
             return 2**num_props
+        
+    def get_flow_charge_diff(self, model):
+        """return the difference of total diff of charge occuring on the 
+        lofw of the initial parton. return [None,None] if the two initial parton
+        are connected and the (partial) value if None if the initial parton is 
+        not a fermiom"""
+        
+        import madgraph.core.drawing as drawing
+        drawdiag = drawing.FeynmanDiagram(self, model)
+        drawdiag.load_diagram()
+        out = []
+        
+        for v in drawdiag.initial_vertex:
+            init_part = v.lines[0]
+            if not init_part.is_fermion():
+                out.append(None)
+                continue
+            
+            init_charge = model.get_particle(init_part.id).get('charge')
+            
+            l_last = init_part
+            v_last = v
+            vcurrent = l_last.end
+            if vcurrent == v:
+                vcurrent = l_last.begin
+            security =0
+            while not vcurrent.is_external():
+                if security > 1000:
+                    raise Exception, 'wrong diagram'
+                next_l = [l for l in vcurrent.lines if l is not l_last and l.is_fermion()][0]
+                next_v = next_l.end
+                if next_v == vcurrent:
+                    next_v = next_l.begin
+                l_last, vcurrent = next_l, next_v
+            if vcurrent in drawdiag.initial_vertex:
+                return [None, None]
+            
+            out.append(model.get_particle(l_last.id).get('charge') - init_charge)    
+        return out
+                
+
 #===============================================================================
 # DiagramList
 #===============================================================================

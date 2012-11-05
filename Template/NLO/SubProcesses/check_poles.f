@@ -9,10 +9,11 @@ C
       double precision pi, zero
       parameter (pi=3.1415926535897932385d0)
       parameter (zero = 0d0)
-      integer npoints
+      integer npoints, npointsChecked
       integer i, j, k
       double precision tolerance, tolerance_default
-      parameter (tolerance_default = 1d-6)
+      double precision accuracy
+      parameter (tolerance_default = 1d-5)
       double precision ren_scale, energy
       parameter (ren_scale = 1d2)
       parameter (energy = 1d3)
@@ -75,10 +76,10 @@ C-----
       call setfksfactor(1)
 
       nfail = 0
-
+      npointsChecked = 0
       open (unit=60, file='check_poles.log',status='unknown')
 
-      do i = 1, npoints
+200   continue
           calculatedborn = .false.
           if (nincoming.eq.1) then
               call rambo(0, nexternal-nincoming-1, pmass(1), 
@@ -139,11 +140,17 @@ C-----
           enddo
 
           call sborn(p_born, born)
-          call sloopmatrix_thres(p_born,virt_wgts,tolerance/100d0) 
+          call sloopmatrix_thres(p_born,virt_wgts,tolerance,accuracy) 
 
           finite = virt_wgts(1)/dble(ngluons)
           single = virt_wgts(2)/dble(ngluons)
           double = virt_wgts(3)/dble(ngluons)
+
+C         If MadLoop was still in initialization mode, then skip this
+C         point for the checks
+          if (accuracy.lt.0.0d0) goto 200
+C         Otherwise, perform the check
+          npointsChecked = npointsChecked +1
 
           do j = 0, 3
             do k = 1, nexternal - 1
@@ -193,7 +200,7 @@ C-----
           enddo
           write(60,*)
 
-      enddo
+      if (npointsChecked.lt.npoints) goto 200 
 
       close(60)
 

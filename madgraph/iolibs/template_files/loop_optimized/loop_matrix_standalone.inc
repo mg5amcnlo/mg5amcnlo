@@ -209,6 +209,10 @@ C     Typically, the hel_offset is 10000
 	  DATA USER_STAB_PREC/-1.0d0/	  
 	  COMMON/USER_STAB_PREC/USER_STAB_PREC
 
+	  %(real_dp_format)s ACCURACY
+	  DATA ACCURACY/1.0d0/	  
+	  common/ACC/ACCURACY
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -304,9 +308,11 @@ IF (USER_STAB_PREC.GT.0.0d0) THEN
   MLSTABTHRES_BU=MLSTABTHRES
   MLSTABTHRES=USER_STAB_PREC
 C In the initialization, I cannot perform stability test and therefore guarantee any precision
-C I therefore chose quad precision directly
   CTMODEINIT_BU=CTMODEINIT
-  CTMODEINIT=4
+C So either one choses quad precision directly
+C  CTMODEINIT=4
+C Or, because this is very slow, we keep the orignal value. The accuracy returned is -1 and tells the MC that he should not trust the evaluation for checks.
+  CTMODEINIT=CTMODEINIT_BU
 ENDIF
 
 IF(DONEHELDOUBLECHECK) THEN
@@ -668,6 +674,7 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 
   IF(DOING_QP_EVALS) THEN
     CALL COMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS)
+	ACCURACY=ACC
 	IF(ACC.GE.MLSTABTHRES) THEN
 	  NEPS=NEPS+1
       CALL COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,TEMP1,TEMP)	  
@@ -698,7 +705,9 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	  STAB_INDEX=0
 	  CTMODE=4
 	  goto 200
-    ENDIF	
+    ELSE
+	  ACCURACY=ACC
+	ENDIF	
   ENDIF
 
 ENDIF
@@ -918,7 +927,7 @@ C THIS SUBROUTINE SIMPLY SET THE GLOBAL PS CONFIGURATION GLOBAL VARIABLES FROM A
 
 	  END
 
-      SUBROUTINE SLOOPMATRIXHEL_THRES(P,HEL,ANS,PREC)
+      SUBROUTINE SLOOPMATRIXHEL_THRES(P,HEL,ANS,PREC_ASKED,PREC_FOUND)
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -931,24 +940,38 @@ C
       %(real_dp_format)s P(0:3,NEXTERNAL)
       %(real_dp_format)s ANS(3)
 	  INTEGER HEL
-	  %(real_dp_format)s PREC
+	  %(real_dp_format)s PREC_ASKED,PREC_FOUND
 C
 C GLOBAL VARIABLES
 C
 	  %(real_dp_format)s USER_STAB_PREC
 	  COMMON/USER_STAB_PREC/USER_STAB_PREC
 
+	  LOGICAL CHECKPHASE
+	  LOGICAL HELDOUBLECHECKED
+      common/INIT/CHECKPHASE, HELDOUBLECHECKED
+
+	  %(real_dp_format)s ACCURACY
+	  common/ACC/ACCURACY
+
 C ----------
 C BEGIN CODE
 C ----------
-      USER_STAB_PREC = PREC
+      USER_STAB_PREC = PREC_ASKED
       CALL SLOOPMATRIXHEL(P,HEL,ANS)
 C Reset it to default value not to affect next runs
 	  USER_STAB_PREC = -1.0d0
 	  
+	  IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED) THEN
+	     PREC_FOUND=ACCURACY
+	  ELSE
+C This is a 'tag value' to say that because ML is still in initialization mode, it could not provide the accuray.
+	     PREC_FOUND=-1.0d0
+	  ENDIF
+
 	  END
 
-      SUBROUTINE SLOOPMATRIX_THRES(P,ANS,PREC)
+      SUBROUTINE SLOOPMATRIX_THRES(P,ANS,PREC_ASKED,PREC_FOUND)
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -960,19 +983,33 @@ C ARGUMENTS
 C  
       %(real_dp_format)s P(0:3,NEXTERNAL)
       %(real_dp_format)s ANS(3)
-	  %(real_dp_format)s PREC
+	  %(real_dp_format)s PREC_ASKED,PREC_FOUND
 C
 C GLOBAL VARIABLES
 C
 	  %(real_dp_format)s USER_STAB_PREC
 	  COMMON/USER_STAB_PREC/USER_STAB_PREC
 
+	  LOGICAL CHECKPHASE
+	  LOGICAL HELDOUBLECHECKED
+      common/INIT/CHECKPHASE, HELDOUBLECHECKED
+
+	  %(real_dp_format)s ACCURACY
+	  common/ACC/ACCURACY
+
 C ----------
 C BEGIN CODE
 C ----------
-      USER_STAB_PREC = PREC
+      USER_STAB_PREC = PREC_ASKED
       CALL SLOOPMATRIX(P,ANS)
 C Reset it to default value not to affect next runs
 	  USER_STAB_PREC = -1.0d0
+
+	  IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED) THEN
+	     PREC_FOUND=ACCURACY
+	  ELSE
+C This is a 'tag value' to say that because ML is still in initialization mode, it could not provide the accuray.
+	     PREC_FOUND=-1.0d0
+	  ENDIF
 	  
 	  END

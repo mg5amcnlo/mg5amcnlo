@@ -773,6 +773,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     def __init__(self, me_dir = None, options = {}, *completekey, **stdin):
         """ add information to the cmd """
 
+        self.start_time = 0
         CmdExtended.__init__(self, *completekey, **stdin)
         common_run.CommonRunCmd.__init__(self, me_dir, options)
        
@@ -920,6 +921,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     ############################################################################      
     def do_calculate_xsect(self, line):
         """Main commands: calculates LO/NLO cross-section, using madevent_vegas """
+        
+        self.start_time = time.time()
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _generate_events_parser.parse_args(argss)
@@ -951,6 +954,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     ############################################################################      
     def do_generate_events(self, line):
         """Main commands: generate events """
+        
+        self.start_time = time.time()
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _generate_events_parser.parse_args(argss)
@@ -990,6 +995,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     ############################################################################      
     def do_launch(self, line):
         """Main commands: launch the full chain """
+        
+        self.start_time = time.time()
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _launch_parser.parse_args(argss)
@@ -1359,10 +1366,12 @@ Integrated cross-section
                 message = message + \
                     ('\n      Number of events generated: %s' + \
                      '\n      Parton shower to be used: %s' + \
-                     '\n      Fraction of negative weights: %4.2f') % \
+                     '\n      Fraction of negative weights: %4.2f' + \
+                     '\n      Total running time : %s') % \
                         (self.run_card['nevents'],
                          self.run_card['parton_shower'],
-                         neg_frac)
+                         neg_frac, 
+                         misc.format_timer(time.time()-self.start_time))
 
         elif mode in ['NLO', 'LO']:
             status = ['Results after grid setup (correspond roughly to LO):',
@@ -1376,43 +1385,48 @@ Integrated cross-section
                      '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
                              self.cross_sect_dict
         
+        if (mode in ['NLO', 'LO'] and step!=1) or \
+           (mode in ['aMC@NLO', 'aMC@LO'] and step!=2):
+            logger.info(message+'\n')
+            return
+
         # Now display the general statistics
         nTotUPS = sum([chan[1] for chan in stats['UPS'].values()],0)
         nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
         UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
              float(chan[1][1]*100)/chan[1][0]) for chan in stats['UPS'].items()]
-        if len(stats['UPS'].keys())>0:
+        maxUPS = max(UPSfracs, key = lambda w: w[1])
+        debug_msg = ""
+        if len(stats['UPS'].keys())>0 and maxUPS[1]>0.1:
             message += '\n      Number of loop ME evaluations: %d'%nTotPS
-            if nTotUPS==0:
-                message += '\n      No unstable PS point detected'
-            else:
-                maxUPS = max(UPSfracs, key = lambda w: w[1])
-                message += '\n      Total number of unstable PS point detected:'+\
+            message += '\n      Total number of unstable PS point detected:'+\
                              ' %d (%4.2f%%)'%(nTotUPS,float(100*nTotUPS)/nTotPS)
-                message += '\n      Maximum fraction of UPS points in '+\
+            message += '\n      Maximum fraction of UPS points in '+\
                       'channel %s (%4.2f%%)'%maxUPS
-                message += '\n      Please report this to the authors while '+\
+            message += '\n      Please report this to the authors while '+\
                                                             'providing the file'
-                message += '\n      %s'%str(pjoin(os.path.dirname(self.me_dir),
+            message += '\n      %s'%str(pjoin(os.path.dirname(self.me_dir),
                                                            maxUPS[0],'UPS.log'))
-            
+        else:
+            debug_msg += '\n      Number of loop ME evaluations: %d'%nTotPS
+        logger.info(message+'\n')            
         nErrors = sum([err[1] for err in stats['Errors']],0)
         if nErrors != 0:
-            message += '\n\n      WARNING:: A total of %d error%s ha%s been '\
+            debug_msg += '\n      WARNING:: A total of %d error%s ha%s been '\
               %(nErrors,'s' if nErrors>1 else '','ve' if nErrors>1 else 's')+\
               'found in the following log file%s:'%('s' if \
                                                  len(stats['Errors'])>1 else '')
             for error in stats['Errors'][:3]:
                 log_name = '/'.join(error[0].split('/')[-5:])
-                message += '\n       > %d error%s in %s'%\
+                debug_msg += '\n       > %d error%s in %s'%\
                                    (error[1],'s' if error[1]>1 else '',log_name)
             if len(stats['Errors'])>3:
                 nRemainingErrors = sum([err[1] for err in stats['Errors']][3:],0)
                 nRemainingLogs = len(stats['Errors'])-3
-                message += '\n      And another %d error%s in %d other log file%s'%\
+                debug_msg += '\n      And another %d error%s in %d other log file%s'%\
                            (nRemainingErrors, 's' if nRemainingErrors>1 else '',
                                nRemainingLogs, 's ' if nRemainingLogs>1 else '')
-        logger.info(message+'\n')
+        logger.debug(debug_msg)
 
 
 
@@ -2065,17 +2079,24 @@ Integrated cross-section
                 self.write_test_input(test)
                 input = pjoin(self.me_dir, '%s_input.txt' % test)
                 #this can be improved/better written to handle the output
-                misc.call(['./%s < %s | tee -a %s | grep "Fraction of failures"' \
-                        % (test, input, test_log)], shell=True)
-            #check that none of the tests failed
-            file = open(test_log)
-            content = file.read()
-            file.close()
-            if 'FAILED' in content:
-                raise aMCatNLOError('Some tests failed, run cannot continue.\n' + \
+                p = misc.Popen(['./%s < %s | tee -a %s | grep "Fraction of failures"'\
+                         % (test, input, test_log)],stdout=subprocess.PIPE, shell=True)
+                output = p.communicate()
+                #check that none of the tests failed
+                file = open(test_log)
+                content = file.read()
+                file.close()
+                if 'FAILED' in content:
+                    logger.info('Output of the failing test:\n'+output[0][:-1],'$MG:color:BLACK')
+                    raise aMCatNLOError('Some tests failed, run cannot continue.\n' + \
                         'Please check that widths of final state particles (e.g. top) have been' + \
                         ' set to 0 in the param_card.dat.')
-
+                else:
+                    logger.info('   Passed.')
+                    logger.debug('\n'+output[0][:-1])
+#                misc.call(['./%s < %s | tee -a %s | grep "Fraction of failures"' \
+#                        % (test, input, test_log)], shell=True)
+                
             if not options['reweightonly']:
                 logger.info('   Compiling gensym...')
                 misc.call(['make -j%d gensym >> %s 2>&1 ' % (nb_core, amcatnlo_log)], shell=True)
@@ -2104,7 +2125,7 @@ Integrated cross-section
                         raise aMCatNLOError('Compilation failed, check %s for details' \
                                 % test_log)
                     logger.info('   Running check_poles...')
-                    open('./check_poles.input', 'w').write('100 \n -1\n') 
+                    open('./check_poles.input', 'w').write('20 \n -1\n') 
                     misc.call(['./check_poles <check_poles.input >> %s' % (test_log)], shell=True) 
                     self.parse_check_poles_log(os.getcwd())
                 #compile madevent_mintMC/vegas
