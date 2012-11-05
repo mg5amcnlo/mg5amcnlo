@@ -607,6 +607,61 @@ class CheckValidForCmd(object):
 class CompleteForCmd(CheckValidForCmd):
     """ The Series of help routine for the MadGraphCmd"""
 
+    def complete_launch(self, text, line, begidx, endidx):
+        """auto-completion for launch command"""
+        
+        args = self.split_arg(line[0:begidx])
+        if len(args) == 1:
+            #return mode
+            return self.list_completion(text,['LO','NLO','aMC@NLO', 'aMC@LO'],line)
+        elif len(args) == 2 and line[begidx-1] == '@':
+            return self.list_completion(text,['LO','NLO'],line)
+        else:
+            opts = []
+            for opt in _launch_parser.option_list:
+                opts += opt._long_opts + opt._short_opts
+            return self.list_completion(text, opts, line)
+            
+    def complete_compile(self, text, line, begidx, endidx):
+        """auto-completion for launch command"""
+        
+        args = self.split_arg(line[0:begidx])
+        if len(args) == 1:
+            #return mode
+            return self.list_completion(text,['FO','MC'],line)
+        else:
+            opts = []
+            for opt in _compile_parser.option_list:
+                opts += opt._long_opts + opt._short_opts
+            return self.list_completion(text, opts, line)        
+
+    def complete_calculate_xsect(self, text, line, begidx, endidx):
+        """auto-completion for launch command"""
+        
+        args = self.split_arg(line[0:begidx])
+        if len(args) == 1:
+            #return mode
+            return self.list_completion(text,['LO','NLO'],line)
+        else:
+            opts = []
+            for opt in _calculate_xsect_parser.option_list:
+                opts += opt._long_opts + opt._short_opts
+            return self.list_completion(text, opts, line) 
+
+    def complete_generate_events(self, text, line, begidx, endidx):
+        """auto-completion for launch command"""
+        
+        args = self.split_arg(line[0:begidx])
+        if len(args) == 1:
+            #return mode
+            return self.list_completion(text,['LO','NLO'],line)
+        else:
+            opts = []
+            for opt in _generate_events_parser.option_list:
+                opts += opt._long_opts + opt._short_opts
+            return self.list_completion(text, opts, line) 
+
+
     def complete_shower(self, text, line, begidx, endidx):
         args = self.split_arg(line[0:begidx])
         if len(args) == 1:
@@ -718,6 +773,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     def __init__(self, me_dir = None, options = {}, *completekey, **stdin):
         """ add information to the cmd """
 
+        self.start_time = 0
         CmdExtended.__init__(self, *completekey, **stdin)
         common_run.CommonRunCmd.__init__(self, me_dir, options)
        
@@ -865,6 +921,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     ############################################################################      
     def do_calculate_xsect(self, line):
         """Main commands: calculates LO/NLO cross-section, using madevent_vegas """
+        
+        self.start_time = time.time()
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _generate_events_parser.parse_args(argss)
@@ -874,12 +932,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         options['parton'] = True
         self.check_calculate_xsect(argss, options)
         
-        if options['multicore']:
-            self.cluster_mode = 2
-        elif options['cluster']:
-            self.cluster_mode = 1
-        else:
-            self.cluster_mode = int(self.options['run_mode'])
+#        if options['multicore']:
+#            self.cluster_mode = 2
+#        elif options['cluster']:
+#            self.cluster_mode = 1
+#        else:
+#            self.cluster_mode = int(self.options['run_mode'])
 
 #        if self.options_madevent['automatic_html_opening']:
 #            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
@@ -896,6 +954,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     ############################################################################      
     def do_generate_events(self, line):
         """Main commands: generate events """
+        
+        self.start_time = time.time()
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _generate_events_parser.parse_args(argss)
@@ -903,12 +963,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         options['reweightonly'] = False
         self.check_generate_events(argss, options)
         
-        if options['multicore']:
-            self.cluster_mode = 2
-        elif options['cluster']:
-            self.cluster_mode = 1
-        else:
-            self.cluster_mode = int(self.options['run_mode'])
+#        if options['multicore']:
+#            self.cluster_mode = 2
+#        elif options['cluster']:
+#            self.cluster_mode = 1
+#        else:
+#            self.cluster_mode = int(self.options['run_mode'])
 
 #        if self.options_madevent['automatic_html_opening']:
 #            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
@@ -935,18 +995,19 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     ############################################################################      
     def do_launch(self, line):
         """Main commands: launch the full chain """
+        
+        self.start_time = time.time()
         argss = self.split_arg(line)
         # check argument validity and normalise argument
         (options, argss) = _launch_parser.parse_args(argss)
         options = options.__dict__
         self.check_launch(argss, options)
-        
-        if options['multicore']:
-            self.cluster_mode = 2
-        elif options['cluster']:
-            self.cluster_mode = 1
-        else:
-            self.cluster_mode = int(self.options['run_mode'])
+#        if options['multicore']:
+#            self.cluster_mode = 2
+#        elif options['cluster']:
+#            self.cluster_mode = 1
+#        else:
+#            self.cluster_mode = int(self.options['run_mode'])
 
 #        if self.options['automatic_html_opening']:
 #            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
@@ -1240,6 +1301,51 @@ Integrated cross-section
         proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
         (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp1']], 
                 self.run_card['ebeam1'], self.run_card['ebeam2'])
+        
+        # Gather some basic statistics for the run and extracted from the log files.
+        # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
+        # > Errors is a list of tuples with this format (log_file,nErrors)
+        stats = {'UPS':{}, 'Errors':[]}
+        if mode in ['aMC@NLO', 'aMC@LO']: 
+            log_GV_files =  glob.glob(pjoin(self.me_dir, \
+                                    'SubProcesses', 'P*','GV*','log_MINT*.txt'))
+            all_log_files = glob.glob(pjoin(self.me_dir, \
+                                          'SubProcesses', 'P*','G*','log*.txt'))
+        elif mode in ['NLO', 'LO']:
+            log_GV_files =  glob.glob(pjoin(self.me_dir, \
+                                    'SubProcesses', 'P*','viSB_G*','log*.txt'))
+            all_log_files = sum([glob.glob(pjoin(self.me_dir,'SubProcesses', 'P*',
+              '%sG*'%foldName,'log*.txt')) for foldName in ['grid_','novB_',\
+                                                                   'viSB_']],[])
+        else:
+            raise aMCatNLOError, 'Running mode %s not supported.'%mode
+        # Recuperate the fraction of unstable PS points found in the runs for the
+        # virtuals
+        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<nPS>\d+).*"+\
+                      r"Unstable points \(check UPS\.log for the first 10\:\)"+\
+                                                r"\s+(?P<nUPS>\d+).*",re.DOTALL)
+        for gv_log in log_GV_files:
+            logfile=open(gv_log,'r')             
+            UPS_stats = re.search(UPS_stat_finder,logfile.read())
+            logfile.close()
+            if not UPS_stats is None:
+                channel_name = '/'.join(gv_log.split('/')[-5:-1])
+                try:
+                    stats['UPS'][channel_name][0] += int(UPS_stats.group('nPS'))
+                    stats['UPS'][channel_name][1] += int(UPS_stats.group('nUPS'))
+                except KeyError:
+                    stats['UPS'][channel_name] = [int(UPS_stats.group('nPS')),
+                                                   int(UPS_stats.group('nUPS'))]
+        # Find the number of potential errors found in all log files
+        for log in all_log_files:
+            logfile=open(log,'r')
+            nErrors = len(re.findall(re.compile(r"\bERROR\b",\
+                                                re.IGNORECASE), logfile.read()))
+            logfile.close()
+            if nErrors != 0:
+                stats['Errors'].append((str(log),nErrors))
+            
+        
         if mode in ['aMC@NLO', 'aMC@LO']:
             status = ['Determining the number of unweighted events per channel',
                       'Updating the number of unweighted events per channel',
@@ -1260,26 +1366,67 @@ Integrated cross-section
                 message = message + \
                     ('\n      Number of events generated: %s' + \
                      '\n      Parton shower to be used: %s' + \
-                     '\n      Fraction of negative weights: %4.2f') % \
+                     '\n      Fraction of negative weights: %4.2f' + \
+                     '\n      Total running time : %s') % \
                         (self.run_card['nevents'],
                          self.run_card['parton_shower'],
-                         neg_frac)
+                         neg_frac, 
+                         misc.format_timer(time.time()-self.start_time))
 
         elif mode in ['NLO', 'LO']:
             status = ['Results after grid setup (correspond roughly to LO):',
                       'Final results and run summary:']
             if step == 0:
                 message = '\n      ' + status[step] + \
-                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb\n' % \
+                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
                              self.cross_sect_dict
             elif step == 1:
                 message = '\n      ' + status[step] + proc_info + \
-                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb\n' % \
+                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
                              self.cross_sect_dict
+        
+        if (mode in ['NLO', 'LO'] and step!=1) or \
+           (mode in ['aMC@NLO', 'aMC@LO'] and step!=2):
+            logger.info(message+'\n')
+            return
 
-
-
-        logger.info(message)
+        # Now display the general statistics
+        nTotUPS = sum([chan[1] for chan in stats['UPS'].values()],0)
+        nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
+        UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
+             float(chan[1][1]*100)/chan[1][0]) for chan in stats['UPS'].items()]
+        maxUPS = max(UPSfracs, key = lambda w: w[1])
+        debug_msg = ""
+        if len(stats['UPS'].keys())>0 and maxUPS[1]>0.1:
+            message += '\n      Number of loop ME evaluations: %d'%nTotPS
+            message += '\n      Total number of unstable PS point detected:'+\
+                             ' %d (%4.2f%%)'%(nTotUPS,float(100*nTotUPS)/nTotPS)
+            message += '\n      Maximum fraction of UPS points in '+\
+                      'channel %s (%4.2f%%)'%maxUPS
+            message += '\n      Please report this to the authors while '+\
+                                                            'providing the file'
+            message += '\n      %s'%str(pjoin(os.path.dirname(self.me_dir),
+                                                           maxUPS[0],'UPS.log'))
+        else:
+            debug_msg += '\n      Number of loop ME evaluations: %d'%nTotPS
+        logger.info(message+'\n')            
+        nErrors = sum([err[1] for err in stats['Errors']],0)
+        if nErrors != 0:
+            debug_msg += '\n      WARNING:: A total of %d error%s ha%s been '\
+              %(nErrors,'s' if nErrors>1 else '','ve' if nErrors>1 else 's')+\
+              'found in the following log file%s:'%('s' if \
+                                                 len(stats['Errors'])>1 else '')
+            for error in stats['Errors'][:3]:
+                log_name = '/'.join(error[0].split('/')[-5:])
+                debug_msg += '\n       > %d error%s in %s'%\
+                                   (error[1],'s' if error[1]>1 else '',log_name)
+            if len(stats['Errors'])>3:
+                nRemainingErrors = sum([err[1] for err in stats['Errors']][3:],0)
+                nRemainingLogs = len(stats['Errors'])-3
+                debug_msg += '\n      And another %d error%s in %d other log file%s'%\
+                           (nRemainingErrors, 's' if nRemainingErrors>1 else '',
+                               nRemainingLogs, 's ' if nRemainingLogs>1 else '')
+        logger.debug(debug_msg)
 
 
 
@@ -1327,8 +1474,18 @@ Integrated cross-section
         oldcwd = os.getcwd()
         os.chdir(pjoin(self.me_dir, 'MCatNLO'))
         shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
-        self.shower_card.write_card(shower, shower_card_path)
 
+        if 'LD_LIBRARY_PATH' in os.environ.keys():
+            ldlibrarypath = os.environ['LD_LIBRARY_PATH']
+        else:
+            ldlibrarypath = ''
+        for path in self.shower_card['extrapaths'].split():
+            ldlibrarypath += ':%s' % path
+        if shower == 'HERWIGPP':
+            ldlibrarypath += ':%s' % pjoin(self.shower_card['hepmcpath'], 'lib')
+        os.putenv('LD_LIBRARY_PATH', ldlibrarypath)
+
+        self.shower_card.write_card(shower, shower_card_path)
 
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
         self.update_status('   Compiling MCatNLO for %s...' % shower, level='parton') 
@@ -1336,6 +1493,7 @@ Integrated cross-section
                     cwd = os.getcwd(), shell=True)
         exe = 'MCATNLO_%s_EXE' % shower
         if not os.path.exists(exe):
+            print open(mcatnlo_log).read()
             raise aMCatNLOError('Compilation failed, check %s for details' % mcatnlo_log)
         logger.info('                     ... done')
         # create an empty dir where to run
@@ -1361,7 +1519,7 @@ Integrated cross-section
                 raise aMCatNLOError('The Herwig++ path set in the shower_card is not valid.')
 
             if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so')):
-                misc.call(['mv %s %s' % \
+                misc.call(['cp %s %s' % \
                     (pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)], 
                                                                                      shell=True)
         evt_name = os.path.basename(evt_file)
@@ -1411,32 +1569,33 @@ Integrated cross-section
                 logger.warning('No .top file has been generated. For the results of your ' +\
                                'run, please check inside %s' % rundir)
 
-            filename = 'plot_%s_%d_' % (shower, 1)
-            count = 1
-            while os.path.exists(pjoin(self.me_dir, 'Events', 
-                self.run_name, '%s0.top' % filename)):
-                count += 1
-                filename = 'plot_%s_%d_' % (shower, count)
-            plotfiles = [] 
-            for i, file in enumerate(topfiles):
-                plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
-                          '%s%d.top' % (filename, i))
-                misc.call(['mv %s %s' % \
-                    (pjoin(rundir, file), plotfile)], shell=True) 
+	    else:    
+                filename = 'plot_%s_%d_' % (shower, 1)
+                count = 1
+                while os.path.exists(pjoin(self.me_dir, 'Events', 
+                    self.run_name, '%s0.top' % filename)):
+                    count += 1
+                    filename = 'plot_%s_%d_' % (shower, count)
+                plotfiles = [] 
+                for i, file in enumerate(topfiles):
+                    plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
+                              '%s%d.top' % (filename, i))
+                    misc.call(['mv %s %s' % \
+                        (pjoin(rundir, file), plotfile)], shell=True) 
 
-                plotfiles.append(plotfile)
+                    plotfiles.append(plotfile)
 
-            files = 'files'
-            have = 'have'
-            if len(plotfiles) == 1:
-                files = 'file'
-                have = 'has'
+                files = 'files'
+                have = 'have'
+                if len(plotfiles) == 1:
+                    files = 'file'
+                    have = 'has'
 
-            misc.call(['gzip %s' % evt_file], shell=True)
-            logger.info(('The %s %s %s been generated, with histograms in the' + \
-                    ' TopDrawer format, obtained by showering the parton-level' + \
-                    ' file %s.gz with %s') % (files, ', '.join(plotfiles), have, \
-                    evt_file, shower))
+                misc.call(['gzip %s' % evt_file], shell=True)
+                logger.info(('The %s %s %s been generated, with histograms in the' + \
+                        ' TopDrawer format, obtained by showering the parton-level' + \
+                        ' file %s.gz with %s') % (files, ', '.join(plotfiles), have, \
+                        evt_file, shower))
 
 
         os.chdir(oldcwd)
@@ -1702,12 +1861,17 @@ Integrated cross-section
                            pjoin(cwd, 'symfact.dat'),
                            pjoin(cwd, 'iproc.dat')]
             
-            # File for the loop (might be not present if MadLoop is not use)
+            # File for the loop (might not be present if MadLoop is not used)
             if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
                 to_add = ['MadLoopParams.dat', 'ColorDenomFactors.dat', 
                                          'ColorNumFactors.dat','HelConfigs.dat']
                 for name in to_add:
                     input_files.append(pjoin(cwd, name))
+
+                to_check = ['HelFilter.dat','LoopFilter.dat']
+                for name in to_check:
+                    if os.path.exists(pjoin(cwd, name)):
+                        input_files.append(pjoin(cwd, name))
 
             Ire = re.compile("for i in ([\d\s]*) ; do")
             try : 
@@ -1920,17 +2084,24 @@ Integrated cross-section
                 self.write_test_input(test)
                 input = pjoin(self.me_dir, '%s_input.txt' % test)
                 #this can be improved/better written to handle the output
-                misc.call(['./%s < %s | tee -a %s | grep "Fraction of failures"' \
-                        % (test, input, test_log)], shell=True)
-            #check that none of the tests failed
-            file = open(test_log)
-            content = file.read()
-            file.close()
-            if 'FAILED' in content:
-                raise aMCatNLOError('Some tests failed, run cannot continue.\n' + \
+                p = misc.Popen(['./%s < %s | tee -a %s | grep "Fraction of failures"'\
+                         % (test, input, test_log)],stdout=subprocess.PIPE, shell=True)
+                output = p.communicate()
+                #check that none of the tests failed
+                file = open(test_log)
+                content = file.read()
+                file.close()
+                if 'FAILED' in content:
+                    logger.info('Output of the failing test:\n'+output[0][:-1],'$MG:color:BLACK')
+                    raise aMCatNLOError('Some tests failed, run cannot continue.\n' + \
                         'Please check that widths of final state particles (e.g. top) have been' + \
                         ' set to 0 in the param_card.dat.')
-
+                else:
+                    logger.info('   Passed.')
+                    logger.debug('\n'+output[0][:-1])
+#                misc.call(['./%s < %s | tee -a %s | grep "Fraction of failures"' \
+#                        % (test, input, test_log)], shell=True)
+                
             if not options['reweightonly']:
                 logger.info('   Compiling gensym...')
                 misc.call(['make -j%d gensym >> %s 2>&1 ' % (nb_core, amcatnlo_log)], shell=True)
@@ -1959,7 +2130,7 @@ Integrated cross-section
                         raise aMCatNLOError('Compilation failed, check %s for details' \
                                 % test_log)
                     logger.info('   Running check_poles...')
-                    open('./check_poles.input', 'w').write('100 \n -1\n') 
+                    open('./check_poles.input', 'w').write('20 \n -1\n') 
                     misc.call(['./check_poles <check_poles.input >> %s' % (test_log)], shell=True) 
                     self.parse_check_poles_log(os.getcwd())
                 #compile madevent_mintMC/vegas
@@ -2123,15 +2294,15 @@ Integrated cross-section
                 elif card_name == 'banner':
                     banner_mod.split_banner(answer, self.me_dir, proc_card=False)
                     logger.info('Splitting the banner in it\'s component')
-                    if auto:
-                        # Re-compute the current mode
-                        mode = 'parton'
-                        for level in ['delphes','pgs','pythia']:
-                            if os.path.exists(pjoin(self.me_dir,'Cards','%s_card.dat' % level)):
-                                mode = level
-                                break
-                    else:
-                        self.clean_pointless_card(mode)
+                    #if 0:
+                    #    # Re-compute the current mode
+                    #    mode = 'parton'
+                    #    for level in ['delphes','pgs','pythia']:
+                    #        if os.path.exists(pjoin(self.me_dir,'Cards','%s_card.dat' % level)):
+                    #            mode = level
+                    #            break
+                    #else:
+                    #    self.clean_pointless_card(mode)
 
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = banner_mod.RunCardNLO(run_card)

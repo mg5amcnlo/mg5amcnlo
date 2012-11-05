@@ -890,9 +890,10 @@ This will take effect only in a NEW terminal
                 args.append(self._done_export[0])
                 return
             else:
-                self.help_launch()
-                raise self.InvalidCmd, \
-                       'No default location available, please specify location.'
+                logger.warning('output command missing, run it automatically (with default argument)')
+                self.do_output('')
+                logger.warning('output done: running launch')
+                return self.check_launch(args, options)
         
         if len(args) != 1:
             self.help_launch()
@@ -3648,7 +3649,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if self.options['fortran_compiler']:
                 compiler = self.options['fortran_compiler']
             elif misc.which('gfortran'):
-                 compiler = 'gfortran'
+                compiler = 'gfortran'
             elif misc.which('g77'):
                 compiler = 'g77'
             else:
@@ -3670,13 +3671,18 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 text = text.replace('FC=g77','FC=gfortran')
                 open(path, 'w').writelines(text)    
 
-                            
         if logger.level <= logging.INFO:
-            devnull = open(os.devnull,'w') 
-            misc.call(['make', 'clean'], stdout=devnull, stderr=-2)
+            devnull = open(os.devnull,'w')
+            try: 
+                misc.call(['make', 'clean'], stdout=devnull, stderr=-2)
+            except:
+                pass
             status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
-            misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
+            try:
+                misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
+            except:
+                pass
             status = misc.compile(mode='', cwd = os.path.join(MG5DIR, name))
         if not status:
             logger.info('Compilation succeeded')
@@ -3716,6 +3722,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if sys.platform == "darwin":
                     logger.warning('''You can download this program at the following link: 
                     http://www.macupdate.com/app/mac/9980/gpl-ghostscript''')
+                    
+            if args[0] == 'MCatNLO-utilities':
+                self.do_set('MCatNLO-utilities_path %s/MCatNLO-utilities' % MG5DIR)
 
     def install_update(self, args, wget):
         """ check if the current version of mg5 is up-to-date. 
@@ -4910,9 +4919,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 os.system('cp -r %s %s' % \
                         (pjoin(MG5DIR, 'MCatNLO-utilities', 'MCatNLO'), self._export_dir))
             else:
-                logger.info('MCatNLO-utilities is not installed. \nIf you want to shower events ' + \
-                        'with MC@NLO please install it by typing "install MCatNLO-utilities"',
-                        '$MG:color:BLUE')
+                logger.warning('MCatNLO-utilities is not installed.')
+                logger.warning('If you want to shower events ' + \
+                        'with MC@NLO please install it by typing "install MCatNLO-utilities"')
 
         elif self._export_format == 'madevent':          
             # Create configuration file [path to executable] for madevent

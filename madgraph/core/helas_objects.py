@@ -81,8 +81,13 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             IdentifyMETag.dec_number += 1
         if not identical_particle_factor:
             identical_particle_factor = process.identical_particle_factor()
-        sorted_tags = sorted([IdentifyMETag(d, model, ninitial) for d in \
-                                  amplitude.get('diagrams')])
+        if process.get('perturbation_couplings') and \
+                process.get('NLO_mode') not in ['virt', 'loop']:
+            sorted_tags = sorted([IdentifyMETagFKS(d, model, ninitial) for d in \
+                                      amplitude.get('diagrams')])
+        else:
+            sorted_tags = sorted([IdentifyMETag(d, model, ninitial) for d in \
+                                      amplitude.get('diagrams')])
         # Do not use this for loop diagrams as for now the HelasMultiProcess
         # always contain only exactly one loop amplitude.
         if sorted_tags and not isinstance(amplitude, \
@@ -206,6 +211,22 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             return (new_vertex[1],)
         # We should not get here
         assert(False)
+
+
+class IdentifyMETagFKS(IdentifyMETag):
+    """on top of what IdentifyMETag, the diagram tags also have the charge 
+    difference along the fermionic flow in them for initial state legs."""
+
+    def __init__(self, diagram, model = None, ninitial = 2):
+        self.flow_charge_diff = diagram.get_flow_charge_diff(model)
+        super(IdentifyMETagFKS, self).__init__(diagram, model, ninitial)
+
+    def __eq__(self, other):
+        return super(IdentifyMETag, self).__eq__(other) and \
+                self.flow_charge_diff == other.flow_charge_diff
+
+
+
         
 #===============================================================================
 # HelasWavefunction

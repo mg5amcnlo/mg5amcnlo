@@ -138,4 +138,10 @@
 .FALSE.
 ! Default :: .FALSE.
 
+!     This decides wether consecutive consistency for the helicity filtering setup is also 
+!     required. Better to set it to false as it can cause problems for unstable processes.
+#HelInitStartOver
+.FALSE.
+! Default :: .FALSE.
+
 /* End of param file */

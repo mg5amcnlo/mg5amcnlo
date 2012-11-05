@@ -27,9 +27,17 @@ If you want to provide output for MadEvent, you also need:
 - perl 5.8 (or higher)
 - a Fortran 77 compiler (such as g77 or gfortran)
 
+If you want to run aMCatNLO, you need
+- bash
+- gfortran4.6 (or higher)
+- fastjet
+
 On Windows:
 ===========
 
 In order to run MG5 you need to
 1) add the Python directory to the PATH
 2) run $> python ./bin/mg5
+
+Note that most of the output (including madevent/aMCatNLO)
+are not compatible with Windows even with cygwin.

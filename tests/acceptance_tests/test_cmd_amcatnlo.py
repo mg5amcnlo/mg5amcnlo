@@ -48,6 +48,7 @@ pjoin = os.path.join
 class TestMECmdShell(unittest.TestCase):
     """this treats all the command not related to MG_ME"""
     
+    
     def generate(self, process, model):
         """Create a process"""
 
@@ -62,16 +63,25 @@ class TestMECmdShell(unittest.TestCase):
             interface.onecmd('generate %s' % process)
         else:
             for p in process:
-                interface.onecmd('add process %s' % p)
-        interface.onecmd('output /tmp/MGPROCESS/ -f')
-        if not os.path.exists(pjoin(_file_path, os.path.pardir, 'MCatNLO-utilities')):
+                interface.onecmd('add process %s' % p)    
+        if not os.path.exists(pjoin(MG5DIR, 'MCatNLO-utilities','MCatNLO','lib','libstdhep.a')):
             interface.onecmd('install MCatNLO-utilities')
             self.assertTrue(os.path.exists(\
-                    pjoin(_file_path, os.path.pardir, 'MCatNLO-utilities','MCatNLO','lib','libstdhep.a')))
+                    pjoin(MG5DIR, 'MCatNLO-utilities','MCatNLO','lib','libstdhep.a')))
             self.assertTrue(os.path.exists(\
-                    pjoin(_file_path, os.path.pardir, 'MCatNLO-utilities','MCatNLO','lib','libFmcfio.a')))
+                    pjoin(MG5DIR, 'MCatNLO-utilities','MCatNLO','lib','libFmcfio.a')))
+        interface.exec_cmd('set MCatNLO-utilities_path %s --no_save' % pjoin(MG5DIR, 'MCatNLO-utilities') )
+
+        interface.onecmd('output /tmp/MGPROCESS/ -f')
+        self.assertTrue(os.path.exists(\
+                    pjoin(MG5DIR, 'MCatNLO-utilities','MCatNLO','lib','libstdhep.a')))
+        self.assertTrue(os.path.exists(\
+                    pjoin(MG5DIR, 'MCatNLO-utilities','MCatNLO','lib','libFmcfio.a')))        
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/MCatNLO/lib/libstdhep.a'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/MCatNLO/lib/libFmcfio.a'))        
         
         self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '/tmp/MGPROCESS')
+        self.cmd_line.exec_cmd('set MCatNLO-utilities_path %s --no_save' % pjoin(MG5DIR, 'MCatNLO-utilities') )
         self.cmd_line.exec_cmd('set automatic_html_opening False')
 
     @staticmethod
@@ -96,7 +106,7 @@ class TestMECmdShell(unittest.TestCase):
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
         # test the hep event file exists
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6.hep.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz'))
         
 
 
@@ -115,7 +125,7 @@ class TestMECmdShell(unittest.TestCase):
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
         # test the hep event file exists
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q.hep.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q_0.hep.gz'))
         
 
         
@@ -130,7 +140,7 @@ class TestMECmdShell(unittest.TestCase):
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
         # test the hep event file exists
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6.hep.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz'))
         
 
     def test_generate_events_nlo_py6_stdhep(self):
@@ -148,7 +158,7 @@ class TestMECmdShell(unittest.TestCase):
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
         # test the hep event file exists
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q.hep.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q_0.hep.gz'))
         
         
 

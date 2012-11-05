@@ -3678,6 +3678,11 @@ class UFO_model_to_mg4(object):
         res_strings = ["%(mp_prefix)s%(name)s=%(name)s"\
                         %{'mp_prefix':self.mp_prefix,'name':param.name}\
                                                 for param in update_params_list]
+        # When read_lha is false, it is G which is taken in input and not AS, so
+        # this is what should be reset here too.
+        if 'aS' in [param.name for param in update_params_list]:
+            res_strings.append("%(mp_prefix)sG=G"%{'mp_prefix':self.mp_prefix})
+            
         fsock = self.open('actualize_mp_ext_params.inc', format='fortran')
         fsock.writelines('\n'.join(res_strings))
 

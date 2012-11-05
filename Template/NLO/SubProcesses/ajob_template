@@ -32,8 +32,8 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         if [[ "$4" != "" ]]; then
             if [[ "$4" == "H" ||"$4" == "S" || "$4" == "V" || "$4" == "B" || "$4" == "F" ]]; then
                 if [[ -e ../G$4$i ]]; then
-                    cp -af ../G$4$i/mint_grids ./preset_mint_grids
-                    cp -af ../G$4$i/grid.MC_integer . >/dev/null 2>&1
+                    cp -f ../G$4$i/mint_grids ./preset_mint_grids
+                    cp -f ../G$4$i/grid.MC_integer . >/dev/null 2>&1
                 else
                     echo "Cannot find direcotry ../G$4$i/" > log.txt
                     exit
@@ -63,6 +63,16 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     if  [[ ! -e MadLoopParams.dat ]] ; then
 	ln -sf ../MadLoopParams.dat .
     fi
+	if  [[ ! -e HelFilter.dat ]] ; then                                                                                      
+    	if [[ -e ../HelFilter.dat ]] ; then                                                                                     
+			ln -sf ../HelFilter.dat .                                                                                                 
+		fi                                                                                                                  
+	fi
+	if  [[ ! -e LoopFilter.dat ]] ; then                                                                                      
+    	if [[ -e ../LoopFilter.dat ]] ; then                                                                                     
+			ln -sf ../LoopFilter.dat .                                                                                                 
+		fi                                                                                                                  
+	fi
     if  [[ ! -e ColorDenomFactors.dat ]] ; then
 	ln -sf ../ColorDenomFactors.dat .
     fi
@@ -99,6 +109,7 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         tail -n 4 $input_template >> input_app.txt
         T="$(date +%s)"
         ../madevent_vegas > log.txt <input_app.txt 2>&1
+        status=$?
         T="$(($(date +%s)-T))"
         echo "Time in seconds: ${T}" >>log.txt
     elif [[ $1 == '2' ]]; then
@@ -117,15 +128,17 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         fi
         T="$(date +%s)"
         ../madevent_mintMC > log.txt <input_app.txt 2>&1
+        status=$?
         T="$(($(date +%s)-T))"
         echo "Time in seconds: ${T}" >>log.txt
-        cp -af log.txt log_MINT$3.txt
+        cp -f log.txt log_MINT$3.txt
     fi
     if [[ $1 == '2' && $runnumber != 0 ]]; then
         mv events.lhe events_$runnumber.lhe
         mv log.txt log_MINT$3_$runnumber.txt
     fi
     cd ../
+    exit $status
 done
 
 

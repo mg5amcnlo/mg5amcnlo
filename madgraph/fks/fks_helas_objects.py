@@ -64,7 +64,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
         logger.info('Generating real emission matrix-elements...')
         self['real_matrix_elements'] = self.generate_matrix_elements(
                 copy.copy(fksmulti['real_amplitudes']), combine_matrix_elements = False)
-        
+
         self['matrix_elements'] = self.generate_matrix_elements_fks(
                                 fksmulti, 
                                 gen_color, decay_ids)
@@ -317,17 +317,23 @@ class FKSHelasProcess(object):
     def __eq__(self, other):
         """the equality between two FKSHelasProcesses is defined up to the 
         color links"""
+        selftag = helas_objects.IdentifyMETag.create_tag(self.born_matrix_element.get('base_amplitude'))
+        othertag = helas_objects.IdentifyMETag.create_tag(other.born_matrix_element.get('base_amplitude'))
                     
-        if self.born_matrix_element != other.born_matrix_element:
+        if self.born_matrix_element != other.born_matrix_element or \
+                selftag != othertag:
             return False
+
         reals2 = copy.copy(other.real_processes)
         for real in  self.real_processes:
             try:
                 reals2.remove(real)
             except:
                 return False  
-
-        return True
+        if not reals2:
+            return True
+        else: 
+            return False
     
     def add_process(self, other): #test written
         """adds processes from born and reals of other to itself. Note that 
@@ -384,7 +390,8 @@ class FKSHelasRealProcess(object): #test written
                         'not same number of amplitudes and matrix elements: %d, %d' % \
                                 (len(real_amp_list), len(real_me_list)))
             if real_me_list and real_amp_list:
-                self.matrix_element = real_me_list[real_amp_list.index(fksrealproc.amplitude)]
+                self.matrix_element = copy.deepcopy(real_me_list[real_amp_list.index(fksrealproc.amplitude)])
+                self.matrix_element['processes'] = copy.deepcopy(self.matrix_element['processes'])
             else:
                 logger.info('generating matrix element...')
                 self.matrix_element = helas_objects.HelasMatrixElement(

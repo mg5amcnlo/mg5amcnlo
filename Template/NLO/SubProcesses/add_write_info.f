@@ -10,6 +10,7 @@ c intermediate resonances. It also boosts the events to the lab frame
       include "reweight0.inc"
       include "nFKSconfigs.inc"
       include "leshouche_info.inc"
+      include "run.inc"
 
 c Arguments
       double precision p_born(0:3,nexternal-1),pp(0:3,nexternal)
@@ -427,6 +428,24 @@ c
                pb(4,i)=xmcmass(i+1)
             endif
          enddo
+c In some rare cases (due to numerical inaccuracies in the boost) the
+c energy of the incoming partons can be larger than the beam energy This
+c is, of course, non-physical, so we use the non-boosted events
+         if (pb(0,1).gt.ebeam(1).or.pb(0,2).gt.ebeam(2)) then
+            write (*,*) 'WARNING: boost from center-of-momentum to '/
+     &           /'laboratory frame too extreme. Use the center-of-mo'/
+     &           /'mentum momenta instead.',pb(0,1),pb(0,2),ebeam(1)
+     &           ,ebeam(2)
+            do i=1,nexpart
+               do j=0,3
+                  if (Hevents) then
+                     pb(j,i)=pp(j,i)
+                  else
+                     pb(j,i)=p_born(j,i)
+                  endif
+               enddo
+            enddo
+         endif
       endif
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -617,8 +636,7 @@ c accidentally overwriting something).
                pmass_tree(j-1)=pmass(j,iconfig)
                pwidth_tree(j-1)=pwidth(j,iconfig)
                do i=1,2
-                  itree(1,j-1)=iforest(1,j,iconfig)
-                  itree(2,j-1)=iforest(2,j,iconfig)
+                  itree(i,j-1)=iforest(i,j,iconfig)
 c Also update the internal references
                   if ( itree(i,j-1).lt. 0 ) then
                      itree(i,j-1)=itree(i,j-1)-1

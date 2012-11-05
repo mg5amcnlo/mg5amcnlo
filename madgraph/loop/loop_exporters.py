@@ -105,7 +105,7 @@ class LoopExporterFortran(object):
 
         if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
             logger.info('Compiling CutTools. This has to be done only once and'+\
-                              ' can take a couple of minutes.','$MG:color:BLUE')
+                              ' can take a couple of minutes.','$MG:color:BLACK')
             current = misc.detect_current_compiler(os.path.join(\
                                                   self.cuttools_dir,'makefile'))
             new = 'gfortran' if self.fortran_compiler is None else \
@@ -562,6 +562,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         else:
             dict['ncomb_helas_objs'] = ''  
             dict['dp_born_amps_decl'] = ''
+            dict['dp_born_amps_decl_in_mp'] = ''
+            dict['copy_mp_to_dp_born_amps'] = ''
             dict['mp_born_amps_decl'] = ''
             dict['nbornamps_decl'] = ''
         
@@ -592,12 +594,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # The born amp declaration suited for also outputing the loop-induced
         # processes as well.
         if matrix_element.get('processes')[0].get('has_born'):
+            self.general_replace_dict['dp_born_amps_decl_in_mp'] = \
+                  self.general_replace_dict['complex_dp_format']+" DPAMP(NBORNAMPS,NCOMB)"+\
+                  "\n common/AMPS/DPAMP"
             self.general_replace_dict['dp_born_amps_decl'] = \
                   self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS,NCOMB)"+\
                   "\n common/AMPS/AMP"
             self.general_replace_dict['mp_born_amps_decl'] = \
                   self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS,NCOMB)"+\
                   "\n common/MP_AMPS/AMP"
+            self.general_replace_dict['copy_mp_to_dp_born_amps'] = \
+                   '\n'.join(['DO I=1,NBORNAMPS','DPAMP(I,H)=AMP(I,H)','ENDDO'])
         
         if writer:
             raise MadGraph5Error, 'Matrix output mode no longer supported.'
@@ -895,10 +902,10 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
               'C  Please specify below the reference value you want to use for'+\
               ' comparisons.','ref=LSCALE*(10.0d0**(5*(-2*NEXTERNAL+8)))'])
             replace_dict['loop_induced_setup'] = '\n'.join([
-              'DUMMY=HELPICKED','HELPICKED=H','MP_DONE=.FALSE.',
+              'HELPICKED_BU=HELPICKED','HELPICKED=H','MP_DONE=.FALSE.',
               'IF(SKIPLOOPEVAL) THEN','GOTO 1227','ENDIF'])
             replace_dict['loop_induced_finalize'] = \
-            """HELPICKED=DUMMY
+            """HELPICKED=HELPICKED_BU
                DO I=NCTAMPS+1,NLOOPAMPS
                IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.S(I))) THEN
                  WRITE(*,*) '##W03 WARNING Contribution ',I
@@ -1162,8 +1169,9 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         else:
             self.general_replace_dict['nloop_groups']=\
                                               self.general_replace_dict['nloops']
+
         # The born amp declaration suited for also outputing the loop-induced
-        # processes as well.
+        # processes as well. (not used for now, but later)
         if matrix_element.get('processes')[0].get('has_born'):
             self.general_replace_dict['dp_born_amps_decl'] = \
                   self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS)"+\
@@ -1171,7 +1179,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             self.general_replace_dict['mp_born_amps_decl'] = \
                   self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS)"+\
                   "\n common/MP_AMPS/AMP"
-        
+
         if writer:
             raise MadGraph5Error, 'Matrix output mode no longer supported.'
 
