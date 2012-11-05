@@ -61,7 +61,7 @@ class UFOExpressionParser(object):
     tokens = (
         'POWER', 'CSC', 'SEC', 'ACSC', 'ASEC',
         'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'FUNCTION',
-        'VARIABLE', 'NUMBER','COND','REGLOG'
+        'VARIABLE', 'NUMBER','COND','REGLOG', 'ARG' # HSS, 5/11/2012
         )
     literals = "=+-*/(),"
 
@@ -85,6 +85,11 @@ class UFOExpressionParser(object):
     def t_COND(self, t):
         r'(?<!\w)cond(?=\()'
         return t
+    # HSS, 5/11/2012
+    def t_ARG(self,t):
+	r'(?<!\w)ARG(?=\()'
+	return t
+    # HSS
     def t_SQRT(self, t):
         r'cmath\.sqrt'
         return t
@@ -140,6 +145,9 @@ class UFOExpressionParser(object):
         ('left','POWER'),
         ('right','COND'),
         ('right','REGLOG'),
+	# HSS, 5/11/2012
+	('right','ARG'),
+	# HSS
         ('right','CSC'),
         ('right','SEC'),
         ('right','ACSC'),
@@ -243,6 +251,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                       | ASEC group
                       | RE group
                       | IM group
+		      | ARG group
                       | SQRT group
                       | CONJ group
                       | REGLOG group'''
@@ -252,6 +261,9 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
         elif p[1] == 're': p[0] = 'dble' + p[2]
         elif p[1] == 'im': p[0] = 'dimag' + p[2]
+	# HSS , 5/11/2012
+	elif p[1] == 'arg': p[0] = 'arg(DCMPLX'+p[2]+')'
+	# HSS
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
 	# HSS, 5/11/2012
         elif p[1] == 'complexconjugate': p[0] = 'conjg(DCMPLX' + p[2]+')'
@@ -305,6 +317,7 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
                       | ASEC group
                       | RE group
                       | IM group
+	              | ARG group
                       | SQRT group
                       | CONJ group
                       | REGLOG group'''
@@ -314,9 +327,12 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
         elif p[1] == 'asec': p[0] = 'acos(1e0_16/' + p[2] + ')'
         elif p[1] == 're': p[0] = 'real' + p[2]
         elif p[1] == 'im': p[0] = 'imag' + p[2]
+	# HSS,5/11/2012
+	elif p[1] == 'arg': p[0] = 'mp_arg(CMPLX('+p[2]+',KIND=16))'
+	# HSS
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
 	# HSS,5/11/2012
-        elif p[1] == 'complexconjugate': p[0] = 'conjg(CMPLX' + p[2]+',KIND=16))'
+        elif p[1] == 'complexconjugate': p[0] = 'conjg(CMPLX(' + p[2]+',KIND=16))'
 	# HSS
         elif p[1] == 'reglog': p[0] = 'mp_reglog(CMPLX(' + p[2] +',KIND=16))'
 
@@ -367,6 +383,7 @@ class UFOExpressionParserCPP(UFOExpressionParser):
                       | ASEC group
                       | RE group
                       | IM group
+		      | ARG group
                       | SQRT group
                       | CONJ group
                       | REGLOG group '''
@@ -376,6 +393,9 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
         elif p[1] == 're': p[0] = 'real' + p[2]
         elif p[1] == 'im': p[0] = 'imag' + p[2]
+	# HSS, 5/11/2012
+	elif p[1] == 'arg':p[0] = 'arg' + p[2]
+	# HSS
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
         elif p[1] == 'complexconjugate': p[0] = 'conj' + p[2]
         elif p[1] == 'reglog': p[0] = 'reglog' + p[2]

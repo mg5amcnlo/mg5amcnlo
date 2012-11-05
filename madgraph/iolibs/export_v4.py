@@ -3546,19 +3546,22 @@ class UFO_model_to_mg4(object):
     def create_model_functions_inc(self):
         """ Create model_functions.inc which contains the various declarations
         of auxiliary functions which might be used in the couplings expressions"""
-        
+        # HSS, 5/11/2012
         fsock = self.open('model_functions.inc', format='fortran')
         fsock.writelines("""double complex cond
-          double complex reglog""")
+          double complex reglog
+          double complex arg""")
         if self.opt['mp']:
             fsock.writelines("""%(complex_mp_format)s mp_cond
-          %(complex_mp_format)s mp_reglog"""\
+          %(complex_mp_format)s mp_reglog
+          %(complex_mp_format)s mp_arg"""\
           %{'complex_mp_format':self.mp_complex_format})
+	# HSS
 
     def create_model_functions_def(self):
         """ Create model_functions.f which contains the various definitions
         of auxiliary functions which might be used in the couplings expressions"""
-
+	# HSS, 5/11/2012
         fsock = self.open('model_functions.f', format='fortran')
         fsock.writelines("""double complex function cond(condition,truecase,falsecase)
           implicit none
@@ -3577,6 +3580,18 @@ class UFO_model_to_mg4(object):
              reglog=(0.0d0,0.0d0)
           else
              reglog=log(arg)
+          endif
+          end
+          
+          double complex function arg(comnum)
+          implicit none
+          double complex comnum
+          double complex iim 
+          iim = (0.0d0,1.0d0)
+          if(comnum.eq.(0.0d0,0.0d0)) then
+             arg=(0.0d0,0.0d0)
+          else
+             arg=log(comnum/abs(comnum))/iim
           endif
           end""")
         if self.opt['mp']:
@@ -3600,8 +3615,20 @@ class UFO_model_to_mg4(object):
               else
                  mp_reglog=log(arg)
               endif
+              end
+              
+              %(complex_mp_format)s function mp_arg(comnum)
+              implicit none
+              %(complex_mp_format)s comnum
+              %(complex_mp_format)s imm
+              imm = (0.0e0_16,1.0e0_16)
+              if(comnum.eq.(0.0e0_16,0.0e0_16)) then
+                 mp_arg=(0.0e0_16,0.0e0_16)
+              else
+                 mp_arg=log(comnum/abs(comnum))/imm
+              endif
               end"""%{'complex_mp_format':self.mp_complex_format})            
-
+        # HSS   
     def create_makeinc(self):
         """create makeinc.inc containing the file to compile """
         
