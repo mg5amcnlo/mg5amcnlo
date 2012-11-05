@@ -1274,6 +1274,8 @@ Integrated cross-section
 
         match = re.search(pat, output[0])
         if not match or output[1]:
+            logger.ingo('Return code of the event collection: '+str(output[1]))
+            logger.info('Output of the event collection:\n'+output[0])
             raise aMCatNLOError('An error occurred during the collection of results')
         if int(match.groups()[0]) != self.njobs:
             raise aMCatNLOError('Not all jobs terminated successfully')
