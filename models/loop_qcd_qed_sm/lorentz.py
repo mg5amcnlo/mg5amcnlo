@@ -195,3 +195,118 @@ VVVV5 = Lorentz(name = 'VVVV5',
                 spins = [ 3, 3, 3, 3 ],
                 structure = 'Metric(1,4)*Metric(2,3) - (Metric(1,3)*Metric(2,4))/2. - (Metric(1,2)*Metric(3,4))/2.')
 
+##############################################
+# UV CounterTerms Lorentz structures for QED #
+# Generate by WriteUFO automatically         # 
+##############################################
+
+l_WmWpMass1 = Lorentz(name = 'l_WmWpMass1',
+                      spins = [ 3, 3 ],
+                      structure = '-Metric(1,2)*P(-1,1)*P(-1,1)')
+
+
+l_WmWpMass2 = Lorentz(name = 'l_WmWpMass2',
+                      spins = [ 3, 3 ],
+                      structure = 'Metric(1,2)')
+
+
+l_WmWpMass3 = Lorentz(name = 'l_WmWpMass3',
+                      spins = [ 3, 3 ],
+                      structure = '-P(1,1)*P(2,1)')
+
+
+l_GmWpMass4 = Lorentz(name = 'l_GmWpMass4',
+                      spins = [ 1, 3 ],
+                      structure = 'P(2,1)')
+
+
+l_GmWpMass5 = Lorentz(name = 'l_GmWpMass5',
+                      spins = [ 1, 3 ],
+                      structure = 'P(2,2)')
+
+
+l_HMass6 = Lorentz(name = 'l_HMass6',
+                   spins = [ 1, 1 ],
+                   structure = '-P(-1,1)*P(-1,1)')
+
+
+l_HMass7 = Lorentz(name = 'l_HMass7',
+                   spins = [ 1, 1 ],
+                   structure = '1')
+
+
+l_vevexMass8 = Lorentz(name = 'l_vevexMass8',
+                       spins = [ 2, 2 ],
+                       structure = 'P(-1,1)*Gamma(-1,2,-2)*ProjM(-2,1)')
+
+
+l_vevexMass9 = Lorentz(name = 'l_vevexMass9',
+                       spins = [ 2, 2 ],
+                       structure = 'P(-1,2)*Gamma(-1,2,-2)*ProjP(-2,1)')
+
+
+l_vevexMass10 = Lorentz(name = 'l_vevexMass10',
+                        spins = [ 2, 2 ],
+                        structure = 'ProjM(2,1)')
+
+
+l_vevexMass11 = Lorentz(name = 'l_vevexMass11',
+                        spins = [ 2, 2 ],
+                        structure = 'ProjP(2,1)')
+
+
+l_WpWpWmWm12 = Lorentz(name = 'l_WpWpWmWm12',
+                       spins = [ 3, 3, 3, 3 ],
+                       structure = 'Metric(1,2)*Metric(3,4)')
+
+
+l_WpWpWmWm13 = Lorentz(name = 'l_WpWpWmWm13',
+                       spins = [ 3, 3, 3, 3 ],
+                       structure = 'Metric(1,4)*Metric(2,3)')
+
+
+l_WpWpWmWm14 = Lorentz(name = 'l_WpWpWmWm14',
+                       spins = [ 3, 3, 3, 3 ],
+                       structure = 'Metric(1,3)*Metric(2,4)')
+
+
+l_AWpWm15 = Lorentz(name = 'l_AWpWm15',
+                    spins = [ 3, 3, 3 ],
+                    structure = 'Metric(1,2)*(P(3,2)-P(3,1))+Metric(2,3)*(P(1,3)-P(1,2))+Metric(3,1)*(P(2,1)-P(2,3))')
+
+
+l_HHWmWp16 = Lorentz(name = 'l_HHWmWp16',
+                     spins = [ 1, 1, 3, 3 ],
+                     structure = 'Metric(3,4)')
+
+
+l_G0HA17 = Lorentz(name = 'l_G0HA17',
+                   spins = [ 1, 1, 3 ],
+                   structure = 'P(3,1)-P(3,2)')
+
+
+l_HWpWm18 = Lorentz(name = 'l_HWpWm18',
+                    spins = [ 1, 3, 3 ],
+                    structure = 'Metric(2,3)')
+
+
+l_vexveA19 = Lorentz(name = 'l_vexveA19',
+                     spins = [ 2, 2, 3 ],
+                     structure = 'Gamma(3,2,-1)*ProjM(-1,1)')
+
+
+l_vexveA20 = Lorentz(name = 'l_vexveA20',
+                     spins = [ 2, 2, 3 ],
+                     structure = 'Gamma(3,2,-1)*ProjP(-1,1)')
+
+
+l_umxumA21 = Lorentz(name = 'l_umxumA21',
+                     spins = [ -1, -1, 3 ],
+                     structure = 'P(3,1)')
+
+
+l_umxumA22 = Lorentz(name = 'l_umxumA22',
+                     spins = [ -1, -1, 3 ],
+                     structure = 'P(3,2)')
+
+

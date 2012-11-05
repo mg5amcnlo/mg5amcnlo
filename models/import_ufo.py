@@ -93,7 +93,7 @@ def import_model(model_name, decay=False):
             restrict_file = os.path.join(model_path,'restrict_default.dat')
         else:
             restrict_file = None
-    
+
     #import the FULL model
     model = import_full_model(model_path, decay) 
     # restore the model name
@@ -102,7 +102,7 @@ def import_model(model_name, decay=False):
     path = os.path.dirname(os.path.realpath(model_path))
     path = os.path.join(path, model.get('name'))
     model.set('version_tag', os.path.realpath(path) +'##'+ str(misc.get_pkg_info()))
-    
+
     #restrict it if needed       
     if restrict_file:
         try:
@@ -113,7 +113,6 @@ def import_model(model_name, decay=False):
             
         if logger_mod.getEffectiveLevel() > 10:
             logger.info('Run \"set stdout_level DEBUG\" before import for more information.')
-
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
         
@@ -131,7 +130,7 @@ def import_full_model(model_path, decay=False):
         (no restriction file use)"""
 
     assert model_path == find_ufo_path(model_path)
-            
+       
     # Check the validity of the model
     files_list_prov = ['couplings.py','lorentz.py','parameters.py',
                        'particles.py', 'vertices.py']
@@ -142,7 +141,7 @@ def import_full_model(model_path, decay=False):
             raise UFOImportError,  "%s directory is not a valid UFO model: \n %s is missing" % \
                                                          (model_path, filename)
         files_list.append(filepath)
-        
+    
     # use pickle files if defined and up-to-date
     if aloha.unitary_gauge: 
         pickle_name = 'model.pkl'
@@ -162,10 +161,9 @@ def import_full_model(model_path, decay=False):
               model.get('version_tag').endswith('##' + str(misc.get_pkg_info())):
                 _import_once.append((model_path, aloha.unitary_gauge))
                 return model
-
     if (model_path, aloha.unitary_gauge) in _import_once:
         raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch mg5' 
-
+ 
     # Load basic information
     ufo_model = ufomodels.load_model(model_path)
     ufo2mg5_converter = UFOMG5Converter(ufo_model)
@@ -173,13 +171,13 @@ def import_full_model(model_path, decay=False):
     
     if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
     model.set('name', os.path.split(model_path)[-1])
-
     # Load the Parameter/Coupling in a convinient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main()
+
     model.set('parameters', parameters)
     model.set('couplings', couplings)
     model.set('functions', ufo_model.all_functions)
-    
+
     # Optional UFO part: decay_width information
     if decay and hasattr(ufo_model, 'all_decays') and ufo_model.all_decays:
         for ufo_part in ufo_model.all_particles:
@@ -192,10 +190,9 @@ def import_full_model(model_path, decay=False):
             elif p and not hasattr(p, 'partial_widths'):
                 p.partial_widths = {}
             # might be None for ghost
-            
+        
     # save in a pickle files to fasten future usage
     save_load_object.save_to_file(os.path.join(model_path, pickle_name), model) 
- 
     #if default and os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
     #    restrict_file = os.path.join(model_path, 'restrict_default.dat') 
     #    model = import_ufo.RestrictModel(model)
@@ -838,7 +835,6 @@ class OrganizeModelExpression:
     def main(self):
         """Launch the actual computation and return the associate 
         params/couplings."""
-        
         self.analyze_parameters()
         self.analyze_couplings()
         return self.params, self.couplings
@@ -908,8 +904,7 @@ class OrganizeModelExpression:
                     if newCoupling.pole(poleOrder)!='ZERO':                    
                         newCoupling.value=newCoupling.pole(poleOrder)
                         new_couplings_list.append(newCoupling)
-            self.model.all_couplings=new_couplings_list
-                        
+            self.model.all_couplings=new_couplings_list                
                                         
         
         for coupling in self.model.all_couplings:
@@ -917,7 +912,6 @@ class OrganizeModelExpression:
             expr = self.shorten_expr(coupling.value)
             depend_on = self.find_dependencies(expr)
             parameter = base_objects.ModelVariable(coupling.name, expr, 'complex', depend_on)
-            
             # Add consistently in the couplings/all_expr
             try:
                 self.couplings[depend_on].append(parameter)
@@ -1072,26 +1066,26 @@ class RestrictModel(model_reader.ModelReader):
 
         # remove the out-dated interactions
         self.remove_interactions(zero_couplings)
-                
+        
         # replace in interactions identical couplings
         for iden_coups in iden_couplings:
             self.merge_iden_couplings(iden_coups)
-        
+
         # remove zero couplings and other pointless couplings
         self.del_coup += zero_couplings
         self.remove_couplings(self.del_coup)
-                
+       
         # deal with parameters
         parameters = self.detect_special_parameters()
         self.fix_parameter_values(*parameters, simplify=rm_parameter, 
                                                     keep_external=keep_external)
-        
+
         # deal with identical parameters
         if not keep_external:
             iden_parameters = self.detect_identical_parameters()
             for iden_param in iden_parameters:
                 self.merge_iden_parameters(iden_param)
-            
+    
         # change value of default parameter if they have special value:
         # 9.999999e-1 -> 1.0
         # 0.000001e-99 -> 0 Those value are used to avoid restriction
@@ -1100,7 +1094,7 @@ class RestrictModel(model_reader.ModelReader):
                 self['parameter_dict'][name] = 1
             elif value == 0.000001e-99:
                 self['parameter_dict'][name] = 0
-      
+
                     
     def locate_coupling(self):
         """ create a dict couplings_name -> vertex or (particle, counterterm_key) """

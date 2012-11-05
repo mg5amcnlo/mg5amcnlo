@@ -253,6 +253,22 @@ class Switcher(object):
                self.current_interface in ['MadLoop']:
                 self.change_principal_cmd('MadGraph')
         return
+    
+    def do_output(self, line, *args, **opts):
+        """ treat output aloha in order to use always the one in MG5 """
+        if line.strip().startswith('aloha'):
+            MGcmd.MadGraphCmd.do_output(self, line, *args, **opts)
+        else:
+            self.cmd.do_output(self, line, *args, **opts)
+    
+    def check_output(self, arg, *args, **opts):
+        if arg and arg[0] == 'aloha':
+            MGcmd.MadGraphCmd.check_output(self, arg, *args, **opts)
+        else:
+            self.cmd.check_output(self, arg, *args, **opts)
+            
+    
+        
 
     # Dummy functions, not triggering any switch of interfaces
             
@@ -303,9 +319,6 @@ class Switcher(object):
         
     def check_open(self, *args, **opts):
         return self.cmd.check_open(self, *args, **opts)
-        
-    def check_output(self, *args, **opts):
-        return self.cmd.check_output(self, *args, **opts)
         
     def check_process_format(self, *args, **opts):
         return self.cmd.check_process_format(self, *args, **opts)
@@ -427,9 +440,6 @@ class Switcher(object):
         
     def do_open(self, *args, **opts):
         return self.cmd.do_open(self, *args, **opts)
-        
-    def do_output(self, *args, **opts):
-        return self.cmd.do_output(self, *args, **opts)
         
     def do_quit(self, *args, **opts):
         return self.cmd.do_quit(self, *args, **opts)

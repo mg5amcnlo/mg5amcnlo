@@ -192,7 +192,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         """ Different daughter classes might want different compilers.
         Here, the gfortran compiler is used throughout the compilation 
         (mandatory for CutTools written in f90) """
-        if not any([name in compiler for name in ['gfortran','ifort']]):
+        if not compiler is None and not any([name in compiler for name in \
+                                                         ['gfortran','ifort']]):
             logger.info('For loop processes, the compiler must be fortran90'+\
                         'compatible, like gfortran.')
             self.set_compiler('gfortran',True)
@@ -1063,7 +1064,7 @@ C                ENDIF
 
         # Extract helas calls
         born_amps_and_wfs_calls = fortran_model.get_born_ct_helas_calls(\
-                                               matrix_element, include_CT=False)
+                                                matrix_element, include_CT=True)
         
         # Turn these HELAS calls to the multiple-precision version of the HELAS
         # subroutines.

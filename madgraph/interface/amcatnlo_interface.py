@@ -76,11 +76,12 @@ class CheckFKS(mg_interface.CheckValidForCmd):
 
     def check_output(self, args):
         """ check the validity of the line"""
-          
+                  
         self._export_format = 'NLO'
         forbidden_formats = ['madevent', 'standalone']
+        
 
-        if not self._fks_multi_proc:
+        if not hasattr(self, '_fks_multi_proc') or not self._fks_multi_proc:
             text = 'No processes generated. Please generate a process first.'
             raise self.InvalidCmd(text)
 
@@ -291,7 +292,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._v4_export_formats = []
         self._nlo_modes_for_completion = ['all','real']
-        self._export_formats = [ 'madevent' ]
+        self._export_formats = [ 'madevent', 'aloha' ]
         # Do not force NLO model as the user might have asked for reals only.
         # It will anyway be forced later if he attempts virt= or all=.
         self.validate_model(loop_type='real_init', stop=False)

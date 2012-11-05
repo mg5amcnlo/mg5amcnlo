@@ -4,7 +4,7 @@
 
 from object_library import all_couplings, Coupling
 
-from function_library import complexconjugate, re, im, csc, sec, acsc, asec
+from function_library import complexconjugate, re, im, csc, sec, acsc, asec, arg, reglog
 
 ################
 # R2 couplings #
@@ -5013,13 +5013,1993 @@ UV_bMass = Coupling(name = 'UV_bMass',
 UV_tMass = Coupling(name = 'UV_tMass',
                  value = 'tMass_UV',
                  order = {'QCD':2})
-# ============== #
-# QED            #
-# ============== #
+# ================================== #
+# QED                                #
+# Generate automatically by WriteUFO #
+# ================================== #
+c_UVWmWpMass1EW = Coupling(name = 'c_UVWmWpMass1EW',
+                           value = 'WWcft_UV_EW*complex(0,1)',
+                           order = {'QED' : 2})
 
-UV_tMassQED = Coupling(name = 'UV_tMassQED',
-                       value = 'tMass_UV_QED',
-                       order = {'QED':2})
+
+c_UVWmWpMass2EW = Coupling(name = 'c_UVWmWpMass2EW',
+                           value = '(WMass2_UV_EW + WWcft_UV_EW*MW**2)*complex(0,1)',
+                           order = {'QED' : 2})
+
+
+c_UVWmWpMass3EW = Coupling(name = 'c_UVWmWpMass3EW',
+                           value = 'WWcft_UV_EW*complex(0,-1)',
+                           order = {'QED' : 2})
+
+
+c_UVZMass1EW = Coupling(name = 'c_UVZMass1EW',
+                        value = 'ZZWcft_UV_EW*complex(0,1)',
+                        order = {'QED' : 2})
+
+
+c_UVZMass2EW = Coupling(name = 'c_UVZMass2EW',
+                        value = '(ZMass2_UV_EW + ZZWcft_UV_EW*MZ**2)*complex(0,1)',
+                        order = {'QED' : 2})
+
+
+c_UVZMass3EW = Coupling(name = 'c_UVZMass3EW',
+                        value = 'ZZWcft_UV_EW*complex(0,-1)',
+                        order = {'QED' : 2})
+
+
+c_UVAMass1EW = Coupling(name = 'c_UVAMass1EW',
+                        value = 'AAWcft_UV_EW*complex(0,1)',
+                        order = {'QED' : 2})
+
+
+c_UVAMass2EW = Coupling(name = 'c_UVAMass2EW',
+                        value = 'AAWcft_UV_EW*complex(0,-1)',
+                        order = {'QED' : 2})
+
+
+c_UVAZMass1EW = Coupling(name = 'c_UVAZMass1EW',
+                         value = '(AZWcft_UV_EW + ZAWcft_UV_EW)*complex(0,0.5)',
+                         order = {'QED' : 2})
+
+
+c_UVAZMass2EW = Coupling(name = 'c_UVAZMass2EW',
+                         value = 'ZAWcft_UV_EW*MZ**2*complex(0,0.5)',
+                         order = {'QED' : 2})
+
+
+c_UVAZMass3EW = Coupling(name = 'c_UVAZMass3EW',
+                         value = '(AZWcft_UV_EW + ZAWcft_UV_EW)*complex(0,-0.5)',
+                         order = {'QED' : 2})
+
+
+c_UVGmWpMass1EW = Coupling(name = 'c_UVGmWpMass1EW',
+                           value = '((WMass2_UV_EW + (GpWcft_UV_EW + WWcft_UV_EW)*MW**2)*complex(0,-0.25))/MW',
+                           order = {'QED' : 2})
+
+
+c_UVGmWpMass2EW = Coupling(name = 'c_UVGmWpMass2EW',
+                           value = '(GpWcft_UV_EW + WWcft_UV_EW + WMass2_UV_EW/MW**2)*MW*complex(0,0.25)',
+                           order = {'QED' : 2})
+
+
+c_UVG0ZMass1EW = Coupling(name = 'c_UVG0ZMass1EW',
+                          value = '((G0Wcft_UV_EW + ZZWcft_UV_EW + ZMass2_UV_EW/MZ**2)*MZ)/4.',
+                          order = {'QED' : 2})
+
+
+c_UVG0ZMass2EW = Coupling(name = 'c_UVG0ZMass2EW',
+                          value = '-(ZMass2_UV_EW + (G0Wcft_UV_EW + ZZWcft_UV_EW)*MZ**2)/(4.*MZ)',
+                          order = {'QED' : 2})
+
+
+c_UVAG0Mass1EW = Coupling(name = 'c_UVAG0Mass1EW',
+                          value = '(ZAWcft_UV_EW*MZ)/4.',
+                          order = {'QED' : 2})
+
+
+c_UVAG0Mass2EW = Coupling(name = 'c_UVAG0Mass2EW',
+                          value = '-(ZAWcft_UV_EW*MZ)/4.',
+                          order = {'QED' : 2})
+
+
+c_UVHMass1EW = Coupling(name = 'c_UVHMass1EW',
+                        value = 'HWcft_UV_EW*complex(0,-1)',
+                        order = {'QED' : 2})
+
+
+c_UVHMass2EW = Coupling(name = 'c_UVHMass2EW',
+                        value = '(HMass2_UV_EW + HWcft_UV_EW*MH**2)*complex(0,-1)',
+                        order = {'QED' : 2})
+
+
+c_UVG0Mass1EW = Coupling(name = 'c_UVG0Mass1EW',
+                         value = 'G0Wcft_UV_EW*complex(0,-1)',
+                         order = {'QED' : 2})
+
+
+c_UVG0Mass2EW = Coupling(name = 'c_UVG0Mass2EW',
+                         value = '0',
+                         order = {'QED' : 0})
+
+
+c_UVGmGpMass1EW = Coupling(name = 'c_UVGmGpMass1EW',
+                           value = 'GpWcft_UV_EW*complex(0,-1)',
+                           order = {'QED' : 2})
+
+
+c_UVvevexMass1EW = Coupling(name = 'c_UVvevexMass1EW',
+                            value = 'complex(0,-0.5)*(complexconjugate(veWcft_UV_EW_L) + veWcft_UV_EW_L)',
+                            order = {'QED' : 2})
+
+
+c_UVvevexMass2EW = Coupling(name = 'c_UVvevexMass2EW',
+                            value = '0',
+                            order = {'QED' : 0})
+
+
+c_UVvexvmMass1EW = Coupling(name = 'c_UVvexvmMass1EW',
+                            value = '0',
+                            order = {'QED' : 0})
+
+
+c_UVvmvmxMass1EW = Coupling(name = 'c_UVvmvmxMass1EW',
+                            value = 'complex(0,-0.5)*(complexconjugate(vmWcft_UV_EW_L) + vmWcft_UV_EW_L)',
+                            order = {'QED' : 2})
+
+
+c_UVvmvmxMass2EW = Coupling(name = 'c_UVvmvmxMass2EW',
+                            value = '0',
+                            order = {'QED' : 0})
+
+
+c_UVvtvtxMass1EW = Coupling(name = 'c_UVvtvtxMass1EW',
+                            value = 'complex(0,-0.5)*(complexconjugate(vtWcft_UV_EW_L) + vtWcft_UV_EW_L)',
+                            order = {'QED' : 2})
+
+
+c_UVvtvtxMass2EW = Coupling(name = 'c_UVvtvtxMass2EW',
+                            value = '0',
+                            order = {'QED' : 0})
+
+
+c_UVemepMass1EW = Coupling(name = 'c_UVemepMass1EW',
+                           value = 'complex(0,-0.5)*(complexconjugate(eWcft_UV_EW_L) + eWcft_UV_EW_L)',
+                           order = {'QED' : 2})
+
+
+c_UVemepMass2EW = Coupling(name = 'c_UVemepMass2EW',
+                           value = 'complex(0,0.5)*(complexconjugate(eWcft_UV_EW_R) + eWcft_UV_EW_R)',
+                           order = {'QED' : 2})
+
+
+c_UVemepMass3EW = Coupling(name = 'c_UVemepMass3EW',
+                           value = 'Me*complex(0,-0.5)*(complexconjugate(eWcft_UV_EW_R) + eWcft_UV_EW_L)',
+                           order = {'QED' : 2})
+
+
+c_UVemepMass4EW = Coupling(name = 'c_UVemepMass4EW',
+                           value = 'Me*complex(0,-0.5)*(complexconjugate(eWcft_UV_EW_L) + eWcft_UV_EW_R)',
+                           order = {'QED' : 2})
+
+
+c_UVmmmpMass1EW = Coupling(name = 'c_UVmmmpMass1EW',
+                           value = 'complex(0,-0.5)*(complexconjugate(muWcft_UV_EW_L) + muWcft_UV_EW_L)',
+                           order = {'QED' : 2})
+
+
+c_UVmmmpMass2EW = Coupling(name = 'c_UVmmmpMass2EW',
+                           value = 'complex(0,0.5)*(complexconjugate(muWcft_UV_EW_R) + muWcft_UV_EW_R)',
+                           order = {'QED' : 2})
+
+
+c_UVmmmpMass3EW = Coupling(name = 'c_UVmmmpMass3EW',
+                           value = 'MM*complex(0,-0.5)*(complexconjugate(muWcft_UV_EW_R) + muWcft_UV_EW_L)',
+                           order = {'QED' : 2})
+
+
+c_UVmmmpMass4EW = Coupling(name = 'c_UVmmmpMass4EW',
+                           value = 'MM*complex(0,-0.5)*(complexconjugate(muWcft_UV_EW_L) + muWcft_UV_EW_R)',
+                           order = {'QED' : 2})
+
+
+c_UVttmttpMass1EW = Coupling(name = 'c_UVttmttpMass1EW',
+                             value = 'complex(0,-0.5)*(complexconjugate(tauWcft_UV_EW_L) + tauWcft_UV_EW_L)',
+                             order = {'QED' : 2})
+
+
+c_UVttmttpMass2EW = Coupling(name = 'c_UVttmttpMass2EW',
+                             value = 'complex(0,0.5)*(complexconjugate(tauWcft_UV_EW_R) + tauWcft_UV_EW_R)',
+                             order = {'QED' : 2})
+
+
+c_UVttmttpMass3EW = Coupling(name = 'c_UVttmttpMass3EW',
+                             value = 'MTA*complex(0,-0.5)*(complexconjugate(tauWcft_UV_EW_R) + tauWcft_UV_EW_L)',
+                             order = {'QED' : 2})
+
+
+c_UVttmttpMass4EW = Coupling(name = 'c_UVttmttpMass4EW',
+                             value = 'MTA*complex(0,-0.5)*(complexconjugate(tauWcft_UV_EW_L) + tauWcft_UV_EW_R)',
+                             order = {'QED' : 2})
+
+
+c_UVuuxMass1EW = Coupling(name = 'c_UVuuxMass1EW',
+                          value = 'complex(0,-0.5)*(complexconjugate(uWcft_UV_EW_L) + uWcft_UV_EW_L)',
+                          order = {'QED' : 2})
+
+
+c_UVuuxMass2EW = Coupling(name = 'c_UVuuxMass2EW',
+                          value = 'complex(0,0.5)*(complexconjugate(uWcft_UV_EW_R) + uWcft_UV_EW_R)',
+                          order = {'QED' : 2})
+
+
+c_UVuuxMass3EW = Coupling(name = 'c_UVuuxMass3EW',
+                          value = 'MU*complex(0,-0.5)*(complexconjugate(uWcft_UV_EW_R) + uWcft_UV_EW_L)',
+                          order = {'QED' : 2})
+
+
+c_UVuuxMass4EW = Coupling(name = 'c_UVuuxMass4EW',
+                          value = 'MU*complex(0,-0.5)*(complexconjugate(uWcft_UV_EW_L) + uWcft_UV_EW_R)',
+                          order = {'QED' : 2})
+
+
+c_UVcuxMass1EW = Coupling(name = 'c_UVcuxMass1EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVcuxMass2EW = Coupling(name = 'c_UVcuxMass2EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVcuxMass3EW = Coupling(name = 'c_UVcuxMass3EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVcuxMass4EW = Coupling(name = 'c_UVcuxMass4EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVtuxMass1EW = Coupling(name = 'c_UVtuxMass1EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVtuxMass2EW = Coupling(name = 'c_UVtuxMass2EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVtuxMass3EW = Coupling(name = 'c_UVtuxMass3EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVtuxMass4EW = Coupling(name = 'c_UVtuxMass4EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVcxuMass1EW = Coupling(name = 'c_UVcxuMass1EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVcxuMass2EW = Coupling(name = 'c_UVcxuMass2EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVcxuMass3EW = Coupling(name = 'c_UVcxuMass3EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVcxuMass4EW = Coupling(name = 'c_UVcxuMass4EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVccxMass1EW = Coupling(name = 'c_UVccxMass1EW',
+                          value = 'complex(0,-0.5)*(complexconjugate(cWcft_UV_EW_L) + cWcft_UV_EW_L)',
+                          order = {'QED' : 2})
+
+
+c_UVccxMass2EW = Coupling(name = 'c_UVccxMass2EW',
+                          value = 'complex(0,0.5)*(complexconjugate(cWcft_UV_EW_R) + cWcft_UV_EW_R)',
+                          order = {'QED' : 2})
+
+
+c_UVccxMass3EW = Coupling(name = 'c_UVccxMass3EW',
+                          value = 'MC*complex(0,-0.5)*(complexconjugate(cWcft_UV_EW_R) + cWcft_UV_EW_L)',
+                          order = {'QED' : 2})
+
+
+c_UVccxMass4EW = Coupling(name = 'c_UVccxMass4EW',
+                          value = 'MC*complex(0,-0.5)*(complexconjugate(cWcft_UV_EW_L) + cWcft_UV_EW_R)',
+                          order = {'QED' : 2})
+
+
+c_UVcxtMass1EW = Coupling(name = 'c_UVcxtMass1EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVcxtMass2EW = Coupling(name = 'c_UVcxtMass2EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVcxtMass3EW = Coupling(name = 'c_UVcxtMass3EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVcxtMass4EW = Coupling(name = 'c_UVcxtMass4EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVtxuMass1EW = Coupling(name = 'c_UVtxuMass1EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVtxuMass2EW = Coupling(name = 'c_UVtxuMass2EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVtxuMass3EW = Coupling(name = 'c_UVtxuMass3EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVtxuMass4EW = Coupling(name = 'c_UVtxuMass4EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVctxMass1EW = Coupling(name = 'c_UVctxMass1EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVctxMass2EW = Coupling(name = 'c_UVctxMass2EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVctxMass3EW = Coupling(name = 'c_UVctxMass3EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVctxMass4EW = Coupling(name = 'c_UVctxMass4EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVttxMass1EW = Coupling(name = 'c_UVttxMass1EW',
+                          value = 'complex(0,-0.5)*(complexconjugate(tWcft_UV_EW_L) + tWcft_UV_EW_L)',
+                          order = {'QED' : 2})
+
+
+c_UVttxMass2EW = Coupling(name = 'c_UVttxMass2EW',
+                          value = 'complex(0,0.5)*(complexconjugate(tWcft_UV_EW_R) + tWcft_UV_EW_R)',
+                          order = {'QED' : 2})
+
+
+c_UVttxMass3EW = Coupling(name = 'c_UVttxMass3EW',
+                          value = 'complex(0,-0.5)*(MT*complexconjugate(tWcft_UV_EW_R) + 2*tMass_UV_EW + MT*tWcft_UV_EW_L)',
+                          order = {'QED' : 2})
+
+
+c_UVttxMass4EW = Coupling(name = 'c_UVttxMass4EW',
+                          value = 'complex(0,-0.5)*(MT*complexconjugate(tWcft_UV_EW_L) + 2*tMass_UV_EW + MT*tWcft_UV_EW_R)',
+                          order = {'QED' : 2})
+
+
+c_UVddxMass1EW = Coupling(name = 'c_UVddxMass1EW',
+                          value = 'complex(0,-0.5)*(complexconjugate(dWcft_UV_EW_L) + dWcft_UV_EW_L)',
+                          order = {'QED' : 2})
+
+
+c_UVddxMass2EW = Coupling(name = 'c_UVddxMass2EW',
+                          value = 'complex(0,0.5)*(complexconjugate(dWcft_UV_EW_R) + dWcft_UV_EW_R)',
+                          order = {'QED' : 2})
+
+
+c_UVddxMass3EW = Coupling(name = 'c_UVddxMass3EW',
+                          value = 'MD*complex(0,-0.5)*(complexconjugate(dWcft_UV_EW_R) + dWcft_UV_EW_L)',
+                          order = {'QED' : 2})
+
+
+c_UVddxMass4EW = Coupling(name = 'c_UVddxMass4EW',
+                          value = 'MD*complex(0,-0.5)*(complexconjugate(dWcft_UV_EW_L) + dWcft_UV_EW_R)',
+                          order = {'QED' : 2})
+
+
+c_UVdxsMass1EW = Coupling(name = 'c_UVdxsMass1EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVdxsMass2EW = Coupling(name = 'c_UVdxsMass2EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVdxsMass3EW = Coupling(name = 'c_UVdxsMass3EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVdxsMass4EW = Coupling(name = 'c_UVdxsMass4EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVbdxMass1EW = Coupling(name = 'c_UVbdxMass1EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVbdxMass2EW = Coupling(name = 'c_UVbdxMass2EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVbdxMass3EW = Coupling(name = 'c_UVbdxMass3EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVbdxMass4EW = Coupling(name = 'c_UVbdxMass4EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVdsxMass1EW = Coupling(name = 'c_UVdsxMass1EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVdsxMass2EW = Coupling(name = 'c_UVdsxMass2EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVdsxMass3EW = Coupling(name = 'c_UVdsxMass3EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVdsxMass4EW = Coupling(name = 'c_UVdsxMass4EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVssxMass1EW = Coupling(name = 'c_UVssxMass1EW',
+                          value = 'complex(0,-0.5)*(complexconjugate(sWcft_UV_EW_L) + sWcft_UV_EW_L)',
+                          order = {'QED' : 2})
+
+
+c_UVssxMass2EW = Coupling(name = 'c_UVssxMass2EW',
+                          value = 'complex(0,0.5)*(complexconjugate(sWcft_UV_EW_R) + sWcft_UV_EW_R)',
+                          order = {'QED' : 2})
+
+
+c_UVssxMass3EW = Coupling(name = 'c_UVssxMass3EW',
+                          value = 'MS*complex(0,-0.5)*(complexconjugate(sWcft_UV_EW_R) + sWcft_UV_EW_L)',
+                          order = {'QED' : 2})
+
+
+c_UVssxMass4EW = Coupling(name = 'c_UVssxMass4EW',
+                          value = 'MS*complex(0,-0.5)*(complexconjugate(sWcft_UV_EW_L) + sWcft_UV_EW_R)',
+                          order = {'QED' : 2})
+
+
+c_UVbsxMass1EW = Coupling(name = 'c_UVbsxMass1EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVbsxMass2EW = Coupling(name = 'c_UVbsxMass2EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVbsxMass3EW = Coupling(name = 'c_UVbsxMass3EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVbsxMass4EW = Coupling(name = 'c_UVbsxMass4EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVbxdMass1EW = Coupling(name = 'c_UVbxdMass1EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVbxdMass2EW = Coupling(name = 'c_UVbxdMass2EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVbxdMass3EW = Coupling(name = 'c_UVbxdMass3EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVbxdMass4EW = Coupling(name = 'c_UVbxdMass4EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVbxsMass1EW = Coupling(name = 'c_UVbxsMass1EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVbxsMass2EW = Coupling(name = 'c_UVbxsMass2EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVbxsMass3EW = Coupling(name = 'c_UVbxsMass3EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVbxsMass4EW = Coupling(name = 'c_UVbxsMass4EW',
+                          value = '0',
+                          order = {'QED' : 0})
+
+
+c_UVbbxMass1EW = Coupling(name = 'c_UVbbxMass1EW',
+                          value = 'complex(0,-0.5)*(complexconjugate(bWcft_UV_EW_L) + bWcft_UV_EW_L)',
+                          order = {'QED' : 2})
+
+
+c_UVbbxMass2EW = Coupling(name = 'c_UVbbxMass2EW',
+                          value = 'complex(0,0.5)*(complexconjugate(bWcft_UV_EW_R) + bWcft_UV_EW_R)',
+                          order = {'QED' : 2})
+
+
+c_UVbbxMass3EW = Coupling(name = 'c_UVbbxMass3EW',
+                          value = 'MB*complex(0,-0.5)*(complexconjugate(bWcft_UV_EW_R) + bWcft_UV_EW_L)',
+                          order = {'QED' : 2})
+
+
+c_UVbbxMass4EW = Coupling(name = 'c_UVbbxMass4EW',
+                          value = 'MB*complex(0,-0.5)*(complexconjugate(bWcft_UV_EW_L) + bWcft_UV_EW_R)',
+                          order = {'QED' : 2})
+
+
+c_UVWpWpWmWm1EW = Coupling(name = 'c_UVWpWpWmWm1EW',
+                           value = '(ee**2*(-SWCoup_UV_EW + (eCoup_UV_EW + WWcft_UV_EW)*sw)*complex(0,4))/sw**3',
+                           order = {'QED' : 4})
+
+
+c_UVWpWpWmWm2EW = Coupling(name = 'c_UVWpWpWmWm2EW',
+                           value = '(ee**2*(SWCoup_UV_EW - (eCoup_UV_EW + WWcft_UV_EW)*sw)*complex(0,2))/sw**3',
+                           order = {'QED' : 4})
+
+
+c_UVWpWmZZ1EW = Coupling(name = 'c_UVWpWmZZ1EW',
+                         value = '(ee**2*(2*SWCoup_UV_EW - cw*sw*(cw*(2*eCoup_UV_EW + WWcft_UV_EW + ZZWcft_UV_EW) - AZWcft_UV_EW*sw))*complex(0,2))/sw**3',
+                         order = {'QED' : 4})
+
+
+c_UVWpWmZZ2EW = Coupling(name = 'c_UVWpWmZZ2EW',
+                         value = '(ee**2*(2*SWCoup_UV_EW - cw*sw*(cw*(2*eCoup_UV_EW + WWcft_UV_EW + ZZWcft_UV_EW) - AZWcft_UV_EW*sw))*complex(0,-1))/sw**3',
+                         order = {'QED' : 4})
+
+
+c_UVWpWmAZ1EW = Coupling(name = 'c_UVWpWmAZ1EW',
+                         value = '(ee**2*(2*SWCoup_UV_EW + cw*(cw**2*ZAWcft_UV_EW - cw*(AAWcft_UV_EW + 4*eCoup_UV_EW + 2*WWcft_UV_EW + ZZWcft_UV_EW)*sw + AZWcft_UV_EW*sw**2))*complex(0,-1))/(cw*sw**2)',
+                         order = {'QED' : 4})
+
+
+c_UVWpWmAZ2EW = Coupling(name = 'c_UVWpWmAZ2EW',
+                         value = '(ee**2*(2*SWCoup_UV_EW + cw*(cw**2*ZAWcft_UV_EW - cw*(AAWcft_UV_EW + 4*eCoup_UV_EW + 2*WWcft_UV_EW + ZZWcft_UV_EW)*sw + AZWcft_UV_EW*sw**2))*complex(0,0.5))/(cw*sw**2)',
+                         order = {'QED' : 4})
+
+
+c_UVWpWmAA1EW = Coupling(name = 'c_UVWpWmAA1EW',
+                         value = '(ee**2*(-(cw*ZAWcft_UV_EW) + (AAWcft_UV_EW + 2*eCoup_UV_EW + WWcft_UV_EW)*sw)*complex(0,-2))/sw',
+                         order = {'QED' : 4})
+
+
+c_UVWpWmAA2EW = Coupling(name = 'c_UVWpWmAA2EW',
+                         value = '(ee**2*(-(cw*ZAWcft_UV_EW) + (AAWcft_UV_EW + 2*eCoup_UV_EW + WWcft_UV_EW)*sw)*complex(0,1))/sw',
+                         order = {'QED' : 4})
+
+
+c_UVAWpWm1EW = Coupling(name = 'c_UVAWpWm1EW',
+                        value = 'ee*(AAWcft_UV_EW/2. + eCoup_UV_EW + WWcft_UV_EW - (cw*ZAWcft_UV_EW)/(2.*sw))*complex(0,-1)',
+                        order = {'QED' : 3})
+
+
+c_UVZWpWm1EW = Coupling(name = 'c_UVZWpWm1EW',
+                        value = '(ee*(-2*SWCoup_UV_EW + cw*sw*(cw*(2*eCoup_UV_EW + 2*WWcft_UV_EW + ZZWcft_UV_EW) - AZWcft_UV_EW*sw))*complex(0,0.5))/(cw*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVHHHH1EW = Coupling(name = 'c_UVHHHH1EW',
+                       value = '(ee**2*MH**2*(2*eCoup_UV_EW + 2*HWcft_UV_EW + HMass2_UV_EW/MH**2 - WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)*complex(0,-0.75))/(MW**2*sw**2)',
+                       order = {'QED' : 4})
+
+
+c_UVHHG0G01EW = Coupling(name = 'c_UVHHG0G01EW',
+                         value = '(ee**2*MH**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + HWcft_UV_EW + HMass2_UV_EW/MH**2 - WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)*complex(0,-0.25))/(MW**2*sw**2)',
+                         order = {'QED' : 4})
+
+
+c_UVHHGmGp1EW = Coupling(name = 'c_UVHHGmGp1EW',
+                         value = '(ee**2*MH**2*(2*eCoup_UV_EW + GpWcft_UV_EW + HWcft_UV_EW + HMass2_UV_EW/MH**2 - WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)*complex(0,-0.25))/(MW**2*sw**2)',
+                         order = {'QED' : 4})
+
+
+c_UVG0G0G0G01EW = Coupling(name = 'c_UVG0G0G0G01EW',
+                           value = '(ee**2*MH**2*(2*eCoup_UV_EW + 2*G0Wcft_UV_EW + HMass2_UV_EW/MH**2 - WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)*complex(0,-0.75))/(MW**2*sw**2)',
+                           order = {'QED' : 4})
+
+
+c_UVG0G0GmGp1EW = Coupling(name = 'c_UVG0G0GmGp1EW',
+                           value = '(ee**2*MH**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + GpWcft_UV_EW + HMass2_UV_EW/MH**2 - WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)*complex(0,-0.25))/(MW**2*sw**2)',
+                           order = {'QED' : 4})
+
+
+c_UVGmGmGpGp1EW = Coupling(name = 'c_UVGmGmGpGp1EW',
+                           value = '(ee**2*MH**2*(2*eCoup_UV_EW + 2*GpWcft_UV_EW + HMass2_UV_EW/MH**2 - WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)*complex(0,-0.5))/(MW**2*sw**2)',
+                           order = {'QED' : 4})
+
+
+c_UVHHH1EW = Coupling(name = 'c_UVHHH1EW',
+                      value = '(ee*MH**2*(eCoup_UV_EW + (3*HWcft_UV_EW)/2. + HMass2_UV_EW/MH**2 - WMass2_UV_EW/(2.*MW**2) - SWCoup_UV_EW/sw)*complex(0,-1.5))/(MW*sw)',
+                      order = {'QED' : 3})
+
+
+c_UVHG0G01EW = Coupling(name = 'c_UVHG0G01EW',
+                        value = '(ee*MH**2*(eCoup_UV_EW + G0Wcft_UV_EW + (HWcft_UV_EW + (2*HMass2_UV_EW)/MH**2 - WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)/2.)*complex(0,-0.5))/(MW*sw)',
+                        order = {'QED' : 3})
+
+
+c_UVGmHGp1EW = Coupling(name = 'c_UVGmHGp1EW',
+                        value = '(ee*MH**2*(eCoup_UV_EW + GpWcft_UV_EW + (HWcft_UV_EW + (2*HMass2_UV_EW)/MH**2 - WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)/2.)*complex(0,-0.5))/(MW*sw)',
+                        order = {'QED' : 3})
+
+
+c_UVHHWmWp1EW = Coupling(name = 'c_UVHHWmWp1EW',
+                         value = '(ee**2*(-2*SWCoup_UV_EW + (2*eCoup_UV_EW + HWcft_UV_EW + WWcft_UV_EW)*sw)*complex(0,0.5))/sw**3',
+                         order = {'QED' : 4})
+
+
+c_UVG0G0WmWp1EW = Coupling(name = 'c_UVG0G0WmWp1EW',
+                           value = '(ee**2*(-2*SWCoup_UV_EW + (2*eCoup_UV_EW + G0Wcft_UV_EW + WWcft_UV_EW)*sw)*complex(0,0.5))/sw**3',
+                           order = {'QED' : 4})
+
+
+c_UVGmGpWmWp1EW = Coupling(name = 'c_UVGmGpWmWp1EW',
+                           value = '(ee**2*(-2*SWCoup_UV_EW + (2*eCoup_UV_EW + GpWcft_UV_EW + WWcft_UV_EW)*sw)*complex(0,0.5))/sw**3',
+                           order = {'QED' : 4})
+
+
+c_UVGmGpZZ1EW = Coupling(name = 'c_UVGmGpZZ1EW',
+                         value = '(ee**2*(cw**2 - sw**2)*(-2*SWCoup_UV_EW + cw**2*sw*(cw**2*(2*eCoup_UV_EW + GpWcft_UV_EW + ZZWcft_UV_EW) - 2*cw*AZWcft_UV_EW*sw - (2*eCoup_UV_EW + GpWcft_UV_EW + ZZWcft_UV_EW)*sw**2))*complex(0,0.5))/(cw**4*sw**3)',
+                         order = {'QED' : 4})
+
+
+c_UVGmGpAZ1EW = Coupling(name = 'c_UVGmGpAZ1EW',
+                         value = '(ee**2*(4*SWCoup_UV_EW + cw*(cw**4*ZAWcft_UV_EW - 2*cw**3*(AAWcft_UV_EW + 4*eCoup_UV_EW + 2*GpWcft_UV_EW + ZZWcft_UV_EW)*sw + 2*cw**2*(2*AZWcft_UV_EW - ZAWcft_UV_EW)*sw**2 + 2*cw*(AAWcft_UV_EW + 4*eCoup_UV_EW + 2*GpWcft_UV_EW + ZZWcft_UV_EW)*sw**3 + ZAWcft_UV_EW*sw**4))*complex(0,0.25))/(cw**3*sw**2)',
+                         order = {'QED' : 4})
+
+
+c_UVGmGpAA1EW = Coupling(name = 'c_UVGmGpAA1EW',
+                         value = 'ee**2*(AAWcft_UV_EW + 2*eCoup_UV_EW + GpWcft_UV_EW - (cw*ZAWcft_UV_EW)/(2.*sw) + (ZAWcft_UV_EW*sw)/(2.*cw))*complex(0,2)',
+                         order = {'QED' : 4})
+
+
+c_UVHHZZ1EW = Coupling(name = 'c_UVHHZZ1EW',
+                       value = '(ee**2*(2*SWCoup_UV_EW*sw**2 + cw**2*(-2*SWCoup_UV_EW + (2*eCoup_UV_EW + HWcft_UV_EW + ZZWcft_UV_EW)*sw))*complex(0,0.5))/(cw**4*sw**3)',
+                       order = {'QED' : 4})
+
+
+c_UVG0G0ZZ1EW = Coupling(name = 'c_UVG0G0ZZ1EW',
+                         value = '(ee**2*(2*SWCoup_UV_EW*sw**2 + cw**2*(-2*SWCoup_UV_EW + (2*eCoup_UV_EW + G0Wcft_UV_EW + ZZWcft_UV_EW)*sw))*complex(0,0.5))/(cw**4*sw**3)',
+                         order = {'QED' : 4})
+
+
+c_UVHHAZ1EW = Coupling(name = 'c_UVHHAZ1EW',
+                       value = '(ZAWcft_UV_EW*ee**2*complex(0,0.25))/(cw**2*sw**2)',
+                       order = {'QED' : 4})
+
+
+c_UVHGpWmZ1EW = Coupling(name = 'c_UVHGpWmZ1EW',
+                         value = '(ee**2*(cw**2*AZWcft_UV_EW - 2*CWCoup_UV_EW*sw + cw*(4*eCoup_UV_EW + GpWcft_UV_EW + HWcft_UV_EW + WWcft_UV_EW + ZZWcft_UV_EW)*sw)*complex(0,-0.25))/(cw**2*sw)',
+                         order = {'QED' : 4})
+
+
+c_UVHGmWpA1EW = Coupling(name = 'c_UVHGmWpA1EW',
+                         value = '(ee**2*(ZAWcft_UV_EW*sw**2 + cw*(-2*SWCoup_UV_EW + (AAWcft_UV_EW + 4*eCoup_UV_EW + GpWcft_UV_EW + HWcft_UV_EW + WWcft_UV_EW)*sw))*complex(0,-0.25))/(cw*sw**2)',
+                         order = {'QED' : 4})
+
+
+c_UVGmG0ZWp1EW = Coupling(name = 'c_UVGmG0ZWp1EW',
+                          value = '(ee**2*(cw**2*AZWcft_UV_EW - 2*CWCoup_UV_EW*sw + cw*(4*eCoup_UV_EW + G0Wcft_UV_EW + GpWcft_UV_EW + WWcft_UV_EW + ZZWcft_UV_EW)*sw))/(4.*cw**2*sw)',
+                          order = {'QED' : 4})
+
+
+c_UVGpG0ZWm1EW = Coupling(name = 'c_UVGpG0ZWm1EW',
+                          value = '-(ee**2*(cw**2*AZWcft_UV_EW - 2*CWCoup_UV_EW*sw + cw*(4*eCoup_UV_EW + G0Wcft_UV_EW + GpWcft_UV_EW + WWcft_UV_EW + ZZWcft_UV_EW)*sw))/(4.*cw**2*sw)',
+                          order = {'QED' : 4})
+
+
+c_UVGmG0AWp1EW = Coupling(name = 'c_UVGmG0AWp1EW',
+                          value = '(ee**2*(ZAWcft_UV_EW*sw**2 + cw*(-2*SWCoup_UV_EW + (AAWcft_UV_EW + 4*eCoup_UV_EW + G0Wcft_UV_EW + GpWcft_UV_EW + WWcft_UV_EW)*sw)))/(4.*cw*sw**2)',
+                          order = {'QED' : 4})
+
+
+c_UVGpG0AWm1EW = Coupling(name = 'c_UVGpG0AWm1EW',
+                          value = '-(ee**2*(ZAWcft_UV_EW*sw**2 + cw*(-2*SWCoup_UV_EW + (AAWcft_UV_EW + 4*eCoup_UV_EW + G0Wcft_UV_EW + GpWcft_UV_EW + WWcft_UV_EW)*sw)))/(4.*cw*sw**2)',
+                          order = {'QED' : 4})
+
+
+c_UVG0HA1EW = Coupling(name = 'c_UVG0HA1EW',
+                       value = '(ZAWcft_UV_EW*ee)/(4.*cw*sw)',
+                       order = {'QED' : 3})
+
+
+c_UVG0HZ1EW = Coupling(name = 'c_UVG0HZ1EW',
+                       value = '(ee*(2*SWCoup_UV_EW*sw**2 + cw**2*(-2*SWCoup_UV_EW + (2*eCoup_UV_EW + G0Wcft_UV_EW + HWcft_UV_EW + ZZWcft_UV_EW)*sw)))/(4.*cw**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVGpGmA1EW = Coupling(name = 'c_UVGpGmA1EW',
+                        value = 'ee*(AAWcft_UV_EW/2. + eCoup_UV_EW + GpWcft_UV_EW - (cw*ZAWcft_UV_EW)/(4.*sw) + (ZAWcft_UV_EW*sw)/(4.*cw))*complex(0,-1)',
+                        order = {'QED' : 3})
+
+
+c_UVGpGmZ1EW = Coupling(name = 'c_UVGpGmZ1EW',
+                        value = '(ee*(2*SWCoup_UV_EW + cw**2*sw*(-(cw**2*(2*eCoup_UV_EW + 2*GpWcft_UV_EW + ZZWcft_UV_EW)) + 2*cw*AZWcft_UV_EW*sw + (2*eCoup_UV_EW + 2*GpWcft_UV_EW + ZZWcft_UV_EW)*sw**2))*complex(0,-0.25))/(cw**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVGmHWp1EW = Coupling(name = 'c_UVGmHWp1EW',
+                        value = '(ee*(-2*SWCoup_UV_EW + (2*eCoup_UV_EW + GpWcft_UV_EW + HWcft_UV_EW + WWcft_UV_EW)*sw)*complex(0,-0.25))/sw**2',
+                        order = {'QED' : 3})
+
+
+c_UVGpHWm1EW = Coupling(name = 'c_UVGpHWm1EW',
+                        value = '(ee*(-2*SWCoup_UV_EW + (2*eCoup_UV_EW + GpWcft_UV_EW + HWcft_UV_EW + WWcft_UV_EW)*sw)*complex(0,0.25))/sw**2',
+                        order = {'QED' : 3})
+
+
+c_UVGmG0Wp1EW = Coupling(name = 'c_UVGmG0Wp1EW',
+                         value = '(ee*(-2*SWCoup_UV_EW + (2*eCoup_UV_EW + G0Wcft_UV_EW + GpWcft_UV_EW + WWcft_UV_EW)*sw))/(4.*sw**2)',
+                         order = {'QED' : 3})
+
+
+c_UVHWpWm1EW = Coupling(name = 'c_UVHWpWm1EW',
+                        value = '(ee*MW*(eCoup_UV_EW + (HWcft_UV_EW + 2*WWcft_UV_EW + WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)/2.)*complex(0,1))/sw',
+                        order = {'QED' : 3})
+
+
+c_UVHZZ1EW = Coupling(name = 'c_UVHZZ1EW',
+                      value = '(ee*MW*(eCoup_UV_EW + (HWcft_UV_EW + 2*ZZWcft_UV_EW + WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw + (4*SWCoup_UV_EW*sw)/cw**2)/2.)*complex(0,1))/(cw**2*sw)',
+                      order = {'QED' : 3})
+
+
+c_UVHZA1EW = Coupling(name = 'c_UVHZA1EW',
+                      value = '(ZAWcft_UV_EW*ee*MW*complex(0,0.5))/(cw**2*sw)',
+                      order = {'QED' : 3})
+
+
+c_UVGpWmZ1EW = Coupling(name = 'c_UVGpWmZ1EW',
+                        value = '(ee*(2*SWCoup_UV_EW*MW**2 + cw**2*(cw*AZWcft_UV_EW*MW**2 + (WMass2_UV_EW + (2*eCoup_UV_EW + GpWcft_UV_EW + WWcft_UV_EW + ZZWcft_UV_EW)*MW**2)*sw))*complex(0,-0.5))/(cw**3*MW)',
+                        order = {'QED' : 3})
+
+
+c_UVGpWmA1EW = Coupling(name = 'c_UVGpWmA1EW',
+                        value = '(ee*(cw*(WMass2_UV_EW + (AAWcft_UV_EW + 2*eCoup_UV_EW + GpWcft_UV_EW + WWcft_UV_EW)*MW**2) + ZAWcft_UV_EW*MW**2*sw)*complex(0,-0.5))/(cw*MW)',
+                        order = {'QED' : 3})
+
+
+c_UVvexveA1EW = Coupling(name = 'c_UVvexveA1EW',
+                         value = '(ZAWcft_UV_EW*ee*complex(0,-0.25))/(cw*sw)',
+                         order = {'QED' : 3})
+
+
+c_UVepemA1EW = Coupling(name = 'c_UVepemA1EW',
+                        value = 'ee*complex(0,0.5)*(AAWcft_UV_EW + 2*eCoup_UV_EW + (ZAWcft_UV_EW*(-0.5 + sw**2))/(cw*sw) + complexconjugate(eWcft_UV_EW_L) + eWcft_UV_EW_L)',
+                        order = {'QED' : 3})
+
+
+c_UVepemA2EW = Coupling(name = 'c_UVepemA2EW',
+                        value = '(ee*complex(0,0.5)*(ZAWcft_UV_EW*sw + cw*complexconjugate(eWcft_UV_EW_R) + cw*(AAWcft_UV_EW + 2*eCoup_UV_EW + eWcft_UV_EW_R)))/cw',
+                        order = {'QED' : 3})
+
+
+c_UVmpmmA1EW = Coupling(name = 'c_UVmpmmA1EW',
+                        value = 'ee*complex(0,0.5)*(AAWcft_UV_EW + 2*eCoup_UV_EW + (ZAWcft_UV_EW*(-0.5 + sw**2))/(cw*sw) + complexconjugate(muWcft_UV_EW_L) + muWcft_UV_EW_L)',
+                        order = {'QED' : 3})
+
+
+c_UVmpmmA2EW = Coupling(name = 'c_UVmpmmA2EW',
+                        value = '(ee*complex(0,0.5)*(ZAWcft_UV_EW*sw + cw*complexconjugate(muWcft_UV_EW_R) + cw*(AAWcft_UV_EW + 2*eCoup_UV_EW + muWcft_UV_EW_R)))/cw',
+                        order = {'QED' : 3})
+
+
+c_UVttpttmA1EW = Coupling(name = 'c_UVttpttmA1EW',
+                          value = 'ee*complex(0,0.5)*(AAWcft_UV_EW + 2*eCoup_UV_EW + (ZAWcft_UV_EW*(-0.5 + sw**2))/(cw*sw) + complexconjugate(tauWcft_UV_EW_L) + tauWcft_UV_EW_L)',
+                          order = {'QED' : 3})
+
+
+c_UVttpttmA2EW = Coupling(name = 'c_UVttpttmA2EW',
+                          value = '(ee*complex(0,0.5)*(ZAWcft_UV_EW*sw + cw*complexconjugate(tauWcft_UV_EW_R) + cw*(AAWcft_UV_EW + 2*eCoup_UV_EW + tauWcft_UV_EW_R)))/cw',
+                          order = {'QED' : 3})
+
+
+c_UVuxuA1EW = Coupling(name = 'c_UVuxuA1EW',
+                       value = '(ee*complex(0,-0.08333333333333333)*(ZAWcft_UV_EW*(3 + 4*sw**2) + 4*cw*sw*complexconjugate(uWcft_UV_EW_L) + 4*cw*sw*(AAWcft_UV_EW + 2*eCoup_UV_EW + uWcft_UV_EW_L)))/(cw*sw)',
+                       order = {'QED' : 3})
+
+
+c_UVuxuA2EW = Coupling(name = 'c_UVuxuA2EW',
+                       value = '(ee*complex(0,-0.3333333333333333)*(ZAWcft_UV_EW*sw + cw*complexconjugate(uWcft_UV_EW_R) + cw*(AAWcft_UV_EW + 2*eCoup_UV_EW + uWcft_UV_EW_R)))/cw',
+                       order = {'QED' : 3})
+
+
+c_UVuxcA1EW = Coupling(name = 'c_UVuxcA1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVuxcA2EW = Coupling(name = 'c_UVuxcA2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVuxtA1EW = Coupling(name = 'c_UVuxtA1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVuxtA2EW = Coupling(name = 'c_UVuxtA2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVcxuA1EW = Coupling(name = 'c_UVcxuA1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVcxuA2EW = Coupling(name = 'c_UVcxuA2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVcxcA1EW = Coupling(name = 'c_UVcxcA1EW',
+                       value = '(ee*complex(0,-0.08333333333333333)*(ZAWcft_UV_EW*(3 + 4*sw**2) + 4*cw*sw*complexconjugate(cWcft_UV_EW_L) + 4*cw*sw*(AAWcft_UV_EW + 2*eCoup_UV_EW + cWcft_UV_EW_L)))/(cw*sw)',
+                       order = {'QED' : 3})
+
+
+c_UVcxcA2EW = Coupling(name = 'c_UVcxcA2EW',
+                       value = '(ee*complex(0,-0.3333333333333333)*(ZAWcft_UV_EW*sw + cw*complexconjugate(cWcft_UV_EW_R) + cw*(AAWcft_UV_EW + 2*eCoup_UV_EW + cWcft_UV_EW_R)))/cw',
+                       order = {'QED' : 3})
+
+
+c_UVcxtA1EW = Coupling(name = 'c_UVcxtA1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVcxtA2EW = Coupling(name = 'c_UVcxtA2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVtxuA1EW = Coupling(name = 'c_UVtxuA1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVtxuA2EW = Coupling(name = 'c_UVtxuA2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVtxcA1EW = Coupling(name = 'c_UVtxcA1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVtxcA2EW = Coupling(name = 'c_UVtxcA2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVtxtA1EW = Coupling(name = 'c_UVtxtA1EW',
+                       value = '(ee*complex(0,-0.08333333333333333)*(ZAWcft_UV_EW*(3 + 4*sw**2) + 4*cw*sw*complexconjugate(tWcft_UV_EW_L) + 4*cw*sw*(AAWcft_UV_EW + 2*eCoup_UV_EW + tWcft_UV_EW_L)))/(cw*sw)',
+                       order = {'QED' : 3})
+
+
+c_UVtxtA2EW = Coupling(name = 'c_UVtxtA2EW',
+                       value = '(ee*complex(0,-0.3333333333333333)*(ZAWcft_UV_EW*sw + cw*complexconjugate(tWcft_UV_EW_R) + cw*(AAWcft_UV_EW + 2*eCoup_UV_EW + tWcft_UV_EW_R)))/cw',
+                       order = {'QED' : 3})
+
+
+c_UVdxdA1EW = Coupling(name = 'c_UVdxdA1EW',
+                       value = '(ee*complex(0,0.08333333333333333)*(ZAWcft_UV_EW*(-3 + 2*sw**2) + 2*cw*sw*complexconjugate(dWcft_UV_EW_L) + 2*cw*sw*(AAWcft_UV_EW + 2*eCoup_UV_EW + dWcft_UV_EW_L)))/(cw*sw)',
+                       order = {'QED' : 3})
+
+
+c_UVdxdA2EW = Coupling(name = 'c_UVdxdA2EW',
+                       value = '(ee*complex(0,0.16666666666666666)*(ZAWcft_UV_EW*sw + cw*complexconjugate(dWcft_UV_EW_R) + cw*(AAWcft_UV_EW + 2*eCoup_UV_EW + dWcft_UV_EW_R)))/cw',
+                       order = {'QED' : 3})
+
+
+c_UVdxsA1EW = Coupling(name = 'c_UVdxsA1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVdxsA2EW = Coupling(name = 'c_UVdxsA2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVdxbA1EW = Coupling(name = 'c_UVdxbA1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVdxbA2EW = Coupling(name = 'c_UVdxbA2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVsxdA1EW = Coupling(name = 'c_UVsxdA1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVsxdA2EW = Coupling(name = 'c_UVsxdA2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVsxsA1EW = Coupling(name = 'c_UVsxsA1EW',
+                       value = '(ee*complex(0,0.08333333333333333)*(ZAWcft_UV_EW*(-3 + 2*sw**2) + 2*cw*sw*complexconjugate(sWcft_UV_EW_L) + 2*cw*sw*(AAWcft_UV_EW + 2*eCoup_UV_EW + sWcft_UV_EW_L)))/(cw*sw)',
+                       order = {'QED' : 3})
+
+
+c_UVsxsA2EW = Coupling(name = 'c_UVsxsA2EW',
+                       value = '(ee*complex(0,0.16666666666666666)*(ZAWcft_UV_EW*sw + cw*complexconjugate(sWcft_UV_EW_R) + cw*(AAWcft_UV_EW + 2*eCoup_UV_EW + sWcft_UV_EW_R)))/cw',
+                       order = {'QED' : 3})
+
+
+c_UVsxbA1EW = Coupling(name = 'c_UVsxbA1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVsxbA2EW = Coupling(name = 'c_UVsxbA2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVbxdA1EW = Coupling(name = 'c_UVbxdA1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVbxdA2EW = Coupling(name = 'c_UVbxdA2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVbxsA1EW = Coupling(name = 'c_UVbxsA1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVbxsA2EW = Coupling(name = 'c_UVbxsA2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVbxbA1EW = Coupling(name = 'c_UVbxbA1EW',
+                       value = '(ee*complex(0,0.08333333333333333)*(ZAWcft_UV_EW*(-3 + 2*sw**2) + 2*cw*sw*complexconjugate(bWcft_UV_EW_L) + 2*cw*sw*(AAWcft_UV_EW + 2*eCoup_UV_EW + bWcft_UV_EW_L)))/(cw*sw)',
+                       order = {'QED' : 3})
+
+
+c_UVbxbA2EW = Coupling(name = 'c_UVbxbA2EW',
+                       value = '(ee*complex(0,0.16666666666666666)*(ZAWcft_UV_EW*sw + cw*complexconjugate(bWcft_UV_EW_R) + cw*(AAWcft_UV_EW + 2*eCoup_UV_EW + bWcft_UV_EW_R)))/cw',
+                       order = {'QED' : 3})
+
+
+c_UVvexveZ1EW = Coupling(name = 'c_UVvexveZ1EW',
+                         value = '(ee*complex(0,-0.25)*(2*SWCoup_UV_EW*sw**2 + cw**2*sw*complexconjugate(veWcft_UV_EW_L) + cw**2*(-2*SWCoup_UV_EW + sw*(2*eCoup_UV_EW + ZZWcft_UV_EW + veWcft_UV_EW_L))))/(cw**3*sw**2)',
+                         order = {'QED' : 3})
+
+
+c_UVvmxvmZ1EW = Coupling(name = 'c_UVvmxvmZ1EW',
+                         value = '(ee*complex(0,-0.25)*(2*SWCoup_UV_EW*sw**2 + cw**2*sw*complexconjugate(vmWcft_UV_EW_L) + cw**2*(-2*SWCoup_UV_EW + sw*(2*eCoup_UV_EW + ZZWcft_UV_EW + vmWcft_UV_EW_L))))/(cw**3*sw**2)',
+                         order = {'QED' : 3})
+
+
+c_UVvtxvtZ1EW = Coupling(name = 'c_UVvtxvtZ1EW',
+                         value = '(ee*complex(0,-0.25)*(2*SWCoup_UV_EW*sw**2 + cw**2*sw*complexconjugate(vtWcft_UV_EW_L) + cw**2*(-2*SWCoup_UV_EW + sw*(2*eCoup_UV_EW + ZZWcft_UV_EW + vtWcft_UV_EW_L))))/(cw**3*sw**2)',
+                         order = {'QED' : 3})
+
+
+c_UVepemZ1EW = Coupling(name = 'c_UVepemZ1EW',
+                        value = '(ee*complex(0,0.25)*(2*SWCoup_UV_EW*sw**2 + 2*cw**3*AZWcft_UV_EW*sw**2 + cw**2*sw*(-1 + 2*sw**2)*complexconjugate(eWcft_UV_EW_L) + cw**2*(2*SWCoup_UV_EW + sw*(-1 + 2*sw**2)*(2*eCoup_UV_EW + ZZWcft_UV_EW + eWcft_UV_EW_L))))/(cw**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVepemZ2EW = Coupling(name = 'c_UVepemZ2EW',
+                        value = '(ee*complex(0,0.5)*(2*SWCoup_UV_EW + cw**2*sw*complexconjugate(eWcft_UV_EW_R) + cw**2*(cw*AZWcft_UV_EW + sw*(2*eCoup_UV_EW + ZZWcft_UV_EW + eWcft_UV_EW_R))))/cw**3',
+                        order = {'QED' : 3})
+
+
+c_UVmpmmZ1EW = Coupling(name = 'c_UVmpmmZ1EW',
+                        value = '(ee*complex(0,0.25)*(2*SWCoup_UV_EW*sw**2 + 2*cw**3*AZWcft_UV_EW*sw**2 + cw**2*sw*(-1 + 2*sw**2)*complexconjugate(muWcft_UV_EW_L) + cw**2*(2*SWCoup_UV_EW + sw*(-1 + 2*sw**2)*(2*eCoup_UV_EW + ZZWcft_UV_EW + muWcft_UV_EW_L))))/(cw**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVmpmmZ2EW = Coupling(name = 'c_UVmpmmZ2EW',
+                        value = '(ee*complex(0,0.5)*(2*SWCoup_UV_EW + cw**2*sw*complexconjugate(muWcft_UV_EW_R) + cw**2*(cw*AZWcft_UV_EW + sw*(2*eCoup_UV_EW + ZZWcft_UV_EW + muWcft_UV_EW_R))))/cw**3',
+                        order = {'QED' : 3})
+
+
+c_UVttpttmZ1EW = Coupling(name = 'c_UVttpttmZ1EW',
+                          value = '(ee*complex(0,0.25)*(2*SWCoup_UV_EW*sw**2 + 2*cw**3*AZWcft_UV_EW*sw**2 + cw**2*sw*(-1 + 2*sw**2)*complexconjugate(tauWcft_UV_EW_L) + cw**2*(2*SWCoup_UV_EW + sw*(-1 + 2*sw**2)*(2*eCoup_UV_EW + ZZWcft_UV_EW + tauWcft_UV_EW_L))))/(cw**3*sw**2)',
+                          order = {'QED' : 3})
+
+
+c_UVttpttmZ2EW = Coupling(name = 'c_UVttpttmZ2EW',
+                          value = '(ee*complex(0,0.5)*(2*SWCoup_UV_EW + cw**2*sw*complexconjugate(tauWcft_UV_EW_R) + cw**2*(cw*AZWcft_UV_EW + sw*(2*eCoup_UV_EW + ZZWcft_UV_EW + tauWcft_UV_EW_R))))/cw**3',
+                          order = {'QED' : 3})
+
+
+c_UVuxuZ1EW = Coupling(name = 'c_UVuxuZ1EW',
+                       value = '(ee*complex(0,-0.08333333333333333)*(14*SWCoup_UV_EW*sw**2 + 4*cw**3*AZWcft_UV_EW*sw**2 + cw**2*sw*(3 + 4*sw**2)*complexconjugate(uWcft_UV_EW_L) + cw**2*(-6*SWCoup_UV_EW + sw*(3 + 4*sw**2)*(2*eCoup_UV_EW + ZZWcft_UV_EW + uWcft_UV_EW_L))))/(cw**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVuxuZ2EW = Coupling(name = 'c_UVuxuZ2EW',
+                       value = '(ee*complex(0,-0.3333333333333333)*(2*SWCoup_UV_EW + cw**2*sw*complexconjugate(uWcft_UV_EW_R) + cw**2*(cw*AZWcft_UV_EW + sw*(2*eCoup_UV_EW + ZZWcft_UV_EW + uWcft_UV_EW_R))))/cw**3',
+                       order = {'QED' : 3})
+
+
+c_UVuxcZ1EW = Coupling(name = 'c_UVuxcZ1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVuxcZ2EW = Coupling(name = 'c_UVuxcZ2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVuxtZ1EW = Coupling(name = 'c_UVuxtZ1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVuxtZ2EW = Coupling(name = 'c_UVuxtZ2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVcxuZ1EW = Coupling(name = 'c_UVcxuZ1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVcxuZ2EW = Coupling(name = 'c_UVcxuZ2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVcxcZ1EW = Coupling(name = 'c_UVcxcZ1EW',
+                       value = '(ee*complex(0,-0.08333333333333333)*(14*SWCoup_UV_EW*sw**2 + 4*cw**3*AZWcft_UV_EW*sw**2 + cw**2*sw*(3 + 4*sw**2)*complexconjugate(cWcft_UV_EW_L) + cw**2*(-6*SWCoup_UV_EW + sw*(3 + 4*sw**2)*(2*eCoup_UV_EW + ZZWcft_UV_EW + cWcft_UV_EW_L))))/(cw**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVcxcZ2EW = Coupling(name = 'c_UVcxcZ2EW',
+                       value = '(ee*complex(0,-0.3333333333333333)*(2*SWCoup_UV_EW + cw**2*sw*complexconjugate(cWcft_UV_EW_R) + cw**2*(cw*AZWcft_UV_EW + sw*(2*eCoup_UV_EW + ZZWcft_UV_EW + cWcft_UV_EW_R))))/cw**3',
+                       order = {'QED' : 3})
+
+
+c_UVcxtZ1EW = Coupling(name = 'c_UVcxtZ1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVcxtZ2EW = Coupling(name = 'c_UVcxtZ2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVtxuZ1EW = Coupling(name = 'c_UVtxuZ1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVtxuZ2EW = Coupling(name = 'c_UVtxuZ2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVtxcZ1EW = Coupling(name = 'c_UVtxcZ1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVtxcZ2EW = Coupling(name = 'c_UVtxcZ2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVtxtZ1EW = Coupling(name = 'c_UVtxtZ1EW',
+                       value = '(ee*complex(0,-0.08333333333333333)*(14*SWCoup_UV_EW*sw**2 + 4*cw**3*AZWcft_UV_EW*sw**2 + cw**2*sw*(3 + 4*sw**2)*complexconjugate(tWcft_UV_EW_L) + cw**2*(-6*SWCoup_UV_EW + sw*(3 + 4*sw**2)*(2*eCoup_UV_EW + ZZWcft_UV_EW + tWcft_UV_EW_L))))/(cw**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVtxtZ2EW = Coupling(name = 'c_UVtxtZ2EW',
+                       value = '(ee*complex(0,-0.3333333333333333)*(2*SWCoup_UV_EW + cw**2*sw*complexconjugate(tWcft_UV_EW_R) + cw**2*(cw*AZWcft_UV_EW + sw*(2*eCoup_UV_EW + ZZWcft_UV_EW + tWcft_UV_EW_R))))/cw**3',
+                       order = {'QED' : 3})
+
+
+c_UVdxdZ1EW = Coupling(name = 'c_UVdxdZ1EW',
+                       value = '(ee*complex(0,0.08333333333333333)*(-2*SWCoup_UV_EW*sw**2 + 2*cw**3*AZWcft_UV_EW*sw**2 + cw**2*sw*(-3 + 2*sw**2)*complexconjugate(dWcft_UV_EW_L) + cw**2*(6*SWCoup_UV_EW + sw*(-3 + 2*sw**2)*(2*eCoup_UV_EW + ZZWcft_UV_EW + dWcft_UV_EW_L))))/(cw**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVdxdZ2EW = Coupling(name = 'c_UVdxdZ2EW',
+                       value = '(ee*complex(0,0.16666666666666666)*(2*SWCoup_UV_EW + cw**2*sw*complexconjugate(dWcft_UV_EW_R) + cw**2*(cw*AZWcft_UV_EW + sw*(2*eCoup_UV_EW + ZZWcft_UV_EW + dWcft_UV_EW_R))))/cw**3',
+                       order = {'QED' : 3})
+
+
+c_UVdxsZ1EW = Coupling(name = 'c_UVdxsZ1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVdxsZ2EW = Coupling(name = 'c_UVdxsZ2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVdxbZ1EW = Coupling(name = 'c_UVdxbZ1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVdxbZ2EW = Coupling(name = 'c_UVdxbZ2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVsxdZ1EW = Coupling(name = 'c_UVsxdZ1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVsxdZ2EW = Coupling(name = 'c_UVsxdZ2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVsxsZ1EW = Coupling(name = 'c_UVsxsZ1EW',
+                       value = '(ee*complex(0,0.08333333333333333)*(-2*SWCoup_UV_EW*sw**2 + 2*cw**3*AZWcft_UV_EW*sw**2 + cw**2*sw*(-3 + 2*sw**2)*complexconjugate(sWcft_UV_EW_L) + cw**2*(6*SWCoup_UV_EW + sw*(-3 + 2*sw**2)*(2*eCoup_UV_EW + ZZWcft_UV_EW + sWcft_UV_EW_L))))/(cw**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVsxsZ2EW = Coupling(name = 'c_UVsxsZ2EW',
+                       value = '(ee*complex(0,0.16666666666666666)*(2*SWCoup_UV_EW + cw**2*sw*complexconjugate(sWcft_UV_EW_R) + cw**2*(cw*AZWcft_UV_EW + sw*(2*eCoup_UV_EW + ZZWcft_UV_EW + sWcft_UV_EW_R))))/cw**3',
+                       order = {'QED' : 3})
+
+
+c_UVsxbZ1EW = Coupling(name = 'c_UVsxbZ1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVsxbZ2EW = Coupling(name = 'c_UVsxbZ2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVbxdZ1EW = Coupling(name = 'c_UVbxdZ1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVbxdZ2EW = Coupling(name = 'c_UVbxdZ2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVbxsZ1EW = Coupling(name = 'c_UVbxsZ1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVbxsZ2EW = Coupling(name = 'c_UVbxsZ2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVbxbZ1EW = Coupling(name = 'c_UVbxbZ1EW',
+                       value = '(ee*complex(0,0.08333333333333333)*(-2*SWCoup_UV_EW*sw**2 + 2*cw**3*AZWcft_UV_EW*sw**2 + cw**2*sw*(-3 + 2*sw**2)*complexconjugate(bWcft_UV_EW_L) + cw**2*(6*SWCoup_UV_EW + sw*(-3 + 2*sw**2)*(2*eCoup_UV_EW + ZZWcft_UV_EW + bWcft_UV_EW_L))))/(cw**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVbxbZ2EW = Coupling(name = 'c_UVbxbZ2EW',
+                       value = '(ee*complex(0,0.16666666666666666)*(2*SWCoup_UV_EW + cw**2*sw*complexconjugate(bWcft_UV_EW_R) + cw**2*(cw*AZWcft_UV_EW + sw*(2*eCoup_UV_EW + ZZWcft_UV_EW + bWcft_UV_EW_R))))/cw**3',
+                       order = {'QED' : 3})
+
+
+c_UVvexemWp1EW = Coupling(name = 'c_UVvexemWp1EW',
+                          value = '(ee*complex(0,0.5)*(-2*SWCoup_UV_EW + sw*complexconjugate(veWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + eWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                          order = {'QED' : 3})
+
+
+c_UVvmxmmWp1EW = Coupling(name = 'c_UVvmxmmWp1EW',
+                          value = '(ee*complex(0,0.5)*(-2*SWCoup_UV_EW + sw*complexconjugate(vmWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + muWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                          order = {'QED' : 3})
+
+
+c_UVvtxttmWp1EW = Coupling(name = 'c_UVvtxttmWp1EW',
+                           value = '(ee*complex(0,0.5)*(-2*SWCoup_UV_EW + sw*complexconjugate(vtWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + tauWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                           order = {'QED' : 3})
+
+
+c_UVepveWm1EW = Coupling(name = 'c_UVepveWm1EW',
+                         value = '(ee*complex(0,0.5)*(-2*SWCoup_UV_EW + sw*complexconjugate(eWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + veWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                         order = {'QED' : 3})
+
+
+c_UVmpvmWm1EW = Coupling(name = 'c_UVmpvmWm1EW',
+                         value = '(ee*complex(0,0.5)*(-2*SWCoup_UV_EW + sw*complexconjugate(muWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + vmWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                         order = {'QED' : 3})
+
+
+c_UVttpvtWm1EW = Coupling(name = 'c_UVttpvtWm1EW',
+                          value = '(ee*complex(0,0.5)*(-2*SWCoup_UV_EW + sw*complexconjugate(tauWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + vtWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                          order = {'QED' : 3})
+
+
+c_UVuxdWp1EW = Coupling(name = 'c_UVuxdWp1EW',
+                        value = '(ee*CKM11*complex(0,0.5)*(-2*SWCoup_UV_EW + sw*complexconjugate(uWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + dWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVuxsWp1EW = Coupling(name = 'c_UVuxsWp1EW',
+                        value = '(ee*CKM12*complex(0,0.5)*(-2*SWCoup_UV_EW + sw*complexconjugate(uWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + sWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVuxbWp1EW = Coupling(name = 'c_UVuxbWp1EW',
+                        value = '(ee*CKM13*complex(0,0.5)*(-2*SWCoup_UV_EW + sw*complexconjugate(uWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + bWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVcxdWp1EW = Coupling(name = 'c_UVcxdWp1EW',
+                        value = '(ee*CKM21*complex(0,0.5)*(-2*SWCoup_UV_EW + sw*complexconjugate(cWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + dWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVcxsWp1EW = Coupling(name = 'c_UVcxsWp1EW',
+                        value = '(ee*CKM22*complex(0,0.5)*(-2*SWCoup_UV_EW + sw*complexconjugate(cWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + sWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVcxbWp1EW = Coupling(name = 'c_UVcxbWp1EW',
+                        value = '(ee*CKM23*complex(0,0.5)*(-2*SWCoup_UV_EW + sw*complexconjugate(cWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + bWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVtxdWp1EW = Coupling(name = 'c_UVtxdWp1EW',
+                        value = '(ee*CKM31*complex(0,0.5)*(-2*SWCoup_UV_EW + sw*complexconjugate(tWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + dWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVtxsWp1EW = Coupling(name = 'c_UVtxsWp1EW',
+                        value = '(ee*CKM32*complex(0,0.5)*(-2*SWCoup_UV_EW + sw*complexconjugate(tWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + sWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVtxbWp1EW = Coupling(name = 'c_UVtxbWp1EW',
+                        value = '(ee*CKM33*complex(0,0.5)*(-2*SWCoup_UV_EW + sw*complexconjugate(tWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + bWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVdxuWm1EW = Coupling(name = 'c_UVdxuWm1EW',
+                        value = '(ee*complex(0,0.5)*complexconjugate(CKM11)*(-2*SWCoup_UV_EW + sw*complexconjugate(dWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + uWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVdxcWm1EW = Coupling(name = 'c_UVdxcWm1EW',
+                        value = '(ee*complex(0,0.5)*complexconjugate(CKM21)*(-2*SWCoup_UV_EW + sw*complexconjugate(dWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + cWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVdxtWm1EW = Coupling(name = 'c_UVdxtWm1EW',
+                        value = '(ee*complex(0,0.5)*complexconjugate(CKM31)*(-2*SWCoup_UV_EW + sw*complexconjugate(dWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + tWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVsxuWm1EW = Coupling(name = 'c_UVsxuWm1EW',
+                        value = '(ee*complex(0,0.5)*complexconjugate(CKM12)*(-2*SWCoup_UV_EW + sw*complexconjugate(sWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + uWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVsxcWm1EW = Coupling(name = 'c_UVsxcWm1EW',
+                        value = '(ee*complex(0,0.5)*complexconjugate(CKM22)*(-2*SWCoup_UV_EW + sw*complexconjugate(sWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + cWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVsxtWm1EW = Coupling(name = 'c_UVsxtWm1EW',
+                        value = '(ee*complex(0,0.5)*complexconjugate(CKM32)*(-2*SWCoup_UV_EW + sw*complexconjugate(sWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + tWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVbxuWm1EW = Coupling(name = 'c_UVbxuWm1EW',
+                        value = '(ee*complex(0,0.5)*complexconjugate(CKM13)*(-2*SWCoup_UV_EW + sw*complexconjugate(bWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + uWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVbxcWm1EW = Coupling(name = 'c_UVbxcWm1EW',
+                        value = '(ee*complex(0,0.5)*complexconjugate(CKM23)*(-2*SWCoup_UV_EW + sw*complexconjugate(bWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + cWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVbxtWm1EW = Coupling(name = 'c_UVbxtWm1EW',
+                        value = '(ee*complex(0,0.5)*complexconjugate(CKM33)*(-2*SWCoup_UV_EW + sw*complexconjugate(bWcft_UV_EW_L) + sw*(2*eCoup_UV_EW + WWcft_UV_EW + tWcft_UV_EW_L)))/(cmath.sqrt(2)*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVepemH1EW = Coupling(name = 'c_UVepemH1EW',
+                        value = '(ee*Me*complex(0,-0.25)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(eWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + HWcft_UV_EW + eWcft_UV_EW_L))))/(MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVepemH2EW = Coupling(name = 'c_UVepemH2EW',
+                        value = '(ee*Me*complex(0,-0.25)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(eWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + HWcft_UV_EW + eWcft_UV_EW_R))))/(MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVmpmmH1EW = Coupling(name = 'c_UVmpmmH1EW',
+                        value = '(ee*MM*complex(0,-0.25)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(muWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + HWcft_UV_EW + muWcft_UV_EW_L))))/(MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVmpmmH2EW = Coupling(name = 'c_UVmpmmH2EW',
+                        value = '(ee*MM*complex(0,-0.25)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(muWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + HWcft_UV_EW + muWcft_UV_EW_R))))/(MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVttpttmH1EW = Coupling(name = 'c_UVttpttmH1EW',
+                          value = '(ee*MTA*complex(0,-0.25)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(tauWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + HWcft_UV_EW + tauWcft_UV_EW_L))))/(MW**3*sw**2)',
+                          order = {'QED' : 3})
+
+
+c_UVttpttmH2EW = Coupling(name = 'c_UVttpttmH2EW',
+                          value = '(ee*MTA*complex(0,-0.25)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(tauWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + HWcft_UV_EW + tauWcft_UV_EW_R))))/(MW**3*sw**2)',
+                          order = {'QED' : 3})
+
+
+c_UVuxuH1EW = Coupling(name = 'c_UVuxuH1EW',
+                       value = '(ee*MU*complex(0,-0.25)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(uWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + HWcft_UV_EW + uWcft_UV_EW_L))))/(MW**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVuxuH2EW = Coupling(name = 'c_UVuxuH2EW',
+                       value = '(ee*MU*complex(0,-0.25)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(uWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + HWcft_UV_EW + uWcft_UV_EW_R))))/(MW**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVuxcH1EW = Coupling(name = 'c_UVuxcH1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVuxcH2EW = Coupling(name = 'c_UVuxcH2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVuxtH1EW = Coupling(name = 'c_UVuxtH1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVuxtH2EW = Coupling(name = 'c_UVuxtH2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVcxuH1EW = Coupling(name = 'c_UVcxuH1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVcxuH2EW = Coupling(name = 'c_UVcxuH2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVcxcH1EW = Coupling(name = 'c_UVcxcH1EW',
+                       value = '(ee*MC*complex(0,-0.25)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(cWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + HWcft_UV_EW + cWcft_UV_EW_L))))/(MW**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVcxcH2EW = Coupling(name = 'c_UVcxcH2EW',
+                       value = '(ee*MC*complex(0,-0.25)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(cWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + HWcft_UV_EW + cWcft_UV_EW_R))))/(MW**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVcxtH1EW = Coupling(name = 'c_UVcxtH1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVcxtH2EW = Coupling(name = 'c_UVcxtH2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVtxuH1EW = Coupling(name = 'c_UVtxuH1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVtxuH2EW = Coupling(name = 'c_UVtxuH2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVtxcH1EW = Coupling(name = 'c_UVtxcH1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVtxcH2EW = Coupling(name = 'c_UVtxcH2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVtxtH1EW = Coupling(name = 'c_UVtxtH1EW',
+                       value = '(ee*complex(0,-0.25)*(-2*SWCoup_UV_EW*MT*MW**2 + MT*MW**2*sw*complexconjugate(tWcft_UV_EW_R) + sw*(-(WMass2_UV_EW*MT) + MW**2*(2*eCoup_UV_EW*MT + HWcft_UV_EW*MT + 2*tMass_UV_EW + MT*tWcft_UV_EW_L))))/(MW**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVtxtH2EW = Coupling(name = 'c_UVtxtH2EW',
+                       value = '(ee*complex(0,-0.25)*(-2*SWCoup_UV_EW*MT*MW**2 + MT*MW**2*sw*complexconjugate(tWcft_UV_EW_L) + sw*(-(WMass2_UV_EW*MT) + MW**2*(2*eCoup_UV_EW*MT + HWcft_UV_EW*MT + 2*tMass_UV_EW + MT*tWcft_UV_EW_R))))/(MW**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVdxdH1EW = Coupling(name = 'c_UVdxdH1EW',
+                       value = '(ee*MD*complex(0,-0.25)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(dWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + HWcft_UV_EW + dWcft_UV_EW_L))))/(MW**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVdxdH2EW = Coupling(name = 'c_UVdxdH2EW',
+                       value = '(ee*MD*complex(0,-0.25)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(dWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + HWcft_UV_EW + dWcft_UV_EW_R))))/(MW**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVdxsH1EW = Coupling(name = 'c_UVdxsH1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVdxsH2EW = Coupling(name = 'c_UVdxsH2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVdxbH1EW = Coupling(name = 'c_UVdxbH1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVdxbH2EW = Coupling(name = 'c_UVdxbH2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVsxdH1EW = Coupling(name = 'c_UVsxdH1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVsxdH2EW = Coupling(name = 'c_UVsxdH2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVsxsH1EW = Coupling(name = 'c_UVsxsH1EW',
+                       value = '(ee*MS*complex(0,-0.25)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(sWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + HWcft_UV_EW + sWcft_UV_EW_L))))/(MW**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVsxsH2EW = Coupling(name = 'c_UVsxsH2EW',
+                       value = '(ee*MS*complex(0,-0.25)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(sWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + HWcft_UV_EW + sWcft_UV_EW_R))))/(MW**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVsxbH1EW = Coupling(name = 'c_UVsxbH1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVsxbH2EW = Coupling(name = 'c_UVsxbH2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVbxdH1EW = Coupling(name = 'c_UVbxdH1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVbxdH2EW = Coupling(name = 'c_UVbxdH2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVbxsH1EW = Coupling(name = 'c_UVbxsH1EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVbxsH2EW = Coupling(name = 'c_UVbxsH2EW',
+                       value = '0',
+                       order = {'QED' : 0})
+
+
+c_UVbxbH1EW = Coupling(name = 'c_UVbxbH1EW',
+                       value = '(ee*MB*complex(0,-0.25)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(bWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + HWcft_UV_EW + bWcft_UV_EW_L))))/(MW**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVbxbH2EW = Coupling(name = 'c_UVbxbH2EW',
+                       value = '(ee*MB*complex(0,-0.25)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(bWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + HWcft_UV_EW + bWcft_UV_EW_R))))/(MW**3*sw**2)',
+                       order = {'QED' : 3})
+
+
+c_UVepemG01EW = Coupling(name = 'c_UVepemG01EW',
+                         value = '-(ee*Me*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(eWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + eWcft_UV_EW_L))))/(4.*MW**3*sw**2)',
+                         order = {'QED' : 3})
+
+
+c_UVepemG02EW = Coupling(name = 'c_UVepemG02EW',
+                         value = '(ee*Me*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(eWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + eWcft_UV_EW_R))))/(4.*MW**3*sw**2)',
+                         order = {'QED' : 3})
+
+
+c_UVmpmmG01EW = Coupling(name = 'c_UVmpmmG01EW',
+                         value = '-(ee*MM*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(muWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + muWcft_UV_EW_L))))/(4.*MW**3*sw**2)',
+                         order = {'QED' : 3})
+
+
+c_UVmpmmG02EW = Coupling(name = 'c_UVmpmmG02EW',
+                         value = '(ee*MM*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(muWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + muWcft_UV_EW_R))))/(4.*MW**3*sw**2)',
+                         order = {'QED' : 3})
+
+
+c_UVttpttmG01EW = Coupling(name = 'c_UVttpttmG01EW',
+                           value = '-(ee*MTA*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(tauWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + tauWcft_UV_EW_L))))/(4.*MW**3*sw**2)',
+                           order = {'QED' : 3})
+
+
+c_UVttpttmG02EW = Coupling(name = 'c_UVttpttmG02EW',
+                           value = '(ee*MTA*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(tauWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + tauWcft_UV_EW_R))))/(4.*MW**3*sw**2)',
+                           order = {'QED' : 3})
+
+
+c_UVuxuG01EW = Coupling(name = 'c_UVuxuG01EW',
+                        value = '(ee*MU*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(uWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + uWcft_UV_EW_L))))/(4.*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVuxuG02EW = Coupling(name = 'c_UVuxuG02EW',
+                        value = '-(ee*MU*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(uWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + uWcft_UV_EW_R))))/(4.*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVuxcG01EW = Coupling(name = 'c_UVuxcG01EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVuxcG02EW = Coupling(name = 'c_UVuxcG02EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVuxtG01EW = Coupling(name = 'c_UVuxtG01EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVuxtG02EW = Coupling(name = 'c_UVuxtG02EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVcxuG01EW = Coupling(name = 'c_UVcxuG01EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVcxuG02EW = Coupling(name = 'c_UVcxuG02EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVcxcG01EW = Coupling(name = 'c_UVcxcG01EW',
+                        value = '(ee*MC*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(cWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + cWcft_UV_EW_L))))/(4.*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVcxcG02EW = Coupling(name = 'c_UVcxcG02EW',
+                        value = '-(ee*MC*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(cWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + cWcft_UV_EW_R))))/(4.*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVcxtG01EW = Coupling(name = 'c_UVcxtG01EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVcxtG02EW = Coupling(name = 'c_UVcxtG02EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVtxuG01EW = Coupling(name = 'c_UVtxuG01EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVtxuG02EW = Coupling(name = 'c_UVtxuG02EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVtxcG01EW = Coupling(name = 'c_UVtxcG01EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVtxcG02EW = Coupling(name = 'c_UVtxcG02EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVtxtG01EW = Coupling(name = 'c_UVtxtG01EW',
+                        value = '(ee*(-2*SWCoup_UV_EW*MT*MW**2 + MT*MW**2*sw*complexconjugate(tWcft_UV_EW_R) + sw*(-(WMass2_UV_EW*MT) + MW**2*(2*eCoup_UV_EW*MT + G0Wcft_UV_EW*MT + 2*tMass_UV_EW + MT*tWcft_UV_EW_L))))/(4.*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVtxtG02EW = Coupling(name = 'c_UVtxtG02EW',
+                        value = '-(ee*(-2*SWCoup_UV_EW*MT*MW**2 + MT*MW**2*sw*complexconjugate(tWcft_UV_EW_L) + sw*(-(WMass2_UV_EW*MT) + MW**2*(2*eCoup_UV_EW*MT + G0Wcft_UV_EW*MT + 2*tMass_UV_EW + MT*tWcft_UV_EW_R))))/(4.*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVdxdG01EW = Coupling(name = 'c_UVdxdG01EW',
+                        value = '-(ee*MD*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(dWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + dWcft_UV_EW_L))))/(4.*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVdxdG02EW = Coupling(name = 'c_UVdxdG02EW',
+                        value = '(ee*MD*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(dWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + dWcft_UV_EW_R))))/(4.*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVdxsG01EW = Coupling(name = 'c_UVdxsG01EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVdxsG02EW = Coupling(name = 'c_UVdxsG02EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVdxbG01EW = Coupling(name = 'c_UVdxbG01EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVdxbG02EW = Coupling(name = 'c_UVdxbG02EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVsxdG01EW = Coupling(name = 'c_UVsxdG01EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVsxdG02EW = Coupling(name = 'c_UVsxdG02EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVsxsG01EW = Coupling(name = 'c_UVsxsG01EW',
+                        value = '-(ee*MS*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(sWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + sWcft_UV_EW_L))))/(4.*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVsxsG02EW = Coupling(name = 'c_UVsxsG02EW',
+                        value = '(ee*MS*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(sWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + sWcft_UV_EW_R))))/(4.*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVsxbG01EW = Coupling(name = 'c_UVsxbG01EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVsxbG02EW = Coupling(name = 'c_UVsxbG02EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVbxdG01EW = Coupling(name = 'c_UVbxdG01EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVbxdG02EW = Coupling(name = 'c_UVbxdG02EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVbxsG01EW = Coupling(name = 'c_UVbxsG01EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVbxsG02EW = Coupling(name = 'c_UVbxsG02EW',
+                        value = '0',
+                        order = {'QED' : 0})
+
+
+c_UVbxbG01EW = Coupling(name = 'c_UVbxbG01EW',
+                        value = '-(ee*MB*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(bWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + bWcft_UV_EW_L))))/(4.*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVbxbG02EW = Coupling(name = 'c_UVbxbG02EW',
+                        value = '(ee*MB*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(bWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + bWcft_UV_EW_R))))/(4.*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVuxdGp1EW = Coupling(name = 'c_UVuxdGp1EW',
+                        value = '(ee*MU*CKM11*complex(0,0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(uWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + dWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVuxdGp2EW = Coupling(name = 'c_UVuxdGp2EW',
+                        value = '(ee*MD*CKM11*complex(0,-0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(uWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + dWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVuxsGp1EW = Coupling(name = 'c_UVuxsGp1EW',
+                        value = '(ee*MU*CKM12*complex(0,0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(uWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + sWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVuxsGp2EW = Coupling(name = 'c_UVuxsGp2EW',
+                        value = '(ee*MS*CKM12*complex(0,-0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(uWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + sWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVuxbGp1EW = Coupling(name = 'c_UVuxbGp1EW',
+                        value = '(ee*MU*CKM13*complex(0,0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(uWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + bWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVuxbGp2EW = Coupling(name = 'c_UVuxbGp2EW',
+                        value = '(ee*MB*CKM13*complex(0,-0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(uWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + bWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVcxdGp1EW = Coupling(name = 'c_UVcxdGp1EW',
+                        value = '(ee*MC*CKM21*complex(0,0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(cWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + dWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVcxdGp2EW = Coupling(name = 'c_UVcxdGp2EW',
+                        value = '(ee*MD*CKM21*complex(0,-0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(cWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + dWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVcxsGp1EW = Coupling(name = 'c_UVcxsGp1EW',
+                        value = '(ee*MC*CKM22*complex(0,0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(cWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + sWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVcxsGp2EW = Coupling(name = 'c_UVcxsGp2EW',
+                        value = '(ee*MS*CKM22*complex(0,-0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(cWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + sWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVcxbGp1EW = Coupling(name = 'c_UVcxbGp1EW',
+                        value = '(ee*MC*CKM23*complex(0,0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(cWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + bWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVcxbGp2EW = Coupling(name = 'c_UVcxbGp2EW',
+                        value = '(ee*MB*CKM23*complex(0,-0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(cWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + bWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVtxdGp1EW = Coupling(name = 'c_UVtxdGp1EW',
+                        value = '(ee*CKM31*complex(0,0.5)*(-2*SWCoup_UV_EW*MT*MW**2 + MT*MW**2*sw*complexconjugate(tWcft_UV_EW_R) + sw*(-(WMass2_UV_EW*MT) + MW**2*(2*eCoup_UV_EW*MT + GpWcft_UV_EW*MT + 2*tMass_UV_EW + MT*dWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVtxdGp2EW = Coupling(name = 'c_UVtxdGp2EW',
+                        value = '(ee*MD*CKM31*complex(0,-0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(tWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + dWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVtxsGp1EW = Coupling(name = 'c_UVtxsGp1EW',
+                        value = '(ee*CKM32*complex(0,0.5)*(-2*SWCoup_UV_EW*MT*MW**2 + MT*MW**2*sw*complexconjugate(tWcft_UV_EW_R) + sw*(-(WMass2_UV_EW*MT) + MW**2*(2*eCoup_UV_EW*MT + GpWcft_UV_EW*MT + 2*tMass_UV_EW + MT*sWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVtxsGp2EW = Coupling(name = 'c_UVtxsGp2EW',
+                        value = '(ee*MS*CKM32*complex(0,-0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(tWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + sWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVtxbGp1EW = Coupling(name = 'c_UVtxbGp1EW',
+                        value = '(ee*CKM33*complex(0,0.5)*(-2*SWCoup_UV_EW*MT*MW**2 + MT*MW**2*sw*complexconjugate(tWcft_UV_EW_R) + sw*(-(WMass2_UV_EW*MT) + MW**2*(2*eCoup_UV_EW*MT + GpWcft_UV_EW*MT + 2*tMass_UV_EW + MT*bWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVtxbGp2EW = Coupling(name = 'c_UVtxbGp2EW',
+                        value = '(ee*MB*CKM33*complex(0,-0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(tWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + bWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVdxuGm1EW = Coupling(name = 'c_UVdxuGm1EW',
+                        value = '(ee*MD*complex(0,-0.5)*complexconjugate(CKM11)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(dWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + uWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVdxuGm2EW = Coupling(name = 'c_UVdxuGm2EW',
+                        value = '(ee*MU*complex(0,0.5)*complexconjugate(CKM11)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(dWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + uWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVdxcGm1EW = Coupling(name = 'c_UVdxcGm1EW',
+                        value = '(ee*MD*complex(0,-0.5)*complexconjugate(CKM21)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(dWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + cWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVdxcGm2EW = Coupling(name = 'c_UVdxcGm2EW',
+                        value = '(ee*MC*complex(0,0.5)*complexconjugate(CKM21)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(dWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + cWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVdxtGm1EW = Coupling(name = 'c_UVdxtGm1EW',
+                        value = '(ee*MD*complex(0,-0.5)*complexconjugate(CKM31)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(dWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + tWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVdxtGm2EW = Coupling(name = 'c_UVdxtGm2EW',
+                        value = '(ee*MT*complex(0,0.5)*complexconjugate(CKM31)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(dWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + tWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVsxuGm1EW = Coupling(name = 'c_UVsxuGm1EW',
+                        value = '(ee*MS*complex(0,-0.5)*complexconjugate(CKM12)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(sWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + uWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVsxuGm2EW = Coupling(name = 'c_UVsxuGm2EW',
+                        value = '(ee*MU*complex(0,0.5)*complexconjugate(CKM12)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(sWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + uWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVsxcGm1EW = Coupling(name = 'c_UVsxcGm1EW',
+                        value = '(ee*MS*complex(0,-0.5)*complexconjugate(CKM22)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(sWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + cWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVsxcGm2EW = Coupling(name = 'c_UVsxcGm2EW',
+                        value = '(ee*MC*complex(0,0.5)*complexconjugate(CKM22)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(sWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + cWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVsxtGm1EW = Coupling(name = 'c_UVsxtGm1EW',
+                        value = '(ee*MS*complex(0,-0.5)*complexconjugate(CKM32)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(sWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + tWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVsxtGm2EW = Coupling(name = 'c_UVsxtGm2EW',
+                        value = '(ee*MT*complex(0,0.5)*complexconjugate(CKM32)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(sWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + tWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVbxuGm1EW = Coupling(name = 'c_UVbxuGm1EW',
+                        value = '(ee*MB*complex(0,-0.5)*complexconjugate(CKM13)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(bWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + uWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVbxuGm2EW = Coupling(name = 'c_UVbxuGm2EW',
+                        value = '(ee*MU*complex(0,0.5)*complexconjugate(CKM13)*(-2*SWCoup_UV_EW*MT*MW**2 + MT*MW**2*sw*complexconjugate(bWcft_UV_EW_L) + sw*(-(WMass2_UV_EW*MT) + MW**2*(2*eCoup_UV_EW*MT + GpWcft_UV_EW*MT + 2*tMass_UV_EW + MT*uWcft_UV_EW_R))))/(cmath.sqrt(2)*MT*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVbxcGm1EW = Coupling(name = 'c_UVbxcGm1EW',
+                        value = '(ee*MB*complex(0,-0.5)*complexconjugate(CKM23)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(bWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + cWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVbxcGm2EW = Coupling(name = 'c_UVbxcGm2EW',
+                        value = '(ee*MC*complex(0,0.5)*complexconjugate(CKM23)*(-2*SWCoup_UV_EW*MT*MW**2 + MT*MW**2*sw*complexconjugate(bWcft_UV_EW_L) + sw*(-(WMass2_UV_EW*MT) + MW**2*(2*eCoup_UV_EW*MT + GpWcft_UV_EW*MT + 2*tMass_UV_EW + MT*cWcft_UV_EW_R))))/(cmath.sqrt(2)*MT*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVbxtGm1EW = Coupling(name = 'c_UVbxtGm1EW',
+                        value = '(ee*MB*complex(0,-0.5)*complexconjugate(CKM33)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(bWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + tWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVbxtGm2EW = Coupling(name = 'c_UVbxtGm2EW',
+                        value = '(ee*complex(0,0.5)*complexconjugate(CKM33)*(-2*SWCoup_UV_EW*MT*MW**2 + MT*MW**2*sw*complexconjugate(bWcft_UV_EW_L) + sw*(-(WMass2_UV_EW*MT) + MW**2*(2*eCoup_UV_EW*MT + GpWcft_UV_EW*MT + 2*tMass_UV_EW + MT*tWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                        order = {'QED' : 3})
+
+
+c_UVvexemGp1EW = Coupling(name = 'c_UVvexemGp1EW',
+                          value = '(ee*Me*complex(0,-0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(veWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + eWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                          order = {'QED' : 3})
+
+
+c_UVvmxmmGp1EW = Coupling(name = 'c_UVvmxmmGp1EW',
+                          value = '(ee*MM*complex(0,-0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(vmWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + muWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                          order = {'QED' : 3})
+
+
+c_UVvtxttmGp1EW = Coupling(name = 'c_UVvtxttmGp1EW',
+                           value = '(ee*MTA*complex(0,-0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(vtWcft_UV_EW_L) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + tauWcft_UV_EW_R))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                           order = {'QED' : 3})
+
+
+c_UVepveGm1EW = Coupling(name = 'c_UVepveGm1EW',
+                         value = '(ee*Me*complex(0,-0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(eWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + veWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                         order = {'QED' : 3})
+
+
+c_UVmpvmGm1EW = Coupling(name = 'c_UVmpvmGm1EW',
+                         value = '(ee*MM*complex(0,-0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(muWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + vmWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                         order = {'QED' : 3})
+
+
+c_UVttpvtGm1EW = Coupling(name = 'c_UVttpvtGm1EW',
+                          value = '(ee*MTA*complex(0,-0.5)*(-2*SWCoup_UV_EW*MW**2 + MW**2*sw*complexconjugate(tauWcft_UV_EW_R) + sw*(-WMass2_UV_EW + MW**2*(2*eCoup_UV_EW + GpWcft_UV_EW + vtWcft_UV_EW_L))))/(cmath.sqrt(2)*MW**3*sw**2)',
+                          order = {'QED' : 3})
 
 # ============== #
 # Mixed QCD-QED  #

@@ -12,8 +12,8 @@ C
 C CONSTANTS
 C     
       %(nbornamps_decl)s
-      INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=%(nloopamps)d) 
+	  INTEGER    NLOOPAMPS, NCTAMPS
+      PARAMETER (NLOOPAMPS=%(nloopamps)d, NCTAMPS=%(nctamps)d)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS
@@ -35,6 +35,7 @@ C
       INTEGER I,J,H
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
 	  DATA IC/NEXTERNAL*1/
+
 C  
 C GLOBAL VARIABLES
 C  
@@ -56,8 +57,15 @@ C
 	  %(complex_mp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
 	  common/MP_WFS/W
 
+      %(complex_mp_format)s AMPL(3,NCTAMPS)
+	  common/MP_AMPL/AMPL
+
 	  %(complex_dp_format)s DPW(20,NWAVEFUNCS%(ncomb_helas_objs)s)
 	  common/WFCTS/DPW
+
+      %(complex_dp_format)s DPAMPL(3,NLOOPAMPS)
+	  LOGICAL S(NLOOPAMPS)
+	  common/AMPL/DPAMPL,S
 
 	  INTEGER HELC(NEXTERNAL,NCOMB)
 	  common/HELCONFIGS/HELC
@@ -78,6 +86,13 @@ C  Copy the qp wfs to the dp ones as they are used to setup the CT calls.
     DO J=1,20
       DPW(J,I%(h_w_suffix)s)=W(J,I%(h_w_suffix)s)
     ENDDO
+  ENDDO
+C  Same for the counterterms amplitudes
+  DO I=1,NCTAMPS
+    DO J=1,3
+	  DPAMPL(J,I)=AMPL(J,I)
+	  S(I)=.TRUE.
+	ENDDO
   ENDDO
 ENDDO
 
