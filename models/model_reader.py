@@ -152,14 +152,11 @@ class ModelReader(loop_base_objects.LoopModel):
         couplings = sum(self['couplings'].values(), [])
         # Now calculate all couplings
         for coup in couplings:
-	    print "haha1"
-	    print coup.name
             exec("locals()[\'%s\'] = %s" % (coup.name, coup.expr))
             coup.value = complex(eval(coup.name))
             if not eval(coup.name) and eval(coup.name) != 0:
                 logger.warning("%s has no expression: %s" % (coup.name,
                                                              coup.expr))
-	    print "haha2"
 
         # Set parameter and coupling dictionaries
         self.set('parameter_dict', dict([(param.name, param.value) \
