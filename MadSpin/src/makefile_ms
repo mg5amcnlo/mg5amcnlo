@@ -8,7 +8,11 @@ LIBS = $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)
 PROCESS=  check_sa.o matrix.o
  
 $(PROG): $(PROCESS)  makefile $(LIBS)
+	GFORTRAN_UNBUFFERED_ALL='y'
+	export GFORTRAN_UNBUFFERED_ALL
 	$(FC) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
+	GFORTRAN_UNBUFFERED_ALL='n'
+	export GFORTRAN_UNBUFFERED_ALL
 
 $(INIT): initialize.o makefile $(LIBS) 
 	$(FC) $(FFLAGS) -o $(INIT) initialize.o $(LINKLIBS)

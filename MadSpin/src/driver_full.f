@@ -56,7 +56,7 @@ c     in coupl.inc .
 
 c      call setpara('param_card.dat')  !first call to setup the paramaters
 
-      include "../../../parameters.inc"
+      include "../parameters.inc"
       call coup()
       include "pmass.inc"             !set up masses
 

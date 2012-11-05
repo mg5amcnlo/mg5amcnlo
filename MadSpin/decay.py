@@ -1783,26 +1783,24 @@ class decay_misc:
                 misc.compile(arg=['clean'], cwd=pjoin(path_me,"production_me","Source", "DHELAS"), mode='fortran')
                 misc.compile( cwd=pjoin(path_me,"production_me","Source"), mode='fortran')
 
-
-                if not os.path.isfile( pjoin( path_me,'parameters.inc' ) ):
+		# write all the parameters:
+                file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'initialize.f')
+                shutil.copyfile(file_madspin,pjoin(new_path,"initialize.f"))
                     
-                    file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'initialize.f')
-                    shutil.copyfile(file_madspin,pjoin(new_path,"initialize.f"))
-                    
-                    file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'lha_read_ms.f')
-                    shutil.copyfile(file_madspin, pjoin(path_me,"production_me","Source","MODEL","lha_read.f" ))                    
+                file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'lha_read_ms.f')
+                shutil.copyfile(file_madspin, pjoin(path_me,"production_me","Source","MODEL","lha_read.f" ))                    
 
-                    os.chdir(pjoin(path_me,'production_me','Source','MODEL'))
-                    try:
-                       os.remove('*.o')
-                    except:
-                       pass
-                    misc.compile(cwd=pjoin(path_me,'production_me','Source','MODEL'), mode='fortran')
-                    os.chdir(new_path)
-                    misc.compile(arg=['init'],cwd=new_path,mode='fortran')
-                    misc.call('./init')
-                    shutil.copyfile('parameters.inc', '../../../parameters.inc')
-                    os.chdir(curr_dir)
+                os.chdir(pjoin(path_me,'production_me','Source','MODEL'))
+                try:
+                   os.remove('*.o')
+                except:
+                   pass
+                misc.compile(cwd=pjoin(path_me,'production_me','Source','MODEL'), mode='fortran')
+                os.chdir(new_path)
+                misc.compile(arg=['init'],cwd=new_path,mode='fortran')
+                misc.call('./init')
+                shutil.copyfile('parameters.inc', '../parameters.inc')
+                os.chdir(curr_dir)
                     
 
                 shutil.copyfile(pjoin(path_me,'production_me','Source','MODEL','input.inc'),pjoin(new_path,'input.inc')) 
@@ -1841,6 +1839,26 @@ class decay_misc:
                 # in case there are new DHELAS routines, we need to recompile                
                 misc.compile(arg=['clean'], cwd=pjoin(path_me,"full_me","Source","DHELAS"), mode='fortran')
                 misc.compile( cwd=pjoin(path_me,"full_me","Source"), mode='fortran')
+
+                # write all the parameters:
+                file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'initialize.f')
+                shutil.copyfile(file_madspin,pjoin(new_path,"initialize.f"))
+                         
+                file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'lha_read_ms.f')
+                shutil.copyfile(file_madspin, pjoin(path_me,"full_me","Source","MODEL","lha_read.f" ))     
+
+                os.chdir(pjoin(path_me,'full_me','Source','MODEL'))
+                try: 
+                   os.remove('*.o')
+                except:
+                   pass 
+                misc.compile(cwd=pjoin(path_me,'full_me','Source','MODEL'), mode='fortran')
+                os.chdir(new_path)
+                misc.compile(arg=['init'],cwd=new_path,mode='fortran')
+                misc.call('./init')
+                shutil.copyfile('parameters.inc', '../parameters.inc')
+                os.chdir(curr_dir)
+
                 
                 # now we can compile check
                 misc.compile(arg=['check'], cwd=new_path, mode='fortran')
@@ -1850,10 +1868,12 @@ class decay_misc:
 
                 
                 
-                if(os.path.getsize(pjoin(path_me,"parameters.inc"))<10): 
-                    logger.warning("Parameters of the model were not written correctly !")
-                    logger.critical('line 1842 of decays has been modified')
+                if(os.path.getsize(pjoin(path_me,'production_me','SubProcesses', 'parameters.inc'))<10):
+		    raise Exception, "Parameters of the model were not written correctly ! " 
                     #os.remove(pjoin(path_me,"parameters.inc"))
+                if(os.path.getsize(pjoin(path_me,'full_me','SubProcesses', 'parameters.inc'))<10):
+		    raise Exception, "Parameters of the model were not written correctly ! " 
+
                 if first:
 
                     first=0
@@ -2208,9 +2228,6 @@ class decay_all_events:
         
 # Remove old stuff from previous runs
 # so that the current run is not confused
-        if os.path.isfile(pjoin(path_me,"parameters.inc")):
-            os.remove(pjoin(path_me,"parameters.inc"))
-            
         if os.path.isfile(pjoin(path_me,"param_card.dat")):
             os.remove(pjoin(path_me,"param_card.dat"))
 
@@ -2366,7 +2383,7 @@ class decay_all_events:
 #    with each topology    weighted by the corresponding diagram squared. 
 
 
-                p, p_str=curr_event.give_momenta()    
+                p, p_str=curr_event.give_momenta()   
 #            Note here that no momentum reshuffling is done, 
 #            since we don't know yet which topology should be used.    
 #            so light quarks and gluons in the final state may have a small mass
@@ -2674,11 +2691,16 @@ class decay_all_events:
         logger.info('Average number of trial points per production event: '\
             +str(float(trial_nb_all_events)/float(event_nb)))
         logger.info('Number of subprocesses '+str(len(decay_path)))
+	self.terminate_fortran_executables()
         shutil.rmtree(pjoin(path_me,'production_me'))
         shutil.rmtree(pjoin(path_me,'full_me'))
-        os.remove(pjoin(path_me,'parameters.inc'))
 
+    def terminate_fortran_executables(self):
+	"""routine to terminate all fortran executables"""
 
+        for (mode, production) in self.calculator:
+            external = self.calculator[(mode, production)]
+            external.terminate()
 
     def calculate_matrix_element(self, mode, production, stdin_text):
         """routine to return the matrix element"""
@@ -2701,16 +2723,16 @@ class decay_all_events:
             self.calculator_nbcall[(mode, production)] = 1       
 
                     
-        
         external.stdin.write(stdin_text)
-        
         if mode == 'prod':
             info = int(external.stdout.readline())
             nb_output = abs(info)+1
         else:
             info = 1
             nb_output = 1
-            
+         
+
+   
         prod_values = ' '.join([external.stdout.readline() for i in range(nb_output)])
         if info < 0:
             print 'ZERO DETECTED'

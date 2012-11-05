@@ -56,7 +56,7 @@ c     in coupl.inc .
 
 c      call setpara('param_card.dat')  !first call to setup the paramaters
 
-      include "../../../parameters.inc"
+      include "../parameters.inc"
       call coup()
       include "pmass.inc"             !set up masses
 
@@ -96,7 +96,7 @@ c      write (*,*) "------------------------------------------------------------
       do i=1,n_max_cg
       write(*,*) amp2(i)
       enddo
-      call flush()
+      flush(6)
       goto 1
 
       end
