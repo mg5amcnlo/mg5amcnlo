@@ -1861,12 +1861,17 @@ Integrated cross-section
                            pjoin(cwd, 'symfact.dat'),
                            pjoin(cwd, 'iproc.dat')]
             
-            # File for the loop (might be not present if MadLoop is not use)
+            # File for the loop (might not be present if MadLoop is not used)
             if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
                 to_add = ['MadLoopParams.dat', 'ColorDenomFactors.dat', 
                                          'ColorNumFactors.dat','HelConfigs.dat']
                 for name in to_add:
                     input_files.append(pjoin(cwd, name))
+
+                to_check = ['HelFilter.dat','LoopFilter.dat']
+                for name in to_check:
+                    if os.path.exists(pjoin(cwd, name)):
+                        input_files.append(pjoin(cwd, name))
 
             Ire = re.compile("for i in ([\d\s]*) ; do")
             try : 
