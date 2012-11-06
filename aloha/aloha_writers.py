@@ -30,12 +30,11 @@ class WriteALOHA:
 
             
     def __init__(self, abstract_routine, dirpath):
-        
         if aloha.loop_mode:
             self.momentum_size = 4
         else:
             self.momentum_size = 2
-        
+
         name = get_routine_name(abstract = abstract_routine)
 
         if dirpath:
@@ -48,21 +47,19 @@ class WriteALOHA:
         self.routine = abstract_routine
         self.tag = self.routine.tag
         self.name = name
+
         self.particles =  [self.type_to_variable[spin] for spin in \
                           abstract_routine.spins]
-        
+
         self.offshell = abstract_routine.outgoing # position of the outgoing in particle list        
         self.outgoing = self.offshell             # expected position for the argument list
         if 'C%s' %((self.outgoing + 1) // 2) in self.tag:
             #flip the outgoing tag if in conjugate
             self.outgoing = self.outgoing + self.outgoing % 2 - (self.outgoing +1) % 2
-        
         self.outname = '%s%s' % (self.particles[self.outgoing -1], \
                                                                self.outgoing)
-        
         #initialize global helper routine
         self.declaration = Declaration_list()
-
                                    
                                        
     def pass_to_HELAS(self, indices, start=0):
@@ -2044,7 +2041,6 @@ class Declaration_list(set):
 class WriterFactory(object):
     
     def __new__(cls, data, language, outputdir, tags):
-        
         language = language.lower()
         if isinstance(data.expr, aloha_lib.SplitCoefficient):
             assert language == 'fortran'
@@ -2052,7 +2048,6 @@ class WriterFactory(object):
                 return ALOHAWriterForFortranLoopQP(data, outputdir)
             else:
                 return ALOHAWriterForFortranLoop(data, outputdir)
-        
         if language == 'fortran':
             if 'MP' in tags:
                 return ALOHAWriterForFortranQP(data, outputdir)

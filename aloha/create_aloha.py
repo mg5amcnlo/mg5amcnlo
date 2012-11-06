@@ -81,7 +81,6 @@ class AbstractRoutine(object):
         
     def write(self, output_dir, language='Fortran', mode='self', combine=True,**opt):
         """ write the content of the object """
-
         writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag)
         text = writer.write(mode=mode, **opt)
         if combine:
@@ -90,8 +89,7 @@ class AbstractRoutine(object):
                     text = tuple([old.__add__(new)  for old, new in zip(text, 
                              writer.write_combined(grouped, mode=mode+'no_include', **opt))])
                 else:
-                    text += writer.write_combined(grouped, mode=mode+'no_include', **opt)
-                
+                    text += writer.write_combined(grouped, mode=mode+'no_include', **opt)        
         if aloha.mp_precision and 'MP' not in self.tag:
             self.tag.append('MP')
             text += self.write(output_dir, language, mode, **opt)
@@ -598,7 +596,7 @@ class AbstractALOHAModel(dict):
             if 5 in lorentz.spins and self.massless_spin2 is not None:
                 builder.spin2_massless = self.massless_spin2
             self.compute_aloha(builder)
-
+            
             if lorentz.name in self.multiple_lor:
                 for m in self.multiple_lor[lorentz.name]:
                     for outgoing in range(len(lorentz.spins)+1):
@@ -623,11 +621,9 @@ class AbstractALOHAModel(dict):
                                     self[(realname, outgoing)].add_combine(m)
                                 except Exception,error:
                                     self[(realname, self.symmetries[lorentz.name][outgoing])].add_combine(m)          
-                    
-                    
+                       
         if save:
             self.save()
-    
     
     def add_Lorentz_object(self, lorentzlist):
         """add a series of Lorentz structure created dynamically"""
@@ -641,7 +637,6 @@ class AbstractALOHAModel(dict):
         data should be a list of tuple (lorentz, tag, outgoing)
         tag should be the list of special tag (like conjugation on pair)
         to apply on the object """
-        
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
         self.look_for_symmetries()
@@ -654,14 +649,13 @@ class AbstractALOHAModel(dict):
             tag =  [i for i in tag if isinstance(i, str)]
             tag = tag + ['C%s'%i for i in conjugate] 
             #
-            
             conjugate = tuple([int(c[1:]) for c in tag if c.startswith('C')])
             loop = any((t.startswith('L') for t in tag))
             if loop:
                 aloha.loop_mode = True
                 self.explicit_combine = True
                 
-            
+
                 
                        
             for l_name in list_l_name:
@@ -672,7 +666,7 @@ class AbstractALOHAModel(dict):
                         request[l_name][conjugate] = [(outgoing,tag)]
                     except:
                         request[l_name] = {conjugate: [(outgoing,tag)]}
-                        
+                           
         # Loop on the structure to build exactly what is request
         for l_name in request:
             lorentz = eval('self.model.lorentz.%s' % l_name)
@@ -705,7 +699,8 @@ class AbstractALOHAModel(dict):
                     conjg_builder = builder.define_conjugate_builder(conjg)
                     # Compute routines
                     self.compute_aloha(conjg_builder, symmetry=lorentz.name,
-                                        routines=routines)
+                                         routines=routines)
+            
         
         # Build mutiple lorentz call
         for list_l_name, tag, outgoing in data:
@@ -748,7 +743,7 @@ class AbstractALOHAModel(dict):
                         conjg_builder = builder.define_conjugate_builder(conjg)
                         # Compute routines
                         self.compute_aloha(conjg_builder, symmetry=lorentz.name,
-                                        routines=routines)
+                                        routines=routines) 
         #
                       
   
@@ -779,7 +774,7 @@ class AbstractALOHAModel(dict):
                 wavefunction = builder.compute_routine(outgoing, tag)
                 #Store the information
                 self.set(realname, outgoing, wavefunction)
-            
+          
 
     def compute_aloha_without_kernel(self, builder, symmetry=None, routines=None):
         """define all the AbstractRoutine linked to a given lorentz structure
@@ -800,10 +795,9 @@ class AbstractALOHAModel(dict):
 
     def write(self, output_dir, language):
         """ write the full set of Helicity Routine in output_dir"""
-
         for abstract_routine in self.values():
             abstract_routine.write(output_dir, language)
-        
+
         for routine in self.external_routines:
             self.locate_external(routine, language, output_dir)
         

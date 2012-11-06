@@ -374,6 +374,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             aloha_model.compute_subset(wanted_lorentz)
         else:
             aloha_model.compute_all(save=False)
+
         write_dir=pjoin(self.dir_path, 'Source', 'DHELAS')
         aloha_model.write(write_dir, 'Fortran')
 
@@ -385,13 +386,13 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         else:
             cp(MG5DIR + '/aloha/template_files/aloha_functions.f', write_dir+'/aloha_functions.f')
         create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
-
+	
         # Make final link in the Process
         self.make_model_symbolic_link()
-        
+    
         # Re-establish original aloha mode
         aloha.mp_precision=old_aloha_mp
-
+    
     #===========================================================================
     # Helper functions
     #===========================================================================
