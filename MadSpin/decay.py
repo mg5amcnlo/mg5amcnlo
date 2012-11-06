@@ -339,6 +339,7 @@ class Banner:
         line=line.split()
         if len(line)==2: return int(line[0]), line[1]
         elif line[0]==keyword: return int(line[1]), line[2]
+#       Here I need to check if 
 
     def ReadParam(self): 
         """ Read the paramters associated with the Param Card """
@@ -1324,9 +1325,114 @@ class branching(dict):
         self["index_propa"]=index_propa
         self["type"]=s_or_t
 
+class width_estimate:
+    """All methods used to calculate branching fractions"""
+
+    def __init__(self,resonances,path_me,pid2label_dic,model):
+
+	self.resonances=resonances
+	self.path_me=path_me
+	self.pid2label=pid2label_dic
+	self.model=model
+
+
+    def extract_br_from_card(self):
+        """read the file width_calculator/Events/run_width/param_card.dat
+	   and extrach the branching fractions
+
+           for each resonance with label 'res', and for each channel with index i,
+	   returns a dictionary 
+		branching_fractions[res][i]
+           with keys
+		'd1' : label of the first daughter
+		'd2' : label of the second daughter
+		'br' : value of the branching fraction 
+	"""
+	os.chdir(self.path_me)
+	trappe=open(pjoin('width_calculator','Events','run_width','param_card.dat'))
+        branching_fractions={}
+        while 1:
+ 	    line=trappe.readline()
+	    if line=="": break
+	    list1=line.split()
+	    if len(list1)==0: continue
+	    if list1[0]=='DECAY':
+		label_mother=self.pid2label[int(list1[1])]
+                line=trappe.readline()  
+		if line=="": break
+     	        list2=line.split()
+	        if len(list2)<2: continue
+		if list2[1]=='BR':
+		    channel_index=0
+		    branching_fractions[label_mother]={}	
+		    while 1:
+		        line=trappe.readline()  
+		        if line=="" or line[0]=='#': break
+			channel_index+=1
+			branching_fractions[label_mother][channel_index]={}
+			list3=line.split()
+			if list3[1]==2:
+			    branching_fractions[label_mother][channel_index]['br']=\
+							float(list3[0]) 
+			    branching_fractions[label_mother][channel_index]['d1']=\
+							pid2label_dic(int(list3[2]))
+			    branching_fractions[label_mother][channel_index]['d2']=\
+							pid2label_dic(int(list3[3]))
+	self.br=branching_fractions
+
+
+    def generate_code_for_width_evaluation(self,mgcmd):
+        """ use madgraph to generate me's for res > all all  """
+   
+        commandline="import model "+self.model
+        mgcmd.exec_cmd(commandline)
+
+	logger.info("generate "+self.resonances[0]+" > all all")
+        commandline="generate "+self.resonances[0]+" > all all"
+	mgcmd.exec_cmd(commandline)
+
+        if len(self.resonances)>1:
+	    for index in range(1,len(self.resonances)):
+		logger.info("add process "+self.resonances[index]+" > all all")		
+	        commandline="add process "+self.resonances[index]+" > all all "
+		mgcmd.exec_cmd(commandline)
+
+	commandline="output width_calculator -f"
+	mgcmd.exec_cmd(commandline)
+	
+
+    def launch_width_evaluation(self):
+        """ launch the calculation of the partial widths """
+
+
+#       I could not make it work the way below: 
+
+        if (0):
+          os.chdir(pjoin(self.path_me,'width_calculator'))
+	  os.sys.path.append(pjoin(self.path_me,'width_calculator','bin','internal'))
+
+	  import madevent_interface
+
+          mgme5=madevent_interface.MadEventCmd(pjoin(self.path_me, 'width_calculator'))
+	  mgme5.do_calculate_decay_widths (" run_width -f")
+	  os.chdir(self.path_me)
+
+#       Use brut force instead:
+        else:
+          os.chdir(pjoin(self.path_me,'width_calculator'))
+          executable="./bin/madevent calculate_decay_widths run_width "
+          os.system(executable)
+          os.chdir(pjoin(self.path_me))
+
+
+
+
 class decay_misc:
     """class with various methods for the decay"""
+
+
    
+
     def decay_one_event(self,curr_event,decay_struct,pid2color_dico,\
                         to_decay, pid2width,pid2mass,resonnances,BW_effects,ran=1):
 
@@ -2262,9 +2368,23 @@ class decay_all_events:
 # we will also need a dictionary pid > color_rep
         pid2color_dict=pid2color(base_model)
 
+# now we need to evaluate the branching fractions:
+	logger.info('Calculating the partial widhts ...')
+	resonances=decay_tools.get_resonances(decay_processes.values())
+	logger.info('List of the resonances:')
+	logger.info(resonances)
+#        calculate_br=width_estimate(resonances,path_me,pid2label_dict,mybanner.proc["model"])#
+#	calculate_br.generate_code_for_width_evaluation(mgcmd)#
+#	calculate_br.launch_width_evaluation()
+#	calculate_br.extract_br_from_card()
+#	print calculate_br.br
+
+
+#	decay_tools.branching_fractions(mgcmd,decay_processes,label2pid_dict,base_model)
+
+
         full_proc_line, decay_struct_item=decay_tools.get_full_process_structure(decay_processes,mybanner.proc["generate"], base_model, mybanner, check=1)
 
-        resonances=decay_tools.get_resonances(decay_processes.values())
 
 # now overwrite the param_card.dat in Cards:
         init=mybanner.whole_banner.find("<slha>")
@@ -2783,9 +2903,9 @@ if __name__=="__main__":
     sys.path.insert(0, root_path)
 
     import logging.config
-    import src.coloring_logging
+    import coloring_logging
 
-    logging.config.fileConfig(os.path.join(curr_dir, 'src', 'me5_logging.conf'))
+    logging.config.fileConfig(os.path.join(curr_dir,  'me5_logging.conf'))
     logging.root.setLevel(eval('logging.' + 'DEBUG'))
     logging.getLogger('madgraph').setLevel(eval('logging.' + 'DEBUG'))
 
