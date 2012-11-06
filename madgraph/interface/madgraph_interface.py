@@ -4562,6 +4562,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # Create and write ALOHA Routine
             aloha_model = create_aloha.AbstractALOHAModel(self._curr_model.get('name'))
             aloha_model.add_Lorentz_object(self._curr_model.get('lorentz'))
+	   
             if wanted_lorentz:
                 aloha_model.compute_subset(wanted_lorentz)
             else:

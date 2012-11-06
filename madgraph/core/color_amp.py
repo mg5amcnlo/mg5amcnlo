@@ -744,5 +744,10 @@ class ColorMatrix(dict):
     @staticmethod
     def lcmm(*args):
         """Return lcm of args."""
-        return reduce(ColorMatrix.lcm, args)
+	# HSS , 5/11/2012
+	if args:
+           return reduce(ColorMatrix.lcm, args)
+        else:
+           return 1
+        # HSS
 
