@@ -432,6 +432,7 @@ c case 3: j_fks is initial state
      &           ,p_born(0,imother),shat,sqrtshat ,x(ixEi),xmrec2,xp
      &           ,phi_i_fks,   xiimax,xinorm,xi_i_fks,y_ij_fks,p_i_fks
      &           ,xjac,xpswgt,pass)
+            if (.not.pass) goto 112
          elseif(m_j_fks.gt.0d0) then
             call generate_momenta_massive_final(icountevts,isolsign
      &           ,i_fks,j_fks,p_born(0,imother),shat,sqrtshat ,m_j_fks
@@ -881,6 +882,7 @@ c local
      $     ,sinphi_i_fks,cosphi_mother_fks,costh_mother_fks
      $     ,phi_mother_fks,sinphi_mother_fks,th_mother_fks,xitmp2
      $     ,sinth_mother_fks,xi_i_hat
+      save xjactmp
 c external
       double precision rho
       external rho
@@ -1004,7 +1006,7 @@ c insert here further importance samplings
       elseif( icountevts.eq.-100 .and.
      &        (colltest.and.xi_i_fks_fix.ne.-2.d0) .and.
      &        (.not.softtest)  )then
-         xjactmp=0.d0
+         xjactmp=1.d0
          if(xi_i_fks_fix.lt.xiimax)then
             xi_i_fks=xi_i_fks_fix
          else
@@ -1013,7 +1015,7 @@ c insert here further importance samplings
          isolsign=1
       elseif( (icountevts.eq.-100) .and.
      &        softtest )then
-         xjactmp=0.d0
+         xjactmp=1.d0
          if(xi_i_fks_fix.lt.xiimax)then
             xi_i_fks=xi_i_fks_fix
          else
@@ -1023,7 +1025,8 @@ c insert here further importance samplings
          endif
          isolsign=1
       elseif(icountevts.eq.0)then
-         xjactmp=0.d0
+c Don't set xjactmp here, because we should use the same as what was
+c used for the (real-emission) event
          xi_i_fks=xi_i_fks_matrix(icountevts)
          isolsign=1
       else
