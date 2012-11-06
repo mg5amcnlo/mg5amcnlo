@@ -449,6 +449,20 @@ the file and returns last line in an internal buffer."""
         else:
             raise StopIteration
 
+def write_PS_input(filePath, PS):
+    """ Write out in file filePath the PS point to be read by the MadLoop."""
+    try:
+        PSfile = open(filePath, 'w')
+        # Add a newline in the end as the implementation fortran 'read'
+        # command on some OS is problematic if it ends directly with the
+        #Êfloating point number read.
+        PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in p]) \
+                                                             for p in PS])+'\n')
+        PSfile.close()
+    except:
+        raise MadGraph5Error, 'Could not write out the PS point to file %s.'\
+                                                                  %str(filePath)
+
 def format_timer(running_time):
     """ return a nicely string representing the time elapsed."""
     if running_time < 2e-2:

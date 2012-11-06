@@ -583,10 +583,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
         # If a PS point is specified, write out the corresponding PS.input
         if PSpoint:
-            PSfile = open(os.path.join(dir_name, 'PS.input'), 'w')
-            PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in p]) \
-                                  for p in PSpoint]))
-            PSfile.close()
+            misc.write_PS_input(os.path.join(dir_name, 'PS.input'),PSpoint)
         
         # Run ./check
         try:
@@ -1165,10 +1162,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 p_out=[[pm[0],-pm[3],pm[2],pm[1]] for pm in p]
             else:
                 raise MadGraph5Error("Rotation id %i not implemented"%rotation)
-            PSfile = open(os.path.join(dir_path, 'PS.input'), 'w')
-            PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in pmom]) \
-                                                            for pmom in p_out]))
-            PSfile.close()  
+            misc.write_PS_input(os.path.join(dir_path, 'PS.input'),p_out)  
   
         def pick_PS_point(proc):
             """ Randomly generate a PS point and make sure it is eligible. Then
