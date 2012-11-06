@@ -1759,7 +1759,8 @@ class decay_misc:
         counter=0
         logger.info("""Finalizing production me's """)
         curr_dir=os.getcwd()
- 
+
+         
         for direc in list_prod:
             if direc[0]=="P":
                 counter+=1
@@ -2219,8 +2220,10 @@ class decay_all_events:
         self.path_me = path_me
 
 
-
-        
+        # need to unbuffer all I/O in fortran, otherwise
+	# the values of matrix elements are not passed to the Python script
+        os.environ['GFORTRAN_UNBUFFERED_ALL']='y'  
+#        os.system(" export GFORTRAN_UNBUFFERED_ALL ")
 
 
         mgcmd=Cmd.MasterCmd()
@@ -2542,7 +2545,7 @@ class decay_all_events:
         while 1:
             if (curr_event.get_next_event()=="no_event"): break
             event_nb+=1
-            if (event_nb % 50==0): 
+            if (event_nb % 100==0): 
                 running_time = misc.format_timer(time.time()-starttime)
                 logger.info('Event nb %s %s' % (event_nb, running_time))
             trial_nb=0
@@ -2694,6 +2697,12 @@ class decay_all_events:
 	self.terminate_fortran_executables()
         shutil.rmtree(pjoin(path_me,'production_me'))
         shutil.rmtree(pjoin(path_me,'full_me'))
+
+	# set the environment variable GFORTRAN_UNBUFFERED_ALL 
+	# to its original value
+        os.environ['GFORTRAN_UNBUFFERED_ALL']='n'
+
+
 
     def terminate_fortran_executables(self):
 	"""routine to terminate all fortran executables"""
