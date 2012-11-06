@@ -1262,19 +1262,19 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 '''Found (\d+) correctly terminated jobs 
 random seed found in 'randinit' is (\d+)
 Integrated abs\(cross-section\)
-.*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
+\s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
 Found (\d+) correctly terminated jobs 
 Integrated cross-section
-.*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)''')
+\s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
         else:
             pat = re.compile(\
 '''Found (\d+) correctly terminated jobs 
-.*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)''')
+\s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
             pass
 
         match = re.search(pat, output[0])
         if not match or output[1]:
-            logger.ingo('Return code of the event collection: '+str(output[1]))
+            logger.info('Return code of the event collection: '+str(output[1]))
             logger.info('Output of the event collection:\n'+output[0])
             raise aMCatNLOError('An error occurred during the collection of results')
         if int(match.groups()[0]) != self.njobs:
