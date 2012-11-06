@@ -1,5 +1,7 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.5.4 (xx/xx/12)  OM: Fix a compilation crash due to aloha (thanks Tim T)
+
 1.5.3 (01/11/12)  OM: Fix a crash in the gridpack mode (Thanks Baris Altunkaynak)
                   OM: Fix a crash occuring on cluster with no central disk (only
                       condor by default) for some complicated process.

@@ -182,12 +182,47 @@ class AddVariable(list):
             else:
                 items[tag] = term.__class__(term, term.prefactor)
                 self[pos] = items[tag]
-                         
+        
+        # get the optimized prefactor
+        countprefact = defaultdict(int)
+        nbplus, nbminus = 0,0
+        if constant not in [0, 1,-1]:
+            countprefact[constant] += 1
+            if constant.real + constant.imag > 0:
+                nbplus += 1
+            else:
+                nbminus += 1  
+             
         for var in items.values():
             if var.prefactor == 0:
                 self.remove(var)
+            else:
+                nb = var.prefactor
+                if nb in [1,-1]:
+                    continue
+                countprefact[abs(nb)] +=1
+                if nb.real + nb.imag > 0:
+                    nbplus += 1
+                else:
+                    nbminus += 1
+        if countprefact and max(countprefact.values()) >1:
+            fact_prefactor = sorted(countprefact.items(), key=lambda x: x[1], reverse=True)[0][0]
+        else:
+            fact_prefactor = 1
+        if nbplus < nbminus:
+                fact_prefactor *= -1
+        self.prefactor *= fact_prefactor
+
+        if fact_prefactor != 1:
+            for i,a in enumerate(self):
+                try:
+                    a.prefactor /= fact_prefactor
+                except AttributeError:
+                    self[i] /= fact_prefactor  
+                    
         if constant:
-            self.append(constant)
+            self.append(constant/ fact_prefactor  )
+            
         # deal with one/zero length object
         varlen = len(self)
         if varlen == 1:
@@ -860,8 +895,13 @@ class MultLorentz(MultVariable):
                 scalar = fact.get_rep([0])
                 if hasattr(scalar, 'vartype') and scalar.vartype == 1:
                     if not veto or not scalar.contains(veto):
+                        scalar = scalar.simplify()
+                        prefactor = 1
+                        if scalar.prefactor not in  [1,-1]:
+                            prefactor = scalar.prefactor
+                            scalar.prefactor = 1
                         new = KERNEL.add_expression_contraction(scalar)
-                        fact.set_rep([0], new)
+                        fact.set_rep([0], prefactor * new)
             out *= fact
         return out
 

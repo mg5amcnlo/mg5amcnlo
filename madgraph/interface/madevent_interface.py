@@ -1743,6 +1743,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 MG5DIR = self.options['mg5_path']
                 config_file = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
                 self.set_configuration(config_file, final=False,initdir=MG5DIR)
+            else:
+                self.options['mg5_path'] = None
             return self.set_configuration(me5_config, final,initdir=self.me_dir)
 
         config_file = open(config_path)
