@@ -1064,13 +1064,15 @@ class DecayParticle(base_objects.Particle):
                 # Do not include the first leg (initial id)
                 if sorted([l.get('id') for l in amplt['process']['legs'][1:]])\
                         == final_pid:
-
+                    #print 'before: ', channel.nice_string()
                     amplt.add_std_diagram(channel)
+                    #print 'after : ', channel.nice_string()
                     found = True
                     break
 
             # If no amplitude is satisfied, initiate a new one.
             if not found:
+                #print 'start : ', channel.nice_string()
                 self.get_amplitudes(clevel).append(DecayAmplitude(channel,
                                                                   model))
 
@@ -1447,7 +1449,7 @@ class DecayModel(model_reader.ModelReader):
                 onshell = ini_mass > (total_mass - ini_mass)
 
                 # Create new legs for the sort later,
-                # turn pid of inital particle into anti-one
+                # turn pid of initial particle into anti-one
                 temp_legs_new = copy.deepcopy(temp_legs)
                 temp_legs_new[num]['id'] = pid
 
@@ -3656,7 +3658,7 @@ class Channel(base_objects.Diagram):
                 # Set the q_dict
                 q_dict[(vert.get('legs')[-1].get('id'), 
                         vert.get('legs')[-1].get('number'))] = q_total
-                # Assign the value if the leg is not inital leg. (propagator),
+                # Assign the value if the leg is not initial leg. (propagator),
                 # for initial particle, q_total should be M.
                 if i < len(self.get('vertices'))-1: 
                     apx_m *= self.get_apx_fnrule(vert.get('legs')[-1].get('id'),
@@ -3709,7 +3711,7 @@ class Channel(base_objects.Diagram):
             # This will take all propagators into accounts.
             # Do not run the identical vertex
             for i, vert in enumerate(self['vertices']):
-                # Assign the value if the leg is not inital leg.
+                # Assign the value if the leg is not initial leg.
                 # q is assumed as 1M
                 if i < len(self.get('vertices'))-1: 
                     apx_m *= self.get_apx_fnrule(vert.get('legs')[-1].get('id'),
@@ -4117,6 +4119,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
 
 
         # non_std_number: number of new_dia
+        # take final legs first
         non_std_numbers = [(l.get('id'),l.get('number')) \
                                for l in new_dia.get_final_legs()]
 
@@ -4138,10 +4141,43 @@ class DecayAmplitude(diagram_generation.Amplitude):
         converted_dict = dict([(num[1], std_numbers[i][1])\
                                    for i, num in enumerate(non_std_numbers)])
 
-        # Convert all legs
+        # 1st stage of converting all legs: change numbering without fixing
+        # wrong number flows (e.g. number 3 2 > 3)
+        all_numbers_goal = []
         for vert in new_dia.get('vertices'):
             for leg in vert.get('legs'):
                 leg['number'] = converted_dict[leg['number']]
+                all_numbers_goal.append((leg['id'], leg['number']))
+
+        # 2nd stage of converting all legs: fixing illegal number flows.
+        # (except for the first one)
+        for vert in new_dia.get('vertices')[:-1]:
+            lowest_num = vert.get('legs')[0]['number']
+            for leg in vert.get('legs')[:-1]:
+                if leg['number'] < lowest_num:
+                    lowest_num = leg['number']
+
+            mother_leg = vert.get('legs')[-1]
+            old_id_number = (mother_leg['id'], mother_leg['number'])            
+            if old_id_number[1] != lowest_num:
+
+                # Change the number of mother
+                mother_leg['number'] = lowest_num                
+                
+                # Find the leg associated with the mother of this vertex,
+                # and change its number to lowest number
+                found = False
+                for pre_vert in new_dia.get('vertices'):
+                    for child_leg in pre_vert['legs'][:-1]:
+                        if (child_leg['id'], child_leg['number'])\
+                                == old_id_number:
+                            child_leg['number'] = lowest_num
+                            found = True
+                            break
+                    if found:
+                        break
+
+        new_dia.initial_setups(model, True)
 
         # Add this standard diagram into diagrams
         self['diagrams'].append(new_dia)

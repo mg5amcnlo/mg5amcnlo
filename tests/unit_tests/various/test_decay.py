@@ -2852,21 +2852,37 @@ class Test_DecayAmplitude(unittest.TestCase):
         # Set channels and amplitude
         self.my_testmodel.find_all_channels(4)
         h_eeveve =  higgs.get_amplitude([-11, 11, -12, 12])
-
+        
         # Construct new amplitude
+        # diagram 0: h > ww > e+ e- ve ve~
         std_amp = decay_objects.DecayAmplitude(h_eeveve['diagrams'][0], 
                                           self.my_testmodel)
 
         # Modify the number of legs in second diagram
+        # diagram 1: h > zz > e+ e- ve ve~
         new_diagram = copy.deepcopy(h_eeveve['diagrams'][1])
+        
+        # Make sure which z goes to which vertex
+        z_1 = new_diagram['vertices'][-1]['legs'][0]
+        z_2 = new_diagram['vertices'][-1]['legs'][0]
+
+        if z_1 == new_diagram['vertices'][0]['legs'][-1]:
+            first_to_first = True
+        else:
+            first_to_first = False
+
+        # Change the numbers
         for vert in new_diagram['vertices']:
             for leg in vert['legs']:
-                # Swap number 2 and 4
+                # change number 2 -> 5, 5-> 4, 4->2
                 old_number = leg['number']
                 if old_number == 2:
+                    leg['number'] = 5
+                if old_number == 5:
                     leg['number'] = 4
                 if old_number == 4:
                     leg['number'] = 2
+
         new_diagram.initial_setups(self.my_testmodel, True)
 
         #print 'dia1:', h_eeveve['diagrams'][0].nice_string(),\
@@ -2888,14 +2904,18 @@ class Test_DecayAmplitude(unittest.TestCase):
         number_b = [(l['number'], l['id']) for l in list_b]
         self.assertEqual(number_a, number_b)
 
+
+
         # Test all legs,
         # numbers must be consistent.
         #print std_amp.nice_string()
         for dia in std_amp['diagrams']:
             for i, vert in enumerate(dia['vertices'][:-1]):
-                # Check final leg of each vertices
+                # Check final (mother) leg of each vertices is the minimum
+                # among its children
                 previous_number = [l['number'] for l in vert['legs'][:-1]]
-                self.assertTrue(vert['legs'][-1]['number'] in previous_number)
+                self.assertEqual(vert['legs'][-1]['number'],
+                                min(previous_number))
                 
                 # Check intermediate legs
                 l=vert['legs'][-1]
@@ -2904,7 +2924,27 @@ class Test_DecayAmplitude(unittest.TestCase):
                         if l['number'] == l2['number']:
                             self.assertEqual(l['id'], l2['id'])
                     
-                
+
+        # Test if the two z bosons still connect to the correct vertex
+        if first_to_first:
+            # 1st vertex from 1st z
+            self.assertEqual(\
+                std_amp['diagrams'][1]['vertices'][0]['legs'][-1]['number'],
+                std_amp['diagrams'][1]['vertices'][-1]['legs'][0]['number'])
+            # 2nd vertex from 2nd z
+            self.assertEqual(\
+                std_amp['diagrams'][1]['vertices'][1]['legs'][-1]['number'],
+                std_amp['diagrams'][1]['vertices'][-1]['legs'][1]['number'])
+
+        # and vice versa
+        else:
+            self.assertEqual(\
+                std_amp['diagrams'][1]['vertices'][0]['legs'][-1]['number'],
+                std_amp['diagrams'][1]['vertices'][-1]['legs'][1]['number'])
+            self.assertEqual(\
+                std_amp['diagrams'][1]['vertices'][1]['legs'][-1]['number'],
+                std_amp['diagrams'][1]['vertices'][-1]['legs'][0]['number'])
+            
 
 #===============================================================================
 # Test_AbstractModel
