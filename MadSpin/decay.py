@@ -1335,8 +1335,133 @@ class width_estimate:
 	self.pid2label=pid2label_dic
 	self.model=model
 
+    def update_branch(self,branches,to_add):
+	""" complete the definition of the branch by appending each element of to_add"""
+        newbranches={}
 
-    def extract_br_from_card(self):
+        for item1 in branches.keys():
+            for item2 in to_add.keys():
+              tag=item1+item2
+              newbranches[tag]={}
+              newbranches[tag]['config']=branches[item1]['config']+to_add[item2]['config']
+              newbranches[tag]['br']=branches[item1]['br']*to_add[item2]['br']
+
+        return newbranches
+
+    def get_BR_for_each_decay(self,decay_processes,multiparticles,model,base_model,pid2label):
+	""" get the list for possible decays & the associated branching fraction  """
+        
+
+        ponctuation=[',','>',')','(']
+        new_decay_processes={}       
+
+        for part in decay_processes.keys():
+	    pos_symbol=-1
+	    branch_list=decay_processes[part].split()
+            new_decay_processes[part]={}
+            new_decay_processes[part]['']={}
+            new_decay_processes[part]['']['config']=""
+            new_decay_processes[part]['']['br']=1.0
+
+            initial=""
+            final=[]
+            for index, item in enumerate(branch_list):
+                # First get the symbol at the next position
+		if index<len(branch_list)-1:
+                    next_symbol=branch_list[index+1]
+		else:
+		    next_symbol=''
+
+                # Then handle the symbol item case by case 
+                if next_symbol=='>':              # case1: we have a particle initiating a branching
+                    initial=item
+                    if item not in [ particle['name'] for particle in base_model['particles'] ] \
+                        and item not in [ particle['antiname'] for particle in base_model['particles'] ]:
+                        raise Exception, "No particle "+item+ " in the model "+model
+                    continue
+                elif item=='>': continue       # case 2: we have the > symbole
+                elif item not in ponctuation : # case 3: we have a particle originating from a branching
+                    final.append(item)
+                    if next_symbol=='' or next_symbol in ponctuation:
+                                                  #end of a splitting, verify that it exists
+                        if initial not in self.br.keys():
+                            logger.info('Branching fractions of particle '+initial+' are unknown')
+	        	    return 0
+                        if len(final)>2:
+                            raise Exception, 'splittings different from A > B +C are currently not implemented '
+
+                        if final[0] in multiparticles.keys():
+                            set_B=[pid2label[pid] for pid in multiparticles[final[0]]]
+ 		        else:
+                            if final[0] not in [ particle['name'] for particle in base_model['particles'] ] \
+                               and final[0] not in [ particle['antiname'] for particle in base_model['particles'] ]:
+                               raise Exception, "No particle "+item+ " in the model "+mybanner.proc["model"]
+                            set_B=[final[0]]
+                        if final[1] in multiparticles.keys():
+                            set_C=[pid2label[pid] for pid in multiparticles[final[1]]]
+		        else:
+                            if final[1] not in [ particle['name'] for particle in base_model['particles'] ] \
+                               and final[1] not in [ particle['antiname'] for particle in base_model['particles'] ]:
+                               raise Exception, "No particle "+item+ " in the model "+model
+                            set_C=[final[1]]
+
+                        splittings={}
+                        counter=0
+                        for d1 in set_B:
+                            for d2 in set_C:
+                                # loop over all channels
+			        for chan in self.br[initial].keys():
+                                  if (d1==self.br[initial][chan]['d1'] and \
+                                     d2==self.br[initial][chan]['d2']) or \
+				     (d2==self.br[initial][chan]['d1'] and \
+                                     d1==self.br[initial][chan]['d2']):
+                                      split=" "+initial+" > "+d1+" "+d2+" "
+                                      counter+=1
+                                      splittings['s'+str(counter)]={}
+                                      splittings['s'+str(counter)]['config']=split
+                                      splittings['s'+str(counter)]['br']=self.br[initial][chan]['br']
+                                  break # to avoid double counting in cases such as w+ > j j 
+                   
+                        if len(splittings)==0:
+			    logger.info('Branching '+initial+' > '+final[0]+' '+final[1])
+  			    logger.info('is currently unknown')
+                            return 0
+		        else:
+                            new_decay_processes[part]=self.update_branch(new_decay_processes[part],splittings)
+                        
+                        inital=""
+                        final=[]
+
+                else:                             # case 4: ponctuation symbol outside a splitting
+                                                  # just append it to all the current branches
+		    fake_splitting={}
+                    fake_splitting['']={}
+                    fake_splitting['']['br']=1.0
+                    fake_splitting['']['config']=item
+                    new_decay_processes[part]=self.update_branch(new_decay_processes[part],fake_splitting)
+
+            print new_decay_processes[part]
+
+
+
+    def print_branching_fractions(self):
+	""" print a list of all known branching fractions"""
+
+	for res in self.br.keys():
+	    logger.info('  ')
+ 	    logger.info('decay channels for '+res+' :')
+	    logger.info('       BR                     d1  d2' )
+
+ 	    for chan in self.br[res].keys():
+		bran=self.br[res][chan]['br']
+		d1=self.br[res][chan]['d1']
+		d2=self.br[res][chan]['d2']
+	        logger.info('   %14e2            %s  %s ' % (bran, d1, d2) )
+	logger.info('  ')
+
+
+
+    def extract_br_from_card(self,filename):
         """read the file width_calculator/Events/run_width/param_card.dat
 	   and extrach the branching fractions
 
@@ -1349,7 +1474,7 @@ class width_estimate:
 		'br' : value of the branching fraction 
 	"""
 	os.chdir(self.path_me)
-	trappe=open(pjoin('width_calculator','Events','run_width','param_card.dat'))
+	trappe=open(filename)
         branching_fractions={}
         while 1:
  	    line=trappe.readline()
@@ -1358,10 +1483,13 @@ class width_estimate:
 	    if len(list1)==0: continue
 	    if list1[0]=='DECAY':
 		label_mother=self.pid2label[int(list1[1])]
+                pos=trappe.tell()
                 line=trappe.readline()  
 		if line=="": break
      	        list2=line.split()
-	        if len(list2)<2: continue
+	        if len(list2)<2:
+		    trappe.seek(pos) 
+                    continue
 		if list2[1]=='BR':
 		    channel_index=0
 		    branching_fractions[label_mother]={}	
@@ -1369,15 +1497,19 @@ class width_estimate:
 		        line=trappe.readline()  
 		        if line=="" or line[0]=='#': break
 			channel_index+=1
+			#logger.info('Found a new channel in the param_card.dat')
 			branching_fractions[label_mother][channel_index]={}
 			list3=line.split()
-			if list3[1]==2:
+			if list3[1]=='2':
 			    branching_fractions[label_mother][channel_index]['br']=\
 							float(list3[0]) 
 			    branching_fractions[label_mother][channel_index]['d1']=\
-							pid2label_dic(int(list3[2]))
+							self.pid2label[int(list3[2])]
 			    branching_fractions[label_mother][channel_index]['d2']=\
-							pid2label_dic(int(list3[3]))
+							self.pid2label[int(list3[3])]
+                else:
+                    trappe.seek(pos)
+
 	self.br=branching_fractions
 
 
@@ -1420,7 +1552,7 @@ class width_estimate:
 #       Use brut force instead:
         else:
           os.chdir(pjoin(self.path_me,'width_calculator'))
-          executable="./bin/madevent calculate_decay_widths run_width "
+          executable="./bin/madevent calculate_decay_widths run_width -f"
           os.system(executable)
           os.chdir(pjoin(self.path_me))
 
@@ -2333,6 +2465,7 @@ class decay_all_events:
 
 
         mgcmd=Cmd.MasterCmd()
+
         curr_dir=os.getcwd()
         
 # Remove old stuff from previous runs
@@ -2351,15 +2484,16 @@ class decay_all_events:
         model_path=mybanner.proc["model"]
         base_model = import_ufo.import_model(model_path)
         base_model.pass_particles_name_in_mg_default() 
+ 	mgcmd.exec_cmd('import model '+mybanner.proc["model"])
         
-        for part in decay_processes:
-            list_symbol=decay_processes[part].split()
-            for item in list_symbol:
-                if item =="," or item==")" or item=="(" or item==">": 
-                    continue
-                elif item not in [ particle['name'] for particle in base_model['particles'] ] \
-                    and item not in [ particle['antiname'] for particle in base_model['particles'] ]:
-                    raise Exception, "No particle "+item+ " in the model "+mybanner.proc["model"]
+#        for part in decay_processes:
+#            list_symbol=decay_processes[part].split()
+#            for item in list_symbol:
+#                if item =="," or item==")" or item=="(" or item==">": 
+#                    continue
+#                elif item not in [ particle['name'] for particle in base_model['particles'] ] \
+#                    and item not in [ particle['antiname'] for particle in base_model['particles'] ]:
+#                    raise Exception, "No particle "+item+ " in the model "+mybanner.proc["model"]
 
 
 # we will need a dictionary pid > label
@@ -2367,23 +2501,6 @@ class decay_all_events:
         label2pid_dict=label2pid(base_model)
 # we will also need a dictionary pid > color_rep
         pid2color_dict=pid2color(base_model)
-
-# now we need to evaluate the branching fractions:
-	logger.info('Calculating the partial widhts ...')
-	resonances=decay_tools.get_resonances(decay_processes.values())
-	logger.info('List of the resonances:')
-	logger.info(resonances)
-#        calculate_br=width_estimate(resonances,path_me,pid2label_dict,mybanner.proc["model"])#
-#	calculate_br.generate_code_for_width_evaluation(mgcmd)#
-#	calculate_br.launch_width_evaluation()
-#	calculate_br.extract_br_from_card()
-#	print calculate_br.br
-
-
-#	decay_tools.branching_fractions(mgcmd,decay_processes,label2pid_dict,base_model)
-
-
-        full_proc_line, decay_struct_item=decay_tools.get_full_process_structure(decay_processes,mybanner.proc["generate"], base_model, mybanner, check=1)
 
 
 # now overwrite the param_card.dat in Cards:
@@ -2401,6 +2518,42 @@ class decay_all_events:
         param=open(pjoin(path_me,'param_card.dat'),"w")
         param.write(param_card)
         param.close()
+
+# now we need to evaluate the branching fractions:
+# =================================================
+	logger.info('We need information on the partial widhts ')
+	logger.info('First look inside the banner of the event file ')
+	logger.info('and check whether this information is available ')
+
+	resonances=decay_tools.get_resonances(decay_processes.values())
+	logger.info('List of resonances:')
+	logger.info(resonances)
+        calculate_br=width_estimate(resonances,path_me,pid2label_dict,mybanner.proc["model"])#
+#       Maybe the branching fractions are already given in the banner:
+	filename=pjoin(path_me,'param_card.dat')
+        calculate_br.extract_br_from_card(filename)
+	calculate_br.print_branching_fractions()
+#
+#        now we check that we have all needed pieces of info regarding the branching fraction:
+        multiparticles=mgcmd._multiparticles
+        branching_per_channel=calculate_br.get_BR_for_each_decay(decay_processes,multiparticles,\
+						mybanner.proc["model"],base_model,pid2label_dict)       
+
+        # check that we get branching fractions for all resonances to be decayed:
+        
+	if(0):
+	    calculate_br.generate_code_for_width_evaluation(mgcmd)#
+	    calculate_br.launch_width_evaluation()
+	    filename=filename=pjoin(path_me,'width_calculator','Events','run_width','param_card.dat')
+	    calculate_br.extract_br_from_card()
+    	    calculate_br.print_branching_fractions()
+
+
+#	decay_tools.branching_fractions(mgcmd,decay_processes,label2pid_dict,base_model)
+
+
+        full_proc_line, decay_struct_item=decay_tools.get_full_process_structure(decay_processes,mybanner.proc["generate"], base_model, mybanner, check=1)
+
 
         label2width={}
         label2mass={}
