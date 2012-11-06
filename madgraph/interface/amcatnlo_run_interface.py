@@ -1388,25 +1388,27 @@ Integrated cross-section
             return
 
         # Now display the general statistics
-        nTotUPS = sum([chan[1] for chan in stats['UPS'].values()],0)
-        nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
-        UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
-             float(chan[1][1]*100)/chan[1][0]) for chan in stats['UPS'].items()]
-        maxUPS = max(UPSfracs, key = lambda w: w[1])
         debug_msg = ""
-        if len(stats['UPS'].keys())>0 and maxUPS[1]>0.1:
-            message += '\n      Number of loop ME evaluations: %d'%nTotPS
-            message += '\n      Total number of unstable PS point detected:'+\
-                             ' %d (%4.2f%%)'%(nTotUPS,float(100*nTotUPS)/nTotPS)
-            message += '\n      Maximum fraction of UPS points in '+\
-                      'channel %s (%4.2f%%)'%maxUPS
-            message += '\n      Please report this to the authors while '+\
-                                                            'providing the file'
-            message += '\n      %s'%str(pjoin(os.path.dirname(self.me_dir),
-                                                           maxUPS[0],'UPS.log'))
-        else:
-            debug_msg += '\n      Number of loop ME evaluations: %d'%nTotPS
-        logger.info(message+'\n')            
+        if len(stats['UPS'].keys())>0:
+            nTotUPS = sum([chan[1] for chan in stats['UPS'].values()],0)
+            nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
+            UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
+                 float(chan[1][1]*100)/chan[1][0]) for chan in stats['UPS'].items()]
+            maxUPS = max(UPSfracs, key = lambda w: w[1])
+            if maxUPS[1]>0.1:
+                message += '\n      Number of loop ME evaluations: %d'%nTotPS
+                message += '\n      Total number of unstable PS point detected:'+\
+                                 ' %d (%4.2f%%)'%(nTotUPS,float(100*nTotUPS)/nTotPS)
+                message += '\n      Maximum fraction of UPS points in '+\
+                          'channel %s (%4.2f%%)'%maxUPS
+                message += '\n      Please report this to the authors while '+\
+                                                                'providing the file'
+                message += '\n      %s'%str(pjoin(os.path.dirname(self.me_dir),
+                                                               maxUPS[0],'UPS.log'))
+            else:
+                debug_msg += '\n      Number of loop ME evaluations: %d'%nTotPS
+        logger.info(message+'\n')
+                 
         nErrors = sum([err[1] for err in stats['Errors']],0)
         if nErrors != 0:
             debug_msg += '\n      WARNING:: A total of %d error%s ha%s been '\
