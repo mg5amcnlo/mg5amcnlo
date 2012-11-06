@@ -379,4 +379,3 @@ Param.MT.counterterm = {(1,0,0):CTParam.tMass_UV.value}
 
 Param.G.loop_particles = [[[u],[d],[c],[s]],[[b]],[[t]],[[G]]],
 Param.G.counterterm = {(1,0,0):CTParam.G_UVq.value,(1,0,1):CTParam.G_UVb.value,(1,0,2):CTParam.G_UVt.value,(1,0,3):CTParam.G_UVg.value}
-
