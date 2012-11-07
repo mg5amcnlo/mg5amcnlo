@@ -225,7 +225,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                 p[0] = p[1] + "**" + p3
             else:
                 p[0] = p[1] + "**" + p[3]
-        except:
+        except Exception:
             p[0] = p[1] + "**" + p[3]
 
     def p_expression_cond(self, p):
@@ -288,7 +288,7 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
                 p[0] = p[1] + "**" + p3
             else:
                 p[0] = p[1] + "**" + p[3]
-        except:
+        except Exception:
             p[0] = p[1] + "**" + p[3]
 
     def p_expression_cond(self, p):

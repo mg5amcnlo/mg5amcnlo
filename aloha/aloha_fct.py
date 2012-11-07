@@ -102,7 +102,7 @@ def check_flow_validity(expression, nb_fermion):
     # Need to expand the expression in order to have a simple sum of expression
     try:
         expr = eval(expression)
-    except:
+    except Exception:
         return
     expr = expr.simplify()
     #expr is now a valid AddVariable object if they are a sum or

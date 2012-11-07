@@ -1385,7 +1385,7 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
                 if isinstance(opt, dict):
                     try:
                         value = opt[process.base_string()]
-                    except:
+                    except Exception:
                         continue
                     result = function(process, stored_quantities, value)
                 else:

@@ -161,7 +161,7 @@ class BasicCmd(cmd.Cmd):
                 import fcntl, termios, struct
                 cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,
                                                      '1234'))
-            except:
+            except Exception:
                 return None
             return cr
         cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
@@ -170,12 +170,12 @@ class BasicCmd(cmd.Cmd):
                 fd = os.open(os.ctermid(), os.O_RDONLY)
                 cr = ioctl_GWINSZ(fd)
                 os.close(fd)
-            except:
+            except Exception:
                 pass
         if not cr:
             try:
                 cr = (os.environ['LINES'], os.environ['COLUMNS'])
-            except:
+            except Exception:
                 cr = (25, 80)
         return int(cr[1])
     
@@ -580,7 +580,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if timeout:
             try:
                 timeout = self.options['timeout']
-            except:
+            except Exception:
                 pass
                     
         # add choice info to the question
@@ -1135,7 +1135,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 cmdname=name[3:]
                 try:
                     doc = getattr(self.cmd, name).__doc__
-                except:
+                except Exception:
                     doc = None
                 if not doc:
                     doc = getattr(self, name).__doc__
@@ -1219,7 +1219,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             outstr = "Value of Internal Variable:\n"
             try:
                 var = eval(args[1])
-            except:
+            except Exception:
                 outstr += 'GLOBAL:\nVariable %s is not a global variable\n' % args[1]
             else:
                 outstr += 'GLOBAL:\n' 
@@ -1227,7 +1227,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                
             try:
                 var = eval('self.%s' % args[1])
-            except:
+            except Exception:
                 outstr += 'LOCAL:\nVariable %s is not a local variable\n' % args[1]
             else:
                 outstr += 'LOCAL:\n'
@@ -1302,7 +1302,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 continue
             try:
                 to_write.remove(key)
-            except:
+            except Exception:
                 pass
             if '_path' in key:       
                 # special case need to update path

@@ -361,7 +361,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         main_file_name = ""
         try:
             main_file_name = args[args.index('-name') + 1]
-        except:
+        except Exception:
             pass
 
         # Whatever the format we always output the quadruple precision routines

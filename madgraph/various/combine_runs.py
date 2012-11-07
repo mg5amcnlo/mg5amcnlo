@@ -24,7 +24,7 @@ import logging
 
 try:
     import madgraph.various.sum_html as sum_html
-except:
+except ImportError:
     import internal.sum_html as sum_html
     
 logger = logging.getLogger('madevent.combine_run') # -> stdout

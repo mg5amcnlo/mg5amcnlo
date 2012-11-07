@@ -1085,10 +1085,10 @@ class Model(PhysicsObject):
         
         try:
             return self["particle_dict"][id]
-        except:
+        except Exception:
             try:
                 return self.get("particle_dict")[id]
-            except:
+            except Exception:
                 return None
 
     def get_lorentz(self, name):
@@ -1114,7 +1114,7 @@ class Model(PhysicsObject):
 
         try:
             return self.get("interaction_dict")[id]
-        except:
+        except Exception:
             return None
 
     def get_parameter(self, name):
@@ -1124,7 +1124,7 @@ class Model(PhysicsObject):
         if hasattr(self, 'parameters_dict') and self.parameters_dict:
             try:
                 return self.parameters_dict[name]
-            except:
+            except Exception:
                 # try to reload it before crashing 
                 pass
             
@@ -1480,7 +1480,7 @@ class ModelVariable(object):
         
         try:
             return other.name == self.name
-        except:
+        except Exception:
             return other == self.name
 
 class ParamCardVariable(ModelVariable):
@@ -1938,7 +1938,7 @@ class Diagram(PhysicsObject):
 
         try:
             return self['orders'][order]
-        except:
+        except Exception:
             return 0
 
     def renumber_legs(self, perm_map, leg_list):
@@ -2232,7 +2232,7 @@ class Process(PhysicsObject):
         if name == 'forbidden_particles':
             try:
                 value = [abs(i) for i in value]
-            except:
+            except Exception:
                 pass
 
         if name == 'required_s_channels':

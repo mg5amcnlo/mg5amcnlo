@@ -411,7 +411,7 @@ class FeynmanLine(object):
         try:
             self.begin.pos_x
             self.end.pos_y
-        except:
+        except Exception:
             raise self.FeynmanLineError, 'No vertex in begin-end position ' + \
                         ' or no position attach at one of those vertex '
         return True
@@ -806,7 +806,7 @@ class FeynmanDiagram(object):
         
         try:
             return self._available_legs[gen_id]
-        except:
+        except Exception:
             return None
 
     def load_vertex(self, vertex):
@@ -986,7 +986,7 @@ class FeynmanDiagram(object):
         vertex_at_level = []
         try:
             t_vertex = self.initial_vertex[-2]
-        except:
+        except Exception:
             return [] #only one particle in initial state => no T-channel
 
         while 1:
@@ -1254,7 +1254,7 @@ class FeynmanDiagram(object):
         # Make a loop on T-channel particles
         try:
             t_vertex = self.initial_vertex[-2]
-        except:
+        except Exception:
             return # No T-channel for 1 > X diagram
 
         t_vertex = self.find_next_t_channel_vertex(t_vertex)
@@ -1340,15 +1340,15 @@ class FeynmanDiagram(object):
             line = self.lineList[i]
             try:
                 begin = self.vertexList.index(line.begin)
-            except:
+            except Exception:
                 begin = -1
             try:
                 end = self.vertexList.index(line.end)
-            except:
+            except Exception:
                 end = -1
             try:
                 external = line.is_external()
-            except:
+            except Exception:
                 external = '?'
             text += 'pos, %s ,id: %s, number: %s, external: %s, S-channel: %s, loop : %s \
                     begin at %s, end at %s \n' % (i, line.id, \
@@ -1447,7 +1447,7 @@ class FeynmanDiagram(object):
         for vertex_self in self.vertexList:
             try:
                 i = other_pos.index((vertex_self.pos_x, vertex_self.pos_y))
-            except:
+            except Exception:
                 # This vertex doesn't have equivalent => They are different.
                 return False
             else:
@@ -1716,7 +1716,7 @@ class DiagramDrawer(object):
         
         try:
             loop_structure = amplitude.get('structure_repository')
-        except:
+        except Exception:
             loop_structure = None
 
         # assign default for model and check validity (if not default)
@@ -1953,7 +1953,7 @@ class DrawOption(object):
         elif(key in ['external', 'max_size', 'add_gap']):
             try:
                 value = self.pass_to_number(value)
-            except:
+            except Exception:
                 raise self.DrawingOptionError('%s is not a numerical when %s \
                                 requires one' % (value, key))
             setattr(self, key, value)

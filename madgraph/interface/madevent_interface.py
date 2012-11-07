@@ -237,7 +237,8 @@ class CmdExtended(cmd.Cmd):
         try:
             self.update_status('Command \'%s\' done.<br> Waiting for instruction.' % arg[0], 
                                level=None, error=True)
-        except:
+        except Exception:
+            misc.sprint('update_status fails')
             pass
         
     
@@ -627,8 +628,8 @@ class CheckValidForCmd(object):
         if args and args[-1].startswith('--accuracy='):
             try:
                 accuracy = float(args[-1].split('=')[-1])
-            except:
-                self.InvalidCmd('Argument error in calculate_decay_widths command')
+            except Exception:
+                raise self.InvalidCmd('Argument error in calculate_decay_widths command')
             del args[-1]
         if len(args) > 1:
             self.help_calculate_decay_widths()
@@ -718,7 +719,7 @@ class CheckValidForCmd(object):
         try:
             import models.model_reader as model_reader
             import models.import_ufo as import_ufo
-        except:
+        except ImportError:
             raise self.ConfigurationError, '''Can\'t load MG5.
             The variable mg5_path should not be correctly configure.'''
             
@@ -1474,7 +1475,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                      'pgs_card.dat', 'pythia_card.dat']:
             try:
                 os.remove(pjoin(self.me_dir, 'Cards', name))
-            except:
+            except Exception:
                 pass
             
         banner_mod.split_banner(args[0], self.me_dir, proc_card=False)
@@ -1799,7 +1800,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     try: # If formatting is wrong, don't want this particle
                         particle = int(line[1])
                         width = float(line[2])
-                    except:
+                    except Exception:
                         particle = 0
                 # Read BRs for this decay
                 line = param_card[line_number]
@@ -1813,7 +1814,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     try: # Remove BR if formatting is wrong
                         partial_width = float(line[0])*width
                         decay_products = [int(p) for p in line[2:2+int(line[1])]]
-                    except:
+                    except Exception:
                         line=param_card[line_number]
                         continue
                     try:
@@ -1889,7 +1890,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.update_status("Merging LHE files", level='parton')
         try:
             os.mkdir(pjoin(self.me_dir,'Events', self.run_name))
-        except:
+        except Exception:
             pass
         os.system('%(bin)s/merge.pl %(event)s/%(name)s_*/unweighted_events.lhe.gz %(event)s/%(name)s/unweighted_events.lhe.gz %(event)s/%(name)s_banner.txt' 
                   % {'bin': self.dirbin, 'event': pjoin(self.me_dir,'Events'),
@@ -2122,7 +2123,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.update_status("Combining runs", level='parton')
         try:
             os.remove(pjoin(Pdir, 'combine_runs.log'))
-        except:
+        except Exception:
             pass
         
         bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
@@ -2147,7 +2148,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.update_status('Combining Events', level='parton')
         try:
             os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
-        except:
+        except Exception:
             pass
         self.cluster.launch_and_wait('../bin/internal/run_combine', 
                                         cwd=pjoin(self.me_dir,'SubProcesses'),
@@ -2390,7 +2391,7 @@ calculator."""
         self.update_status('Running Pythia', 'pythia')
         try:
             os.remove(pjoin(self.me_dir,'Events','pythia.done'))
-        except:
+        except Exception:
             pass
         
         ## LAUNCHING PYTHIA
@@ -2518,7 +2519,8 @@ calculator."""
         try:
             self.resuls.def_current(run)
             self.update_status(' Cleaning %s' % run, level=None)
-        except:
+        except Exception:
+            misc.sprint('fail to update results or html status')
             pass # Just ensure that html never makes crash this function
 
 
@@ -2571,12 +2573,12 @@ calculator."""
                 if os.path.exists(pjoin(self.me_dir, 'Events', run, file2rm)):
                     try:
                         os.remove(pjoin(self.me_dir, 'Events', run, file2rm))
-                    except:
+                    except Exception:
                         shutil.rmtree(pjoin(self.me_dir, 'Events', run, file2rm))
                 else:
                     try:
                         os.remove(pjoin(self.me_dir, 'HTML', run, file2rm))
-                    except:
+                    except Exception:
                         shutil.rmtree(pjoin(self.me_dir, 'HTML', run, file2rm))
 
 
@@ -2586,7 +2588,7 @@ calculator."""
             try:
                 if tag and self.results[run][0]['tag'] != tag:
                     raise Exception, 'dummy'
-            except:
+            except Exception:
                 pass
             else:
                 to_delete = glob.glob(pjoin(self.me_dir, 'SubProcesses', '%s*' % run))
@@ -2610,7 +2612,7 @@ calculator."""
                 # remove banner
                 try:
                     os.remove(pjoin(self.me_dir, 'Events',run,'%s_%s_banner.txt' % (run,tag)))
-                except:
+                except Exception:
                     logger.warning('fail to remove the banner')
                 # remove the run from the html output
                 if run in self.results:
@@ -2785,7 +2787,7 @@ calculator."""
                 Ire = re
                 try : 
                     fsock = open(exe)
-                except:
+                except Exception:
                     fsock = open(pjoin(cwd,exe))
                 text = fsock.read()
                 output_files = Gre.findall(text)
@@ -3102,11 +3104,11 @@ calculator."""
   
         try:
             os.remove(pjoin(self.me_dir,'RunWeb'))
-        except:
+        except Exception:
             pass
         try:
             self.store_result()
-        except:
+        except Exception:
             # If nothing runs they they are no result to update
             pass
         try:
@@ -3117,11 +3119,11 @@ calculator."""
             devnull = open(os.devnull, 'w') 
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)
-        except:
+        except Exception:
             pass
         try:
             devnull.close()
-        except:
+        except Exception:
             pass
 
         return super(MadEventCmd, self).do_quit(line)
@@ -3197,7 +3199,7 @@ calculator."""
             misc.call(['%s/ExRootLHEFConverter' % eradir, 
                              input, output],
                             cwd=pjoin(self.me_dir, 'Events'))
-        except:
+        except Exception:
             logger.warning('fail to produce Root output [problem with ExRootAnalysis]')
     
     def clean_pointless_card(self, mode):
@@ -3682,7 +3684,7 @@ class GridPackCmd(MadEventCmd):
         self.update_status("Combining runs", level='parton')
         try:
             os.remove(pjoin(Pdir, 'combine_runs.log'))
-        except:
+        except Exception:
             pass
         
         bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
@@ -3941,7 +3943,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 else:
                     try:
                         value = float(args[-1])
-                    except:
+                    except Exception:
                         logger.warning('Invalid input: Expected number and not \'%s\'' \
                                                                      % args[-1])
                         return

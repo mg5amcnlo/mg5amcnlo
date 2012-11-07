@@ -245,7 +245,7 @@ class FKSRealProcess(object):
         for order in perturbed_orders:
             try:
                 orders[order] +=1
-            except:
+            except :
                 pass
             if order == 'QCD':
                 orders['WEIGHTED'] +=1

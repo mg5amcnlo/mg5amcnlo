@@ -1433,7 +1433,7 @@ class FDStructure(base_objects.PhysicsObject):
                         try:
                             tag[i+1][0].remove(leg)
                             Found=True
-                        except:
+                        except Exception:
                             pass
                     if Found:
                         tag[i+1][0].append(legs[-1])
