@@ -1948,7 +1948,9 @@ Integrated cross-section
                         break
                 else:
                     # possible when using lhapdf
-                    self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
+                    self.pdffile = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'], 
+                            shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+                    #self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
                     input_files.append(self.pdffile)
                     
             
