@@ -1334,10 +1334,15 @@ Integrated cross-section
                     stats['UPS'][channel_name] = [int(UPS_stats.group('nPS')),
                                                    int(UPS_stats.group('nUPS'))]
         # Find the number of potential errors found in all log files
+        # This re is a simple match on a case-insensitve 'error' but there is 
+        # also some veto added for excluding the sentence 
+        #  "See Section 6 of paper for error calculation."
+        # which appear in the header of lhapdf in the logs.
+        err_finder = re.compile(\
+             r"(?<!of\spaper\sfor\s)\bERROR\b(?!\scalculation\.)",re.IGNORECASE)
         for log in all_log_files:
             logfile=open(log,'r')
-            nErrors = len(re.findall(re.compile(r"\bERROR\b",\
-                                                re.IGNORECASE), logfile.read()))
+            nErrors = len(re.findall(err_finder, logfile.read()))
             logfile.close()
             if nErrors != 0:
                 stats['Errors'].append((str(log),nErrors))
