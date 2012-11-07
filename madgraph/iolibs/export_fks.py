@@ -2033,8 +2033,12 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         # link the files from the MODEL
         model_path = self.dir_path + '/Source/MODEL/'
-        ln(model_path + '/mp_coupl.inc', self.dir_path + '/SubProcesses')
-        ln(model_path + '/mp_coupl_same_name.inc', self.dir_path + '/SubProcesses')
+        # Note that for the [real=] mode, these files are not present
+        if os.path.isfile(os.path.join(model_path,'mp_coupl.inc')):
+            ln(model_path + '/mp_coupl.inc', self.dir_path + '/SubProcesses')
+        if os.path.isfile(os.path.join(model_path,'mp_coupl_same_name.inc')):
+            ln(model_path + '/mp_coupl_same_name.inc', \
+                                                self.dir_path + '/SubProcesses')
 
         # Write the cts_mpc.h and cts_mprec.h files imported from CutTools
         self.write_mp_files(writers.FortranWriter('cts_mprec.h'),\
