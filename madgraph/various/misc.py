@@ -455,7 +455,8 @@ def write_PS_input(filePath, PS):
         PSfile = open(filePath, 'w')
         # Add a newline in the end as the implementation fortran 'read'
         # command on some OS is problematic if it ends directly with the
-        #Êfloating point number read.
+        # floating point number read.
+
         PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in p]) \
                                                              for p in PS])+'\n')
         PSfile.close()

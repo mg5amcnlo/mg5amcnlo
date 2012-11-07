@@ -1,6 +1,7 @@
       program check_events
 c Checks self-consistency of event files. Compile with
-c g77 -o check_events check_events.f handling_lhe_events.f
+c g77 -I./P0_<anydir> -o check_events 
+c   check_events.f handling_lhe_events.f fill_MC_mshell.f
 c With some work on finalizeprocesses(), it should work also for 
 c LH files created by Herwig, assuming they are identified by a 
 c negative number of events
@@ -463,6 +464,7 @@ c
       charges(21)=0.d0
       charges(23)=0.d0
       charges(24)=1.d0
+      charges(25)=0.d0
 c
       do i=-100,-1
         if(abs(charges(-i)).le.1.d0)charges(i)=-charges(-i)
