@@ -1290,23 +1290,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
      
         BW_effects=1
 
-# by default set the branching fraction to 1
-        branching_fraction=1.0
-        
-        answer=self.ask( "Branching fraction ? (type a negative number is unknown ) \n",-1.0)
-
-        try:
-            if float(answer) >0.0: branching_fraction=float(answer)
-        except: 
-            pass
-
         path_me=self.me_dir
         current_dir=os.getcwd()
         try:
 #            os.chdir("../MadSpin")
             generate_all=decay.decay_all_events(inputfile,mybanner,to_decay,decay_processes,\
-                 prod_branches, proc_option, max_weight, BW_effects,branching_fraction, \
-                 path_me)
+                 prod_branches, proc_option, max_weight, BW_effects,path_me)
         except Exception:
             os.chdir(current_dir)
             raise

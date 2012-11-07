@@ -2088,7 +2088,6 @@ class decay_misc:
         list_prod=os.listdir(pjoin(path_me,"production_me/SubProcesses"))
         counter=0
         logger.info("""Finalizing production me's """)
-        curr_dir=os.getcwd()
 
          
         for direc in list_prod:
@@ -2108,35 +2107,36 @@ class decay_misc:
                 shutil.copyfile(file_madspin, pjoin(new_path,"makefile") )
 
                 file=pjoin(path_me, 'param_card.dat')
-                shutil.copyfile(file,pjoin(path_me,"production_me","Cards","param_card.dat")) 
-                
-                # in case there are new DHELAS routines, we need to recompile 
-                misc.compile(arg=['clean'], cwd=pjoin(path_me,"production_me","Source", "DHELAS"), mode='fortran')
-                misc.compile( cwd=pjoin(path_me,"production_me","Source","DHELAS"), mode='fortran')
+                shutil.copyfile(file,pjoin(path_me,"production_me","Cards","param_card.dat"))                
 
-
-
-		# write all the parameters:
+		# files to produce the parameters:
                 file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'initialize.f')
                 shutil.copyfile(file_madspin,pjoin(new_path,"initialize.f"))
                     
                 file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'lha_read_ms.f')
                 shutil.copyfile(file_madspin, pjoin(path_me,"production_me","Source","MODEL","lha_read.f" )) 
+                shutil.copyfile(pjoin(path_me,'production_me','Source','MODEL','input.inc'),pjoin(new_path,'input.inc')) 
+
+
+                # COMPILATION
+                # in case there are new DHELAS routines, we need to recompile 
+                misc.compile(arg=['clean'], cwd=pjoin(path_me,"production_me","Source", "DHELAS"), mode='fortran')
+                misc.compile( cwd=pjoin(path_me,"production_me","Source","DHELAS"), mode='fortran')
 
                 misc.compile(arg=['clean'], cwd=pjoin(path_me,"production_me","Source", "MODEL"), mode='fortran')
                 misc.compile( cwd=pjoin(path_me,"production_me","Source","MODEL"), mode='fortran')                   
 
                 os.chdir(new_path)
-                
                 misc.compile(arg=['clean'], cwd=new_path, mode='fortran')
                 misc.compile(arg=['init'],cwd=new_path,mode='fortran')
                 misc.call('./init')
+
                 shutil.copyfile('parameters.inc', '../parameters.inc')
                 os.chdir(path_me)
                     
-                shutil.copyfile(pjoin(path_me,'production_me','Source','MODEL','input.inc'),pjoin(new_path,'input.inc')) 
 
                 misc.compile(cwd=new_path, mode='fortran')
+
                 if(os.path.getsize(pjoin(path_me,'production_me','SubProcesses', 'parameters.inc'))<10):
 		    raise Exception, "Parameters of the model were not written correctly ! " 
                 return prod_name
@@ -2156,7 +2156,6 @@ class decay_misc:
             if direc[0]=="P":
                 
                 decay_name=direc[string.find(direc,"_")+1:]
-      
                 
                 old_path=pjoin(path_me,'full_me','SubProcesses',direc)
                 new_path=pjoin(path_me, 'full_me','SubProcesses',decay_name)
@@ -2175,16 +2174,20 @@ class decay_misc:
                                 
                 shutil.copyfile(pjoin(path_me,'full_me','Source','MODEL','input.inc'),pjoin(new_path,'input.inc'))
 
-                # in case there are new DHELAS routines, we need to recompile                
-                misc.compile(arg=['clean'], cwd=pjoin(path_me,"full_me","Source","DHELAS"), mode='fortran')
-                misc.compile( cwd=pjoin(path_me,"full_me","Source","DHELAS"), mode='fortran')
-
                 # write all the parameters:
                 file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'initialize.f')
                 shutil.copyfile(file_madspin,pjoin(new_path,"initialize.f"))
                          
                 file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'lha_read_ms.f')
                 shutil.copyfile(file_madspin, pjoin(path_me,"full_me","Source","MODEL","lha_read.f" ))  
+
+                file=pjoin(path_me, 'param_card.dat')
+                shutil.copyfile(file,pjoin(path_me,"full_me","Cards","param_card.dat")) 
+
+                # BEGIN COMPILATION
+                # in case there are new DHELAS routines, we need to recompile                
+                misc.compile(arg=['clean'], cwd=pjoin(path_me,"full_me","Source","DHELAS"), mode='fortran')
+                misc.compile( cwd=pjoin(path_me,"full_me","Source","DHELAS"), mode='fortran')
 
                 misc.compile(arg=['clean'], cwd=pjoin(path_me,"full_me","Source","MODEL"), mode='fortran')
                 misc.compile( cwd=pjoin(path_me,"full_me","Source","MODEL"), mode='fortran')   
@@ -2195,21 +2198,18 @@ class decay_misc:
                 misc.call('./init')
                 shutil.copyfile('parameters.inc', '../parameters.inc')
                 os.chdir(path_me)
-
                 
                 # now we can compile check
                 misc.compile(arg=['check'], cwd=new_path, mode='fortran')
+                # END COMPILATION
 
-                file=pjoin(path_me, 'param_card.dat')
-                shutil.copyfile(file,pjoin(path_me,"full_me","Cards","param_card.dat"))             
-
-                    #os.remove(pjoin(path_me,"parameters.inc"))
+            
                 if(os.path.getsize(pjoin(path_me,'full_me','SubProcesses', 'parameters.inc'))<10):
 		    raise Exception, "Parameters of the model were not written correctly ! " 
 
-                decay_pattern=direc[string.find(direc,"_")+1:]
-                decay_pattern=decay_pattern[string.find(decay_pattern,"_")+1:]
-                decay_pattern=decay_pattern[string.find(decay_pattern,"_")+1:]
+                #decay_pattern=direc[string.find(direc,"_")+1:]
+                #decay_pattern=decay_pattern[string.find(decay_pattern,"_")+1:]
+                #decay_pattern=decay_pattern[string.find(decay_pattern,"_")+1:]
 
         os.chdir(path_me)
         return decay_name
@@ -2584,8 +2584,8 @@ class decay_all_events:
     
     @misc.mute_logger()
     def __init__(self,inputfile,mybanner,to_decay,decay_processes,\
-                 prod_branches,proc_option, max_weight, BW_effects,\
-                 branching_fraction,path_me):
+                 prod_branches,proc_option, max_weight_arg, BW_effects,\
+                path_me):
         
         self.calculator = {}
         self.calculator_nbcall = {}
@@ -2786,11 +2786,15 @@ class decay_all_events:
 #==========================================================================
 
 
-# THE LINE HERE BELOW IS NOT USED ANYMORE
-#        full_proc_line, decay_struct_item=decay_tools.get_full_process_structure(decay_processes,mybanner.proc["generate"], base_model, mybanner, check=1)
 
 
-# consider the possibility of several production process
+
+
+
+# Estimation of the maximum weight
+#=================================
+
+#    consider the possibility of several production process
         set_of_processes=[]
 #    me_full_mg5format=[]
 #    me_prod_mg5format=[]
@@ -2798,16 +2802,17 @@ class decay_all_events:
         decay_path={}     # dictionary to record the name of the directory with decay fortran me
         production_path={} # dictionary to record the name of the directory with production fortran me
 
-# also for production matrix elements, 
+#    also for production matrix elements, 
 #    we need to keep track of the topologies
         topologies={}
-
-#    tag_production=mybanner.proc["generate"].replace(" ", "")
 
  
         os.system("date")
 # Now we are ready to start the evaluation of the maximum weight 
-        if max_weight<0:
+        if max_weight_arg>0:
+            max_weight={}
+            for tag_decay in decay_tags: max_weight[tag_decay]=max_weight_arg
+        else:
             logger.info('  ')
             logger.info('   Estimating the maximum weight    ')
             logger.info('   *****************************    ')
@@ -3376,14 +3381,6 @@ if __name__=="__main__":
         BW_effects=0
 
 
-# by default set the branching fraction to 1
-    branching_fraction=1.0
-
-    answer=raw_input( "Branching fraction ? (type a negative number is unknown ) \n")
-    if float(answer) >0.0: branching_fraction=float(answer)
-
-
-
     generate_all=decay_all_events(inputfile,mybanner,to_decay,decay_processes,\
-                prod_branches,proc_option, max_weight, BW_effects,branching_fraction, curr_dir)
+                prod_branches,proc_option, max_weight, BW_effects, curr_dir)
 
