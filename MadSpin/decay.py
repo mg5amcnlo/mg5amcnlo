@@ -1112,6 +1112,8 @@ class production_topo(dict):
                     oldt=t
                     p1z=pp
                     pt=0.0
+                    p1x=0
+                    p2x=0
                     t=m1*m1+ma2-2.0*p1E*E_acms+2.0*p_acms*p1z
                     diff_t=abs((t-oldt)/t)*100
                     if (diff_t>2.0): 
@@ -1133,24 +1135,24 @@ class production_topo(dict):
                 p1x=pt*branch["cosphi"]
                 p1y=pt*branch["sinphi"]
 
-                p1=momentum(p1E,p1x,p1y,p1z)
+            p1=momentum(p1E,p1x,p1y,p1z)
 
-                p1=p1.rot(pa_cms)
-                pboost.px=-pboost.px
-                pboost.py=-pboost.py
-                pboost.pz=-pboost.pz
-                p1=p1.boost(pboost)
-                pr=pa.subtract(p1)
+            p1=p1.rot(pa_cms)
+            pboost.px=-pboost.px
+            pboost.py=-pboost.py
+            pboost.pz=-pboost.pz
+            p1=p1.boost(pboost)
+            pr=pa.subtract(p1)
 #                print " p1 is "
 #                print p1.nice_string()
                 #print " pr is "
                 #print pr.nice_string()
-                p2=(pa.add(pb)).subtract(p1)
+            p2=(pa.add(pb)).subtract(p1)
 #                print " p2 is "
 #                print p2.nice_string()
 #            now update momentum 
-                self["get_momentum"][id1]=p1.copy()
-                self["get_momentum"][res]=pr.copy()
+            self["get_momentum"][id1]=p1.copy()
+            self["get_momentum"][res]=pr.copy()
 
         # after we have looped over all t-branchings,
         # p2 can be identified with the momentum of the second daughter of the last branching
@@ -2580,6 +2582,32 @@ class decay_misc:
 
         return line, proc_option
 
+    def get_mean_sd(self,list_obj):
+        """ return the mean value and the standard deviation of a list of reals """
+        sum=0.0
+        N=float(len(list_obj))
+        for item in list_obj:
+            sum+=item
+        mean=sum/N
+        sd=0.0
+        for item in list_obj:
+            sd+=(item-mean)**2
+        sd=sd/(N-1.0)
+        return mean, sd
+     
+
+    def check_decay_tag(self, tag,tag_list,check_weights):
+        """ check is check_weights[tag] is proportional to 
+            check_weights[x] for one x in tag_list   """
+
+        for x in tag_list:
+#           build a list of [el1/el2]
+            ratio=[ check_weights[x][index]/item for index, item in enumerate(check_weights[tag])]
+            mean, sd = self.get_mean_sd(ratio)
+ 
+            if sd<mean*1e-5: return x
+        return 0
+
 class decay_all_events:
     
     @misc.mute_logger()
@@ -2772,6 +2800,8 @@ class decay_all_events:
             multi_decay_processes[tag]['config']=list_branches
 
 #       compute the cumulative probabilities associated with the branching fractions
+#       keep track of sum of br over the decay channels at work, since we need to rescale
+#       the event weight by this number
         sum_br=decay_tools.set_cumul_proba_for_tag_decay(multi_decay_processes,decay_tags)
 
 
@@ -2782,36 +2812,165 @@ class decay_all_events:
 #      The only difference with the one-channel implementation resides in the fact that 
 #      decay_processes is replaced by multi_decay_processes
 
-#Next step: we need to determine which matrix elements are really necessary
-#==========================================================================
 
-
-
-
-
-
-
-# Estimation of the maximum weight
-#=================================
-
+ 
+# A few initialisations:
+#========================
 #    consider the possibility of several production process
         set_of_processes=[]
-#    me_full_mg5format=[]
-#    me_prod_mg5format=[]
         decay_struct={}
         decay_path={}     # dictionary to record the name of the directory with decay fortran me
         production_path={} # dictionary to record the name of the directory with production fortran me
-
 #    also for production matrix elements, 
 #    we need to keep track of the topologies
         topologies={}
 
- 
+
+#Next step: we need to determine which matrix elements are really necessary
+#==========================================================================
+
+        # create a dictionnary that maps a 'tag_decay' onto 'tag_me_decay' = tag for the matrix elements
+	# call this map 'map_decay_me' 
+        logger.info('Checking the equality of matrix elements for different decay channels ... ')
+        check_weights={}
+        curr_event=Event(inputfile)
+        curr_event.get_next_event()
+        prod_process=curr_event.give_procdef(pid2label_dict)
+        extended_prod_process=decay_tools.find_resonances(prod_process, prod_branches)
+
+        tag_production=prod_process.replace(">", "_")
+        tag_production=tag_production.replace(" ","")
+        tag_production=tag_production.replace("~","x")
+        set_of_processes.append(tag_production) 
+        # generate fortran me for production only
+        logger.info(tag_production)
+        topologies[tag_production]=\
+               decay_tools.generate_fortran_me([extended_prod_process+proc_option],\
+               mybanner.proc["model"], 0,mgcmd,path_me)
+
+        prod_name=decay_tools.compile_fortran_me_production(path_me)
+        production_path[tag_production]=prod_name
+
+        # generate fortran me for the whole process
+        decay_struct[tag_production]={}
+        decay_path[tag_production]={}
+        for tag_decay in decay_tags:
+             check_weights[tag_decay]=[]
+             new_full_proc_line, new_decay_struct=\
+                decay_tools.get_full_process_structure(multi_decay_processes[tag_decay]['config'],\
+                extended_prod_process, base_model, mybanner)
+             decay_struct[tag_production][tag_decay]=new_decay_struct
+#
+             decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
+                                                    mybanner.proc["model"], 1,mgcmd,path_me)
+
+             decay_name=decay_tools.compile_fortran_me_full(path_me)
+             decay_path[tag_production][tag_decay]=decay_name
+
+        # select a topology for the reshuffling
+        p, p_str=curr_event.give_momenta()
+        prod_values = self.calculate_matrix_element('prod',
+                               production_path[tag_production], p_str)
+        prod_values=prod_values.replace("\n", "")
+        prod_values=prod_values.split()
+        mg5_me_prod = float(prod_values[0])
+        tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
+
+        # extract the canonical phase-space variable based on that topology       
+        topologies[tag_production][tag_topo].dress_topo_from_event(curr_event,to_decay)
+        topologies[tag_production][tag_topo].extract_angles()
+
+        # Breit-Wigner effects + reshuffling      
+        decay_tools.set_light_parton_massless(topologies[tag_production][tag_topo])
+        for dec in range(100):
+             try_reshuffle=0
+             while 1:
+                 try_reshuffle+=1
+                 BW_weight_prod=decay_tools.generate_BW_masses(\
+                       topologies[tag_production][tag_topo], \
+                       to_decay.values(),pid2label_dict, pid2width,pid2mass, \
+                       curr_event.shat)
+
+                 succeed=topologies[tag_production][tag_topo].reshuffle_momenta()
+                 # sanlity check
+                 for part in topologies[tag_production][tag_topo]['get_momentum'].keys():
+                     if part in to_decay and \
+                           topologies[tag_production][tag_topo]['get_momentum'][part].m<1.0:
+                         logger.debug('Mass of a particle to decay is less than 1 GeV')
+                         logger.debug('in reshuffling loop')
+                 # end sanity check
+                 if succeed: break
+                 if try_reshuffle==10:
+                     logger.warning( 'tried 10x to reshuffle the momenta, failed')
+                     logger.warning( ' So let us try with another topology')
+                     tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
+                     topologies[tag_production][tag_topo].dress_topo_from_event(\
+                                                             curr_event,to_decay)
+                     topologies[tag_production][tag_topo].extract_angles()
+                     decay_tools.set_light_parton_massless(topologies\
+                                              [tag_production][tag_topo])
+                     try_reshuffle=0
+
+             topologies[tag_production][tag_topo].topo2event(curr_event,to_decay)
+
+             decayed_event, BW_weight_decay=decay_tools.decay_one_event(\
+                     curr_event,decay_struct[tag_production][decay_tags[0]], \
+                     pid2color_dict, to_decay, pid2width, \
+                     pid2mass, resonances,BW_effects)
+
+             if decayed_event==0:
+                 logger.warning('failed to decay event properly')
+                 continue
+             for tag_decay in decay_tags:
+#     set the momenta for the production event and the decayed event:
+                 p, p_str=curr_event.give_momenta()
+                 p_full, p_full_str=decayed_event.give_momenta()
+
+#     Evaluate matrix elements
+#     start with production weight:
+                 prod_values =self.calculate_matrix_element('prod',
+                 production_path[tag_production], p_str)
+
+                 prod_values=prod_values.replace("\n", "")
+                 prod_values=prod_values.split()
+                 mg5_me_prod = float(prod_values[0])
+#     then decayed weight:
+                 full_values =self.calculate_matrix_element('full',
+                            decay_path[tag_production][tag_decay], p_full_str)
+
+                 mg5_me_full = float(full_values)
+                    #mg5_me_full = float(external.communicate(input=p_full_str)[0])
+                 mg5_me_full=mg5_me_full*BW_weight_prod*BW_weight_decay
+                 os.chdir(curr_dir)
+                 if(not mg5_me_full>0 or not mg5_me_prod >0 ):
+                       logger.warning('WARNING: NEGATIVE MATRIX ELEMENT !!')
+                 weight=mg5_me_full/mg5_me_prod
+                 check_weights[tag_decay].append(weight)
+
+#       verify if some matrix elements are identical up to an overal factor                
+        map_decay_me={}
+        decay_me_tags=[]
+        for tag_decay in decay_tags:
+             tag=decay_tools.check_decay_tag(tag_decay,map_decay_me.values(),check_weights)
+             if tag==0:
+                 map_decay_me[tag_decay]=tag_decay
+                 decay_me_tags.append(tag_decay)
+             else:
+                 map_decay_me[tag_decay]=tag
+                 self.terminate_fortran_executables(decay_path[tag_production][tag_decay])
+                 shutil.rmtree(pjoin(self.path_me,'full_me', 'SubProcesses',decay_path[tag_production][tag_decay]))
+
+        logger.info('Out of %d decay channels, %s matrix elements are independent ' % (len(decay_tags), len(decay_me_tags)))
+        del check_weights
+# Estimation of the maximum weight
+#=================================
+        inputfile.seek(0)
+        del curr_event 
         os.system("date")
 # Now we are ready to start the evaluation of the maximum weight 
         if max_weight_arg>0:
             max_weight={}
-            for tag_decay in decay_tags: max_weight[tag_decay]=max_weight_arg
+            for tag_decay in decay_me_tags: max_weight[tag_decay]=max_weight_arg
         else:
             logger.info('  ')
             logger.info('   Estimating the maximum weight    ')
@@ -2826,10 +2985,9 @@ class decay_all_events:
             starttime = time.time()
             for ev in range(5):
                 probe_weight.append({})
-                for tag_decay in decay_tags:
+                for tag_decay in decay_me_tags:
                     probe_weight[ev][tag_decay]=0.0
                 curr_event.get_next_event()
-
 #    check if we have a new production process, in which case 
 #    we need to generate the corresponding matrix elements
                 prod_process=curr_event.give_procdef(pid2label_dict)
@@ -2865,6 +3023,7 @@ class decay_all_events:
                             extended_prod_process, base_model, mybanner)
                         decay_struct[tag_production][tag_decay]=new_decay_struct
 #
+                    for tag_decay in decay__me_tags:
                         decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
                                                     mybanner.proc["model"], 1,mgcmd,path_me)
 
@@ -2966,7 +3125,7 @@ class decay_all_events:
 #                   now we need to decay it.
 #                   There might be several decay channels -> loop over them
 
-                    for tag_decay in decay_tags:
+                    for tag_decay in decay_me_tags:
 
                         decayed_event, BW_weight_decay=decay_tools.decay_one_event(\
                                             curr_event,decay_struct[tag_production][tag_decay], \
@@ -3002,14 +3161,14 @@ class decay_all_events:
                         weight=mg5_me_full/mg5_me_prod
                         if (weight>probe_weight[ev][tag_decay]): probe_weight[ev][tag_decay]=weight
 
-                for  index,tag_decay in enumerate(decay_tags):
+                for  index,tag_decay in enumerate(decay_me_tags):
                   logger.info('Max weight,  event '+str(ev+1)+\
                             ' , dk config '+str(index+1)+' : '+str(probe_weight[ev][tag_decay]))
 
             max_weight={}
             min_weight={}
 
-            for index,tag_decay in enumerate(decay_tags):
+            for index,tag_decay in enumerate(decay_me_tags):
                 max_weight[tag_decay]=0.0
                 min_weight[tag_decay]=1e10
                 for ev in range(5):
@@ -3044,7 +3203,7 @@ class decay_all_events:
                 for part in multi_decay_processes[tag_decay]['config'].keys():
                     new_banner+="# "+multi_decay_processes[tag_decay]['config'][part]+"\n"
                 new_banner+="# branching fraction: "+str(multi_decay_processes[tag_decay]['br']) + "\n"
-                new_banner+="# estimate of the maximum weight: "+str(max_weight[tag_decay]) + "\n"
+                new_banner+="# estimate of the maximum weight: "+str(max_weight[map_decay_me[tag_decay]]) + "\n"
             new_banner+="</DECAY>\n"
             new_banner+=old_banner[pos:]
             outputfile.write(new_banner)
@@ -3096,6 +3255,7 @@ class decay_all_events:
                         extended_prod_process, base_model, mybanner)
                     decay_struct[tag_production][tag_decay]=new_decay_struct
 #
+                for tag_decay in decay_me_tags:
                     decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
                                                 mybanner.proc["model"], 1,mgcmd,path_me)
 
@@ -3172,7 +3332,7 @@ class decay_all_events:
                 mg5_me_prod = float(prod_values[0])
 #            then decayed weight:
                 full_value = self.calculate_matrix_element('full', 
-                                         decay_path[tag_production][tag_decay], p_full_str)
+                                         decay_path[tag_production][map_decay_me[tag_decay]], p_full_str)
                 mg5_me_full = float(full_value)
                 mg5_me_full=mg5_me_full*BW_weight_prod*BW_weight_decay
 
@@ -3183,10 +3343,10 @@ class decay_all_events:
 #            mg5_me_full, amp_full = evaluator.evaluate_matrix_element(me_full[tag_production],p_full)
 
                 weight=mg5_me_full/mg5_me_prod
-                if weight>max_weight[tag_decay]: 
+                if weight>max_weight[map_decay_me[tag_decay]]: 
                     logger.info('warning: got a larger weight than max_weight estimate')
-                    logger.info('the ratio with the max_weight estimate is '+str(weight/max_weight[tag_decay]))
-                if (weight/max_weight[tag_decay]> random.random()):
+                    logger.info('the ratio with the max_weight estimate is '+str(weight/max_weight[map_decay_me[tag_decay]]))
+                if (weight/max_weight[map_decay_me[tag_decay]]> random.random()):
 
 #             Here we need to restore the masses of the light partons 
 #             initially found in the lhe production event
@@ -3228,11 +3388,15 @@ class decay_all_events:
 
 
 
-    def terminate_fortran_executables(self):
+    def terminate_fortran_executables(self, path_to_decay=0 ):
 	"""routine to terminate all fortran executables"""
 
-        for (mode, production) in self.calculator:
-            external = self.calculator[(mode, production)]
+        if not path_to_decay:
+            for (mode, production) in self.calculator:
+                external = self.calculator[(mode, production)]
+                external.terminate()
+        else:
+            external = self.calculator[('full', path_to_decay)]
             external.terminate()
 
     def calculate_matrix_element(self, mode, production, stdin_text):
