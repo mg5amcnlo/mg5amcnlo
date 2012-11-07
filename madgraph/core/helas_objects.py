@@ -4419,18 +4419,28 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 if matrix_element in matrix_elements:
                     me = matrix_elements[matrix_elements.index(matrix_element)]
                     me_procs = me.get('processes')
-                    logger.info("Combining process %s with %s" % \
-                            (matrix_element.get('processes')[0].nice_string().\
-                                 replace('Process: ', ''),
-                             me.get('processes')[0].nice_string().\
-                                 replace('Process: ', '')))
-                    for proc in matrix_element.get('processes'):
-                        if proc not in me_procs:
-                            me_procs.append(proc)
-                        else:
-                            raise InvalidCmd, "Duplicate process %s found. Please check your processes." % \
-                                proc.nice_string().replace('Process: ', '')
-                    continue
+                    procs = matrix_element.get('processes')
+                    if me_procs[0].get_ninitial() > 1 or \
+                            procs[0].get_initial_ids() == \
+                            me_procs[0].get_initial_ids():
+                        logger.info("Combining process %s with %s" % \
+                                (procs[0].nice_string().\
+                                     replace('Process: ', ''),
+                                 me_procs[0].nice_string().\
+                                     replace('Process: ', '')))
+                        for proc in procs:
+                            if proc not in me_procs:
+                                me_procs.append(proc)
+                            else:
+                                raise InvalidCmd,("Duplicate process %s found."\
+                                           +" Please check your processes.") % \
+                                    proc.nice_string().replace('Process: ', '')
+                        # Remove this matrix element from the lists
+                        if combine_matrix_elements and amplitude_tags:
+                            amplitude_tags.pop(-1)
+                            identified_matrix_elements.pop(-1)
+                            permutations.pop(-1)
+                        continue
 
                 # Otherwise, add this matrix element to list
                 matrix_elements.append(matrix_element)
