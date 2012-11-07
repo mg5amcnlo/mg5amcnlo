@@ -408,7 +408,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,
                                    ignore_six_quark_processes))
-        except: 
+        except AttributeError: 
             self._fks_multi_proc = fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,
                                    ignore_six_quark_processes)

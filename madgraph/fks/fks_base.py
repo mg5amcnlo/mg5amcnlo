@@ -89,7 +89,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         try:
             # Now generating the borns for the first time.
             super(FKSMultiProcess, self).__init__(*arguments)
-        except:
+        except InvalidCmd as error:
             # If no born, then this process most likely does not have any.
             raise InvalidCmd, "Born diagrams could not be generated for the "+\
                self['process_definitions'][0].nice_string().replace('Process',\
@@ -245,7 +245,7 @@ class FKSRealProcess(object):
         for order in perturbed_orders:
             try:
                 orders[order] +=1
-            except :
+            except KeyError:
                 pass
             if order == 'QCD':
                 orders['WEIGHTED'] +=1
