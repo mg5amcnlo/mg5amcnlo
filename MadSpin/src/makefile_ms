@@ -15,3 +15,6 @@ $(INIT): initialize.o makefile $(LIBS)
 	$(FC) $(FFLAGS) -o $(INIT) initialize.o $(LINKLIBS)
 
 driver.f: nexternal.inc pmass.inc ngraphs.inc coupl.inc
+
+clean:
+	$(RM) *.o

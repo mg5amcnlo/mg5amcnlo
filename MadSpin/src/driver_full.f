@@ -67,10 +67,6 @@ c      read phase-space point
       enddo
 
 
-       if( WT<1d-5) WT=1.491500D0
-       if( WW<1d-5) WW=2.047600D0
-       if( WZ<1d-5) WW=2.441404D0
-       if( WH<1d-5) WH=5.753088D0
 
 c     
 c     Now we can call the matrix element!

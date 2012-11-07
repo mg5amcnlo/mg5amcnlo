@@ -33,6 +33,7 @@ import os
 import shutil
 import logging
 import time
+import cmath
 pjoin = os.path.join
 from subprocess import Popen, PIPE, STDOUT
 
@@ -1407,24 +1408,27 @@ class width_estimate:
 
                         splittings={}
                         counter=0
-                        for d1 in set_B:
-                            for d2 in set_C:
-                                # loop over all channels
-			        for chan in self.br[initial].keys():
-                                  if (d1==self.br[initial][chan]['d1'] and \
-                                     d2==self.br[initial][chan]['d2']) or \
-				     (d2==self.br[initial][chan]['d1'] and \
-                                     d1==self.br[initial][chan]['d2']):
+			for chan in self.br[initial].keys(): # loop over all channels
+			    got_it=0
+                            for d1 in set_B: 
+				for d2 in set_C:
+                                  if (d1==self.br[initial][chan]['daughters'][0] and \
+                                     d2==self.br[initial][chan]['daughters'][1]) or \
+				     (d2==self.br[initial][chan]['daughters'][0] and \
+                                     d1==self.br[initial][chan]['daughters'][1]):
                                       split=" "+initial+" > "+d1+" "+d2+" "
                                       counter+=1
                                       splittings['s'+str(counter)]={}
                                       splittings['s'+str(counter)]['config']=split
                                       splittings['s'+str(counter)]['br']=self.br[initial][chan]['br']
-                                  break # to avoid double counting in cases such as w+ > j j 
-                   
+				      got_it=1
+                                      break # to avoid double counting in cases such as w+ > j j 
+                                if got_it: break                   
+
                         if len(splittings)==0:
 			    logger.info('Branching '+initial+' > '+final[0]+' '+final[1])
   			    logger.info('is currently unknown')
+                  
                             return 0
 		        else:
                             new_decay_processes[part]=self.update_branch(new_decay_processes[part],splittings)
@@ -1440,7 +1444,7 @@ class width_estimate:
                     fake_splitting['']['config']=item
                     new_decay_processes[part]=self.update_branch(new_decay_processes[part],fake_splitting)
 
-            print new_decay_processes[part]
+        return new_decay_processes
 
 
 
@@ -1450,16 +1454,29 @@ class width_estimate:
 	for res in self.br.keys():
 	    logger.info('  ')
  	    logger.info('decay channels for '+res+' :')
-	    logger.info('       BR                     d1  d2' )
+	    logger.info('       BR                 d1  d2' )
 
  	    for chan in self.br[res].keys():
 		bran=self.br[res][chan]['br']
-		d1=self.br[res][chan]['d1']
-		d2=self.br[res][chan]['d2']
-	        logger.info('   %14e2            %s  %s ' % (bran, d1, d2) )
+		d1=self.br[res][chan]['daughters'][0]
+		d2=self.br[res][chan]['daughters'][1]
+	        logger.info('   %e            %s  %s ' % (bran, d1, d2) )
 	logger.info('  ')
 
+    def print_partial_widths(self):
+	""" print a list of all known partial widths"""
 
+	for res in self.br.keys():
+	    logger.info('  ')
+ 	    logger.info('decay channels for '+res+' :')
+	    logger.info('       width                     d1  d2' )
+
+ 	    for chan in self.br[res].keys():
+		width=self.br[res][chan]['width']
+		d1=self.br[res][chan]['daughters'][0]
+		d2=self.br[res][chan]['daughters'][1]
+	        logger.info('   %e            %s  %s ' % (width, d1, d2) )
+	logger.info('  ')
 
     def extract_br_from_card(self,filename):
         """read the file width_calculator/Events/run_width/param_card.dat
@@ -1501,12 +1518,13 @@ class width_estimate:
 			branching_fractions[label_mother][channel_index]={}
 			list3=line.split()
 			if list3[1]=='2':
+			    branching_fractions[label_mother][channel_index]['daughters']=[]
 			    branching_fractions[label_mother][channel_index]['br']=\
 							float(list3[0]) 
-			    branching_fractions[label_mother][channel_index]['d1']=\
-							self.pid2label[int(list3[2])]
-			    branching_fractions[label_mother][channel_index]['d2']=\
-							self.pid2label[int(list3[3])]
+			    branching_fractions[label_mother][channel_index]\
+                                   ['daughters'].append(self.pid2label[int(list3[2])])
+			    branching_fractions[label_mother][channel_index]\
+                                   ['daughters'].append(self.pid2label[int(list3[3])])
                 else:
                     trappe.seek(pos)
 
@@ -1514,10 +1532,12 @@ class width_estimate:
 
 
     def generate_code_for_width_evaluation(self,mgcmd):
-        """ use madgraph to generate me's for res > all all  """
+        """ use madgraph to generate me's for res > all all  
+            OBSELETE: NOW WE USE THE FR IMPLEMENTATION
+        """
    
         commandline="import model "+self.model
-        mgcmd.exec_cmd(commandline)
+        mgcmd.exec_cmd(commandline)#
 
 	logger.info("generate "+self.resonances[0]+" > all all")
         commandline="generate "+self.resonances[0]+" > all all"
@@ -1532,29 +1552,101 @@ class width_estimate:
 	commandline="output width_calculator -f"
 	mgcmd.exec_cmd(commandline)
 	
+    def extract_br_for_antiparticle(self,label2pid,pid2label):
+        '''  
+            for each channel with a specific br value, 
+            set the branching fraction of the complex conjugated channel 
+            to the same br value 
+        '''
 
-    def launch_width_evaluation(self):
+	for res in self.br.keys():
+            anti_res=pid2label[-label2pid[res]]
+            self.br[anti_res]={}
+ 	    for chan in self.br[res].keys():
+                self.br[anti_res][chan]={}
+		bran=self.br[res][chan]['br']
+		d1=self.br[res][chan]['daughters'][0]
+		d2=self.br[res][chan]['daughters'][1]
+                d1bar=pid2label[-label2pid[d1]]
+                d2bar=pid2label[-label2pid[d2]]
+                self.br[anti_res][chan]['br']=bran
+                self.br[anti_res][chan]['daughters']=[]
+                self.br[anti_res][chan]['daughters'].append(d1bar)
+                self.br[anti_res][chan]['daughters'].append(d2bar)
+                if self.br[res][chan].has_key('width'):
+		    self.br[anti_res][chan]['width']=self.br[res][chan]['width']
+		    
+    def extract_br_from_width(self):
+        """
+          If compute_width is used to get the partial width values from FR formulae,
+          we still need to evaluate the br's from the partial widths
+        """
+	for res in self.br.keys():
+            total_width=0.0
+ 	    for chan in self.br[res].keys():
+ 		total_width+=self.br[res][chan]['width']
+ 	    for chan in self.br[res].keys():
+ 		self.br[res][chan]['br']=self.br[res][chan]['width']/total_width                   
+
+
+    def launch_width_evaluation(self,resonances,label2pid,pid2label,model):
         """ launch the calculation of the partial widths """
 
+        # first build a set resonances with pid>0
+	# since compute_width cannot be used for particle with pid<0
+        
+        particle_set=[]
+        for part in resonances:
+            if label2pid[part]>0: particle_set.append(part)
+        for part in resonances:
+	    if label2pid[part]<0:
+                pid_part=-label2pid[part]
+                if pid2label[pid_part] not in particle_set:
+		    particle_set.append(pid2label[pid_part])  
 
-#       I could not make it work the way below: 
+        # erase old info
+        del self.br
+        self.br={}
 
-        if (0):
-          os.chdir(pjoin(self.path_me,'width_calculator'))
-	  os.sys.path.append(pjoin(self.path_me,'width_calculator','bin','internal'))
+        data = model.set_parameters_and_couplings(pjoin(self.path_me,
+                                                              'param_card.dat'))
 
-	  import madevent_interface
+        # find UFO particles linked to the require names. COPIED FROM madevent_interface.py
+        for part in particle_set:
+            self.br[part]={}
+            chan=0
+            pid=label2pid[part] 
+            particle = model.get_particle(pid)
 
-          mgme5=madevent_interface.MadEventCmd(pjoin(self.path_me, 'width_calculator'))
-	  mgme5.do_calculate_decay_widths (" run_width -f")
-	  os.chdir(self.path_me)
+            mass = abs(eval(str(particle.get('mass')), data).real)
+            data = model.set_parameters_and_couplings(pjoin(self.path_me,
+                                            'param_card.dat'), scale= mass)
+            for mode, expr in particle.partial_widths.items():
+                tmp_mass = mass
+                for p in mode:
+                    tmp_mass -= abs(eval(str(p.mass), data))
+                if tmp_mass <=0:
+                    continue
 
-#       Use brut force instead:
-        else:
-          os.chdir(pjoin(self.path_me,'width_calculator'))
-          executable="./bin/madevent calculate_decay_widths run_width -f"
-          os.system(executable)
-          os.chdir(pjoin(self.path_me))
+                decay_to = [p.get('pdg_code') for p in mode]
+                value = eval(expr,{'cmath':cmath},data).real
+                if -1e-10 < value < 0:
+                    value = 0
+                if -1e-5 < value < 0:
+                    logger.warning('Partial width for %s > %s negative: %s automatically set to zero' %
+                                   (particle.get('name'), ' '.join([p.get('name') for p in mode]), value))
+                    value = 0
+                elif value < 0:
+                    raise Exception, 'Partial width for %s > %s negative: %s' % \
+                                   (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
+
+                if value>0:
+                    chan+=1
+                    self.br[part][chan]={}
+                    self.br[part][chan]['width']=value
+                    self.br[part][chan]['daughters']=[]
+                    for pid in decay_to:
+                        self.br[part][chan]['daughters'].append(pid2label[pid])
 
 
 
@@ -1987,10 +2079,10 @@ class decay_misc:
 
         return full_proc_line, decay_struct
 
-    def compile_fortran_me(self,path_me):
+    def compile_fortran_me_production(self,path_me):
         """ Compile the fortran executables associated with the evalutation of the 
-                matrix elements
-                Returns the directory names of the new decay & production matrix elements
+                matrix elements (production process)
+                Returns the path to the fortran executable
         """
 
         list_prod=os.listdir(pjoin(path_me,"production_me/SubProcesses"))
@@ -2020,41 +2112,49 @@ class decay_misc:
                 
                 # in case there are new DHELAS routines, we need to recompile 
                 misc.compile(arg=['clean'], cwd=pjoin(path_me,"production_me","Source", "DHELAS"), mode='fortran')
-                misc.compile( cwd=pjoin(path_me,"production_me","Source"), mode='fortran')
+                misc.compile( cwd=pjoin(path_me,"production_me","Source","DHELAS"), mode='fortran')
+
+
 
 		# write all the parameters:
                 file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'initialize.f')
                 shutil.copyfile(file_madspin,pjoin(new_path,"initialize.f"))
                     
                 file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'lha_read_ms.f')
-                shutil.copyfile(file_madspin, pjoin(path_me,"production_me","Source","MODEL","lha_read.f" ))                    
+                shutil.copyfile(file_madspin, pjoin(path_me,"production_me","Source","MODEL","lha_read.f" )) 
 
-                os.chdir(pjoin(path_me,'production_me','Source','MODEL'))
-                try:
-                   os.remove('*.o')
-                except:
-                   pass
-                misc.compile(cwd=pjoin(path_me,'production_me','Source','MODEL'), mode='fortran')
+                misc.compile(arg=['clean'], cwd=pjoin(path_me,"production_me","Source", "MODEL"), mode='fortran')
+                misc.compile( cwd=pjoin(path_me,"production_me","Source","MODEL"), mode='fortran')                   
+
                 os.chdir(new_path)
+                
+                misc.compile(arg=['clean'], cwd=new_path, mode='fortran')
                 misc.compile(arg=['init'],cwd=new_path,mode='fortran')
                 misc.call('./init')
                 shutil.copyfile('parameters.inc', '../parameters.inc')
-                os.chdir(curr_dir)
+                os.chdir(path_me)
                     
-
                 shutil.copyfile(pjoin(path_me,'production_me','Source','MODEL','input.inc'),pjoin(new_path,'input.inc')) 
-                misc.compile(cwd=new_path, mode='fortran')
 
+                misc.compile(cwd=new_path, mode='fortran')
+                if(os.path.getsize(pjoin(path_me,'production_me','SubProcesses', 'parameters.inc'))<10):
+		    raise Exception, "Parameters of the model were not written correctly ! " 
+                return prod_name
+
+
+    def compile_fortran_me_full(self,path_me):
+        """ Compile the fortran executables associated with the evalutation of the 
+                matrix elements (full process)
+                Returns the path to the fortran executable
+        """
 
  
         list_full=os.listdir(pjoin(path_me,"full_me","SubProcesses"))
 
-        first=1
         logger.info("""Finalizing decay chain me's """)
         for direc in list_full:
             if direc[0]=="P":
                 
-                counter+=1
                 decay_name=direc[string.find(direc,"_")+1:]
       
                 
@@ -2077,54 +2177,42 @@ class decay_misc:
 
                 # in case there are new DHELAS routines, we need to recompile                
                 misc.compile(arg=['clean'], cwd=pjoin(path_me,"full_me","Source","DHELAS"), mode='fortran')
-                misc.compile( cwd=pjoin(path_me,"full_me","Source"), mode='fortran')
+                misc.compile( cwd=pjoin(path_me,"full_me","Source","DHELAS"), mode='fortran')
 
                 # write all the parameters:
                 file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'initialize.f')
                 shutil.copyfile(file_madspin,pjoin(new_path,"initialize.f"))
                          
                 file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'lha_read_ms.f')
-                shutil.copyfile(file_madspin, pjoin(path_me,"full_me","Source","MODEL","lha_read.f" ))     
+                shutil.copyfile(file_madspin, pjoin(path_me,"full_me","Source","MODEL","lha_read.f" ))  
 
-                os.chdir(pjoin(path_me,'full_me','Source','MODEL'))
-                try: 
-                   os.remove('*.o')
-                except:
-                   pass 
-                misc.compile(cwd=pjoin(path_me,'full_me','Source','MODEL'), mode='fortran')
+                misc.compile(arg=['clean'], cwd=pjoin(path_me,"full_me","Source","MODEL"), mode='fortran')
+                misc.compile( cwd=pjoin(path_me,"full_me","Source","MODEL"), mode='fortran')   
+
                 os.chdir(new_path)
+                misc.compile(arg=['clean'], cwd=new_path, mode='fortran')
                 misc.compile(arg=['init'],cwd=new_path,mode='fortran')
                 misc.call('./init')
                 shutil.copyfile('parameters.inc', '../parameters.inc')
-                os.chdir(curr_dir)
+                os.chdir(path_me)
 
                 
                 # now we can compile check
                 misc.compile(arg=['check'], cwd=new_path, mode='fortran')
 
                 file=pjoin(path_me, 'param_card.dat')
-                shutil.copyfile(file,pjoin(path_me,"full_me","Cards","param_card.dat")) 
+                shutil.copyfile(file,pjoin(path_me,"full_me","Cards","param_card.dat"))             
 
-                
-                
-                if(os.path.getsize(pjoin(path_me,'production_me','SubProcesses', 'parameters.inc'))<10):
-		    raise Exception, "Parameters of the model were not written correctly ! " 
                     #os.remove(pjoin(path_me,"parameters.inc"))
                 if(os.path.getsize(pjoin(path_me,'full_me','SubProcesses', 'parameters.inc'))<10):
 		    raise Exception, "Parameters of the model were not written correctly ! " 
 
-                if first:
+                decay_pattern=direc[string.find(direc,"_")+1:]
+                decay_pattern=decay_pattern[string.find(decay_pattern,"_")+1:]
+                decay_pattern=decay_pattern[string.find(decay_pattern,"_")+1:]
 
-                    first=0
-                    decay_pattern=direc[string.find(direc,"_")+1:]
-                    decay_pattern=decay_pattern[string.find(decay_pattern,"_")+1:]
-                    decay_pattern=decay_pattern[string.find(decay_pattern,"_")+1:]
-
-
-        if counter!=2: 
-            logger.warning('Expected 1 decay me and 1 prod me, got smth. else')
-        os.chdir(curr_dir)
-        return decay_name, prod_name
+        os.chdir(path_me)
+        return decay_name
 
     def restore_light_parton_masses(self,topo,event):
         """ masses of light partons were set to zero for 
@@ -2403,6 +2491,52 @@ class decay_misc:
 
     def get_banner(self):
         pass
+
+
+    def set_cumul_proba_for_tag_decay(self,multi_decay_processes,decay_tags):
+        """
+        """
+
+        sum_br=0.0
+        for index, tag_decay in enumerate(decay_tags):
+           sum_br+=multi_decay_processes[tag_decay]['br']
+
+        cumul=0.0
+        for index, tag_decay in enumerate(decay_tags):
+           cumul+=multi_decay_processes[tag_decay]['br']/sum_br
+           multi_decay_processes[tag_decay]['cumul_br']=cumul
+        return sum_br
+
+
+
+
+    def generate_tag_decay(self,multi_decay_processes,decay_tags ):
+        """ generate randomly the tag for the decay config. using a probability law 
+            based on branching fractions
+        """
+
+        r=random.random()
+
+        for index, tag_decay in enumerate(decay_tags):
+            if r < multi_decay_processes[tag_decay]['cumul_br']:
+               return tag_decay
+        if r==1.0:
+            return decay_tags[-1]
+
+
+
+    def update_tag_decays(self, decay_tags, branch_tags):
+        """ update the set of tags to identify the final state content of a decay channel """
+
+        new_decay_tags=[]
+        for item1 in branch_tags:
+            if len(decay_tags)==0:
+               new_decay_tags.append( (item1,) )
+            else:
+               for item2 in decay_tags:
+                   new_decay_tags.append(item2+(item1,))
+        return new_decay_tags
+                  
     
     def format_proc_line(self,procline):
         
@@ -2483,6 +2617,13 @@ class decay_all_events:
         logger.info('model:     '+ mybanner.proc["model"])
         model_path=mybanner.proc["model"]
         base_model = import_ufo.import_model(model_path)
+
+        # Import model
+        base_model = import_ufo.import_model(model_path,
+                                        decay=True)
+        if not hasattr(base_model.get('particles')[0], 'partial_widths'):
+            logger.warning('The UFO model does not include widths information. Impossible to compute widths automatically')
+
         base_model.pass_particles_name_in_mg_default() 
  	mgcmd.exec_cmd('import model '+mybanner.proc["model"])
         
@@ -2519,41 +2660,10 @@ class decay_all_events:
         param.write(param_card)
         param.close()
 
-# now we need to evaluate the branching fractions:
-# =================================================
-	logger.info('We need information on the partial widhts ')
-	logger.info('First look inside the banner of the event file ')
-	logger.info('and check whether this information is available ')
-
+# extract all resonances in the decay:
 	resonances=decay_tools.get_resonances(decay_processes.values())
 	logger.info('List of resonances:')
 	logger.info(resonances)
-        calculate_br=width_estimate(resonances,path_me,pid2label_dict,mybanner.proc["model"])#
-#       Maybe the branching fractions are already given in the banner:
-	filename=pjoin(path_me,'param_card.dat')
-        calculate_br.extract_br_from_card(filename)
-	calculate_br.print_branching_fractions()
-#
-#        now we check that we have all needed pieces of info regarding the branching fraction:
-        multiparticles=mgcmd._multiparticles
-        branching_per_channel=calculate_br.get_BR_for_each_decay(decay_processes,multiparticles,\
-						mybanner.proc["model"],base_model,pid2label_dict)       
-
-        # check that we get branching fractions for all resonances to be decayed:
-        
-	if(0):
-	    calculate_br.generate_code_for_width_evaluation(mgcmd)#
-	    calculate_br.launch_width_evaluation()
-	    filename=filename=pjoin(path_me,'width_calculator','Events','run_width','param_card.dat')
-	    calculate_br.extract_br_from_card()
-    	    calculate_br.print_branching_fractions()
-
-
-#	decay_tools.branching_fractions(mgcmd,decay_processes,label2pid_dict,base_model)
-
-
-        full_proc_line, decay_struct_item=decay_tools.get_full_process_structure(decay_processes,mybanner.proc["generate"], base_model, mybanner, check=1)
-
 
         label2width={}
         label2mass={}
@@ -2585,6 +2695,101 @@ class decay_all_events:
 # parameters will be read when evaluating matrix elements
         decay_tools.modify_param_card(pid2width,path_me)
 
+
+# now we need to evaluate the branching fractions:
+# =================================================
+	logger.info('We need information on the partial widhts ')
+	logger.info('First look inside the banner of the event file ')
+	logger.info('and check whether this information is available ')
+
+        calculate_br=width_estimate(resonances,path_me,pid2label_dict,mybanner.proc["model"])#
+#       Maybe the branching fractions are already given in the banner:
+	filename=pjoin(path_me,'param_card.dat')
+        calculate_br.extract_br_from_card(filename)
+        calculate_br.extract_br_for_antiparticle(label2pid_dict,pid2label_dict)
+	calculate_br.print_branching_fractions()
+#
+#        now we check that we have all needed pieces of info regarding the branching fraction:
+        multiparticles=mgcmd._multiparticles
+        branching_per_channel=calculate_br.get_BR_for_each_decay(decay_processes,multiparticles,\
+						mybanner.proc["model"],base_model,pid2label_dict)       
+
+        # check that we get branching fractions for all resonances to be decayed:
+        
+	if(branching_per_channel==0):
+	    #calculate_br.generate_code_for_width_evaluation(mgcmd)#NOT USED ANYMORE, USE THE FR IMPLEMENTATION INSTEAD
+	    logger.info('We need to recalculate the branching franctions')
+	    logger.info('using the compute_width module of madevent')
+	    calculate_br.launch_width_evaluation(resonances,label2pid_dict,pid2label_dict,base_model) # use FR to get all partial widths
+            calculate_br.extract_br_from_width()                                       # set the br to partial_width/total_width
+            calculate_br.extract_br_for_antiparticle(label2pid_dict,pid2label_dict)    # set the partial widths of antiparticles equal to the one of the CC channel  
+    	    calculate_br.print_branching_fractions()
+            branching_per_channel=calculate_br.get_BR_for_each_decay(decay_processes,multiparticles,\
+						mybanner.proc["model"],base_model,pid2label_dict)       
+
+        if branching_per_channel==0:
+	    raise Exception, 'Failed to extract the branching franction associated with each decay channel'
+
+
+# now we need to sort all the different decay configurations, and get the br for each of them
+# ===========================================================================================
+
+#       1. first create a list of branches that ordered according to the mg numeratation:
+        list_particle_to_decay=to_decay.keys()
+        list_particle_to_decay.sort()
+
+#       2. then use a tuple to identify a decay channel
+#
+#       (tag1 , tag2 , tag3, ...)  
+#
+#       where the number of entries is the number of branches, 
+#       tag1 is the tag that identifies the final state of branch 1, 
+#       tag2 is the tag that identifies the final state of branch 2, 
+#       etc ...
+
+#       2.a. first get decay_tags = the list of all the tuples
+
+        decay_tags=[]
+        for part in list_particle_to_decay:  # loop over particle to decay in the production process
+            branch_tags=[ fs for fs in branching_per_channel[part]] # list of tags in a given branch
+            decay_tags=decay_tools.update_tag_decays(decay_tags, branch_tags)
+
+#       2.b. then build the dictionary multi_decay_processes = multi dico
+#       first key = a tag in decay_tags
+#       second key :  ['br'] = float with the branching fraction for the FS associated with 'tag'   
+#                     ['config'] = a list of strings, each of then giving the definition of a branch    
+
+        multi_decay_processes={}
+        for tag in decay_tags:
+#           compute br + get the congis
+            br=1.0
+            list_branches={}
+            for index, part in enumerate(list_particle_to_decay):
+                br=br*branching_per_channel[part][tag[index]]['br']
+                list_branches[part]=branching_per_channel[part][tag[index]]['config']
+            multi_decay_processes[tag]={}
+            multi_decay_processes[tag]['br']=br
+            multi_decay_processes[tag]['config']=list_branches
+
+#       compute the cumulative probabilities associated with the branching fractions
+        sum_br=decay_tools.set_cumul_proba_for_tag_decay(multi_decay_processes,decay_tags)
+
+
+
+#      Now we have a dictionary (multi_decay_processes) of which values 
+#      identifies all the decay channels to be considered, and the associated branching fractions.
+
+#      The only difference with the one-channel implementation resides in the fact that 
+#      decay_processes is replaced by multi_decay_processes
+
+#Next step: we need to determine which matrix elements are really necessary
+#==========================================================================
+
+
+# THE LINE HERE BELOW IS NOT USED ANYMORE
+#        full_proc_line, decay_struct_item=decay_tools.get_full_process_structure(decay_processes,mybanner.proc["generate"], base_model, mybanner, check=1)
+
+
 # consider the possibility of several production process
         set_of_processes=[]
 #    me_full_mg5format=[]
@@ -2615,11 +2820,13 @@ class decay_all_events:
 
             starttime = time.time()
             for ev in range(5):
-                probe_weight.append(0.0)
+                probe_weight.append({})
+                for tag_decay in decay_tags:
+                    probe_weight[ev][tag_decay]=0.0
                 curr_event.get_next_event()
 
 #    check if we have a new production process, in which case 
-#    we need to generate the correspomding matrix elements
+#    we need to generate the corresponding matrix elements
                 prod_process=curr_event.give_procdef(pid2label_dict)
                 extended_prod_process=decay_tools.find_resonances(prod_process, prod_branches)
 
@@ -2635,21 +2842,30 @@ class decay_all_events:
                     logger.info( tag_production)
                     logger.info( ' -> need to generate the corresponding fortran matrix element ... ')
                     set_of_processes.append(tag_production)
-#             me_prod_mg5format.append(prod_process)
-                    new_full_proc_line, new_decay_struct=\
-                        decay_tools.get_full_process_structure(decay_processes,\
-                        extended_prod_process, base_model, mybanner)
-#             me_full_mg5format.append(new_full_proc_line)
-                    decay_struct[tag_production]=new_decay_struct
-#
+
+                    # generate fortran me for production only
                     topologies[tag_production]=\
                         decay_tools.generate_fortran_me([extended_prod_process+proc_option],\
                             mybanner.proc["model"], 0,mgcmd,path_me)
-                    decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
-                                                    mybanner.proc["model"], 1,mgcmd,path_me)
-                    decay_name, prod_name=decay_tools.compile_fortran_me(path_me)
-                    decay_path[tag_production]=decay_name
+
+                    prod_name=decay_tools.compile_fortran_me_production(path_me)
                     production_path[tag_production]=prod_name
+
+#                   for the decay, we need to keep track of all possibilities for the decay final state:
+                    decay_struct[tag_production]={}
+                    decay_path[tag_production]={}
+                    for tag_decay in decay_tags:
+                        new_full_proc_line, new_decay_struct=\
+                            decay_tools.get_full_process_structure(multi_decay_processes[tag_decay]['config'],\
+                            extended_prod_process, base_model, mybanner)
+                        decay_struct[tag_production][tag_decay]=new_decay_struct
+#
+                        decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
+                                                    mybanner.proc["model"], 1,mgcmd,path_me)
+
+                        decay_name=decay_tools.compile_fortran_me_full(path_me)
+                        decay_path[tag_production][tag_decay]=decay_name
+                    
                     logger.info('Done.')
 
 #    Now the relevant matrix elements for the current event are there.
@@ -2741,53 +2957,67 @@ class decay_all_events:
 #                 print "Event after reshuffling:"
 #                 print curr_event.string_event_compact()
 
-                    decayed_event, BW_weight_decay=decay_tools.decay_one_event(\
-                                            curr_event,decay_struct[tag_production], \
+#                   Here the production event has been reshuffled, 
+#                   now we need to decay it.
+#                   There might be several decay channels -> loop over them
+
+                    for tag_decay in decay_tags:
+
+                        decayed_event, BW_weight_decay=decay_tools.decay_one_event(\
+                                            curr_event,decay_struct[tag_production][tag_decay], \
                                             pid2color_dict, to_decay, pid2width, \
                                             pid2mass, resonances,BW_effects)
 
-                    if decayed_event==0:
-                        logger.warning('failed to decay event properly')
-                        continue
+                        if decayed_event==0:
+                            logger.warning('failed to decay event properly')
+                            continue
 #     set the momenta for the production event and the decayed event:
-                    p, p_str=curr_event.give_momenta()    
-                    p_full, p_full_str=decayed_event.give_momenta()    
+                        p, p_str=curr_event.give_momenta()    
+                        p_full, p_full_str=decayed_event.give_momenta()    
 
 #     start with production weight:
-                    prod_values =self.calculate_matrix_element('prod',
+                        prod_values =self.calculate_matrix_element('prod',
                                          production_path[tag_production], p_str)
 
-                    prod_values=prod_values.replace("\n", "")
-                    prod_values=prod_values.split()
-                    mg5_me_prod = float(prod_values[0])
+                        prod_values=prod_values.replace("\n", "")
+                        prod_values=prod_values.split()
+                        mg5_me_prod = float(prod_values[0])
 #     then decayed weight:
-                    prod_values =self.calculate_matrix_element('full',
-                                         decay_path[tag_production], p_full_str)
+                        full_values =self.calculate_matrix_element('full',
+                                         decay_path[tag_production][tag_decay], p_full_str)
 
-                    mg5_me_full = float(prod_values)
+                        mg5_me_full = float(full_values)
                     #mg5_me_full = float(external.communicate(input=p_full_str)[0])
-                    mg5_me_full=mg5_me_full*BW_weight_prod*BW_weight_decay
-                    os.chdir(curr_dir)
+                        mg5_me_full=mg5_me_full*BW_weight_prod*BW_weight_decay
+                        os.chdir(curr_dir)
 
-                    if(not mg5_me_full>0 or not mg5_me_prod >0 ):
-                        logger.warning('WARNING: NEGATIVE MATRIX ELEMENT !!')
+                        if(not mg5_me_full>0 or not mg5_me_prod >0 ):
+                            logger.warning('WARNING: NEGATIVE MATRIX ELEMENT !!')
 
-                    weight=mg5_me_full/mg5_me_prod
-                    if (weight>probe_weight[ev]): probe_weight[ev]=weight
+                        weight=mg5_me_full/mg5_me_prod
+                        if (weight>probe_weight[ev][tag_decay]): probe_weight[ev][tag_decay]=weight
 
-                logger.info('Max weight,    event '+str(ev+1)+\
-                            ':    '+str(probe_weight[ev]))
+                for  index,tag_decay in enumerate(decay_tags):
+                  logger.info('Max weight,  event '+str(ev+1)+\
+                            ' , dk config '+str(index+1)+' : '+str(probe_weight[ev][tag_decay]))
 
-            max_weight=0.0
-            min_weight=1e10
-            for ev in range(5):
-                if(max_weight<probe_weight[ev]): max_weight=probe_weight[ev]
-                if(min_weight>probe_weight[ev]): min_weight=probe_weight[ev]
-            logger.info(' ')
-            logger.info('     maximum weight that we got is '+str(max_weight))
-            logger.info('     with a fluctuation of '+str(max_weight-min_weight))
-            logger.info('     -> add 2x this fluctuation to the max. weight ')
-            max_weight=3.0*max_weight-2.0*min_weight
+            max_weight={}
+            min_weight={}
+
+            for index,tag_decay in enumerate(decay_tags):
+                max_weight[tag_decay]=0.0
+                min_weight[tag_decay]=1e10
+                for ev in range(5):
+                    if(max_weight[tag_decay]<probe_weight[ev][tag_decay]): max_weight[tag_decay]=probe_weight[ev][tag_decay]
+                    if(min_weight[tag_decay]>probe_weight[ev][tag_decay]): min_weight[tag_decay]=probe_weight[ev][tag_decay]
+                logger.info(' ')
+                logger.info(' Decay channel '+str(index+1))
+                for part in multi_decay_processes[tag_decay]['config'].keys():
+                     logger.info(multi_decay_processes[tag_decay]['config'][part])
+                logger.info('     maximum weight that we got is '+str(max_weight[tag_decay]))
+                logger.info('     with a fluctuation of '+str(max_weight[tag_decay]-min_weight[tag_decay]))
+                logger.info('     -> add 2x this fluctuation to the max. weight ')
+                max_weight[tag_decay]=3.0*max_weight[tag_decay]-2.0*min_weight[tag_decay]
             del curr_event
 
 
@@ -2804,9 +3034,12 @@ class decay_all_events:
         if (pos>0):
             new_banner=old_banner[:pos]
             new_banner+="<DECAY>\n"
-            new_banner+="# "+full_proc_line + "\n"
-            new_banner+="# branching fraction: "+str(branching_fraction) + "\n"
-            new_banner+="# estimate of the maximum weight: "+str(max_weight) + "\n"
+            for index,tag_decay in enumerate(decay_tags):
+                new_banner+="# Decay channel "+str(index+1)+"\n"
+                for part in multi_decay_processes[tag_decay]['config'].keys():
+                    new_banner+="# "+multi_decay_processes[tag_decay]['config'][part]+"\n"
+                new_banner+="# branching fraction: "+str(multi_decay_processes[tag_decay]['br']) + "\n"
+                new_banner+="# estimate of the maximum weight: "+str(max_weight[tag_decay]) + "\n"
             new_banner+="</DECAY>\n"
             new_banner+=old_banner[pos:]
             outputfile.write(new_banner)
@@ -2840,21 +3073,32 @@ class decay_all_events:
                 logger.info( tag_production)
                 logger.info( ' -> need to generate the corresponding fortran matrix element ... ')
                 set_of_processes.append(tag_production)
-#            me_prod_mg5format.append(prod_process)
-                new_full_proc_line, new_decay_struct=\
-                    decay_tools.get_full_process_structure(decay_processes,\
-                    extended_prod_process, base_model, mybanner)     
-#            me_full_mg5format.append(new_full_proc_line)
-                decay_struct[tag_production]=new_decay_struct
-                topologies[tag_production]=decay_tools.generate_fortran_me(\
-                        [extended_prod_process+proc_option],\
-                         mybanner.proc["model"], 0, mgcmd,path_me)
-                decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
-                        mybanner.proc["model"], 1, mgcmd,path_me)
-                decay_name, prod_name=decay_tools.compile_fortran_me(path_me)
+
+                # generate fortran me for production only
+                topologies[tag_production]=\
+                    decay_tools.generate_fortran_me([extended_prod_process+proc_option],\
+                        mybanner.proc["model"], 0,mgcmd,path_me)
+
+                prod_name=decay_tools.compile_fortran_me_production(path_me)
                 production_path[tag_production]=prod_name
-                decay_path[tag_production]=decay_name
-                logger.info( ' Done.')
+
+#               for the decay, we need to keep track of all possibilities for the decay final state:
+                decay_struct[tag_production]={}
+                decay_path[tag_production]={}
+                for tag_decay in decay_tags:
+                    new_full_proc_line, new_decay_struct=\
+                        decay_tools.get_full_process_structure(multi_decay_processes[tag_decay]['config'],\
+                        extended_prod_process, base_model, mybanner)
+                    decay_struct[tag_production][tag_decay]=new_decay_struct
+#
+                    decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
+                                                mybanner.proc["model"], 1,mgcmd,path_me)
+
+                    decay_name=decay_tools.compile_fortran_me_full(path_me)
+                    decay_path[tag_production][tag_decay]=decay_name
+                    
+                logger.info('Done.')
+
 
 # First evaluate production matrix element
             p, p_str=curr_event.give_momenta()
@@ -2901,8 +3145,11 @@ class decay_all_events:
                 else:
                     BW_weight_prod=1.0
 
+#               Here we need to select a decay configuration on a random basis:
+                tag_decay=decay_tools.generate_tag_decay(multi_decay_processes,decay_tags)
+
                 topologies[tag_production][tag_topo].topo2event(curr_event,to_decay)
-                decayed_event, BW_weight_decay=decay_tools.decay_one_event(curr_event,decay_struct[tag_production], \
+                decayed_event, BW_weight_decay=decay_tools.decay_one_event(curr_event,decay_struct[tag_production][tag_decay], \
                                             pid2color_dict, to_decay, pid2width, pid2mass, resonances,BW_effects)
 
                 if decayed_event==0: 
@@ -2919,9 +3166,9 @@ class decay_all_events:
                 prod_values=prod_values.split()
                 mg5_me_prod = float(prod_values[0])
 #            then decayed weight:
-                prod_values = self.calculate_matrix_element('full', 
-                                         decay_path[tag_production], p_full_str)
-                mg5_me_full = float(prod_values)
+                full_value = self.calculate_matrix_element('full', 
+                                         decay_path[tag_production][tag_decay], p_full_str)
+                mg5_me_full = float(full_value)
                 mg5_me_full=mg5_me_full*BW_weight_prod*BW_weight_decay
 
                 if(not mg5_me_full>0 or not mg5_me_prod >0 ):
@@ -2931,14 +3178,13 @@ class decay_all_events:
 #            mg5_me_full, amp_full = evaluator.evaluate_matrix_element(me_full[tag_production],p_full)
 
                 weight=mg5_me_full/mg5_me_prod
-                if weight>max_weight: 
+                if weight>max_weight[tag_decay]: 
                     logger.info('warning: got a larger weight than max_weight estimate')
-                    logger.info('the ratio with the max_weight estimate is '+str(weight/max_weight))
-                if (weight/max_weight> random.random()):
+                    logger.info('the ratio with the max_weight estimate is '+str(weight/max_weight[tag_decay]))
+                if (weight/max_weight[tag_decay]> random.random()):
 
 #             Here we need to restore the masses of the light partons 
 #             initially found in the lhe production event
-
                     decay_tools.restore_light_parton_masses(topologies[tag_production][tag_topo],curr_event)
                     succeed=topologies[tag_production][tag_topo].reshuffle_momenta()
                     if not succeed:
@@ -2946,13 +3192,13 @@ class decay_all_events:
                         break
                     topologies[tag_production][tag_topo].topo2event(curr_event,to_decay)
                     curr_event.reset_resonances() # re-evaluate the momentum of each resonance in prod. event
-                    decayed_event, BW_weight_decay=decay_tools.decay_one_event(curr_event,decay_struct[tag_production], \
+                    decayed_event, BW_weight_decay=decay_tools.decay_one_event(curr_event,decay_struct[tag_production][tag_decay], \
                                             pid2color_dict, to_decay, pid2width, pid2mass, resonances,BW_effects,ran=0)
       #              print decayed_event.string_event_compact()
       #              print "    "
       #              print p_full_str
       #              print "    "
-                    decayed_event.wgt=decayed_event.wgt*branching_fraction
+                    decayed_event.wgt=decayed_event.wgt*sum_br
                     outputfile.write(decayed_event.string_event())
 #                print "number of trials: "+str(trial_nb)
                     trial_nb_all_events+=trial_nb
