@@ -3487,24 +3487,24 @@ calculator."""
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
                 output_files = []
-                
+
                 #Find the correct PDF input file
-                if self.pdffile:
-                    input_files.append(self.pdffile)
-                else:
-                    for line in open(pjoin(self.me_dir,'Source','PDF','pdf_list.txt')):
-                        data = line.split()
-                        if len(data) < 4:
-                            continue
-                        if data[0].lower() == self.run_card['pdlabel'].lower():
-                            self.pdffile = pjoin(self.me_dir, 'lib', 'Pdfdata', data[2])
-                            input_files.append(self.pdffile) 
-                            break
+                if 'lhapdf' not in os.environ or os.environ['lhapdf'] != 'True':
+                    if self.pdffile:
+                        input_files.append(self.pdffile)
                     else:
-                        # possible when using lhapdf
-                        self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
-                        input_files.append(self.pdffile) 
-                        
+                        for line in open(pjoin(self.me_dir,'Source','PDF','pdf_list.txt')):
+                            data = line.split()
+                            if len(data) < 4:
+                                continue
+                            if data[0].lower() == self.run_card['pdlabel'].lower():
+                                self.pdffile = pjoin(self.me_dir, 'lib', 'Pdfdata', data[2])
+                                input_files.append(self.pdffile)
+                                break
+                else:
+                    # using lhapdf
+                    self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
+                    input_files.append(self.pdffile)
                 
                 #Find the correct ajob
                 Gre = re.compile("\s*j=(G[\d\.\w]+)")
