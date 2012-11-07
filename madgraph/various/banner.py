@@ -25,7 +25,7 @@ try:
     import madgraph.iolibs.file_writers as file_writers
     from madgraph import MG5DIR
     MADEVENT = False
-except:
+except ImportError:
     MADEVENT = True
     import internal.file_writers as file_writers
     MEDIR = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]

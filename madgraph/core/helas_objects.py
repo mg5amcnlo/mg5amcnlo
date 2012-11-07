@@ -2661,7 +2661,7 @@ class HelasDiagram(base_objects.PhysicsObject):
             for order in wf.get('orders').keys():
                 try:
                     coupling_orders[order] += wf.get('orders')[order]
-                except:
+                except Exception:
                     coupling_orders[order] = wf.get('orders')[order]
 
         return coupling_orders

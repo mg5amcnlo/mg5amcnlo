@@ -328,7 +328,8 @@ class aMCatNLOLauncher(ExtLauncher):
         for line in set_cmd:
             try:
                 usecmd.exec_cmd(line)
-            except:
+            except Exception, error:
+                misc.sprint('command %s fails with msg: %s' % error)
                 pass
         launch = self.cmd_int.define_child_cmd_interface(
                      usecmd, interface=False)
@@ -416,7 +417,7 @@ class MELauncher(ExtLauncher):
         for line in set_cmd:
             try:
                 usecmd.do_set(line[3:], log=False)
-            except:
+            except Exception:
                 pass
         usecmd.do_set('stdout_level %s'  % stdout_level,log=False)
         #ensure that the logger level 

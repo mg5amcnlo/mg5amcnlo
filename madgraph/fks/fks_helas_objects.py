@@ -328,7 +328,7 @@ class FKSHelasProcess(object):
         for real in  self.real_processes:
             try:
                 reals2.remove(real)
-            except:
+            except ValueError:
                 return False  
         if not reals2:
             return True

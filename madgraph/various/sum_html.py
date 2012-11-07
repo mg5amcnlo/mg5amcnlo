@@ -22,7 +22,7 @@ logger = logging.getLogger('madevent.stdout') # -> stdout
 pjoin = os.path.join
 try:
     import madgraph.various.cluster as cluster
-except:
+except ImportError:
     import internal.cluster as cluster
 
 class OneResult(object):

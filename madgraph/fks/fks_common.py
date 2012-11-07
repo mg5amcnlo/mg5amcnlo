@@ -400,7 +400,7 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
                 # with the born one
             try:
                 masslist.remove('zero')
-            except:
+            except ValueError:
                 continue
             if len(set(masslist)) == 1 and not \
                     any( [ p['pdg_code'] in ghost_list for p in ii['particles']]) :

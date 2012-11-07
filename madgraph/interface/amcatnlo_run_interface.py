@@ -62,9 +62,8 @@ try:
 
     from madgraph import InvalidCmd, aMCatNLOError
     aMCatNLO = False
-except Exception, error:
-    if __debug__:
-        print error
+except ImportError, error:
+    logger.debug(error)
     # import from madevent directory
     import internal.extended_cmd as cmd
     import internal.common_run_interface as common_run
@@ -248,11 +247,10 @@ class CmdExtended(cmd.Cmd):
         try:
             self.update_status('Command \'%s\' done.<br> Waiting for instruction.' % arg[0], 
                                level=None, error=True)
-        except:
+        except Exception:
+            misc.sprint('self.update_status fails', log=logger)
             pass
-        
-
-    
+            
     def nice_user_error(self, error, line):
         """If a ME run is currently running add a link in the html output"""
 
@@ -1472,7 +1470,7 @@ Integrated cross-section
 
         try:
             misc.call(['gunzip %s.gz' % evt_file], shell=True)
-        except:
+        except Exception:
             pass
         shower = self.evt_file_to_mcatnlo(evt_file)
         oldcwd = os.getcwd()
@@ -1519,7 +1517,7 @@ Integrated cross-section
             try:
                 misc.call(['ln -s %s %s' % \
                 (pjoin(self.shower_card['hwpppath'], 'bin', 'Herwig++'), rundir)], shell=True)
-            except:
+            except Exception:
                 raise aMCatNLOError('The Herwig++ path set in the shower_card is not valid.')
 
             if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so')):
@@ -1880,7 +1878,7 @@ Integrated cross-section
             Ire = re.compile("for i in ([\d\s]*) ; do")
             try : 
                 fsock = open(exe)
-            except:
+            except IOError:
                 fsock = open(pjoin(cwd,exe))
             text = fsock.read()
             data = Ire.findall(text)
@@ -1955,7 +1953,9 @@ Integrated cross-section
                         break
                 else:
                     # possible when using lhapdf
-                    self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
+                    self.pdffile = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'], 
+                            shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+                    #self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
                     input_files.append(self.pdffile)
                     
             
@@ -2322,7 +2322,7 @@ Integrated cross-section
         """ """
         try:
             os.remove(pjoin(self.me_dir,'RunWeb'))
-        except:
+        except Exception:
             pass
 #        try:
 #            self.store_result()
@@ -2337,7 +2337,7 @@ Integrated cross-section
         try:
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)
-        except:
+        except Exception:
             pass
 
         return super(aMCatNLOCmd, self).do_quit(line)

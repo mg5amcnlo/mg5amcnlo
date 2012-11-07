@@ -1528,15 +1528,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         if makejpg:
             logger.info("Generate jpeg diagrams")
             for Pdir in P_dir_list:
-                os.chdir(Pdir)
-                try:
-                    subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
-                                stdout = devnull)
-                except:
-                    os.system('chmod +x %s ' % pjoin(old_pos, self.dir_path, 'bin', 'internal', '*'))
-                    subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
-                                stdout = devnull)
-                os.chdir(os.path.pardir)
+                misc.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+                                stdout = devnull, cwd=Pdir)
 
         logger.info("Generate web pages")
         # Create the WebPage using perl script
