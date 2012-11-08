@@ -2608,6 +2608,17 @@ class decay_misc:
             if sd<mean*1e-5: return x
         return 0
 
+
+    def process_decay_syntax(self,decay_processes):
+        """ add spaces to avoid any confusion in the decay chain syntax """
+
+        for part in decay_processes:
+            decay_processes[part]=decay_processes[part].replace(',',' , ')
+            decay_processes[part]=decay_processes[part].replace('>',' > ')
+            decay_processes[part]=decay_processes[part].replace(')',' ) ')
+            decay_processes[part]=decay_processes[part].replace('(',' ( ')
+
+
 class decay_all_events:
     
     @misc.mute_logger()
@@ -2654,15 +2665,10 @@ class decay_all_events:
 
         base_model.pass_particles_name_in_mg_default() 
  	mgcmd.exec_cmd('import model '+mybanner.proc["model"])
-        
-#        for part in decay_processes:
-#            list_symbol=decay_processes[part].split()
-#            for item in list_symbol:
-#                if item =="," or item==")" or item=="(" or item==">": 
-#                    continue
-#                elif item not in [ particle['name'] for particle in base_model['particles'] ] \
-#                    and item not in [ particle['antiname'] for particle in base_model['particles'] ]:
-#                    raise Exception, "No particle "+item+ " in the model "+mybanner.proc["model"]
+
+
+        # process a bit the decay chain strings, so that the code is not confused by the sintax
+        decay_tools.process_decay_syntax(decay_processes)        
 
 
 # we will need a dictionary pid > label
@@ -3023,7 +3029,7 @@ class decay_all_events:
                             extended_prod_process, base_model, mybanner)
                         decay_struct[tag_production][tag_decay]=new_decay_struct
 #
-                    for tag_decay in decay__me_tags:
+                    for tag_decay in decay_me_tags:
                         decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
                                                     mybanner.proc["model"], 1,mgcmd,path_me)
 
@@ -3081,7 +3087,7 @@ class decay_all_events:
                 if BW_effects:
                     decay_tools.set_light_parton_massless(topologies[tag_production][tag_topo])
 
-                for dec in range(5000):
+                for dec in range(10000):
 
 #        try to reshuffle the momenta 
                     if  BW_effects:
