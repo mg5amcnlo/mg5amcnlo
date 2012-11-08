@@ -55,7 +55,7 @@ NTOT=0
 for dir in "$@" ; do
     N=`ls -d P*/$dir | wc -l`
     NTOT=`expr $NTOT + $N`
-    ls -d P0*/$dir >> dirs.txt
+    ls -d P*/$dir >> dirs.txt
     grep -H 'Final result:' P*/$dir/res_$arg1 >> res.txt
 done
 ./sumres.py $NTOT -1

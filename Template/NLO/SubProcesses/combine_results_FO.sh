@@ -34,8 +34,8 @@ NTOT=0
 for dir in "$@" ; do
     N=`ls -d P*/$dir | wc -l`
     NTOT=`expr $NTOT + $N`
-    ls -d P0*/$dir >> dirs.txt
-    grep -H 'Final result:' P0*/$dir/log$mint_mode.txt >> res.txt
+    ls -d P*/$dir >> dirs.txt
+    grep -H 'Final result:' P*/$dir/log$mint_mode.txt >> res.txt
 done
 
 sed -i.bak s/"\+\/\-"/" \+\/\-"/ res.txt
