@@ -1,5 +1,256 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+2.0.0.beta1(31/10/12) aMCatNLO Team: First public (beta) version of aMCatNLO.
+                        In order to learn aMCatNLO, please do "tutorial aMCatNLO"
+                        Please also visit: http://amcatnlo.cern.ch/list.htm for more
+                        information.
+
+1.5.3 (01/11/12)  OM: Fix a crash in the gridpack mode (Thanks Baris Altunkaynak)
+                  OM: Fix a crash occuring on cluster with no central disk (only
+                      condor by default) for some complicated process.
+                  OM: If launch command is typed before any output command, 
+                      "output madevent" is run automatically.
+                  OM: Fix bug preventing to set width to Auto in the mssm model.
+                  OM: Allow "set width PID VALUE" as an additional possibility to
+                      answer edit card function.
+                  OM: Improve ME5_debug file (include now the content of the 
+                      proc_card as well).
+
+1.5.2 (11/10/12)  OM: Fix Bug for mssm model. The param_card was not read properly
+                      for this model. (introduce in 1.5.0)
+                  OM: If the code is run with an input file (./bin/mg5 cmd.cmd)
+                      All question not answered in the file will be answered by the 
+                      default value. Running with piping data is not affected by this.
+                      i.e. running ./bin/mg5 cmd.cmd < answer_to_question 
+                       or echo 'answer_to_question' | ./bin/mg5 cmd.cmd      
+                      are not affected by this change and will work as expected.
+                  OM: Fixing a bug preventing to use the "set MH 125" command in a
+                      script file.
+                  JA: Fixed a bug in format of results.dat file for impossible
+                      configurations in processes with conflicting BWs.
+                  OM: Adding command "launch" in madevent interface which is the
+                      exact equivalent to the launch command in the MG5 interface
+                      in madevent output.
+                  OM: Secure the auto-update, since we receive some report of incomplete
+                      version file information.
+
+1.5.1 (06/10/12)  JA: Fixed symmetry factors in non-grouped MadEvent mode
+                      (bug introduced in v. 1.5.0).
+                  JA: Fixed phase space integration problem with multibody 
+                      decay processes (thanks Kentarou for finding this!).
+                  OM: Fix that standalone output was not reading correctly the param_card
+                      (introduce in 1.5.0)
+                  OM: Fix a crash when trying to load heft
+                  OM: Fix the case when the UFO model contains one mass which 
+                      has the same name as another parameter up to the case.
+                  OM: Fix a bug for result lower than 1e-100 those one are now 
+                      consider as zero.
+                  OM: Fix a bug present in the param_card create by width computation 
+                      computation where the qnumbers data were written as a float 
+                      (makes Pythia 6 crash).
+
+1.5.0 (28/09/12)  OM: Allow MG5 to run in complex mass scheme mode
+                      (mg5> set complex_mass True)
+                  OM: Allow MG5 to run in feynman Gauge
+                      (mg5> set gauge Feynman)
+                  OM: Add a new command: 'customize_model' which allow (for a
+                      selection of model) to fine tune the model to your need.
+                  FR team: add a file decays.py in the UFO format, this files 
+                      contains the analytical expression for one to two decays
+       		  OM: implement a function for computing the 1 to 2 width on 
+                      the fly. (requires MG5 installed on the computer, not only
+                      the process directory)
+                  OM: The question asking for the edition of the param_card/run_card
+                      now accepts a command "set" to change values in those cards
+                      without opening an editor. This allow simple implemetation 
+                      of scanning. (Thanks G. Durieux to have push me to do it)
+                  OM: Support UFO model with spin 3/2
+                  OM + CDe: Support four fermion interactions. Fermion flow 
+                       violation/Majorana are not yet allowed in four fermion 
+                       interactions.
+                  OM + PdA: Allow Large Extra Dimension Model (LED) to run in the
+                      MG5 framework.
+                  OM: Add auto-detection if MG5 is up-to-date and propose to
+                      apply a patch if not.
+                  OM: MadEvent changes automatically the compiler according to 
+                      the value present in the configuration file.
+                  OM: Aloha modifications: faster to create routines and more 
+                      optimized routines (up to 40% faster than previous version).
+                  OM: Aloha now supports Lorentz expression with denominator.
+                  OM: Improve error message when Source didn't compile properly.
+                  OM: The numerical evaluation of the matrix element requires now 
+                      less memory than before (madevent and standalone output)
+                  OM: Fix a series of bugs with the madevent command 'remove' and 
+                      'run_banner'                    
+                  JA: Ensure identical results for identical seeds also with
+                      multiple runs in the same directory. Note that identical runs
+                      with previous versions can't be guaranteed (but different
+                      seeds are guaranteed to give statistically independent runs).
+                      Save the results.dat files from all runs.
+                  JA: Amended kinematics to correctly deal with the case of
+                      massive beams, as well as fixed-target proton collisions.
+                  JA: Changed default in the run_card.dat to use -1 as "no cut"
+                      for the max-type cuts (etaj, ptjmax, etc.).
+                  JA: Added support for negative weights in matrix elements
+                      (as required for interference-only terms) and PDFs.
+                  JA: Avoid creating directories for integration channels
+                      that can not give events based on BW settings
+                      (further improvement compared to v. 1.4.8).
+                  JA: Optimize phase space integration when there are resonances
+                      with mass above ECM.
+                  JA: Fixed issue in replace.pl script with more than 9 particles
+                      in an event.
+                  JA+OM: Allow cluster run to run everything on a local (node) disk.
+                      This is done fully automatically for condor cluster.
+                      For the other clusters, the user should set the variable
+                      "cluster_temp_path" pointing to a directory (usefull only if 
+                      the directory is on the node filesystem). This still requires
+                      access to central disk for copying, event combination,
+                      running Pythia/PGS/Delphes etc.
+                  OM: Replace fortran script combine_runs by a python script. 
+                      This script allows to be more stable when running on clusters 
+                      with slow filesystem response (bugs #1050269 and #1028844)
+                  JA: Ensure that process mirroring is turned off for decay
+                      processes of type A > B C...
+
+1.4.8.4 (29/08/12) OM: Fix a web problem which creates generations to run twice on the web.
+
+1.4.8.3 (21/08/12) JA: Ensure that the correct seed is written also in the .lhe
+                       file header.
+                   JA: Stop run in presence of empty results.dat files 
+                       (which can happen if there are problems with disk access
+                       in a cluster run).
+                   JA: Allow reading up to 5M weighted events in combine_events.
+
+1.4.8.2 (30/07/12) OM: Allow AE(1,1), AE(2,2) to not be present in SLAH1 card
+                       (1.4.8 crashes if they were not define in the param_card)
+                   OM: Add a button Stop-job for the cluster and make nicer output 
+                       when the user press Ctrl-C during the job.
+
+1.4.8 (24/07/12)  JA: Cancel running of integration channels where the BW
+                      structure makes it impossible to get any events. This
+                      can significantly speed up event generation for processes
+                      with conflicting BWs.
+                  JA: Minor modification of integration grid presetting in
+                      myamp.f, due to the above point.
+                  JA: Raise exception if a decay process has decaying particles
+                      that are not present in the corresponding core process
+                      (this might help avoid syntax mistakes).
+                  JA: Fixed subprocess group combination also for the case
+                      when different process flags @N are given to different
+                      decays of the same core process (sorry, this was missed
+                      in v. 1.4.7).
+                  JA: Fixed crash for process p p > w+ w+ j j t t~ when all 
+                      w and t/t~ are decayed (bug #1017912, thanks to Nicolas
+                      Deutschmann).
+                  JA: Fixed array dimension for diagrams with a single s-channel
+                      propagator (caused crash for certain compilers, bug #1022415
+                      thanks Sho Iwamoto).
+                  JA: Fixed crash for identical decay chains for particle-anti- 
+                      particle when only one of the two is decayed, introduced 
+                      in v. 1.4.7 (thanks John Lee).
+                  OM: Ensure that matching plots are replaced correctly when
+                      Pythia is run reusing a tag name.
+                  OM: Improved check for YE/AE, YU/AU, YD/AD for first two
+                      generations in SLHA1<->2 converter (thanks Abhishek).
+
+1.4.7 (25/06/12)  JA: Change the random seed treatment to ensure that the original 
+                      seed is stored in the banner (this was broken in v. 1.4.0).
+                      If a non-zero seed is given in the run_card, this seed
+                      is used as starting value for the SubProcesses/randinit file,
+                      while the seed in the run_card is set to 0.
+                      This way, the seed for a multi_run is automatically
+                      updated in the same way as for individual runs.
+                  TS + JA: Fix problem with duplicate random seeds above 64000.
+                      Now, random seeds up to 30081*30081 can safely be used.
+                  JA: Turn off automatic checking for minimal coupling orders
+                      in decay processes A > B C ...
+                  JA: Ensure that automatic coupling order determination works
+                      also for effective theories with multiple orders in an
+                      interaction (thanks Claude and Gizem Ozturk).
+                  JA: Optimize phase space integration and event generation
+                      for decay processes with very squeezed mass spectrum.
+                  JA: Ensure that identical matrix elements in different process 
+                      definitions are combined also when using the decay chain 
+                      formalism (thanks to Zhen Liu for pointing this out).
+                  BF+JA: Updated the NMSSM model to the latest FR version.
+                  OM: Change EW_dim6 to remove all interactions which don't 
+                      impact three boson scattering.
+                  JA: Fixed problem in matrix element combination which allowed
+                      non-identical matrix elements to be combined in certain
+                      complicated processes (such as p p > l vl l vl l vl),
+                      resulting in lines with Z > e+ mu- in the event file
+                      (bug #1015032, thanks Johannes E for reporting).
+                  JA: Fixed minor typo in myamp.f.
+                  OM: Fixed minor behavior restriction of multi_run (thanks to
+                      Joachim Kopp).
+                  OM: Improved condor cluster support when the cluster is 
+                      unresponsive (should avoid some crashes on the web).
+                  JA: Fixed support for color sextets in addmothers.f
+                      (thanks Nicolas Deutschmann for reporting).          
+                  JA: Make sure that also the SubProcesses directories are 
+                      cleaned when running bin/compile in a gridpack.
+                  JA: Removed the confusing makefile in Template and replace it
+                      with scripts to create madevent.tar.gz and gridpack.tar.gz.
+                  
+1.4.6 (16/05/12)  JA: Added cuts on lepton pt for each of the 4 hardest leptons
+                  OM: Allow bin/madevent script to be run with a single line command
+                      example ./bin/madevent multi_run 10 
+                  OM: Adding the 4 higgs interactions in the standard model UFO model
+                  JA: Added new restriction card for the sm model with massive
+                      muon and electron, and non-zero tau decay width
+                  JA: Ensure assignment of colors to intermediate propagators
+                      works also in fermion flow- and color flow-violating 
+                      RPV processes (thanks Brock Tweedie for finding this).
+                  JA: Fix crash for certain fermion flow violating decay chains
+                      (introduced in v. 1.3.27) (again thanks to Brock Tweedie).
+                  JA: Fix crash for decay chains with multiple decays involving 
+                      the same particles (thanks Steve Blanchet for reporting)
+                  JA+OM: Fix crash for Pythia8 output with multiparticle vertices
+                      (thanks to Moritz Huck for reporting this.)
+                  OM: Fixing ALOHA output for C++/python.
+                  OM: Fix a crash occuring when trying to create an output on 
+                      an existing directory (thanks Celine)
+
+1.4.5 (11/04/12)  OM: Change the seed automatically in multi_run. (Even if the seed
+                      was set to a non automatic value in the card.)
+                  OM: correct a minor bug #975647 (SLAH convention problem) 
+                      Thanks to Sho Iwamoto
+                  OM: Improve cluster support (more secure and complete version)
+                  JA: Increased the number of events tested for non-zero helicity
+                      configurations (needed for goldstino processes).
+                  OM: Add a command to remove the file RunWeb which were not always
+                      deleted correctly
+                  OM+JA: Correct the display of number of events and error for Pythia 
+                     in the html files.
+                  OM: Changed the way the stdout/stderr are treated on the cluster
+                      since some cluster cann't support to have the same output file
+                      for both. (thanks abhishek)
+
+1.4.4 (29/03/12)  OM: Added a command: "output aloha" which allows to creates a 
+                      subset (or all) of the aloha routines linked to the
+                      current model
+                  OM: allow to choose the duration of the timer for the questions.
+                      (via ./input/mg5_configuration.txt)
+                  OM: Allow UFO model where G is not defined.
+                  OM: allow to use ~,~user, ${var} in the path. Improve support
+                      for path containing spaces.
+                  JA: Fixed LHAPDF functionality which was broken in v. 1.4.0
+                  JA: Allow non-equal mixing angles in mssm restrict cards
+                      (as needed for cards from some spectrum generators)
+                  JA: Fixed script addmasses.py for complicated events such as
+                      p p > t t~ + jets with decays of t and t~.
+                  JA: Added GE cluster to the list in cluster.py.
+                  JA: Allow up to 1M events in a single run. Note that the 
+                      unweighting (combine events) step gets quite slow with
+                      so many events. Also note that if Pythia is run, still
+                      maximum 50k events is recommended in a single run. 
+                  OM: Fix problem linked to filesystem which makes new files
+                      non executables by default. (bug #958616)
+                  JA: Fixed buffer overflow in gen_ximprove when number of
+                      configs > number of diagrams due to competing resonances
+                      (introduced in v. 1.4.3).
+
 1.4.3 (08/03/12)  JA: Reintroduced the possibility to completely forbid
                       s-channel diagrams, using the $$ notation. Note that
                       this should be used with great care, since the result

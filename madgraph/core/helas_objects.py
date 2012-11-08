@@ -23,16 +23,21 @@ writing Helas calls, found in the iolibs directory"""
 
 import array
 import copy
+import collections
 import logging
 import itertools
 import math
 
+import aloha
+
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
+import madgraph.loop.loop_diagram_generation as loop_diagram_generation
+import madgraph.loop.loop_color_amp as loop_color_amp
 import madgraph.core.color_algebra as color
 
-from madgraph import InvalidCmd
+from madgraph import InvalidCmd, MadGraph5Error
 
 #===============================================================================
 # 
@@ -76,14 +81,69 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             IdentifyMETag.dec_number += 1
         if not identical_particle_factor:
             identical_particle_factor = process.identical_particle_factor()
+        if process.get('perturbation_couplings') and \
+                process.get('NLO_mode') not in ['virt', 'loop']:
+            sorted_tags = sorted([IdentifyMETagFKS(d, model, ninitial) for d in \
+                                      amplitude.get('diagrams')])
+        else:
+            sorted_tags = sorted([IdentifyMETag(d, model, ninitial) for d in \
+                                      amplitude.get('diagrams')])
+        # Do not use this for loop diagrams as for now the HelasMultiProcess
+        # always contain only exactly one loop amplitude.
+        if sorted_tags and not isinstance(amplitude, \
+                                         loop_diagram_generation.LoopAmplitude):
+            # Need to keep track of relative permutations for all diagrams,
+            # to make sure we indeed have different matrix elements,
+            # and not just identical diagrams disregarding particle order.
+            # However, identical particles should be treated symmetrically.
+            comp_dict = IdentifyMETag.prepare_comp_dict(process,
+                                         sorted_tags[0].get_external_numbers())
+            perms = [array.array('H',
+                     sum([comp_dict[n] for n in p.get_external_numbers()], []))
+                     for p in sorted_tags[1:]]
+        else:
+            perms = []
+
         return [amplitude.get('has_mirror_process'),
                 process.get('id'),
                 process.get('is_decay_chain'),
                 identical_particle_factor,
                 dc,
-                sorted([IdentifyMETag(d, model, ninitial) for d in \
-                        amplitude.get('diagrams')])]        
-        
+                perms,
+                sorted_tags]
+
+    @staticmethod
+    def prepare_comp_dict(process, numbers):
+        """Prepare a dictionary from leg number to [positions] in such
+           a way that identical particles are treated in a symmetric way"""
+
+        # Crate dictionary from leg number to position
+        start_perm_dict = dict([(n,i) for (i,n) in enumerate(numbers)])
+
+        # Ids for process legs            
+        legs = [l.get('id') for l in sorted(process.get_legs_with_decays())]
+        if process.get('is_decay_chain'):
+            legs.insert(0,process.get('legs')[0].get('id'))
+        ninitial = len([l for l in process.get('legs') if \
+                                not l.get('state')])
+        # Dictionary from leg id to position for final-state legs
+        id_num_dict = {}
+        for n in start_perm_dict.keys():
+            if n > ninitial:
+                id_num_dict.setdefault(legs[n-1], []).append(\
+                    start_perm_dict[n])
+        # Make each entry in start_perm_dict independent of position of
+        # identical particles by including all positions
+        for n in start_perm_dict.keys():
+            if n <= ninitial:
+                # Just turn it into a list
+                start_perm_dict[n] = [start_perm_dict[n]]
+            else:
+                # Turn into list of positions for identical particles
+                start_perm_dict[n] = sorted(id_num_dict[legs[n-1]])
+
+        return start_perm_dict
+
     @staticmethod
     def link_from_leg(leg, model):
         """Returns the end link for a leg needed to identify matrix
@@ -112,8 +172,8 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         code if possible onshell s-channel prop. Note that is_part
         and PDG code needs to be flipped if we move the final vertex around."""
 
-        if vertex.get('id') == 0:
-            return (0,)
+        if vertex.get('id') in [0,-1]:
+            return (vertex.get('id'),)
 
         inter = model.get_interaction(vertex.get('id'))
         coup_keys = sorted(inter.get('couplings').keys())
@@ -151,6 +211,22 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             return (new_vertex[1],)
         # We should not get here
         assert(False)
+
+
+class IdentifyMETagFKS(IdentifyMETag):
+    """on top of what IdentifyMETag, the diagram tags also have the charge 
+    difference along the fermionic flow in them for initial state legs."""
+
+    def __init__(self, diagram, model = None, ninitial = 2):
+        self.flow_charge_diff = diagram.get_flow_charge_diff(model)
+        super(IdentifyMETagFKS, self).__init__(diagram, model, ninitial)
+
+    def __eq__(self, other):
+        return super(IdentifyMETag, self).__eq__(other) and \
+                self.flow_charge_diff == other.flow_charge_diff
+
+
+
         
 #===============================================================================
 # HelasWavefunction
@@ -162,6 +238,17 @@ class HelasWavefunction(base_objects.PhysicsObject):
     interaction id, all relevant interaction information, fermion flow
     state, wavefunction number
     """
+
+    @staticmethod
+    def spin_to_size(spin):
+        """ Returns the size of a wavefunction (i.e. number of element) carrying
+        a particle with spin 'spin' """
+
+        sizes = {1:1,2:4,3:4,4:16,5:16}
+        try:
+            return sizes[abs(spin)]
+        except KeyError:
+            raise MadGraph5Error, "L-cut particle has spin %d which is not supported."%spin
 
     def default_setup(self):
         """Default values for all properties"""
@@ -208,12 +295,22 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # fermionflow = 1    fermions have +-1 for flow (bosons always +1),
         #                    -1 is used only if there is a fermion flow clash
         #                    due to a Majorana particle 
+        # is_loop = logical true if this function builds a loop or belong
+        #           to an external structure.
         self['state'] = 'initial'
         self['leg_state'] = True
         self['mothers'] = HelasWavefunctionList()
         self['number_external'] = 0
         self['number'] = 0
+        self['me_id'] = 0
         self['fermionflow'] = 1
+        self['is_loop'] = False
+        # The rank is used in the open loops method and stores the rank of the
+        # polynomial describing the loop numerator up to this loop wavefunction
+        self['rank'] = None
+        # The lcut_size stores the size of the L-Cut wavefunction at the origin
+        # of the loopwavefunction.
+        self['lcut_size']=None
         # The decay flag is used in processes with defined decay chains,
         # to indicate that this wavefunction has a decay defined
         self['decay'] = False
@@ -247,6 +344,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 self.set('particle', leg.get('id'), model)
                 self.set('number_external', leg.get('number'))
                 self.set('number', leg.get('number'))
+                self.set('is_loop', leg.get('loop_line'))
                 self.set('state', {False: 'initial', True: 'final'}[leg.get('state')])
                 if leg.get('onshell') == False:
                     # Denotes forbidden s-channel
@@ -394,18 +492,36 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid bool" % str(value) + \
                         " for decay"
-
+        
         if name in ['onshell']:
-            if not isinstance(value, bool) and value != None:
+            if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid bool" % str(value) + \
                         " for onshell"
 
+        if name in ['is_loop']:
+            if not isinstance(value, bool):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid bool" % str(value) + \
+                        " for is_loop"
+                        
         if name == 'conjugate_indices':
             if not isinstance(value, tuple) and value != None:
                 raise self.PhysicsObjectError, \
                         "%s is not a valid tuple" % str(value) + \
                         " for conjugate_indices"
+
+        if name == 'rank':
+            if not isinstance(value, int) and value != None:
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid int" % str(value) + \
+                        " for the rank"
+
+        if name == 'lcut_size':
+            if not isinstance(value, int) and value != None:
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid int" % str(value) + \
+                        " for the lcut_size"
 
         return True
 
@@ -418,6 +534,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if name == 'conjugate_indices' and self[name] == None:
             self['conjugate_indices'] = self.get_conjugate_index()
 
+        if name == 'rank' and self[name] == None:
+            self['rank'] = self.get_rank()
+        
+        if name == 'lcut_size' and self[name] == None:
+            self['lcut_size'] = self.get_lcut_size()  
+
         if name in ['spin', 'mass', 'width', 'self_antipart']:
             return self['particle'].get(name)
         elif name == 'pdg_code':
@@ -428,12 +550,17 @@ class HelasWavefunction(base_objects.PhysicsObject):
             return self['particle'].get_name()
         elif name == 'antiname':
             return self['particle'].get_anti_name()
+        elif name == 'me_id':
+            out = super(HelasWavefunction, self).get(name)
+            if out: 
+                return out
+            else:
+                return super(HelasWavefunction, self).get('number')
         else:
             return super(HelasWavefunction, self).get(name)
         
 
     # Enhanced set function, where we can append a model
-
     def set(self, *arguments):
         """When setting interaction_id, if model is given (in tuple),
         set all other interaction properties. When setting pdg_code,
@@ -485,7 +612,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return ['particle', 'antiparticle', 'is_part',
                 'interaction_id', 'pdg_codes', 'orders', 'inter_color', 
                 'lorentz', 'coupling', 'color_key', 'state', 'number_external',
-                'number', 'fermionflow', 'mothers']
+                'number', 'fermionflow', 'mothers', 'is_loop']
 
     # Helper functions
 
@@ -495,6 +622,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self.set('particle', self.get('antiparticle'))
         self.set('antiparticle', part)
 
+    def is_anticommutating_ghost(self):
+        """ Return True if the particle of this wavefunction is a ghost charged
+        under SU(3)"""
+        return self.get('particle').get('ghost') and self.get('color')!=1
+
     def is_fermion(self):
         return self.get('spin') % 2 == 0
 
@@ -503,6 +635,47 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
     def is_majorana(self):
         return self.is_fermion() and self.get('self_antipart')
+
+    def get_interaction_q_power(self):
+        """ Returns the power of the loop momentum q brought by the interaction
+        and propagator from which this loop wavefunction originates. This 
+        is done in a SM ad-hoc way, but it should be promoted to be general in 
+        the future, by reading the lorentz structure of the interaction."""
+        rank=0
+        # First add the propagator power for a fermion of spin 1/2.
+        # For the bosons, it is assumed to be in Feynman gauge so that the
+        # propagator does not bring in any power of the loop momentum.
+        if self.get('spin')==2:
+            rank=rank+1
+        # Now add a possible power of the loop momentum depending on the
+        # vertex creating this loop wavefunction. For now we don't read the
+        # lorentz structure but just use an SM ad-hoc rule that only 
+        # the feynman rules for a three point vertex with only bosons bring
+        # in one power of q.
+        if self.is_boson() and len([w for w in self.get('mothers') \
+                                                           if w.is_boson()])==2:
+            rank=rank+1
+        return rank
+        
+    def get_rank(self):
+        """ Returns the rank of this wavefunction. Which means the rank of the 
+        polynomial in the loop momenta q which is built at this point in the 
+        loop flow. """
+        
+        if not self['is_loop']:
+            return 0
+        
+        loop_mothers=[wf for wf in self['mothers'] if wf['is_loop']]
+        
+        if len(loop_mothers)==0:
+            # It is an external loop wavefunction
+            return 0
+        elif len(loop_mothers)==1:
+            rank=loop_mothers[0].get_rank()
+            return rank+self.get_interaction_q_power()
+        else:
+            raise MadGraph5Error, "A loop wavefunction has more than one loop"+\
+                " mothers."
 
     def to_array(self):
         """Generate an array with the information needed to uniquely
@@ -515,6 +688,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # wavefunctions from the same interaction but different
         # color structures
         array_rep.append(self['color_key'])
+        # Also need to specify if it is a loop wf
+        array_rep.append(int(self['is_loop']))
         # Finally, the mother numbers
         array_rep.extend([mother['number'] for \
                           mother in self['mothers']])
@@ -562,7 +737,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
                self.get_spin_state_number() == -2 and \
                self.get('self_antipart') and \
                [m.get('color') for m in self.get('mothers')] == [8, 8]:
-            self.set('coupling', ['-' + c for c in self.get('coupling')])
+            if hasattr(self, 'octet_majorana_flip'):
+                return
+            self.octet_majorana_flip = True
+            self.set('coupling', ['-%s' % c 
+                                              for c in self.get('coupling')])
         
     def set_state_and_particle(self, model):
         """Set incoming/outgoing state according to mother states and
@@ -874,16 +1053,116 @@ class HelasWavefunction(base_objects.PhysicsObject):
             return filter(lambda state: state != self.get('state'),
                           ['incoming', 'outgoing'])[0]
         return self.get(name)
+    
+    def get_external_helas_call_dict(self):
+        """ Returns a dictionary for formatting this external wavefunction
+        helas call """
+        
+        if self['mothers']:
+            raise MadGraph5Error, "This function should be called only for"+\
+                                                    " external wavefunctions."
+        return_dict = {}
+        if self.get('is_loop'):
+            return_dict['conjugate'] = ('C' if self.needs_hermitian_conjugate() \
+                                                                        else '')
+            return_dict['lcutspinletter'] = self.get_lcutspinletter()
+        return_dict['number'] = self.get('number')
+        return_dict['me_id'] = self.get('me_id')
+        return_dict['number_external'] = self.get('number_external')
+        return_dict['mass'] = self.get('mass')
+        if self.is_boson():
+            return_dict['state_id'] = (-1) ** (self.get('state') == 'initial')
+        else:
+            return_dict['state_id'] = -(-1) ** self.get_with_flow('is_part')
+        return_dict['number_external'] = self.get('number_external')
+        
+        return return_dict
 
-    def get_spin_state_number(self):
+    def get_helas_call_dict(self, index=1, OptimizedOutput=False,
+                                                               specifyHel=True):
+        """ return a dictionary to be used for formatting
+        HELAS call. The argument index sets the flipping while optimized output
+        changes the wavefunction specification in the arguments."""
+
+        if index == 1:
+            flip = 0
+        else:
+            flip = 1
+
+        output = {}
+        if self.get('is_loop') and OptimizedOutput:
+            output['vertex_rank']=self.get_interaction_q_power()
+            output['lcut_size']=self.get('lcut_size')
+            output['out_size']=self.spin_to_size(self.get('spin'))
+        
+        loop_mother_found=False
+        for ind, mother in enumerate(self.get('mothers')):
+            # temporary START
+            # This temporary modification is only because aloha has the convention
+            # of putting the loop polynomial mother wavefunction first in the 
+            # list of argument of the helas call. I this convention is changed
+            # to be the 'natural' order in the interaction, this would not be
+            # needed anymore.
+            if OptimizedOutput and self.get('is_loop'):
+                if mother.get('is_loop'):
+                    i=0
+                else:
+                    if loop_mother_found:
+                        i=ind
+                    else:
+                        i=ind+1
+            else:
+                i=ind
+            # temporary END
+            nb = mother.get('me_id') - flip
+            output[str(i)] = nb
+            if not OptimizedOutput:
+                if mother.get('is_loop'):
+                    output['WF%d'%i] = 'L(1,%d)'%nb
+                else:
+                    output['WF%d'%i] = '(1,WE(%d)'%nb
+            else:
+                if mother.get('is_loop'):
+                    output['loop_mother_number']=nb
+                    output['loop_mother_rank']=mother.get('rank')
+                    output['in_size']=self.spin_to_size(mother.get('spin'))
+                    output['WF%d'%i] = 'PL(0,%d)'%nb
+                    loop_mother_found=True
+                else:
+                    output['WF%d'%i] = 'W(1,%d'%nb
+            if not mother.get('is_loop'):
+                if specifyHel:
+                    output['WF%d'%i]=output['WF%d'%i]+',H)'
+                else:
+                    output['WF%d'%i]=output['WF%d'%i]+')'
+                    
+        #fixed argument
+        for i, coup in enumerate(self.get_with_flow('coupling')):
+            output['coup%d'%i] = coup
+        output['out'] = self.get('me_id') - flip
+        output['M'] = self.get('mass')
+        output['W'] = self.get('width')
+        # optimization
+        if aloha.complex_mass: 
+            if (self.get('width') == 'ZERO' or self.get('mass') == 'ZERO'):
+                #print self.get('width'), self.get('mass')
+                output['CM'] = '%s' % self.get('mass') 
+            else: 
+                output['CM'] ='CMASS_%s' % self.get('mass')
+        return output
+    
+    def get_spin_state_number(self, flip=False):
         """Returns the number corresponding to the spin state, with a
-        minus sign for incoming fermions"""
+        minus sign for incoming fermions. For flip=True, this 
+        spin_state_number is suited for find the index in the interaction 
+        of a MOTHER wavefunction. """
 
-        state_number = {'incoming':-1, 'outgoing': 1,
+        state_number = {'incoming':-1 if not flip else 1,
+                        'outgoing': 1 if not flip else -1,
                         'intermediate': 1, 'initial': 1, 'final': 1}
         return self.get('fermionflow') * \
-               state_number[self.get('state')] * \
-               self.get('spin')
+                  state_number[self.get('state')] * \
+                  self.get('spin')
 
     def find_mother_fermion(self):
         """Return the fermion mother which is fermion flow connected to
@@ -900,14 +1179,22 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def find_outgoing_number(self):
         "Return the position of the resulting particles in the interactions"
         # First shot: just the index in the interaction
+        
         if self.get('interaction_id') == 0:
             return 0
         
+        return self.find_leg_index(self.get_anti_pdg_code(),\
+                                                   self.get_spin_state_number())
+        
+    def find_leg_index(self, pdg_code, spin_state):
+        """ Find the place in the interaction list of the given particle with
+        pdg 'pdg_code' and spin 'spin_stat'. For interactions with several identical particles (or 
+        fermion pairs) the outgoing index is always the first occurence.
+        """
         wf_indices = self.get('pdg_codes')
-        # Take the first index in case of identical particles
-        wf_index = wf_indices.index(self.get_anti_pdg_code())
+        wf_index = wf_indices.index(pdg_code)
+
         # If fermion, then we need to correct for I/O status
-        spin_state = self.get_spin_state_number()
         if spin_state % 2 == 0:
             if wf_index % 2 == 0 and spin_state < 0:
                 # Outgoing particle at even slot -> increase by 1
@@ -916,7 +1203,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 # Incoming particle at odd slot -> decrease by 1
                 wf_index -= 1
         return wf_index + 1
-
+    
     def get_call_key(self):
         """Generate the (spin, number, C-state) tuple used as key for
         the helas call dictionaries in HelasModel"""
@@ -927,10 +1214,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         # Sort according to spin and flow direction
         res.sort()
-
+#        if not self['is_loop']:
         res.append(self.get_spin_state_number())
-
         res.append(self.find_outgoing_number())
+#        else:
+        if self['is_loop']:
+            res.append(self.get_loop_index())
+            if not self.get('mothers'):
+                res.append(self.get('is_part'))
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
@@ -978,28 +1269,38 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # leg corresponds to a decaying (onshell) particle, forbidden
         # s-channel, or regular
         try:
+            if self.get('is_loop'):
+                # Loop wavefunction should always be redefined
+                raise KeyError
             lastleg = wf_dict[(self.get('number'),self.get('onshell'))]
         except KeyError:            
             lastleg = base_objects.Leg({
                 'id': self.get_pdg_code(),
                 'number': self.get('number_external'),
                 'state': self.get('leg_state'),
-                'onshell': self.get('onshell')
+                'onshell': self.get('onshell'),
+                'loop_line':self.get('is_loop')
                 })
-            if optimization != 0:
+
+            if optimization != 0 and not self.get('is_loop'):
                 wf_dict[(self.get('number'),self.get('onshell'))] = lastleg
 
-        for mother in self.get('mothers'):
+        for mother in self.get('mothers'):           
             try:
+                if mother.get('is_loop'):
+                # Loop wavefunction should always be redefined
+                    raise KeyError
                 leg = wf_dict[(mother.get('number'),False)]
             except KeyError:
                 leg = base_objects.Leg({
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
+                    'onshell': None,
+                    'loop_line':mother.get('is_loop'),
                     'onshell': None
                     })
-                if optimization != 0:
+                if optimization != 0 and not mother.get('is_loop'):
                     wf_dict[(mother.get('number'),False)] = leg
             legs.append(leg)
 
@@ -1029,17 +1330,43 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return color_indices
 
-    def get_s_and_t_channels(self, ninitial, mother_leg):
+    def get_lcutspinletter(self):
+        """Returns S,V or F depending on the spin of the mother loop particle.
+        Return '' otherwise."""
+        
+        if self['is_loop'] and not self.get('mothers'):
+            if self.get('spin') == 1:
+                if self.get('particle').get('is_part'):
+                    return 'S'
+                else:
+                    return 'AS'
+            if self.get('spin') == 2:
+                if self.get('particle').get('is_part'):
+                    return 'F'
+                else:
+                    return 'AF'
+            if self.get('spin') == 3:
+                return 'V'
+            else:
+                raise MadGraph5Error,'L-cut particle type not supported'
+        else:
+            return ''
+
+    def get_s_and_t_channels(self, ninitial, mother_leg, reverse_t_ch = False):
         """Returns two lists of vertices corresponding to the s- and
-        t-channels that can be traced from this wavefunction, ordered
-        from the outermost s-channel and in/down towards the highest
-        number initial state leg. mother_leg corresponds to self but with
+        t-channels that can be traced from this wavefunction, ordered 
+        from the outermost s-channel and in/down towards the highest 
+        (if not reverse_t_ch) or lowest (if reverse_t_ch) number initial 
+        state leg. mother_leg corresponds to self but with
         correct leg number = min(final state mothers)."""
 
         schannels = base_objects.VertexList()
         tchannels = base_objects.VertexList()
 
         mother_leg = copy.copy(mother_leg)
+
+        (startleg, finalleg) = (1,2)
+        if reverse_t_ch: (startleg, finalleg) = (2,1)
 
         # Add vertices for all s-channel mothers
         final_mothers = filter(lambda wf: wf.get('number_external') > ninitial,
@@ -1070,9 +1397,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     'onshell': mother.get('onshell')
                     }))
 
-            if init_mothers[0].get('number_external') == 1 and \
-                   not init_mothers[0].get('leg_state') and \
-                   ninitial > 1:
+            if init_mothers[0].get('number_external') == startleg and \
+                   not init_mothers[0].get('leg_state') and ninitial > 1:
                 # If this is t-channel going towards external leg 1,
                 # mother_leg is resulting wf
                 legs.append(mother_leg)
@@ -1093,7 +1419,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             # Add s- and t-channels from init_mother
             new_mother_leg = legs[-1]
-            if init_mothers[0].get('number_external') == 1 and \
+            if init_mothers[0].get('number_external') == startleg and \
                    not init_mothers[0].get('leg_state') and \
                    ninitial > 1:
                 # Mother of next vertex is init_mothers[0]
@@ -1102,11 +1428,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             mother_s, tchannels = \
                       init_mothers[0].get_s_and_t_channels(ninitial,
-                                                           new_mother_leg)
+                                                           new_mother_leg,
+                                                           reverse_t_ch)
             if ninitial == 1 or init_mothers[0].get('leg_state') == True:
                 # This vertex is s-channel
                 schannels.append(vertex)
-            elif init_mothers[0].get('number_external') == 1:
+            elif init_mothers[0].get('number_external') == startleg:
                 # If init_mothers is going towards external leg 1, add
                 # to t-channels, at end
                 tchannels.append(vertex)
@@ -1121,9 +1448,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
             # This is a t-channel junction. Start with the leg going
             # towards external particle 1, and then do external
             # particle 2
-            init_mothers1 = filter(lambda wf: wf.get('number_external') == 1,
+            init_mothers1 = filter(lambda wf: wf.get('number_external') == \
+                                   startleg,
                                    init_mothers)[0]
-            init_mothers2 = filter(lambda wf: wf.get('number_external') == 2,
+            init_mothers2 = filter(lambda wf: wf.get('number_external') == \
+                                   finalleg,
                                    init_mothers)[0]
 
             # Create vertex
@@ -1146,7 +1475,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             # Add s- and t-channels going down towards leg 1
             mother_s, tchannels = \
-                      init_mothers1.get_s_and_t_channels(ninitial, legs[1])
+                      init_mothers1.get_s_and_t_channels(ninitial, legs[-2],
+                                                         reverse_t_ch)
             schannels.extend(mother_s)
 
             # Add vertex
@@ -1154,7 +1484,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             # Add s- and t-channels going down towards leg 2
             mother_s, mother_t = \
-                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1])
+                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1],
+                                                         reverse_t_ch)
             schannels.extend(mother_s)
             tchannels.extend(mother_t)
 
@@ -1164,6 +1495,78 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return schannels, tchannels
 
+    def get_struct_external_leg_ids(self):
+        """ Return a set containing the ids of all the non-loop outter-most
+        external legs attached to the loop at the interaction point of this 
+        loop wavefunction """
+        
+        if not self.get('mothers'):
+            return set([self.get('number_external'),])
+
+        res=set([])
+        for wf in self.get('mothers'):
+            if not wf['is_loop']:
+                res=res.union(wf.get_struct_external_leg_ids())
+        return res
+
+    def get_loop_index(self):
+        """Return the index of the wavefunction in the mothers which is the 
+        loop one"""
+        
+        if not self.get('mothers'):
+            return 0
+        
+        try:
+            loop_wf_index=\
+                       [wf['is_loop'] for wf in self.get('mothers')].index(True)
+        except ValueError:
+            raise MadGraph5Error, "The loop wavefunctions should have exactly"+\
+                                                " one loop wavefunction mother."
+
+        if self.find_outgoing_number()-1<=loop_wf_index:
+            # If the incoming loop leg is placed after the outgoing one we
+            # need to increment once more its index in the interaction list (
+            # because the outgoing loop leg is not part of the mother wf list)
+            return loop_wf_index+2
+        else:
+            # Basic increment of +1 because aloha counts particles in the 
+            # interaction starting at 1.
+            return loop_wf_index+1
+
+    def get_lcut_size(self):
+        """ Return the size (i.e number of elements) of the L-Cut wavefunction
+        this loop wavefunction originates from. """
+        
+        if not self['is_loop']:
+            return 0
+        
+        # Obtain the L-cut wavefunction this loop wavefunction comes from.
+        # (I'm using two variable instead of one in order to have only one call
+        #  to get_loop_mother())
+        last_loop_wf=self
+        last_loop_wf_loop_mother=last_loop_wf.get_loop_mother()
+        while last_loop_wf_loop_mother:
+            last_loop_wf=last_loop_wf_loop_mother
+            last_loop_wf_loop_mother=last_loop_wf_loop_mother.get_loop_mother()
+        
+        # Translate its spin into a wavefunction size.
+        return self.spin_to_size(last_loop_wf.get('spin'))
+        
+    def get_loop_mother(self):
+        """ Return the mother of type 'loop', if any. """
+        
+        if not self.get('mothers'):
+            return None
+        loop_wfs=[wf for wf in self.get('mothers') if wf['is_loop']]
+        if loop_wfs:
+            if len(loop_wfs)==1:
+                return loop_wfs[0]
+            else:
+                raise MadGraph5Error, "The loop wavefunction must have either"+\
+                  " no mothers, or exactly one mother with type 'loop'."
+        else:
+            return None
+        
     def get_conjugate_index(self):
         """Return the index of the particle that should be conjugated."""
 
@@ -1414,12 +1817,10 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
             pdg_codes.pop(my_index)
         
         mothers = copy.copy(self)
-
         # Sort according to interaction pdg codes
 
         mother_codes = [ wf.get_pdg_code() for wf \
-                         in mothers ]
-
+                         in mothers ]    
         if pdg_codes == mother_codes:
             # Already sorted - skip sort below
             return mothers, my_index
@@ -1495,6 +1896,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         # Properties related to the interaction generating the propagator
         self['interaction_id'] = 0
+        # Base for born amplitude, the 'type' argument for the CT-vertices
+        # and 'loop' for the HelasAmplitudes in a LoopHelasAmplitude.
+        self['type'] = 'base'
         self['pdg_codes'] = []
         self['orders'] = {}
         self['inter_color'] = None
@@ -1697,6 +2101,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     self.set('orders', inter.get('orders'))
                     # Note that the following values might change, if
                     # the relevant color/lorentz/coupling is not index 0
+                    if inter.get('type'):
+                        self.set('type', inter.get('type'))
                     if inter.get('color'):
                         self.set('inter_color', inter.get('color')[0])
                     if inter.get('lorentz'):
@@ -1716,7 +2122,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
         return ['interaction_id', 'pdg_codes', 'orders', 'inter_color', 
                 'lorentz', 'coupling', 'color_key', 'number', 'color_indices',
                 'fermionfactor', 'mothers']
-
 
     # Helper functions
 
@@ -1747,6 +2152,17 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         return self.get('conjugate_indices') != ()
 
+    def get_epsilon_order(self):
+        """Based on the type of the amplitude, determines to which epsilon
+        order it contributes"""
+        
+        if '1eps' in self['type']:
+            return 1
+        elif '2eps' in self['type']:
+            return 2
+        else:
+            return 0
+
     def get_call_key(self):
         """Generate the (spin, state) tuples used as key for the helas call
         dictionaries in HelasModel"""
@@ -1757,6 +2173,13 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         # Sort according to spin and flow direction
         res.sort()
+
+        # The call is different depending on the type of vertex. 
+        # For example, base would give AMP(%d), R2 would give AMPL(0,%d)
+        # and a single pole UV counter-term would give AMPL(1,%d).
+        # Also for loop amplitudes, one must have the tag 'loop'
+        if self['type']!='base':
+            res.append(self['type'])
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
@@ -1770,6 +2193,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         # Pick out fermion mothers
         fermions = [wf for wf in self.get('mothers') if wf.is_fermion()]
+        assert len(fermions) % 2 == 0
 
         # Pick out bosons
         bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
@@ -1789,8 +2213,15 @@ class HelasAmplitude(base_objects.PhysicsObject):
             # Bosons return a list [n1,n2,...]
             fermion_number_list.extend(boson.get_fermion_order())
 
-        self['fermionfactor'] = \
-                         HelasAmplitude.sign_flips_to_order(fermion_number_list)
+        fermion_factor = HelasAmplitude.sign_flips_to_order(fermion_number_list)
+        # Apply the right sign correction for anti-commutating ghost loops
+        if self.get('type')=='loop':
+            lcuf_wf_2=[m for m in self.get('mothers') if m['is_loop'] and \
+                                                        not m.get('mothers')][0]
+            self['fermionfactor'] = -fermion_factor if \
+                        lcuf_wf_2.is_anticommutating_ghost() else fermion_factor
+        else:
+            self['fermionfactor'] = fermion_factor
 
     @staticmethod
     def sign_flips_to_order(fermions):
@@ -1820,7 +2251,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
         for mother in self.get('mothers'):
             vertices.extend(mother.get_base_vertices(wf_dict, vx_list,
                                                      optimization))
-
         # Generate last vertex
         vertex = self.get_base_vertex(wf_dict, vx_list, optimization)
 
@@ -1830,20 +2260,24 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
     def get_base_vertex(self, wf_dict, vx_list = [], optimization = 1):
         """Get a base_objects.Vertex corresponding to this amplitude."""
-
+                
         # Generate last vertex
         legs = base_objects.LegList()
         for mother in self.get('mothers'):
             try:
+                if mother.get('is_loop'):
+                    # Loop wavefunction should always be redefined
+                    raise KeyError
                 leg = wf_dict[(mother.get('number'),False)]
             except KeyError:
                 leg = base_objects.Leg({
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'onshell': None
+                    'onshell': None,
+                    'loop_line':mother.get('is_loop')
                     })
-                if optimization != 0:
+                if optimization != 0 and not mother.get('is_loop'):
                     wf_dict[(mother.get('number'),False)] = leg
             legs.append(leg)
 
@@ -1851,14 +2285,17 @@ class HelasAmplitude(base_objects.PhysicsObject):
             'id': self.get('interaction_id'),
             'legs': legs})
 
-    def get_s_and_t_channels(self, ninitial, new_pdg):
+    def get_s_and_t_channels(self, ninitial, new_pdg, reverse_t_ch = False):
         """Returns two lists of vertices corresponding to the s- and
         t-channels of this amplitude/diagram, ordered from the outermost
-        s-channel and in/down towards the highest number initial state
-        leg."""
+        s-channel and in/down towards the highest (if not reverse_t_ch) or
+        lowest (if reverse_t_ch) number initial state leg."""
 
         schannels = base_objects.VertexList()
         tchannels = base_objects.VertexList()
+
+        (startleg, finalleg) = (1,2)
+        if reverse_t_ch: (startleg, finalleg) = (2,1)
 
         # Add vertices for all s-channel mothers
         final_mothers = filter(lambda wf: wf.get('number_external') > ninitial,
@@ -1902,16 +2339,19 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
             # Add s- and t-channels from further down
             mother_s, tchannels = init_mothers[0].\
-                                  get_s_and_t_channels(ninitial, legs[-1])
+                                  get_s_and_t_channels(ninitial, legs[-1],
+                                                       reverse_t_ch)
 
             schannels.extend(mother_s)
         else:
             # This is a t-channel leg. Start with the leg going
             # towards external particle 1, and then do external
             # particle 2
-            init_mothers1 = filter(lambda wf: wf.get('number_external') == 1,
+            init_mothers1 = filter(lambda wf: wf.get('number_external') == \
+                                   startleg,
                                    init_mothers)[0]
-            init_mothers2 = filter(lambda wf: wf.get('number_external') == 2,
+            init_mothers2 = filter(lambda wf: wf.get('number_external') == \
+                                   finalleg,
                                    init_mothers)[0]
 
             # Create vertex
@@ -1932,7 +2372,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
             # Add s- and t-channels going down towards leg 1
             mother_s, tchannels = \
-                      init_mothers1.get_s_and_t_channels(ninitial, legs[-2])
+                      init_mothers1.get_s_and_t_channels(ninitial, legs[-2],
+                                                         reverse_t_ch)
 
             schannels.extend(mother_s)
 
@@ -1941,7 +2382,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
             # Add s- and t-channels going down towards leg 2
             mother_s, mother_t = \
-                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1])
+                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1],
+                                                         reverse_t_ch)
             schannels.extend(mother_s)
             tchannels.extend(mother_t)
 
@@ -2030,7 +2472,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
             color_indices.extend(mother.get_color_indices())
 
         # Add this amp's color index
-        if self.get('interaction_id'):
+        if self.get('interaction_id') not in [0,-1]:
             color_indices.append(self.get('color_key'))
 
         return color_indices
@@ -2072,6 +2514,36 @@ class HelasAmplitude(base_objects.PhysicsObject):
             vertex_leg_numbers.extend(mother.get_vertex_leg_numbers())
 
         return vertex_leg_numbers
+
+    def get_helas_call_dict(self,index=1,OptimizedOutput=False,specifyHel=True):
+        """ return a dictionary to be used for formatting
+        HELAS call."""
+        
+        if index == 1:
+            flip = 0
+        else:
+            flip = 1
+        
+        output = {}
+        for i, mother in enumerate(self.get('mothers')):
+            nb = mother.get('me_id') - flip 
+            output[str(i)] = nb
+            if mother.get('is_loop'):
+                output['WF%d' % i ] = 'L(1,%d)'%nb
+            else:
+                if specifyHel:
+                    output['WF%d' % i ] = '(1,WE(%d),H)'%nb
+                else:
+                    output['WF%d' % i ] = '(1,WE(%d))'%nb                    
+                
+        #fixed argument
+        for i, coup in enumerate(self.get('coupling')):
+            output['coup%d'%i] = str(coup)
+
+        output['out'] = self.get('number') - flip
+        return output
+
+
 
     def set_coupling_color_factor(self):
         """Check if there is a mismatch between order of fermions
@@ -2146,6 +2618,10 @@ class HelasDiagram(base_objects.PhysicsObject):
         """Default values for all properties"""
 
         self['wavefunctions'] = HelasWavefunctionList()
+        # In the optimized output the loop wavefunctions can be recycled as
+        # well. If so, those are put in the list below, and are not mixed with
+        # the tree wavefunctions above in order to keep the original structure.
+        self['loop_wavefunctions'] = HelasWavefunctionList()
         # One diagram can have several amplitudes, if there are
         # different Lorentz or color structures associated with this
         # diagram
@@ -2155,7 +2631,7 @@ class HelasDiagram(base_objects.PhysicsObject):
     def filter(self, name, value):
         """Filter for valid diagram property values."""
 
-        if name == 'wavefunctions':
+        if name == 'wavefunctions' or name == 'loop_wavefunctions':
             if not isinstance(value, HelasWavefunctionList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid HelasWavefunctionList object" % \
@@ -2171,7 +2647,7 @@ class HelasDiagram(base_objects.PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['wavefunctions', 'amplitudes']
+        return ['wavefunctions', 'loop_wavefunctions', 'amplitudes']
 
     def calculate_orders(self):
         """Calculate the actual coupling orders of this diagram"""
@@ -2185,7 +2661,7 @@ class HelasDiagram(base_objects.PhysicsObject):
             for order in wf.get('orders').keys():
                 try:
                     coupling_orders[order] += wf.get('orders')[order]
-                except:
+                except Exception:
                     coupling_orders[order] = wf.get('orders')[order]
 
         return coupling_orders
@@ -2194,6 +2670,12 @@ class HelasDiagram(base_objects.PhysicsObject):
         """Get a list of the number of legs in vertices in this diagram"""
 
         return self.get('amplitudes')[0].get_vertex_leg_numbers()
+
+    def get_regular_amplitudes(self):
+        """ For regular HelasDiagrams, it is simply all amplitudes.
+        It is overloaded in LoopHelasDiagram"""
+        
+        return self['amplitudes']
 
 #===============================================================================
 # HelasDiagramList
@@ -2315,9 +2797,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 self.calculate_fermionfactors()
                 self.calculate_identical_particle_factor()
                 if gen_color and not self.get('color_basis'):
-                    self.get('color_basis').build(self.get('base_amplitude'))
-                    self.set('color_matrix',
-                             color_amp.ColorMatrix(self.get('color_basis')))
+                    self.process_color()
             else:
                 # In this case, try to use amplitude as a dictionary
                 super(HelasMatrixElement, self).__init__(amplitude)
@@ -2359,6 +2839,15 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Overloading the nonequality operator, to make comparison easy"""
         return not self.__eq__(other)
 
+    def process_color(self):
+        """ Perform the simple color processing from a single matrix element 
+        (without optimization then). This is called from the initialization
+        and pulled out here in order to have the correct treatment in daughter
+        classes."""
+        self.get('color_basis').build(self.get('base_amplitude'))
+        self.set('color_matrix',
+          color_amp.ColorMatrix(self.get('color_basis')))
+        
     def generate_helas_diagrams(self, amplitude, optimization=1,
                                 decay_ids=[]):
         """Starting from a list of Diagrams from the diagram
@@ -2376,7 +2865,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     "Missing or erraneous arguments for generate_helas_diagrams"
         assert isinstance(optimization, int), \
                     "Missing or erraneous arguments for generate_helas_diagrams"
-
+        self.optimization = optimization
 
         diagram_list = amplitude.get('diagrams')
         process = amplitude.get('process')
@@ -2508,7 +2997,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         try:
                             wf = diagram_wavefunctions[\
                                     diagram_wavefunctions.index(wf)]
-                        except ValueError:
+                        except ValueError, error:
                             # Update wf number
                             wf_number = wf_number + 1
                             wf.set('number', wf_number)
@@ -2543,7 +3032,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             helas_diagram.set('number', diagram_number)
             for number_wf_dict, color_list in zip(number_to_wavefunctions,
                                                   color_lists):
-
                 # Now generate HelasAmplitudes from the last vertex.
                 if lastvx.get('id'):
                     inter = model.get_interaction(lastvx.get('id'))
@@ -2609,7 +3097,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # Sort the wavefunctions according to number
             diagram_wavefunctions.sort(lambda wf1, wf2: \
                           wf1.get('number') - wf2.get('number'))
-
+            
             if optimization:
                 wavefunctions.extend(diagram_wavefunctions)
                 wf_mother_arrays.extend([wf.to_array() for wf \
@@ -2619,6 +3107,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             # Append this diagram in the diagram list
             helas_diagrams.append(helas_diagram)
+        
 
         self.set('diagrams', helas_diagrams)
 
@@ -2629,6 +3118,67 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         for amp in self.get_all_amplitudes():
             amp.set('mothers', HelasMatrixElement.sorted_mothers(amp))
             amp.set('color_indices', amp.get_color_indices())
+
+              
+    def reuse_outdated_wavefunctions(self, helas_diagrams):
+        """change the wavefunctions id used in the writer to minimize the 
+           memory used by the wavefunctions."""
+           
+        if not self.optimization:
+            for diag in helas_diagrams:
+                for wf in diag['wavefunctions']:
+                    wf.set('me_id',wf.get('number'))
+            return helas_diagrams
+
+        # First compute the first/last appearance of each wavefunctions
+        # first takes the line number and return the id of the created wf
+        # last_lign takes the id of the wf and return the line number
+        last_lign={}
+        first={}
+        pos=0
+        for diag in helas_diagrams:
+            for wf in diag['wavefunctions']:
+                pos+=1
+                for wfin in wf.get('mothers'):
+                    last_lign[wfin.get('number')] = pos
+                    assert wfin.get('number') in first.values()
+                first[pos] = wf.get('number')
+            for amp in diag['amplitudes']:
+                pos+=1
+                for wfin in amp.get('mothers'):
+                    last_lign[wfin.get('number')] = pos
+        
+        # last takes the line number and return the last appearing wf at
+        #that particular line
+        last=collections.defaultdict(list)
+        for nb, pos in last_lign.items():
+            last[pos].append(nb)
+        tag = list(set(last.keys()+first.keys())) 
+        tag.sort() #lines number where something happen (new in/out) 
+
+        # Create the replacement id dictionary
+        outdated = [] # wf id which ar not use any more at this stage
+        replace = {}  # replacement directory
+        max_wf = 0
+        for nb in tag:
+            if outdated and nb in first:
+                replace[first[nb]] = outdated.pop()
+            elif nb in first:
+                assert first[nb] not in replace, '%s already assigned' % first[nb]
+                max_wf += 1
+                replace[first[nb]] = max_wf
+            if nb in last:
+                for value in last[nb]:
+                    outdated.append(replace[value])
+
+                   
+        #replace the id
+        for diag in helas_diagrams:
+            for wf in diag['wavefunctions']:
+                wf.set('me_id', replace[wf.get('number')])
+        
+        return helas_diagrams
+
 
     def insert_decay_chains(self, decay_dict):
         """Iteratively insert decay chains decays into this matrix
@@ -2772,6 +3322,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # Calculate identical particle factors for
         # this matrix element
         self.identical_decay_chain_factor(decay_dict.values())
+        
 
     def insert_decay(self, old_wfs, decay, numbers, got_majoranas):
         """Insert a decay chain matrix element into the matrix element.
@@ -2955,6 +3506,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         for i, wf in enumerate(final_decay_wfs):
                             final_decay_wfs[i] = \
                                                decay_diag_wfs[decay_diag_wfs.index(wf)]
+                            
                         # Remove final wavefunctions from decay_diag_wfs,
                         # since these will be replaced separately by
                         # replace_wavefunctions
@@ -3075,7 +3627,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                                    final_decay_wfs,
                                                    diagrams,
                                                    numbers)
-
             # Now that we are done with this set of diagrams, we need
             # to clean out duplicate wavefunctions (i.e., remove
             # identical wavefunctions which are already present in
@@ -3261,7 +3812,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         is possible only if there is only one diagram in the decay."""
 
         for key in old_wf.keys():
-            old_wf.set(key, new_wf.get(key))
+            old_wf.set(key, new_wf[key])
 
     def identical_decay_chain_factor(self, decay_chains):
         """Calculate the denominator factor from identical decay chains"""
@@ -3387,14 +3938,23 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Get number of diagrams, which is always more than number of
         configs"""
 
-        return len(self.get('diagrams'))    
+        model = self.get('processes')[0].\
+                get('model')
+        
+        next, nini = self.get_nexternal_ninitial()
+        return sum([d.get_num_configs(model, nini) for d in \
+                    self.get('base_amplitude').get('diagrams')])
 
     def get_number_of_wavefunctions(self):
         """Gives the total number of wavefunctions for this ME"""
 
+        out =  max([wf.get('me_id') for wfs in self.get('diagrams') 
+                                    for wf in wfs.get('wavefunctions')])
+        if out: 
+            return out
         return sum([ len(d.get('wavefunctions')) for d in \
                        self.get('diagrams')])
-
+        
     def get_all_wavefunctions(self):
         """Gives a list of all wavefunctions for this ME"""
 
@@ -3414,7 +3974,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                               self.get('diagrams')[0].get('wavefunctions'))
 
         external_wfs.sort(lambda w1, w2: w1.get('number_external') - \
-             w1.get('number_external'))
+             w2.get('number_external'))
 
         i = 1
         while i < len(external_wfs):
@@ -3445,6 +4005,22 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                          filter(lambda wf: wf.get('leg_state') == False,
                                 external_wfs)])))
 
+    def get_external_masses(self):
+        """Gives the list of the strings corresponding to the masses of the
+        external particles."""
+
+        mass_list=[]
+        external_wfs = sorted(filter(lambda wf: wf.get('leg_state') != \
+                              'intermediate', self.get_all_wavefunctions()),\
+                              key=lambda w: w['number_external'])
+        external_number=1
+        for wf in external_wfs:
+            if wf.get('number_external')==external_number:
+                external_number=external_number+1
+                mass_list.append(wf.get('particle').get('mass'))
+        
+        return mass_list
+        
     def get_helicity_combinations(self):
         """Gives the number of helicity combinations for external
         wavefunctions"""
@@ -3472,6 +4048,19 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                   wf.get('pdg_code')].get_helicity_states()\
                                   for wf in self.get_external_wavefunctions()])
 
+    def get_hel_avg_factor(self):
+        """ Calculate the denominator factor due to the average over initial
+        state spin only """
+        
+        model = self.get('processes')[0].get('model')
+        initial_legs = filter(lambda leg: leg.get('state') == False, \
+                              self.get('processes')[0].get('legs'))
+        
+        return reduce(lambda x, y: x * y,
+                      [ len(model.get('particle_dict')[leg.get('id')].\
+                                   get_helicity_states())\
+                        for leg in initial_legs ])
+        
     def get_denominator_factor(self):
         """Calculate the denominator factor due to:
         Averaging initial state color and spin, and
@@ -3494,17 +4083,17 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         return spin_factor * color_factor * self['identical_particle_factor']
 
-    def get_color_amplitudes(self):
-        """Return a list of (coefficient, amplitude number) lists,
-        corresponding to the JAMPs for this matrix element. The
-        coefficients are given in the format (fermion factor, color
-        coeff (frac), imaginary, Nc power)."""
+    def generate_color_amplitudes(self, color_basis, diagrams):
+        """ Return a list of (coefficient, amplitude number) lists,
+        corresponding to the JAMPs for the HelasDiagrams and color basis passed
+        in argument. The coefficients are given in the format (fermion factor, 
+        colorcoeff (frac), imaginary, Nc power). """
 
-        if not self.get('color_basis'):
+        if not color_basis:
             # No color, simply add all amplitudes with correct factor
             # for first color amplitude
             col_amp = []
-            for diagram in self.get('diagrams'):
+            for diagram in diagrams:
                 for amplitude in diagram.get('amplitudes'):
                     col_amp.append(((amplitude.get('fermionfactor'),
                                     1, False, 0),
@@ -3516,13 +4105,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         col_amp_list = []
         for i, col_basis_elem in \
-                enumerate(sorted(self.get('color_basis').keys())):
+                enumerate(sorted(color_basis.keys())):
 
             col_amp = []
-            for diag_tuple in self.get('color_basis')[col_basis_elem]:
+            for diag_tuple in color_basis[col_basis_elem]:
                 res_amps = filter(lambda amp: \
                           tuple(amp.get('color_indices')) == diag_tuple[1],
-                          self.get('diagrams')[diag_tuple[0]].get('amplitudes'))
+                          diagrams[diag_tuple[0]].get('amplitudes'))
                 if not res_amps:
                     raise self.PhysicsObjectError, \
                           """No amplitude found for color structure
@@ -3542,22 +4131,33 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         return col_amp_list
 
+    def get_color_amplitudes(self):
+        """Return a list of (coefficient, amplitude number) lists,
+        corresponding to the JAMPs for this matrix element. The
+        coefficients are given in the format (fermion factor, color
+        coeff (frac), imaginary, Nc power)."""
+        
+        return self.generate_color_amplitudes(self['color_basis'],self['diagrams'])
+
     def get_used_lorentz(self):
-        """Return a list of (lorentz_name, conjugate, outgoing) with
+        """Return a list of (lorentz_name, conjugate_tag, outgoing) with
         all lorentz structures used by this HelasMatrixElement."""
 
-        return [(tuple(wa.get('lorentz')), tuple(wa.get_conjugate_index()),
+        return [(tuple(wa.get('lorentz')), tuple(['C%s' % w for w in wa.get('conjugate_indices')]),
                  wa.find_outgoing_number()) for wa in \
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
-                if wa.get('interaction_id') != 0]
+                if wa.get('interaction_id') not in [0,-1]]
         
     def get_used_couplings(self):
         """Return a list with all couplings used by this
         HelasMatrixElement."""
 
-        return [wa.get('coupling') for wa in \
+        tmp = [wa.get('coupling') for wa in \
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
-                if wa.get('interaction_id') != 0]
+                if wa.get('interaction_id') not in [0,-1]]
+        #some coupling have a minus one associated -> need to remove those
+        return [ [t] if not t.startswith('-') else [t[1:]] for t2 in tmp for t in t2]
+
 
     def get_mirror_processes(self):
         """Return a list of processes with initial states interchanged
@@ -3874,7 +4474,8 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
         final state particle.
         * If the number of decay chains and decaying final state particles
         don't correspond, all decays applying to a given particle type are
-        combined (without double counting)."""
+        combined (without double counting).
+        """
 
         # End recursion when there are no more decay chains
         if not self['decay_chains']:
@@ -4015,7 +4616,8 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                                         replace('Process: ', '') \
                                         for d in decay_dict.values()])))
 
-                matrix_element.insert_decay_chains(decay_dict)
+                matrix_element.insert_decay_chains(decay_dict)    
+                
                 me_tag = IdentifyMETag.create_tag(\
                             matrix_element.get_base_amplitude(),
                             matrix_element.get('identical_particle_factor'))
@@ -4036,6 +4638,8 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                            matrix_element.get('diagrams'):
                         matrix_elements.append(matrix_element)
                         me_tags.append(me_tag)
+
+
 
         return matrix_elements
 
@@ -4078,23 +4682,30 @@ class HelasMultiProcess(base_objects.PhysicsObject):
 
         return ['matrix_elements']
 
-    def __init__(self, argument=None, combine_matrix_elements=True):
-        """Allow initialization with AmplitudeList"""
+    def __init__(self, argument=None, combine_matrix_elements=True,
+                 matrix_element_opts={}):
+        """Allow initialization with AmplitudeList. Matrix_element_opts are 
+        potential options to be passed to the constructor of the 
+        HelasMatrixElements created. By default it is none, but when called from
+        LoopHelasProcess, this options will contain 'optimized_output'."""
 
         if isinstance(argument, diagram_generation.AmplitudeList):
             super(HelasMultiProcess, self).__init__()
             self.set('matrix_elements', self.generate_matrix_elements(argument,
-                            combine_matrix_elements = combine_matrix_elements))
+                            combine_matrix_elements = combine_matrix_elements,
+                            matrix_element_opts=matrix_element_opts))
         elif isinstance(argument, diagram_generation.MultiProcess):
             super(HelasMultiProcess, self).__init__()
             self.set('matrix_elements',
                      self.generate_matrix_elements(argument.get('amplitudes'),
-                             combine_matrix_elements = combine_matrix_elements))
+                             combine_matrix_elements = combine_matrix_elements,
+                             matrix_element_opts = matrix_element_opts))
         elif isinstance(argument, diagram_generation.Amplitude):
             super(HelasMultiProcess, self).__init__()
             self.set('matrix_elements', self.generate_matrix_elements(\
                              diagram_generation.AmplitudeList([argument]),
-                             combine_matrix_elements = combine_matrix_elements))
+                             combine_matrix_elements = combine_matrix_elements,
+                             matrix_element_opts = matrix_element_opts))
         elif argument:
             # call the mother routine
             super(HelasMultiProcess, self).__init__(argument)
@@ -4110,18 +4721,18 @@ class HelasMultiProcess(base_objects.PhysicsObject):
 
         for me in self.get('matrix_elements'):
             helas_list.extend(me.get_used_lorentz())
-
+                
         return list(set(helas_list))
 
     def get_used_couplings(self):
         """Return a list with all couplings used by this
         HelasMatrixElement."""
-
+        
         coupling_list = []
 
         for me in self.get('matrix_elements'):
             coupling_list.extend([c for l in me.get_used_couplings() for c in l])
-
+        
         return list(set(coupling_list))
     
     def get_matrix_elements(self):
@@ -4133,27 +4744,91 @@ class HelasMultiProcess(base_objects.PhysicsObject):
     # generate_matrix_elements
     #===========================================================================
 
+    @classmethod
+    def process_color(cls,matrix_element, color_information):
+        """ Process the color information for a given matrix
+        element made of a tree diagram """
+        
+        # Define the objects stored in the contained color_information
+        for key in color_information:
+            exec("%s=color_information['%s']"%(key,key))
+        
+        # Always create an empty color basis, and the
+        # list of raw colorize objects (before
+        # simplification) associated with amplitude
+        col_basis = color_amp.ColorBasis()
+        new_amp = matrix_element.get_base_amplitude()
+        matrix_element.set('base_amplitude', new_amp)
+        
+        colorize_obj = col_basis.create_color_dict_list(\
+                         matrix_element.get('base_amplitude'))
+        
+        try:
+            # If the color configuration of the ME has
+            # already been considered before, recycle
+            # the information
+            col_index = list_colorize.index(colorize_obj)
+        except ValueError:
+            # If not, create color basis and color
+            # matrix accordingly
+            list_colorize.append(colorize_obj)
+            col_basis.build()
+            list_color_basis.append(col_basis)
+            col_matrix = color_amp.ColorMatrix(col_basis)
+            list_color_matrices.append(col_matrix)
+            col_index = -1
+            logger.info(\
+              "Processing color information for %s" % \
+              matrix_element.get('processes')[0].nice_string(print_weighted=False).\
+                             replace('Process', 'process'))
+        else: # Found identical color
+            logger.info(\
+              "Reusing existing color information for %s" % \
+              matrix_element.get('processes')[0].nice_string(print_weighted=False).\
+                                 replace('Process', 'process'))
+
+        matrix_element.set('color_basis',
+                               list_color_basis[col_index])
+        matrix_element.set('color_matrix',
+                               list_color_matrices[col_index])
+
+    # Below is the type of HelasMatrixElement which should be created by this
+    # HelasMultiProcess class
     matrix_element_class = HelasMatrixElement
 
     @classmethod
     def generate_matrix_elements(cls, amplitudes, gen_color = True,
-                                decay_ids = [], combine_matrix_elements = True):
+                                decay_ids = [], combine_matrix_elements = True,
+                                matrix_element_opts = {}):
         """Generate the HelasMatrixElements for the amplitudes,
         identifying processes with identical matrix elements, as
         defined by HelasMatrixElement.__eq__. Returns a
         HelasMatrixElementList and an amplitude map (used by the
         SubprocessGroup functionality). decay_ids is a list of decayed
         particle ids, since those should not be combined even if
-        matrix element is identical."""
+        matrix element is identical. matrix_element_opts are potential
+        additional options to be passed to the HelasMatrixElements constructed."""
 
         assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
-                  "%s is not valid AmplitudeList" % repr(amplitudes)
+                  "%s is not valid AmplitudeList" % type(amplitudes)
 
         # Keep track of already generated color objects, to reuse as
         # much as possible
         list_colorize = []
         list_color_basis = []
         list_color_matrices = []
+        
+        # Now this keeps track of the color matrices created from the loop-born
+        # color basis. Keys are 2-tuple with the index of the loop and born basis
+        # in the list above and the value is the resulting matrix.
+        dict_loopborn_matrices = {}
+        
+        # The dictionary below is simply a container for convenience to be 
+        # passed to the function process_color.
+        color_information = { 'list_colorize' : list_colorize,
+                              'list_color_basis' : list_color_basis,
+                              'list_color_matrices' : list_color_matrices,
+                              'dict_loopborn_matrices' : dict_loopborn_matrices}
 
         # List of valid matrix elements
         matrix_elements = HelasMatrixElementList()
@@ -4165,18 +4840,12 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         # which allows to reorder the final state particles in the right way
         # for maximal process combination
         permutations = []
-
-        while amplitudes:
-            # Pop the amplitude to save memory space
-            amplitude = amplitudes.pop(0)
+        for amplitude in amplitudes:
             if isinstance(amplitude, diagram_generation.DecayChainAmplitude):
                 # Might get multiple matrix elements from this amplitude
                 matrix_element_list = HelasDecayChainProcess(amplitude).\
                                       combine_decay_chain_processes()
             else:
-                logger.info("Generating Helas calls for %s" % \
-                            amplitude.get('process').nice_string().\
-                                           replace('Process', 'process'))
                 # Create tag identifying the matrix element using
                 # IdentifyMETag. If two amplitudes have the same tag,
                 # they have the same matrix element
@@ -4185,9 +4854,16 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     me_index = amplitude_tags.index(amplitude_tag)
                 except ValueError:
                     # Create matrix element for this amplitude
+                    logger.info("Generating Helas calls for %s" % \
+                            amplitude.get('process').nice_string().\
+                                           replace('Process', 'process'))
+                    # Correctly choose the helas matrix element class depending
+                    # on the type of 'HelasMultiProcess' this static function
+                    # is called from.
                     matrix_element_list = [cls.matrix_element_class(amplitude,
                                                           decay_ids=decay_ids,
-                                                          gen_color=False)]
+                                                          gen_color=False,
+                                                         **matrix_element_opts)]
                     me = matrix_element_list[0]
                     if me.get('processes') and me.get('diagrams'):
                         # Keep track of amplitude tags
@@ -4200,68 +4876,56 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     # Identical matrix element found
                     other_processes = identified_matrix_elements[me_index].\
                                       get('processes')
-                    logger.info("Combining process with %s" % \
-                                other_processes[0].nice_string().\
-                                replace('Process: ', ''))
                     other_processes.append(cls.reorder_process(\
                         amplitude.get('process'),
                         permutations[me_index],
                         amplitude_tag[-1][0].get_external_numbers()))
+                    logger.info("Combined %s with %s" % \
+                                (other_processes[-1].nice_string().\
+                                 replace('Process: ', 'process '),
+                                 other_processes[0].nice_string().\
+                                 replace('Process: ', 'process ')))
                     # Go on to next amplitude
                     continue
-            # Deal with newly generated matrix element
+            
+            # Deal with newly generated matrix elements
             for matrix_element in copy.copy(matrix_element_list):
                 assert isinstance(matrix_element, HelasMatrixElement), \
                           "Not a HelasMatrixElement: %s" % matrix_element
-
                 # If the matrix element has no diagrams,
                 # remove this matrix element.
                 if not matrix_element.get('processes') or \
                        not matrix_element.get('diagrams'):
                     continue
+                
+                # Check if identical matrix element already present
+                if combine_matrix_elements and matrix_element in matrix_elements:
+                    me = matrix_elements[matrix_elements.index(matrix_element)]
+                    me_procs = me.get('processes')
+                    logger.info("Combining process %s with %s" % \
+                            (matrix_element.get('processes')[0].nice_string().\
+                                 replace('Process: ', ''),
+                             me.get('processes')[0].nice_string().\
+                                 replace('Process: ', '')))
+                    for proc in matrix_element.get('processes'):
+                        if proc not in me_procs:
+                            me_procs.append(proc)
+                        else:
+                            raise InvalidCmd, "Duplicate process %s found. Please check your processes." % \
+                                proc.nice_string().replace('Process: ', '')
+                    continue
+
                 # Otherwise, add this matrix element to list
                 matrix_elements.append(matrix_element)
 
                 if not gen_color:
                     continue
 
-                # Always create an empty color basis, and the
-                # list of raw colorize objects (before
-                # simplification) associated with amplitude
-                col_basis = color_amp.ColorBasis()
-                new_amp = matrix_element.get_base_amplitude()
-                matrix_element.set('base_amplitude', new_amp)
-                colorize_obj = col_basis.create_color_dict_list(new_amp)
+                # The treatment of color is quite different for loop amplitudes
+                # than for regular tree ones. So the function below is overloaded
+                # in LoopHelasProcess
+                cls.process_color(matrix_element,color_information)                    
 
-                try:
-                    # If the color configuration of the ME has
-                    # already been considered before, recycle
-                    # the information
-                    col_index = list_colorize.index(colorize_obj)
-                except ValueError:
-                    # If not, create color basis and color
-                    # matrix accordingly
-                    list_colorize.append(colorize_obj)
-                    col_basis.build()
-                    list_color_basis.append(col_basis)
-                    col_matrix = color_amp.ColorMatrix(col_basis)
-                    list_color_matrices.append(col_matrix)
-                    col_index = -1
-                    logger.info(\
-                      "Processing color information for %s" % \
-                      matrix_element.get('processes')[0].nice_string().\
-                                     replace('Process', 'process'))
-                else: # Found identical color
-                    logger.info(\
-                      "Reusing existing color information for %s" % \
-                      matrix_element.get('processes')[0].nice_string().\
-                                         replace('Process', 'process'))
-                if gen_color:
-                    matrix_element.set('color_basis',
-                                       list_color_basis[col_index])
-                    matrix_element.set('color_matrix',
-                                       list_color_matrices[col_index])
-            
         if not matrix_elements:
             raise InvalidCmd, \
                   "No matrix elements generated, check overall coupling orders"

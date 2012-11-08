@@ -36,9 +36,15 @@ sys.path.insert(0, root_path)
 pjoin = os.path.join
 
 import madgraph
+import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.helas_objects as helas_objects
+import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madgraph_interface as MGcmd
-import madgraph.interface.Loop_interface as LoopCmd
+import madgraph.interface.loop_interface as LoopCmd
+import madgraph.interface.amcatnlo_interface as amcatnloCmd
+import madgraph.fks.fks_base as fks_base
+import madgraph.iolibs.files as files
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
@@ -53,10 +59,23 @@ class Switcher(object):
         # define the interface
         self.change_principal_cmd(main)
         self.cmd.__init__(self, *args, **opt)       
-        
 
+    interface_names= {'MadGraph':('MG5',MGcmd.MadGraphCmd),
+                      'MadLoop':('ML5',LoopCmd.LoopInterface),
+                      'aMC@NLO':('aMC@NLO',amcatnloCmd.aMCatNLOInterface)}
 
-        
+    _switch_opts = [interface_names[key][0] for key in interface_names.keys()]
+    current_interface = None
+   
+    # Helper functions
+   
+    def setup(self, *args, **opts):
+        """ Function to initialize the interface when switched to it. It is not
+        the same as __init__ as this latter functions would call its mother
+        from madgraph_interface and this is only desirable for the first
+        initialization when launching MG5 """
+        return self.cmd.setup(self, *args, **opts)
+   
     def debug_link_to_command(self):
         """redefine all the command to call directly the appropriate child"""
         
@@ -132,10 +151,129 @@ class Switcher(object):
                     
         if not correct:
             raise Exception, 'The Cmd interface has dangerous features. Please see previous warnings and correct those.' 
-        
-        
+
     
+
+    @staticmethod
+    def extract_process_type(line):
+        """Extract from a string what is the type of the computation. This 
+        returns a tuple (mode, option, pert_orders) where mode can be either 'NLO' or 'tree'
+        and option 'all', 'real' or 'virt'."""
+
+        # Perform sanity modifications on the lines:
+        # Add a space before and after any > , $ / | [ ]
+        space_before = re.compile(r"(?P<carac>\S)(?P<tag>[\\[\\]/\,\\$\\>|])(?P<carac2>\S)")
+        line2 = space_before.sub(r'\g<carac> \g<tag> \g<carac2>', line)       
+        
+        # Use regular expressions to extract the loop mode (if present) and its
+        # option, specified in the line with format [ option = loop_orders ] or
+        # [ loop_orders ] which implicitly select the 'all' option.
+        loopRE = re.compile(r"^(.*)(?P<loop>\[(\s*(?P<option>\w+)\s*=)?(?P<orders>.+)\])(.*)$")
+        res=loopRE.search(line)
+        if res:
+            if res.group('option') and len(res.group('option').split())==1:
+                return ('NLO',res.group('option').split()[0],
+                                    res.group('orders').split())
+            else:
+                return ('NLO','all',res.group('orders').split())
+        else:
+            return ('tree',None,[])    
     
+    # Wrapping functions possibly switching to new interfaces
+
+    def do_add(self, line, *args, **opts):
+        
+        argss = cmd.Cmd.split_arg(line)
+        if len(argss)>=1 and argss[0] in ['process','timing','profile']:
+            proc_line = ' '.join(argss[1:])
+            (type,nlo_mode,orders)=self.extract_process_type(proc_line)
+            if type=='NLO':
+                if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCMD( \
+                    'The NLO mode %s is not valid. Please choose one among: %s' \
+                    % (nlo_mode, ' '.join(self._valid_nlo_modes)))
+                elif nlo_mode == 'all':
+                    self.change_principal_cmd('aMC@NLO')
+                elif nlo_mode == 'real':
+                    self.change_principal_cmd('aMC@NLO')
+                elif nlo_mode == 'virt' or nlo_mode == 'sqrvirt':
+                    self.change_principal_cmd('MadLoop')
+                    
+        return self.cmd.do_add(self, line, *args, **opts)
+        
+    def do_check(self, line, *args, **opts):
+
+        argss = self.split_arg(line)
+        proc_line = " ".join(argss[1:])
+        (type,nlo_mode,orders)=self.extract_process_type(proc_line)
+        if type=='NLO':
+            if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCMD(\
+                'The NLO mode %s is not valid. Please chose one among: %s' \
+                % (nlo_mode, ' '.join(self._valid_nlo_modes)))
+            elif nlo_mode == 'all':
+                self.change_principal_cmd('aMC@NLO')
+            elif nlo_mode == 'real':
+                self.change_principal_cmd('aMC@NLO')
+            elif nlo_mode == 'virt' or nlo_mode == 'sqrvirt':
+                self.change_principal_cmd('MadLoop')
+        else:
+            self.change_principal_cmd('MadGraph')
+        
+        return self.cmd.do_check(self, line, *args, **opts)
+
+    def do_generate(self, line, *args, **opts):
+
+        argss = cmd.Cmd.split_arg(line)
+        # Make sure to switch to the right interface.
+        if len(argss)>=1:            
+            proc_line = ' '.join(argss[1:])
+            (type,nlo_mode,orders)=self.extract_process_type(proc_line)
+            if type=='NLO':
+                if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCmd( \
+                    'The NLO mode %s is not valid. Please chose one among: %s' \
+                    % (nlo_mode, ' '.join(self._valid_nlo_modes)))
+                elif nlo_mode == 'all' or nlo_mode == 'real':
+                    self._fks_multi_proc = fks_base.FKSMultiProcess()
+                    self.change_principal_cmd('aMC@NLO')
+                elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
+                    self.change_principal_cmd('MadLoop')
+            else:
+                self.change_principal_cmd('MadGraph')
+                
+        return self.cmd.do_generate(self, line, *args, **opts)
+
+    def do_import(self, *args, **opts):
+        self.cmd.do_import(self, *args, **opts)
+        if self._curr_model:
+            if isinstance(self._curr_model, loop_base_objects.LoopModel) and \
+               self._curr_model['perturbation_couplings']!=[] and \
+               self.current_interface not in ['aMC@NLO','MadLoop']:
+                self.change_principal_cmd('aMC@NLO')
+            if (not isinstance(self._curr_model, loop_base_objects.LoopModel) or \
+               self._curr_model['perturbation_couplings']==[]) and \
+               self.current_interface in ['MadLoop']:
+                self.change_principal_cmd('MadGraph')
+        return
+    
+    def do_output(self, line, *args, **opts):
+        """ treat output aloha in order to use always the one in MG5 """
+        if line.strip().startswith('aloha'):
+            MGcmd.MadGraphCmd.do_output(self, line, *args, **opts)
+        else:
+            self.cmd.do_output(self, line, *args, **opts)
+    
+    def check_output(self, arg, *args, **opts):
+        if arg and arg[0] == 'aloha':
+            MGcmd.MadGraphCmd.check_output(self, arg, *args, **opts)
+        else:
+            self.cmd.check_output(self, arg, *args, **opts)
+            
+    
+        
+
+    # Dummy functions, not triggering any switch of interfaces
+            
+    def export(self, *args, **opts):
+        return self.cmd.export(self, *args, **opts)
     
     def check_add(self, *args, **opts):
         return self.cmd.check_add(self, *args, **opts)
@@ -160,6 +298,9 @@ class Switcher(object):
         
     def check_generate(self, *args, **opts):
         return self.cmd.check_generate(self, *args, **opts)
+
+    def check_tutorial(self, *args, **opts):
+        return self.cmd.check_tutorial(self, *args, **opts)
         
     def check_history(self, *args, **opts):
         return self.cmd.check_history(self, *args, **opts)
@@ -179,23 +320,23 @@ class Switcher(object):
     def check_open(self, *args, **opts):
         return self.cmd.check_open(self, *args, **opts)
         
-    def check_output(self, *args, **opts):
-        return self.cmd.check_output(self, *args, **opts)
-        
     def check_process_format(self, *args, **opts):
         return self.cmd.check_process_format(self, *args, **opts)
-        
+    
     def check_save(self, *args, **opts):
         return self.cmd.check_save(self, *args, **opts)
         
     def check_set(self, *args, **opts):
         return self.cmd.check_set(self, *args, **opts)
         
-    def check_stored_line(self, *args, **opts):
-        return self.cmd.check_stored_line(self, *args, **opts)
+    def get_stored_line(self, *args, **opts):
+        return self.cmd.get_stored_line(self, *args, **opts)
         
     def complete_add(self, *args, **opts):
         return self.cmd.complete_add(self, *args, **opts)
+
+    def complete_switch(self, *args, **opts):
+        return self.cmd.complete_switch(self, *args, **opts)
         
     def complete_check(self, *args, **opts):
         return self.cmd.complete_check(self, *args, **opts)
@@ -244,15 +385,13 @@ class Switcher(object):
         
     def complete_tutorial(self, *args, **opts):
         return self.cmd.complete_tutorial(self, *args, **opts)
-        
+
+    def do_switch(self, *args, **opts):
+        """Not in help """
+        return self.cmd.do_switch(self, *args, **opts)
+      
     def do_EOF(self, *args, **opts):
         return self.cmd.do_EOF(self, *args, **opts)
-        
-    def do_add(self, *args, **opts):
-        return self.cmd.do_add(self, *args, **opts)
-        
-    def do_check(self, *args, **opts):
-        return self.cmd.do_check(self, *args, **opts)
         
     def do_define(self, *args, **opts):
         return self.cmd.do_define(self, *args, **opts)
@@ -263,32 +402,44 @@ class Switcher(object):
     def do_exit(self, *args, **opts):
         return self.cmd.do_exit(self, *args, **opts)
         
-    def do_generate(self, *args, **opts):
-        return self.cmd.do_generate(self, *args, **opts)
-        
     def do_help(self, *args, **opts):
         return self.cmd.do_help(self, *args, **opts)
         
     def do_history(self, *args, **opts):
-        return self.cmd.do_history(self, *args, **opts)
-        
-    def do_import(self, *args, **opts):
-        return self.cmd.do_import(self, *args, **opts)
+        return self.cmd.do_history(self, *args, **opts) 
         
     def do_install(self, *args, **opts):
-        return self.cmd.do_install(self, *args, **opts)
+        self.cmd.do_install(self, *args, **opts)
         
-    def do_launch(self, *args, **opts):
-        return self.cmd.do_launch(self, *args, **opts)
+    def do_launch(self, line, *argss, **opts):
+        args = cmd.Cmd.split_arg(line)
+        # check if a path is given
+        if len(args) >=1:
+            if os.path.isdir(args[0]):
+                path = os.path.realpath(args[0])
+            elif os.path.isdir(pjoin(MG5DIR,args[0])):
+                path = pjoin(MG5DIR,args[0])
+            elif  MG4DIR and os.path.isdir(pjoin(MG4DIR,args[0])):
+                path = pjoin(MG4DIR,args[0])
+            else:
+                path=None
+        # if there is a path, find what output has been done
+            if path:
+                type = self.cmd.find_output_type(self, path) 
+                if type in ['standalone', 'standalone_cpp', 'pythia8', 'madevent']:
+                    self.change_principal_cmd('MadGraph')
+                elif type == 'aMC@NLO':
+                    self.change_principal_cmd('aMC@NLO')
+                elif type == 'MadLoop':
+                    self.change_principal_cmd('MadLoop')
+
+        return self.cmd.do_launch(self, line, *argss, **opts)
         
     def do_load(self, *args, **opts):
         return self.cmd.do_load(self, *args, **opts)
         
     def do_open(self, *args, **opts):
         return self.cmd.do_open(self, *args, **opts)
-        
-    def do_output(self, *args, **opts):
-        return self.cmd.do_output(self, *args, **opts)
         
     def do_quit(self, *args, **opts):
         return self.cmd.do_quit(self, *args, **opts)
@@ -298,10 +449,10 @@ class Switcher(object):
         
     def do_set(self, *args, **opts):
         return self.cmd.do_set(self, *args, **opts)
-        
+    
     def do_tutorial(self, *args, **opts):
         return self.cmd.do_tutorial(self, *args, **opts)
-        
+
     def help_EOF(self, *args, **opts):
         return self.cmd.help_EOF(self, *args, **opts)
         
@@ -362,24 +513,70 @@ class Switcher(object):
     def set_configuration(self, *args, **opts):
         return self.cmd.set_configuration(self, *args, **opts)
 
+    def check_customize_model(self, *args, **opts):
+        return self.cmd.check_customize_model(self, *args, **opts)
 
-class MasterCmd(Switcher, LoopCmd.LoopInterface, cmd.CmdShell):
+    def complete_customize_model(self, *args, **opts):
+        return self.cmd.complete_customize_model(self, *args, **opts)
+
+    def do_customize_model(self, *args, **opts):
+        return self.cmd.do_customize_model(self, *args, **opts)
+
+    def help_customize_model(self, *args, **opts):
+        return self.cmd.help_customize_model(self, *args, **opts)
+
+class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, cmd.CmdShell):
+
+    def __init__(self, main='MadGraph', *args, **opt):
+            
+        # define the interface
+        if main in self.interface_names.keys():
+            self.prompt= self.interface_names[main][0]+'>'
+            self.cmd= self.interface_names[main][1]
+            self.current_interface=main
+        else:
+            raise MadGraph5Error, 'Type of interface not valid: %s' % main  
+        self.cmd.__init__(self, *args, **opt)     
+        self.current_interface = main  
+        
+    def complete_switch(self, text, line, begidx, endidx):
+        """Complete the switch command"""
+        return self.list_completion(text,self._switch_opts)
+        
+    def do_switch(self, line):
+        """Not in help: Allow to switch to any given interface from command line """
+        interface_quick_name=dict([(self.interface_names[name][0],name) for name \
+                                   in self.interface_names.keys()])
+        args = cmd.Cmd.split_arg(line)
+        if len(args)==1 and args[0] in interface_quick_name.keys():
+            self.change_principal_cmd(interface_quick_name[args[0]])
+        else:
+            raise self.InvalidCmd("Invalid switch command or non existing interface %s."\
+                            %args[0]+" Valid interfaces are %s"\
+                            %','.join(interface_quick_name.keys()))
 
     def change_principal_cmd(self, name):
-        if name == 'MadGraph':
-            self.cmd = MGcmd.MadGraphCmd
-        elif name == 'Loop':
-            self.cmd = LoopCmd.LoopInterface
+
+        old_cmd=self.current_interface
+        if name in self.interface_names.keys():
+            self.prompt= self.interface_names[name][0]+'>'
+            self.cmd= self.interface_names[name][1]
+            self.current_interface=name
         else:
-            raise MadGraph5Error, 'Type of interface not valid'  
+            raise MadGraph5Error, 'Type of interface not valid: %s' % name  
+        
+        if self.current_interface!=old_cmd:
+            logger.info("Switching from interface %s to %s"\
+                        %(self.interface_names[old_cmd][0],\
+                          self.interface_names[name][0]))
+            # Setup the interface
+            self.cmd.setup(self)
         
         if __debug__:
-            self.debug_link_to_command()      
-        
+            self.debug_link_to_command() 
+     
 class MasterCmdWeb(Switcher, LoopCmd.LoopInterfaceWeb):
- 
-    timeout = 1 # time authorize to answer question [0 is no time limit]
-    
+   
     def __init__(self, *arg, **opt):
     
         if os.environ.has_key('_CONDOR_SCRATCH_DIR'):
@@ -392,6 +589,8 @@ class MasterCmdWeb(Switcher, LoopCmd.LoopInterfaceWeb):
         
         #standard initialization
         Switcher.__init__(self, mgme_dir = '', *arg, **opt)
+        
+        self.options['timeout'] = 1 # time authorize to answer question [0 is no time limit]
         
     def change_principal_cmd(self, name):
         if name == 'MadGraph':
@@ -440,3 +639,23 @@ class MasterCmdWeb(Switcher, LoopCmd.LoopInterfaceWeb):
         config_path = pjoin(os.environ['MADGRAPH_BASE'], 'mg5_configuration.txt')
         return Switcher.set_configuration(self, config_path=config_path)
     
+    def do_save(self, line, check=True, **opt):
+        """Save information to file"""
+        
+        if check:
+            self.check_save([])
+            raise #useless but full security
+        
+        args = self.split_arg(line)
+        if args[0] != 'options':
+            Switcher.do_save(self, line,check, opt)
+        else:
+            # put default options since 
+            # in the web the local file is not used
+            # in download the default file is more usefull
+            files.cp(pjoin(MG5DIR,'input','mg5_configuration.txt'), args[1])
+            
+    def do_install(self, line):
+        """block all install"""
+        return
+

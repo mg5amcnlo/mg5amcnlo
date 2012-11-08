@@ -11,6 +11,7 @@ c
       include 'maxconfigs.inc'
       include '../../Source/run_config.inc'
       include 'maxamps.inc'
+      include 'nexternal.inc'
       
       double precision ZERO
       parameter       (ZERO = 0d0)
@@ -25,14 +26,23 @@ c
       integer use_config(0:lmaxconfigs)
       integer i,j, npara, nhel_survey
       double precision xdum
-      double precision pmass(-max_branch:-1,lmaxconfigs)   !Propagotor mass
-      double precision pwidth(-max_branch:-1,lmaxconfigs)  !Propagotor width
+      double precision prmass(-max_branch:-1,lmaxconfigs)   !Propagotor mass
+      double precision prwidth(-max_branch:-1,lmaxconfigs)  !Propagotor width
       integer pow(-max_branch:-1,lmaxconfigs)
       character*20 param(maxpara),value(maxpara)
+      double precision pmass(nexternal)   !External particle mass
+      double precision pi1(0:3),pi2(0:3),m1,m2,ebeam(2)
+      integer lpp(2)
 c
 c     Global
 c
       include 'coupl.inc'
+      logical gridpack
+      common/to_gridpack/gridpack
+      double precision bwcutoff
+      common/to_bwcutoff/bwcutoff
+      double precision stot
+      common/to_stot/stot
 c
 c     DATA
 c
@@ -45,6 +55,7 @@ c
 c-----
 c  Begin Code
 c-----
+
 c      write(*,*) 'Enter compression (0=none, 1=sym, 2=BW, 3=full)'
 c      read(*,*) icomp
 c      if (icomp .gt. 3 .or. icomp .lt. 0) icomp=0
@@ -67,7 +78,39 @@ c      if (icomp .gt. 3 .or. icomp .lt. 0) icomp=0
 c     If different card options set for nhel_refine and nhel_survey:
       call get_integer(npara,param,value," nhel_survey ",nhel_survey,
      $     1*nhel_survey)
+      call get_logical(npara,param,value," gridpack ",gridpack,.false.)
+      call get_real(npara,param,value," bwcutoff ",bwcutoff,5d0)
+      call get_real(npara,param,value," ebeam1 ",ebeam(1),0d0)
+      call get_real(npara,param,value," ebeam2 ",ebeam(2),0d0)
+      call get_integer(npara,param,value," lpp1 ",lpp(1),0)
+      call get_integer(npara,param,value," lpp2 ",lpp(2),0)
+
       call setpara('%(param_card_name)s' %(setparasecondarg)s)   !Sets up couplings and masses
+      include 'pmass.inc'
+
+c     Set stot
+      if (nincoming.eq.1) then
+         stot=pmass(1)**2
+      else
+         m1=pmass(1)
+         m2=pmass(2)
+         if (abs(lpp(1)) .eq. 1 .or. abs(lpp(1)) .eq. 2) m1 = 0.938d0
+         if (abs(lpp(2)) .eq. 1 .or. abs(lpp(2)) .eq. 2) m2 = 0.938d0
+         if (abs(lpp(1)) .eq. 3) m1 = 0.000511d0
+         if (abs(lpp(2)) .eq. 3) m2 = 0.000511d0
+         pi1(0)=ebeam(1)
+         pi1(3)=sqrt(ebeam(1)**2-m1**2)
+         pi2(0)=ebeam(2)
+         pi2(3)=-sqrt(ebeam(2)**2-m2**2)
+         stot=m1**2+m2**2+2*(pi1(0)*pi2(0)-pi1(3)*pi2(3))
+      endif
+
+      write(*,*) 'Read parameters:'
+      write(*,*) 'nhel_survey = ',nhel_survey
+      write(*,*) 'gridpack    = ',gridpack
+      write(*,*) 'bwcutoff    = ',bwcutoff
+      write(*,*) 'sqrt(stot)  = ',sqrt(stot)
+
       call printout
       include 'props.inc'
 
@@ -85,7 +128,7 @@ c
       close(25)
 
       call write_input(j, nhel_survey)
-      call write_bash(mapconfig,use_config,pwidth,icomp,iforest,sprop)
+      call write_bash(mapconfig,use_config,prwidth,icomp,iforest,sprop)
       end
 
       subroutine write_input(nconfigs, nhel_survey)
@@ -112,18 +155,11 @@ c     local
 c
       integer npoints,itmax
       double precision acc
-      character*20 param(maxpara),value(maxpara)
-      integer npara, nreq
-c
-c     global
-c
-      logical gridpack
-      common/to_gridpack/gridpack
 c-----
 c  Begin Code
 c-----
       write(*,*) 'Give npoints, max iter, and accuracy'
-      read(*,*)  npoints,itmax,acc,gridpack
+      read(*,*)  npoints,itmax,acc
 
       open (unit=26, file = 'input_app.txt', status='unknown',
      $     err=99)
@@ -175,9 +211,9 @@ c     Write ic with correct number of digits
 c      write(lun,15) '#PBS -q ' // PBS_QUE
 c      write(lun,15) '#PBS -o PBS.log'
 c      write(lun,15) '#PBS -e PBS.err'
-      write(lun,15) 'if [[ "$PBS_O_WORKDIR" != "" ]]; then' 
-      write(lun,15) '    cd $PBS_O_WORKDIR'
-      write(lun,15) 'fi'
+c      write(lun,15) 'if [[ "$PBS_O_WORKDIR" != "" ]]; then' 
+c      write(lun,15) '    cd $PBS_O_WORKDIR'
+c      write(lun,15) 'fi'
       write(lun,15) 'k=run1_app.log'
       write(lun,15) 'script=' // fname
 c      write(lun,15) 'rm -f wait.$script >& /dev/null'
@@ -186,7 +222,7 @@ c      write(lun,15) 'touch run.$script'
  15   format(a)
       end
 
-      subroutine write_bash(mapconfig,use_config, pwidth, jcomp,iforest,
+      subroutine write_bash(mapconfig,use_config, prwidth, jcomp,iforest,
      $     sprop)
 c***************************************************************************
 c     Writes out bash commands to run integration over all of the various
@@ -208,7 +244,7 @@ c
 c     Arguments
 c
       integer mapconfig(0:lmaxconfigs),use_config(0:lmaxconfigs)
-      double precision pwidth(-max_branch:-1,lmaxconfigs)  !Propagotor width
+      double precision prwidth(-max_branch:-1,lmaxconfigs)  !Propagotor width
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer jcomp
@@ -219,16 +255,22 @@ c
       integer i, j, nbw, ic, icode
       integer ncode, nconf, nsym
       double precision dconfig
-      character*10 formstr
+      character*20 formstr,formstr2,filename
       integer iarray(imax)
       logical lconflict(-max_branch:nexternal)
-      logical done
+      logical done,file_exists
+      logical failConfig
+      external failConfig
       integer gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'decayBW.inc'
 
 c-----
 c  Begin Code
 c-----
+c     First open symfact file
+      open (unit=27, file = 'symfact.dat', status='unknown')
+      nsym=int(dlog10(dble(mapconfig(0))))+3
+
       call open_bash_file(26)
       ic = 0      
 c     ncode is number of digits needed for the code
@@ -243,9 +285,9 @@ c     ncode is number of digits needed for the code
                   iarray(j)=0   !Assume no cuts on BW
                enddo
                do j=1,nexternal-3
-c                  write(*,*) 'Width',pwidth(-j,i),j,i
-                  nbw=nbw+1
-                  if (pwidth(-j,i) .gt. 1d-20 .and. sprop(1,-j,i).ne.0) then
+c                  write(*,*) 'Width',prwidth(-j,i),j,i
+                  if (prwidth(-j,i) .gt. 0d0 .and. sprop(1,-j,i).ne.0) then
+                     nbw=nbw+1
                      write(*,*) 'Got bw',-nbw,j
 c                    JA 4/8/11 don't treat forced BW differently
                      if(lconflict(-j)) then
@@ -261,6 +303,8 @@ c                    JA 4/8/11 don't treat forced BW differently
 c            do j=1,2**nbw
             done = .false.
             do while (.not. done)
+               if(failConfig(i,iarray,iforest(1,-max_branch,i),
+     $           sprop(1,-max_branch,i),gForceBW(-max_branch,i))) goto 100
                call enCode(icode,iarray,ibase,imax)
                ic=ic+1
                if (ic .gt. ChanPerJob) then
@@ -274,74 +318,53 @@ c               write(*,*) 'mapping',ic,mapconfig(i)
 c                 Create format string based on number of digits
                   write(formstr,'(a,i1,a)') '(I',nconf,'$)'
                   write(26,formstr) mapconfig(i)
+c                 Write symmetry factors
+                  write(formstr2,'(a,i1,a)') '(2i',nsym,')'
+                  write(27,formstr2) mapconfig(i),use_config(i)
                else
 c                 Create format string based on number of digits
                   dconfig=mapconfig(i)+icode*1d0/10**ncode
-                  write(formstr,'(a,i1,a,i1,a)') '(F',nconf+ncode+1,
-     $                 '.',ncode,'$)'
+                  if(nconf+ncode+1.lt.10) then
+                     write(formstr,'(a,i1,a,i1,a)') '(F',nconf+ncode+1,
+     $                    '.',ncode,'$)'
+                  else
+                     write(formstr,'(a,i2,a,i1,a)') '(F',nconf+ncode+1,
+     $                    '.',ncode,'$)'
+                  endif
                   write(26,formstr) dconfig
+c                 Write symmetry factors
+                  nconf=int(dlog10(dble(mapconfig(i))))+1
+                  if(nconf+ncode+1.lt.10) then
+                     write(formstr2,'(a,i1,a,i1,a,i1,a)') '(F',nconf+ncode+1,
+     $                    '.',ncode,',i',nsym,')'
+                  else
+                     write(formstr2,'(a,i2,a,i1,a,i1,a)') '(F',nconf+ncode+1,
+     $                    '.',ncode,',i',nsym,')'
+                  endif
+                  dconfig=mapconfig(i)+icode*1d0/10**ncode
+                  write(27,formstr2) dconfig,use_config(i)
                endif
                write(26,'(a$)') ' '
-               call bw_increment_array(iarray,imax,ibase,done)
+ 100           call bw_increment_array(iarray,imax,ibase,done)
             enddo
+         else
+            write(formstr2,'(a,i1,a)') '(2i',nsym,')'
+            write(27,formstr2) mapconfig(i),use_config(i)
          endif
       enddo
       call close_bash_file(26)
-      if (mapconfig(0) .gt. 99999) then
-         write(*,*) 'Only writing first 99999 jobs',mapconfig(0)
+      close(27)
+      if(ic.eq.0) then
+c        Stop generation with error message
+         filename='../../error'
+         INQUIRE(FILE="../../RunWeb", EXIST=file_exists)
+         if(.not.file_exists) filename = '../' // filename
+         open(unit=26,file=filename,status='unknown')
+         write(26,*)'No Phase Space. Please check particle masses.'
+         write(*,*)'Error: No valid channels found. ',
+     $        'Please check particle masses.'
+         close(26)
       endif
-c
-c     Now write out the symmetry factors for each graph
-c
-      open (unit=26, file = 'symfact.dat', status='unknown')
-      nsym=int(dlog10(dble(mapconfig(0))))+3
-      do i=1,mapconfig(0)
-         if (use_config(i) .gt. 0) then
-c
-c        Need to write appropriate number of BW sets this is
-c        same thing as above for the bash file
-c
-            call bw_conflict(i,iforest(1,-max_branch,i),lconflict,
-     $           sprop(1,-max_branch,i), gForceBW(-max_branch,i))
-            nbw=0               !Look for B.W. resonances
-            if (jcomp .eq. 0 .or. jcomp .eq. 1 .or. .true.) then
-               do j=1,imax
-                  iarray(j)=0   !Assume no cuts on BW
-               enddo
-               do j=1,nexternal-3
-                  nbw=nbw+1
-                  if (pwidth(-j,i) .gt. 1d-20  .and. sprop(1,-j,i).ne.0) then
-                     write(*,*) 'Got bw',nbw,j
-c                    JA 4/8/11 don't treat forced BW differently
-                     if(lconflict(-j)) then
-                        iarray(nbw)=1 !Cuts on BW
-                        if (nbw .gt. imax) then
-                           write(*,*) 'Too many BW w conflicts',nbw,imax
-                        endif
-                     endif
-                  endif
-               enddo
-            endif            
-            done = .false.
-            do while (.not. done)
-               call enCode(icode,iarray,ibase,imax)
-               if (icode .gt. 0) then
-                  nconf=int(dlog10(dble(mapconfig(i))))+1
-                  write(formstr,'(a,i1,a,i1,a,i1,a)') '(F',nconf+ncode+1,
-     $                 '.',ncode,',i',nsym,')'
-                  dconfig=mapconfig(i)+icode*1d0/10**ncode
-                  write(26,formstr) dconfig,use_config(i)
-               else
-                  write(formstr,'(a,i1,a)') '(2i',nsym,')'
-                  write(26,formstr) mapconfig(i),use_config(i)
-               endif
-               call bw_increment_array(iarray,imax,ibase,done)
-            enddo
-         else
-            write(formstr,'(a,i1,a)') '(2i',nsym,')'
-            write(26,formstr) mapconfig(i),use_config(i)
-         endif
-      enddo
       end
 
 
@@ -372,33 +395,43 @@ c     local
 c
       integer i,j
       integer iden_part(-max_branch:-1)
-      double precision pwidth(-max_branch:-1,lmaxconfigs)  !Propagator width
-      double precision pmass(-max_branch:-1,lmaxconfigs)   !Propagator mass
+      double precision prwidth(-max_branch:-1,lmaxconfigs)  !Propagator width
+      double precision prmass(-max_branch:-1,lmaxconfigs)   !Propagator mass
       double precision pow(-max_branch:-1,lmaxconfigs)    !Not used, in props.inc
       double precision xmass(-max_branch:nexternal)
+      double precision pmass(nexternal)   !External particle mass
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
+      double precision mtot
       include 'leshouche.inc'
 c
 c     Global
 c
       include 'coupl.inc'                     !Mass and width info
+      double precision stot
+      common/to_stot/stot
 
 c-----
 c  Begin Code
 c-----
-      include 'props.inc'   !Propagator mass and width information pmass,pwidth
+      include 'props.inc'   !Propagator mass and width information prmass,prwidth
+      include 'pmass.inc'   !External particle masses
       write(*,*) 'Checking for BW ',iconfig
 c
 c     Reset variables
 c      
       do i=1,nexternal
-         xmass(i) = 0d0
+         xmass(i) = pmass(i)
       enddo
       do i=1,nexternal-1
          lconflict(-i) = .false.
          iden_part(-i)=0
+      enddo
+c     Initialize mtot (needed final-state phase space)
+      mtot=0
+      do i=nincoming+1,nexternal
+          mtot=mtot+xmass(i)
       enddo
 c
 c     Start by determining which propagators are part of the same 
@@ -407,7 +440,8 @@ c
       i=1
       do while (i .lt. nexternal-2 .and. itree(1,-i) .ne. 1)
          xmass(-i) = xmass(itree(1,-i))+xmass(itree(2,-i))
-         if (pwidth(-i,iconfig) .gt. 0d0) then
+         mtot=mtot-xmass(-i)
+         if (prwidth(-i,iconfig) .gt. 0d0) then
 c     JA 3/31/11 Keep track of identical particles (i.e., radiation vertices)
 c     by tracing the particle identity from the external particle.
             if(itree(1,-i).gt.0) then
@@ -432,14 +466,15 @@ c     by tracing the particle identity from the external particle.
      $           sprop(1,-i).eq.sprop(1,itree(2,-i)))
      $              iden_part(-i) = sprop(1,-i)
             endif
-            if (xmass(-i) .gt. pmass(-i,iconfig) .and.
+            if (xmass(-i) .gt. prmass(-i,iconfig) .and.
      $           iden_part(-i).eq.0) then !Can't be on shell, and not radiation
                lconflict(-i)=.true.
                write(*,*) "Found Conflict", iconfig,i,
-     $              pmass(-i,iconfig),xmass(-i)
+     $              prmass(-i,iconfig),xmass(-i)
             endif
          endif
-         xmass(-i) = max(xmass(-i),pmass(-i,iconfig)+3d0*pwidth(-i,iconfig))        
+         xmass(-i) = max(xmass(-i),prmass(-i,iconfig)+3d0*prwidth(-i,iconfig))        
+         mtot=mtot+xmass(-i)
          i=i+1
       enddo
 c
@@ -453,11 +488,20 @@ c
          endif
       enddo
 c
+c     If not enough energy, mark all BWs as conflicting
+c
+      if(stot.lt.mtot**2)then
+         write(*,*) 'Not enough energy, set all BWs as conflicting'
+         do j=i,1,-1
+            lconflict(-j) = .true.
+         enddo
+      endif
+c
 c     Only include BW props as conflicting, but not if radiation
 c
       do j=i,1,-1
          if (lconflict(-j)) then 
-            if (pwidth(-j,iconfig) .le. 0 .or. iden_part(-j).gt.0) then 
+            if (prwidth(-j,iconfig) .le. 0 .or. iden_part(-j).gt.0) then 
                lconflict(-j) = .false.
                write(*,*) 'No conflict BW',iconfig,j
             else
@@ -466,6 +510,123 @@ c
          endif
       enddo                  
 
+      end
+
+      function failConfig(iconfig,iarray,itree,sprop,forcebw)
+c***************************************************************************
+c     Determines if the configuration allows integration based on
+c     mass relations
+c***************************************************************************
+      implicit none
+c
+c     Constants
+c
+      include 'genps.inc'
+      include 'maxconfigs.inc'
+      include 'maxamps.inc'
+      include 'nexternal.inc'
+      double precision zero
+      parameter       (zero=0d0)
+      integer    imax
+      parameter (imax=max_branch-1)
+c
+c     Arguments
+c
+      logical failConfig
+      integer iconfig,iarray(imax),itree(2,-max_branch:-1)
+      logical lconflict(-max_branch:nexternal)
+      integer sprop(maxsproc,-max_branch:-1)  ! Propagator id
+      integer forcebw(-max_branch:-1) ! Forced BW, for identical particle conflicts
+c
+c     local
+c
+      integer i,j,nbw
+      integer iden_part(-max_branch:-1)
+      double precision prwidth(-max_branch:-1,lmaxconfigs)  !Propagator width
+      double precision prmass(-max_branch:-1,lmaxconfigs)   !Propagator mass
+      double precision pow(-max_branch:-1,lmaxconfigs)    !Not used, in props.inc
+      double precision xmass(-max_branch:nexternal)
+      double precision xwidth(-max_branch:nexternal)
+      double precision pmass(nexternal)   !External particle mass
+      double precision mtot
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
+      include 'leshouche.inc'
+c
+c     Global
+c
+      double precision bwcutoff
+      common/to_bwcutoff/bwcutoff
+      double precision stot
+      common/to_stot/stot
+      include 'coupl.inc'                     !Mass and width info
+
+c-----
+c  Begin Code
+c-----
+      include 'props.inc'   !Propagator mass and width information prmass,prwidth
+      include 'pmass.inc'   !External particle masses
+c
+c     Reset variables
+c      
+      do i=1,nexternal
+         xmass(i) = pmass(i)
+         xwidth(i) = 0
+      enddo
+      do i=1,nexternal-1
+         lconflict(-i) = .false.
+         iden_part(-i)=0
+      enddo
+c     Initialize mtot (needed final-state phase space)
+      mtot=0
+      do i=nincoming+1,nexternal
+          mtot=mtot+xmass(i)
+      enddo
+
+c     By default pass
+      failConfig=.false.
+
+c
+c     Go through
+c
+      nbw=0
+      i=1
+      do while (i .lt. nexternal-2 .and. itree(1,-i) .ne. 1 .and.
+     $     sprop(1,-i).ne.0)
+
+         xmass(-i) = xmass(itree(1,-i))+xmass(itree(2,-i))
+         mtot=mtot-xmass(-i)
+         xwidth(-i)=prwidth(-i,iconfig)
+         if (xwidth(-i) .gt. 0d0) then
+            nbw=nbw+1
+            if (iarray(nbw) .eq. 1) then
+               if(xmass(-i).gt.prmass(-i,iconfig)+5d0*xwidth(-i)) then
+                  failConfig=.true.
+                  return
+               else
+                  xmass(-i)=max(xmass(-i),prmass(-i,iconfig)-5d0*xwidth(-i))
+               endif
+            else if(forcebw(-i) .eq. 1) then
+               if(xmass(-i).gt.prmass(-i,iconfig)+bwcutoff*xwidth(-i)) then
+                  failConfig=.true.
+                  return
+               else
+                  xmass(-i)=max(xmass(-i),prmass(-i,iconfig)-
+     $                 bwcutoff*xwidth(-i))
+               endif
+            endif
+         endif
+         mtot=mtot+xmass(-i)
+         i=i+1
+      enddo
+
+c     Fail if too small phase space
+      if (stot.lt.mtot**2) then
+         failConfig=.true.
+      endif
+
+      return
       end
 
       subroutine close_bash_file(lun)

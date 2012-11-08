@@ -1,0 +1,67 @@
+#!/bin/bash
+#  
+#   First we need to get into the main directory
+#
+if [[  ! -d ./bin  ]]; then
+    cd ../
+    if [[ ! -d ./bin ]]; then
+	echo "Error: store must be executed from the main, or bin directory"
+	exit
+    fi
+fi
+if [[ ! -d SubProcesses ]]; then
+    echo "Error: SubProcesses directory not found"
+    exit
+fi
+if [[  "$2" == ""  ]]; then
+    echo 'Enter you must specify a run name and a tag (eg store4grid run_01 tag_1)'
+    exit
+fi
+#$i=1;
+#$max_store = 99;
+#while(-e "SubProcesses/".$t.$i."_results.html" && $i < $max_store){
+#    $i++;
+#}
+rm -rf HTML/default
+cp -rp HTML/$1 HTML/default
+for i in `find HTML/default -name "*_results.html"`;do
+    sed s/$1/default/g $i | sed s/log.txt/default_log.txt/g | sed s/$1_$2/default/g > $i
+done
+
+cd SubProcesses
+if [[ -e default_results.dat ]]; then
+    rm -f default_results.dat
+fi    
+cp -f $1_results.dat default_results.dat
+for i in `cat subproc.mg` ; do
+    cd $i
+    echo $i
+    if [[ -e default_results.dat ]]; then
+	rm -f default_results.dat
+    fi    
+    cp -f $1_results.dat default_results.dat
+    for k in G* ; do
+	if [[ ! -d $k ]]; then
+	    continue
+	fi
+	cd $k
+	if [[ -e events.lhe ]]; then
+	    rm -f events.lhe
+	fi
+	for j in results.dat log.txt ; do
+	    if [[ -e $1_$j ]]; then
+		cp -f $1_$j default_$j
+	    fi
+	done
+	for j in ftn26.gz ; do
+	    if [[ -e $1_$j ]]; then
+		mv -f $1_$j default_$j
+	    fi
+	done
+	cd ../
+    done
+    cd ../
+done
+cd ..
+mkdir Events/default >& /dev/null
+cp -f Events/$1/$1_$2_banner.txt Events/default/default_banner.txt 

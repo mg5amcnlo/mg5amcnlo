@@ -1364,7 +1364,7 @@ c
       REAL*4 region(2*mxdim),fxn,tgral,chi2a,sd
       real*8 diff,eff,ave_wei
       LOGICAL WRITEOUT
-      DATA WRITEOUT /.TRUE./
+      DATA WRITEOUT /.FALSE./
 c
 c     EXTERNAL
 c
@@ -1431,6 +1431,7 @@ c
          if(calc_width.gt.0d0) then
             diff=(calc_width-MC_width)/(calc_width+MC_width)*100d0
          endif
+         backspace(lunout)
          write(lunout,'(a3,2x,i2,2x,e12.5,2x,e10.5,
      &              1x,f5.2,3x,e10.5,3x,f5.1)') 
      &        id(ip),imode,calc_width,MC_width,diff,mxwgt,eff

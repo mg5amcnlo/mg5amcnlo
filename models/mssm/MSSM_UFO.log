@@ -1,13 +1,15 @@
-# This file was automatically created by FeynRules $Revision: 510 $
-# Mathematica version: 7.0 for Linux x86 (64-bit) (February 18, 2009)
-# Date: Wed 2 Mar 2011 15:02:57
+# This file was automatically created by FeynRules 1.7.53
+# Mathematica version: 8.0 for Linux x86 (64-bit) (February 23, 2011)
+# Date: Tue 31 Jul 2012 19:31:04
 
 
 # 
 # This is the logfile for the model MSSM
 
 # Authors: Benjamin Fuks
-# Model version: 1.3.0
+# Model version: 1.3.11
+# Checking the Quantum numbers
+   * Electric charge defined.
 # Checking the Lagrangians
    * All Lagrangians are ok.
 #
@@ -33,8 +35,7 @@
 # Parameter definitions
 #
 
-   * Parameter gp has no value. Default value 1 assigned.
-   * Parameter gw has no value. Default value 1 assigned.
+   * All parameters are ok.
 
 
 # Vertices
@@ -64,5 +65,17 @@
 # Coupling definitions
 #
 
-   * 945 couplings written.
+   * 951 couplings written.
    * couplings.py written.
+#
+# Coupling order definitions
+#
+
+   * 0 couplings orders written.
+   * coupling_orders.py written.
+#
+# Decay definitions
+#
+
+   * 37 decays written.
+   * decay.py not written

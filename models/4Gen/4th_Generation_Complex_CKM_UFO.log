@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 535 $
-# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Wed 23 Mar 2011 22:53:52
+# This file was automatically created by FeynRules 1.7.55
+# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (October 6, 2011)
+# Date: Wed 8 Aug 2012 14:29:35
 
 
 # 
@@ -8,6 +8,8 @@
 
 # Authors: C. Duhr
 # Model version: 1.1
+# Checking the Quantum numbers
+   * Electric charge defined.
 # Checking the Lagrangians
    * All Lagrangians are ok.
 #
@@ -38,10 +40,9 @@
 
 # Vertices
    * Calling FeynmanRules for 1 Lagrangians.
-   * Number of classes vertices: 29
-   * Number of flavored vertices: 94
+   * Number of classes vertices: 93
+   * Number of flavored vertices: 199
    * Saved vertices in InterfaceRun[ 1 ].
-   * Removing all ghosts and Goldstone bosons form the output.
    * Checked QNumber conservation.
       - Quantum number GhostNumber conserved in all vertices.
       - Quantum number LeptonNumber conserved in all vertices.
@@ -52,17 +53,29 @@
 # Vertex definitions
 #
 
-   * 94 vertices written.
+   * 199 vertices written.
    * vertices.py written.
 #
 # Lorentz structure definitions
 #
 
-   * 15 lorentz structures written.
+   * 22 lorentz structures written.
    * lorentz.py written.
 #
 # Coupling definitions
 #
 
-   * 65 couplings written.
+   * 172 couplings written.
    * couplings.py written.
+#
+# Coupling order definitions
+#
+
+   * 0 couplings orders written.
+   * coupling_orders.py written.
+#
+# Decay definitions
+#
+
+   * 8 decays written.
+   * decay.py not written

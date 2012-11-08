@@ -41,10 +41,8 @@ C
         INTEGER JC(NEXTERNAL),II
         LOGICAL GOODHEL(NCOMB,2)
         REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
-        INTEGER IDUM, NGOOD(2), IGOOD(NCOMB,2)
+        INTEGER NGOOD(2), IGOOD(NCOMB,2)
 	INTEGER JHEL(2), J, JJ
-        REAL     XRAN1
-        EXTERNAL XRAN1
 C  
 C GLOBAL VARIABLES
 C  
@@ -64,7 +62,6 @@ C
     LOGICAL                    MULTI_CHANNEL
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
 %(define_iconfigs_lines)s
-    DATA IDUM /0/
     DATA XTRY, XREJ /0,0/
     DATA NTRY /0,0/
     DATA NGOOD /0,0/
@@ -106,18 +103,18 @@ C ----------
                   T=T*(2d0-ABS(POL(JJ)))
                ENDIF
             ENDDO
-            ANS=ANS+T
+            ANS=ANS+DABS(T)
             TS(I)=T
          ENDIF
       ENDDO
       JHEL(IMIRROR) = 1
       IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
          DO I=1,NCOMB
-            IF (.NOT.GOODHEL(I,IMIRROR) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB)) THEN
+            IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
                GOODHEL(I,IMIRROR)=.TRUE.
                NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
                IGOOD(NGOOD(IMIRROR),IMIRROR) = I
-               PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS
+               PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS,' in event ',NTRY(IMIRROR)
             ENDIF
          ENDDO
       ENDIF
@@ -138,20 +135,24 @@ C ----------
                 T=T*(2d0-ABS(POL(JJ)))
               ENDIF
             ENDDO
-            ANS=ANS+T*HWGT
+            ANS=ANS+DABS(T)*HWGT
             TS(I)=T*HWGT
         ENDDO
         IF (ISHEL(IMIRROR) .EQ. 1) THEN
           WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+c         Set right sign for ANS, based on sign of chosen helicity
+          ANS=DSIGN(ANS,TS(I))
         ENDIF
     ENDIF
     IF (ISHEL(IMIRROR) .NE. 1) THEN
-    R=XRAN1(IDUM)*ANS
+    CALL RANMAR(R)
     SUMHEL=0d0
     DO I=1,NCOMB
-       SUMHEL=SUMHEL+TS(I)
+       SUMHEL=SUMHEL+DABS(TS(I))/ANS
        IF(R.LT.SUMHEL)THEN
           WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+c         Set right sign for ANS, based on sign of chosen helicity
+          ANS=DSIGN(ANS,TS(I))
           GOTO 10
        ENDIF
     ENDDO

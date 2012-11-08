@@ -1,5 +1,5 @@
 
-__date__ = "3 june 2010"
+__date__ = "02 Aug 2012"
 __author__ = 'olivier.mattelaer@uclouvain.be'
 
 from function_library import *
@@ -28,6 +28,7 @@ class ParamCardWriter(object):
         self.fsock.write(self.header)
         
         self.write_card(list_of_parameters)
+        self.fsock.close()
     
     def define_not_dep_param(self, list_of_parameters):
         """define self.dep_mass and self.dep_width in case that they are 
@@ -40,8 +41,28 @@ class ParamCardWriter(object):
         self.dep_width = [(part, part.width) for part in all_particles\
                              if part.pdg_code > 0 and \
                                 part.width not in list_of_parameters]        
-        
     
+    @staticmethod
+    def order_param(obj1, obj2):
+        """ order parameter of a given block """
+        
+        maxlen = min([len(obj1.lhacode), len(obj2.lhacode)])
+    
+        for i in range(maxlen):
+            if obj1.lhacode[i] < obj2.lhacode[i]:
+                return -1
+            elif obj1.lhacode[i] == obj2.lhacode[i]:
+                return 0
+            else:
+                return 1
+        #identical up to the first finish
+        if len(obj1.lhacode) > len(obj2.lhacode):
+            return 1
+        elif  len(obj1.lhacode) == len(obj2.lhacode):
+            return 0
+        else:
+            return -1
+        
     def write_card(self, all_ext_param):
         """ """
         
@@ -49,12 +70,21 @@ class ParamCardWriter(object):
         all_lhablock = set([param.lhablock for param in all_ext_param])
         
         # ordonate lhablock alphabeticaly
-        list(all_lhablock).sort()
+        all_lhablock = list(all_lhablock)
+        all_lhablock.sort()
+        # put at the beginning SMINPUT + MASS + DECAY
+        for name in ['DECAY', 'MASS','SMINPUTS']:
+            if name in all_lhablock:
+                all_lhablock.remove(name)
+                all_lhablock.insert(0, name)
         
         for lhablock in all_lhablock:
             self.write_block(lhablock)
-            [self.write_param(param, lhablock) for param in all_ext_param if \
+            need_writing = [ param for param in all_ext_param if \
                                                      param.lhablock == lhablock]
+            need_writing.sort(self.order_param)
+            [self.write_param(param, lhablock) for param in need_writing]
+            
             if self.generic_output:
                 if lhablock in ['MASS', 'DECAY']:
                     self.write_dep_param_block(lhablock)
@@ -77,9 +107,9 @@ class ParamCardWriter(object):
         
         lhacode=' '.join(['%3s' % key for key in param.lhacode])
         if lhablock != 'DECAY':
-            text = """  %s %e # %s \n""" % (lhacode, param.value, param.name ) 
+            text = """  %s %e # %s \n""" % (lhacode, complex(param.value).real, param.name ) 
         else:
-            text = '''DECAY %s %e \n''' % (lhacode, param.value)
+            text = '''DECAY %s %e \n''' % (lhacode, complex(param.value).real)
         self.fsock.write(text) 
                     
 
@@ -102,11 +132,17 @@ class ParamCardWriter(object):
             data = self.dep_width
             prefix = "DECAY "
         for part, param in data:
-            text += """%s %s %f # %s : %s \n""" %(prefix, part.pdg_code, complex(eval(param.value)).real, part.name, param.value)
+            if isinstance(param.value, str):
+                value = complex(eval(param.value)).real
+            else:
+                value = param.value
+            
+            text += """%s %s %f # %s : %s \n""" %(prefix, part.pdg_code, 
+                        value, part.name, param.value)
         self.fsock.write(text)    
     
     sm_pdg = [1,2,3,4,5,6,11,12,13,13,14,15,16,21,22,23,24,25]
-    data="""   Block QNUMBERS %(pdg)d  # %(name)s 
+    data="""Block QNUMBERS %(pdg)d  # %(name)s 
         1 %(charge)d  # 3 times electric charge
         2 %(spin)d  # number of spin states (2S+1)
         3 %(color)d  # colour rep (1: singlet, 3: triplet, 8: octet)
@@ -115,7 +151,8 @@ class ParamCardWriter(object):
     def write_qnumber(self):
         """ write qnumber """
         from particles import all_particles
-
+        import particles
+        print particles.__file__
         text="""#===========================================================\n"""
         text += """# QUANTUM NUMBERS OF NEW STATE(S) (NON SM PDG CODE)\n"""
         text += """#===========================================================\n\n"""
@@ -126,12 +163,11 @@ class ParamCardWriter(object):
             text += self.data % {'pdg': part.pdg_code,
                                  'name': part.name,
                                  'charge': 3 * part.charge,
-                                 'spin': 3 * part.spin,
+                                 'spin': part.spin,
                                  'color': part.color,
                                  'antipart': part.name != part.antiname and 1 or 0}
         
         self.fsock.write(text)
-        
         
             
             

@@ -311,7 +311,8 @@ class Amplitude(base_objects.PhysicsObject):
             if self['process']:
                 self.generate_diagrams()
 
-        return Amplitude.__bases__[0].get(self, name)  #return the mother routine
+        return super(Amplitude, self).get(name)
+#        return Amplitude.__bases__[0].get(self, name)  #return the mother routine
 
 
     def get_sorted_keys(self):
@@ -342,7 +343,12 @@ class Amplitude(base_objects.PhysicsObject):
         """Returns the number of initial state particles in the process."""
         return self.get('process').get_ninitial()
 
-    def generate_diagrams(self):
+    def has_loop_process(self):
+        """ Returns wether this amplitude has a loop process."""
+        
+        return self.get('process').get('perturbation_couplings')
+
+    def generate_diagrams(self, returndiag=False):
         """Generate diagrams. Algorithm:
 
         1. Define interaction dictionaries:
@@ -382,6 +388,11 @@ class Amplitude(base_objects.PhysicsObject):
         chains, we need to ensure that BC... combine first, giving A=A
         as a final vertex. This case is defined by the Process
         property is_decay_chain = True.
+        This function can also be called by the generate_diagram function
+        of LoopAmplitudes, in which case the generated diagrams here must not
+        be directly assigned to the 'diagrams' attributed but returned as a
+        DiagramList by the function. This is controlled by the argument
+        returndiag.
         """
 
         process = self.get('process')
@@ -408,18 +419,26 @@ class Amplitude(base_objects.PhysicsObject):
         # First check that the number of fermions is even
         if len(filter(lambda leg: model.get('particle_dict')[\
                         leg.get('id')].is_fermion(), legs)) % 2 == 1:
-            self['diagrams'] = res
-            raise InvalidCmd, 'The number of fermion is odd' 
-            return res
+            if not returndiag:
+                self['diagrams'] = res
+                raise InvalidCmd, 'The number of fermion is odd'
+                return res
+            else:
+                raise InvalidCmd, 'The number of fermion is odd'
+                return res, res
 
         # Then check same number of incoming and outgoing fermions (if
         # no Majorana particles in model)
         if not model.get('got_majoranas') and \
            len(filter(lambda leg: leg.is_incoming_fermion(model), legs)) != \
            len(filter(lambda leg: leg.is_outgoing_fermion(model), legs)):
-            self['diagrams'] = res
-            raise InvalidCmd, 'The number of of incoming/outcoming fermions are different' 
-            return res
+            if not returndiag:
+                self['diagrams'] = res
+                raise InvalidCmd, 'The number of of incoming/outcoming fermions are different'
+                return res
+            else:
+                raise InvalidCmd, 'The number of of incoming/outcoming fermions are different'
+                return res, res
         
         # Finally check that charge (conserve by all interactions) of the process
         #is globally conserve for this process.
@@ -438,11 +457,16 @@ class Amplitude(base_objects.PhysicsObject):
                     total += value
 
             if abs(total) > 1e-10:
-                self['diagrams'] = res
-                raise InvalidCmd, 'No %s conservation for this process ' % charge
-                return res
-                    
-        logger.info("Trying %s " % process.nice_string().replace('Process', 'process'))
+                if not returndiag:
+                    self['diagrams'] = res
+                    raise InvalidCmd, 'No %s conservation for this process ' % charge
+                    return res
+                else:
+                    raise InvalidCmd, 'No %s conservation for this process ' % charge
+                    return res, res
+
+        if not returndiag:
+            logger.info("Trying %s " % process.nice_string().replace('Process', 'process'))
 
         # Give numbers to legs in process
         for i in range(0, len(process.get('legs'))):
@@ -454,11 +478,10 @@ class Amplitude(base_objects.PhysicsObject):
 
         # Copy leglist from process, so we can flip leg identities
         # without affecting the original process
-        leglist = base_objects.LegList(\
-                       [ copy.copy(leg) for leg in process.get('legs') ])
+        leglist = self.copy_leglist(process.get('legs'))
 
         for leg in leglist:
-
+            
             # For the first step, ensure the tag from_group 
             # is true for all legs
             leg.set('from_group', True)
@@ -479,7 +502,6 @@ class Amplitude(base_objects.PhysicsObject):
         # list of vertices
 
         # For decay processes, generate starting from final-state
-        # particles and make sure the initial state particle is
         # combined only as the last particle. This allows to use these
         # in decay chains later on.
         is_decay_proc = process.get_ninitial() == 1
@@ -504,11 +526,15 @@ class Amplitude(base_objects.PhysicsObject):
                                                   model.get('ref_dict_to0'),
                                                   is_decay_proc,
                                                   process.get('orders'))
-
+        
+        #In LoopAmplitude the function below is overloaded such that it
+        #converts back all DGLoopLegs to Legs. In the default tree-level
+        #diagram generation, this does nothing.
+        self.convert_dgleg_to_leg(reduced_leglist)
+         
         if reduced_leglist:
             for vertex_list in reduced_leglist:
-                res.append(base_objects.Diagram(
-                            {'vertices':base_objects.VertexList(vertex_list)}))
+                res.append(self.create_diagram(base_objects.VertexList(vertex_list)))
 
         # Record whether or not we failed generation before required
         # s-channel propagators are taken into account
@@ -564,6 +590,7 @@ class Amplitude(base_objects.PhysicsObject):
         if process.get('forbidden_onsh_s_channels'):
             ninitial = len(filter(lambda leg: leg.get('state') == False,
                               process.get('legs')))
+            
             verts = base_objects.VertexList(sum([[vertex for vertex \
                                                   in diagram.get('vertices')[:-1]
                                            if vertex.get_s_channel_id(\
@@ -580,12 +607,12 @@ class Amplitude(base_objects.PhysicsObject):
         self['diagrams'] = res
 
         # Set actual coupling orders for each diagram
-        for diagram in self['diagrams']:
+        for diagram in res:
             diagram.calculate_orders(model)
 
         # Replace final id=0 vertex if necessary
         if not process.get('is_decay_chain'):
-            for diagram in self['diagrams']:
+            for diagram in res:
                 vertices = diagram.get('vertices')
                 if len(vertices) > 1 and vertices[-1].get('id') == 0:
                     # Need to "glue together" last and next-to-last
@@ -608,16 +635,41 @@ class Amplitude(base_objects.PhysicsObject):
                     vertices.append(nexttolastvertex)
                     diagram.set('vertices', vertices)
 
-        if res:
+        if res and not returndiag:
             logger.info("Process has %d diagrams" % len(res))
 
         # Trim down number of legs and vertices used to save memory
-        self.trim_diagrams()
+        self.trim_diagrams(diaglist=res)
 
         # Sort process legs according to leg number
         self.get('process').get('legs').sort()
-        
-        return not failed_crossing
+
+        # Set diagrams to res if not asked to be returned
+        if not returndiag:
+           self['diagrams'] = res
+           return not failed_crossing
+        else:
+           return not failed_crossing, res
+
+    def create_diagram(self, vertexlist):
+        """ Return a Diagram created from the vertex list. This function can be
+            overloaded by daughter classes."""
+        return base_objects.Diagram({'vertices':vertexlist})
+
+    def convert_dgleg_to_leg(self, vertexdoublelist):
+        """ In LoopAmplitude, it converts back all DGLoopLegs into Legs.
+            In Amplitude, there is nothing to do. """
+
+        return True
+
+    def copy_leglist(self, legs):
+        """ Simply returns a copy of the leg list. This function is
+            overloaded in LoopAmplitude so that a DGLoopLeg list is returned.
+            The DGLoopLeg has some additional parameters only useful during
+            loop diagram generation"""
+
+        return base_objects.LegList(\
+                [ copy.copy(leg) for leg in legs ])
 
     def reduce_leglist(self, curr_leglist, max_multi_to1, ref_dict_to0,
                        is_decay_proc = False, coupling_orders = None):
@@ -644,7 +696,8 @@ class Amplitude(base_objects.PhysicsObject):
         # Special treatment for decay chain legs
 
         if curr_leglist.can_combine_to_0(ref_dict_to0, is_decay_proc):
-            # Extract the interaction idassociated to the vertex 
+            # Extract the interaction id associated to the vertex 
+            
             vertex_ids = self.get_combined_vertices(curr_leglist,
                        copy.copy(ref_dict_to0[tuple(sorted([leg.get('id') for \
                                                        leg in curr_leglist]))]))
@@ -926,13 +979,25 @@ class Amplitude(base_objects.PhysicsObject):
 
         return vert_ids
                           
-    def trim_diagrams(self, decay_ids = []):
-        """Reduce the number of legs and vertices used in memory."""
+    def trim_diagrams(self, decay_ids=[], diaglist=None):
+        """Reduce the number of legs and vertices used in memory.
+        When called by a diagram generation initiated by LoopAmplitude, 
+        this function should no trim the diagrams in the attribute 'diagrams'
+        but rather a given list in the 'diaglist' argument."""
 
         legs = []
         vertices = []
 
-        for diagram in self.get('diagrams'):
+        if diaglist is None:
+            diaglist=self.get('diagrams')
+
+        # Flag decaying legs in the core process by onshell = True
+        process = self.get('process')
+        for leg in process.get('legs'):
+            if leg.get('state') and leg.get('id') in decay_ids:
+                leg.set('onshell', True)
+        
+        for diagram in diaglist:
             # Keep track of external legs (leg numbers already used)
             leg_external = set()
             for ivx, vertex in enumerate(diagram.get('vertices')):
@@ -966,6 +1031,14 @@ class AmplitudeList(base_objects.PhysicsObjectList):
     """List of Amplitude objects
     """
 
+    def has_any_loop_process(self):
+        """ Check the content of all processes of the amplitudes in this list to
+        see if there is any which defines perturbation couplings. """
+        
+        for amp in self:
+            if amp.has_loop_process():
+                return True
+
     def is_valid_element(self, obj):
         """Test if object obj is a valid Amplitude for the list."""
 
@@ -991,19 +1064,29 @@ class DecayChainAmplitude(Amplitude):
 
         if isinstance(argument, base_objects.Process):
             super(DecayChainAmplitude, self).__init__()
+            from madgraph.loop.loop_diagram_generation import LoopMultiProcess
+            if argument['perturbation_couplings']:
+                MultiProcessClass=LoopMultiProcess
+            else:
+                MultiProcessClass=MultiProcess                             
             if isinstance(argument, base_objects.ProcessDefinition):
                 self['amplitudes'].extend(\
-                MultiProcess.generate_multi_amplitudes(argument,
+                  MultiProcessClass.generate_multi_amplitudes(argument,
                                                     collect_mirror_procs,
                                                     ignore_six_quark_processes))
             else:
-                self['amplitudes'].append(Amplitude(argument))
+                self['amplitudes'].append(\
+                  MultiProcessClass.get_amplitude_from_proc(argument))
                 # Clean decay chains from process, since we haven't
                 # combined processes with decay chains yet
                 process = copy.copy(self.get('amplitudes')[0].get('process'))
                 process.set('decay_chains', base_objects.ProcessList())
                 self['amplitudes'][0].set('process', process)
+
             for process in argument.get('decay_chains'):
+                if process.get('perturbation_couplings'):
+                    raise MadGraph5Error,\
+                          "Decay processes can not be perturbed"
                 process.set('overall_orders', argument.get('overall_orders'))
                 if not process.get('is_decay_chain'):
                     process.set('is_decay_chain',True)
@@ -1014,13 +1097,27 @@ class DecayChainAmplitude(Amplitude):
                 self['decay_chains'].append(\
                     DecayChainAmplitude(process, collect_mirror_procs,
                                         ignore_six_quark_processes))
-            # Flag decaying legs in the core process by onshell = True
+
+            # Flag decaying legs in the core diagrams by onshell = True
             decay_ids = sum([[a.get('process').get('legs')[0].get('id') \
                               for a in dec.get('amplitudes')] for dec in \
                              self['decay_chains']], [])
             decay_ids = set(decay_ids)
             for amp in self['amplitudes']:
-                amp.trim_diagrams(decay_ids)                             
+                amp.trim_diagrams(decay_ids)                    
+
+            # Finally, check that all decay ids are present in at
+            # least some process
+            for amp in self['amplitudes']:
+                for l in amp.get('process').get('legs'):
+                    if l.get('id') in decay_ids:
+                        decay_ids.remove(l.get('id'))
+            
+            if decay_ids:
+                raise InvalidCmd, \
+                 "Decay without corresponding particle in core process. " + \
+                 "Please check your process definition."
+
         elif argument != None:
             # call the mother routine
             super(DecayChainAmplitude, self).__init__(argument)
@@ -1098,6 +1195,10 @@ class DecayChainAmplitude(Amplitude):
             
         # Return a list with unique ids
         return list(set(decay_ids))
+    
+    def has_loop_process(self):
+        """ Returns wether this amplitude has a loop process."""
+        return self['amplitudes'].has_any_loop_process()
     
     def get_amplitudes(self):
         """Recursive function to extract all amplitudes for this process"""
@@ -1213,7 +1314,7 @@ class MultiProcess(base_objects.PhysicsObject):
                                        self.get('ignore_six_quark_processes')))
                 else:
                     self['amplitudes'].extend(\
-                       MultiProcess.generate_multi_amplitudes(process_def,
+                       self.generate_multi_amplitudes(process_def,
                                        self.get('collect_mirror_procs'),
                                        self.get('ignore_six_quark_processes')))
 
@@ -1224,8 +1325,8 @@ class MultiProcess(base_objects.PhysicsObject):
 
         return ['process_definitions', 'amplitudes']
 
-    @staticmethod
-    def generate_multi_amplitudes(process_definition,
+    @classmethod
+    def generate_multi_amplitudes(cls,process_definition,
                                   collect_mirror_procs = False,
                                   ignore_six_quark_processes = []):
         """Generate amplitudes in a semi-efficient way.
@@ -1327,12 +1428,19 @@ class MultiProcess(base_objects.PhysicsObject):
                                  process_definition.get('forbidden_particles'),
                               'is_decay_chain': \
                                  process_definition.get('is_decay_chain'),
+                              'perturbation_couplings': \
+                                 process_definition.get('perturbation_couplings'),
+                              'squared_orders': \
+                                 process_definition.get('squared_orders'),
                               'overall_orders': \
-                                 process_definition.get('overall_orders')})
-                
+                                 process_definition.get('overall_orders'),
+                              'has_born': \
+                                 process_definition.get('has_born')
+                                 })
                 fast_proc = \
                           array.array('i',[leg.get('id') for leg in legs])
-                if collect_mirror_procs:
+                if collect_mirror_procs and \
+                        process_definition.get_ninitial() == 2:
                     # Check if mirrored process is already generated
                     mirror_proc = \
                               array.array('i', [fast_proc[1], fast_proc[0]] + \
@@ -1340,7 +1448,7 @@ class MultiProcess(base_objects.PhysicsObject):
                     try:
                         mirror_amp = \
                                amplitudes[non_permuted_procs.index(mirror_proc)]
-                    except:
+                    except Exception:
                         # Didn't find any mirror process
                         pass
                     else:
@@ -1378,8 +1486,8 @@ class MultiProcess(base_objects.PhysicsObject):
                         continue
                     
                 # Create new amplitude
-                amplitude = Amplitude({'process': process})
-                
+                amplitude = cls.get_amplitude_from_proc(process)
+
                 try:
                     result = amplitude.generate_diagrams()
                 except InvalidCmd as error:
@@ -1407,7 +1515,14 @@ class MultiProcess(base_objects.PhysicsObject):
 
         # Return the produced amplitudes
         return amplitudes
-            
+
+    @classmethod
+    def get_amplitude_from_proc(cls,proc):
+        """ Return the correct amplitude type according to the characteristics of
+            the process proc """
+        return Amplitude({"process": proc})
+
+
     @staticmethod
     def find_optimal_process_orders(process_definition):
         """Find the minimal WEIGHTED order for this set of processes.
@@ -1454,7 +1569,13 @@ class MultiProcess(base_objects.PhysicsObject):
 
         # If there are already couplings defined, return
         if process_definition.get('orders') or \
-               process_definition.get('overall_orders'):
+                process_definition.get('overall_orders') or \
+                process_definition.get('NLO_mode')=='virt':
+            return process_definition.get('orders')
+
+        # If this is a decay process (and not a decay chain), return
+        if process_definition.get_ninitial() == 1 and not \
+                process_definition.get('is_decay_chain'):
             return process_definition.get('orders')
 
         logger.info("Checking for minimal orders which gives processes.")
@@ -1473,9 +1594,12 @@ class MultiProcess(base_objects.PhysicsObject):
         fsids = [leg['ids'] for leg in \
                  filter(lambda leg: leg['state'] == True, process_definition['legs'])]
 
+        max_WEIGHTED_order = \
+                        (len(fsids + isids) - 2)*int(model.get_max_WEIGHTED())
+
         # Run diagram generation with increasing max_order_now until
         # we manage to get diagrams
-        while max_order_now < len(fsids)*max(hierarchy):
+        while max_order_now < max_WEIGHTED_order:
 
             logger.info("Trying coupling order WEIGHTED=%d" % max_order_now)
 
@@ -1572,7 +1696,7 @@ class MultiProcess(base_objects.PhysicsObject):
             logger.setLevel(oldloglevel)
 
         # If no valid processes found with nfinal-1 couplings, return maximal
-        return {coupling: len(fsids)*max(hierarchy)}
+        return {coupling: max_order_now}
 
     @staticmethod
     def cross_amplitude(amplitude, process, org_perm, new_perm):

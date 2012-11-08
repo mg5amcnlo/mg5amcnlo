@@ -1,0 +1,73 @@
+#!/bin/bash
+
+
+
+
+if [[  "$1" == ""  ]]; then
+    echo 'Path to MadAnalysis and topdrawer must be given to plot'
+    exit 
+else
+     MAdir=$1
+     td=$2
+fi
+
+if [[ -x $MAdir/plot_events ]]; then
+    echo 'plot_events found'
+else
+    echo 'plot_events not found'
+    exit
+fi
+
+if [[ -x $td/td ]]; then
+    echo 'topdrawer found'
+    # This is needed for Mac OS X
+    export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$td
+else
+    echo 'topdrawer not found'
+    exit
+fi
+
+if [[ -x $MAdir/epstosmth ]]; then
+    echo 'epstosmth found'
+else
+    echo 'epstosmth not found'
+    exit
+fi
+
+#if [[ -e events.list ]]; then
+#    echo 'events.list found'
+#else
+#    echo 'events.list not found'
+#    exit
+#fi
+
+if [[ -e ../../../Cards/plot_card.dat ]]; then
+    echo 'plot_card found'
+    cp ../../../Cards/plot_card.dat ./ma_card.dat
+else
+    echo 'plot_card not found'
+    exit
+fi
+
+#$MAdir/plot_events < events.list
+
+echo 'end plot_events'
+
+#$td/td -device=ps plots.top -sideways
+$td/td plots.top 
+csplit -ks -n 3 -f ma_plot plots.top "/   NEW PLOT/" '{250}'
+    
+for file in ma_plot??? ; do
+  echo ">> Converting topdrawer file $file to postscript" >> log.convert
+#  $td/td -device=ps $file -sideways
+  rm -f $file\.top
+  echo "SET DEVICE POSTSCRIPT ORIENT=3" > $file\.top
+  cat $file >> $file\.top
+  $td/td $file\.top
+done
+
+for file in ma_plot???.ps ; do
+  echo ">> Converting file $file" >> log.convert
+  $MAdir/epstosmth --gsopt='-r60x60 -dGraphicsAlphaBits=4' --gsdev=jpeg $file
+done
+

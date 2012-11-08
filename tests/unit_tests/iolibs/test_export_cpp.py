@@ -1367,14 +1367,14 @@ public:
 static Parameters_sm* getInstance();
 
 // Model parameters independent of aS
-double WTau,WH,WW,WZ,WT,MTA,MM,Me,MH,MZ,MB,MT,MC,ymtau,ymm,yme,ymt,ymb,ymc,etaWS,rhoWS,AWS,lamWS,Gf,aEWM1,ZERO,lamWS__exp__2,lamWS__exp__3,MZ__exp__2,MZ__exp__4,sqrt__2,MH__exp__2,aEW,MW,sqrt__aEW,ee,MW__exp__2,sw2,cw,sqrt__sw2,sw,g1,gw,v,v__exp__2,lam,yb,yc,ye,ym,yt,ytau,muH,gw__exp__2,cw__exp__2,ee__exp__2,sw__exp__2;
-std::complex<double> CKM11,CKM12,complexi,CKM13,CKM21,CKM22,CKM23,CKM31,CKM32,CKM33,conjg__CKM11,conjg__CKM12,conjg__CKM13,conjg__CKM21,conjg__CKM22,conjg__CKM23,conjg__CKM31,conjg__CKM32,conjg__CKM33;
+double WTau,WH,WT,WW,WZ,MTA,MM,Me,MH,MB,MT,MC,MZ,ymtau,ymm,yme,ymt,ymb,ymc,etaWS,rhoWS,AWS,lamWS,Gf,aEWM1,ZERO,lamWS__exp__2,lamWS__exp__3,MZ__exp__2,MZ__exp__4,sqrt__2,MH__exp__2,aEW,MW,sqrt__aEW,ee,MW__exp__2,sw2,cw,sqrt__sw2,sw,g1,gw,vev,vev__exp__2,lam,yb,yc,ye,ym,yt,ytau,muH,ee__exp__2,sw__exp__2,cw__exp__2;
+std::complex<double> CKM1x1,CKM1x2,complexi,CKM1x3,CKM2x1,CKM2x2,CKM2x3,CKM3x1,CKM3x2,CKM3x3,conjg__CKM1x3,conjg__CKM2x3,conjg__CKM3x3,conjg__CKM2x1,conjg__CKM3x1,conjg__CKM2x2,conjg__CKM3x2,conjg__CKM1x1,conjg__CKM1x2,I1x31,I1x32,I1x33,I2x12,I2x13,I2x22,I2x23,I2x32,I2x33,I3x21,I3x22,I3x23,I3x31,I3x32,I3x33,I4x13,I4x23,I4x33;
 // Model parameters dependent on aS
 double aS,sqrt__aS,G,G__exp__2;
 // Model couplings independent of aS
-std::complex<double> GC_1,GC_2,GC_3,GC_7,GC_8,GC_9,GC_10,GC_11,GC_12,GC_13,GC_14,GC_15,GC_16,GC_17,GC_18,GC_19,GC_20,GC_21,GC_22,GC_23,GC_24,GC_25,GC_26,GC_27,GC_28,GC_29,GC_30,GC_31,GC_32,GC_33,GC_34,GC_35,GC_36,GC_37,GC_38,GC_39,GC_40,GC_41,GC_42,GC_43,GC_44,GC_45,GC_46,GC_47;
+std::complex<double> GC_1,GC_2,GC_3,GC_4,GC_5,GC_6,GC_7,GC_8,GC_9,GC_13,GC_14,GC_15,GC_16,GC_17,GC_18,GC_19,GC_20,GC_21,GC_22,GC_23,GC_24,GC_25,GC_26,GC_27,GC_28,GC_29,GC_30,GC_31,GC_32,GC_33,GC_34,GC_35,GC_36,GC_37,GC_38,GC_39,GC_40,GC_41,GC_42,GC_43,GC_44,GC_45,GC_46,GC_47,GC_48,GC_49,GC_50,GC_51,GC_52,GC_53,GC_54,GC_55,GC_56,GC_57,GC_58,GC_59,GC_60,GC_61,GC_62,GC_63,GC_64,GC_65,GC_66,GC_67,GC_68,GC_69,GC_70,GC_71,GC_72,GC_73,GC_74,GC_75,GC_76,GC_77,GC_78,GC_79,GC_80,GC_81,GC_82,GC_83,GC_84,GC_85,GC_86,GC_87,GC_88,GC_89,GC_90,GC_91,GC_92,GC_93,GC_94,GC_95,GC_96,GC_97,GC_98,GC_99,GC_100,GC_101,GC_102,GC_103,GC_104,GC_105,GC_106,GC_107,GC_108;
 // Model couplings dependent on aS
-std::complex<double> GC_6,GC_5,GC_4;
+std::complex<double> GC_12,GC_11,GC_10;
 
 // Set parameters that are unchanged during the run
 void setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr);
@@ -1401,7 +1401,8 @@ static Parameters_sm* instance;
 
 } // end namespace Pythia8
 #endif // Pythia8_parameters_sm_H
-""" % misc.get_pkg_info()
+"""% misc.get_pkg_info()
+
 
         goal_file_cc = \
 """//==========================================================================
@@ -1422,26 +1423,26 @@ namespace Pythia8 {
 
     // Function to get static instance - only one instance per program
     Parameters_sm* Parameters_sm::getInstance(){
-	if (instance == 0)
-	    instance = new Parameters_sm();
+    if (instance == 0)
+        instance = new Parameters_sm();
 
-	return instance;
+    return instance;
     }
 
     void Parameters_sm::setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr){
-	WTau=pd->mWidth(15);
+    WTau=pd->mWidth(15);
 WH=pd->mWidth(25);
+WT=pd->mWidth(6);
 WW=pd->mWidth(24);
 WZ=pd->mWidth(23);
-WT=pd->mWidth(6);
 MTA=pd->m0(15);
 MM=pd->m0(13);
 Me=pd->m0(11);
 MH=pd->m0(25);
-MZ=pd->m0(23);
 MB=pd->m0(5);
 MT=pd->m0(6);
 MC=pd->m0(4);
+MZ=pd->m0(23);
 ymtau=pd->mRun(15, pd->m0(24));
 ymm=pd->mRun(13, pd->m0(24));
 yme=pd->mRun(11, pd->m0(24));
@@ -1464,30 +1465,30 @@ Gf = M_PI*csm->alphaEM(pow(pd->m0(23),2))*pow(pd->m0(23),2)/(sqrt(2.)*pow(pd->m0
 aEWM1 = 1./csm->alphaEM(pow(pd->m0(23),2));
 ZERO = 0.;
 lamWS__exp__2 = pow(lamWS,2.);
-CKM11 = 1.-lamWS__exp__2/2.;
-CKM12 = lamWS;
+CKM1x1 = 1.-lamWS__exp__2/2.;
+CKM1x2 = lamWS;
 complexi = std::complex<double>(0.,1.);
 lamWS__exp__3 = pow(lamWS,3.);
-CKM13 = AWS*lamWS__exp__3*(-(etaWS*complexi)+rhoWS);
-CKM21 = -lamWS;
-CKM22 = 1.-lamWS__exp__2/2.;
-CKM23 = AWS*lamWS__exp__2;
-CKM31 = AWS*lamWS__exp__3*(1.-etaWS*complexi-rhoWS);
-CKM32 = -(AWS*lamWS__exp__2);
-CKM33 = 1.;
+CKM1x3 = AWS*lamWS__exp__3*(-(etaWS*complexi)+rhoWS);
+CKM2x1 = -lamWS;
+CKM2x2 = 1.-lamWS__exp__2/2.;
+CKM2x3 = AWS*lamWS__exp__2;
+CKM3x1 = AWS*lamWS__exp__3*(1.-etaWS*complexi-rhoWS);
+CKM3x2 = -(AWS*lamWS__exp__2);
+CKM3x3 = 1.;
 MZ__exp__2 = pow(MZ,2.);
 MZ__exp__4 = pow(MZ,4.);
 sqrt__2 = sqrt(2.);
 MH__exp__2 = pow(MH,2.);
-conjg__CKM11 = conj(CKM11);
-conjg__CKM12 = conj(CKM12);
-conjg__CKM13 = conj(CKM13);
-conjg__CKM21 = conj(CKM21);
-conjg__CKM22 = conj(CKM22);
-conjg__CKM23 = conj(CKM23);
-conjg__CKM31 = conj(CKM31);
-conjg__CKM32 = conj(CKM32);
-conjg__CKM33 = conj(CKM33);
+conjg__CKM1x3 = conj(CKM1x3);
+conjg__CKM2x3 = conj(CKM2x3);
+conjg__CKM3x3 = conj(CKM3x3);
+conjg__CKM2x1 = conj(CKM2x1);
+conjg__CKM3x1 = conj(CKM3x1);
+conjg__CKM2x2 = conj(CKM2x2);
+conjg__CKM3x2 = conj(CKM3x2);
+conjg__CKM1x1 = conj(CKM1x1);
+conjg__CKM1x2 = conj(CKM1x2);
 aEW = 1./aEWM1;
 MW = sqrt(MZ__exp__2/2.+sqrt(MZ__exp__4/4.-(aEW*M_PI*MZ__exp__2)/(Gf*sqrt__2)));
 sqrt__aEW = sqrt(aEW);
@@ -1499,95 +1500,173 @@ sqrt__sw2 = sqrt(sw2);
 sw = sqrt__sw2;
 g1 = ee/cw;
 gw = ee/sw;
-v = (2.*MW*sw)/ee;
-v__exp__2 = pow(v,2.);
-lam = MH__exp__2/(2.*v__exp__2);
-yb = (ymb*sqrt__2)/v;
-yc = (ymc*sqrt__2)/v;
-ye = (yme*sqrt__2)/v;
-ym = (ymm*sqrt__2)/v;
-yt = (ymt*sqrt__2)/v;
-ytau = (ymtau*sqrt__2)/v;
-muH = sqrt(lam*v__exp__2);
-gw__exp__2 = pow(gw,2.);
-cw__exp__2 = pow(cw,2.);
+vev = (2.*MW*sw)/ee;
+vev__exp__2 = pow(vev,2.);
+lam = MH__exp__2/(2.*vev__exp__2);
+yb = (ymb*sqrt__2)/vev;
+yc = (ymc*sqrt__2)/vev;
+ye = (yme*sqrt__2)/vev;
+ym = (ymm*sqrt__2)/vev;
+yt = (ymt*sqrt__2)/vev;
+ytau = (ymtau*sqrt__2)/vev;
+muH = sqrt(lam*vev__exp__2);
+I1x31 = yb*conjg__CKM1x3;
+I1x32 = yb*conjg__CKM2x3;
+I1x33 = yb*conjg__CKM3x3;
+I2x12 = yc*conjg__CKM2x1;
+I2x13 = yt*conjg__CKM3x1;
+I2x22 = yc*conjg__CKM2x2;
+I2x23 = yt*conjg__CKM3x2;
+I2x32 = yc*conjg__CKM2x3;
+I2x33 = yt*conjg__CKM3x3;
+I3x21 = CKM2x1*yc;
+I3x22 = CKM2x2*yc;
+I3x23 = CKM2x3*yc;
+I3x31 = CKM3x1*yt;
+I3x32 = CKM3x2*yt;
+I3x33 = CKM3x3*yt;
+I4x13 = CKM1x3*yb;
+I4x23 = CKM2x3*yb;
+I4x33 = CKM3x3*yb;
 ee__exp__2 = pow(ee,2.);
 sw__exp__2 = pow(sw,2.);
+cw__exp__2 = pow(cw,2.);
     }
     void Parameters_sm::setIndependentCouplings(){
-	GC_1 = -(ee*complexi)/3.;
+    GC_1 = -(ee*complexi)/3.;
 GC_2 = (2.*ee*complexi)/3.;
 GC_3 = -(ee*complexi);
-GC_7 = cw*complexi*gw;
-GC_8 = -(complexi*gw__exp__2);
-GC_9 = cw__exp__2*complexi*gw__exp__2;
-GC_10 = (ee__exp__2*complexi)/(2.*sw__exp__2);
-GC_11 = (ee*complexi)/(sw*sqrt__2);
-GC_12 = (CKM11*ee*complexi)/(sw*sqrt__2);
-GC_13 = (CKM12*ee*complexi)/(sw*sqrt__2);
-GC_14 = (CKM13*ee*complexi)/(sw*sqrt__2);
-GC_15 = (CKM21*ee*complexi)/(sw*sqrt__2);
-GC_16 = (CKM22*ee*complexi)/(sw*sqrt__2);
-GC_17 = (CKM23*ee*complexi)/(sw*sqrt__2);
-GC_18 = (CKM31*ee*complexi)/(sw*sqrt__2);
-GC_19 = (CKM32*ee*complexi)/(sw*sqrt__2);
-GC_20 = (CKM33*ee*complexi)/(sw*sqrt__2);
-GC_21 = -(cw*ee*complexi)/(2.*sw);
-GC_22 = (cw*ee*complexi)/(2.*sw);
-GC_23 = -(ee*complexi*sw)/(6.*cw);
-GC_24 = (ee*complexi*sw)/(2.*cw);
-GC_25 = complexi*gw*sw;
-GC_26 = -2.*cw*complexi*gw__exp__2*sw;
-GC_27 = complexi*gw__exp__2*sw__exp__2;
-GC_28 = (cw*ee*complexi)/(2.*sw)+(ee*complexi*sw)/(2.*cw);
-GC_29 = ee__exp__2*complexi+(cw__exp__2*ee__exp__2*complexi)/(2.*sw__exp__2)+(ee__exp__2*complexi*sw__exp__2)/(2.*cw__exp__2);
-GC_30 = -6.*complexi*lam*v;
-GC_31 = (ee__exp__2*complexi*v)/(2.*sw__exp__2);
-GC_32 = ee__exp__2*complexi*v+(cw__exp__2*ee__exp__2*complexi*v)/(2.*sw__exp__2)+(ee__exp__2*complexi*sw__exp__2*v)/(2.*cw__exp__2);
-GC_33 = -((complexi*yb)/sqrt__2);
-GC_34 = -((complexi*yc)/sqrt__2);
-GC_35 = -((complexi*ye)/sqrt__2);
-GC_36 = -((complexi*ym)/sqrt__2);
-GC_37 = -((complexi*yt)/sqrt__2);
-GC_38 = -((complexi*ytau)/sqrt__2);
-GC_39 = (ee*complexi*conjg__CKM11)/(sw*sqrt__2);
-GC_40 = (ee*complexi*conjg__CKM12)/(sw*sqrt__2);
-GC_41 = (ee*complexi*conjg__CKM13)/(sw*sqrt__2);
-GC_42 = (ee*complexi*conjg__CKM21)/(sw*sqrt__2);
-GC_43 = (ee*complexi*conjg__CKM22)/(sw*sqrt__2);
-GC_44 = (ee*complexi*conjg__CKM23)/(sw*sqrt__2);
-GC_45 = (ee*complexi*conjg__CKM31)/(sw*sqrt__2);
-GC_46 = (ee*complexi*conjg__CKM32)/(sw*sqrt__2);
-GC_47 = (ee*complexi*conjg__CKM33)/(sw*sqrt__2);
+GC_4 = ee*complexi;
+GC_5 = ee__exp__2*complexi;
+GC_6 = 2.*ee__exp__2*complexi;
+GC_7 = -ee__exp__2/(2.*cw);
+GC_8 = (ee__exp__2*complexi)/(2.*cw);
+GC_9 = ee__exp__2/(2.*cw);
+GC_13 = I1x31;
+GC_14 = I1x32;
+GC_15 = I1x33;
+GC_16 = -I2x12;
+GC_17 = -I2x13;
+GC_18 = -I2x22;
+GC_19 = -I2x23;
+GC_20 = -I2x32;
+GC_21 = -I2x33;
+GC_22 = I3x21;
+GC_23 = I3x22;
+GC_24 = I3x23;
+GC_25 = I3x31;
+GC_26 = I3x32;
+GC_27 = I3x33;
+GC_28 = -I4x13;
+GC_29 = -I4x23;
+GC_30 = -I4x33;
+GC_31 = -2.*complexi*lam;
+GC_32 = -4.*complexi*lam;
+GC_33 = -6.*complexi*lam;
+GC_34 = (ee__exp__2*complexi)/(2.*sw__exp__2);
+GC_35 = -((ee__exp__2*complexi)/sw__exp__2);
+GC_36 = (cw__exp__2*ee__exp__2*complexi)/sw__exp__2;
+GC_37 = -ee/(2.*sw);
+GC_38 = -(ee*complexi)/(2.*sw);
+GC_39 = (ee*complexi)/(2.*sw);
+GC_40 = (ee*complexi)/(sw*sqrt__2);
+GC_41 = (CKM1x1*ee*complexi)/(sw*sqrt__2);
+GC_42 = (CKM1x2*ee*complexi)/(sw*sqrt__2);
+GC_43 = (CKM1x3*ee*complexi)/(sw*sqrt__2);
+GC_44 = (CKM2x1*ee*complexi)/(sw*sqrt__2);
+GC_45 = (CKM2x2*ee*complexi)/(sw*sqrt__2);
+GC_46 = (CKM2x3*ee*complexi)/(sw*sqrt__2);
+GC_47 = (CKM3x1*ee*complexi)/(sw*sqrt__2);
+GC_48 = (CKM3x2*ee*complexi)/(sw*sqrt__2);
+GC_49 = (CKM3x3*ee*complexi)/(sw*sqrt__2);
+GC_50 = -(cw*ee*complexi)/(2.*sw);
+GC_51 = (cw*ee*complexi)/(2.*sw);
+GC_52 = -((cw*ee*complexi)/sw);
+GC_53 = (cw*ee*complexi)/sw;
+GC_54 = -ee__exp__2/(2.*sw);
+GC_55 = -(ee__exp__2*complexi)/(2.*sw);
+GC_56 = ee__exp__2/(2.*sw);
+GC_57 = (-2.*cw*ee__exp__2*complexi)/sw;
+GC_58 = -(ee*complexi*sw)/(6.*cw);
+GC_59 = (ee*complexi*sw)/(2.*cw);
+GC_60 = -(cw*ee)/(2.*sw)-(ee*sw)/(2.*cw);
+GC_61 = -(cw*ee*complexi)/(2.*sw)+(ee*complexi*sw)/(2.*cw);
+GC_62 = (cw*ee*complexi)/(2.*sw)+(ee*complexi*sw)/(2.*cw);
+GC_63 = (cw*ee__exp__2*complexi)/sw-(ee__exp__2*complexi*sw)/cw;
+GC_64 = -(ee__exp__2*complexi)+(cw__exp__2*ee__exp__2*complexi)/(2.*sw__exp__2)+(ee__exp__2*complexi*sw__exp__2)/(2.*cw__exp__2);
+GC_65 = ee__exp__2*complexi+(cw__exp__2*ee__exp__2*complexi)/(2.*sw__exp__2)+(ee__exp__2*complexi*sw__exp__2)/(2.*cw__exp__2);
+GC_66 = -(ee__exp__2*vev)/(2.*cw);
+GC_67 = (ee__exp__2*vev)/(2.*cw);
+GC_68 = -2.*complexi*lam*vev;
+GC_69 = -6.*complexi*lam*vev;
+GC_70 = -(ee__exp__2*vev)/(4.*sw__exp__2);
+GC_71 = -(ee__exp__2*complexi*vev)/(4.*sw__exp__2);
+GC_72 = (ee__exp__2*complexi*vev)/(2.*sw__exp__2);
+GC_73 = (ee__exp__2*vev)/(4.*sw__exp__2);
+GC_74 = -(ee__exp__2*vev)/(2.*sw);
+GC_75 = (ee__exp__2*vev)/(2.*sw);
+GC_76 = -(ee__exp__2*vev)/(4.*cw)-(cw*ee__exp__2*vev)/(4.*sw__exp__2);
+GC_77 = (ee__exp__2*vev)/(4.*cw)-(cw*ee__exp__2*vev)/(4.*sw__exp__2);
+GC_78 = -(ee__exp__2*vev)/(4.*cw)+(cw*ee__exp__2*vev)/(4.*sw__exp__2);
+GC_79 = (ee__exp__2*vev)/(4.*cw)+(cw*ee__exp__2*vev)/(4.*sw__exp__2);
+GC_80 = -(ee__exp__2*complexi*vev)/2.-(cw__exp__2*ee__exp__2*complexi*vev)/(4.*sw__exp__2)-(ee__exp__2*complexi*sw__exp__2*vev)/(4.*cw__exp__2);
+GC_81 = ee__exp__2*complexi*vev+(cw__exp__2*ee__exp__2*complexi*vev)/(2.*sw__exp__2)+(ee__exp__2*complexi*sw__exp__2*vev)/(2.*cw__exp__2);
+GC_82 = -(yb/sqrt__2);
+GC_83 = -((complexi*yb)/sqrt__2);
+GC_84 = -((complexi*yc)/sqrt__2);
+GC_85 = yc/sqrt__2;
+GC_86 = -ye;
+GC_87 = ye;
+GC_88 = -(ye/sqrt__2);
+GC_89 = -((complexi*ye)/sqrt__2);
+GC_90 = -ym;
+GC_91 = ym;
+GC_92 = -(ym/sqrt__2);
+GC_93 = -((complexi*ym)/sqrt__2);
+GC_94 = -((complexi*yt)/sqrt__2);
+GC_95 = yt/sqrt__2;
+GC_96 = -ytau;
+GC_97 = ytau;
+GC_98 = -(ytau/sqrt__2);
+GC_99 = -((complexi*ytau)/sqrt__2);
+GC_100 = (ee*complexi*conjg__CKM1x1)/(sw*sqrt__2);
+GC_101 = (ee*complexi*conjg__CKM1x2)/(sw*sqrt__2);
+GC_102 = (ee*complexi*conjg__CKM1x3)/(sw*sqrt__2);
+GC_103 = (ee*complexi*conjg__CKM2x1)/(sw*sqrt__2);
+GC_104 = (ee*complexi*conjg__CKM2x2)/(sw*sqrt__2);
+GC_105 = (ee*complexi*conjg__CKM2x3)/(sw*sqrt__2);
+GC_106 = (ee*complexi*conjg__CKM3x1)/(sw*sqrt__2);
+GC_107 = (ee*complexi*conjg__CKM3x2)/(sw*sqrt__2);
+GC_108 = (ee*complexi*conjg__CKM3x3)/(sw*sqrt__2);
     }
     void Parameters_sm::setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS){
-	aS = alpS;
+    aS = alpS;
 sqrt__aS = sqrt(aS);
 G = 2.*sqrt__aS*sqrt(M_PI);
 G__exp__2 = pow(G,2.);
     }
     void Parameters_sm::setDependentCouplings(){
-	GC_6 = complexi*G__exp__2;
-GC_5 = complexi*G;
-GC_4 = -G;
+    GC_12 = complexi*G__exp__2;
+GC_11 = complexi*G;
+GC_10 = -G;
     }
 
     // Routines for printing out parameters
     void Parameters_sm::printIndependentParameters(){
-	cout << "sm model parameters independent of event kinematics:" << endl;
-	cout << setw(20) << "WTau " << "= " << setiosflags(ios::scientific) << setw(10) << WTau << endl;
+    cout << "sm model parameters independent of event kinematics:" << endl;
+    cout << setw(20) << "WTau " << "= " << setiosflags(ios::scientific) << setw(10) << WTau << endl;
 cout << setw(20) << "WH " << "= " << setiosflags(ios::scientific) << setw(10) << WH << endl;
+cout << setw(20) << "WT " << "= " << setiosflags(ios::scientific) << setw(10) << WT << endl;
 cout << setw(20) << "WW " << "= " << setiosflags(ios::scientific) << setw(10) << WW << endl;
 cout << setw(20) << "WZ " << "= " << setiosflags(ios::scientific) << setw(10) << WZ << endl;
-cout << setw(20) << "WT " << "= " << setiosflags(ios::scientific) << setw(10) << WT << endl;
 cout << setw(20) << "MTA " << "= " << setiosflags(ios::scientific) << setw(10) << MTA << endl;
 cout << setw(20) << "MM " << "= " << setiosflags(ios::scientific) << setw(10) << MM << endl;
 cout << setw(20) << "Me " << "= " << setiosflags(ios::scientific) << setw(10) << Me << endl;
 cout << setw(20) << "MH " << "= " << setiosflags(ios::scientific) << setw(10) << MH << endl;
-cout << setw(20) << "MZ " << "= " << setiosflags(ios::scientific) << setw(10) << MZ << endl;
 cout << setw(20) << "MB " << "= " << setiosflags(ios::scientific) << setw(10) << MB << endl;
 cout << setw(20) << "MT " << "= " << setiosflags(ios::scientific) << setw(10) << MT << endl;
 cout << setw(20) << "MC " << "= " << setiosflags(ios::scientific) << setw(10) << MC << endl;
+cout << setw(20) << "MZ " << "= " << setiosflags(ios::scientific) << setw(10) << MZ << endl;
 cout << setw(20) << "ymtau " << "= " << setiosflags(ios::scientific) << setw(10) << ymtau << endl;
 cout << setw(20) << "ymm " << "= " << setiosflags(ios::scientific) << setw(10) << ymm << endl;
 cout << setw(20) << "yme " << "= " << setiosflags(ios::scientific) << setw(10) << yme << endl;
@@ -1602,30 +1681,30 @@ cout << setw(20) << "Gf " << "= " << setiosflags(ios::scientific) << setw(10) <<
 cout << setw(20) << "aEWM1 " << "= " << setiosflags(ios::scientific) << setw(10) << aEWM1 << endl;
 cout << setw(20) << "ZERO " << "= " << setiosflags(ios::scientific) << setw(10) << ZERO << endl;
 cout << setw(20) << "lamWS__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << lamWS__exp__2 << endl;
-cout << setw(20) << "CKM11 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM11 << endl;
-cout << setw(20) << "CKM12 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM12 << endl;
+cout << setw(20) << "CKM1x1 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM1x1 << endl;
+cout << setw(20) << "CKM1x2 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM1x2 << endl;
 cout << setw(20) << "complexi " << "= " << setiosflags(ios::scientific) << setw(10) << complexi << endl;
 cout << setw(20) << "lamWS__exp__3 " << "= " << setiosflags(ios::scientific) << setw(10) << lamWS__exp__3 << endl;
-cout << setw(20) << "CKM13 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM13 << endl;
-cout << setw(20) << "CKM21 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM21 << endl;
-cout << setw(20) << "CKM22 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM22 << endl;
-cout << setw(20) << "CKM23 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM23 << endl;
-cout << setw(20) << "CKM31 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM31 << endl;
-cout << setw(20) << "CKM32 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM32 << endl;
-cout << setw(20) << "CKM33 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM33 << endl;
+cout << setw(20) << "CKM1x3 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM1x3 << endl;
+cout << setw(20) << "CKM2x1 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM2x1 << endl;
+cout << setw(20) << "CKM2x2 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM2x2 << endl;
+cout << setw(20) << "CKM2x3 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM2x3 << endl;
+cout << setw(20) << "CKM3x1 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM3x1 << endl;
+cout << setw(20) << "CKM3x2 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM3x2 << endl;
+cout << setw(20) << "CKM3x3 " << "= " << setiosflags(ios::scientific) << setw(10) << CKM3x3 << endl;
 cout << setw(20) << "MZ__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << MZ__exp__2 << endl;
 cout << setw(20) << "MZ__exp__4 " << "= " << setiosflags(ios::scientific) << setw(10) << MZ__exp__4 << endl;
 cout << setw(20) << "sqrt__2 " << "= " << setiosflags(ios::scientific) << setw(10) << sqrt__2 << endl;
 cout << setw(20) << "MH__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << MH__exp__2 << endl;
-cout << setw(20) << "conjg__CKM11 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM11 << endl;
-cout << setw(20) << "conjg__CKM12 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM12 << endl;
-cout << setw(20) << "conjg__CKM13 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM13 << endl;
-cout << setw(20) << "conjg__CKM21 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM21 << endl;
-cout << setw(20) << "conjg__CKM22 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM22 << endl;
-cout << setw(20) << "conjg__CKM23 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM23 << endl;
-cout << setw(20) << "conjg__CKM31 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM31 << endl;
-cout << setw(20) << "conjg__CKM32 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM32 << endl;
-cout << setw(20) << "conjg__CKM33 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM33 << endl;
+cout << setw(20) << "conjg__CKM1x3 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM1x3 << endl;
+cout << setw(20) << "conjg__CKM2x3 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM2x3 << endl;
+cout << setw(20) << "conjg__CKM3x3 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM3x3 << endl;
+cout << setw(20) << "conjg__CKM2x1 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM2x1 << endl;
+cout << setw(20) << "conjg__CKM3x1 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM3x1 << endl;
+cout << setw(20) << "conjg__CKM2x2 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM2x2 << endl;
+cout << setw(20) << "conjg__CKM3x2 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM3x2 << endl;
+cout << setw(20) << "conjg__CKM1x1 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM1x1 << endl;
+cout << setw(20) << "conjg__CKM1x2 " << "= " << setiosflags(ios::scientific) << setw(10) << conjg__CKM1x2 << endl;
 cout << setw(20) << "aEW " << "= " << setiosflags(ios::scientific) << setw(10) << aEW << endl;
 cout << setw(20) << "MW " << "= " << setiosflags(ios::scientific) << setw(10) << MW << endl;
 cout << setw(20) << "sqrt__aEW " << "= " << setiosflags(ios::scientific) << setw(10) << sqrt__aEW << endl;
@@ -1637,8 +1716,8 @@ cout << setw(20) << "sqrt__sw2 " << "= " << setiosflags(ios::scientific) << setw
 cout << setw(20) << "sw " << "= " << setiosflags(ios::scientific) << setw(10) << sw << endl;
 cout << setw(20) << "g1 " << "= " << setiosflags(ios::scientific) << setw(10) << g1 << endl;
 cout << setw(20) << "gw " << "= " << setiosflags(ios::scientific) << setw(10) << gw << endl;
-cout << setw(20) << "v " << "= " << setiosflags(ios::scientific) << setw(10) << v << endl;
-cout << setw(20) << "v__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << v__exp__2 << endl;
+cout << setw(20) << "vev " << "= " << setiosflags(ios::scientific) << setw(10) << vev << endl;
+cout << setw(20) << "vev__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << vev__exp__2 << endl;
 cout << setw(20) << "lam " << "= " << setiosflags(ios::scientific) << setw(10) << lam << endl;
 cout << setw(20) << "yb " << "= " << setiosflags(ios::scientific) << setw(10) << yb << endl;
 cout << setw(20) << "yc " << "= " << setiosflags(ios::scientific) << setw(10) << yc << endl;
@@ -1647,22 +1726,39 @@ cout << setw(20) << "ym " << "= " << setiosflags(ios::scientific) << setw(10) <<
 cout << setw(20) << "yt " << "= " << setiosflags(ios::scientific) << setw(10) << yt << endl;
 cout << setw(20) << "ytau " << "= " << setiosflags(ios::scientific) << setw(10) << ytau << endl;
 cout << setw(20) << "muH " << "= " << setiosflags(ios::scientific) << setw(10) << muH << endl;
-cout << setw(20) << "gw__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << gw__exp__2 << endl;
-cout << setw(20) << "cw__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << cw__exp__2 << endl;
+cout << setw(20) << "I1x31 " << "= " << setiosflags(ios::scientific) << setw(10) << I1x31 << endl;
+cout << setw(20) << "I1x32 " << "= " << setiosflags(ios::scientific) << setw(10) << I1x32 << endl;
+cout << setw(20) << "I1x33 " << "= " << setiosflags(ios::scientific) << setw(10) << I1x33 << endl;
+cout << setw(20) << "I2x12 " << "= " << setiosflags(ios::scientific) << setw(10) << I2x12 << endl;
+cout << setw(20) << "I2x13 " << "= " << setiosflags(ios::scientific) << setw(10) << I2x13 << endl;
+cout << setw(20) << "I2x22 " << "= " << setiosflags(ios::scientific) << setw(10) << I2x22 << endl;
+cout << setw(20) << "I2x23 " << "= " << setiosflags(ios::scientific) << setw(10) << I2x23 << endl;
+cout << setw(20) << "I2x32 " << "= " << setiosflags(ios::scientific) << setw(10) << I2x32 << endl;
+cout << setw(20) << "I2x33 " << "= " << setiosflags(ios::scientific) << setw(10) << I2x33 << endl;
+cout << setw(20) << "I3x21 " << "= " << setiosflags(ios::scientific) << setw(10) << I3x21 << endl;
+cout << setw(20) << "I3x22 " << "= " << setiosflags(ios::scientific) << setw(10) << I3x22 << endl;
+cout << setw(20) << "I3x23 " << "= " << setiosflags(ios::scientific) << setw(10) << I3x23 << endl;
+cout << setw(20) << "I3x31 " << "= " << setiosflags(ios::scientific) << setw(10) << I3x31 << endl;
+cout << setw(20) << "I3x32 " << "= " << setiosflags(ios::scientific) << setw(10) << I3x32 << endl;
+cout << setw(20) << "I3x33 " << "= " << setiosflags(ios::scientific) << setw(10) << I3x33 << endl;
+cout << setw(20) << "I4x13 " << "= " << setiosflags(ios::scientific) << setw(10) << I4x13 << endl;
+cout << setw(20) << "I4x23 " << "= " << setiosflags(ios::scientific) << setw(10) << I4x23 << endl;
+cout << setw(20) << "I4x33 " << "= " << setiosflags(ios::scientific) << setw(10) << I4x33 << endl;
 cout << setw(20) << "ee__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << ee__exp__2 << endl;
 cout << setw(20) << "sw__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << sw__exp__2 << endl;
+cout << setw(20) << "cw__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << cw__exp__2 << endl;
     }
     void Parameters_sm::printIndependentCouplings(){
-	cout << "sm model couplings independent of event kinematics:" << endl;
-	cout << setw(20) << "GC_1 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_1 << endl;
+    cout << "sm model couplings independent of event kinematics:" << endl;
+    cout << setw(20) << "GC_1 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_1 << endl;
 cout << setw(20) << "GC_2 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_2 << endl;
 cout << setw(20) << "GC_3 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_3 << endl;
+cout << setw(20) << "GC_4 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_4 << endl;
+cout << setw(20) << "GC_5 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_5 << endl;
+cout << setw(20) << "GC_6 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_6 << endl;
 cout << setw(20) << "GC_7 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_7 << endl;
 cout << setw(20) << "GC_8 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_8 << endl;
 cout << setw(20) << "GC_9 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_9 << endl;
-cout << setw(20) << "GC_10 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_10 << endl;
-cout << setw(20) << "GC_11 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_11 << endl;
-cout << setw(20) << "GC_12 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_12 << endl;
 cout << setw(20) << "GC_13 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_13 << endl;
 cout << setw(20) << "GC_14 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_14 << endl;
 cout << setw(20) << "GC_15 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_15 << endl;
@@ -1698,26 +1794,86 @@ cout << setw(20) << "GC_44 " << "= " << setiosflags(ios::scientific) << setw(10)
 cout << setw(20) << "GC_45 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_45 << endl;
 cout << setw(20) << "GC_46 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_46 << endl;
 cout << setw(20) << "GC_47 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_47 << endl;
+cout << setw(20) << "GC_48 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_48 << endl;
+cout << setw(20) << "GC_49 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_49 << endl;
+cout << setw(20) << "GC_50 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_50 << endl;
+cout << setw(20) << "GC_51 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_51 << endl;
+cout << setw(20) << "GC_52 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_52 << endl;
+cout << setw(20) << "GC_53 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_53 << endl;
+cout << setw(20) << "GC_54 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_54 << endl;
+cout << setw(20) << "GC_55 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_55 << endl;
+cout << setw(20) << "GC_56 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_56 << endl;
+cout << setw(20) << "GC_57 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_57 << endl;
+cout << setw(20) << "GC_58 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_58 << endl;
+cout << setw(20) << "GC_59 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_59 << endl;
+cout << setw(20) << "GC_60 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_60 << endl;
+cout << setw(20) << "GC_61 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_61 << endl;
+cout << setw(20) << "GC_62 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_62 << endl;
+cout << setw(20) << "GC_63 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_63 << endl;
+cout << setw(20) << "GC_64 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_64 << endl;
+cout << setw(20) << "GC_65 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_65 << endl;
+cout << setw(20) << "GC_66 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_66 << endl;
+cout << setw(20) << "GC_67 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_67 << endl;
+cout << setw(20) << "GC_68 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_68 << endl;
+cout << setw(20) << "GC_69 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_69 << endl;
+cout << setw(20) << "GC_70 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_70 << endl;
+cout << setw(20) << "GC_71 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_71 << endl;
+cout << setw(20) << "GC_72 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_72 << endl;
+cout << setw(20) << "GC_73 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_73 << endl;
+cout << setw(20) << "GC_74 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_74 << endl;
+cout << setw(20) << "GC_75 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_75 << endl;
+cout << setw(20) << "GC_76 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_76 << endl;
+cout << setw(20) << "GC_77 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_77 << endl;
+cout << setw(20) << "GC_78 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_78 << endl;
+cout << setw(20) << "GC_79 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_79 << endl;
+cout << setw(20) << "GC_80 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_80 << endl;
+cout << setw(20) << "GC_81 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_81 << endl;
+cout << setw(20) << "GC_82 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_82 << endl;
+cout << setw(20) << "GC_83 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_83 << endl;
+cout << setw(20) << "GC_84 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_84 << endl;
+cout << setw(20) << "GC_85 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_85 << endl;
+cout << setw(20) << "GC_86 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_86 << endl;
+cout << setw(20) << "GC_87 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_87 << endl;
+cout << setw(20) << "GC_88 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_88 << endl;
+cout << setw(20) << "GC_89 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_89 << endl;
+cout << setw(20) << "GC_90 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_90 << endl;
+cout << setw(20) << "GC_91 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_91 << endl;
+cout << setw(20) << "GC_92 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_92 << endl;
+cout << setw(20) << "GC_93 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_93 << endl;
+cout << setw(20) << "GC_94 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_94 << endl;
+cout << setw(20) << "GC_95 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_95 << endl;
+cout << setw(20) << "GC_96 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_96 << endl;
+cout << setw(20) << "GC_97 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_97 << endl;
+cout << setw(20) << "GC_98 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_98 << endl;
+cout << setw(20) << "GC_99 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_99 << endl;
+cout << setw(20) << "GC_100 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_100 << endl;
+cout << setw(20) << "GC_101 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_101 << endl;
+cout << setw(20) << "GC_102 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_102 << endl;
+cout << setw(20) << "GC_103 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_103 << endl;
+cout << setw(20) << "GC_104 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_104 << endl;
+cout << setw(20) << "GC_105 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_105 << endl;
+cout << setw(20) << "GC_106 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_106 << endl;
+cout << setw(20) << "GC_107 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_107 << endl;
+cout << setw(20) << "GC_108 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_108 << endl;
     }
     void Parameters_sm::printDependentParameters(){
-	cout << "sm model parameters dependent on event kinematics:" << endl;
-	cout << setw(20) << "aS " << "= " << setiosflags(ios::scientific) << setw(10) << aS << endl;
+    cout << "sm model parameters dependent on event kinematics:" << endl;
+    cout << setw(20) << "aS " << "= " << setiosflags(ios::scientific) << setw(10) << aS << endl;
 cout << setw(20) << "sqrt__aS " << "= " << setiosflags(ios::scientific) << setw(10) << sqrt__aS << endl;
 cout << setw(20) << "G " << "= " << setiosflags(ios::scientific) << setw(10) << G << endl;
 cout << setw(20) << "G__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << G__exp__2 << endl;
     }
     void Parameters_sm::printDependentCouplings(){
-	cout << "sm model couplings dependent on event kinematics:" << endl;
-	cout << setw(20) << "GC_6 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_6 << endl;
-cout << setw(20) << "GC_5 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_5 << endl;
-cout << setw(20) << "GC_4 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_4 << endl;
+    cout << "sm model couplings dependent on event kinematics:" << endl;
+    cout << setw(20) << "GC_12 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_12 << endl;
+cout << setw(20) << "GC_11 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_11 << endl;
+cout << setw(20) << "GC_10 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_10 << endl;
     }
 
 } // end namespace Pythia8
 """ % misc.get_pkg_info()
 
         file_h, file_cc = self.model_builder.generate_parameters_class_files()
-
-        self.assertEqual(file_h, goal_file_h)
-        self.assertEqual(file_cc, goal_file_cc)
+        self.assertEqual(file_h.split('\n'), goal_file_h.split('\n'))
+        self.assertEqual(file_cc.replace('\t', '    ').split('\n'), goal_file_cc.replace('\t', '    ').split('\n'))
 

@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 535 $
-# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Mon 11 Apr 2011 22:27:17
+# This file was automatically created by FeynRules 1.7.55
+# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (October 6, 2011)
+# Date: Wed 8 Aug 2012 14:37:00
 
 
 from object_library import all_lorentz, Lorentz

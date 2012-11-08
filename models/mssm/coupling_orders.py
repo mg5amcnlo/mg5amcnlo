@@ -1,15 +1,16 @@
-# This file was automatically created by FeynRules $Revision: 634 $
-# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Tue 19 Jul 2011 18:23:49
+# This file was automatically created by FeynRules 1.7.53
+# Mathematica version: 8.0 for Linux x86 (64-bit) (February 23, 2011)
+# Date: Tue 31 Jul 2012 19:55:22
 
 
 from object_library import all_orders, CouplingOrder
 
 
 QCD = CouplingOrder(name = 'QCD',
-                    expansion_order = -1,
+                    expansion_order = 99,
                     hierarchy = 1)
 
 QED = CouplingOrder(name = 'QED',
-                    expansion_order = -1,
+                    expansion_order = 99,
                     hierarchy = 2)
+

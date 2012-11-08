@@ -18,7 +18,6 @@ TestLoader = unittest.TestLoader
 #import tests
 #tests.NBTEST = 0
 
-
 class TestCase(unittest.TestCase):
     """Test Case with smarter self.assertraise in optimize mode"""
 

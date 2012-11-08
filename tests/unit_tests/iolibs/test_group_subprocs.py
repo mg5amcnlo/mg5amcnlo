@@ -463,7 +463,8 @@ class SubProcessGroupTest(unittest.TestCase):
             'decay_chains': decays})
 
         dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
-                          group_amplitudes(decay_chains)
+              group_amplitudes(\
+                 diagram_generation.DecayChainAmplitudeList([decay_chains]))
 
         #print dc_subproc_group.nice_string()
         
@@ -734,7 +735,8 @@ Decay groups:
         my_amplitude = diagram_generation.DecayChainAmplitude(process)
 
         dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
-                          group_amplitudes(my_amplitude)
+              group_amplitudes(\
+                 diagram_generation.DecayChainAmplitudeList([my_amplitude]))
 
         subproc_groups = \
                        dc_subproc_group.generate_helas_decay_chain_subproc_groups()
@@ -764,3 +766,855 @@ Decay groups:
             self.assertEqual(me.get('processes')[0].nice_string(),
                              me_strings[i])
             
+
+    def test_even_more_special_group_decay_chain(self):
+        """Test group_amplitudes for even more special decay chain"""
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A d quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        d = mypartlist[-1]
+        antid = copy.copy(d)
+        antid.set('is_part', False)
+
+        # A u quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[len(mypartlist) - 1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # An s and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'s',
+                      'antiname':'s~',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':3,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        s = mypartlist[-1]
+        antis = copy.copy(s)
+        antis.set('is_part', False)
+
+        # A c quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'c',
+                      'antiname':'c~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'c',
+                      'antitexname':'\bar c',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':4,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        c = mypartlist[len(mypartlist) - 1]
+        antic = copy.copy(c)
+        antic.set('is_part', False)
+
+        # A b quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'b',
+                      'antiname':'b~',
+                      'spin':2,
+                      'color':1,
+                      'mass':'MB',
+                      'width':'zero',
+                      'texname':'b',
+                      'antitexname':'\bar b',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':5,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        b = mypartlist[-1]
+        antib = copy.copy(b)
+        antib.set('is_part', False)
+
+        # A t quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'MT',
+                      'width':'zero',
+                      'texname':'t',
+                      'antitexname':'\bar t',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t = mypartlist[len(mypartlist) - 1]
+        antit = copy.copy(t)
+        antit.set('is_part', False)
+
+        # A funny Zprime
+        mypartlist.append(base_objects.Particle({
+            'name': 'Zp',
+            'antiname': 'Zp',
+            'spin': 3,
+            'color': 1,
+            'charge': 0.00,
+            'mass': 'MZp',
+            'width': 'WZp',
+            'pdg_code': 9900032,
+            'texname': 'Zp',
+            'antitexname': 'Zp',
+            'line': 'wavy',
+            'propagating': True,
+            'is_part': True,
+            'self_antipart': True}))
+
+        Zp = mypartlist[-1]
+
+        # A funny neutralino
+        mypartlist.append(base_objects.Particle({
+                    'name': '~n1',
+                    'antiname': '~n1',
+                    'spin': 2,
+                    'color': 1,
+                    'charge': 0.00,
+                    'mass': 'MnH1',
+                    'width': 'WnH1',
+                    'pdg_code': 9910012,
+                    'texname': '~n1',
+                    'antitexname': '~n1',
+                    'line': 'swavy',
+                    'propagating': True,
+                    'is_part': True,
+                    'self_antipart': True}))
+        n1 = mypartlist[-1]
+
+        # A W
+        mypartlist.append(base_objects.Particle({'name':'W+',
+                      'antiname':'W-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MW',
+                      'width':'WW',
+                      'texname':'W^+',
+                      'antitexname':'W^-',
+                     'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        Wplus = mypartlist[len(mypartlist) - 1]
+        Wminus = copy.copy(Wplus)
+        Wminus.set('is_part', False)
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e-',
+                      'antiname':'e+',
+                      'spin':2,
+                      'color':1,
+                      'mass':'me',
+                      'width':'zero',
+                      'texname':'e^-',
+                      'antitexname':'e^+',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        eminus = mypartlist[len(mypartlist) - 1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
+
+        # Interactions
+
+        myinterlist.append(base_objects.Interaction({
+                    'id': 1,
+                    'particles': base_objects.ParticleList(\
+                        [antid,u,Wminus]),
+                    'color': [],
+                    'lorentz': ['FFV3'],
+                    'couplings': {(0, 0): 'GC_35'},
+                    'orders': {'QED': 1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                    'id': 2,
+                    'particles': base_objects.ParticleList(\
+                        [antiu,d,Wplus]),
+                    'color': [],
+                    'lorentz': ['FFV3'],
+                    'couplings': {(0, 0): 'GC_112'},
+                    'orders': {'QED': 1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                    'id': 3,
+                    'particles': base_objects.ParticleList(\
+                        [antis,c,Wminus]),
+                    'color': [],
+                    'lorentz': ['FFV3'],
+                    'couplings': {(0, 0): 'GC_35'},
+                    'orders': {'QED': 1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                    'id': 4,
+                    'particles': base_objects.ParticleList(\
+                        [antic,s,Wplus]),
+                    'color': [],
+                    'lorentz': ['FFV3'],
+                    'couplings': {(0, 0): 'GC_112'},
+                    'orders': {'QED': 1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                    'id': 5,
+                    'particles': base_objects.ParticleList(\
+                        [antib,t,Wminus]),
+                    'color': [],
+                    'lorentz': ['FFV3'],
+                    'couplings': {(0, 0): 'GC_35'},
+                    'orders': {'QED': 1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                    'id': 6,
+                    'particles': base_objects.ParticleList(\
+                        [antit,b,Wplus]),
+                    'color': [],
+                    'lorentz': ['FFV3'],
+                    'couplings': {(0, 0): 'GC_112'},
+                    'orders': {'QED': 1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                    'id': 7,
+                    'particles': base_objects.ParticleList(\
+                        [antid,d,Zp]),
+                    'color': [],
+                    'lorentz': ['FFV1'],
+                    'couplings': {(0, 0): 'GC_7'},
+                    'orders': {'QED': 1}
+                    }))
+        
+        myinterlist.append(base_objects.Interaction({
+                    'id': 8,
+                    'particles': base_objects.ParticleList(\
+                        [n1,n1,Zp]),
+                    'color': [],
+                    'lorentz': ['FFV2'],
+                    'couplings': {(0, 0): 'GC_22'},
+                    'orders': {'QED': 1}
+                    }))
+
+        myinterlist.append(base_objects.Interaction({
+                    'id': 9,
+                    'particles': base_objects.ParticleList(\
+                        [eplus,n1,Wminus]),
+                    'color': [],
+                    'lorentz': ['FFV3'],
+                    'couplings': {(0, 0): 'GC_46'},
+                    'orders': {'QED': 1}
+                    }))
+
+        myinterlist.append(base_objects.Interaction({
+                    'id': 10,
+                    'particles': base_objects.ParticleList(\
+                        [n1,eminus,Wplus]),
+                    'color': [],
+                    'lorentz': ['FFV3'],
+                    'couplings': {(0, 0): 'GC_46'},
+                    'orders': {'QED': 1}
+                    }))
+
+        myinterlist.append(base_objects.Interaction({
+                    'id': 11,
+                    'particles': base_objects.ParticleList(\
+                        [antit,c,Zp]),
+                    'color': [],
+                    'lorentz': ['FFV4'],
+                    'couplings': {(0, 0): 'GC_50'},
+                    'orders': {'QED': 1}
+                    }))
+
+        myinterlist.append(base_objects.Interaction({
+                    'id': 12,
+                    'particles': base_objects.ParticleList(\
+                        [antic,t,Zp]),
+                    'color': [],
+                    'lorentz': ['FFV4'],
+                    'couplings': {(0, 0): 'GC_50'},
+                    'orders': {'QED': 1}
+                    }))
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)        
+        mymodel.set('name', 'sm')
+
+        # Multiparticle labels
+        ds = [1,-1]
+        qs = [1,3,2,4,-1,-3,-2,-4]
+
+        my_leglist = base_objects.MultiLegList()
+        my_leglist.append(base_objects.MultiLeg({'ids': ds,
+                                                 'state': False}))
+        my_leglist.append(base_objects.MultiLeg({'ids': ds,
+                                                 'state': False}))
+        my_leglist.append(base_objects.MultiLeg({'ids': [n1.get('pdg_code')]}))
+        my_leglist.append(base_objects.MultiLeg({'ids': [n1.get('pdg_code')]}))
+
+        core_process = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                       'model':mymodel})
+
+        decay1proc1 = [[n1.get('pdg_code')], 
+                      [11], [24]]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay1proc1])
+        my_leglist[0].set('state', False)
+        decay1process1 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                        'model':mymodel})
+        decay1process2 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                        'model':mymodel})
+
+        decay2proc1 = [[24], qs, qs]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay2proc1])
+        my_leglist[0].set('state', False)
+        decay2process1 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                         'model':mymodel})
+        decay2proc2 = [[24], [6], [-5]]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay2proc2])
+        my_leglist[0].set('state', False)
+        decay2process2 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                         'model':mymodel})
+
+        decay1process1.get('decay_chains').append(decay2process1)
+        decay1process2.get('decay_chains').append(decay2process2)
+        core_process.get('decay_chains').append(decay1process1)
+        core_process.get('decay_chains').append(decay1process2)
+
+        my_amplitude = diagram_generation.DecayChainAmplitude(core_process)
+
+        dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
+              group_amplitudes(\
+                 diagram_generation.DecayChainAmplitudeList([my_amplitude]))
+
+        subproc_groups = \
+                       dc_subproc_group.generate_helas_decay_chain_subproc_groups()
+
+        self.assertEqual(len(subproc_groups), 1)
+
+        self.assertEqual(len(subproc_groups[0].get('matrix_elements')),2)
+
+        me_strings = ["""Process: d d~ > ~n1 ~n1 WEIGHTED=2
+  Decay: ~n1 > e- W+ WEIGHTED=1
+    Decay: W+ > u d~ WEIGHTED=1
+  Decay: ~n1 > e- W+ WEIGHTED=1
+    Decay: W+ > t b~ WEIGHTED=1""",
+                      """Process: d~ d > ~n1 ~n1 WEIGHTED=2
+  Decay: ~n1 > e- W+ WEIGHTED=1
+    Decay: W+ > u d~ WEIGHTED=1
+  Decay: ~n1 > e- W+ WEIGHTED=1
+    Decay: W+ > t b~ WEIGHTED=1"""]
+        
+
+        for i,me in enumerate(subproc_groups[0].get('matrix_elements')):
+            self.assertEqual(me.get('processes')[0].nice_string(),
+                             me_strings[i])
+            
+
+        # Now test also for different process ids
+
+        ds = [1,-1]
+        qs = [1,3,2,4,-1,-3,-2,-4]
+
+        # First process
+        my_leglist = base_objects.MultiLegList()
+        my_leglist.append(base_objects.MultiLeg({'ids': ds,
+                                                 'state': False}))
+        my_leglist.append(base_objects.MultiLeg({'ids': ds,
+                                                 'state': False}))
+        my_leglist.append(base_objects.MultiLeg({'ids': [n1.get('pdg_code')]}))
+        my_leglist.append(base_objects.MultiLeg({'ids': [n1.get('pdg_code')]}))
+
+        core_process1 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                       'model':mymodel,
+                                                       'id': 1})
+
+        decay1proc1 = [[n1.get('pdg_code')], 
+                      [11], [24]]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay1proc1])
+        my_leglist[0].set('state', False)
+        decay1process1 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                        'model':mymodel})
+        decay1process2 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                        'model':mymodel})
+
+        decay2proc1 = [[24], qs, qs]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay2proc1])
+        my_leglist[0].set('state', False)
+        decay2process1 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                         'model':mymodel})
+        decay2proc2 = [[24], [6], [-5]]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay2proc2])
+        my_leglist[0].set('state', False)
+        decay2process2 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                         'model':mymodel})
+
+        decay1process1.get('decay_chains').append(decay2process1)
+        decay1process2.get('decay_chains').append(decay2process2)
+        core_process1.get('decay_chains').append(decay1process1)
+        core_process1.get('decay_chains').append(decay1process2)
+
+        my_amplitude1 = diagram_generation.DecayChainAmplitude(core_process1)
+
+        # Second process
+
+        my_leglist = base_objects.MultiLegList()
+        my_leglist.append(base_objects.MultiLeg({'ids': ds,
+                                                 'state': False}))
+        my_leglist.append(base_objects.MultiLeg({'ids': ds,
+                                                 'state': False}))
+        my_leglist.append(base_objects.MultiLeg({'ids': [n1.get('pdg_code')]}))
+        my_leglist.append(base_objects.MultiLeg({'ids': [n1.get('pdg_code')]}))
+
+        core_process2 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                       'model':mymodel,
+                                                       'id': 2})
+
+        decay1proc1 = [[n1.get('pdg_code')], 
+                      [11], [24]]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay1proc1])
+        my_leglist[0].set('state', False)
+        decay1process1 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                        'model':mymodel})
+        decay1process2 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                        'model':mymodel})
+
+        decay2proc1 = [[24], [6], [-5]]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay2proc1])
+        my_leglist[0].set('state', False)
+        decay2process1 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                         'model':mymodel})
+        decay2proc2 = [[24], [6], [-5]]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay2proc2])
+        my_leglist[0].set('state', False)
+        decay2process2 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                         'model':mymodel})
+
+        decay1process1.get('decay_chains').append(decay2process1)
+        decay1process2.get('decay_chains').append(decay2process2)
+        core_process2.get('decay_chains').append(decay1process1)
+        core_process2.get('decay_chains').append(decay1process2)
+
+        my_amplitude2 = diagram_generation.DecayChainAmplitude(core_process2)
+
+        dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
+              group_amplitudes(\
+                 diagram_generation.DecayChainAmplitudeList([my_amplitude1,
+                                                             my_amplitude2]))
+
+        subproc_groups = \
+                       dc_subproc_group.generate_helas_decay_chain_subproc_groups()
+
+        self.assertEqual(len(subproc_groups), 2)
+
+        self.assertEqual(len(subproc_groups[0].get('matrix_elements')),2)
+        self.assertEqual(len(subproc_groups[1].get('matrix_elements')),2)
+        
+    def test_single_decay_combinations(self):
+        """Test combination of single decay of t and t~:
+        b b~ > t t~, t > c d d~ and b b~ > t t~, t~ > c~ d d~"""
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        g = mypartlist[-1]
+
+        # A quark U and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[-1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A quark D and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        d = mypartlist[-1]
+        antid = copy.copy(d)
+        antid.set('is_part', False)
+
+        # A top quark and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'MT',
+                      'width':'zero',
+                      'texname':'t',
+                      'antitexname':'\bar t',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t = mypartlist[len(mypartlist) - 1]
+        antit = copy.copy(t)
+        antit.set('is_part', False)
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e-',
+                      'antiname':'e+',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'e^-',
+                      'antitexname':'e^+',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        eminus = mypartlist[-1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        a = mypartlist[-1]
+
+        # A Z
+        mypartlist.append(base_objects.Particle({'name':'z',
+                      'antiname':'z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MZ',
+                      'width':'WZ',
+                      'texname':'Z',
+                      'antitexname':'Z',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        z = mypartlist[-1]
+
+        # 3 gluon vertiex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [g] * 3),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G'},
+                      'orders':{'QCD':1}}))
+
+        # 4 gluon vertex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [g] * 4),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G^2'},
+                      'orders':{'QCD':2}}))
+
+        # Gluon and photon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [u, \
+                                             antiu, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [u, \
+                                             antiu, \
+                                             a]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 5,
+                      'particles': base_objects.ParticleList(\
+                                            [d, \
+                                             antid, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 6,
+                      'particles': base_objects.ParticleList(\
+                                            [antit, \
+                                             t, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [d, \
+                                             antid, \
+                                             a]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of e to gamma
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 8,
+                      'particles': base_objects.ParticleList(\
+                                            [eminus, \
+                                             eplus, \
+                                             a]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of Z to quarks and electrons
+        
+        myinterlist.append(base_objects.Interaction({
+                      'id': 9,
+                      'particles': base_objects.ParticleList(\
+                                            [u, \
+                                             antiu, \
+                                             z]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 10,
+                      'particles': base_objects.ParticleList(\
+                                            [d, \
+                                             antid, \
+                                             z]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 11,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             eminus, \
+                                             z]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        # FCNC coupling
+        myinterlist.append(base_objects.Interaction({
+                      'id': 12,
+                      'particles': base_objects.ParticleList(\
+                                            [antit, \
+                                             u, \
+                                             z]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GFCNC'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 13,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             t, \
+                                             z]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GFCNC'},
+                      'orders':{'QED':1}}))
+
+
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)        
+        mymodel.set('name', 'sm')
+
+        # d d~ > t t~, t > u Z 
+        my_leglist = base_objects.MultiLegList()
+        my_leglist.append(base_objects.MultiLeg({'ids': [1],
+                                                 'state': False}))
+        my_leglist.append(base_objects.MultiLeg({'ids': [-1],
+                                                 'state': False}))
+        my_leglist.append(base_objects.MultiLeg({'ids': [6]}))
+        my_leglist.append(base_objects.MultiLeg({'ids': [-6]}))
+
+        core_process1 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                       'model':mymodel})
+
+        decay1proc1 = [[6], [2], [23]]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay1proc1])
+        my_leglist[0].set('state', False)
+        decay1process1 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                        'model':mymodel})
+
+        core_process1.get('decay_chains').append(decay1process1)
+        my_amplitude1 = diagram_generation.DecayChainAmplitude(core_process1)
+
+        # d d~ > t t~, t~ > u~ Z 
+        my_leglist = base_objects.MultiLegList()
+        my_leglist.append(base_objects.MultiLeg({'ids': [1],
+                                                 'state': False}))
+        my_leglist.append(base_objects.MultiLeg({'ids': [-1],
+                                                 'state': False}))
+        my_leglist.append(base_objects.MultiLeg({'ids': [6]}))
+        my_leglist.append(base_objects.MultiLeg({'ids': [-6]}))
+
+        core_process2 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                       'model':mymodel})
+
+        decay1proc2 = [[-6], [-2], [23]]
+        my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id}) for id in decay1proc2])
+        my_leglist[0].set('state', False)
+        decay1process2 = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                        'model':mymodel})
+
+        core_process2.get('decay_chains').append(decay1process2)
+
+        my_amplitude2 = diagram_generation.DecayChainAmplitude(core_process2)
+
+        dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
+              group_amplitudes(\
+                 diagram_generation.DecayChainAmplitudeList([my_amplitude1,
+                                                             my_amplitude2]))
+
+        subproc_groups = \
+                       dc_subproc_group.generate_helas_decay_chain_subproc_groups()
+
+        self.assertEqual(len(subproc_groups), 2)
+
+        self.assertEqual(len(subproc_groups[0].get('matrix_elements')),1)
+
+        me_strings = ["""Process: d d~ > t t~ WEIGHTED=2
+  Decay: t > u z WEIGHTED=2""",
+                      """Process: d d~ > t t~ WEIGHTED=2
+  Decay: t~ > u~ z WEIGHTED=2"""]
+        
+
+        for i, group in enumerate(subproc_groups):
+            self.assertEqual(group.get('matrix_elements')[0].\
+                                 get('processes')[0].nice_string(),
+                             me_strings[i])
+            
+
