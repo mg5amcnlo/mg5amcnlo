@@ -3653,23 +3653,22 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 compiler = 'g77'
             else:
                 raise self.InvalidCmd('Require g77 or Gfortran compiler')
-            if compiler == 'gfortran' and args[0] == "pythia-pgs":
+            
+            path = None
+            base_compiler= ['FC=g77','FC=gfortran']
+            if args[0] == "pythia-pgs":
                 path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
-                text = open(path).read()
-                text = text.replace('FC=g77','FC=gfortran')
-                open(path, 'w').writelines(text)    
-            elif compiler == 'gfortran' and args[0] == 'MadAnalysis':
+            elif args[0] == 'MadAnalysis':
                 path = os.path.join(MG5DIR, 'MadAnalysis', 'makefile')
-                text = open(path).read()
-                text = text.replace('FC=g77','FC=gfortran')
-                open(path, 'w').writelines(text)
-
-            elif compiler == 'gfortran' and args[0] =='MCatNLO-utilities':
+            elif args[0] == 'MCatNLO-utilities':
                 path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'make_opts')
+            
+            if path:
                 text = open(path).read()
-                text = text.replace('FC=g77','FC=gfortran')
-                open(path, 'w').writelines(text)    
-
+                for base in base_compiler:
+                    text = text.replace(base,'FC=%s' % compiler)
+                open(path, 'w').writelines(text)
+                        
         if logger.level <= logging.INFO:
             devnull = open(os.devnull,'w')
             try: 
