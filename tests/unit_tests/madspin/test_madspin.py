@@ -59,6 +59,7 @@ class Testtopo(unittest.TestCase):
 
     def test_topottx(self):
 
+        os.environ['GFORTRAN_UNBUFFERED_ALL']='y'
         path_for_me=pjoin(MG5DIR, 'tests','unit_tests','madspin')
         shutil.copyfile(pjoin(MG5DIR, 'tests','input_files','param_card_sm.dat'),\
 		pjoin(path_for_me,'param_card.dat'))
@@ -72,7 +73,9 @@ class Testtopo(unittest.TestCase):
         decay_tools=madspin.decay_misc()
         topo=decay_tools.generate_fortran_me([process_prod],"sm",0, mgcmd, path_for_me)
         decay_tools.generate_fortran_me([process_full],"sm", 1,mgcmd, path_for_me)
-	decay_name, prod_name = decay_tools.compile_fortran_me(path_for_me)
+
+        prod_name=decay_tools.compile_fortran_me_production(path_for_me)
+	decay_name = decay_tools.compile_fortran_me_full(path_for_me)
 
 
         topo_test={1: {'branchings': [{'index_propa': -1, 'type': 's',\
@@ -108,6 +111,9 @@ class Testtopo(unittest.TestCase):
         prod_values=prod_values.split()
         prod_values_test=['0.59366146660637686', '7.5713552297679376', '12.386583104018380', '34.882849897228873']
         self.assertEqual(prod_values,prod_values_test)               
+        external.terminate()
+
+
         os.chdir(temp_dir)
         
         p_string='0.5000000E+03  0.0000000E+00  0.0000000E+00  0.5000000E+03 \n'
@@ -132,9 +138,10 @@ class Testtopo(unittest.TestCase):
         for i in range(len(decay_value)): 
             self.assertAlmostEqual(eval(decay_value[i]),eval(decay_value_test[i]))
         os.chdir(curr_dir)
+        external.terminate()
         shutil.rmtree(pjoin(path_for_me,'production_me'))
         shutil.rmtree(pjoin(path_for_me,'full_me'))
         os.remove(pjoin(path_for_me,'param_card.dat'))
-        os.remove(pjoin(path_for_me,'parameters.inc'))
+        os.environ['GFORTRAN_UNBUFFERED_ALL']='n'
 
         
