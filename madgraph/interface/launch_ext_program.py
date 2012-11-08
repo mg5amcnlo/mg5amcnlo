@@ -229,7 +229,7 @@ class MadLoopLauncher(ExtLauncher):
                                                      for pmom in res['res_p']]),
                   '\n|| Born contribution (GeV^%d):'%res['gev_pow'],
                   '|    Born        = %s'%special_float_format(res['born']),
-                  '|| Virtual contribution normalized with alpha_S/(2*pi):',
+                  '|| Virtual contribution normalized with born*alpha_S/(2*pi):',
                   '|    Finite      = %s'%special_float_format(res['finite']),
                   '|    Single pole = %s'%special_float_format(res['1eps']),
                   '|    Double pole = %s'%special_float_format(res['2eps']),
