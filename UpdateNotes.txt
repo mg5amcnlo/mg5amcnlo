@@ -1,6 +1,8 @@
 Update notes for MadGraph 5 (in reverse time order)
 
 1.5.4 (xx/xx/12)  OM: Fix a compilation crash due to aloha (thanks Tim T)
+                  OM: Fix Bug #1076043. Wrong cross-section computation for
+ 		      e- p collision. Thanks to Uta Klein. (introduce in 1.5.0) 
                   JA: Avoid bug #1075525, combination of decay processes for 
                       particle and antiparticle (e.g. w+ > all all and 
                       w- > all all), thanks Pierre.
