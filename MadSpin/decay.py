@@ -1331,12 +1331,13 @@ class branching(dict):
 class width_estimate:
     """All methods used to calculate branching fractions"""
 
-    def __init__(self,resonances,path_me,pid2label_dic,model):
+    def __init__(self,resonances,path_me,pid2label_dic,model,base_model):
 
 	self.resonances=resonances
 	self.path_me=path_me
 	self.pid2label=pid2label_dic
 	self.model=model
+	self.base_model=base_model
 
     def update_branch(self,branches,to_add):
 	""" complete the definition of the branch by appending each element of to_add"""
@@ -1562,6 +1563,8 @@ class width_estimate:
         '''
 
 	for res in self.br.keys():
+            particle=self.base_model.get_particle(label2pid[res])
+            if particle['self_antipart']: continue
             anti_res=pid2label[-label2pid[res]]
             self.br[anti_res]={}
  	    for chan in self.br[res].keys():
@@ -1643,14 +1646,14 @@ class width_estimate:
                                    (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
 
                 if value>0:
+                    #print "found one channel:"
+                    #print decay_to
                     chan+=1
                     self.br[part][chan]={}
                     self.br[part][chan]['width']=value
                     self.br[part][chan]['daughters']=[]
                     for pid in decay_to:
                         self.br[part][chan]['daughters'].append(pid2label[pid])
-
-
 
 
 class decay_misc:
@@ -2736,7 +2739,7 @@ class decay_all_events:
 	logger.info('First look inside the banner of the event file ')
 	logger.info('and check whether this information is available ')
 
-        calculate_br=width_estimate(resonances,path_me,pid2label_dict,mybanner.proc["model"])#
+        calculate_br=width_estimate(resonances,path_me,pid2label_dict,mybanner.proc["model"],base_model)#
 #       Maybe the branching fractions are already given in the banner:
 	filename=pjoin(path_me,'param_card.dat')
         calculate_br.extract_br_from_card(filename)
