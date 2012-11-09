@@ -618,10 +618,21 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                     'gev_pow':0,
                     'export_format':'Default'}
         res_p = []
-
-        for line in output:
+        
+        # output is supposed to be a file, if it is its content directly then
+        # I change it to be the list of line.
+        if isinstance(output,file):
+            text=output
+        elif isinstance(output,str):
+            text=output.split('\n')
+        else:
+            raise MadGraph5Error, 'Type for argument output not supported in'+\
+                                                          ' parse_check_output.'
+        for line in text:
             splitline=line.split()
-            if splitline[0]=='PS':
+            if len(splitline)==0:
+                continue
+            elif splitline[0]=='PS':
                 res_p.append([float(s) for s in splitline[1:]])
             elif splitline[0]=='BORN':
                 res_dict['born']=float(splitline[1])
@@ -770,7 +781,6 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         The list attempt gives the successive number of PS points the 
         initialization should be tried with before calling it failed.
         Returns the number of PS points which were necessary for the init."""
-        
         to_attempt = copy.copy(attempts)
         to_attempt.reverse()
         my_req_files = copy.copy(req_files)
@@ -804,6 +814,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             compile_time, run_time = cls.make_and_run(run_dir)
             if compile_time==None:
                 logging.error("Failed at running the process in %s."%run_dir)
+                attempts = None
                 return None
             # Only set process_compilation time for the first compilation.
             if 'Process_compilation' not in infos.keys() or \
@@ -925,13 +936,14 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                 os.path.join(export_dir,'SubProcesses'),infos,\
                                 req_files = ['HelFilter.dat','LoopFilter.dat'],
                                 attempts = attempts)
-        if infos['Process_compilation'] == None:
+        if attempts is None:
             logger.error("Could not compile the process %s,"%shell_name+\
                               " try to generate it via the 'generate' command.")
             return None
-        if nPS_necessary == None:
+        if nPS_necessary is None:
             logger.error("Could not initialize the process %s"%shell_name+\
                                             " with %s PS points."%max(attempts))
+            return None
         elif nPS_necessary > min(attempts):
             logger.warning("Could not initialize the process %s"%shell_name+\
               " with %d PS points. It needed %d."%(min(attempts),nPS_necessary))
@@ -1090,11 +1102,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         # The unstable point encountered are stored in this list
         Unstable_PS_points = []
         # The exceptional PS points are those which stay unstable in quad prec.
-        Exceptional_PS_points = []       
+        Exceptional_PS_points = []
         
         # Normally, this should work for loop-induced processes as well
-#        if not matrix_element.get('processes')[0]['has_born']:
-#            return None
         if not reusing:
             process = matrix_element['processes'][0]
         else:
@@ -1105,9 +1115,20 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             infos = self.setup_process(matrix_element, model,export_dir, \
                                                             reusing, param_card)
             if not infos:
-                return None            
+                return None
         dir_path=infos['dir_path']
-        
+
+        # Reuse old stability runs if present
+        if reusing:
+            if os.path.isfile(os.path.join(dir_path,'SavedStabilityRun.pkl')):
+                saved_run = save_load_object.load_from_file(os.path.join(\
+                                              dir_path,'SavedStabilityRun.pkl'))
+                for key in saved_run.keys():
+                    DP_stability = saved_run['DP_stability']
+                    QP_stability = saved_run['QP_stability']
+                    Unstable_PS_points = saved_run['Unstable_PS_points']
+                    Exceptional_PS_points = saved_run['Exceptional_PS_points']
+
         logger.info("Checking stability of process %s "%proc_name+\
                     "with %d PS points."%nPoints)
         if infos['Initialization'] != None:
@@ -1148,20 +1169,23 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             logging.info("Error while executing make in %s" % dir_path)
             return None
 
-        def output_PS_point(dir_path, p, rotation=0):
+        def format_PS_point(ps, rotation=0):
             """ Write out the specified PS point to the file dir_path/PS.input
             while rotating it if rotation!=0. We consider only rotations of 90
             but one could think of having rotation of arbitrary angle too.
             rotation=1 => (x'=z,y'=-x,z'=-y)
             rotation=2 => (x'=-z,y'=y,z'=x)"""
             if rotation==0:
-                p_out=copy.copy(p)
+                p_out=copy.copy(ps)
             elif rotation==1:
-                p_out=[[pm[0],pm[3],-pm[1],-pm[2]] for pm in p]
+                p_out=[[pm[0],pm[3],-pm[1],-pm[2]] for pm in ps]
             elif rotation==2:
-                p_out=[[pm[0],-pm[3],pm[2],pm[1]] for pm in p]
+                p_out=[[pm[0],-pm[3],pm[2],pm[1]] for pm in ps]
             else:
                 raise MadGraph5Error("Rotation id %i not implemented"%rotation)
+            
+            return '\n'.join([' '.join(['%.16E'%pi for pi in p]) for p in ps])
+            
             misc.write_PS_input(os.path.join(dir_path, 'PS.input'),p_out)  
   
         def pick_PS_point(proc):
@@ -1202,26 +1226,42 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 p, w_rambo = self.get_momenta(proc)
             return p                
 
+        # First create the stability check fortran driver executable if not 
+        # already present.
+        if not os.path.isfile(os.path.join(dir_path,'StabilityCheckDriver.f')):
+            # Use the presence of the file born_matrix.f to check if this output
+            # is a loop_induced one or not.
+            if os.path.isfile(os.path.join(dir_path,'born_matrix.f')):
+                checkerName = 'StabilityCheckDriver.f'
+            else:
+                checkerName = 'StabilityCheckDriver_loop_induced.f'                
+            cp(os.path.join(self.mg_root,'Template','loop_material','Checks',\
+                   checkerName),os.path.join(dir_path,'StabilityCheckDriver.f'))
+            misc.compile(arg=['StabilityCheckDriver'], cwd=dir_path, \
+                                              mode='fortran', job_specs = False)
+
+        StabChecker = subprocess.Popen([os.path.join(dir_path,'StabilityCheckDriver')], 
+          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                                                                   cwd=dir_path)
         if progress_bar!=None:
                 progress_bar.start()
-        for i in range(nPoints):
-            cards_path = os.path.join(export_dir,'Cards')
+        for i in range(nPoints): 
             # Pick an eligible PS point with rambo
             p = pick_PS_point(process)
 #            print "I use P_%i="%i,p
             if progress_bar!=None:
                 progress_bar.update(i+1)
             # Write it in the input file
-            output_PS_point(dir_path,p,0)
+            PSPoint = format_PS_point(p,0)
             dp_dict={}
             dp_res=[]
-            dp_res.append(self.get_me_value(1,cards_path,dir_path))
+            dp_res.append(self.get_me_value(StabChecker,PSPoint,1))
             dp_dict['CTModeA']=dp_res[-1]
-            dp_res.append(self.get_me_value(2,cards_path,dir_path))
+            dp_res.append(self.get_me_value(StabChecker,PSPoint,2))
             dp_dict['CTModeB']=dp_res[-1]
             for rotation in range(1,3):
-                output_PS_point(dir_path,p,rotation)
-                dp_res.append(self.get_me_value(1,cards_path,dir_path))
+                PSPoint = format_PS_point(p,rotation)
+                dp_res.append(self.get_me_value(StabChecker,PSPoint,1))
                 dp_dict['Rotation%i'%rotation]=dp_res[-1]
             # Make sure all results make sense
             if any([not res for res in dp_res]):
@@ -1233,13 +1273,14 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 Unstable_PS_points.append([i,p])
                 qp_res=[]
                 qp_dict={}
-                qp_res.append(self.get_me_value(4,cards_path,dir_path))
+                PSPoint = format_PS_point(p,0)
+                qp_res.append(self.get_me_value(StabChecker,PSPoint,4))
                 qp_dict['CTModeA']=qp_res[-1]
-                qp_res.append(self.get_me_value(5,cards_path,dir_path))
+                qp_res.append(self.get_me_value(StabChecker,PSPoint,5))
                 qp_dict['CTModeB']=qp_res[-1]
                 for rotation in range(1,3):
-                    output_PS_point(dir_path,p,rotation)                
-                    qp_res.append(self.get_me_value(4,cards_path,dir_path))
+                    PSPoint = format_PS_point(p,rotation)
+                    qp_res.append(self.get_me_value(StabChecker,PSPoint,4))
                     qp_dict['Rotation%i'%rotation]=qp_res[-1]
                 # Make sure all results make sense
                 if any([not res for res in qp_res]):
@@ -1259,33 +1300,49 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             logger.info('Finished check on %s.'%datetime.datetime.now().strftime(\
                                                               "%d-%m-%Y %H:%M"))
         
-        return {'DP_stability':DP_stability,
-                'QP_stability':QP_stability,
-                'Unstable_PS_points':Unstable_PS_points,
-                'Exceptional_PS_points':Exceptional_PS_points,
-                'Process': matrix_element.get('processes')[0] if not reusing\
-                                                            else matrix_element}
+        # Close the StabChecker process.
+        StabChecker.stdin.write('y\n')
+        
+        return_dict = {'DP_stability':DP_stability,
+                       'QP_stability':QP_stability,
+                       'Unstable_PS_points':Unstable_PS_points,
+                       'Exceptional_PS_points':Exceptional_PS_points}
+        
+        # Save the run for possible future use
+        save_load_object.save_to_file(os.path.join(dir_path,\
+                                           'SavedStabilityRun.pkl'),return_dict)
 
-    def get_me_value(self,mode,param_card_path,dir_path):
+        return_dict['Process'] =  matrix_element.get('processes')[0] if not \
+                                                     reusing else matrix_element
+        return return_dict
+
+    @classmethod
+    def get_me_value(cls, StabChecker, PSpoint, mode, hel=-1, mu_r=-1.0):
         """ This version of get_me_value is simplified for the purpose of this
         class. No compilation is necessary. The CT mode can be specified."""
 
-        self.fix_MadLoopParamCard(param_card_path,mp=mode,loop_filter=True)
+        # Reset the stdin with EOF character without closing it.
+        StabChecker.stdin.write('\x1a')
+        StabChecker.stdin.write('1\n')
+        StabChecker.stdin.write('%d\n'%mode)   
+        StabChecker.stdin.write('%s\n'%PSpoint)
+        StabChecker.stdin.write('%.16E\n'%mu_r) 
+        StabChecker.stdin.write('%d\n'%hel)
         try:
-            output = subprocess.Popen('./check',
-                        cwd=dir_path,
-                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
-            output.read()
-            output.close()
-            if os.path.exists(os.path.join(dir_path,'result.dat')):
-                return self.parse_check_output(file(os.path.join(dir_path,\
-                                'result.dat')),format='tuple')[0][0]
-            else:
-                logging.warning("Error while looking for file %s"%str(os.path\
-                                                  .join(dir_path,'result.dat')))
-                return None
+            while True:
+                output = StabChecker.stdout.readline()  
+                if output==' ##TAG#RESULT_START#TAG##\n':
+                    break
+            res = ""
+            while True:
+                output = StabChecker.stdout.readline()
+                if output==' ##TAG#RESULT_STOP#TAG##\n':
+                    break
+                else:
+                    res += output
+            return cls.parse_check_output(res,format='tuple')[0][0]
         except IOError:
-            logging.warning("Error while executing ./check in %s"%str(dir_path))
+            logging.warning("Error while running MadLoop. Exception = %s")
             return None    
 
 def evaluate_helicities(process, param_card = None, mg_root="", 
@@ -2088,8 +2145,8 @@ def output_stability(stability, mg_root, opt, reusing=False):
                                10**(-int(math.log(nPS-0.5)/math.log(10))-1), 1])
         plt.yscale('log')
         plt.xscale('log')
-        plt.title('Stability plot for %s (%s mode)'%\
-                                               (process.nice_string()[9:],mode))
+        plt.title('Stability plot for %s (%s mode, %d points)'%\
+                                           (process.nice_string()[9:],mode,nPS))
         plt.ylabel('Fraction of events')
         plt.xlabel('Maximal precision')
         if not reusing:
