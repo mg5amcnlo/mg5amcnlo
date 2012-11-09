@@ -64,8 +64,11 @@ class TestMECmdShell(unittest.TestCase):
             for p in process:
                 interface.onecmd('add process %s' % p)
         interface.onecmd('output madevent /tmp/MGPROCESS/ -f')
-        if not os.path.exists(pjoin(_file_path, os.path.pardir, 'pythia-pgs')):
+        pythia_path = pjoin(_file_path, os.path.pardir, 'pythia-pgs')
+        if not os.path.exists(pythia_path):
             interface.onecmd('install pythia-pgs')
+
+        misc.compile(cwd=pythia_path)
         if not misc.which('root'):
             raise Exception, 'root is require for this test'
         if not os.path.exists(pjoin(_file_path, os.path.pardir, 'MadAnalysis')):
@@ -236,11 +239,13 @@ class TestMEfromfile(unittest.TestCase):
         import subprocess
         
         devnull =open(os.devnull,'w')
-        if not os.path.exists(pjoin(_file_path, os.path.pardir, 'pythia-pgs')):
+        pythia_path =  pjoin(_file_path, os.path.pardir, 'pythia-pgs')
+        if not os.path.exists(pythia_path):
             p = subprocess.Popen([pjoin(_file_path, os.path.pardir,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=devnull,stderr=devnull)
             out = p.communicate('install pythia-pgs')
+        misc.compile(cwd=pythia_path)
         
 
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 

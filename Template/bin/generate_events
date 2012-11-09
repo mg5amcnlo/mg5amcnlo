@@ -75,7 +75,7 @@ def treat_old_argument(argument):
     elif mode == 2:
         argument = ['fake','-f', '--multicore', str(name), '--nb_core=%s' % opt]
     else:
-        argument = ['fake','-f', name]
+        argument = ['fake','-f', name, '--nb_core=1']
 
     return argument
 
