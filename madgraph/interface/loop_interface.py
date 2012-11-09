@@ -212,18 +212,19 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         if not proc['perturbation_couplings'] and mode.startswith('ML5'):
             raise self.InvalidCmd(
                 "Please perform tree-level generations within default MG5 interface.")
-        
-        if proc['perturbation_couplings'] and not \
-           isinstance(self._curr_model,loop_base_objects.LoopModel):
-            raise self.InvalidCmd(
+        if not 'real':
+            if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
+                                             not proc['perturbation_couplings']:
+                raise self.InvalidCmd(
                 "The current model does not allow for loop computations.")
         
-        miss_order = [ p_order for p_order in proc['perturbation_couplings'] if \
-                  p_order not in self._curr_model.get('perturbation_couplings')]
-        if len(miss_order)>0 and not 'real' in mode:
-            raise self.InvalidCmd(
+            miss_order = [ p_order for p_order in proc['perturbation_couplings'] \
+                if p_order not in self._curr_model.get('perturbation_couplings')]
+            if len(miss_order)>0 and not 'real' in mode:
+                raise self.InvalidCmd(
                     "Perturbation orders %s not among"%str(miss_order) + \
                     " the perturbation orders allowed for by the loop model.")
+
         proc_diff = self.rate_proc_difficulty(proc, mode)
         logger.debug('Process difficulty estimation: %d'%proc_diff)
         if proc_diff >= difficulty_threshold:
