@@ -3936,7 +3936,6 @@ end
 
         amp = builder.compute_routine(2)
         routine = amp.write(output_dir=None, language='Fortran')
-        print routine
         split_solution = [l.strip() for l in solution.split('\n')]
         split_routine = [l.strip() for l in routine.split('\n')]
         self.assertEqual(split_solution, split_routine)
