@@ -1,7 +1,9 @@
       subroutine idenparts(iden_part,itree,sprop,forcebw,prwidth)
-c     Keep track of identical particles to map radiation processes better. 
-c     Only view the outermost identical particle as a BW, 
-c     unless it is a required BW.
+c
+c     Keep track of identical particles to map radiation processes
+c     (i.e., not use BW for such processes).
+c     Only consider particles that are present in final state as
+c     radiating, since need to correctly map conflicting BWs for decays.
 c
 c     Constants
 c
