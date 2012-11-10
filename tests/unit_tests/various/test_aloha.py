@@ -2202,6 +2202,16 @@ class TestSomeObjectProperty(unittest.TestCase):
         Identity = aloha_obj.Identity
         Metric = aloha_obj.Metric        
 
+
+        # Sigma_mu_nu = 1/2 [Gamma_mu, Gamma_nu]
+        term1 = Sigma('mu','nu','a','b')
+        commutator = Gamma('mu','a','c') * Gamma('nu','c','b') - Gamma('nu','a','c') * Gamma('mu','c','b') 
+        expr = term1 - 0.25j* commutator
+        zero = expr.expand().simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, '%s != 0.0for %s' % \
+                             (zero.get_rep(ind), ind))  
+
         # Gamma_mu* Gamma_mu = 4 * Id
         fact1 = aloha_obj.Gamma('mu', 'a', 'b')
         fact2 = aloha_obj.Gamma('mu', 'b', 'c')
