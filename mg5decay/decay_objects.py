@@ -623,7 +623,7 @@ class DecayParticle(base_objects.Particle):
                         ini_leg.set('id', self.get_pdg_code())
                     
                 #Sort the outgoing leglist for comparison sake (removable!)
-                legs.sort(legcmp)
+                legs.sort(key= lambda l: l['id'], reverse=True)
                 # Append the initial leg
                 legs.append(ini_leg)
 
@@ -974,12 +974,19 @@ class DecayParticle(base_objects.Particle):
         # Setup the final leg number that is used in the channel.
         leg_num = max([l['number'] for l in sub_channel.get_final_legs()])
 
-        # Find the correct vertex id for decays of antiparticles
-        # Using dict in model.conj_int_dict
+
+        # Find the correct vertex id for decays of antiparticles,
+        # using dict in model.conj_int_dict
+        # particle legs must be in front of anti-particle legs
         if sub_channel.get_final_legs()[index]['id'] < 0:
             new_vertex['id'] = model['conj_int_dict'][vertex['id']]
             for leg in new_vertex['legs']:
                 leg['id']  = model.get_particle(leg['id']).get_anti_pdg_code()
+
+            new_vertex['legs'][:-1] = sorted(new_vertex['legs'][:-1],
+                                             key=lambda leg: leg['id'],
+                                             reverse=True)
+
 
         # Legs continue the number of the final one in sub_channel,
         # except the first and the last one ( these two should be connected.)
@@ -989,18 +996,25 @@ class DecayParticle(base_objects.Particle):
             leg_num += 1
             leg['number'] = leg_num
 
+
         # Assign correct number to each leg in the vertex.
         # The first leg follows the mother leg.
         new_vertex['legs'][-1]['number'] = \
             sub_channel.get_final_legs()[index]['number']
         new_vertex['legs'][0]['number'] = new_vertex['legs'][-1]['number']
 
+
+        # Combining vertex with channel
         new_channel = Channel()
+
         # New vertex is first
         new_channel['vertices'].append(new_vertex)
+
         # Then extend the vertices of the old channel
         # deepcopy is necessary to get new legs
         new_channel['vertices'].extend(copy.deepcopy(sub_channel['vertices']))
+
+
 
         # Setup properties of new_channel (This slows the time)
         new_channel.initial_setups(model, True)
@@ -1075,6 +1089,8 @@ class DecayParticle(base_objects.Particle):
                 #print 'start : ', channel.nice_string()
                 self.get_amplitudes(clevel).append(DecayAmplitude(channel,
                                                                   model))
+
+
 
         # Calculate the apx_decaywidth and for every amplitude.
         # apr_br WILL NOT be calculated!
@@ -1456,9 +1472,13 @@ class DecayModel(model_reader.ModelReader):
                 # Put initial leg in the last 
                 # and sort other legs for comparison
                 inileg = temp_legs_new.pop(num)
-                # The order of legs follows the order of pdg_codes in
-                # interaction
-                #temp_legs_new.sort(legcmp)
+
+                # IMPORTANT
+                # Particle legs must be in front of anti-particle legs
+                # for the sake of HELAS output
+                temp_legs_new.sort(key= lambda leg: leg['id'],
+                                   reverse=True)
+
                 temp_legs_new.append(inileg)
                 temp_vertex = base_objects.Vertex({'id': inter.get('id'),
                                                    'legs':temp_legs_new})
@@ -4176,6 +4196,12 @@ class DecayAmplitude(diagram_generation.Amplitude):
                             break
                     if found:
                         break
+            """
+            # Put particles before antiparticles            
+            vert['legs'][:-1] = sorted(vert['legs'][:-1],
+                                       key=lambda leg: leg['id'],
+                                       reverse = True)"""
+        
 
         new_dia.initial_setups(model, True)
 

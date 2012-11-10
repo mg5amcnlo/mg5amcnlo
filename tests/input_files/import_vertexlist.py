@@ -46,7 +46,7 @@ def make_vertexlist(model):
                                 for part in inter['particles']])
         #Create the original legs
         temp_legs = base_objects.LegList([copy.copy(full_leglist[part2.get_pdg_code()]) for part2 in inter['particles']])
-        
+
 
         for num, part in enumerate(inter['particles']):
             #Ignore massless incoming particle
@@ -71,8 +71,11 @@ def make_vertexlist(model):
 
             # Initial leg should be in the last
             ini_leg = temp_legs_new.pop(num)
-            temp_legs_new.append(ini_leg)
 
+            # Sort the other legs
+            temp_legs_new.sort(lambda l1, l2: cmp(l1['id'],l2['id']), 
+                               reverse=True)
+            temp_legs_new.append(ini_leg)
             temp_vertex = base_objects.Vertex({'id': inter.get('id'),
                                                'legs':temp_legs_new})
 
