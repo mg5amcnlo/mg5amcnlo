@@ -395,10 +395,10 @@ c
 c     local
 c
       integer i,j,it
-      integer iden_part(-max_branch:-1)
-      double precision prwidth(-max_branch:-1,lmaxconfigs)  !Propagator width
-      double precision prmass(-max_branch:-1,lmaxconfigs)   !Propagator mass
-      double precision pow(-max_branch:-1,lmaxconfigs)    !Not used, in props.inc
+      integer iden_part(-nexternal+1:nexternal)
+      double precision prwidth(-nexternal:0,lmaxconfigs)  !Propagator width
+      double precision prmass(-nexternal:0,lmaxconfigs)   !Propagator mass
+      double precision pow(-nexternal:0,lmaxconfigs)    !Not used, in props.inc
       double precision xmass(-max_branch:nexternal)
       double precision pmass(nexternal)   !External particle mass
       integer idup(nexternal,maxproc,maxsproc)
@@ -419,7 +419,7 @@ c  Begin Code
 c-----
       include 'props.inc'   !Propagator mass and width information prmass,prwidth
       include 'pmass.inc'   !External particle masses
-      write(*,*) 'Checking for BW ',iconfig
+      write(*,*) 'Checking for BW in config number ',iconfig
 c
 c     Reset variables
 c      
@@ -428,7 +428,6 @@ c
       enddo
       do i=1,nexternal-1
          lconflict(-i) = .false.
-         iden_part(-i)=0
       enddo
 c     Initialize mtot (needed final-state phase space)
       mtot=0
@@ -440,7 +439,8 @@ c
 c     Start by keeping track of identical particles. Only view the outermost
 c     identical particle as a BW, unless it is a required BW
 c     
-      call idenparts(iden_part,itree,sprop,forcebw)
+      call idenparts(iden_part,itree,sprop,forcebw,
+     $               prwidth(-nexternal,iconfig))
 c
 c     Now determine which propagators are part of the same 
 c     chain and could potentially conflict
@@ -528,10 +528,9 @@ c
 c     local
 c
       integer i,j,nbw
-      integer iden_part(-max_branch:-1)
-      double precision prwidth(-max_branch:-1,lmaxconfigs)  !Propagator width
-      double precision prmass(-max_branch:-1,lmaxconfigs)   !Propagator mass
-      double precision pow(-max_branch:-1,lmaxconfigs)    !Not used, in props.inc
+      double precision prwidth(-nexternal:0,lmaxconfigs)  !Propagator width
+      double precision prmass(-nexternal:0,lmaxconfigs)   !Propagator mass
+      double precision pow(-nexternal:0,lmaxconfigs)    !Not used, in props.inc
       double precision xmass(-max_branch:nexternal)
       double precision xwidth(-max_branch:nexternal)
       double precision pmass(nexternal)   !External particle mass
@@ -563,7 +562,6 @@ c
       enddo
       do i=1,nexternal-1
          lconflict(-i) = .false.
-         iden_part(-i)=0
       enddo
 c     Initialize mtot (needed final-state phase space)
       mtot=0

@@ -6,14 +6,12 @@ Update notes for MadGraph 5 (in reverse time order)
                   JA: Avoid bug #1075525, combination of decay processes for 
                       particle and antiparticle (e.g. w+ > all all and 
                       w- > all all), thanks Pierre.
+                  JA: Fixed bug in combine_runs.py (introduced in v. 1.5.0) for
+                      processes with 5 final-state particles, which prevented
+                      matching to Pythia to work properly (thanks Priscila!).
                   JA: Fixed running LHAPDF on a cluster with cluster_temp_path.
-                  JA: Reworked phase space generation for processes with
-                      competing BWs to make it more efficient. It can now
-                      generate p p > l+ vl e+ e- with no cuts on (massive) e:s.
-                      Note however that for this process to be gauge invariant,
-                      the W width *has* to be set < 2*m_e. Retrieve the correct
-                      cross section by multiplying with \Gamma_W/\Gamma_W(true).
-		      (STILL IN PROGRESS)
+                  JA: Improved and clarified phase space presetting for processes
+                      with competing BWs.
 
 1.5.3 (01/11/12)  OM: Fix a crash in the gridpack mode (Thanks Baris Altunkaynak)
                   OM: Fix a crash occuring on cluster with no central disk (only

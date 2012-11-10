@@ -1,4 +1,4 @@
-      subroutine idenparts(iden_part,itree,sprop,forcebw)
+      subroutine idenparts(iden_part,itree,sprop,forcebw,prwidth)
 c     Keep track of identical particles to map radiation processes better. 
 c     Only view the outermost identical particle as a BW, 
 c     unless it is a required BW.
@@ -12,17 +12,15 @@ c
 c
 c     Arguments
 c
-      integer iden_part(-max_branch:-1)
+      integer iden_part(-nexternal+1:nexternal)
       integer itree(2,-max_branch:-1),iconfig
       integer sprop(maxsproc,-max_branch:-1)  ! Propagator id
       integer forcebw(-max_branch:-1) ! Forced BW, for identical particle conflicts
+      double precision prwidth(-nexternal:0)  !Propagator width
 c
 c     local
 c
       integer i,j,it
-      double precision prwidth(-max_branch:-1,lmaxconfigs)  !Propagator width
-      double precision prmass(-max_branch:-1,lmaxconfigs)   !Propagator mass
-      double precision pow(-max_branch:-1,lmaxconfigs)    !Not used, in props.inc
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
@@ -38,14 +36,14 @@ c
       do i=1,nexternal
          ipdg(i) = idup(i,1,1)
       enddo
-      do i=1,nexternal-1
-         iden_part(-i)=0
+      do i=-(nexternal-1),nexternal
+         iden_part(i)=0
       enddo
 
       i=1
       do while (i .lt. nexternal-2 .and. itree(1,-i) .ne. 1)
          ipdg(-i)=sprop(1,-i)
-         if (prwidth(-i,iconfig) .gt. 0d0) then
+         if (prwidth(-i) .gt. 0d0) then
             if(ipdg(-i).eq.ipdg(itree(1,-i)).and.itree(1,-i).gt.0.or.
      $         ipdg(-i).eq.ipdg(itree(2,-i)).and.itree(2,-i).gt.0) then
                iden_part(-i) = ipdg(-i)

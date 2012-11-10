@@ -302,7 +302,7 @@ c
       double precision dr,mtot,etot,xqfact
       double precision spmass
       integer i, iconfig, l1, l2, j, nt, nbw, iproc
-      integer iden_part(-max_branch:-1)
+      integer iden_part(-nexternal+1:nexternal)
 
       double precision prmass(-nexternal:0,lmaxconfigs)
       double precision prwidth(-nexternal:0,lmaxconfigs)
@@ -367,7 +367,7 @@ c      etmin = 10
       iconfig = this_config
       mtot = 0d0
       etot = 0d0   !Total energy needed
-      spmass = 0d0 !Mass for use with spole
+      spmass = 0d0 !Keep track of BW masses for shat
       xqfact=1d0
       if(ickkw.eq.2.or.ktscheme.eq.2) xqfact=0.3d0
       do i=nincoming+1,nexternal  !assumes 2 incoming
@@ -386,7 +386,6 @@ c-JA 1/2009: Set grid also based on xqcut
 c     Reset variables
       nbw = 0
       do i=1,nexternal-2
-         iden_part(-i)=0
          spole(i)=0
          swidth(i)=0
       enddo
@@ -401,7 +400,8 @@ c     If no non-zero sprop, set iproc to 1
 
 c     Look for identical particles to map radiation processes
       call idenparts(iden_part, iforest(1,-max_branch,iconfig),
-     $     sprop(1,-max_branch,iconfig), gForceBW(-max_branch,iconfig))
+     $     sprop(1,-max_branch,iconfig), gForceBW(-max_branch,iconfig),
+     $     prwidth(-nexternal,iconfig))
 
 c     Start loop over propagators
       do i=-1,-(nexternal-3),-1
