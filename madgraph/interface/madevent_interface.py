@@ -2465,7 +2465,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             p = misc.Popen(['./gensym'], stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE, 
                                  stderr=subprocess.STDOUT, cwd=Pdir)
-            sym_input = "%(points)d %(iterations)d %(accuracy)f %(gridpack)s\n" % self.opts
+            sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
             (stdout, stderr) = p.communicate(sym_input)
             if os.path.exists(pjoin(self.me_dir,'error')):
                 files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
