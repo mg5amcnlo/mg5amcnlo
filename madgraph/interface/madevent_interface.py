@@ -1743,6 +1743,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 MG5DIR = self.options['mg5_path']
                 config_file = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
                 self.set_configuration(config_file, final=False,initdir=MG5DIR)
+            else:
+                self.options['mg5_path'] = None
             return self.set_configuration(me5_config, final,initdir=self.me_dir)
 
         config_file = open(config_path)
@@ -2463,7 +2465,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             p = misc.Popen(['./gensym'], stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE, 
                                  stderr=subprocess.STDOUT, cwd=Pdir)
-            sym_input = "%(points)d %(iterations)d %(accuracy)f %(gridpack)s\n" % self.opts
+            sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
             (stdout, stderr) = p.communicate(sym_input)
             if os.path.exists(pjoin(self.me_dir,'error')):
                 files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
@@ -2641,9 +2643,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                                      '%s_%s_banner.txt' % (self.run_name, tag)))
-        self.banner.add(pjoin(self.me_dir, 'Cards', 'param_card.dat'))
-        self.banner.add(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
-        
         
         misc.call(['%s/put_banner' % self.dirbin, 'events.lhe',
                    str(self.random_orig)],
@@ -3485,7 +3484,7 @@ calculator."""
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
                 output_files = []
-                
+
                 #Find the correct PDF input file
                 if self.pdffile:
                     input_files.append(self.pdffile)
@@ -3503,7 +3502,6 @@ calculator."""
                         self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
                         input_files.append(self.pdffile) 
                         
-                
                 #Find the correct ajob
                 Gre = re.compile("\s*j=(G[\d\.\w]+)")
                 Ire = re

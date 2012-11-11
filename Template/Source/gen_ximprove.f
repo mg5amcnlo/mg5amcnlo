@@ -63,7 +63,7 @@ c     If different card options set for nhel_refine and nhel_survey:
          write(*,'(a,a)')'Enter fractional accuracy (<1)',
      &        ', or number events (>1), max processes per job',
      &        ', and whether to split channels (T/F)'
-         read(*,*) err_goal, max_np, split_channels
+         read(5,*) err_goal, max_np, split_channels
          min_iter=3
          parallel = .false.
          if (err_goal .lt. 1) then
