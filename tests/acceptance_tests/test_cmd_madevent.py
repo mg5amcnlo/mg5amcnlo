@@ -183,13 +183,30 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(err2 / val2 < 0.005)
         self.assertTrue(err1 / val1 < 0.005)
         
+    def test_e_p_collision(self):
+        """check that e p > e j gives the correct result"""
         
-    
-        
-        
-        
-        
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            pass
 
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.exec_cmd('set automatic_html_opening False --save')
+        mg_cmd.exec_cmd(' generate e- p  > e- j')
+        mg_cmd.exec_cmd('output /tmp/MGPROCESS/')
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_ep.dat'),
+                    '/tmp/MGPROCESS/Cards/run_card.dat')
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        
+        target = 3864.0
+        self.assertTrue(abs(val1 - target) / err1 < 1.)
+        
     def load_result(self, run_name):
         
         import madgraph.iolibs.save_load_object as save_load_object
