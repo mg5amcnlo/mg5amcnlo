@@ -290,6 +290,11 @@ class Banner:
         self.proc_keys=["model","generate"]
         self.param_keys=["Block mass","Block sminputs","Block yukawa", "DECAY"]
         self.whole_banner=""
+#       to improve the reading use regular expression
+        self.re_search={}
+        self.re_search['model']="^import.*model.*"
+        self.re_search['generate']="^generate.*"
+
 
     def ReadBannerFromFile(self):
         """Read the whole banner"""    
@@ -329,7 +334,7 @@ class Banner:
             self.whole_banner+=line
             if line=="" or string.find(line,"MG5ProcCard")>-1: break
             for key in self.proc_keys:
-                if string.find(line,key)>-1: self.proc[key]=self.GetProcValue(line,key)
+                if re.match(self.re_search[key],line): self.proc[key]=self.GetProcValue(line,key)
         # if self.proc["model"].find("loop_sm")>-1:self.proc["model"]="sm"
 
     def GetParamValue(self,line,keyword):

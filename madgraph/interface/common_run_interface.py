@@ -1223,14 +1223,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         logger.info("Extracting the banner ...")
         mybanner=decay.Banner(inputfile)
         mybanner.ReadBannerFromFile()
+        nlo=(mybanner.proc["generate"].find('[')>-1)
         mybanner.proc["generate"], proc_option=decay_tools.format_proc_line(\
                                         mybanner.proc["generate"])
         logger.info("process: "+mybanner.proc["generate"])
         logger.info("options: "+proc_option)
 
         if not mybanner.proc.has_key('model'):
-            logger.info('No model found in the banner, set the model to sm')
-            mybanner.proc['model']='sm'
+            if nlo: 
+                mybanner.proc['model']='loop_sm'
+                logger.info('No model found in the banner, set the model to loop_sm')
+            else:
+                mybanner.proc['model']='sm'
+                logger.info('No model found in the banner, set the model to sm')
 # Read the final state of the production process:
 #     "_full" means with the complete decay chain syntax 
 #     "_compact" means without the decay chain syntax 
