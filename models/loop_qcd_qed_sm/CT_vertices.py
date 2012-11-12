@@ -2655,7 +2655,7 @@ V_R2GTT2 = CTVertex(name = 'V_R2GTT2',
 # Pure QCD  #
 # ========= #
 
-# There are the alpha_s renormalization vertices
+# These are the alpha_s renormalization vertices
 
 # ggg
 V_UV1eps3G = CTVertex(name = 'V_UV1eps3G',
@@ -2792,28 +2792,28 @@ V_UVAZMassEW = CTVertex(name = 'V_UVAZMassEW',
                         type = 'UVmass')
 
 
-V_UVGmWpMassEW = CTVertex(name = 'V_UVGmWpMassEW',
-                          particles = [ P.G__minus__, P.W__plus__ ],
-                          color = [ '1' ],
-                          lorentz = [ L.l_GmWpMass4, L.l_GmWpMass5 ],
-                          loop_particles = [[[P.W__plus__,P.A]]],
-                          couplings = {(0, 0, 0) : C.c_UVGmWpMass1EW, (0, 1, 0) : C.c_UVGmWpMass2EW},
-                          type = 'UVmass')
-
-
 V_UVGpWmMassEW = CTVertex(name = 'V_UVGpWmMassEW',
                           particles = [ P.G__plus__, P.W__minus__ ],
                           color = [ '1' ],
-                          lorentz = [ L.l_GmWpMass4, L.l_GmWpMass5 ],
+                          lorentz = [ L.l_GpWmMass4, L.l_GpWmMass5 ],
                           loop_particles = [[[P.W__plus__,P.A]]],
-                          couplings = {(0, 0, 0) : C.c_UVGmWpMass2EW, (0, 1, 0) : C.c_UVGmWpMass1EW},
+                          couplings = {(0, 0, 0) : C.c_UVGpWmMass1EW, (0, 1, 0) : C.c_UVGpWmMass2EW},
+                          type = 'UVmass')
+
+
+V_UVGmWpMassEW = CTVertex(name = 'V_UVGmWpMassEW',
+                          particles = [ P.G__minus__, P.W__plus__ ],
+                          color = [ '1' ],
+                          lorentz = [ L.l_GpWmMass4, L.l_GpWmMass5 ],
+                          loop_particles = [[[P.W__plus__,P.A]]],
+                          couplings = {(0, 0, 0) : C.c_UVGmWpMass1EW, (0, 1, 0) : C.c_UVGmWpMass2EW},
                           type = 'UVmass')
 
 
 V_UVG0ZMassEW = CTVertex(name = 'V_UVG0ZMassEW',
                          particles = [ P.G0, P.Z ],
                          color = [ '1' ],
-                         lorentz = [ L.l_GmWpMass4, L.l_GmWpMass5 ],
+                         lorentz = [ L.l_GpWmMass4, L.l_GpWmMass5 ],
                          loop_particles = [[[P.Z,P.H]]],
                          couplings = {(0, 0, 0) : C.c_UVG0ZMass1EW, (0, 1, 0) : C.c_UVG0ZMass2EW},
                          type = 'UVmass')
@@ -2822,7 +2822,7 @@ V_UVG0ZMassEW = CTVertex(name = 'V_UVG0ZMassEW',
 V_UVAG0MassEW = CTVertex(name = 'V_UVAG0MassEW',
                          particles = [ P.G0, P.A ],
                          color = [ '1' ],
-                         lorentz = [ L.l_GmWpMass4, L.l_GmWpMass5 ],
+                         lorentz = [ L.l_GpWmMass4, L.l_GpWmMass5 ],
                          loop_particles = [[[P.W__plus__,P.G__plus__]]],
                          couplings = {(0, 0, 0) : C.c_UVAG0Mass1EW, (0, 1, 0) : C.c_UVAG0Mass2EW},
                          type = 'UVmass')
@@ -2944,6 +2944,7 @@ V_UVddxMassEW = CTVertex(name = 'V_UVddxMassEW',
                          couplings = {(0, 0, 0) : C.c_UVddxMass1EW, (0, 1, 0) : C.c_UVddxMass2EW, (0, 2, 0) : C.c_UVddxMass3EW, (0, 3, 0) : C.c_UVddxMass4EW},
                          type = 'UVmass')
 
+
 V_UVssxMassEW = CTVertex(name = 'V_UVssxMassEW',
                          particles = [ P.s__tilde__, P.s ],
                          color = [ 'Identity(1,2)' ],
@@ -2951,6 +2952,7 @@ V_UVssxMassEW = CTVertex(name = 'V_UVssxMassEW',
                          loop_particles = [[[P.s,P.A]]],
                          couplings = {(0, 0, 0) : C.c_UVssxMass1EW, (0, 1, 0) : C.c_UVssxMass2EW, (0, 2, 0) : C.c_UVssxMass3EW, (0, 3, 0) : C.c_UVssxMass4EW},
                          type = 'UVmass')
+
 
 V_UVbbxMassEW = CTVertex(name = 'V_UVbbxMassEW',
                          particles = [ P.b__tilde__, P.b ],
@@ -3027,7 +3029,7 @@ V_UVHHHHEW = CTVertex(name = 'V_UVHHHHEW',
 V_UVHHG0G0EW = CTVertex(name = 'V_UVHHG0G0EW',
                         particles = [ P.H, P.H, P.G0, P.G0 ],
                         color = [ '1' ],
-                        lorentz = [ L.l_HHG0G018 ],
+                        lorentz = [ L.l_HHHH16 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVHHG0G01EW},
                         type = 'UV')
@@ -3036,7 +3038,7 @@ V_UVHHG0G0EW = CTVertex(name = 'V_UVHHG0G0EW',
 V_UVHHGmGpEW = CTVertex(name = 'V_UVHHGmGpEW',
                         particles = [ P.H, P.H, P.G__minus__, P.G__plus__ ],
                         color = [ '1' ],
-                        lorentz = [ L.l_HHGmGp20 ],
+                        lorentz = [ L.l_HHHH16 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVHHGmGp1EW},
                         type = 'UV')
@@ -3045,7 +3047,7 @@ V_UVHHGmGpEW = CTVertex(name = 'V_UVHHGmGpEW',
 V_UVG0G0G0G0EW = CTVertex(name = 'V_UVG0G0G0G0EW',
                           particles = [ P.G0, P.G0, P.G0, P.G0 ],
                           color = [ '1' ],
-                          lorentz = [ L.l_G0G0G0G022 ],
+                          lorentz = [ L.l_HHHH16 ],
                           loop_particles = [  ],
                           couplings = {(0, 0, 0) : C.c_UVG0G0G0G01EW},
                           type = 'UV')
@@ -3054,7 +3056,7 @@ V_UVG0G0G0G0EW = CTVertex(name = 'V_UVG0G0G0G0EW',
 V_UVG0G0GmGpEW = CTVertex(name = 'V_UVG0G0GmGpEW',
                           particles = [ P.G0, P.G0, P.G__minus__, P.G__plus__ ],
                           color = [ '1' ],
-                          lorentz = [ L.l_G0G0GmGp24 ],
+                          lorentz = [ L.l_HHHH16 ],
                           loop_particles = [  ],
                           couplings = {(0, 0, 0) : C.c_UVG0G0GmGp1EW},
                           type = 'UV')
@@ -3063,7 +3065,7 @@ V_UVG0G0GmGpEW = CTVertex(name = 'V_UVG0G0GmGpEW',
 V_UVGmGmGpGpEW = CTVertex(name = 'V_UVGmGmGpGpEW',
                           particles = [ P.G__minus__, P.G__minus__, P.G__plus__, P.G__plus__ ],
                           color = [ '1' ],
-                          lorentz = [ L.l_GmGmGpGp26 ],
+                          lorentz = [ L.l_HHHH16 ],
                           loop_particles = [  ],
                           couplings = {(0, 0, 0) : C.c_UVGmGmGpGp1EW},
                           type = 'UV')
@@ -3072,7 +3074,7 @@ V_UVGmGmGpGpEW = CTVertex(name = 'V_UVGmGmGpGpEW',
 V_UVHHHEW = CTVertex(name = 'V_UVHHHEW',
                      particles = [ P.H, P.H, P.H ],
                      color = [ '1' ],
-                     lorentz = [ L.l_HHH28 ],
+                     lorentz = [ L.l_HHH17 ],
                      loop_particles = [  ],
                      couplings = {(0, 0, 0) : C.c_UVHHH1EW},
                      type = 'UV')
@@ -3081,7 +3083,7 @@ V_UVHHHEW = CTVertex(name = 'V_UVHHHEW',
 V_UVHG0G0EW = CTVertex(name = 'V_UVHG0G0EW',
                        particles = [ P.H, P.G0, P.G0 ],
                        color = [ '1' ],
-                       lorentz = [ L.l_HG0G030 ],
+                       lorentz = [ L.l_HHH17 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVHG0G01EW},
                        type = 'UV')
@@ -3090,7 +3092,7 @@ V_UVHG0G0EW = CTVertex(name = 'V_UVHG0G0EW',
 V_UVGmHGpEW = CTVertex(name = 'V_UVGmHGpEW',
                        particles = [ P.G__minus__, P.H, P.G__plus__ ],
                        color = [ '1' ],
-                       lorentz = [ L.l_GmHGp32 ],
+                       lorentz = [ L.l_HHH17 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVGmHGp1EW},
                        type = 'UV')
@@ -3099,7 +3101,7 @@ V_UVGmHGpEW = CTVertex(name = 'V_UVGmHGpEW',
 V_UVHHWmWpEW = CTVertex(name = 'V_UVHHWmWpEW',
                         particles = [ P.H, P.H, P.W__minus__, P.W__plus__ ],
                         color = [ '1' ],
-                        lorentz = [ L.l_HHWmWp34 ],
+                        lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVHHWmWp1EW},
                         type = 'UV')
@@ -3108,7 +3110,7 @@ V_UVHHWmWpEW = CTVertex(name = 'V_UVHHWmWpEW',
 V_UVG0G0WmWpEW = CTVertex(name = 'V_UVG0G0WmWpEW',
                           particles = [ P.G0, P.G0, P.W__minus__, P.W__plus__ ],
                           color = [ '1' ],
-                          lorentz = [ L.l_HHWmWp34 ],
+                          lorentz = [ L.l_HHWmWp18 ],
                           loop_particles = [  ],
                           couplings = {(0, 0, 0) : C.c_UVG0G0WmWp1EW},
                           type = 'UV')
@@ -3117,7 +3119,7 @@ V_UVG0G0WmWpEW = CTVertex(name = 'V_UVG0G0WmWpEW',
 V_UVGmGpWmWpEW = CTVertex(name = 'V_UVGmGpWmWpEW',
                           particles = [ P.G__minus__, P.G__plus__, P.W__minus__, P.W__plus__ ],
                           color = [ '1' ],
-                          lorentz = [ L.l_HHWmWp34 ],
+                          lorentz = [ L.l_HHWmWp18 ],
                           loop_particles = [  ],
                           couplings = {(0, 0, 0) : C.c_UVGmGpWmWp1EW},
                           type = 'UV')
@@ -3126,7 +3128,7 @@ V_UVGmGpWmWpEW = CTVertex(name = 'V_UVGmGpWmWpEW',
 V_UVGmGpZZEW = CTVertex(name = 'V_UVGmGpZZEW',
                         particles = [ P.G__minus__, P.G__plus__, P.Z, P.Z ],
                         color = [ '1' ],
-                        lorentz = [ L.l_HHWmWp34 ],
+                        lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVGmGpZZ1EW},
                         type = 'UV')
@@ -3135,7 +3137,7 @@ V_UVGmGpZZEW = CTVertex(name = 'V_UVGmGpZZEW',
 V_UVGmGpAZEW = CTVertex(name = 'V_UVGmGpAZEW',
                         particles = [ P.G__minus__, P.G__plus__, P.A, P.Z ],
                         color = [ '1' ],
-                        lorentz = [ L.l_HHWmWp34 ],
+                        lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVGmGpAZ1EW},
                         type = 'UV')
@@ -3144,7 +3146,7 @@ V_UVGmGpAZEW = CTVertex(name = 'V_UVGmGpAZEW',
 V_UVGmGpAAEW = CTVertex(name = 'V_UVGmGpAAEW',
                         particles = [ P.G__minus__, P.G__plus__, P.A, P.A ],
                         color = [ '1' ],
-                        lorentz = [ L.l_HHWmWp34 ],
+                        lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVGmGpAA1EW},
                         type = 'UV')
@@ -3153,7 +3155,7 @@ V_UVGmGpAAEW = CTVertex(name = 'V_UVGmGpAAEW',
 V_UVHHZZEW = CTVertex(name = 'V_UVHHZZEW',
                       particles = [ P.H, P.H, P.Z, P.Z ],
                       color = [ '1' ],
-                      lorentz = [ L.l_HHWmWp34 ],
+                      lorentz = [ L.l_HHWmWp18 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVHHZZ1EW},
                       type = 'UV')
@@ -3162,7 +3164,7 @@ V_UVHHZZEW = CTVertex(name = 'V_UVHHZZEW',
 V_UVG0G0ZZEW = CTVertex(name = 'V_UVG0G0ZZEW',
                         particles = [ P.G0, P.G0, P.Z, P.Z ],
                         color = [ '1' ],
-                        lorentz = [ L.l_HHWmWp34 ],
+                        lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVG0G0ZZ1EW},
                         type = 'UV')
@@ -3171,7 +3173,7 @@ V_UVG0G0ZZEW = CTVertex(name = 'V_UVG0G0ZZEW',
 V_UVHHAZEW = CTVertex(name = 'V_UVHHAZEW',
                       particles = [ P.H, P.H, P.A, P.Z ],
                       color = [ '1' ],
-                      lorentz = [ L.l_HHWmWp34 ],
+                      lorentz = [ L.l_HHWmWp18 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVHHAZ1EW},
                       type = 'UV')
@@ -3180,79 +3182,79 @@ V_UVHHAZEW = CTVertex(name = 'V_UVHHAZEW',
 V_UVG0G0AZEW = CTVertex(name = 'V_UVG0G0AZEW',
                         particles = [ P.G0, P.G0, P.A, P.Z ],
                         color = [ '1' ],
-                        lorentz = [ L.l_HHWmWp34 ],
+                        lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVHHAZ1EW},
-                        type = 'UV')
-
-
-V_UVHGpWmZEW = CTVertex(name = 'V_UVHGpWmZEW',
-                        particles = [ P.H, P.G__plus__, P.W__minus__, P.Z ],
-                        color = [ '1' ],
-                        lorentz = [ L.l_HHWmWp34 ],
-                        loop_particles = [  ],
-                        couplings = {(0, 0, 0) : C.c_UVHGpWmZ1EW},
                         type = 'UV')
 
 
 V_UVHGmWpZEW = CTVertex(name = 'V_UVHGmWpZEW',
                         particles = [ P.H, P.G__minus__, P.W__plus__, P.Z ],
                         color = [ '1' ],
-                        lorentz = [ L.l_HHWmWp34 ],
+                        lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
-                        couplings = {(0, 0, 0) : C.c_UVHGpWmZ1EW},
+                        couplings = {(0, 0, 0) : C.c_UVHGmWpZ1EW},
                         type = 'UV')
 
 
-V_UVHGmWpAEW = CTVertex(name = 'V_UVHGmWpAEW',
-                        particles = [ P.H, P.G__minus__, P.W__plus__, P.A ],
+V_UVHGpWmZEW = CTVertex(name = 'V_UVHGpWmZEW',
+                        particles = [ P.H, P.G__plus__, P.W__minus__, P.Z ],
                         color = [ '1' ],
-                        lorentz = [ L.l_HHWmWp34 ],
+                        lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
-                        couplings = {(0, 0, 0) : C.c_UVHGmWpA1EW},
+                        couplings = {(0, 0, 0) : C.c_UVHGpWmZ1EW},
                         type = 'UV')
 
 
 V_UVHGpWmAEW = CTVertex(name = 'V_UVHGpWmAEW',
                         particles = [ P.H, P.G__plus__, P.W__minus__, P.A ],
                         color = [ '1' ],
-                        lorentz = [ L.l_HHWmWp34 ],
+                        lorentz = [ L.l_HHWmWp18 ],
+                        loop_particles = [  ],
+                        couplings = {(0, 0, 0) : C.c_UVHGpWmA1EW},
+                        type = 'UV')
+
+
+V_UVHGmWpAEW = CTVertex(name = 'V_UVHGmWpAEW',
+                        particles = [ P.H, P.G__minus__, P.W__plus__, P.A ],
+                        color = [ '1' ],
+                        lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVHGmWpA1EW},
                         type = 'UV')
 
 
-V_UVGmG0ZWpEW = CTVertex(name = 'V_UVGmG0ZWpEW',
-                         particles = [ P.G__minus__, P.G0, P.Z, P.W__plus__ ],
-                         color = [ '1' ],
-                         lorentz = [ L.l_HHWmWp34 ],
-                         loop_particles = [  ],
-                         couplings = {(0, 0, 0) : C.c_UVGmG0ZWp1EW},
-                         type = 'UV')
-
-
 V_UVGpG0ZWmEW = CTVertex(name = 'V_UVGpG0ZWmEW',
                          particles = [ P.G__plus__, P.G0, P.Z, P.W__minus__ ],
                          color = [ '1' ],
-                         lorentz = [ L.l_HHWmWp34 ],
+                         lorentz = [ L.l_HHWmWp18 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVGpG0ZWm1EW},
                          type = 'UV')
 
 
-V_UVGmG0AWpEW = CTVertex(name = 'V_UVGmG0AWpEW',
-                         particles = [ P.G__minus__, P.G0, P.A, P.W__plus__ ],
+V_UVGmG0ZWpEW = CTVertex(name = 'V_UVGmG0ZWpEW',
+                         particles = [ P.G__minus__, P.G0, P.Z, P.W__plus__ ],
                          color = [ '1' ],
-                         lorentz = [ L.l_HHWmWp34 ],
+                         lorentz = [ L.l_HHWmWp18 ],
                          loop_particles = [  ],
-                         couplings = {(0, 0, 0) : C.c_UVGmG0AWp1EW},
+                         couplings = {(0, 0, 0) : C.c_UVGpG0ZWm1EW},
                          type = 'UV')
 
 
 V_UVGpG0AWmEW = CTVertex(name = 'V_UVGpG0AWmEW',
                          particles = [ P.G__plus__, P.G0, P.A, P.W__minus__ ],
                          color = [ '1' ],
-                         lorentz = [ L.l_HHWmWp34 ],
+                         lorentz = [ L.l_HHWmWp18 ],
+                         loop_particles = [  ],
+                         couplings = {(0, 0, 0) : C.c_UVGpG0AWm1EW},
+                         type = 'UV')
+
+
+V_UVGmG0AWpEW = CTVertex(name = 'V_UVGmG0AWpEW',
+                         particles = [ P.G__minus__, P.G0, P.A, P.W__plus__ ],
+                         color = [ '1' ],
+                         lorentz = [ L.l_HHWmWp18 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVGpG0AWm1EW},
                          type = 'UV')
@@ -3261,7 +3263,7 @@ V_UVGpG0AWmEW = CTVertex(name = 'V_UVGpG0AWmEW',
 V_UVG0HAEW = CTVertex(name = 'V_UVG0HAEW',
                       particles = [ P.G0, P.H, P.A ],
                       color = [ '1' ],
-                      lorentz = [ L.l_G0HA35 ],
+                      lorentz = [ L.l_G0HA19 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVG0HA1EW},
                       type = 'UV')
@@ -3270,7 +3272,7 @@ V_UVG0HAEW = CTVertex(name = 'V_UVG0HAEW',
 V_UVG0HZEW = CTVertex(name = 'V_UVG0HZEW',
                       particles = [ P.G0, P.H, P.Z ],
                       color = [ '1' ],
-                      lorentz = [ L.l_G0HA35 ],
+                      lorentz = [ L.l_G0HA19 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVG0HZ1EW},
                       type = 'UV')
@@ -3279,7 +3281,7 @@ V_UVG0HZEW = CTVertex(name = 'V_UVG0HZEW',
 V_UVGpGmAEW = CTVertex(name = 'V_UVGpGmAEW',
                        particles = [ P.G__plus__, P.G__minus__, P.A ],
                        color = [ '1' ],
-                       lorentz = [ L.l_G0HA35 ],
+                       lorentz = [ L.l_G0HA19 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVGpGmA1EW},
                        type = 'UV')
@@ -3288,43 +3290,43 @@ V_UVGpGmAEW = CTVertex(name = 'V_UVGpGmAEW',
 V_UVGpGmZEW = CTVertex(name = 'V_UVGpGmZEW',
                        particles = [ P.G__plus__, P.G__minus__, P.Z ],
                        color = [ '1' ],
-                       lorentz = [ L.l_G0HA35 ],
+                       lorentz = [ L.l_G0HA19 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVGpGmZ1EW},
-                       type = 'UV')
-
-
-V_UVGmHWpEW = CTVertex(name = 'V_UVGmHWpEW',
-                       particles = [ P.G__minus__, P.H, P.W__plus__ ],
-                       color = [ '1' ],
-                       lorentz = [ L.l_G0HA35 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVGmHWp1EW},
                        type = 'UV')
 
 
 V_UVGpHWmEW = CTVertex(name = 'V_UVGpHWmEW',
                        particles = [ P.G__plus__, P.H, P.W__minus__ ],
                        color = [ '1' ],
-                       lorentz = [ L.l_G0HA35 ],
+                       lorentz = [ L.l_G0HA19 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVGpHWm1EW},
                        type = 'UV')
 
 
-V_UVGmG0WpEW = CTVertex(name = 'V_UVGmG0WpEW',
-                        particles = [ P.G__minus__, P.G0, P.W__plus__ ],
-                        color = [ '1' ],
-                        lorentz = [ L.l_G0HA35 ],
-                        loop_particles = [  ],
-                        couplings = {(0, 0, 0) : C.c_UVGmG0Wp1EW},
-                        type = 'UV')
+V_UVGmHWpEW = CTVertex(name = 'V_UVGmHWpEW',
+                       particles = [ P.G__minus__, P.H, P.W__plus__ ],
+                       color = [ '1' ],
+                       lorentz = [ L.l_G0HA19 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVGpHWm1EW},
+                       type = 'UV')
 
 
 V_UVGpG0WmEW = CTVertex(name = 'V_UVGpG0WmEW',
                         particles = [ P.G__plus__, P.G0, P.W__minus__ ],
                         color = [ '1' ],
-                        lorentz = [ L.l_G0HA35 ],
+                        lorentz = [ L.l_G0HA19 ],
+                        loop_particles = [  ],
+                        couplings = {(0, 0, 0) : C.c_UVGpG0Wm1EW},
+                        type = 'UV')
+
+
+V_UVGmG0WpEW = CTVertex(name = 'V_UVGmG0WpEW',
+                        particles = [ P.G__minus__, P.G0, P.W__plus__ ],
+                        color = [ '1' ],
+                        lorentz = [ L.l_G0HA19 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVGmG0Wp1EW},
                         type = 'UV')
@@ -3333,7 +3335,7 @@ V_UVGpG0WmEW = CTVertex(name = 'V_UVGpG0WmEW',
 V_UVHWpWmEW = CTVertex(name = 'V_UVHWpWmEW',
                        particles = [ P.H, P.W__plus__, P.W__minus__ ],
                        color = [ '1' ],
-                       lorentz = [ L.l_HWpWm36 ],
+                       lorentz = [ L.l_HWpWm20 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVHWpWm1EW},
                        type = 'UV')
@@ -3342,7 +3344,7 @@ V_UVHWpWmEW = CTVertex(name = 'V_UVHWpWmEW',
 V_UVHZZEW = CTVertex(name = 'V_UVHZZEW',
                      particles = [ P.H, P.Z, P.Z ],
                      color = [ '1' ],
-                     lorentz = [ L.l_HWpWm36 ],
+                     lorentz = [ L.l_HWpWm20 ],
                      loop_particles = [  ],
                      couplings = {(0, 0, 0) : C.c_UVHZZ1EW},
                      type = 'UV')
@@ -3351,43 +3353,43 @@ V_UVHZZEW = CTVertex(name = 'V_UVHZZEW',
 V_UVHZAEW = CTVertex(name = 'V_UVHZAEW',
                      particles = [ P.H, P.Z, P.A ],
                      color = [ '1' ],
-                     lorentz = [ L.l_HWpWm36 ],
+                     lorentz = [ L.l_HWpWm20 ],
                      loop_particles = [  ],
                      couplings = {(0, 0, 0) : C.c_UVHZA1EW},
                      type = 'UV')
 
 
-V_UVGpWmZEW = CTVertex(name = 'V_UVGpWmZEW',
-                       particles = [ P.G__plus__, P.W__minus__, P.Z ],
-                       color = [ '1' ],
-                       lorentz = [ L.l_HWpWm36 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVGpWmZ1EW},
-                       type = 'UV')
-
-
 V_UVGmWpZEW = CTVertex(name = 'V_UVGmWpZEW',
                        particles = [ P.G__minus__, P.W__plus__, P.Z ],
                        color = [ '1' ],
-                       lorentz = [ L.l_HWpWm36 ],
+                       lorentz = [ L.l_HWpWm20 ],
                        loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVGpWmZ1EW},
+                       couplings = {(0, 0, 0) : C.c_UVGmWpZ1EW},
                        type = 'UV')
 
 
-V_UVGpWmAEW = CTVertex(name = 'V_UVGpWmAEW',
-                       particles = [ P.G__plus__, P.W__minus__, P.A ],
+V_UVGpWmZEW = CTVertex(name = 'V_UVGpWmZEW',
+                       particles = [ P.G__plus__, P.W__minus__, P.Z ],
                        color = [ '1' ],
-                       lorentz = [ L.l_HWpWm36 ],
+                       lorentz = [ L.l_HWpWm20 ],
                        loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVGpWmA1EW},
+                       couplings = {(0, 0, 0) : C.c_UVGpWmZ1EW},
                        type = 'UV')
 
 
 V_UVGmWpAEW = CTVertex(name = 'V_UVGmWpAEW',
                        particles = [ P.G__minus__, P.W__plus__, P.A ],
                        color = [ '1' ],
-                       lorentz = [ L.l_HWpWm36 ],
+                       lorentz = [ L.l_HWpWm20 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVGmWpA1EW},
+                       type = 'UV')
+
+
+V_UVGpWmAEW = CTVertex(name = 'V_UVGpWmAEW',
+                       particles = [ P.G__plus__, P.W__minus__, P.A ],
+                       color = [ '1' ],
+                       lorentz = [ L.l_HWpWm20 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVGpWmA1EW},
                        type = 'UV')
@@ -3396,7 +3398,7 @@ V_UVGmWpAEW = CTVertex(name = 'V_UVGmWpAEW',
 V_UVvexveAEW = CTVertex(name = 'V_UVvexveAEW',
                         particles = [ P.ve__tilde__, P.ve, P.A ],
                         color = [ '1' ],
-                        lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVvexveA1EW},
                         type = 'UV')
@@ -3405,7 +3407,7 @@ V_UVvexveAEW = CTVertex(name = 'V_UVvexveAEW',
 V_UVvmxvmAEW = CTVertex(name = 'V_UVvmxvmAEW',
                         particles = [ P.vm__tilde__, P.vm, P.A ],
                         color = [ '1' ],
-                        lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVvexveA1EW},
                         type = 'UV')
@@ -3414,7 +3416,7 @@ V_UVvmxvmAEW = CTVertex(name = 'V_UVvmxvmAEW',
 V_UVvtxvtAEW = CTVertex(name = 'V_UVvtxvtAEW',
                         particles = [ P.vt__tilde__, P.vt, P.A ],
                         color = [ '1' ],
-                        lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVvexveA1EW},
                         type = 'UV')
@@ -3423,7 +3425,7 @@ V_UVvtxvtAEW = CTVertex(name = 'V_UVvtxvtAEW',
 V_UVepemAEW = CTVertex(name = 'V_UVepemAEW',
                        particles = [ P.e__plus__, P.e__minus__, P.A ],
                        color = [ '1' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVepemA1EW, (0, 1, 0) : C.c_UVepemA2EW},
                        type = 'UV')
@@ -3432,7 +3434,7 @@ V_UVepemAEW = CTVertex(name = 'V_UVepemAEW',
 V_UVmpmmAEW = CTVertex(name = 'V_UVmpmmAEW',
                        particles = [ P.m__plus__, P.m__minus__, P.A ],
                        color = [ '1' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVmpmmA1EW, (0, 1, 0) : C.c_UVmpmmA2EW},
                        type = 'UV')
@@ -3441,7 +3443,7 @@ V_UVmpmmAEW = CTVertex(name = 'V_UVmpmmAEW',
 V_UVttpttmAEW = CTVertex(name = 'V_UVttpttmAEW',
                          particles = [ P.tt__plus__, P.tt__minus__, P.A ],
                          color = [ '1' ],
-                         lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                         lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVttpttmA1EW, (0, 1, 0) : C.c_UVttpttmA2EW},
                          type = 'UV')
@@ -3450,79 +3452,79 @@ V_UVttpttmAEW = CTVertex(name = 'V_UVttpttmAEW',
 V_UVuxuAEW = CTVertex(name = 'V_UVuxuAEW',
                       particles = [ P.u__tilde__, P.u, P.A ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVuxuA1EW, (0, 1, 0) : C.c_UVuxuA2EW},
-                      type = 'UV')
-
-
-V_UVuxcAEW = CTVertex(name = 'V_UVuxcAEW',
-                      particles = [ P.u__tilde__, P.c, P.A ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVuxcA1EW, (0, 1, 0) : C.c_UVuxcA2EW},
-                      type = 'UV')
-
-
-V_UVuxtAEW = CTVertex(name = 'V_UVuxtAEW',
-                      particles = [ P.u__tilde__, P.t, P.A ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVuxtA1EW, (0, 1, 0) : C.c_UVuxtA2EW},
                       type = 'UV')
 
 
 V_UVcxuAEW = CTVertex(name = 'V_UVcxuAEW',
                       particles = [ P.c__tilde__, P.u, P.A ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVcxuA1EW, (0, 1, 0) : C.c_UVcxuA2EW},
-                      type = 'UV')
-
-
-V_UVcxcAEW = CTVertex(name = 'V_UVcxcAEW',
-                      particles = [ P.c__tilde__, P.c, P.A ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVcxcA1EW, (0, 1, 0) : C.c_UVcxcA2EW},
-                      type = 'UV')
-
-
-V_UVcxtAEW = CTVertex(name = 'V_UVcxtAEW',
-                      particles = [ P.c__tilde__, P.t, P.A ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVcxtA1EW, (0, 1, 0) : C.c_UVcxtA2EW},
                       type = 'UV')
 
 
 V_UVtxuAEW = CTVertex(name = 'V_UVtxuAEW',
                       particles = [ P.t__tilde__, P.u, P.A ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxuA1EW, (0, 1, 0) : C.c_UVtxuA2EW},
+                      type = 'UV')
+
+
+V_UVuxcAEW = CTVertex(name = 'V_UVuxcAEW',
+                      particles = [ P.u__tilde__, P.c, P.A ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVuxcA1EW, (0, 1, 0) : C.c_UVuxcA2EW},
+                      type = 'UV')
+
+
+V_UVcxcAEW = CTVertex(name = 'V_UVcxcAEW',
+                      particles = [ P.c__tilde__, P.c, P.A ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVcxcA1EW, (0, 1, 0) : C.c_UVcxcA2EW},
                       type = 'UV')
 
 
 V_UVtxcAEW = CTVertex(name = 'V_UVtxcAEW',
                       particles = [ P.t__tilde__, P.c, P.A ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxcA1EW, (0, 1, 0) : C.c_UVtxcA2EW},
+                      type = 'UV')
+
+
+V_UVuxtAEW = CTVertex(name = 'V_UVuxtAEW',
+                      particles = [ P.u__tilde__, P.t, P.A ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVuxtA1EW, (0, 1, 0) : C.c_UVuxtA2EW},
+                      type = 'UV')
+
+
+V_UVcxtAEW = CTVertex(name = 'V_UVcxtAEW',
+                      particles = [ P.c__tilde__, P.t, P.A ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVcxtA1EW, (0, 1, 0) : C.c_UVcxtA2EW},
                       type = 'UV')
 
 
 V_UVtxtAEW = CTVertex(name = 'V_UVtxtAEW',
                       particles = [ P.t__tilde__, P.t, P.A ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxtA1EW, (0, 1, 0) : C.c_UVtxtA2EW},
                       type = 'UV')
@@ -3531,79 +3533,79 @@ V_UVtxtAEW = CTVertex(name = 'V_UVtxtAEW',
 V_UVdxdAEW = CTVertex(name = 'V_UVdxdAEW',
                       particles = [ P.d__tilde__, P.d, P.A ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVdxdA1EW, (0, 1, 0) : C.c_UVdxdA2EW},
-                      type = 'UV')
-
-
-V_UVdxsAEW = CTVertex(name = 'V_UVdxsAEW',
-                      particles = [ P.d__tilde__, P.s, P.A ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVdxsA1EW, (0, 1, 0) : C.c_UVdxsA2EW},
-                      type = 'UV')
-
-
-V_UVdxbAEW = CTVertex(name = 'V_UVdxbAEW',
-                      particles = [ P.d__tilde__, P.b, P.A ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVdxbA1EW, (0, 1, 0) : C.c_UVdxbA2EW},
                       type = 'UV')
 
 
 V_UVsxdAEW = CTVertex(name = 'V_UVsxdAEW',
                       particles = [ P.s__tilde__, P.d, P.A ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVsxdA1EW, (0, 1, 0) : C.c_UVsxdA2EW},
-                      type = 'UV')
-
-
-V_UVsxsAEW = CTVertex(name = 'V_UVsxsAEW',
-                      particles = [ P.s__tilde__, P.s, P.A ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVsxsA1EW, (0, 1, 0) : C.c_UVsxsA2EW},
-                      type = 'UV')
-
-
-V_UVsxbAEW = CTVertex(name = 'V_UVsxbAEW',
-                      particles = [ P.s__tilde__, P.b, P.A ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVsxbA1EW, (0, 1, 0) : C.c_UVsxbA2EW},
                       type = 'UV')
 
 
 V_UVbxdAEW = CTVertex(name = 'V_UVbxdAEW',
                       particles = [ P.b__tilde__, P.d, P.A ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxdA1EW, (0, 1, 0) : C.c_UVbxdA2EW},
+                      type = 'UV')
+
+
+V_UVdxsAEW = CTVertex(name = 'V_UVdxsAEW',
+                      particles = [ P.d__tilde__, P.s, P.A ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVdxsA1EW, (0, 1, 0) : C.c_UVdxsA2EW},
+                      type = 'UV')
+
+
+V_UVsxsAEW = CTVertex(name = 'V_UVsxsAEW',
+                      particles = [ P.s__tilde__, P.s, P.A ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVsxsA1EW, (0, 1, 0) : C.c_UVsxsA2EW},
                       type = 'UV')
 
 
 V_UVbxsAEW = CTVertex(name = 'V_UVbxsAEW',
                       particles = [ P.b__tilde__, P.s, P.A ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxsA1EW, (0, 1, 0) : C.c_UVbxsA2EW},
+                      type = 'UV')
+
+
+V_UVdxbAEW = CTVertex(name = 'V_UVdxbAEW',
+                      particles = [ P.d__tilde__, P.b, P.A ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVdxbA1EW, (0, 1, 0) : C.c_UVdxbA2EW},
+                      type = 'UV')
+
+
+V_UVsxbAEW = CTVertex(name = 'V_UVsxbAEW',
+                      particles = [ P.s__tilde__, P.b, P.A ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVsxbA1EW, (0, 1, 0) : C.c_UVsxbA2EW},
                       type = 'UV')
 
 
 V_UVbxbAEW = CTVertex(name = 'V_UVbxbAEW',
                       particles = [ P.b__tilde__, P.b, P.A ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxbA1EW, (0, 1, 0) : C.c_UVbxbA2EW},
                       type = 'UV')
@@ -3612,7 +3614,7 @@ V_UVbxbAEW = CTVertex(name = 'V_UVbxbAEW',
 V_UVvexveZEW = CTVertex(name = 'V_UVvexveZEW',
                         particles = [ P.ve__tilde__, P.ve, P.Z ],
                         color = [ '1' ],
-                        lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVvexveZ1EW},
                         type = 'UV')
@@ -3621,7 +3623,7 @@ V_UVvexveZEW = CTVertex(name = 'V_UVvexveZEW',
 V_UVvmxvmZEW = CTVertex(name = 'V_UVvmxvmZEW',
                         particles = [ P.vm__tilde__, P.vm, P.Z ],
                         color = [ '1' ],
-                        lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVvmxvmZ1EW},
                         type = 'UV')
@@ -3630,7 +3632,7 @@ V_UVvmxvmZEW = CTVertex(name = 'V_UVvmxvmZEW',
 V_UVvtxvtZEW = CTVertex(name = 'V_UVvtxvtZEW',
                         particles = [ P.vt__tilde__, P.vt, P.Z ],
                         color = [ '1' ],
-                        lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVvtxvtZ1EW},
                         type = 'UV')
@@ -3639,7 +3641,7 @@ V_UVvtxvtZEW = CTVertex(name = 'V_UVvtxvtZEW',
 V_UVepemZEW = CTVertex(name = 'V_UVepemZEW',
                        particles = [ P.e__plus__, P.e__minus__, P.Z ],
                        color = [ '1' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVepemZ1EW, (0, 1, 0) : C.c_UVepemZ2EW},
                        type = 'UV')
@@ -3648,7 +3650,7 @@ V_UVepemZEW = CTVertex(name = 'V_UVepemZEW',
 V_UVmpmmZEW = CTVertex(name = 'V_UVmpmmZEW',
                        particles = [ P.m__plus__, P.m__minus__, P.Z ],
                        color = [ '1' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVmpmmZ1EW, (0, 1, 0) : C.c_UVmpmmZ2EW},
                        type = 'UV')
@@ -3657,7 +3659,7 @@ V_UVmpmmZEW = CTVertex(name = 'V_UVmpmmZEW',
 V_UVttpttmZEW = CTVertex(name = 'V_UVttpttmZEW',
                          particles = [ P.tt__plus__, P.tt__minus__, P.Z ],
                          color = [ '1' ],
-                         lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                         lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVttpttmZ1EW, (0, 1, 0) : C.c_UVttpttmZ2EW},
                          type = 'UV')
@@ -3666,79 +3668,79 @@ V_UVttpttmZEW = CTVertex(name = 'V_UVttpttmZEW',
 V_UVuxuZEW = CTVertex(name = 'V_UVuxuZEW',
                       particles = [ P.u__tilde__, P.u, P.Z ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVuxuZ1EW, (0, 1, 0) : C.c_UVuxuZ2EW},
-                      type = 'UV')
-
-
-V_UVuxcZEW = CTVertex(name = 'V_UVuxcZEW',
-                      particles = [ P.u__tilde__, P.c, P.Z ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVuxcZ1EW, (0, 1, 0) : C.c_UVuxcZ2EW},
-                      type = 'UV')
-
-
-V_UVuxtZEW = CTVertex(name = 'V_UVuxtZEW',
-                      particles = [ P.u__tilde__, P.t, P.Z ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVuxtZ1EW, (0, 1, 0) : C.c_UVuxtZ2EW},
                       type = 'UV')
 
 
 V_UVcxuZEW = CTVertex(name = 'V_UVcxuZEW',
                       particles = [ P.c__tilde__, P.u, P.Z ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVcxuZ1EW, (0, 1, 0) : C.c_UVcxuZ2EW},
-                      type = 'UV')
-
-
-V_UVcxcZEW = CTVertex(name = 'V_UVcxcZEW',
-                      particles = [ P.c__tilde__, P.c, P.Z ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVcxcZ1EW, (0, 1, 0) : C.c_UVcxcZ2EW},
-                      type = 'UV')
-
-
-V_UVcxtZEW = CTVertex(name = 'V_UVcxtZEW',
-                      particles = [ P.c__tilde__, P.t, P.Z ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVcxtZ1EW, (0, 1, 0) : C.c_UVcxtZ2EW},
                       type = 'UV')
 
 
 V_UVtxuZEW = CTVertex(name = 'V_UVtxuZEW',
                       particles = [ P.t__tilde__, P.u, P.Z ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxuZ1EW, (0, 1, 0) : C.c_UVtxuZ2EW},
+                      type = 'UV')
+
+
+V_UVuxcZEW = CTVertex(name = 'V_UVuxcZEW',
+                      particles = [ P.u__tilde__, P.c, P.Z ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVuxcZ1EW, (0, 1, 0) : C.c_UVuxcZ2EW},
+                      type = 'UV')
+
+
+V_UVcxcZEW = CTVertex(name = 'V_UVcxcZEW',
+                      particles = [ P.c__tilde__, P.c, P.Z ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVcxcZ1EW, (0, 1, 0) : C.c_UVcxcZ2EW},
                       type = 'UV')
 
 
 V_UVtxcZEW = CTVertex(name = 'V_UVtxcZEW',
                       particles = [ P.t__tilde__, P.c, P.Z ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxcZ1EW, (0, 1, 0) : C.c_UVtxcZ2EW},
+                      type = 'UV')
+
+
+V_UVuxtZEW = CTVertex(name = 'V_UVuxtZEW',
+                      particles = [ P.u__tilde__, P.t, P.Z ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVuxtZ1EW, (0, 1, 0) : C.c_UVuxtZ2EW},
+                      type = 'UV')
+
+
+V_UVcxtZEW = CTVertex(name = 'V_UVcxtZEW',
+                      particles = [ P.c__tilde__, P.t, P.Z ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVcxtZ1EW, (0, 1, 0) : C.c_UVcxtZ2EW},
                       type = 'UV')
 
 
 V_UVtxtZEW = CTVertex(name = 'V_UVtxtZEW',
                       particles = [ P.t__tilde__, P.t, P.Z ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxtZ1EW, (0, 1, 0) : C.c_UVtxtZ2EW},
                       type = 'UV')
@@ -3747,115 +3749,88 @@ V_UVtxtZEW = CTVertex(name = 'V_UVtxtZEW',
 V_UVdxdZEW = CTVertex(name = 'V_UVdxdZEW',
                       particles = [ P.d__tilde__, P.d, P.Z ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVdxdZ1EW, (0, 1, 0) : C.c_UVdxdZ2EW},
-                      type = 'UV')
-
-
-V_UVdxsZEW = CTVertex(name = 'V_UVdxsZEW',
-                      particles = [ P.d__tilde__, P.s, P.Z ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVdxsZ1EW, (0, 1, 0) : C.c_UVdxsZ2EW},
-                      type = 'UV')
-
-
-V_UVdxbZEW = CTVertex(name = 'V_UVdxbZEW',
-                      particles = [ P.d__tilde__, P.b, P.Z ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVdxbZ1EW, (0, 1, 0) : C.c_UVdxbZ2EW},
                       type = 'UV')
 
 
 V_UVsxdZEW = CTVertex(name = 'V_UVsxdZEW',
                       particles = [ P.s__tilde__, P.d, P.Z ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVsxdZ1EW, (0, 1, 0) : C.c_UVsxdZ2EW},
-                      type = 'UV')
-
-
-V_UVsxsZEW = CTVertex(name = 'V_UVsxsZEW',
-                      particles = [ P.s__tilde__, P.s, P.Z ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVsxsZ1EW, (0, 1, 0) : C.c_UVsxsZ2EW},
-                      type = 'UV')
-
-
-V_UVsxbZEW = CTVertex(name = 'V_UVsxbZEW',
-                      particles = [ P.s__tilde__, P.b, P.Z ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVsxbZ1EW, (0, 1, 0) : C.c_UVsxbZ2EW},
                       type = 'UV')
 
 
 V_UVbxdZEW = CTVertex(name = 'V_UVbxdZEW',
                       particles = [ P.b__tilde__, P.d, P.Z ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxdZ1EW, (0, 1, 0) : C.c_UVbxdZ2EW},
+                      type = 'UV')
+
+
+V_UVdxsZEW = CTVertex(name = 'V_UVdxsZEW',
+                      particles = [ P.d__tilde__, P.s, P.Z ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVdxsZ1EW, (0, 1, 0) : C.c_UVdxsZ2EW},
+                      type = 'UV')
+
+
+V_UVsxsZEW = CTVertex(name = 'V_UVsxsZEW',
+                      particles = [ P.s__tilde__, P.s, P.Z ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVsxsZ1EW, (0, 1, 0) : C.c_UVsxsZ2EW},
                       type = 'UV')
 
 
 V_UVbxsZEW = CTVertex(name = 'V_UVbxsZEW',
                       particles = [ P.b__tilde__, P.s, P.Z ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxsZ1EW, (0, 1, 0) : C.c_UVbxsZ2EW},
+                      type = 'UV')
+
+
+V_UVdxbZEW = CTVertex(name = 'V_UVdxbZEW',
+                      particles = [ P.d__tilde__, P.b, P.Z ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVdxbZ1EW, (0, 1, 0) : C.c_UVdxbZ2EW},
+                      type = 'UV')
+
+
+V_UVsxbZEW = CTVertex(name = 'V_UVsxbZEW',
+                      particles = [ P.s__tilde__, P.b, P.Z ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVsxbZ1EW, (0, 1, 0) : C.c_UVsxbZ2EW},
                       type = 'UV')
 
 
 V_UVbxbZEW = CTVertex(name = 'V_UVbxbZEW',
                       particles = [ P.b__tilde__, P.b, P.Z ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                      lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxbZ1EW, (0, 1, 0) : C.c_UVbxbZ2EW},
                       type = 'UV')
 
 
-V_UVvexemWpEW = CTVertex(name = 'V_UVvexemWpEW',
-                         particles = [ P.ve__tilde__, P.e__minus__, P.W__plus__ ],
-                         color = [ '1' ],
-                         lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                         loop_particles = [  ],
-                         couplings = {(0, 0, 0) : C.c_UVvexemWp1EW},
-                         type = 'UV')
-
-
-V_UVvmxmmWpEW = CTVertex(name = 'V_UVvmxmmWpEW',
-                         particles = [ P.vm__tilde__, P.m__minus__, P.W__plus__ ],
-                         color = [ '1' ],
-                         lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                         loop_particles = [  ],
-                         couplings = {(0, 0, 0) : C.c_UVvmxmmWp1EW},
-                         type = 'UV')
-
-
-V_UVvtxttmWpEW = CTVertex(name = 'V_UVvtxttmWpEW',
-                          particles = [ P.vt__tilde__, P.tt__minus__, P.W__plus__ ],
-                          color = [ '1' ],
-                          lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                          loop_particles = [  ],
-                          couplings = {(0, 0, 0) : C.c_UVvtxttmWp1EW},
-                          type = 'UV')
-
-
 V_UVepveWmEW = CTVertex(name = 'V_UVepveWmEW',
                         particles = [ P.e__plus__, P.ve, P.W__minus__ ],
                         color = [ '1' ],
-                        lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVepveWm1EW},
                         type = 'UV')
@@ -3864,7 +3839,7 @@ V_UVepveWmEW = CTVertex(name = 'V_UVepveWmEW',
 V_UVmpvmWmEW = CTVertex(name = 'V_UVmpvmWmEW',
                         particles = [ P.m__plus__, P.vm, P.W__minus__ ],
                         color = [ '1' ],
-                        lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVmpvmWm1EW},
                         type = 'UV')
@@ -3873,178 +3848,205 @@ V_UVmpvmWmEW = CTVertex(name = 'V_UVmpvmWmEW',
 V_UVttpvtWmEW = CTVertex(name = 'V_UVttpvtWmEW',
                          particles = [ P.tt__plus__, P.vt, P.W__minus__ ],
                          color = [ '1' ],
-                         lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                         lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVttpvtWm1EW},
                          type = 'UV')
 
 
-V_UVuxdWpEW = CTVertex(name = 'V_UVuxdWpEW',
-                       particles = [ P.u__tilde__, P.d, P.W__plus__ ],
-                       color = [ '1', 'Identity(1,2)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                       loop_particles = [  ],
-                       couplings = {(1, 0, 0) : C.c_UVuxdWp1EW},
-                       type = 'UV')
+V_UVvexemWpEW = CTVertex(name = 'V_UVvexemWpEW',
+                         particles = [ P.ve__tilde__, P.e__minus__, P.W__plus__ ],
+                         color = [ '1' ],
+                         lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                         loop_particles = [  ],
+                         couplings = {(0, 0, 0) : C.c_UVvexemWp1EW},
+                         type = 'UV')
 
 
-V_UVuxsWpEW = CTVertex(name = 'V_UVuxsWpEW',
-                       particles = [ P.u__tilde__, P.s, P.W__plus__ ],
-                       color = [ '1', 'Identity(1,2)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                       loop_particles = [  ],
-                       couplings = {(1, 0, 0) : C.c_UVuxsWp1EW},
-                       type = 'UV')
+V_UVvmxmmWpEW = CTVertex(name = 'V_UVvmxmmWpEW',
+                         particles = [ P.vm__tilde__, P.m__minus__, P.W__plus__ ],
+                         color = [ '1' ],
+                         lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                         loop_particles = [  ],
+                         couplings = {(0, 0, 0) : C.c_UVvmxmmWp1EW},
+                         type = 'UV')
 
 
-V_UVuxbWpEW = CTVertex(name = 'V_UVuxbWpEW',
-                       particles = [ P.u__tilde__, P.b, P.W__plus__ ],
-                       color = [ '1', 'Identity(1,2)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                       loop_particles = [  ],
-                       couplings = {(1, 0, 0) : C.c_UVuxbWp1EW},
-                       type = 'UV')
-
-
-V_UVcxdWpEW = CTVertex(name = 'V_UVcxdWpEW',
-                       particles = [ P.c__tilde__, P.d, P.W__plus__ ],
-                       color = [ '1', 'Identity(1,2)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                       loop_particles = [  ],
-                       couplings = {(1, 0, 0) : C.c_UVcxdWp1EW},
-                       type = 'UV')
-
-
-V_UVcxsWpEW = CTVertex(name = 'V_UVcxsWpEW',
-                       particles = [ P.c__tilde__, P.s, P.W__plus__ ],
-                       color = [ '1', 'Identity(1,2)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                       loop_particles = [  ],
-                       couplings = {(1, 0, 0) : C.c_UVcxsWp1EW},
-                       type = 'UV')
-
-
-V_UVcxbWpEW = CTVertex(name = 'V_UVcxbWpEW',
-                       particles = [ P.c__tilde__, P.b, P.W__plus__ ],
-                       color = [ '1', 'Identity(1,2)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                       loop_particles = [  ],
-                       couplings = {(1, 0, 0) : C.c_UVcxbWp1EW},
-                       type = 'UV')
-
-
-V_UVtxdWpEW = CTVertex(name = 'V_UVtxdWpEW',
-                       particles = [ P.t__tilde__, P.d, P.W__plus__ ],
-                       color = [ '1', 'Identity(1,2)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                       loop_particles = [  ],
-                       couplings = {(1, 0, 0) : C.c_UVtxdWp1EW},
-                       type = 'UV')
-
-
-V_UVtxsWpEW = CTVertex(name = 'V_UVtxsWpEW',
-                       particles = [ P.t__tilde__, P.s, P.W__plus__ ],
-                       color = [ '1', 'Identity(1,2)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                       loop_particles = [  ],
-                       couplings = {(1, 0, 0) : C.c_UVtxsWp1EW},
-                       type = 'UV')
-
-
-V_UVtxbWpEW = CTVertex(name = 'V_UVtxbWpEW',
-                       particles = [ P.t__tilde__, P.b, P.W__plus__ ],
-                       color = [ '1', 'Identity(1,2)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                       loop_particles = [  ],
-                       couplings = {(1, 0, 0) : C.c_UVtxbWp1EW},
-                       type = 'UV')
+V_UVvtxttmWpEW = CTVertex(name = 'V_UVvtxttmWpEW',
+                          particles = [ P.vt__tilde__, P.tt__minus__, P.W__plus__ ],
+                          color = [ '1' ],
+                          lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                          loop_particles = [  ],
+                          couplings = {(0, 0, 0) : C.c_UVvtxttmWp1EW},
+                          type = 'UV')
 
 
 V_UVdxuWmEW = CTVertex(name = 'V_UVdxuWmEW',
                        particles = [ P.d__tilde__, P.u, P.W__minus__ ],
-                       color = [ '1', 'Identity(2,1)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                       color = [ '1', 'Identity(1,2)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVdxuWm1EW},
                        type = 'UV')
 
 
-V_UVdxcWmEW = CTVertex(name = 'V_UVdxcWmEW',
-                       particles = [ P.d__tilde__, P.c, P.W__minus__ ],
-                       color = [ '1', 'Identity(2,1)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                       loop_particles = [  ],
-                       couplings = {(1, 0, 0) : C.c_UVdxcWm1EW},
-                       type = 'UV')
-
-
-V_UVdxtWmEW = CTVertex(name = 'V_UVdxtWmEW',
-                       particles = [ P.d__tilde__, P.t, P.W__minus__ ],
-                       color = [ '1', 'Identity(2,1)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                       loop_particles = [  ],
-                       couplings = {(1, 0, 0) : C.c_UVdxtWm1EW},
-                       type = 'UV')
-
-
 V_UVsxuWmEW = CTVertex(name = 'V_UVsxuWmEW',
                        particles = [ P.s__tilde__, P.u, P.W__minus__ ],
-                       color = [ '1', 'Identity(2,1)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                       color = [ '1', 'Identity(1,2)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVsxuWm1EW},
                        type = 'UV')
 
 
-V_UVsxcWmEW = CTVertex(name = 'V_UVsxcWmEW',
-                       particles = [ P.s__tilde__, P.c, P.W__minus__ ],
-                       color = [ '1', 'Identity(2,1)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                       loop_particles = [  ],
-                       couplings = {(1, 0, 0) : C.c_UVsxcWm1EW},
-                       type = 'UV')
-
-
-V_UVsxtWmEW = CTVertex(name = 'V_UVsxtWmEW',
-                       particles = [ P.s__tilde__, P.t, P.W__minus__ ],
-                       color = [ '1', 'Identity(2,1)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
-                       loop_particles = [  ],
-                       couplings = {(1, 0, 0) : C.c_UVsxtWm1EW},
-                       type = 'UV')
-
-
 V_UVbxuWmEW = CTVertex(name = 'V_UVbxuWmEW',
                        particles = [ P.b__tilde__, P.u, P.W__minus__ ],
-                       color = [ '1', 'Identity(2,1)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                       color = [ '1', 'Identity(1,2)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVbxuWm1EW},
                        type = 'UV')
 
 
+V_UVdxcWmEW = CTVertex(name = 'V_UVdxcWmEW',
+                       particles = [ P.d__tilde__, P.c, P.W__minus__ ],
+                       color = [ '1', 'Identity(1,2)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                       loop_particles = [  ],
+                       couplings = {(1, 0, 0) : C.c_UVdxcWm1EW},
+                       type = 'UV')
+
+
+V_UVsxcWmEW = CTVertex(name = 'V_UVsxcWmEW',
+                       particles = [ P.s__tilde__, P.c, P.W__minus__ ],
+                       color = [ '1', 'Identity(1,2)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                       loop_particles = [  ],
+                       couplings = {(1, 0, 0) : C.c_UVsxcWm1EW},
+                       type = 'UV')
+
+
 V_UVbxcWmEW = CTVertex(name = 'V_UVbxcWmEW',
                        particles = [ P.b__tilde__, P.c, P.W__minus__ ],
-                       color = [ '1', 'Identity(2,1)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                       color = [ '1', 'Identity(1,2)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVbxcWm1EW},
                        type = 'UV')
 
 
+V_UVdxtWmEW = CTVertex(name = 'V_UVdxtWmEW',
+                       particles = [ P.d__tilde__, P.t, P.W__minus__ ],
+                       color = [ '1', 'Identity(1,2)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                       loop_particles = [  ],
+                       couplings = {(1, 0, 0) : C.c_UVdxtWm1EW},
+                       type = 'UV')
+
+
+V_UVsxtWmEW = CTVertex(name = 'V_UVsxtWmEW',
+                       particles = [ P.s__tilde__, P.t, P.W__minus__ ],
+                       color = [ '1', 'Identity(1,2)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                       loop_particles = [  ],
+                       couplings = {(1, 0, 0) : C.c_UVsxtWm1EW},
+                       type = 'UV')
+
+
 V_UVbxtWmEW = CTVertex(name = 'V_UVbxtWmEW',
                        particles = [ P.b__tilde__, P.t, P.W__minus__ ],
-                       color = [ '1', 'Identity(2,1)' ],
-                       lorentz = [ L.l_vexveA37, L.l_vexveA38 ],
+                       color = [ '1', 'Identity(1,2)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVbxtWm1EW},
+                       type = 'UV')
+
+
+V_UVuxdWpEW = CTVertex(name = 'V_UVuxdWpEW',
+                       particles = [ P.u__tilde__, P.d, P.W__plus__ ],
+                       color = [ '1', 'Identity(2,1)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                       loop_particles = [  ],
+                       couplings = {(1, 0, 0) : C.c_UVuxdWp1EW},
+                       type = 'UV')
+
+
+V_UVcxdWpEW = CTVertex(name = 'V_UVcxdWpEW',
+                       particles = [ P.c__tilde__, P.d, P.W__plus__ ],
+                       color = [ '1', 'Identity(2,1)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                       loop_particles = [  ],
+                       couplings = {(1, 0, 0) : C.c_UVcxdWp1EW},
+                       type = 'UV')
+
+
+V_UVtxdWpEW = CTVertex(name = 'V_UVtxdWpEW',
+                       particles = [ P.t__tilde__, P.d, P.W__plus__ ],
+                       color = [ '1', 'Identity(2,1)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                       loop_particles = [  ],
+                       couplings = {(1, 0, 0) : C.c_UVtxdWp1EW},
+                       type = 'UV')
+
+
+V_UVuxsWpEW = CTVertex(name = 'V_UVuxsWpEW',
+                       particles = [ P.u__tilde__, P.s, P.W__plus__ ],
+                       color = [ '1', 'Identity(2,1)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                       loop_particles = [  ],
+                       couplings = {(1, 0, 0) : C.c_UVuxsWp1EW},
+                       type = 'UV')
+
+
+V_UVcxsWpEW = CTVertex(name = 'V_UVcxsWpEW',
+                       particles = [ P.c__tilde__, P.s, P.W__plus__ ],
+                       color = [ '1', 'Identity(2,1)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                       loop_particles = [  ],
+                       couplings = {(1, 0, 0) : C.c_UVcxsWp1EW},
+                       type = 'UV')
+
+
+V_UVtxsWpEW = CTVertex(name = 'V_UVtxsWpEW',
+                       particles = [ P.t__tilde__, P.s, P.W__plus__ ],
+                       color = [ '1', 'Identity(2,1)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                       loop_particles = [  ],
+                       couplings = {(1, 0, 0) : C.c_UVtxsWp1EW},
+                       type = 'UV')
+
+
+V_UVuxbWpEW = CTVertex(name = 'V_UVuxbWpEW',
+                       particles = [ P.u__tilde__, P.b, P.W__plus__ ],
+                       color = [ '1', 'Identity(2,1)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                       loop_particles = [  ],
+                       couplings = {(1, 0, 0) : C.c_UVuxbWp1EW},
+                       type = 'UV')
+
+
+V_UVcxbWpEW = CTVertex(name = 'V_UVcxbWpEW',
+                       particles = [ P.c__tilde__, P.b, P.W__plus__ ],
+                       color = [ '1', 'Identity(2,1)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                       loop_particles = [  ],
+                       couplings = {(1, 0, 0) : C.c_UVcxbWp1EW},
+                       type = 'UV')
+
+
+V_UVtxbWpEW = CTVertex(name = 'V_UVtxbWpEW',
+                       particles = [ P.t__tilde__, P.b, P.W__plus__ ],
+                       color = [ '1', 'Identity(2,1)' ],
+                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
+                       loop_particles = [  ],
+                       couplings = {(1, 0, 0) : C.c_UVtxbWp1EW},
                        type = 'UV')
 
 
 V_UVepemHEW = CTVertex(name = 'V_UVepemHEW',
                        particles = [ P.e__plus__, P.e__minus__, P.H ],
                        color = [ '1' ],
-                       lorentz = [ L.l_epemH39, L.l_epemH40 ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVepemH1EW, (0, 1, 0) : C.c_UVepemH2EW},
                        type = 'UV')
@@ -4053,7 +4055,7 @@ V_UVepemHEW = CTVertex(name = 'V_UVepemHEW',
 V_UVmpmmHEW = CTVertex(name = 'V_UVmpmmHEW',
                        particles = [ P.m__plus__, P.m__minus__, P.H ],
                        color = [ '1' ],
-                       lorentz = [ L.l_mpmmH49, L.l_mpmmH50 ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVmpmmH1EW, (0, 1, 0) : C.c_UVmpmmH2EW},
                        type = 'UV')
@@ -4062,7 +4064,7 @@ V_UVmpmmHEW = CTVertex(name = 'V_UVmpmmHEW',
 V_UVttpttmHEW = CTVertex(name = 'V_UVttpttmHEW',
                          particles = [ P.tt__plus__, P.tt__minus__, P.H ],
                          color = [ '1' ],
-                         lorentz = [ L.l_ttpttmH59, L.l_ttpttmH60 ],
+                         lorentz = [ L.l_epemH23, L.l_epemH24 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVttpttmH1EW, (0, 1, 0) : C.c_UVttpttmH2EW},
                          type = 'UV')
@@ -4071,79 +4073,79 @@ V_UVttpttmHEW = CTVertex(name = 'V_UVttpttmHEW',
 V_UVuxuHEW = CTVertex(name = 'V_UVuxuHEW',
                       particles = [ P.u__tilde__, P.u, P.H ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_uxuH63, L.l_uxuH64 ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVuxuH1EW, (0, 1, 0) : C.c_UVuxuH2EW},
-                      type = 'UV')
-
-
-V_UVuxcHEW = CTVertex(name = 'V_UVuxcHEW',
-                      particles = [ P.u__tilde__, P.c, P.H ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_uxcH67, L.l_uxcH68 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVuxcH1EW, (0, 1, 0) : C.c_UVuxcH2EW},
-                      type = 'UV')
-
-
-V_UVuxtHEW = CTVertex(name = 'V_UVuxtHEW',
-                      particles = [ P.u__tilde__, P.t, P.H ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_uxtH69, L.l_uxtH70 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVuxtH1EW, (0, 1, 0) : C.c_UVuxtH2EW},
                       type = 'UV')
 
 
 V_UVcxuHEW = CTVertex(name = 'V_UVcxuHEW',
                       particles = [ P.c__tilde__, P.u, P.H ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_cxuH71, L.l_cxuH72 ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVcxuH1EW, (0, 1, 0) : C.c_UVcxuH2EW},
-                      type = 'UV')
-
-
-V_UVcxcHEW = CTVertex(name = 'V_UVcxcHEW',
-                      particles = [ P.c__tilde__, P.c, P.H ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_cxcH73, L.l_cxcH74 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVcxcH1EW, (0, 1, 0) : C.c_UVcxcH2EW},
-                      type = 'UV')
-
-
-V_UVcxtHEW = CTVertex(name = 'V_UVcxtHEW',
-                      particles = [ P.c__tilde__, P.t, P.H ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_cxtH77, L.l_cxtH78 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVcxtH1EW, (0, 1, 0) : C.c_UVcxtH2EW},
                       type = 'UV')
 
 
 V_UVtxuHEW = CTVertex(name = 'V_UVtxuHEW',
                       particles = [ P.t__tilde__, P.u, P.H ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_txuH79, L.l_txuH80 ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxuH1EW, (0, 1, 0) : C.c_UVtxuH2EW},
+                      type = 'UV')
+
+
+V_UVuxcHEW = CTVertex(name = 'V_UVuxcHEW',
+                      particles = [ P.u__tilde__, P.c, P.H ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVuxcH1EW, (0, 1, 0) : C.c_UVuxcH2EW},
+                      type = 'UV')
+
+
+V_UVcxcHEW = CTVertex(name = 'V_UVcxcHEW',
+                      particles = [ P.c__tilde__, P.c, P.H ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVcxcH1EW, (0, 1, 0) : C.c_UVcxcH2EW},
                       type = 'UV')
 
 
 V_UVtxcHEW = CTVertex(name = 'V_UVtxcHEW',
                       particles = [ P.t__tilde__, P.c, P.H ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_txcH81, L.l_txcH82 ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxcH1EW, (0, 1, 0) : C.c_UVtxcH2EW},
+                      type = 'UV')
+
+
+V_UVuxtHEW = CTVertex(name = 'V_UVuxtHEW',
+                      particles = [ P.u__tilde__, P.t, P.H ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVuxtH1EW, (0, 1, 0) : C.c_UVuxtH2EW},
+                      type = 'UV')
+
+
+V_UVcxtHEW = CTVertex(name = 'V_UVcxtHEW',
+                      particles = [ P.c__tilde__, P.t, P.H ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVcxtH1EW, (0, 1, 0) : C.c_UVcxtH2EW},
                       type = 'UV')
 
 
 V_UVtxtHEW = CTVertex(name = 'V_UVtxtHEW',
                       particles = [ P.t__tilde__, P.t, P.H ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_txtH83, L.l_txtH84 ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxtH1EW, (0, 1, 0) : C.c_UVtxtH2EW},
                       type = 'UV')
@@ -4152,79 +4154,79 @@ V_UVtxtHEW = CTVertex(name = 'V_UVtxtHEW',
 V_UVdxdHEW = CTVertex(name = 'V_UVdxdHEW',
                       particles = [ P.d__tilde__, P.d, P.H ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_dxdH87, L.l_dxdH88 ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVdxdH1EW, (0, 1, 0) : C.c_UVdxdH2EW},
-                      type = 'UV')
-
-
-V_UVdxsHEW = CTVertex(name = 'V_UVdxsHEW',
-                      particles = [ P.d__tilde__, P.s, P.H ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_dxsH91, L.l_dxsH92 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVdxsH1EW, (0, 1, 0) : C.c_UVdxsH2EW},
-                      type = 'UV')
-
-
-V_UVdxbHEW = CTVertex(name = 'V_UVdxbHEW',
-                      particles = [ P.d__tilde__, P.b, P.H ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_dxbH93, L.l_dxbH94 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVdxbH1EW, (0, 1, 0) : C.c_UVdxbH2EW},
                       type = 'UV')
 
 
 V_UVsxdHEW = CTVertex(name = 'V_UVsxdHEW',
                       particles = [ P.s__tilde__, P.d, P.H ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_sxdH95, L.l_sxdH96 ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVsxdH1EW, (0, 1, 0) : C.c_UVsxdH2EW},
-                      type = 'UV')
-
-
-V_UVsxsHEW = CTVertex(name = 'V_UVsxsHEW',
-                      particles = [ P.s__tilde__, P.s, P.H ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_sxsH97, L.l_sxsH98 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVsxsH1EW, (0, 1, 0) : C.c_UVsxsH2EW},
-                      type = 'UV')
-
-
-V_UVsxbHEW = CTVertex(name = 'V_UVsxbHEW',
-                      particles = [ P.s__tilde__, P.b, P.H ],
-                      color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_sxbH101, L.l_sxbH102 ],
-                      loop_particles = [  ],
-                      couplings = {(0, 0, 0) : C.c_UVsxbH1EW, (0, 1, 0) : C.c_UVsxbH2EW},
                       type = 'UV')
 
 
 V_UVbxdHEW = CTVertex(name = 'V_UVbxdHEW',
                       particles = [ P.b__tilde__, P.d, P.H ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_bxdH103, L.l_bxdH104 ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxdH1EW, (0, 1, 0) : C.c_UVbxdH2EW},
+                      type = 'UV')
+
+
+V_UVdxsHEW = CTVertex(name = 'V_UVdxsHEW',
+                      particles = [ P.d__tilde__, P.s, P.H ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVdxsH1EW, (0, 1, 0) : C.c_UVdxsH2EW},
+                      type = 'UV')
+
+
+V_UVsxsHEW = CTVertex(name = 'V_UVsxsHEW',
+                      particles = [ P.s__tilde__, P.s, P.H ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVsxsH1EW, (0, 1, 0) : C.c_UVsxsH2EW},
                       type = 'UV')
 
 
 V_UVbxsHEW = CTVertex(name = 'V_UVbxsHEW',
                       particles = [ P.b__tilde__, P.s, P.H ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_bxsH105, L.l_bxsH106 ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxsH1EW, (0, 1, 0) : C.c_UVbxsH2EW},
+                      type = 'UV')
+
+
+V_UVdxbHEW = CTVertex(name = 'V_UVdxbHEW',
+                      particles = [ P.d__tilde__, P.b, P.H ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVdxbH1EW, (0, 1, 0) : C.c_UVdxbH2EW},
+                      type = 'UV')
+
+
+V_UVsxbHEW = CTVertex(name = 'V_UVsxbHEW',
+                      particles = [ P.s__tilde__, P.b, P.H ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                      loop_particles = [  ],
+                      couplings = {(0, 0, 0) : C.c_UVsxbH1EW, (0, 1, 0) : C.c_UVsxbH2EW},
                       type = 'UV')
 
 
 V_UVbxbHEW = CTVertex(name = 'V_UVbxbHEW',
                       particles = [ P.b__tilde__, P.b, P.H ],
                       color = [ 'Identity(1,2)' ],
-                      lorentz = [ L.l_bxbH107, L.l_bxbH108 ],
+                      lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxbH1EW, (0, 1, 0) : C.c_UVbxbH2EW},
                       type = 'UV')
@@ -4233,7 +4235,7 @@ V_UVbxbHEW = CTVertex(name = 'V_UVbxbHEW',
 V_UVepemG0EW = CTVertex(name = 'V_UVepemG0EW',
                         particles = [ P.e__plus__, P.e__minus__, P.G0 ],
                         color = [ '1' ],
-                        lorentz = [ L.l_epemG0111, L.l_epemG0112 ],
+                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVepemG01EW, (0, 1, 0) : C.c_UVepemG02EW},
                         type = 'UV')
@@ -4242,7 +4244,7 @@ V_UVepemG0EW = CTVertex(name = 'V_UVepemG0EW',
 V_UVmpmmG0EW = CTVertex(name = 'V_UVmpmmG0EW',
                         particles = [ P.m__plus__, P.m__minus__, P.G0 ],
                         color = [ '1' ],
-                        lorentz = [ L.l_mpmmG0121, L.l_mpmmG0122 ],
+                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVmpmmG01EW, (0, 1, 0) : C.c_UVmpmmG02EW},
                         type = 'UV')
@@ -4251,7 +4253,7 @@ V_UVmpmmG0EW = CTVertex(name = 'V_UVmpmmG0EW',
 V_UVttpttmG0EW = CTVertex(name = 'V_UVttpttmG0EW',
                           particles = [ P.tt__plus__, P.tt__minus__, P.G0 ],
                           color = [ '1' ],
-                          lorentz = [ L.l_ttpttmG0131, L.l_ttpttmG0132 ],
+                          lorentz = [ L.l_epemH23, L.l_epemH24 ],
                           loop_particles = [  ],
                           couplings = {(0, 0, 0) : C.c_UVttpttmG01EW, (0, 1, 0) : C.c_UVttpttmG02EW},
                           type = 'UV')
@@ -4260,79 +4262,79 @@ V_UVttpttmG0EW = CTVertex(name = 'V_UVttpttmG0EW',
 V_UVuxuG0EW = CTVertex(name = 'V_UVuxuG0EW',
                        particles = [ P.u__tilde__, P.u, P.G0 ],
                        color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_uxuG0135, L.l_uxuG0136 ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVuxuG01EW, (0, 1, 0) : C.c_UVuxuG02EW},
-                       type = 'UV')
-
-
-V_UVuxcG0EW = CTVertex(name = 'V_UVuxcG0EW',
-                       particles = [ P.u__tilde__, P.c, P.G0 ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_uxcG0139, L.l_uxcG0140 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVuxcG01EW, (0, 1, 0) : C.c_UVuxcG02EW},
-                       type = 'UV')
-
-
-V_UVuxtG0EW = CTVertex(name = 'V_UVuxtG0EW',
-                       particles = [ P.u__tilde__, P.t, P.G0 ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_uxtG0141, L.l_uxtG0142 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVuxtG01EW, (0, 1, 0) : C.c_UVuxtG02EW},
                        type = 'UV')
 
 
 V_UVcxuG0EW = CTVertex(name = 'V_UVcxuG0EW',
                        particles = [ P.c__tilde__, P.u, P.G0 ],
                        color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_cxuG0143, L.l_cxuG0144 ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVcxuG01EW, (0, 1, 0) : C.c_UVcxuG02EW},
-                       type = 'UV')
-
-
-V_UVcxcG0EW = CTVertex(name = 'V_UVcxcG0EW',
-                       particles = [ P.c__tilde__, P.c, P.G0 ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_cxcG0145, L.l_cxcG0146 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVcxcG01EW, (0, 1, 0) : C.c_UVcxcG02EW},
-                       type = 'UV')
-
-
-V_UVcxtG0EW = CTVertex(name = 'V_UVcxtG0EW',
-                       particles = [ P.c__tilde__, P.t, P.G0 ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_cxtG0149, L.l_cxtG0150 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVcxtG01EW, (0, 1, 0) : C.c_UVcxtG02EW},
                        type = 'UV')
 
 
 V_UVtxuG0EW = CTVertex(name = 'V_UVtxuG0EW',
                        particles = [ P.t__tilde__, P.u, P.G0 ],
                        color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_txuG0151, L.l_txuG0152 ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVtxuG01EW, (0, 1, 0) : C.c_UVtxuG02EW},
+                       type = 'UV')
+
+
+V_UVuxcG0EW = CTVertex(name = 'V_UVuxcG0EW',
+                       particles = [ P.u__tilde__, P.c, P.G0 ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVuxcG01EW, (0, 1, 0) : C.c_UVuxcG02EW},
+                       type = 'UV')
+
+
+V_UVcxcG0EW = CTVertex(name = 'V_UVcxcG0EW',
+                       particles = [ P.c__tilde__, P.c, P.G0 ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVcxcG01EW, (0, 1, 0) : C.c_UVcxcG02EW},
                        type = 'UV')
 
 
 V_UVtxcG0EW = CTVertex(name = 'V_UVtxcG0EW',
                        particles = [ P.t__tilde__, P.c, P.G0 ],
                        color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_txcG0153, L.l_txcG0154 ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVtxcG01EW, (0, 1, 0) : C.c_UVtxcG02EW},
+                       type = 'UV')
+
+
+V_UVuxtG0EW = CTVertex(name = 'V_UVuxtG0EW',
+                       particles = [ P.u__tilde__, P.t, P.G0 ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVuxtG01EW, (0, 1, 0) : C.c_UVuxtG02EW},
+                       type = 'UV')
+
+
+V_UVcxtG0EW = CTVertex(name = 'V_UVcxtG0EW',
+                       particles = [ P.c__tilde__, P.t, P.G0 ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVcxtG01EW, (0, 1, 0) : C.c_UVcxtG02EW},
                        type = 'UV')
 
 
 V_UVtxtG0EW = CTVertex(name = 'V_UVtxtG0EW',
                        particles = [ P.t__tilde__, P.t, P.G0 ],
                        color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_txtG0155, L.l_txtG0156 ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVtxtG01EW, (0, 1, 0) : C.c_UVtxtG02EW},
                        type = 'UV')
@@ -4341,298 +4343,299 @@ V_UVtxtG0EW = CTVertex(name = 'V_UVtxtG0EW',
 V_UVdxdG0EW = CTVertex(name = 'V_UVdxdG0EW',
                        particles = [ P.d__tilde__, P.d, P.G0 ],
                        color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_dxdG0159, L.l_dxdG0160 ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVdxdG01EW, (0, 1, 0) : C.c_UVdxdG02EW},
-                       type = 'UV')
-
-
-V_UVdxsG0EW = CTVertex(name = 'V_UVdxsG0EW',
-                       particles = [ P.d__tilde__, P.s, P.G0 ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_dxsG0163, L.l_dxsG0164 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVdxsG01EW, (0, 1, 0) : C.c_UVdxsG02EW},
-                       type = 'UV')
-
-
-V_UVdxbG0EW = CTVertex(name = 'V_UVdxbG0EW',
-                       particles = [ P.d__tilde__, P.b, P.G0 ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_dxbG0165, L.l_dxbG0166 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVdxbG01EW, (0, 1, 0) : C.c_UVdxbG02EW},
                        type = 'UV')
 
 
 V_UVsxdG0EW = CTVertex(name = 'V_UVsxdG0EW',
                        particles = [ P.s__tilde__, P.d, P.G0 ],
                        color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_sxdG0167, L.l_sxdG0168 ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVsxdG01EW, (0, 1, 0) : C.c_UVsxdG02EW},
-                       type = 'UV')
-
-
-V_UVsxsG0EW = CTVertex(name = 'V_UVsxsG0EW',
-                       particles = [ P.s__tilde__, P.s, P.G0 ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_sxsG0169, L.l_sxsG0170 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVsxsG01EW, (0, 1, 0) : C.c_UVsxsG02EW},
-                       type = 'UV')
-
-
-V_UVsxbG0EW = CTVertex(name = 'V_UVsxbG0EW',
-                       particles = [ P.s__tilde__, P.b, P.G0 ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_sxbG0173, L.l_sxbG0174 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVsxbG01EW, (0, 1, 0) : C.c_UVsxbG02EW},
                        type = 'UV')
 
 
 V_UVbxdG0EW = CTVertex(name = 'V_UVbxdG0EW',
                        particles = [ P.b__tilde__, P.d, P.G0 ],
                        color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_bxdG0175, L.l_bxdG0176 ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVbxdG01EW, (0, 1, 0) : C.c_UVbxdG02EW},
+                       type = 'UV')
+
+
+V_UVdxsG0EW = CTVertex(name = 'V_UVdxsG0EW',
+                       particles = [ P.d__tilde__, P.s, P.G0 ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVdxsG01EW, (0, 1, 0) : C.c_UVdxsG02EW},
+                       type = 'UV')
+
+
+V_UVsxsG0EW = CTVertex(name = 'V_UVsxsG0EW',
+                       particles = [ P.s__tilde__, P.s, P.G0 ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVsxsG01EW, (0, 1, 0) : C.c_UVsxsG02EW},
                        type = 'UV')
 
 
 V_UVbxsG0EW = CTVertex(name = 'V_UVbxsG0EW',
                        particles = [ P.b__tilde__, P.s, P.G0 ],
                        color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_bxsG0177, L.l_bxsG0178 ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVbxsG01EW, (0, 1, 0) : C.c_UVbxsG02EW},
+                       type = 'UV')
+
+
+V_UVdxbG0EW = CTVertex(name = 'V_UVdxbG0EW',
+                       particles = [ P.d__tilde__, P.b, P.G0 ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVdxbG01EW, (0, 1, 0) : C.c_UVdxbG02EW},
+                       type = 'UV')
+
+
+V_UVsxbG0EW = CTVertex(name = 'V_UVsxbG0EW',
+                       particles = [ P.s__tilde__, P.b, P.G0 ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVsxbG01EW, (0, 1, 0) : C.c_UVsxbG02EW},
                        type = 'UV')
 
 
 V_UVbxbG0EW = CTVertex(name = 'V_UVbxbG0EW',
                        particles = [ P.b__tilde__, P.b, P.G0 ],
                        color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_bxbG0179, L.l_bxbG0180 ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVbxbG01EW, (0, 1, 0) : C.c_UVbxbG02EW},
                        type = 'UV')
 
 
-V_UVuxdGpEW = CTVertex(name = 'V_UVuxdGpEW',
-                       particles = [ P.u__tilde__, P.d, P.G__plus__ ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_uxdGp183, L.l_uxdGp184 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVuxdGp1EW, (0, 1, 0) : C.c_UVuxdGp2EW},
-                       type = 'UV')
-
-
-V_UVuxsGpEW = CTVertex(name = 'V_UVuxsGpEW',
-                       particles = [ P.u__tilde__, P.s, P.G__plus__ ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_uxsGp187, L.l_uxsGp188 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVuxsGp1EW, (0, 1, 0) : C.c_UVuxsGp2EW},
-                       type = 'UV')
-
-
-V_UVuxbGpEW = CTVertex(name = 'V_UVuxbGpEW',
-                       particles = [ P.u__tilde__, P.b, P.G__plus__ ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_uxbGp191, L.l_uxbGp192 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVuxbGp1EW, (0, 1, 0) : C.c_UVuxbGp2EW},
-                       type = 'UV')
-
-
-V_UVcxdGpEW = CTVertex(name = 'V_UVcxdGpEW',
-                       particles = [ P.c__tilde__, P.d, P.G__plus__ ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_cxdGp195, L.l_cxdGp196 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVcxdGp1EW, (0, 1, 0) : C.c_UVcxdGp2EW},
-                       type = 'UV')
-
-
-V_UVcxsGpEW = CTVertex(name = 'V_UVcxsGpEW',
-                       particles = [ P.c__tilde__, P.s, P.G__plus__ ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_cxsGp199, L.l_cxsGp200 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVcxsGp1EW, (0, 1, 0) : C.c_UVcxsGp2EW},
-                       type = 'UV')
-
-
-V_UVcxbGpEW = CTVertex(name = 'V_UVcxbGpEW',
-                       particles = [ P.c__tilde__, P.b, P.G__plus__ ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_cxbGp203, L.l_cxbGp204 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVcxbGp1EW, (0, 1, 0) : C.c_UVcxbGp2EW},
-                       type = 'UV')
-
-
-V_UVtxdGpEW = CTVertex(name = 'V_UVtxdGpEW',
-                       particles = [ P.t__tilde__, P.d, P.G__plus__ ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_txdGp207, L.l_txdGp208 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVtxdGp1EW, (0, 1, 0) : C.c_UVtxdGp2EW},
-                       type = 'UV')
-
-
-V_UVtxsGpEW = CTVertex(name = 'V_UVtxsGpEW',
-                       particles = [ P.t__tilde__, P.s, P.G__plus__ ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_txsGp211, L.l_txsGp212 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVtxsGp1EW, (0, 1, 0) : C.c_UVtxsGp2EW},
-                       type = 'UV')
-
-
-V_UVtxbGpEW = CTVertex(name = 'V_UVtxbGpEW',
-                       particles = [ P.t__tilde__, P.b, P.G__plus__ ],
-                       color = [ 'Identity(1,2)' ],
-                       lorentz = [ L.l_txbGp215, L.l_txbGp216 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVtxbGp1EW, (0, 1, 0) : C.c_UVtxbGp2EW},
-                       type = 'UV')
-
-
 V_UVdxuGmEW = CTVertex(name = 'V_UVdxuGmEW',
                        particles = [ P.d__tilde__, P.u, P.G__minus__ ],
-                       color = [ 'Identity(2,1)' ],
-                       lorentz = [ L.l_dxuGm219, L.l_dxuGm220 ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVdxuGm1EW, (0, 1, 0) : C.c_UVdxuGm2EW},
                        type = 'UV')
 
 
-V_UVdxcGmEW = CTVertex(name = 'V_UVdxcGmEW',
-                       particles = [ P.d__tilde__, P.c, P.G__minus__ ],
-                       color = [ 'Identity(2,1)' ],
-                       lorentz = [ L.l_dxcGm223, L.l_dxcGm224 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVdxcGm1EW, (0, 1, 0) : C.c_UVdxcGm2EW},
-                       type = 'UV')
-
-
-V_UVdxtGmEW = CTVertex(name = 'V_UVdxtGmEW',
-                       particles = [ P.d__tilde__, P.t, P.G__minus__ ],
-                       color = [ 'Identity(2,1)' ],
-                       lorentz = [ L.l_dxtGm227, L.l_dxtGm228 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVdxtGm1EW, (0, 1, 0) : C.c_UVdxtGm2EW},
-                       type = 'UV')
-
-
 V_UVsxuGmEW = CTVertex(name = 'V_UVsxuGmEW',
                        particles = [ P.s__tilde__, P.u, P.G__minus__ ],
-                       color = [ 'Identity(2,1)' ],
-                       lorentz = [ L.l_sxuGm231, L.l_sxuGm232 ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVsxuGm1EW, (0, 1, 0) : C.c_UVsxuGm2EW},
                        type = 'UV')
 
 
-V_UVsxcGmEW = CTVertex(name = 'V_UVsxcGmEW',
-                       particles = [ P.s__tilde__, P.c, P.G__minus__ ],
-                       color = [ 'Identity(2,1)' ],
-                       lorentz = [ L.l_sxcGm235, L.l_sxcGm236 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVsxcGm1EW, (0, 1, 0) : C.c_UVsxcGm2EW},
-                       type = 'UV')
-
-
-V_UVsxtGmEW = CTVertex(name = 'V_UVsxtGmEW',
-                       particles = [ P.s__tilde__, P.t, P.G__minus__ ],
-                       color = [ 'Identity(2,1)' ],
-                       lorentz = [ L.l_sxtGm239, L.l_sxtGm240 ],
-                       loop_particles = [  ],
-                       couplings = {(0, 0, 0) : C.c_UVsxtGm1EW, (0, 1, 0) : C.c_UVsxtGm2EW},
-                       type = 'UV')
-
-
 V_UVbxuGmEW = CTVertex(name = 'V_UVbxuGmEW',
                        particles = [ P.b__tilde__, P.u, P.G__minus__ ],
-                       color = [ 'Identity(2,1)' ],
-                       lorentz = [ L.l_bxuGm243, L.l_bxuGm244 ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVbxuGm1EW, (0, 1, 0) : C.c_UVbxuGm2EW},
                        type = 'UV')
 
 
+V_UVdxcGmEW = CTVertex(name = 'V_UVdxcGmEW',
+                       particles = [ P.d__tilde__, P.c, P.G__minus__ ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVdxcGm1EW, (0, 1, 0) : C.c_UVdxcGm2EW},
+                       type = 'UV')
+
+
+V_UVsxcGmEW = CTVertex(name = 'V_UVsxcGmEW',
+                       particles = [ P.s__tilde__, P.c, P.G__minus__ ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVsxcGm1EW, (0, 1, 0) : C.c_UVsxcGm2EW},
+                       type = 'UV')
+
+
 V_UVbxcGmEW = CTVertex(name = 'V_UVbxcGmEW',
                        particles = [ P.b__tilde__, P.c, P.G__minus__ ],
-                       color = [ 'Identity(2,1)' ],
-                       lorentz = [ L.l_bxcGm247, L.l_bxcGm248 ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVbxcGm1EW, (0, 1, 0) : C.c_UVbxcGm2EW},
                        type = 'UV')
 
 
+V_UVdxtGmEW = CTVertex(name = 'V_UVdxtGmEW',
+                       particles = [ P.d__tilde__, P.t, P.G__minus__ ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVdxtGm1EW, (0, 1, 0) : C.c_UVdxtGm2EW},
+                       type = 'UV')
+
+
+V_UVsxtGmEW = CTVertex(name = 'V_UVsxtGmEW',
+                       particles = [ P.s__tilde__, P.t, P.G__minus__ ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVsxtGm1EW, (0, 1, 0) : C.c_UVsxtGm2EW},
+                       type = 'UV')
+
+
 V_UVbxtGmEW = CTVertex(name = 'V_UVbxtGmEW',
                        particles = [ P.b__tilde__, P.t, P.G__minus__ ],
-                       color = [ 'Identity(2,1)' ],
-                       lorentz = [ L.l_bxtGm251, L.l_bxtGm252 ],
+                       color = [ 'Identity(1,2)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVbxtGm1EW, (0, 1, 0) : C.c_UVbxtGm2EW},
                        type = 'UV')
 
 
-V_UVvexemGpEW = CTVertex(name = 'V_UVvexemGpEW',
-                         particles = [ P.ve__tilde__, P.e__minus__, P.G__plus__ ],
-                         color = [ '1' ],
-                         lorentz = [ L.l_vexemGp255, L.l_vexemGp256 ],
-                         loop_particles = [  ],
-                         couplings = {(0, 1, 0) : C.c_UVvexemGp1EW},
-                         type = 'UV')
+V_UVuxdGpEW = CTVertex(name = 'V_UVuxdGpEW',
+                       particles = [ P.u__tilde__, P.d, P.G__plus__ ],
+                       color = [ 'Identity(2,1)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVuxdGp1EW, (0, 1, 0) : C.c_UVuxdGp2EW},
+                       type = 'UV')
 
 
-V_UVvmxmmGpEW = CTVertex(name = 'V_UVvmxmmGpEW',
-                         particles = [ P.vm__tilde__, P.m__minus__, P.G__plus__ ],
-                         color = [ '1' ],
-                         lorentz = [ L.l_vmxmmGp259, L.l_vmxmmGp260 ],
-                         loop_particles = [  ],
-                         couplings = {(0, 1, 0) : C.c_UVvmxmmGp1EW},
-                         type = 'UV')
+V_UVcxdGpEW = CTVertex(name = 'V_UVcxdGpEW',
+                       particles = [ P.c__tilde__, P.d, P.G__plus__ ],
+                       color = [ 'Identity(2,1)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVcxdGp1EW, (0, 1, 0) : C.c_UVcxdGp2EW},
+                       type = 'UV')
 
 
-V_UVvtxttmGpEW = CTVertex(name = 'V_UVvtxttmGpEW',
-                          particles = [ P.vt__tilde__, P.tt__minus__, P.G__plus__ ],
-                          color = [ '1' ],
-                          lorentz = [ L.l_vtxttmGp263, L.l_vtxttmGp264 ],
-                          loop_particles = [  ],
-                          couplings = {(0, 1, 0) : C.c_UVvtxttmGp1EW},
-                          type = 'UV')
+V_UVtxdGpEW = CTVertex(name = 'V_UVtxdGpEW',
+                       particles = [ P.t__tilde__, P.d, P.G__plus__ ],
+                       color = [ 'Identity(2,1)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVtxdGp1EW, (0, 1, 0) : C.c_UVtxdGp2EW},
+                       type = 'UV')
+
+
+V_UVuxsGpEW = CTVertex(name = 'V_UVuxsGpEW',
+                       particles = [ P.u__tilde__, P.s, P.G__plus__ ],
+                       color = [ 'Identity(2,1)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVuxsGp1EW, (0, 1, 0) : C.c_UVuxsGp2EW},
+                       type = 'UV')
+
+
+V_UVcxsGpEW = CTVertex(name = 'V_UVcxsGpEW',
+                       particles = [ P.c__tilde__, P.s, P.G__plus__ ],
+                       color = [ 'Identity(2,1)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVcxsGp1EW, (0, 1, 0) : C.c_UVcxsGp2EW},
+                       type = 'UV')
+
+
+V_UVtxsGpEW = CTVertex(name = 'V_UVtxsGpEW',
+                       particles = [ P.t__tilde__, P.s, P.G__plus__ ],
+                       color = [ 'Identity(2,1)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVtxsGp1EW, (0, 1, 0) : C.c_UVtxsGp2EW},
+                       type = 'UV')
+
+
+V_UVuxbGpEW = CTVertex(name = 'V_UVuxbGpEW',
+                       particles = [ P.u__tilde__, P.b, P.G__plus__ ],
+                       color = [ 'Identity(2,1)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVuxbGp1EW, (0, 1, 0) : C.c_UVuxbGp2EW},
+                       type = 'UV')
+
+
+V_UVcxbGpEW = CTVertex(name = 'V_UVcxbGpEW',
+                       particles = [ P.c__tilde__, P.b, P.G__plus__ ],
+                       color = [ 'Identity(2,1)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVcxbGp1EW, (0, 1, 0) : C.c_UVcxbGp2EW},
+                       type = 'UV')
+
+
+V_UVtxbGpEW = CTVertex(name = 'V_UVtxbGpEW',
+                       particles = [ P.t__tilde__, P.b, P.G__plus__ ],
+                       color = [ 'Identity(2,1)' ],
+                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                       loop_particles = [  ],
+                       couplings = {(0, 0, 0) : C.c_UVtxbGp1EW, (0, 1, 0) : C.c_UVtxbGp2EW},
+                       type = 'UV')
 
 
 V_UVepveGmEW = CTVertex(name = 'V_UVepveGmEW',
                         particles = [ P.e__plus__, P.ve, P.G__minus__ ],
                         color = [ '1' ],
-                        lorentz = [ L.l_epveGm267, L.l_epveGm268 ],
+                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                         loop_particles = [  ],
-                        couplings = {(0, 0, 0) : C.c_UVepveGm1EW},
+                        couplings = {(0, 1, 0) : C.c_UVepveGm1EW},
                         type = 'UV')
 
 
 V_UVmpvmGmEW = CTVertex(name = 'V_UVmpvmGmEW',
                         particles = [ P.m__plus__, P.vm, P.G__minus__ ],
                         color = [ '1' ],
-                        lorentz = [ L.l_mpvmGm271, L.l_mpvmGm272 ],
+                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                         loop_particles = [  ],
-                        couplings = {(0, 0, 0) : C.c_UVmpvmGm1EW},
+                        couplings = {(0, 1, 0) : C.c_UVmpvmGm1EW},
                         type = 'UV')
 
 
 V_UVttpvtGmEW = CTVertex(name = 'V_UVttpvtGmEW',
                          particles = [ P.tt__plus__, P.vt, P.G__minus__ ],
                          color = [ '1' ],
-                         lorentz = [ L.l_ttpvtGm275, L.l_ttpvtGm276 ],
+                         lorentz = [ L.l_epemH23, L.l_epemH24 ],
                          loop_particles = [  ],
-                         couplings = {(0, 0, 0) : C.c_UVttpvtGm1EW},
+                         couplings = {(0, 1, 0) : C.c_UVttpvtGm1EW},
                          type = 'UV')
+
+
+V_UVvexemGpEW = CTVertex(name = 'V_UVvexemGpEW',
+                         particles = [ P.ve__tilde__, P.e__minus__, P.G__plus__ ],
+                         color = [ '1' ],
+                         lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                         loop_particles = [  ],
+                         couplings = {(0, 0, 0) : C.c_UVvexemGp1EW},
+                         type = 'UV')
+
+
+V_UVvmxmmGpEW = CTVertex(name = 'V_UVvmxmmGpEW',
+                         particles = [ P.vm__tilde__, P.m__minus__, P.G__plus__ ],
+                         color = [ '1' ],
+                         lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                         loop_particles = [  ],
+                         couplings = {(0, 0, 0) : C.c_UVvmxmmGp1EW},
+                         type = 'UV')
+
+
+V_UVvtxttmGpEW = CTVertex(name = 'V_UVvtxttmGpEW',
+                          particles = [ P.vt__tilde__, P.tt__minus__, P.G__plus__ ],
+                          color = [ '1' ],
+                          lorentz = [ L.l_epemH23, L.l_epemH24 ],
+                          loop_particles = [  ],
+                          couplings = {(0, 0, 0) : C.c_UVvtxttmGp1EW},
+                          type = 'UV')
+
 
 # ============== #
 # Mixed QCD-QED  #
