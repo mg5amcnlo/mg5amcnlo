@@ -2821,7 +2821,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                             cuttools=CT_dir,
                                             cmd = self)
             nb_processes += len(comparisons[0])
-
+	print args[0]
         if args[0] in ['lorentz', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
                                           param_card = param_card,
@@ -2863,7 +2863,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             nb_processes += len(gauge_result_no_brs)            
             
         cpu_time2 = time.time()
-
         logger.info("%i checked performed in %0.3f s" \
                     % (nb_processes,
                       (cpu_time2 - cpu_time1)))
@@ -2876,7 +2875,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 text = "Note That all width have been set to zero for those checks\n\n"
         else:
             text =""
-        
+
         if timings:
             text += 'Timing result for the '+('optimized' if \
               self.options['loop_optimized_output'] else 'default')+' output:\n'

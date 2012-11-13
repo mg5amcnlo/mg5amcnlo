@@ -1719,7 +1719,7 @@ def check_processes(processes, param_card = None, quick = [],cuttools="",
     if processes[0].get('perturbation_couplings')!=[]:
         # Clean temporary folders created for the running of the loop processes
         clean_up(mg_root)    
-    
+
     return comparison_results, evaluator.stored_quantities["used_lorentz"]
 
 def check_process(process, evaluator, quick):
@@ -2241,8 +2241,7 @@ def output_timings(process, timings, loop_optimized_output):
 def output_comparisons(comparison_results):
     """Present the results of a comparison in a nice list format
        mode short: return the number of fail process
-    """
-    
+    """    
     proc_col_size = 17
 
     pert_coupl = comparison_results[0]['process']['perturbation_couplings']
@@ -2252,8 +2251,9 @@ def output_comparisons(comparison_results):
         process_header = "Process"
 
     if len(process_header) + 1 > proc_col_size:
-        proc_col_size = process_header + 1
-
+	# HSS,13/11/2012
+        proc_col_size = len(process_header) + 1
+	# HSS
     for proc in comparison_results:
         if len(proc['process'].base_string()) + 1 > proc_col_size:
             proc_col_size = len(proc['process'].base_string()) + 1
@@ -2495,7 +2495,9 @@ def output_gauge(comparison_results, output='text'):
         process_header = "Process"
 
     if len(process_header) + 1 > proc_col_size:
-        proc_col_size = process_header + 1
+	# HSS, 13/11/2012
+        proc_col_size = len(process_header) + 1
+	# HSS
 
     for one_comp in comparison_results:
         proc = one_comp['process'].base_string()
@@ -2929,7 +2931,9 @@ def output_lorentz_inv(comparison_results, output='text'):
         process_header = "Process"
 
     if len(process_header) + 1 > proc_col_size:
-        proc_col_size = process_header + 1
+	# HSS,13/11/2012
+        proc_col_size = len(process_header) + 1
+	# HSS
     
     for proc, values in comparison_results:
         if len(proc) + 1 > proc_col_size:
