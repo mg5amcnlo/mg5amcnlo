@@ -36,7 +36,7 @@ import aloha.aloha_parsers as aloha_parsers
 import aloha.aloha_fct as aloha_fct
 try:
     import madgraph.iolibs.files as files
-except:
+except Exception:
     import aloha.files as files
     
 aloha_path = os.path.dirname(os.path.realpath(__file__))
@@ -477,7 +477,7 @@ class AbstractALOHAModel(dict):
         try:
             python_pos = model_name 
             __import__(python_pos)
-        except:
+        except Exception:
             python_pos = 'models.%s' % model_name 
             __import__(python_pos)
         self.model = sys.modules[python_pos]
@@ -555,7 +555,7 @@ class AbstractALOHAModel(dict):
         
         try:
             return self[(lorentzname, outgoing)]
-        except:
+        except Exception:
             logger.warning('(%s, %s) is not a valid key' % 
                                                        (lorentzname, outgoing) )
             return None
@@ -602,7 +602,7 @@ class AbstractALOHAModel(dict):
                     for outgoing in range(len(lorentz.spins)+1):
                         try:
                             self[(lorentz.name, outgoing)].add_combine(m)
-                        except:
+                        except Exception:
                             pass # this routine is a symmetric one, so it 
                                  # already has the combination.
                     
@@ -661,10 +661,10 @@ class AbstractALOHAModel(dict):
             for l_name in list_l_name:
                 try:
                     request[l_name][conjugate].append((outgoing,tag))
-                except:
+                except Exception:
                     try:
                         request[l_name][conjugate] = [(outgoing,tag)]
-                    except:
+                    except Exception:
                         request[l_name] = {conjugate: [(outgoing,tag)]}
                            
         # Loop on the structure to build exactly what is request
@@ -911,7 +911,7 @@ class AbstractALOHAModel(dict):
 
         try:
             equiv = self.symmetries[l_name][outgoing]
-        except:
+        except Exception:
             return out
         else:
             if not valid_output or equiv in valid_output:
@@ -963,7 +963,7 @@ class AbstractALOHAModel(dict):
                 for lorentz in vertex.lorentz:
                     try:
                         conjugate_request[lorentz.name].add(i//2+1)
-                    except:
+                    except Exception:
                         conjugate_request[lorentz.name] = set([i//2+1])
         
         for elem in conjugate_request:

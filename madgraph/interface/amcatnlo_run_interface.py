@@ -62,9 +62,8 @@ try:
 
     from madgraph import InvalidCmd, aMCatNLOError
     aMCatNLO = False
-except Exception, error:
-    if __debug__:
-        print error
+except ImportError, error:
+    logger.debug(error)
     # import from madevent directory
     import internal.extended_cmd as cmd
     import internal.common_run_interface as common_run
@@ -248,11 +247,10 @@ class CmdExtended(cmd.Cmd):
         try:
             self.update_status('Command \'%s\' done.<br> Waiting for instruction.' % arg[0], 
                                level=None, error=True)
-        except:
+        except Exception:
+            misc.sprint('self.update_status fails', log=logger)
             pass
-        
-
-    
+            
     def nice_user_error(self, error, line):
         """If a ME run is currently running add a link in the html output"""
 
@@ -932,12 +930,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         options['parton'] = True
         self.check_calculate_xsect(argss, options)
         
-#        if options['multicore']:
-#            self.cluster_mode = 2
-#        elif options['cluster']:
-#            self.cluster_mode = 1
-#        else:
-#            self.cluster_mode = int(self.options['run_mode'])
+        if options['multicore']:
+            self.cluster_mode = 2
+        elif options['cluster']:
+            self.cluster_mode = 1
 
 #        if self.options_madevent['automatic_html_opening']:
 #            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
@@ -963,12 +959,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         options['reweightonly'] = False
         self.check_generate_events(argss, options)
         
-#        if options['multicore']:
-#            self.cluster_mode = 2
-#        elif options['cluster']:
-#            self.cluster_mode = 1
-#        else:
-#            self.cluster_mode = int(self.options['run_mode'])
+        if options['multicore']:
+            self.cluster_mode = 2
+        elif options['cluster']:
+            self.cluster_mode = 1
 
 #        if self.options_madevent['automatic_html_opening']:
 #            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
@@ -1002,12 +996,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         (options, argss) = _launch_parser.parse_args(argss)
         options = options.__dict__
         self.check_launch(argss, options)
-#        if options['multicore']:
-#            self.cluster_mode = 2
-#        elif options['cluster']:
-#            self.cluster_mode = 1
-#        else:
-#            self.cluster_mode = int(self.options['run_mode'])
+
+        if options['multicore']:
+            self.cluster_mode = 2
+        elif options['cluster']:
+            self.cluster_mode = 1
 
 #        if self.options['automatic_html_opening']:
 #            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
@@ -1262,21 +1255,23 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 '''Found (\d+) correctly terminated jobs 
 random seed found in 'randinit' is (\d+)
 Integrated abs\(cross-section\)
-.*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
+\s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
 Found (\d+) correctly terminated jobs 
 Integrated cross-section
-.*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)''')
+\s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
         else:
             pat = re.compile(\
 '''Found (\d+) correctly terminated jobs 
-.*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)''')
+\s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
             pass
 
         match = re.search(pat, output[0])
         if not match or output[1]:
+            logger.info('Return code of the event collection: '+str(output[1]))
+            logger.info('Output of the event collection:\n'+output[0])
             raise aMCatNLOError('An error occurred during the collection of results')
-        if int(match.groups()[0]) != self.njobs:
-            raise aMCatNLOError('Not all jobs terminated successfully')
+#        if int(match.groups()[0]) != self.njobs:
+#            raise aMCatNLOError('Not all jobs terminated successfully')
         if mode in ['aMC@LO', 'aMC@NLO']:
             return {'randinit' : int(match.groups()[1]),
                     'xseca' : float(match.groups()[2]),
@@ -1337,10 +1332,15 @@ Integrated cross-section
                     stats['UPS'][channel_name] = [int(UPS_stats.group('nPS')),
                                                    int(UPS_stats.group('nUPS'))]
         # Find the number of potential errors found in all log files
+        # This re is a simple match on a case-insensitve 'error' but there is 
+        # also some veto added for excluding the sentence 
+        #  "See Section 6 of paper for error calculation."
+        # which appear in the header of lhapdf in the logs.
+        err_finder = re.compile(\
+             r"(?<!of\spaper\sfor\s)\bERROR\b(?!\scalculation\.)",re.IGNORECASE)
         for log in all_log_files:
             logfile=open(log,'r')
-            nErrors = len(re.findall(re.compile(r"\bERROR\b",\
-                                                re.IGNORECASE), logfile.read()))
+            nErrors = len(re.findall(err_finder, logfile.read()))
             logfile.close()
             if nErrors != 0:
                 stats['Errors'].append((str(log),nErrors))
@@ -1391,25 +1391,27 @@ Integrated cross-section
             return
 
         # Now display the general statistics
-        nTotUPS = sum([chan[1] for chan in stats['UPS'].values()],0)
-        nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
-        UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
-             float(chan[1][1]*100)/chan[1][0]) for chan in stats['UPS'].items()]
-        maxUPS = max(UPSfracs, key = lambda w: w[1])
         debug_msg = ""
-        if len(stats['UPS'].keys())>0 and maxUPS[1]>0.1:
-            message += '\n      Number of loop ME evaluations: %d'%nTotPS
-            message += '\n      Total number of unstable PS point detected:'+\
-                             ' %d (%4.2f%%)'%(nTotUPS,float(100*nTotUPS)/nTotPS)
-            message += '\n      Maximum fraction of UPS points in '+\
-                      'channel %s (%4.2f%%)'%maxUPS
-            message += '\n      Please report this to the authors while '+\
-                                                            'providing the file'
-            message += '\n      %s'%str(pjoin(os.path.dirname(self.me_dir),
-                                                           maxUPS[0],'UPS.log'))
-        else:
-            debug_msg += '\n      Number of loop ME evaluations: %d'%nTotPS
-        logger.info(message+'\n')            
+        if len(stats['UPS'].keys())>0:
+            nTotUPS = sum([chan[1] for chan in stats['UPS'].values()],0)
+            nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
+            UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
+                 float(chan[1][1]*100)/chan[1][0]) for chan in stats['UPS'].items()]
+            maxUPS = max(UPSfracs, key = lambda w: w[1])
+            if maxUPS[1]>0.1:
+                message += '\n      Number of loop ME evaluations: %d'%nTotPS
+                message += '\n      Total number of unstable PS point detected:'+\
+                                 ' %d (%4.2f%%)'%(nTotUPS,float(100*nTotUPS)/nTotPS)
+                message += '\n      Maximum fraction of UPS points in '+\
+                          'channel %s (%4.2f%%)'%maxUPS
+                message += '\n      Please report this to the authors while '+\
+                                                                'providing the file'
+                message += '\n      %s'%str(pjoin(os.path.dirname(self.me_dir),
+                                                               maxUPS[0],'UPS.log'))
+            else:
+                debug_msg += '\n      Number of loop ME evaluations: %d'%nTotPS
+        logger.info(message+'\n')
+                 
         nErrors = sum([err[1] for err in stats['Errors']],0)
         if nErrors != 0:
             debug_msg += '\n      WARNING:: A total of %d error%s ha%s been '\
@@ -1440,16 +1442,16 @@ Integrated cross-section
 
         self.update_status('Collecting events', level='parton')
         misc.call(['make collect_events > %s' % \
-                pjoin(self.me_dir, 'log_collect_events.txt')], shell=True)
+                pjoin(self.me_dir, 'collect_events.log')], shell=True)
         misc.call(['echo "1" | ./collect_events > %s' % \
-                pjoin(self.me_dir, 'log_collect_events.txt')], shell=True)
+                pjoin(self.me_dir, 'collect_events.log')], shell=True)
 
         #get filename from collect events
-        filename = open(pjoin(self.me_dir, 'log_collect_events.txt')).read().split()[-1]
+        filename = open(pjoin(self.me_dir, 'collect_events.log')).read().split()[-1]
 
         if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', filename)):
             raise aMCatNLOError('An error occurred during event generation. ' + \
-                    'The event file has not been created. Check log_collect_events.txt')
+                    'The event file has not been created. Check collect_events.log')
         evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
         misc.call(['mv %s %s' % 
             (pjoin(self.me_dir, 'SubProcesses', filename), evt_file)], shell=True )
@@ -1468,7 +1470,7 @@ Integrated cross-section
 
         try:
             misc.call(['gunzip %s.gz' % evt_file], shell=True)
-        except:
+        except Exception:
             pass
         shower = self.evt_file_to_mcatnlo(evt_file)
         oldcwd = os.getcwd()
@@ -1515,7 +1517,7 @@ Integrated cross-section
             try:
                 misc.call(['ln -s %s %s' % \
                 (pjoin(self.shower_card['hwpppath'], 'bin', 'Herwig++'), rundir)], shell=True)
-            except:
+            except Exception:
                 raise aMCatNLOError('The Herwig++ path set in the shower_card is not valid.')
 
             if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so')):
@@ -1876,7 +1878,7 @@ Integrated cross-section
             Ire = re.compile("for i in ([\d\s]*) ; do")
             try : 
                 fsock = open(exe)
-            except:
+            except IOError:
                 fsock = open(pjoin(cwd,exe))
             text = fsock.read()
             data = Ire.findall(text)
@@ -1951,7 +1953,9 @@ Integrated cross-section
                         break
                 else:
                     # possible when using lhapdf
-                    self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
+                    self.pdffile = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'], 
+                            shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+                    #self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
                     input_files.append(self.pdffile)
                     
             
@@ -2318,7 +2322,7 @@ Integrated cross-section
         """ """
         try:
             os.remove(pjoin(self.me_dir,'RunWeb'))
-        except:
+        except Exception:
             pass
 #        try:
 #            self.store_result()
@@ -2333,7 +2337,7 @@ Integrated cross-section
         try:
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)
-        except:
+        except Exception:
             pass
 
         return super(aMCatNLOCmd, self).do_quit(line)

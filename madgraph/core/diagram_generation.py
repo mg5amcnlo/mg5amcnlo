@@ -1448,7 +1448,7 @@ class MultiProcess(base_objects.PhysicsObject):
                     try:
                         mirror_amp = \
                                amplitudes[non_permuted_procs.index(mirror_proc)]
-                    except:
+                    except Exception:
                         # Didn't find any mirror process
                         pass
                     else:

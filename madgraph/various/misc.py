@@ -245,7 +245,7 @@ def get_gfortran_version(compiler='gfortran'):
         version_finder=re.compile(r"(?P<version>(\d.)*\d)")
         version = version_finder.search(output).group('version')
         return version
-    except:
+    except Exception:
         return '0'
 
 def mod_compilator(directory, new='gfortran', current=None):
@@ -449,6 +449,21 @@ the file and returns last line in an internal buffer."""
         else:
             raise StopIteration
 
+def write_PS_input(filePath, PS):
+    """ Write out in file filePath the PS point to be read by the MadLoop."""
+    try:
+        PSfile = open(filePath, 'w')
+        # Add a newline in the end as the implementation fortran 'read'
+        # command on some OS is problematic if it ends directly with the
+        # floating point number read.
+
+        PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in p]) \
+                                                             for p in PS])+'\n')
+        PSfile.close()
+    except Exception:
+        raise MadGraph5Error, 'Could not write out the PS point to file %s.'\
+                                                                  %str(filePath)
+
 def format_timer(running_time):
     """ return a nicely string representing the time elapsed."""
     if running_time < 2e-2:
@@ -616,7 +631,7 @@ def is_executable(path):
     """ check if a path is executable"""
     try: 
         return os.access(path, os.X_OK)
-    except:
+    except Exception:
         return False        
 
 
@@ -629,6 +644,29 @@ class OptionParser(optparse.OptionParser):
         else:
             raise InvalidCmd
 
+def sprint(*args, **opt):
+    """Returns the current line number in our program."""
+    import inspect
+    if opt.has_key('log'):
+        log = opt['log']
+    else:
+        log = logging.getLogger('madgraph')
+    if opt.has_key('level'):
+        level = opt['level']
+    else:
+        level=10
+    
+    lineno  =  inspect.currentframe().f_back.f_lineno
+    fargs =  inspect.getframeinfo(inspect.currentframe().f_back)
+    filename, lineno = fargs[:2]
+    #file = inspect.currentframe().f_back.co_filename
+    #print type(file)
+
+
+    log.log(level, '\n'.join(args) + \
+               '\nraised at %s at line %s ' % (filename, lineno))
+    
+    return 
 
 ################################################################################
 # TAIL FUNCTION
@@ -638,15 +676,15 @@ class digest:
     def test_all(self):
         try:
             return self.test_hashlib()
-        except:
+        except Exception:
             pass
         try:
             return self.test_md5()
-        except:
+        except Exception:
             pass
         try:
             return self.test_zlib()
-        except:
+        except Exception:
             pass
                 
     def test_hashlib(self):

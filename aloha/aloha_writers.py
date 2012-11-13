@@ -1,7 +1,7 @@
 try:
     import madgraph.iolibs.file_writers as writers 
     import madgraph.various.q_polynomial as q_polynomial
-except:
+except Exception:
     import aloha.file_writers as writers
     import aloha.q_polynomial as q_polynomial
 
@@ -258,7 +258,7 @@ class WriteALOHA:
         
         try:
             vartype = obj.vartype
-        except:
+        except Exception:
             return self.change_number_format(obj)
 
         # The order is from the most current one to the les probable one
@@ -1166,7 +1166,7 @@ def combine_name(name, other_names, outgoing, tag=None):
         for s in other_names:
             try:
                 base2,id2 = p.search(s).groups()
-            except:
+            except Exception:
                 routine = ''
                 break # one matching not good -> other scheme
             if base != base2:
@@ -1191,7 +1191,7 @@ def combine_name(name, other_names, outgoing, tag=None):
             short_name, addon = name.split('C',1)
             try:
                 addon = 'C' + str(int(addon))
-            except:
+            except Exception:
                 addon = ''
             else:
                 name = short_name

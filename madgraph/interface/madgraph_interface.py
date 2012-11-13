@@ -230,26 +230,26 @@ class CmdExtended(cmd.Cmd):
         
         try:
             logger_tuto.info(getattr(tutorial_text, command).replace('\n','\n\t'))
-        except:
+        except Exception:
             try:
                 logger_tuto.info(getattr(tutorial_text, args[0]).replace('\n','\n\t'))
-            except:
+            except Exception:
                 pass
 
         try:
             logger_tuto_nlo.info(getattr(tutorial_text_nlo, command).replace('\n','\n\t'))
-        except:
+        except Exception:
             try:
                 logger_tuto_nlo.info(getattr(tutorial_text_nlo, args[0]).replace('\n','\n\t'))
-            except:
+            except Exception:
                 pass
         
         try:
             logger_tuto_madloop.info(getattr(tutorial_text_madloop, command).replace('\n','\n\t'))
-        except:
+        except Exception:
             try:
                 logger_tuto_madloop.info(getattr(tutorial_text_madloop, args[0]).replace('\n','\n\t'))
-            except:
+            except Exception:
                 pass
         
         return stop
@@ -631,7 +631,6 @@ class CheckValidForCmd(cmd.CheckCmd):
         """check the validity of line
         syntax: define multipart_name [ part_name_list ]
         """  
-
         
         if len(args) < 2:
             self.help_define()
@@ -1936,7 +1935,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 try:
                     cur_path = pjoin(*[a for a in args \
                                                    if a.endswith(os.path.sep)])
-                except:
+                except Exception:
                     pass
                 else:
                     all_dir = self.path_completion(text, cur_path, only_dirs = True)
@@ -1952,7 +1951,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 try:
                     cur_path = pjoin(*[a for a in args \
                                                    if a.endswith(os.path.sep)])
-                except:
+                except Exception:
                     pass
                 else:
                     all_path =  self.path_completion(text, cur_path)
@@ -2541,7 +2540,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 print ' "display couplings" present the actual definition'
                 print 'prints the current states of mode'
                 print eval('ufomodel.couplings.%s.nice_string()'%args[1])
-            except:
+            except Exception:
                 raise self.InvalidCmd, 'no couplings %s in current model' % args[1]
         
         elif args[0] == 'lorentz':
@@ -2555,7 +2554,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             try:
                 ufomodel = ufomodels.load_model(self._curr_model.get('name'))
                 print eval('ufomodel.lorentz.%s.nice_string()'%args[1])
-            except:
+            except Exception:
                 raise self.InvalidCmd, 'no lorentz %s in current model' % args[1]
             
         elif args[0] == 'checks':
@@ -3523,7 +3522,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             try:
                 for part in self._multiparticles[key]:
                     self._curr_model.get('particle_dict')[part]
-            except:
+            except Exception:
                 del self._multiparticles[key]
                 defined_multiparticles.remove(key)
                 removed_multiparticles.append(key)
@@ -3593,7 +3592,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         try:
             data = urllib.urlopen('http://madgraph.phys.ucl.ac.be/package_info.dat')
-        except:
+        except Exception:
             raise MadGraph5Error, '''Impossible to connect the server. 
             Please check your internet connection or retry later'''
         for line in data: 
@@ -3602,7 +3601,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         try:
             os.system('rm -rf %s' % pjoin(MG5DIR, name))
-        except:
+        except Exception:
             pass
         
         # Load that path
@@ -3655,34 +3654,33 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 compiler = 'g77'
             else:
                 raise self.InvalidCmd('Require g77 or Gfortran compiler')
-            if compiler == 'gfortran' and args[0] == "pythia-pgs":
+            
+            path = None
+            base_compiler= ['FC=g77','FC=gfortran']
+            if args[0] == "pythia-pgs":
                 path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
-                text = open(path).read()
-                text = text.replace('FC=g77','FC=gfortran')
-                open(path, 'w').writelines(text)    
-            elif compiler == 'gfortran' and args[0] == 'MadAnalysis':
+            elif args[0] == 'MadAnalysis':
                 path = os.path.join(MG5DIR, 'MadAnalysis', 'makefile')
-                text = open(path).read()
-                text = text.replace('FC=g77','FC=gfortran')
-                open(path, 'w').writelines(text)
-
-            elif compiler == 'gfortran' and args[0] =='MCatNLO-utilities':
+            elif args[0] == 'MCatNLO-utilities':
                 path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'make_opts')
+            
+            if path:
                 text = open(path).read()
-                text = text.replace('FC=g77','FC=gfortran')
-                open(path, 'w').writelines(text)    
-
+                for base in base_compiler:
+                    text = text.replace(base,'FC=%s' % compiler)
+                open(path, 'w').writelines(text)
+                        
         if logger.level <= logging.INFO:
             devnull = open(os.devnull,'w')
             try: 
                 misc.call(['make', 'clean'], stdout=devnull, stderr=-2)
-            except:
+            except Exception:
                 pass
             status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
             try:
                 misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
-            except:
+            except Exception:
                 pass
             status = misc.compile(mode='', cwd = os.path.join(MG5DIR, name))
         if not status:
@@ -3853,7 +3851,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 try:
                     filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch/build%s.patch' %(i+1))
 #                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch_test/build%s.patch' %(i+1))
-                except:
+                except Exception:
                     print 'fail to load patch to build #%s' % (i+1)
                     fail = i
                     break
@@ -4532,7 +4530,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         main_file_name = ""
         try:
             main_file_name = args[args.index('-name') + 1]
-        except:
+        except Exception:
             pass
         
         ################
@@ -4722,7 +4720,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                 self._generate_info)
                 try:
                     cmd.Cmd.onecmd(self, 'history .')
-                except:
+                except Exception:
+                    misc.sprint('command history fails.')
                     pass
                 
         # Pythia 8
@@ -4861,7 +4860,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 stderr=subprocess.PIPE)
                 output, error = p.communicate()
                 res = 0
-            except:
+            except Exception:
                 res = 1
                 pass
 
@@ -4885,7 +4884,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             try:
                 res = misc.call([self.options['lhapdf'], '--version'], \
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            except:
+            except Exception:
                 res = 1
             if res != 0:
                 logger.info('The value for lhapdf in the current configuration does not ' + \

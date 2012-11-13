@@ -99,7 +99,7 @@ c======================================================================
 c check for poles cancellation
 c If MadLoop was still in initialization mode, then skip the check
 c and it will use the next one for that purpose
-      if (acc_found.gt.0.0d0) goto 111
+      if (acc_found.lt.0.0d0) goto 111
       call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
       ntot = ntot+1
       avgPoleRes(1)=(single+madfks_single)/2.0d0

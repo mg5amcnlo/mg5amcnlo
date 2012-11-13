@@ -431,7 +431,7 @@ class MultiCore(Cluster):
                         time.sleep(5)
                         if no_in_queue > 5 * 3600.0 / 5:
                             break
-                    except:
+                    except KeyboardInterrupt:
                         logger.warning('CTRL-C assumes that all jobs are done. Continue the code')
                         self.pids = [] # avoid security 6
                         break
@@ -1189,7 +1189,7 @@ class GECluster(Cluster):
                 line = line.strip()
                 try:
                     id = pat.search(line).groups()[0]
-                except:
+                except Exception:
                     pass
                 else:
                     if id not in self.submitted_ids:

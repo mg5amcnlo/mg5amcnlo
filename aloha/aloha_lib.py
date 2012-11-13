@@ -441,7 +441,7 @@ class AddVariable(list):
             for term in self:
                 try:
                     term.remove(maxvar)
-                except:
+                except Exception:
                     constant.append(term)
                 else:
                     if len(term):
@@ -767,7 +767,7 @@ class MultLorentz(MultVariable):
                     fact2 = self[k]
                     try:
                         l = fact2.lorentz_ind.index(fact.lorentz_ind[j])
-                    except:
+                    except Exception:
                         pass
                     else:
                         out[(i, j)] = (k, l)
@@ -789,7 +789,7 @@ class MultLorentz(MultVariable):
                     fact2 = self[k]
                     try:
                         l = fact2.spin_ind.index(fact.spin_ind[j])
-                    except:                
+                    except Exception:                
                         pass
                     else:
                         out[(i, j)] = (k, l)  
@@ -829,7 +829,7 @@ class MultLorentz(MultVariable):
                 try: 
                     # look in priority in basic_end_point (P/S/fermion/...)
                     current = basic_end_point.pop()
-                except:
+                except Exception:
                     #take one of the remaining
                     current = self.unused.pop()
                 else:
@@ -901,7 +901,7 @@ class LorentzObject(object):
 
         try:
             return self.representation
-        except:
+        except Exception:
             self.create_representation()
         return self.representation
     
@@ -1181,7 +1181,7 @@ class LorentzObjectRepresentation(dict):
                     #compute the prefactor due to the lorentz contraction
                     try:
                         factor.prefactor *= (-1) ** (len(l_value) - l_value.count(0))
-                    except:
+                    except Exception:
                         factor *= (-1) ** (len(l_value) - l_value.count(0))
                     out += factor                        
         return out

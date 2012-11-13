@@ -229,7 +229,7 @@ class MadLoopLauncher(ExtLauncher):
                                                      for pmom in res['res_p']]),
                   '\n|| Born contribution (GeV^%d):'%res['gev_pow'],
                   '|    Born        = %s'%special_float_format(res['born']),
-                  '|| Virtual contribution normalized with alpha_S/(2*pi):',
+                  '|| Virtual contribution normalized with born*alpha_S/(2*pi):',
                   '|    Finite      = %s'%special_float_format(res['finite']),
                   '|    Single pole = %s'%special_float_format(res['1eps']),
                   '|    Double pole = %s'%special_float_format(res['2eps']),
@@ -328,7 +328,8 @@ class aMCatNLOLauncher(ExtLauncher):
         for line in set_cmd:
             try:
                 usecmd.exec_cmd(line)
-            except:
+            except Exception, error:
+                misc.sprint('command %s fails with msg: %s' % error)
                 pass
         launch = self.cmd_int.define_child_cmd_interface(
                      usecmd, interface=False)
@@ -416,7 +417,7 @@ class MELauncher(ExtLauncher):
         for line in set_cmd:
             try:
                 usecmd.do_set(line[3:], log=False)
-            except:
+            except Exception:
                 pass
         usecmd.do_set('stdout_level %s'  % stdout_level,log=False)
         #ensure that the logger level 

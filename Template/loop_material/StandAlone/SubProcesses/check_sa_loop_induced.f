@@ -99,7 +99,7 @@
       SQRTS=dsqrt(dabs(DOT(PIN(0),PIN(0))))
       MU_R=91.188d0
 !---  Update the couplings with the new MU_R
-      CALL COUP()
+      CALL UPDATE_AS_PARAM()
 
 !     
 !     Now we can call the matrix element!

@@ -239,10 +239,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
 
         # If a PS point is specified, write out the corresponding PS.input
         if PSpoint:
-            PSfile = open(os.path.join(dir_name, 'PS.input'), 'w')
-            PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in p]) \
-                                  for p in PSpoint]))
-            PSfile.close()
+            misc.write_PS_input(os.path.join(dir_name, 'PS.input'),PSpoint)
         
         # Run ./check
         try:
@@ -527,10 +524,7 @@ class LoopMG4Runner(me_comparator.MERunner):
 
         # If a PS point is specified, write out the corresponding PS.input
         if PSpoint!=[]:
-            PSfile = open(os.path.join(dir_name, 'PS.input'), 'w')
-            PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in p]) \
-                                  for p in PSpoint]))
-            PSfile.close()
+            misc.write_PS_input(os.path.join(dir_name, 'PS.input'),PSpoint)
         
         # Run make
         devnull = open(os.devnull, 'w')
@@ -1043,10 +1037,7 @@ class GoSamRunner(me_comparator.MERunner):
 
         # If a PS point is specified, write out the corresponding PS.input
         if PSpoint!=[]:
-            PSfile = open(os.path.join(matrix_dir_name, 'PS.input'), 'w')
-            PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in p]) \
-                                  for p in PSpoint]))
-            PSfile.close()
+            misc.write_PS_input(os.path.join(matrix_dir_name, 'PS.input'),PSpoint)
         
         # Run make
         devnull = open(os.devnull, 'w')
