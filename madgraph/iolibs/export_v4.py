@@ -865,6 +865,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         if not root_dir:
             root_dir = self.dir_path
+	
         make_opts = pjoin(root_dir, 'Source', 'make_opts')
         lines = open(make_opts).read().split('\n')
         FC_re = re.compile('^(\s*)FC\s*=\s*.+\s*$')
@@ -972,6 +973,15 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                               online = False, compiler='g77'):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
+	# HSS,13/11/2012
+	mg5_configuration=pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
+        lines = open(mg5_configuration).read().split('\n')
+        FC_re = re.compile('^\s*fortran_compiler\s*=\s*(.+)\s*$')
+        for iline, line in enumerate(lines):
+            FC_result = FC_re.match(line)
+            if FC_result:
+		compiler=FC_result.group(1)
+	# HSS
         self.compiler_choice(compiler)
         self.make()
 
