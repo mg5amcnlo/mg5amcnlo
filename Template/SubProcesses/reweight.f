@@ -413,9 +413,9 @@ c     q2bck holds the central q2fact scales
       data first/.true./
       data nwarning/0/
 
-      logical isqcd,isjet,isparton,cluster
+      logical isqcd,isjet,isparton,cluster,isjetvx
       double precision alphas
-      external isqcd, isjet, isparton, cluster, alphas
+      external isqcd, isjet, isparton, cluster, isjetvx, alphas
 
       setclscales=.true.
 
@@ -502,7 +502,8 @@ c             Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
 c             f1(x1,pt2E) is given by DSIG, just need to set scale.
                  ibeam(j)=imocl(n)
                  if(jfirst(j).eq.0)then
-                    if(isjet(ipdgcl(imocl(n),igraphs(1),iproc))) then
+                    if(isjetvx(imocl(n),idacl(n,1),idacl(n,2),
+     $                 ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)) then
                        jfirst(j)=n
                     else
                        jfirst(j)=-1
