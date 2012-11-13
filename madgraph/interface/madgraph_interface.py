@@ -2950,7 +2950,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Call add process
         args = self.split_arg(line)
         args.insert(0, 'process')
-        
+       
         self.do_add(" ".join(args))
 
     def extract_process(self, line, proc_number = 0, overall_orders = {}):

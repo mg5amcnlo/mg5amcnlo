@@ -237,8 +237,7 @@ class Switcher(object):
                 elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
                     self.change_principal_cmd('MadLoop')
             else:
-                self.change_principal_cmd('MadGraph')
-                
+                self.change_principal_cmd('MadGraph')        
         return self.cmd.do_generate(self, line, *args, **opts)
 
     def do_import(self, *args, **opts):
@@ -538,7 +537,7 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
             raise MadGraph5Error, 'Type of interface not valid: %s' % main  
         self.cmd.__init__(self, *args, **opt)     
         self.current_interface = main  
-        
+    
     def complete_switch(self, text, line, begidx, endidx):
         """Complete the switch command"""
         return self.list_completion(text,self._switch_opts)
