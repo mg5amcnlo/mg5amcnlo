@@ -602,7 +602,13 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 
         argss = self.split_arg(line, *args,**opt)
         # Check args validity
-        self.validate_model()
+	# HSS,13/11/2012
+	args2=re.search("QED",line)
+	if args2:
+            self.validate_model(coupling_type='QED')
+        else:
+       	    self.validate_model()
+	# HSS
         param_card = self.check_check(argss)
         # For the stability check the user can specify the statistics (i.e
         # number of trial PS points) as a second argument
@@ -615,7 +621,13 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         # Now make sure the process is acceptable
         proc = " ".join(argss[1:])
         myprocdef = self.extract_process(proc)
-        self.validate_model('virtual')
+	# HSS, 13/11/2012
+	# Is it useless ?
+	if args2:
+            self.validate_model(loop_type='virtual',coupling_type='QED')
+	else:
+            self.validate_model(loop_type='virtual')
+	# HSS
         self.proc_validity(myprocdef,'ML5_check')
         
         return mg_interface.MadGraphCmd.do_check(self, line, *args,**opt)
@@ -631,7 +643,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 	# HSS, 13/11/2012
 	args2=re.search('QED',line)
 	if args2:
-            self.validate_model(loop_type='virtual',coupling_type='QED')
+            self.validate_model(coupling_type='QED')
 	else:
 	    self.validate_model()
 	# HSS
@@ -648,7 +660,13 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
 
             # Extract process from process definition
-            self.validate_model('virtual')
+	    # HSS, 13/11/2012
+	    # Is it useless ?
+	    if args2:
+		self.validate_model(loop_type='virtual',coupling_type='QED')
+            else:
+            	self.validate_model(loop_type='virtual')
+	    # HSS
             if ',' in line:
                 myprocdef, line = self.extract_decay_chain_process(line)
             else:

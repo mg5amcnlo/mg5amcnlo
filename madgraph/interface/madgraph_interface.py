@@ -2743,8 +2743,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Check that we have something    
         if not myprocdef:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
-
-        if args[0]=='gauge' and myprocdef.get('perturbation_couplings'):
+	# HSS, 13/11/2012
+        if args[0]=='gauge' and myprocdef.get('perturbation_couplings') and not self.options['gauge']=='Feynman':
+	# HSS
             raise self.InvalidCmd("Processes involving loops can only be"+
                                                  " evaluated in Feynman gauge.")
 
