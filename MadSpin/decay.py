@@ -1117,8 +1117,6 @@ class production_topo(dict):
                     oldt=t
                     p1z=pp
                     pt=0.0
-                    p1x=0
-                    p2x=0
                     t=m1*m1+ma2-2.0*p1E*E_acms+2.0*p_acms*p1z
                     diff_t=abs((t-oldt)/t)*100
                     if (diff_t>2.0): 
@@ -1137,8 +1135,9 @@ class production_topo(dict):
                     return 0
             else:
                 pt=math.sqrt(pp*pp-p1z*p1z)
-                p1x=pt*branch["cosphi"]
-                p1y=pt*branch["sinphi"]
+
+            p1x=pt*branch["cosphi"]
+            p1y=pt*branch["sinphi"]
 
             p1=momentum(p1E,p1x,p1y,p1z)
 
@@ -1736,8 +1735,8 @@ class decay_misc:
 #                    print part_number
 #                    print pid
 #                    print " "
-                            mothup1=part_number
-                            mothup2=part_number
+                        mothup1=part_number
+                        mothup2=part_number
 #
 #             Extract color information so that we can write the color flow
 #
@@ -1874,20 +1873,20 @@ class decay_misc:
                     decayed_event.particle[part_number]=curr_event.resonance[part]
                     decayed_event.event2mg[part_number]=part_number
 #        Here I need to check that the daughters still have the correct mothup1 and mothup2
-                for part in curr_event.resonance.keys():
-                    mothup1=curr_event.resonance[part]["mothup1"]         
-                    mothup2=curr_event.resonance[part]["mothup2"] 
-                    if mothup1==index:
-                        if mothup2!=index: print "Warning: mothup1!=mothup2"
-                        curr_event.resonance[part]["mothup1"]=part_number
-                        curr_event.resonance[part]["mothup2"]=part_number
-                for part in curr_event.particle.keys():
-                    mothup1=curr_event.particle[part]["mothup1"]         
-                    mothup2=curr_event.particle[part]["mothup2"] 
-                    if mothup1==index:
-                        if mothup2!=index: print "Warning: mothup1!=mothup2"
-                        curr_event.particle[part]["mothup1"]=part_number
-                        curr_event.particle[part]["mothup2"]=part_number
+                    for part in curr_event.resonance.keys():
+                        mothup1=curr_event.resonance[part]["mothup1"]         
+                        mothup2=curr_event.resonance[part]["mothup2"] 
+                        if mothup1==index:
+                            if mothup2!=index: print "Warning: mothup1!=mothup2"
+                            curr_event.resonance[part]["mothup1"]=part_number
+                            curr_event.resonance[part]["mothup2"]=part_number
+                    for part in curr_event.particle.keys():
+                        mothup1=curr_event.particle[part]["mothup1"]         
+                        mothup2=curr_event.particle[part]["mothup2"] 
+                        if mothup1==index:
+                            if mothup2!=index: print "Warning: mothup1!=mothup2"
+                            curr_event.particle[part]["mothup1"]=part_number
+                            curr_event.particle[part]["mothup2"]=part_number
 
         decayed_event.nexternal=part_number        
 
