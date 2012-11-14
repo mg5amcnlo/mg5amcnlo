@@ -24,6 +24,8 @@ import sys
 import shutil
 import re
 import glob
+import tarfile
+import datetime
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
@@ -72,6 +74,8 @@ _proc_file_path = os.path.join(_mgme_file_path, 'UNITTEST_proc')
 # You can regenerate them by running the __main__ of this module if you believe
 # that one of them is outdated and want to automatically update it.
 _hc_comparison_files = os.path.join(_input_file_path,'LoopExporterTestComparison')
+_hc_comparison_tarball = os.path.join(_input_file_path,'LoopExporterTest.tar.bz2')
+_hc_comparison_modif_log = os.path.join(_input_file_path,'RefFilesModifs.log')
 
 #===============================================================================
 # LoopExporterTest Test
@@ -535,9 +539,38 @@ class IOExportMadLoopTest(unittest.TestCase,
     # Ex. ['../../Source/DHELAS/[.+\.(inc|f)]']
     filesChecked_filter = ['ALL']
     # To filter what tests you want to use, edit the tag ['ALL'] by the
-    # list of test folders and names you want in. 
+    # list of test folders and names you want in.
+    # You can prepend '-' to the folder or test name to veto it instead of
+    # selecting it. Typically, ['-longTest'] considers all tests but the
+    # longTest one (synthax not available for filenames)
     testFolders_filter = ['ALL']
     testNames_filter = ['ALL']  
+
+    def applyFilter(self, testName=None, folderName=None):
+        """ Returns True if the selected filter does not excluded the testName
+        and folderName given in argument. Specify None to disregard the filters
+        corresponding to this category."""
+        
+        if testName is None and folderName is None:
+            return True
+        
+        if not testName is None:
+            chosen = [f for f in self.testNames_filter if not f.startswith('-')]
+            veto = [f[1:] for f in self.testNames_filter if f.startswith('-')]
+            if testName in veto:
+                return False
+            if len(chosen)>0 and chosen!=['ALL'] and not testName in chosen:
+                return False
+
+        if not folderName is None:
+            chosen = [f for f in self.testFolders_filter if not f.startswith('-')]
+            veto = [f[1:] for f in self.testFolders_filter if f.startswith('-')]
+            if folderName in veto:
+                return False
+            if len(chosen)>0 and chosen!=['ALL'] and not folderName in chosen:
+                return False
+        
+        return True
 
     def toFileName(self, file_path):
         """ transforms a file specification like ../../Source/MODEL/myfile to
@@ -563,6 +596,15 @@ class IOExportMadLoopTest(unittest.TestCase,
         """load the models and exporters if necessary. Very similar to the one
         of LoopExporterTest, but I want to keep them separate."""
 
+        # Extract the tarball for hardcoded comparison if necessary
+        if not path.isdir(_hc_comparison_files):
+            if path.isfile(_hc_comparison_tarball):
+                tar = tarfile.open(_hc_comparison_tarball,mode='r:bz2')
+                tar.extractall(path.dirname(_hc_comparison_files))
+                tar.close()
+            else:
+                os.makedirs(_hc_comparison_files)
+            
         if not hasattr(self, 'models') or \
            not hasattr(self, 'fortran_models') or \
            not hasattr(self, 'loop_exporters') or \
@@ -638,7 +680,7 @@ class IOExportMadLoopTest(unittest.TestCase,
             
             # g g > t t~
             testName = 'gg_ttx'
-            if self.testNames_filter==['ALL'] or testName in self.testNames_filter:
+            if self.applyFilter(testName=testName, folderName=None):
                 myleglist = base_objects.LegList()
                 myleglist.append(base_objects.Leg({'id':21, 'state':False}))
                 myleglist.append(base_objects.Leg({'id':21, 'state':False}))
@@ -654,8 +696,7 @@ class IOExportMadLoopTest(unittest.TestCase,
                 myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
                 for exporter in ['default','optimized']:
                     testFolder = 'SM_virtQCD_%s'%exporter
-                    if self.testFolders_filter==['ALL'] or \
-                                          testFolder in self.testFolders_filter:
+                    if self.applyFilter(testName=None, folderName=testFolder): 
                         # For this first process, I check everything in both
                         # output modes
                         self.my_tests[(testFolder,testName)] = \
@@ -666,7 +707,7 @@ class IOExportMadLoopTest(unittest.TestCase,
             
             # d d~ > t t~
             testName = 'ddx_ttx'
-            if self.testNames_filter==['ALL'] or testName in self.testNames_filter:
+            if self.applyFilter(testName=testName, folderName=None):
                 myleglist = base_objects.LegList()
                 myleglist.append(base_objects.Leg({'id':1, 'state':False}))
                 myleglist.append(base_objects.Leg({'id':-1, 'state':False}))
@@ -682,8 +723,7 @@ class IOExportMadLoopTest(unittest.TestCase,
                 myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
                 for exporter in ['default','optimized']:
                     testFolder = 'SM_virtQCD_%s'%exporter
-                    if self.testFolders_filter==['ALL'] or \
-                                          testFolder in self.testFolders_filter:
+                    if self.applyFilter(testName=None, folderName=testFolder):
                         # In this case, the model and helas files would be the 
                         # same, so I only check the proc files
                         self.my_tests[(testFolder,testName)] = \
@@ -694,7 +734,7 @@ class IOExportMadLoopTest(unittest.TestCase,
 
             # d u~ > mu- vmx g
             testName = 'dux_mumvmxg'
-            if self.testNames_filter==['ALL'] or testName in self.testNames_filter:
+            if self.applyFilter(testName=testName, folderName=None):
                 myleglist = base_objects.LegList()
                 myleglist.append(base_objects.Leg({'id':1, 'state':False}))
                 myleglist.append(base_objects.Leg({'id':-2, 'state':False}))
@@ -711,8 +751,7 @@ class IOExportMadLoopTest(unittest.TestCase,
                 myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
                 for exporter in ['default','optimized']:
                     testFolder = 'SM_virtQCD_%s'%exporter
-                    if self.testFolders_filter==['ALL'] or \
-                                          testFolder in self.testFolders_filter:
+                    if self.applyFilter(testName=None, folderName=testFolder):
                         # In this case, the model and helas files are mostly
                         # new, so I add them.
                         self.my_tests[(testFolder,testName)] = \
@@ -720,13 +759,40 @@ class IOExportMadLoopTest(unittest.TestCase,
                              self.loop_exporters[exporter],
                              self.fortran_models['fortran_model'],
                              proc_files+helas_files+model_files]
-                            
+            
+            # Single top (rather long but really includes everything)
+            # g g > w- t b~
+            testName = 'gg_wmtbx'
+            if self.applyFilter(testName=testName, folderName=None):
+                myleglist = base_objects.LegList()
+                myleglist.append(base_objects.Leg({'id':21, 'state':False}))
+                myleglist.append(base_objects.Leg({'id':21, 'state':False}))
+                myleglist.append(base_objects.Leg({'id':-24, 'state':True}))
+                myleglist.append(base_objects.Leg({'id':6, 'state':True}))
+                myleglist.append(base_objects.Leg({'id':-5, 'state':True}))
+        
+                myproc = base_objects.Process({'legs': myleglist,
+                                     'model': self.models['loop_sm'],
+                                     'orders':{'QCD': 2, 'QED': 1},
+                                     'perturbation_couplings': ['QCD'],
+                                     'NLO_mode': 'virt'})
+                
+                myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
+                for exporter in ['default','optimized']:
+                    testFolder = 'SM_virtQCD_%s'%exporter
+                    if self.applyFilter(testName=None, folderName=testFolder):
+                        # In this case, the model and helas files are mostly
+                        # new, so I add them.
+                        self.my_tests[(testFolder,testName)] = \
+                            [loop_helas_objects.LoopHelasMatrixElement(myloopamp),
+                             self.loop_exporters[exporter],
+                             self.fortran_models['fortran_model'],
+                             proc_files+helas_files+model_files]
+            
             # And the loop induced g g > h h for good measure
             testName = 'gg_hh'
             testFolder = 'SM_virtQCD_LoopInduced'
-            if (self.testNames_filter==['ALL'] or testName in \
-                self.testNames_filter) and ( self.testFolders_filter==['ALL'] \
-                                      or testFolder in self.testFolders_filter):
+            if self.applyFilter(testName=testName, folderName=testFolder):
                 myleglist = base_objects.LegList()
                 myleglist.append(base_objects.Leg({'id':21, 'state':False}))
                 myleglist.append(base_objects.Leg({'id':21, 'state':False}))
@@ -759,11 +825,11 @@ class IOExportMadLoopTest(unittest.TestCase,
                 ./test_loop_exporters folderName/testName/fileName
                 
             If create_files is True (meant to be used by __main__ only) then
-            it will create the file instead of testing them.
+            it will create/update/remove the files instead of testing them.
         """
         # In create_files = True mode, we keep track of the modification to 
         # provide summary information
-        modifications={'updated':[],'created':[]}
+        modifications={'updated':[],'created':[], 'removed':[]}
         
         if self.verbose: print "\n== Operational mode : file %s ==\n"%\
                                      ('CREATION' if create_files else 'TESTING')
@@ -781,8 +847,7 @@ class IOExportMadLoopTest(unittest.TestCase,
             
             proc_name='P'+loop_me.get('processes')[0].shell_string()
             files_path = pjoin(_proc_file_path,'SubProcesses',proc_name)
-            
-            _hc_comparison_files
+
             # First create the list of files to check as the user might be using
             # regular expressions.
             filesToCheck=[]
@@ -799,6 +864,24 @@ class IOExportMadLoopTest(unittest.TestCase,
                                       not path.isdir(f) and not path.islink(f))]
                 else:
                     filesToCheck.append(fname)
+                    
+            if create_files:
+                # Remove files which are no longer used for comparison
+                activeFiles = [self.toFileName(f) for f in filesToCheck]
+                for file in glob.glob(pjoin(_hc_comparison_files,folder_name,\
+                                                                test_name,'*')):
+                    # Ignore the .BackUp files and directories
+                    if path.basename(file).endswith('.BackUp') or\
+                                                               path.isdir(file):
+                        continue
+                    if path.basename(file) not in activeFiles:
+                        os.remove(file)
+                        if self.verbose: print "    > [ REMOVED ] %s"\
+                                                            %path.basename(file)
+                        modifications['removed'].append(
+                                            '/'.join(str(file).split('/')[-3:]))
+
+                    
             # Make sure it is not filtered out by the user-filter
             if self.filesChecked_filter!=['ALL']:
                 new_filesToCheck = []
@@ -834,7 +917,14 @@ class IOExportMadLoopTest(unittest.TestCase,
                         raise MadGraph5Error, 'The file %s'%str(comparison_path)+\
                                                               ' does not exist.'
                     goal = open(comparison_path).read()%misc.get_pkg_info()
-                    self.assertFileContains(open(file_path), goal)
+                    if not self.verbose:
+                        self.assertFileContains(open(file_path), goal)
+                    else:
+                        try:
+                            self.assertFileContains(open(file_path), goal)
+                        except AssertionError:
+                            print "    > %s differs from the reference."%fname
+                            
                 else:                        
                     if not path.isdir(pjoin(_hc_comparison_files,folder_name)):
                         os.makedirs(pjoin(_hc_comparison_files,folder_name))
@@ -845,16 +935,17 @@ class IOExportMadLoopTest(unittest.TestCase,
                     # Transform the package information to make it a template
                     file = open(file_path,'r')
                     target=file.read()
-                    target.replace('MadGraph 5 v. %(version)s, %(date)s'\
-                                                       %misc.get_pkg_info(),
-                                      'MadGraph 5 v. %(version)s, %(date)s')
+                    target = target.replace('MadGraph 5 v. %(version)s, %(date)s'\
+                                                           %misc.get_pkg_info(),
+                                          'MadGraph 5 v. %(version)s, %(date)s')
                     file.close()
                     if os.path.isfile(comparison_path):
                         file = open(comparison_path,'r')
                         existing = file.read()
                         file.close()
                         if existing == target:
-                            if self.verbose: print "    > [ IDENTICAL ] %s"%fname
+                            # The following print statement is a bit of a flood
+                            # if self.verbose: print "    > [ IDENTICAL ] %s"%fname
                             continue
                         else:
                             if self.verbose: print "    > [ UPDATED ] %s"%fname
@@ -868,8 +959,7 @@ class IOExportMadLoopTest(unittest.TestCase,
                         mv(comparison_path,back_up_path)
                     else:
                         if self.verbose: print "    > [ CREATED ] %s"%fname
-
-                    modifications['created'].append(
+                        modifications['created'].append(
                                       '/'.join(comparison_path.split('/')[-3:]))
                     file = open(comparison_path,'w')
                     file.write(target)
@@ -878,9 +968,13 @@ class IOExportMadLoopTest(unittest.TestCase,
             # Clean the process created
             if os.path.isdir(_proc_file_path):
                 shutil.rmtree(_proc_file_path)
-        # Monitor the modifications when in creation files mode.
+
+        # Monitor the modifications when in creation files mode by returning the
+        # modifications dictionary.
         if create_files:
             return modifications
+        else:
+            return 'test_over'
 
     # This is just so that this method can be instantiated from anywhere as it 
     # is a child of 
@@ -909,6 +1003,12 @@ if __name__ == '__main__':
     This includes only the files in this directory matching it.
     Typically '../../Source/DHELAS/[.+\.(inc|f)]' matches any file in DHELAS
     with extension .inc or .f
+    Also, you can prepend '-' to the folder or test name to veto it instead of
+    selecting it. Typically, ['-longTest'] considers all tests but the
+    'longTest' one (synthax not available for filenames).
+    
+    Finally, you can launch a test only from here too. Same synthax as above,
+    but add the argument --test somewhere.
     """
    
     launcher = IOExportMadLoopTest()
@@ -916,6 +1016,7 @@ if __name__ == '__main__':
     launcher.testFolders_filter = ['ALL']
     launcher.testNames_filter = ['ALL']    
     launcher.verbose = True
+    UpdateFiles=True
     
     for arg in sys.argv[1:]:
         if arg.startswith('--folders='):
@@ -924,7 +1025,9 @@ if __name__ == '__main__':
             launcher.testNames_filter = arg[12:].split('&')   
         elif arg.startswith('--filePaths='):
             launcher.filesChecked_filter = arg[12:].split('&')
-        elif len(sys.argv)==2 and not arg.startswith('--') and '/' in arg:
+        elif arg == '--test':
+            UpdateFiles = False
+        elif not arg.startswith('--') and '/' in arg:
             launcher.testFolders_filter = arg.split('/')[0].split('&')
             launcher.testNames_filter = arg.split('/')[1].split('&')
             launcher.filesChecked_filter = '/'.join(arg.split('/')[2:]).split('&')
@@ -936,13 +1039,40 @@ if __name__ == '__main__':
     print "INFO:: Using test names %s"%str(launcher.testNames_filter)         
     print "INFO:: Using file paths %s"%str(launcher.filesChecked_filter)      
     launcher.setUp()
-    modifications = launcher.test_files(create_files=True)
+    modifications = launcher.test_files(create_files=UpdateFiles)
+    if modifications == 'test_over':
+        print "Loop exporters test successfully finished."
+        sys.exit(0)        
+    elif not isinstance(modifications,dict):
+        print "Error during the files update."
+        sys.exit(0)
+
     if sum(len(v) for v in modifications.values())>0:
+        # Display the modifications
+        text = " \nModifications performed on %s at %s in"%(\
+                         str(datetime.date.today()),misc.format_timer(0.0)[14:])
+        text += '\n   MadGraph 5 v. %(version)s, %(date)s\n'%misc.get_pkg_info()
         for key in modifications.keys():
             if len(modifications[key])==0:
                 continue
-            print "\nThe following reference files have been %s :"%key
-            print '\n'.join(["   %s"%mod for mod in modifications[key]])
+            text += "The following reference files have been %s :"%key
+            text += '\n'+'\n'.join(["   %s"%mod for mod in modifications[key]])
+            text += '\n'
+        log = open(_hc_comparison_modif_log,mode='a')
+        log.write(text)
+        log.close()
+        print text
+        # Update the tarball, while removing the .backups.
+        def noBackUps(tarinfo):
+            if tarinfo.name.endswith('.BackUp'):
+                return None
+            else:
+                return tarinfo
+        tar = tarfile.open(_hc_comparison_tarball, "w:bz2")
+        tar.add(_hc_comparison_files, \
+                  arcname=path.basename(_hc_comparison_files), filter=noBackUps)
+        tar.close()
+        print "INFO:: tarball %s updated"%str(_hc_comparison_tarball)
     else:
         print "\nAll files already identical to the reference ones."+\
               " No update necessary."
