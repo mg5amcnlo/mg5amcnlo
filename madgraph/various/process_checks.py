@@ -772,7 +772,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                                            'not well formatted.'
         
     @classmethod    
-    def run_initialization(cls, run_dir, check_sa_dir, infos,\
+    def run_initialization(cls, run_dir=None, SubProc_dir=None, infos=None,\
                             req_files = ['HelFilter.dat','LoopFilter.dat'],
                             attempts = [3,15]):
         """ Run the initialization of the process in 'run_dir' with success 
@@ -780,13 +780,38 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         The directory containing the driving source code 'check_sa.f'.
         The list attempt gives the successive number of PS points the 
         initialization should be tried with before calling it failed.
-        Returns the number of PS points which were necessary for the init."""
+        Returns the number of PS points which were necessary for the init.
+        Notice at least run_dir or SubProc_dir must be provided."""
+        
+        # If the user does not want detailed info, then set the dictionary
+        # to a dummy one.
+        if infos is None:
+            infos={}
+        
+        if SubProc_dir is None and run_dir is None:
+            raise MadGraph5Error, 'At least one of [SubProc_dir,run_dir] must'+\
+                                           ' be provided in run_initialization.'
+        
+        # If the user does not specify where is check_sa.f, then it is assumed
+        # to be one levels above run_dir
+        if SubProc_dir is None:
+            SubProc_dir = os.path.abspath(os.path.join(run_dir,os.pardir))
+            
+        if run_dir is None:
+            directories =[ dir for dir in glob.glob(os.path.join(SubProc_dir,\
+                                             'P[0-9]*')) if os.path.isdir(dir) ]
+            if directories:
+                run_dir = directories[0]
+            else:
+                raise MadGraph5Error, 'Could not find a valid running directory'+\
+                                                      ' in %s.'%str(SubProc_dir)
+
         to_attempt = copy.copy(attempts)
         to_attempt.reverse()
         my_req_files = copy.copy(req_files)
         
         # Make sure that LoopFilter really is needed.
-        MLCardPath = os.path.join(check_sa_dir,os.pardir,'Cards',\
+        MLCardPath = os.path.join(SubProc_dir,os.pardir,'Cards',\
                                                             'MadLoopParams.dat')
         if not os.path.isfile(MLCardPath):
             raise MadGraph5Error, 'Could not find MadLoopParams.dat at %s.'\
@@ -809,7 +834,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             curr_attempt = to_attempt.pop()+1
             # Plus one because the filter are written on the next PS point after
             # initialization is performed.
-            cls.fix_PSPoint_in_check(check_sa_dir, read_ps = False, 
+            cls.fix_PSPoint_in_check(SubProc_dir, read_ps = False, 
                                                          npoints = curr_attempt)
             compile_time, run_time = cls.make_and_run(run_dir)
             if compile_time==None:

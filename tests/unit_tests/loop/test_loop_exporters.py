@@ -22,6 +22,8 @@ import math
 import os
 import sys
 import shutil
+import re
+import glob
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
@@ -42,22 +44,34 @@ import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.helas_call_writers as helas_call_writers
-import models.import_ufo as models
+import models.import_ufo as import_ufo
+import madgraph.various.misc as misc
+import madgraph.various.process_checks as process_checks
 import aloha
 import tests.unit_tests.various.test_aloha as test_aloha
 import aloha.create_aloha as create_aloha
 from tests.unit_tests.various.test_aloha import set_global
+import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 
+from madgraph.iolibs.files import cp, ln, mv
 from madgraph import MadGraph5Error
+
+pjoin = os.path.join
+path = os.path
 
 _file_path = os.path.dirname(os.path.realpath(__file__))
 
-_input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
-                                'input_files')
-_mgme_file_path = os.path.join(_file_path, *([os.path.pardir]*3))
+_input_file_path = os.path.abspath(os.path.join(_file_path, \
+                                  os.path.pardir, os.path.pardir,'input_files'))
+_mgme_file_path = os.path.abspath(os.path.join(_file_path, *([os.path.pardir]*3)))
 _loop_file_path = os.path.join(_mgme_file_path,'Template','loop_material')
 _cuttools_file_path = os.path.join(_mgme_file_path, 'vendor','CutTools')
-_proc_file_path = os.path.join(_mgme_file_path, 'test_proc')
+_proc_file_path = os.path.join(_mgme_file_path, 'UNITTEST_proc')
+
+# The folder below contains the files to which the exporter outputs are contained.
+# You can regenerate them by running the __main__ of this module if you believe
+# that one of them is outdated and want to automatically update it.
+_hc_comparison_files = os.path.join(_input_file_path,'LoopExporterTestComparison')
 
 #===============================================================================
 # LoopExporterTest Test
@@ -65,40 +79,31 @@ _proc_file_path = os.path.join(_mgme_file_path, 'test_proc')
 class LoopExporterTest(unittest.TestCase):
     """Test class for all functions related to the Loop exporters."""
 
-    myloopmodel = loop_base_objects.LoopModel()
-    fortran_model= helas_call_writers.FortranUFOHelasCallWriter()
-    
-    loopExporter = loop_exporters.LoopProcessExporterFortranSA(\
-                                  _mgme_file_path, _proc_file_path,
-                                  {'clean':False, 'complex_mass':False, 
-                                   'export_format':'madloop','mp':True,
-                                   'loop_dir':_loop_file_path,
-                                   'cuttools_dir':_cuttools_file_path,
-                                   'fortran_compiler':'gfortran'})
-    
-    loopOptimizedExporter = loop_exporters.LoopProcessOptimizedExporterFortranSA(\
-                                  _mgme_file_path, _proc_file_path,
-                                  {'clean':False, 'complex_mass':False, 
-                                   'export_format':'madloop','mp':True,
-                                   'loop_dir':_loop_file_path,
-                                   'cuttools_dir':_cuttools_file_path,
-                                   'fortran_compiler':'gfortran'})
-
     def setUp(self):
-        """load the NLO toy model"""
-        self.loadModel("UFO")
-        
-    def loadModel(self, mode="UFO"):
-        """ Either loads the model from a UFO model in the input files
-        (if mode is set to "UFO") or use the equivalent hardcoded one."""
-        # Import it from the stone-graved smQCDNLO model in the input_files of
-        # the test.
-        if mode=="UFO":
-            self.myloopmodel = models.import_full_model(os.path.join(\
-                                                _input_file_path,'LoopSMTest'))
+        """load the models and exporters if necessary."""
+        if not hasattr(self, 'mymodel') or \
+           not hasattr(self, 'fortran_model') or \
+           not hasattr(self, 'loopExporter') or \
+           not hasattr(self, 'loopOptimizedExporter'):
+            self.mymodel = import_ufo.import_model('loop_sm')
             self.fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
-                                                            self.myloopmodel)
-            return
+                                                               self.myloopmodel)
+            self.loopExporter = loop_exporters.LoopProcessExporterFortranSA(\
+                                  _mgme_file_path, _proc_file_path,
+                                  {'clean':False, 'complex_mass':False, 
+                                   'export_format':'madloop','mp':True,
+                                   'loop_dir':_loop_file_path,
+                                   'cuttools_dir':_cuttools_file_path,
+                                   'fortran_compiler':'gfortran'})
+    
+            self.loopOptimizedExporter = loop_exporters.\
+                                  LoopProcessOptimizedExporterFortranSA(\
+                                  _mgme_file_path, _proc_file_path,
+                                  {'clean':False, 'complex_mass':False, 
+                                   'export_format':'madloop','mp':True,
+                                   'loop_dir':_loop_file_path,
+                                   'cuttools_dir':_cuttools_file_path,
+                                   'fortran_compiler':'gfortran'})
 
     @test_aloha.set_global(loop=True, unitary=False, mp=True, cms=False) 
     def check_output_sanity(self, loopME, chosenLoopExporter=None):
@@ -150,11 +155,16 @@ class LoopExporterTest(unittest.TestCase):
                'nexternal.inc','born_matrix.f','coupl.inc',
                'makefile','ngraphs.inc','born_matrix.ps',
                'cts_mpc.h','loop_matrix.f','mpmodule.mod','pmass.inc']
-#        files.append('loop_matrix.ps')
+        files.append('loop_matrix.ps')
         for file in files:
             self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
                              ,'SubProcesses',proc_name,file)))
 
+        # Make sure it initializes fine
+        n_points = process_checks.LoopMatrixElementTimer.run_initialization( \
+               run_dir = os.path.join(_proc_file_path,'SubProcesses',proc_name))
+        self.assertTrue(not n_points is None)
+    
     @test_aloha.set_global()
     def test_aloha_loop_HELAS_subroutines(self):
         """ Test that Aloha correctly processes loop HELAS subroutines. """
@@ -505,3 +515,436 @@ class LoopExporterTest(unittest.TestCase):
         myloopamplitude.generate_diagrams()
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
+
+#===============================================================================
+# IOExportMadLoopTest
+#===============================================================================
+class IOExportMadLoopTest(unittest.TestCase,
+                     test_file_writers.CheckFileCreate):
+    """Test class for the loop exporter modules. It uses hardcoded output 
+    for the comparisons."""
+    
+    # To control the verbosity of the test
+    verbose = False
+    # To filter files which are checked, edit the tag ['ALL'] by the 
+    # chosen filenames.
+    # These filenames should be the path relative to the
+    # position SubProcess/<P0_proc_name>/ in the output. Notice that you can
+    # use the parent directory keyword ".." and instead of the filename you
+    # can exploit the syntax [regexp] (brackets not part of the regexp)
+    # Ex. ['../../Source/DHELAS/[.+\.(inc|f)]']
+    filesChecked_filter = ['ALL']
+    # To filter what tests you want to use, edit the tag ['ALL'] by the
+    # list of test folders and names you want in. 
+    testFolders_filter = ['ALL']
+    testNames_filter = ['ALL']  
+
+    def toFileName(self, file_path):
+        """ transforms a file specification like ../../Source/MODEL/myfile to
+        %..%..%Source%MODEL%myfile """
+        fpath = copy.copy(file_path)
+        if not isinstance(fpath, str):
+            fpath=str(fpath)
+        if '/' not in fpath:
+            return fpath
+        
+        return '%'+'%'.join(file_path.split('/'))
+        
+    def toFilePath(self, file_name):
+        """ transforms a file name specification like %..%..%Source%MODEL%myfile
+        to ../../Source/MODEL/myfile"""
+        
+        if not file_name.startswith('%'):
+            return file_name
+        
+        return pjoin(file_name[1:].split('%'))
+
+    def setUp(self):
+        """load the models and exporters if necessary. Very similar to the one
+        of LoopExporterTest, but I want to keep them separate."""
+
+        if not hasattr(self, 'models') or \
+           not hasattr(self, 'fortran_models') or \
+           not hasattr(self, 'loop_exporters') or \
+           not hasattr(self, 'my_procs'):
+            self.models = { \
+                'loop_sm' : import_ufo.import_model('loop_sm') 
+                          }
+            self.fortran_models = {
+                'fortran_model' : helas_call_writers.FortranUFOHelasCallWriter(\
+                                                         self.models['loop_sm']) 
+                                  }
+            
+            self.loop_exporters = {
+                'default' : loop_exporters.LoopProcessExporterFortranSA(\
+                                  _mgme_file_path, _proc_file_path,
+                                  {'clean':False, 'complex_mass':False, 
+                                   'export_format':'madloop','mp':True,
+                                   'loop_dir':_loop_file_path,
+                                   'cuttools_dir':_cuttools_file_path,
+                                   'fortran_compiler':'gfortran'}),
+                'optimized' : loop_exporters.\
+                                  LoopProcessOptimizedExporterFortranSA(\
+                                  _mgme_file_path, _proc_file_path,
+                                  {'clean':False, 'complex_mass':False, 
+                                   'export_format':'madloop','mp':True,
+                                   'loop_dir':_loop_file_path,
+                                   'cuttools_dir':_cuttools_file_path,
+                                   'fortran_compiler':'gfortran'})
+                                  }
+            
+            # Notice that here the file should be the path relative to the
+            # position SubProcess/<P0_proc_name>/ in the output.
+            # You are allowed to use the parent directory specification ..
+            # You can use the synthax [regexp] instead of a specific filename.
+            # This includes only the files in this directory matching it.
+            # Typically '../../Source/DHELAS/[.+\.(inc|f)]' matches any file
+            # with the extension .f or .inc.
+            # Notice that the squared brackets are not part of the reg expr. 
+            
+            # The version below is for the hardcoded version
+            proc_files = ['CT_interface.f',
+                            'ColorDenomFactors.dat',
+                            'ColorNumFactors.dat',
+                            'HelConfigs.dat',
+                            'improve_ps.f',
+                            'loop_matrix.f',
+                            'loop_num.f',
+                            'pmass.inc',
+                            'nexternal.inc']
+            # It's best to replace it with the regexp lookup
+            proc_files = ['[.+\.(f|dat|inc)]']
+            
+            # For the DHELAS and model folder, only the regexp make sense
+            model_files = ['../../Source/MODEL/[.+\.(f|inc)]']            
+            helas_files = ['../../Source/DHELAS/[.+\.(f|inc)]']            
+            
+            # Of course feel free to use whatever pleases you for your own
+            # specific tests which might target one specific file only.
+            
+            # Now we create the various processes for which we want to perform
+            # the comparison versus old outputs.
+            # Each class of test is stored in a dictionary with entries of 
+            # the format:
+            # {(folder_name, test_name) : 
+            #    [LoopAmplitude, exporter, fortran_model, files_to_test]}
+            # The format above is typically useful because we don't aim at
+            # testing all processes for all exporters and all model, but we 
+            # choose certain combinations which spans most possibilities.
+            # Notice that the process and model can anyway be recovered from the 
+            # LoopAmplitude object, so I did not bother to put it here.
+            
+            self.my_tests = {}
+            
+            # g g > t t~
+            testName = 'gg_ttx'
+            if self.testNames_filter==['ALL'] or testName in self.testNames_filter:
+                myleglist = base_objects.LegList()
+                myleglist.append(base_objects.Leg({'id':21, 'state':False}))
+                myleglist.append(base_objects.Leg({'id':21, 'state':False}))
+                myleglist.append(base_objects.Leg({'id':6, 'state':True}))
+                myleglist.append(base_objects.Leg({'id':-6, 'state':True}))
+        
+                myproc = base_objects.Process({'legs': myleglist,
+                                     'model': self.models['loop_sm'],
+                                     'orders':{'QCD': 2, 'QED': 0},
+                                     'perturbation_couplings': ['QCD'],
+                                     'NLO_mode': 'virt'})
+                
+                myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
+                for exporter in ['default','optimized']:
+                    testFolder = 'SM_virtQCD_%s'%exporter
+                    if self.testFolders_filter==['ALL'] or \
+                                          testFolder in self.testFolders_filter:
+                        # For this first process, I check everything in both
+                        # output modes
+                        self.my_tests[(testFolder,testName)] = \
+                            [loop_helas_objects.LoopHelasMatrixElement(myloopamp),
+                             self.loop_exporters[exporter],
+                             self.fortran_models['fortran_model'],
+                             proc_files+helas_files+model_files]
+            
+            # d d~ > t t~
+            testName = 'ddx_ttx'
+            if self.testNames_filter==['ALL'] or testName in self.testNames_filter:
+                myleglist = base_objects.LegList()
+                myleglist.append(base_objects.Leg({'id':1, 'state':False}))
+                myleglist.append(base_objects.Leg({'id':-1, 'state':False}))
+                myleglist.append(base_objects.Leg({'id':6, 'state':True}))
+                myleglist.append(base_objects.Leg({'id':-6, 'state':True}))
+        
+                myproc = base_objects.Process({'legs': myleglist,
+                                     'model': self.models['loop_sm'],
+                                     'orders':{'QCD': 2, 'QED': 0},
+                                     'perturbation_couplings': ['QCD'],
+                                     'NLO_mode': 'virt'})
+                
+                myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
+                for exporter in ['default','optimized']:
+                    testFolder = 'SM_virtQCD_%s'%exporter
+                    if self.testFolders_filter==['ALL'] or \
+                                          testFolder in self.testFolders_filter:
+                        # In this case, the model and helas files would be the 
+                        # same, so I only check the proc files
+                        self.my_tests[(testFolder,testName)] = \
+                            [loop_helas_objects.LoopHelasMatrixElement(myloopamp),
+                             self.loop_exporters[exporter],
+                             self.fortran_models['fortran_model'],
+                             proc_files]
+
+            # d u~ > mu- vmx g
+            testName = 'dux_mumvmxg'
+            if self.testNames_filter==['ALL'] or testName in self.testNames_filter:
+                myleglist = base_objects.LegList()
+                myleglist.append(base_objects.Leg({'id':1, 'state':False}))
+                myleglist.append(base_objects.Leg({'id':-2, 'state':False}))
+                myleglist.append(base_objects.Leg({'id':13, 'state':True}))
+                myleglist.append(base_objects.Leg({'id':-14, 'state':True}))
+                myleglist.append(base_objects.Leg({'id':21, 'state':True}))
+        
+                myproc = base_objects.Process({'legs': myleglist,
+                                     'model': self.models['loop_sm'],
+                                     'orders':{'QCD': 1, 'QED': 2},
+                                     'perturbation_couplings': ['QCD'],
+                                     'NLO_mode': 'virt'})
+                
+                myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
+                for exporter in ['default','optimized']:
+                    testFolder = 'SM_virtQCD_%s'%exporter
+                    if self.testFolders_filter==['ALL'] or \
+                                          testFolder in self.testFolders_filter:
+                        # In this case, the model and helas files are mostly
+                        # new, so I add them.
+                        self.my_tests[(testFolder,testName)] = \
+                            [loop_helas_objects.LoopHelasMatrixElement(myloopamp),
+                             self.loop_exporters[exporter],
+                             self.fortran_models['fortran_model'],
+                             proc_files+helas_files+model_files]
+                            
+            # And the loop induced g g > h h for good measure
+            testName = 'gg_hh'
+            testFolder = 'SM_virtQCD_LoopInduced'
+            if (self.testNames_filter==['ALL'] or testName in \
+                self.testNames_filter) and ( self.testFolders_filter==['ALL'] \
+                                      or testFolder in self.testFolders_filter):
+                myleglist = base_objects.LegList()
+                myleglist.append(base_objects.Leg({'id':21, 'state':False}))
+                myleglist.append(base_objects.Leg({'id':21, 'state':False}))
+                myleglist.append(base_objects.Leg({'id':25, 'state':True}))
+                myleglist.append(base_objects.Leg({'id':25, 'state':True}))
+        
+                myproc = base_objects.Process({'legs': myleglist,
+                                     'model': self.models['loop_sm'],
+                                     'orders':{'QCD': 1, 'QED': 2},
+                                     'perturbation_couplings': ['QCD'],
+                                     'NLO_mode': 'virt'})
+                
+                myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
+                # In this case, the model and helas files are mostly
+                # new, so I add them.
+                self.my_tests[(testFolder,testName)] = \
+                    [loop_helas_objects.LoopHelasMatrixElement(myloopamp),
+                     self.loop_exporters['default'],
+                     self.fortran_models['fortran_model'],
+                     proc_files+helas_files+model_files]
+
+    def test_files(self, create_files = False):
+        """ Compare the files of the chosen tests against the hardcoded ones
+            stored in tests/input_files/LoopExporterTestComparison. If you see
+            an error in the comparison and you are sure that the newest output
+            is correct (i.e. you understand that this modification is meant to
+            be so). Then feel free to automatically regenerate this file with
+            the newest version by doing 
+            
+                ./test_loop_exporters folderName/testName/fileName
+                
+            If create_files is True (meant to be used by __main__ only) then
+            it will create the file instead of testing them.
+        """
+        # In create_files = True mode, we keep track of the modification to 
+        # provide summary information
+        modifications={'updated':[],'created':[]}
+        
+        if self.verbose: print "\n== Operational mode : file %s ==\n"%\
+                                     ('CREATION' if create_files else 'TESTING')
+        for (folder_name, test_name),\
+             [loop_me, exporter, fortran_model, files] in self.my_tests.items():
+            if self.verbose: print "Processing %s in %s"%(test_name,folder_name)
+            model = loop_me.get('processes')[0].get('model')
+            if os.path.isdir(_proc_file_path):
+                shutil.rmtree(_proc_file_path)
+            exporter.copy_v4template(model.get('name'))
+            exporter.generate_loop_subprocess(loop_me, fortran_model)
+            wanted_lorentz = loop_me.get_used_lorentz()
+            wanted_couplings = list(set(sum(loop_me.get_used_couplings(),[])))
+            exporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
+            
+            proc_name='P'+loop_me.get('processes')[0].shell_string()
+            files_path = pjoin(_proc_file_path,'SubProcesses',proc_name)
+            
+            _hc_comparison_files
+            # First create the list of files to check as the user might be using
+            # regular expressions.
+            filesToCheck=[]
+            for fname in files:
+                if fname.endswith(']'):
+                    split=fname[:-1].split('[')
+                    # folder without the final /
+                    folder=split[0][:-1]
+                    search = re.compile('['.join(split[1:]))
+                    # In filesToCheck, we must remove the files_path/ prepended
+                    filesToCheck += [ f[(len(str(files_path))+1):]
+                           for f in glob.glob(pjoin(files_path,folder,'*')) if \
+                               (not search.match(path.basename(f)) is None and \
+                                      not path.isdir(f) and not path.islink(f))]
+                else:
+                    filesToCheck.append(fname)
+            # Make sure it is not filtered out by the user-filter
+            if self.filesChecked_filter!=['ALL']:
+                new_filesToCheck = []
+                for file in filesToCheck:
+                    # Try if it matches any filter
+                    for filter in self.filesChecked_filter:
+                        # A regular expression
+                        if filter.endswith(']'):
+                            split=filter[:-1].split('[')
+                            # folder without the final /
+                            folder=split[0][:-1]
+                            if folder!=path.dirname(pjoin(file)):
+                                continue
+                            search = re.compile('['.join(split[1:]))
+                            if not search.match(path.basename(file)) is None:
+                                new_filesToCheck.append(file)
+                                break    
+                        # Just the exact filename
+                        elif filter==file:
+                            new_filesToCheck.append(file)
+                            break
+                filesToCheck = new_filesToCheck
+            
+            # Now we can scan them and process them one at a time
+            for fname in filesToCheck:
+                file_path = path.abspath(pjoin(files_path,fname))
+                self.assertTrue(path.isfile(file_path),
+                                            'File %s not found.'%str(file_path))
+                comparison_path = pjoin(_hc_comparison_files,\
+                                    folder_name,test_name,self.toFileName(fname))
+                if not create_files:
+                    if not os.path.isfile(comparison_path):
+                        raise MadGraph5Error, 'The file %s'%str(comparison_path)+\
+                                                              ' does not exist.'
+                    goal = open(comparison_path).read()%misc.get_pkg_info()
+                    self.assertFileContains(open(file_path), goal)
+                else:                        
+                    if not path.isdir(pjoin(_hc_comparison_files,folder_name)):
+                        os.makedirs(pjoin(_hc_comparison_files,folder_name))
+                    if not path.isdir(pjoin(_hc_comparison_files,folder_name,
+                                                                    test_name)):
+                        os.makedirs(pjoin(_hc_comparison_files,folder_name,
+                                                                    test_name))
+                    # Transform the package information to make it a template
+                    file = open(file_path,'r')
+                    target=file.read()
+                    target.replace('MadGraph 5 v. %(version)s, %(date)s'\
+                                                       %misc.get_pkg_info(),
+                                      'MadGraph 5 v. %(version)s, %(date)s')
+                    file.close()
+                    if os.path.isfile(comparison_path):
+                        file = open(comparison_path,'r')
+                        existing = file.read()
+                        file.close()
+                        if existing == target:
+                            if self.verbose: print "    > [ IDENTICAL ] %s"%fname
+                            continue
+                        else:
+                            if self.verbose: print "    > [ UPDATED ] %s"%fname
+                            modifications['updated'].append(
+                                      '/'.join(comparison_path.split('/')[-3:]))
+                        # Copying the existing reference as a backup
+                        back_up_path = pjoin(_hc_comparison_files,folder_name,\
+                                     test_name,self.toFileName(fname)+'.BackUp')
+                        if os.path.isfile(back_up_path):
+                            os.remove(back_up_path)
+                        mv(comparison_path,back_up_path)
+                    else:
+                        if self.verbose: print "    > [ CREATED ] %s"%fname
+
+                    modifications['created'].append(
+                                      '/'.join(comparison_path.split('/')[-3:]))
+                    file = open(comparison_path,'w')
+                    file.write(target)
+                    file.close()
+
+            # Clean the process created
+            if os.path.isdir(_proc_file_path):
+                shutil.rmtree(_proc_file_path)
+        # Monitor the modifications when in creation files mode.
+        if create_files:
+            return modifications
+
+    # This is just so that this method can be instantiated from anywhere as it 
+    # is a child of 
+    def runTest(self,*args,**opts):
+        return super(self,IOExportMadLoopTest).runTest(*args,**opts)
+
+if __name__ == '__main__':
+    help = """ 
+    To ease the actualization of these tests when some of the hardcoded
+    comparison file must be updated, you can simply run this module in
+    standalone. When provided with no argument, it will update everything.
+    Otherwise run it with these possible arguments (all optional) :
+
+           --folders="folder1&folder2&folder3&etc..."
+           --testNames="testName1&testName2&testName3&etc..."
+           --filePaths="filePath1&filePath2&filePath3&etc..."
+    
+    or directly like this:
+    
+            python test_loop_exporter "folders/testNames/filePaths"
+    
+    Notice that the filePath use a file path relative to
+    the position SubProcess/<P0_proc_name>/ in the output.
+    You are allowed to use the parent directory specification ".."
+    You can use the synthax [regexp] instead of a specific filename.
+    This includes only the files in this directory matching it.
+    Typically '../../Source/DHELAS/[.+\.(inc|f)]' matches any file in DHELAS
+    with extension .inc or .f
+    """
+   
+    launcher = IOExportMadLoopTest()
+    launcher.filesChecked_filter = ['ALL']
+    launcher.testFolders_filter = ['ALL']
+    launcher.testNames_filter = ['ALL']    
+    launcher.verbose = True
+    
+    for arg in sys.argv[1:]:
+        if arg.startswith('--folders='):
+            launcher.testFolders_filter = arg[10:].split('&')
+        elif arg.startswith('--testNames='):
+            launcher.testNames_filter = arg[12:].split('&')   
+        elif arg.startswith('--filePaths='):
+            launcher.filesChecked_filter = arg[12:].split('&')
+        elif len(sys.argv)==2 and not arg.startswith('--') and '/' in arg:
+            launcher.testFolders_filter = arg.split('/')[0].split('&')
+            launcher.testNames_filter = arg.split('/')[1].split('&')
+            launcher.filesChecked_filter = '/'.join(arg.split('/')[2:]).split('&')
+        else:
+            print help
+            sys.exit(0)
+    
+    print "INFO:: Using folders %s"%str(launcher.testFolders_filter)    
+    print "INFO:: Using test names %s"%str(launcher.testNames_filter)         
+    print "INFO:: Using file paths %s"%str(launcher.filesChecked_filter)      
+    launcher.setUp()
+    modifications = launcher.test_files(create_files=True)
+    if sum(len(v) for v in modifications.values())>0:
+        for key in modifications.keys():
+            if len(modifications[key])==0:
+                continue
+            print "\nThe following reference files have been %s :"%key
+            print '\n'.join(["   %s"%mod for mod in modifications[key]])
+    else:
+        print "\nAll files already identical to the reference ones."+\
+              " No update necessary."
+
+
