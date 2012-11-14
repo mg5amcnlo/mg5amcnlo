@@ -295,6 +295,14 @@ class Banner:
         self.re_search['model']="^import.*model.*"
         self.re_search['generate']="^generate.*"
 
+    def check_pid(self,pid2label):
+        """Remove any info from the banner related to a PID that is not in the model """
+
+        for item1 in self.param_keys:
+            pid_set=self.param[item1].keys()
+            for pid in pid_set:
+                if pid not in pid2label.keys(): del self.param[item1][pid]
+
 
     def ReadBannerFromFile(self):
         """Read the whole banner"""    
@@ -1505,7 +1513,7 @@ class width_estimate:
 	    if line=="": break
 	    list1=line.split()
 	    if len(list1)==0: continue
-	    if list1[0]=='DECAY':
+	    if list1[0]=='DECAY' and list1[1] in self.pid2label.keys():
 		label_mother=self.pid2label[int(list1[1])]
                 pos=trappe.tell()
                 line=trappe.readline()  
@@ -2660,6 +2668,12 @@ class decay_all_events:
             shutil.rmtree(pjoin(path_me,"full_me"))
         decay_tools=decay_misc()
 
+        if (mybanner.proc["model"]=='loop_sm'):
+            logger.info("The model in the banner is loop_sm")
+            logger.info("Set the model to sm since only tree-")
+            logger.info("level amplitudes are used for the decay ")
+            mybanner.proc["model"]='sm'
+
         logger.info('model:     '+ mybanner.proc["model"])
         model_path=mybanner.proc["model"]
         base_model = import_ufo.import_model(model_path)
@@ -2673,7 +2687,7 @@ class decay_all_events:
         base_model.pass_particles_name_in_mg_default() 
  	mgcmd.exec_cmd('import model '+mybanner.proc["model"])
 
-
+         
         # process a bit the decay chain strings, so that the code is not confused by the sintax
         decay_tools.process_decay_syntax(decay_processes)        
 
@@ -2681,6 +2695,9 @@ class decay_all_events:
 # we will need a dictionary pid > label
         pid2label_dict=pid2label(base_model)
         label2pid_dict=label2pid(base_model)
+
+
+        mybanner.check_pid(pid2label_dict)        
 # we will also need a dictionary pid > color_rep
         pid2color_dict=pid2color(base_model)
 
@@ -2767,6 +2784,7 @@ class decay_all_events:
     	    calculate_br.print_branching_fractions()
             branching_per_channel=calculate_br.get_BR_for_each_decay(decay_processes,multiparticles,\
 						mybanner.proc["model"],base_model,pid2label_dict)       
+
 
         if branching_per_channel==0:
 	    raise Exception, 'Failed to extract the branching franction associated with each decay channel'
