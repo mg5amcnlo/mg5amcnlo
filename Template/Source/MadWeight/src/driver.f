@@ -44,6 +44,10 @@ c
       integer perm_id(nexternal-2)     !permutation of 1,2,...,nexternal-2
       integer num_per                  !total number of permutations
       double precision weight,weight_error,final
+      integer matching_type_part(3:max_particles) !modif/link between our order by type for permutation
+      integer inv_matching_type_part(3:max_particles)
+      common/madgraph_order_type/matching_type_part,
+& inv_matching_type_part
 c
 c     variable for selecting perm in loop 1
 c
@@ -231,16 +235,17 @@ c
 
       write(23,*) ' permutation channel   value      error'
       call init_perm()
-      channel_pos=0
+      counter=0
       do perm_pos=1,num_per
          call give_permut(perm_id)
          write(23,*) "======================================"
-         write(23,*) perm_id
+         write(23,*) '1   2',(inv_matching_type_part(2+perm_id(matching_type_part(i)-2)), i=3,8)
+
          do ll=1,nb_sol_config
             counter=counter+1
-            write(23,*) perm_pos,' || ',ll,' || ',
+            write(23,*) perm_pos,'\t',ll,'\t',
      & order_value(counter),
-     &           ' ||', order_error(counter)
+     &           '\t', order_error(counter)
          enddo
       enddo
       write(23,*) "======================================"
