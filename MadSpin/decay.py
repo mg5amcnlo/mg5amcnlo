@@ -1512,7 +1512,7 @@ class width_estimate:
  	    line=trappe.readline()
 	    if line=="": break
 	    list1=line.split()
-	    if len(list1)==0: continue
+	    if len(list1)<2: continue
 	    if list1[0]=='DECAY' and list1[1] in self.pid2label.keys():
 		label_mother=self.pid2label[int(list1[1])]
                 pos=trappe.tell()
@@ -2623,6 +2623,29 @@ class decay_misc:
             if sd<mean*1e-5: return x
         return 0
 
+    def check_param_card(self, param_card):
+
+        list_line=param_card.split('\n')
+
+        output=""
+        loop_block=0
+        for line in list_line:
+            if line=="": continue
+            current_line=line.split()
+
+            if loop_block==1 and line[0]!='#': continue
+            if loop_block==1 and line[0]=='#': 
+               loop_block=0
+               continue
+            
+            if len(current_line)<2:
+                output+=line+"\n" 
+            elif current_line[0]!='Block' or current_line[1]!='loop':
+                output+=line+"\n"
+            else:
+                loop_block=1
+
+        return output
 
     def process_decay_syntax(self,decay_processes):
         """ add spaces to avoid any confusion in the decay chain syntax """
@@ -2710,7 +2733,9 @@ class decay_all_events:
             logger.warning('EXTRACTION OF THE PARAM_CARD FROM THE BANNER FAILED!!')
 
         param_card=mybanner.whole_banner[init+7:fin]
+        param_card=decay_tools.check_param_card( param_card)
 
+        decay_tools.check_param_card(param_card)
 # now we can write the param_card.dat:
 # Note that the width of each resonance in the    
 # decay chain should be >0 , we will check that later on
