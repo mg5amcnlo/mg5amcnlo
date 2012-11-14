@@ -1292,7 +1292,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
      
         BW_effects=1
 
-        path_me=self.me_dir
+        path_me=pjoin(self.me_dir,'Events',self.run_name)
         current_dir=os.getcwd()
         try:
 #            os.chdir("../MadSpin")
