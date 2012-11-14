@@ -2668,11 +2668,11 @@ class decay_all_events:
             shutil.rmtree(pjoin(path_me,"full_me"))
         decay_tools=decay_misc()
 
-        if (mybanner.proc["model"]=='loop_sm'):
-            logger.info("The model in the banner is loop_sm")
-            logger.info("Set the model to sm since only tree-")
-            logger.info("level amplitudes are used for the decay ")
-            mybanner.proc["model"]='sm'
+        if (mybanner.proc["model"][0:5]=='loop_'):
+            logger.info("The model in the banner is "+mybanner.proc["model"])
+            logger.info("Set the model to "+mybanner.proc["model"][5:]+" since only")
+            logger.info("tree-level amplitudes are used for the decay ")
+            mybanner.proc["model"]=mybanner.proc["model"][5:]
 
         logger.info('model:     '+ mybanner.proc["model"])
         model_path=mybanner.proc["model"]
