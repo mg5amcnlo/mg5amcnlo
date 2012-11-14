@@ -81,7 +81,7 @@ class ProcessExporterPython(object):
         self.helas_call_writer = python_helas_call_writer
 
         if not isinstance(self.helas_call_writer, helas_call_writers.PythonUFOHelasCallWriter):
-            raise ProcessExporterPythonError, \
+            raise Exception, \
                 "helas_call_writer not PythonUFOHelasCallWriter"
 
         self.matrix_methods = {}

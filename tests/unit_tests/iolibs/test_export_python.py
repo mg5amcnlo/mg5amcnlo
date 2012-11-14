@@ -226,10 +226,10 @@ class IOExportPythonTest(unittest.TestCase):
     def __init__(self):
         \"\"\"define the object\"\"\"
         self.clean()
-        
+
     def clean(self):
         self.jamp = []
-        
+
     def smatrix(self,p, model):
         #  
         #  MadGraph 5 v. %(version)s, %(date)s
@@ -279,10 +279,12 @@ class IOExportPythonTest(unittest.TestCase):
         # BEGIN CODE
         # ----------
         self.amp2 = [0.] * ndiags
+        self.helEvals = []
         ans = 0.
         for hel in helicities:
             t = self.matrix(p, hel, model)
             ans = ans + t
+            self.helEvals.append([hel, t.real / denominator ])
         ans = ans / denominator
         return ans.real
 
@@ -366,7 +368,6 @@ class IOExportPythonTest(unittest.TestCase):
 
         matrix_methods = exporter.get_python_matrix_methods()["0_uux_uux"].\
                           split('\n')
-
 
         self.assertEqual(matrix_methods, goal_method)
         

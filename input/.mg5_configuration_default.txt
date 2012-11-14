@@ -124,6 +124,18 @@
 
 #td_path = ./td
 
+# lhapdf-config
+# If None: try to find one available on the system
+# lhapdf = lhapdf-config
+
+# fastjet-config
+# If None: try to find one available on the system
+# fastjet = fastjet-config
+
+# MCatNLO-utilities 
+# relative path start from main directory
+# MCatNLO-utilities_path = ./MCatNLO-utilities
+
 
 
 

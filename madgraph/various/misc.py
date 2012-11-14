@@ -23,19 +23,20 @@ import subprocess
 import sys
 import StringIO
 import sys
+import optparse
 import time
 
 try:
     # Use in MadGraph
     import madgraph
-    from madgraph import MadGraph5Error
+    from madgraph import MadGraph5Error, InvalidCmd
     import madgraph.iolibs.files as files
 except Exception, error:
     if __debug__:
         print error
     # Use in MadEvent
     import internal as madgraph
-    from internal import MadGraph5Error
+    from internal import MadGraph5Error, InvalidCmd
     import internal.files as files
     
 logger = logging.getLogger('cmdprint.ext_program')
@@ -116,7 +117,6 @@ def which(program):
             exe_file = os.path.join(path, program)
             if is_exe(exe_file):
                 return exe_file
-
     return None
 
 #===============================================================================
@@ -172,11 +172,12 @@ def multiple_try(nb_try=5, sleep=20):
 #===============================================================================
 # Compiler which returns smart output error in case of trouble
 #===============================================================================
-def compile(arg=[], cwd=None, mode='fortran', **opt):
+def compile(arg=[], cwd=None, mode='fortran', job_specs = True ,**opt):
     """compile a given directory"""
-
+    
+    command = ['make','-j2'] if job_specs else ['make']
     try:
-        p = subprocess.Popen(['make','-j2'] + arg, stdout=subprocess.PIPE, 
+        p = subprocess.Popen(command + arg, stdout=subprocess.PIPE, 
                              stderr=subprocess.STDOUT, cwd=cwd, **opt)
         (out, err) = p.communicate()
     except OSError, error:
@@ -189,7 +190,7 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
             error_text += "In general this means that your computer is not able to compile."
             if sys.platform == "darwin":
                 error_text += "Note that MacOSX doesn\'t have gmake/gfortan install by default.\n"
-                error_text += "Xcode3 contains those require program"
+                error_text += "Xcode3 contains those required program"
             raise MadGraph5Error, error_text
 
     if p.returncode:
@@ -209,8 +210,19 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
             error_msg += 'Please install g++ (which is part of the gcc package)  on your computer and retry.'
             raise MadGraph5Error, error_msg
 
+        # Check if this is due to the need of gfortran 4.6 for quadruple precision
+        if any(tag.upper() in out.upper() for tag in ['real(kind=16)','real*16',
+            'complex*32']) and mode == 'fortran' and not \
+                             ''.join(get_gfortran_version().split('.')) >= '46':
+            if not which('gfortran'):
+                raise MadGraph5Error, 'The fortran compiler gfortran v4.6 or later '+\
+                  'is required to compile %s.\nPlease install it and retry.'%cwd
+            else:
+                logger_stderr.error('ERROR, you could not compile %s because'%cwd+\
+             ' your version of gfortran is older than 4.6. MadGraph will carry on,'+\
+                              ' but will not be able to compile an executable.')
+                return p.returncode
         # Other reason
-
         error_text = 'A compilation Error occurs '
         if cwd:
             error_text += 'when trying to compile %s.\n' % cwd
@@ -222,6 +234,19 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
 
         raise MadGraph5Error, error_text
     return p.returncode
+
+def get_gfortran_version(compiler='gfortran'):
+    """ Returns the gfortran version as a string.
+        Returns '0' if it failed."""
+    try:    
+        p = Popen(compiler+' -dumpversion', stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE, shell=True)
+        output, error = p.communicate()
+        version_finder=re.compile(r"(?P<version>(\d.)*\d)")
+        version = version_finder.search(output).group('version')
+        return version
+    except Exception:
+        return '0'
 
 def mod_compilator(directory, new='gfortran', current=None):
     #define global regular expression
@@ -243,7 +268,9 @@ def mod_compilator(directory, new='gfortran', current=None):
 def detect_current_compiler(path):
     """find the current compiler for the current directory"""
     
-    comp = re.compile("^\s*FC\s*=\s*(\w+)\s*")
+#    comp = re.compile("^\s*FC\s*=\s*(\w+)\s*")
+#   The regular expression below allows for compiler definition with absolute path
+    comp = re.compile("^\s*FC\s*=\s*([\w\/\\.\-]+)\s*")
     for line in open(path):
         if comp.search(line):
             compiler = comp.search(line).groups()[0]
@@ -296,6 +323,7 @@ def check_system_error(value=1):
             try:
                 return f(arg, *args, **opt)
             except OSError, error:
+                logger.debug('try to recover from %s' % error)
                 if isinstance(arg, list):
                     prog =  arg[0]
                 else:
@@ -421,7 +449,35 @@ the file and returns last line in an internal buffer."""
         else:
             raise StopIteration
 
+def write_PS_input(filePath, PS):
+    """ Write out in file filePath the PS point to be read by the MadLoop."""
+    try:
+        PSfile = open(filePath, 'w')
+        # Add a newline in the end as the implementation fortran 'read'
+        # command on some OS is problematic if it ends directly with the
+        # floating point number read.
 
+        PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in p]) \
+                                                             for p in PS])+'\n')
+        PSfile.close()
+    except Exception:
+        raise MadGraph5Error, 'Could not write out the PS point to file %s.'\
+                                                                  %str(filePath)
+
+def format_timer(running_time):
+    """ return a nicely string representing the time elapsed."""
+    if running_time < 2e-2:
+        running_time = running_time = 'current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min) 
+    elif running_time < 10:
+        running_time = ' %.2gs ' % running_time
+    elif 60 > running_time >= 10:
+        running_time = ' %.3gs ' % running_time
+    elif 3600 > running_time >= 60:
+        running_time = ' %im %is ' % (running_time // 60, int(running_time % 60))
+    else:
+        running_time = ' %ih %im ' % (running_time // 3600, (running_time//60 % 60))
+    return running_time
+    
 
 
 #
@@ -575,6 +631,85 @@ def is_executable(path):
     """ check if a path is executable"""
     try: 
         return os.access(path, os.X_OK)
-    except:
+    except Exception:
         return False        
+
+
+class OptionParser(optparse.OptionParser):
+    """Option Peaser which raise an error instead as calling exit"""
+    
+    def exit(self, status=0, msg=None):
+        if msg:
+            raise InvalidCmd, msg
+        else:
+            raise InvalidCmd
+
+def sprint(*args, **opt):
+    """Returns the current line number in our program."""
+    import inspect
+    if opt.has_key('log'):
+        log = opt['log']
+    else:
+        log = logging.getLogger('madgraph')
+    if opt.has_key('level'):
+        level = opt['level']
+    else:
+        level=10
+    
+    lineno  =  inspect.currentframe().f_back.f_lineno
+    fargs =  inspect.getframeinfo(inspect.currentframe().f_back)
+    filename, lineno = fargs[:2]
+    #file = inspect.currentframe().f_back.co_filename
+    #print type(file)
+
+
+    log.log(level, '\n'.join(args) + \
+               '\nraised at %s at line %s ' % (filename, lineno))
+    
+    return 
+
+################################################################################
+# TAIL FUNCTION
+################################################################################
+class digest:
+
+    def test_all(self):
+        try:
+            return self.test_hashlib()
+        except Exception:
+            pass
+        try:
+            return self.test_md5()
+        except Exception:
+            pass
+        try:
+            return self.test_zlib()
+        except Exception:
+            pass
+                
+    def test_hashlib(self):
+        import hashlib
+        def digest(text):
+            """using mg5 for the hash"""
+            t = hashlib.md5()
+            t.update(text)
+            return t.hexdigest()
+        return digest
+    
+    def test_md5(self):
+        import md5
+        def digest(text):
+            """using mg5 for the hash"""
+            t = md5.md5()
+            t.update(text)
+            return t.hexdigest()
+        return digest
+    
+    def test_zlib(self):
+        import zlib
+        def digest(text):
+            return zlib.adler32(text)
+        
+digest = digest().test_all()
+
 

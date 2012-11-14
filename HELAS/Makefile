@@ -15,8 +15,8 @@
 # ----------------------------------------------------------------------------
 
 # Check for ../make_opts
-ifeq ($(wildcard ../Template/Source/make_opts), ../Template/Source/make_opts)
-  include ../Template/Source/make_opts
+ifeq ($(wildcard ../Template/LO/Source/make_opts), ../Template/LO/Source/make_opts)
+  include ../Template/LO/Source/make_opts
 else
   include ../madevent/Source/make_opts
 endif

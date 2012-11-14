@@ -17,7 +17,6 @@
 import copy
 import os
 
-
 import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
@@ -47,7 +46,9 @@ class ParticleTest(unittest.TestCase):
                       'pdg_code':6,
                       'propagating':True,
                       'is_part':True,
-                      'self_antipart':False}
+                      'ghost':False,
+                      'self_antipart':False,
+                      'counterterm':{('QCD',((1,2),(3,4))):{0:'GC_0',-1:'GC_1'}}}
 
         self.mypart = base_objects.Particle(self.mydict)
 
@@ -162,7 +163,9 @@ class ParticleTest(unittest.TestCase):
         goal = goal + "    \'line\': \'straight\',\n"
         goal = goal + "    \'propagating\': True,\n"
         goal = goal + "    \'is_part\': True,\n"
-        goal = goal + "    \'self_antipart\': False\n}"
+        goal = goal + "    \'self_antipart\': False,\n"        
+        goal = goal + "    \'ghost\': False,\n"
+        goal = goal + "    \'counterterm\': {('QCD', ((1, 2), (3, 4))): {0: 'GC_0', -1: 'GC_1'}}\n}"
 
         self.assertEqual(goal, str(self.mypart))
 
@@ -271,7 +274,10 @@ class InteractionTest(unittest.TestCase):
                                     (0, 1):'g01',
                                     (1, 0):'g10',
                                     (1, 1):'g11'},
-                       'orders':{'QCD':1, 'QED':1}}
+                       'orders':{'QCD':1, 'QED':1},
+                       'loop_particles':[[]],
+                       'perturbation_type':'QCD',
+                       'type':'base'}
 
         self.myinter = base_objects.Interaction(self.mydict)
 
@@ -282,7 +288,7 @@ class InteractionTest(unittest.TestCase):
 
         # First fill myinter2 it using set
         for prop in ['id', 'particles', 'color', 'lorentz', 'couplings',
-                     'orders']:
+                     'orders', 'type', 'loop_particles','perturbation_type']:
             myinter2.set(prop, self.mydict[prop])
 
         # Check equality between Interaction objects
@@ -371,7 +377,10 @@ class InteractionTest(unittest.TestCase):
         goal = goal + "    \'lorentz\': [\'L1\', \'L2\'],\n"
         goal = goal + "    \'couplings\': %s,\n" % \
                                     repr(self.myinter['couplings'])
-        goal = goal + "    \'orders\': %s\n}" % repr(self.myinter['orders'])
+        goal = goal + "    \'orders\': %s,\n" % repr(self.myinter['orders'])
+        goal = goal + "    \'loop_particles\': [[]],\n"        
+        goal = goal + "    \'type\': \'base\',\n"
+        goal = goal + "    \'perturbation_type\': 'QCD'\n}"
 
         self.assertEqual(goal, str(self.myinter))
 
@@ -919,9 +928,8 @@ class ModelTest2(unittest.TestCase):
     def setUp(self):
         """ """
         import madgraph.interface.master_interface as Cmd
-        cmd = Cmd.MasterCmd()
-        cmd.do_load('model %s' % os.path.join(madgraph.MG5DIR, 'tests',
-                                                        'input_files','sm.pkl'))
+        cmd = Cmd.MasterCmd() 
+        cmd.do_import('model sm')
         self.model = cmd._curr_model
         
     def test_change_to_complex_mass_scheme(self):
@@ -948,7 +956,7 @@ class ModelTest2(unittest.TestCase):
                 self.assertFalse(WW)
             elif param.name == 'WW':
                 WW = param
-            else:
+            elif param.name == 'MW': 
                 MW = param
                 self.assertFalse(WW)
                 self.assertFalse(WComplex)
@@ -957,7 +965,7 @@ class ModelTest2(unittest.TestCase):
         self.assertTrue(WComplex)
         # Check that WW and MW are the real/imaginary part
         self.assertEqual(WW.expr, '-1 * im(CMASS_MW**2) / MW')
-        self.assertEqual('cmath.sqrt(re(%s**2))' % WComplex.expr, MW.expr)
+        self.assertEqual(['cmath.sqrt(re(%s**2))' % WComplex.expr], [MW.expr])
         
         # Check that MZ has a complex_mass definition
         # and that the width and the mass are external
@@ -996,7 +1004,8 @@ class LegTest(unittest.TestCase):
                       'number':5,
                       'state':True,
                       'from_group':False,
-                      'onshell':None}
+                      'onshell':None,                       
+                      'loop_line':False}
 
         self.myleg = base_objects.Leg(self.mydict)
 
@@ -1075,7 +1084,8 @@ class LegTest(unittest.TestCase):
         goal = goal + "    \'id\': 3,\n"
         goal = goal + "    \'number\': 5,\n"
         goal = goal + "    \'state\': True,\n"
-        goal = goal + "    \'from_group\': False,\n"
+        goal = goal + "    \'from_group\': False,\n" 
+        goal = goal + "    \'loop_line\': False,\n"
         goal = goal + "    \'onshell\': None\n}"
 
         self.assertEqual(goal, str(self.myleg))
@@ -1506,9 +1516,13 @@ class ProcessTest(unittest.TestCase):
                        'forbidden_s_channels':[],
                        'forbidden_onsh_s_channels':[],
                        'forbidden_particles':[],
+                       'perturbation_couplings':[],
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
-                       'overall_orders': {}}
+                       'squared_orders': {},
+                       'has_born': True,
+                       'overall_orders': {},
+                       'NLO_mode':'tree'}
 
         self.myprocess = base_objects.Process(self.mydict)
 
@@ -1581,6 +1595,7 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'orders\': %s,\n" % repr(self.myprocess['orders'])
         goal = goal + "    \'overall_orders\': %s,\n" % \
                repr(self.myprocess['overall_orders'])
+        goal = goal + "    \'squared_orders\': %s,\n" % repr(self.myprocess['squared_orders'])
         goal = goal + "    \'model\': %s,\n" % repr(self.myprocess['model'])
         goal = goal + "    \'id\': 1,\n"
         goal = goal + "    \'required_s_channels\': [],\n"
@@ -1588,21 +1603,26 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'forbidden_s_channels\': [],\n"
         goal = goal + "    \'forbidden_particles\': [],\n"
         goal = goal + "    \'is_decay_chain\': False,\n"
-        goal = goal + "    \'decay_chains\': []\n}"
+        goal = goal + "    \'decay_chains\': [],\n"
+        goal = goal + "    \'perturbation_couplings\': [],\n"
+        goal = goal + "    \'has_born\': True,\n"
+        goal = goal + "    \'NLO_mode\': 'tree'\n}"
 
+        for a, b in zip(goal.split('\n'), str(self.myprocess).split('\n')):
+            self.assertEqual(a,b)
         self.assertEqual(goal, str(self.myprocess))
 
     def test_nice_string(self):
         """Test Process nice_string representation"""
 
-        goal_str = "Process: c c > c c c QCD=5 QED=1 @1"
+        goal_str = "Process: c c > c c c QED=1 QCD=5 @1"
 
         self.assertEqual(goal_str, self.myprocess.nice_string())
 
     def test_input_string(self):
         """Test Process nice_string representation"""
 
-        goal_str = "c c > c c c QCD=5 QED=1, (c > c c c c, c > c c c c)"
+        goal_str = "c c > c c c QED=1 QCD=5, (c > c c c c, c > c c c c)"
 
         decay = copy.copy(self.myprocess)
         decay.set('legs', copy.deepcopy(decay.get('legs')))
@@ -1687,9 +1707,13 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'forbidden_s_channels':[],
                        'forbidden_onsh_s_channels':[],
                        'forbidden_particles':[],
+                       'perturbation_couplings':[],
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
-                       'overall_orders':{}}
+                       'squared_orders':{},
+                       'has_born': True,
+                       'overall_orders':{},
+                       'NLO_mode':'tree'}
 
         self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
 
@@ -1761,6 +1785,7 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'legs\': %s,\n" % repr(self.my_multi_leglist)
         goal = goal + "    \'orders\': %s,\n" % repr(self.my_process_definition['orders'])
         goal = goal + "    \'overall_orders\': %s,\n" % repr(self.my_process_definition['overall_orders'])
+        goal = goal + "    \'squared_orders\': %s,\n" % repr(self.my_process_definition['squared_orders'])
         goal = goal + "    \'model\': %s,\n" % repr(self.my_process_definition['model'])
         goal = goal + "    \'id\': %s,\n" % repr(self.my_process_definition['id'])
         goal = goal + "    \'required_s_channels\': [],\n"
@@ -1768,7 +1793,10 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'forbidden_s_channels\': [],\n"
         goal = goal + "    \'forbidden_particles\': [],\n"
         goal = goal + "    \'is_decay_chain\': False,\n"
-        goal = goal + "    \'decay_chains\': []\n}"
+        goal = goal + "    \'decay_chains\': [],\n"
+        goal = goal + "    \'perturbation_couplings\': [],\n"
+        goal = goal + "    \'has_born\': True,\n"
+        goal = goal + "    \'NLO_mode\': 'tree'\n}"        
         self.assertEqual(goal, str(self.my_process_definition))
 
 #===============================================================================

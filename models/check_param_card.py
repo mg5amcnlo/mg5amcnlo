@@ -227,6 +227,7 @@ class Block(list):
 
 class ParamCard(dict):
     """ a param Card: list of Block """
+    mp_prefix = 'MP__'
 
     header = \
     """######################################################################\n""" + \
@@ -334,8 +335,8 @@ class ParamCard(dict):
                     value =defaultcard[block].get(tuple(lhaid)).value
             else:
                 value =defaultcard[block].get(tuple(lhaid)).value
-            value = str(value).lower()
-            fout.writelines(' %s = %s' % (variable, str(value).replace('e','d')))
+            #value = str(value).lower()
+            fout.writelines(' %s = %s' % (variable, ('%e' % value).replace('e','d')))
             
         
         
@@ -466,6 +467,37 @@ class ParamCard(dict):
                 error_msg += 'Parameter %s %s should be %s' % (block, lhacode, value)
                 raise InvalidParamCard, error_msg   
             self.remove_param(block, lhacode)
+
+
+class ParamCardMP(ParamCard):
+    """ a param Card: list of Block with also MP definition of variables"""
+            
+    def write_inc_file(self, outpath, identpath, default):
+        """ write a fortran file which hardcode the param value"""
+        
+        fout = file_writers.FortranWriter(outpath)
+        defaultcard = ParamCard(default)
+        for line in open(identpath):
+            if line.startswith('c  ') or line.startswith('ccccc'):
+                continue
+            split = line.split()
+            if len(split) < 3:
+                continue
+            block = split[0]
+            lhaid = [int(i) for i in split[1:-1]]
+            variable = split[-1]
+            if block in self:
+                try:
+                    value = self[block].get(tuple(lhaid)).value
+                except KeyError:
+                    value =defaultcard[block].get(tuple(lhaid)).value
+            else:
+                value =defaultcard[block].get(tuple(lhaid)).value
+            #value = str(value).lower()
+            fout.writelines(' %s = %s' % (variable, ('%e' % value).replace('e','d')))
+            fout.writelines(' %s%s = %s_16' % (self.mp_prefix, 
+                variable, ('%e' % value)))
+
 
 class ParamCardRule(object):
     """ A class for storing the linked between the different parameter of

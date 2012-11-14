@@ -944,7 +944,7 @@ SpinorPropagatorin = lambda spin1, spin2, particle: complex(0,+1) * (Gamma('mu',
 
 def VectorPropagator(l1,l2,part):
     """Define numerator of vector propagator"""
-    
+
     if aloha.unitary_gauge:
         return complex(0,1) * (-1 * Metric(l1, l2) + OverMass2(part) * \
                                     Metric(l1,'I3')* P('I3', part) * P(l2, part))
@@ -964,7 +964,6 @@ def VectorPropagator(l1,l2,part):
 Spin3halfPropagatorout =  lambda mu, nu, s1, s2, part:  - 1/3 * (Gamma(mu,s1,-2) + Identity(s1, -2) *  P(mu, part) * Mass(part) * OverMass2(part))* \
                              (PSlash(-2,-3, part) - Identity(-2,-3) * Mass(part)) * \
                              ( Gamma(nu, -3, s2)+ Mass(part) * OverMass2(part) * Identity(-3, s2) * P(nu, part) )
-
 
 Spin3halfPropagatorin =  lambda mu, nu, s1, s2, part:  + 1/3 * (Gamma(mu,s1,-2) - Identity(s1, -2) *  P(mu, part) * Mass(part) * OverMass2(part))* \
                              (PSlash(-2,-3, part) + Identity(-2,-3) * Mass(part)) * \

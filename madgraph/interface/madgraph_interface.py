@@ -48,12 +48,15 @@ from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.loop.loop_diagram_generation as loop_diagram_generation
+import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.drawing as draw_lib
 import madgraph.core.helas_objects as helas_objects
 
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.export_cpp as export_cpp
 import madgraph.iolibs.export_v4 as export_v4
+import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.files as files
@@ -63,8 +66,11 @@ import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.tutorial_text as tutorial_text
+import madgraph.interface.tutorial_text_nlo as tutorial_text_nlo
+import madgraph.interface.tutorial_text_madloop as tutorial_text_madloop
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.interface.madevent_interface as madevent_interface
+import madgraph.interface.amcatnlo_run_interface as amcatnlo_run
 
 import madgraph.various.process_checks as process_checks
 import madgraph.various.banner as banner_module
@@ -85,6 +91,10 @@ logger = logging.getLogger('cmdprint') # -> stdout
 logger_stderr = logging.getLogger('fatalerror') # ->stderr
 logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in  
                                             #order to learn MG5
+logger_tuto_nlo = logging.getLogger('tutorial_aMCatNLO') # -> stdout include instruction in  
+                                                        #order to learn aMC@NLO
+
+logger_tuto_madloop = logging.getLogger('tutorial_MadLoop') # -> stoud for MadLoop tuto
 
 #===============================================================================
 # CmdExtended
@@ -188,6 +198,8 @@ class CmdExtended(cmd.Cmd):
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
         "*           Type 'tutorial' to learn how MG5 works         *\n" + \
+        "*    Type 'tutorial aMCatNLO' to learn how aMC@NLO works   *\n" + \
+        "*    Type 'tutorial MadLoop' to learn how MadLoop works    *\n" + \
         "*                                                          *\n" + \
         "************************************************************")
         
@@ -218,10 +230,26 @@ class CmdExtended(cmd.Cmd):
         
         try:
             logger_tuto.info(getattr(tutorial_text, command).replace('\n','\n\t'))
-        except:
+        except Exception:
             try:
                 logger_tuto.info(getattr(tutorial_text, args[0]).replace('\n','\n\t'))
-            except:
+            except Exception:
+                pass
+
+        try:
+            logger_tuto_nlo.info(getattr(tutorial_text_nlo, command).replace('\n','\n\t'))
+        except Exception:
+            try:
+                logger_tuto_nlo.info(getattr(tutorial_text_nlo, args[0]).replace('\n','\n\t'))
+            except Exception:
+                pass
+        
+        try:
+            logger_tuto_madloop.info(getattr(tutorial_text_madloop, command).replace('\n','\n\t'))
+        except Exception:
+            try:
+                logger_tuto_madloop.info(getattr(tutorial_text_madloop, args[0]).replace('\n','\n\t'))
+            except Exception:
                 pass
         
         return stop
@@ -238,8 +266,8 @@ class HelpToCmd(cmd.HelpCmd):
     """ The Series of help routine for the MadGraphCmd"""    
     
     def help_save(self):
-        logger.info("syntax: save %s FILENAME" % "|".join(self._save_opts))
-        logger.info("-- save information as file FILENAME")
+        logger.info("syntax: save %s FILENAME" % "|".join(self._save_opts),'$MG:color:BLUE')
+        logger.info("-- save information as file FILENAME",'$MG:color:BLACK')
         logger.info("   FILENAME is optional for saving 'options'.")
         logger.info('   By default it uses ./input/mg5_configuration.txt')
         logger.info('   If you put "global" for FILENAME it will use ~/.mg5/mg5_configuration.txt')
@@ -247,15 +275,15 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info('   to read the local options files.')
 
     def help_load(self):
-        logger.info("syntax: load %s FILENAME" % "|".join(self._save_opts))
-        logger.info("-- load information from file FILENAME")
+        logger.info("syntax: load %s FILENAME" % "|".join(self._save_opts),'$MG:color:BLUE')
+        logger.info("-- load information from file FILENAME",'$MG:color:BLACK')
 
     def help_import(self):
         logger.info("syntax: import " + "|".join(self._import_formats) + \
-              " FILENAME")
-        logger.info("-- imports file(s) in various formats")
+              " FILENAME",'$MG:color:BLUE')
+        logger.info("-- imports file(s) in various formats",'$MG:color:GREEN')
         logger.info("")
-        logger.info("   import model MODEL[-RESTRICTION] [--modelname]:")
+        logger.info("   import model MODEL[-RESTRICTION] [--modelname]:",'$MG:color:BLACK')
         logger.info("      Import a UFO model.")
         logger.info("      MODEL should be a valid UFO model name")
         logger.info("      Model restrictions are specified by MODEL-RESTRICTION")
@@ -264,74 +292,113 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("        Specify model_name-full to get unrestricted model.")
         logger.info("      '--modelname' keeps the original particle names for the model")
         logger.info("")
-        logger.info("   import model_v4 MODEL [--modelname] :")
+        logger.info("   import model_v4 MODEL [--modelname] :",'$MG:color:BLACK')
         logger.info("      Import an MG4 model.")
         logger.info("      Model should be the name of the model")
         logger.info("      or the path to theMG4 model directory")
         logger.info("      '--modelname' keeps the original particle names for the model")
         logger.info("")
-        logger.info("   import proc_v4 [PATH] :"  )
+        logger.info("   import proc_v4 [PATH] :",'$MG:color:BLACK')
         logger.info("      Execute MG5 based on a proc_card.dat in MG4 format.")
         logger.info("      Path to the proc_card is optional if you are in a")
         logger.info("      madevent directory")
         logger.info("")
-        logger.info("   import command PATH :")
+        logger.info("   import command PATH :",'$MG:color:BLACK')
         logger.info("      Execute the list of command in the file at PATH")
         logger.info("")
-        logger.info("   import banner PATH  [--no_launch]:")
+        logger.info("   import banner PATH  [--no_launch]:",'$MG:color:BLACK')
         logger.info("      Rerun the exact same run define in the valid banner.")
  
     def help_install(self):
-        logger.info("syntax: install " + "|".join(self._install_opts))
+        logger.info("syntax: install " + "|".join(self._install_opts),'$MG:color:BLUE')
         logger.info("-- Download the last version of the program and install it")
-        logger.info("   localy in the current Madgraph version. In order to have")
-        logger.info("   a sucessfull instalation, you will need to have up-to-date")
+        logger.info("   locally in the current Madgraph version. In order to have")
+        logger.info("   a successful installation, you will need to have an up-to-date")
         logger.info("   F77 and/or C and Root compiler.")
         logger.info(" ")
-        logger.info("   \"install update\" check if your MG5 installation is the latest one.")
+        logger.info("   \"install update\"",'$MG:color:BLACK')
+        logger.info("   check if your MG5 installation is the latest one.")
         logger.info("   If not it load the difference between your current version and the latest one,")
         logger.info("   and apply it to the code. Two options are available for this command:")
         logger.info("     -f: didn't ask for confirmation if it founds an update.")
         logger.info("     --timeout=: Change the maximum time allowed to reach the server.")
         
     def help_display(self):
-        logger.info("syntax: display " + "|".join(self._display_opts))
+        logger.info("syntax: display " + "|".join(self._display_opts),'$MG:color:BLUE')
         logger.info("-- display a the status of various internal state variables")
         logger.info("   for particles/interactions you can specify the name or id of the")
         logger.info("   particles/interactions to receive more details information.")
-        logger.info("   Example: display particles e+.")
-        logger.info("   For \"checks\", can specify only to see failed checks.")
-        logger.info("   For \"diagrams\", you can specify where the file will be written.")
-        logger.info("   Example: display diagrams ./")
+        logger.info("   Example: display particles e+.",'$MG:color:GREEN')
+        logger.info(" > For \"checks\", can specify only to see failed checks.")
+        logger.info(" > For \"diagrams\", you can specify where the file will be written.")
+        logger.info("   Example: display diagrams ./",'$MG:color:GREEN')
         
         
     def help_launch(self):
         """help for launch command"""
-        _launch_parser.print_help()
+        # Using the built-in parser help is not convenient when one wants to use
+        # color schemes.
+        #_launch_parser.print_help()
+        logger.info("syntax: launch <dir_path> <options>",'$MG:color:BLUE')
+        logger.info("-- execute the aMC@NLO/madevent/standalone/pythia8 output present in dir_path",'$MG:color:BLACK')
+        logger.info("By default, dir_path points to the last created directory.")
+        logger.info("(for pythia8, it should be the Pythia 8 main directory)")
+        logger.info("")        
+        logger.info("Launch on madevent/pythia8/standalone outputs:",'$MG:color:BLACK')
+        logger.info(" o Example: launch PROC_sm_1 --name=run2",'$MG:color:GREEN')        
+        logger.info(" o Example: launch ../pythia8",'$MG:color:GREEN')        
+        logger.info(" > Options:")        
+        logger.info("     -h, --help            show this help message and exit")        
+        logger.info("     -f, --force           Use the card present in the directory in order")        
+        logger.info("                           to launch the different program")        
+        logger.info("     -n NAME, --name=NAME  Provide a name to the run (for madevent run)")        
+        logger.info("     -c, --cluster         submit the job on the cluster")        
+        logger.info("     -m, --multicore       submit the job on multicore core")        
+        logger.info("     -i, --interactive     Use Interactive Console [if available]")        
+        logger.info("     -s LASTSTEP, --laststep=LASTSTEP")        
+        logger.info("                           last program run in MadEvent run.")
+        logger.info("                           [auto|parton|pythia|pgs|delphes]")        
+        logger.info("")    
+        logger.info("Launch on MadLoop standalone output:",'$MG:color:BLACK')
+        logger.info(" o Example: launch PROC_loop_sm_1 -f",'$MG:color:GREEN')    
+        logger.info(" > Simple check of a single Phase-space points.")    
+        logger.info(" > You will be asked whether you want to edit the MadLoop ")    
+        logger.info("   and model param card as well as the PS point, unless ")    
+        logger.info("   the -f option is specified. All other options are ")    
+        logger.info("   irrelevant for this kind of launch.")    
+        logger.info("")    
+        logger.info("Launch on aMC@NLO output:",'$MG:color:BLACK')
+        logger.info(" > launch <dir_path> <mode> <options>",'$MG:color:BLUE')
+        logger.info(" o Example: launch MyProc aMC@NLO -f -p",'$MG:color:GREEN')    
 
     def help_tutorial(self):
-        logger.info("syntax: tutorial [" + "|".join(self._tutorial_opts) + "]")
-        logger.info("-- start/stop the tutorial mode")
+        logger.info("syntax: tutorial [" + "|".join(self._tutorial_opts) + "]",'$MG:color:BLUE')
+        logger.info("-- start/stop the MG5 tutorial mode (or stop any other mode)")
+        logger.info("-- aMCatNLO: start aMC@NLO tutorial mode")
+        logger.info("-- MadLoop: start MadLoop tutorial mode")
 
     def help_open(self):
-        logger.info("syntax: open FILE  ")
-        logger.info("-- open a file with the appropriate editor.")
+        logger.info("syntax: open FILE  ",'$MG:color:BLUE')
+        logger.info("-- open a file with the appropriate editor.",'$MG:color:BLACK')
         logger.info('   If FILE belongs to index.html, param_card.dat, run_card.dat')
         logger.info('   the path to the last created/used directory is used')
         logger.info('   The program used to open those files can be chosen in the')
         logger.info('   configuration file ./input/mg5_configuration.txt')
         
     def help_customize_model(self):
-        logger.info("syntax: customize_model --save=NAME")
-        logger.info("--  Open an invite where you options to tweak the model.")
+        logger.info("syntax: customize_model --save=NAME",'$MG:color:BLUE')
+        logger.info("--  Open an invite where you options to tweak the model.",'$MG:color:BLACK')
         logger.info("    If you specify the option --save=NAME, this tweak will be")
         logger.info("    available for future import with the command 'import model XXXX-NAME'")
         
     def help_output(self):
         logger.info("syntax: output [" + "|".join(self._export_formats) + \
-                    "] [path|.|auto] [options]")
-        logger.info("-- Output any generated process(es) to file.")
-        logger.info("   mode: Default mode is madevent. Default path is \'.\' or auto.")
+                    "] [path|.|auto] [options]",'$MG:color:BLUE')
+        logger.info("-- Output any generated process(es) to file.",'$MG:color:BLACK')
+        logger.info("   Default mode is madevent. Default path is \'.\' or auto.")
+        logger.info("   mode:",'$MG:color:BLACK')
+        logger.info("   - For MadLoop and aMC@NLO runs, there is only one mode and")
+        logger.info("     it is set by default.")                
         logger.info("   - If mode is madevent, create a MadEvent process directory.")
         logger.info("   - If mode is standalone, create a Standalone directory")
         logger.info("   - If mode is matrix, output the matrix.f files for all")
@@ -347,108 +414,191 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("     valid options for aloha output are:")
         logger.info("      --format=Fortran|Python|Cpp : defining the output language")
         logger.info("      --output= : defining output directory")
-        logger.info("   path: The path of the process directory.")
+        logger.info("   path: The path of the process directory.",'$MG:color:BLACK')
         logger.info("     If you put '.' as path, your pwd will be used.")
         logger.info("     If you put 'auto', an automatic directory PROC_XX_n will be created.")
-        logger.info("   options:")
+        logger.info("   options:",'$MG:color:BLACK')
         logger.info("      -f: force cleaning of the directory if it already exists")
         logger.info("      -d: specify other MG/ME directory")
         logger.info("      -noclean: no cleaning performed in \"path\".")
         logger.info("      -nojpeg: no jpeg diagrams will be generated.")
         logger.info("      -name: the postfix of the main file in pythia8 mode.")
-        logger.info("   Examples:")
-        logger.info("       output")
-        logger.info("       output standalone MYRUN -f")
-        logger.info("       output pythia8 ../pythia8/ -name qcdprocs")
+        logger.info("   Examples:",'$MG:color:GREEN')
+        logger.info("       output",'$MG:color:GREEN')
+        logger.info("       output standalone MYRUN -f",'$MG:color:GREEN')
+        logger.info("       output pythia8 ../pythia8/ -name qcdprocs",'$MG:color:GREEN')
         
     def help_check(self):
 
-        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition")
-        logger.info("-- check a process or set of processes. Options:")
-        logger.info("full: Perform all three checks described below:")
+        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition",'$MG:color:BLUE')
+        logger.info("-- check a process or set of processes.",'$MG:color:BLACK')
+        logger.info("General options:",'$MG:color:BLACK')
+        logger.info("o full:",'$MG:color:GREEN')
+        logger.info("   Perform all four checks described below:")
         logger.info("   permutation, gauge and lorentz_invariance.")
-        logger.info("permutation: Check that the model and MG5 are working")
-        logger.info("   properly by generating permutations of the process and")
-        logger.info("   checking that the resulting matrix elements give the")
-        logger.info("   same value.")
-        logger.info("gauge: Check that processes with massless gauge bosons")
-        logger.info("   are gauge invariant")
-        logger.info("lorentz_invariance: Check that the amplitude is lorentz")
-        logger.info("   invariant by comparing the amplitiude in different frames")        
-        logger.info("If param_card is given, that param_card is used instead")
-        logger.info("   of the default values for the model.")
-        logger.info("For process syntax, please see help generate")
+        logger.info("o permutation:",'$MG:color:GREEN')
+        logger.info("   Check that the model and MG5 are working properly")
+        logger.info("   by generating permutations of the process and checking")
+        logger.info("   that the resulting matrix elements give the same value.")
+        logger.info("o gauge:",'$MG:color:GREEN')
+        logger.info("   Check that processes with massless gauge bosons are")
+        logger.info("   gauge invariant (comparing Feynman and unitary gauges)")
+        logger.info("   This check if for now not available for loop processes.")
+        logger.info("o brs:",'$MG:color:GREEN')
+        logger.info("   Check that the ward identities are satisfied if the ")
+        logger.info("   process has at least one massless gauge boson as an")
+        logger.info("   external particle.")
+        logger.info("o lorentz_invariance:",'$MG:color:GREEN')
+        logger.info("   Check that the amplitude is lorentz invariant by")
+        logger.info("   comparing the amplitiude in different frames")
+        logger.info("Comments",'$MG:color:GREEN')         
+        logger.info(" > If param_card is given, that param_card is used ")
+        logger.info("   instead of the default values for the model.")
+        logger.info(" > Except for the 'gauge' test, all checks above are also")
+        logger.info("   available for loop processes with ML5 ('virt=' mode)")
+        logger.info("Example: check full p p > j j",'$MG:color:GREEN')
+        logger.info("Options for loop processes only:",'$MG:color:BLACK')
+        logger.info("o timing:",'$MG:color:GREEN')
+        logger.info("   Generate and output a process and returns detailed")        
+        logger.info("   information about the code and a timing benchmark.")
+        logger.info("o stability:",'$MG:color:GREEN')
+        logger.info("   Generate and output a process and returns detailed")        
+        logger.info("   statistics about the numerical stability of the code.")
+        logger.info("o profile:",'$MG:color:GREEN')
+        logger.info("   Performs both the timing and stability analysis at once")
+        logger.info("   and outputs the result in a log file without prompting")
+        logger.info("   it to the user.")
+        logger.info("Comments",'$MG:color:GREEN')
+        logger.info(" > These checks are only available for ML5 ('virt=' mode)")
+        logger.info(" > For the 'profile' and 'stability' checks, you can chose") 
+        logger.info("   how many PS points should be used for the statistic by")  
+        logger.info("   specifying it as an integer just before the [param_card]")        
+        logger.info("   optional argument.")
+        logger.info(" > Notice multiparticle labels cannot be used with these checks.")
+        logger.info(" > For process syntax, please see help generate.")
+        logger.info("Example: check profile g g > t t~",'$MG:color:GREEN')
 
     def help_generate(self):
 
-        logger.info("syntax: generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
-        logger.info("-- generate diagrams for a given process")
-        logger.info("   Syntax example: l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1")
-        logger.info("   Alternative required s-channels can be separated by \"|\":")
+        logger.info("-- generate diagrams for a given process",'$MG:color:BLUE')
+        logger.info("General leading-order syntax:",'$MG:color:BLACK')
+        logger.info(" o generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
+        logger.info(" o Example: generate l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1",'$MG:color:GREEN')
+        logger.info(" > Alternative required s-channels can be separated by \"|\":")
         logger.info("   b b~ > W+ W- | H+ H- > ta+ vt ta- vt~")
-        logger.info("   If no coupling orders are given, MG5 will try to determine")
+        logger.info(" > If no coupling orders are given, MG5 will try to determine")
         logger.info("   orders to ensure maximum number of QCD vertices.")
-        logger.info("   Note that if there are more than one non-QCD coupling type,")
-        logger.info("   coupling orders need to be specified by hand.")
-        logger.info("Decay chain syntax:")
-        logger.info("   core process, decay1, (decay2, (decay2', ...)), ...  etc")
-        logger.info("   Example: p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2")
-        logger.info("   Note that identical particles will all be decayed.")
-        logger.info("To generate a second process use the \"add process\" command")
+        logger.info(" > To generate a second process use the \"add process\" command")
+        logger.info("Decay chain syntax:",'$MG:color:BLACK')
+        logger.info(" o core process, decay1, (decay2, (decay2', ...)), ...  etc")
+        logger.info(" o Example: generate p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2",'$MG:color:GREEN')
+        logger.info(" > Note that identical particles will all be decayed.")
+        logger.info("Loop processes syntax:",'$MG:color:BLACK')
+        logger.info(" o core process [ <NLO_mode=> LoopOrder1 LoopOrder2 ... ] SQUAREDCOUPi=ORDERi")        
+        logger.info(" o Example: generate p p > t~ t QED=0 QCD=2 [ all= QCD ] QCD=6",'$MG:color:GREEN')
+        logger.info(" > Notice that in this format, decay chains are not allowed.")
+        logger.info(" > The LoopOrder(s) defined specify the kind of loops to consider (only QCD for now).")
+        logger.info(" > The coupling restrictions before '[' restrict the orders of born *amplitudes*.")
+        logger.info("   So that in the example above QCD=2 restricts the born amplitude to have at")   
+        logger.info("   most QCD=2 and loop amplitudes at most QCD=2+2 (because QCD loops are considered)")             
+        logger.info(" > The coupling restrictions after ']' restrict the orders of the matrix element, ")
+        logger.info("   namely the squared amplitudes. In the example above QCD=6 correspond to born") 
+        logger.info("   amplitudes with QCD=2 squared against loop amplitudes with QCD=4, adding up to 6.")
+        logger.info(" > The optional <NLO_mode=> can be any of the following ('all=' by default if absent):")                    
+        logger.info("     all=   : Generate all the real-emission and loop diagrams, ready for aMC@NLO runs.")                    
+        logger.info("     virt=  : Generate only the loop diagrams, read for MadLoop standalone checks/runs.")                    
+        logger.info("     real=  : Generate only the real-emission diagrams, for use with alternative OLP. ")                    
+        logger.info(" > For processes without born amplitudes (i.e. loop-induced like g g > z), please use ")                    
+        logger.info("   the 'virt=' NLO mode. aMC@NLO cannot integrate these processes, but standalone MadLoop5")                    
+        logger.info("   can still handle these.")                    
 
     def help_add(self):
 
-        logger.info("syntax: add process INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2")
-        logger.info("-- generate diagrams for a process and add to existing processes")
-        logger.info("   Syntax example: l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1")
-        logger.info("   Alternative required s-channels can be separated by \"|\":")
+        logger.info("-- generate diagrams for a process and add to existing processes",'$MG:color:BLUE')
+        logger.info("General leading-order syntax:",'$MG:color:BLACK')
+        logger.info(" o add process INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
+        logger.info(" o Example: add process l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1",'$MG:color:GREEN')
+        logger.info(" > Alternative required s-channels can be separated by \"|\":")
         logger.info("   b b~ > W+ W- | H+ H- > ta+ vt ta- vt~")
-        logger.info("   If no coupling orders are given, MG5 will try to determine")
+        logger.info(" > If no coupling orders are given, MG5 will try to determine")
         logger.info("   orders to ensure maximum number of QCD vertices.")
-        logger.info("Decay chain syntax:")
-        logger.info("   core process, decay1, (decay2, (decay2', ...)), ...  etc")
-        logger.info("   Example: p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2")
-        logger.info("   Note that identical particles will all be decayed.")
+        logger.info(" > Note that if there are more than one non-QCD coupling type,")
+        logger.info("   coupling orders need to be specified by hand.")
+        logger.info("Decay chain syntax:",'$MG:color:BLACK')
+        logger.info(" o core process, decay1, (decay2, (decay2', ...)), ...  etc")
+        logger.info(" o Example: add process p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2",'$MG:color:GREEN')
+        logger.info(" > Note that identical particles will all be decayed.")
+        logger.info("Loop processes syntax:",'$MG:color:BLACK')
+        logger.info(" o core process [ <NLO_mode=> LoopOrder1 LoopOrder2 ... ] SQUAREDCOUPi=ORDERi")        
+        logger.info(" o Example: add process p p > t~ t QED=0 QCD=2 [ all= QCD ] QCD=6",'$MG:color:GREEN')
+        logger.info(" > Notice that in this format, decay chains are not allowed.")
+        logger.info(" > The LoopOrder(s) defined specify the kind of loops to consider (only QCD for now).")
+        logger.info(" > The coupling restrictions before '[' restrict the orders of born *amplitudes*.")
+        logger.info("   So that in the example above QCD=2 restricts the born amplitude to have at")   
+        logger.info("   most QCD=2 and loop amplitudes at most QCD=2+2 (because QCD loops are considered)")             
+        logger.info(" > The coupling restrictions after ']' restrict the orders of the matrix element, ")
+        logger.info("   namely the squared amplitudes. In the example above QCD=6 correspond to born") 
+        logger.info("   amplitudes with QCD=2 squared against loop amplitudes with QCD=4, adding up to 6.")
+        logger.info(" > The optional <NLO_mode=> can be any of the following ('all=' by default if absent):")                    
+        logger.info("     all=   : Generate all the real-emission and loop diagrams, ready for aMC@NLO runs.")                    
+        logger.info("     virt=  : Generate only the loop diagrams, read for MadLoop standalone checks/runs.")                    
+        logger.info("     real=  : Generate only the real-emission diagrams, for use with alternative OLP. ")                    
+        logger.info(" > For processes without born amplitudes (i.e. loop-induced like g g > z), please use ")                    
+        logger.info("   the 'virt=' NLO mode. aMC@NLO cannot integrate these processes, but standalone MadLoop5")                    
+        logger.info("   can still handle these.")
 
     def help_define(self):
-        logger.info("syntax: define multipart_name [=] part_name_list")
-        logger.info("-- define a multiparticle")
-        logger.info("   Example: define p = g u u~ c c~ d d~ s s~ b b~")
+        logger.info("-- define a multiparticle",'$MG:color:BLUE')
+        logger.info("Syntax:  define multipart_name [=] part_name_list")
+        logger.info("Example: define p = g u u~ c c~ d d~ s s~ b b~",'$MG:color:GREEN')
         
 
     def help_set(self):
-        logger.info("syntax: set %s argument|default" % "|".join(self._set_options))
-        logger.info("-- set options for generation or output.")
-        logger.info("   group_subprocesses True/False/Auto: ")
-        logger.info("     (default Auto) Smart grouping of subprocesses into ")
-        logger.info("     directories, mirroring of initial states, and ")
-        logger.info("     combination of integration channels.")
-        logger.info("     Example: p p > j j j w+ gives 5 directories and 184 channels")
-        logger.info("     (cf. 65 directories and 1048 channels for regular output)")
-        logger.info("     Auto means False for decay computation and True for") 
-        logger.info("     collisions.")
-        logger.info("   ignore_six_quark_processes multi_part_label")
-        logger.info("     (default none) ignore processes with at least 6 of any")
-        logger.info("     of the quarks given in multi_part_label.")
-        logger.info("     These processes give negligible contribution to the")
-        logger.info("     cross section but have subprocesses/channels.")
-        logger.info("   stdout_level DEBUG|INFO|WARNING|ERROR|CRITICAL")
-        logger.info("     change the default level for printed information")
-        logger.info("   fortran_compiler NAME")
-        logger.info("      (default None) Force a specific fortran compiler.")
-        logger.info("      If None, it tries first g77 and if not present gfortran.")
-        logger.info("   gauge unitary|Feynman")        
-        logger.info("      (default unitary) choose the gauge.")
-        logger.info("   complex_mass_scheme True|False")        
-        logger.info("      (default False) Set complex mass scheme.")
-        logger.info("   timeout VALUE")
-        logger.info("      (default 20) Seconds allowed to answer questions.")
-        logger.info("      Note that pressing tab always stops the timer.")
-        logger.info("   cluster_temp_path PATH")
-        logger.info("      (default None) [Used in Madevent Output]")
-        logger.info("      Allow to perform the run in PATH directory")
-        logger.info("      This allow to not run on the central disk. This is not used")
-        logger.info("      by condor cluster (since condor has it's own way to prevent it).")
+        logger.info("-- set options for generation or output.",'$MG:color:BLUE')
+        logger.info("syntax: set <option_name> <option_value>",'$MG:color:BLACK')
+        logger.info("Possible options are: ")
+        for opts in [self._set_options[i*3:(i+1)*3] for i in \
+                                          range((len(self._set_options)//4)+1)]:
+            logger.info("%s"%(','.join(opts)),'$MG:color:GREEN')
+        logger.info("Details of each option:")
+        logger.info("group_subprocesses True/False/Auto: ",'$MG:color:BLACK')
+        logger.info(" > (default Auto) Smart grouping of subprocesses into ")
+        logger.info("   directories, mirroring of initial states, and ")
+        logger.info("   combination of integration channels.")
+        logger.info(" > Example: p p > j j j w+ gives 5 directories and 184 channels",'$MG:color:GREEN')
+        logger.info("   (cf. 65 directories and 1048 channels for regular output)",'$MG:color:GREEN')
+        logger.info(" > Auto means False for decay computation and True for collisions.") 
+        logger.info("ignore_six_quark_processes multi_part_label",'$MG:color:BLACK')
+        logger.info(" > (default none) ignore processes with at least 6 of any")
+        logger.info("   of the quarks given in multi_part_label.")
+        logger.info(" > These processes give negligible contribution to the")
+        logger.info("   cross section but have subprocesses/channels.")
+        logger.info("stdout_level DEBUG|INFO|WARNING|ERROR|CRITICAL",'$MG:color:BLACK')
+        logger.info(" > change the default level for printed information")
+        logger.info("fortran_compiler NAME",'$MG:color:BLACK')
+        logger.info(" > (default None) Force a specific fortran compiler.")
+        logger.info("   If None, it tries first g77 and if not present gfortran")
+        logger.info("   but loop output use gfortran.")
+        logger.info("loop_optimized_output True|False",'$MG:color:BLACK')
+        logger.info(" > Exploits the open loop thechnique for considerable")
+        logger.info("   improvement.")
+        logger.info(" > CP relations among helicites are detected and the helicity")
+        logger.info("   filter has more potential.")
+        logger.info("gauge unitary|Feynman",'$MG:color:BLACK')        
+        logger.info(" > (default unitary) choose the gauge of the non QCD part.")
+        logger.info(" > For loop processes, only Feynman gauge is employable.")        
+        logger.info("complex_mass_scheme True|False",'$MG:color:BLACK')        
+        logger.info(" > (default False) Set complex mass scheme.")
+        logger.info(" > Complex mass scheme is not yet supported for loop processes.")
+        logger.info("timeout VALUE",'$MG:color:BLACK')
+        logger.info(" > (default 20) Seconds allowed to answer questions.")
+        logger.info(" > Note that pressing tab always stops the timer.")
+        logger.info("cluster_temp_path PATH",'$MG:color:BLACK')
+        logger.info(" > (default None) [Used in Madevent Output]")
+        logger.info(" > Allow to perform the run in PATH directory")
+        logger.info(" > This allow to not run on the central disk. ")
+        logger.info(" > This is not used by condor cluster (since condor has")
+        logger.info("   its own way to prevent it).")
        
 #===============================================================================
 # CheckValidForCmd
@@ -481,7 +631,6 @@ class CheckValidForCmd(cmd.CheckCmd):
         """check the validity of line
         syntax: define multipart_name [ part_name_list ]
         """  
-
         
         if len(args) < 2:
             self.help_define()
@@ -520,8 +669,9 @@ class CheckValidForCmd(cmd.CheckCmd):
         if not self._curr_model:
             raise self.InvalidCmd("No model currently active, please import a model!")
 
-        if args[0] in ['processes', 'diagrams'] and not self._curr_amps:
-            raise self.InvalidCmd("No process generated, please generate a process!")
+# check that either _curr_amps or _fks_multi_proc exists
+        if (args[0] in ['processes', 'diagrams'] and not self._curr_amps and not self._fks_multi_proc):
+           raise self.InvalidCmd("No process generated, please generate a process!")
         if args[0] == 'checks' and not self._comparisons:
             raise self.InvalidCmd("No check results to display.")
         
@@ -558,9 +708,31 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd("\"check\" requires a process.")
 
         param_card = None
-        if os.path.isfile(args[1]):
+        if args[0] not in ['stability','profile','timing'] and os.path.isfile(args[1]):
             param_card = args.pop(1)
 
+        if args[0] in ['stability','profile','timing'] and len(args)>1:
+            if args[1] != "-reuse":
+                if args[1][0] == '-':
+                    raise self.InvalidCmd("Command option %s not recognized."%args[1])
+                else:    
+                    args.insert(1, '-no_reuse')
+
+        if args[0] in ['timing'] and os.path.isfile(args[2]):
+            param_card = args.pop(2)
+
+        if args[0] in ['stability', 'profile'] and len(args)>1:
+            # If the first argument after 'stability' is not the integer
+            # specifying the desired statistics (i.e. number of points), then
+            # we insert the default value 100
+            try: 
+                int(args[2])
+            except ValueError:
+                args.insert(2, '100')
+            
+        if args[0] in ['stability', 'profile'] and os.path.isfile(args[3]):
+            param_card = args.pop(3)
+                
         if args[0] not in self._check_opts:
             args.insert(0, 'full')
 
@@ -614,6 +786,21 @@ class CheckValidForCmd(cmd.CheckCmd):
                 raise self.InvalidCmd(
                 'wrong process format: restriction should be place after the final states')
         
+
+    def check_tutorial(self, args):
+        """check the validity of the line"""
+        if len(args) == 1:
+            if not args[0] in self._tutorial_opts:
+                self.help_tutorial()
+                raise self.InvalidCmd('Invalid argument for tutorial')
+        elif len(args) == 0:
+            #this means mg5 tutorial
+            args.append('MadGraph5')
+        else:
+            self.help_tutorial()
+            raise self.InvalidCmd('Too manu arguments for tutorial')
+
+
     
     def check_import(self, args):
         """check the validity of line"""
@@ -782,8 +969,10 @@ This will take effect only in a NEW terminal
         
         if os.path.isdir(src_path):
             return 'standalone_cpp'
-        elif os.path.isfile(pjoin(bin_path,'generate_events')):
+        elif os.path.isfile(pjoin(bin_path,'madevent')):
             return 'madevent'
+        elif os.path.isfile(pjoin(bin_path,'aMCatNLO')):
+            return 'aMC@NLO'
         elif os.path.isdir(card_path):
             return 'standalone'
 
@@ -865,8 +1054,9 @@ This will take effect only in a NEW terminal
 
     def check_set(self, args, log=True):
         """ check the validity of the line"""
-
-        if len(args) == 1 and args[0] == 'complex_mass_scheme':
+        
+        if len(args) == 1 and args[0] in ['complex_mass_scheme',\
+                                          'loop_optimized_output']:
             args.append('True')
         
         if len(args) < 2:
@@ -907,6 +1097,15 @@ This will take effect only in a NEW terminal
                                                           not args[1].isdigit():
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')       
+        
+        if args[0] in ['timeout']:
+            if not args[1].isdigit():
+                raise self.InvalidCmd('timeout values should be a integer')   
+
+        if args[0] in ['loop_optimized_output']:
+            if args[1] not in ['True', 'False']:
+                raise self.InvalidCmd('loop_optimized_output needs argument True or False') 
+    
         if args[0] in ['gauge']:
             if args[1] not in ['unitary','Feynman']:
                 raise self.InvalidCmd('gauge needs argument unitary or Feynman.')       
@@ -958,7 +1157,8 @@ This will take effect only in a NEW terminal
                 
     def check_output(self, args):
         """ check the validity of the line"""
-          
+        
+        
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
         else:
@@ -973,7 +1173,7 @@ This will take effect only in a NEW terminal
             text = " The Model imported (MG4 format) does not contain enough\n "
             text += " information for this type of output. In order to create\n"
             text += " output for " + args[0] + ", you have to use a UFO model.\n"
-            text += " Those model can be imported with mg5> import model NAME."
+            text += " Those model can be imported with MG5> import model NAME."
             logger.warning(text)
             raise self.InvalidCmd('')
 
@@ -1042,7 +1242,13 @@ This will take effect only in a NEW terminal
                     if 'TemplateVersion.txt' in self._export_dir:
                         return
         
-        if self._export_format.startswith('madevent'):            
+
+        if self._export_format == 'NLO':            
+            name_dir = lambda i: 'PROCNLO_%s_%s' % \
+                                    (self._curr_model['name'], i)
+            auto_path = lambda i: pjoin(self.writing_dir,
+                                               name_dir(i))
+        elif self._export_format.startswith('madevent'):            
             name_dir = lambda i: 'PROC_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,
@@ -1180,41 +1386,158 @@ class CheckValidForCmdWeb(CheckValidForCmd):
 #===============================================================================
 class CompleteForCmd(cmd.CompleteCmd):
     """ The Series of help routine for the MadGraphCmd"""
-    
+     
+    def nlo_completion(self,args,text,line,allowed_loop_mode=None):
+        """ complete the nlo settings within square brackets. It uses the
+         allowed_loop_mode for the proposed mode if specified, otherwise, it 
+         uses self._nlo_modes_for_completion"""
+
+        # We are now editing the loop related options
+        # Automatically allow for QCD perturbation if in the sm because the
+        # loop_sm would then automatically be loaded
+        nlo_modes = allowed_loop_mode if not allowed_loop_mode is None else \
+                                                  self._nlo_modes_for_completion
+        if isinstance(self._curr_model,loop_base_objects.LoopModel):
+            pert_couplings_allowed = self._curr_model['perturbation_couplings']
+        else:
+            pert_couplings_allowed = []
+        if self._curr_model.get('name').startswith('sm'):
+            pert_couplings_allowed = pert_couplings_allowed + ['QCD']
+        # Find wether the loop mode is already set or not
+        loop_specs = line[line.index('[')+1:]
+        try:
+            loop_orders = loop_specs[loop_specs.index('=')+1:]
+        except ValueError:
+            loop_orders = loop_specs
+        possibilities = []
+        possible_orders = [order for order in pert_couplings_allowed if \
+                                                  order not in loop_orders]
+            
+        # Simplify obvious loop completion
+        single_completion = ''
+        if len(nlo_modes)==1:
+                single_completion = '%s= '%nlo_modes[0]
+                if len(possible_orders)==1:
+                    single_completion = single_completion + possible_orders[0] + ' ] '
+        # Automatically add a space if not present after [ or =
+        if text.endswith('['):
+            if single_completion != '':
+                return self.list_completion(text, ['[ '+single_completion])
+            else:
+                return self.list_completion(text,['[ '])
+
+        if text.endswith('='):
+            return self.list_completion(text,[' '])
+
+        if args[-1]=='[':
+            possibilities = possibilities + ['%s= '%mode for mode in nlo_modes]                    
+            if single_completion != '':
+                return self.list_completion(text, [single_completion])
+            else:
+                if len(possible_orders)==1:
+                    return self.list_completion(text, [poss+' %s ] '%\
+                              possible_orders[0] for poss in possibilities])
+                return self.list_completion(text, possibilities)
+
+        if len(possible_orders)==1:
+            possibilities.append(possible_orders[0]+' ] ')
+        else:
+            possibilities.extend(possible_orders)
+        if any([(order in loop_orders) for order in pert_couplings_allowed]):
+            possibilities.append(']')
+        return self.list_completion(text, possibilities)
  
-    def model_completion(self, text, process):
-        """ complete the line with model information """
+    def model_completion(self, text, process, line, categories = True, \
+                                                      allowed_loop_mode = None):
+        """ complete the line with model information. If categories is True,
+        it will use completion with categories. If allowed_loop_mode is 
+        specified, it will only complete with these loop modes."""
+
+        # First check if we are within squared brackets so that specific 
+        # input for NLO settings must be completed
+        args = self.split_arg(process)
+        if len(args) > 2 and '>' in line and '[' in line and not ']' in line:
+            return self.nlo_completion(args,text,line, allowed_loop_mode = \
+                                                              allowed_loop_mode)
 
         while ',' in process:
             process = process[process.index(',')+1:]
         args = self.split_arg(process)
         couplings = []
 
+        # Do no complete the @ for the process number.
+        if len(args) > 1 and args[-1]=='@':
+            return
+        
+        # Automatically allow for QCD perturbation if in the sm because the
+        # loop_sm would then automatically be loaded
+        if isinstance(self._curr_model,loop_base_objects.LoopModel):
+            pert_couplings_allowed = self._curr_model['perturbation_couplings']
+        else:
+            pert_couplings_allowed = []        
+        if self._curr_model.get('name').startswith('sm'):
+            pert_couplings_allowed = pert_couplings_allowed + ['QCD']
+
+        # Remove possible identical names
+        particles = list(set(self._particle_names + self._multiparticles.keys()))
+        n_part_entered = len([1 for a in args if a in particles])
+
         # Force '>' if two initial particles.
-        if len(args) == 2 and args[-1] != '>':
+        if n_part_entered == 2 and args[-1] != '>':
                 return self.list_completion(text, '>')
             
         # Add non-particle names
-        if len(args) > 0 and args[-1] != '>':
-            couplings = ['>']
+        syntax = []
+        couplings = []
+        if len(args) > 0 and args[-1] != '>' and n_part_entered > 0:
+            syntax.append('>')
         if '>' in args and args.index('>') < len(args) - 1:
-            couplings = [c + "=" for c in self._couplings] + \
-                        ['@','$','/','>',',']
-        return self.list_completion(text, self._particle_names + \
-                                    self._multiparticles.keys() + couplings)
+            couplings.extend([c + "=" for c in self._couplings] + ['WEIGHTED='])
+            syntax.extend(['@','$','/','>',','])
+            if '[' not in line and ',' not in line and len(pert_couplings_allowed)>0:
+                syntax.append('[')
+        # If information for the virtuals has been specified already, do not
+        # propose syntax or particles input anymore
+        if '[' in line:
+            syntax = []
+            particles = []
+            # But still allow for defining the process id
+            couplings.append('@')
         
+        if not categories:
+            # The direct completion (might be needed for some completion using
+            # this function but adding some other completions (like in check)).
+            # For those, it looks ok in the categorie mode on my mac, but if
+            # someone sees wierd result on Linux systems, then use the 
+            # default completion for these features.
+            return self.list_completion(text, particles+syntax+couplings)
+        else:
+            # A more elaborate one with categories
+            poss_particles = self.list_completion(text, particles)
+            poss_syntax = self.list_completion(text, syntax)
+            poss_couplings = self.list_completion(text, couplings)
+            possibilities = {}
+            if poss_particles != []: possibilities['Particles']=poss_particles
+            if poss_syntax != []: possibilities['Syntax']=poss_syntax
+            if poss_couplings != []: possibilities['Coupling orders']=poss_couplings
+            if len(possibilities.keys())==1:    
+                return self.list_completion(text, possibilities.values()[0])   
+            else:
+                return self.deal_multiple_categories(possibilities)     
                     
     def complete_generate(self, text, line, begidx, endidx):
-        "Complete the add command"
+        "Complete the generate command"
 
         # Return list of particle names and multiparticle names, as well as
         # coupling orders and allowed symbols
         args = self.split_arg(line[0:begidx])
-        if len(args) > 2 and args[-1] == '@' or args[-1].endswith('='):
+        
+        if len(args) > 2 and args[-1] == '@' or ( args[-1].endswith('=') and \
+                            (not '[' in line or ('[' in line and ']' in line))):
             return
 
         try:
-            return self.model_completion(text, ' '.join(args[1:]))
+            return self.model_completion(text, ' '.join(args[1:]),line)
         except Exception as error:
             print error
             
@@ -1265,20 +1588,29 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) == 1:
             return self.list_completion(text, self._check_opts)
 
-        
-
-
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text, pjoin(*[a for a in args \
                                                     if a.endswith(os.path.sep)]))
         # autocompletion for particles/couplings
-        model_comp = self.model_completion(text, ' '.join(args[2:]))
+        model_comp = self.model_completion(text, ' '.join(args[2:]),line,
+                                  categories = True, allowed_loop_mode=['virt'])
+
+        model_comp_and_path = self.deal_multiple_categories(\
+          {'Process completion': self.model_completion(text, ' '.join(args[2:]),
+          line, categories = False, allowed_loop_mode=['virt']), 
+          'Param_card.dat path completion:':self.path_completion(text)})
 
         if len(args) == 2:
-            return model_comp + self.path_completion(text)
-
-        if len(args) > 2:
+            return model_comp_and_path
+        elif len(args) == 3:
+            try:
+                int(args[2])
+            except ValueError:
+                return model_comp
+            else:
+                return model_comp_and_path
+        elif len(args) > 3:
             return model_comp
             
         
@@ -1291,7 +1623,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         
     def complete_define(self, text, line, begidx, endidx):
         """Complete particle information"""
-        return self.model_completion(text, line[6:])
+        return self.model_completion(text, line[6:],line)
 
     def complete_display(self, text, line, begidx, endidx):
         "Complete the display command"
@@ -1305,7 +1637,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text, ['failed'])
 
         if len(args) == 2 and args[1] == 'particles':
-            return self.model_completion(text, line[begidx:])
+            return self.model_completion(text, line[begidx:],line)
 
     def complete_draw(self, text, line, begidx, endidx):
         "Complete the draw command"
@@ -1357,7 +1689,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             out['Options'] = self.list_completion(text, opt, line)
         else:
             opt = ['--cluster', '--multicore', '-i', '--name=', '-f','-m', '-n', 
-               '--interactive', '--laststep=parton', '--laststep=pythia',
+               '-p','--parton','--interactive', '--laststep=parton', '--laststep=pythia',
                '--laststep=pgs', '--laststep=delphes','--laststep=auto']
             out['Options'] = self.list_completion(text, opt, line)
         
@@ -1528,8 +1860,9 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text, opts)
 
         if len(args) == 2:
-            if args[1] in ['group_subprocesses', 'complex_mass_scheme']:
-                return self.list_completion(text, ['False', 'True','default'])
+            if args[1] in ['group_subprocesses', 'complex_mass_scheme',\
+                           'loop_optimized_output']:
+                return self.list_completion(text, ['False', 'True', 'default'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
             elif args[1] == 'gauge':
@@ -1562,7 +1895,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         "Complete the import command"
         
         args=self.split_arg(line[0:begidx])
-        
+    
         # Format
         if len(args) == 1:
             opt =  self.list_completion(text, self._import_formats)
@@ -1602,7 +1935,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 try:
                     cur_path = pjoin(*[a for a in args \
                                                    if a.endswith(os.path.sep)])
-                except:
+                except Exception:
                     pass
                 else:
                     all_dir = self.path_completion(text, cur_path, only_dirs = True)
@@ -1618,7 +1951,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 try:
                     cur_path = pjoin(*[a for a in args \
                                                    if a.endswith(os.path.sep)])
-                except:
+                except Exception:
                     pass
                 else:
                     all_path =  self.path_completion(text, cur_path)
@@ -1749,20 +2082,23 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'checks', 'parameters', 'options', 'coupling_order','variable']
     _add_opts = ['process']
     _save_opts = ['model', 'processes', 'options']
-    _tutorial_opts = ['start', 'stop']
-    _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
+    _tutorial_opts = ['aMCatNLO', 'stop', 'MadLoop', 'MadGraph5']
+    _switch_opts = ['mg5','aMC@NLO','ML5']
+    _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation', 
+                   'gauge','lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
-    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 
-                     'update']
+    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 'MCatNLO-utilities','update']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
                     'stdout_level',
                     'fortran_compiler',
-                    'gauge',
-                    'complex_mass_scheme']
-    
+                    'loop_optimized_output',
+                    'complex_mass_scheme',
+                    'gauge']
+    _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
+
     # The three options categories are treated on a different footage when a 
     # set/save configuration occur. current value are kept in self.options
     options_configuration = {'pythia8_path': './pythia8',
@@ -1771,6 +2107,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
+                       'MCatNLO-utilities_path':'./MCatNLO-utilities',
                        'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
@@ -1780,13 +2117,18 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_type': 'condor',
                        'cluster_temp_path': None,
                        'cluster_queue': None,
+                       'fastjet':'fastjet-config',
+                       'lhapdf':'lhapdf-config',
+                       'cluster_temp_path':None
                        }
     
     options_madgraph= {'group_subprocesses': 'Auto',
                           'ignore_six_quark_processes': False,
                           'complex_mass_scheme': False,
                           'gauge':'unitary',
-                          'stdout_level':None}
+                          'stdout_level':None,
+                          'loop_optimized_output':True}
+
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
                          'nb_core': None,
@@ -1801,11 +2143,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _curr_cpp_model = None
     _curr_exporter = None
     _done_export = False
+    
+    helporder = ['Main commands', 'Documented commands']
 
     def preloop(self):
         """Initializing before starting the main loop"""
 
-        self.prompt = 'mg5>'       
+        self.prompt = 'MG5>'       
         self.do_install('update --mode=mg5_start')
         
         # By default, load the UFO Standard Model
@@ -1820,7 +2164,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """ add a tracker of the history """
 
         CmdExtended.__init__(self, *completekey, **stdin)
-        
+     
         # Set MG/ME directory path
         if mgme_dir:
             if os.path.isdir(pjoin(mgme_dir, 'Template')):
@@ -1840,13 +2184,33 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._export_dir = None
         self._export_format = 'madevent'
         self._mgme_dir = MG4DIR
+        self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
         self._comparisons = None
+        self._nlo_modes_for_completion = ['all','virt','real']
 
         # Load the configuration file
         self.set_configuration()
 
+    def setup(self):
+        """ Actions to carry when switching to this interface """
+        
+        # Refresh all the interface stored value as things like generated
+        # processes and amplitudes are not to be reused in between different
+        # interfaces
+        # Clear history, amplitudes and matrix elements when a model is imported
+        # Remove previous imports, generations and outputs from history
+        self.clean_history(remove_bef_last='import')
+        # Reset amplitudes and matrix elements
+        self._done_export=False
+        self._curr_amps = diagram_generation.AmplitudeList()
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess()    
+
+        self._v4_export_formats = ['madevent', 'standalone', 'matrix'] 
+        self._export_formats = self._v4_export_formats + ['standalone_cpp', 'pythia8']
+        self._nlo_modes_for_completion = ['all','virt','real']
+    
     def do_quit(self, line):
-        """Do quit"""
+        """Not in help: Do quit"""
 
         if self._done_export and \
                     os.path.exists(pjoin(self._done_export[0],'RunWeb')):
@@ -1854,7 +2218,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 
         value = super(MadGraphCmd, self).do_quit(line)
         self.do_install('update --mode=mg5_end')
-        print
 
         return value
         
@@ -1884,6 +2247,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # Extract process from process definition
             if ',' in line:
                 myprocdef, line = self.extract_decay_chain_process(line)
+                if myprocdef.are_decays_perturbed():
+                    raise MadGraph5Error("Decay processes cannot be perturbed")
             else:
                 myprocdef = self.extract_process(line)
 
@@ -1908,11 +2273,18 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                            "ignore_six_quark_processes" in self.options \
                            else []
 
-            myproc = diagram_generation.MultiProcess(myprocdef,
-                                          collect_mirror_procs =\
-                                          collect_mirror_procs,
-                                          ignore_six_quark_processes = \
-                                          ignore_six_quark_processes)
+            # Decide here wether one needs a LoopMultiProcess or a MultiProcess
+            multiprocessclass=None
+            if myprocdef['perturbation_couplings']!=[]:
+                multiprocessclass=loop_diagram_generation.LoopMultiProcess
+            else:
+                multiprocessclass=diagram_generation.MultiProcess
+
+            myproc = multiprocessclass(myprocdef,
+                                       collect_mirror_procs =\
+                                       collect_mirror_procs,
+                                       ignore_six_quark_processes = \
+                                       ignore_six_quark_processes)
 
             for amp in myproc.get('amplitudes'):
                 if amp not in self._curr_amps:
@@ -2168,7 +2540,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 print ' "display couplings" present the actual definition'
                 print 'prints the current states of mode'
                 print eval('ufomodel.couplings.%s.nice_string()'%args[1])
-            except:
+            except Exception:
                 raise self.InvalidCmd, 'no couplings %s in current model' % args[1]
         
         elif args[0] == 'lorentz':
@@ -2182,7 +2554,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             try:
                 ufomodel = ufomodels.load_model(self._curr_model.get('name'))
                 print eval('ufomodel.lorentz.%s.nice_string()'%args[1])
-            except:
+            except Exception:
                 raise self.InvalidCmd, 'no lorentz %s in current model' % args[1]
             
         elif args[0] == 'checks':
@@ -2262,17 +2634,25 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                     get('particle_dict')[part_id].get_name() \
                                     for part_id in self._multiparticles[key]]))
             
-  
-
     def do_tutorial(self, line):
         """Activate/deactivate the tutorial mode."""
 
         args = self.split_arg(line)
-        if len(args) > 0 and args[0] == "stop":
+        self.check_tutorial(args)
+        tutorials = {'MadGraph5': logger_tuto,
+                     'aMCatNLO': logger_tuto_nlo,
+                     'MadLoop': logger_tuto_madloop}
+        try:
+            tutorials[args[0]].setLevel(logging.INFO)
+            for mode in [m for m in tutorials.keys() if m != args[0]]:
+                tutorials[mode].setLevel(logging.ERROR)
+        except KeyError:
             logger_tuto.info("\n\tThanks for using the tutorial!")
             logger_tuto.setLevel(logging.ERROR)
-        else:
-            logger_tuto.setLevel(logging.INFO)
+            logger_tuto_nlo.info("\n\tThanks for using the aMC@NLO tutorial!")
+            logger_tuto_nlo.setLevel(logging.ERROR)
+            logger_tuto_madloop.info("\n\tThanks for using MadLoop tutorial!")
+            logger_tuto_madloop.setLevel(logging.ERROR)
 
         if not self._mgme_dir:
             logger_tuto.info(\
@@ -2280,8 +2660,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        "please run from a" + \
                        "\n\t         valid MG_ME directory.")
 
-    def draw(self, line):
-        """ draw the Feynman diagram for the given process """
+
+
+    def draw(self, line,selection='all',type=''):
+        """ draw the Feynman diagram for the given process.
+        Type refers to born, real or loop"""
 
         args = self.split_arg(line)
         # Check the validity of the arguments
@@ -2307,11 +2690,25 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         for amp in amplitudes:
             filename = pjoin(args[0], 'diagrams_' + \
                                     amp.get('process').shell_string() + ".eps")
-            plot = draw.MultiEpsDiagramDrawer(amp['diagrams'],
+            
+            if selection=='all' and type != 'loop':
+                diags=amp.get('diagrams')
+            elif selection=='born':
+                diags=amp.get('born_diagrams')
+            elif selection=='loop' or type == 'loop':
+                diags=base_objects.DiagramList([d for d in 
+                        amp.get('loop_diagrams') if d.get('type')>0])
+                if len(diags) > 1000:
+                    logger.warning('Displaying only the first 1000 diagrams')
+                    diags = base_objects.DiagramList(diags[:1000])
+
+            plot = draw.MultiEpsDiagramDrawer(diags,
                                           filename,
                                           model=self._curr_model,
-                                          amplitude='',
-                                          legend=amp.get('process').input_string())
+                                          amplitude=amp,
+                                          legend=amp.get('process').input_string(),
+                                          diagram_type=type)
+                                          
 
             logger.info("Drawing " + \
                          amp.get('process').nice_string())
@@ -2322,96 +2719,183 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         stop = time.time()
         logger.info('time to draw %s' % (stop - start)) 
     
-    # Generate a new amplitude
+    # Perform checks
     def do_check(self, line):
         """Check a given process or set of processes"""
-
         args = self.split_arg(line)
-
         # Check args validity
         param_card = self.check_check(args)
-
-        line = " ".join(args[1:])
-        myprocdef = self.extract_process(line)
+        
+        # For the stability check the user can specify the statistics (i.e
+        # number of trial PS points) as a second argument
+        reuse = False
+        if args[0] in ['stability','profile','timing']:        
+            reuse = args[1]=="-reuse"       
+            args = args[:1]+args[2:] 
+        if args[0] in ['stability', 'profile']:
+            stab_statistics = int(args[1])
+            args = args[:1]+args[2:]
+        
+        proc_line = " ".join(args[1:])
+        myprocdef = self.extract_process(proc_line)
 
         # Check that we have something    
         if not myprocdef:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
 
-        # Disable diagram generation logger
-        diag_logger = logging.getLogger('madgraph.diagram_generation')
-        old_level = diag_logger.getEffectiveLevel()
-        diag_logger.setLevel(logging.WARNING)
+        if args[0]=='gauge' and myprocdef.get('perturbation_couplings'):
+            raise self.InvalidCmd("Processes involving loops can only be"+
+                                                 " evaluated in Feynman gauge.")
 
+        if args[0] in ['timing','stability', 'profile'] and not \
+                                        myprocdef.get('perturbation_couplings'):
+            raise self.InvalidCmd("Only loop processes can have their "+
+                                  " timings or stability checked.")
+        
+        # Disable some loggers
+        loggers = [logging.getLogger('madgraph.diagram_generation'),
+                   logging.getLogger('madgraph.loop_diagram_generation'),
+                   logging.getLogger('ALOHA'),
+                   logging.getLogger('madgraph.helas_objects'),
+                   logging.getLogger('madgraph.loop_exporter'),
+                   logging.getLogger('madgraph.export_v4')]
+        old_levels = [logger.getEffectiveLevel() for logger in loggers]
+        for logger in loggers:
+            logger.setLevel(logging.WARNING)
+        
         # run the check
         cpu_time1 = time.time()
         # Run matrix element generation check on processes
-        mass_scheme = self.options['complex_mass_scheme']
+        # The loop optimization output flag is passed as a global to 
+        # process_checks because I am fed up with passing it through each single
+        # damn little function of process_checks.
+        old_process_checks_loop_opt = process_checks.loop_optimized_output
+        
+        process_checks.loop_optimized_output = self.options['loop_optimized_output']
 
         comparisons = []
         gauge_result = []
         gauge_result_no_brs = []
         lorentz_result =[]
         nb_processes = 0
+        timings = []
+        stability = []
+        profile_time = []
+        profile_stab = []
         
+        if "_cuttools_dir" in dir(self):
+            CT_dir = self._cuttools_dir
+        else:
+            CT_dir =""
+        
+        if args[0] in ['timing']:
+            timings = process_checks.check_timing(myprocdef,
+                                                  param_card = param_card,
+                                                  cuttools=CT_dir,
+                                                  reuse = reuse,
+                                                  cmd = self)        
+
+        if args[0] in ['stability']:
+            stability = process_checks.check_stability(myprocdef,
+                                                  param_card = param_card,
+                                                  cuttools=CT_dir,
+                                                  nPoints=stab_statistics,
+                                                  reuse = reuse,
+                                                  cmd = self)
+
+        if args[0] in ['profile']:
+            # In this case timing and stability will be checked one after the
+            # other without re-generating the process.
+            profile_time, profile_stab = process_checks.check_profile(myprocdef,
+                                                  param_card = param_card,
+                                                  cuttools=CT_dir,
+                                                  nPoints=stab_statistics,
+                                                  reuse = reuse,
+                                                  cmd = self)
+
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
-                                                        param_card = param_card,
-                                                        quick = True)
+                                            param_card = param_card,
+                                            quick = True,
+                                            cuttools=CT_dir,
+                                            cmd = self)
             nb_processes += len(comparisons[0])
 
-        if args[0] in ['lorentz_invariance', 'full']:
+        if args[0] in ['lorentz', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
-                                                      param_card = param_card,
-                                                      cmass_scheme = mass_scheme)
+                                          param_card = param_card,
+                                          cuttools=CT_dir,
+                                          cmd = self)
             nb_processes += len(lorentz_result)
             
-        if args[0] in  ['gauge', 'full']:
+        if args[0] in  ['brs', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
-                                                      param_card = param_card,
-                                                      cmass_scheme = mass_scheme)
+                                          param_card = param_card,
+                                          cuttools=CT_dir,
+                                          cmd = self)
             nb_processes += len(gauge_result)
 
-        if args[0] in  ['gauge', 'full'] and len(self._curr_model.get('gauge')) == 2:
-            
+        if args[0] in  ['gauge', 'full'] and \
+          len(self._curr_model.get('gauge')) == 2 and \
+          not myprocdef.get('perturbation_couplings'):            
             gauge = str(self.options['gauge'])
             line = " ".join(args[1:])
             myprocdef = self.extract_process(line)
-            model_name = self._curr_model['name']
             if gauge == 'unitarity':
                 myprocdef_unit = myprocdef
                 self.do_set('gauge Feynman', log=False)
-                self.do_import('model %s' % model_name)
                 myprocdef_feyn = self.extract_process(line)
             else:
                 myprocdef_feyn = myprocdef
                 self.do_set('gauge unitary', log=False)
-                self.do_import('model %s' % model_name)
                 myprocdef_unit = self.extract_process(line)            
             
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
-                                                cmass_scheme = mass_scheme)
+                                                cuttools=CT_dir,
+                                                cmd = self)
             
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
-            self.do_import('model %s' % model_name)
             
             nb_processes += len(gauge_result_no_brs)            
-            
             
         cpu_time2 = time.time()
 
         logger.info("%i checked performed in %0.3f s" \
                     % (nb_processes,
                       (cpu_time2 - cpu_time1)))
-        if mass_scheme:
-            text = "Note that Complex mass scheme gives gauge/lorentz invariant\n"
-            text+= "results only for stable particles in final states.\n\n"
+
+        if args[0] not in ['timing','stability', 'profile']:
+            if self.options['complex_mass_scheme']:
+                text = "Note that Complex mass scheme gives gauge/lorentz invariant\n"
+                text+= "results only for stable particles in final states.\n\n"
+            else:
+                text = "Note That all width have been set to zero for those checks\n\n"
         else:
-            text = "Note That all width have been set to zero for those checks\n\n"
-            
+            text =""
+        
+        if timings:
+            text += 'Timing result for the '+('optimized' if \
+              self.options['loop_optimized_output'] else 'default')+' output:\n'
+                
+            text += process_checks.output_timings(myprocdef, timings,
+                                         process_checks.loop_optimized_output)
+        if stability:
+            text += 'Stability result for the '+('optimized' if \
+              self.options['loop_optimized_output'] else 'default')+' output:\n'
+            text += process_checks.output_stability(stability,
+                                    mg_root=self._mgme_dir, 
+                                    opt = process_checks.loop_optimized_output)
+        
+        if profile_time and profile_stab:
+            text += 'Timing result '+('optimized' if \
+                    self.options['loop_optimized_output'] else 'default')+':\n'
+            text += process_checks.output_profile(myprocdef, profile_stab,
+                                   profile_time, self._mgme_dir,
+                                   process_checks.loop_optimized_output,
+                                   reuse) + '\n'
         if gauge_result:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'
@@ -2429,21 +2913,28 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._comparisons = comparisons
 
         logger.info(text)
-        pydoc.pager(text)
+        if not (reuse and args[0] in ['profile']) and text!='':
+            pydoc.pager(text)
         # Restore diagram logger
-        diag_logger.setLevel(old_level)
-        
+        for i, logger in enumerate(loggers):
+            logger.setLevel(old_levels[i])
+
+        # Restore the default global for checks
+        process_checks.loop_optimized_output = old_process_checks_loop_opt
+
         # clean the globals created.
         process_checks.clean_added_globals(process_checks.ADDED_GLOBAL)
+        if not reuse:
+            process_checks.clean_up(self._mgme_dir)
     
     # Generate a new amplitude
     def do_generate(self, line):
-        """Generate an amplitude for a given process"""
+        """Main commands: Generate an amplitude for a given process"""
 
         # Reset amplitudes
         self._curr_amps = diagram_generation.AmplitudeList()
         # Reset Helas matrix elements
-        self._curr_matrix_elements = None
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._generate_info = line
         # Reset _done_export, since we have new process
         self._done_export = False
@@ -2460,7 +2951,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         args.insert(0, 'process')
         
         self.do_add(" ".join(args))
-    
+
     def extract_process(self, line, proc_number = 0, overall_orders = {}):
         """Extract a process definition from a string. Returns
         a ProcessDefinition."""
@@ -2473,8 +2964,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
 
         # Perform sanity modifications on the lines:
-        # Add a space before and after any > , $ / |
-        space_before = re.compile(r"(?P<carac>\S)(?P<tag>[/\,\\$\\>|])(?P<carac2>\S)")
+        # Add a space before and after any > , $ / | [ ]
+        space_before = re.compile(r"(?P<carac>\S)(?P<tag>[\\[\\]/\,\\$\\>|])(?P<carac2>\S)")
         line = space_before.sub(r'\g<carac> \g<tag> \g<carac2>', line)       
         
         # Use regular expressions to extract s-channel propagators,
@@ -2489,14 +2980,61 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             line = proc_number_re.group(1) + \
                    proc_number_re.group(3)
 
-        # Then take coupling orders (identified by "=")
-        order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
-        order_re = order_pattern.match(line)
+        # Now check for squared orders, specified after the perturbation orders.
+        # If it turns out there is no perturbation order then we will use these orders
+        # for the regular orders.
+        squared_order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+        squared_order_re = squared_order_pattern.match(line)
+        squared_orders = {}
+        while squared_order_re:
+            squared_orders[squared_order_re.group(2)] = int(squared_order_re.group(3))
+            line = squared_order_re.group(1)
+            squared_order_re = squared_order_pattern.match(line)
+
+        # Now check for perturbation orders, specified in between squared brackets
+        perturbation_couplings_pattern = \
+          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
+        perturbation_couplings_re = perturbation_couplings_pattern.match(line)
+        perturbation_couplings = ""
+        LoopOption= 'tree'
+        HasBorn= True
+        if perturbation_couplings_re:
+            perturbation_couplings = perturbation_couplings_re.group("pertOrders")
+            option=perturbation_couplings_re.group("option")
+            if option:
+                if option in self._valid_nlo_modes:
+                    if option=='sqrvirt':
+                        LoopOption='virt'
+                        HasBorn=False
+                    else:
+                        LoopOption=option
+                else:
+                    raise self.InvalidCmd, "NLO mode %s is not valid. "%option+\
+                       "Valid modes are %s. "%str(self._valid_nlo_modes)
+            else:
+                LoopOption='all'
+            line = perturbation_couplings_re.group("proc")+\
+                     perturbation_couplings_re.group("rest")
+
+        # Now if perturbation orders are defined, we will scan for the 
+        # amplitudes orders. If not we will use the squared orders above instead.
         orders = {}
-        while order_re:
-            orders[order_re.group(2)] = int(order_re.group(3))
-            line = order_re.group(1)
+        if perturbation_couplings == "":
+            for order in squared_orders:
+                orders[order]=squared_orders[order]
+            squared_orders={}
+        else:
+            # We take the coupling orders (identified by "=")
+            order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
             order_re = order_pattern.match(line)
+            while order_re:
+                orders[order_re.group(2)] = int(order_re.group(3))
+                line = order_re.group(1)
+                order_re = order_pattern.match(line)
+        # if the squared orders are defined but not the orders, assume orders=sq_orders
+        if not orders and squared_orders:
+            for order in squared_orders:
+                orders[order]=squared_orders[order]
 
         if self._use_lower_part_names:
             # Particle names lowercase
@@ -2571,18 +3109,32 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             else:
                 raise self.InvalidCmd, \
                       "No particle %s in model" % part_name
-
+                                                
         if filter(lambda leg: leg.get('state') == True, myleglist):
             # We have a valid process
-
+            # Extract perturbation orders
+            perturbation_couplings_list = perturbation_couplings.split()
+            if perturbation_couplings_list==['']:
+                perturbation_couplings_list=[]
+            if perturbation_couplings_list and LoopOption!='real':
+                if not isinstance(self._curr_model,loop_base_objects.LoopModel):
+                    raise self.InvalidCmd(\
+                      "The current model does not allow for loop computations.")
+                else:
+                    for pert_order in perturbation_couplings_list:
+                        if pert_order not in self._curr_model['perturbation_couplings']:
+                            raise self.InvalidCmd(\
+                                "Perturbation order %s is not among" % pert_order + \
+                                " the perturbation orders allowed for by the loop model.")
+                                                        
             # Now extract restrictions
             forbidden_particle_ids = \
                               self.extract_particle_ids(forbidden_particles)
             if forbidden_particle_ids and \
                isinstance(forbidden_particle_ids[0], list):
-                raise self.InvalidCmd,\
+                raise self.InvalidCmd(\
                       "Multiparticle %s is or-multiparticle" % part_name + \
-                      " which can be used only for required s-channels"
+                      " which can be used only for required s-channels")
             forbidden_onsh_schannel_ids = \
                               self.extract_particle_ids(forbidden_onsh_schannels)
             forbidden_schannel_ids = \
@@ -2603,18 +3155,21 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    isinstance(required_schannel_ids[0], list):
                 required_schannel_ids = [required_schannel_ids]
             
-
             return \
                 base_objects.ProcessDefinition({'legs': myleglist,
                               'model': self._curr_model,
                               'id': proc_number,
                               'orders': orders,
+                              'squared_orders':squared_orders,
                               'forbidden_particles': forbidden_particle_ids,
                               'forbidden_onsh_s_channels': forbidden_onsh_schannel_ids,
                               'forbidden_s_channels': \
                                                 forbidden_schannel_ids,
                               'required_s_channels': required_schannel_ids,
-                              'overall_orders': overall_orders
+                              'overall_orders': overall_orders,
+                              'perturbation_couplings': perturbation_couplings_list,
+                              'has_born':HasBorn,
+                              'NLO_mode':LoopOption
                               })
       #                       'is_decay_chain': decay_process\
 
@@ -2767,8 +3322,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     # Import files
     def do_import(self, line):
-        """Import files with external formats"""
-
+        """Main commands: Import files with external formats"""
         args = self.split_arg(line)
         # Check argument's validity
         self.check_import(args)
@@ -2804,17 +3358,27 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     if hasattr(self._curr_model, 'set_parameters_and_couplings'):
                         self._curr_model.set_parameters_and_couplings()
                 if self.options['gauge']=='unitary':
+                    if isinstance(self._curr_model,loop_base_objects.LoopModel) and \
+                         self._curr_model.get('perturbation_couplings')!=[] and \
+                                           self.options['gauge']=='unitary' and \
+                                          self.options['loop_optimized_output']:
+                        logger.info('Change the gauge to Feynman because '+\
+                          'the loop optimized output requires to work in this gauge')
+                        if 1 not in self._curr_model.get('gauge') :
+                            raise self.InvalidCmd(' Could not load this loop '+\
+                              'model in the loop_optimized output mode because'+\
+                                      ' it does not support the Feynman gauge.')
+                        self.do_set('gauge Feynman', log=False)
+                        return
                     if 0 not in self._curr_model.get('gauge') :
                         logger.warning('Change the gauge to Feynman since the model does not allow unitary gauge') 
                         self.do_set('gauge Feynman', log=False)
-                        self.do_import(line)
                         return                        
                 else:
                     if 1 not in self._curr_model.get('gauge') :
                         logger.warning('Change the gauge to unitary since the model does not allow Feynman gauge')
                         self._curr_model = None
                         self.do_set('gauge unitary', log= False)
-                        self.do_import(line)
                         return 
                 
                 self._curr_fortran_model = \
@@ -2867,7 +3431,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if '--no_launch' not in args:
                 self.exec_cmd('launch')
             
-            
         elif args[0] == 'proc_v4':
             self.history = []
 
@@ -2885,7 +3448,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
  
             #convert and excecute the card
             self.import_mg4_proc_card(proc_card)
-            
     
     def import_ufo_model(self, model_name):
         """ import the UFO model """
@@ -2959,7 +3521,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             try:
                 for part in self._multiparticles[key]:
                     self._curr_model.get('particle_dict')[part]
-            except:
+            except Exception:
                 del self._multiparticles[key]
                 defined_multiparticles.remove(key)
                 removed_multiparticles.append(key)
@@ -3021,23 +3583,24 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Load file with path of the different program:
         import urllib
         path = {}
+
+        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes':'Delphes', 
+                'pythia-pgs':'pythia-pgs', 'ExRootAnalysis': 'ExRootAnalysis',
+                'MadAnalysis':'MadAnalysis', 'MCatNLO-utilities':'MCatNLO-utilities'}
+        name = name[args[0]]
+
         try:
             data = urllib.urlopen('http://madgraph.phys.ucl.ac.be/package_info.dat')
-        except:
+        except Exception:
             raise MadGraph5Error, '''Impossible to connect the server. 
             Please check your internet connection or retry later'''
         for line in data: 
             split = line.split()   
             path[split[0]] = split[1]
         
-        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes':'Delphes', 
-                'pythia-pgs':'pythia-pgs', 'ExRootAnalysis': 'ExRootAnalysis',
-                'MadAnalysis':'MadAnalysis'}
-        name = name[args[0]]
-        
         try:
             os.system('rm -rf %s' % pjoin(MG5DIR, name))
-        except:
+        except Exception:
             pass
         
         # Load that path
@@ -3046,9 +3609,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             misc.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
         else:
             misc.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
+
         # Untar the file
         returncode = misc.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR, 
                                      stdout=open(os.devnull, 'w'))
+
         if returncode:
             raise MadGraph5Error, 'Fail to download correctly the File. Stop'
         
@@ -3061,11 +3626,18 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             else:
                 created_name = created_name[0]
             files.mv(pjoin(MG5DIR, created_name), pjoin(MG5DIR, name))
+
+
         logger.info('compile %s. This might takes a while.' % name)
         
         # Modify Makefile for pythia-pgs on Mac 64 bit
         if args[0] == "pythia-pgs" and sys.maxsize > 2**32:
             path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
+            text = open(path).read()
+            text = text.replace('MBITS=32','MBITS=64')
+            open(path, 'w').writelines(text)
+        elif args[0] == "MCatNLO-utilities" and sys.maxsize > 2**32:
+            path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'make_opts')
             text = open(path).read()
             text = text.replace('MBITS=32','MBITS=64')
             open(path, 'w').writelines(text)
@@ -3076,31 +3648,42 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if self.options['fortran_compiler']:
                 compiler = self.options['fortran_compiler']
             elif misc.which('gfortran'):
-                 compiler = 'gfortran'
+                compiler = 'gfortran'
             elif misc.which('g77'):
                 compiler = 'g77'
             else:
                 raise self.InvalidCmd('Require g77 or Gfortran compiler')
-            if compiler == 'gfortran' and args[0] == "pythia-pgs":
+            
+            path = None
+            base_compiler= ['FC=g77','FC=gfortran']
+            if args[0] == "pythia-pgs":
                 path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
-                text = open(path).read()
-                text = text.replace('FC=g77','FC=gfortran')
-                open(path, 'w').writelines(text)    
-            elif compiler == 'gfortran' and args[0] == 'MadAnalysis':
+            elif args[0] == 'MadAnalysis':
                 path = os.path.join(MG5DIR, 'MadAnalysis', 'makefile')
+            elif args[0] == 'MCatNLO-utilities':
+                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'make_opts')
+            
+            if path:
                 text = open(path).read()
-                text = text.replace('FC=g77','FC=gfortran')
+                for base in base_compiler:
+                    text = text.replace(base,'FC=%s' % compiler)
                 open(path, 'w').writelines(text)
-                            
+                        
         if logger.level <= logging.INFO:
-            devnull = open(os.devnull,'w') 
-            misc.call(['make', 'clean'], stdout=devnull, stderr=-2)
+            devnull = open(os.devnull,'w')
+            try: 
+                misc.call(['make', 'clean'], stdout=devnull, stderr=-2)
+            except Exception:
+                pass
             status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
-            misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
+            try:
+                misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
+            except Exception:
+                pass
             status = misc.compile(mode='', cwd = os.path.join(MG5DIR, name))
         if not status:
-            logger.info('compilation succeeded')
+            logger.info('Compilation succeeded')
         else:
             logger.warning('Error detected during the compilation. Please check the compilation error and run make manually.')
 
@@ -3137,6 +3720,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if sys.platform == "darwin":
                     logger.warning('''You can download this program at the following link: 
                     http://www.macupdate.com/app/mac/9980/gpl-ghostscript''')
+                    
+            if args[0] == 'MCatNLO-utilities':
+                self.do_set('MCatNLO-utilities_path %s/MCatNLO-utilities' % MG5DIR)
 
     def install_update(self, args, wget):
         """ check if the current version of mg5 is up-to-date. 
@@ -3264,7 +3850,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 try:
                     filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch/build%s.patch' %(i+1))
 #                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch_test/build%s.patch' %(i+1))
-                except:
+                except Exception:
                     print 'fail to load patch to build #%s' % (i+1)
                     fail = i
                     break
@@ -3315,7 +3901,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if not self.options:
             self.options = dict(self.options_configuration)
             self.options.update(self.options_madgraph)
-            self.options.update(self.options_madevent) 
+            self.options.update(self.options_madevent)             
 
         if not config_path:
             if os.environ.has_key('MADGRAPH_BASE'):
@@ -3371,7 +3957,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         self.options['pythia8_path'] = None
                     else:
                         continue
-                    
+
             elif key.endswith('path'):
                 pass
             elif key in ['run_mode', 'auto_update']:
@@ -3413,10 +3999,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             return
 
     def do_launch(self, line):
-        """Ask for editing the parameter and then 
+        """Main commands: Ask for editing the parameter and then 
         Execute the code (madevent/standalone/...)
         """
-        
         start_cwd = os.getcwd()
         
         args = self.split_arg(line)
@@ -3427,7 +4012,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # args is now MODE PATH
 
         if args[0].startswith('standalone'):
-            ext_program = launch_ext.SALauncher(self, args[1], options=self.options, **options)
+            if os.path.isfile(os.path.join(os.getcwd(),args[1],'Cards',\
+              'MadLoopParams.dat')) and not os.path.isfile(os.path.join(\
+              os.getcwd(),args[1],'SubProcesses','check_poles.f')):
+                ext_program = launch_ext.MadLoopLauncher(self, args[1], \
+                                                options=self.options, **options)
+            else:
+                ext_program = launch_ext.SALauncher(self, args[1], \
+                                                options=self.options, **options)
         elif args[0] == 'madevent':
             if options['interactive']:
                 if hasattr(self, 'do_shell'):
@@ -3447,7 +4039,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 generate_info = generate_info.split('#')[0]
             else:
                 generate_info = self._generate_info
-            
+
             if len(generate_info.split('>')[0].strip().split())>1:
                 ext_program = launch_ext.MELauncher(args[1], self,
                                 shell = hasattr(self, 'do_shell'),
@@ -3460,6 +4052,21 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         elif args[0] == 'pythia8':
             ext_program = launch_ext.Pythia8Launcher( args[1], self, **options)
+
+        elif args[0] == 'aMC@NLO':
+            if options['interactive']:
+                if hasattr(self, 'do_shell'):
+                    ME = amcatnlo_run.aMCatNLOCmdShell(me_dir=args[1], options=self.options)
+                else:
+                     ME = amcatnlo_run.aMCatNLOCmd(me_dir=args[1],options=self.options)
+                     ME.pass_in_web_mode()
+                # transfer interactive configuration
+                config_line = [l for l in self.history if l.strip().startswith('set')]
+                for line in config_line:
+                    ME.exec_cmd(line)
+                stop = self.define_child_cmd_interface(ME)                
+                return stop
+            ext_program = launch_ext.aMCatNLOLauncher( args[1], self, **options)
         else:
             os.chdir(start_cwd) #ensure to go to the initial path
             raise self.InvalidCmd , '%s cannot be run from MG5 interface' % args[0]
@@ -3468,9 +4075,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         ext_program.run()
         os.chdir(start_cwd) #ensure to go to the initial path
         
-        
-        
-    
     def do_load(self, line):
         """Not in help: Load information from file"""
 
@@ -3633,13 +4237,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             param_card.write(path)
             self._curr_model['name'] += '-%s' % name
         
-        
-        
-        
-        
-        
-        
-        
     
     
     def do_save(self, line, check=True, to_keep={}, log=True):
@@ -3728,10 +4325,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                             for q in self.options[args[0]]]))
             
         elif args[0] == 'group_subprocesses':
-            if args[1] != 'Auto':
+            if args[1] not in ['Auto', 'NLO']:
                 self.options[args[0]] = eval(args[1])
             else:
-                self.options[args[0]] = 'Auto'
+                self.options[args[0]] = args[1]
             if log:
                 logger.info('Set group_subprocesses to %s' % \
                         str(self.options[args[0]]))
@@ -3777,7 +4374,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.exec_cmd('import model %s' % self._curr_model.get('name'))
 
         elif args[0] == "gauge":
-            
             # Treat the case where they are no model loaded
             if not self._curr_model:
                 if args[1] == 'unitary':
@@ -3786,7 +4382,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     aloha.unitary_gauge = False
                 aloha_lib.KERNEL.clean()
                 self.options[args[0]] = args[1]
-                if log: logger.info('Pass to gauge %s.' % args[1])
+                if log: logger.info('Passing to gauge %s.' % args[1])
                 return
             
             # They are a valid model
@@ -3808,7 +4404,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self.options[args[0]] = args[1]
 
             #re-init all variable
-            model_name = self._curr_model.get('name')
+            model_name = self._curr_model.get('version_tag').split('##')[0]
             self._curr_model = None
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -3817,10 +4413,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._curr_exporter = None
             self._done_export = False
             import_ufo._import_once = []
-            logger.info('Pass to gauge %s.' % args[1])
+            logger.info('Passing to gauge %s.' % args[1])
             
             if able_to_mod:
-                self.do_import('model %s' % model_name)
+                # We don't want to go through the MasterCommand again
+                # because it messes with the interface switching when
+                # importing a loop model from MG5
+                MadGraphCmd.do_import(self,'model %s' %model_name)
             elif log:
                 logger.info('Note that you have to reload the model') 
 
@@ -3832,8 +4431,48 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.options['fortran_compiler'] = args[1]
             else:
                 self.options['fortran_compiler'] = None
+        elif args[0] == 'loop_optimized_output':
+            if log:
+                    logger.info('set loop optimized output to %s' % args[1])
+            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+            self.options[args[0]] = eval(args[1])
+
+        elif args[0] == 'fastjet':
+            try:
+                p = subprocess.Popen([args[1], '--version'], stdout=subprocess.PIPE, 
+                stderr=subprocess.PIPE)
+                output, error = p.communicate()
+                res = 0
+                logger.info('set fastjet to %s' % args[1])
+                self.options[args[0]] = args[1]
+            except Exception:
+                res = 1
+
+            if res != 0 or error:
+                logger.warning('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
+                        'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n' + \
+                        'You will NOT be able to run aMC@NLO otherwise.\n')
+            elif int(output.split('.')[0]) < 3:
+                logger.warning('%s is not ' + \
+                        'v3 or greater. Please install FastJet v3+.' % args[1] + \
+                        'You will NOT be able to run aMC@NLO otherwise.\n')
+
+        elif args[0] == 'lhapdf':
+            try:
+                res = misc.call([args[1], '--version'], stdout=subprocess.PIPE,
+                                                             stderr=subprocess.PIPE)
+                logger.info('set lhapdf to %s' % args[1])
+                self.options[args[0]] = args[1]
+            except Exception:
+                res = 1
+            if res != 0:
+                logger.info('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
+                        'executable. Please enter the full PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
+                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
+
         elif args[0] in ['timeout', 'auto_update']:
                 self.options[args[0]] = int(args[1]) 
+        
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -3874,7 +4513,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         launch_ext.open_file(file_path)
                  
     def do_output(self, line):
-        """Initialize a new Template or reinitialize one"""
+        """Main commands: Initialize a new Template or reinitialize one"""
 
         args = self.split_arg(line)
         # Check Argument validity
@@ -3890,7 +4529,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         main_file_name = ""
         try:
             main_file_name = args[args.index('-name') + 1]
-        except:
+        except Exception:
             pass
         
         ################
@@ -3941,7 +4580,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 raise self.InvalidCmd('Stopped by user request')
             else:
                 shutil.rmtree(self._export_dir)
-                             
+
         # Make a Template Copy
         if self._export_format in ['madevent', 'standalone', 'matrix']:
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean)
@@ -4080,7 +4719,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                 self._generate_info)
                 try:
                     cmd.Cmd.onecmd(self, 'history .')
-                except:
+                except Exception:
+                    misc.sprint('command history fails.')
                     pass
                 
         # Pythia 8
@@ -4178,7 +4818,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
         
-        if self._export_format in ['madevent', 'standalone']:
+        if self._export_format in ['madevent', 'standalone', 'NLO']:
             # For v4 models, copy the model/HELAS information.
             if self._model_v4_path:
                 logger.info('Copy %s model files to directory %s' % \
@@ -4208,6 +4848,80 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                             wanted_couplings)
             export_cpp.make_model_cpp(self._export_dir)
 
+
+        elif self._export_format in ['NLO']:
+            ## write fj_lhapdf_opts file
+            devnull = os.open(os.devnull, os.O_RDWR)
+            fj_lhapdf_file = open(os.path.join(self._export_dir,'Source','fj_lhapdf_opts'),'w')
+
+            try:
+                p = subprocess.Popen([self.options['fastjet'], '--version'], stdout=subprocess.PIPE, 
+                stderr=subprocess.PIPE)
+                output, error = p.communicate()
+                res = 0
+            except Exception:
+                res = 1
+                pass
+
+            if res != 0 or error:
+                logger.warning('The value for "fastjet" in the current configuration does not ' + \
+                        'correspond to a valid executable.\nPlease make sure you have FastJet ' + \
+                        'v3 or greater installed, then set the variable correctly either in ' + \
+                        'input/mg5_configuration or with "set fastjet /path/to/fastjet-config" ' + \
+                        'and regenrate the process. To avoid regeneration, manually edit the ' + \
+                        ('%s/Source/fj_lhapdf_opts file\n' % self._export_dir) + \
+                        'You will NOT be able to run aMC@NLO otherwise.\n')
+            elif int(output.split('.')[0]) < 3:
+                logger.warning('The value for "fastjet" in the current configuration is not ' + \
+                        'v3 or greater. Please install FastJet v3+, then set the variable ' + \
+                        'correctly either in ' + \
+                        'input/mg5_configuration or with "set fastjet /path/to/fastjet-config" ' + \
+                        'and regenrate the process. To avoid regeneration, manually edit the ' + \
+                        ('%s/Source/fj_lhapdf_opts file\n' % self._export_dir) + \
+                        'You will NOT be able to run aMC@NLO otherwise.\n')
+
+            try:
+                res = misc.call([self.options['lhapdf'], '--version'], \
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            except Exception:
+                res = 1
+            if res != 0:
+                logger.info('The value for lhapdf in the current configuration does not ' + \
+                        'correspond to a valid executable.\nPlease set it correctly either in ' + \
+                        'input/mg5_configuration or with "set lhapdf /path/to/lhapdf-config" ' + \
+                        'and regenrate the process. \nTo avoid regeneration, manually edit the ' + \
+                        ('%s/Source/fj_lhapdf_opts file.\n' % self._export_dir ) + \
+                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
+
+            fj_lhapdf_lines = \
+                 ['fastjet_config=%s' % self.options['fastjet'],
+                  'lhapdf_config=%s' % self.options['lhapdf']]
+            text = '\n'.join(fj_lhapdf_lines) + '\n'
+            fj_lhapdf_file.write(text)
+            fj_lhapdf_file.close()
+            self._curr_exporter.finalize_fks_directory( \
+                                           self._curr_matrix_elements,
+                                           [self.history_header] + \
+                                           self.history,
+                                           not nojpeg,
+                                           online,
+                                           self.options['fortran_compiler'])
+            # Create configuration file [path to executable] for amcatnlo
+            filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
+            self.do_save('options %s' % filename.replace(' ', '\ '), check=False, \
+                    to_keep = {'MCatNLO-utilities_path': './MCatNLO-utilities',
+                               'lhapdf': self.options['lhapdf'],
+                               'fastjet': self.options['fastjet']})
+
+            # copy the MCatNLO directory from mcatnlo-utils inside the exported dir
+            if os.path.isdir(pjoin(MG5DIR, 'MCatNLO-utilities')):
+                os.system('cp -r %s %s' % \
+                        (pjoin(MG5DIR, 'MCatNLO-utilities', 'MCatNLO'), self._export_dir))
+            else:
+                logger.warning('MCatNLO-utilities is not installed.')
+                logger.warning('If you want to shower events ' + \
+                        'with MC@NLO please install it by typing "install MCatNLO-utilities"')
+
         elif self._export_format == 'madevent':          
             # Create configuration file [path to executable] for madevent
             filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
@@ -4227,7 +4941,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
 
-        if self._export_format == 'madevent':              
+        if self._export_format in ['madevent', 'NLO']:              
             logger.info('Type \"launch\" to generate events from this process, or see')
             logger.info(self._export_dir + '/README')
             logger.info('Run \"open index.html\" to see more information about this process.')
@@ -4262,7 +4976,7 @@ _draw_usage = "draw FILEPATH [options]\n" + \
          "-- draw the diagrams in eps format\n" + \
          "   Files will be FILEPATH/diagrams_\"process_string\".eps \n" + \
          "   Example: draw plot_dir . \n"
-_draw_parser = optparse.OptionParser(usage=_draw_usage)
+_draw_parser = misc.OptionParser(usage=_draw_usage)
 _draw_parser.add_option("", "--horizontal", default=False,
                    action='store_true', help="force S-channel to be horizontal")
 _draw_parser.add_option("", "--external", default=0, type='float',
@@ -4279,12 +4993,12 @@ _draw_parser.add_option("", "--add_gap", default=0, type='float', \
 
 # LAUNCH PROGRAM
 _launch_usage = "launch [DIRPATH] [options]\n" + \
-         "-- execute the madevent/standalone/standalone_cpp/pythia8 output present in DIRPATH\n" + \
+         "-- execute the madevent/standalone/standalone_cpp/pythia8/NLO output present in DIRPATH\n" + \
          "   By default DIRPATH is the latest created directory \n" + \
          "   (for pythia8, it should be the Pythia 8 main directory) \n" + \
          "   Example: launch PROC_sm_1 --name=run2 \n" + \
          "   Example: launch ../pythia8 \n"
-_launch_parser = optparse.OptionParser(usage=_launch_usage)
+_launch_parser = misc.OptionParser(usage=_launch_usage)
 _launch_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory in order to launch the different program")
 _launch_parser.add_option("-n", "--name", default='', type='str',

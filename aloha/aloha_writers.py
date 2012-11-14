@@ -1,7 +1,9 @@
 try:
     import madgraph.iolibs.file_writers as writers 
-except:
+    import madgraph.various.q_polynomial as q_polynomial
+except Exception:
     import aloha.file_writers as writers
+    import aloha.q_polynomial as q_polynomial
 
 import aloha
 import aloha.aloha_lib as aloha_lib
@@ -175,6 +177,7 @@ class WriteALOHA:
 
         conjugate = [2*(int(c[1:])-1) for c in self.tag if c[0] == 'C']
         
+
         for index,spin in enumerate(self.particles):
             if self.offshell == index + 1:
                 continue
@@ -224,7 +227,6 @@ class WriteALOHA:
         core_text = self.define_expression()    
         self.define_argument_list()
         out = StringIO()
-        
         out.write(self.get_header_txt(mode=self.mode))
         out.write(self.get_declaration_txt())
         out.write(self.get_momenta_txt())
@@ -259,7 +261,7 @@ class WriteALOHA:
         
         try:
             vartype = obj.vartype
-        except:
+        except Exception:
             return self.change_number_format(obj)
 
         # The order is from the most current one to the les probable one
@@ -390,7 +392,8 @@ class WriteALOHA:
                 call_arg.append('%s%d' % (spin2, index2 +1)) 
             else:
                 call_arg.append('%s%d' % (spin, index +1)) 
-                
+        
+        
         return call_arg
 
     
@@ -865,7 +868,6 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
     """routines for writing out Fortran"""
 
     def __init__(self, abstract_routine, dirpath):
-
         
         ALOHAWriterForFortran.__init__(self, abstract_routine, dirpath)
         # position of the outgoing in particle list        
@@ -886,27 +888,40 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
                 self.declaration.add(('complex', name))
 
-
-        OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
-                                                              self.offshell)
         if not 'Coup(1)' in self.routine.infostr:
             coup = True
         else:
-            coup = False      
+            coup = False
+
+        rank = self.routine.expr.get_max_rank()
+        poly_object = q_polynomial.Polynomial(rank)
+        nb_coeff = q_polynomial.get_number_of_coefs_for_rank(rank)
+        size = self.type_to_size[self.particles[self.l_id-1]] - 2
         
-        for key,expr in self.routine.expr.items():
-            arg = self.get_loop_argument(key)
-            for ind in expr.listindices():
-                data = expr.get_rep(ind)
-                
-                if data and coup:
-                    out.write('    COEFF(%s,%s)= coup*%s\n' % ( 
-                                    self.pass_to_HELAS(ind)+1, ','.join(arg), 
-                                    self.write_obj(data)))
-                else:
-                    out.write('    COEFF(%s,%s)= %s\n' % ( 
-                                    self.pass_to_HELAS(ind)+1, ','.join(arg), 
-                                    self.write_obj(data)))                    
+        for K in range(size):
+            for J in range(nb_coeff):
+                data = poly_object.get_coef_at_position(J)
+                arg = [data.count(i) for i in range(4)] # momentum
+                arg += [0] * (K) + [1] + [0] * (size-1-K) 
+                try:
+                    expr = self.routine.expr[tuple(arg)]
+                except KeyError:
+                    expr = None
+                for ind in self.routine.expr.values()[0].listindices():
+                    if expr:
+                        data = expr.get_rep(ind)
+                    else:
+                        data = 0
+                    if data and coup:
+                        out.write('    COEFF(%s,%s,%s)= coup*%s\n' % ( 
+                                    self.pass_to_HELAS(ind)+1-self.momentum_size,
+                                    J, K+1, self.write_obj(data)))
+                    else:
+                        out.write('    COEFF(%s,%s,%s)= %s\n' % ( 
+                                    self.pass_to_HELAS(ind)+1-self.momentum_size,
+                                    J, K+1, self.write_obj(data)))
+
+
         return out.getvalue()
     
     def get_declaration_txt(self):
@@ -976,13 +991,14 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
             
             if index in conjugate:
                 index2, spin2 = index+1, self.particles[index+1]
-                call_arg.append(('complex','%s%d' % (spin2, index2 +1))) 
+                call_arg.append(('complex','%s%d' % (spin2, index2 +1)))
                 #call_arg.append('%s%d' % (spin, index +1)) 
             elif index-1 in conjugate:
                 index2, spin2 = index-1, self.particles[index-1]
-                call_arg.append(('complex','%s%d' % (spin2, index2 +1))) 
+                call_arg.append(('complex','%s%d' % (spin2, index2 +1)))
             else:
                 call_arg.append(('complex','%s%d' % (spin, index +1)))
+            self.declaration.add(('list_complex', call_arg[-1][-1])) 
         
         # couplings
         if couplings is None:
@@ -1140,7 +1156,7 @@ def combine_name(name, other_names, outgoing, tag=None):
         for s in other_names:
             try:
                 base2,id2 = p.search(s).groups()
-            except:
+            except Exception:
                 routine = ''
                 break # one matching not good -> other scheme
             if base != base2:
@@ -1165,13 +1181,15 @@ def combine_name(name, other_names, outgoing, tag=None):
             short_name, addon = name.split('C',1)
             try:
                 addon = 'C' + str(int(addon))
-            except:
+            except Exception:
                 addon = ''
             else:
                 name = short_name
 
-    return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
- 
+    if outgoing is not None:
+        return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
+    else:
+        return '_'.join((name,) + tuple(other_names)) + addon
 
 class ALOHAWriterForCPP(WriteALOHA): 
     """Routines for writing out helicity amplitudes as C++ .h and .cc files."""
@@ -1890,8 +1908,8 @@ class ALOHAWriterForPython(WriteALOHA):
                     nb2 -= 1
             else:
                 operator =''
-                nb = energy_pos + j
-                nb2 = energy_pos + j
+                nb = j
+                nb2 = j
             data.append(template % {'j':j,'type': type, 'i': i, 
                         'nb': nb, 'nb2': nb2, 'operator':operator,
                         'sign': self.get_P_sign(i)}) 

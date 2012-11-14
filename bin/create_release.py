@@ -156,6 +156,11 @@ if rev_nb:
 shutil.copy(path.join(filepath, 'input','.mg5_configuration_default.txt'), 
             path.join(filepath, 'input','mg5_configuration.txt'))
 
+# 1.1 Change the trapfpe.c code to an empty file
+os.remove(path.join(filepath,'Template','NLO','SubProcesses','trapfpe.c'))
+create_empty = open(path.join(filepath,'Template','NLO','SubProcesses','trapfpe.c'),'w')
+create_empty.close()
+
 # 2. Create the automatic documentation in the apidoc directory
 
 try:

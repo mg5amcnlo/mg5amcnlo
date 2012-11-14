@@ -1,5 +1,14 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+2.0.0.beta2(xx/xx/12) MG5 Team: Include 1.5.4 modification
+
+2.0.0.beta1(31/10/12) aMCatNLO Team: First public (beta) version of aMCatNLO.
+                        In order to learn aMCatNLO, please do "tutorial aMCatNLO"
+                        Please also visit: http://amcatnlo.cern.ch/list.htm for more
+                        information.
+
+
+
 1.5.4 (11/11/12)  JA: Fixed bug in combine_runs.py (introduced in v. 1.5.0) for
                       processes with 5 final-state particles, which prevented
                       matching to Pythia to work properly (thanks Priscila).

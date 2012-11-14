@@ -36,7 +36,7 @@ import aloha.aloha_parsers as aloha_parsers
 import aloha.aloha_fct as aloha_fct
 try:
     import madgraph.iolibs.files as files
-except:
+except Exception:
     import aloha.files as files
     
 aloha_path = os.path.dirname(os.path.realpath(__file__))
@@ -242,7 +242,7 @@ in presence of majorana particle/flow violation"""
                 lorentz = self.change_sign_for_outcoming_fermion()  
                 self.routine_kernel = lorentz
                 lorentz = eval(lorentz)
-            except NameError, error:
+            except NameError as error:
                 logger.error('unknow type in Lorentz Evaluation:%s'%str(error))
                 raise ALOHAERROR, 'unknow type in Lorentz Evaluation: %s ' % str(error) 
             else:
@@ -345,6 +345,7 @@ in presence of majorana particle/flow violation"""
         
                     
         l_in = [int(tag[1:]) for tag in self.tag][0]
+        assert l_in != outgoing, 'incoming Open Loop can not be the outcoming one'
         
         # modify the expression for the momenta
         # P_i -> P_i + P_L and P_o -> -P_o - P_L
@@ -363,7 +364,7 @@ in presence of majorana particle/flow violation"""
             P_obj = aloha_object.P(lorentz_ind, P.particle)
             new_expr = sign*(P_Lid + P_obj)
             lorentz = lorentz.replace(id, new_expr)
-            
+
         # Compute the variable from which we need to split the expression
         var_veto =  ['PL_0', 'PL_1', 'PL_2', 'PL_3']
         spin = aloha_writers.WriteALOHA.type_to_variable[self.spins[l_in-1]]
@@ -373,13 +374,14 @@ in presence of majorana particle/flow violation"""
         veto_ids = aloha_lib.KERNEL.get_ids(var_veto)
         
         lorentz = lorentz.expand(veto = veto_ids)
+        lorentz = lorentz.simplify()
         coeff_expr = lorentz.split(veto_ids)
         
         for key, expr in coeff_expr.items():
             expr = expr.simplify()
             coeff_expr[key] = expr.factorize()
         coeff_expr.tag = set(aloha_lib.KERNEL.use_tag)
-        
+
         return coeff_expr
                         
     def define_lorentz_expr(self, lorentz_expr):
@@ -458,6 +460,7 @@ class AbstractALOHAModel(dict):
                  explicit_combine=False):
         """ load the UFO model and init the dictionary """
         
+        aloha_lib.KERNEL.clean()
         # Option
         self.explicit_combine = explicit_combine
         
@@ -476,7 +479,7 @@ class AbstractALOHAModel(dict):
         try:
             python_pos = model_name 
             __import__(python_pos)
-        except:
+        except Exception:
             python_pos = 'models.%s' % model_name 
             __import__(python_pos)
         self.model = sys.modules[python_pos]
@@ -554,7 +557,7 @@ class AbstractALOHAModel(dict):
         
         try:
             return self[(lorentzname, outgoing)]
-        except:
+        except Exception:
             logger.warning('(%s, %s) is not a valid key' % 
                                                        (lorentzname, outgoing) )
             return None
@@ -601,7 +604,7 @@ class AbstractALOHAModel(dict):
                     for outgoing in range(len(lorentz.spins)+1):
                         try:
                             self[(lorentz.name, outgoing)].add_combine(m)
-                        except:
+                        except Exception:
                             pass # this routine is a symmetric one, so it 
                                  # already has the combination.
                     
@@ -664,10 +667,10 @@ class AbstractALOHAModel(dict):
             for l_name in list_l_name:
                 try:
                     request[l_name][conjugate].append((outgoing,tag))
-                except:
+                except Exception:
                     try:
                         request[l_name][conjugate] = [(outgoing,tag)]
-                    except:
+                    except Exception:
                         request[l_name] = {conjugate: [(outgoing,tag)]}
                         
         # Loop on the structure to build exactly what is request
@@ -746,8 +749,7 @@ class AbstractALOHAModel(dict):
                         # Compute routines
                         self.compute_aloha(conjg_builder, symmetry=lorentz.name,
                                         routines=routines)
-
-                
+        #
                       
   
                 
@@ -768,6 +770,9 @@ class AbstractALOHAModel(dict):
         for outgoing, tag in routines:
             symmetric = self.has_symmetries(symmetry, outgoing, valid_output=routines)
             realname = name + ''.join(tag)
+            if (realname, outgoing) in self:
+                continue # already computed
+            
             if symmetric:
                 self.get(realname, symmetric).add_symmetry(outgoing)
             else:
@@ -912,7 +917,7 @@ class AbstractALOHAModel(dict):
 
         try:
             equiv = self.symmetries[l_name][outgoing]
-        except:
+        except Exception:
             return out
         else:
             if not valid_output or equiv in valid_output:
@@ -964,7 +969,7 @@ class AbstractALOHAModel(dict):
                 for lorentz in vertex.lorentz:
                     try:
                         conjugate_request[lorentz.name].add(i//2+1)
-                    except:
+                    except Exception:
                         conjugate_request[lorentz.name] = set([i//2+1])
         
         for elem in conjugate_request:

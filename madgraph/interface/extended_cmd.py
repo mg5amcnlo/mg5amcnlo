@@ -161,7 +161,7 @@ class BasicCmd(cmd.Cmd):
                 import fcntl, termios, struct
                 cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,
                                                      '1234'))
-            except:
+            except Exception:
                 return None
             return cr
         cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
@@ -170,12 +170,12 @@ class BasicCmd(cmd.Cmd):
                 fd = os.open(os.ctermid(), os.O_RDONLY)
                 cr = ioctl_GWINSZ(fd)
                 os.close(fd)
-            except:
+            except Exception:
                 pass
         if not cr:
             try:
                 cr = (os.environ['LINES'], os.environ['COLUMNS'])
-            except:
+            except Exception:
                 cr = (25, 80)
         return int(cr[1])
     
@@ -184,7 +184,7 @@ class BasicCmd(cmd.Cmd):
          If a command has not been entered, then complete against command list.
          Otherwise try to call complete_<command> to get list of completions.
         """
-                
+
         if state == 0:
             import readline
             origline = readline.get_line_buffer()
@@ -244,7 +244,7 @@ class BasicCmd(cmd.Cmd):
         try:
             return self.completion_matches[state]
         except IndexError, error:
-            #if __debug__:
+            # if __debug__:
             #    logger.error('\n Completion ERROR:')
             #    logger.error( error)
             return None    
@@ -371,31 +371,32 @@ class HelpCmd(object):
     """Extension of the cmd object for only the help command"""
 
     def help_quit(self):
-        logger.info("syntax: quit")
-        logger.info("-- terminates the application")
+        logger.info("-- terminates the application",'$MG:color:BLUE')
+        logger.info("syntax: quit",'$MG:color:BLACK')
     
     help_EOF = help_quit
 
     def help_history(self):
-        logger.info("syntax: history [FILEPATH|clean|.] ")
-        logger.info("   If FILEPATH is \'.\' and \'output\' is done,")
+        logger.info("-- interact with the command history.",'$MG:color:BLUE')
+        logger.info("syntax: history [FILEPATH|clean|.] ",'$MG:color:BLACK')
+        logger.info(" > If FILEPATH is \'.\' and \'output\' is done,")
         logger.info("   Cards/proc_card_mg5.dat will be used.")
-        logger.info("   If FILEPATH is omitted, the history will be output to stdout.")
+        logger.info(" > If FILEPATH is omitted, the history will be output to stdout.")
         logger.info("   \"clean\" will remove all entries from the history.")
         
     def help_help(self):
-        logger.info("syntax: help")
-        logger.info("-- access to the in-line help" )
+        logger.info("-- access to the in-line help",'$MG:color:BLUE')
+        logger.info("syntax: help",'$MG:color:BLACK')
 
     def help_save(self):
         """help text for save"""
-        logger.info("syntax: save [options]  [FILEPATH]") 
-        logger.info("-- save options configuration to filepath.")
+        logger.info("-- save options configuration to filepath.",'$MG:color:BLUE')
+        logger.info("syntax: save [options]  [FILEPATH]",'$MG:color:BLACK') 
         
     def help_display(self):
         """help for display command"""
-        logger.info("syntax: display " + "|".join(self._display_opts))
-        logger.info("-- display a the status of various internal state variables")          
+        logger.info("-- display a the status of various internal state variables",'$MG:color:BLUE')          
+        logger.info("syntax: display " + "|".join(self._display_opts),'$MG:color:BLACK')
         
 class CompleteCmd(object):
     """Extension of the cmd object for only the complete command"""
@@ -450,7 +451,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     history_header = ""
     
     _display_opts = ['options','variable']
-    helporder = ['Documented commands']
     
     class InvalidCmd(Exception):
         """expected error for wrong command"""
@@ -482,7 +482,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         self.haspiping = not sys.stdin.isatty() # check if mg5 is piped 
         self.stored_line = '' # for be able to treat answer to question in input file 
                               # answer which are not required.
-
+        if not hasattr(self, 'helporder'):
+            self.helporder = ['Documented commands']
         
         
     def precmd(self, line):
@@ -579,7 +580,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if timeout:
             try:
                 timeout = self.options['timeout']
-            except:
+            except Exception:
                 pass
                     
         # add choice info to the question
@@ -873,6 +874,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # Faulty command
         logger.warning("Command \"%s\" not recognized, please try again" % \
                                                                 line.split()[0])
+        if line.strip() in ['q', '.q', 'stop']:
+            logger.info("If you want to quit mg5 please type \"exit\".")
+        
         self.history.pop()
         
 
@@ -1090,7 +1094,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
     # Quit
     def do_quit(self, line):
-        """ exit the mainloop() """
+        """Not in help: exit the mainloop() """
         
         if self.child:
             self.child.exec_cmd('quit ' + line, printcmd=False)
@@ -1131,11 +1135,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 cmdname=name[3:]
                 try:
                     doc = getattr(self.cmd, name).__doc__
-                except:
+                except Exception:
                     doc = None
                 if not doc:
                     doc = getattr(self, name).__doc__
                 if not doc:
+                    print 'no infor on ', name
                     tag = "Documented commands"
                 elif ':' in doc:
                     tag = doc.split(':',1)[0]
@@ -1144,11 +1149,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 if tag in cmds:
                     cmds[tag].append(cmdname)
                 else:
-                    cmds[tag] = [cmdname]
-                
-
+                    cmds[tag] = [cmdname] 
+                    
         self.stdout.write("%s\n"%str(self.doc_leader))
         for tag in self.helporder:
+            if tag not in cmds:
+                continue
             header = "%s (type help <topic>):" % tag
             self.print_topics(header, cmds[tag],   15,80)
         for name, item in cmds.items():
@@ -1213,7 +1219,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             outstr = "Value of Internal Variable:\n"
             try:
                 var = eval(args[1])
-            except:
+            except Exception:
                 outstr += 'GLOBAL:\nVariable %s is not a global variable\n' % args[1]
             else:
                 outstr += 'GLOBAL:\n' 
@@ -1221,7 +1227,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                
             try:
                 var = eval('self.%s' % args[1])
-            except:
+            except Exception:
                 outstr += 'LOCAL:\nVariable %s is not a local variable\n' % args[1]
             else:
                 outstr += 'LOCAL:\n'
@@ -1262,7 +1268,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             
         if len(args) == 0:
             args.append(base)
-        self.write_configuration(args[0], base, basedir)
+        self.write_configuration(args[0], base, basedir, self.options)
         
     def write_configuration(self, filepath, basefile, basedir, to_keep):
         """Write the configuration file"""
@@ -1289,7 +1295,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 value, comment = value.split('#',1)
             else:
                 comment = ''    
-            
             if key in to_keep:
                 value = str(to_keep[key])
             else:
@@ -1297,7 +1302,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 continue
             try:
                 to_write.remove(key)
-            except:
+            except Exception:
                 pass
             if '_path' in key:       
                 # special case need to update path
@@ -1350,9 +1355,8 @@ class CmdShell(Cmd):
 
     def help_shell(self):
         """help for the shell"""
-        
-        logger.info("syntax: shell CMD (or ! CMD)")
-        logger.info("-- run the shell command CMD and catch output")
+        logger.info("-- run the shell command CMD and catch output",'$MG:color:BLUE')        
+        logger.info("syntax: shell CMD (or ! CMD)",'$MG:color:BLACK')
 
 
 

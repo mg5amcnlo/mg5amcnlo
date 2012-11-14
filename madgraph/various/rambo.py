@@ -78,6 +78,7 @@ def RAMBO(N,ET,XM):
     iwarn = FortranList(5)
     Nincoming = 2
     
+    
     # Object Initialization
     Z = FortranList(N)
     Q = DoubleFortranList((4,N))
@@ -88,7 +89,7 @@ def RAMBO(N,ET,XM):
     P2 = FortranList(N)
     E = FortranList(N)
     V= FortranList(N)
-
+    IWARN = [0,0]
 # Check input object
     assert isinstance(XM, FortranList)
     assert XM.min == 1

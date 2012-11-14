@@ -23,6 +23,7 @@ import sys
 
 from madgraph import MadGraph5Error, MG5DIR
 import madgraph.core.base_objects as base_objects
+import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
 import madgraph.iolibs.save_load_object as save_load_object
@@ -97,7 +98,10 @@ def import_model(model_name, decay=False):
     model = import_full_model(model_path, decay) 
     # restore the model name
     if restrict_name:
-        model["name"] += '-' + restrict_name 
+        model["name"] += '-' + restrict_name
+    path = os.path.dirname(os.path.realpath(model_path))
+    path = os.path.join(path, model.get('name'))
+    model.set('version_tag', os.path.realpath(path) +'##'+ str(misc.get_pkg_info()))
     
     #restrict it if needed       
     if restrict_file:
@@ -109,16 +113,16 @@ def import_model(model_name, decay=False):
             
         if logger_mod.getEffectiveLevel() > 10:
             logger.info('Run \"set stdout_level DEBUG\" before import for more information.')
-            
+
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
+        
         if model_name == 'mssm':
             keep_external=True
         else:
             keep_external=False
         model.restrict_model(restrict_file, rm_parameter=not decay,
                                             keep_external=keep_external)
-        
     return model
 
 _import_once = []
@@ -145,7 +149,6 @@ def import_full_model(model_path, decay=False):
     else:
         pickle_name = 'model_Feynman.pkl'
         
-    
     if files.is_uptodate(os.path.join(model_path, pickle_name), files_list):
         try:
             model = save_load_object.load_from_file( \
@@ -153,12 +156,14 @@ def import_full_model(model_path, decay=False):
         except Exception, error:
             logger.info('failed to load model from pickle file. Try importing UFO from File')
         else:
-            # check path is correct 
-            if model.has_key('version_tag') and model.get('version_tag') == os.path.realpath(model_path) + str(misc.get_pkg_info()):
+            # We don't care about the restrict_card for this comparison
+            if model.has_key('version_tag') and not model.get('version_tag') is None and \
+              model.get('version_tag').startswith(os.path.realpath(model_path)) and \
+              model.get('version_tag').endswith('##' + str(misc.get_pkg_info())):
                 _import_once.append((model_path, aloha.unitary_gauge))
                 return model
 
-    if (model_path,aloha.unitary_gauge) in _import_once:
+    if (model_path, aloha.unitary_gauge) in _import_once:
         raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch mg5' 
 
     # Load basic information
@@ -168,7 +173,6 @@ def import_full_model(model_path, decay=False):
     
     if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
     model.set('name', os.path.split(model_path)[-1])
-    model.set('version_tag', os.path.realpath(model_path) +'##'+ str(misc.get_pkg_info()))
 
     # Load the Parameter/Coupling in a convinient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main()
@@ -209,7 +213,23 @@ class UFOMG5Converter(object):
         
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
-        self.model = base_objects.Model()
+                        
+        # Check here if we can extract the couplings perturbed in this model
+        # which indicate a loop model or if this model is only meant for 
+        # tree-level computations
+        self.perturbation_couplings = {}
+        for order in model.all_orders:
+            try:
+                if(order.perturbative_expansion>0):
+                    self.perturbation_couplings[order.name]=order.perturbative_expansion
+            except AttributeError:
+                    pass
+
+        if self.perturbation_couplings!={}:
+            self.model = loop_base_objects.LoopModel({'perturbation_couplings':\
+                                                self.perturbation_couplings.keys()})
+        else:
+            self.model = base_objects.Model()                        
         self.model.set('particles', self.particles)
         self.model.set('interactions', self.interactions)
         self.conservecharge = set(['charge'])
@@ -258,43 +278,68 @@ class UFOMG5Converter(object):
         logger.info('load vertices')
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info, color_info)
-        
+
+        if self.perturbation_couplings:
+            for interaction_info in self.ufomodel.all_CTvertices:
+                self.add_CTinteraction(interaction_info, color_info)
+                    
         self.model.set('conserved_charge', self.conservecharge)
 
         # If we deal with a Loop model here, the order hierarchy MUST be 
         # defined in the file coupling_orders.py and we import it from 
         # there.
 
+        all_orders = self.ufomodel.all_orders
+
         hierarchy={}
         try:
-            all_orders = self.ufomodel.all_orders
             for order in all_orders:
                 hierarchy[order.name]=order.hierarchy
         except AttributeError:
-            pass
+            if self.perturbation_couplings:
+                raise MadGraph5Error, 'The loop model MG5 attemps to import does not specify an order hierarchy.' 
+            else:
+                pass
         else:
             self.model.set('order_hierarchy', hierarchy)            
         
         # Also set expansion_order, i.e., maximum coupling order per process
-
         expansion_order={}
         try:
-            all_orders = self.ufomodel.all_orders
             for order in all_orders:
                 expansion_order[order.name]=order.expansion_order
         except AttributeError:
-            pass
+            if self.perturbation_couplings:
+                raise MadGraph5Error, 'The loop model MG5 attemps to import does not specify an expansion_order for all coupling orders.' 
+            else:
+                pass
         else:
             self.model.set('expansion_order', expansion_order)
         
+        # And finally the UVCT coupling order counterterms
+        coupling_order_counterterms={}
+        try:
+            for order in all_orders:
+                coupling_order_counterterms[order.name]=order.expansion_order
+        except AttributeError:
+            if self.perturbation_couplings:
+                raise MadGraph5Error, 'The loop model MG5 attemps to import does not specify an expansion_order for all coupling orders.' 
+            else:
+                pass
+        else:
+            self.model.set('expansion_order', expansion_order)
+
         #clean memory
         del self.checked_lor
-        
+                
         return self.model
         
     
     def add_particle(self, particle_info):
         """ convert and add a particle in the particle list """
+                
+        loop_particles = [[[]]]
+        counterterms = {}
         
         # MG5 have only one entry for particle and anti particles.
         #UFO has two. use the color to avoid duplictions
@@ -302,9 +347,9 @@ class UFOMG5Converter(object):
         if pdg in self.incoming or (pdg not in self.outcoming and pdg <0):
             return
         
-        # MG5 doesn't use ghost (The sum over polarization has momenta term)
-        if particle_info.spin < 0:
-            return 
+        # MG5 doesn't use ghost for tree models: physical sum on the polarization
+        if not self.perturbation_couplings and particle_info.spin < 0:
+            return
         
         if (aloha.unitary_gauge and 0 in self.model['gauge']) \
 	          or (1 not in self.model['gauge']): 
@@ -313,7 +358,7 @@ class UFOMG5Converter(object):
             if hasattr(particle_info, 'GoldstoneBoson'):
                 if particle_info.GoldstoneBoson:
                     return
-               
+                
         # Initialize a particles
         particle = base_objects.Particle()
 
@@ -321,7 +366,7 @@ class UFOMG5Converter(object):
         # Loop over the element defining the UFO particles
         for key,value in particle_info.__dict__.items():
             # Check if we use it in the MG5 definition of a particles
-            if key in base_objects.Particle.sorted_keys:
+            if key in base_objects.Particle.sorted_keys and not key=='counterterm':
                 nb_property +=1
                 if key in ['name', 'antiname']:
                     if self.use_lower_part_names:
@@ -332,21 +377,118 @@ class UFOMG5Converter(object):
                     particle.set(key, float(value))
                 elif key in ['mass','width']:
                     particle.set(key, str(value))
+                elif key == 'spin':
+                    # MG5 internally treats ghost with positive spin for loop models and 
+                    # ignore them otherwise
+                    particle.set(key,abs(value))
+                    if value<0:
+                        particle.set('ghost',True)
                 else:
-                    particle.set(key, value)
+                    particle.set(key, value)    
+            elif key == 'loop_particles':
+                loop_particles = value
+            elif key == 'counterterm':
+                counterterms = value
             elif key.lower() not in ('ghostnumber','selfconjugate','goldstoneboson','partial_widths'):
-                # add charge -we will check later if those are conserve 
+                # add charge -we will check later if those are conserved 
                 self.conservecharge.add(key)
                 particle.set(key,value, force=True)
-            
+        
         assert(12 == nb_property) #basic check that all the information is there         
         
         # Identify self conjugate particles
         if particle_info.name == particle_info.antiname:
             particle.set('self_antipart', True)
-            
-        # Add the particles to the list
+                    
+        # Proceed only if we deal with a loop model and that this particle
+        # has wavefunction renormalization
+        if not self.perturbation_couplings or counterterms=={}:
+            self.particles.append(particle)
+            return
+        
+        # Set here the 'counterterm' attribute to the particle.
+        # First we must change the couplings dictionary keys from the entry format
+        # (order1,order2,...,orderN,loop_particle#):LaurentSerie
+        # two a dictionary with format 
+        # ('ORDER_OF_COUNTERTERM',((Particle_list_PDG))):{laurent_order:CTCouplingName}
+        particle_counterterms = {}
+        for key, counterterm in counterterms.items():
+            # Makes sure this counterterm contributes at one-loop.
+            if len([1 for k in key[:-1] if k==1])==1 and \
+               not any(k>1 for k in key[:-1]):
+                newParticleCountertermKey=[None,\
+                  tuple([tuple([abs(part.pdg_code) for part in loop_parts]) for\
+                    loop_parts in loop_particles[key[-1]]])]
+                for i, order in enumerate(self.ufomodel.all_orders[:-1]):
+                    if key[i]==1:
+                        newParticleCountertermKey[0]=order.name
+                newCouplingName='UVWfct_'+particle_info.name+'_'+str(key[-1])
+                particle_counterterms[tuple(newParticleCountertermKey)]=\
+                  dict([(key,newCouplingName+('' if key==0 else '_'+str(-key)+'eps'))\
+                        for key in counterterm.keys()])
+                # We want to create the new coupling for this wavefunction
+                # renormalization.
+                self.ufomodel.object_library.Coupling(\
+                    name = newCouplingName,
+                    value = counterterm,
+                    order = {newParticleCountertermKey[0]:2})
+
+        particle.set('counterterm',particle_counterterms)
         self.particles.append(particle)
+        return
+
+    def add_CTinteraction(self, interaction, color_info):
+        """ Split this interaction in order to call add_interaction for
+        interactions for each element of the loop_particles list. Also it
+        is necessary to unfold here the contributions to the different laurent
+        expansion orders of the couplings."""
+
+        # Work on a local copy of the interaction provided
+        interaction_info=copy.copy(interaction)
+        
+        intType=''
+        if interaction_info.type not in ['UV','UVmass','R2']:
+            raise MadGraph5Error, 'MG5 only supports the following types of'+\
+              ' vertices, R2, UV and UVmass. %s is not in this list.'%interaction_info.type
+        else:
+            intType=interaction_info.type
+            
+        # Make sure that if it is a UV mass renromalization counterterm it is
+        # defined as such.
+        if len(intType)>2 and intType[:2]=='UV' and len(interaction_info.particles)==2 \
+           and interaction_info.particles[0].name==interaction_info.particles[1].name:
+            intType='UVmass'
+
+        # Now we create a couplings dictionary for each element of the loop_particles list
+        # and for each expansion order of the laurent serie in the coupling.
+        # Format is new_couplings[loop_particles][laurent_order] and each element
+        # is a couplings dictionary.
+        new_couplings=[[{} for j in range(0,3)] for i in \
+                       range(0,max(1,len(interaction_info.loop_particles)))]
+        # So sort all entries in the couplings dictionary to put them a the
+        # correct place in new_couplings.
+        for key, coupling in interaction_info.couplings.items():
+            for poleOrder in range(0,3):
+                if coupling.pole(poleOrder)!='ZERO':
+                    newCoupling=copy.copy(coupling)
+                    if poleOrder!=0:
+                        newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
+                    newCoupling.value=coupling.pole(poleOrder)
+                    new_couplings[key[2]][poleOrder][(key[0],key[1])]=\
+                      newCoupling
+        
+        # Now we can add an interaction for each.         
+        for i, all_couplings in enumerate(new_couplings):
+            loop_particles=[[]]
+            if len(interaction_info.loop_particles)>0:
+                loop_particles=[[part.pdg_code for part in loop_parts] \
+                    for loop_parts in interaction_info.loop_particles[i]]
+            for poleOrder in range(0,3):
+                if all_couplings[poleOrder]!={}:
+                    interaction_info.couplings=all_couplings[poleOrder]
+                    self.add_interaction(interaction_info, color_info,\
+                      (intType if poleOrder==0 else (intType+str(poleOrder)+\
+                                                     'eps')),loop_particles)
 
 
     def find_color_anti_color_rep(self):
@@ -425,18 +567,15 @@ class UFOMG5Converter(object):
                         self.incoming.append(pdg[i])
                         self.outcoming.append(pdg[i+1])
                      
-            
-    def add_interaction(self, interaction_info, color_info):
+    def add_interaction(self, interaction_info, color_info, type='base', loop_particles=None):            
         """add an interaction in the MG5 model. interaction_info is the 
         UFO vertices information."""
-        
         # Import particles content:
         particles = [self.model.get_particle(particle.pdg_code) \
                                     for particle in interaction_info.particles]
         if None in particles:
             # Interaction with a ghost/goldstone
             return 
-        
         particles = base_objects.ParticleList(particles)
         
         # Import Lorentz content:
@@ -501,11 +640,14 @@ class UFOMG5Converter(object):
                                      '%s%s' %(coupling_sign,coupling.name)})
                     interaction.set('orders', coupling.order)            
                     interaction.set('color', colors)
-                    order_to_int[order] = interaction
+                    interaction.set('type', type)
+                    interaction.set('loop_particles', loop_particles)                    
+                    order_to_int[order] = interaction                        
                     # add to the interactions
                     self.interactions.append(interaction)
-
+        
         # check if this interaction conserve the charge defined
+ #       if type=='base':
         for charge in list(self.conservecharge): #duplicate to allow modification
             total = 0
             for part in interaction_info.particles:
@@ -573,30 +715,6 @@ class UFOMG5Converter(object):
         self.model['lorentz'].append(new)
         self.model.create_lorentz_dict()
         return name
-
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-    
-
-                
-                
-                
-        
-        
-        
-        
-           
-   
-   
     
     _pat_T = re.compile(r'T\((?P<first>\d*),(?P<second>\d*)\)')
     _pat_id = re.compile(r'Identity\((?P<first>\d*),(?P<second>\d*)\)')
@@ -689,7 +807,7 @@ class UFOMG5Converter(object):
 class OrganizeModelExpression:
     """Organize the couplings/parameters of a model"""
     
-    track_dependant = ['aS','aEWM1'] # list of variable from which we track 
+    track_dependant = ['aS','aEWM1','MU_R'] # list of variable from which we track 
                                    #dependencies those variables should be define
                                    #as external parameters
     
@@ -701,11 +819,18 @@ class OrganizeModelExpression:
     conj_expr = re.compile(r'''complexconjugate\((?P<expr>\w+)\)''')
     
     #RE expression for is_event_dependent
-    separator = re.compile(r'''[+,\-*/()]''')    
+    separator = re.compile(r'''[+,\-*/()]''')
     
     def __init__(self, model):
     
         self.model = model  # UFOMODEL
+        self.perturbation_couplings = {}
+        for order in model.all_orders: # Check if it is a loop model or not
+            try:
+                if(order.perturbative_expansion>0):
+                    self.perturbation_couplings[order.name]=order.perturbative_expansion
+            except AttributeError:
+                    pass
         self.params = {}     # depend on -> ModelVariable
         self.couplings = {}  # depend on -> ModelVariable
         self.all_expr = {} # variable_name -> ModelVariable
@@ -771,8 +896,23 @@ class OrganizeModelExpression:
         """creates the shortcut for all special function/parameter
         separate the couplings dependent of track variables of the others"""
         
+        # First expand the couplings on all their non-zero contribution to the 
+        # three laurent orders 0, -1 and -2.
+        if self.perturbation_couplings:
+            new_couplings_list=[]
+            for coupling in self.model.all_couplings:
+                for poleOrder in range(0,3):
+                    newCoupling=copy.deepcopy(coupling)
+                    if poleOrder!=0:
+                        newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
+                    if newCoupling.pole(poleOrder)!='ZERO':                    
+                        newCoupling.value=newCoupling.pole(poleOrder)
+                        new_couplings_list.append(newCoupling)
+            self.model.all_couplings=new_couplings_list
+                        
+                                        
+        
         for coupling in self.model.all_couplings:
-            
             # shorten expression, find dependencies, create short object
             expr = self.shorten_expr(coupling.value)
             depend_on = self.find_dependencies(expr)
@@ -783,8 +923,7 @@ class OrganizeModelExpression:
                 self.couplings[depend_on].append(parameter)
             except KeyError:
                 self.couplings[depend_on] = [parameter]
-            self.all_expr[coupling.value] = parameter
-            
+            self.all_expr[coupling.value] = parameter                
 
     def find_dependencies(self, expr):
         """check if an expression should be evaluated points by points or not
@@ -807,7 +946,6 @@ class OrganizeModelExpression:
             elif subexpr in self.all_expr.keys() and self.all_expr[subexpr].depend:
                 [depend_on.add(value) for value in self.all_expr[subexpr].depend 
                                 if  self.all_expr[subexpr].depend != ('external',)]
-
         if depend_on:
             return tuple(depend_on)
         else:
@@ -817,7 +955,6 @@ class OrganizeModelExpression:
     def shorten_expr(self, expr):
         """ apply the rules of contraction and fullfill
         self.params with dependent part"""
-
         expr = self.complex_number.sub(self.shorten_complex, expr)
         expr = self.expo_expr.sub(self.shorten_expo, expr)
         expr = self.cmath_expr.sub(self.shorten_cmath, expr)
@@ -966,7 +1103,7 @@ class RestrictModel(model_reader.ModelReader):
       
                     
     def locate_coupling(self):
-        """ create a dict couplings_name -> vertex """
+        """ create a dict couplings_name -> vertex or (particle, counterterm_key) """
         
         self.coupling_pos = {}
         for vertex in self['interactions']:
@@ -976,7 +1113,16 @@ class RestrictModel(model_reader.ModelReader):
                         self.coupling_pos[coupling].append(vertex)
                 else:
                     self.coupling_pos[coupling] = [vertex]
-                    
+        
+        for particle in self['particles']:
+            for key, coupling_dict in particle['counterterm'].items():
+                for LaurentOrder, coupling in coupling_dict.items():
+                    if coupling in self.coupling_pos:
+                        if (particle,key) not in self.coupling_pos[coupling]:
+                            self.coupling_pos[coupling].append((particle,key))
+                    else:
+                        self.coupling_pos[coupling] = [(particle,key)]
+
         return self.coupling_pos
         
     def detect_identical_couplings(self, strict_zero=False):
@@ -1060,7 +1206,8 @@ class RestrictModel(model_reader.ModelReader):
 
 
     def merge_iden_couplings(self, couplings):
-        """merge the identical couplings in the interactions"""
+        """merge the identical couplings in the interactions and particle 
+        counterterms"""
 
         
         logger_mod.debug(' Fuse the Following coupling (they have the same value): %s '% \
@@ -1074,11 +1221,20 @@ class RestrictModel(model_reader.ModelReader):
             if coupling not in self.coupling_pos:
                 continue
             # replace the coupling, by checking all coupling of the interaction
-            vertices = self.coupling_pos[coupling]
+            vertices = [ vert for vert in self.coupling_pos[coupling] if 
+                         isinstance(vert, base_objects.Interaction)]
             for vertex in vertices:
                 for key, value in vertex['couplings'].items():
                     if value == coupling:
                         vertex['couplings'][key] = main
+
+            # replace the coupling appearing in the particle counterterm
+            particles_ct = [ pct for pct in self.coupling_pos[coupling] if 
+                         isinstance(pct, tuple)]
+            for pct in particles_ct:
+                for key, value in pct[0]['counterterm'][pct[1]].items():
+                    if value == coupling:
+                        pct[0]['counterterm'][pct[1]][key] = main
 
          
     def merge_iden_parameters(self, parameters):
@@ -1122,25 +1278,44 @@ class RestrictModel(model_reader.ModelReader):
                                                        if p[arg] in change_name]
             
     def remove_interactions(self, zero_couplings):
-        """ remove the interactions associated to couplings"""
+        """ remove the interactions and particle counterterms 
+        associated to couplings"""
         
-        mod = []
+        
+        mod_vertex = []
+        mod_particle_ct = []
         for coup in zero_couplings:
             # some coupling might be not related to any interactions
             if coup not in self.coupling_pos:
-                coup, self.coupling_pos.keys()
                 continue
-            for vertex in self.coupling_pos[coup]:
+            
+            # Remove the corresponding interactions.
+
+            vertices = [ vert for vert in self.coupling_pos[coup] if 
+                         isinstance(vert, base_objects.Interaction) ]
+            for vertex in vertices:
                 modify = False
                 for key, coupling in vertex['couplings'].items():
                     if coupling in zero_couplings:
                         modify=True
                         del vertex['couplings'][key]
                 if modify:
-                    mod.append(vertex)
+                    mod_vertex.append(vertex)
+            
+            # Remove the corresponding particle counterterm
+            particles_ct = [ pct for pct in self.coupling_pos[coup] if 
+                         isinstance(pct, tuple)]
+            for pct in particles_ct:
+                modify = False
+                for key, coupling in pct[0]['counterterm'][pct[1]].items():
+                    if coupling in zero_couplings:
+                        modify=True
+                        del pct[0]['counterterm'][pct[1]][key]
+                if modify:
+                    mod_particle_ct.append(pct)
 
-        # print usefull log and clean the empty interaction
-        for vertex in mod:
+        # print useful log and clean the empty interaction
+        for vertex in mod_vertex:
             part_name = [part['name'] for part in vertex['particles']]
             orders = ['%s=%s' % (order,value) for order,value in vertex['orders'].items()]
                                         
@@ -1151,7 +1326,25 @@ class RestrictModel(model_reader.ModelReader):
             else:
                 logger_mod.debug('modify interactions: %s at order: %s' % \
                                 (' '.join(part_name),', '.join(orders)))       
-        
+
+        # print useful log and clean the empty counterterm values
+        for pct in mod_particle_ct:
+            part_name = pct[0]['name']
+            order = pct[1][0]
+            loop_parts = ','.join(['('+','.join([\
+                         self.get_particle(p)['name'] for p in part])+')' \
+                         for part in pct[1][1]])
+                                        
+            if not pct[0]['counterterm'][pct[1]]:
+                logger_mod.debug('remove counterterm of particle %s'%part_name+\
+                                 ' with loop particles (%s)'%loop_parts+\
+                                 ' perturbing order %s'%order)
+                del pct[0]['counterterm'][pct[1]]
+            else:
+                logger_mod.debug('Modify counterterm of particle %s'%part_name+\
+                                 ' with loop particles (%s)'%loop_parts+\
+                                 ' perturbing order %s'%order)  
+
         return
                 
     def remove_couplings(self, couplings):                
@@ -1204,7 +1397,6 @@ class RestrictModel(model_reader.ModelReader):
         else:
             used = set([i for i in special_parameters if i])
         
-        
         # simplify the regular expression
         re_str = '|'.join([param for param in special_parameters 
                                                       if param not in used])
@@ -1222,12 +1414,13 @@ class RestrictModel(model_reader.ModelReader):
                 # Bypass all external parameter
                 if isinstance(parameter, base_objects.ParamCardVariable):
                     continue
-
-                # check the presence of zero/one parameter
-                if simplify:
+                
+                # If there is no further special parameter to look for
+                if re_str!='' and simplify:
+                    # check the presence of zero/one parameter
                     for use in  re_pat.findall(parameter.expr):
                         used.add(use)
-                        
+        
         # modify the object for those which are still used
         for param in used:
             if not param:

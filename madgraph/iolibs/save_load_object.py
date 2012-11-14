@@ -65,19 +65,19 @@ class UnPickler(pickle.Unpickler):
         newmodule = 'internal.%s' % module.rsplit('.',1)[1]
         try:
             return pickle.Unpickler.find_class(self, newmodule , name)
-        except:
+        except Exception:
             pass
         
         newmodule = 'madgraph.iolibs.%s' % module.rsplit('.',1)[1]
         try:
             return pickle.Unpickler.find_class(self, newmodule , name)
-        except:
+        except Exception:
             pass        
 
         newmodule = 'madgraph.various.%s' % module.rsplit('.',1)[1]
         try:
             return pickle.Unpickler.find_class(self, newmodule , name)
-        except:
+        except Exception:
             raise
     
 

@@ -25,7 +25,7 @@ try:
     import madgraph.iolibs.file_writers as file_writers
     from madgraph import MG5DIR
     MADEVENT = False
-except:
+except ImportError:
     MADEVENT = True
     import internal.file_writers as file_writers
     MEDIR = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
@@ -148,13 +148,14 @@ class Banner(dict):
         if MADEVENT:
             ff.write(open(pjoin(MEDIR, 'Source', 'banner_header.txt')).read())
         else:
-            ff.write(open(pjoin(MG5DIR,'Template', 'Source', 'banner_header.txt')).read())
+            ff.write(open(pjoin(MG5DIR,'Template', 'LO', 'Source', 'banner_header.txt')).read())
         for tag in [t for t in self.ordered_items if t in self.keys()]:
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
                      {'tag':tag, 'text':self[tag].strip()})
         for tag in [t for t in self.keys() if t not in self.ordered_items]:
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
                      {'tag':tag, 'text':self[tag].strip()})
+
         ff.write('</header>\n')    
         ff.write('</LesHouchesEvents>\n')
             
@@ -486,8 +487,77 @@ class RunCard(dict):
         self.fsock.writelines(' %s = %s \n' % (fortran_name, self.format(type, value)))
 
 
+class RunCardNLO(RunCard):
+    """A class object for the run_card for a (aMC@)NLO pocess"""
 
+        
+    def write_include_file(self, output_path):
+        """writing the run_card.inc file""" 
+        
+        self.fsock = file_writers.FortranWriter(output_path)    
+################################################################################
+#      Writing the lines corresponding to the cuts
+################################################################################
+    
+        self.add_line('maxjetflavor', 'int', 5)
+        # minimum pt
+        self.add_line('ptj', 'float', 20)
+        self.add_line('etaj', 'float', -1.0)
+        self.add_line('ptl', 'float', 20)
+        self.add_line('etal', 'float', -1.0)
+        # minimum delta_r
+        self.add_line('drll', 'float', 0.4)     
+        # minimum invariant mass for pairs
+        self.add_line('mll', 'float', 0.0)
+        #inclusive cuts
+        # Jet measure cuts 
+        self.add_line("jetradius", 'float', 0.7, log=10)
 
+################################################################################
+#      Writing the lines corresponding to anything but cuts
+################################################################################
+        # seed
+        self.add_line('iseed', 'int', 0)
+        self.add_line('parton_shower', 'str', 'HERWIG6', fortran_name='shower_mc')
+        self.add_line('nevents', 'int', 10000)
+        # Renormalizrion and factorization scales
+        self.add_line('fixed_ren_scale', 'bool', True)
+        self.add_line('fixed_fac_scale', 'bool', True)
+        self.add_line('fixed_QES_scale', 'bool', True)
+        self.add_line('muR_ref_fixed', 'float', 91.188)
+        self.add_line('muF1_ref_fixed','float', 91.188)
+        self.add_line('muF2_ref_fixed', 'float', 91.188)
+        self.add_line('QES_ref_fixed', 'float', 91.188)
+        self.add_line('muR_over_ref', 'float', 1.0)
+        self.add_line('muF1_over_ref', 'float', 1.0)
+        self.add_line('muF2_over_ref', 'float', 1.0)
+        self.add_line('QES_over_ref', 'float', 1.0)
+        #reweight block
+        self.add_line('reweight_scale', 'bool', True, fortran_name='do_rwgt_scale')
+        self.add_line('rw_Rscale_up', 'float', 2.0)
+        self.add_line('rw_Rscale_down', 'float', 0.5)
+        self.add_line('rw_Fscale_up', 'float', 2.0)
+        self.add_line('rw_Fscale_down', 'float', 0.5)
+        self.add_line('reweight_PDF', 'bool', True, fortran_name='do_rwgt_pdf')
+        self.add_line('PDF_set_min', 'int', 21101)
+        self.add_line('PDF_set_max', 'int', 21140)
 
- 
+       # self.add_line('fixed_couplings', 'bool', True, log=10)
+        self.add_line('jetalgo', 'int', 1)
+        # Collider energy and type
+        self.add_line('lpp1', 'int', 1, fortran_name='lpp(1)')
+        self.add_line('lpp2', 'int', 1, fortran_name='lpp(2)')
+        self.add_line('ebeam1', 'float', 4000, fortran_name='ebeam(1)')
+        self.add_line('ebeam2', 'float', 4000, fortran_name='ebeam(2)')
+        # BW cutoff (M+/-bwcutoff*Gamma)
+        self.add_line('bwcutoff', 'float', 15.0)
+        #  Collider pdf
+        self.add_line('pdlabel','str','cteq6_m')
+        if self['pdlabel'] == 'lhapdf':
+            self.add_line('lhaid', 'int', 10042)
+        else:
+            self.add_line('lhaid', 'int', 10042, log=10)
+        
+        self.fsock.close()
+
 

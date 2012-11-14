@@ -93,7 +93,8 @@ class Computation(dict):
             try:
                 id = self[var]
             except KeyError:
-                id = DVariable(var).get_id()
+                assert var not in ['M','W']
+                id = Variable(var).get_id()
             out.append(id)
         return out
         
@@ -160,7 +161,7 @@ class AddVariable(list):
         
     def simplify(self):
         """ apply rule of simplification """
-        
+
         # deal with one length object
         if len(self) == 1:
             return self.prefactor * self[0].simplify()
@@ -170,6 +171,10 @@ class AddVariable(list):
         for term in self[:]:
             pos += 1 # current position in the real self
             if not hasattr(term, 'vartype'):
+                if isinstance(term, dict):
+                    # allow term of type{(0,):x}
+                    assert term.values() == [0]
+                    term = term[(0,)]
                 constant += term
                 del self[pos]
                 pos -= 1
@@ -239,7 +244,7 @@ class AddVariable(list):
         """return a dict with the key being the power associated to each variables
            and the value being the object remaining after the suppression of all
            the variable"""
-        
+
         out = defaultdict(int)
         for obj in self:
             for key, value in obj.split(variables_id).items():
@@ -471,7 +476,7 @@ class AddVariable(list):
             for term in self:
                 try:
                     term.remove(maxvar)
-                except:
+                except Exception:
                     constant.append(term)
                 else:
                     if len(term):
@@ -755,8 +760,7 @@ class DVariable(FactoryVar):
             if name[0] in ['M','W'] or name.startswith('OM'):
                 return FactoryVar(name, C_Variable)
         if aloha.loop_mode and name.startswith('P'):
-            return FactoryVar(name, C_Variable)
-        
+            return FactoryVar(name, C_Variable)        
         #Normal case:
         return FactoryVar(name, R_Variable)
 
@@ -798,7 +802,7 @@ class MultLorentz(MultVariable):
                     fact2 = self[k]
                     try:
                         l = fact2.lorentz_ind.index(fact.lorentz_ind[j])
-                    except:
+                    except Exception:
                         pass
                     else:
                         out[(i, j)] = (k, l)
@@ -820,7 +824,7 @@ class MultLorentz(MultVariable):
                     fact2 = self[k]
                     try:
                         l = fact2.spin_ind.index(fact.spin_ind[j])
-                    except:                
+                    except Exception:                
                         pass
                     else:
                         out[(i, j)] = (k, l)  
@@ -860,7 +864,7 @@ class MultLorentz(MultVariable):
                 try: 
                     # look in priority in basic_end_point (P/S/fermion/...)
                     current = basic_end_point.pop()
-                except:
+                except Exception:
                     #take one of the remaining
                     current = self.unused.pop()
                 else:
@@ -937,7 +941,7 @@ class LorentzObject(object):
 
         try:
             return self.representation
-        except:
+        except Exception:
             self.create_representation()
         return self.representation
     
@@ -999,6 +1003,13 @@ class LorentzObjectRepresentation(dict):
         #store the representation
         if self.lorentz_ind or self.spin_ind:
             dict.__init__(self, representation) 
+        elif isinstance(representation,dict):
+            if len(representation) == 0:
+                self[(0,)] = 0
+            elif len(representation) == 1 and (0,) in representation:
+                self[(0,)] = representation[(0,)]
+            else:
+                raise self.LorentzObjectRepresentationError("There is no key of (0,) in representation.")                    
         else:
             self[(0,)] = representation
 
@@ -1199,7 +1210,7 @@ class LorentzObjectRepresentation(dict):
                     #compute the prefactor due to the lorentz contraction
                     try:
                         factor.prefactor *= (-1) ** (len(l_value) - l_value.count(0))
-                    except:
+                    except Exception:
                         factor *= (-1) ** (len(l_value) - l_value.count(0))
                     out += factor                        
         return out
@@ -1383,6 +1394,7 @@ class SplitCoefficient(dict):
         
     def get_max_rank(self):
         """return the highest rank of the coefficient"""
+        
         return max([max(arg[:4]) for arg in self])
 
       

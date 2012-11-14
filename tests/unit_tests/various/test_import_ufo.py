@@ -51,6 +51,29 @@ class TestImportUFO(unittest.TestCase):
         self.assertEqual(self.base_model.get('expansion_order'),
                          {'QCD': 99, 'QED': 99, 'HIG':1, 'HIW': 1})
 
+class TestNFlav(unittest.TestCase):
+    """Test class for the get_nflav function"""
+
+    def test_get_nflav_sm(self):
+        """Tests the get_nflav_function for the full SM.
+        Here b and c quark are massive"""
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_full_model(sm_path)
+        self.assertEqual(model.get_nflav(), 3)
+
+    def test_get_nflav_sm_nobmass(self):
+        """Tests the get_nflav_function for the SM, with the no-b-mass restriction"""
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_model(sm_path + '-no_b_mass')
+        self.assertEqual(model.get_nflav(), 5)
+
+
+    def test_get_nflav_sm_nomasses(self):
+        """Tests the get_nflav_function for the SM, with the no_masses restriction"""
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_model(sm_path + '-no_masses')
+        self.assertEqual(model.get_nflav(), 5)
+
 #===============================================================================
 # TestRestrictModel
 #===============================================================================
@@ -139,6 +162,7 @@ class TestRestrictModel(unittest.TestCase):
             self.assertEqual(self.model['coupling_dict'][name], 0)
         
         self.assertEqual(expected, result)        
+        
         # check what are the identical coupling
         expected = [['GC_100', 'GC_108', 'GC_49', 'GC_45', 'GC_40', 'GC_41', 'GC_104']]
         expected.sort()
@@ -191,9 +215,8 @@ class TestRestrictModel(unittest.TestCase):
         content =  [[p.get('name') for p in v.get('particles')] \
                for v in self.model.get('interactions') \
                if any([c in target for c in v['couplings'].values()])]
-        
+
         self.assertEqual(len(check_content),len(content))#, 'test not up-to-date'      
-        
 
         vertex_id = [v.get('id') \
                for v in self.model.get('interactions') \

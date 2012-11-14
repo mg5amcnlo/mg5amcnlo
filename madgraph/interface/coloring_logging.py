@@ -8,6 +8,7 @@ COLORS = {
     'DEBUG'    : GREEN,
     'CRITICAL' : RED,
     'ERROR'    : RED,
+    'BLACK'    : BLACK,
     'RED'      : RED,
     'GREEN'    : GREEN,
     'YELLOW'   : YELLOW,
@@ -29,6 +30,22 @@ class ColorFormatter(logging.Formatter):
 
     def format(self, record):
         levelname = record.levelname
+        color_choice = COLORS[levelname]
+        new_args=[]
+        # A not-so-nice but working way of passing arguments to this formatter
+        # from MadGraph.
+        color_specified = False
+        for arg in record.args:
+            if isinstance(arg,str) and arg.startswith('$MG'):
+                elems=arg.split(':')
+                if len(elems)>2:
+                    if elems[1]=='color':
+                        color_specified = True                            
+                        color_choice = COLORS[elems[2]]
+            else:
+                new_args.append(arg)
+        record.args = tuple(new_args)
+        color     = COLOR_SEQ % (30 + color_choice)
         message   = logging.Formatter.format(self, record) + RESET_SEQ
         for k,v in COLORS.items():
             message = message.replace("$" + k,    COLOR_SEQ % (v+30))\
@@ -39,10 +56,9 @@ class ColorFormatter(logging.Formatter):
         if levelname == 'INFO':
             message   = message.replace("$RESET", '')\
                            .replace("$BOLD",  '')\
-                           .replace("$COLOR", '')
+                           .replace("$COLOR", color if color_specified else '')
             return message
         else:    
-            color     = COLOR_SEQ % (30 + COLORS[levelname])
             message   = message.replace("$RESET", RESET_SEQ)\
                            .replace("$BOLD",  BOLD_SEQ)\
                            .replace("$COLOR", color)
