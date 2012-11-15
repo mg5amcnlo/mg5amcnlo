@@ -16,6 +16,9 @@
 import sys
 import os
 import string
+import collections
+import itertools
+import copy
 
 class Multi_list(list):
     """ a list of list """
@@ -269,3 +272,47 @@ cases are handled, but never can be sure..."""
 #          self.close()
 #      except:
 #          pass
+
+
+
+
+def get_all_permutations(cat_list):
+    """ """
+    
+    # create the category names and the id to permute for each category
+    nb_cat = collections.defaultdict(list)
+    for i,cat in enumerate(cat_list):
+        nb_cat[cat].append(i+1) #+1 in order to be in Fortan convention
+    cat_names = nb_cat.keys()
+    # build an iterator for each category
+    iterator = dict([(cat, itertools.permutations(value)) 
+                                               for cat,value in nb_cat.items()])
+        
+    permutations = [] # all possibility
+    current = 0       # position of the last modify category
+    #initialize all iterator to have starting point value
+    current_value = dict([(cat, list(it.next())) for cat,it in iterator.items()])
+
+    while current < len(iterator):
+        #store the current value
+        perm = []
+        curr = copy.deepcopy(current_value)        
+        for cat in cat_list:
+            perm.append(curr[cat].pop(0))
+        permutations.append(perm)
+        #update the iterator to have the next value
+        while current < len(iterator):
+            cat = cat_names[current]
+            it  = iterator[cat]
+            try:
+                new_val = it.next()
+            except StopIteration:
+                iterator[cat] = itertools.permutations(nb_cat[cat])
+                current_value[cat] = list(iterator[cat].next())
+                current +=1
+            else:
+                current_value[cat] = list(new_val)
+                current = 0
+                break
+                
+    return permutations

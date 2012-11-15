@@ -41,7 +41,7 @@ class MG_diagram(diagram_class.MG_diagram):
         self.code = []
         self.ParticlesFile=Cards.Particles_file('./Source/MODEL/particles.dat')
         self.dict_Fmass,self.dict_Fwidth=self.ParticlesFile.give_mass_width_dict()
-
+        self.MWparam = opt
 
     def create_all_fortran_code(self):
         """go  in each subprocesses and create the fortran code in each of them"""
@@ -517,6 +517,8 @@ class MG_diagram(diagram_class.MG_diagram):
         mod_file.mod_text(write_data, template.dico, self.directory + '/data.inc')        
         mod_file.mod_text(write_mchannel, template.dico, self.directory + '/multi_channel.f')
 
+        # create permutations.inc file
+        self.write_permutations_file()
 
     def write_f77_parameter(self):
         """ define the f77 parameter for the data file """
@@ -571,6 +573,68 @@ class MG_diagram(diagram_class.MG_diagram):
         self.D_f_text += f_text  
         
         return 'first_d_' + str(tag1) + '_' + str(tag2) + ', second_d_' + str(tag1) + '_' + str(tag2) + ',' + str(tag3)
+ 
+ 
+    def write_permutations_file(self):
+        """ write the permutations.inc file """
+        
+        # assign each particles to a class of identical/equivalent particles
+        list_id = []
+        for i in range(3, 100):
+            if i not in self.content:
+                break
+            id = self.content[i].pid
+            if abs(id) in [1,2,3,4]:
+                list_id.append('j')
+            elif abs(id) == 5:
+                if self.MWparam['mw_perm']['bjet_is_jet']:
+                    list_id.append('j')
+                else:
+                    list_id.append('b')
+            else:
+                list_id.append(self.content[i].pid)
+        
+        #get the id permutations
+        permutations = get_all_permutations(list_id)
+        # sanity check ensure that no identical permutation are presnt
+        check = set([tuple(i) for i in permutations])
+        assert len(check) == len(permutations)
+        
+        text = open(self.directory + '/../permutation_template.f', 'r').read()
+        
+        text += '\n      subroutine get_perm(nb, perm)\n'
+        text += '      implicit none\n'
+        text += '      integer i,j\n'
+        text += '      include \'nexternal.inc\'\n'
+        text += '      INTEGER    NB\n'
+        text += '      INTEGER    PERM(NEXTERNAL-2)\n'        
+        text += '      INTEGER    NPERM\n'
+        text += '      PARAMETER (NPERM=%s)\n' % len(permutations)
+        text += '      INTEGER PERMS(NPERM, NEXTERNAL-2)\n'
+        for i, perm in enumerate(permutations):
+            text += "      DATA (PERMS(%s,I),I=1,%s) /%s/\n" % (i+1, len(perm),
+                                               ','.join([str(j) for j in perm]))
+        text += '        do i=1, NEXTERNAL-2\n'
+        text += '            perm(i) = PERMS(nb, i)\n'
+        text += '        enddo\n'   
+        text += '        return\n' 
+        text += '        end\n\n'
+        text += '''      subroutine get_num_per(num_per)
+c
+c    compute the total number of permutations    
+      implicit none
+      include 'nexternal.inc'
+
+      integer num_per 
+      num_per = %i
+      write(*,*) "The number of parton-jet assignements is", num_per
+      return
+      end
+      '''  % len(permutations)
+      
+        open(self.directory + '/permutation.f', 'w').write(text)
+
+        
  
     def init_d_choices_file(self):
         """ write banner in the fortran/inc file """

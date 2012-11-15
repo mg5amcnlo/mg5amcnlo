@@ -147,17 +147,13 @@ C
 C     initialization of the permutation
 C
  1    normalize_perm=0d0
-      call init_perm()
-      do i=1,nexternal-2
-         perm_id(i)=i
-      enddo
 
       loop_index=loop_index+1
       counter=0
       temp_err=0d0
       temp_val=0d0
       do perm_pos=1,num_per
-         call give_permut(perm_id)
+         call get_perm(perm_pos, perm_id)
          call assign_perm(perm_id)
          chan_val=0d0
          chan_err=0d0
@@ -233,12 +229,11 @@ c
       close(21)
 
       write(23,*) ' permutation channel   value      error'
-      call init_perm()
       counter=0
       do perm_pos=1,num_per
-         call give_permut(perm_id)
+         call get_perm(perm_pos, perm_id)
          write(23,*) "======================================"
-         write(23,*) '1   2',(inv_matching_type_part(2+perm_id(matching_type_part(i)-2)), i=3,8)
+         write(23,*) '1   2', (2+perm_id(i-2), i=3,8)
 
          do ll=1,nb_sol_config
             counter=counter+1

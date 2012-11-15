@@ -1488,7 +1488,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()
 
-        linkfiles = ['driver.f', 'initialization.f','permutation.f','gen_ps.f','phasespace.inc', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
+        linkfiles = ['driver.f', 'initialization.f','gen_ps.f','phasespace.inc', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
 
         for file in linkfiles:
             ln('../%s' % file, starting_dir=cwd)
@@ -4554,7 +4554,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         # Generate jpgs -> pass in make_html
         #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
-        linkfiles = ['driver.f', 'initialization.f','permutation.f','gen_ps.f','phasespace.inc', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
+        linkfiles = ['driver.f', 'initialization.f','gen_ps.f','phasespace.inc', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
 
         for file in linkfiles:
             ln('../%s' % file, cwd=Ppath)
