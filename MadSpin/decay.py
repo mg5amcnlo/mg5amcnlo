@@ -122,7 +122,7 @@ class Event:
                 in the lhe format.
         """
         line="<event> \n"
-        line1=' %2d %6d %14.8e %14.8e %14.8e %14.8e' % \
+        line1=' %2d %6d %+13.7e %14.8e %14.8e %14.8e' % \
         (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
         line1=line1.replace("e","d")
         line+=line1+"\n"
