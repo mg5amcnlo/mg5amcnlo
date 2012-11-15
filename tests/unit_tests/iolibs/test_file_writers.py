@@ -34,13 +34,8 @@ class CheckFileCreate():
 
     def assertFileContains(self, filename, solution):
         """ Check the content of a file """
-
-        # So that I can use it from LoopExporterTest where I don't use this
-        # fancy class except for this function.
-        if isinstance(filename,file):
-            current_value = filename.read()
-        else:
-            current_value = open(self.give_pos(filename)).read()
+        
+        current_value = open(self.give_pos(filename)).read()
         list_cur=current_value.split('\n')
         list_sol=solution.split('\n')
         while 1:

@@ -25,7 +25,7 @@ import tarfile
 import datetime
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
-sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
+sys.path.append(os.path.join(root_path, os.path.pardir))
 
 import tests.unit_tests as unittest
 
@@ -45,6 +45,7 @@ import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.import_ufo as import_ufo
 import madgraph.various.misc as misc
 import tests.IOTests as IOTests
+import tests.unit_tests.loop.test_loop_exporters as test_loop_exporters
 
 from madgraph.iolibs.files import cp, ln, mv
 from madgraph import MadGraph5Error
@@ -55,8 +56,8 @@ path = os.path
 _file_path = os.path.dirname(os.path.realpath(__file__))
 
 _input_file_path = os.path.abspath(os.path.join(_file_path, \
-                                  os.path.pardir, os.path.pardir,'input_files'))
-_mgme_file_path = os.path.abspath(os.path.join(_file_path, *([os.path.pardir]*3)))
+                                                  os.path.pardir,'input_files'))
+_mgme_file_path = os.path.abspath(os.path.join(_file_path, *([os.path.pardir]*2)))
 _loop_file_path = os.path.join(_mgme_file_path,'Template','loop_material')
 _cuttools_file_path = os.path.join(_mgme_file_path, 'vendor','CutTools')
 _proc_file_path = os.path.join(_mgme_file_path, 'UNITTEST_proc')
@@ -64,61 +65,9 @@ _proc_file_path = os.path.join(_mgme_file_path, 'UNITTEST_proc')
 #===============================================================================
 # IOExportMadLoopUTest
 #===============================================================================
-class IOExportMadLoopUnitTest(IOTests.IOTestManager):
+class IOExportMadLoopAcceptanceTest(test_loop_exporters.IOExportMadLoopUnitTest):
     """Test class for the loop exporter modules. It uses hardcoded output 
     for the comparisons."""
-
-    # A helper function to add more easily IOTests for several exporters.
-    def addIOTestsForProcess(self,testName,testFolder,particles_ids,exporters,orders,
-                             files_to_check=IOTests.IOTest.all_files,
-                             perturbation_couplings=['QCD'],
-                             NLO_mode='virt',
-                             model=None,
-                             fortran_model=None):
-        """ Simply adds a test for the process defined and all the exporters
-        specified."""
-        
-        if model==None:
-            model = self.models['loop_sm']
-        if fortran_model==None:
-            fortran_model = self.fortran_models['fortran_model']
-        
-        needed = False
-        if not isinstance(exporters,dict):
-            if self.need(testFolder,testName):
-                needed = True
-        elif any(self.need('%s_%s'%(testFolder,exporter) ,testName) for \
-                                                  exporter in exporters.keys()):
-            needed = True
-        if not needed:
-            return
-        
-        myleglist = base_objects.LegList()
-        for i, pid in enumerate(particles_ids):
-            myleglist.append(base_objects.Leg({'id':pid, 
-                                           'state':False if i<2 else True}))
-        myproc = base_objects.Process({'legs': myleglist,
-                        'model': model,
-                        'orders': orders,
-                        'perturbation_couplings': perturbation_couplings,
-                        'NLO_mode': NLO_mode})
-        
-        myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
-        # Exporter directly given
-        if not isinstance(exporters,dict):
-            test_list = [(testFolder,exporters)]
-        # Several exporters given in a dictionary
-        else:
-            test_list = [('%s_%s'%(testFolder,exp),exporters[exp]) for exp in \
-                                                               exporters.keys()]         
-        for (folderName, exporter) in test_list:
-            if self.need(folderName,testName): 
-                self.addIOTest(folderName,testName, IOTests.IOTest(\
-                  hel_amp=loop_helas_objects.LoopHelasMatrixElement(myloopamp),
-                  exporter=exporter,
-                  helasModel=fortran_model,
-                  testedFiles=files_to_check,
-                  outputPath=_proc_file_path))
 
     def setUp(self):
         """load the models and exporters if necessary."""
@@ -152,26 +101,18 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                                    'cuttools_dir':_cuttools_file_path,
                                    'fortran_compiler':'gfortran'})
                                   }
+
+            # d u~ > mu- vmx g
+            self.addIOTestsForProcess( testName = 'dux_mumvmxg',
+                                       testFolder = 'long_ML_SMQCD',
+                                       particles_ids = [1,-2,13,-14,21],
+                                       exporters = self.loop_exporters,
+                                       orders = {'QCD': 1, 'QED': 2} )
             
-            # g g > t t~
-            self.addIOTestsForProcess( testName = 'gg_ttx',
-                                       testFolder = 'short_ML_SMQCD',
-                                       particles_ids = [21,21,6,-6],
+            # g g > w- t b~ Single top (long but really includes everything)
+            self.addIOTestsForProcess( testName = 'gg_wmtbx',
+                                       testFolder = 'long_ML_SMQCD',
+                                       particles_ids = [21,21,-24,6,-5],
                                        exporters = self.loop_exporters,
-                                       orders = {'QCD':2,'QED':0} )
+                                       orders = {'QCD': 2, 'QED': 1} )
 
-            # d d > t t~ (only the proc files for this one)
-            self.addIOTestsForProcess( testName = 'ddx_ttx',
-                                       testFolder = 'short_ML_SMQCD',
-                                       particles_ids = [1,-1,6,-6],
-                                       exporters = self.loop_exporters,
-                                       orders = {'QCD':2,'QED':0},
-                                       files_to_check=IOTests.IOTest.proc_files)
-
-            # And the loop induced g g > h h for good measure 
-            # Use only one exporter only here
-            self.addIOTestsForProcess( testName = 'gg_hh',
-                                       testFolder = 'short_ML_SMQCD_LoopInduced',
-                                       particles_ids = [21,21,25,25],
-                                       exporters = self.loop_exporters['default'],
-                                       orders = {'QCD': 2, 'QED': 2} )
