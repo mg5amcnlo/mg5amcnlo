@@ -162,21 +162,17 @@ c-----
       if (first_time) then
          include 'props.inc'
          nbw = 0
-         tsgn = 1d0
          do i=-1,-(nexternal-3),-1
-            if (iforest(1,i,iconfig) .eq. 1) then
-              tsgn=-1d0
+            if (iforest(1,i,iconfig) .eq. 1 .or. prwidth(i,iconfig).le.0) then
               cycle
             endif
             nbw=nbw+1
-            if (prwidth(i,iconfig) .gt. 0d0) then
-               if (lbw(nbw) .eq. 1) then
-                  write(*,*) 'Requiring BW ',i,nbw
-               elseif(lbw(nbw) .eq. 2) then
-                  write(*,*) 'Excluding BW ',i,nbw
-               else
-                  write(*,*) 'No cut BW ',i,nbw
-               endif
+            if (lbw(nbw) .eq. 1) then
+               write(*,*) 'Requiring BW ',i,nbw
+            elseif(lbw(nbw) .eq. 2) then
+               write(*,*) 'Excluding BW ',i,nbw
+            else
+               write(*,*) 'No cut BW ',i,nbw
             endif
          enddo
          first_time=.false.
@@ -206,8 +202,8 @@ c     Start loop over propagators
      $           +tsgn*xp(j,iforest(2,i,iconfig))
          enddo
          if (tsgn .lt. 0d0) cycle
-         nbw=nbw+1
          if (prwidth(i,iconfig) .gt. 0d0 ) then !This is B.W.
+            nbw=nbw+1
 c            write(*,*) 'Checking BW',nbw
             xmass = sqrt(dot(xp(0,i),xp(0,i)))
 c            write(*,*) 'xmass',xmass,prmass(i,iconfig)
@@ -304,8 +300,9 @@ c
       double precision tsgn, xo, a
       double precision x1,x2,xk(nexternal)
       double precision dr,mtot,etot,xqfact
+      double precision spmass
       integer i, iconfig, l1, l2, j, nt, nbw, iproc
-      integer iden_part(-max_branch:-1)
+      integer iden_part(-nexternal+1:nexternal)
 
       double precision prmass(-nexternal:0,lmaxconfigs)
       double precision prwidth(-nexternal:0,lmaxconfigs)
@@ -318,6 +315,7 @@ c
 
       integer gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'decayBW.inc'
+
 c
 c     Global
 c
@@ -369,6 +367,7 @@ c      etmin = 10
       iconfig = this_config
       mtot = 0d0
       etot = 0d0   !Total energy needed
+      spmass = 0d0 !Keep track of BW masses for shat
       xqfact=1d0
       if(ickkw.eq.2.or.ktscheme.eq.2) xqfact=0.3d0
       do i=nincoming+1,nexternal  !assumes 2 incoming
@@ -382,11 +381,11 @@ c-JA 1/2009: Set grid also based on xqcut
          etot = etot+xe(i)
          mtot=mtot+xm(i)         
       enddo
+      spmass=mtot
       tsgn    = +1d0
 c     Reset variables
       nbw = 0
       do i=1,nexternal-2
-         iden_part(-i)=0
          spole(i)=0
          swidth(i)=0
       enddo
@@ -399,32 +398,13 @@ c     If no non-zero sprop, set iproc to 1
       if(iproc.ge.maxsproc.and.sprop(maxsproc,-1,iconfig).eq.0)
      $     iproc=1
 
+c     Look for identical particles to map radiation processes
+      call idenparts(iden_part, iforest(1,-max_branch,iconfig),
+     $     sprop(1,-max_branch,iconfig), gForceBW(-max_branch,iconfig),
+     $     prwidth(-nexternal,iconfig))
+
 c     Start loop over propagators
       do i=-1,-(nexternal-3),-1
-c     JA 3/31/11 Keep track of identical particles (i.e., radiation vertices)
-c     by tracing the particle identity from the external particle.
-         if(iforest(1,i,iconfig).gt.0) then
-            if (sprop(iproc,i,iconfig).eq.idup(iforest(1,i,iconfig),1,iproc))
-     $        iden_part(i) = sprop(iproc,i,iconfig)
-         endif
-         if(iforest(2,i,iconfig).gt.0) then
-            if(sprop(iproc,i,iconfig).eq.idup(iforest(2,i,iconfig),1,iproc))
-     $           iden_part(i) = sprop(iproc,i,iconfig)
-         endif
-         if(iforest(1,i,iconfig).lt.0) then
-            if((iden_part(iforest(1,i,iconfig)).ne.0.and.
-     $        sprop(iproc,i,iconfig).eq.iden_part(iforest(1,i,iconfig)) .or.
-     $        gforcebw(iforest(1,i,iconfig),iconfig).eq.1.and.
-     $        sprop(iproc,i,iconfig).eq.sprop(iproc,iforest(1,i,iconfig),iconfig)))
-     $       iden_part(i) = sprop(iproc,i,iconfig)
-         endif
-         if(iforest(2,i,iconfig).lt.0) then
-            if((iden_part(iforest(2,i,iconfig)).ne.0.and.
-     $        sprop(iproc,i,iconfig).eq.iden_part(iforest(2,i,iconfig)).or.
-     $        gforcebw(iforest(2,i,iconfig),iconfig).eq.1.and.
-     $        sprop(iproc,i,iconfig).eq.sprop(iproc,iforest(2,i,iconfig),iconfig)))
-     $           iden_part(i) = sprop(iproc,i,iconfig)
-         endif
          if (iforest(1,i,iconfig) .eq. 1) tsgn=-1d0
          if (tsgn .eq. 1d0) then                         !s channel
             xm(i) = xm(iforest(1,i,iconfig))+xm(iforest(2,i,iconfig))
@@ -486,7 +466,6 @@ c----
                      spole(j)=prmass(i,iconfig)*prmass(i,iconfig)/stot
                      swidth(j) = prwidth(i,iconfig)*prmass(i,iconfig)/stot
                   endif
-                  continue
                else if(iden_part(i).eq.0 .or. lbw(nbw).eq.1) then
                   write(*,*) 'Setting BW',i,nbw,prmass(i,iconfig)
                   spole(-i)=prmass(i,iconfig)*prmass(i,iconfig)/stot
@@ -500,6 +479,10 @@ c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
                   if (xo.eq.0d0) xo=1d0/stot
                   call setgrid(-i,xo,a,1)
                endif
+c     Set spmass for BWs
+               if (swidth(-i) .ne. 0d0)
+     $              spmass=spmass-xm(i) +
+     $              max(xm(i),prmass(i,iconfig)-5d0*prwidth(i,iconfig))
             else                                  !1/x^pow
               a=prmass(i,iconfig)**2/stot
 c     JA 4/1/2011 always set grid
@@ -561,6 +544,7 @@ c               read(*,*) xo
              if (i .ne. -1 .or. .true.) call setgrid(-i,xo,a,1)
          endif
       enddo
+c     Perform setting for shat (PDF BW or 1/s)
       if (abs(lpp(1)) .eq. 1 .or. abs(lpp(2)) .eq. 1) then
 c     Set minimum based on: 1) required energy 2) resonances 3) 1/10000 of sqrt(s)
          i = 3*(nexternal-2) - 4 + 1
@@ -573,18 +557,21 @@ c        Take into account special cuts
          xo = max(xo, xmtc*dabs(xmtc)/stot)
          xo = max(xo, htjmin**2/stot)
          xo = max(xo, ptj1min**2/stot)
-         xo = max(xo, ptj2min**2/stot)
-         xo = max(xo, ptj3min**2/stot)
-         xo = max(xo, ptj4min**2/stot)
+         xo = max(xo, (2*ptj2min)**2/stot)
+         xo = max(xo, (3*ptj3min)**2/stot)
+         xo = max(xo, (4*ptj4min)**2/stot)
          xo = max(xo, ht2min**2/stot)
          xo = max(xo, ht3min**2/stot)
          xo = max(xo, ht4min**2/stot)
          xo = max(xo, misset**2/stot)
          xo = max(xo, ptllmin**2/stot)
          xo = max(xo, ptl1min**2/stot)
-         xo = max(xo, ptl2min**2/stot)
-         xo = max(xo, ptl3min**2/stot)
-         xo = max(xo, ptl4min**2/stot)
+         xo = max(xo, (2*ptl2min)**2/stot)
+         xo = max(xo, (3*ptl3min)**2/stot)
+         xo = max(xo, (4*ptl4min)**2/stot)
+         xo = max(xo, mmnl**2/stot)
+c     Include mass scale from BWs
+         xo = max(xo, spmass**2/stot)
          if (swidth(i).eq.0.and.xo.eq.1d0/stot) then
             write(*,*) 'Warning: No minimum found for integration'
             write(*,*) '         Setting minimum to ',1d0/stot
@@ -598,10 +585,6 @@ c-----------------------
             write(*,*) "Transforming s_hat 1/s ",i,xo
          else
             write(*,*) "Transforming s_hat BW ",spole(i),swidth(i)
-         endif
-c-----------------------
-         if (swidth(i) .eq. 0d0) then
-            call setgrid(i,xo,0d0,1)
          endif
       endif
 

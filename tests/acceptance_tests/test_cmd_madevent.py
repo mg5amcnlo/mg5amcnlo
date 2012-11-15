@@ -63,8 +63,11 @@ class TestMECmdShell(unittest.TestCase):
         else:
             for p in process:
                 interface.onecmd('add process %s' % p)
+
         if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
             interface.onecmd('install pythia-pgs')
+
+        misc.compile(cwd=pjoin(MG5DIR, 'pythia-pgs'))
         if not misc.which('root'):
             raise Exception, 'root is require for this test'
         if not os.path.exists(pjoin(MG5DIR, 'MadAnalysis')):
@@ -183,13 +186,54 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(err2 / val2 < 0.005)
         self.assertTrue(err1 / val1 < 0.005)
         
+    def test_e_p_collision(self):
+        """check that e p > e j gives the correct result"""
         
-    
-        
-        
-        
-        
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            pass
 
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.exec_cmd('set automatic_html_opening False --save')
+        mg_cmd.exec_cmd(' generate e- p  > e- j')
+        mg_cmd.exec_cmd('output /tmp/MGPROCESS/')
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_ep.dat'),
+                    '/tmp/MGPROCESS/Cards/run_card.dat')
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        
+        target = 3864.0
+        self.assertTrue(abs(val1 - target) / err1 < 1.)
+        
+    def test_e_e_collision(self):
+        """check that e+ e- > t t~ gives the correct result"""
+        
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            pass
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.exec_cmd('set automatic_html_opening False --save')
+        mg_cmd.exec_cmd(' generate e+ e-  > t t~')
+        mg_cmd.exec_cmd('output /tmp/MGPROCESS/')
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_ee.dat'),
+                    '/tmp/MGPROCESS/Cards/run_card.dat')
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        
+        target = 0.545
+        self.assertTrue(abs(val1 - target) / err1 < 1.)
+        
     def load_result(self, run_name):
         
         import madgraph.iolibs.save_load_object as save_load_object
@@ -237,7 +281,7 @@ class TestMEfromfile(unittest.TestCase):
         except Exception, error:
             pass
         import subprocess
-        if logging.getLogger('madgraph').level > 10:
+        if logging.getLogger('madgraph').level != 50:
             stdout=None
             stderr=None
         else:
@@ -245,17 +289,16 @@ class TestMEfromfile(unittest.TestCase):
             stdout=devnull
             stderr=devnull
 
-        
-
-        if not os.path.exists(pjoin(_file_path, os.path.pardir, 'pythia-pgs')):
+        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
             p = subprocess.Popen([pjoin(_file_path, os.path.pardir,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
             out = p.communicate('install pythia-pgs')
+        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         
 
 
-            
+        
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_mssm_generation')],
                          cwd=pjoin(MG5DIR),

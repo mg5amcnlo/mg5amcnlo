@@ -28,26 +28,8 @@ gridpack.tar:
 
 clean:
 	rm -rf MCatNLO
-	rm -rf Events/*
 	rm -f *.log
-	rm -f SubProcesses/P*/*.o
-	rm -f SubProcesses/P*/*.a
-	rm -f SubProcesses/P*/madevent_*
-	rm -f SubProcesses/P*/gensym
-	rm -f SubProcesses/P*/check_poles
-	rm -f SubProcesses/P*/test_M?
-	rm -f SubProcesses/P*/test_M?
-	rm -f SubProcesses/P*/ajob*
-	rm -f SubProcesses/P*/reweight_xsec_events
-	rm -rf SubProcesses/P*/GV*
-	rm -rf SubProcesses/P*/GF*
-	rm -rf SubProcesses/P*/GB*
-	rm -rf SubProcesses/P*/viSB*
-	rm -rf SubProcesses/P*/novB*
-	rm -rf SubProcesses/P*/born_G*
-	rm -f SubProcesses/P*/V*/*.o
-	rm -f SubProcesses/P*/V*/*.a
-	rm -rf lib/*
-	rm -f Source/*.o
-	rm -f Sourde/*/*.o 
+	cd Source; make clean
+	for dir in `ls -d SubProcesses/P*`; do cd $$dir; make clean; cd ../../;\
+	    done
 

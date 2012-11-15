@@ -98,3 +98,9 @@ reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
 
 write_ajob_basic: $(WRITE_AJOB_BASIC)
 	$(FC) $(FFLAGS) -o write_ajob_basic $(WRITE_AJOB_BASIC)
+
+clean:
+	@rm -f *.o write_ajob_basic reweight_xsec_events madevent_* check_poles\
+	    test_M* gensym
+	for dir in `ls -d V*`; do cd $$dir; make clean; cd ../; done
+

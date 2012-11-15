@@ -314,7 +314,7 @@ c        Set CM rapidity for use in the rap() function
          cm_rap=.5d0*dlog((p0+p3)/(p0-p3))
          set_cm_rap=.true.
 c        Set shat
-         s(-nbranch) = m2**2+xbk(1)*ebeam(1) * 
+         s(-nbranch) = m2**2+2*xbk(1)*ebeam(1) *
      $                 (ebeam(2)+sqrt(ebeam(2)**2-m2**2))
       elseif (abs(lpp(2)) .ge. 1) then
          call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
@@ -325,7 +325,7 @@ c        Set CM rapidity for use in the rap() function
          cm_rap=.5d0*dlog((p0+p3)/(p0-p3))
          set_cm_rap=.true.
 c        Set shat
-         s(-nbranch) = m1**2+(ebeam(1)+sqrt(ebeam(1)**2-m1**2))
+         s(-nbranch) = m1**2+2*(ebeam(1)+sqrt(ebeam(1)**2-m1**2))
      $                 * xbk(2)*ebeam(2)
       else
 c        Set CM rapidity for use in the rap() function
