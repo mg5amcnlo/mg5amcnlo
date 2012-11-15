@@ -68,9 +68,9 @@ class Testmadweight(unittest.TestCase):
     def test_zh(self):
         """test output madweight for one specific process"""
 
+
         cmd = os.getcwd()
         self.generate('p p > Z h , Z > mu+ mu- , h > b b~ ' , 'sm')
-        misc.sprint(cmd, level=50)
         # test that each file in P0_qq_zh_z_ll_h_bbx has been correctly written
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/matrix1.f'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/matrix2.f'))
@@ -110,10 +110,8 @@ class Testmadweight(unittest.TestCase):
 
         cmd = os.getcwd()
         self.generate('p p > t t~ , t > e+ ve b , ( t~ > W- b~ , W- > j j )' , 'sm')
-        misc.sprint(cmd, level=50)
         # test that each file in P0_qq_zh_z_ll_h_bbx has been correctly written
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_gg_ttx_t_lvlb_tx_wmbx_wm_qq'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_ttx_t_lvlb_tx_wmbx_wm_qq'))                        
                         
         # test that all libraries have been compiled
 
@@ -124,5 +122,4 @@ class Testmadweight(unittest.TestCase):
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libmodel.a'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libpdf.a'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libtools.a'))
-        
     

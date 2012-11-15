@@ -663,7 +663,7 @@ def sprint(*args, **opt):
     #print type(file)
 
 
-    log.log(level, '\n'.join([str(a) for a in args]) + \
+    log.log(level, ' '.join([str(a) for a in args]) + \
                '\nraised at %s at line %s ' % (filename, lineno))
     
     return 

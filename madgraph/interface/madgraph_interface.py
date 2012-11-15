@@ -4656,7 +4656,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                 non_dc_amps, self._export_format))
 
                     if dc_amps:
-                        misc.sprint(len(dc_amps), level=50)
                         dc_subproc_group = \
                                   group_subprocs.DecayChainSubProcessGroup.\
                                   group_amplitudes(dc_amps, self._export_format)

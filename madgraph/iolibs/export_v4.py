@@ -1137,11 +1137,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         except os.error as error:
             logger.warning(error.strerror + " " + dirpath)
 
-        try:
-            os.chdir(dirpath)
-        except os.error:
-            logger.error('Could not cd to directory %s' % dirpath)
-            return 0
+        #try:
+        #    os.chdir(dirpath)
+        #except os.error:
+        #    logger.error('Could not cd to directory %s' % dirpath)
+        #    return 0
 
         logger.info('Creating files in directory %s' % dirpath)
 
@@ -1149,26 +1149,26 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
         # Create the matrix.f file and the nexternal.inc file
-        filename = 'matrix.f'
+        filename = pjoin(dirpath, 'matrix.f')
         calls = self.write_matrix_element_v4(
             writers.FortranWriter(filename),
             matrix_element,
             fortran_model)
 
-        filename = 'nexternal.inc'
+        filename = pjoin(dirpath,'nexternal.inc')
         self.write_nexternal_file(writers.FortranWriter(filename),
                              nexternal, ninitial)
 
-        filename = 'pmass.inc'
+        filename = pjoin(dirpath, 'pmass.inc')
         self.write_pmass_file(writers.FortranWriter(filename),
                          matrix_element)
 
-        filename = 'ngraphs.inc'
+        filename = pjoin(dirpath, 'ngraphs.inc')
         self.write_ngraphs_file(writers.FortranWriter(filename),
                            len(matrix_element.get_all_amplitudes()))
 
         # Generate diagrams
-        filename = "matrix.ps"
+        filename = pjoin(dirpath, "matrix.ps")
         plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
                                              get('diagrams'),
                                           filename,
@@ -1182,10 +1182,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
 
         for file in linkfiles:
-            ln('../%s' % file)
+            ln('../%s' % file, cwd=dirpath)
 
         # Return to original PWD
-        os.chdir(cwd)
+        #os.chdir(cwd)
 
         if not calls:
             calls = 0
@@ -1421,11 +1421,11 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         except os.error as error:
             logger.warning(error.strerror + " " + dirpath)
 
-        try:
-            os.chdir(dirpath)
-        except os.error:
-            logger.error('Could not cd to directory %s' % dirpath)
-            return 0
+        #try:
+        #    os.chdir(dirpath)
+        #except os.error:
+        #    logger.error('Could not cd to directory %s' % dirpath)
+        #    return 0
 
         logger.info('Creating files in directory %s' % dirpath)
 
@@ -1433,43 +1433,43 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
         # Create the matrix.f file and the nexternal.inc file
-        filename = 'matrix.f'
+        filename = pjoin(dirpath,'matrix.f')
         calls,ncolor = self.write_matrix_element_v4(
             writers.FortranWriter(filename),
             matrix_element,
             fortran_model)
 
-        filename = 'auto_dsig.f'
+        filename = pjoin(dirpath, 'auto_dsig.f')
         self.write_auto_dsig_file(writers.FortranWriter(filename),
                              matrix_element)
 
-        filename = 'configs.inc'
+        filename = pjoin(dirpath, 'configs.inc')
         mapconfigs, s_and_t_channels = self.write_configs_file(\
             writers.FortranWriter(filename),
             matrix_element)
 
-        filename = 'nexternal.inc'
+        filename = pjoin(dirpath, 'nexternal.inc')
         self.write_nexternal_file(writers.FortranWriter(filename),
                              nexternal, ninitial)
 
-        filename = 'leshouche.inc'
+        filename = pjoin(dirpath, 'leshouche.inc')
         self.write_leshouche_file(writers.FortranWriter(filename),
                              matrix_element)
 
-        filename = 'props.inc'
+        filename = pjoin(dirpath, 'props.inc')
         self.write_props_file(writers.FortranWriter(filename),
                          matrix_element,
                          s_and_t_channels)
 
-        filename = 'pmass.inc'
+        filename = pjoin(dirpath, 'pmass.inc')
         self.write_pmass_file(writers.FortranWriter(filename),
                          matrix_element)
 
-        filename = 'ngraphs.inc'
+        filename = pjoin(dirpath, 'ngraphs.inc')
         self.write_ngraphs_file(writers.FortranWriter(filename),
                            len(matrix_element.get_all_amplitudes()))
 
-        filename = 'maxamps.inc'
+        filename = pjoin(dirpath, 'maxamps.inc')
         self.write_maxamps_file(writers.FortranWriter(filename),
                            len(matrix_element.get('diagrams')),
                            ncolor,
@@ -1477,7 +1477,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                            1)
 
         # Generate diagrams
-        filename = "matrix.ps"
+        filename = pjoin(dirpath, "matrix.ps")
         plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
                                              get('diagrams'),
                                           filename,
@@ -1491,14 +1491,14 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         linkfiles = ['driver.f', 'initialization.f','permutation.f','gen_ps.f','phasespace.inc', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
 
         for file in linkfiles:
-            ln('../%s' % file)
+            ln('../%s' % file, starting_dir=cwd)
 
-        ln('nexternal.inc', '../../Source', log=False)
-        ln('leshouche.inc', '../../Source', log=False)
-        ln('maxamps.inc', '../../Source', log=False)
+        ln('nexternal.inc', '../../Source', log=False, cwd=dirpath)
+        ln('leshouche.inc', '../../Source', log=False, cwd=dirpath)
+        ln('maxamps.inc', '../../Source', log=False, cwd=dirpath)
 
         # Return to original PWD
-        os.chdir(cwd)
+        #os.chdir(cwd)
 
         if not calls:
             calls = 0
@@ -2004,99 +2004,100 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
 
 
-        os.chdir(path)
+        #os.chdir(path)
         # Create the directory PN_xx_xxxxx in the specified path
         subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string()
         try:
-            os.mkdir(subprocdir)
+            os.mkdir(pjoin(path,subprocdir))
         except os.error as error:
             logger.warning(error.strerror + " " + subprocdir)
 
-        try:
-            os.chdir(subprocdir)
-        except os.error:
-            logger.error('Could not cd to directory %s' % subprocdir)
-            return 0
+        #try:
+        #    os.chdir(subprocdir)
+        #except os.error:
+        #    logger.error('Could not cd to directory %s' % subprocdir)
+        #    return 0
 
         logger.info('Creating files in directory %s' % subprocdir)
-
+        Ppath = pjoin(path, subprocdir)
+        
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
         # Create the matrix.f file, auto_dsig.f file and all inc files
-        filename = 'matrix.f'
+        filename = pjoin(Ppath, 'matrix.f')
         calls, ncolor = \
                self.write_matrix_element_v4(writers.FortranWriter(filename),
                                                 matrix_element,
                                                 fortran_model)
 
-        filename = 'auto_dsig.f'
+        filename = pjoin(Ppath, 'auto_dsig.f')
         self.write_auto_dsig_file(writers.FortranWriter(filename),
                              matrix_element)
 
-        filename = 'configs.inc'
+        filename = pjoin(Ppath, 'configs.inc')
         mapconfigs, s_and_t_channels = self.write_configs_file(\
             writers.FortranWriter(filename),
             matrix_element)
 
-        filename = 'config_subproc_map.inc'
+        filename = pjoin(Ppath, 'config_subproc_map.inc')
         self.write_config_subproc_map_file(writers.FortranWriter(filename),
                                            s_and_t_channels)
 
-        filename = 'coloramps.inc'
+        filename = pjoin(Ppath, 'coloramps.inc')
         self.write_coloramps_file(writers.FortranWriter(filename),
                              mapconfigs,
                              matrix_element)
 
-        filename = 'get_color.f'
+        filename = pjoin(Ppath, 'get_color.f')
         self.write_colors_file(writers.FortranWriter(filename),
                                matrix_element)
 
-        filename = 'decayBW.inc'
+        filename = pjoin(Ppath, 'decayBW.inc')
         self.write_decayBW_file(writers.FortranWriter(filename),
                            s_and_t_channels)
 
-        filename = 'dname.mg'
+        filename = pjoin(Ppath, 'dname.mg')
         self.write_dname_file(writers.FileWriter(filename),
                          "P"+matrix_element.get('processes')[0].shell_string())
 
-        filename = 'iproc.dat'
+        filename = pjoin(Ppath, 'iproc.dat')
         self.write_iproc_file(writers.FortranWriter(filename),
                          me_number)
 
-        filename = 'leshouche.inc'
+        filename = pjoin(Ppath, 'leshouche.inc')
         self.write_leshouche_file(writers.FortranWriter(filename),
                              matrix_element)
 
-        filename = 'maxamps.inc'
+        filename = pjoin(Ppath, 'maxamps.inc')
         self.write_maxamps_file(writers.FortranWriter(filename),
                            len(matrix_element.get('diagrams')),
                            ncolor,
                            len(matrix_element.get('processes')),
                            1)
 
-        filename = 'mg.sym'
+        filename = pjoin(Ppath, 'mg.sym')
         self.write_mg_sym_file(writers.FortranWriter(filename),
                           matrix_element)
 
-        filename = 'ncombs.inc'
+        filename = pjoin(Ppath, 'ncombs.inc')
         self.write_ncombs_file(writers.FortranWriter(filename),
                           nexternal)
 
-        filename = 'nexternal.inc'
+        filename = pjoin(Ppath, 'nexternal.inc')
         self.write_nexternal_file(writers.FortranWriter(filename),
                              nexternal, ninitial)
 
-        filename = 'ngraphs.inc'
+        filename = pjoin(Ppath, 'ngraphs.inc')
         self.write_ngraphs_file(writers.FortranWriter(filename),
                            len(mapconfigs))
 
 
-        filename = 'pmass.inc'
+        filename = pjoin(Ppath, 'pmass.inc')
         self.write_pmass_file(writers.FortranWriter(filename),
                          matrix_element)
 
-        filename = 'props.inc'
+        filename = pjoin(Ppath, 'props.inc')
         self.write_props_file(writers.FortranWriter(filename),
                          matrix_element,
                          s_and_t_channels)
@@ -2105,16 +2106,16 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         symmetry, perms, ident_perms = \
                   diagram_symmetry.find_symmetry(matrix_element)
 
-        filename = 'symswap.inc'
+        filename = pjoin(Ppath, 'symswap.inc')
         self.write_symswap_file(writers.FortranWriter(filename),
                                 ident_perms)
 
-        filename = 'symfact.dat'
+        filename = pjoin(Ppath, 'symfact.dat')
         self.write_symfact_file(writers.FortranWriter(filename),
                            symmetry)
 
         # Generate diagrams
-        filename = "matrix.ps"
+        filename = pjoin(Ppath, "matrix.ps")
         plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
                                              get('diagrams'),
                                           filename,
@@ -2153,24 +2154,24 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'unwgt.f']
 
         for file in linkfiles:
-            ln('../' + file , '.')
+            ln('../' + file , cwd=Ppath)
 
         #import nexternal/leshouche in Source
-        ln('nexternal.inc', '../../Source', log=False)
-        ln('leshouche.inc', '../../Source', log=False)
-        ln('maxamps.inc', '../../Source', log=False)
+        ln(pjoin(Ppath,'nexternal.inc'), pjoin(self.dir_path,'Source'), log=False)
+        ln(pjoin(Ppath,'leshouche.inc'),  pjoin(self.dir_path,'Source'), log=False)
+        ln(pjoin(Ppath,'maxamps.inc'),  pjoin(self.dir_path,'Source'), log=False)
 
         # Return to SubProcesses dir
-        os.chdir(os.path.pardir)
+        #os.chdir(os.path.pardir)
 
         # Add subprocess to subproc.mg
-        filename = 'subproc.mg'
+        filename = pjoin(path, 'subproc.mg')
         files.append_to_file(filename,
                              self.write_subproc,
                              subprocdir)
 
         # Return to original dir
-        os.chdir(cwd)
+        #os.chdir(cwd)
 
         # Generate info page
         gen_infohtml.make_info_html(self.dir_path)
@@ -2210,25 +2211,26 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.set_compiler(compiler)
 
         old_pos = os.getcwd()
-        os.chdir(pjoin(self.dir_path, 'SubProcesses'))
-        P_dir_list = [proc for proc in os.listdir('.') if os.path.isdir(proc) and \
-                                                                    proc[0] == 'P']
+        subpath = pjoin(self.dir_path, 'SubProcesses')
+
+        P_dir_list = [proc for proc in os.listdir(subpath) 
+                      if os.path.isdir(pjoin(subpath,proc)) and proc[0] == 'P']
 
         devnull = os.open(os.devnull, os.O_RDWR)
         # Convert the poscript in jpg files (if authorize)
         if makejpg:
             logger.info("Generate jpeg diagrams")
             for Pdir in P_dir_list:
-                misc.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
-                                stdout = devnull, cwd=Pdir)
+                misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+                                stdout = devnull, cwd=pjoin(subpath, Pdir))
 
         logger.info("Generate web pages")
         # Create the WebPage using perl script
 
-        subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')], \
+        subprocess.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')], \
                                                                 stdout = devnull)
 
-        os.chdir(os.path.pardir)
+        #os.chdir(os.path.pardir)
 
         obj = gen_infohtml.make_info_html(self.dir_path)
         [mv(name, './HTML/') for name in os.listdir('.') if \
@@ -2236,31 +2238,30 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                             name != 'index.html']               
         if online:
             nb_channel = obj.rep_rule['nb_gen_diag']
-            open(pjoin('./Online'),'w').write(str(nb_channel))
+            open(pjoin(self.dir_path, 'Online'),'w').write(str(nb_channel))
         
         # Write command history as proc_card_mg5
-        if os.path.isdir('Cards'):
-            output_file = pjoin('Cards', 'proc_card_mg5.dat')
+        if os.path.isdir(pjoin(self.dir_path,'Cards')):
+            output_file = pjoin(self.dir_path,'Cards', 'proc_card_mg5.dat')
             output_file = open(output_file, 'w')
             text = ('\n'.join(history) + '\n') % misc.get_time_info()
             output_file.write(text)
             output_file.close()
 
-        subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
-                        stdout = devnull)
-
+        subprocess.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
+                        stdout = devnull, cwd=self.dir_path)
         # Run "make" to generate madevent.tar.gz file
-        if os.path.exists(pjoin('SubProcesses', 'subproc.mg')):
-            if os.path.exists('madevent.tar.gz'):
-                os.remove('madevent.tar.gz')
-            subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'make_madevent_tar')],
-                        stdout = devnull)
+        if os.path.exists(pjoin(self.dir_path,'SubProcesses', 'subproc.mg')):
+            if os.path.exists(pjoin(self.dir_path,'madevent.tar.gz')):
+                os.remove(pjoin(self.dir_path,'madevent.tar.gz'))
+            subprocess.call([os.path.join(self.dir_path, 'bin', 'internal', 'make_madevent_tar')],
+                        stdout = devnull, cwd=self.dir_path)
 
-        subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
-                        stdout = devnull)
+        subprocess.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
+                        stdout = devnull, cwd= self.dir_path)
 
         #return to the initial dir
-        os.chdir(old_pos)               
+        #os.chdir(old_pos)               
 
     #===========================================================================
     # write_matrix_element_v4
@@ -3046,7 +3047,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         cwd = os.getcwd()
         path = pjoin(self.dir_path, 'SubProcesses')
-
+        
+        misc.sprint('change directory', level=50)
         os.chdir(path)
         pathdir = os.getcwd()
 
@@ -3255,6 +3257,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         ln('maxamps.inc', '../../Source', log=False)
 
         # Return to SubProcesses dir
+        misc.sprint('changedir')
         os.chdir(pathdir)
 
         # Add subprocess to subproc.mg
@@ -3267,6 +3270,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         gen_infohtml.make_info_html(os.path.pardir)
         
         # Return to original dir
+        misc.sprint('changedir')
         os.chdir(cwd)
 
         if not tot_calls:
@@ -4437,28 +4441,19 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
             self.model = subproc_group.get('matrix_elements')[0].\
                          get('processes')[0].get('model')
 
-        cwd = os.getcwd()
-        path = os.path.join(self.dir_path, 'SubProcesses')
-
-        os.chdir(path)
-
-        pathdir = os.getcwd()
+        pathdir = os.path.join(self.dir_path, 'SubProcesses')
 
         # Create the directory PN in the specified path
         subprocdir = "P%d_%s" % (subproc_group.get('number'),
                                  subproc_group.get('name'))
         try:
-            os.mkdir(subprocdir)
+            os.mkdir(pjoin(pathdir, subprocdir))
         except os.error as error:
             logger.warning(error.strerror + " " + subprocdir)
 
-        try:
-            os.chdir(subprocdir)
-        except os.error:
-            logger.error('Could not cd to directory %s' % subprocdir)
-            return 0
 
         logger.info('Creating files in directory %s' % subprocdir)
+        Ppath = pjoin(pathdir, subprocdir)
 
         # Create the matrix.f files, auto_dsig.f files and all inc files
         # for all subprocesses in the group
@@ -4471,7 +4466,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
 
         for ime, matrix_element in \
                 enumerate(matrix_elements):
-            filename = 'matrix%d.f' % (ime+1)
+            filename = pjoin(Ppath, 'matrix%d.f' % (ime+1))
             calls, ncolor = \
                self.write_matrix_element_v4(writers.FortranWriter(filename), 
                                                 matrix_element,
@@ -4480,7 +4475,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
                                                 subproc_group.get('diagram_maps')[\
                                                                               ime])
 
-            filename = 'auto_dsig%d.f' % (ime+1)
+            filename = pjoin(Ppath, 'auto_dsig%d.f' % (ime+1))
             self.write_auto_dsig_file(writers.FortranWriter(filename),
                                  matrix_element,
                                  str(ime+1))
@@ -4491,7 +4486,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
             maxamps = max(maxamps, len(matrix_element.get('diagrams')))
 
             # Draw diagrams
-            filename = "matrix%d.ps" % (ime+1)
+            filename = pjoin(Ppath, "matrix%d.ps" % (ime+1))
             plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
                                                                     get('diagrams'),
                                               filename,
@@ -4512,21 +4507,21 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
 
         subproc_diagrams_for_config = subproc_group.get('diagrams_for_configs')
 
-        filename = 'auto_dsig.f'
+        filename = pjoin(Ppath, 'auto_dsig.f')
         self.write_super_auto_dsig_file(writers.FortranWriter(filename),
                                    subproc_group)
 
-        filename = 'configs.inc'
+        filename = pjoin(Ppath,'configs.inc')
         nconfigs, s_and_t_channels = self.write_configs_file(\
             writers.FortranWriter(filename),
             subproc_group,
             subproc_diagrams_for_config)
 
-        filename = 'leshouche.inc'
+        filename = pjoin(Ppath, 'leshouche.inc')
         self.write_leshouche_file(writers.FortranWriter(filename),
                                    subproc_group)
 
-        filename = 'maxamps.inc'
+        filename = pjoin(Ppath, 'maxamps.inc')
         self.write_maxamps_file(writers.FortranWriter(filename),
                            maxamps,
                            maxflows,
@@ -4534,24 +4529,24 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
                                 matrix_elements]),
                            len(matrix_elements))
 
-        filename = 'mirrorprocs.inc'
+        filename = pjoin(Ppath, 'mirrorprocs.inc')
         self.write_mirrorprocs(writers.FortranWriter(filename),
                           subproc_group)
 
-        filename = 'nexternal.inc'
+        filename = pjoin(Ppath, 'nexternal.inc')
         self.write_nexternal_file(writers.FortranWriter(filename),
                              nexternal, ninitial)
 
-        filename = 'pmass.inc'
+        filename = pjoin(Ppath, 'pmass.inc')
         self.write_pmass_file(writers.FortranWriter(filename),
                          matrix_element)
 
-        filename = 'props.inc'
+        filename = pjoin(Ppath, 'props.inc')
         self.write_props_file(writers.FortranWriter(filename),
                          matrix_element,
                          s_and_t_channels)
 
-#        filename = 'processes.dat'
+#        filename = pjoin(Ppath, 'processes.dat')
 #        files.write_to_file(filename,
 #                            self.write_processes_file,
 #                            subproc_group)
@@ -4562,14 +4557,11 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         linkfiles = ['driver.f', 'initialization.f','permutation.f','gen_ps.f','phasespace.inc', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
 
         for file in linkfiles:
-            ln('../%s' % file)
+            ln('../%s' % file, cwd=Ppath)
 
-        ln('nexternal.inc', '../../Source', log=False)
-        ln('leshouche.inc', '../../Source', log=False)
-        ln('maxamps.inc', '../../Source', log=False)
-
-        # Return to SubProcesses dir
-        os.chdir(pathdir)
+        ln('nexternal.inc', '../../Source', cwd=Ppath, log=False)
+        ln('leshouche.inc', '../../Source', cwd=Ppath, log=False)
+        ln('maxamps.inc', '../../Source', cwd=Ppath, log=False)
 
         if not tot_calls:
             tot_calls = 0
