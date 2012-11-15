@@ -193,6 +193,173 @@ class MadEventComparator(me_comparator.MEComparator):
         fail_test, fail_prop = self.output_result('', tolerance)
 
         test_object.assertEqual(fail_test, 0, "Failed for processes: %s" % ', '.join(fail_prop))
+        
+class MadEventComparatorGauge(me_comparator.MEComparatorGauge):
+    """Base object to run comparison tests. Take standard Runner objects and
+    a list of proc as an input and return detailed comparison tables in various
+    formats."""
+
+    def run_comparison(self, proc_list, model='sm', orders={}):
+        """Run the codes and store results."""
+
+        #if isinstance(model, basestring):
+        #    model= [model] * len(self.me_runners)
+
+        self.results = []
+        self.proc_list = proc_list
+
+        logging.info(\
+            "Running on %i processes with order: %s, in model %s" % \
+            (len(proc_list),
+             ' '.join(["%s=%i" % (k, v) for k, v in orders.items()]),
+             model))
+
+        pass_proc = False
+        for i,runner in enumerate(self.me_runners):
+            cpu_time1 = time.time()
+            logging.info("Now running %s" % runner.name)
+            if pass_proc:
+                runner.pass_proc = pass_proc 
+            self.results.append(runner.run(proc_list, model, orders))
+            cpu_time2 = time.time()
+            logging.info(" Done in %0.3f s" % (cpu_time2 - cpu_time1))
+#            logging.info(" (%i/%i with zero ME)" % \
+#                    (len([res for res in self.results[-1] if res[0][0] == 0.0]),
+#                     len(proc_list)))
+
+    def cleanup(self):
+        """Call cleanup for each MERunner."""
+
+        for runner in self.me_runners:
+            logging.info("Cleaning code %s runner" % runner.name)
+            runner.cleanup()
+            
+    def output_result(self, filename=None, tolerance=3e-03):
+        """Output result as a nicely formated table. If filename is provided,
+        write it to the file, else to the screen. Tolerance can be adjusted."""
+
+        def detect_type(data):
+            """check if the type is an integer/float/string"""
+            
+
+            if data.isdigit():
+                return 'int'
+            elif len(data) and data[0] == '-' and data[1:].isdigit():
+                return 'int'
+            
+            try:
+                float(data)
+                return 'float'
+            except:
+                return 'str'
+
+
+        proc_col_size = 17
+        for proc in self.results[0]:
+            if len(proc) + 1 > proc_col_size:
+                proc_col_size = len(proc) + 1
+        
+        col_size = 17
+
+        pass_test = 0
+        fail_test = 0
+
+        failed_proc_list = []
+
+        res_str = "\n" + self._fixed_string_length("Process", proc_col_size) + \
+                ''.join([self._fixed_string_length(runner.name, col_size) for \
+                           runner in self.me_runners]) + \
+                  self._fixed_string_length("Diff both unit", col_size) + \
+                  self._fixed_string_length("Diff both cms", col_size) + \
+                  self._fixed_string_length("Diff both fixw", col_size) + \
+                  self._fixed_string_length("Diff both feyn", col_size) + \
+                  "Result"
+
+        for proc in self.results[0]:
+            loc_results = []
+            succeed = True
+            for i in range(len(self.results)):
+                if not self.results[i].has_key(proc):
+                    loc_results.append('not present')
+                    succeed = False
+                else:
+                    loc_results.append(self.results[i][proc])
+            res_str += '\n' + self._fixed_string_length(proc, proc_col_size)+ \
+                       ''.join([self._fixed_string_length(str(res),
+                                               col_size) for res in loc_results])
+            if not succeed:
+                res_str += self._fixed_string_length("NAN", col_size)
+                res_str += 'failed'
+                fail_test += 1
+                failed_proc_list.append(proc) 
+            else:
+                # check the type (integer/float/string)
+                type = detect_type(loc_results[0])
+                if type == 'float':
+                    if max(loc_results) == 0.0 and min(loc_results) == 0.0:
+                        res_str += self._fixed_string_length("0", col_size)
+                        res_str += 'passed'
+                        pass_test +=1
+                    else:
+                        loc_results = [float(d) for d in loc_results]                        
+                        diff_feyn = abs(loc_results[1] - loc_results[2]) / \
+                          (loc_results[1] + loc_results[2] + 1e-99)
+                        diff_unit = abs(loc_results[0] - loc_results[3]) / \
+                          (loc_results[0] + loc_results[3] + 1e-99)
+                        diff_cms = abs(loc_results[0] - loc_results[1]) / \
+                          (loc_results[0] + loc_results[1] + 1e-99)
+                        diff_fixw = abs(loc_results[2] - loc_results[3]) / \
+                          (loc_results[2] + loc_results[3] + 1e-99)
+                        
+                        res_str += self._fixed_string_length("%1.10e" % diff_unit, col_size)
+                        res_str += self._fixed_string_length("%1.10e" % diff_cms, col_size)
+                        res_str += self._fixed_string_length("%1.10e" % diff_fixw, col_size)
+                        res_str += self._fixed_string_length("%1.10e" % diff_feyn, col_size)
+                        
+                        if diff_feyn < 4e-2 and diff_cms < 1e-2 and diff_fixw < 1e-2 and \
+                         diff_unit < 4e-2:
+                            pass_test += 1
+                            res_str += "Pass"
+                        else:
+                           fail_test += 1
+                           failed_proc_list.append(proc)
+                           res_str += "Fail"
+
+                else:
+                    for value in loc_results:
+                        if value != loc_results[0]:
+                            res_str += self._fixed_string_length("differ", col_size)
+                            res_str += 'failed'
+                            failed_proc_list.append(proc) 
+                            fail_test += 1
+                            break
+                    res_str += self._fixed_string_length("identical", col_size)
+                    res_str += 'passed'
+                    pass_test +=1
+        
+        res_str += "\nSummary: %i/%i passed, %i/%i failed" % \
+                    (pass_test, pass_test + fail_test,
+                     fail_test, pass_test + fail_test)
+
+        if fail_test != 0:
+            res_str += "\nFailed processes: %s" % ', '.join(failed_proc_list)
+
+        logging.info(res_str)
+
+        if filename:
+            file = open(filename, 'w')
+            file.write(res_str)
+            file.close()
+        
+        return fail_test, failed_proc_list
+
+
+    def assert_processes(self, test_object, tolerance = 1e-06):
+        """Run assert to check that all processes passed comparison""" 
+
+        fail_test, fail_prop = self.output_result('', tolerance)
+
+        test_object.assertEqual(fail_test, 0, "Failed for processes: %s" % ', '.join(fail_prop))
 
 
 class FakeRunner(object):
@@ -309,7 +476,7 @@ class MG5Runner(MadEventRunner):
         """Create a proc_card.dat string following v5 conventions."""
 
         v5_string = "import model %s\n" % os.path.join(self.model_dir, model)
-
+        v5_string += "set automatic_html_opening False\n"
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
         for i, proc in enumerate(proc_list):
@@ -366,7 +533,7 @@ class MG5OldRunner(MG5Runner):
         """Create a proc_card.dat string following v5 conventions."""
 
         v5_string = "import model %s\n" % os.path.join(self.model_dir, model)
-
+        v5_string += "set automatic_html_opening False\n"
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
         for i, proc in enumerate(proc_list):
@@ -414,3 +581,34 @@ class MG5OldRunner(MG5Runner):
         self.res_list.append(values)
         return values
     
+class MG5gaugeRunner(MG5Runner):
+    """Runner object for the MG5 Matrix Element generator."""
+
+    def __init__(self, cms, gauge):
+        self.cms = cms
+        self.gauge = gauge
+        self.mg5_path = ""
+        self.name = 'MG_%s_%s' %(self.cms, self.gauge)
+        self.type = '%s_%s' %(self.cms, self.gauge)
+    
+    def format_mg5_proc_card(self, proc_list, model, orders):
+        """Create a proc_card.dat string following v5 conventions."""
+
+        v5_string = 'import model sm_mw \n'
+        v5_string += 'set automatic_html_opening False\n'
+        v5_string += 'set complex_mass_scheme %s \n' % self.cms
+        v5_string += 'set gauge %s \n' % self.gauge
+        v5_string += "import model %s \n" % os.path.join(self.model_dir, model)
+
+        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
+
+        for i, proc in enumerate(proc_list):
+            v5_string += 'add process ' + proc + ' ' + couplings + \
+                         '@%i' % i + '\n'
+        v5_string += "output %s -f\n" % \
+                     os.path.join(self.mg5_path, self.temp_dir_name)
+        v5_string += "launch -f \n"
+        
+        v5_string += 'set complex_mass_scheme False \n'
+        v5_string += 'set gauge unitary'
+        return v5_string

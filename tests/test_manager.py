@@ -40,7 +40,8 @@ import optparse
 import os
 import re
 import unittest
-
+import time
+from functools import wraps
 
 #Add the ROOT dir to the current PYTHONPATH
 root_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -48,6 +49,9 @@ sys.path.insert(0, root_path)
 # Only for profiling with -m cProfile!
 #root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
 #sys.path.append(root_path)
+
+import aloha
+import aloha.aloha_lib as aloha_lib
 
 from madgraph import MG4DIR
 
@@ -68,7 +72,9 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1):
     collect = unittest.TestLoader()
     for test_fct in TestFinder(package=package, expression=expression, \
                                    re_opt=re_opt):
-        data = collect.loadTestsFromName(test_fct)
+        data = collect.loadTestsFromName(test_fct)        
+        assert(isinstance(data,unittest.TestSuite))        
+        data.__class__ = TestSuiteModified
         testsuite.addTest(data)
         
     return unittest.TextTestRunner(verbosity=verbosity).run(testsuite)
@@ -76,6 +82,54 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1):
     #import tests
     #print 'runned %s checks' % tests.NBTEST
     #return out
+    
+def set_global(loop=False, unitary=True, mp=False, cms=False):
+    """This decorator set_global() which make sure that for each test
+    the global variable are returned to their default value. This decorator can
+    be modified with the new global variables to come and will potenitally be
+    different than the one in test_aloha."""
+    def deco_set(f):
+        @wraps(f)
+        def deco_f_set(*args, **opt):
+            old_loop = aloha.loop_mode
+            old_gauge = aloha.unitary_gauge
+            old_mp = aloha.mp_precision
+            old_cms = aloha.complex_mass
+            aloha.loop_mode = loop
+            aloha.unitary_gauge = unitary
+            aloha.mp_precision = mp
+            aloha.complex_mass = cms
+            aloha_lib.KERNEL.clean()
+            try:
+                out =  f(*args, **opt)
+            except:
+                aloha.loop_mode = old_loop
+                aloha.unitary_gauge = old_gauge
+                aloha.mp_precision = old_mp
+                aloha.complex_mass = old_cms
+                raise
+            aloha.loop_mode = old_loop
+            aloha.unitary_gauge = old_gauge
+            aloha.mp_precision = old_mp
+            aloha.complex_mass = old_cms
+            aloha_lib.KERNEL.clean()
+            return out
+        return deco_f_set
+    return deco_set
+
+#===============================================================================
+# TestSuiteModified
+#===============================================================================
+class TestSuiteModified(unittest.TestSuite):
+    """ This is a wrapper for the default implementation of unittest.TestSuite 
+    so that we can add the decorator for the resetting of the global variables
+    everytime the TestSuite is __call__'ed., hence avoiding side effects from 
+    them."""
+    
+    @set_global()
+    def __call__(self, *args, **kwds):
+        super(TestSuiteModified,self).__call__(*args,**kwds)
+
 #===============================================================================
 # TestFinder
 #===============================================================================
@@ -113,8 +167,9 @@ class TestFinder(list):
             Uses to have smart __iter__ and __contain__ functions
         """
         if len(self) == 0:
+            start = time.time()
             self.collect_dir(self.package, checking=True)
-
+            print 'loading test takes %ss'  % (time.time()-start)
     def __iter__(self):
         """ Check that a collect was performed (do it if needed) """
         self._check_if_obj_build()
@@ -127,7 +182,7 @@ class TestFinder(list):
 
     def collect_dir(self, directory, checking=True):
         """ Find the file and the subpackage in this package """
-
+        
         #ensures that we are at root position
         move = False
         if self.launch_pos == '':
@@ -156,7 +211,8 @@ class TestFinder(list):
 
     def collect_file(self, filename, checking=True):
         """ Find the different class instance derivated of TestCase """
-
+        
+        start = time.time()
         pyname = self.passin_pyformat(filename)
         __import__(pyname)
         obj = sys.modules[pyname]
@@ -176,6 +232,10 @@ class TestFinder(list):
 
                 self.collect_function(class_, checking=check_inside, \
                                           base=pyname)
+                
+        time_to_load = time.time() - start
+        if time_to_load > 0.1:
+            logging.critical("file %s takes a long time to load (%.4fs)" % (pyname, time_to_load))
 
     def collect_function(self, class_, checking=True, base=''):
         """
@@ -387,5 +447,3 @@ if __name__ == "__main__":
 #    run('TestTestFinder')
 #    run('test_check_valid_on_file')
 #    run('test_collect_dir.*') # '.*' stands for all possible char (re format)
-
-

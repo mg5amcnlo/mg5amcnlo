@@ -91,7 +91,7 @@ def append_to_file(filename, myfunct, *args):
 #===============================================================================
 # check piclke validity
 #===============================================================================
-def is_uptodate(picklefile, path_list=None, min_time=1300120445):
+def is_uptodate(picklefile, path_list=None, min_time=1343682423):
     """Check if the pickle files is uptodate compare to a list of files. 
     If no files are given, the pickle files is checked against it\' current 
     directory"""
@@ -139,6 +139,9 @@ def cp(path1, path2, log=True):
     except IOError, why:
         if log:
             logger.warning(why)
+    except shutil.Error:
+        # idetical file
+        pass
         
     
 def mv(path1, path2):
@@ -147,7 +150,7 @@ def mv(path1, path2):
     path2 = format_path(path2)
     try:
         shutil.move(path1, path2)
-    except:
+    except Exception:
         # An error can occur if the files exist at final destination
         if os.path.isfile(path2):
             os.remove(path2)
@@ -162,7 +165,7 @@ def mv(path1, path2):
             raise
         
 def ln(file_pos, starting_dir='.', name='', log=True):
-    """a simple way to have a symbolic link whithout to have to change directory
+    """a simple way to have a symbolic link without to have to change directory
     starting_point is the directory where to write the link
     file_pos is the file to link
     WARNING: not the linux convention
@@ -173,14 +176,17 @@ def ln(file_pos, starting_dir='.', name='', log=True):
         name = os.path.split(file_pos)[1]    
 
     # Remove existing link if necessary
-    if os.path.islink(os.path.join(starting_dir, name)):
+    if os.path.exists(os.path.join(starting_dir, name)):
         os.remove(os.path.join(starting_dir, name))
 
     try:
         os.symlink(os.path.relpath(file_pos, starting_dir), \
                         os.path.join(starting_dir, name))
-    except:
+    except Exception:
         if log:
             logger.warning('Could not link %s at position: %s' % (file_pos, \
                                                 os.path.realpath(starting_dir)))
- 
+
+
+
+     

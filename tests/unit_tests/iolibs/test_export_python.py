@@ -226,10 +226,10 @@ class IOExportPythonTest(unittest.TestCase):
     def __init__(self):
         \"\"\"define the object\"\"\"
         self.clean()
-        
+
     def clean(self):
         self.jamp = []
-        
+
     def smatrix(self,p, model):
         #  
         #  MadGraph 5 v. %(version)s, %(date)s
@@ -279,10 +279,12 @@ class IOExportPythonTest(unittest.TestCase):
         # BEGIN CODE
         # ----------
         self.amp2 = [0.] * ndiags
+        self.helEvals = []
         ans = 0.
         for hel in helicities:
             t = self.matrix(p, hel, model)
             ans = ans + t
+            self.helEvals.append([hel, t.real / denominator ])
         ans = ans / denominator
         return ans.real
 
@@ -303,7 +305,7 @@ class IOExportPythonTest(unittest.TestCase):
         #  
         ngraphs = 4
         nexternal = 4
-        nwavefuncs = 8
+        nwavefuncs = 5
         ncolor = 2
         ZERO = 0.
         #  
@@ -329,18 +331,18 @@ class IOExportPythonTest(unittest.TestCase):
         w[1] = oxxxxx(p[1],ZERO,hel[1],-1)
         w[2] = oxxxxx(p[2],ZERO,hel[2],+1)
         w[3] = ixxxxx(p[3],ZERO,hel[3],-1)
-        w[4] = FFV1_3(w[0],w[1],GC_10,ZERO, ZERO)
+        w[4]= FFV1_3(w[0],w[1],GC_10,ZERO,ZERO)
         # Amplitude(s) for diagram number 1
-        amp[0] = FFV1_0(w[3],w[2],w[4],GC_10)
-        w[5] = FFV2_5_3(w[0],w[1],GC_35,GC_47,MZ, WZ)
+        amp[0]= FFV1_0(w[3],w[2],w[4],GC_10)
+        w[4]= FFV2_5_3(w[0],w[1],GC_35,GC_47,MZ,WZ)
         # Amplitude(s) for diagram number 2
-        amp[1] = FFV2_5_0(w[3],w[2],w[5],GC_35,GC_47)
-        w[6] = FFV1_3(w[0],w[2],GC_10,ZERO, ZERO)
+        amp[1]= FFV2_5_0(w[3],w[2],w[4],GC_35,GC_47)
+        w[4]= FFV1_3(w[0],w[2],GC_10,ZERO,ZERO)
         # Amplitude(s) for diagram number 3
-        amp[2] = FFV1_0(w[3],w[1],w[6],GC_10)
-        w[7] = FFV2_5_3(w[0],w[2],GC_35,GC_47,MZ, WZ)
+        amp[2]= FFV1_0(w[3],w[1],w[4],GC_10)
+        w[4]= FFV2_5_3(w[0],w[2],GC_35,GC_47,MZ,WZ)
         # Amplitude(s) for diagram number 4
-        amp[3] = FFV2_5_0(w[3],w[1],w[7],GC_35,GC_47)
+        amp[3]= FFV2_5_0(w[3],w[1],w[4],GC_35,GC_47)
 
         jamp = [None] * ncolor
         jamp[0] = +1./6.*amp[0]-amp[1]+1./2.*amp[2]
@@ -366,7 +368,6 @@ class IOExportPythonTest(unittest.TestCase):
 
         matrix_methods = exporter.get_python_matrix_methods()["0_uux_uux"].\
                           split('\n')
-
 
         self.assertEqual(matrix_methods, goal_method)
         

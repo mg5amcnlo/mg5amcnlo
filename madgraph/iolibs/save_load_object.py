@@ -28,7 +28,7 @@ class SaveObjectError(Exception):
 def save_to_file(filename, object):
     """Save any Python object to file filename"""
 
-    if not isinstance(filename, str):
+    if not isinstance(filename, basestring):
         raise SaveObjectError, "filename must be a string"
 
     files.write_to_file(filename, pickle_object, object)
@@ -65,19 +65,19 @@ class UnPickler(pickle.Unpickler):
         newmodule = 'internal.%s' % module.rsplit('.',1)[1]
         try:
             return pickle.Unpickler.find_class(self, newmodule , name)
-        except:
+        except Exception:
             pass
         
         newmodule = 'madgraph.iolibs.%s' % module.rsplit('.',1)[1]
         try:
             return pickle.Unpickler.find_class(self, newmodule , name)
-        except:
+        except Exception:
             pass        
 
         newmodule = 'madgraph.various.%s' % module.rsplit('.',1)[1]
         try:
             return pickle.Unpickler.find_class(self, newmodule , name)
-        except:
+        except Exception:
             raise
     
 

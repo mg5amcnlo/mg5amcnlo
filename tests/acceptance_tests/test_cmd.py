@@ -28,6 +28,7 @@ import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 
 import madgraph.interface.master_interface as Cmd
 import madgraph.interface.launch_ext_program as launch_ext
+import madgraph.various.misc as misc
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
@@ -65,7 +66,7 @@ class TestCmdShell1(unittest.TestCase):
         self.do('define J P g')
         self.do('add process e+ e- > J')
         self.assertEqual(len(self.cmd._curr_amps), 2)
-        self.do('add process mu+ mu- > P, Z>mu+ mu-')
+        self.do('add process mu+ mu- > P, Z > mu+ mu-')
         self.assertEqual(len(self.cmd._curr_amps), 3)
         self.do('generate e+ e- > Z > e+ e-')
         self.assertEqual(len(self.cmd._curr_amps), 1)
@@ -75,7 +76,7 @@ class TestCmdShell1(unittest.TestCase):
         self.do('generate e+ e- > V > e+ e-')
         self.assertEqual(len(self.cmd._curr_amps), 1)
         self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 2)
-        self.do('generate e+ e- > z|a > e+ e-')
+        self.do('generate e+ e- > z | a > e+ e-')
         self.assertEqual(len(self.cmd._curr_amps), 1)
         self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 2)
         self.assertRaises(MadGraph5Error, self.do, 'generate a V > e+ e-')
@@ -107,26 +108,38 @@ class TestCmdShell1(unittest.TestCase):
         
     def test_config(self):
         """check that configuration file is at default value"""
-        
-        config = self.cmd.set_configuration(MG5DIR+'/input/mg5_configuration.txt', test=True)
+        self.maxDiff=None
+        config = self.cmd.set_configuration(MG5DIR+'/input/.mg5_configuration_default.txt', final=False)
+        config =dict(config)
+        del config['stdout_level']
+        for key in config.keys():
+            if key.endswith('_path') and key != 'cluster_temp_path':
+                del config[key]
         expected = {'web_browser': None, 
                     'text_editor': None, 
-                    'cluster_queue': 'madgraph',
+                    'cluster_queue': None,
                     'nb_core': None,
-                    'run_mode': '0',
-                    'pythia-pgs_path': './pythia-pgs', 
-                    'td_path': './td', 
-                    'delphes_path': './Delphes', 
+                    'run_mode': 2,
+#                    'pythia-pgs_path': './pythia-pgs', 
+#                    'td_path': './td', 
+#                    'delphes_path': './Delphes', 
                     'cluster_type': 'condor', 
-                    'madanalysis_path': './MadAnalysis', 
+#                    'madanalysis_path': './MadAnalysis', 
+                    'cluster_temp_path': None, 
                     'fortran_compiler': None, 
-                    'exrootanalysis_path': './ExRootAnalysis', 
+#                    'exrootanalysis_path': './ExRootAnalysis', 
                     'eps_viewer': None, 
-                    'automatic_html_opening': 'True', 
-                    'pythia8_path': './pythia8',
+                    'automatic_html_opening': True, 
+#                    'pythia8_path': None,
                     'group_subprocesses': 'Auto',
-                    'timeout': '20',
-                    'ignore_six_quark_processes': False
+                    'complex_mass_scheme': False,
+                    'gauge': 'unitary',
+                    'lhapdf': 'lhapdf-config',  
+                    'loop_optimized_output': True,
+                    'fastjet': 'fastjet-config',
+                    'timeout': 60,
+                    'ignore_six_quark_processes': False,
+                    'auto_update': 7
                     }
 
         self.assertEqual(config, expected)
@@ -177,7 +190,7 @@ class TestCmdShell2(unittest.TestCase,
         """Test outputting a MadEvent directory"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
         
         self.do('import model_v4 sm')
         self.do('set group_subprocesses False')
@@ -303,7 +316,7 @@ class TestCmdShell2(unittest.TestCase,
 
     def test_read_madgraph4_proc_card(self):
         """Test reading a madgraph4 proc_card.dat"""
-        os.system('cp -rf %s %s' % (os.path.join(MG4DIR,'Template'),
+        os.system('cp -rf %s %s' % (os.path.join(MG5DIR,'Template','LO'),
                                     self.out_dir))
         os.system('cp -rf %s %s' % (
                             self.join_path(_pickle_path,'simple_v4_proc_card.dat'),
@@ -312,9 +325,12 @@ class TestCmdShell2(unittest.TestCase,
         self.cmd = Cmd.MasterCmd()
         pwd = os.getcwd()
         os.chdir(self.out_dir)
-        self.do('import proc_v4 %s' % os.path.join('Cards','proc_card.dat'))
+        try:
+            self.do('import proc_v4 %s' % os.path.join('Cards','proc_card.dat'))
+        except:
+            os.chdir(pwd)
+            raise
         os.chdir(pwd)
-
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                               'SubProcesses', 'P1_ll_vlvl')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -325,13 +341,14 @@ class TestCmdShell2(unittest.TestCase,
                                                     'matrix1.ps')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'madevent.tar.gz')))
+        
 
 
     def test_output_standalone_directory(self):
         """Test command 'output' with path"""
         
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('set group_subprocesses False')
         self.do('import model_v4 sm')
@@ -350,10 +367,10 @@ class TestCmdShell2(unittest.TestCase,
         """Test the import of models and the export of Helas Routine """
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model sm')
-        self.do('generate e+ e->e+ e-')
+        self.do('generate e+ e- > e+ e-')
         self.do('output standalone %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
         files = ['aloha_file.inc', 
@@ -410,7 +427,7 @@ class TestCmdShell2(unittest.TestCase,
         """Test standalone directory for UFO HEFT model"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model_v4 heft')
         self.do('generate g g > h g g')
@@ -452,11 +469,11 @@ class TestCmdShell2(unittest.TestCase,
         """Test MadEvent output with UFO/ALOHA"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model sm')
         self.do('set group_subprocesses False')
-        self.do('generate e+ e->e+ e-')
+        self.do('generate e+ e- > e+ e-')
         self.do('output %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
         files = ['aloha_file.inc', 
@@ -540,7 +557,7 @@ class TestCmdShell2(unittest.TestCase,
         """Test decay chain output"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model sm')
         self.do('define p = u u~ d d~')
@@ -604,11 +621,49 @@ class TestCmdShell2(unittest.TestCase,
                                                     'P1_udx_wp_wp_epve',
                                                     'madevent')))
         
+    def test_complex_mass_SA(self):
+        """ Test that the complex_mass compile in fortran """
+        
+        self.do('import model sm')
+        self.do('set complex_mass_scheme')
+        self.do('generate e+ e- > e+ e-')
+        self.do('output standalone %s ' % self.out_dir)
+        misc.compile(cwd=os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem'))
+        p = subprocess.Popen(['./check'], cwd=os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem'),
+                            stdout=subprocess.PIPE)
+        #output = p.stdout.read()
+        for line in p.stdout:
+            if 'Matrix element' in line:
+                value = line.split('=')[1]
+                value = value. split('GeV')[0]
+                value = eval(value)
+                self.assertAlmostEqual(value, 1.951829785476705e-2)
+
+    def test_load_feynman(self):
+        """ Test that feynman gauge assignment works """
+        
+        self.do('import model sm')
+        # check that the model is correctly loaded (has some goldstone)
+        nb_goldstone = 0
+        for part in self.cmd._curr_model['particles']:
+            if part.get('pdg_code') in [250, 251]:
+                nb_goldstone += 1
+        self.assertEqual(nb_goldstone, 0)
+        self.do('set gauge Feynman')
+        self.do('import model sm')
+        # check that the model is correctly loaded (has some goldstone)
+        nb_goldstone = 0
+        for part in self.cmd._curr_model['particles']:
+            if part.get('pdg_code') in [250, 251]:
+                nb_goldstone += 1
+        self.assertEqual(nb_goldstone, 2)
+        
+
     def test_madevent_subproc_group(self):
         """Test MadEvent output using the SubProcess group functionality"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model sm')
         self.do('define p = g u d u~ d~')
@@ -682,12 +737,6 @@ class TestCmdShell2(unittest.TestCase,
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'bin','internal', 'gen_ximprove')))
-        status = subprocess.call(['make', '../bin/internal/combine_runs'],
-                                 stdout=devnull, 
-                                 cwd=os.path.join(self.out_dir, 'Source'))
-        self.assertEqual(status, 0)
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'bin','internal', 'combine_runs')))
         # Check that gensym compiles
         status = subprocess.call(['make', 'gensym'],
                                  stdout=devnull, 
@@ -720,7 +769,7 @@ class TestCmdShell2(unittest.TestCase,
         """Check that symmetry.f gives right output"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model mssm')
         self.do('define q = u d u~ d~')
@@ -795,7 +844,7 @@ class TestCmdShell2(unittest.TestCase,
         """Test decay chain output using the SubProcess group functionality"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model sm')
         self.do('define p = g u d u~ d~')
@@ -874,7 +923,7 @@ P1_qq_wp_wp_lvl
         """Test group_subprocesses=False for decay process"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model sm')
         self.do('set group_subprocesses False')
@@ -957,7 +1006,7 @@ P1_qq_wp_wp_lvl
         """Test leshouche.inc output of sextet diquarks"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         devnull = open(os.devnull,'w')
 
@@ -1001,18 +1050,19 @@ P1_qq_wp_wp_lvl
         
         self.do('import model sm')
         self.assertEqual(len(self.cmd._curr_model.get('particles')), 17)
-        self.assertEqual(len(self.cmd._curr_model.get('interactions')), 55)
+        self.assertEqual(len(self.cmd._curr_model.get('interactions')), 56)
         self.do('save model /tmp/model.pkl')
         self.do('import model mssm-full')
         self.do('load model /tmp/model.pkl')
         self.assertEqual(len(self.cmd._curr_model.get('particles')), 17)
-        self.assertEqual(len(self.cmd._curr_model.get('interactions')), 55)
+        self.assertEqual(len(self.cmd._curr_model.get('interactions')), 56)
         self.do('generate mu+ mu- > ta+ ta-') 
         self.assertEqual(len(self.cmd._curr_amps), 1)
         nicestring = """Process: mu+ mu- > ta+ ta- WEIGHTED=4
 2 diagrams:
-1  ((1(13),2(-13)>1(22),id:18),(3(-15),4(15),1(22),id:19)) (QCD=0,QED=2,WEIGHTED=4)
-2  ((1(13),2(-13)>1(23),id:57),(3(-15),4(15),1(23),id:58)) (QCD=0,QED=2,WEIGHTED=4)"""
+1  ((1(13),2(-13)>1(22),id:35),(3(-15),4(15),1(22),id:36)) (QCD=0,QED=2,WEIGHTED=4)
+2  ((1(13),2(-13)>1(23),id:41),(3(-15),4(15),1(23),id:42)) (QCD=0,QED=2,WEIGHTED=4)"""
+
         self.assertEqual(self.cmd._curr_amps[0].nice_string().split('\n'), nicestring.split('\n'))
         self.do('save processes /tmp/model.pkl')
         self.do('generate e+ e- > e+ e-')
@@ -1026,7 +1076,7 @@ P1_qq_wp_wp_lvl
         """Test Pythia 8 output"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
         # Create out_dir and out_dir/include
         os.makedirs(os.path.join(self.out_dir,'include'))
         # Touch the file Pythia.h, which is needed to verify that this is a Pythia dir
@@ -1061,7 +1111,7 @@ P1_qq_wp_wp_lvl
         """Test the C++ standalone output"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model sm')
         self.do('generate e+ e- > e+ e- @2')
@@ -1112,6 +1162,9 @@ P1_qq_wp_wp_lvl
         
     def test_import_banner_command(self):
         """check that the import banner command works"""
+        
+        cwd = os.getcwd()
+        os.chdir(MG5DIR)
         self.do('import banner %s --no_launch' % pjoin(MG5DIR, 'tests', 'input_files', 'tt_banner.txt'))
         
         # check that the output exists:
@@ -1121,5 +1174,5 @@ P1_qq_wp_wp_lvl
         run_card = open(pjoin(self.out_dir,'Cards','run_card.dat')).read()
         self.assertTrue("'tt'     = run_tag" in run_card)
         self.assertTrue("200       = nevents" in run_card)
-        
+        os.chdir(cwd)
         

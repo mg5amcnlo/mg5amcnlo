@@ -1,0 +1,112 @@
+#!/bin/bash
+#
+#  Stick a banner on top of the event file and update iseed
+#  
+#  Usage: put_banner event_file
+#
+#   First we need to get into the main directory
+#
+if [[  ! -d ./bin  ]]; then
+    cd ../
+    if [[ ! -d ./bin ]]; then
+	echo "Error: put_banner be executed from the main, or bin directory"
+	exit
+    fi
+fi
+if [[  "$1" == ""  ]]; then
+    echo 'Enter file with events (in directory Events)' 
+    read c 
+else
+    c=$1
+fi
+
+if [[  "$2" == ""  ]]; then
+    echo 'Enter random seed for the run'
+    read r
+else
+    r=$2
+fi
+
+
+if [[ -d Events ]]; then
+    cd Events
+# Put all the info in a long banner
+# First the header
+# $B$ begin_banner $B$ !this is a tag for MadWeight. Don't edit this line
+  cat ../Source/banner_header.txt >& b.txt
+# $E$ begin_banner $E$ !this is a tag for MadWeight. Don't edit this line
+# Now the version information
+# grab the info first
+   mgme=`awk '/.*/{print $1}' ../MGMEVersion.txt`
+# $B$version_info$E$  ! Tag for add info in MW_version. Don't edit this line
+   echo "<MGVersion>">& version.txt
+   echo "# MG    version    : $mgme"    >>version.txt
+   if [[ -e ../Source/MODEL/ModelVersion.txt ]];then
+       model=`awk '/.*/{print $1}' ../Source/MODEL/ModelVersion.txt`
+       echo "# model version    : $model"    >>version.txt
+   fi
+# $B$ write_version $E$  ! Tag for add info in MW_version. Don't edit this line
+   echo "</MGVersion>" >> version.txt 
+   cat version.txt >> b.txt
+   rm -f version.txt
+#proc_card.dat
+   if [[ -e "../SubProcesses/procdef_mg5.dat" ]];then
+       echo "<MG5ProcCard>" >>b.txt
+       cat ../Cards/proc_card_mg5.dat  >> b.txt
+       echo "</MG5ProcCard>" >>b.txt
+       echo "<MGProcCard>" >>b.txt
+       cat ../SubProcesses/procdef_mg5.dat  >> b.txt
+       echo "</MGProcCard>" >>b.txt
+   else
+       echo "<MGProcCard>" >>b.txt
+       cat ../Cards/proc_card.dat  >> b.txt
+       echo "</MGProcCard>" >>b.txt
+   fi
+# $B$ param_card $B$  ! Tag for add info in MW_version. Don't edit this line
+# param_card.dat
+   echo "<slha>">>b.txt
+   cp ../Cards/param_card.dat param_card_temp.dat
+#   ../bin/qnumbers.pl ../Source/MODEL/particles.dat param_card_temp.dat
+   cat param_card_temp.dat >> b.txt
+   rm param_card_temp.dat
+   echo "</slha>">>b.txt
+# $E$ param_card $E$  ! Tag for add info in MW_version. Don't edit this line
+# run_card.dat
+   echo "<MGRunCard>">>b.txt
+   cat ../Cards/run_card.dat   >> b.txt
+   echo "</MGRunCard>">>b.txt
+# grid_card.dat
+   b=`awk '/^[^#].*=.*gridpack/{print $1}' ../Cards/run_card.dat`
+   if [[ $b == ".true." ]]; then
+      echo "<MGGridCard>">>b.txt
+      cat ../Cards/grid_card.dat   >> b.txt
+      echo "</MGGridCard>">>b.txt
+   fi
+# $B$ other_card $E$  ! Tag for add info in MW_version. Don't edit this line
+# $B$ end_file $B$  ! Tag for add info in MW_version. Don't edit this line
+#  
+#  sed -e "s/^/#/g" b.txt > bb.txt
+#  cat bb.txt >> b.txt
+#now update the random seed
+    if [[ $r -eq 0 && -e ../SubProcesses/randinit ]]; then
+	source ../SubProcesses/randinit
+#	echo "Got r "
+    fi
+#    echo $r
+#    echo '<LesHouchesEvents version="1.0">' >& banner.txt
+#    echo '<!---' >> banner.txt
+    sed -e "s/[\t ]0.*iseed/ $r = iseed/g" b.txt >& banner.txt
+    rm -f b.txt 
+#now copy things over 
+    cat $c >> banner.txt
+    rm -f $c
+    echo '</LesHouchesEvents>' >> banner.txt
+    sed -e '/^ *$/d' banner.txt > $c
+    rm -f temp.dat
+    rm -f banner.txt
+    cd ..
+else
+    echo 'Error Events directory not found'
+    exit
+fi
+# $E$ end_file $E$  ! Tag for add info in MW_version. Don't edit this line
