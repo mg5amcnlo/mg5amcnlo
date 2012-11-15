@@ -2058,14 +2058,14 @@ class decay_misc:
         return resonances
          
 
-    def get_full_process_structure(self,decay_processes,line_prod_proc, base_model, banner,check=0):
+    def get_full_process_structure(self,decay_processes,line_prod_proc, base_model, banner, proc_option, check=0):
         """ return a string with the definition of the process fully decayed
                 and also a list of dc_branch objects with all infomation about the topology 
                 of each decay branch
         """
 
         decay_struct={}    
-        full_proc_line=line_prod_proc+" , "
+        full_proc_line=line_prod_proc+" "+proc_option+" , "
         for proc_index in decay_processes.keys():
             if ',' in decay_processes[proc_index]:
                 current_branch=decay_processes[proc_index]
@@ -2914,7 +2914,7 @@ class decay_all_events:
              check_weights[tag_decay]=[]
              new_full_proc_line, new_decay_struct=\
                 decay_tools.get_full_process_structure(multi_decay_processes[tag_decay]['config'],\
-                extended_prod_process, base_model, mybanner)
+                extended_prod_process, base_model, mybanner, proc_option)
              decay_struct[tag_production][tag_decay]=new_decay_struct
 #
              decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
@@ -3076,7 +3076,7 @@ class decay_all_events:
                     for tag_decay in decay_tags:
                         new_full_proc_line, new_decay_struct=\
                             decay_tools.get_full_process_structure(multi_decay_processes[tag_decay]['config'],\
-                            extended_prod_process, base_model, mybanner)
+                            extended_prod_process, base_model, mybanner,proc_option)
                         decay_struct[tag_production][tag_decay]=new_decay_struct
 #
                     for tag_decay in decay_me_tags:
@@ -3308,7 +3308,7 @@ class decay_all_events:
                 for tag_decay in decay_tags:
                     new_full_proc_line, new_decay_struct=\
                         decay_tools.get_full_process_structure(multi_decay_processes[tag_decay]['config'],\
-                        extended_prod_process, base_model, mybanner)
+                        extended_prod_process, base_model, mybanner,proc_option)
                     decay_struct[tag_production][tag_decay]=new_decay_struct
 #
                 for tag_decay in decay_me_tags:
@@ -3390,6 +3390,7 @@ class decay_all_events:
                 full_value = self.calculate_matrix_element('full', 
                                          decay_path[tag_production][map_decay_me[tag_decay]], p_full_str)
                 mg5_me_full = float(full_value)
+                temp=mg5_me_full
                 mg5_me_full=mg5_me_full*BW_weight_prod*BW_weight_decay
 
                 if(not mg5_me_full>0 or not mg5_me_prod >0 ):
@@ -3402,6 +3403,7 @@ class decay_all_events:
                 if weight>max_weight[map_decay_me[tag_decay]]: 
                     logger.info('warning: got a larger weight than max_weight estimate')
                     logger.info('the ratio with the max_weight estimate is '+str(weight/max_weight[map_decay_me[tag_decay]]))
+                    
                 if (weight/max_weight[map_decay_me[tag_decay]]> random.random()):
 
 #             Here we need to restore the masses of the light partons 
@@ -3410,15 +3412,11 @@ class decay_all_events:
                     succeed=topologies[tag_production][tag_topo].reshuffle_momenta()
                     if not succeed:
                         logger.info('Warning: unable to restore masses of light partons')
-                        break
-                    topologies[tag_production][tag_topo].topo2event(curr_event,to_decay)
+                    else:
+                        topologies[tag_production][tag_topo].topo2event(curr_event,to_decay)
                     curr_event.reset_resonances() # re-evaluate the momentum of each resonance in prod. event
                     decayed_event, BW_weight_decay=decay_tools.decay_one_event(curr_event,decay_struct[tag_production][tag_decay], \
                                             pid2color_dict, to_decay, pid2width, pid2mass, resonances,BW_effects,ran=0)
-      #              print decayed_event.string_event_compact()
-      #              print "    "
-      #              print p_full_str
-      #              print "    "
                     decayed_event.wgt=decayed_event.wgt*sum_br
                     outputfile.write(decayed_event.string_event())
 #                print "number of trials: "+str(trial_nb)
