@@ -46,8 +46,7 @@ c
       double precision weight,weight_error,final
       integer matching_type_part(3:max_particles) !modif/link between our order by type for permutation
       integer inv_matching_type_part(3:max_particles)
-      common/madgraph_order_type/matching_type_part,
-& inv_matching_type_part
+      common/madgraph_order_type/matching_type_part, inv_matching_type_part
 c
 c     variable for selecting perm in loop 1
 c

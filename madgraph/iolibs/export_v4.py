@@ -1634,10 +1634,10 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # Set dsig_line
         if ninitial == 1:
             # No conversion, since result of decay should be given in GeV
-            dsig_line = "pd(IPROC)*dsiguu"
+            dsig_line = "pd(0)*dsiguu"
         else:
             # Convert result (in GeV) to pb
-            dsig_line = "pd(IPROC)*conv*dsiguu"
+            dsig_line = "pd(0)*conv*dsiguu"
 
         replace_dict['dsig_line'] = dsig_line
 

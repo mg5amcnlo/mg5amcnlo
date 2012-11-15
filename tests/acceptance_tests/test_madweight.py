@@ -65,12 +65,12 @@ class Testmadweight(unittest.TestCase):
 
 
 
-    def test_one_process(self):
+    def test_zh(self):
         """test output madweight for one specific process"""
 
         cmd = os.getcwd()
         self.generate('p p > Z h , Z > mu+ mu- , h > b b~ ' , 'sm')
-
+        misc.sprint(cmd, level=50)
         # test that each file in P0_qq_zh_z_ll_h_bbx has been correctly written
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/matrix1.f'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/matrix2.f'))
@@ -104,4 +104,25 @@ class Testmadweight(unittest.TestCase):
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libmodel.a'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libpdf.a'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libtools.a'))
+    
+    def test_tt_semi(self):
+        """test output madweight for one specific process"""
 
+        cmd = os.getcwd()
+        self.generate('p p > t t~ , t > e+ ve b , ( t~ > W- b~ , W- > j j )' , 'sm')
+        misc.sprint(cmd, level=50)
+        # test that each file in P0_qq_zh_z_ll_h_bbx has been correctly written
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_gg_ttx_t_lvlb_tx_wmbx_wm_qq'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_ttx_t_lvlb_tx_wmbx_wm_qq'))                        
+                        
+        # test that all libraries have been compiled
+
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libblocks.a'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libcernlib.a'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libdhelas.a'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libgeneric.a'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libmodel.a'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libpdf.a'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libtools.a'))
+        
+    

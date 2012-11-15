@@ -386,10 +386,10 @@ c
       double precision pmass2(max_particles)     ! records the pole mass of any particle of the diagram  (MG order)
       common / to_mass/pmass2
 c
-      double precision pmass(-max_branches:0,max_configs)
-      double precision pwidth(-max_branches:0,max_configs)
+      double precision prmass(-max_branches:0,max_configs)
+      double precision prwidth(-max_branches:0,max_configs)
       double precision pow(-max_branches:0,max_configs)
-      common /to_MWconfig/pmass, pwidth,pow
+      common /to_MWconfig/prmass, prwidth,pow
 c
       double precision              S,X1,X2,PSWGT,JAC
       common /PHASESPACE/ S,X1,X2,PSWGT,JAC
@@ -400,9 +400,9 @@ c---
       include 'props.inc'
       if (NWA) then
         do i=1,num_propa(config_pos)
-          mvir2(propa_cont(i,config_pos))=pmass(propa_cont(i,config_pos),1)**2
-          jac=jac*pmass(propa_cont(i,config_pos),1)
-     .    *pwidth(propa_cont(i,config_pos),1)*pi
+          mvir2(propa_cont(i,config_pos))=prmass(propa_cont(i,config_pos),1)**2
+          jac=jac*prmass(propa_cont(i,config_pos),1)
+     .    *prwidth(propa_cont(i,config_pos),1)*pi
         enddo
       else
 c     below we do not use the narrow width approximation
@@ -443,10 +443,10 @@ c     lower bound
         endif
 
 14      continue
-        pole=(pmass(propa_cont(i,config_pos),1)**2-lower_bound)/
+        pole=(prmass(propa_cont(i,config_pos),1)**2-lower_bound)/
      & (upper_bound-lower_bound)
-        gam=(pwidth(propa_cont(i,config_pos),1)*
-     & pmass(propa_cont(i,config_pos),1))/(upper_bound-lower_bound)
+        gam=(prwidth(propa_cont(i,config_pos),1)*
+     & prmass(propa_cont(i,config_pos),1))/(upper_bound-lower_bound)
         n_var=n_var+1
         call transpole(pole,gam,x(n_var),y,jac)
         jac=jac*(upper_bound-lower_bound)
