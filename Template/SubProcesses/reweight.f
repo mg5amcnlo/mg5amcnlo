@@ -479,14 +479,13 @@ C   anyway already set by "scale" above)
             q2fact(2)=q2bck(2)
          endif
       endif
-      jfirst(1)=0
-      jfirst(2)=0
 
       do i=1,2
          ibeam(i)=ishft(1,i-1)
+         jfirst(i)=0
          jlast(i)=0
          jcentral(i)=0
-         partonline(i)=isjet(ipdgcl(ibeam(i),igraphs(1),iproc))
+         partonline(i)=isparton(ipdgcl(ibeam(i),igraphs(1),iproc))
          qcdline(i)=isqcd(ipdgcl(ibeam(i),igraphs(1),iproc))
       enddo
 
