@@ -80,6 +80,60 @@ class Event:
             if self.particle[part]["istup"]==1:
                 proc_line+=pid2label[self.particle[part]["pid"]]+" "
         return proc_line
+ 
+    def get_map_resonances(self, branchindex2label,pid2label):
+        """
+           decay_processes is a dictionary 1 : "A1"
+                                           2 : "A2" 
+                                           ...
+          returns a map  {mg index : index of the branch}
+          for each mg index associated with a resonance to be decayed
+        """
+        # first build a dictionary {}
+
+        dico_map={}
+        dico_label={}
+        dico_symmetry_fac={}  # dico {label : symmetry factor}
+        branch_not_yet_found=branchindex2label.keys()
+        branch_found=[]
+
+         
+        for index in self.event2mg.keys():
+           if self.event2mg[index]>0:
+                part=self.event2mg[index]
+                pid=self.particle[part]['pid']
+                found=0
+                for  index, id in enumerate(branch_not_yet_found):
+                    if pid2label[pid]==branchindex2label[id]:
+                        found=1
+                        dico_map[part]=id
+                        label=pid2label[pid]
+                        dico_label[part]=label 
+                        if not dico_symmetry_fac.has_key(label):
+                            dico_symmetry_fac[label]=1
+                        else:
+                            dico_symmetry_fac[label]+=1
+
+                        branch_found.append(id)
+                        to_delete=index
+                        break
+                if found: del branch_not_yet_found[to_delete]
+
+                if not found:
+                    for index in branch_found:  
+                        if pid2label[pid]==branchindex2label[index]:
+                            dico_map[part]=index
+                            dico_label[part]=pid2label[pid]
+
+#       now get the symmetry factor:
+        symm_fac=1.0
+        print dico_symmetry_fac
+        for label in dico_symmetry_fac.keys():
+            for index in range(2,dico_symmetry_fac[label]+1):
+                symm_fac=symm_fac*(index)
+
+        return dico_map, dico_label, symm_fac
+
 
     def give_momenta(self):
         """ return the set of external momenta of the event, 
@@ -1709,10 +1763,11 @@ class decay_misc:
                 part=curr_event.event2mg[index]
                 if part in to_decay.keys():
                     mom_init=curr_event.particle[part]["momentum"].copy()
+                    branch_id=to_decay[part]
                     # sanity check
                     if mom_init.m<1e-6:
                         logger.debug('Decaying particle with mass less than 1e-6 GeV in decay_one_event')
-                    decay_products, jac=decay_struct[part].generate_momenta(mom_init,\
+                    decay_products, jac=decay_struct[branch_id].generate_momenta(mom_init,\
                                         ran, pid2width,pid2mass,resonnances,BW_effects)
 
                     if ran==1:
@@ -1721,7 +1776,7 @@ class decay_misc:
 
                     # now we need to write the decay products in the event
                     # follow the decay chain order, so that we can easily keep track of the mother index
-                    for res in range(-1,-len(decay_struct[part]["tree"].keys())-1,-1):
+                    for res in range(-1,-len(decay_struct[branch_id]["tree"].keys())-1,-1):
                         if (res==-1):
                             part_number+=1
                             mom=decay_products[res]["momentum"]
@@ -1749,9 +1804,9 @@ class decay_misc:
 #             Extract color information so that we can write the color flow
 #
                         colormother=pid2color_dico[decay_products[res]["pid"]]
-                        colord1=pid2color_dico[decay_products[decay_struct[part]\
+                        colord1=pid2color_dico[decay_products[decay_struct[branch_id]\
                                             ["tree"][res]["d1"]["index"]]["pid"]]
-                        colord2=pid2color_dico[decay_products[decay_struct[part]\
+                        colord2=pid2color_dico[decay_products[decay_struct[branch_id]\
                                             ["tree"][res]["d2"]["index"]]["pid"]]
                 
                         colup1=decay_products[res]["colup1"]
@@ -1818,13 +1873,13 @@ class decay_misc:
                             d2colup1=0
 
                         part_number+=1
-                        mom=decay_products[decay_struct[part]\
+                        mom=decay_products[decay_struct[branch_id]\
                                     ["tree"][res]["d1"]["index"]]["momentum"]
-                        pid=decay_products[decay_struct[part]\
+                        pid=decay_products[decay_struct[branch_id]\
                                     ["tree"][res]["d1"]["index"]]["pid"]
 
 
-                        indexd1=decay_struct[part]["tree"][res]["d1"]["index"]
+                        indexd1=decay_struct[branch_id]["tree"][res]["d1"]["index"]
                         if ( indexd1>0):
                             istup=1
                             external+=1
@@ -1842,12 +1897,12 @@ class decay_misc:
                         decayed_event.event2mg[part_number]=part_number
 
                         part_number+=1
-                        mom=decay_products[decay_struct[part]["tree"][res]["d2"]\
+                        mom=decay_products[decay_struct[branch_id]["tree"][res]["d2"]\
                                            ["index"]]["momentum"]
-                        pid=decay_products[decay_struct[part]["tree"][res]["d2"]\
+                        pid=decay_products[decay_struct[branch_id]["tree"][res]["d2"]\
                                            ["index"]]["pid"]
 
-                        indexd2=decay_struct[part]["tree"][res]["d2"]["index"]
+                        indexd2=decay_struct[branch_id]["tree"][res]["d2"]["index"]
                         if ( indexd2>0):
                             istup=1
                             external+=1
@@ -2647,6 +2702,16 @@ class decay_misc:
 
         return output
 
+    def get_dico_branchindex2label(self, decay_processes):
+        """ return a dictionary {index branch : label of decaying particle}"""
+
+        dico={}
+        for part in decay_processes:
+            line_proc=decay_processes[part].split()
+            dico[part]=line_proc[0]
+
+        return dico
+
     def process_decay_syntax(self,decay_processes):
         """ add spaces to avoid any confusion in the decay chain syntax """
 
@@ -2660,7 +2725,8 @@ class decay_misc:
 class decay_all_events:
     
     @misc.mute_logger()
-    def __init__(self,inputfile,mybanner,to_decay,decay_processes,\
+
+    def __init__(self,inputfile,mybanner,decay_processes,\
                  prod_branches,proc_option, max_weight_arg, BW_effects,\
                 path_me):
         
@@ -2818,8 +2884,8 @@ class decay_all_events:
 # now we need to sort all the different decay configurations, and get the br for each of them
 # ===========================================================================================
 
-#       1. first create a list of branches that ordered according to the mg numeratation:
-        list_particle_to_decay=to_decay.keys()
+#       1. first create a list of branches that ordered according to the canonical numeratation 1, 2, ...:
+        list_particle_to_decay=decay_processes.keys()
         list_particle_to_decay.sort()
 
 #       2. then use a tuple to identify a decay channel
@@ -2869,7 +2935,6 @@ class decay_all_events:
 #      decay_processes is replaced by multi_decay_processes
 
 
- 
 # A few initialisations:
 #========================
 #    consider the possibility of several production process
@@ -2881,6 +2946,8 @@ class decay_all_events:
 #    we need to keep track of the topologies
         topologies={}
 
+        dico_branchindex2label=decay_tools.get_dico_branchindex2label(decay_processes)
+
 
 #Next step: we need to determine which matrix elements are really necessary
 #==========================================================================
@@ -2891,6 +2958,12 @@ class decay_all_events:
         check_weights={}
         curr_event=Event(inputfile)
         curr_event.get_next_event()
+        to_decay_map, to_decay_label, symm_fac=curr_event.get_map_resonances(dico_branchindex2label, pid2label_dict)
+
+        logger.info('Symmetry factor: '+str(int(symm_fac)))
+#        print to_decay_map, 
+#        print to_decay_label
+
         prod_process=curr_event.give_procdef(pid2label_dict)
         extended_prod_process=decay_tools.find_resonances(prod_process, prod_branches)
 
@@ -2933,7 +3006,7 @@ class decay_all_events:
         tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
 
         # extract the canonical phase-space variable based on that topology       
-        topologies[tag_production][tag_topo].dress_topo_from_event(curr_event,to_decay)
+        topologies[tag_production][tag_topo].dress_topo_from_event(curr_event,to_decay_label)
         topologies[tag_production][tag_topo].extract_angles()
 
         # Breit-Wigner effects + reshuffling      
@@ -2944,13 +3017,13 @@ class decay_all_events:
                  try_reshuffle+=1
                  BW_weight_prod=decay_tools.generate_BW_masses(\
                        topologies[tag_production][tag_topo], \
-                       to_decay.values(),pid2label_dict, pid2width,pid2mass, \
+                       to_decay_label.values(),pid2label_dict, pid2width,pid2mass, \
                        curr_event.shat)
 
                  succeed=topologies[tag_production][tag_topo].reshuffle_momenta()
                  # sanlity check
                  for part in topologies[tag_production][tag_topo]['get_momentum'].keys():
-                     if part in to_decay and \
+                     if part in to_decay_map and \
                            topologies[tag_production][tag_topo]['get_momentum'][part].m<1.0:
                          logger.debug('Mass of a particle to decay is less than 1 GeV')
                          logger.debug('in reshuffling loop')
@@ -2961,17 +3034,17 @@ class decay_all_events:
                      logger.warning( ' So let us try with another topology')
                      tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
                      topologies[tag_production][tag_topo].dress_topo_from_event(\
-                                                             curr_event,to_decay)
+                                                             curr_event,to_decay_label)
                      topologies[tag_production][tag_topo].extract_angles()
                      decay_tools.set_light_parton_massless(topologies\
                                               [tag_production][tag_topo])
                      try_reshuffle=0
 
-             topologies[tag_production][tag_topo].topo2event(curr_event,to_decay)
+             topologies[tag_production][tag_topo].topo2event(curr_event,to_decay_label)
 
              decayed_event, BW_weight_decay=decay_tools.decay_one_event(\
                      curr_event,decay_struct[tag_production][decay_tags[0]], \
-                     pid2color_dict, to_decay, pid2width, \
+                     pid2color_dict, to_decay_map, pid2width, \
                      pid2mass, resonances,BW_effects)
 
              if decayed_event==0:
@@ -3131,7 +3204,7 @@ class decay_all_events:
 #        4. reshuffle the momenta in the production event
 #        5. pass the info to curr_event
 
-                topologies[tag_production][tag_topo].dress_topo_from_event(curr_event,to_decay)
+                topologies[tag_production][tag_topo].dress_topo_from_event(curr_event,to_decay_label)
                 topologies[tag_production][tag_topo].extract_angles()
  
                 if BW_effects:
@@ -3146,13 +3219,13 @@ class decay_all_events:
                             try_reshuffle+=1
                             BW_weight_prod=decay_tools.generate_BW_masses(\
                                             topologies[tag_production][tag_topo], \
-                                            to_decay.values(),pid2label_dict, pid2width,pid2mass, \
+                                            to_decay_label.values(),pid2label_dict, pid2width,pid2mass, \
                                             curr_event.shat)
                             
                             succeed=topologies[tag_production][tag_topo].reshuffle_momenta()
                             # sanlity check
                             for part in topologies[tag_production][tag_topo]['get_momentum'].keys():
-                                if part in to_decay and \
+                                if part in to_decay_map and \
                                 topologies[tag_production][tag_topo]['get_momentum'][part].m<1.0:
                                     logger.debug('Mass of a particle to decay is less than 1 GeV')
                                     logger.debug('in reshuffling loop')
@@ -3163,7 +3236,7 @@ class decay_all_events:
                                 logger.warning( ' So let us try with another topology')
                                 tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
                                 topologies[tag_production][tag_topo].dress_topo_from_event(\
-                                                                                    curr_event,to_decay)
+                                                                                    curr_event,to_decay_label)
                                 topologies[tag_production][tag_topo].extract_angles()
                                 decay_tools.set_light_parton_massless(topologies\
                                                             [tag_production][tag_topo])
@@ -3171,7 +3244,7 @@ class decay_all_events:
                     else: 
                         BW_weight_prod=1.0
 
-                    topologies[tag_production][tag_topo].topo2event(curr_event,to_decay)
+                    topologies[tag_production][tag_topo].topo2event(curr_event,to_decay_label)
 
 #             if dec==0:
 #                 print "Event after reshuffling:"
@@ -3185,7 +3258,7 @@ class decay_all_events:
 
                         decayed_event, BW_weight_decay=decay_tools.decay_one_event(\
                                             curr_event,decay_struct[tag_production][tag_decay], \
-                                            pid2color_dict, to_decay, pid2width, \
+                                            pid2color_dict, to_decay_map, pid2width, \
                                             pid2mass, resonances,BW_effects)
 
                         if decayed_event==0:
@@ -3333,7 +3406,7 @@ class decay_all_events:
             tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
 
 #    dress the topology with momenta and extract the canonical numbers 
-            topologies[tag_production][tag_topo].dress_topo_from_event(curr_event,to_decay)
+            topologies[tag_production][tag_topo].dress_topo_from_event(curr_event,to_decay_label)
             topologies[tag_production][tag_topo].extract_angles()
 
             if BW_effects:
@@ -3348,7 +3421,7 @@ class decay_all_events:
                     while 1:
                         try_reshuffle+=1
                         BW_weight_prod=decay_tools.generate_BW_masses(topologies[tag_production][tag_topo], \
-                                                        to_decay.values(),pid2label_dict, pid2width,pid2mass, \
+                                                        to_decay_label.values(),pid2label_dict, pid2width,pid2mass, \
                                                         curr_event.shat)
                         succeed=topologies[tag_production][tag_topo].reshuffle_momenta()
                         if succeed: break
@@ -3358,7 +3431,7 @@ class decay_all_events:
 #                        print "Event: "+str(event_nb)
 #                        topologies[tag_production][tag_topo].print_topo()
                             tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
-                            topologies[tag_production][tag_topo].dress_topo_from_event(curr_event,to_decay)
+                            topologies[tag_production][tag_topo].dress_topo_from_event(curr_event,to_decay_label)
                             topologies[tag_production][tag_topo].extract_angles()
                             decay_tools.set_light_parton_massless(topologies[tag_production][tag_topo])
                             try_reshuffle=0
@@ -3369,9 +3442,9 @@ class decay_all_events:
 #               Here we need to select a decay configuration on a random basis:
                 tag_decay=decay_tools.generate_tag_decay(multi_decay_processes,decay_tags)
 
-                topologies[tag_production][tag_topo].topo2event(curr_event,to_decay)
+                topologies[tag_production][tag_topo].topo2event(curr_event,to_decay_label)
                 decayed_event, BW_weight_decay=decay_tools.decay_one_event(curr_event,decay_struct[tag_production][tag_decay], \
-                                            pid2color_dict, to_decay, pid2width, pid2mass, resonances,BW_effects)
+                                            pid2color_dict, to_decay_map, pid2width, pid2mass, resonances,BW_effects)
 
                 if decayed_event==0: 
                     logger.info('failed to decay one event properly')
@@ -3413,11 +3486,11 @@ class decay_all_events:
                     if not succeed:
                         logger.info('Warning: unable to restore masses of light partons')
                     else:
-                        topologies[tag_production][tag_topo].topo2event(curr_event,to_decay)
+                        topologies[tag_production][tag_topo].topo2event(curr_event,to_decay_label)
                     curr_event.reset_resonances() # re-evaluate the momentum of each resonance in prod. event
                     decayed_event, BW_weight_decay=decay_tools.decay_one_event(curr_event,decay_struct[tag_production][tag_decay], \
-                                            pid2color_dict, to_decay, pid2width, pid2mass, resonances,BW_effects,ran=0)
-                    decayed_event.wgt=decayed_event.wgt*sum_br
+                                            pid2color_dict, to_decay_map, pid2width, pid2mass, resonances,BW_effects,ran=0)
+                    decayed_event.wgt=decayed_event.wgt*sum_br*float(symm_fac)
                     outputfile.write(decayed_event.string_event())
 #                print "number of trials: "+str(trial_nb)
                     trial_nb_all_events+=trial_nb
@@ -3599,6 +3672,6 @@ if __name__=="__main__":
         BW_effects=0
 
 
-    generate_all=decay_all_events(inputfile,mybanner,to_decay,decay_processes,\
+    generate_all=decay_all_events(inputfile,mybanner,decay_processes,\
                 prod_branches,proc_option, max_weight, BW_effects, curr_dir)
 

@@ -1258,7 +1258,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 break
             decay_process, init_part=\
                 decay_tools.reorder_branch(decaybranch)
-            list_branches[init_part]=decay_process
+            if not list_branches.has_key(init_part):
+                list_branches[init_part]=[ ]
+            list_branches[init_part].append(decay_process)
             del decay_process, init_part    
         
         if len(list_branches)==0:
@@ -1267,13 +1269,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 # Ask the user which particle should be decayed        
         particle_index=2
         to_decay={}
+        counter=0
         for particle in final_state_compact.split():
             particle_index+=1
             if list_branches.has_key(str(particle)):
-                to_decay[particle_index]=particle
-                decay_processes[particle_index]=list_branches[str(particle)]
+                counter+=1
+                decay_processes[counter]=list_branches[str(particle)][0]
+                # if there are seveal decay branches initiated by the same particle:
+                #  use each of them in turn:
+                if len(list_branches[str(particle)])>1: del list_branches[str(particle)][0] 
 
-        if len(to_decay)==0:
+        if len(decay_processes)==0:
             logger.info("Nothing to decay ...")
             return
             
@@ -1296,7 +1302,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         current_dir=os.getcwd()
         try:
 #            os.chdir("../MadSpin")
-            generate_all=decay.decay_all_events(inputfile,mybanner,to_decay,decay_processes,\
+            generate_all=decay.decay_all_events(inputfile,mybanner,decay_processes,\
                  prod_branches, proc_option, max_weight, BW_effects,path_me)
         except Exception:
             os.chdir(current_dir)
