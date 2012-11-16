@@ -1305,6 +1305,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # Add the MW specific file
         shutil.copytree(pjoin(MG5DIR,'Template','MadWeight'),
                                pjoin(self.dir_path, 'Source','MadWeight'), True)
+        os.system('ls %s' % (pjoin(self.dir_path, 'Source','MadWeight')))
+        os.system('ls %s' % (pjoin(self.dir_path, 'Source','MadWeight','src')))          
         files.mv(pjoin(self.dir_path, 'Source','MadWeight','src','setrun.f'),
                                       pjoin(self.dir_path, 'Source','setrun.f'))
         # File created from Template (Different in some child class)
