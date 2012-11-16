@@ -88,7 +88,7 @@ class Cluster(object):
         input_files=( %(input_files)s )
         for i in ${input_files[@]}
         do
-            cp -r $i $MYTMP
+            cp -rL $i $MYTMP
         done
         cd $MYTMP
         bash ./%(script)s %(arguments)s

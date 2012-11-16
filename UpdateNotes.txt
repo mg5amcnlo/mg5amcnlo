@@ -5,6 +5,8 @@ Update notes for MadGraph 5 (in reverse time order)
                   JA: Ensure that t-channel single top gives non-zero cross section
                       even if maxjetflavor=4 (note that if run with matching,
                       maxjetflavor=5 is necessary for correct PDF reweighting).
+                  OM: Fixed Bug #1077877. Aloha crashing for pseudo-scalar, 3 bosons 
+                      interactions (introduces in 1.5.4)
 
 1.5.4 (11/11/12)  JA: Fixed bug in combine_runs.py (introduced in v. 1.5.0) for
                       processes with 5 final-state particles, which might prevent
