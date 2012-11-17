@@ -1,5 +1,21 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+2.0.0.beta1(31/10/12) aMCatNLO Team: First public (beta) version of aMCatNLO.
+                        In order to learn aMCatNLO, please do "tutorial aMCatNLO"
+                        Please also visit: http://amcatnlo.cern.ch/list.htm for more
+                        information.
+
+1.5.3 (01/11/12)  OM: Fix a crash in the gridpack mode (Thanks Baris Altunkaynak)
+                  OM: Fix a crash occuring on cluster with no central disk (only
+                      condor by default) for some complicated process.
+                  OM: If launch command is typed before any output command, 
+                      "output madevent" is run automatically.
+                  OM: Fix bug preventing to set width to Auto in the mssm model.
+                  OM: Allow "set width PID VALUE" as an additional possibility to
+                      answer edit card function.
+                  OM: Improve ME5_debug file (include now the content of the 
+                      proc_card as well).
+
 1.5.2 (11/10/12)  OM: Fix Bug for mssm model. The param_card was not read properly
                       for this model. (introduce in 1.5.0)
                   OM: If the code is run with an input file (./bin/mg5 cmd.cmd)

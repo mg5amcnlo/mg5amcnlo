@@ -150,7 +150,7 @@ def mv(path1, path2):
     path2 = format_path(path2)
     try:
         shutil.move(path1, path2)
-    except:
+    except Exception:
         # An error can occur if the files exist at final destination
         if os.path.isfile(path2):
             os.remove(path2)
@@ -182,7 +182,7 @@ def ln(file_pos, starting_dir='.', name='', log=True):
     try:
         os.symlink(os.path.relpath(file_pos, starting_dir), \
                         os.path.join(starting_dir, name))
-    except:
+    except Exception:
         if log:
             logger.warning('Could not link %s at position: %s' % (file_pos, \
                                                 os.path.realpath(starting_dir)))

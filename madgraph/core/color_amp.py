@@ -718,7 +718,7 @@ class ColorMatrix(dict):
             for index in elem[1]:
                 try:
                     fix_elem[1].append(repl_dict[index])
-                except:
+                except Exception:
                     fix_elem[1].append(index)
             return_list.append((elem[0], tuple(fix_elem[1])))
 

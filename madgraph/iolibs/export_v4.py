@@ -1540,15 +1540,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         if makejpg:
             logger.info("Generate jpeg diagrams")
             for Pdir in P_dir_list:
-                os.chdir(Pdir)
-                try:
-                    subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
-                                stdout = devnull)
-                except:
-                    os.system('chmod +x %s ' % pjoin(old_pos, self.dir_path, 'bin', 'internal', '*'))
-                    subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
-                                stdout = devnull)
-                os.chdir(os.path.pardir)
+                misc.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+                                stdout = devnull, cwd=Pdir)
 
         logger.info("Generate web pages")
         # Create the WebPage using perl script
@@ -3690,6 +3683,11 @@ class UFO_model_to_mg4(object):
         res_strings = ["%(mp_prefix)s%(name)s=%(name)s"\
                         %{'mp_prefix':self.mp_prefix,'name':param.name}\
                                                 for param in update_params_list]
+        # When read_lha is false, it is G which is taken in input and not AS, so
+        # this is what should be reset here too.
+        if 'aS' in [param.name for param in update_params_list]:
+            res_strings.append("%(mp_prefix)sG=G"%{'mp_prefix':self.mp_prefix})
+            
         fsock = self.open('actualize_mp_ext_params.inc', format='fortran')
         fsock.writelines('\n'.join(res_strings))
 

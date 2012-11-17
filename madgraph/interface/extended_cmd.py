@@ -39,10 +39,11 @@ try:
     import madgraph.various.misc as misc
     from madgraph import MG5DIR
     MADEVENT = False
-except Exception, error:
-    if __debug__:
-       logger.info('extended_cmd:'+str(error))
-    import internal.misc as misc
+except ImportError, error:
+    try:
+        import internal.misc as misc
+    except:
+        raise error
     MADEVENT = True
 
 pjoin = os.path.join
@@ -161,7 +162,7 @@ class BasicCmd(cmd.Cmd):
                 import fcntl, termios, struct
                 cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,
                                                      '1234'))
-            except:
+            except Exception:
                 return None
             return cr
         cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
@@ -170,12 +171,12 @@ class BasicCmd(cmd.Cmd):
                 fd = os.open(os.ctermid(), os.O_RDONLY)
                 cr = ioctl_GWINSZ(fd)
                 os.close(fd)
-            except:
+            except Exception:
                 pass
         if not cr:
             try:
                 cr = (os.environ['LINES'], os.environ['COLUMNS'])
-            except:
+            except Exception:
                 cr = (25, 80)
         return int(cr[1])
     
@@ -184,7 +185,7 @@ class BasicCmd(cmd.Cmd):
          If a command has not been entered, then complete against command list.
          Otherwise try to call complete_<command> to get list of completions.
         """
-                
+
         if state == 0:
             import readline
             origline = readline.get_line_buffer()
@@ -580,7 +581,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if timeout:
             try:
                 timeout = self.options['timeout']
-            except:
+            except Exception:
                 pass
                     
         # add choice info to the question
@@ -632,13 +633,14 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 line = self.inputfile.next()
             except StopIteration:
                 if self.haspiping:
+                    logger.debug('piping')
                     self.store_line(line)
                     return None # print the question and use the pipe
-                logger.info(question_instance.question)
+                logger.debug(question_instance.question)
                 logger.warning('The answer to the previous question is not set in your input file')
                 logger.warning('Use %s value' % default)
                 return str(default)
-            
+        
         line = line.replace('\n','').strip()
         if '#' in line: 
             line = line.split('#')[0]
@@ -662,6 +664,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             self.store_line(line)
             return None # print the question and use the pipe
         else:
+            print 'invalid value for the questions -> put as not answered', line
             logger.info(question_instance.question)
             logger.warning('The answer to the previous question is not set in your input file')
             logger.warning('Use %s value' % default)
@@ -937,72 +940,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 new_history.append(cur_line)
             
         new_history.reverse()
-        self.history = new_history
+        self.history[:] = new_history
         
-        
-    def clean_history(self, to_keep=['set','add','load'],
-                            remove_bef_last=None,
-                            to_remove=['open','display','launch', 'check'],
-                            allow_for_removal=None,
-                            keep_switch=False):
-        """Remove command in arguments from history.
-        All command before the last occurrence of  'remove_bef_last'
-        (including it) will be removed (but if another options tells the opposite).                
-        'to_keep' is a set of line to always keep.
-        'to_remove' is a set of line to always remove (don't care about remove_bef_ 
-        status but keep_switch acts.).
-        if 'allow_for_removal' is define only the command in that list can be 
-        remove of the history for older command that remove_bef_lb1. all parameter
-        present in to_remove are always remove even if they are not part of this 
-        list.
-        keep_switch force to keep the statement remove_bef_??? which changes starts
-        the removal mode.
-        """
-        
-        #check consistency
-        if __debug__ and allow_for_removal:
-            for arg in to_keep:
-                assert arg not in allow_for_removal
-            
-    
-        nline = -1
-        removal = False
-        #looping backward
-        while nline > -len(self.history):
-            switch  = False # set in True when removal pass in True
-
-            #check if we need to pass in removal mode
-            if not removal and remove_bef_last:
-                    if self.history[nline].startswith(remove_bef_last):
-                        removal = True
-                        switch = True  
-
-            # if this is the switch and is protected pass to the next element
-            if switch and keep_switch:
-                nline -= 1
-                continue
-
-            # remove command in to_remove (whatever the status of removal)
-            if any([self.history[nline].startswith(arg) for arg in to_remove]):
-                self.history.pop(nline)
-                continue
-            
-            # Only if removal mode is active!
-            if removal:
-                if allow_for_removal:
-                    # Only a subset of command can be removed
-                    if any([self.history[nline].startswith(arg) 
-                                                 for arg in allow_for_removal]):
-                        self.history.pop(nline)
-                        continue
-                elif not any([self.history[nline].startswith(arg) for arg in to_keep]):
-                    # All command have to be remove but protected
-                    self.history.pop(nline)
-                    continue
-            
-            # update the counter to pass to the next element
-            nline -= 1
-                
+                        
     def import_command_file(self, filepath):
         # remove this call from history
         if self.history:
@@ -1024,8 +964,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if line:
                 self.exec_cmd(line, precmd=True)
             if self.stored_line: # created by intermediate question
-                self.exec_cmd(self.stored_line, precmd=True)
-                self.stored_line = ''
+                line, self.stored_line  = self.stored_line, None
+                self.exec_cmd(line, precmd=True)
+
         # If a child was open close it
         if self.child:
             self.child.exec_cmd('quit')        
@@ -1134,7 +1075,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 cmdname=name[3:]
                 try:
                     doc = getattr(self.cmd, name).__doc__
-                except:
+                except Exception:
                     doc = None
                 if not doc:
                     doc = getattr(self, name).__doc__
@@ -1218,7 +1159,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             outstr = "Value of Internal Variable:\n"
             try:
                 var = eval(args[1])
-            except:
+            except Exception:
                 outstr += 'GLOBAL:\nVariable %s is not a global variable\n' % args[1]
             else:
                 outstr += 'GLOBAL:\n' 
@@ -1226,7 +1167,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                
             try:
                 var = eval('self.%s' % args[1])
-            except:
+            except Exception:
                 outstr += 'LOCAL:\nVariable %s is not a local variable\n' % args[1]
             else:
                 outstr += 'LOCAL:\n'
@@ -1267,7 +1208,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             
         if len(args) == 0:
             args.append(base)
-        self.write_configuration(args[0], base, basedir)
+        self.write_configuration(args[0], base, basedir, self.options)
         
     def write_configuration(self, filepath, basefile, basedir, to_keep):
         """Write the configuration file"""
@@ -1301,7 +1242,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 continue
             try:
                 to_write.remove(key)
-            except:
+            except Exception:
                 pass
             if '_path' in key:       
                 # special case need to update path

@@ -1,7 +1,7 @@
 aMC@NLO in MadGraph 5 v2.0
 
 http://madgraph.phys.ucl.ac.be/
-http://amcatlo.web.cern.ch/
+http://amcatnlo.cern.ch/
 
 Information on the process to be generated is found in the file
 index.html in this directory, which should be viewed using your web
@@ -59,7 +59,7 @@ in the file, etc...) are directly read from the file header. You need
 to have the MCatNLO-utilities installed (see above)
 
 calculate_crossx
-Calcualte the cross-section at NLO. This command does not generate 
+Calculate the cross-section at NLO. This command does not generate 
 any event file. If you want to generate parton-level plots, you
 have to manually edit the SubProcesses/madfks_plot.f file before running
 this command

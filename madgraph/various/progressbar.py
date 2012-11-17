@@ -220,7 +220,7 @@ class ProgressBar(object):
                 self.handle_resize(None,None)
                 signal.signal(signal.SIGWINCH, self.handle_resize)
                 self.signal_set = True
-            except:
+            except Exception:
                 self.term_width = 79
         else:
             self.term_width = term_width

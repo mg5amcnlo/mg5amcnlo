@@ -118,7 +118,7 @@ content+='\nTotal: \n                      %10.8e +- %6.4e  (%6.4e%%)\n' %\
         (tot, math.sqrt(err), math.sqrt(err)/tot *100.)
 
 if not correct:
-    print 'ERROR: not all jobs terminated correctly\n'
+    sys.exit('ERROR: not all jobs terminated correctly\n')
 
 file=open("res.txt", 'w')
 

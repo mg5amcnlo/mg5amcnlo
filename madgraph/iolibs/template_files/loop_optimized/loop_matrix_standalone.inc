@@ -73,6 +73,10 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER I,J,K,H,DUMMY
+	  INTEGER CTMODEINIT_BU
+	  %(real_dp_format)s MLSTABTHRES_BU
+	  INTEGER NEWHELREF	  
+	  LOGICAL HEL_INCONSISTENT	  
       %(real_dp_format)s P(0:3,NEXTERNAL)	  
 C DP_RES STORES THE DOUBLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
 C THE STAB_STAGE COUNTER I CORRESPONDANCE GOES AS FOLLOWS
@@ -201,6 +205,14 @@ C     Typically, the hel_offset is 10000
 	  INTEGER HELC(NEXTERNAL,NCOMB)
 	  common/HELCONFIGS/HELC
 
+	  %(real_dp_format)s PREC,USER_STAB_PREC
+	  DATA USER_STAB_PREC/-1.0d0/	  
+	  COMMON/USER_STAB_PREC/USER_STAB_PREC
+
+	  %(real_dp_format)s ACCURACY
+	  DATA ACCURACY/1.0d0/	  
+	  common/ACC/ACCURACY
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -279,7 +291,7 @@ C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
   ENDDO
   IF(BOOTANDSTOP) THEN
     WRITE(*,*) 'Stopped by user request.'
-    STOP
+    stop
   ENDIF
 ENDIF
 
@@ -291,6 +303,18 @@ EVAL_DONE(1)=.TRUE.
 DO I=2,MAXSTABILITYLENGTH
   EVAL_DONE(I)=.FALSE.
 ENDDO
+
+IF (USER_STAB_PREC.GT.0.0d0) THEN
+  MLSTABTHRES_BU=MLSTABTHRES
+  MLSTABTHRES=USER_STAB_PREC
+C In the initialization, I cannot perform stability test and therefore guarantee any precision
+  CTMODEINIT_BU=CTMODEINIT
+C So either one choses quad precision directly
+C  CTMODEINIT=4
+C Or, because this is very slow, we keep the orignal value. The accuracy returned is -1 and tells the MC that he should not trust the evaluation for checks.
+  CTMODEINIT=CTMODEINIT_BU
+ENDIF
+
 IF(DONEHELDOUBLECHECK) THEN
   HELDOUBLECHECKED=.TRUE.
   DONEHELDOUBLECHECK=.FALSE.
@@ -385,10 +409,14 @@ DO K=1,3
 ENDDO
 
 C Check if we directly go to multiple precision
-IF (.NOT.MP_DONE.AND.CTMODE.GE.4) THEN
-  CALL MP_COMPUTE_LOOP_COEFS(MP_P,BUFFR_BIS)
-  MP_DONE=.TRUE.
-  goto 300 
+IF (CTMODE.GE.4) THEN
+  IF (.NOT.MP_DONE) THEN
+    CALL MP_COMPUTE_LOOP_COEFS(MP_P,BUFFR_BIS)
+  ENDIF
+C Even if MP_DONE is .TRUE. we should anyway skip the
+C double precision evaluation as it as already been
+c computed in quadruple precision.
+  goto 300
 ENDIF
 
 DO H=1,NCOMB
@@ -448,18 +476,24 @@ C SAVE RESULT OF EACH INDEPENDENT HELICITY FOR COMPARISON DURING THE HELICITY FI
   IF (CHECKPHASE) THEN
 C   SET THE HELICITY FILTER
     IF(.NOT.FOUNDHELFILTER) THEN
+	  HEL_INCONSISTENT=.FALSE.
       IF(ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1)) THEN
         IF(NTRY.EQ.1) THEN
 	      GOODHEL(HELPICKED)=-HELOFFSET
 	    ELSEIF(GOODHEL(HELPICKED).NE.-HELOFFSET) THEN
-	      WRITE(*,*) '##W02 WARNING Inconsistent vanishing helicity ',HELPICKED,' filter setting, starting over.'
-	      NTRY=0
-	    ENDIF
+		  WRITE(*,*) '##W02A WARNING Inconsistent helicity ',HELPICKED
+		  IF(HELINITSTARTOVER) THEN
+	        WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the helicity filter setup.'
+	        NTRY=0
+		  ELSE
+		    HEL_INCONSISTENT=.TRUE.
+		  ENDIF
+		ENDIF
       ELSE
 	    DO H=1,HELPICKED-1
 		  IF(GOODHEL(H).GT.-HELOFFSET) THEN
 C           Be looser for helicity check, bring a factor 100
-		    DUMMY=ISSAME(ANS,HELSAVED(1,H),REF)
+		    DUMMY=ISSAME(ANS,HELSAVED(1,H),REF,.FALSE.)
 		    IF(DUMMY.NE.0) THEN
 		      IF(NTRY.EQ.1) THEN
 C               Set the matching helicity to be contributing once more
@@ -468,13 +502,42 @@ C               Use an offset to clearly show it is linked to an other one and t
 			    GOODHEL(HELPICKED)=-H-HELOFFSET
 C             Make sure we have paired this hel config to the same one last PS point
 			  ELSEIF(GOODHEL(HELPICKED).NE.(-H-HELOFFSET)) THEN
-	      	    WRITE(*,*) '##W02 WARNING Inconsistent matching helicity ',HELPICKED,' filter setting, starting over.'
-	      	    NTRY=0
+			    WRITE(*,*) '##W02B WARNING Inconsistent helicity ',HELPICKED
+		        IF(HELINITSTARTOVER) THEN
+	              WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the helicity filter setup.'
+	              NTRY=0
+		        ELSE
+				  HEL_INCONSISTENT=.TRUE. 
+				ENDIF
 			  ENDIF
-			  EXIT
 			ENDIF
 		  ENDIF
 		ENDDO
+	  ENDIF
+	  IF(HEL_INCONSISTENT) THEN
+C This helicity has unstable filter so we will always compute it by itself.
+C We therefore also need to remove it from the multiplicative factor of the corresponding helicity.
+	    IF(GOODHEL(HELPICKED).LT.-HELOFFSET) THEN
+	      GOODHEL(-GOODHEL(HELPICKED)-HELOFFSET)=GOODHEL(-GOODHEL(HELPICKED)-HELOFFSET)-1
+	    ENDIF
+C If several helicities were matched to that one, we need to chose another one as reference and redirect the others to this new one
+C Of course if it is one, then we do not need to do anything (because with HELINITSTARTOVER=.FALSE. we only support exactly identical Hels.)
+	    IF(GOODHEL(HELPICKED).GT.-HELOFFSET.AND.GOODHEL(HELPICKED).NE.1) THEN
+		  NEWHELREF=-1
+		  DO H=1,NCOMB
+		    IF (GOODHEL(H).EQ.(-HELOFFSET-HELPICKED)) THEN
+			  IF (NEWHELREF.EQ.-1) THEN
+			    NEWHELREF=H
+				GOODHEL(H)=GOODHEL(HELPICKED)-1
+			  ELSE
+				GOODHEL(H)=-NEWHELREF-HELOFFSET
+			  ENDIF
+			ENDIF
+		  ENDDO
+		ENDIF
+C In all cases, from now on this helicity will be computed independantly of the others.
+C In particular, it is the only thing to do if the helicity was flagged not contributing.
+		GOODHEL(HELPICKED)=1
 	  ENDIF
     ENDIF
 
@@ -511,7 +574,7 @@ C   DOUBLE CHECK THE HELICITY FILTER
 	  ENDIF
 	ENDIF
 	IF (GOODHEL(HELPICKED).LT.-HELOFFSET.AND.NTRY.NE.0) THEN
-	  IF(ISSAME(ANS,HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF).EQ.0) THEN
+	  IF(ISSAME(ANS,HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
 	    write(*,*) '##W15 Helicity filter could not be successfully double checked.'
 	    write(*,*) 'One reason for this is that you might have changed sensible parameters which affected the helicity dependance relations.'
 	    write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
@@ -522,7 +585,8 @@ C   DOUBLE CHECK THE HELICITY FILTER
 	  ENDIF
 	ENDIF
 C   SET HELDOUBLECHECKED TO .TRUE. WHEN DONE
-	IF (HELPICKED.EQ.NCOMB.AND.NTRY.NE.0) THEN
+C   even if it failed we do not want to redo the check afterwards if HELINITSTARTOVER=.FALSE.
+    IF (HELPICKED.EQ.NCOMB.AND.(NTRY.NE.0.OR..NOT.HELINITSTARTOVER)) THEN
 	  DONEHELDOUBLECHECK=.TRUE.
 	ENDIF
   ENDIF
@@ -547,7 +611,7 @@ c    ENDDO
 	  NATTEMPTS=NATTEMPTS+1
 	  IF(NATTEMPTS.EQ.MAXATTEMPTS) THEN
 	    WRITE(*,*) '##E01 ERROR Could not initialize the filters in ',MAXATTEMPTS,' trials'
-		STOP
+		STOP 1
 	  ENDIF
 	ENDIF
   ENDIF
@@ -610,6 +674,7 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 
   IF(DOING_QP_EVALS) THEN
     CALL COMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS)
+	ACCURACY=ACC
 	IF(ACC.GE.MLSTABTHRES) THEN
 	  NEPS=NEPS+1
       CALL COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,TEMP1,TEMP)	  
@@ -640,12 +705,21 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	  STAB_INDEX=0
 	  CTMODE=4
 	  goto 200
-    ENDIF	
+    ELSE
+	  ACCURACY=ACC
+	ENDIF	
   ENDIF
 
 ENDIF
 
  9999 CONTINUE
+
+C Reinitialize the default threshold if it was specified by the user
+IF (USER_STAB_PREC.GT.0.0d0) THEN
+  MLSTABTHRES=MLSTABTHRES_BU
+  CTMODEINIT=CTMODEINIT_BU  
+ENDIF
+
       END
 
 
@@ -674,7 +748,7 @@ C ----------
 	  IF(abs(reference_value).eq.0.0d0) then
 	    IsZero=.FALSE.
 		write(*,*) '##E02 ERRROR Reference value for comparison is zero.'
-		STOP
+		STOP 1
 	  else
 	    IsZero=((abs(toTest)/abs(reference_value)).lt.ZEROTHRES)
 	  endif
@@ -687,32 +761,46 @@ C ----------
 
 	  end
 
-      integer function ISSAME(resA,resB,ref)
+      integer function ISSAME(resA,resB,ref,useMax)
 	  IMPLICIT NONE
 C     This function compares the result from two different helicity configuration A and B
 C     It returns 0 if they are not related and (+/-wgt) if A=(+/-wgt)*B.
-C     For now, the only wgt implemented is the integer 1.
-C  
+C     For now, the only wgt implemented is the integer 1 or -1.
+C     If useMax is .TRUE., it uses all implemented weights no matter what is HELINITSTARTOVER
+C   
 C CONSTANTS
 C
-      integer N_WGT_TO_TRY
-	  parameter (N_WGT_TO_TRY=2)
+      integer MAX_WGT_TO_TRY
+	  parameter (MAX_WGT_TO_TRY=2)
 C  
 C ARGUMENTS 
 C  
 	  %(real_dp_format)s resA(3), resB(3)
 	  %(real_dp_format)s ref
+	  logical useMax
 C  
 C LOCAL VARIABLES
 C
       LOGICAL ISZERO
       integer I,J
-      integer WGT_TO_TRY(N_WGT_TO_TRY)
+	  integer N_WGT_TO_TRY
+      integer WGT_TO_TRY(MAX_WGT_TO_TRY)
 	  data WGT_TO_TRY/1,-1/
+C
+C INCLUDES
+C
+	  include 'MadLoopParams.inc'
 C ----------
 C BEGIN CODE
 C ----------
       ISSAME=0
+
+C If the helicity can be constructed progressively while allowing inconsistency, then we only allow for weight one comparisons.
+	  IF (.NOT.HELINITSTARTOVER.AND..NOT.USEMAX) THEN
+	    N_WGT_TO_TRY=1
+	  ELSE
+	    N_WGT_TO_TRY=MAX_WGT_TO_TRY
+	  ENDIF
 
 	  DO I=1,N_WGT_TO_TRY
 	    DO J=1,3
@@ -811,7 +899,7 @@ C     The following is used instead
 
 	  IF(N_DP_EVALS.GT.20.OR.N_QP_EVALS.GT.20) THEN
 	    WRITE(*,*) 'ERROR:: Increase hardcoded maxstabilitylength.'
-		STOP
+		stop 1
 	  ENDIF
 
 	  END
@@ -837,4 +925,91 @@ C THIS SUBROUTINE SIMPLY SET THE GLOBAL PS CONFIGURATION GLOBAL VARIABLES FROM A
     	  ENDDO
   	  	ENDDO
 
+	  END
+
+      SUBROUTINE SLOOPMATRIXHEL_THRES(P,HEL,ANS,PREC_ASKED,PREC_FOUND)
+      IMPLICIT NONE
+C  
+C CONSTANTS
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+C  
+C ARGUMENTS 
+C  
+      %(real_dp_format)s P(0:3,NEXTERNAL)
+      %(real_dp_format)s ANS(3)
+	  INTEGER HEL
+	  %(real_dp_format)s PREC_ASKED,PREC_FOUND
+C
+C GLOBAL VARIABLES
+C
+	  %(real_dp_format)s USER_STAB_PREC
+	  COMMON/USER_STAB_PREC/USER_STAB_PREC
+
+	  LOGICAL CHECKPHASE
+	  LOGICAL HELDOUBLECHECKED
+      common/INIT/CHECKPHASE, HELDOUBLECHECKED
+
+	  %(real_dp_format)s ACCURACY
+	  common/ACC/ACCURACY
+
+C ----------
+C BEGIN CODE
+C ----------
+      USER_STAB_PREC = PREC_ASKED
+      CALL SLOOPMATRIXHEL(P,HEL,ANS)
+C Reset it to default value not to affect next runs
+	  USER_STAB_PREC = -1.0d0
+	  
+	  IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED) THEN
+	     PREC_FOUND=ACCURACY
+	  ELSE
+C This is a 'tag value' to say that because ML is still in initialization mode, it could not provide the accuray.
+	     PREC_FOUND=-1.0d0
+	  ENDIF
+
+	  END
+
+      SUBROUTINE SLOOPMATRIX_THRES(P,ANS,PREC_ASKED,PREC_FOUND)
+      IMPLICIT NONE
+C  
+C CONSTANTS
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+C  
+C ARGUMENTS 
+C  
+      %(real_dp_format)s P(0:3,NEXTERNAL)
+      %(real_dp_format)s ANS(3)
+	  %(real_dp_format)s PREC_ASKED,PREC_FOUND
+C
+C GLOBAL VARIABLES
+C
+	  %(real_dp_format)s USER_STAB_PREC
+	  COMMON/USER_STAB_PREC/USER_STAB_PREC
+
+	  LOGICAL CHECKPHASE
+	  LOGICAL HELDOUBLECHECKED
+      common/INIT/CHECKPHASE, HELDOUBLECHECKED
+
+	  %(real_dp_format)s ACCURACY
+	  common/ACC/ACCURACY
+
+C ----------
+C BEGIN CODE
+C ----------
+      USER_STAB_PREC = PREC_ASKED
+      CALL SLOOPMATRIX(P,ANS)
+C Reset it to default value not to affect next runs
+	  USER_STAB_PREC = -1.0d0
+
+	  IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED) THEN
+	     PREC_FOUND=ACCURACY
+	  ELSE
+C This is a 'tag value' to say that because ML is still in initialization mode, it could not provide the accuray.
+	     PREC_FOUND=-1.0d0
+	  ENDIF
+	  
 	  END

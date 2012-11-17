@@ -2158,7 +2158,7 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
                                                    param.name + ' = ' + \
                                                    self.slha_to_expr[key] + ';',
                                                    'real'))
-                except:
+                except Exception:
                     # For Yukawa couplings, masses and widths, insert
                     # the Pythia 8 value
                     if param.lhablock == 'YUKAWA':

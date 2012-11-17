@@ -62,7 +62,8 @@ class TestLoopDrawer(unittest.TestCase):
             try:
                 TestLoopDrawer.store_diagram = pickle.load(open(os.path.join(_file_path, \
                                             '../../input_files/test_draw_nlo.obj'), 'r'))
-            except:
+            except Exception, error:
+                print error
                 pass
 
     class FakeAMP(dict):

@@ -694,7 +694,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                              'pythia_events.lhe', 
                              pjoin(self.run_name, '%s_pythia_lhe_events.root' % self.run_tag)],
                             cwd=pjoin(self.me_dir,'Events'))              
-                except:
+                except Exception, error:
+                    misc.sprint('ExRootLHEFConverter fails', str(error), 
+                                                                     log=logger)
                     pass
 
     def store_result(self):
@@ -775,7 +777,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 
         try: 
             os.remove(pjoin(self.me_dir, 'Events', 'pgs.done'))
-        except:
+        except Exception:
             pass
         pgs_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_pgs.log" % tag)
         self.cluster.launch_and_wait('../bin/internal/run_pgs', 
@@ -800,7 +802,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 misc.call([eradir+'/ExRootLHCOlympicsConverter', 
                              'pgs_events.lhco',pjoin('%s/%s_pgs_events.root' % (self.run_name, tag))],
                             cwd=pjoin(self.me_dir, 'Events')) 
-            except:
+            except Exception:
                 logger.warning('fail to produce Root output [problem with ExRootAnalysis')
         if os.path.exists(pjoin(self.me_dir, 'Events', 'pgs_events.lhco')):
             # Creating plots
@@ -1056,7 +1058,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 logger.info(status)
         elif starttime:
             running_time = misc.format_timer(time.time()-starttime)
-            logger.info(' Idle: %s,  Running: %s,  Completed: %s %s' % \
+            logger.info(' Idle: %s,  Running: %s,  Completed: %s [ %s ]' % \
                        (status[0], status[1], status[2], running_time))
         else: 
             logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])

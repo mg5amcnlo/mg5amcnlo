@@ -4288,6 +4288,13 @@ class TestIdentifyMETag(unittest.TestCase):
                         for d in myamplitude2.get('diagrams')])
 
         self.assertEqual(tags1, tags2)
+        
+        tags1 = sorted([helas_objects.IdentifyMETagFKS(d, self.base_model) \
+                        for d in myamplitude1.get('diagrams')])
+        tags2 = sorted([helas_objects.IdentifyMETagFKS(d, self.base_model) \
+                        for d in myamplitude2.get('diagrams')])
+
+        self.assertEqual(tags1, tags2)        
 
     def test_non_identify_me_tag_qq_qqg(self):
         """Test the find_symmetry function"""
@@ -4335,3 +4342,80 @@ class TestIdentifyMETag(unittest.TestCase):
                         for d in myamplitude2.get('diagrams')])
 
         self.assertFalse(tags1 == tags2)
+
+        tags1 = sorted([helas_objects.IdentifyMETagFKS(d, self.base_model) \
+                        for d in myamplitude1.get('diagrams')])
+
+        tags2 = sorted([helas_objects.IdentifyMETagFKS(d, self.base_model) \
+                        for d in myamplitude2.get('diagrams')])
+
+        self.assertFalse(tags1 == tags2)
+#===============================================================================
+# TestIdentifyMETag
+#===============================================================================
+class TestIdentifyMETagFKS(unittest.TestCase):
+    """Test class for the DiagramTag class"""
+
+
+    def setUp(self):
+        self.base_model = import_ufo.import_model('sm')
+    
+    def test_identify_me_tag_qq_qg(self):
+        """Test the find_symmetry function"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':-1,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':-4,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':-3,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model,
+                                       'orders': {'QED': 2, 'QCD':0},
+                                       'perturbation_couplings': ['QCD'],
+                                       'NLO_mode':'tree'})
+
+
+        myamplitude1 = diagram_generation.Amplitude(myproc)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':-2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':-3,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':-4,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model,
+                                       'orders': {'QED': 2, 'QCD':0},
+                                        'perturbation_couplings': ['QCD'],
+                                       'NLO_mode':'tree'})
+
+        myamplitude2 = diagram_generation.Amplitude(myproc)
+
+        tags1 = sorted([helas_objects.IdentifyMETag(d, self.base_model) \
+                        for d in myamplitude1.get('diagrams')])
+        tags2 = sorted([helas_objects.IdentifyMETag(d, self.base_model) \
+                        for d in myamplitude2.get('diagrams')])
+
+        self.assertEqual(tags1, tags2)
+
+        tags1 = sorted([helas_objects.IdentifyMETagFKS(d, self.base_model) \
+                        for d in myamplitude1.get('diagrams')])
+        tags2 = sorted([helas_objects.IdentifyMETagFKS(d, self.base_model) \
+                        for d in myamplitude2.get('diagrams')])
+
+        self.assertNotEqual(tags1, tags2)
+
+
+
+

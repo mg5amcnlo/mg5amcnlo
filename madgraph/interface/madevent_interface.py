@@ -237,7 +237,8 @@ class CmdExtended(cmd.Cmd):
         try:
             self.update_status('Command \'%s\' done.<br> Waiting for instruction.' % arg[0], 
                                level=None, error=True)
-        except:
+        except Exception:
+            misc.sprint('update_status fails')
             pass
         
     
@@ -252,10 +253,18 @@ class CmdExtended(cmd.Cmd):
 
         self.add_error_log_in_html()
         cmd.Cmd.nice_config_error(self, error, line)
+        
+        
+        try:
+            debug_file = open(self.debug_output, 'a')
+            debug_file.write(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')))
+            debug_file.close()
+        except:
+            pass 
+            
 
     def nice_error_handling(self, error, line):
         """If a ME run is currently running add a link in the html output"""
-        
 
         if isinstance(error, ZeroResult):
             self.add_error_log_in_html(error)
@@ -287,7 +296,12 @@ class CmdExtended(cmd.Cmd):
         else:
             self.add_error_log_in_html()            
             cmd.Cmd.nice_error_handling(self, error, line)
-
+            try:
+                debug_file = open(self.debug_output, 'a')
+                debug_file.write(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')))
+                debug_file.close()
+            except:
+                pass
         
         
 #===============================================================================
@@ -614,8 +628,8 @@ class CheckValidForCmd(object):
         if args and args[-1].startswith('--accuracy='):
             try:
                 accuracy = float(args[-1].split('=')[-1])
-            except:
-                self.InvalidCmd('Argument error in calculate_decay_widths command')
+            except Exception:
+                raise self.InvalidCmd('Argument error in calculate_decay_widths command')
             del args[-1]
         if len(args) > 1:
             self.help_calculate_decay_widths()
@@ -705,13 +719,18 @@ class CheckValidForCmd(object):
         try:
             import models.model_reader as model_reader
             import models.import_ufo as import_ufo
-        except:
+        except ImportError:
             raise self.ConfigurationError, '''Can\'t load MG5.
             The variable mg5_path should not be correctly configure.'''
             
         # Import model
-        model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
+        if not MADEVENT:
+            modelname = self.find_model_name()
+            model = import_ufo.import_model(modelname, decay=True)
+        else:
+            model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
                                         decay=True)
+            
         if not hasattr(model.get('particles')[0], 'partial_widths'):
             raise self.InvalidCmd, 'The UFO model does not include widths information. Impossible to compute widths automatically'
             
@@ -1457,7 +1476,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                      'pgs_card.dat', 'pythia_card.dat']:
             try:
                 os.remove(pjoin(self.me_dir, 'Cards', name))
-            except:
+            except Exception:
                 pass
             
         banner_mod.split_banner(args[0], self.me_dir, proc_card=False)
@@ -1782,7 +1801,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     try: # If formatting is wrong, don't want this particle
                         particle = int(line[1])
                         width = float(line[2])
-                    except:
+                    except Exception:
                         particle = 0
                 # Read BRs for this decay
                 line = param_card[line_number]
@@ -1796,7 +1815,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     try: # Remove BR if formatting is wrong
                         partial_width = float(line[0])*width
                         decay_products = [int(p) for p in line[2:2+int(line[1])]]
-                    except:
+                    except Exception:
                         line=param_card[line_number]
                         continue
                     try:
@@ -1872,7 +1891,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.update_status("Merging LHE files", level='parton')
         try:
             os.mkdir(pjoin(self.me_dir,'Events', self.run_name))
-        except:
+        except Exception:
             pass
         os.system('%(bin)s/merge.pl %(event)s/%(name)s_*/unweighted_events.lhe.gz %(event)s/%(name)s/unweighted_events.lhe.gz %(event)s/%(name)s_banner.txt' 
                   % {'bin': self.dirbin, 'event': pjoin(self.me_dir,'Events'),
@@ -2105,7 +2124,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.update_status("Combining runs", level='parton')
         try:
             os.remove(pjoin(Pdir, 'combine_runs.log'))
-        except:
+        except Exception:
             pass
         
         bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
@@ -2130,7 +2149,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.update_status('Combining Events', level='parton')
         try:
             os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
-        except:
+        except Exception:
             pass
         self.cluster.launch_and_wait('../bin/internal/run_combine', 
                                         cwd=pjoin(self.me_dir,'SubProcesses'),
@@ -2192,16 +2211,17 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         """Require MG5 directory: Compute automatically the widths of a set 
         of particles"""
 
-        args = self.split_arg(line)
-        # check the argument and return those in a dictionary format
-        args = self.check_compute_widths(args)
-        
         warning_text = """Be carefull automatic computation of the width is 
 ONLY valid if all three (or more) body decay are negligeable. In doubt use a 
 calculator."""
         
         logger.warning(warning_text)
         logger.info('In a future version of MG5 those mode will also be taken into account')
+      
+        args = self.split_arg(line)
+        # check the argument and return those in a dictionary format
+        args = self.check_compute_widths(args)
+        
         if args['input']:
             files.cp(args['input'], pjoin(self.me_dir, 'Cards'))
         elif not args['force']: 
@@ -2372,7 +2392,7 @@ calculator."""
         self.update_status('Running Pythia', 'pythia')
         try:
             os.remove(pjoin(self.me_dir,'Events','pythia.done'))
-        except:
+        except Exception:
             pass
         
         ## LAUNCHING PYTHIA
@@ -2384,10 +2404,7 @@ calculator."""
                         cwd=pjoin(self.me_dir,'Events'))
 
         if not os.path.exists(pjoin(self.me_dir,'Events','pythia.done')):
-            if self.cluster_mode == 1:
-                logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log)
-            else:
-                logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log.name)
+            logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log)
             return
         else:
             os.remove(pjoin(self.me_dir,'Events','pythia.done'))
@@ -2503,7 +2520,8 @@ calculator."""
         try:
             self.resuls.def_current(run)
             self.update_status(' Cleaning %s' % run, level=None)
-        except:
+        except Exception:
+            misc.sprint('fail to update results or html status')
             pass # Just ensure that html never makes crash this function
 
 
@@ -2556,12 +2574,12 @@ calculator."""
                 if os.path.exists(pjoin(self.me_dir, 'Events', run, file2rm)):
                     try:
                         os.remove(pjoin(self.me_dir, 'Events', run, file2rm))
-                    except:
+                    except Exception:
                         shutil.rmtree(pjoin(self.me_dir, 'Events', run, file2rm))
                 else:
                     try:
                         os.remove(pjoin(self.me_dir, 'HTML', run, file2rm))
-                    except:
+                    except Exception:
                         shutil.rmtree(pjoin(self.me_dir, 'HTML', run, file2rm))
 
 
@@ -2571,7 +2589,7 @@ calculator."""
             try:
                 if tag and self.results[run][0]['tag'] != tag:
                     raise Exception, 'dummy'
-            except:
+            except Exception:
                 pass
             else:
                 to_delete = glob.glob(pjoin(self.me_dir, 'SubProcesses', '%s*' % run))
@@ -2595,7 +2613,7 @@ calculator."""
                 # remove banner
                 try:
                     os.remove(pjoin(self.me_dir, 'Events',run,'%s_%s_banner.txt' % (run,tag)))
-                except:
+                except Exception:
                     logger.warning('fail to remove the banner')
                 # remove the run from the html output
                 if run in self.results:
@@ -2770,12 +2788,12 @@ calculator."""
                 Ire = re
                 try : 
                     fsock = open(exe)
-                except:
+                except Exception:
                     fsock = open(pjoin(cwd,exe))
                 text = fsock.read()
                 output_files = Gre.findall(text)
                 if not output_files:
-                    Ire = re.compile("for i in ([\d\s]*) ; do")
+                    Ire = re.compile("for i in ([\d\.\s]*) ; do")
                     data = Ire.findall(text)
                     data = ' '.join(data).split()
                     for nb in data:
@@ -3087,11 +3105,11 @@ calculator."""
   
         try:
             os.remove(pjoin(self.me_dir,'RunWeb'))
-        except:
+        except Exception:
             pass
         try:
             self.store_result()
-        except:
+        except Exception:
             # If nothing runs they they are no result to update
             pass
         try:
@@ -3102,11 +3120,11 @@ calculator."""
             devnull = open(os.devnull, 'w') 
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)
-        except:
+        except Exception:
             pass
         try:
             devnull.close()
-        except:
+        except Exception:
             pass
 
         return super(MadEventCmd, self).do_quit(line)
@@ -3182,7 +3200,7 @@ calculator."""
             misc.call(['%s/ExRootLHEFConverter' % eradir, 
                              input, output],
                             cwd=pjoin(self.me_dir, 'Events'))
-        except:
+        except Exception:
             logger.warning('fail to produce Root output [problem with ExRootAnalysis]')
     
     def clean_pointless_card(self, mode):
@@ -3667,13 +3685,11 @@ class GridPackCmd(MadEventCmd):
         self.update_status("Combining runs", level='parton')
         try:
             os.remove(pjoin(Pdir, 'combine_runs.log'))
-        except:
+        except Exception:
             pass
         
         bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
-        misc.call([pjoin(bindir, 'combine_runs')], 
-                                          cwd=pjoin(self.me_dir,'SubProcesses'),
-                                          stdout=devnull)
+        combine_runs.CombineRuns(self.me_dir)
         
         #update html output
         cross, error = sum_html.make_all_html_results(self)
@@ -3732,6 +3748,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         self.pname2block[var].append((bname, lha_id))
                     else:
                         self.pname2block[var] = [(bname, lha_id)]
+        
                     
         # check for conflict with run_card
         for var in self.pname2block:                
@@ -3761,6 +3778,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'block':'all', 'param_card':'default'}
             elif args[1] in self.param_card.keys():
                 allowed = {'block':args[1]}
+            elif args[1] == 'width':
+                allowed = {'block': 'decay'}
             else:
                 allowed = {'value':''}
         else:
@@ -3805,6 +3824,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if 'block' in allowed.keys():
             if allowed['block'] == 'all':
                 allowed_block = [i for i in self.param_card.keys() if 'qnumbers' not in i]
+                allowed_block.append('width')
                 possibilities['Param Card Block' ] = \
                                        self.list_completion(text, allowed_block)
             elif isinstance(allowed['block'], basestring):
@@ -3839,7 +3859,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         args = self.split_arg(line.lower())
         start = 0
         if len(args) < 2:
-            logger.warning('invalid set command')
+            logger.warning('invalid set command %s' % line)
             return
 
         card = '' #store which card need to be modify (for name conflict)
@@ -3853,7 +3873,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 card = args[0]
             start=1
             if len(args) < 3:
-                logger.warning('invalid set command')
+                logger.warning('invalid set command: %s' % line)
                 return
 
         #### RUN CARD
@@ -3883,7 +3903,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                               pjoin(self.me_dir,'Cards','run_card_default.dat'))
             
         ### PARAM_CARD WITH BLOCK NAME
-        elif args[start] in self.param_card and card != 'run_card':
+        elif (args[start] in self.param_card or args[start] == 'width') \
+                                                         and card != 'run_card':
+            if args[start] == 'width':
+                args[start] = 'decay'
+                
             if args[start+1] in self.conflict and card == '':
                 text = 'ambiguous name (present in both param_card and run_card. Please specify'
                 logger.warning(text)
@@ -3904,7 +3928,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 try:
                     key = tuple([int(i) for i in args[start+1:-1]])
                 except ValueError:
-                    logger.warning('invalid set command')
+                    logger.warning('invalid set command %s' % line)
                     return 
 
             if key in self.param_card[args[start]].param_dict:
@@ -3920,13 +3944,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 else:
                     try:
                         value = float(args[-1])
-                    except:
+                    except Exception:
                         logger.warning('Invalid input: Expected number and not \'%s\'' \
                                                                      % args[-1])
                         return
                     self.setP(args[start], key, value)
             else:
-                logger.warning('invalid set command')
+                logger.warning('invalid set command %s' % line)
                 return                   
             self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
         
@@ -3944,7 +3968,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning('all listed variables have been modified')
         #INVALID
         else:
-            logger.warning('invalid set command')
+            logger.warning('invalid set command %s' % line)
             return            
     
     def setR(self, name, value):

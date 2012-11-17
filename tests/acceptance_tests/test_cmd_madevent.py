@@ -63,13 +63,16 @@ class TestMECmdShell(unittest.TestCase):
         else:
             for p in process:
                 interface.onecmd('add process %s' % p)
-        interface.onecmd('output madevent /tmp/MGPROCESS/ -f')
-        if not os.path.exists(pjoin(_file_path, os.path.pardir, 'pythia-pgs')):
+        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
             interface.onecmd('install pythia-pgs')
         if not misc.which('root'):
             raise Exception, 'root is require for this test'
-        if not os.path.exists(pjoin(_file_path, os.path.pardir, 'MadAnalysis')):
+        if not os.path.exists(pjoin(MG5DIR, 'MadAnalysis')):
             interface.onecmd('install MadAnalysis')
+        interface.exec_cmd('set pythia-pgs_path %s --no_save' % pjoin(MG5DIR, 'pythia-pgs'))
+        interface.exec_cmd('set madanalysis_path %s --no_save' % pjoin(MG5DIR, 'MadAnalysis'))
+        interface.onecmd('output madevent /tmp/MGPROCESS/ -f')            
+        
         
         self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
         self.cmd_line.exec_cmd('set automatic_html_opening False')
@@ -234,19 +237,29 @@ class TestMEfromfile(unittest.TestCase):
         except Exception, error:
             pass
         import subprocess
+        if logging.getLogger('madgraph').level > 10:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
         
-        devnull =open(os.devnull,'w')
+
         if not os.path.exists(pjoin(_file_path, os.path.pardir, 'pythia-pgs')):
             p = subprocess.Popen([pjoin(_file_path, os.path.pardir,'bin','mg5')],
                              stdin=subprocess.PIPE,
-                             stdout=devnull,stderr=devnull)
+                             stdout=stdout,stderr=stderr)
             out = p.communicate('install pythia-pgs')
         
 
+
+            
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_mssm_generation')],
-                         cwd=pjoin(_file_path, os.path.pardir),
-                        stdout=devnull,stderr=devnull)
+                         cwd=pjoin(MG5DIR),
+                        stdout=stdout,stderr=stderr)
 
         
         self.check_parton_output(cross=4.541638, error=0.035)

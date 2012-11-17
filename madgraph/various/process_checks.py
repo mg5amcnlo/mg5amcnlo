@@ -583,10 +583,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
         # If a PS point is specified, write out the corresponding PS.input
         if PSpoint:
-            PSfile = open(os.path.join(dir_name, 'PS.input'), 'w')
-            PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in p]) \
-                                  for p in PSpoint]))
-            PSfile.close()
+            misc.write_PS_input(os.path.join(dir_name, 'PS.input'),PSpoint)
         
         # Run ./check
         try:
@@ -600,7 +597,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                                                   'result.dat')),format='tuple')  
             else:
                 logging.warning("Error while looking for file %s"%str(os.path\
-                                           .join(dir_name,format='result.dat')))
+                                           .join(dir_name,'result.dat')))
                 return ((0.0, 0.0, 0.0, 0.0, 0), [])
         except IOError:
             logging.warning("Error while executing ./check in %s" % shell_name)
@@ -1165,10 +1162,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 p_out=[[pm[0],-pm[3],pm[2],pm[1]] for pm in p]
             else:
                 raise MadGraph5Error("Rotation id %i not implemented"%rotation)
-            PSfile = open(os.path.join(dir_path, 'PS.input'), 'w')
-            PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in pmom]) \
-                                                            for pmom in p_out]))
-            PSfile.close()  
+            misc.write_PS_input(os.path.join(dir_path, 'PS.input'),p_out)  
   
         def pick_PS_point(proc):
             """ Randomly generate a PS point and make sure it is eligible. Then
@@ -1391,7 +1385,7 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
                 if isinstance(opt, dict):
                     try:
                         value = opt[process.base_string()]
-                    except:
+                    except Exception:
                         continue
                     result = function(process, stored_quantities, value)
                 else:

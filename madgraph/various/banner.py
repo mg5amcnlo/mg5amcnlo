@@ -17,17 +17,20 @@
 import sys
 import re
 import os
+from cStringIO import StringIO
 
 pjoin = os.path.join
 
 try:
     import madgraph.various.misc as misc
     import madgraph.iolibs.file_writers as file_writers
+    import models.check_param_card as param_card_reader
     from madgraph import MG5DIR
     MADEVENT = False
-except:
+except ImportError:
     MADEVENT = True
     import internal.file_writers as file_writers
+    import internal.check_param_card as param_card_reader
     MEDIR = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
     MEDIR = os.path.split(MEDIR)[0]
 
@@ -87,7 +90,12 @@ class Banner(dict):
                     store = False
             if store:
                 text += line
-
+                
+            #reaching end of the banner in a event file avoid to read full file 
+            if "</init>" in line:
+                break
+            elif "<event>" in line:
+                break
                 
     def load_basic(self, medir):
         """ Load the proc_card /param_card and run_card """
@@ -181,11 +189,36 @@ class Banner(dict):
                 raise Exception, 'Impossible to know the type of the card'
 
             self[tag.lower()] = open(path).read()
-
-
-
-
-
+    
+    
+    def charge_card(self, tag):
+        """Build the python object associated to the card"""
+        
+        assert tag in ['param_card', 'run_card']
+        
+        if tag == 'param_card':
+            param_card = self[tag].split('\n')
+            self.param_card = param_card_reader.ParamCard(param_card)
+        elif tag == 'run_card':
+            run_card = self[tag].split('\n') 
+            self.run_card = RunCard(run_card)
+    
+    def get_detail(self, tag, *arg):
+        """return a specific """
+        
+        assert tag in ['param_card', 'run_card']
+        
+        if not hasattr(self, tag):
+            self.charge_card(tag) 
+            
+        card = getattr(self, tag)
+        if len(arg) == 1:
+            return card[arg]
+        elif len(arg) == 2:
+            assert tag == 'param_card'
+            return card[arg[0]].get(arg[1])
+        
+               
 def split_banner(banner_path, me_dir, proc_card=True):
     """a simple way to split a banner"""
     
@@ -227,8 +260,13 @@ class RunCard(dict):
 
     def __init__(self, run_card):
         """ """
+        
+        if isinstance(run_card, str):
+            run_card = file(run_card,'r')
+        else:
+            pass # use in banner loading
 
-        for line in file(run_card,'r'):
+        for line in run_card:
             line = line.split('#')[0]
             line = line.split('!')[0]
             line = line.split('=')
@@ -552,4 +590,132 @@ class RunCardNLO(RunCard):
         
         self.fsock.close()
 
+class ProcCard(list):
+    """Basic Proccard object"""
+    
+    def __init__(self, init=None):
+        """ initialize a basic proc_card"""
+        self.model = None
+        list.__init__(self)
+        if init:
+            self.read(init)
+            
+            
+    def read(self, init):
+        """read the proc_card and save the information"""
+        
+        if isinstance(init, str): #path to file
+            init = file(init, 'r')
+        
+        for line in init:
+            self.append(line)
+    
+    def append(self, line):
+        """"add a line in the proc_card perform automatically cleaning"""
 
+        cmds = line.split()
+        if len(cmds) == 0:
+            return
+        
+        list.append(self, line)
+        
+        # command type:
+        cmd = cmds[0]
+        
+        if cmd == 'output':
+            # Remove previous outputs from history
+            self.clean(allow_for_removal = ['output'], keep_switch=True,
+                           remove_bef_last='output')
+            # Remove previous outputs from history Ml version
+            #self.clean(to_remove=['display','open','history','launch','output'],
+            #                   remove_bef_last='generate')
+        elif cmd == 'generate':
+            # Remove previous generations from history
+            self.clean(remove_bef_last='generate', keep_switch=True,
+                     allow_for_removal= ['generate', 'add process', 'output'])
+        elif cmd == 'import':
+            if len(cmds) < 2:
+                return
+            if cmds[1] == 'model':
+                self.clean(remove_bef_last='import', keep_switch=True,
+                        allow_for_removal=['generate', 'add process', 'output'])
+            elif cmds[1] == 'proc_v4':
+                #full cleaning
+                self[:] = []
+                
+
+    def clean(self, to_keep=['set','add','load'],
+                            remove_bef_last=None,
+                            to_remove=['open','display','launch', 'check','history'],
+                            allow_for_removal=None,
+                            keep_switch=False):
+        """Remove command in arguments from history.
+        All command before the last occurrence of  'remove_bef_last'
+        (including it) will be removed (but if another options tells the opposite).                
+        'to_keep' is a set of line to always keep.
+        'to_remove' is a set of line to always remove (don't care about remove_bef_ 
+        status but keep_switch acts.).
+        if 'allow_for_removal' is define only the command in that list can be 
+        remove of the history for older command that remove_bef_lb1. all parameter
+        present in to_remove are always remove even if they are not part of this 
+        list.
+        keep_switch force to keep the statement remove_bef_??? which changes starts
+        the removal mode.
+        """
+        
+        #check consistency
+        if __debug__ and allow_for_removal:
+            for arg in to_keep:
+                assert arg not in allow_for_removal
+            
+    
+        nline = -1
+        removal = False
+        #looping backward
+        while nline > -len(self):
+            switch  = False # set in True when removal pass in True
+
+            #check if we need to pass in removal mode
+            if not removal and remove_bef_last:
+                    if self[nline].startswith(remove_bef_last):
+                        removal = True
+                        switch = True  
+
+            # if this is the switch and is protected pass to the next element
+            if switch and keep_switch:
+                nline -= 1
+                continue
+
+            # remove command in to_remove (whatever the status of removal)
+            if any([self[nline].startswith(arg) for arg in to_remove]):
+                self.pop(nline)
+                continue
+            
+            # Only if removal mode is active!
+            if removal:
+                if allow_for_removal:
+                    # Only a subset of command can be removed
+                    if any([self[nline].startswith(arg) 
+                                                 for arg in allow_for_removal]):
+                        self.pop(nline)
+                        continue
+                elif not any([self[nline].startswith(arg) for arg in to_keep]):
+                    # All command have to be remove but protected
+                    self.pop(nline)
+                    continue
+            
+            # update the counter to pass to the next element
+            nline -= 1
+        
+        
+    
+            
+            
+        
+        
+        
+        
+        
+        
+        
+    

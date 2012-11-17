@@ -356,6 +356,49 @@ class Banner:
             pid_set=self.param[item1].keys()
             for pid in pid_set:
                 if pid not in pid2label.keys(): del self.param[item1][pid]
+                
+            
+    def format_proc_line(self,procline):
+        
+# remove the tag "[*]": this tag is used in aMC@LNO , 
+# but it is not a valid syntax for mg5
+        line=procline
+        pos1=line.find("[")
+        pos2=line.find("]")
+        if pos1>0 and pos2 >pos1:
+            line=line[:pos1]+line[pos2+1:]
+#
+# Extract the options:
+#
+# A. Remove process number (identified by "@")
+        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
+        proc_number_re = proc_number_pattern.match(line)
+        if proc_number_re:
+            line = proc_number_re.group(1) + \
+                         proc_number_re.group(3)
+
+# B. search for the beginning of the option string
+        pos=1000
+# start with order
+        order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+        order_re = order_pattern.match(line)
+        if (order_re):
+            pos_order=line.find(order_re.group(2))
+            if pos_order>0 and pos_order < pos : pos=pos_order
+
+# then look for slash or dollar
+        slash = line.find("/")
+        if slash > 0 and slash < pos: pos=slash
+        dollar = line.find("$")
+        if dollar > 0 and dollar < pos: pos=dollar
+
+        if pos<1000:
+            proc_option=line[pos:]
+            line=line[:pos]
+        else:
+            proc_option=""
+
+        return line, proc_option
 
 
     def ReadBannerFromFile(self):
@@ -2609,49 +2652,6 @@ class decay_misc:
                    new_decay_tags.append(item2+(item1,))
         return new_decay_tags
                   
-    
-    def format_proc_line(self,procline):
-        
-# remove the tag "[*]": this tag is used in aMC@LNO , 
-# but it is not a valid syntax for mg5
-        line=procline
-        pos1=line.find("[")
-        pos2=line.find("]")
-        if pos1>0 and pos2 >pos1:
-            line=line[:pos1]+line[pos2+1:]
-#
-# Extract the options:
-#
-# A. Remove process number (identified by "@")
-        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
-        proc_number_re = proc_number_pattern.match(line)
-        if proc_number_re:
-            line = proc_number_re.group(1) + \
-                         proc_number_re.group(3)
-
-# B. search for the beginning of the option string
-        pos=1000
-# start with order
-        order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
-        order_re = order_pattern.match(line)
-        if (order_re):
-            pos_order=line.find(order_re.group(2))
-            if pos_order>0 and pos_order < pos : pos=pos_order
-
-# then look for slash or dollar
-        slash = line.find("/")
-        if slash > 0 and slash < pos: pos=slash
-        dollar = line.find("$")
-        if dollar > 0 and dollar < pos: pos=dollar
-
-        if pos<1000:
-            proc_option=line[pos:]
-            line=line[:pos]
-        else:
-            proc_option=""
-
-        return line, proc_option
-
     def get_mean_sd(self,list_obj):
         """ return the mean value and the standard deviation of a list of reals """
         sum=0.0

@@ -69,8 +69,8 @@ class TestValidCmd(unittest.TestCase):
         display particles
         generate p p > go go"""
         history = [l.strip() for l in  history.split('\n')]
-        self.cmd.history = history
-        self.cmd.clean_history(remove_bef_last='generate', keep_switch=True,
+        self.cmd.history[:] = history
+        self.cmd.history.clean(remove_bef_last='generate', keep_switch=True,
                      allow_for_removal= ['generate', 'add process', 'output'])
 
         goal = """set cluster_queue 2
@@ -95,9 +95,9 @@ class TestValidCmd(unittest.TestCase):
         generate p p > go go
         import heft"""
         history = [l.strip() for l in  history.split('\n')]
-        self.cmd.history = history        
+        self.cmd.history[:] = history        
         
-        self.cmd.clean_history(remove_bef_last='import', keep_switch=True,
+        self.cmd.history.clean(remove_bef_last='import', keep_switch=True,
                         allow_for_removal=['generate', 'add process', 'output'])
 
         # Test the call present in do_import model
@@ -123,9 +123,9 @@ class TestValidCmd(unittest.TestCase):
         launch
         output"""
         history = [l.strip() for l in  history.split('\n')]
-        self.cmd.history = history         
+        self.cmd.history[:] = history         
         
-        self.cmd.clean_history(allow_for_removal = ['output'], keep_switch=True,
+        self.cmd.history.clean(allow_for_removal = ['output'], keep_switch=True,
                            remove_bef_last='output')
 
         goal="""set cluster_queue 2

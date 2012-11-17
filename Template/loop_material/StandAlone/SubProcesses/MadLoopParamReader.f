@@ -89,6 +89,9 @@
           else if (buff .eq. '#LoopInitStartOver') then
              read(666,*,end=999) LoopInitStartOver
 
+          else if (buff .eq. '#HelInitStartOver') then
+             read(666,*,end=999) HelInitStartOver
+
           else if (buff .eq. '#ImprovePSPoint') then
              read(666,*,end=999) ImprovePSPoint
 
@@ -143,6 +146,7 @@ C     a non existing or malformed parameter file
       write(*,*) ' > DoubleCheckHelicityFilter = ',
      &DoubleCheckHelicityFilter
       write(*,*) ' > LoopInitStartOver         = ',LoopInitStartOver
+      write(*,*) ' > HelInitStartOver          = ',HelInitStartOver
       write(*,*) ' > ZeroThres                 = ',ZeroThres
       write(*,*)
      & '==============================================================='
@@ -171,6 +175,7 @@ C     a non existing or malformed parameter file
       UseLoopFilter=.False.
       DoubleCheckHelicityFilter=.True.
       LoopInitStartOver=.False.
+      HelInitStartOver=.False.
       ZeroThres=1.0d-9
       ImprovePSPoint=.True.
 

@@ -104,7 +104,9 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I,J,K,H,DUMMY
+      INTEGER I,J,K,H
+	  INTEGER HELPICKED_BU, CTMODEINIT_BU
+	  %(real_dp_format)s MLSTABTHRES_BU
 C P is the actual PS POINT used for the computation, and can be rotated for the stability test purposes.
 	  %(real_dp_format)s P(0:3,NEXTERNAL) 
 C DP_RES STORES THE DOUBLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
@@ -212,6 +214,14 @@ C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT USED ANYWHE
 	  INTEGER HELC(NEXTERNAL,NCOMB)
 	  common/HELCONFIGS/HELC
 
+	  %(real_dp_format)s PREC,USER_STAB_PREC
+	  DATA USER_STAB_PREC/-1.0d0/	  
+	  COMMON/USER_STAB_PREC/USER_STAB_PREC
+
+	  %(real_dp_format)s ACCURACY
+	  DATA ACCURACY/1.0d0/	  
+	  common/ACC/ACCURACY
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -290,6 +300,18 @@ EVAL_DONE(1)=.TRUE.
 DO I=2,MAXSTABILITYLENGTH
   EVAL_DONE(I)=.FALSE.
 ENDDO
+
+IF (USER_STAB_PREC.GT.0.0d0) THEN
+  MLSTABTHRES_BU=MLSTABTHRES
+  MLSTABTHRES=USER_STAB_PREC
+C In the initialization, I cannot perform stability test and therefore guarantee any precision
+  CTMODEINIT_BU=CTMODEINIT
+C So either one choses quad precision directly
+C  CTMODEINIT=4
+C Or, because this is very slow, we keep the orignal value. The accuracy returned is -1 and tells the MC that he should not trust the evaluation for checks.
+  CTMODEINIT=CTMODEINIT_BU
+ENDIF
+
 IF(DONEHELDOUBLECHECK) THEN
   HELDOUBLECHECKED=.TRUE.
   DONEHELDOUBLECHECK=.FALSE.
@@ -360,8 +382,11 @@ DO K=1, 3
   ENDDO
 ENDDO
 
-
 200 CONTINUE
+
+IF (CTMODE.EQ.0.OR.CTMODE.GE.4) THEN
+  CALL MP_UPDATE_AS_PARAM()
+ENDIF
 
 IF (.NOT.MP_PS_SET.AND.(CTMODE.EQ.0.OR.CTMODE.GE.4)) THEN
   CALL SET_MP_PS(P_USER)
@@ -383,8 +408,22 @@ DO H=1,NCOMB
   DO I=1,NEXTERNAL
     NHEL(I)=HELC(I,H)
   ENDDO
-  %(loop_induced_setup)s
+C Check if we are in multiple precision and compute wfs and amps accordingly if needed   
+  IF (CTMODE.GE.4) THEN
+C   Force that only current helicity is used in the routine below
+C   This should always be done, even if MP_DONE is True
+C   because the AMPL of the R2 MUST be recomputed for loop induced.
+C   (because they are not saved for each hel configuration)
+C   (This is not optimal unlike what is done int the loop optimized output)
+	HELPICKED_BU = HELPICKED
+    HELPICKED = H
+    CALL MP_BORN_AMPS_AND_WFS(MP_P)
+    HELPICKED = HELPICKED_BU
+    GOTO 300	
+  ENDIF
   %(born_ct_helas_calls)s
+300 continue
+  %(loop_induced_setup)s  
   %(loop_induced_helas_calls)s
   %(loop_induced_finalize)s
   DO I=1,%(nctamps_or_nloopamps)s
@@ -396,6 +435,11 @@ DO H=1,NCOMB
   ENDDO
   ENDIF
 ENDDO
+
+C WHEN CTMODE IS >=4, then the MP computation of wfs and amps is automatically done.
+IF (CTMODE.GE.4) THEN
+  MP_DONE = .TRUE.
+ENDIF
 
 IF(SKIPLOOPEVAL) THEN
   GOTO 1226
@@ -421,10 +465,23 @@ C   SET THE HELICITY FILTER
         IF(NTRY.EQ.1) THEN
 	      GOODHEL(HELPICKED)=.FALSE.
 	    ELSEIF(GOODHEL(HELPICKED)) THEN
-	      WRITE(*,*) '##W02 WARNING Inconsistent helicity ',HELPICKED,' filter setting, starting over.'
-	      NTRY=0
+		  WRITE(*,*) '##W02A WARNING Inconsistent helicity ',HELPICKED
+		  IF(HELINITSTARTOVER) THEN
+	        WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the helicity filter setup.'
+	        NTRY=0
+		  ENDIF
 	    ENDIF
-      ENDIF
+      ELSE
+	    IF(.NOT.GOODHEL(HELPICKED)) THEN
+		  WRITE(*,*) '##W02B WARNING Inconsistent helicity ',HELPICKED
+		  IF(HELINITSTARTOVER) THEN
+	        WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the helicity filter setup.'
+	        NTRY=0
+		  ELSE
+		    GOODHEL(HELPICKED)=.TRUE.
+		  ENDIF
+		ENDIF
+	  ENDIF
     ENDIF
 
 C   SET THE LOOP FILTER
@@ -456,7 +513,8 @@ C   SET THE LOOP FILTER
       CLOSE(30,STATUS='delete')
 	ENDIF
 C   SET HELDOUBLECHECKED TO .TRUE. WHEN DONE
-	IF (HELPICKED.EQ.NCOMB) THEN
+C   even if it failed we do not want to redo the check afterwards if HELINITSTARTOVER=.FALSE.
+    IF (HELPICKED.EQ.NCOMB.AND.(NTRY.NE.0.OR..NOT.HELINITSTARTOVER)) THEN
       DONEHELDOUBLECHECK=.TRUE.
 	ENDIF
   ENDIF
@@ -537,6 +595,7 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 
   IF(DOING_QP_EVALS) THEN
     CALL COMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS)
+	ACCURACY=ACC	
 	IF(ACC.GE.MLSTABTHRES) THEN
 	  NEPS=NEPS+1
       CALL COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,TEMP1,TEMP)	  
@@ -567,11 +626,19 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	  STAB_INDEX=0
 	  CTMODE=4
 	  goto 200
-    ENDIF	
+    ELSE
+	  ACCURACY=ACC
+	ENDIF
   ENDIF
 ENDIF
 
  9999 continue
+
+C Reinitialize the default threshold if it was specified by the user
+IF (USER_STAB_PREC.GT.0.0d0) THEN
+  MLSTABTHRES=MLSTABTHRES_BU
+  CTMODEINIT=CTMODEINIT_BU  
+ENDIF
 
 END
 
@@ -684,3 +751,93 @@ C THIS SUBROUTINE SIMPLY SET THE GLOBAL PS CONFIGURATION GLOBAL VARIABLES FROM A
 
 	  END
 
+      SUBROUTINE SLOOPMATRIXHEL_THRES(P,HEL,ANS,PREC_ASKED,PREC_FOUND)
+      IMPLICIT NONE
+C  
+C CONSTANTS
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+C  
+C ARGUMENTS 
+C  
+      %(real_dp_format)s P(0:3,NEXTERNAL)
+      %(real_dp_format)s ANS(3)
+	  INTEGER HEL
+	  %(real_dp_format)s PREC_ASKED,PREC_FOUND
+C
+C GLOBAL VARIABLES
+C
+	  %(real_dp_format)s USER_STAB_PREC
+	  COMMON/USER_STAB_PREC/USER_STAB_PREC
+
+	  INTEGER NTRY	  
+	  LOGICAL CHECKPHASE
+	  LOGICAL HELDOUBLECHECKED
+	  %(real_dp_format)s REF
+      common/INIT/NTRY,CHECKPHASE,HELDOUBLECHECKED,REF
+
+	  %(real_dp_format)s ACCURACY
+	  common/ACC/ACCURACY
+
+C ----------
+C BEGIN CODE
+C ----------
+      USER_STAB_PREC = PREC_ASKED
+      CALL SLOOPMATRIXHEL(P,HEL,ANS)
+C Reset it to default value not to affect next runs
+	  USER_STAB_PREC = -1.0d0
+	  
+	  IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED) THEN
+	     PREC_FOUND=ACCURACY
+	  ELSE
+C This is a 'tag value' to say that because ML is still in initialization mode, it could not provide the accuray.
+	     PREC_FOUND=-1.0d0
+	  ENDIF
+
+	  END
+
+      SUBROUTINE SLOOPMATRIX_THRES(P,ANS,PREC_ASKED,PREC_FOUND)
+      IMPLICIT NONE
+C  
+C CONSTANTS
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+C  
+C ARGUMENTS 
+C  
+      %(real_dp_format)s P(0:3,NEXTERNAL)
+      %(real_dp_format)s ANS(3)
+	  %(real_dp_format)s PREC_ASKED,PREC_FOUND
+C
+C GLOBAL VARIABLES
+C
+	  %(real_dp_format)s USER_STAB_PREC
+	  COMMON/USER_STAB_PREC/USER_STAB_PREC
+
+	  INTEGER NTRY
+	  LOGICAL CHECKPHASE
+	  LOGICAL HELDOUBLECHECKED
+	  %(real_dp_format)s REF
+      common/INIT/NTRY,CHECKPHASE,HELDOUBLECHECKED,REF
+
+	  %(real_dp_format)s ACCURACY
+	  common/ACC/ACCURACY
+
+C ----------
+C BEGIN CODE
+C ----------
+      USER_STAB_PREC = PREC_ASKED
+      CALL SLOOPMATRIX(P,ANS)
+C Reset it to default value not to affect next runs
+	  USER_STAB_PREC = -1.0d0
+
+	  IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED) THEN
+	     PREC_FOUND=ACCURACY
+	  ELSE
+C This is a 'tag value' to say that because ML is still in initialization mode, it could not provide the accuray.
+	     PREC_FOUND=-1.0d0
+	  ENDIF
+	  
+	  END

@@ -217,7 +217,7 @@ class make_info_html:
                     line_dict['first'] = ''
                 try:
                     names = idnames[id]
-                except:
+                except Exception:
                     names = idnames['']
                     id = ''
                 line_dict['id'] = str(id)     
@@ -368,7 +368,7 @@ class make_info_html_nlo(make_info_html):
                             line_dict['first'] = '<TD class=$class rowspan=%s>  </TD>' % (len(idnames))
                         try:
                             names = idnames[id]
-                        except:
+                        except Exception:
                             names = idnames['']
                             id = ''
                         line_dict['type'] = type
@@ -417,7 +417,7 @@ class make_info_html_nlo(make_info_html):
             pass
         try:
             nb_diag += int(match.groups()[0])
-        except:
+        except Exception:
             pass
         
         return nb_diag

@@ -163,6 +163,10 @@ C
 	  %(real_mp_format)s MP_PS(0:3,NEXTERNAL),MP_P(0:3,NEXTERNAL)
 	  common/MP_PSPOINT/MP_PS,MP_P
 
+	  %(real_dp_format)s LSCALE
+	  INTEGER CTMODE	  
+      common/CT/LSCALE,CTMODE
+
       INTEGER WE(NEXTERNAL)  
       INTEGER ID, SYMFACT,AMPLNUM
       COMMON/LOOP/WE,ID,SYMFACT,AMPLNUM
@@ -194,15 +198,9 @@ C ----------
       ENDDO
 	  QPRES=(0.0E0_16,0.0E0_16)	  
 
-      IF(.NOT.MP_DONE) THEN
-C TO BE SAFE WE COPY FIRST THE PS POINT
-	    DO I=1,NEXTERNAL
-		  DO J=0,3
-		    QPP(J,I)=MP_P(J,I)
-		  ENDDO
-		ENDDO
-		CALL MP_UPDATE_AS_PARAM()
-	    CALL MP_BORN_AMPS_AND_WFS(QPP)
+      IF(.NOT.MP_DONE.AND.CTMODE.EQ.0) THEN
+C       This is just to compute the wfs in quad prec
+	    CALL MP_BORN_AMPS_AND_WFS(MP_P)
 	    MP_DONE=.TRUE.
 	  ENDIF
 

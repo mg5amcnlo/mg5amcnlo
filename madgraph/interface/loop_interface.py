@@ -268,6 +268,9 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                                                    " support loop corrections.")
             else:
                 model_path = self._curr_model.get('version_tag').split('##')[0]
+                model_dir = os.path.dirname(os.path.join(model_path))
+                if model_dir == pjoin(MG5DIR, 'models'):
+                    model_dir = ''              
                 model_name = self._curr_model.get('name')
                 if model_name.split('-')[0]=='sm':
                     # So that we don't load the model twice
@@ -278,9 +281,11 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                     logger.info(\
                       "The default sm model does not allow to generate"+
                       " loop processes. MG5 now loads 'loop_sm' instead.")
-                    mpath=os.path.join(os.path.dirname(os.path.join(model_path)),
-                                                            'loop_'+model_name)
-                    self.do_import("model %s"%str(mpath))
+                    mpath = pjoin(model_dir, 'loop_'+model_name)
+                    #import model with correct treatment of the history
+                    last_command = self.history[-1]
+                    self.exec_cmd(" import model %s" % str(mpath), precmd=True)
+                    self.history.append(last_command)
                 elif stop:
                     raise MadGraph5Error(
                       "The model %s cannot handle loop processes"%model_name)    
@@ -309,7 +314,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         # interfaces
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
-        self.clean_history(remove_bef_last='import')
+        self.history.clean(remove_bef_last='import')
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -350,10 +355,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         args = self.split_arg(line)
         # Check Argument validity
         self.check_output(args)
-
-        # Remove previous outputs from history
-        self.clean_history(to_remove=['display','open','history','launch','output'],
-                           remove_bef_last='generate')
         
         noclean = '-noclean' in args
         force = '-f' in args 
@@ -361,7 +362,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         main_file_name = ""
         try:
             main_file_name = args[args.index('-name') + 1]
-        except:
+        except Exception:
             pass
 
         # Whatever the format we always output the quadruple precision routines

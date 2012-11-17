@@ -275,6 +275,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         """ Special init tasks for the Loop Interface """
 
         mg_interface.MadGraphCmd.__init__(self, mgme_dir = '', *completekey, **stdin)
+        misc.sprint(type(self.history))
         self.setup()
 
     def setup(self):
@@ -285,7 +286,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # interfaces
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
-        self.clean_history(remove_bef_last='import')
+        self.history.clean(remove_bef_last='import')
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -408,7 +409,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,
                                    ignore_six_quark_processes))
-        except: 
+        except AttributeError: 
             self._fks_multi_proc = fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,
                                    ignore_six_quark_processes)
@@ -419,10 +420,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         args = self.split_arg(line)
         # Check Argument validity
         self.check_output(args)
-
-        # Remove previous outputs from history
-        self.clean_history(allow_for_removal = ['output'], keep_switch=True,
-                           remove_bef_last='output')
         
         noclean = '-noclean' in args
         force = '-f' in args 
@@ -430,7 +427,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         main_file_name = ""
         try:
             main_file_name = args[args.index('-name') + 1]
-        except:
+        except Exception:
             pass
 
         self.options['group_subprocesses'] = False
@@ -543,7 +540,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                                 self._generate_info)
                 try:
                     cmd.Cmd.onecmd(self, 'history .')
-                except:
+                except Exception:
+                    logger.debug('fail to run command \"history cmd\"')
                     pass
             
         cpu_time1 = time.time()

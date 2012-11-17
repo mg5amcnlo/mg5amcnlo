@@ -11,9 +11,9 @@
       real*8 MLStabThres,CTStabThres,ZeroThres
 
       logical UseLoopFilter,LoopInitStartOver,DoubleCheckHelicityFilter
-	  logical ImprovePSPoint
+	  logical ImprovePSPoint,HelInitStartOver
 
       common /MADLOOP/CTModeInit,CTModeRun,NRotations_DP,NRotations_QP,
      &CheckCycle, MaxAttempts,UseLoopFilter,MLStabThres,CTStabThres,
      &CTLoopLibrary,LoopInitStartOver,DoubleCheckHelicityFilter,
-     &ZeroThres,ImprovePSPoint
+     &ZeroThres,ImprovePSPoint,HelInitStartOver

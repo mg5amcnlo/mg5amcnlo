@@ -54,6 +54,7 @@ C
 	  common/HELCHOICE/HELPICKED
 
 	  %(mp_born_amps_decl)s
+	  %(dp_born_amps_decl_in_mp)s
 	  %(complex_mp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
 	  common/MP_WFS/W
 
@@ -80,7 +81,6 @@ DO H=1,NCOMB
     NHEL(I)=HELC(I,H)
   ENDDO
   %(born_amps_and_wfs_calls)s
-  ENDIF
 C  Copy the qp wfs to the dp ones as they are used to setup the CT calls.
   DO I=1,NWAVEFUNCS
     DO J=1,20
@@ -94,6 +94,8 @@ C  Same for the counterterms amplitudes
 	  S(I)=.TRUE.
 	ENDDO
   ENDDO
+  %(copy_mp_to_dp_born_amps)s
+  ENDIF  
 ENDDO
 
 END
