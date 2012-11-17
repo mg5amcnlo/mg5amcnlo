@@ -10,6 +10,8 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Fix Bug for the command "check gauge". The test of comparing
                       results between the two gauge (unitary and Feynman) was not 
                       changing the gauge correctly.
+                  OM: Improvment in LSF cluster support (see bug #1071765) Thanks to
+                      Brian Dorney.
 
 1.5.4 (11/11/12)  JA: Fixed bug in combine_runs.py (introduced in v. 1.5.0) for
                       processes with 5 final-state particles, which might prevent
