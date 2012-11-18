@@ -34,6 +34,7 @@ if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
                Please upgrate your version of python.')
 
 import inspect
+import tarfile
 import logging
 import logging.config
 import optparse
@@ -41,6 +42,7 @@ import os
 import re
 import unittest
 import time
+import datetime
 from functools import wraps
 
 #Add the ROOT dir to the current PYTHONPATH
@@ -50,13 +52,26 @@ sys.path.insert(0, root_path)
 #root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
 #sys.path.append(root_path)
 
+import tests.IOTests
 import aloha
 import aloha.aloha_lib as aloha_lib
 
 from madgraph import MG4DIR
+import madgraph.various.misc as misc
 
 #position of MG_ME
 MGME_dir = MG4DIR
+
+IOTestManager = tests.IOTests.IOTestManager
+
+path = os.path
+pjoin = path.join
+
+_file_path = os.path.dirname(os.path.realpath(__file__))
+_input_file_path = path.abspath(os.path.join(_file_path,'input_files'))
+_hc_comparison_files = pjoin(_input_file_path,'IOTestsComparison')
+_hc_comparison_tarball = pjoin(_input_file_path,'IOTestsComparison.tar.bz2')
+_hc_comparison_modif_log = pjoin(_input_file_path,'IOTestsRefModifs.log')
 
 #===============================================================================
 # run
@@ -116,6 +131,112 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
             return out
         return deco_f_set
     return deco_set
+
+#===============================================================================
+# runIOTests
+#===============================================================================
+def runIOTests(arg=[''],update=True,force=False,synchronize=False):
+    """ running the IOtests associated to expression. By default, this launch all 
+    the tests created in classes inheriting IOTests. 
+    Expression is of this form:
+    
+    """
+    
+    # Update the tarball, while removing the .backups.
+    def noBackUps(tarinfo):
+        if tarinfo.name.endswith('.BackUp'):
+            return None
+        else:
+            return tarinfo
+    
+    if synchronize:
+        print "Please, prefer updating the reference file automatically "+\
+                                                          "rather than by hand."
+        tar = tarfile.open(_hc_comparison_tarball, "w:bz2")
+        tar.add(_hc_comparison_files, \
+                  arcname=path.basename(_hc_comparison_files), filter=noBackUps)
+        tar.close()
+        # I am too lazy to work out the difference with the existing tarball and
+        # put it in the log. So this is why one should refrain from editing the
+        # reference files by hand.
+        text = " \nModifications performed by hand on %s at %s in"%(\
+                         str(datetime.date.today()),misc.format_timer(0.0)[14:])
+        text += '\n   MadGraph 5 v. %(version)s, %(date)s\n'%misc.get_pkg_info()
+        log = open(_hc_comparison_modif_log,mode='a')
+        log.write(text)
+        log.close()
+        print "INFO:: tarball %s updated"%str(_hc_comparison_tarball)
+        return
+    
+    if len(arg)!=1 or not isinstance(arg[0],str):
+        print "Exactly one argument, and in must be a string, not %s."%arg
+        return
+    arg=arg[0]
+
+    # Extract the tarball for hardcoded comparison if necessary
+    if not path.isdir(_hc_comparison_files):
+        if path.isfile(_hc_comparison_tarball):
+            tar = tarfile.open(_hc_comparison_tarball,mode='r:bz2')
+            tar.extractall(path.dirname(_hc_comparison_files))
+            tar.close()
+        else:
+            os.makedirs(_hc_comparison_files)
+
+    IOTestManager.testFolders_filter = arg.split('/')[0].split('&')
+    IOTestManager.testNames_filter = arg.split('/')[1].split('&')
+    IOTestManager.filesChecked_filter = '/'.join(arg.split('/')[2:]).split('&')
+    #print "INFO:: Using folders %s"%str(IOTestManager.testFolders_filter)    
+    #print "INFO:: Using test names %s"%str(IOTestManager.testNames_filter)         
+    #print "INFO:: Using file paths %s"%str(IOTestManager.filesChecked_filter)
+    
+    # Initiate all the IOTests from all the setUp()
+    IOTestsInstances = []
+    start = time.time()
+    for IOTestsClass in IOTestFinder():
+        IOTestsInstances.append(IOTestsClass())
+        IOTestsInstances[-1].setUp()
+    
+    if len(IOTestsInstances)==0:
+        print "No IOTest found."
+        return
+    
+    # runIOTests cannot be made a classmethod, so I use an instance, but it does 
+    # not matter which one as no instance attribute will be used.
+    modifications = IOTestsInstances[-1].runIOTests( update = update, force = force,\
+                          verbose=True, testKeys=IOTestManager.all_tests.keys()) 
+ 
+    tot_time = time.time() - start
+    
+    if modifications == 'test_over':
+        print "\n%d IOTests successfully tested in %.4fs."%\
+                                  (len(IOTestManager.all_tests.keys()),tot_time)
+        sys.exit(0)
+    elif not isinstance(modifications,dict):
+        print "Error during the files update."
+        sys.exit(0)
+
+    if sum(len(v) for v in modifications.values())>0:
+        # Display the modifications
+        text = " \nModifications performed on %s at %s in"%(\
+                         str(datetime.date.today()),misc.format_timer(0.0)[14:])
+        text += '\n   MadGraph 5 v. %(version)s, %(date)s\n'%misc.get_pkg_info()
+        for key in modifications.keys():
+            if len(modifications[key])==0:
+                continue
+            text += "The following reference files have been %s :"%key
+            text += '\n'+'\n'.join(["   %s"%mod for mod in modifications[key]])
+            text += '\n'
+        log = open(_hc_comparison_modif_log,mode='a')
+        log.write(text)
+        log.close()
+        print text
+        tar = tarfile.open(_hc_comparison_tarball, "w:bz2")
+        tar.add(_hc_comparison_files, \
+                  arcname=path.basename(_hc_comparison_files), filter=noBackUps)
+        tar.close()
+        print "INFO:: tarball %s updated"%str(_hc_comparison_tarball)
+    else:
+        print "\nNo modifications performed. No update necessary."
 
 #===============================================================================
 # TestSuiteModified
@@ -401,7 +522,85 @@ class TestFinder(list):
         #os.chdir(self.launch_pos)
         #self.launch_pos = ''
 
+#===============================================================================
+# IOTestFinder
+#===============================================================================
+class IOTestFinder(TestFinder):
+    """ Class introspecting the test modules to find the available IOTest classes.
+    The routine collect_dir looks in all module/file to find the different 
+    functions in different test class. This produce a list, on which external 
+    routines can loop on. 
+        
+    In order to authorize definition and loop on this object on the same time,
+    i.e: for test in TestFinder([opt])-. At each time a loop is started, 
+    we check if a collect_dir ran before, and run it if necessary.
+    """
+    class IOTestFinderError(Exception):
+        """Error associated to the TestFinder class."""
+        pass
+
+    def __init__(self, package='tests/', expression='', re_opt=0):
+        """ initialize global variable for the test """
+        if expression!='' or re_opt!=0:
+            raise IOTestFinderError('Only use IOTestFinder for searching for'+\
+                                                                 ' all classes')
+        super(IOTestFinder,self).__init__(package,expression,re_opt)
+
+    def collect_file(self, filename, checking=True):
+        """ Find the different class instance derivated of TestCase """
+        
+        start = time.time()
+        pyname = self.passin_pyformat(filename)
+        __import__(pyname)
+        obj = sys.modules[pyname]
+        #look at class
+        for name in dir(obj):
+            class_ = getattr(obj, name)
+            if inspect.isclass(class_) and class_!=tests.IOTests.IOTestManager and \
+                                issubclass(class_, tests.IOTests.IOTestManager):
+                self.append(class_)
+
+        time_to_load = time.time() - start
+        if time_to_load > 0.1:
+            logging.critical("file %s takes a long time to load (%.4fs)" % \
+                                                         (pyname, time_to_load))
+
 if __name__ == "__main__":
+
+    help = """ 
+    Use the argument -i U to update the hardcoded tests used by the IOTests.
+    When provided with no argument, it will update everything.
+    Otherwise  it can be called like this:
+    
+                ./test_manager.py -i U "folders/testNames/filePaths"
+
+    the arguments between '/' are specified according to this format
+    (For each of the three category, you can use the keyword 'ALL' to select 
+     all of the IOTests in this category)
+
+           folders   -> "folder1&folder2&folder3&etc..."
+           testNames -> "testName1&testName2&testName3&etc..."
+           filePaths -> "filePath1&filePath2&filePath3&etc..."    
+    
+    Notice that the filePath use a file path relative to
+    the position SubProcess/<P0_proc_name>/ in the output.
+    You are allowed to use the parent directory specification ".."
+    You can use the synthax [regexp] instead of a specific filename.
+    This includes only the files in this directory matching it.
+    > Ex. '../../Source/DHELAS/[.+\.(inc|f)]' matches any file in DHELAS
+    with extension .inc or .f
+    Also, you can prepend '-' to the folder or test name to veto it instead of
+    selecting it.
+    > Ex. '-longTest' considers all tests but the one named
+    'longTest' one (synthax not available for filenames).
+    If you prepend '+' to the folder or test name, then you will include all 
+    items in this category which starts with what follows '+'.
+    > Ex. '+short' includes all IOTests starting with 'short'
+    To bypass the monitoring of the modification, you can use -f.
+    
+    Finally, you can run the test only from here too. Same synthax as above,
+    but use the option -i R.
+    """
 
     usage = "usage: %prog [expression1]... [expressionN] [options] "
     parser = optparse.OptionParser(usage=usage)
@@ -413,10 +612,26 @@ if __name__ == "__main__":
                   help="position to start the search (from root)  [%default]")
     parser.add_option("-l", "--logging", default='CRITICAL',
         help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
-
+    parser.add_option("-f", "--force", action="store_true", default=False,
+        help="Force the update, bypassing its monitoring by the user")
+    parser.add_option("-i", "--IOTests", default='No',
+          help="Process the IOTests to run (R) or updated (U) them.")
+    parser.add_option("-s", "--synchronize", action="store_true", default=False,
+          help="Replace the IOTestsComparison.tar.bz2 tarball with the "+\
+                                      "content of the folder IOTestsComparison")
+    
     (options, args) = parser.parse_args()
-    if len(args) == 0:
-        args = ''
+
+    if options.IOTests=='No':
+        if len(args) == 0:
+            args = ''
+    else:
+        if len(args) == 0:
+            args = ['ALL/ALL/ALL']
+
+    if len(args) == 1 and args[0]=='help':
+        print help
+        sys.exit(0)
 
     if options.path == 'U':
         options.path = 'tests/unit_tests'
@@ -434,10 +649,14 @@ if __name__ == "__main__":
         logging.getLogger('tutorial').setLevel('ERROR')
     except:
         pass
-
-    #logging.basicConfig(level=vars(logging)[options.logging])
-    run(args, re_opt=options.reopt, verbosity=options.verbose, \
+    
+    if options.IOTests=='No' and not options.synchronize:
+        #logging.basicConfig(level=vars(logging)[options.logging])
+        run(args, re_opt=options.reopt, verbosity=options.verbose, \
             package=options.path)
+    else:
+        runIOTests(args,update=options.IOTests=='U',force=options.force,
+                                                synchronize=options.synchronize)
     
 #some example
 #    run('iolibs')
