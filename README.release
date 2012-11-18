@@ -34,10 +34,11 @@ Type "tutorial aMCatNLO" for a tutorial on aMC@NLO runs for NLO computations.
 Type "tutorial MadLoop" for a tutorial on MadLoop for learning how to output
 standalone codes for loop process evaluation for given PS points.
 
-To run using the Template bin/newprocess_mg5 script (Leading-Order runs only) 
------------------------------------------------------------------------------
-Copy the Template directory to a new directory, e.g. MyRunDir.
-Modify the Cards/proc_card.dat or Cards/proc_card_mg5.dat, and run:
-./bin/newprocess_mg5
-After completed process generation, you will find the sequence of
-commands used by MG5 in the file Cards/proc_card_mg5.dat.
+
+To run using the Template bin/newprocess_mg5 script
+---------------------------------------------------
+
+Not available anymore (since v2.0.0) !!!
+But you can still run madgraph5 by doing the following:
+./bin/mg5 proc_card.dat
+

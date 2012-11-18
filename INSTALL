@@ -20,17 +20,27 @@
 Dependencies :
 ===============
 
+ * MadGraph 5 *
+
 - Python 2.6 (or higher, but not compatible with 3.X)
 
-If you want to provide output for MadEvent, you also need:
+ * MadEvent *
+Package for the LO cross-section computation and generation of events 
+
 - bash
 - perl 5.8 (or higher)
 - a Fortran 77 compiler (such as g77 or gfortran)
 
-If you want to run aMCatNLO, you need
+ * aMC@NLO *
+Package for the NLO cross-section computation (matched to shower) and generation of events 
+
 - bash
 - gfortran4.6 (or higher)
 - fastjet
+To configure the path to fastjet please do:
+./bin/mg5
+set fastjet PATH_TO_FASTJET-CONFIG_FILE
+
 
 On Windows:
 ===========

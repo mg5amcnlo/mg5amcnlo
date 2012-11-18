@@ -1442,16 +1442,16 @@ Integrated cross-section
 
         self.update_status('Collecting events', level='parton')
         misc.call(['make collect_events > %s' % \
-                pjoin(self.me_dir, 'log_collect_events.txt')], shell=True)
+                pjoin(self.me_dir, 'collect_events.log')], shell=True)
         misc.call(['echo "1" | ./collect_events > %s' % \
-                pjoin(self.me_dir, 'log_collect_events.txt')], shell=True)
+                pjoin(self.me_dir, 'collect_events.log')], shell=True)
 
         #get filename from collect events
-        filename = open(pjoin(self.me_dir, 'log_collect_events.txt')).read().split()[-1]
+        filename = open(pjoin(self.me_dir, 'collect_events.log')).read().split()[-1]
 
         if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', filename)):
             raise aMCatNLOError('An error occurred during event generation. ' + \
-                    'The event file has not been created. Check log_collect_events.txt')
+                    'The event file has not been created. Check collect_events.log')
         evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
         misc.call(['mv %s %s' % 
             (pjoin(self.me_dir, 'SubProcesses', filename), evt_file)], shell=True )
