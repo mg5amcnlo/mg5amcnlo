@@ -588,7 +588,7 @@ if __name__ == "__main__":
     > Ex. '../../Source/DHELAS/[.+\.(inc|f)]' matches any file in DHELAS
     with extension .inc or .f
     Also, you can prepend '-' to the folder or test name to veto it instead of
-    selecting it. 
+    selecting it.
     > Ex. '-longTest' considers all tests but the one named
     'longTest' one (synthax not available for filenames).
     If you prepend '+' to the folder or test name, then you will include all 

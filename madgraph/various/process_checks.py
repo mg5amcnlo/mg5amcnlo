@@ -621,7 +621,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         
         # output is supposed to be a file, if it is its content directly then
         # I change it to be the list of line.
-        if isinstance(output,file):
+        if isinstance(output,file) or isinstance(output,list):
             text=output
         elif isinstance(output,str):
             text=output.split('\n')

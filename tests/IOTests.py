@@ -136,6 +136,8 @@ class IOTestManager(unittest.TestCase):
     # use the parent directory keyword ".." and instead of the filename you
     # can exploit the syntax [regexp] (brackets not part of the regexp)
     # Ex. ['../../Source/DHELAS/[.+\.(inc|f)]']
+    # You can also prepend '-' to a filename to veto it (it cannot be a regexp
+    # in this case though.)
     filesChecked_filter = ['ALL']
     # To filter what tests you want to use, edit the tag ['ALL'] by the
     # list of test folders and names you want in.

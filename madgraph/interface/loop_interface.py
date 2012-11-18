@@ -583,11 +583,10 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         # Check args validity
         self.validate_model()
         param_card = self.check_check(argss)
+        reuse = argss[1]=="-reuse"   
+        argss = argss[:1]+argss[2:]
         # For the stability check the user can specify the statistics (i.e
         # number of trial PS points) as a second argument
-        if argss[0] in ['stability','profile','timing']:        
-            reuse = argss[1]=="-reuse"   
-            argss = argss[:1]+argss[2:]
         if argss[0] in ['stability', 'profile']:
             stab_statistics = int(argss[1])
             argss = argss[:1]+argss[2:]
