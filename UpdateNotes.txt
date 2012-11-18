@@ -1,7 +1,20 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.5.5 (18/11/12)  JA: Fixed Bug #1078168, giving asymmetries in X+gamma generation
+                      (e.g. Z+gamma) when ickkw=1 and pdfwgt=T. Thanks Irakli!
+                  JA: Ensure that t-channel single top gives non-zero cross section
+                      even if maxjetflavor=4 (note that if run with matching,
+                      maxjetflavor=5 is necessary for correct PDF reweighting).
+                  OM: Fixed Bug #1077877. Aloha crashing for pseudo-scalar, 3 bosons 
+                      interactions (introduces in 1.5.4)
+                  OM: Fix Bug for the command "check gauge". The test of comparing
+                      results between the two gauge (unitary and Feynman) was not 
+                      changing the gauge correctly.
+                  OM: Improvment in LSF cluster support (see bug #1071765) Thanks to
+                      Brian Dorney.
+
 1.5.4 (11/11/12)  JA: Fixed bug in combine_runs.py (introduced in v. 1.5.0) for
-                      processes with 5 final-state particles, which prevented
+                      processes with 5 final-state particles, which might prevent
                       matching to Pythia to work properly (thanks Priscila).
                   OM: Fix Bug #1076043, error in kinematics for e- p collisions,
  		      thanks to Uta Klein (introduced in 1.5.0).

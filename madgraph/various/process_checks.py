@@ -1015,7 +1015,6 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None, cmas
         # Generate a list of unique processes
         # Extract IS and FS ids
         multiprocess_unit = processes_unit
-        resutls = []
         model = multiprocess_unit.get('model')
         
         # Initialize matrix element evaluation
@@ -1057,9 +1056,8 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None, cmas
                 if particle.get('width') != 'ZERO':
                     evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
 
-        output_f = run_multiprocs_no_crossings(get_value,
-                                           multiprocess_feynm,
-                                           evaluator, momentum)  
+        output_f = run_multiprocs_no_crossings(get_value, multiprocess_feynm,
+                                                            evaluator, momentum)  
         
         output = []
         for data in output_f:
@@ -1077,29 +1075,6 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None, cmas
 #        pass
     else:
         raise InvalidCmd("processes is of non-supported format")
-
-    assert False
-    assert processes, "No processes given"
-
-    model = processes[0].get('model')
-
-    # Initialize matrix element evaluation
-    evaluator = MatrixElementEvaluator(model, param_card,
-                                       auth_skipping = True, reuse = False)
-
-    comparison_results = []
-    comparison_explicit_flip = []
-
-    # For each process, make sure we have set up leg numbers:
-    for process in processes:
-        # Get process result
-        result = check_gauge_process(process, evaluator)
-        if result:
-            comparison_results.append(result)
-        
-        
-            
-    return comparison_results
 
 
 def get_value(process, evaluator, p=None):

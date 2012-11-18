@@ -19,7 +19,7 @@ all_lorentz = lorentz.all_lorentz
 all_parameters = parameters.all_parameters
 all_orders = coupling_orders.all_orders
 all_functions = function_library.all_functions
-
+gauge = [0]
 
 __author__ = "C. Degrande"
 __version__ = "1.0"
