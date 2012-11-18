@@ -81,6 +81,7 @@ class Event:
                 proc_line+=pid2label[self.particle[part]["pid"]]+" "
         return proc_line
  
+
     def get_map_resonances(self, branchindex2label,pid2label):
         """
            decay_processes is a dictionary 1 : "A1"
@@ -93,7 +94,8 @@ class Event:
 
         dico_map={}
         dico_label={}
-        dico_symmetry_fac={}  # dico {label : symmetry factor}
+
+#        dico_symmetry_fac={}  # dico {label : symmetry factor}
         branch_not_yet_found=branchindex2label.keys()
         branch_found=[]
 
@@ -109,10 +111,10 @@ class Event:
                         dico_map[part]=id
                         label=pid2label[pid]
                         dico_label[part]=label 
-                        if not dico_symmetry_fac.has_key(label):
-                            dico_symmetry_fac[label]=1
-                        else:
-                            dico_symmetry_fac[label]+=1
+#                        if not dico_symmetry_fac.has_key(label):
+#                            dico_symmetry_fac[label]=1
+#                        else:
+#                            dico_symmetry_fac[label]+=1
 
                         branch_found.append(id)
                         to_delete=index
@@ -126,13 +128,13 @@ class Event:
                             dico_label[part]=pid2label[pid]
 
 #       now get the symmetry factor:
-        symm_fac=1.0
-        print dico_symmetry_fac
-        for label in dico_symmetry_fac.keys():
-            for index in range(2,dico_symmetry_fac[label]+1):
-                symm_fac=symm_fac*(index)
+#        symm_fac=1.0
+#        print dico_symmetry_fac
+#        for label in dico_symmetry_fac.keys():
+#            for index in range(2,dico_symmetry_fac[label]+1):
+#                symm_fac=symm_fac*(index)
 
-        return dico_map, dico_label, symm_fac
+        return dico_map, dico_label #, symm_fac
 
 
     def give_momenta(self):
@@ -2342,6 +2344,30 @@ class decay_misc:
 
         return new_branch, list_branch[0]
 
+
+    def get_symm_fac(self, decay_processes):
+        """  get the symmetry factor associated with associated resonance """
+
+        dico_initpart={}
+
+        for index in decay_processes.keys():
+            line=decay_processes[index]
+            list_obj=line.split()
+            res=list_obj[0]
+            if not dico_initpart.has_key(res):
+                dico_initpart[res]=[]
+            if line not in dico_initpart[res]:
+                dico_initpart[res].append(line)
+                
+ 
+        symm_fac=1
+        for res in dico_initpart.keys():
+            nb_decay_channels=len(dico_initpart[res])
+            for index in range(1,nb_decay_channels+1):
+                symm_fac=symm_fac*index
+
+        return symm_fac
+
     def set_light_parton_massless(self,topo):
         """ masses of light partons are set to zero for 
             the evaluation of the matrix elements
@@ -2947,6 +2973,8 @@ class decay_all_events:
         topologies={}
 
         dico_branchindex2label=decay_tools.get_dico_branchindex2label(decay_processes)
+        symm_fac=decay_tools.get_symm_fac(decay_processes)
+        logger.info('Symmetry factor: '+str(symm_fac))
 
 
 #Next step: we need to determine which matrix elements are really necessary
@@ -2958,9 +2986,8 @@ class decay_all_events:
         check_weights={}
         curr_event=Event(inputfile)
         curr_event.get_next_event()
-        to_decay_map, to_decay_label, symm_fac=curr_event.get_map_resonances(dico_branchindex2label, pid2label_dict)
+        to_decay_map, to_decay_label =curr_event.get_map_resonances(dico_branchindex2label, pid2label_dict)
 
-        logger.info('Symmetry factor: '+str(int(symm_fac)))
 #        print to_decay_map, 
 #        print to_decay_label
 
@@ -3117,6 +3144,8 @@ class decay_all_events:
                 for tag_decay in decay_me_tags:
                     probe_weight[ev][tag_decay]=0.0
                 curr_event.get_next_event()
+                to_decay_map, to_decay_label =\
+                   curr_event.get_map_resonances(dico_branchindex2label, pid2label_dict)
 #    check if we have a new production process, in which case 
 #    we need to generate the corresponding matrix elements
                 prod_process=curr_event.give_procdef(pid2label_dict)
@@ -3348,6 +3377,8 @@ class decay_all_events:
                 running_time = misc.format_timer(time.time()-starttime)
                 logger.info('Event nb %s %s' % (event_nb, running_time))
             trial_nb=0
+            to_decay_map, to_decay_label =\
+               curr_event.get_map_resonances(dico_branchindex2label, pid2label_dict)
 
 #        if event_nb>10: break
 #    check if we have a new production process, in which case we need to generate the correspomding matrix elements
