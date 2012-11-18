@@ -49,6 +49,9 @@ class TestCmdLoop(unittest.TestCase):
     def setUp(self):
         """ Initialize the test """
         self.interface = MGCmd.MasterCmd()
+        # Below the key is the name of the logger and the value is a tuple with
+        # first the handlers and second the level.
+        self.logger_saved_info = {}
     
     def generate(self, process, model):
         """Create a process"""
@@ -69,7 +72,7 @@ class TestCmdLoop(unittest.TestCase):
         """ exec a line in the interface """        
         self.interface.onecmd(line)
     
-    def setup_logFile_for_logger(self,full_logname,level='DEBUG'):
+    def setup_logFile_for_logger(self,full_logname,restore=False,level='DEBUG'):
         """ Setup the logger by redirecting them all to logfiles in tmp """
         
         logs = full_logname.split('.')
@@ -81,15 +84,24 @@ class TestCmdLoop(unittest.TestCase):
             except Exception, error:
                 pass
             my_logger = logging.getLogger(logname)
-            my_logger.setLevel(level)
+            if restore:
+                my_logger.setLevel(self.logger_saved_info[logname][1])
+            else:
+                self.logger_saved_info[logname] = (copy.copy(my_logger.handlers),\
+                                                                my_logger.level)
+                my_logger.setLevel(level)
             allHandlers = copy.copy(my_logger.handlers)
             for h in allHandlers:
                 my_logger.removeHandler(h)
-            hdlr = logging.FileHandler('/tmp/%s.log'%logname)
-            my_logger.addHandler(hdlr)
-
-        for logname in lognames:        
-            my_logger.info('Log of %s'%logname)
+            if restore:
+                for h in self.logger_saved_info[logname][0]:
+                    my_logger.addHandler(h)
+            else:
+                hdlr = logging.FileHandler('/tmp/%s.log'%logname)
+                my_logger.addHandler(hdlr)
+        if not restore:
+            for logname in lognames:      
+                my_logger.info('Log of %s'%logname)
 
     def test_ML_launch_gg_ddx(self):
         """test that the output works fine for g g > d d~ [virt=QCD]"""
@@ -111,7 +123,8 @@ class TestCmdLoop(unittest.TestCase):
         # in the output are not NaN or so, but it is not really the idea of these
         # acceptance tests.
         self.assertTrue('Results for process gg > ddx' in \
-                                   open('/tmp/cmdprint.ext_program.log').read())        
+                                   open('/tmp/cmdprint.ext_program.log').read())
+        self.setup_logFile_for_logger('cmdprint.ext_program',restore=True)      
     
     def test_ML_check_brs_gd_gd(self):
         """test that the brs check works fine on g d > g d"""
@@ -127,6 +140,7 @@ class TestCmdLoop(unittest.TestCase):
         self.assertTrue('Summary: 1/1 passed, 0/1 failed' in res)
         self.assertTrue('BRS' in res)
         self.assertTrue('Passed' in res)
+        self.setup_logFile_for_logger('madgraph.export_v4',restore=True)
 
     def test_ML_check_all_epem_ttx(self):
         """ Test that check full e+ e- > t t~ works fine """
@@ -142,7 +156,8 @@ class TestCmdLoop(unittest.TestCase):
         self.assertTrue('Process permutation results:' in res)
         self.assertTrue('Summary: 1/1 passed, 0/1 failed' in res)
         self.assertTrue('Passed' in res) 
-        
+        self.setup_logFile_for_logger('madgraph.export_v4',restore=True)
+
     def test_ML_check_timing_epem_ttx(self):
         """ Test that check timing e+ e- > t t~ works fine """
         
@@ -163,6 +178,7 @@ class TestCmdLoop(unittest.TestCase):
             shutil.rmtree('TMP_CHECK_epem_ttx')
         except Exception, error:
             pass
+        self.setup_logFile_for_logger('madgraph.export_v4',restore=True)
 
     def test_ML_check_profile_epem_ttx(self):
         """ Test that check profile e+ e- > t t~ works fine """
@@ -186,3 +202,4 @@ class TestCmdLoop(unittest.TestCase):
             shutil.rmtree('TMP_CHECK_epem_ttx')
         except Exception, error:
             pass
+        self.setup_logFile_for_logger('madgraph.export_v4',restore=True)

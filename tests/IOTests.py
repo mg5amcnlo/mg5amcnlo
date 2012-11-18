@@ -41,6 +41,7 @@ path = os.path
 _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = path.abspath(os.path.join(_file_path,'input_files'))
 _hc_comparison_files = pjoin(_input_file_path,'IOTestsComparison')
+_hc_comparison_tarball = pjoin(_input_file_path,'IOTestsComparison.tar.bz2')
 
 class IOTest(object):
     """ IOTest runner and attribute container. It can be overloaded depending on
@@ -278,6 +279,18 @@ class IOTestManager(unittest.TestCase):
             The force argument must be true if you do not want to monitor the 
             modifications on the updated files.
         """
+        
+        # First make sure that the tarball need not be untarred
+        # Extract the tarball for hardcoded comparison if necessary
+        if not path.isdir(_hc_comparison_files):
+            if path.isfile(_hc_comparison_tarball):
+                tar = tarfile.open(_hc_comparison_tarball,mode='r:bz2')
+                tar.extractall(path.dirname(_hc_comparison_files))
+                tar.close()
+            else:
+                raise MadGraph5Error, \
+              "Could not find the comparison tarball %s."%_hc_comparison_tarball
+
         # In update = True mode, we keep track of the modification to 
         # provide summary information
         modifications={'updated':[],'created':[], 'removed':[]}

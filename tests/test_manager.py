@@ -575,6 +575,8 @@ if __name__ == "__main__":
                 ./test_manager.py -i U "folders/testNames/filePaths"
 
     the arguments between '/' are specified according to this format
+    (For each of the three category, you can use the keyword 'ALL' to select 
+     all of the IOTests in this category)
 
            folders   -> "folder1&folder2&folder3&etc..."
            testNames -> "testName1&testName2&testName3&etc..."
