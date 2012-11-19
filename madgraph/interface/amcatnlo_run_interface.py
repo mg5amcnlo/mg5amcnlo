@@ -2002,7 +2002,6 @@ Integrated cross-section
         file.close()
 
 
-
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
@@ -2013,37 +2012,33 @@ Integrated cross-section
         gensym_log = pjoin(self.me_dir, 'gensym.log')
         test_log = pjoin(self.me_dir, 'test.log')
 
-        old_cwd = os.getcwd()
+        libdir = pjoin(self.me_dir, 'lib')
+        sourcedir = pjoin(self.me_dir, 'Source')
 
         #clean files
         misc.call(['rm -f %s' % 
                 ' '.join([amcatnlo_log, madloop_log, reweight_log, gensym_log, test_log])], \
                   cwd=self.me_dir, shell=True)
 
-        import multiprocessing
-        nb_core = multiprocessing.cpu_count()
-
         #define which executable/tests to compile
         if mode in ['NLO', 'LO']:
             exe = 'madevent_vegas'
             tests = ['test_ME']
-        if mode in ['aMC@NLO', 'aMC@LO']:
+        elif mode in ['aMC@NLO', 'aMC@LO']:
             exe = 'madevent_mintMC'
             tests = ['test_ME', 'test_MC']
-        #directory where to compile exe
-        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
-        p_dirs = [file for file in os.listdir('.') if file.startswith('P') and os.path.isdir(file)]
-        # if --nocompile option is specified, check here that all exes exists. 
-        # If they exists, return
 
+        #directory where to compile exe
+        p_dirs = [file for file in os.listdir(pjoin(self.me_dir, 'SubProcesses')) 
+                    if file.startswith('P') and \
+                    os.path.isdir(pjoin(self.me_dir, 'SubProcesses', file))]
         # create param_card.inc and run_card.inc
         self.do_treatcards('', amcatnlo=True)
+        # if --nocompile option is specified, check here that all exes exists. 
+        # If they exists, return
         if all([os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, exe)) \
                 for p_dir in p_dirs]) and options['nocompile']:
-            os.chdir(old_cwd)
             return
-
-        libdir = pjoin(self.me_dir, 'lib')
 
         # rm links to lhapdflib/ PDFsets if exist
         if os.path.islink(pjoin(libdir, 'libLHAPDF.a')):
@@ -2060,100 +2055,97 @@ Integrated cross-section
 
         # make Source
         self.update_status('Compiling source...', level=None)
-        os.chdir(pjoin(self.me_dir, 'Source'))
-        misc.call(['make -j%d > %s 2>&1' % (nb_core, amcatnlo_log)], shell=True)
+        misc.compile(cwd = sourcedir)
         if os.path.exists(pjoin(libdir, 'libdhelas.a')) \
           and os.path.exists(pjoin(libdir, 'libgeneric.a')) \
           and os.path.exists(pjoin(libdir, 'libmodel.a')) \
           and os.path.exists(pjoin(libdir, 'libpdf.a')):
             logger.info('          ...done, continuing with P* directories')
         else:
-            raise aMCatNLOError('Compilation failed, check %s for details' % amcatnlo_log)
+            raise aMCatNLOError('Compilation failed')
+
+        # check if virtuals have been generated
+        proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
+        if not '[real=QCD]' in proc_card:
+            hasvirt = True
+            os.putenv('madloop', 'true')
+            tests.append('check_poles')
+        else:
+            os.unsetenv('madloop')
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)
+
         for p_dir in p_dirs:
             logger.info(p_dir)
             this_dir = pjoin(self.me_dir, 'SubProcesses', p_dir) 
-            os.chdir(this_dir)
+            #compile everything
+
             # compile and run tests
             for test in tests:
                 logger.info('   Compiling %s...' % test)
-                misc.call(['make -j%d %s >> %s 2>&1 ' % (nb_core, test, test_log)], shell=True)
+                misc.compile([test], cwd = this_dir)
                 if not os.path.exists(pjoin(this_dir, test)):
-                    raise aMCatNLOError('Compilation failed, check %s for details' \
-                            % test_log)
-            for test in tests:
+                    raise aMCatNLOError('Compilation failed')
                 logger.info('   Running %s...' % test)
                 self.write_test_input(test)
                 input = pjoin(self.me_dir, '%s_input.txt' % test)
                 #this can be improved/better written to handle the output
-                p = misc.Popen(['./%s < %s | tee -a %s | grep "Fraction of failures"'\
-                         % (test, input, test_log)],stdout=subprocess.PIPE, shell=True)
-                output = p.communicate()
+                misc.Popen(['./%s' % (test)], cwd=this_dir, 
+                        stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
                 #check that none of the tests failed
-                file = open(test_log)
-                content = file.read()
-                file.close()
-                if 'FAILED' in content:
-                    logger.info('Output of the failing test:\n'+output[0][:-1],'$MG:color:BLACK')
-                    raise aMCatNLOError('Some tests failed, run cannot continue.\n' + \
-                        'Please check that widths of final state particles (e.g. top) have been' + \
-                        ' set to 0 in the param_card.dat.')
-                else:
-                    logger.info('   Passed.')
-                    logger.debug('\n'+output[0][:-1])
-#                misc.call(['./%s < %s | tee -a %s | grep "Fraction of failures"' \
-#                        % (test, input, test_log)], shell=True)
+                self.check_tests(test, this_dir)
                 
             if not options['reweightonly']:
                 logger.info('   Compiling gensym...')
-                misc.call(['make -j%d gensym >> %s 2>&1 ' % (nb_core, amcatnlo_log)], shell=True)
+                misc.compile(['gensym'], cwd=this_dir)
                 if not os.path.exists(pjoin(this_dir, 'gensym')):
-                    raise aMCatNLOError('Compilation failed, check %s for details' % amcatnlo_log)
+                    raise aMCatNLOError('Compilation failed')
 
                 logger.info('   Running gensym...')
-                misc.call(['echo %s | ./gensym >> %s' % (self.options['run_mode'], gensym_log)], shell=True) 
-                #compile madloop library
-                v_dirs = [file for file in os.listdir('.') if file.startswith('V') and os.path.isdir(file)]
-                for v_dir in v_dirs:
-                    os.putenv('madloop', 'true')
-                    logger.info('   Compiling MadLoop library in %s' % v_dir)
-                    madloop_dir = pjoin(this_dir, v_dir)
-                    os.chdir(madloop_dir)
-                    misc.call(['make -j%d >> %s 2>&1' % (nb_core, madloop_log)], shell=True)
-                    if not os.path.exists(pjoin(this_dir, 'libMadLoop.a')):
-                        raise aMCatNLOError('Compilation failed, check %s for details' % madloop_log)
-                #compile and run check_poles if the virtuals have been exported
-                proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
-                os.chdir(this_dir)
-                if not '[real=QCD]' in proc_card:
-                    logger.info('   Compiling check_poles...')
-                    misc.call(['make -j%d check_poles >> %s 2>&1 ' % (nb_core, test_log)], shell=True)
-                    if not os.path.exists(pjoin(this_dir, 'check_poles')):
-                        raise aMCatNLOError('Compilation failed, check %s for details' \
-                                % test_log)
-                    logger.info('   Running check_poles...')
-                    open('./check_poles.input', 'w').write('20 \n -1\n') 
-                    misc.call(['./check_poles <check_poles.input >> %s' % (test_log)], shell=True) 
-                    self.parse_check_poles_log(os.getcwd())
+                p = misc.Popen(['./gensym'], stdin=subprocess.PIPE, stdout=open(gensym_log, 'w'),\
+                        cwd= this_dir) 
+                p.communicate(input = '%s\n' % self.options['run_mode'])
                 #compile madevent_mintMC/vegas
                 logger.info('   Compiling %s' % exe)
-                misc.call(['make -j%d %s >> %s 2>&1' % (nb_core, exe, amcatnlo_log)], shell=True)
-                os.unsetenv('madloop')
+                misc.compile([exe], cwd=this_dir)
                 if not os.path.exists(pjoin(this_dir, exe)):
-                    raise aMCatNLOError('Compilation failed, check %s for details' % amcatnlo_log)
+                    raise aMCatNLOError('Compilation failed')
             if mode in ['aMC@NLO', 'aMC@LO'] and not options['noreweight']:
                 logger.info('   Compiling reweight_xsec_events')
-                misc.call(['make -j%d reweight_xsec_events >> %s 2>&1' % (nb_core, reweight_log)], shell=True)
+                misc.compile(['reweight_xsec_events'], cwd=this_dir)
                 if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
-                    raise aMCatNLOError('Compilation failed, check %s for details' % reweight_log)
+                    raise aMCatNLOError('Compilation failed')
 
-        os.chdir(old_cwd)
+        os.unsetenv('madloop')
 
-    def parse_check_poles_log(self, dir):
+    def check_tests(self, test, dir):
+        """just call the correct parser for the test log"""
+        if test in ['test_ME', 'test_MC']:
+            return self.parse_test_mx_log(pjoin(self.me_dir, 'SubProcesses', dir, '%s.log' % test)) 
+        elif test == ['check_poles']:
+            return self.parse_ckeck_poles_log(pjoin(self.me_dir, 'SubProcesses', dir, '%s.log' % test)) 
+
+
+    def parse_test_mx_log(self, log):
+        """read and parse the test_ME/MC.log file"""
+        file = open(log)
+        content = file.read()
+        file.close()
+        if 'FAILED' in content:
+            logger.info('Output of the failing test:\n'+output[0][:-1],'$MG:color:BLACK')
+            raise aMCatNLOError('Some tests failed, run cannot continue.\n' + \
+                'Please check that widths of final state particles (e.g. top) have been' + \
+                ' set to 0 in the param_card.dat.')
+        else:
+            lines = [l for l in content.split('\n') if 'PASSED' in l]
+            logger.info('   Passed.')
+            logger.debug('\n'.join(lines))
+
+
+    def parse_check_poles_log(self, log):
         """reads and parse the check_poles.log file"""
-        content = open(pjoin(dir, 'check_poles.log')).read()
+        content = open(log).read()
         npass = 0
         nfail = 0
         for line in content.split('\n'):
@@ -2187,21 +2179,24 @@ Integrated cross-section
 
 
     def write_test_input(self, test):
-        """write the input files to run test_ME/MC"""
-        content = "-2 -2\n" #generate randomly energy/angle
-        content+= "100 100\n" #run 100 points for soft and collinear tests
-        content+= "0\n" #sum over helicities
-        content+= "0\n" #all FKS configs
-        content+= '\n'.join(["-1"] * 50) #random diagram
+        """write the input files to run test_ME/MC or check_poles"""
+        if test in ['test_ME', 'test_MC']:
+            content = "-2 -2\n" #generate randomly energy/angle
+            content+= "100 100\n" #run 100 points for soft and collinear tests
+            content+= "0\n" #sum over helicities
+            content+= "0\n" #all FKS configs
+            content+= '\n'.join(["-1"] * 50) #random diagram
+        elif test == 'check_poles':
+            content = '20 \n -1\n'
         
         file = open(pjoin(self.me_dir, '%s_input.txt' % test), 'w')
-        if test == 'test_ME':
-            file.write(content)
-        elif test == 'test_MC':
+        if test == 'test_MC':
             shower = self.run_card['parton_shower']
             MC_header = "%s\n " % shower + \
                         "1 \n1 -0.1\n-1 -0.1\n"
             file.write(MC_header + content)
+        else:
+            file.write(content)
         file.close()
 
 
