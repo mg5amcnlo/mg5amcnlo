@@ -38,16 +38,11 @@ from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 
 pjoin = os.path.join
 
-    
-    
-
-
 #===============================================================================
 # TestCmd
 #===============================================================================
 class TestMECmdShell(unittest.TestCase):
     """this treats all the command not related to MG_ME"""
-    
     
     def generate(self, process, model):
         """Create a process"""
@@ -195,4 +190,3 @@ class TestMECmdShell(unittest.TestCase):
         
         result = save_load_object.load_from_file('/tmp/MGPROCESS/HTML/results.pkl')
         return result[run_name]
-

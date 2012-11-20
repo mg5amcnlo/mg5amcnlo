@@ -1,4 +1,4 @@
-FILES = Cards HTML SubProcesses bin lib Source Events index.html README \
+FILES = Cards HTML SubProcesses bin lib Source Events index.html README README.lhapdf \
            TemplateVersion.txt MGMEVersion.txt
   
 amcatnlo.tar.gz: amcatnlo.tar
@@ -6,7 +6,7 @@ amcatnlo.tar.gz: amcatnlo.tar
 	gzip amcatnlo.tar
   
 amcatnlo.tar: 
-	tar cf madevent.tar $(FILES)
+	tar cf amcatnlo.tar $(FILES)
   
 gridpack.tar.gz: gridpack.tar
 	rm -f gridpack.tar.gz
