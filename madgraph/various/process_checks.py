@@ -297,7 +297,7 @@ class MatrixElementEvaluator(object):
         energy = max(energy, sum(mass[:nincoming]) + 200.,
                      sum(mass[nincoming:]) + 200.)
 
-        e2 = energy**2
+        
         m1 = mass[0]
 
         p = []
@@ -325,8 +325,9 @@ class MatrixElementEvaluator(object):
             raise rambo.RAMBOError('Need 1 or 2 incoming particles')
 
         if nfinal == 1:
-            energy = masses[0]
+            energy = masses[1]
 
+	e2 = energy**2
         m2 = mass[1]
 
         mom = math.sqrt((e2**2 - 2*e2*m1**2 + m1**4 - 2*e2*m2**2 - \
