@@ -24,6 +24,7 @@ import pydoc
 import re
 import signal
 import subprocess
+import copy
 import sys
 import shutil
 import StringIO
@@ -2739,6 +2740,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Check that we have something    
         if not myprocdef:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
+
 	# HSS, 13/11/2012
         if args[0]=='gauge' and myprocdef.get('perturbation_couplings') and not self.options['gauge']=='Feynman':
 	# HSS
@@ -2834,19 +2836,22 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             nb_processes += len(gauge_result)
 
         if args[0] in  ['gauge', 'full'] and \
-          len(self._curr_model.get('gauge')) == 2 and \
-          not myprocdef.get('perturbation_couplings'):            
+          len(self._curr_model.get('gauge')) == 2:            
             gauge = str(self.options['gauge'])
+            opt_loop_output = str(self.options['loop_optimized_output'])
+            # In order to be able to switch gauges, we put ourselves in the
+            # default output mode.
+            self.do_set('loop_optimized_output False', log=False)
             line = " ".join(args[1:])
             myprocdef = self.extract_process(line)
-            if gauge == 'unitarity':
+            if gauge == 'unitary':
                 myprocdef_unit = myprocdef
                 self.do_set('gauge Feynman', log=False)
                 myprocdef_feyn = self.extract_process(line)
             else:
                 myprocdef_feyn = myprocdef
                 self.do_set('gauge unitary', log=False)
-                myprocdef_unit = self.extract_process(line)            
+                myprocdef_unit = self.extract_process(line)  
             
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
@@ -2856,6 +2861,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
+            self.do_set('loop_optimized_output %s' % opt_loop_output, log=False)
             
             nb_processes += len(gauge_result_no_brs)            
             
@@ -2910,7 +2916,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._comparisons = comparisons
 
         # We use the reuse tag for an alternative way of skipping the pager.
-        if not reuse and text!='':
+        if len(text.split('\n'))>20 and not reuse and text!='':
             pydoc.pager(text)
             
         # Restore diagram logger
@@ -2919,7 +2925,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
         # Output the result to the interface directly if short enough or if it
         # was anyway not output to the pager
-        if len(text.split('\n'))<=20 or reuse:
+#        if args[0] in  ['timing', 'stability', 'profile']:
+        if (len(text.split('\n'))<=20 or reuse):
             logger.info(text)
         else:
             logger.debug(text)            

@@ -297,7 +297,10 @@ class MatrixElementEvaluator(object):
         energy = max(energy, sum(mass[:nincoming]) + 200.,
                      sum(mass[nincoming:]) + 200.)
 
+<<<<<<< TREE
         
+=======
+>>>>>>> MERGE-SOURCE
         m1 = mass[0]
 
         p = []
@@ -305,7 +308,7 @@ class MatrixElementEvaluator(object):
         masses = rambo.FortranList(nfinal)
         for i in range(nfinal):
             masses[i+1] = mass[nincoming + i]
-        
+
         if nincoming == 1:
 
             # Momenta for the incoming particle
@@ -326,6 +329,11 @@ class MatrixElementEvaluator(object):
 
         if nfinal == 1:
             energy = masses[1]
+<<<<<<< TREE
+=======
+
+        e2 = energy**2
+>>>>>>> MERGE-SOURCE
 
 	e2 = energy**2
         m2 = mass[1]
@@ -711,7 +719,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
     """Class taking care of matrix element evaluation and running timing for 
        loop processes."""
-   
+
     def __init__(self, *args, **kwargs):
         """ Same as the mother for now """
         LoopMatrixElementEvaluator.__init__(self,*args, **kwargs)
@@ -878,7 +886,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         file.write(loop_matrix)
         file.close()
 
-    def setup_process(self, matrix_element, model, export_dir, reusing = False,
+    def setup_process(self, matrix_element, export_dir, reusing = False,
                                                              param_card = None):
         """ Output the matrix_element in argument and perform the initialization
         while providing some details about the output in the dictionary returned. 
@@ -922,13 +930,13 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
     
             start=time.time()
             FortranExporter = exporter_class(self.mg_root, export_dir, options)
-            FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
-            FortranExporter.copy_v4template(modelname=model.get('name'))
+            FortranModel = helas_call_writers.FortranUFOHelasCallWriter(self.full_model)
+            FortranExporter.copy_v4template(modelname=self.full_model.get('name'))
             FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
             wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
             wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
                                                                 for c in l]))
-            FortranExporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
+            FortranExporter.convert_model_to_mg4(self.full_model,wanted_lorentz,wanted_couplings)
             infos['Process_output'] = time.time()-start
             start=time.time()
             FortranExporter.finalize_v4_directory(None,"",False,False,'gfortran')
@@ -972,7 +980,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
         return infos
 
-    def time_matrix_element(self, matrix_element, model, reusing = False,
+    def time_matrix_element(self, matrix_element, reusing = False,
                                                              param_card = None):
         """ Output the matrix_element in argument and give detail information
         about the timing for its output and running"""
@@ -991,7 +999,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             
         export_dir=os.path.join(self.mg_root,temp_dir_prefix+"_%s"%proc_name)
 
-        res_timings = self.setup_process(matrix_element, model,export_dir, \
+        res_timings = self.setup_process(matrix_element,export_dir, \
                                                             reusing, param_card)
         
         if res_timings == None:
@@ -1098,7 +1106,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 # Global helper function run_multiprocs
 #===============================================================================
 
-    def check_matrix_element_stability(self, matrix_element, model, nPoints,
+    def check_matrix_element_stability(self, matrix_element, nPoints,
                               infos = None, reusing = False, param_card = None):
         """ Output the matrix_element in argument, run in for nPoints and return
         a dictionary containing the stability information on each of these points.
@@ -1134,7 +1142,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         proc_name = process.shell_string()[2:]
         export_dir=os.path.join(self.mg_root,temp_dir_prefix+"_%s"%proc_name)
         if not infos:
-            infos = self.setup_process(matrix_element, model,export_dir, \
+            infos = self.setup_process(matrix_element,export_dir, \
                                                             reusing, param_card)
             if not infos:
                 return None
@@ -1589,8 +1597,7 @@ def check_profile(process_definition, param_card = None,cuttools="",
                                                                   reuse,cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
     myProfiler = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
-    timing2 = myProfiler.time_matrix_element(matrix_element, \
-                                                     model, reusing, param_card)
+    timing2 = myProfiler.time_matrix_element(matrix_element, reusing, param_card)
     
     if timing2 == None:
         return None, None
@@ -1599,7 +1606,7 @@ def check_profile(process_definition, param_card = None,cuttools="",
     timing = dict(timing1.items()+timing2.items())
 
     stability = myProfiler.check_matrix_element_stability(matrix_element, 
-     model,nPoints=nPoints, infos=timing, reusing=reusing,param_card=param_card)
+           nPoints=nPoints, infos=timing, reusing=reusing,param_card=param_card)
     if stability == None:
         return None, None
     else:
@@ -1618,10 +1625,10 @@ def check_stability(process_definition, param_card = None,cuttools="",
     timing, matrix_element = generate_loop_matrix_element(process_definition,
                                                                  reuse, cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
-    myStabilityChecker = LoopMatrixElementTimer(cuttools_dir=cuttools, model=model, 
-                                                                        cmd=cmd)
+    myStabilityChecker = LoopMatrixElementTimer(cuttools_dir=cuttools,
+                                                            model=model,cmd=cmd)
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
-                    model,nPoints=nPoints,reusing=reusing,param_card=param_card)
+                          nPoints=nPoints,reusing=reusing,param_card=param_card)
     
     if stability == None:
         return None
@@ -1641,7 +1648,7 @@ def check_timing(process_definition, param_card= None, cuttools="",
                                                                  reuse, cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
     myTimer = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
-    timing2 = myTimer.time_matrix_element(matrix_element, model, reusing, \
+    timing2 = myTimer.time_matrix_element(matrix_element, reusing, \
                                                                      param_card)
     
     if timing2 == None:
@@ -2266,7 +2273,7 @@ def output_comparisons(comparison_results):
 
     pert_coupl = comparison_results[0]['process']['perturbation_couplings']
     if pert_coupl:
-        process_header = "Process ["+" ".join(pert_coupl)+"]"
+        process_header = "Process [virt="+" ".join(pert_coupl)+"]"
     else:
         process_header = "Process"
 
@@ -2274,6 +2281,7 @@ def output_comparisons(comparison_results):
 	# HSS,13/11/2012
         proc_col_size = len(process_header) + 1
 	# HSS
+
     for proc in comparison_results:
         if len(proc['process'].base_string()) + 1 > proc_col_size:
             proc_col_size = len(proc['process'].base_string()) + 1
@@ -2348,7 +2356,7 @@ def check_gauge(processes, param_card = None,cuttools="", cmd = FakeInterface())
     For one of the massless external bosons (e.g. gluon or photon), 
     replace the polarization vector (epsilon_mu) with its momentum (p_mu)
     """
-
+    
     mg_root = cmd._mgme_dir
     cmass_scheme = cmd.options['complex_mass_scheme']
     if isinstance(processes, base_objects.ProcessDefinition):
@@ -2356,8 +2364,7 @@ def check_gauge(processes, param_card = None,cuttools="", cmd = FakeInterface())
         # Extract IS and FS ids
         multiprocess = processes
 
-        model = multiprocess.get('model')
-        
+        model = multiprocess.get('model')        
         # Initialize matrix element evaluation
         if multiprocess.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model, param_card,cmd= cmd,
@@ -2507,14 +2514,20 @@ def output_gauge(comparison_results, output='text'):
         threshold=1e-10
         
     if pert_coupl:
-        process_header = "Process ["+" ".join(pert_coupl)+"]"
+        process_header = "Process [virt="+" ".join(pert_coupl)+"]"
     else:
         process_header = "Process"
 
     if len(process_header) + 1 > proc_col_size:
+<<<<<<< TREE
 	# HSS, 13/11/2012
+=======
+>>>>>>> MERGE-SOURCE
         proc_col_size = len(process_header) + 1
+<<<<<<< TREE
 	# HSS
+=======
+>>>>>>> MERGE-SOURCE
 
     for one_comp in comparison_results:
         proc = one_comp['process'].base_string()
@@ -2757,6 +2770,8 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
     """Check gauge invariance of the processes by flipping
        the gauge of the model
     """
+    global loop_optimized_output
+    loop_optimized_bu = loop_optimized_output
     mg_root = cmd._mgme_dir
     cmass_scheme = cmd.options['complex_mass_scheme']
     if isinstance(processes_unit, base_objects.ProcessDefinition):
@@ -2765,8 +2780,10 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         multiprocess_unit = processes_unit
         results = []
         model = multiprocess_unit.get('model')
-        
+
         # Initialize matrix element evaluation
+        # For the unitary gauge, open loops should not be used
+        loop_optimized_output = False
         aloha.unitary_gauge = True
         if processes_unit.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model, param_card,
@@ -2775,11 +2792,9 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
             evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,
                                            cmd=cmd, model=model,
                                            param_card=param_card,
-                                           auth_skipping = False, reuse = True)
+                                           auth_skipping = False, reuse = False)
 
-                
         if not cmass_scheme:
-            # Set all widths to zero for gauge check
             logger.info('Set All width to zero for non complex mass scheme checks')
             for particle in evaluator.full_model.get('particles'):
                 if particle.get('width') != 'ZERO':
@@ -2788,9 +2803,11 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         output_u = run_multiprocs_no_crossings(get_value,
                                            multiprocess_unit,
                                            evaluator)
-        
         clean_added_globals(ADDED_GLOBAL)
-        
+       # Clear up previous run if checking loop outptu
+        if processes_unit.get('perturbation_couplings')!=[]:
+            clean_up(mg_root)
+
         momentum = {}
         for data in output_u:
             momentum[data['process']] = data['p']
@@ -2800,6 +2817,9 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         
         # Initialize matrix element evaluation
         aloha.unitary_gauge = False
+        # We could use the default output as well for Feynman, but it provides
+        # an additional check
+        loop_optimized_output = True
         if processes_feynm.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model, param_card,
                                        cmd= cmd, auth_skipping = False, reuse = False)
@@ -2818,9 +2838,9 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
 
         output_f = run_multiprocs_no_crossings(get_value,
                                            multiprocess_feynm,
-                                           evaluator, momentum)  
+                                           evaluator, momentum)
         
-        output = []
+        output = [processes_unit]
         for data in output_f:
             local_dico = {}
             local_dico['process'] = data['process']
@@ -2832,6 +2852,9 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         if processes_feynm.get('perturbation_couplings')!=[]:
             # Clean temporary folders created for the running of the loop processes
             clean_up(mg_root)        
+
+        # Reset the original global variable loop_optimized_output.
+        loop_optimized_output = loop_optimized_bu
 
         return output
 #    elif isinstance(processes, base_objects.Process):
@@ -2877,14 +2900,13 @@ def get_value(process, evaluator, p=None):
         p, w_rambo = evaluator.get_momenta(process)
         
     # Generate the HelasMatrixElement for the process
-    # Generate the HelasMatrixElement for the process
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
         matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = True)
     else:
         matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude, 
-                                                              gen_color = False)    
-      
+                     gen_color = True, optimized_output = loop_optimized_output)
+
     mvalue = evaluator.evaluate_matrix_element(matrix_element, p=p,
                                                                   output='jamp')
     
@@ -2938,14 +2960,20 @@ def output_lorentz_inv(comparison_results, output='text'):
     else:
         threshold=1e-10
     if pert_coupl:
-        process_header = "Process ["+" ".join(pert_coupl)+"]"
+        process_header = "Process [virt="+" ".join(pert_coupl)+"]"
     else:
         process_header = "Process"
 
     if len(process_header) + 1 > proc_col_size:
+<<<<<<< TREE
 	# HSS,13/11/2012
+=======
+>>>>>>> MERGE-SOURCE
         proc_col_size = len(process_header) + 1
+<<<<<<< TREE
 	# HSS
+=======
+>>>>>>> MERGE-SOURCE
     
     for proc, values in comparison_results:
         if len(proc) + 1 > proc_col_size:
@@ -3052,12 +3080,24 @@ def output_unitary_feynman(comparison_results, output='text'):
     """
     
     proc_col_size = 17
+    
+    # We use the first element of the comparison_result list to store the
+    # process definition object
+    pert_coupl = comparison_results[0]['perturbation_couplings']
+    comparison_results = comparison_results[1:]
+    
+    if pert_coupl:
+        process_header = "Process [virt="+" ".join(pert_coupl)+"]"
+    else:
+        process_header = "Process"
+    
+    if len(process_header) + 1 > proc_col_size:
+        proc_col_size = len(process_header) + 1
+    
     for data in comparison_results:
         proc = data['process']
         if len(proc) + 1 > proc_col_size:
             proc_col_size = len(proc) + 1
-
-    col_size = 17
 
     pass_proc = 0
     fail_proc = 0
@@ -3066,7 +3106,9 @@ def output_unitary_feynman(comparison_results, output='text'):
     failed_proc_list = []
     no_check_proc_list = []
 
-    res_str = fixed_string_length("Process", proc_col_size) + \
+    col_size = 18
+
+    res_str = fixed_string_length(process_header, proc_col_size) + \
               fixed_string_length("Unitary", col_size) + \
               fixed_string_length("Feynman", col_size) + \
               fixed_string_length("Relative diff.", col_size) + \
@@ -3105,35 +3147,38 @@ def output_unitary_feynman(comparison_results, output='text'):
 
         #check all the JAMP
         # loop over jamp
-        for k in range(len(data[0]['jamp'][0])):
-            sum = [0, 0]
-            # loop over helicity
-            for j in range(len(data[0]['jamp'])):
-                #values for the different lorentz boost
-                values = [abs(data[i]['jamp'][j][k])**2 for i in range(len(data))]
-                sum = [sum[i] + values[i] for i in range(len(values))]
-
-            # Compare the different lorentz boost  
-            min_val = min(sum)
-            max_val = max(sum)
-            if not max_val:
-                continue
-            diff = (max_val - min_val) / max_val 
-        
-            tmp_str = '\n' + fixed_string_length('   JAMP %s'%k , proc_col_size) + \
-                       fixed_string_length("%1.10e" % sum[0], col_size) + \
-                       fixed_string_length("%1.10e" % sum[1], col_size) + \
-                       fixed_string_length("%1.10e" % diff, col_size)
-                   
-            if diff > 1e-10:
-                if not len(failed_proc_list) or failed_proc_list[-1] != proc:
-                    fail_proc += 1
-                    pass_proc -= 1
-                    failed_proc_list.append(proc)
-                res_str += tmp_str + "Failed"
-            elif not proc_succeed:
-                 res_str += tmp_str + "Passed" 
+        # This is not available for loop processes where the jamp list returned
+        # is empty.
+        if len(data[0]['jamp'])>0:
+            for k in range(len(data[0]['jamp'][0])):
+                sum = [0, 0]
+                # loop over helicity
+                for j in range(len(data[0]['jamp'])):
+                    #values for the different lorentz boost
+                    values = [abs(data[i]['jamp'][j][k])**2 for i in range(len(data))]
+                    sum = [sum[i] + values[i] for i in range(len(values))]
+    
+                # Compare the different lorentz boost  
+                min_val = min(sum)
+                max_val = max(sum)
+                if not max_val:
+                    continue
+                diff = (max_val - min_val) / max_val 
             
+                tmp_str = '\n' + fixed_string_length('   JAMP %s'%k , col_size) + \
+                           fixed_string_length("%1.10e" % sum[0], col_size) + \
+                           fixed_string_length("%1.10e" % sum[1], col_size) + \
+                           fixed_string_length("%1.10e" % diff, col_size)
+                       
+                if diff > 1e-10:
+                    if not len(failed_proc_list) or failed_proc_list[-1] != proc:
+                        fail_proc += 1
+                        pass_proc -= 1
+                        failed_proc_list.append(proc)
+                    res_str += tmp_str + "Failed"
+                elif not proc_succeed:
+                     res_str += tmp_str + "Passed" 
+                
             
         
     res_str += "\nSummary: %i/%i passed, %i/%i failed" % \
@@ -3146,7 +3191,6 @@ def output_unitary_feynman(comparison_results, output='text'):
         res_str += "\nNot checked processes: %s" % ', '.join(no_check_proc_list)
     
     
-    print res_str
     if output == 'text':
         return res_str        
     else: 
