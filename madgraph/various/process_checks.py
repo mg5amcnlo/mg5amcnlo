@@ -142,7 +142,6 @@ class MatrixElementEvaluator(object):
         """
         if full_model:
             self.full_model = full_model
-
         process = matrix_element.get('processes')[0]
         model = process.get('model')
 
@@ -159,7 +158,6 @@ class MatrixElementEvaluator(object):
             else:
                 m2 = matrix.smatrix(p, self.full_model)
             return {'m2': m2, output:getattr(matrix, output)}
-
         if (auth_skipping or self.auth_skipping) and matrix_element in \
                self.stored_quantities['matrix_elements']:
             # Exactly the same matrix element has been tested
@@ -228,7 +226,6 @@ class MatrixElementEvaluator(object):
             aloha_routines.append(
                      open(aloha_model.locate_external(routine, 'Python')).read())
 
-
         # Define the routines to be available globally
         previous_globals = list(globals().keys())
         for routine in aloha_routines:
@@ -239,10 +236,10 @@ class MatrixElementEvaluator(object):
 
         # Add the defined Aloha routines to used_lorentz
         self.store_aloha.extend(me_used_lorentz)
-
         # Export the matrix element to Python calls
         exporter = export_python.ProcessExporterPython(matrix_element,
                                                        self.helas_writer)
+
         try:
             matrix_methods = exporter.get_python_matrix_methods(\
                 gauge_check=gauge_check)
@@ -250,15 +247,14 @@ class MatrixElementEvaluator(object):
         except helas_call_writers.HelasWriterError, error:
             logger.info(error)
             return None
-
+	#open(os.path.join('/afs/cern.ch/work/h/hshao/aMCatNLO_EW','test02.txt'),'w').write(matrix_methods[process.shell_string()])
         if self.reuse:
             # Define the routines (globally)
-            exec(matrix_methods[process.shell_string()], globals())
+            exec(matrix_methods[process.shell_string()], globals())	    
             ADDED_GLOBAL.append('Matrix_%s'  % process.shell_string())
         else:
             # Define the routines (locally is enough)
             exec(matrix_methods[process.shell_string()])
-
         # Generate phase space point to use
         if not p:
             p, w_rambo = self.get_momenta(process)
@@ -1393,8 +1389,7 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
     a multiprocess, without having to first create a process list
     (which makes a big difference for very large multiprocesses.
     stored_quantities is a dictionary for any quantities that we want
-    to reuse between runs."""
-                   
+    to reuse between runs."""               
     model = multiprocess.get('model')
     isids = [leg.get('ids') for leg in multiprocess.get('legs') \
               if not leg.get('state')]
@@ -1405,7 +1400,6 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
     for id in set(tuple(sum(isids+fsids, []))):
         id_anti_id_dict[id] = model.get_particle(id).get_anti_pdg_code()
         id_anti_id_dict[model.get_particle(id).get_anti_pdg_code()] = id        
-
     sorted_ids = []
     results = []
     for is_prod in apply(itertools.product, isids):
@@ -1415,7 +1409,6 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
             if check_already_checked(is_prod, fs_prod, sorted_ids,
                                      multiprocess, model, id_anti_id_dict):
                 continue
-
             # Generate process based on the selected ids
             process = base_objects.Process({\
                 'legs': base_objects.LegList(\
@@ -1438,6 +1431,7 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
                               multiprocess.get('is_decay_chain'),
                 'overall_orders': \
                               multiprocess.get('overall_orders')})
+
             if opt is not None:
                 if isinstance(opt, dict):
                     try:
@@ -1449,10 +1443,10 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
                     result = function(process, stored_quantities, opt)
             else:
                 result = function(process, stored_quantities)
-                        
+            
             if result:
                 results.append(result)
-                
+            
     return results
 
 #===============================================================================
@@ -2422,7 +2416,6 @@ def check_gauge_process(process, evaluator):
         if part.get('spin') == 3 and part.get('mass').lower() == 'zero':
             found_gauge = True
             break
-
     if not found_gauge:
         # This process can't be checked
         return None
@@ -2448,13 +2441,11 @@ def check_gauge_process(process, evaluator):
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
         return None    
-    
     if not amplitude.get('diagrams'):
         # This process has no diagrams; go to next process
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
         return None
-
     # Generate the HelasMatrixElement for the process
     if not isinstance(amplitude,loop_diagram_generation.LoopAmplitude):
         matrix_element = helas_objects.HelasMatrixElement(amplitude,
@@ -2462,17 +2453,17 @@ def check_gauge_process(process, evaluator):
     else:
         matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                                          optimized_output=loop_optimized_output)
-        
+    
     brsvalue = evaluator.evaluate_matrix_element(matrix_element, gauge_check = True,
                                                  output='jamp')
 
     if not isinstance(amplitude,loop_diagram_generation.LoopAmplitude):
         matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = False)
-          
+     
     mvalue = evaluator.evaluate_matrix_element(matrix_element, gauge_check = False,
                                                output='jamp')
-    
+
     if mvalue and mvalue['m2']:
         return {'process':process,'value':mvalue,'brs':brsvalue}
 
@@ -2598,9 +2589,7 @@ def check_lorentz(processes, param_card = None,cuttools="", cmd = FakeInterface(
         # Generate a list of unique processes
         # Extract IS and FS ids
         multiprocess = processes
-
         model = multiprocess.get('model')
-        
         # Initialize matrix element evaluation
         if multiprocess.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model,
@@ -2618,14 +2607,14 @@ def check_lorentz(processes, param_card = None,cuttools="", cmd = FakeInterface(
                 if particle.get('width') != 'ZERO':
                     evaluator.full_model.get('parameter_dict')[\
                                                      particle.get('width')] = 0.
+
         results = run_multiprocs_no_crossings(check_lorentz_process,
                                            multiprocess,
                                            evaluator)
-        
+
         if multiprocess.get('perturbation_couplings')!=[]:
             # Clean temporary folders created for the running of the loop processes
             clean_up(mg_root)
-        
         return results
         
     elif isinstance(processes, base_objects.Process):
@@ -2710,7 +2699,6 @@ def check_lorentz_process(process, evaluator):
 
     # Generate phase space point to use
     p, w_rambo = evaluator.get_momenta(process)
-
     # Generate the HelasMatrixElement for the process
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
         matrix_element = helas_objects.HelasMatrixElement(amplitude,
@@ -2721,7 +2709,6 @@ def check_lorentz_process(process, evaluator):
 
     data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
                                              auth_skipping = True)
-
     if data and data['m2']:
         results = [data]
     else:
@@ -2732,8 +2719,7 @@ def check_lorentz_process(process, evaluator):
         results.append(evaluator.evaluate_matrix_element(matrix_element,
                                                          p=boost_p,
                                                          output='jamp'))
-        
-        
+            
     return {'process': process, 'results': results}
 
 

@@ -666,7 +666,6 @@ class LoopAmplitude(diagram_generation.Amplitude):
         logger.info("Contributing diagrams generated: "+\
                      "%d born, %d loop, %d R2, %d UV"%\
                      (len(self['born_diagrams']),nLoopDiag,nCT['R2'],nCT['UV']))
-
         ldg_debug_info("#Diags after filtering",len(self['loop_diagrams']))
         ldg_debug_info("# of different structures identified",\
                                               len(self['structure_repository']))
