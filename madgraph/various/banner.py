@@ -17,7 +17,6 @@
 import sys
 import re
 import os
-from cStringIO import StringIO
 
 pjoin = os.path.join
 
@@ -75,9 +74,12 @@ class Banner(dict):
     def read_banner(self, input_path):
         """read a banner"""
 
+        if isinstance(input_path, str):
+            input_path = open(input_path)
+
         text = ''
         store = False
-        for line in open(input_path):
+        for line in input_path:
             if self.pat_begin.search(line):
                 tag = self.pat_begin.search(line).group('name').lower()
                 if tag in self.tag_to_file:
@@ -194,31 +196,66 @@ class Banner(dict):
     def charge_card(self, tag):
         """Build the python object associated to the card"""
         
-        assert tag in ['param_card', 'run_card']
-        
         if tag == 'param_card':
+            tag = 'slha'
+        elif tag == 'run_card':
+            tag = 'mgruncard' 
+        elif tag == 'proc_card':
+            tag = 'mg5proccard' 
+        
+        assert tag in ['sha', 'mgruncard', 'mg5proccard']
+        
+        if tag == 'slha':
             param_card = self[tag].split('\n')
             self.param_card = param_card_reader.ParamCard(param_card)
-        elif tag == 'run_card':
+            return self.param_card
+        elif tag == 'mgruncard':
             run_card = self[tag].split('\n') 
             self.run_card = RunCard(run_card)
-    
+            return self.run_card
+        elif tag == 'mg5proccard':
+            proc_card = self[tag].split('\n')
+            self.proc_card = ProcCard(proc_card)
+            return self.proc_card
+        
     def get_detail(self, tag, *arg):
         """return a specific """
+                
+        if tag == 'param_card':
+            tag = 'slha'
+            attr_tag = 'param_card'
+        elif tag == 'run_card':
+            tag = 'mgruncard' 
+            attr_tag = 'run_card'
+        elif tag == 'proc_card':
+            tag = 'mg5proccard' 
+            attr_tag = 'proc_card'
+        elif tag == 'model':
+            tag = 'mg5proccard' 
+            attr_tag = 'proc_card'
+            arg = ('model',)
+        elif tag == 'generate':
+            tag = 'mg5proccard' 
+            attr_tag = 'proc_card'
+            arg = ('generate',)
+        assert tag in ['slha', 'mgruncard', 'mg5proccard'], 'not recognized'
         
-        assert tag in ['param_card', 'run_card']
-        
-        if not hasattr(self, tag):
-            self.charge_card(tag) 
+        if not hasattr(self, attr_tag):
+            self.charge_card(attr_tag) 
             
-        card = getattr(self, tag)
+        card = getattr(self, attr_tag)
         if len(arg) == 1:
+            if tag == 'mg5proccard':
+                return card.info[arg[0]]
             return card[arg]
-        elif len(arg) == 2:
-            assert tag == 'param_card'
+        elif len(arg) == 2 and tag == 'slha':
             return card[arg[0]].get(arg[1])
+        else:
+            raise Exception, "Unknow command"
+    
+    #convenient alias
+    get = get_detail
         
-               
 def split_banner(banner_path, me_dir, proc_card=True):
     """a simple way to split a banner"""
     
@@ -596,10 +633,11 @@ class ProcCard(list):
     def __init__(self, init=None):
         """ initialize a basic proc_card"""
         self.model = None
+        self.info = {'model': 'sm', 'generate':None}
         list.__init__(self)
         if init:
             self.read(init)
-            
+
             
     def read(self, init):
         """read the proc_card and save the information"""
@@ -626,19 +664,21 @@ class ProcCard(list):
             # Remove previous outputs from history
             self.clean(allow_for_removal = ['output'], keep_switch=True,
                            remove_bef_last='output')
-            # Remove previous outputs from history Ml version
-            #self.clean(to_remove=['display','open','history','launch','output'],
-            #                   remove_bef_last='generate')
         elif cmd == 'generate':
             # Remove previous generations from history
             self.clean(remove_bef_last='generate', keep_switch=True,
                      allow_for_removal= ['generate', 'add process', 'output'])
+            self.info['generate'] = ' '.join(cmds[1:])
         elif cmd == 'import':
             if len(cmds) < 2:
                 return
-            if cmds[1] == 'model':
+            if cmds[1].startswith('model'):
                 self.clean(remove_bef_last='import', keep_switch=True,
                         allow_for_removal=['generate', 'add process', 'output'])
+                if cmds[1] == 'model':
+                    self.info['model'] = cmds[2]
+                else:
+                    self.info['model'] = None # not UFO model
             elif cmds[1] == 'proc_v4':
                 #full cleaning
                 self[:] = []
@@ -707,6 +747,13 @@ class ProcCard(list):
             # update the counter to pass to the next element
             nline -= 1
         
+        def __getattr__(self, tag):
+            if isinstance(tag, int):
+                list.__getattr__(self, tag)
+            else:
+                return self.info[tag]
+                
+            
         
     
             

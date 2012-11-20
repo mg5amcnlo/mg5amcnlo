@@ -358,47 +358,7 @@ class Banner:
                 if pid not in pid2label.keys(): del self.param[item1][pid]
                 
             
-    def format_proc_line(self,procline):
-        
-# remove the tag "[*]": this tag is used in aMC@LNO , 
-# but it is not a valid syntax for mg5
-        line=procline
-        pos1=line.find("[")
-        pos2=line.find("]")
-        if pos1>0 and pos2 >pos1:
-            line=line[:pos1]+line[pos2+1:]
-#
-# Extract the options:
-#
-# A. Remove process number (identified by "@")
-        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
-        proc_number_re = proc_number_pattern.match(line)
-        if proc_number_re:
-            line = proc_number_re.group(1) + \
-                         proc_number_re.group(3)
 
-# B. search for the beginning of the option string
-        pos=1000
-# start with order
-        order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
-        order_re = order_pattern.match(line)
-        if (order_re):
-            pos_order=line.find(order_re.group(2))
-            if pos_order>0 and pos_order < pos : pos=pos_order
-
-# then look for slash or dollar
-        slash = line.find("/")
-        if slash > 0 and slash < pos: pos=slash
-        dollar = line.find("$")
-        if dollar > 0 and dollar < pos: pos=dollar
-
-        if pos<1000:
-            proc_option=line[pos:]
-            line=line[:pos]
-        else:
-            proc_option=""
-
-        return line, proc_option
 
 
     def ReadBannerFromFile(self):
@@ -1508,7 +1468,7 @@ class width_estimate:
  		        else:
                             if final[0] not in [ particle['name'] for particle in base_model['particles'] ] \
                                and final[0] not in [ particle['antiname'] for particle in base_model['particles'] ]:
-                               raise Exception, "No particle "+item+ " in the model "+mybanner.proc["model"]
+                               raise Exception, "No particle "+item+ " in the model "+mybanner.get("model")
                             set_B=[final[0]]
                         if final[1] in multiparticles.keys():
                             set_C=[pid2label[pid] for pid in multiparticles[final[1]]]
@@ -2757,14 +2717,14 @@ class decay_all_events:
             shutil.rmtree(pjoin(path_me,"full_me"))
         decay_tools=decay_misc()
 
-        if (mybanner.proc["model"][0:5]=='loop_'):
-            logger.info("The model in the banner is "+mybanner.proc["model"])
-            logger.info("Set the model to "+mybanner.proc["model"][5:]+" since only")
+        if (mybanner.get("model").startswith('loop_')):
+            logger.info("The model in the banner is "+mybanner.get("model"))
+            logger.info("Set the model to "+mybanner.proc("model")[5:]+" since only")
             logger.info("tree-level amplitudes are used for the decay ")
-            mybanner.proc["model"]=mybanner.proc["model"][5:]
+            mybanner.get["model"]=mybanner.get["model"][5:]
 
-        logger.info('model:     '+ mybanner.proc["model"])
-        model_path=mybanner.proc["model"]
+        logger.info('model:     '+ mybanner.get("model"))
+        model_path=mybanner.get("model")
         base_model = import_ufo.import_model(model_path)
 
         # Import model
@@ -2774,7 +2734,7 @@ class decay_all_events:
             logger.warning('The UFO model does not include widths information. Impossible to compute widths automatically')
 
         base_model.pass_particles_name_in_mg_default() 
- 	mgcmd.exec_cmd('import model '+mybanner.proc["model"])
+ 	mgcmd.exec_cmd('import model '+mybanner.get("model"))
 
          
         # process a bit the decay chain strings, so that the code is not confused by the sintax
@@ -2851,7 +2811,7 @@ class decay_all_events:
 	logger.info('First look inside the banner of the event file ')
 	logger.info('and check whether this information is available ')
 
-        calculate_br=width_estimate(resonances,path_me,pid2label_dict,mybanner.proc["model"],base_model)#
+        calculate_br=width_estimate(resonances,path_me,pid2label_dict,mybanner.get("model"),base_model)#
 #       Maybe the branching fractions are already given in the banner:
 	filename=pjoin(path_me,'param_card.dat')
         calculate_br.extract_br_from_card(filename)
@@ -2861,7 +2821,7 @@ class decay_all_events:
 #        now we check that we have all needed pieces of info regarding the branching fraction:
         multiparticles=mgcmd._multiparticles
         branching_per_channel=calculate_br.get_BR_for_each_decay(decay_processes,multiparticles,\
-						mybanner.proc["model"],base_model,pid2label_dict)       
+						mybanner.get("model"),base_model,pid2label_dict)       
 
         # check that we get branching fractions for all resonances to be decayed:
         
@@ -2874,7 +2834,7 @@ class decay_all_events:
             calculate_br.extract_br_for_antiparticle(label2pid_dict,pid2label_dict)    # set the partial widths of antiparticles equal to the one of the CC channel  
     	    calculate_br.print_branching_fractions()
             branching_per_channel=calculate_br.get_BR_for_each_decay(decay_processes,multiparticles,\
-						mybanner.proc["model"],base_model,pid2label_dict)       
+						mybanner.get("model"),base_model,pid2label_dict)       
 
 
         if branching_per_channel==0:
@@ -2975,7 +2935,7 @@ class decay_all_events:
         logger.info(tag_production)
         topologies[tag_production]=\
                decay_tools.generate_fortran_me([extended_prod_process+proc_option],\
-               mybanner.proc["model"], 0,mgcmd,path_me)
+               mybanner.get("model"), 0,mgcmd,path_me)
 
         prod_name=decay_tools.compile_fortran_me_production(path_me)
         production_path[tag_production]=prod_name
@@ -2991,7 +2951,7 @@ class decay_all_events:
              decay_struct[tag_production][tag_decay]=new_decay_struct
 #
              decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
-                                                    mybanner.proc["model"], 1,mgcmd,path_me)
+                                                    mybanner.get("model"), 1,mgcmd,path_me)
 
              decay_name=decay_tools.compile_fortran_me_full(path_me)
              decay_path[tag_production][tag_decay]=decay_name
@@ -3138,7 +3098,7 @@ class decay_all_events:
                     # generate fortran me for production only
                     topologies[tag_production]=\
                         decay_tools.generate_fortran_me([extended_prod_process+proc_option],\
-                            mybanner.proc["model"], 0,mgcmd,path_me)
+                            mybanner.get("model"), 0,mgcmd,path_me)
 
                     prod_name=decay_tools.compile_fortran_me_production(path_me)
                     production_path[tag_production]=prod_name
@@ -3154,7 +3114,7 @@ class decay_all_events:
 #
                     for tag_decay in decay_me_tags:
                         decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
-                                                    mybanner.proc["model"], 1,mgcmd,path_me)
+                                                    mybanner.get("model"), 1,mgcmd,path_me)
 
                         decay_name=decay_tools.compile_fortran_me_full(path_me)
                         decay_path[tag_production][tag_decay]=decay_name
@@ -3370,7 +3330,7 @@ class decay_all_events:
                 # generate fortran me for production only
                 topologies[tag_production]=\
                     decay_tools.generate_fortran_me([extended_prod_process+proc_option],\
-                        mybanner.proc["model"], 0,mgcmd,path_me)
+                        mybanner.get("model"), 0,mgcmd,path_me)
 
                 prod_name=decay_tools.compile_fortran_me_production(path_me)
                 production_path[tag_production]=prod_name
@@ -3386,7 +3346,7 @@ class decay_all_events:
 #
                 for tag_decay in decay_me_tags:
                     decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
-                                                mybanner.proc["model"], 1,mgcmd,path_me)
+                                                mybanner.get("model"), 1,mgcmd,path_me)
 
                     decay_name=decay_tools.compile_fortran_me_full(path_me)
                     decay_path[tag_production][tag_decay]=decay_name
@@ -3619,17 +3579,17 @@ if __name__=="__main__":
     mybanner=Banner(inputfile)
     mybanner.ReadBannerFromFile()
    
-    mybanner.proc["generate"], proc_option=decay_tools.format_proc_line(\
-                                        mybanner.proc["generate"])
-    print "process: "+mybanner.proc["generate"]
-    print "options: "+proc_option
-    print "model: "+mybanner.proc["model"]
+    #mybanner.get("generate"), proc_option=decay_tools.format_proc_line(\
+    #                                    mybanner.get("generate"))
+    #print "process: "+mybanner.get("generate")
+    #print "options: "+proc_option
+    #print "model: "+mybanner.get("model")
 
 
 # Read the final state of the production process:
 #     "_full" means with the complete decay chain syntax 
-#     "_compact" means without the decay chain syntax 
-    final_state_full=mybanner.proc["generate"][mybanner.proc["generate"].find(">")+1:]
+#     "_compact" means without the decay chain syntax
+    final_state_full=mybanner.get("generate")[mybanner.get("generate").find(">")+1:] 
     final_state_compact, prod_branches=decay_tools.get_final_state_compact(final_state_full)
 
     print "branches: "

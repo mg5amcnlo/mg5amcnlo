@@ -67,7 +67,7 @@ try:
     import models.check_param_card as check_param_card    
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT = False
-except Exception, error:
+except ImportError, error:
     if __debug__:
         print error
     # import from madevent directory

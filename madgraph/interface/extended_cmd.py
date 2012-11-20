@@ -721,18 +721,24 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                                             str(error).replace('\n','\n\t'))
         error_text += self.error_debug % {'debug': self.debug_output}
         logger_stderr.critical(error_text)
+        
                 
         # Add options status to the debug file
         try:
             self.do_display('options', debug_file)
         except Exception, error:
             debug_file.write('Fail to write options with error %s' % error)
-        
+
+        debug_file.close()
+        text =  open(self.debug_output).read()
+        misc.sprint(text)        
 
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
             return True 
         return False
+
+
 
     def nice_user_error(self, error, line):
         if self.child:
