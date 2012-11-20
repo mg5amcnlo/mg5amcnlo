@@ -1043,9 +1043,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             # if the option is not none, the path should already exist
             # the folder has been exported before installation of MCatNLO-utilities
             # and they have been installed
-            misc.call(['cp -r %s %s' % \
-                     (pjoin(self.options['MCatNLO-utilities_path'], 'MCatNLO'), self.me_dir)],
-                     shell=True)
+            files.cp(pjoin(self.options['MCatNLO-utilities_path'], 'MCatNLO'), self.me_dir)
             return True
 
         else:
@@ -1087,7 +1085,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             options['only_generation'] = False
 
         os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
-        old_cwd = os.getcwd()
 
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
@@ -1103,72 +1100,69 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.cluster = cluster.MultiCore(self.nb_core, 
                                      temp_dir=self.options['cluster_temp_path'])
         self.update_random_seed()
-        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
         #find and keep track of all the jobs
+        folder_names = {'LO': ['born_G*'], 'NLO': ['viSB_G*', 'novB_G*'],
+                    'aMC@LO': ['GB*'], 'aMC@NLO': ['GV*', 'GF*']}
         job_dict = {}
-        p_dirs = [file for file in os.listdir('.') if file.startswith('P') and os.path.isdir(file)]
+        p_dirs = [file for file in os.listdir(pjoin(self.me_dir, 'SubProcesses')) 
+                    if file.startswith('P') and \
+                    os.path.isdir(pjoin(self.me_dir, 'SubProcesses', file))]
+        #find jobs and clean previous results
+        self.update_status('Cleaning previous results', level=None)
         for dir in p_dirs:
-            os.chdir(pjoin(self.me_dir, 'SubProcesses', dir))
-            job_dict[dir] = [file for file in os.listdir('.') if file.startswith('ajob')] 
+            job_dict[dir] = [file for file in \
+                        os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                        if file.startswith('ajob')] 
+            for obj in folder_names[mode]:
+                to_rm = [file for file in \
+                        os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                        if file.startswith(obj[:-1]) and \
+                    os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file))] 
+                files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_rm])
 
-        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
         if options['reweightonly']:
             nevents = self.run_card['nevents']
             self.reweight_and_collect_events(options, mode, nevents)
-            os.chdir(old_cwd)
             return
 
         devnull = os.open(os.devnull, os.O_RDWR) 
-        if mode == 'LO':
-            logger.info('Doing fixed order LO')
-            self.update_status('Cleaning previous results', level=None)
-            misc.call(['rm -rf P*/born_G*'], shell=True)
+        if mode in ['LO', 'NLO']:
+            logger.info('Doing fixed order %s' % mode)
+            if mode == 'LO':
+                self.update_status('Computing cross-section', level=None)
+                self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
+            elif mode == 'NLO':
+                self.update_status('Setting up grid', level=None)
+                self.run_all(job_dict, [['0', 'grid', '0']], 'Setting up grid')
+                p = misc.Popen(['./combine_results_FO.sh', 'grid*'], \
+                                    stdout=subprocess.PIPE, 
+                                    cwd=pjoin(self.me_dir, 'SubProcesses'))
+                output = p.communicate()
+                self.cross_sect_dict = self.read_results(output, mode)
+                self.print_summary(0, mode)
 
-            self.update_status('Computing cross-section', level=None)
-            self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
-            p = misc.Popen(['./combine_results_FO.sh born_G* '], \
-                                stdout=subprocess.PIPE, shell=True)
+                self.update_status('Computing cross-section', level=None)
+                self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'grid']], \
+                        'Computing cross-section')
+
+            p = misc.Popen(['./combine_results_FO.sh'] + folder_names[mode], \
+                                stdout=subprocess.PIPE, 
+                                cwd=pjoin(self.me_dir, 'SubProcesses'))
             output = p.communicate()
             self.cross_sect_dict = self.read_results(output, mode)
             self.print_summary(1, mode)
-            misc.call(['./combine_plots_FO.sh born_G*'], stdout=devnull, shell=True)
-            misc.call(['cp MADatNLO.top res.txt %s' % \
-                    pjoin(self.me_dir, 'Events', self.run_name)], shell=True)
+            misc.call(['./combine_plots_FO.sh'] + folder_names[mode], \
+                                stdout=devnull, 
+                                cwd=pjoin(self.me_dir, 'SubProcesses'))
+
+            files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.top'),
+                     pjoin(self.me_dir, 'Events', self.run_name))
+            files.cp(pjoin(self.me_dir, 'SubProcesses', 'res.txt'),
+                     pjoin(self.me_dir, 'Events', self.run_name))
             logger.info('The results of this run and the TopDrawer file with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
-            os.chdir(old_cwd)
-            return
-
-        if mode == 'NLO':
-            self.update_status('Doing fixed order NLO', level=None)
-            logger.info('   Cleaning previous results')
-            misc.call(['rm -rf P*/grid_G* P*/novB_G* P*/viSB_G*'], shell=True)
-
-            self.update_status('Setting up grid', level=None)
-            self.run_all(job_dict, [['0', 'grid', '0']], 'Setting up grid')
-            p = misc.Popen(['./combine_results_FO.sh grid*'], \
-                                stdout=subprocess.PIPE, shell=True)
-            output = p.communicate()
-            self.cross_sect_dict = self.read_results(output, mode)
-            self.print_summary(0, mode)
-
-            self.update_status('Computing cross-section', level=None)
-            self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'grid']], \
-                    'Computing cross-section')
-            p = misc.Popen(['./combine_results_FO.sh viSB* novB*'], \
-                                stdout=subprocess.PIPE, shell=True)
-            output = p.communicate()
-            self.cross_sect_dict = self.read_results(output, mode)
-            self.print_summary(1, mode)
-
-            misc.call(['./combine_plots_FO.sh viSB* novB*'], stdout=devnull, shell=True)
-            misc.call(['cp MADatNLO.top res.txt %s' % \
-                    pjoin(self.me_dir, 'Events', self.run_name)], shell=True)
-            logger.info('The results of this run and the TopDrawer file with the plots' + \
-                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
-            os.chdir(old_cwd)
             return
 
         elif mode in ['aMC@NLO', 'aMC@LO']:
@@ -1180,48 +1174,33 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 raise aMCatNLOError('%s is not a valid parton shower. Please use one of the following: %s' \
                     % (shower, ', '.join(shower_list)))
 
-            if mode == 'aMC@NLO':
-                if not options['only_generation']:
-                    logger.info('Doing NLO matched to parton shower')
-                    logger.info('   Cleaning previous results')
-                    misc.call(['rm -rf P*/GF* P*/GV*'], shell=True)
+            if not options['only_generation']:
+                logger.info('Doing %s matched to parton shower' % mode[4:])
 
-                for i, status in enumerate(mcatnlo_status):
-                    if i == 2 or not options['only_generation']:
-                        self.update_status(status, level='parton')
-                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
-                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
-                        self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
+            for i, status in enumerate(mcatnlo_status):
+                if i == 2 or not options['only_generation']:
+                    self.update_status(status, level='parton')
+                if mode == 'aMC@NLO':
+                    self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
+                    self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
+                    self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
 
-                    if (i < 2 and not options['only_generation'])  or i == 1 :
-                        p = misc.Popen(['./combine_results.sh %d %d GF* GV*' % (i, nevents)],
-                                stdout=subprocess.PIPE, shell=True)
-                        output = p.communicate()
-                        misc.call(['cp res_%d_abs.txt res_%d_tot.txt %s' % \
-                           (i, i, pjoin(self.me_dir, 'Events', self.run_name))], shell=True)
-                        self.cross_sect_dict = self.read_results(output, mode)
-                        self.print_summary(i, mode)
+                elif mode == 'aMC@LO':
+                    self.write_madinMMC_file(
+                            pjoin(self.me_dir, 'SubProcesses'), 'born', i) 
+                    self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
 
-            elif mode == 'aMC@LO':
-                if not options['only_generation']:
-                    logger.info('Doing LO matched to parton shower')
-                    logger.info('   Cleaning previous results')
-                    misc.call(['rm -rf P*/GB*'], shell=True)
-                for i, status in enumerate(mcatnlo_status):
-                    if i == 2 or not options['only_generation']:
-                        self.update_status('%s at LO' % status, level='parton')
-                        self.write_madinMMC_file(
-                                pjoin(self.me_dir, 'SubProcesses'), 'born', i) 
-                        self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
+                if (i < 2 and not options['only_generation']) or i == 1 :
+                    p = misc.Popen(['./combine_results.sh'] + [ '%d' % i,'%d' % nevents] + folder_names[mode],
+                            stdout=subprocess.PIPE, cwd = pjoin(self.me_dir, 'SubProcesses'))
+                    output = p.communicate()
+                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d_abs.txt' % i), \
+                             pjoin(self.me_dir, 'Events', self.run_name))
+                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d_tot.txt' % i), \
+                             pjoin(self.me_dir, 'Events', self.run_name))
 
-                    if (i < 2 and not options['only_generation'])  or i == 1 :
-                        p = misc.Popen(['./combine_results.sh %d %d GB*' % (i, nevents)],
-                                stdout=subprocess.PIPE, shell=True)
-                        output = p.communicate()
-                        misc.call(['cp res_%d_abs.txt res_%d_tot.txt %s' % \
-                           (i, i, pjoin(self.me_dir, 'Events', self.run_name))], shell=True)
-                        self.cross_sect_dict = self.read_results(output, mode)
-                        self.print_summary(i, mode)
+                    self.cross_sect_dict = self.read_results(output, mode)
+                    self.print_summary(i, mode)
 
         if self.cluster_mode == 1:
             #if cluster run, wait 15 sec so that event files are transferred back
@@ -1229,9 +1208,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     'Waiting while files are transferred back from the cluster nodes',
                     level='parton')
             time.sleep(10)
-
-        # chancge back to the original pwd
-        os.chdir(old_cwd)
 
         return self.reweight_and_collect_events(options, mode, nevents)
 
@@ -1441,10 +1417,12 @@ Integrated cross-section
             self.run_reweight(options['reweightonly'])
 
         self.update_status('Collecting events', level='parton')
-        misc.call(['make collect_events > %s' % \
-                pjoin(self.me_dir, 'collect_events.log')], shell=True)
-        misc.call(['echo "1" | ./collect_events > %s' % \
-                pjoin(self.me_dir, 'collect_events.log')], shell=True)
+        misc.compile(['collect_events'], 
+                    cwd=pjoin(self.me_dir, 'SubProcesses'))
+        p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
+                stdin=subprocess.PIPE, 
+                stdout=open(pjoin(self.me_dir, 'collect_events.log'), 'w'))
+        p.communicate(input = '1\n')
 
         #get filename from collect events
         filename = open(pjoin(self.me_dir, 'collect_events.log')).read().split()[-1]
@@ -1453,8 +1431,7 @@ Integrated cross-section
             raise aMCatNLOError('An error occurred during event generation. ' + \
                     'The event file has not been created. Check collect_events.log')
         evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
-        misc.call(['mv %s %s' % 
-            (pjoin(self.me_dir, 'SubProcesses', filename), evt_file)], shell=True )
+        files.mv(pjoin(self.me_dir, 'SubProcesses', filename), evt_file)
         misc.call(['gzip %s' % evt_file], shell=True)
         self.print_summary(2, mode)
         logger.info('The %s.gz file has been generated.\n' \
@@ -1473,8 +1450,6 @@ Integrated cross-section
         except Exception:
             pass
         shower = self.evt_file_to_mcatnlo(evt_file)
-        oldcwd = os.getcwd()
-        os.chdir(pjoin(self.me_dir, 'MCatNLO'))
         shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
 
         if 'LD_LIBRARY_PATH' in os.environ.keys():
@@ -1491,10 +1466,11 @@ Integrated cross-section
 
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
         self.update_status('   Compiling MCatNLO for %s...' % shower, level='parton') 
-        misc.call(['./MCatNLO_MadFKS.inputs > %s 2>&1' % mcatnlo_log], \
-                    cwd = os.getcwd(), shell=True)
+        misc.call(['./MCatNLO_MadFKS.inputs'], stdout=open(mcatnlo_log, 'w'),
+                    stderr=open(mcatnlo_log, 'w'), 
+                    cwd=pjoin(self.me_dir, 'MCatNLO'))
         exe = 'MCATNLO_%s_EXE' % shower
-        if not os.path.exists(exe):
+        if not os.path.exists(pjoin(self.me_dir, 'MCatNLO', exe)):
             print open(mcatnlo_log).read()
             raise aMCatNLOError('Compilation failed, check %s for details' % mcatnlo_log)
         logger.info('                     ... done')
@@ -1506,12 +1482,13 @@ Integrated cross-section
         rundir = pjoin(self.me_dir, 'MCatNLO', 'RUN_%s_%d' % \
                         (shower, count))
         os.mkdir(rundir)
-        misc.call(['cp %s %s' % (shower_card_path, rundir)], shell=True)
+        files.cp(shower_card_path, rundir)
 
         self.update_status('Running MCatNLO in %s (this may take some time)...' % rundir,
                 level='parton')
         os.chdir(rundir)
-        misc.call(['mv ../%s ../MCATNLO_%s_input .' % (exe, shower)], shell=True)
+        files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
+        files.mv(pjoin(self.me_dir, 'MCatNLO', 'MCATNLO_%s_input' % shower), rundir)
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
@@ -1521,9 +1498,8 @@ Integrated cross-section
                 raise aMCatNLOError('The Herwig++ path set in the shower_card is not valid.')
 
             if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so')):
-                misc.call(['cp %s %s' % \
-                    (pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)], 
-                                                                                     shell=True)
+                files.cp(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)
+
         evt_name = os.path.basename(evt_file)
         misc.call(['ln -s %s %s' % (os.path.split(evt_file)[0], self.run_name)], shell=True)
         misc.call(['./%s < MCATNLO_%s_input > amcatnlo_run.log 2>&1' % \
@@ -1587,20 +1563,18 @@ Integrated cross-section
 
                     plotfiles.append(plotfile)
 
-                files = 'files'
+                ffiles = 'files'
                 have = 'have'
                 if len(plotfiles) == 1:
-                    files = 'file'
+                    ffiles = 'file'
                     have = 'has'
 
                 misc.call(['gzip %s' % evt_file], shell=True)
                 logger.info(('The %s %s %s been generated, with histograms in the' + \
                         ' TopDrawer format, obtained by showering the parton-level' + \
-                        ' file %s.gz with %s') % (files, ', '.join(plotfiles), have, \
+                        ' file %s.gz with %s') % (ffiles, ', '.join(plotfiles), have, \
                         evt_file, shower))
 
-
-        os.chdir(oldcwd)
 
 
     ############################################################################
@@ -1693,8 +1667,6 @@ Integrated cross-section
                 if tagRun.pythia:
                     return tagRun['tag']
             
-            
-
 
     def evt_file_to_mcatnlo(self, evt_file):
         """creates the mcatnlo input script using the values set in the header of the event_file.
@@ -1750,7 +1722,7 @@ Integrated cross-section
         # if only doing reweight, copy back the nevents_unweighted file
         if only:
             if os.path.exists(nev_unw + '.orig'):
-                misc.call(['cp %s %s' % (nev_unw + '.orig', nev_unw)], shell=True)
+                files.cp(nev_unw + '.orig', nev_unw)
             else:
                 raise aMCatNLOError('Cannot find event file information')
 
@@ -1759,24 +1731,23 @@ Integrated cross-section
         lines = file.read().split('\n')
         file.close()
         # make copy of the original nevent_unweighted file
-        misc.call(['cp %s %s' % (nev_unw, nev_unw + '.orig')], shell=True)
+        files.cp(nev_unw, nev_unw + '.orig')
         # loop over lines (all but the last one whith is empty) and check that the
         #  number of events is not 0
         evt_files = [line.split()[0] for line in lines[:-1] if line.split()[1] != '0']
         #prepare the job_dict
         job_dict = {}
+        if self.cluster_mode == 1:
+            exe = 'reweight_xsec_events.cluster'
+        else:
+            exe = 'reweight_xsec_events.local'
         for i, evt_file in enumerate(evt_files):
             path, evt = os.path.split(evt_file)
-            os.chdir(pjoin(self.me_dir, 'SubProcesses', path))
-            if self.cluster_mode == 0 or self.cluster_mode == 2:
-                exe = 'reweight_xsec_events.local'
-            elif self.cluster_mode == 1:
-                exe = 'reweight_xsec_events.cluster'
-            misc.call(['ln -sf ../../%s .' % exe], shell=True)
+            files.ln(pjoin(self.me_dir, 'SubProcesses', exe), \
+                     pjoin(self.me_dir, 'SubProcesses', path))
             job_dict[path] = [exe]
 
         self.run_all(job_dict, [[evt, '1']], 'Running reweight')
-        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
 
         #check that the new event files are complete
         for evt_file in evt_files:
