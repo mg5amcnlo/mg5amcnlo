@@ -1,9 +1,29 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+2.0.0.beta2(xx/xx/12) MG5 Team: Include 1.5.4 modification
+
 2.0.0.beta1(31/10/12) aMCatNLO Team: First public (beta) version of aMCatNLO.
                         In order to learn aMCatNLO, please do "tutorial aMCatNLO"
                         Please also visit: http://amcatnlo.cern.ch/list.htm for more
                         information.
+
+
+
+1.5.4 (11/11/12)  JA: Fixed bug in combine_runs.py (introduced in v. 1.5.0) for
+                      processes with 5 final-state particles, which prevented
+                      matching to Pythia to work properly (thanks Priscila).
+                  OM: Fix Bug #1076043, error in kinematics for e- p collisions,
+ 		      thanks to Uta Klein (introduced in 1.5.0).
+                  JA: Fix Bug #1075525, combination of decay processes for 
+                      particle and antiparticle (e.g. w+ > all all and 
+                      w- > all all), thanks Pierre.
+                  OM: Fix a compilation crash due to aloha (thanks Tim T)
+                  JA: Fixed dynamical scale settings for e- p collisions.
+                  JA: Fixed running LHAPDF on a cluster with cluster_temp_path.
+                  JA: Ensure that the seed is stored in the banner even when Pythia
+                      is run (this was broken in v. 1.5.0).
+                  JA: Improved and clarified phase space presetting for processes
+                      with competing BWs.
 
 1.5.3 (01/11/12)  OM: Fix a crash in the gridpack mode (Thanks Baris Altunkaynak)
                   OM: Fix a crash occuring on cluster with no central disk (only

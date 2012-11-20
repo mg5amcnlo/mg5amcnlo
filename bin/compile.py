@@ -26,11 +26,12 @@ from madgraph import MG5DIR
 import madgraph.iolibs.import_v4 as import_v4
 import models.import_ufo as import_ufo
 import aloha.create_aloha as create_aloha
-
+import madgraph.iolibs.files as files
 
 # Set logging level to error
 logging.basicConfig(level=vars(logging)['INFO'],
                     format="%(message)s")
+pjoin = os.path.join
 
 class Compile_MG5:
     
@@ -38,6 +39,10 @@ class Compile_MG5:
         """ launch all the compilation """
         self.make_UFO_pkl()
         self.make_v4_pkl()
+        
+        #important for UCL cluster
+        files.cp(pjoin(MG5DIR,'input','.mg5_configuration_default.txt'),
+                 pjoin(MG5DIR,'input','mg5_configuration.txt'))
         
     @staticmethod
     def make_v4_pkl():

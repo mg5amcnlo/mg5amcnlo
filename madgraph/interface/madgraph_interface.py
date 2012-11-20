@@ -4919,8 +4919,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             # copy the MCatNLO directory from mcatnlo-utils inside the exported dir
             if os.path.isdir(pjoin(MG5DIR, 'MCatNLO-utilities')):
-                os.system('cp -r %s %s' % \
-                        (pjoin(MG5DIR, 'MCatNLO-utilities', 'MCatNLO'), self._export_dir))
+                files.cp(pjoin(MG5DIR, 'MCatNLO-utilities', 'MCatNLO'), self._export_dir)
             else:
                 logger.warning('MCatNLO-utilities is not installed.')
                 logger.warning('If you want to shower events ' + \
@@ -4969,8 +4968,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             else: 
                 last_action_2 = 'none'
 
-class MadGraphCmdWeb(CheckValidForCmdWeb,MadGraphCmd):
-    """Temporary parser"""               
+class MadGraphCmdWeb(CheckValidForCmdWeb, MadGraphCmd):
+    """Temporary parser"""
+                
 #===============================================================================
 # Command Parser
 #=============================================================================== 
