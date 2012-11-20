@@ -807,7 +807,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.ask_run_configuration('', options)
         if self.check_mcatnlo_dir():
             self.run_mcatnlo(evt_file)
-        os.chdir(root_path)
 
     ################################################################################
     def do_plot(self, line):
@@ -944,7 +943,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
         self.run(mode, options)
-        os.chdir(root_path)
 
         
     ############################################################################      
@@ -974,7 +972,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         evt_file = self.run(mode, options)
         if self.check_mcatnlo_dir() and not options['parton']:
             self.run_mcatnlo(evt_file)
-        os.chdir(root_path)
 
     ############################################################################
     def do_treatcards(self, line, amcatnlo=True):
@@ -1014,7 +1011,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         evt_file = self.run(mode, options)
         if self.check_mcatnlo_dir() and not options['parton']:
             self.run_mcatnlo(evt_file)
-        os.chdir(root_path)
 
 
     ############################################################################      
@@ -1031,7 +1027,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         mode = {'FO': 'NLO', 'MC': 'aMC@NLO'}[argss[0]]
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
-        os.chdir(root_path)
 
     def check_mcatnlo_dir(self):
         """Check that the MCatNLO dir (with files to run the parton-shower has 
@@ -1486,7 +1481,6 @@ Integrated cross-section
 
         self.update_status('Running MCatNLO in %s (this may take some time)...' % rundir,
                 level='parton')
-        os.chdir(rundir)
         files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
         files.mv(pjoin(self.me_dir, 'MCatNLO', 'MCATNLO_%s_input' % shower), rundir)
         #link the hwpp exe in the rundir
@@ -1501,19 +1495,22 @@ Integrated cross-section
                 files.cp(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)
 
         evt_name = os.path.basename(evt_file)
-        misc.call(['ln -s %s %s' % (os.path.split(evt_file)[0], self.run_name)], shell=True)
-        misc.call(['./%s < MCATNLO_%s_input > amcatnlo_run.log 2>&1' % \
-                    (exe, shower)], cwd = os.getcwd(), shell=True)
+        misc.call(['ln -s %s %s' % (os.path.split(evt_file)[0], 
+            pjoin(rundir,self.run_name))], shell=True)
+        misc.call(['./%s' % exe], cwd = rundir, 
+                stdin=open(pjoin(rundir,'MCATNLO_%s_input' % shower)),
+                stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
+                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
         #copy the showered stdhep file back in events
         if not self.shower_card['analyse']:
-            if os.path.exists(pjoin(self.run_name, evt_name + '.hep')):
+            if os.path.exists(pjoin(rundir, self.run_name, evt_name + '.hep')):
                 hep_file = '%s_%s_0.hep' % (evt_file[:-4], shower)
                 count = 0
                 while os.path.exists(hep_file + '.gz'):
                     count +=1
                     hep_file = '%s_%s_%d.hep' % (evt_file[:-4], shower, count)
 
-                misc.call(['mv %s %s' % (pjoin(self.run_name, evt_name + '.hep'), hep_file)], shell=True) 
+                misc.call(['mv %s %s' % (pjoin(rundir, self.run_name, evt_name + '.hep'), hep_file)], shell=True) 
                 misc.call(['gzip %s' % evt_file], shell=True)
                 misc.call(['gzip %s' % hep_file], shell=True)
 
@@ -1751,7 +1748,8 @@ Integrated cross-section
 
         #check that the new event files are complete
         for evt_file in evt_files:
-            last_line = subprocess.Popen('tail -n1 %s.rwgt ' % evt_file, \
+            last_line = subprocess.Popen('tail -n1 %s.rwgt ' % \
+                    pjoin(self.me_dir, 'SubProcesses', evt_file), \
                 shell = True, stdout = subprocess.PIPE).stdout.read().strip()
             if last_line != "</LesHouchesEvents>":
                 raise aMCatNLOError('An error occurred during reweight. Check the' + \
@@ -1793,7 +1791,6 @@ Integrated cross-section
         if self.cluster_mode == 2:
             time.sleep(1) # security to allow all jobs to be launched
         self.wait_for_complete(run_type)
-        os.chdir(pjoin(self.me_dir, 'SubProcesses'))
 
 
     def run_exe(self, exe, args, run_type, cwd=None):
@@ -2062,7 +2059,7 @@ Integrated cross-section
                 self.write_test_input(test)
                 input = pjoin(self.me_dir, '%s_input.txt' % test)
                 #this can be improved/better written to handle the output
-                misc.Popen(['./%s' % (test)], cwd=this_dir, 
+                misc.call(['./%s' % (test)], cwd=this_dir, 
                         stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
                 #check that none of the tests failed
                 self.check_tests(test, this_dir)
@@ -2093,16 +2090,14 @@ Integrated cross-section
     def check_tests(self, test, dir):
         """just call the correct parser for the test log"""
         if test in ['test_ME', 'test_MC']:
-            return self.parse_test_mx_log(pjoin(self.me_dir, 'SubProcesses', dir, '%s.log' % test)) 
-        elif test == ['check_poles']:
-            return self.parse_ckeck_poles_log(pjoin(self.me_dir, 'SubProcesses', dir, '%s.log' % test)) 
+            return self.parse_test_mx_log(pjoin(dir, '%s.log' % test)) 
+        elif test == 'check_poles':
+            return self.parse_check_poles_log(pjoin(dir, '%s.log' % test)) 
 
 
     def parse_test_mx_log(self, log):
         """read and parse the test_ME/MC.log file"""
-        file = open(log)
-        content = file.read()
-        file.close()
+        content = open(log).read()
         if 'FAILED' in content:
             logger.info('Output of the failing test:\n'+output[0][:-1],'$MG:color:BLACK')
             raise aMCatNLOError('Some tests failed, run cannot continue.\n' + \
@@ -2111,7 +2106,7 @@ Integrated cross-section
         else:
             lines = [l for l in content.split('\n') if 'PASSED' in l]
             logger.info('   Passed.')
-            logger.debug('\n'.join(lines))
+            logger.debug('\n'+'\n'.join(lines))
 
 
     def parse_check_poles_log(self, log):
