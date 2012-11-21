@@ -80,8 +80,51 @@ except ImportError, error:
 
 
 
+
 class aMCatNLOError(Exception):
     pass
+
+
+def compile_dir(arguments):
+    """compile the direcory p_dir
+    arguments is the tuple (me_dir, p_dir, mode, options, tests, exe, run_mode)
+    this function needs not to be a class method in order to use pool to do
+    the compilation on multicore"""
+
+    (me_dir, p_dir, mode, options, tests, exe, run_mode) = arguments
+    logger.info(' Compiling %s...' % p_dir)
+
+    gensym_log = pjoin(me_dir, 'gensym.log')
+    this_dir = pjoin(me_dir, 'SubProcesses', p_dir) 
+    #compile everything
+
+    # compile and run tests
+    for test in tests:
+        misc.compile([test], cwd = this_dir)
+        if not os.path.exists(pjoin(this_dir, test)):
+            raise aMCatNLOError('%s compilation failed' % test)
+        input = pjoin(me_dir, '%s_input.txt' % test)
+        #this can be improved/better written to handle the output
+        misc.call(['./%s' % (test)], cwd=this_dir, 
+                stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
+        
+    if not options['reweightonly']:
+        misc.compile(['gensym'], cwd=this_dir)
+        if not os.path.exists(pjoin(this_dir, 'gensym')):
+            raise aMCatNLOError('gensym compilation failed')
+
+        open(pjoin(this_dir, 'gensym_input.txt'), 'w').write('%s\n' % run_mode)
+        p = misc.Popen(['./gensym'], stdin=open(pjoin(this_dir, 'gensym_input.txt')),
+                 stdout=open(gensym_log, 'w'),cwd= this_dir) 
+        #compile madevent_mintMC/vegas
+        misc.compile([exe], cwd=this_dir)
+        if not os.path.exists(pjoin(this_dir, exe)):
+            raise aMCatNLOError('%s compilation failed' % exe)
+    if mode in ['aMC@NLO', 'aMC@LO'] and not options['noreweight']:
+        misc.compile(['reweight_xsec_events'], cwd=this_dir)
+        if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
+            raise aMCatNLOError('reweight_xsec_events compilation failed')
+    logger.info('    %s done.' % p_dir) 
 
 
 def check_compiler(options, block=False):
@@ -1973,11 +2016,13 @@ Integrated cross-section
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
+
+        from multiprocessing import Pool
+
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
         madloop_log = pjoin(self.me_dir, 'compile_madloop.log')
         reweight_log = pjoin(self.me_dir, 'compile_reweight.log')
-        gensym_log = pjoin(self.me_dir, 'gensym.log')
         test_log = pjoin(self.me_dir, 'test.log')
 
         libdir = pjoin(self.me_dir, 'lib')
@@ -1985,7 +2030,7 @@ Integrated cross-section
 
         #clean files
         misc.call(['rm -f %s' % 
-                ' '.join([amcatnlo_log, madloop_log, reweight_log, gensym_log, test_log])], \
+                ' '.join([amcatnlo_log, madloop_log, reweight_log, test_log])], \
                   cwd=self.me_dir, shell=True)
 
         #define which executable/tests to compile
@@ -2044,48 +2089,27 @@ Integrated cross-section
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)
 
+        for test in tests:
+            self.write_test_input(test)
+
+        mypool = Pool() 
+        mypool.map(compile_dir,
+                ((self.me_dir, p_dir, mode, options, tests, exe, self.options['run_mode']) for p_dir in p_dirs))
+
+        logger.info('Checking test output:')
         for p_dir in p_dirs:
             logger.info(p_dir)
-            this_dir = pjoin(self.me_dir, 'SubProcesses', p_dir) 
-            #compile everything
-
-            # compile and run tests
             for test in tests:
-                logger.info('   Compiling %s...' % test)
-                misc.compile([test], cwd = this_dir)
-                if not os.path.exists(pjoin(this_dir, test)):
-                    raise aMCatNLOError('Compilation failed')
-                logger.info('   Running %s...' % test)
-                self.write_test_input(test)
-                input = pjoin(self.me_dir, '%s_input.txt' % test)
-                #this can be improved/better written to handle the output
-                misc.call(['./%s' % (test)], cwd=this_dir, 
-                        stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
+                logger.info(' Result for %s:' % test)
+
+                this_dir = pjoin(self.me_dir, 'SubProcesses', p_dir) 
                 #check that none of the tests failed
                 self.check_tests(test, this_dir)
-                
-            if not options['reweightonly']:
-                logger.info('   Compiling gensym...')
-                misc.compile(['gensym'], cwd=this_dir)
-                if not os.path.exists(pjoin(this_dir, 'gensym')):
-                    raise aMCatNLOError('Compilation failed')
-
-                logger.info('   Running gensym...')
-                p = misc.Popen(['./gensym'], stdin=subprocess.PIPE, stdout=open(gensym_log, 'w'),\
-                        cwd= this_dir) 
-                p.communicate(input = '%s\n' % self.options['run_mode'])
-                #compile madevent_mintMC/vegas
-                logger.info('   Compiling %s' % exe)
-                misc.compile([exe], cwd=this_dir)
-                if not os.path.exists(pjoin(this_dir, exe)):
-                    raise aMCatNLOError('Compilation failed')
-            if mode in ['aMC@NLO', 'aMC@LO'] and not options['noreweight']:
-                logger.info('   Compiling reweight_xsec_events')
-                misc.compile(['reweight_xsec_events'], cwd=this_dir)
-                if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
-                    raise aMCatNLOError('Compilation failed')
 
         os.unsetenv('madloop')
+
+
+
 
     def check_tests(self, test, dir):
         """just call the correct parser for the test log"""
