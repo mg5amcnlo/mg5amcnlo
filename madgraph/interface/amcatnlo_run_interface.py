@@ -1106,14 +1106,15 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.update_status('Cleaning previous results', level=None)
         for dir in p_dirs:
             job_dict[dir] = [file for file in \
-                        os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
-                        if file.startswith('ajob')] 
-            for obj in folder_names[mode]:
-                to_rm = [file for file in \
-                        os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
-                        if file.startswith(obj[:-1]) and \
-                    os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file))] 
-                files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_rm])
+                                 os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                                 if file.startswith('ajob')] 
+            if not options['only_generation']:
+                for obj in folder_names[mode]:
+                    to_rm = [file for file in \
+                                 os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                                 if file.startswith(obj[:-1]) and \
+                                 os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file))] 
+                    files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_rm])
 
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
@@ -1208,19 +1209,22 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
             if not options['only_generation']:
                 logger.info('Doing %s matched to parton shower' % mode[4:])
+            else:
+                logger.info('Generating events starting from existing results')
 
             for i, status in enumerate(mcatnlo_status):
                 if i == 2 or not options['only_generation']:
                     self.update_status(status, level='parton')
-                if mode == 'aMC@NLO':
-                    self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
-                    self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
-                    self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
 
-                elif mode == 'aMC@LO':
-                    self.write_madinMMC_file(
+                    if mode == 'aMC@NLO':
+                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
+                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
+                        self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
+                        
+                    elif mode == 'aMC@LO':
+                        self.write_madinMMC_file(
                             pjoin(self.me_dir, 'SubProcesses'), 'born', i) 
-                    self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
+                        self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
 
                 if (i < 2 and not options['only_generation']) or i == 1 :
                     p = misc.Popen(['./combine_results.sh'] + [ '%d' % i,'%d' % nevents, '%s' % req_acc ] + folder_names[mode],
