@@ -12,6 +12,7 @@ import os
 
 nexpected=int(sys.argv[1])
 nevents=int(sys.argv[2])
+req_acc=float(sys.argv[3])
 # if nevents is >0 the script will also determine the 
 # number of events required for each process
 
@@ -127,6 +128,10 @@ file.close()
 
 #determine the events for each process:
 if nevents>0:
+    if req_acc<0: 
+        req_acc2_inv=nevents
+    else:
+        req_acc2_inv=1/(req_acc*req_acc)
     #get the random number seed from the randinit file
     file=open("randinit")
     exec file
@@ -174,7 +179,7 @@ if nevents>0:
         for line in fileinputs:
             i += 1
             if i == 2:
-                accuracy=min(math.sqrt(tot/(totevents*proc['result'])),0.2)
+                accuracy=min(math.sqrt(tot/(req_acc2_inv*proc['result'])),0.2)
                 fileinputschannel.write('%10.8e\n' % accuracy)
             elif i == 8:
                 fileinputschannel.write('1        ! MINT mode\n')
