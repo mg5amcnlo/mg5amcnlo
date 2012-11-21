@@ -1166,7 +1166,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                                    stdout=subprocess.PIPE, cwd=pjoin(self.me_dir, 'SubProcesses'))
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
-                # Do not print summary, because there is no useful information...
+                self.print_summary(0, mode)
 
                 npoints = self.run_card['npoints_FO']
                 niters = self.run_card['niters_FO']
@@ -1382,7 +1382,7 @@ Integrated cross-section
                          misc.format_timer(time.time()-self.start_time))
 
         elif mode in ['NLO', 'LO']:
-            status = ['Results after grid setup:',
+            status = ['Results after grid setup (cross-section is non-physical):',
                       'Final results and run summary:']
             if step == 0:
                 message = '\n      ' + status[step] + \
