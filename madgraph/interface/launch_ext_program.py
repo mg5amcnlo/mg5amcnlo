@@ -312,7 +312,7 @@ class aMCatNLOLauncher(ExtLauncher):
             elif max_node == 2:
                 nb_node = 2
             elif not self.force:
-                nb_node = self.ask('How many core do you want to use?', max_node, range(2,max_node+1))
+                nb_node = self.ask('How many cores do you want to use?', max_node, range(2,max_node+1))
             else:
                 nb_node=max_node
                 
@@ -342,6 +342,7 @@ class aMCatNLOLauncher(ExtLauncher):
             command += " -c"
         elif mode == "2":
             command += " -m" 
+            run_int.nb_core = nb_node
         try:
             os.remove('ME5_debug')
         except:
@@ -400,7 +401,7 @@ class MELauncher(ExtLauncher):
             elif max_node == 2:
                 nb_node = 2
             elif not self.force:
-                nb_node = self.ask('How many core do you want to use?', max_node, range(2,max_node+1))
+                nb_node = self.ask('How many cores do you want to use?', max_node, range(2,max_node+1))
             else:
                 nb_node=max_node
                 

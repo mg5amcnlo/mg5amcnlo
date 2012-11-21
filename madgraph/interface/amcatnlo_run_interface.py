@@ -824,6 +824,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
        
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = banner_mod.RunCardNLO(run_card)
+        self.nb_core = 0
 
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
@@ -1134,10 +1135,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                                               self.options['cluster_temp_path'])
         if self.cluster_mode == 2:
             import multiprocessing
-            try:
-                self.nb_core = int(self.options['nb_core'])
-            except TypeError:
-                self.nb_core = multiprocessing.cpu_count()
+            if not self.nb_core:
+                try:
+                    self.nb_core = int(self.options['nb_core'])
+                except TypeError:
+                    self.nb_core = multiprocessing.cpu_count()
             logger.info('Using %d cores' % self.nb_core)
             self.cluster = cluster.MultiCore(self.nb_core, 
                                      temp_dir=self.options['cluster_temp_path'])
