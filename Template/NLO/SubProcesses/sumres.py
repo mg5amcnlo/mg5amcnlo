@@ -13,7 +13,7 @@ import os
 nexpected=int(sys.argv[1])
 nevents=int(sys.argv[2])
 req_acc=float(sys.argv[3])
-# if nevents is >0 the script will also determine the 
+# if nevents is >=0 the script will also determine the 
 # number of events required for each process
 
 
@@ -127,7 +127,7 @@ file.write(content)
 file.close()
 
 #determine the events for each process:
-if nevents>0:
+if nevents>=0:
     if req_acc<0: 
         req_acc2_inv=nevents
     else:

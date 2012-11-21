@@ -1214,8 +1214,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
             for i, status in enumerate(mcatnlo_status):
                 if i == 2 or not options['only_generation']:
-                    self.update_status(status, level='parton')
+                    # if the number of events requested is zero, simply print summary and return
+                    if i==2 and nevents==0:
+                        self.print_summary(2,mode)
+                        return
 
+                    self.update_status(status, level='parton')
                     if mode == 'aMC@NLO':
                         self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
                         self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
