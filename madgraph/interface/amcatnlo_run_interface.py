@@ -31,6 +31,7 @@ import subprocess
 import sys
 import traceback
 import time
+import signal
 
 try:
     import readline
@@ -84,6 +85,9 @@ except ImportError, error:
 class aMCatNLOError(Exception):
     pass
 
+def init_worker():
+    """this is to catch ctrl+c with Pool""" 
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 def compile_dir(arguments):
     """compile the direcory p_dir
@@ -2092,7 +2096,7 @@ Integrated cross-section
         for test in tests:
             self.write_test_input(test)
 
-        mypool = Pool() 
+        mypool = Pool(self.nb_core, init_worker) 
         mypool.map(compile_dir,
                 ((self.me_dir, p_dir, mode, options, tests, exe, self.options['run_mode']) for p_dir in p_dirs))
 
