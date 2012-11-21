@@ -1127,7 +1127,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             logger.info('Doing fixed order %s' % mode)
             if mode == 'LO':
                 npoints = self.run_card['npoints_FO_grid']
-                niters = int(self.run_card['niters_FO_grid'])
+                niters = self.run_card['niters_FO_grid']
                 self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 1, npoints, niters) 
                 self.update_status('Setting up grids', level=None)
                 self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
@@ -1139,14 +1139,14 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 self.print_summary(0, mode)
 
                 npoints = self.run_card['npoints_FO']
-                niters = int(self.run_card['niters_FO'])
+                niters = self.run_card['niters_FO']
                 self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 3, npoints, niters) 
                 self.update_status('Computing cross-section', level=None)
                 self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
             elif mode == 'NLO':
                 self.update_status('Setting up grid', level=None)
                 npoints = self.run_card['npoints_FO_grid']
-                niters = int(self.run_card['niters_FO_grid'])
+                niters = self.run_card['niters_FO_grid']
                 self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'grid', 1, npoints, niters) 
                 self.run_all(job_dict, [['0', 'grid', '0']], 'Setting up grid using Born')
                 p = misc.Popen(['./combine_results_FO.sh', 'grid_G*'], \
@@ -1157,7 +1157,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 self.print_summary(0, mode)
 
                 npoints = self.run_card['npoints_FO_grid']
-                niters = int(self.run_card['niters_FO_grid'])
+                niters = self.run_card['niters_FO_grid']
                 self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 3, npoints, niters) 
                 self.update_status('Improving grid using NLO', level=None)
                 self.run_all(job_dict, [['0', 'novB', '0', 'grid']], \
@@ -1166,12 +1166,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                                    stdout=subprocess.PIPE, cwd=pjoin(self.me_dir, 'SubProcesses'))
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
+                # Do not print summary, because there is no useful information...
 
                 npoints = self.run_card['npoints_FO']
-                niters = int(self.run_card['niters_FO'])
+                niters = self.run_card['niters_FO']
                 self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 3, npoints, niters) 
                 npoints = self.run_card['npoints_FO_virt']
-                niters = int(self.run_card['niters_FO_virt'])
+                niters = self.run_card['niters_FO_virt']
                 self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', 3, npoints, niters) 
                 self.update_status('Computing cross-section', level=None)
                 self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'novB']], \
@@ -2005,7 +2006,7 @@ Integrated cross-section
         file.write(content)
         file.close()
 
-    def write_madin_file(self, path, run_mode, vegas_mode,npoints, niters):
+    def write_madin_file(self, path, run_mode, vegas_mode, npoints, niters):
         """writes the madin.run_mode file"""
         #check the validity of the arguments
         run_modes = ['born', 'virt', 'novi', 'all', 'viSB', 'novB', 'grid']
