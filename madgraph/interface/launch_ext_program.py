@@ -317,7 +317,6 @@ class aMCatNLOLauncher(ExtLauncher):
                 nb_node=max_node
                 
         import madgraph.interface.amcatnlo_run_interface as run_int
-        
         if hasattr(self, 'shell'):
             usecmd = run_int.aMCatNLOCmdShell(me_dir=self.running_dir, options = self.cmd_int.options)
         else:
@@ -342,7 +341,7 @@ class aMCatNLOLauncher(ExtLauncher):
             command += " -c"
         elif mode == "2":
             command += " -m" 
-            run_int.nb_core = nb_node
+            usecmd.nb_core = int(nb_node)
         try:
             os.remove('ME5_debug')
         except:
