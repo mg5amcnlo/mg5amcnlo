@@ -24,8 +24,10 @@ import logging
 
 try:
     import madgraph.various.sum_html as sum_html
+    from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
 except ImportError:
     import internal.sum_html as sum_html
+    from internal import InvalidCmd, MadGraph5Error
     
 logger = logging.getLogger('madevent.combine_run') # -> stdout
 
@@ -131,21 +133,20 @@ class CombineRuns(object):
             power = int(power) + 1
             return '%.7fE%+03i' %(nb,power)
         new_wgt = get_fortran_str(new_wgt)
+        old_line = ""
         for line in open(input):
-            data = line.split()
-            if len(data) == 6:            
+            if old_line.startswith("<event>"):
+                data = line.split()
+                if not len(data) == 6:
+                    raise MadGraph5Error, "Line after <event> should have 6 entries"
                 if float(data[2]) > 0:
                     sign = ''
                 else:
                     sign = '-'
                 line= ' %s  %s%s  %s\n' % ('   '.join(data[:2]), sign,
-                                                   new_wgt, '  '.join(data[3:]))
+                                           new_wgt, '  '.join(data[3:]))
             fsock.write(line)
-
-        
-        
-        
-           
+            old_line = line
            
     def get_channels(self, proc_path):
         """Opens file symfact.dat to determine all channels"""

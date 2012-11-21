@@ -26,8 +26,8 @@ $(LOOPLIB): $(PROCESS)
 	@ar cr $(LOOPLIB) $(PROCESS)
 	mv $(LOOPLIB) ../
 
-clean:
-		@rm -f *.o
+clean: cleanlib
+		@rm -f *.o 
 
 cleanlib:
 	rm -f ../$(LOOPLIB) $(PROG)
