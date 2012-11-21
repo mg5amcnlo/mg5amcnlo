@@ -69,6 +69,7 @@ class Banner(dict):
       'mgdelphestrigger':'delphes_trigger.dat',
       'mg5proccard':'proc_card_mg5.dat',
       'mgproccard': 'proc_card.dat',
+      'init': ''
       }
     
     def read_banner(self, input_path):
@@ -147,6 +148,24 @@ class Banner(dict):
     ############################################################################
     #  WRITE BANNER
     ############################################################################
+    def check_pid(self, pid2label):
+        """special routine removing width/mass of particles not present in the model
+        This is usefull in case of loop model card, when we want to use the non
+        loop model."""
+        
+        if not hasattr(self, 'param_card'):
+            self.charge_card('slha')
+            
+        for tag in ['mass', 'decay']:
+            block = self.param_card.get(tag)
+            for data in block:
+                pid = data.lhacode[0]
+                if pid not in pid2label.keys(): 
+                    block.remove((pid,))
+
+    ############################################################################
+    #  WRITE BANNER
+    ############################################################################
     def write(self, output_path):
         """write the banner"""
         
@@ -160,11 +179,16 @@ class Banner(dict):
         else:
             ff.write(open(pjoin(MG5DIR,'Template', 'LO', 'Source', 'banner_header.txt')).read())
         for tag, text in self.items():
-            ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
+            if not tag == 'init':
+                ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
                      {'tag':tag, 'text':text})
         ff.write('</header>\n')    
         ff.write('</LesHouchesEvents>\n')
-            
+        if 'init' in self:
+            text = self['init']
+            ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
+                     {'tag':'init', 'text':text})            
+        
     ############################################################################
     # BANNER
     ############################################################################

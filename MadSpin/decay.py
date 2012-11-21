@@ -266,10 +266,10 @@ class Event:
         assert len(inputs) == 6
         self.nexternal=int(inputs[0])
         self.ievent=int(inputs[1])
-        self.wgt=float(inputs[2].replace("D","E"))
-        self.scale=float(inputs[3].replace("D","E"))
-        self.aqed=float(inputs[4].replace("D","E"))
-        self.aqcd=float(inputs[5].replace("D","E"))        
+        self.wgt=float(inputs[2].replace("d","e"))
+        self.scale=float(inputs[3].replace("d","e"))
+        self.aqed=float(inputs[4].replace("d","e"))
+        self.aqcd=float(inputs[5].replace("d","e"))        
         
         
 
@@ -278,6 +278,7 @@ class Event:
         line_type = 'none' # support type: init / event / rwgt
         self.diese = ''
         for line in self.inputfile:
+            line = line.lower()
             if line=="":
                 continue 
             # Find special tag in the line
@@ -293,6 +294,8 @@ class Event:
                 line_type = 'rwgt'
                 #No Continue! need to keep track of this line
             elif '</event>' in line:
+                if not self.particle:
+                    continue
                 self.shat=self.particle[1]["momentum"].dot(self.particle[2]["momentum"])
                 return 1
             
@@ -321,7 +324,7 @@ class Event:
             elif line_type == 'event':
                 index_prod+=1
                 line=line.replace("\n","")
-                line=line.replace("D","E")
+                line=line.replace("d","e")
                 inputs=line.split()
                 pid=int(inputs[0])
                 istup=int(inputs[1])
@@ -2764,18 +2767,19 @@ class decay_all_events:
             shutil.rmtree(pjoin(path_me,"full_me"))
         decay_tools=decay_misc()
 
-        if (mybanner.get("model").startswith('loop_')):
-            raise Exception, 'need to fix this!!!'
+        model = mybanner.get("model")
+        if (model.startswith('loop_')):
+            #raise Exception, 'need to fix this!!!'
             #if we keep it, we need to keep the modification of the param_card
             #commented bellow
             logger.info("The model in the banner is "+mybanner.get("model"))
-            logger.info("Set the model to "+mybanner.proc("model")[5:]+" since only")
+            logger.info("Set the model to "+mybanner.get("model")[5:]+" since only")
             logger.info("tree-level amplitudes are used for the decay ")
-            mybanner.get["model"]=mybanner.get["model"][5:]
+            model = model[5:]
 
-        logger.info('model:     '+ mybanner.get("model"))
-        model_path=mybanner.get("model")
-        base_model = import_ufo.import_model(model_path)
+        logger.info('model:     '+ model)
+        model_path = model
+        #base_model = import_ufo.import_model(model_path)
 
         # Import model
         base_model = import_ufo.import_model(model_path,
@@ -2784,7 +2788,7 @@ class decay_all_events:
             logger.warning('The UFO model does not include widths information. Impossible to compute widths automatically')
 
         base_model.pass_particles_name_in_mg_default() 
-        mgcmd.exec_cmd('import model '+mybanner.get("model"))
+        mgcmd.exec_cmd('import model '+model)
 
          
         # process a bit the decay chain strings, so that the code is not confused by the sintax
@@ -2795,8 +2799,7 @@ class decay_all_events:
         pid2label_dict=pid2label(base_model)
         label2pid_dict=label2pid(base_model)
 
-        # TO UNCOMMENT DEPENDING OF THE LOOP TREATMENT
-        #mybanner.check_pid(pid2label_dict)
+        mybanner.check_pid(pid2label_dict)
                 
 # we will also need a dictionary pid > color_rep
         pid2color_dict=pid2color(base_model)
