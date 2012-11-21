@@ -81,6 +81,7 @@ class Event:
                 proc_line+=pid2label[self.particle[part]["pid"]]+" "
         return proc_line
  
+
     def get_map_resonances(self, branchindex2label,pid2label):
         """
            decay_processes is a dictionary 1 : "A1"
@@ -93,7 +94,8 @@ class Event:
 
         dico_map={}
         dico_label={}
-        dico_symmetry_fac={}  # dico {label : symmetry factor}
+
+#        dico_symmetry_fac={}  # dico {label : symmetry factor}
         branch_not_yet_found=branchindex2label.keys()
         branch_found=[]
 
@@ -109,10 +111,10 @@ class Event:
                         dico_map[part]=id
                         label=pid2label[pid]
                         dico_label[part]=label 
-                        if not dico_symmetry_fac.has_key(label):
-                            dico_symmetry_fac[label]=1
-                        else:
-                            dico_symmetry_fac[label]+=1
+#                        if not dico_symmetry_fac.has_key(label):
+#                            dico_symmetry_fac[label]=1
+#                        else:
+#                            dico_symmetry_fac[label]+=1
 
                         branch_found.append(id)
                         to_delete=index
@@ -126,13 +128,13 @@ class Event:
                             dico_label[part]=pid2label[pid]
 
 #       now get the symmetry factor:
-        symm_fac=1.0
-        print dico_symmetry_fac
-        for label in dico_symmetry_fac.keys():
-            for index in range(2,dico_symmetry_fac[label]+1):
-                symm_fac=symm_fac*(index)
+#        symm_fac=1.0
+#        print dico_symmetry_fac
+#        for label in dico_symmetry_fac.keys():
+#            for index in range(2,dico_symmetry_fac[label]+1):
+#                symm_fac=symm_fac*(index)
 
-        return dico_map, dico_label, symm_fac
+        return dico_map, dico_label #, symm_fac
 
 
     def give_momenta(self):
@@ -188,10 +190,10 @@ class Event:
                 particle_line=self.get_particle_line(self.resonance[part])
             line+=particle_line        
 
-        if self.diese!="0":
-            line+=self.diese
-        if self.rwgt!="0":
-            line+=self.rwgt
+        if self.diese:
+            line += self.diese
+        if self.rwgt:
+            line += self.rwgt
         line+="</event> \n"
         return line
 
@@ -255,182 +257,205 @@ class Event:
                 mothers.append(self.particle[part]["mothup1"])
                 self.reshuffle_resonances(self.particle[part]["mothup1"]) 
 
+    def assign_scale_line(self, line):
+        """read the line corresponding to global event line
+        format of the line is:
+        Nexternal IEVENT WEIGHT SCALE AEW AS
+        """
+        inputs = line.split()
+        assert len(inputs) == 6
+        self.nexternal=int(inputs[0])
+        self.ievent=int(inputs[1])
+        self.wgt=float(inputs[2].replace("D","E"))
+        self.scale=float(inputs[3].replace("D","E"))
+        self.aqed=float(inputs[4].replace("D","E"))
+        self.aqcd=float(inputs[5].replace("D","E"))        
+        
+        
+
     def get_next_event(self):
         """ read next event in the lhe event file """
-        while 1:
-            line=self.inputfile.readline()
-            if line=="": return "no_event"
-            if line.find("<event>")>-1:
-                line=self.inputfile.readline()
-                line=line.replace("\n","")
-                inputs=line.split()
-                self.nexternal=int(inputs[0])
-                self.ievent=int(inputs[1])
-                self.wgt=float(inputs[2].replace("D","E"))
-                self.scale=float(inputs[3].replace("D","E"))
-                self.aqed=float(inputs[4].replace("D","E"))
-                self.aqcd=float(inputs[5].replace("D","E"))
+        line_type = 'none' # support type: init / event / rwgt
+        self.diese = ''
+        for line in self.inputfile:
+            if line=="":
+                continue 
+            # Find special tag in the line
+            if line[0]=="#":
+                self.diese+=line
+                continue
+            if '<event>' in line:
+                #start new_event
+                line_type = 'init'
+                continue
+            elif '<rwgt>' in line:
+                #re-weighting information block
+                line_type = 'rwgt'
+                #No Continue! need to keep track of this line
+            elif '</event>' in line:
+                self.shat=self.particle[1]["momentum"].dot(self.particle[2]["momentum"])
+                return 1
+            
+            
+            if line_type == 'none':
+                continue
+            # read the line and assign the date accordingly                
+            elif line_type == 'init':
+                line_type = 'event'
+                self.assign_scale_line(line)         
+                # initialize some local variable
                 index_prod=0
                 index_external=0
                 index_resonance=0
                 self.particle={}
                 self.resonance={}
                 self.max_col=500
-                self.diese="0"
-                self.rwgt="0"
+                self.diese=""
+                self.rwgt=""
                 self.event2mg={} # dict. event-like label <-> "madgraph-like" label
-                                                            # in "madgraph-like", resonances are labeled -1, -2, ...                                        
-                while 1:
-                    line=self.inputfile.readline()
-#                 aMC@NLO events have an extra line starting with #
-                    if line[0]=="#":
-                        self.diese=line
-                        continue
-#                 aMC@NLO events have extra lines for PDF and scale uncertainties #
-                    if line.find("<rwgt>")>-1:
-                        self.rwgt=line
-                        while 1:
-                            line=self.inputfile.readline()
-                            self.rwgt=self.rwgt+line
-                            if line.find("</rwgt>")>-1: break
-                        continue
-                    if line=="": return "no_event"
-                    if line.find("</event>")>-1:break
-                    index_prod+=1
-                    line=line.replace("\n","")
-                    line=line.replace("D","E")
-                    inputs=line.split()
-                    pid=int(inputs[0])
-                    istup=int(inputs[1])
-                    mothup1=int(inputs[2])
-                    mothup2=int(inputs[3])
-                    colup1=int(inputs[4])
-                    if colup1>self.max_col:
-                        self.max_col=colup1 
-                    colup2=int(inputs[5])
-                    if colup2>self.max_col:
-                        self.max_col=colup2 
-                    mom=momentum(float(inputs[9]),float(inputs[6]),float(inputs[7]),float(inputs[8]))
-                    mass=float(inputs[10])
-                    helicity=float(inputs[12])
-                    if abs(istup)==1:
-                        index_external+=1
-                        self.event2mg[index_prod]=index_external
-                        self.particle[index_external]={"pid":pid,"istup":istup,"mothup1":mothup1,\
-                        "mothup2":mothup2,"colup1":colup1,"colup2":colup2,"momentum":mom,"mass":mass,"helicity":helicity}
-                    elif istup==2:
-                        index_resonance=index_resonance-1
-                        self.event2mg[index_prod]=index_resonance
-                        self.resonance[index_resonance]={"pid":pid,"istup":istup,"mothup1":mothup1,\
-                        "mothup2":mothup2,"colup1":colup1,"colup2":colup2,"momentum":mom,"mass":mass,"helicity":helicity}
-                    else: 
-                        logger.warning('unknown status in lhe file')
-                self.shat=self.particle[1]["momentum"].dot(self.particle[2]["momentum"])
-                return 1
-                break
+                                                            # in "madgraph-like", resonances are labeled -1, -2, ...
+            elif line_type == 'rwgt': #special aMC@NLO information
+                self.rwgt += line
+                if '</rwgt>' in line:
+                    line_type = 'event'
+            elif line_type == 'event':
+                index_prod+=1
+                line=line.replace("\n","")
+                line=line.replace("D","E")
+                inputs=line.split()
+                pid=int(inputs[0])
+                istup=int(inputs[1])
+                mothup1=int(inputs[2])
+                mothup2=int(inputs[3])
+                colup1=int(inputs[4])
+                if colup1>self.max_col:
+                    self.max_col=colup1 
+                colup2=int(inputs[5])
+                if colup2>self.max_col:
+                    self.max_col=colup2 
+                mom=momentum(float(inputs[9]),float(inputs[6]),float(inputs[7]),float(inputs[8]))
+                mass=float(inputs[10])
+                helicity=float(inputs[12])
+                if abs(istup)==1:
+                    index_external+=1
+                    self.event2mg[index_prod]=index_external
+                    self.particle[index_external]={"pid":pid,"istup":istup,"mothup1":mothup1,\
+                    "mothup2":mothup2,"colup1":colup1,"colup2":colup2,"momentum":mom,"mass":mass,"helicity":helicity}
+                elif istup==2:
+                    index_resonance=index_resonance-1
+                    self.event2mg[index_prod]=index_resonance
+                    self.resonance[index_resonance]={"pid":pid,"istup":istup,"mothup1":mothup1,\
+                    "mothup2":mothup2,"colup1":colup1,"colup2":colup2,"momentum":mom,"mass":mass,"helicity":helicity}
+                else: 
+                    logger.warning('unknown status in lhe file')
+        return "no_event"
 
-
-class Banner:
-    """ A banner object contains all the information about the process,
-    the run and the parameters of the model"""
- 
-    def __init__(self,inputfile):
-        """Initialize self.file=input file """
-        self.inputfile =inputfile
-        self.proc={}
-        self.run={}
-        self.param={}
 #
-        self.proc_keys=["model","generate"]
-        self.param_keys=["Block mass","Block sminputs","Block yukawa", "DECAY"]
-        self.whole_banner=""
-#       to improve the reading use regular expression
-        self.re_search={}
-        self.re_search['model']="^import.*model.*"
-        self.re_search['generate']="^generate.*"
+#class Banner:
+#    """ A banner object contains all the information about the process,
+#    the run and the parameters of the model"""
+# 
+#    def __init__(self,inputfile):
+#        misc.sprint('DEPRECIATION WARNING')
+#        """Initialize self.file=input file """
+#        self.inputfile =inputfile
+#        self.proc={}
+#        self.run={}
+#        self.param={}
+##
+#        self.proc_keys=["model","generate"]
+#        self.param_keys=["Block mass","Block sminputs","Block yukawa", "DECAY"]
+#        self.whole_banner=""
+##       to improve the reading use regular expression
+#        self.re_search={}
+#        self.re_search['model']="^import.*model.*"
+#        self.re_search['generate']="^generate.*"
+#
+#    def check_pid(self,pid2label):
+#        """Remove any info from the banner related to a PID that is not in the model """
+#
+#        for item1 in self.param_keys:
+#            pid_set=self.param[item1].keys()
+#            for pid in pid_set:
+#                if pid not in pid2label.keys(): del self.param[item1][pid]
+#                
+#            
+#
+#
+#
+#    def ReadBannerFromFile(self):
+#        """Read the whole banner"""    
+#        misc.sprint('DEPRECIATED WARNING')
+#        while 1:
+#            line=self.inputfile.readline()
+#            if line=="": break
+#            self.whole_banner+=line
+#            if line.find("</init>")>-1: break
+#            if string.find(line,"MG5ProcCard")>-1:self.ReadProc()
+#            if string.find(line,"slha")>-1:self.ReadParam()
+#            if string.find(line,"MGRunCard")>-1:self.ReadRun()
+#
+#        if "model" not in self.proc.keys():
+#            logger.warning('The model was not found in the banner, assuming the Standard Model')
+##        if len(self.proc)!=len(self.proc_keys):     
+##            logger.warning('Some parameters have not been read in the proc card')
+##        if len(self.param)!=len(self.param_keys): 
+##            logger.warning('Some parameters have not been read in the param card')
+#
+#    def GetProcValue(self,line,keyword):
+#        """Extract a parameter from a line in the Proc Card"""
+#
+#        line = line.split("#", 2)[0]
+#        index=string.find(line,keyword)+len(keyword)
+#        line=line[index:-1]
+#        while 1:
+#            if line[0]==" ":line=line[1:]
+#            elif line[-1]==" ":line=line[:-1]
+#            else: break
+#        return line
+#
+#    def ReadProc(self): 
+#        """ Read the parameters associated with the Proc Card """
+#        misc.sprint('DEPRECIATED WARNING')
+#        while 1:
+#            line=self.inputfile.readline()
+#            self.whole_banner+=line
+#            if line=="" or string.find(line,"MG5ProcCard")>-1: break
+#            for key in self.proc_keys:
+#                if re.match(self.re_search[key],line): self.proc[key]=self.GetProcValue(line,key)
+#        # if self.proc["model"].find("loop_sm")>-1:self.proc["model"]="sm"
+#
+#    def GetParamValue(self,line,keyword):
+#        """Extract the tag and the value from a line in the Param Card"""
+#
+#        if line[0]=="#": return 
+#        line = line.split("#", 2)[0]
+#        line=line.split()
+#        if len(line)==2: return int(line[0]), line[1]
+#        elif line[0]==keyword: return int(line[1]), line[2]
+##       Here I need to check if 
+#
+#    def ReadParam(self): 
+#        """ Read the paramters associated with the Param Card """
+#        misc.sprint('DEPRECIATED WARNING')
+#        while 1:
+#            line=self.inputfile.readline()
+#            self.whole_banner+=line
+#            if line=="" or string.find(line,"slha")>-1: break
+#            for key in self.param_keys:
+#                if string.find(line,key)>-1:
+#                    currentkey=key
+#                    if currentkey not in self.param: self.param[currentkey]={}     
+#                    
+#            try:
+#                tag, value=self.GetParamValue(line,currentkey)
+#                self.param[currentkey][tag]=value
+#            except Exception, error: continue
+#
+#    def ReadRun(self):
+#        """ Read the paramters associated with the Run Card """
+#        pass
 
-    def check_pid(self,pid2label):
-        """Remove any info from the banner related to a PID that is not in the model """
-
-        for item1 in self.param_keys:
-            pid_set=self.param[item1].keys()
-            for pid in pid_set:
-                if pid not in pid2label.keys(): del self.param[item1][pid]
-                
-            
-
-
-
-    def ReadBannerFromFile(self):
-        """Read the whole banner"""    
-
-        while 1:
-            line=self.inputfile.readline()
-            if line=="": break
-            self.whole_banner+=line
-            if line.find("</init>")>-1: break
-            if string.find(line,"MG5ProcCard")>-1:self.ReadProc()
-            if string.find(line,"slha")>-1:self.ReadParam()
-            if string.find(line,"MGRunCard")>-1:self.ReadRun()
-
-        if "model" not in self.proc.keys():
-            logger.warning('The model was not found in the banner, assuming the Standard Model')
-#        if len(self.proc)!=len(self.proc_keys):     
-#            logger.warning('Some parameters have not been read in the proc card')
-#        if len(self.param)!=len(self.param_keys): 
-#            logger.warning('Some parameters have not been read in the param card')
-
-    def GetProcValue(self,line,keyword):
-        """Extract a parameter from a line in the Proc Card"""
-
-        line = line.split("#", 2)[0]
-        index=string.find(line,keyword)+len(keyword)
-        line=line[index:-1]
-        while 1:
-            if line[0]==" ":line=line[1:]
-            elif line[-1]==" ":line=line[:-1]
-            else: break
-        return line
-
-    def ReadProc(self): 
-        """ Read the parameters associated with the Proc Card """
-        while 1:
-            line=self.inputfile.readline()
-            self.whole_banner+=line
-            if line=="" or string.find(line,"MG5ProcCard")>-1: break
-            for key in self.proc_keys:
-                if re.match(self.re_search[key],line): self.proc[key]=self.GetProcValue(line,key)
-        # if self.proc["model"].find("loop_sm")>-1:self.proc["model"]="sm"
-
-    def GetParamValue(self,line,keyword):
-        """Extract the tag and the value from a line in the Param Card"""
-
-        if line[0]=="#": return 
-        line = line.split("#", 2)[0]
-        line=line.split()
-        if len(line)==2: return int(line[0]), line[1]
-        elif line[0]==keyword: return int(line[1]), line[2]
-#       Here I need to check if 
-
-    def ReadParam(self): 
-        """ Read the paramters associated with the Param Card """
-        while 1:
-            line=self.inputfile.readline()
-            self.whole_banner+=line
-            if line=="" or string.find(line,"slha")>-1: break
-            for key in self.param_keys:
-                if string.find(line,key)>-1:
-                    currentkey=key
-                    if currentkey not in self.param: self.param[currentkey]={}     
-                    
-            try:
-                tag, value=self.GetParamValue(line,currentkey)
-                self.param[currentkey][tag]=value
-            except: continue
-
-    def ReadRun(self):
-        """ Read the paramters associated with the Run Card """
-        pass
 
 class pid2label(dict):
     """ dico pid:label for a given model"""
@@ -469,11 +494,11 @@ class mass_n_width(dict):
             I assume that masses and widths are real
     """
 
-    def __init__(self, model,banner):
+    def __init__(self, model, banner):
         """ Fill the dictionary based on the information in the banner """
 
-        self.model=model
-        self.banner=banner
+        self.model = model
+        self.banner = banner
         for particle in model["particles"]:
             self[particle["name"]]={"mass":0.0, "width":0.0}
             if particle["mass"]!="ZERO":
@@ -484,18 +509,17 @@ class mass_n_width(dict):
     def get_mass(self,pid):
         """ extract the mass of particle with PDG code=pid from the banner"""
         try: 
-            mass=self.banner.param["Block mass"][pid]
-        except:
+            mass=self.banner.get('param_card', 'mass', pid)
+        except Exception, error:
             mass=0.0
-
         return mass
     
 
     def get_width(self,pid):
         """ extract the width of particle with PDG code=pid from the banner"""
         try:
-            width=self.banner.param["DECAY"][pid]
-        except:
+            width=self.banner.get('param_card', 'decay', pid)
+        except Exception, error:
             width=0.0
         return width
 
@@ -538,7 +562,7 @@ class dc_branch(dict):
                                 +str(self.label2pid[self["tree"][res]["d1"]["label"]]))
                     logger.info(self.banner.param["Block mass"]\
                          [abs(self.label2pid[self["tree"][res]["d1"]["label"]])])
-                except:
+                except Exception, error:
                     logger.info('The mass of particle with id '\
                                 +str(self.label2pid[self["tree"][res]["d1"]["label"]]))
                     logger.info('was not defined in the param_card.dat') 
@@ -551,7 +575,7 @@ class dc_branch(dict):
                                 +str(self.label2pid[self["tree"][res]["d2"]["label"]]))
                     logger.info(     self.banner.param["Block mass"]\
                          [abs(self.label2pid[self["tree"][res]["d2"]["label"]])])
-                except:
+                except Exception, error:
                     logger.info('The mass of particle with id '\
                                 +str(self.label2pid[self["tree"][res]["d2"]["label"]]))
                     logger.info('was not defined in the param_card.dat')
@@ -630,8 +654,8 @@ class dc_branch(dict):
 #         If ran=0, just read the value from the previous generation of momenta 
 #                             (this is used for reshuffling purposes) 
             if d1>0 or not BW_effects :
-                mB=float(self.banner.param["Block mass"][abs(self.label2pid[self["tree"]\
-                                                                [res]["d1"]["label"]])])
+                mB=float(self.banner.get('param_card', 'mass', 
+                         abs(self.label2pid[self["tree"][res]["d1"]["label"]])).value)
             elif ran==0:    # reshuffling phase
                 mB=self["tree"][res]["d1"]["mass"]
             else:
@@ -649,8 +673,8 @@ class dc_branch(dict):
                 weight=weight*jac
 
             if d2>0 or not BW_effects:
-                mC=float(self.banner.param["Block mass"][abs(self.label2pid[self["tree"]\
-                                                                [res]["d2"]["label"]])])
+                mC=float(self.banner.get('param_card', 'mass', 
+                    abs(self.label2pid[self["tree"][res]["d2"]["label"]])).value)
             elif ran==0:
                 mC=self["tree"][res]["d2"]["mass"]
             else:
@@ -1001,7 +1025,7 @@ class production_topo(dict):
 #                print self["get_momentum"][d2].nice_string()
 #                print "P^2:    "+str(self["get_mass2"][d2])
 #                print "root:    "+str(math.sqrt(abs(self["get_mass2"][d2])))
-#            except:
+#            except Exception, error:
 #                print "topology not yet dressed" 
 
     def dress_topo_from_event(self,event,to_decay):
@@ -1468,7 +1492,7 @@ class width_estimate:
  		        else:
                             if final[0] not in [ particle['name'] for particle in base_model['particles'] ] \
                                and final[0] not in [ particle['antiname'] for particle in base_model['particles'] ]:
-                               raise Exception, "No particle "+item+ " in the model "+mybanner.get("model")
+                               raise Exception, "No particle "+item+ " in the model "
                             set_B=[final[0]]
                         if final[1] in multiparticles.keys():
                             set_C=[pid2label[pid] for pid in multiparticles[final[1]]]
@@ -2345,6 +2369,30 @@ class decay_misc:
 
         return new_branch, list_branch[0]
 
+
+    def get_symm_fac(self, decay_processes):
+        """  get the symmetry factor associated with associated resonance """
+
+        dico_initpart={}
+
+        for index in decay_processes.keys():
+            line=decay_processes[index]
+            list_obj=line.split()
+            res=list_obj[0]
+            if not dico_initpart.has_key(res):
+                dico_initpart[res]=[]
+            if line not in dico_initpart[res]:
+                dico_initpart[res].append(line)
+                
+ 
+        symm_fac=1
+        for res in dico_initpart.keys():
+            nb_decay_channels=len(dico_initpart[res])
+            for index in range(1,nb_decay_channels+1):
+                symm_fac=symm_fac*index
+
+        return symm_fac
+
     def set_light_parton_massless(self,topo):
         """ masses of light partons are set to zero for 
             the evaluation of the matrix elements
@@ -2557,7 +2605,7 @@ class decay_misc:
             for branch in branch_list:
                 list_part=branch.split()
                 branches[list_part[0]]={"finalstate":list_part[2:]}
-                branches[list_part[0]]["branch"], dummy=decay_tools.reorder_branch(branch)
+                branches[list_part[0]]["branch"], dummy= self.reorder_branch(branch)
         else: 
             final_state_compact=final_state_full
             branches={}
@@ -2694,9 +2742,8 @@ class decay_all_events:
         self.calculator_nbcall = {}
         self.path_me = path_me
 
-
         # need to unbuffer all I/O in fortran, otherwise
-	# the values of matrix elements are not passed to the Python script
+        # the values of matrix elements are not passed to the Python script
         os.environ['GFORTRAN_UNBUFFERED_ALL']='y'  
 #        os.system(" export GFORTRAN_UNBUFFERED_ALL ")
 
@@ -2718,6 +2765,9 @@ class decay_all_events:
         decay_tools=decay_misc()
 
         if (mybanner.get("model").startswith('loop_')):
+            raise Exception, 'need to fix this!!!'
+            #if we keep it, we need to keep the modification of the param_card
+            #commented bellow
             logger.info("The model in the banner is "+mybanner.get("model"))
             logger.info("Set the model to "+mybanner.proc("model")[5:]+" since only")
             logger.info("tree-level amplitudes are used for the decay ")
@@ -2734,7 +2784,7 @@ class decay_all_events:
             logger.warning('The UFO model does not include widths information. Impossible to compute widths automatically')
 
         base_model.pass_particles_name_in_mg_default() 
- 	mgcmd.exec_cmd('import model '+mybanner.get("model"))
+        mgcmd.exec_cmd('import model '+mybanner.get("model"))
 
          
         # process a bit the decay chain strings, so that the code is not confused by the sintax
@@ -2745,20 +2795,15 @@ class decay_all_events:
         pid2label_dict=pid2label(base_model)
         label2pid_dict=label2pid(base_model)
 
-
-        mybanner.check_pid(pid2label_dict)        
+        # TO UNCOMMENT DEPENDING OF THE LOOP TREATMENT
+        #mybanner.check_pid(pid2label_dict)
+                
 # we will also need a dictionary pid > color_rep
         pid2color_dict=pid2color(base_model)
 
 
 # now overwrite the param_card.dat in Cards:
-        init=mybanner.whole_banner.find("<slha>")
-        fin=mybanner.whole_banner.find("</slha>")
-
-        if init<0 or fin <0:
-            logger.warning('EXTRACTION OF THE PARAM_CARD FROM THE BANNER FAILED!!')
-
-        param_card=mybanner.whole_banner[init+7:fin]
+        param_card=mybanner['slha']
         param_card=decay_tools.check_param_card( param_card)
 
         decay_tools.check_param_card(param_card)
@@ -2770,9 +2815,9 @@ class decay_all_events:
         param.close()
 
 # extract all resonances in the decay:
-	resonances=decay_tools.get_resonances(decay_processes.values())
-	logger.info('List of resonances:')
-	logger.info(resonances)
+        resonances=decay_tools.get_resonances(decay_processes.values())
+        logger.info('List of resonances:')
+        logger.info(resonances)
 
         label2width={}
         label2mass={}
@@ -2782,10 +2827,17 @@ class decay_all_events:
         for particle_label in resonances:
             try:
                 part=label2pid_dict[particle_label]
-                label2width[particle_label]=float(mybanner.param["DECAY"][abs(part)])
-                label2mass[particle_label]=float(mybanner.param["Block mass"][abs(part)])
-                pid2width[part]=label2width[particle_label]
+                mass = mybanner.get('param_card','mass', abs(part))
+                width = mybanner.get('param_card','decay', abs(part))
+            except ValueError, error:
+                misc.sprint(error)
+                continue
+                misc.sprint(width.value)
+            else:
+                label2width[particle_label]=float(width.value)
+                label2mass[particle_label]=float(mass.value)
                 pid2mass[part]=label2mass[particle_label]
+                pid2width[part]=label2width[particle_label]
                 if label2width[particle_label]==0.0:
                     for param in base_model["parameters"][('external',)]:
                         if param.lhablock=="DECAY" and param.lhacode==[abs(part)]:
@@ -2797,8 +2849,7 @@ class decay_all_events:
                     logger.warning('Use instead the default value '\
                                    +str(label2width[particle_label]))
 
-            except: 
-                continue
+
 # now we need to modify the values of the width
 # in param_card.dat, since this is where the input 
 # parameters will be read when evaluating matrix elements
@@ -2827,7 +2878,7 @@ class decay_all_events:
         
 	if(branching_per_channel==0):
 	    #calculate_br.generate_code_for_width_evaluation(mgcmd)#NOT USED ANYMORE, USE THE FR IMPLEMENTATION INSTEAD
-	    logger.info('We need to recalculate the branching franctions')
+	    logger.info('We need to recalculate the branching fractions')
 	    logger.info('using the compute_width module of madevent')
 	    calculate_br.launch_width_evaluation(resonances,label2pid_dict,pid2label_dict,base_model) # use FR to get all partial widths
             calculate_br.extract_br_from_width()                                       # set the br to partial_width/total_width
@@ -2838,7 +2889,7 @@ class decay_all_events:
 
 
         if branching_per_channel==0:
-	    raise Exception, 'Failed to extract the branching franction associated with each decay channel'
+	    raise Exception, 'Failed to extract the branching fraction associated with each decay channel'
 
 
 # now we need to sort all the different decay configurations, and get the br for each of them
@@ -2907,6 +2958,8 @@ class decay_all_events:
         topologies={}
 
         dico_branchindex2label=decay_tools.get_dico_branchindex2label(decay_processes)
+        symm_fac=decay_tools.get_symm_fac(decay_processes)
+        logger.info('Symmetry factor: '+str(symm_fac))
 
 
 #Next step: we need to determine which matrix elements are really necessary
@@ -2918,9 +2971,8 @@ class decay_all_events:
         check_weights={}
         curr_event=Event(inputfile)
         curr_event.get_next_event()
-        to_decay_map, to_decay_label, symm_fac=curr_event.get_map_resonances(dico_branchindex2label, pid2label_dict)
+        to_decay_map, to_decay_label =curr_event.get_map_resonances(dico_branchindex2label, pid2label_dict)
 
-        logger.info('Symmetry factor: '+str(int(symm_fac)))
 #        print to_decay_map, 
 #        print to_decay_label
 
@@ -2972,69 +3024,78 @@ class decay_all_events:
         # Breit-Wigner effects + reshuffling      
         decay_tools.set_light_parton_massless(topologies[tag_production][tag_topo])
         for dec in range(100):
-             try_reshuffle=0
-             while 1:
-                 try_reshuffle+=1
-                 BW_weight_prod=decay_tools.generate_BW_masses(\
+            try_reshuffle=0
+            while 1:
+                try_reshuffle+=1
+                if try_reshuffle > 10:
+                    misc.sprint('current %s' % try_reshuffle)                
+                BW_weight_prod=decay_tools.generate_BW_masses(\
                        topologies[tag_production][tag_topo], \
                        to_decay_label.values(),pid2label_dict, pid2width,pid2mass, \
                        curr_event.shat)
 
-                 succeed=topologies[tag_production][tag_topo].reshuffle_momenta()
-                 # sanlity check
-                 for part in topologies[tag_production][tag_topo]['get_momentum'].keys():
-                     if part in to_decay_map and \
+                succeed=topologies[tag_production][tag_topo].reshuffle_momenta()
+                # sanlity check
+                for part in topologies[tag_production][tag_topo]['get_momentum'].keys():
+                    if part in to_decay_map and \
                            topologies[tag_production][tag_topo]['get_momentum'][part].m<1.0:
-                         logger.debug('Mass of a particle to decay is less than 1 GeV')
-                         logger.debug('in reshuffling loop')
-                 # end sanity check
-                 if succeed: break
-                 if try_reshuffle==10:
-                     logger.warning( 'tried 10x to reshuffle the momenta, failed')
-                     logger.warning( ' So let us try with another topology')
-                     tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
-                     topologies[tag_production][tag_topo].dress_topo_from_event(\
+                        logger.debug('Mass of a particle to decay is less than 1 GeV')
+                        logger.debug('in reshuffling loop')
+                # end sanity check
+                if succeed:
+                    if try_reshuffle > 10:
+                        misc.sprint('pass at %s' % try_reshuffle)
+                    break
+                if try_reshuffle % 10 == 0:
+                    logger.warning( 'tried %ix to reshuffle the momenta, failed'% try_reshuffle)
+                    logger.warning( ' So let us try with another topology')
+                    tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
+                    topologies[tag_production][tag_topo].dress_topo_from_event(\
                                                              curr_event,to_decay_label)
-                     topologies[tag_production][tag_topo].extract_angles()
-                     decay_tools.set_light_parton_massless(topologies\
+                    topologies[tag_production][tag_topo].extract_angles()
+                    decay_tools.set_light_parton_massless(topologies\
                                               [tag_production][tag_topo])
-                     try_reshuffle=0
+                    continue
+                    #try_reshuffle=0
+                    if try_reshuffle >100:
+                        misc.sprint('fail 100 times')
+                        break
 
-             topologies[tag_production][tag_topo].topo2event(curr_event,to_decay_label)
+            topologies[tag_production][tag_topo].topo2event(curr_event,to_decay_label)
 
-             decayed_event, BW_weight_decay=decay_tools.decay_one_event(\
+            decayed_event, BW_weight_decay=decay_tools.decay_one_event(\
                      curr_event,decay_struct[tag_production][decay_tags[0]], \
                      pid2color_dict, to_decay_map, pid2width, \
                      pid2mass, resonances,BW_effects)
 
-             if decayed_event==0:
-                 logger.warning('failed to decay event properly')
-                 continue
-             for tag_decay in decay_tags:
+            if decayed_event==0:
+                logger.warning('failed to decay event properly')
+                continue
+            for tag_decay in decay_tags:
 #     set the momenta for the production event and the decayed event:
-                 p, p_str=curr_event.give_momenta()
-                 p_full, p_full_str=decayed_event.give_momenta()
+                p, p_str=curr_event.give_momenta()
+                p_full, p_full_str=decayed_event.give_momenta()
 
 #     Evaluate matrix elements
 #     start with production weight:
-                 prod_values =self.calculate_matrix_element('prod',
+                prod_values =self.calculate_matrix_element('prod',
                  production_path[tag_production], p_str)
 
-                 prod_values=prod_values.replace("\n", "")
-                 prod_values=prod_values.split()
-                 mg5_me_prod = float(prod_values[0])
+                prod_values=prod_values.replace("\n", "")
+                prod_values=prod_values.split()
+                mg5_me_prod = float(prod_values[0])
 #     then decayed weight:
-                 full_values =self.calculate_matrix_element('full',
+                full_values =self.calculate_matrix_element('full',
                             decay_path[tag_production][tag_decay], p_full_str)
 
-                 mg5_me_full = float(full_values)
+                mg5_me_full = float(full_values)
                     #mg5_me_full = float(external.communicate(input=p_full_str)[0])
-                 mg5_me_full=mg5_me_full*BW_weight_prod*BW_weight_decay
-                 os.chdir(curr_dir)
-                 if(not mg5_me_full>0 or not mg5_me_prod >0 ):
-                       logger.warning('WARNING: NEGATIVE MATRIX ELEMENT !!')
-                 weight=mg5_me_full/mg5_me_prod
-                 check_weights[tag_decay].append(weight)
+                mg5_me_full=mg5_me_full*BW_weight_prod*BW_weight_decay
+                os.chdir(curr_dir)
+                if(not mg5_me_full>0 or not mg5_me_prod >0 ):
+                    logger.warning('WARNING: NEGATIVE MATRIX ELEMENT !!')
+                weight=mg5_me_full/mg5_me_prod
+                check_weights[tag_decay].append(weight)
 
 #       verify if some matrix elements are identical up to an overal factor                
         map_decay_me={}
@@ -3077,6 +3138,8 @@ class decay_all_events:
                 for tag_decay in decay_me_tags:
                     probe_weight[ev][tag_decay]=0.0
                 curr_event.get_next_event()
+                to_decay_map, to_decay_label =\
+                   curr_event.get_map_resonances(dico_branchindex2label, pid2label_dict)
 #    check if we have a new production process, in which case 
 #    we need to generate the corresponding matrix elements
                 prod_process=curr_event.give_procdef(pid2label_dict)
@@ -3282,32 +3345,29 @@ class decay_all_events:
         inputfile.seek(0)
         outputfile = open(pjoin(path_me,'decayed_events.lhe'), 'w')
         curr_event=Event(inputfile)
-        old_banner=mybanner.whole_banner
-        pos=old_banner.find("</header>")
-        if (pos>0):
-            new_banner=old_banner[:pos]
-            new_banner+="<DECAY>\n"
-            for index,tag_decay in enumerate(decay_tags):
-                new_banner+="# Decay channel "+str(index+1)+"\n"
-                for part in multi_decay_processes[tag_decay]['config'].keys():
-                    new_banner+="# "+multi_decay_processes[tag_decay]['config'][part]+"\n"
-                new_banner+="# branching fraction: "+str(multi_decay_processes[tag_decay]['br']) + "\n"
-                new_banner+="# estimate of the maximum weight: "+str(max_weight[map_decay_me[tag_decay]]) + "\n"
-            new_banner+="</DECAY>\n"
-            new_banner+=old_banner[pos:]
-            outputfile.write(new_banner)
-
-
+        ms_banner = ""
+        for index,tag_decay in enumerate(decay_tags):
+            ms_banner+="# Decay channel "+str(index+1)+"\n"
+            for part in multi_decay_processes[tag_decay]['config'].keys():
+                ms_banner+="# "+multi_decay_processes[tag_decay]['config'][part]+"\n"
+            ms_banner+="# branching fraction: "+str(multi_decay_processes[tag_decay]['br']) + "\n"
+            ms_banner+="# estimate of the maximum weight: "+str(max_weight[map_decay_me[tag_decay]]) + "\n"
+    
+        mybanner.add_text('decay', ms_banner)
+        mybanner.write(outputfile)
+        
         event_nb=0
         trial_nb_all_events=0
         starttime = time.time()
         while 1:
             if (curr_event.get_next_event()=="no_event"): break
             event_nb+=1
-            if (event_nb % 100==0): 
+            if (event_nb % 250==0): 
                 running_time = misc.format_timer(time.time()-starttime)
                 logger.info('Event nb %s %s' % (event_nb, running_time))
             trial_nb=0
+            to_decay_map, to_decay_label =\
+               curr_event.get_map_resonances(dico_branchindex2label, pid2label_dict)
 
 #        if event_nb>10: break
 #    check if we have a new production process, in which case we need to generate the correspomding matrix elements
@@ -3545,93 +3605,4 @@ class decay_all_events:
         return prod_values
         
     
-
-
-
-if __name__=="__main__":
-
-# This is the main program
-
-    import sys
-    curr_dir=os.getcwd() 
-    root_path = os.path.dirname(os.path.realpath( __file__ ))
-    sys.path.insert(0, root_path)
-
-    import logging.config
-    import coloring_logging
-
-    logging.config.fileConfig(os.path.join(curr_dir,  'me5_logging.conf'))
-    logging.root.setLevel(eval('logging.' + 'DEBUG'))
-    logging.getLogger('madgraph').setLevel(eval('logging.' + 'DEBUG'))
-
-#    load the tools
-    decay_tools=decay_misc()
-#
-#    Ask the user where is the event file
-#
-    filename=raw_input("Enter the name of the input lhe file \n")
-    inputfile = open(filename, 'r')
-#
-# Read the banner from the input event file
-#
-    print "    "
-    print "Extracting the banner ..."
-    mybanner=Banner(inputfile)
-    mybanner.ReadBannerFromFile()
-   
-    #mybanner.get("generate"), proc_option=decay_tools.format_proc_line(\
-    #                                    mybanner.get("generate"))
-    #print "process: "+mybanner.get("generate")
-    #print "options: "+proc_option
-    #print "model: "+mybanner.get("model")
-
-
-# Read the final state of the production process:
-#     "_full" means with the complete decay chain syntax 
-#     "_compact" means without the decay chain syntax
-    final_state_full=mybanner.get("generate")[mybanner.get("generate").find(">")+1:] 
-    final_state_compact, prod_branches=decay_tools.get_final_state_compact(final_state_full)
-
-    print "branches: "
-    print prod_branches
-    print "final state: "+ final_state_compact
-    decay_processes={}
-
-# Ask the user which particle should be decayed
-    particle_index=2
-    to_decay={}
-    for particle in final_state_compact.split():
-        particle_index+=1
-        do_decay=raw_input("decay the "+str(particle)+" ? (yes/no)\n")
-        if do_decay=="yes":
-            to_decay[particle_index]=particle
-            decay_processes[particle_index], dummy=\
-            decay_tools.reorder_branch(raw_input("enter the decay process  \n"))
-            #print decay_processes[particle_index]
-
-    print "particles to decay:    "
-    print to_decay.keys()
-
-    print "By any chance, do you know the max. weight already ? \n"
-    answer=raw_input("Type the max weight if yes, otherwise type a negative number \n")
-    try:
-        answer=answer.replace("\n","") 
-        if float(answer)>0:
-            max_weight=float(answer)
-        else:
-            max_weight=-1
-            print "ok, let us evaluate the max weight then ..."
-    except: 
-        print "ok, let us evaluate the max weight then ..."
-        max_weight=-1
-
-    answer=raw_input( "Include Breit Wigner effects ? (yes/no) \n")
-    if (answer=="yes"): 
-        BW_effects=1
-    else:
-        BW_effects=0
-
-
-    generate_all=decay_all_events(inputfile,mybanner,decay_processes,\
-                prod_branches,proc_option, max_weight, BW_effects, curr_dir)
 

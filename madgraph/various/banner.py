@@ -150,7 +150,11 @@ class Banner(dict):
     def write(self, output_path):
         """write the banner"""
         
-        ff = open(output_path, 'w')
+        if isinstance(output_path, str):
+            ff = open(output_path, 'w')
+        else:
+            ff = output_path
+            
         if MADEVENT:
             ff.write(open(pjoin(MEDIR, 'Source', 'banner_header.txt')).read())
         else:
@@ -190,7 +194,12 @@ class Banner(dict):
             else:
                 raise Exception, 'Impossible to know the type of the card'
 
-            self[tag.lower()] = open(path).read()
+            self.add_text(tag.lower(), open(path).read())
+
+    def add_text(self, tag, text):
+        """Add the content of the file to the banner"""
+        
+        self[tag.lower()] = text
     
     
     def charge_card(self, tag):
@@ -203,7 +212,7 @@ class Banner(dict):
         elif tag == 'proc_card':
             tag = 'mg5proccard' 
         
-        assert tag in ['sha', 'mgruncard', 'mg5proccard']
+        assert tag in ['slha', 'mgruncard', 'mg5proccard'], 'invalid card %s' % tag
         
         if tag == 'slha':
             param_card = self[tag].split('\n')
@@ -249,7 +258,7 @@ class Banner(dict):
                 return card.info[arg[0]]
             return card[arg]
         elif len(arg) == 2 and tag == 'slha':
-            return card[arg[0]].get(arg[1])
+            return card[arg[0]].get(arg[1:])
         else:
             raise Exception, "Unknow command"
     
