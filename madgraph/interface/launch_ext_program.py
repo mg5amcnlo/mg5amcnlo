@@ -312,12 +312,11 @@ class aMCatNLOLauncher(ExtLauncher):
             elif max_node == 2:
                 nb_node = 2
             elif not self.force:
-                nb_node = self.ask('How many core do you want to use?', max_node, range(2,max_node+1))
+                nb_node = self.ask('How many cores do you want to use?', max_node, range(2,max_node+1))
             else:
                 nb_node=max_node
                 
         import madgraph.interface.amcatnlo_run_interface as run_int
-        
         if hasattr(self, 'shell'):
             usecmd = run_int.aMCatNLOCmdShell(me_dir=self.running_dir, options = self.cmd_int.options)
         else:
@@ -342,6 +341,7 @@ class aMCatNLOLauncher(ExtLauncher):
             command += " -c"
         elif mode == "2":
             command += " -m" 
+            usecmd.nb_core = int(nb_node)
         try:
             os.remove('ME5_debug')
         except:
@@ -400,7 +400,7 @@ class MELauncher(ExtLauncher):
             elif max_node == 2:
                 nb_node = 2
             elif not self.force:
-                nb_node = self.ask('How many core do you want to use?', max_node, range(2,max_node+1))
+                nb_node = self.ask('How many cores do you want to use?', max_node, range(2,max_node+1))
             else:
                 nb_node=max_node
                 
