@@ -1214,7 +1214,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
             for i, status in enumerate(mcatnlo_status):
                 if i == 2 or not options['only_generation']:
-                    # if the number of events requested is zero, simply print summary and return
+                    # if the number of events requested is zero,
+                    # skip mint step 2
                     if i==2 and nevents==0:
                         self.print_summary(2,mode)
                         return
