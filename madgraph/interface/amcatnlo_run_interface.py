@@ -104,7 +104,7 @@ def compile_dir(arguments):
 
     # compile and run tests
     for test in tests:
-        misc.compile([test], cwd = this_dir)
+        misc.compile([test], cwd = this_dir, job_specs = False)
         if not os.path.exists(pjoin(this_dir, test)):
             raise aMCatNLOError('%s compilation failed' % test)
         input = pjoin(me_dir, '%s_input.txt' % test)
@@ -113,7 +113,7 @@ def compile_dir(arguments):
                 stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
         
     if not options['reweightonly']:
-        misc.compile(['gensym'], cwd=this_dir)
+        misc.compile(['gensym'], cwd=this_dir, job_specs = False)
         if not os.path.exists(pjoin(this_dir, 'gensym')):
             raise aMCatNLOError('gensym compilation failed')
 
@@ -121,11 +121,11 @@ def compile_dir(arguments):
         p = misc.Popen(['./gensym'], stdin=open(pjoin(this_dir, 'gensym_input.txt')),
                  stdout=open(gensym_log, 'w'),cwd= this_dir) 
         #compile madevent_mintMC/vegas
-        misc.compile([exe], cwd=this_dir)
+        misc.compile([exe], cwd=this_dir, job_specs = False)
         if not os.path.exists(pjoin(this_dir, exe)):
             raise aMCatNLOError('%s compilation failed' % exe)
     if mode in ['aMC@NLO', 'aMC@LO'] and not options['noreweight']:
-        misc.compile(['reweight_xsec_events'], cwd=this_dir)
+        misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
         if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
             raise aMCatNLOError('reweight_xsec_events compilation failed')
     logger.info('    %s done.' % p_dir) 
@@ -2023,7 +2023,7 @@ Integrated cross-section
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
 
-        from multiprocessing import Pool
+        import multiprocessing
 
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
@@ -2098,7 +2098,13 @@ Integrated cross-section
         for test in tests:
             self.write_test_input(test)
 
-        mypool = Pool(self.nb_core, init_worker) 
+        if not self.nb_core:
+            try:
+                self.nb_core = int(self.options['nb_core'])
+            except TypeError:
+                self.nb_core = multiprocessing.cpu_count()
+
+        mypool = multiprocessing.Pool(self.nb_core, init_worker) 
         mypool.map(compile_dir,
                 ((self.me_dir, p_dir, mode, options, tests, exe, self.options['run_mode']) for p_dir in p_dirs))
 
