@@ -659,11 +659,8 @@ class AbstractALOHAModel(dict):
             loop = any((t.startswith('L') for t in tag))
             if loop:
                 aloha.loop_mode = True
-                self.explicit_combine = True
-                
-            
-                
-                       
+                self.explicit_combine = True                
+           
             for l_name in list_l_name:
                 try:
                     request[l_name][conjugate].append((outgoing,tag))

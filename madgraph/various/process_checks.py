@@ -246,7 +246,7 @@ class MatrixElementEvaluator(object):
         try:
             matrix_methods = exporter.get_python_matrix_methods(\
                 gauge_check=gauge_check)
-#            print "I got matrix_methods=",str(matrix_methods.items()[0][1])
+            # print "I got matrix_methods=",str(matrix_methods.items()[0][1])
         except helas_call_writers.HelasWriterError, error:
             logger.info(error)
             return None
@@ -265,10 +265,10 @@ class MatrixElementEvaluator(object):
 
         # Evaluate the matrix element for the momenta p
         exec("data = Matrix_%s()" % process.shell_string())
-        if output == "m2": 
+        if output == "m2":
             return data.smatrix(p, self.full_model), data.amp2
         else:
-            m2 = data.smatrix(p, self.full_model)
+            m2 = data.smatrix(p,self.full_model)
             return {'m2': m2, output:getattr(data, output)}
     
     #===============================================================================
@@ -363,11 +363,12 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
     """Class taking care of matrix element evaluation for loop processes."""
 
     def __init__(self, cuttools_dir=None, *args, **kwargs):
+
         """Allow for initializing the MG5 root where the temporary fortran
         output for checks is placed."""
         
         super(LoopMatrixElementEvaluator,self).__init__(*args, **kwargs)
-        
+
         self.mg_root=self.cmd._mgme_dir
         self.cuttools_dir=cuttools_dir
         # Set proliferate to true if you want to keep the produced directories
@@ -377,27 +378,24 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
     #===============================================================================
     # Helper function evaluate_matrix_element for loops
     #===============================================================================
-    def evaluate_matrix_element(self, matrix_element, p=None, full_model=None, 
+    def evaluate_matrix_element(self, matrix_element, p=None, 
                                 gauge_check=False, auth_skipping=None, output='m2'):
         """Calculate the matrix element and evaluate it for a phase space point
            Output can only be 'm2. The 'jamp' and 'amp' returned values are just
            empty lists at this point.
         """
-        if full_model:
-            self.full_model = full_model
 
         process = matrix_element.get('processes')[0]
         model = process.get('model')
             
-        if "matrix_elements" not in self.stored_quantities:
-            self.stored_quantities['matrix_elements'] = []
+        if "loop_matrix_elements" not in self.stored_quantities:
+            self.stored_quantities['loop_matrix_elements'] = []
 
         if (auth_skipping or self.auth_skipping) and matrix_element in \
-                [el[0] for el in self.stored_quantities['matrix_elements']]:
+                [el[0] for el in self.stored_quantities['loop_matrix_elements']]:
             # Exactly the same matrix element has been tested
             logger.info("Skipping %s, " % process.nice_string() + \
-                        "identical matrix element already tested" \
-                        )
+                        "identical matrix element already tested" )
             return None
 
         # Generate phase space point to use
@@ -405,9 +403,9 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             p, w_rambo = self.get_momenta(process)
         
         if matrix_element in [el[0] for el in \
-                                     self.stored_quantities['matrix_elements']]:  
-            export_dir=self.stored_quantities['matrix_elements'][\
-                [el[0] for el in self.stored_quantities['matrix_elements']\
+                                self.stored_quantities['loop_matrix_elements']]:  
+            export_dir=self.stored_quantities['loop_matrix_elements'][\
+                [el[0] for el in self.stored_quantities['loop_matrix_elements']\
                  ].index(matrix_element)][1]
             logger.debug("Reusing generated output %s"%str(export_dir))
         else:        
@@ -423,7 +421,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                     export_dir=os.path.join(self.mg_root,'%s_%i'%(temp_dir_prefix,id))
             
             if self.proliferate:
-                self.stored_quantities['matrix_elements'].append(\
+                self.stored_quantities['loop_matrix_elements'].append(\
                                                     (matrix_element,export_dir))
 
             # I do the import here because there is some cyclic import of export_v4
@@ -485,7 +483,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 mp_file = open(mp_file_path,'w')
                 mp_file.write(mp_orig_file_content)
                 mp_file.close()
-    
+        
         # Now erase the output directory
         if not self.proliferate:
             shutil.rmtree(export_dir)
@@ -676,7 +674,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         if ind==len(file_names):
             raise Exception, "No helas calls output file found."
         
-        helas_file_name=os.path.join(dir_name,file_names[ind])  
+        helas_file_name=os.path.join(dir_name,file_names[ind])
         file = open(os.path.join(dir_name,helas_file_name), 'r')
         
         helas_calls_out=""
@@ -888,6 +886,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         while providing some details about the output in the dictionary returned. 
         Returns None if anything fails"""
 
+        model = matrix_element['processes'][0].get('model')
+        
         infos={'Process_output': None,
                'HELAS_MODEL_compilation' : None,
                'dir_path' : None,
@@ -926,13 +926,13 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
     
             start=time.time()
             FortranExporter = exporter_class(self.mg_root, export_dir, options)
-            FortranModel = helas_call_writers.FortranUFOHelasCallWriter(self.full_model)
-            FortranExporter.copy_v4template(modelname=self.full_model.get('name'))
+            FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
+            FortranExporter.copy_v4template(modelname=model.get('name'))
             FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
             wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
             wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
                                                                 for c in l]))
-            FortranExporter.convert_model_to_mg4(self.full_model,wanted_lorentz,wanted_couplings)
+            FortranExporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
             infos['Process_output'] = time.time()-start
             start=time.time()
             FortranExporter.finalize_v4_directory(None,"",False,False,'gfortran')
@@ -977,7 +977,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         return infos
 
     def time_matrix_element(self, matrix_element, reusing = False,
-                                                             param_card = None):
+                                        param_card = None, keep_folder = False):
         """ Output the matrix_element in argument and give detail information
         about the timing for its output and running"""
         
@@ -992,8 +992,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             proc_name = matrix_element['processes'][0].shell_string()[2:]
         else:
             proc_name = matrix_element.shell_string()[2:]
-            
-        export_dir=os.path.join(self.mg_root,temp_dir_prefix+"_%s"%proc_name)
+        
+        export_dir=os.path.join(self.mg_root,('SAVED' if keep_folder else '')+\
+                                                temp_dir_prefix+"_%s"%proc_name)
 
         res_timings = self.setup_process(matrix_element,export_dir, \
                                                             reusing, param_card)
@@ -1103,7 +1104,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 #===============================================================================
 
     def check_matrix_element_stability(self, matrix_element, nPoints,
-                              infos = None, reusing = False, param_card = None):
+         infos = None, reusing = False, param_card = None, keep_folder = False):
         """ Output the matrix_element in argument, run in for nPoints and return
         a dictionary containing the stability information on each of these points.
         If infos are provided, then the matrix element output is skipped and 
@@ -1136,7 +1137,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         else:
             process = matrix_element
         proc_name = process.shell_string()[2:]
-        export_dir=os.path.join(self.mg_root,temp_dir_prefix+"_%s"%proc_name)
+        export_dir=os.path.join(self.mg_root,("SAVED" if keep_folder else "")+\
+                                                temp_dir_prefix+"_%s"%proc_name)
         if not infos:
             infos = self.setup_process(matrix_element,export_dir, \
                                                             reusing, param_card)
@@ -1420,7 +1422,7 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
     (which makes a big difference for very large multiprocesses.
     stored_quantities is a dictionary for any quantities that we want
     to reuse between runs."""
-                   
+    
     model = multiprocess.get('model')
     isids = [leg.get('ids') for leg in multiprocess.get('legs') \
               if not leg.get('state')]
@@ -1532,8 +1534,6 @@ def generate_loop_matrix_element(process_definition, reuse,
               'n_loop_wfs': None,
               'loop_wfs_ranks': None}
     
-    model=process_definition.get('model')
-    
     if any(len(l.get('ids'))>1 for l in process_definition.get('legs')):
         raise InvalidCmd("This check can only be performed on single "+
                          " processes. (i.e. without multiparticle labels).")
@@ -1546,7 +1546,7 @@ def generate_loop_matrix_element(process_definition, reuse,
     # Now generate a process based on the ProcessDefinition given in argument.
     process = process_definition.get_process(isids,fsids)
     
-    proc_dir = os.path.join(mg_root,temp_dir_prefix+"_%s"%(
+    proc_dir = os.path.join(mg_root,"SAVED"+temp_dir_prefix+"_%s"%(
                                '_'.join(process.shell_string().split('_')[1:])))
     if reuse and os.path.isdir(proc_dir):
         logger.info("Reusing directory %s"%str(proc_dir))
@@ -1589,13 +1589,16 @@ def check_profile(process_definition, param_card = None,cuttools="",
     """For a single loop process, check both its timings and then its stability
     in one go without regenerating it."""
 
+    keep_folder = reuse
+
     model=process_definition.get('model')
 
     timing1, matrix_element = generate_loop_matrix_element(process_definition,
                                                                   reuse,cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
     myProfiler = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
-    timing2 = myProfiler.time_matrix_element(matrix_element, reusing, param_card)
+    timing2 = myProfiler.time_matrix_element(matrix_element, reusing, 
+                                            param_card, keep_folder=keep_folder)
     
     if timing2 == None:
         return None, None
@@ -1604,7 +1607,8 @@ def check_profile(process_definition, param_card = None,cuttools="",
     timing = dict(timing1.items()+timing2.items())
 
     stability = myProfiler.check_matrix_element_stability(matrix_element, 
-           nPoints=nPoints, infos=timing, reusing=reusing,param_card=param_card)
+           nPoints=nPoints, infos=timing, reusing=reusing,param_card=param_card,
+                                                      keep_folder = keep_folder)
     if stability == None:
         return None, None
     else:
@@ -1617,7 +1621,8 @@ def check_stability(process_definition, param_card = None,cuttools="",
                                nPoints=100, reuse=False, cmd = FakeInterface()):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
-
+    
+    keep_folder = reuse
     model=process_definition.get('model')
 
     timing, matrix_element = generate_loop_matrix_element(process_definition,
@@ -1626,7 +1631,8 @@ def check_stability(process_definition, param_card = None,cuttools="",
     myStabilityChecker = LoopMatrixElementTimer(cuttools_dir=cuttools,
                                                             model=model,cmd=cmd)
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
-                          nPoints=nPoints,reusing=reusing,param_card=param_card)
+                        nPoints=nPoints,reusing=reusing,param_card=param_card, 
+                                                        keep_folder=keep_folder)
     
     if stability == None:
         return None
@@ -1641,13 +1647,14 @@ def check_timing(process_definition, param_card= None, cuttools="",
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
 
+    keep_folder = reuse
     model=process_definition.get('model')
     timing1, matrix_element = generate_loop_matrix_element(process_definition,
                                                                  reuse, cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
     myTimer = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
-    timing2 = myTimer.time_matrix_element(matrix_element, reusing, \
-                                                                     param_card)
+    timing2 = myTimer.time_matrix_element(matrix_element, reusing, param_card,
+                                                      keep_folder = keep_folder)
     
     if timing2 == None:
         return None
@@ -1759,8 +1766,8 @@ def check_process(process, evaluator, quick):
     for i, leg in enumerate(process.get('legs')):
         leg.set('number', i+1)
 
-    logger.info("Checking %s" % \
-                process.nice_string().replace('Process', 'process'))
+    logger.info("Checking crossings of %s" % \
+                process.nice_string().replace('Process:', 'process'))
 
     process_matrix_elements = []
 
@@ -1912,7 +1919,7 @@ def clean_up(mg_root):
 
     directories = glob.glob(os.path.join(mg_root, '%s*'%temp_dir_prefix))
     if directories != []:
-        logger.info("Cleaning temporary %s* check runs."%temp_dir_prefix)
+        logger.debug("Cleaning temporary %s* check runs."%temp_dir_prefix)
     for dir in directories:
         shutil.rmtree(dir)
 
@@ -2269,7 +2276,6 @@ def output_comparisons(comparison_results):
     """
     
     proc_col_size = 17
-
     pert_coupl = comparison_results[0]['process']['perturbation_couplings']
     if pert_coupl:
         process_header = "Process [virt="+" ".join(pert_coupl)+"]"
@@ -2353,7 +2359,6 @@ def check_gauge(processes, param_card = None,cuttools="", cmd = FakeInterface())
     For one of the massless external bosons (e.g. gluon or photon), 
     replace the polarization vector (epsilon_mu) with its momentum (p_mu)
     """
-    
     mg_root = cmd._mgme_dir
     cmass_scheme = cmd.options['complex_mass_scheme']
     if isinstance(processes, base_objects.ProcessDefinition):
@@ -2371,13 +2376,12 @@ def check_gauge(processes, param_card = None,cuttools="", cmd = FakeInterface())
                                            cmd= cmd,model=model, param_card=param_card,
                                            auth_skipping = False, reuse = False)
 
-        if not cmass_scheme:
+        if not cmass_scheme and multiprocess.get('perturbation_couplings')==[]:
             # Set all widths to zero for gauge check
             logger.info('Set All width to zero for non complex mass scheme checks')
             for particle in evaluator.full_model.get('particles'):
                 if particle.get('width') != 'ZERO':
                     evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
-
         results = run_multiprocs_no_crossings(check_gauge_process,
                                            multiprocess,
                                            evaluator)
@@ -2448,13 +2452,15 @@ def check_gauge_process(process, evaluator):
             break
 
     if not found_gauge:
+        logger.info("No ward identity for %s" % \
+                process.nice_string().replace('Process', 'process'))
         # This process can't be checked
         return None
 
     for i, leg in enumerate(process.get('legs')):
         leg.set('number', i+1)
 
-    logger.info("Checking gauge %s" % \
+    logger.info("Checking ward identities for %s" % \
                 process.nice_string().replace('Process', 'process'))
 
     legs = process.get('legs')
@@ -2622,18 +2628,15 @@ def check_lorentz(processes, param_card = None,cuttools="", cmd = FakeInterface(
         multiprocess = processes
 
         model = multiprocess.get('model')
-        
         # Initialize matrix element evaluation
         if multiprocess.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model,
-                                           cmd= cmd,
-                                           auth_skipping = False, reuse = True)
+                                cmd= cmd, auth_skipping = False, reuse = True)
         else:
-            evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools, model=model,
-                                           auth_skipping = False, reuse = True,
-                                           cmd = cmd)
+            evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,
+                     model=model, auth_skipping = False, reuse = True,cmd = cmd)
 
-        if not cmass_scheme:
+        if not cmass_scheme and processes.get('perturbation_couplings')==[]:
             # Set all widths to zero for lorentz check
             logger.info('Set All width to zero for non complex mass scheme checks')
             for particle in evaluator.full_model.get('particles'):
@@ -2705,8 +2708,8 @@ def check_lorentz_process(process, evaluator):
     for i, leg in enumerate(process.get('legs')):
         leg.set('number', i+1)
 
-    logger.info("Checking lorentz %s" % \
-                process.nice_string().replace('Process', 'process'))
+    logger.info("Checking lorentz transformations for %s" % \
+                process.nice_string().replace('Process:', 'process'))
 
     legs = process.get('legs')
     # Generate a process with these legs
@@ -2740,7 +2743,7 @@ def check_lorentz_process(process, evaluator):
     else:
         matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                                        optimized_output = loop_optimized_output)
-
+    
     data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
                                              auth_skipping = True)
 
@@ -2776,6 +2779,7 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         # Extract IS and FS ids
         multiprocess_unit = processes_unit
         results = []
+
         model = multiprocess_unit.get('model')
 
         # Initialize matrix element evaluation
@@ -2790,8 +2794,7 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
                                            cmd=cmd, model=model,
                                            param_card=param_card,
                                            auth_skipping = False, reuse = False)
-
-        if not cmass_scheme:
+        if not cmass_scheme and multiprocess_unit.get('perturbation_couplings')==[]:
             logger.info('Set All width to zero for non complex mass scheme checks')
             for particle in evaluator.full_model.get('particles'):
                 if particle.get('width') != 'ZERO':
@@ -2801,7 +2804,7 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
                                            multiprocess_unit,
                                            evaluator)
         clean_added_globals(ADDED_GLOBAL)
-       # Clear up previous run if checking loop outptu
+       # Clear up previous run if checking loop output
         if processes_unit.get('perturbation_couplings')!=[]:
             clean_up(mg_root)
 
@@ -2811,7 +2814,7 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         
         multiprocess_feynm = processes_feynm
         model = multiprocess_feynm.get('model')
-        
+
         # Initialize matrix element evaluation
         aloha.unitary_gauge = False
         # We could use the default output as well for Feynman, but it provides
@@ -2825,10 +2828,9 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
                                            cmd= cmd, model=model,
                                            param_card=param_card,
                                            auth_skipping = False, reuse = False)
-                
-        if not cmass_scheme:
+
+        if not cmass_scheme and multiprocess_feynm.get('perturbation_couplings')==[]:
             # Set all widths to zero for gauge check
-            logger.info('Set All width to zero for non complex mass scheme checks')
             for particle in evaluator.full_model.get('particles'):
                 if particle.get('width') != 'ZERO':
                     evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
@@ -2836,7 +2838,6 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         output_f = run_multiprocs_no_crossings(get_value,
                                            multiprocess_feynm,
                                            evaluator, momentum)
-        
         output = [processes_unit]
         for data in output_f:
             local_dico = {}
@@ -2845,7 +2846,7 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
             local_dico['value_unit'] = [d['value'] for d in output_u 
                                       if d['process'] == data['process']][0]
             output.append(local_dico)
-
+        
         if processes_feynm.get('perturbation_couplings')!=[]:
             # Clean temporary folders created for the running of the loop processes
             clean_up(mg_root)        
@@ -2863,15 +2864,13 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
 
 def get_value(process, evaluator, p=None):
     """Return the value/momentum for a phase space point"""
-
-    model = process.get('model')
-
+    
     for i, leg in enumerate(process.get('legs')):
         leg.set('number', i+1)
 
-
-    logger.info("Checking gauge %s" % \
-                process.nice_string().replace('Process', 'process'))
+    logger.info("Checking %s in %s gauge" % \
+        ( process.nice_string().replace('Process:', 'process'),
+                               'unitary' if aloha.unitary_gauge else 'feynman'))
 
     legs = process.get('legs')
     # Generate a process with these legs

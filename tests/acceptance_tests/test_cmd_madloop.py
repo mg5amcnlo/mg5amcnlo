@@ -142,7 +142,7 @@ class TestCmdLoop(unittest.TestCase):
         self.assertTrue('Passed' in res)
         self.setup_logFile_for_logger('madgraph.export_v4',restore=True)
 
-    def test_ML_check_all_epem_ttx(self):
+    def test_ML_check_full_epem_ttx(self):
         """ Test that check full e+ e- > t t~ works fine """
         
         self.setup_logFile_for_logger('madgraph.export_v4')
@@ -152,10 +152,13 @@ class TestCmdLoop(unittest.TestCase):
         self.assertEqual(cmd, os.getcwd())
         self.assertTrue(path.isfile('/tmp/madgraph.export_v4.log'))
         res = open('/tmp/madgraph.export_v4.log').read()
+        # Needs the loop_sm feynman model to successfully run the gauge check.
+        # self.assertTrue('Gauge results' in res)
         self.assertTrue('Lorentz invariance results' in res)
         self.assertTrue('Process permutation results:' in res)
         self.assertTrue('Summary: 1/1 passed, 0/1 failed' in res)
-        self.assertTrue('Passed' in res) 
+        self.assertTrue(res.count('Passed')==3)
+        self.assertTrue('1/1 passed' in res) 
         self.setup_logFile_for_logger('madgraph.export_v4',restore=True)
 
     def test_ML_check_timing_epem_ttx(self):

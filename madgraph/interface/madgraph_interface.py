@@ -2726,6 +2726,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Check args validity
         param_card = self.check_check(args)
         
+        # Back up the gauge for later
+        gauge = str(self.options['gauge'])
+        
         reuse = args[1]=="-reuse"       
         args = args[:1]+args[2:] 
         # For the stability check the user can specify the statistics (i.e
@@ -2741,10 +2744,21 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if not myprocdef:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
 
-        if args[0] in ['timing','stability', 'profile'] and not \
-                                        myprocdef.get('perturbation_couplings'):
+        if args[0] in ['timing','stability', 'profile'] and \
+                                    myprocdef.get('perturbation_couplings')!=[]:
             raise self.InvalidCmd("Only loop processes can have their "+
                                   " timings or stability checked.")
+        
+        if args[0]=='gauge' and \
+                    not myprocdef.get('perturbation_couplings') in [[],['QCD']]:
+            raise self.InvalidCmd(
+"""Feynman vs unitary gauge comparisons can only be done if there are no loop 
+   propagators affected by this gauge. Typically, either processes at tree level
+   or including only QCD perturbations can be considered here.""")
+        
+        if args[0]=='gauge' and len(self._curr_model.get('gauge')) < 2:
+            raise self.InvalidCmd("The current model does not allow for both "+\
+                                                   "Feynman and unitary gauge.")
         
         # Disable some loggers
         loggers = [logging.getLogger('madgraph.diagram_generation'),
@@ -2752,7 +2766,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    logging.getLogger('ALOHA'),
                    logging.getLogger('madgraph.helas_objects'),
                    logging.getLogger('madgraph.loop_exporter'),
-                   logging.getLogger('madgraph.export_v4')]
+                   logging.getLogger('madgraph.export_v4'),
+                   logging.getLogger('cmdprint'),
+                   logging.getLogger('madgraph.model'),
+                   logging.getLogger('madgraph.base_objects')]
         old_levels = [logger.getEffectiveLevel() for logger in loggers]
         for logger in loggers:
             logger.setLevel(logging.WARNING)
@@ -2764,9 +2781,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # process_checks because I am fed up with passing it through each single
         # damn little function of process_checks.
         old_process_checks_loop_opt = process_checks.loop_optimized_output
-        
         process_checks.loop_optimized_output = self.options['loop_optimized_output']
-
+        
+        # The aloha python output has trouble when doing (tree level of course)
+        # python output and that loop_mode is True at the beginning.
+        # So as a temporary fix for the problem that after doing a check at NLO
+        # then a check at LO will fail, I make sure I set it to False if the
+        # process is a tree-level one
+        if myprocdef.get('perturbation_couplings')==[]:
+            aloha.loop_mode = False
+        
         comparisons = []
         gauge_result = []
         gauge_result_no_brs = []
@@ -2807,31 +2831,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                   reuse = reuse,
                                                   cmd = self)
 
-        if args[0] in  ['permutation', 'full']:
-            comparisons = process_checks.check_processes(myprocdef,
-                                            param_card = param_card,
-                                            quick = True,
-                                            cuttools=CT_dir,
-                                            cmd = self)
-            nb_processes += len(comparisons[0])
-
-        if args[0] in ['lorentz', 'full']:
-            lorentz_result = process_checks.check_lorentz(myprocdef,
-                                          param_card = param_card,
-                                          cuttools=CT_dir,
-                                          cmd = self)
-            nb_processes += len(lorentz_result)
-            
-        if args[0] in  ['brs', 'full']:
-            gauge_result = process_checks.check_gauge(myprocdef,
-                                          param_card = param_card,
-                                          cuttools=CT_dir,
-                                          cmd = self)
-            nb_processes += len(gauge_result)
-
         if args[0] in  ['gauge', 'full'] and \
-          len(self._curr_model.get('gauge')) == 2:            
-            gauge = str(self.options['gauge'])
+          len(self._curr_model.get('gauge')) == 2 and\
+          myprocdef.get('perturbation_couplings') in [[],['QCD']]:
             opt_loop_output = str(self.options['loop_optimized_output'])
             # In order to be able to switch gauges, we put ourselves in the
             # default output mode.
@@ -2857,7 +2859,30 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self.do_set('gauge %s' % gauge, log=False)
             self.do_set('loop_optimized_output %s' % opt_loop_output, log=False)
             
-            nb_processes += len(gauge_result_no_brs)            
+            nb_processes += len(gauge_result_no_brs)
+
+        if args[0] in  ['permutation', 'full']:
+            comparisons = process_checks.check_processes(myprocdef,
+                                            param_card = param_card,
+                                            quick = True,
+                                            cuttools=CT_dir,
+                                            cmd = self)
+            nb_processes += len(comparisons[0])
+
+        if args[0] in ['lorentz', 'full']:
+            myprocdeff = copy.copy(myprocdef)
+            lorentz_result = process_checks.check_lorentz(myprocdeff,
+                                          param_card = param_card,
+                                          cuttools=CT_dir,
+                                          cmd = self)
+            nb_processes += len(lorentz_result)
+        
+        if args[0] in  ['brs', 'full']:
+            gauge_result = process_checks.check_gauge(myprocdef,
+                                          param_card = param_card,
+                                          cuttools=CT_dir,
+                                          cmd = self)
+            nb_processes += len(gauge_result)     
             
         cpu_time2 = time.time()
 
@@ -2869,10 +2894,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if self.options['complex_mass_scheme']:
                 text = "Note that Complex mass scheme gives gauge/lorentz invariant\n"
                 text+= "results only for stable particles in final states.\n\n"
-            else:
+            elif not myprocdef.get('perturbation_couplings'):
                 text = "Note That all width have been set to zero for those checks\n\n"
+            else:
+                text = "\n"
         else:
-            text =""
+            text ="\n"
         
         if timings:
             text += 'Timing result for the '+('optimized' if \
@@ -2905,7 +2932,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text += 'Lorentz invariance results:\n'
             text += process_checks.output_lorentz_inv(lorentz_result) + '\n'
 
-        if comparisons:
+        if comparisons and len(comparisons[0])>0:
             text += 'Process permutation results:\n'
             text += process_checks.output_comparisons(comparisons[0]) + '\n'
             self._comparisons = comparisons
@@ -2920,7 +2947,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
         # Output the result to the interface directly if short enough or if it
         # was anyway not output to the pager
-#        if args[0] in  ['timing', 'stability', 'profile']:
         if (len(text.split('\n'))<=20 or reuse):
             logger.info(text)
         else:
@@ -3327,7 +3353,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     
 
     # Import files
-    def do_import(self, line):
+    def do_import(self, line, force=False):
         """Main commands: Import files with external formats"""
         args = self.split_arg(line)
         # Check argument's validity
@@ -3355,34 +3381,39 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 except import_ufo.UFOImportError, error:
                     if 'not a valid UFO model' in str(error):
                         logger_stderr.warning('WARNING: %s' % error)
-                        logger_stderr.warning('Try to recover by running automatically `import model_v4 %s` instead.' \
-                                                                      % args[1])
+                        logger_stderr.warning('Try to recover by running '+\
+                         'automatically `import model_v4 %s` instead.'% args[1])
                     self.exec_cmd('import model_v4 %s ' % args[1], precmd=True)
-                    return    
+                    return
                 if self.options['complex_mass_scheme']:
                     self._curr_model.change_mass_to_complex_scheme()
                     if hasattr(self._curr_model, 'set_parameters_and_couplings'):
                         self._curr_model.set_parameters_and_couplings()
                 if self.options['gauge']=='unitary':
-                    if isinstance(self._curr_model,loop_base_objects.LoopModel) and \
-                         self._curr_model.get('perturbation_couplings')!=[] and \
-                                           self.options['gauge']=='unitary' and \
-                                          self.options['loop_optimized_output']:
-                        logger.info('Change the gauge to Feynman because '+\
-                          'the loop optimized output requires to work in this gauge')
+                    if not force and isinstance(self._curr_model,\
+                                              loop_base_objects.LoopModel) and \
+                         self._curr_model.get('perturbation_couplings') not in \
+                                                                   [[],['QCD']]:
                         if 1 not in self._curr_model.get('gauge') :
-                            raise self.InvalidCmd(' Could not load this loop '+\
-                              'model in the loop_optimized output mode because'+\
-                                      ' it does not support the Feynman gauge.')
-                        self.do_set('gauge Feynman', log=False)
-                        return
+                            logger.warning('This model does not allow Feynman '+\
+                              'gauge. You will only be able to do tree level '+\
+                                                'QCD loop cmputations with it.')
+                        else:
+                            logger.info('Change to the gauge to Feynman because '+\
+                          'this loop model allows for more than just tree level'+\
+                                                      ' and QCD perturbations.')
+                            self.do_set('gauge Feynman', log=False)
+                            return
                     if 0 not in self._curr_model.get('gauge') :
-                        logger.warning('Change the gauge to Feynman since the model does not allow unitary gauge') 
+                        logger.warning('Change the gauge to Feynman since '+\
+                                       'the model does not allow unitary gauge') 
                         self.do_set('gauge Feynman', log=False)
                         return                        
                 else:
                     if 1 not in self._curr_model.get('gauge') :
-                        logger.warning('Change the gauge to unitary since the model does not allow Feynman gauge')
+                        logger.warning('Change the gauge to unitary since the'+\
+                          ' model does not allow Feynman gauge.'+\
+                                                  ' Please re-import the model')
                         self._curr_model = None
                         self.do_set('gauge unitary', log= False)
                         return 
@@ -4409,6 +4440,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 		                                     % self._curr_model.get('name'))
             self.options[args[0]] = args[1]
 
+            if able_to_mod and log and args[0] == 'gauge' and \
+                args[1] == 'unitary' and not self.options['gauge']=='unitary' and \
+                isinstance(self._curr_model,loop_base_objects.LoopModel) and \
+                  not self._curr_model['perturbation_couplings'] in [[],['QCD']]:
+                logger.warning('You will only be able to do tree level'+\
+                                   ' and QCD corrections in the unitary gauge.')
+
             #re-init all variable
             model_name = self._curr_model.get('version_tag').split('##')[0]
             self._curr_model = None
@@ -4425,7 +4463,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 # We don't want to go through the MasterCommand again
                 # because it messes with the interface switching when
                 # importing a loop model from MG5
-                MadGraphCmd.do_import(self,'model %s' %model_name)
+                MadGraphCmd.do_import(self,'model %s' %model_name, force=True)
             elif log:
                 logger.info('Note that you have to reload the model') 
 

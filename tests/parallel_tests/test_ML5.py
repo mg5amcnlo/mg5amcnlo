@@ -21,7 +21,8 @@ ML4_processes_short = [('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0
                        ('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}),
                        ('g g > t t~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
                        ('d~ d > g a',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}),
-                       ('d~ d > g z',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2})]
+                       ('d~ d > g z',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}),
+                       ('u d~ > h t b~',{'QED':3,'QCD':0},['QCD'],{'QCD':2,'QED':6})]
 
 ML4_processes_long =  [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2}), 
                        ('g g > h h t t~',{'QCD':2,'QED':2},['QCD'],{'QCD':6,'QED':4}),
