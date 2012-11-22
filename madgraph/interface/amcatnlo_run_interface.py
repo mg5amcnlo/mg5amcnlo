@@ -1057,7 +1057,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
-        if self.check_mcatnlo_dir() and not options['parton']:
+        if not mode in ['LO', 'NLO'] and self.check_mcatnlo_dir() and not options['parton']:
             self.run_mcatnlo(evt_file)
 
 
@@ -1155,14 +1155,15 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.update_status('Cleaning previous results', level=None)
         for dir in p_dirs:
             job_dict[dir] = [file for file in \
-                        os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
-                        if file.startswith('ajob')] 
-            for obj in folder_names[mode]:
-                to_rm = [file for file in \
-                        os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
-                        if file.startswith(obj[:-1]) and \
-                    os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file))] 
-                files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_rm])
+                                 os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                                 if file.startswith('ajob')] 
+            if not options['only_generation']:
+                for obj in folder_names[mode]:
+                    to_rm = [file for file in \
+                                 os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                                 if file.startswith(obj[:-1]) and \
+                                 os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file))] 
+                    files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_rm])
 
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
@@ -1175,20 +1176,56 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if mode in ['LO', 'NLO']:
             logger.info('Doing fixed order %s' % mode)
             if mode == 'LO':
+                npoints = self.run_card['npoints_FO_grid']
+                niters = self.run_card['niters_FO_grid']
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 1, npoints, niters) 
+                self.update_status('Setting up grids', level=None)
+                self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
+                p = misc.Popen(['./combine_results_FO.sh', 'born_G*'], \
+                                   stdout=subprocess.PIPE, \
+                                   cwd=pjoin(self.me_dir, 'SubProcesses'))
+                output = p.communicate()
+                self.cross_sect_dict = self.read_results(output, mode)
+                self.print_summary(0, mode)
+
+                npoints = self.run_card['npoints_FO']
+                niters = self.run_card['niters_FO']
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 3, npoints, niters) 
                 self.update_status('Computing cross-section', level=None)
                 self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
             elif mode == 'NLO':
                 self.update_status('Setting up grid', level=None)
-                self.run_all(job_dict, [['0', 'grid', '0']], 'Setting up grid')
-                p = misc.Popen(['./combine_results_FO.sh', 'grid*'], \
+                npoints = self.run_card['npoints_FO_grid']
+                niters = self.run_card['niters_FO_grid']
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'grid', 1, npoints, niters) 
+                self.run_all(job_dict, [['0', 'grid', '0']], 'Setting up grid using Born')
+                p = misc.Popen(['./combine_results_FO.sh', 'grid_G*'], \
                                     stdout=subprocess.PIPE, 
                                     cwd=pjoin(self.me_dir, 'SubProcesses'))
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(0, mode)
 
+                npoints = self.run_card['npoints_FO_grid']
+                niters = self.run_card['niters_FO_grid']
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 3, npoints, niters) 
+                self.update_status('Improving grid using NLO', level=None)
+                self.run_all(job_dict, [['0', 'novB', '0', 'grid']], \
+                                 'Improving grids using NLO')
+                p = misc.Popen(['./combine_results_FO.sh', 'novB_G*'], \
+                                   stdout=subprocess.PIPE, cwd=pjoin(self.me_dir, 'SubProcesses'))
+                output = p.communicate()
+                self.cross_sect_dict = self.read_results(output, mode)
+                self.print_summary(0, mode)
+
+                npoints = self.run_card['npoints_FO']
+                niters = self.run_card['niters_FO']
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 3, npoints, niters) 
+                npoints = self.run_card['npoints_FO_virt']
+                niters = self.run_card['niters_FO_virt']
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', 3, npoints, niters) 
                 self.update_status('Computing cross-section', level=None)
-                self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'grid']], \
+                self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'novB']], \
                         'Computing cross-section')
 
             p = misc.Popen(['./combine_results_FO.sh'] + folder_names[mode], \
@@ -1212,6 +1249,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         elif mode in ['aMC@NLO', 'aMC@LO']:
             shower = self.run_card['parton_shower']
             nevents = int(self.run_card['nevents'])
+            req_acc = self.run_card['req_acc']
             #shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
             shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q']
             if not shower in shower_list:
@@ -1220,22 +1258,30 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
             if not options['only_generation']:
                 logger.info('Doing %s matched to parton shower' % mode[4:])
+            else:
+                logger.info('Generating events starting from existing results')
 
             for i, status in enumerate(mcatnlo_status):
                 if i == 2 or not options['only_generation']:
-                    self.update_status(status, level='parton')
-                if mode == 'aMC@NLO':
-                    self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
-                    self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
-                    self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
+                    # if the number of events requested is zero,
+                    # skip mint step 2
+                    if i==2 and nevents==0:
+                        self.print_summary(2,mode)
+                        return
 
-                elif mode == 'aMC@LO':
-                    self.write_madinMMC_file(
+                    self.update_status(status, level='parton')
+                    if mode == 'aMC@NLO':
+                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
+                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
+                        self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
+                        
+                    elif mode == 'aMC@LO':
+                        self.write_madinMMC_file(
                             pjoin(self.me_dir, 'SubProcesses'), 'born', i) 
-                    self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
+                        self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
 
                 if (i < 2 and not options['only_generation']) or i == 1 :
-                    p = misc.Popen(['./combine_results.sh'] + [ '%d' % i,'%d' % nevents] + folder_names[mode],
+                    p = misc.Popen(['./combine_results.sh'] + [ '%d' % i,'%d' % nevents, '%s' % req_acc ] + folder_names[mode],
                             stdout=subprocess.PIPE, cwd = pjoin(self.me_dir, 'SubProcesses'))
                     output = p.communicate()
                     files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d_abs.txt' % i), \
@@ -1405,7 +1451,7 @@ Integrated cross-section
                    
 
         elif mode in ['NLO', 'LO']:
-            status = ['Results after grid setup (correspond roughly to LO):',
+            status = ['Results after grid setup (cross-section is non-physical):',
                       'Final results and run summary:']
             if step == 0:
                 message = '\n      ' + status[step] + \
@@ -2001,10 +2047,10 @@ Integrated cross-section
                             os.mkdir(pjoin(cwd,current))
                             input_files.append(pjoin(cwd, current))
                         for name in to_move:
-                            files.ln(pjoin(cwd,base, name), 
-                                            starting_dir=pjoin(cwd,current))
-                        files.ln(pjoin(cwd,base, 'grid.MC_integer'), 
-                                            starting_dir=pjoin(cwd,current))
+                            files.cp(pjoin(cwd,base, name), 
+                                            pjoin(cwd,current))
+                        files.cp(pjoin(cwd,base, 'grid.MC_integer'), 
+                                            pjoin(cwd,current))
                                   
             elif args[0] == '2':
                 # MINTMC MODE
@@ -2093,6 +2139,31 @@ Integrated cross-section
         file.write(content)
         file.close()
 
+    def write_madin_file(self, path, run_mode, vegas_mode, npoints, niters):
+        """writes the madin.run_mode file"""
+        #check the validity of the arguments
+        run_modes = ['born', 'virt', 'novi', 'all', 'viSB', 'novB', 'grid']
+        if run_mode not in run_modes:
+            raise aMCatNLOError('%s is not a valid mode for run. Please use one of the following: %s' \
+                    % (run_mode, ', '.join(run_modes)))
+        name_suffix = run_mode
+
+        content = \
+"""%s %s  ! points, iterations
+0 ! accuracy
+2 ! 0 fixed grid 2 adjust
+1 ! 1 suppress amp, 0 doesnt
+0 ! 0 for exact hel sum
+1 ! hel configuration numb
+'test'
+1 ! 1 to save grids
+%s ! 0 to exclude, 1 for new run, 2 to restart, 3 to reset w/ keeping grid
+%s        ! all, born, real, virt
+""" \
+                    % (npoints,niters,vegas_mode,run_mode)
+        file = open(pjoin(path, 'madin.%s' % name_suffix), 'w')
+        file.write(content)
+        file.close()
 
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
