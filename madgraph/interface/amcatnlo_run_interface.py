@@ -1482,7 +1482,11 @@ Integrated cross-section
         self.update_status('Running MCatNLO in %s (this may take some time)...' % rundir,
                 level='parton')
         files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
-        files.mv(pjoin(self.me_dir, 'MCatNLO', 'MCATNLO_%s_input' % shower), rundir)
+        # special treatment for pythia8
+        if shower=='PYTHIA8':
+            files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.cmd'), rundir)
+        else:
+            files.mv(pjoin(self.me_dir, 'MCatNLO', 'MCATNLO_%s_input' % shower), rundir)
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
@@ -1497,7 +1501,14 @@ Integrated cross-section
         evt_name = os.path.basename(evt_file)
         misc.call(['ln -s %s %s' % (os.path.split(evt_file)[0], 
             pjoin(rundir,self.run_name))], shell=True)
-        misc.call(['./%s' % exe], cwd = rundir, 
+        # special treatment for pythia8
+        if shower=='PYTHIA8':
+            misc.call(['./%s' % exe, 'Pythia8.cmd'], cwd = rundir, 
+                stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
+                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
+
+        else:
+            misc.call(['./%s' % exe], cwd = rundir, 
                 stdin=open(pjoin(rundir,'MCATNLO_%s_input' % shower)),
                 stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
                 stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
@@ -1528,6 +1539,22 @@ Integrated cross-section
 
                 misc.call(['mv %s %s' % \
                     (pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc'), hep_file)], shell=True) 
+                misc.call(['gzip %s' % evt_file], shell=True)
+                misc.call(['gzip %s' % hep_file], shell=True)
+                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
+                            ' and hadronized events in the HEPMC format obtained' + \
+                            ' showering the parton-level event file %s.gz with %s') % \
+                            (hep_file, evt_file, shower))
+            #this is for pythia8
+            elif os.path.exists(pjoin(rundir, 'Pythia8.hep')):
+                hep_file = '%s_%s_0.hep' % (evt_file[:-4], shower)
+                count = 0
+                while os.path.exists(hep_file + '.gz'):
+                    count +=1
+                    hep_file = '%s_%s_%d.hepmc' % (evt_file[:-4], shower, count)
+
+                misc.call(['mv %s %s' % \
+                    (pjoin(rundir, 'Pythia8.hep'), hep_file)], shell=True) 
                 misc.call(['gzip %s' % evt_file], shell=True)
                 misc.call(['gzip %s' % hep_file], shell=True)
                 logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
