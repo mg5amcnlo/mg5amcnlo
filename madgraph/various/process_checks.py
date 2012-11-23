@@ -297,10 +297,6 @@ class MatrixElementEvaluator(object):
         energy = max(energy, sum(mass[:nincoming]) + 200.,
                      sum(mass[nincoming:]) + 200.)
 
-<<<<<<< TREE
-        
-=======
->>>>>>> MERGE-SOURCE
         m1 = mass[0]
 
         p = []
@@ -329,11 +325,6 @@ class MatrixElementEvaluator(object):
 
         if nfinal == 1:
             energy = masses[1]
-<<<<<<< TREE
-=======
-
-        e2 = energy**2
->>>>>>> MERGE-SOURCE
 
 	e2 = energy**2
         m2 = mass[1]
@@ -2519,15 +2510,9 @@ def output_gauge(comparison_results, output='text'):
         process_header = "Process"
 
     if len(process_header) + 1 > proc_col_size:
-<<<<<<< TREE
 	# HSS, 13/11/2012
-=======
->>>>>>> MERGE-SOURCE
         proc_col_size = len(process_header) + 1
-<<<<<<< TREE
 	# HSS
-=======
->>>>>>> MERGE-SOURCE
 
     for one_comp in comparison_results:
         proc = one_comp['process'].base_string()
@@ -2965,15 +2950,9 @@ def output_lorentz_inv(comparison_results, output='text'):
         process_header = "Process"
 
     if len(process_header) + 1 > proc_col_size:
-<<<<<<< TREE
 	# HSS,13/11/2012
-=======
->>>>>>> MERGE-SOURCE
         proc_col_size = len(process_header) + 1
-<<<<<<< TREE
 	# HSS
-=======
->>>>>>> MERGE-SOURCE
     
     for proc, values in comparison_results:
         if len(proc) + 1 > proc_col_size:
