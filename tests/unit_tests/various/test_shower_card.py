@@ -69,6 +69,15 @@ THEPEGPATH = None   # Path to the dir where ThePeg is installed
 HEPMCPATH  = None   # Path to the dir where HepMC is installed
 ################################################################################
 #
+# PYTHIA8 PATH
+# The following line need to be set only for Pythia8. Use the absolute paths
+# to the directories where the packages are installed, containing lib/, include/,
+# and share/ subfolders. "None" and an empty value are equivalent
+#
+################################################################################
+PY8PATH    = None   # Path to the dir where Pythia8 is installed
+################################################################################
+#
 # EXTRA LIBRARIES/ANALYSES
 # The following lines need to be changed if the user does not want to create the
 # StdHEP/HEPMC file, but to directly run his/her own analyse.
@@ -133,6 +142,15 @@ THEPEGPATH = None   # Path to the dir where ThePeg is installed
 HEPMCPATH  = None   # Path to the dir where HepMC is installed
 ################################################################################
 #
+# PYTHIA8 PATH
+# The following line need to be set only for Pythia8. Use the absolute paths
+# to the directories where the packages are installed, containing lib/, include/,
+# and share/ subfolders. "None" and an empty value are equivalent
+#
+################################################################################
+PY8PATH    = None   # Path to the dir where Pythia8 is installed
+################################################################################
+#
 # EXTRA LIBRARIES/ANALYSES
 # The following lines need to be changed if the user does not want to create the
 # StdHEP/HEPMC file, but to directly run his/her own analyse.
@@ -151,6 +169,39 @@ ANALYSE     =myanalyse.o            # User's analysis and histogramming routines
                                     # (please use .o as extension and use spaces to separate files)
 """
             TestShowerCard.card_analyse = shower_card.ShowerCard(text_analyse, testing = True) 
+
+
+    def test_shower_card_py8(self):
+        """test that the py8 card is correctly written"""
+        goal = \
+"""NEVENTS=-1
+UE_PY8=.TRUE.
+HADRONIZE_PY8=.TRUE.
+MAXPR_PY8=2
+ERR_FR_PY8=0.010
+B_STABLE_PY8=.FALSE.
+PI_STABLE_PY8=.TRUE.
+WP_STABLE_PY8=.FALSE.
+WM_STABLE_PY8=.FALSE.
+Z_STABLE_PY8=.FALSE.
+H_STABLE_PY8=.FALSE.
+TAUP_STABLE_PY8=.FALSE.
+TAUM_STABLE_PY8=.FALSE.
+MUP_STABLE_PY8=.FALSE.
+MUM_STABLE_PY8=.FALSE.
+RNDEVSEED_PY8=0
+HWPPPATH=
+THEPEGPATH=
+HEPMCPATH=
+PY8PATH=
+EXTRALIBS="stdhep Fmcfio"
+EXTRAPATHS="../lib"
+INCLUDEPATHS=
+"""
+        text = self.card.write_card('PYTHIA8', '')
+        for a, b in zip(text.split('\n'), goal.split('\n')):
+            self.assertEqual(a,b)
+        self.assertEqual(text, goal)
     
     def test_shower_card_hwpp(self):
         """test that the hwpp card is correctly written"""
@@ -174,6 +225,7 @@ RNDEVSEED_HWPP=0
 HWPPPATH=
 THEPEGPATH=
 HEPMCPATH=
+PY8PATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -207,6 +259,7 @@ RNDEVSEED_HWPP=0
 HWPPPATH=
 THEPEGPATH=
 HEPMCPATH=
+PY8PATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -244,6 +297,7 @@ MODBOS_2=5
 HWPPPATH=
 THEPEGPATH=
 HEPMCPATH=
+PY8PATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -281,6 +335,7 @@ MODBOS_2=5
 HWPPPATH=
 THEPEGPATH=
 HEPMCPATH=
+PY8PATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -316,6 +371,7 @@ IS_4L_PY=.FALSE.
 HWPPPATH=
 THEPEGPATH=
 HEPMCPATH=
+PY8PATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -351,6 +407,7 @@ IS_4L_PY=.FALSE.
 HWPPPATH=
 THEPEGPATH=
 HEPMCPATH=
+PY8PATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
