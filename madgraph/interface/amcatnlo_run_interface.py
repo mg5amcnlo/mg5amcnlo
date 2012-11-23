@@ -1876,8 +1876,10 @@ Integrated cross-section
 
     def pdf_scale_from_reweighting(self, evt_files):
         """This function takes the files with the scale and pdf values
-        written by the reweight_xsec_events.f code and computes the
-        overall scale and PDF dependence and returns it in percents"""
+        written by the reweight_xsec_events.f code
+        (P*/G*/pdf_scale_uncertainty.dat) and computes the overall
+        scale and PDF uncertainty (the latter is computed using the
+        Hessian method) and returns it in percents"""
         scales=[]
         pdfs=[]
         for ii,evt_file in enumerate(evt_files):
