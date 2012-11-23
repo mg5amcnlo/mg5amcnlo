@@ -1164,7 +1164,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             shower = self.run_card['parton_shower']
             nevents = int(self.run_card['nevents'])
             #shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
-            shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q']
+            shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA8']
             if not shower in shower_list:
                 raise aMCatNLOError('%s is not a valid parton shower. Please use one of the following: %s' \
                     % (shower, ', '.join(shower_list)))
