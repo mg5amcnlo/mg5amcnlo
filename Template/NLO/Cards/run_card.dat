@@ -22,9 +22,23 @@
 #***********************************************************************
   tag_1     = run_tag ! name of the run 
 #***********************************************************************
-# Number of events                                                     *
+# Number of events and the required (relative) accuracy on the Xsec    *
+# (ignored for fixed order runs)                                       *
 #***********************************************************************
- 10000    = nevents     ! Number of unweighted events requested 
+ 10000 = nevents ! Number of unweighted events requested 
+    -1 = req_acc ! Required accuracy (-1=auto determined from nevents)
+#***********************************************************************
+# Number of points per itegration channel (ignored for aMC@NLO runs)   *
+#***********************************************************************
+ 5000   = npoints_FO_grid  ! number of points to set-up int. grids
+ 5      = niters_FO_grid   ! number of iterations to set-up int. grids
+ 6000   = npoints_FO_virt  ! number of points to compute Xsec (virt)
+ 2      = niters_FO_virt   ! number of iter. to compute Xsec (virt)
+ 10000  = npoints_FO       ! number of points to compute Xsec (no virt)
+ 6      = niters_FO        ! number of iter. to compute Xsec (no virt)
+#***********************************************************************
+# Random number seed                                                   *
+#***********************************************************************
      0    = iseed       ! rnd seed (0=assigned automatically=default))
 #***********************************************************************
 # Collider type and energy                                             *
