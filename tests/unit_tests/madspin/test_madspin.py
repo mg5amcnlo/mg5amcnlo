@@ -29,6 +29,7 @@ sys.path.insert(0, os.path.join(root_path,'..','..'))
 
 import tests.unit_tests as unittest
 import madgraph.interface.master_interface as Cmd
+import madgraph.various.banner as banner
 
 import copy
 import array
@@ -45,12 +46,12 @@ class TestBanner(unittest.TestCase):
     def test_extract_info(self):
         """Test that the banner is read properly"""
 
-        banner=pjoin(MG5DIR, 'tests', 'input_files', 'tt_banner.txt')
-        inputfile = open(banner, 'r')
-        mybanner=madspin.Banner(inputfile)
-        mybanner.ReadBannerFromFile()
-        process=mybanner.proc["generate"]
-        model=mybanner.proc["model"]
+        path=pjoin(MG5DIR, 'tests', 'input_files', 'tt_banner.txt')
+        inputfile = open(path, 'r')
+        mybanner = banner.Banner(inputfile)
+#        mybanner.ReadBannerFromFile()
+        process=mybanner.get("generate")
+        model=mybanner.get("model")
         self.assertEqual(process,"p p > t t~ @1")
         self.assertEqual(model,"sm")
 
