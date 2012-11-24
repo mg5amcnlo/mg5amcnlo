@@ -2841,7 +2841,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             gauge = str(self.options['gauge'])
             line = " ".join(args[1:])
             myprocdef = self.extract_process(line)
-            if gauge == 'unitarity':
+            if gauge == 'unitary':
                 myprocdef_unit = myprocdef
                 self.do_set('gauge Feynman', log=False)
                 myprocdef_feyn = self.extract_process(line)
@@ -2850,11 +2850,17 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.do_set('gauge unitary', log=False)
                 myprocdef_unit = self.extract_process(line)            
             
+            nb_part_unit = len(myprocdef_unit.get('model').get('particles'))
+            nb_part_feyn = len(myprocdef_feyn.get('model').get('particles'))
+            
+            if nb_part_feyn == nb_part_unit:
+                logger.error('No Goldstone present for this check!!')
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
                                                 cuttools=CT_dir,
                                                 cmd = self)
+            
             
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
