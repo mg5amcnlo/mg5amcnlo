@@ -3061,15 +3061,17 @@ class decay_all_events:
                     topologies[tag_production][tag_topo].dress_topo_from_event(\
                                                              curr_event,to_decay_label)
                     topologies[tag_production][tag_topo].extract_angles()
-                    decay_tools.set_light_parton_massless(topologies\
-                                              [tag_production][tag_topo])
+
+                    # sometimes not possible to set the masses of the external partons to zero,
+                    # keep the original masses
+#                    decay_tools.set_light_parton_massless(topologies\
+#                                              [tag_production][tag_topo])
                     continue
                     #try_reshuffle=0
                     if try_reshuffle >100:
                         misc.sprint('fail 100 times')
                         break
 
-            topologies[tag_production][tag_topo].topo2event(curr_event,to_decay_label)
 
             decayed_event, BW_weight_decay=decay_tools.decay_one_event(\
                      curr_event,decay_struct[tag_production][decay_tags[0]], \
@@ -3269,8 +3271,9 @@ class decay_all_events:
                                 topologies[tag_production][tag_topo].dress_topo_from_event(\
                                                                                     curr_event,to_decay_label)
                                 topologies[tag_production][tag_topo].extract_angles()
-                                decay_tools.set_light_parton_massless(topologies\
-                                                            [tag_production][tag_topo])
+                                # keep original masses in the event
+#                                decay_tools.set_light_parton_massless(topologies\
+#                                                            [tag_production][tag_topo])
                                 try_reshuffle=0
                     else: 
                         BW_weight_prod=1.0
@@ -3461,7 +3464,9 @@ class decay_all_events:
                             tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
                             topologies[tag_production][tag_topo].dress_topo_from_event(curr_event,to_decay_label)
                             topologies[tag_production][tag_topo].extract_angles()
-                            decay_tools.set_light_parton_massless(topologies[tag_production][tag_topo])
+
+                            # keep original masses in the production event
+#                            decay_tools.set_light_parton_massless(topologies[tag_production][tag_topo])
                             try_reshuffle=0
 
                 else:
