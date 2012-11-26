@@ -886,8 +886,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                                                                 line.split()[0])
         if line.strip() in ['q', '.q', 'stop']:
             logger.info("If you want to quit mg5 please type \"exit\".")
-        
-        self.history.pop()
+
+        if self.history and self.history[-1] == line:        
+            self.history.pop()
         
 
 

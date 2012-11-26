@@ -264,9 +264,14 @@ class CheckValidForCmd(object):
         Note that other option are already remove at this point
         """
         
+        opts = []
+        if '-from_cards' in args:
+            args.remove('-from_cards')
+            opts.append('-from_cards')
+        
         if len(args) == 0:
             if self.run_name:
-                args.insert(0, self.results.lastrun)
+                args.insert(0, self.run_name)
             elif self.results.lastrun:
                 args.insert(0, self.results.lastrun)
             else:
@@ -286,15 +291,14 @@ class CheckValidForCmd(object):
                            pjoin(self.me_dir,'Events',args[0], 'events.lhe')]
 
         for path in possible_path:
-            print 'check', path
             if os.path.exists(path):
                 correct_path = path
-                print 'find path'
                 break
         else:
             raise self.InvalidCmd('No events file corresponding to %s run. ' % args[0])
         args[0] = correct_path
         
+        args += opts
      
 
 class MadEventAlreadyRunning(InvalidCmd):
@@ -1205,6 +1209,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
     def do_decay_events(self,line):
         """Require MG5 directory: decay events with spin correlations
         """
+
+        if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'madspin_card.dat')):
+            return
         
         # First need to load MadSpin
         
@@ -1221,6 +1228,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             raise self.ConfigurationError, '''Can\'t load MadSpin
             The variable mg5_path might not be correctly configured.'''
         
+        
+        
         self.help_decay_events(skip_syntax=True)
 
         # load the name of the event file
@@ -1228,6 +1237,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         self.check_decay_events(args) 
         # args now alway content the path to the valid files
         madspin_cmd = interface_madspin.MadSpinInterface(args[0]) 
+        
+        if '-from_cards' in args:
+            path = pjoin(self.me_dir, 'Cards', 'madspin_card.dat')
+            madspin_cmd.import_command_file(path)
+            return
                 
         logger.info('Please enter the definition of each branch ')
         logger.info('associated with the decay channel you want to consider')

@@ -172,7 +172,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         if not self.list_branches.has_key(init_part):
             self.list_branches[init_part] = []
         self.list_branches[init_part].append(decay_process)
-        misc.sprint(self.list_branches)
         del decay_process, init_part    
         
     
@@ -255,8 +254,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         if not self.decay_processes:
             logger.info("Nothing to decay ...")
             return
-        else:
-            misc.sprint(self.decay_processes)
 
         model_line = self.banner.get('proc_card', 'full_model_line')
 

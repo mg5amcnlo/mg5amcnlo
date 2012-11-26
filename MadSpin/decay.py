@@ -3335,7 +3335,7 @@ class decay_all_events:
             ms_banner+="# branching fraction: "+str(multi_decay_processes[tag_decay]['br']) + "\n"
             ms_banner+="# estimate of the maximum weight: "+str(max_weight[map_decay_me[tag_decay]]) + "\n"
     
-        mybanner.add_text('decay', ms_banner)
+        mybanner.add_text('madspin', ms_banner)
         mybanner.write(outputfile)
         
         event_nb=0
