@@ -1446,7 +1446,8 @@ Integrated cross-section
             pass
         shower = self.evt_file_to_mcatnlo(evt_file)
         shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
-
+        
+        # set environmental variables for the run
         if 'LD_LIBRARY_PATH' in os.environ.keys():
             ldlibrarypath = os.environ['LD_LIBRARY_PATH']
         else:
@@ -1456,6 +1457,14 @@ Integrated cross-section
         if shower == 'HERWIGPP':
             ldlibrarypath += ':%s' % pjoin(self.shower_card['hepmcpath'], 'lib')
         os.putenv('LD_LIBRARY_PATH', ldlibrarypath)
+
+        if 'DYLD_LIBRARY_PATH' in os.environ.keys():
+            dyldlibrarypath = os.environ['DYLD_LIBRARY_PATH']
+        else:
+            dyldlibrarypath = ''
+        if shower == 'PYTHIA8':
+            dyldlibrarypath += ':%s' % pjoin(self.shower_card['py8path'], 'HEPMC', 'lib')
+        os.putenv('DYLD_LIBRARY_PATH', dyldlibrarypath)
 
         self.shower_card.write_card(shower, shower_card_path)
 
