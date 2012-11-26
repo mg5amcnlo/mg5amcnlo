@@ -224,17 +224,22 @@ class Event:
                 if self.resonance[index]["mothup1"]==mother:
                     daughters.append(index)
 
-        if len(daughters)!=2: logger.warning("Got more than 2 daughters for one particles")
+        if len(daughters)!=2:
+            logger.info("Got more than 2 daughters for one particles")
+            logger.info("in one production event (before decay)")
+
 
         if daughters[0]>0:
             momentum_mother=self.particle[daughters[0]]["momentum"].copy()
-        else:    
+        else:
             momentum_mother=self.resonance[daughters[0]]["momentum"].copy()
 
-        if daughters[1]>0:
-            momentum_mother=momentum_mother.add(self.particle[daughters[1]]["momentum"])
-        else:
-            momentum_mother=momentum_mother.add(self.resonance[daughters[1]]["momentum"])
+#       there might be more than 2 daughters, add all their momentum to get the momentum of the mother
+        for index in range(1,len(daughters)):
+            if daughters[index]>0:
+                momentum_mother=momentum_mother.add(self.particle[daughters[index]]["momentum"])
+            else:
+                momentum_mother=momentum_mother.add(self.resonance[daughters[index]]["momentum"])
 
         res=self.event2mg[mother]
         del self.resonance[res]["momentum"]
