@@ -3585,7 +3585,7 @@ c closer to xseclvc than xsecvc(i), the condition
 c   |xsecvc(i)/xseclvc-1|/|xsecvc(i+1)/xseclvc-1| > rat
 c if xseclvc#0, or 
 c   |xsecvc(i)|/|xsecvc(i+1)| > rat
-c if xseclvc=0 must be fulfilled; the value of rat is set equal to 8 and to 2
+c if xseclvc=0 must be fulfilled; the value of rat is set equal to 4 and to 2
 c for soft and collinear limits respectively, since the cross section is 
 c expected to scale as xii**2 and sqrt(1-yi**2), and the values of xii and yi
 c are chosen as powers of 10 (thus, if scaling would be exact, rat should
@@ -3616,7 +3616,7 @@ c
         endif
       enddo
       if(iflag.eq.0)then
-        rat=8.d0
+        rat=4.d0
       elseif(iflag.eq.1)then
         rat=2.d0
       else

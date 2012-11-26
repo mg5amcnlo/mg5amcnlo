@@ -251,7 +251,7 @@ class CmdExtended(cmd.Cmd):
         info_line + \
         "*                                                          *\n" + \
         "*    The MadGraph Development Team - Please visit us at    *\n" + \
-        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "*                 http://amcatnlo.cern.ch                  *\n" + \
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
         "*                                                          *\n" + \
@@ -590,7 +590,7 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd, 'options -m (--multicore) and -c (--cluster)' + \
                     ' are not compatible. Please choose one.'
         if options['noreweight'] and options['reweightonly']:
-            raise self.InvalidCmd, 'options -R (--noreweight) and -R (--reweightonly)' + \
+            raise self.InvalidCmd, 'options -R (--noreweight) and -r (--reweightonly)' + \
                     ' are not compatible. Please choose one.'
 
 
@@ -618,7 +618,7 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd, 'options -m (--multicore) and -c (--cluster)' + \
                     ' are not compatible. Please choose one.'
         if options['noreweight'] and options['reweightonly']:
-            raise self.InvalidCmd, 'options -R (--noreweight) and -R (--reweightonly)' + \
+            raise self.InvalidCmd, 'options -R (--noreweight) and -r (--reweightonly)' + \
                     ' are not compatible. Please choose one.'
         if mode == 'NLO' and options['reweightonly']:
             raise self.InvalidCmd, 'option -r (--reweightonly) needs mode "aMC@NLO" or "aMC@LO"'
@@ -1152,12 +1152,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     if file.startswith('P') and \
                     os.path.isdir(pjoin(self.me_dir, 'SubProcesses', file))]
         #find jobs and clean previous results
-        self.update_status('Cleaning previous results', level=None)
+        if not options['only_generation'] and not options['reweightonly']:
+            self.update_status('Cleaning previous results', level=None)
         for dir in p_dirs:
             job_dict[dir] = [file for file in \
                                  os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
                                  if file.startswith('ajob')] 
-            if not options['only_generation']:
+            if not options['only_generation'] and not options['reweightonly']:
                 for obj in folder_names[mode]:
                     to_rm = [file for file in \
                                  os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
@@ -1168,7 +1169,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
         if options['reweightonly']:
-            nevents = self.run_card['nevents']
+            nevents=int(self.run_card['nevents'])
             self.reweight_and_collect_events(options, mode, nevents)
             return
 
@@ -1534,10 +1535,11 @@ Integrated cross-section
         evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
         files.mv(pjoin(self.me_dir, 'SubProcesses', filename), evt_file)
         misc.call(['gzip %s' % evt_file], shell=True)
-        if not options['noreweight']:
-            self.print_summary(2, mode, scale_upp, scale_low, pdf_upp, pdf_low)
-        else:
-            self.print_summary(2, mode)
+        if not options['reweightonly']:
+            if not options['noreweight']:
+                self.print_summary(2, mode, scale_upp, scale_low, pdf_upp, pdf_low)
+            else:
+                self.print_summary(2, mode)
         logger.info('The %s.gz file has been generated.\n' \
                 % (evt_file))
         return evt_file
