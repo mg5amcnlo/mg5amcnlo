@@ -652,3 +652,171 @@ I4x33 = Parameter(name = 'I4x33',
                   type = 'complex',
                   value = 'CKM3x3*yb',
                   texname = '\\text{I4x33}')
+
+Vector_ubGp = Parameter(name = 'Vector_ubGp',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'I1x31',
+                  texname = '\\text{Vector_ubGp}')
+
+Vector_cdGp = Parameter(name = 'Vector_cdGp',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I2x12',
+                  texname = '\\text{Vector_cdGp}')
+
+Vector_csGp = Parameter(name = 'Vector_csGp',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I2x22',
+                  texname = '\\text{Vector_csGp}')
+
+Vector_cbGp = Parameter(name = 'Vector_cbGp',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'I1x32-I2x32',
+                  texname = '\\text{Vector_cbGp}')
+
+Vector_tdGp = Parameter(name = 'Vector_tdGp',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I2x13',
+                  texname = '\\text{Vector_tdGp}')
+
+Vector_tsGp = Parameter(name = 'Vector_tsGp',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I2x23',
+                  texname = '\\text{Vector_tsGp}')
+
+Vector_tbGp = Parameter(name = 'Vector_tbGp',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'I1x33-I2x33',
+                  texname = '\\text{Vector_tbGp}')
+
+Axial_ubGp = Parameter(name = 'Axial_ubGp',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I1x31',
+                  texname = '\\text{Axial_ubGp}')
+
+Axial_cdGp = Parameter(name = 'Axial_cdGp',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I2x12',
+                  texname = '\\text{Axial_cdGp}')
+
+Axial_csGp = Parameter(name = 'Axial_csGp',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I2x22',
+                  texname = '\\text{Axial_csGp}')
+
+Axial_cbGp = Parameter(name = 'Axial_cbGp',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I2x32-I1x32',
+                  texname = '\\text{Axial_cbGp}')
+
+Axial_tdGp = Parameter(name = 'Axial_tdGp',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I2x13',
+                  texname = '\\text{Axial_tdGp}')
+
+Axial_tsGp = Parameter(name = 'Axial_tsGp',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I2x23',
+                  texname = '\\text{Axial_tsGp}')
+
+Axial_tbGp = Parameter(name = 'Axial_tbGp',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I2x33-I1x33',
+                  texname = '\\text{Axial_tbGp}')
+
+Vector_ubGm = Parameter(name = 'Vector_ubGm',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I4x13',
+                  texname = '\\text{Vector_ubGm}')
+
+Vector_cdGm = Parameter(name = 'Vector_cdGm',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'I3x21',
+                  texname = '\\text{Vector_cdGm}')
+
+Vector_csGm = Parameter(name = 'Vector_csGm',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'I3x22',
+                  texname = '\\text{Vector_csGm}')
+
+Vector_cbGm = Parameter(name = 'Vector_cbGm',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'I3x23-I4x23',
+                  texname = '\\text{Vector_cbGm}')
+
+Vector_tdGm = Parameter(name = 'Vector_tdGm',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'I3x31',
+                  texname = '\\text{Vector_tdGm}')
+
+Vector_tsGm = Parameter(name = 'Vector_tsGm',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'I3x32',
+                  texname = '\\text{Vector_tsGm}')
+
+Vector_tbGm = Parameter(name = 'Vector_tbGm',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = 'I3x33-I4x33',
+                  texname = '\\text{Vector_tbGm}')
+
+Axial_ubGm = Parameter(name = 'Axial_ubGm',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I4x13',
+                  texname = '\\text{Axial_ubGm}')
+
+Axial_cdGm = Parameter(name = 'Axial_cdGm',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I3x21',
+                  texname = '\\text{Axial_cdGm}')
+
+Axial_csGm = Parameter(name = 'Axial_csGm',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I3x22',
+                  texname = '\\text{Axial_csGm}')
+
+Axial_cbGm = Parameter(name = 'Axial_cbGm',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I4x23-I3x23',
+                  texname = '\\text{Axial_cbGm}')
+
+Axial_tdGm = Parameter(name = 'Axial_tdGm',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I3x31',
+                  texname = '\\text{Axial_tdGm}')
+
+Axial_tsGm = Parameter(name = 'Axial_tsGm',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I3x32',
+                  texname = '\\text{Axial_tsGm}')
+
+Axial_tbGm = Parameter(name = 'Axial_tbGm',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '-I4x33-I3x33',
+                  texname = '\\text{Axial_tbGm}')

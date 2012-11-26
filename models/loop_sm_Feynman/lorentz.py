@@ -144,7 +144,7 @@ UUS1 = Lorentz(name = 'UUS1',
                spins = [ -1, -1, 1 ],
                structure = '1')
 
-FFS1_bis = Lorentz(name = 'FFS1_bis',
+FFS8 = Lorentz(name = 'FFS8',
                spins = [ 2, 2, 1 ],
                structure = 'ProjM(2,1)')
 

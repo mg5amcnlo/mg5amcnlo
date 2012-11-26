@@ -31,7 +31,8 @@ ML4_processes_long =  [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':
                        ('d~ d > z g g',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}),
                        ('d~ d > a g g',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}),
                        ('g g > z t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}),
-                       ('g g > a t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2})]
+                       ('g g > a t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}),
+                       ('u u~ > w+ w- z',{'QED':3,'QCD':0},['QCD'],{'QCD':2,'QED':6})]
 
 ML5_processes_short = [('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
                        ('d g > d g',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
@@ -44,6 +45,7 @@ ML5_processes_short = [('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0
                        ('u~ u > g z',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}),
                        ('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}),
                        ('d u~ > w- g',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2})]
+
 ML5_processes_long =  [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2}), 
                        ('d d~ > w+ w- g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}),
                        ('d~ d > z z g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}),
@@ -56,15 +58,16 @@ ML5_processes_long =  [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':
                        ('g g > a t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}),
                        ('g g > h h t t~',{'QCD':2,'QED':2},['QCD'],{'QCD':6,'QED':4}),
                        ('u u~ > w+ w- b b~',{'QCD':2,'QED':2},['QCD'],{'QCD':6,'QED':4}),                       
-                       ('g g > g g g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})]
+                       ('g g > g g g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}),
+                       ('u u~ > z z z',{'QED':3,'QCD':0},['QCD'],{'QCD':2,'QED':6})]
 
-#ML4_processes_short = [('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
-#                       ('d g > d g',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0})]
-#
-#ML5_processes_short = ML4_processes_short 
-#ML5_processes_long = ML4_processes_short + [('d~ d > z z g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4})]
-#ML4_processes_short = ML4_processes_short
-#ML4_processes_long = ML4_processes_short + [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2})]
+ML4_processes_short = [('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
+                       ('d g > d g',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0})]
+
+ML5_processes_short = ML4_processes_short 
+ML5_processes_long = ML4_processes_short + [('d~ d > z z g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4})]
+ML4_processes_short = ML4_processes_short
+ML4_processes_long = ML4_processes_short + [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2})]
 
 class ML5Test(unittest.TestCase):
     """ A class to test ML5 versus runs from older versions or ML4 """

@@ -2783,7 +2783,6 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         model = multiprocess_unit.get('model')
 
         # Initialize matrix element evaluation
-        # For the unitary gauge, open loops should not be used
         loop_optimized_output = False
         aloha.unitary_gauge = True
         if processes_unit.get('perturbation_couplings')==[]:
@@ -2818,8 +2817,8 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         # Initialize matrix element evaluation
         aloha.unitary_gauge = False
         # We could use the default output as well for Feynman, but it provides
-        # an additional check
-        loop_optimized_output = True
+        # an additional check this way
+        loop_optimized_output = False
         if processes_feynm.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model, param_card,
                                        cmd= cmd, auth_skipping = False, reuse = False)
@@ -2865,6 +2864,8 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
 def get_value(process, evaluator, p=None):
     """Return the value/momentum for a phase space point"""
     
+    global loop_optimized_output
+    
     for i, leg in enumerate(process.get('legs')):
         leg.set('number', i+1)
 
@@ -2883,7 +2884,7 @@ def get_value(process, evaluator, p=None):
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
-        return None    
+        return None
     
     if not amplitude.get('diagrams'):
         # This process has no diagrams; go to next process
@@ -2894,7 +2895,15 @@ def get_value(process, evaluator, p=None):
     if not p:
         # Generate phase space point to use
         p, w_rambo = evaluator.get_momenta(process)
-        
+    
+
+    reset_global_loo = False
+    if not amplitude.get('process').get('has_born') and loop_optimized_output:
+        logging.debug("Setting loop_optimized_output to false for processes"+\
+                                    " without an underlying born contribution.")
+        loop_optimized_output = False
+        reset_global_loo = True
+
     # Generate the HelasMatrixElement for the process
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
         matrix_element = helas_objects.HelasMatrixElement(amplitude,
@@ -2905,6 +2914,8 @@ def get_value(process, evaluator, p=None):
 
     mvalue = evaluator.evaluate_matrix_element(matrix_element, p=p,
                                                                   output='jamp')
+    if reset_global_loo:
+        loop_optimized_output = True
     
     if mvalue and mvalue['m2']:
         return {'process':process.base_string(),'value':mvalue,'p':p}
