@@ -2352,6 +2352,9 @@ class decay_misc:
                 reorder into             " A > C B , B > ... "
 
         """
+        branch=branch.replace(',', ' , ')
+        branch=branch.replace(')', ' ) ')
+        branch=branch.replace('(', ' ( ')
         list_branch=branch.split(" ")
         for index in range(len(list_branch)-1,-1,-1):
             if list_branch[index]==' ' or list_branch[index]=='': del list_branch[index]
