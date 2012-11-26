@@ -8,7 +8,7 @@
 #                                                                      *
 #  Some notation/conventions:                                          *
 #                                                                      *
-#   Lines starting with a '# ' are info or comments                    *
+#   Lines starting with a hash (#) are info or comments                *
 #                                                                      *
 #   mind the format:   value    = variable     ! comment               *
 #***********************************************************************
@@ -50,8 +50,8 @@
 #***********************************************************************
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
 #***********************************************************************
- 'cteq6_m'   = pdlabel     ! PDF set                                     
-  10042      = lhaid
+ cteq6_m   = pdlabel   ! PDF set                                     
+  10042    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
 #***********************************************************************
 # Include the NLO Monte Carlo subtr. terms for the following parton    *
 # shower (HERWIG6 | HERWIGPP | PYTHIA6Q )                              *
@@ -60,7 +60,7 @@
 #***********************************************************************
 # Renormalization and factorization scales                             *
 # (Default functional form for the non-fixed scales is the sum of      *
-# the transverse masses of all final state particles & partons. This   *
+# the transverse masses of all final state particles and partons. This *
 # can be changed in SubProcesses/set_scales.f)                         *
 #***********************************************************************
  F        = fixed_ren_scale  ! if .true. use fixed ren scale
@@ -102,16 +102,16 @@
 # considerably softer than the analysis cuts.                          *
 # (more specific cuts can be specified in SubProcesses/cuts.f)         *
 #***********************************************************************
-    1  = jetalgo    ! FastJet jet algorithm (1=kT, 0=C/A, -1=anti-kT)
-  0.7  = jetradius  ! The radius parameter for the jet algorithm
-   10  = ptj        ! Min jet transverse momentum
-   -1  = etaj       ! Max jet abs(pseudo-rap)  (a value <0 means no cut)
+   1  = jetalgo   ! FastJet jet algorithm (1=kT, 0=C/A, -1=anti-kT)
+ 0.7  = jetradius ! The radius parameter for the jet algorithm
+  10  = ptj       ! Min jet transverse momentum
+  -1  = etaj      ! Max jet abs(pseudo-rap) (a value .lt.0 means no cut)
 #***********************************************************************
 # Cuts on the charged leptons (e+, e-, mu+, mu-, tau+ and tau-)        *
 # (more specific gen cuts can be specified in SubProcesses/cuts.f)     *
 #***********************************************************************
    0  = ptl   ! Min lepton transverse momentum
-  -1  = etal  ! Max lepton abs(pseudo-rap)  (a value <0 means no cut)
+  -1  = etal  ! Max lepton abs(pseudo-rap) (a value .lt.0 means no cut)
    0  = drll  ! Min distance between opposite sign lepton pairs
   30  = mll   ! Min inv. mass of all oppositely charged lepton pairs
 #***********************************************************************
