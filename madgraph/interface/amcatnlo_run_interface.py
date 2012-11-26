@@ -820,7 +820,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.check_plot(args)
         logger.info('plot for run %s' % self.run_name)
         
-        self.ask_edit_cards([], args)
+        self.ask_edit_cards([], args, plot=True)
                 
         if any([arg in ['parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
@@ -1564,7 +1564,7 @@ Integrated cross-section
                             (hep_file, evt_file, shower))
 
             else:
-                raise aMCatNLOError('No file has been generated, an error occurred')
+                raise aMCatNLOError('No file has been generated, an error occurred. More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
         else:
             topfiles = [n for n in os.listdir(pjoin(rundir)) \
                                             if n.lower().endswith('.top')]
@@ -2238,76 +2238,16 @@ Integrated cross-section
         
         if 'parton' in options.keys():
             if options['parton'] == False:
-                cards = ['param', 'run', 'shower']
+                cards = ['param_card.dat', 'run_card.dat', 'shower_card.dat']
             elif options['parton'] == 'onlyshower':
-                cards = ['shower']
+                cards = ['shower_card.dat']
             else:  
-                cards = ['param', 'run']
+                cards = ['param_card.dat', 'run_card.dat']
         else:  
             cards = ['param', 'run', 'shower']
 
-        def get_question(mode, cards):
-            # Ask the user if he wants to edit any of the files
-            #First create the asking text
-            question = "Do you want to edit a card (press enter to bypass editing)?\n" + \
-                       "(be careful about parameter consistency, especially widths)\n"
-            card = {0:'done'}
-            for i, c in enumerate(cards):
-                card[i+1] = c
-
-            possible_answer = []
-            for i, c in card.items():
-                if i > 0:
-                    question += '%d / %6s : %s_card.dat\n' % (i, c, c)
-                else:
-                    question += '%d / %6s \n' % (i, c)
-                possible_answer.extend([i,c])
-
-            # Add the path options
-            question += '  Path to a valid card.\n'
-            return question, possible_answer, card
-        
-        # Loop as long as the user is not done.
-        answer = 'no'
-        if options['force'] or self.force:
-            answer='done'
-        while answer != 'done':
-            question, possible_answer, card = get_question(mode, cards)
-            answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
-            if answer.isdigit():
-                answer = card[int(answer)]
-            if answer == 'done':
-                break
-            if not os.path.isfile(answer):
-                if answer != 'trigger':
-                    path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
-                else:
-                    path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
-                self.exec_cmd('open %s' % path)                    
-            else:
-                # detect which card is provided
-                card_name = self.detect_card_type(answer)
-                if card_name == 'unknown':
-                    card_name = self.ask('Fail to determine the type of the file. Please specify the format',
-                   'param_card.dat', choices=['param_card.dat', 'run_card.dat','pythia_card.dat','pgs_card.dat',
-                    'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
-                if card_name != 'banner':
-                    logger.info('copy %s as %s' % (answer, card_name))
-                    files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
-                    #if card_name == 'param_card.dat':
-                    #    self.check_param_card(pjoin(self.me_dir, 'Cards', card_name))                        
-                elif card_name == 'banner':
-                    banner_mod.split_banner(answer, self.me_dir, proc_card=False)
-                    logger.info('Splitting the banner in it\'s component')
-                    #if 0:
-                    #    # Re-compute the current mode
-                    #    mode = 'parton'
-                    #    for level in ['delphes','pgs','pythia']:
-                    #        if os.path.exists(pjoin(self.me_dir,'Cards','%s_card.dat' % level)):
-                    #            mode = level
-                    #            break
-                    #else:
-                    #    self.clean_pointless_card(mode)
+        if not options['force'] and not  self.force:
+            self.ask_edit_cards(cards)   
 
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = banner_mod.RunCardNLO(run_card)

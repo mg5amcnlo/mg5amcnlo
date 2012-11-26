@@ -37,6 +37,8 @@ import array
 import madgraph.core.base_objects as MG
 import madgraph.various.misc as misc
 import MadSpin.decay as madspin 
+import models.import_ufo as import_ufo
+
 
 from madgraph import MG5DIR
 #
@@ -54,6 +56,23 @@ class TestBanner(unittest.TestCase):
         model=mybanner.get("model")
         self.assertEqual(process,"p p > t t~ @1")
         self.assertEqual(model,"sm")
+        
+    
+    def test_get_final_state_particle(self):
+        """test that we find the final state particles correctly"""
+
+        cmd = Cmd.MasterCmd()
+        cmd.do_import('sm')
+        fct = lambda x: cmd.get_final_part(x)
+        
+        # 
+        self.assertEqual(set([11, -11]), fct('p p > e+ e-'))
+        self.assertEqual(set([11, 24]), fct('p p > w+ e-'))
+        self.assertEqual(set([11, 24]), fct('p p > W+ e-'))
+        self.assertEqual(set([1, 2, 3, 4, -1, 11, 21, -4, -3, -2]), fct('p p > W+ e-, w+ > j j'))
+        self.assertEqual(fct('p p > t t~, (t > b w+, w+ > j j) ,t~ > b~ w-'), set([1, 2, 3, 4, -1, 21, -4, -3, -2,5,-5,-24]))
+        self.assertEqual(fct('e+ e- > all all, all > e+ e-'), set([-11,11]))
+        self.assertEqual(fct('e+ e- > j w+, j > e+ e-'), set([-11,11,24]))
 
 class Testtopo(unittest.TestCase):
     """Test the extraction of the topologies for the undecayed process"""

@@ -237,7 +237,7 @@ class TestMEfromfile(unittest.TestCase):
         except Exception, error:
             pass
         import subprocess
-        if logging.getLogger('madgraph').level > 10:
+        if logging.getLogger('madgraph').level <= 20:
             stdout=None
             stderr=None
         else:

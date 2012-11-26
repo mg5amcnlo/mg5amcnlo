@@ -3219,7 +3219,82 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         return line, proc_option
 
-
+    def get_final_part(self, procline):
+        """Takes a valid process and return
+           a set of id of final states particles. [Used by MadSpin]
+        """
+                
+        if self._use_lower_part_names:
+            procline = procline.lower()
+        pids = self._curr_model.get('name2pdg')
+            
+        # method.
+        # 1) look for decay.
+        #     in presence of decay call this routine recursively and veto 
+        #     the particles which are decayed
+        
+        # Deal with decay chain
+        if ',' in procline:
+            core, decay = procline.split(',', 1)
+            core_final = self.get_final_part(core)
+            
+            #split the decay 
+            all_decays = decay.split(',')
+            nb_level,  tmp_decay = 0, ''
+            decays = []
+            # deal with ()
+            for one_decay in all_decays:
+                if '(' in one_decay:
+                    nb_level += 1
+                if ')' in one_decay:
+                    nb_level -= 1
+                    
+                if nb_level:
+                    if tmp_decay:
+                        tmp_decay += ', %s' % one_decay
+                    else: 
+                        tmp_decay = one_decay
+                elif tmp_decay:
+                    final = '%s,%s' % (tmp_decay, one_decay)
+                    final = final.strip()
+                    assert final[0] == '(' and final[-1] == ')'
+                    final = final[1:-1]
+                    decays.append(final)
+                    tmp_decay = ''
+                else:
+                    decays.append(one_decay)
+            # remove from the final states all particles which are decayed
+            for one_decay in decays:
+                first = one_decay.split('>',1)[0].strip()
+                if first in pids:
+                    pid = set([pids[first]])
+                elif first in self._multiparticles:
+                    pid = set(self._multiparticles[first])
+                else:
+                    raise Exception, 'invalid particle name: %s. ' % first
+                core_final.difference_update(pid)
+                core_final.update(self.get_final_part(one_decay))
+                
+            return core_final
+                
+        # NO DECAY CHAIN
+        final = set()
+        final_states = re.search(r'> ([^\/\$\=\@>]*)(\s\S+\=|\$|\/|\@|$)', procline)
+        particles = final_states.groups()[0]
+        for particle in particles.split():
+            if particle in pids:
+                final.add(pids[particle])
+            elif particle in self._multiparticles:
+                final.update(set(self._multiparticles[particle]))
+        return final
+            
+            
+            
+        
+        
+        
+        
+        
 
 
     def extract_particle_ids(self, args):

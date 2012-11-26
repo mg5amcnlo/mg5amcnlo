@@ -2342,7 +2342,7 @@ class decay_misc:
                         topo["branchings"][-2]["m2"]=math.sqrt(topo["get_mass2"][part])
 
     def reorder_branch(self,branch):
-        """ branch is a sting with the definition of a decay chain
+        """ branch is a string with the definition of a decay chain
                 If branch contains " A > B C , B > ... " 
                 reorder into             " A > C B , B > ... "
 
@@ -2736,22 +2736,25 @@ class decay_misc:
 class decay_all_events:
     
     @misc.mute_logger()
-
-    def __init__(self,inputfile,mybanner,decay_processes,\
-                 prod_branches,proc_option, max_weight_arg, BW_effects,\
-                path_me):
+    def __init__(self, ms_interface, inputfile, mybanner, decay_processes,\
+                 prod_branches, proc_option, options):
         
         self.calculator = {}
         self.calculator_nbcall = {}
-        self.path_me = path_me
-
+        self.options = options
+        max_weight_arg = options['max_weight']  
+        BW_effects = options['BW_effect']
+        path_me = options['curr_dir']
+        self.path_me = path_me                             
+                                     
         # need to unbuffer all I/O in fortran, otherwise
         # the values of matrix elements are not passed to the Python script
         os.environ['GFORTRAN_UNBUFFERED_ALL']='y'  
 #        os.system(" export GFORTRAN_UNBUFFERED_ALL ")
 
 
-        mgcmd=Cmd.MasterCmd()
+        mgcmd = ms_interface.mg5cmd
+        base_model = ms_interface.model
 
         curr_dir=os.getcwd()
         
@@ -2766,32 +2769,8 @@ class decay_all_events:
         if os.path.isdir(pjoin(path_me,"full_me")):
             shutil.rmtree(pjoin(path_me,"full_me"))
         decay_tools=decay_misc()
-
-        model = mybanner.get("model")
-        if (model.startswith('loop_')):
-            #raise Exception, 'need to fix this!!!'
-            #if we keep it, we need to keep the modification of the param_card
-            #commented bellow
-            logger.info("The model in the banner is "+mybanner.get("model"))
-            logger.info("Set the model to "+mybanner.get("model")[5:]+" since only")
-            logger.info("tree-level amplitudes are used for the decay ")
-            model = model[5:]
-
-        logger.info('model:     '+ model)
-        model_path = model
-        #base_model = import_ufo.import_model(model_path)
-
-        # Import model
-        base_model = import_ufo.import_model(model_path,
-                                        decay=True)
-        if not hasattr(base_model.get('particles')[0], 'partial_widths'):
-            logger.warning('The UFO model does not include widths information. Impossible to compute widths automatically')
-
-        base_model.pass_particles_name_in_mg_default() 
-        mgcmd.exec_cmd('import model '+model)
-
          
-        # process a bit the decay chain strings, so that the code is not confused by the sintax
+        # process a bit the decay chain strings, so that the code is not confused by the syntax
         decay_tools.process_decay_syntax(decay_processes)        
 
 

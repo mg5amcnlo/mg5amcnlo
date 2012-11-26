@@ -924,6 +924,10 @@ class Model(PhysicsObject):
         self['expansion_order'] = None
         self['version_tag'] = None # position of the directory (for security)
         self['gauge'] = [0, 1]
+        
+        # attribute which might be define if needed
+        #self['name2pdg'] = {'name': pdg}
+        
 
     def filter(self, name, value):
         """Filter for model property values"""
@@ -1033,7 +1037,13 @@ class Model(PhysicsObject):
             if self['interactions']:
                 self['expansion_order'] = \
                    dict([(order, -1) for order in self.get('coupling_orders')])
-
+                   
+        if (name == 'name2pdg') and 'name2pdg' not in self:
+            self['name2pdg'] = {}
+            for p in self.get('particles'):
+                self['name2pdg'][p.get('antiname')] = -1*p.get('pdg_code')
+                self['name2pdg'][p.get('name')] =  p.get('pdg_code')
+                
         return Model.__bases__[0].get(self, name) # call the mother routine
 
     def set(self, name, value):
@@ -1081,15 +1091,32 @@ class Model(PhysicsObject):
                 'couplings','lorentz', 'gauge']
 
     def get_particle(self, id):
-        """Return the particle corresponding to the id"""
+        """Return the particle corresponding to the id / name"""
         
         try:
             return self["particle_dict"][id]
         except Exception:
-            try:
-                return self.get("particle_dict")[id]
-            except Exception:
-                return None
+            if isinstance(id, int):
+                try:
+                    return self.get("particle_dict")[id]
+                except Exception:
+                    return None
+            else:
+                if not hasattr(self, 'name2part'):
+                    self.create_name2part()
+                try: 
+                    return self.name2part[id]
+                except:
+                    return None
+
+    def create_name2part(self):
+        """create a dictionary name 2 part"""
+        
+        self.name2part = {}
+        for part in self.get("particle_dict"):
+            self.name2part[part.get('name')] = part
+            
+            
 
     def get_lorentz(self, name):
         """return the lorentz object from the associate name"""

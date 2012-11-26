@@ -255,6 +255,14 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
     def validate_model(self, loop_type='virtual', stop=True):
         """ Upgrade the model sm to loop_sm if needed """
 
+        if not self._curr_model:
+            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
+            #import model with correct treatment of the history
+            last_command = self.history[-1]
+            self.exec_cmd(" import model loop_sm", precmd=True)
+            self.history.append(last_command)
+            return
+
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
            self._curr_model['perturbation_couplings']==[]:
             if loop_type.startswith('real'):

@@ -25,10 +25,12 @@ if '__main__' == __name__:
 
 import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.interface.madgraph_interface as mg_interface
+import madgraph.interface.master_interface as master_interface
 import madgraph.various.misc as misc
-import MadSpin.decay as madspin
 import madgraph.various.banner as banner
 
+import models.import_ufo as import_ufo
+import MadSpin.decay as madspin
 
 logger = logging.getLogger('decay.stdout') # -> stdout
 logger_stderr = logging.getLogger('decay.stderr') # ->stderr
@@ -41,9 +43,15 @@ class MadSpinInterface(extended_cmd.Cmd):
     prompt = 'MadSpin>'
     debug_output = 'MS_debug'
     
-    def __init__(self, event_path=None,*completekey, **stdin):
+    @misc.mute_logger()
+    def __init__(self, event_path=None, *completekey, **stdin):
         """initialize the interface with potentially an event_path"""
         
+        print '************************************************************'
+        print '*                                                          *'
+        print '*           W E L C O M E  to  M A D S P I N               *'
+        print '*                                                          *'
+        print '************************************************************'
         extended_cmd.Cmd.__init__(self, *completekey, **stdin)
         
         self.decay = madspin.decay_misc()
@@ -52,13 +60,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.options = {'max_weight': -1, 'BW_effect': 1, 
                         'curr_dir': os.getcwd()}
         
-        logger.info("Extracting the banner ...")
+
         
         self.events_file = None
         self.decay_processes = {}
         self.list_branches = {}
         self.to_decay={}
+        self.mg5cmd = master_interface.MasterCmd()
+        
         if event_path:
+            logger.info("Extracting the banner ...")
             self.do_import(event_path)
             
             
@@ -66,12 +77,20 @@ class MadSpinInterface(extended_cmd.Cmd):
         """import the event file"""
         
         if not os.path.exists(inputfile):
-            raise self.InvalidCmd('No such file or directory : %s' % inputfile)
+            if inputfile.endswith('.gz'):
+                if not os.path.exists(inputfile[:-3]):
+                    raise self.InvalidCmd('No such file or directory : %s' % inputfile)
+                else: 
+                    inputfile = inputfile[:-3]
+            elif os.path.exists(inputfile + '.gz'):
+                inputfile = inputfile + '.gz'
+            else: 
+                raise self.InvalidCmd('No such file or directory : %s' % inputfile)
         
         if inputfile.endswith('.gz'):
             misc.call(['gunzip', inputfile])
-            inputfile = inputfile.replace(".gz","")
-        
+            inputfile = inputfile[:-3]
+
         # Read the banner of the inputfile
         self.events_file = open(inputfile)
         self.banner = banner.Banner(self.events_file)
@@ -99,6 +118,29 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.final_state_full = process[process.find(">")+1:]
         self.final_state_compact, self.prod_branches=\
                  self.decay.get_final_state_compact(self.final_state_full)
+            
+        # Load the model     
+        info = self.banner.get('proc_card', 'full_model_line')
+        if '-modelname' in info:
+            mg_names = False
+        else:
+            mg_names = True
+        model_name = self.banner.get('proc_card', 'model')
+        if model_name:
+            self.load_model(model_name, mg_names)
+        else:
+            raise self.InvalidCmd('Only UFO model can be loaded in MadSpin.')
+        
+        # check particle which can be decayed:
+        self.final_state = set()
+        for line in self.banner.proc_card:
+            if line.startswith('generate'):
+                self.final_state.update(self.mg5cmd.get_final_part(line[8:]))
+            elif line.startswith('add process'):
+                self.final_state.update(self.mg5cmd.get_final_part(line[11:]))
+            elif line.startswith('define'):
+                self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)            
+            
 
     @extended_cmd.debug()
     def complete_import(self, text, line, begidx, endidx):
@@ -123,10 +165,14 @@ class MadSpinInterface(extended_cmd.Cmd):
     def do_decay(self, decaybranch):
         """add a process in the list of decayed particles"""
         
+        if self.mg5cmd._use_lower_part_names:
+            decaybranch = decaybranch.lower()
+        
         decay_process, init_part = self.decay.reorder_branch(decaybranch)
         if not self.list_branches.has_key(init_part):
             self.list_branches[init_part] = []
         self.list_branches[init_part].append(decay_process)
+        misc.sprint(self.list_branches)
         del decay_process, init_part    
         
     
@@ -166,7 +212,10 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise self.InvalidCmd('Unknown options')
         
         if args[0] in  ['max_weight', 'BW_effect']:
-            self.options[args[0]] = args[1] 
+            self.options[args[0]] = args[1]
+        elif args[0] == 'seed':
+            import random
+            random.seed(int(args[1])) 
 
     def check_launch(self, args):
         """check the validity of the launch command"""
@@ -176,12 +225,20 @@ class MadSpinInterface(extended_cmd.Cmd):
         if not self.events_file:
             raise self.InvalidCmd("No events files defined.")
 
+    @misc.mute_logger()
     def do_launch(self, line):
         """end of the configuration launched the code"""
         
         args = self.split_arg(line)
         self.check_launch(args)
-    
+        for part in self.list_branches.keys():
+            pid = self.mg5cmd._curr_model.get('name2pdg')[part]
+            if pid in self.final_state:
+                break
+        else:
+            logger.info("Nothing to decay ...")
+            return
+        
         # Ask the user which particle should be decayed        
         particle_index=2
         counter=0
@@ -198,15 +255,17 @@ class MadSpinInterface(extended_cmd.Cmd):
         if not self.decay_processes:
             logger.info("Nothing to decay ...")
             return
+        else:
+            misc.sprint(self.decay_processes)
 
-        generate_all = madspin.decay_all_events(self.events_file,
+        model_line = self.banner.get('proc_card', 'full_model_line')
+
+        generate_all = madspin.decay_all_events(self,self.events_file,
                                               self.banner,
                                               self.decay_processes,
                                               self.prod_branches, 
                                               self.proc_option, 
-                                              self.options['max_weight'], 
-                                              self.options['BW_effect'],
-                                              self.options['curr_dir'])
+                                              self.options)
 
         evt_path = self.events_file.name
         misc.call(['gzip %s' % evt_path], shell=True)
@@ -215,6 +274,34 @@ class MadSpinInterface(extended_cmd.Cmd):
         misc.call(['gzip %s' % decayed_evt_file], shell=True)
         logger.info("Decayed events have been written in %s" % decayed_evt_file)
     
+    
+    def load_model(self, name, use_mg_default):
+        """load the model"""
+        
+        loop = False
+        if (name.startswith('loop_')):
+            logger.info("The model in the banner is %s" % name)
+            logger.info("Set the model to %s since only" % name[:5])
+            logger.info("tree-level amplitudes are used for the decay ")
+            name = name[5:]
+            self.banner.proc_card.info['full_model_line'].replace('loop_','')
+
+        logger.info('detected model: %s. Loading...' % name)
+        model_path = name
+        #base_model = import_ufo.import_model(model_path)
+
+        # Import model
+        base_model = import_ufo.import_model(name, decay=True)
+        if not hasattr(base_model.get('particles')[0], 'partial_widths'):
+            logger.warning('The UFO model does not include widths information. Impossible to compute widths automatically')
+
+        if use_mg_default:
+            base_model.pass_particles_name_in_mg_default()
+        
+        self.model = base_model
+        self.mg5cmd._curr_model = self.model
+        self.mg5cmd.process_model()
+        
 
 if __name__ == '__main__':
     

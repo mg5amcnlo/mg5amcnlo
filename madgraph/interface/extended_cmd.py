@@ -569,7 +569,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     # Ask a question with nice options handling
     #===============================================================================    
     def ask(self, question, default, choices=[], path_msg=None, 
-            timeout = True, fct_timeout=None, ask_class=None):
+            timeout = True, fct_timeout=None, ask_class=None, **opt):
         """ ask a question with some pre-define possibility
             path info is
         """
@@ -607,11 +607,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             obj = SmartQuestion
 
         question_instance = obj(allow_arg=choices, default=default, 
-                                                          mother_interface=self)
+                                                   mother_interface=self, **opt)
         question_instance.question = question
 
         answer = self.check_answer_in_input_file(question_instance, default, path_msg)
         if answer is not None:
+            if ask_class:
+                question_instance.default(answer)
             return answer
         
         value =   Cmd.timed_input(question, default, timeout=timeout,
@@ -730,8 +732,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             debug_file.write('Fail to write options with error %s' % error)
 
         debug_file.close()
-        text =  open(self.debug_output).read()
-        misc.sprint(text)        
+        text =  open(self.debug_output).read()        
 
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
@@ -1392,11 +1393,13 @@ class SmartQuestion(BasicCmd):
                 return True
             elif line and hasattr(self, 'do_%s' % line.split()[0]):
                 return self.reask()
+            elif self.value == 'repeat':
+                return self.reask()
             elif len(self.allow_arg)==0:
                 return True
             else: 
                 raise Exception
-        except Exception:
+        except Exception,error:
             if self.wrong_answer < 100:
                 self.wrong_answer += 1
                 print """%s not valid argument. Valid argument are in (%s).""" \
@@ -1473,7 +1476,9 @@ class OneLinePathCompletion(SmartQuestion):
                 return True
             elif line and hasattr(self, 'do_%s' % line.split()[0]):
                 # go to retry
-                reprint_opt = True          
+                reprint_opt = True 
+            elif self.value == 'repeat':
+                reprint_opt = True         
             else:
                 raise Exception
         except Exception, error:            

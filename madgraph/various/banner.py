@@ -666,7 +666,8 @@ class ProcCard(list):
     def __init__(self, init=None):
         """ initialize a basic proc_card"""
         self.model = None
-        self.info = {'model': 'sm', 'generate':None}
+        self.info = {'model': 'sm', 'generate':None,
+                     'full_model_line':'import model sm'}
         list.__init__(self)
         if init:
             self.read(init)
@@ -706,6 +707,7 @@ class ProcCard(list):
             if len(cmds) < 2:
                 return
             if cmds[1].startswith('model'):
+                self.info['full_model_line'] = line
                 self.clean(remove_bef_last='import', keep_switch=True,
                         allow_for_removal=['generate', 'add process', 'output'])
                 if cmds[1] == 'model':
@@ -785,6 +787,7 @@ class ProcCard(list):
                 list.__getattr__(self, tag)
             else:
                 return self.info[tag]
+            
                 
             
         

@@ -21,6 +21,7 @@ import shutil
 import sys
 import logging
 import time
+from cStringIO import StringIO
 
 logger = logging.getLogger('test_cmd')
 
@@ -186,6 +187,51 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the plot file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
+    
+    def test_amcatnlo_from_file(self):
+        """ """
+        
+        cwd = os.getcwd()
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            pass
+        import subprocess
+        
+        stdout = open('/tmp/test.log','w')
+        if logging.getLogger('madgraph').level <= 20:
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stderr=devnull
+
+    
+            
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+                         pjoin(_file_path, 'input_files','test_amcatnlo')],
+                         cwd=pjoin(MG5DIR),
+                        stdout=stdout,stderr=stderr)
+        stdout.close()
+        text = open('/tmp/test.log','r').read()
+        
+        data = text.split('\n')
+        for i,line in enumerate(data):
+            if 'Summary:' in line:
+                break
+        #      Run at p-p collider (4000 + 4000 GeV)
+        self.assertTrue('Run at p-p collider (4000 + 4000 GeV)' in data[i+2])
+        #      Total cross-section: 1.249e+03 +- 3.2e+00 pb        
+        cross_section = data[i+3]
+        cross_section = float(cross_section.split(':')[1].split('+-')[0])
+        self.assertAlmostEqual(1.005e+03, cross_section,2)
+        #      Number of events generated: 10000        
+        self.assertTrue('Number of events generated: 100' in data[i+4])
+        
+        
+
+        
+        
+        
         
 
     def load_result(self, run_name):
