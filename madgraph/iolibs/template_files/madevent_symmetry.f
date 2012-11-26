@@ -1,3 +1,4 @@
+
       program symmetry
 c*****************************************************************************
 c     Given identical particles, and the configurations. This program identifies
@@ -288,10 +289,10 @@ c     ncode is number of digits needed for the code
 c                  write(*,*) 'Width',prwidth(-j,i),j,i
                   if (prwidth(-j,i) .gt. 0d0 .and. sprop(1,-j,i).ne.0) then
                      nbw=nbw+1
-                     write(*,*) 'Got bw',-nbw,j
+c                     write(*,*) 'Got bw',-nbw,j
 c                    JA 4/8/11 don't treat forced BW differently
                      if(lconflict(-j)) then
-                        write(*,*) 'Got conflict ',-nbw,j
+c                        write(*,*) 'Got conflict ',-nbw,j
                         iarray(nbw)=1 !Cuts on BW
                         if (nbw .gt. imax) then
                            write(*,*) 'Too many BW w conflicts',nbw,imax
@@ -393,16 +394,17 @@ c
 c
 c     local
 c
-      integer i,j
-      integer iden_part(-max_branch:-1)
-      double precision prwidth(-max_branch:-1,lmaxconfigs)  !Propagator width
-      double precision prmass(-max_branch:-1,lmaxconfigs)   !Propagator mass
-      double precision pow(-max_branch:-1,lmaxconfigs)    !Not used, in props.inc
+      integer i,j,it
+      integer iden_part(-nexternal+1:nexternal)
+      double precision prwidth(-nexternal:0,lmaxconfigs)  !Propagator width
+      double precision prmass(-nexternal:0,lmaxconfigs)   !Propagator mass
+      double precision pow(-nexternal:0,lmaxconfigs)    !Not used, in props.inc
       double precision xmass(-max_branch:nexternal)
       double precision pmass(nexternal)   !External particle mass
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
+      integer ipdg(-nexternal+1:nexternal)
       double precision mtot
       include 'leshouche.inc'
 c
@@ -417,7 +419,7 @@ c  Begin Code
 c-----
       include 'props.inc'   !Propagator mass and width information prmass,prwidth
       include 'pmass.inc'   !External particle masses
-      write(*,*) 'Checking for BW ',iconfig
+      write(*,*) 'Checking for BW in config number ',iconfig
 c
 c     Reset variables
 c      
@@ -426,46 +428,28 @@ c
       enddo
       do i=1,nexternal-1
          lconflict(-i) = .false.
-         iden_part(-i)=0
       enddo
 c     Initialize mtot (needed final-state phase space)
       mtot=0
       do i=nincoming+1,nexternal
           mtot=mtot+xmass(i)
       enddo
+
 c
-c     Start by determining which propagators are part of the same 
-c     chain, or could potentially conflict
+c     Start by keeping track of identical particles. Only view the outermost
+c     identical particle as a BW, unless it is a required BW
+c     
+      call idenparts(iden_part,itree,sprop,forcebw,
+     $               prwidth(-nexternal,iconfig))
+c
+c     Now determine which propagators are part of the same 
+c     chain and could potentially conflict
 c
       i=1
       do while (i .lt. nexternal-2 .and. itree(1,-i) .ne. 1)
          xmass(-i) = xmass(itree(1,-i))+xmass(itree(2,-i))
          mtot=mtot-xmass(-i)
          if (prwidth(-i,iconfig) .gt. 0d0) then
-c     JA 3/31/11 Keep track of identical particles (i.e., radiation vertices)
-c     by tracing the particle identity from the external particle.
-            if(itree(1,-i).gt.0) then
-               if(sprop(1,-i).eq.idup(itree(1,-i),1,1))
-     $              iden_part(-i) = sprop(1,-i)
-            endif
-            if(itree(2,-i).gt.0) then
-               if(sprop(1,-i).eq.idup(itree(2,-i),1,1))
-     $              iden_part(-i) = sprop(1,-i)
-            endif
-            if(itree(1,-i).lt.0) then
-               if(iden_part(itree(1,-i)).ne.0.and.
-     $           sprop(1,-i).eq.iden_part(itree(1,-i)) .or.
-     $         forcebw(itree(1,-i)).eq.1.and.
-     $           sprop(1,-i).eq.sprop(1,itree(1,-i)))
-     $              iden_part(-i) = sprop(1,-i)
-            endif
-            if(itree(2,-i).lt.0) then
-               if(iden_part(itree(2,-i)).ne.0.and.
-     $           sprop(1,-i).eq.iden_part(itree(2,-i)).or.
-     $         forcebw(itree(2,-i)).eq.1.and.
-     $           sprop(1,-i).eq.sprop(1,itree(2,-i)))
-     $              iden_part(-i) = sprop(1,-i)
-            endif
             if (xmass(-i) .gt. prmass(-i,iconfig) .and.
      $           iden_part(-i).eq.0) then !Can't be on shell, and not radiation
                lconflict(-i)=.true.
@@ -473,7 +457,9 @@ c     by tracing the particle identity from the external particle.
      $              prmass(-i,iconfig),xmass(-i)
             endif
          endif
-         xmass(-i) = max(xmass(-i),prmass(-i,iconfig)+3d0*prwidth(-i,iconfig))        
+         if (iden_part(-i).eq.0) then
+            xmass(-i) = max(xmass(-i),prmass(-i,iconfig)+3d0*prwidth(-i,iconfig))        
+         endif
          mtot=mtot+xmass(-i)
          i=i+1
       enddo
@@ -503,7 +489,8 @@ c
          if (lconflict(-j)) then 
             if (prwidth(-j,iconfig) .le. 0 .or. iden_part(-j).gt.0) then 
                lconflict(-j) = .false.
-               write(*,*) 'No conflict BW',iconfig,j
+c               write(*,*) 'No conflict BW',iconfig,j
+               continue
             else
                write(*,*) 'Conflicting BW',iconfig,j
             endif
@@ -541,10 +528,9 @@ c
 c     local
 c
       integer i,j,nbw
-      integer iden_part(-max_branch:-1)
-      double precision prwidth(-max_branch:-1,lmaxconfigs)  !Propagator width
-      double precision prmass(-max_branch:-1,lmaxconfigs)   !Propagator mass
-      double precision pow(-max_branch:-1,lmaxconfigs)    !Not used, in props.inc
+      double precision prwidth(-nexternal:0,lmaxconfigs)  !Propagator width
+      double precision prmass(-nexternal:0,lmaxconfigs)   !Propagator mass
+      double precision pow(-nexternal:0,lmaxconfigs)    !Not used, in props.inc
       double precision xmass(-max_branch:nexternal)
       double precision xwidth(-max_branch:nexternal)
       double precision pmass(nexternal)   !External particle mass
@@ -576,7 +562,6 @@ c
       enddo
       do i=1,nexternal-1
          lconflict(-i) = .false.
-         iden_part(-i)=0
       enddo
 c     Initialize mtot (needed final-state phase space)
       mtot=0

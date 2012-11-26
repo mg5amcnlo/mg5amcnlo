@@ -277,13 +277,22 @@ class WriteALOHA:
         """Turn a multvariable into a string"""
         
         mult_list = [self.write_variable_id(id) for id in obj]
-        data = {'factors': '*'.join(mult_list)}
+	# HSS, 23/11/2012
+	# data = {'factors': '*'.join(mult_list)}
+        data = {'factors': '('+')*('.join(mult_list)+')'}
+	# HSS
         if prefactor and obj.prefactor != 1:
             if obj.prefactor != -1:
-                text = '%(prefactor)s * %(factors)s'
+		# HSS,23/11/2012
+		# * %(factors)s->* (%(factors)s)
+                text = '%(prefactor)s * (%(factors)s)'
+		# HSS
                 data['prefactor'] = self.change_number_format(obj.prefactor)
             else:
-                text = '-%(factors)s'
+		# HSS, 23/11/2012
+		# text = '-%(factors)s'
+                text = '(-%(factors)s)'
+		# HSS
         else:
             text = '%(factors)s'
         return text % data
@@ -292,13 +301,22 @@ class WriteALOHA:
         """Turn a multvariable into a string"""
 
         mult_list = [self.write_obj(id) for id in obj]
-        data = {'factors': '*'.join(mult_list)}
+	# HSS, 23/11/2012
+	# data = {'factors': '*'.join(mult_list)}
+        data = {'factors': '('+')*('.join(mult_list)+')'}
+	# HSS
         if prefactor and obj.prefactor != 1:
             if obj.prefactor != -1:
-                text = '%(prefactor)s * %(factors)s'
+		# HSS, 23/11/2012
+		# * %(factors)s->* (%(factors)s)
+                text = '%(prefactor)s * (%(factors)s)'
+		# HSS
                 data['prefactor'] = self.change_number_format(obj.prefactor)
             else:
-                text = '-%(factors)s'
+		# HSS, 23/11/2012
+		# text = '-%(factors)s'
+                text = '(-%(factors)s)'
+		# HSS
         else:
             text = '%(factors)s'
         return text % data
@@ -662,7 +680,10 @@ class ALOHAWriterForFortran(WriteALOHA):
                     if number.imag == 1:
                         out = 'CI'
                     elif number.imag == -1:
-                        out = '-CI'
+			# HSS, 23/11/2012
+			# out = '-CI'
+                        out = '(-CI)'
+			# HSS
                     else: 
                         out = '%s * CI' % self.change_number_format(number.imag)
             else:
@@ -681,6 +702,8 @@ class ALOHAWriterForFortran(WriteALOHA):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
+                self.declaration.add(('complex', name))
+                
         
         def sort_fct(a, b):
             if len(a) < len(b):
@@ -728,7 +751,10 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         if not self.offshell:
             if coup_name == 'COUP':
-                out.write(' vertex = COUP*%s\n' % self.write_obj(numerator.get_rep([0])))
+		# HSS, 23/11/2012
+		# *%s->*(%s)
+                out.write(' vertex = COUP*(%s)\n' % self.write_obj(numerator.get_rep([0])))
+		# HSS
             else:
                 out.write(' vertex = %s\n' % self.write_obj(numerator.get_rep([0])))
         else:
@@ -755,9 +781,12 @@ class ALOHAWriterForFortran(WriteALOHA):
                     coeff = ''
             to_order = {}  
             for ind in numerator.listindices():
+		# HSS,23/11/2012
+		# %s%s-> %s(%s)
                 to_order[self.pass_to_HELAS(ind)] = \
-                        '    %s(%d)= %s%s\n' % (self.outname, self.pass_to_HELAS(ind)+1, 
+                        '    %s(%d)= %s(%s)\n' % (self.outname, self.pass_to_HELAS(ind)+1, 
                         coeff, self.write_obj(numerator.get_rep(ind)))
+		# HSS
             key = to_order.keys()
             key.sort()
             for i in key:
@@ -897,6 +926,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
+                self.declaration.add(('complex', name))
 
         if not 'Coup(1)' in self.routine.infostr:
             coup = True
@@ -923,9 +953,12 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                     else:
                         data = 0
                     if data and coup:
-                        out.write('    COEFF(%s,%s,%s)= coup*%s\n' % ( 
+			# HSS, 23/11/2012
+			# coup*%s -> coup*(%s)
+                        out.write('    COEFF(%s,%s,%s)= coup*(%s)\n' % ( 
                                     self.pass_to_HELAS(ind)+1-self.momentum_size,
                                     J, K+1, self.write_obj(data)))
+			# HSS
                     else:
                         out.write('    COEFF(%s,%s,%s)= %s\n' % ( 
                                     self.pass_to_HELAS(ind)+1-self.momentum_size,
@@ -1229,7 +1262,10 @@ class ALOHAWriterForCPP(WriteALOHA):
                     if number.imag == 1:
                         out = 'cI'
                     elif number.imag == -1:
-                        out = '-cI'
+			# HSS,23/11/2012
+                        # out = '-cI'
+			out = '(-cI)'
+			# HSS
                     else: 
                         out = '%s * cI' % self.change_number_format(number.imag)
             else:
@@ -1465,6 +1501,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s;\n' % (name, self.write_obj(obj)))
+                self.declaration.add(('complex', name))
                 
         for name, (fct, objs) in self.routine.fct.items():
 	    # HSS, 5/11/2012
@@ -1483,6 +1520,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             # HSS
 	    format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
             out.write(format % ','.join([self.write_obj(obj) for obj in objs]))
+            
         
 
         numerator = self.routine.expr
@@ -1492,7 +1530,10 @@ class ALOHAWriterForCPP(WriteALOHA):
             coup_name = '%s' % self.change_number_format(1)
         if not self.offshell:
             if coup_name == 'COUP':
-                out.write(' vertex = COUP*%s;\n' % self.write_obj(numerator.get_rep([0])))
+		# HSS, 23/11/2012
+		# COUP*%s -> COUP*(%s)
+                out.write(' vertex = COUP*(%s);\n' % self.write_obj(numerator.get_rep([0])))
+		# HSS
             else:
                 out.write(' vertex = %s;\n' % self.write_obj(numerator.get_rep([0])))
         else:
@@ -1516,9 +1557,12 @@ class ALOHAWriterForCPP(WriteALOHA):
                 coeff = 'COUP'
                 
             for ind in numerator.listindices():
-                out.write('    %s[%d]= %s*%s;\n' % (self.outname, 
+		# HSS , 23/11/2012
+		# *%s -> *(%s)
+                out.write('    %s[%d]= %s*(%s);\n' % (self.outname, 
                                         self.pass_to_HELAS(ind), coeff,
                                         self.write_obj(numerator.get_rep(ind))))
+		# HSS
         return out.getvalue()
         
     remove_double = re.compile('complex<double> (?P<name>[\w]+)\[\]')
@@ -1756,7 +1800,9 @@ class ALOHAWriterForPython(WriteALOHA):
                 return '%ij' % obj.imag
             else:
                 return '%sj' % str(obj.imag)
-        else: 
+        elif obj.imag == 0 and int(obj.real) == obj:
+            return '%i' % obj.real 
+        else:
             return str(obj)
     
     
@@ -1801,7 +1847,10 @@ class ALOHAWriterForPython(WriteALOHA):
 
         if not self.offshell:
             if coup_name == 'COUP':
-                out.write('    vertex = COUP*%s\n' % self.write_obj(numerator.get_rep([0])))
+		# HSS,23/11/2012
+		# *%s->*(%s)
+                out.write('    vertex = COUP*(%s)\n' % self.write_obj(numerator.get_rep([0])))
+		# HSS
             else:
                 out.write('    vertex = %s\n' % self.write_obj(numerator.get_rep([0])))
         else:
@@ -1820,9 +1869,12 @@ class ALOHAWriterForPython(WriteALOHA):
                 coeff = 'COUP'
                 
             for ind in numerator.listindices():
-                out.write('    %s[%d]= %s*%s\n' % (self.outname, 
+		# HSS,23/11/2012
+		# %s*%s -> %s*(%s)
+                out.write('    %s[%d]= %s*(%s)\n' % (self.outname, 
                                         self.pass_to_HELAS(ind), coeff, 
                                         self.write_obj(numerator.get_rep(ind))))
+		# HSS
         return out.getvalue()
     
     def get_foot_txt(self):

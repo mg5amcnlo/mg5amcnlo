@@ -767,7 +767,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         other contributions like the UV mass renormalization are added in the
         function setLoopCTVertices"""
 
-
+        return True# debug
         #  ============================================
         #     Vertex renormalization
         #  ============================================
@@ -887,7 +887,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
     def setLoopCT_vertices(self):
         """ Scan each loop diagram and recognizes what are the R2/UVmass 
             CounterTerms associated to them """
-
+        return # debug
         # We first create a base dictionary with as a key (tupleA,tupleB). For 
         # each R2/UV interaction, tuple B is the ordered tuple of the loop 
         # particles (not anti-particles, so that the PDG is always positive!) 

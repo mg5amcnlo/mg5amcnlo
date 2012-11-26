@@ -42,7 +42,7 @@ sed -i.bak s/"\+\/\-"/" \+\/\-"/ res.txt
 
 echo N of directories: $NTOT
 
-./sumres.py $NTOT -1
+./sumres.py $NTOT -1 -1
 
 rm -r res.txt.bak
 

@@ -230,6 +230,7 @@ class MatrixElementEvaluator(object):
         previous_globals = list(globals().keys())
         for routine in aloha_routines:
             exec(routine, globals())
+	#open(os.path.join('/afs/cern.ch/work/h/hshao/aMCatNLO_EW','test01.txt'),'w').write("\n      ".join(aloha_routines))
         for key in globals().keys():
             if key not in previous_globals:
                 ADDED_GLOBAL.append(key)

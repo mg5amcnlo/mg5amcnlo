@@ -888,7 +888,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         nb_init = self.ninitial
         pat = re.compile(r'''DATA \(IDUP\(I,\d+\),I=1,\d+\)/([\+\-\d,\s]*)/''', re.I)
         for Pdir in subproc:
-            text = open(pjoin(Pdir, 'born_leshouche.inc')).read()
+            text = open(pjoin(self.me_dir, 'SubProcesses', Pdir, 'born_leshouche.inc')).read()
             group = pat.findall(text)
             for particles in group:
                 particles = particles.split(',')

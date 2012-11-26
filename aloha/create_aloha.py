@@ -642,6 +642,10 @@ class AbstractALOHAModel(dict):
         self.look_for_symmetries()
         # reorganize the data (in order to use optimization for a given lorentz
         #structure
+	# HSS,27/11/2012
+	aloha.loop_mode = False
+	# self.explicit_combine = False
+	# HSS
         request = {}
         for list_l_name, tag, outgoing in data:
             #allow tag to have integer for retro-compatibility

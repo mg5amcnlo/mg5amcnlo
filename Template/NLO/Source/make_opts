@@ -59,8 +59,10 @@ endif
 
 # Madloop
 ifdef madloop
-  libmadloop=libMadLoop.a -lcts
+  libmadloop=libMadLoop.a
+  libcuttools=-lcts
 else
   libmadloop=
+  libcuttools=
 endif
 

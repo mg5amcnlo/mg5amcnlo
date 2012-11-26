@@ -1622,7 +1622,7 @@ c
          if (pp .gt. 0) then
             PP=SQRT(pp)*0.5d0
          else
-            write(*,*) 'Error #12 in genps_fks.f',pp
+            write(*,*) 'Warning #12 in genps_fks.f',pp
             jac=-1
             return
          endif
