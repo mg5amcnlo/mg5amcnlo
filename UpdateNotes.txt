@@ -5,6 +5,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       run_card.dat. Please read more in 
                       Template/README.systematics
                       Note that the Pythia/PGS package v. 2.2 is needed.
+                  JA: Included <clustering> tag in matched .lhe output,
+                      to be used together with Pythia 8 CKKW-L matching.
 
 1.5.5 (18/11/12)  JA: Fixed Bug #1078168, giving asymmetries in X+gamma generation
                       (e.g. Z+gamma) when ickkw=1 and pdfwgt=T. Thanks Irakli!

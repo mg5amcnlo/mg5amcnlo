@@ -19,6 +19,9 @@ c     resmap gives potential resonances for diagrams
       logical clustered
       common/cl_val/pcl,pt2ijcl,zcl,mt2ij,mt2last,imocl,idacl,igraphs,ipdgcl,
      &    isbw,clustered
+c     variable for LH output of clustering info (R,E,S,I)
+      integer icluster(4,nexternal)
+      common/cl_iclus/icluster
 c     parameters for qcd jets
       double precision ptclus(nexternal)
       common/cl_jets/ptclus

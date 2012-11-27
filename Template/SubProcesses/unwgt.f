@@ -243,6 +243,8 @@ c
       integer ievent
       character*300 buff
       character*(s_bufflen) buff2
+      integer nclus
+      character*(clus_bufflen) buffclus(nexternal)
 C     
 C     GLOBAL
 C
@@ -299,7 +301,7 @@ c
       do i=1,nw
          if (.not. done) then
             call read_event(lun,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,
-     $           buff2,done)
+     $           buff2,nclus,buffclus,done)
          else
             wgt = 0d0
          endif
@@ -329,7 +331,7 @@ c      endif
       do j=1,nw
          if (.not. done) then
             call read_event(lun,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,
-     $           buff2,done)
+     $           buff2,nclus,buffclus,done)
          else
             write(*,*) 'Error done early',j,nw
          endif
@@ -343,7 +345,7 @@ c      endif
             xtot = xtot + dabs(wgt)
             i=i+1
             call write_Event(lunw,p,wgt,n,ic,ngroup,scale,aqcd,aqed,
-     $           buff,buff2)
+     $           buff,buff2,nclus,buffclus)
          endif
       enddo
       write(*,*) 'Found ',nw,' events.'
@@ -407,6 +409,8 @@ c
 
       character*300 buff
       character*(s_bufflen) buff2
+      integer nclus
+      character*(clus_bufflen) buffclus(nexternal)
       character*20 cfmt
 C     
 C     GLOBAL
@@ -631,11 +635,24 @@ c         print *,'systematics buffer:'
 c         write(*,'(a)') buff2(1:ifin)
 c         print *,'max and actual length: ',s_bufflen,ifin
       endif
+
+c     Write out buffers for clustering info
+      nclus=0
+      if(icluster(1,1).ne.0 .and. ickkw.ne.0)then
+         nclus=nexternal
+         write(buffclus(1),'(a)')'<clustering>'
+         do i=1,nexternal-2
+            write(buffclus(i+1),'(a13,f9.3,a2,4I3,a7)') '<clus scale="',
+     $           dsqrt(pt2ijcl(i)),'">',(icluster(j,i),j=1,4),'</clus>'
+         enddo
+         write(buffclus(nexternal),'(a)')'</clustering>'
+      endif
+
       call write_event(lun,pb(0,1),wgt,npart,jpart(1,1),ngroup,
-     &   sscale,aaqcd,aaqed,buff,buff2(1:ifin))
+     &   sscale,aaqcd,aaqed,buff,buff2(1:ifin),nclus,buffclus)
       if(btest(mlevel,1))
      &   call write_event(6,pb(0,1),wgt,npart,jpart(1,1),ngroup,
-     &   sscale,aaqcd,aaqed,buff,buff2(1:ifin))
+     &   sscale,aaqcd,aaqed,buff,buff2(1:ifin),nclus,buffclus)
 
       end
       

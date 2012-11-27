@@ -52,8 +52,11 @@ c
 
       character*300 buff
       character*(s_bufflen) buff2
+      integer nclus
+      character*(clus_bufflen) buffclus(max_particles)
       data buff2/''/
       data iseed/-1/
+      data buffclus/max_particles*' '/
 c-----
 c  Begin Code
 c-----
@@ -104,7 +107,7 @@ c
       I4 = 4
       R8 = 8
       record_length = 4*I4+maxexternal*I4*7+maxexternal*5*R8+3*R8+
-     &   300
+     &   300+max_particles*clus_bufflen
       if (use_syst) record_length=record_length+s_bufflen
 C $B$ scratch_name $B$ !this is tag for automatic modification by MW
       filename='scratch'
@@ -151,14 +154,26 @@ C $E$ output_file1 $E$ !this is tag for automatic modification by MW
             read(sfnum,rec=iarray(i)) wgt,n,
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     &           buff,buff2
+     &           buff,buff2,(buffclus(j),j=1,max_particles)
          else
             read(sfnum,rec=iarray(i)) wgt,n,
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     &           buff
+     &           buff,(buffclus(j),j=1,max_particles)
          endif
-         call write_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,buff,buff2)
+c        Find nclus
+         nclus=max_particles
+         do j=1,max_particles
+            if(buffclus(j).eq.' ')then
+               nclus=j-1
+               exit
+            elseif(buffclus(j).eq.'</clustering>') then
+               nclus=j
+               exit
+            endif
+         enddo
+         call write_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,buff,buff2,
+     $        nclus,buffclus)
       enddo
       close(15)
 c
@@ -233,15 +248,26 @@ C $E$ output_file2 $E$ !this is tag for automatic modification by MW
                read(sfnum,rec=iarray(i)) wgt,n,
      &              ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &              ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     $              buff, buff2
+     $              buff, buff2,(buffclus(j),j=1,max_particles)
             else
                read(sfnum,rec=iarray(i)) wgt,n,
      &              ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
-     &              ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed, buff
+     &              ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,buff,
+     $              (buffclus(j),j=1,max_particles)
             endif
             wgt=dsign(xsec/nreq,wgt)
+c        Find nclus
+            do j=1,max_particles
+               if(buffclus(j).eq.' ')then
+                  nclus=j-1
+                  exit
+               elseif(buffclus(j).eq.'</clustering>') then
+                  nclus=j
+                  exit
+               endif
+            enddo
             call write_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,
-     $           buff,buff2)
+     $           buff,buff2,nclus,buffclus)
             ntry=ntry+1
          endif
       enddo
@@ -555,6 +581,9 @@ c
       character*300 buff
       character*(s_bufflen) buff2
       character*300 fullname
+      integer nclus
+      character*(clus_bufflen) buffclus(max_particles)
+      data buffclus/max_particles*' '/
 c
 c     Les Houches init block (for the <init> info)
 c
@@ -602,7 +631,8 @@ c
 c     Now loop through events
 c
       do while (.not. done)
-         call read_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,buff,buff2,done)
+         call read_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,buff,buff2,
+     $        nclus,buffclus,done)
          if (.not. done) then
             revent = revent+1
             wgt = wgt*nj*gsfact                 !symmetry factor * grid factor
@@ -614,11 +644,12 @@ c
                   write(sfnum,rec=kevent) wgt,n,
      &                 ((ic(i,j),j=1,maxexternal),i=1,7),ievent,
      &                 ((p(i,j),i=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     $                 buff,buff2
+     $                 buff,buff2,(buffclus(i),i=1,max_particles)
                else
                   write(sfnum,rec=kevent) wgt,n,
      &              ((ic(i,j),j=1,maxexternal),i=1,7),ievent,
-     &              ((p(i,j),i=0,4),j=1,maxexternal),sscale,aqcd,aqed,buff
+     &              ((p(i,j),i=0,4),j=1,maxexternal),sscale,aqcd,aqed,
+     $                 buff,(buffclus(i),i=1,max_particles)
                endif
                sum=sum+dabs(wgt)
                found=.false.

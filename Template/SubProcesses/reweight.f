@@ -451,6 +451,7 @@ c      endif
      $       '&',idacl(i,2),'(',ipdgcl(idacl(i,2),igraphs(1),iproc),')',
      $       ' -> ',imocl(i),'(',ipdgcl(imocl(i),igraphs(1),iproc),')',
      $       ', ptij = ',dsqrt(pt2ijcl(i))
+          write(*,*)'   icluster(',i,')=',(icluster(j,i),j=1,4)
         enddo
         write(*,*)'  process: ',iproc
         write(*,*)'  graphs (',igraphs(0),'):',(igraphs(i),i=1,igraphs(0))

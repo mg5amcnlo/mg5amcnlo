@@ -43,3 +43,7 @@ c     Parameter for string buffer length for systematics variations info
         integer s_bufflen
         parameter (s_bufflen=max(300,1+4*3+(max_particles-1)*9+
      $                               (1+(max_particles-1)*3)*15))
+
+c     Parameter for string buffer length for clustering info
+        integer clus_bufflen
+        parameter (clus_bufflen=43)
