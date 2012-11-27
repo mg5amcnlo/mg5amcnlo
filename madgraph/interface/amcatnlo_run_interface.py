@@ -1458,14 +1458,6 @@ Integrated cross-section
             ldlibrarypath += ':%s' % pjoin(self.shower_card['hepmcpath'], 'lib')
         os.putenv('LD_LIBRARY_PATH', ldlibrarypath)
 
-        if 'DYLD_LIBRARY_PATH' in os.environ.keys():
-            dyldlibrarypath = os.environ['DYLD_LIBRARY_PATH']
-        else:
-            dyldlibrarypath = ''
-        if shower == 'PYTHIA8':
-            dyldlibrarypath += ':%s' % pjoin(self.shower_card['py8path'], 'HEPMC', 'lib')
-        os.putenv('DYLD_LIBRARY_PATH', dyldlibrarypath)
-
         self.shower_card.write_card(shower, shower_card_path)
 
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
@@ -1474,7 +1466,8 @@ Integrated cross-section
                     stderr=open(mcatnlo_log, 'w'), 
                     cwd=pjoin(self.me_dir, 'MCatNLO'))
         exe = 'MCATNLO_%s_EXE' % shower
-        if not os.path.exists(pjoin(self.me_dir, 'MCatNLO', exe)):
+        if not os.path.exists(pjoin(self.me_dir, 'MCatNLO', exe)) and \
+            not os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe')):
             print open(mcatnlo_log).read()
             raise aMCatNLOError('Compilation failed, check %s for details' % mcatnlo_log)
         logger.info('                     ... done')
@@ -1490,12 +1483,13 @@ Integrated cross-section
 
         self.update_status('Running MCatNLO in %s (this may take some time)...' % rundir,
                 level='parton')
-        files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
-        # special treatment for pythia8
-        if shower=='PYTHIA8':
-            files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.cmd'), rundir)
-        else:
+        if shower != 'PYTHIA8':
+            files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'MCATNLO_%s_input' % shower), rundir)
+        # special treatment for pythia8
+        else:
+            files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.cmd'), rundir)
+            files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe'), rundir)
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
@@ -1512,9 +1506,14 @@ Integrated cross-section
             pjoin(rundir,self.run_name))], shell=True)
         # special treatment for pythia8
         if shower=='PYTHIA8':
-            misc.call(['./%s' % exe, 'Pythia8.cmd'], cwd = rundir, 
+            open(pjoin(rundir, exe), 'w').write(\
+                 '#!/bin/bash\nsource %s\n./Pythia8.exe Pythia8.cmd\n'\
+                % pjoin(self.shower_card['py8path'], 'examples', 'config.sh'))
+            os.system('chmod  +x %s' % pjoin(rundir,exe))
+            misc.call(['./%s' % exe], cwd = rundir, 
                 stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
-                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
+                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
+                shell=True)
 
         else:
             misc.call(['./%s' % exe], cwd = rundir, 
