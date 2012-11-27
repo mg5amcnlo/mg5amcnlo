@@ -373,11 +373,19 @@ CKM33 = Parameter(name = 'CKM33',
                   value = '1',
                   texname = '\\text{CKM33}')
 
+#MW = Parameter(name = 'MW',
+#               nature = 'internal',
+#               type = 'real',
+#               value = 'cmath.sqrt(MZ**2/2. + cmath.sqrt(MZ**4/4. - (aEW*cmath.pi*MZ**2)/(Gf*cmath.sqrt(2))))',
+#               texname = 'M_W')
+
 MW = Parameter(name = 'MW',
-               nature = 'internal',
+               nature = 'external',
                type = 'real',
-               value = 'cmath.sqrt(MZ**2/2. + cmath.sqrt(MZ**4/4. - (aEW*cmath.pi*MZ**2)/(Gf*cmath.sqrt(2))))',
-               texname = 'M_W')
+               value = 80.419,
+               texname = '\\text{MW}',
+               lhablock = 'MASS',
+               lhacode = [ 24 ])
 
 ee = Parameter(name = 'ee',
                nature = 'internal',

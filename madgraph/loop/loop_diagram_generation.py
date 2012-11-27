@@ -307,6 +307,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
                        "make sure that the loop diagrams have been tgged first."
             valid_diag = True
             if i!=19:valid_diag=False
+            #if 22 in diag.get_loop_lines_pdgs():
+            #     valid_diag=False
             # Ex. 1: Chose the topology, i.e. number of loop line.
             #        Notice that here particles and antiparticles are not 
             #        differentiated and always the particle PDG is returned.

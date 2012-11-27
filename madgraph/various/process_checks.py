@@ -289,7 +289,7 @@ class MatrixElementEvaluator(object):
 
         # Find masses of particles
         mass_strings = [self.full_model.get_particle(l.get('id')).get('mass') \
-                         for l in sorted_legs]
+                         for l in sorted_legs]        
         mass = [self.full_model.get('parameter_dict')[m] for m in mass_strings]
         mass = [m.real for m in mass]
         #mass = [math.sqrt(m.real) for m in mass]
@@ -2636,7 +2636,7 @@ def check_lorentz(processes, param_card = None,cuttools="", cmd = FakeInterface(
         results = run_multiprocs_no_crossings(check_lorentz_process,
                                            multiprocess,
                                            evaluator)
-
+        # raise NameError,"haha"
         if multiprocess.get('perturbation_couplings')!=[]:
             # Clean temporary folders created for the running of the loop processes
             clean_up(mg_root)
@@ -2724,6 +2724,12 @@ def check_lorentz_process(process, evaluator):
 
     # Generate phase space point to use
     p, w_rambo = evaluator.get_momenta(process)
+    #ps=""
+    #for pi in p:
+    #   for pij in pi:
+    #      ps=ps+str(pij)+"  "
+    #   ps=ps+"\n"
+    # open(os.path.join('/afs/cern.ch/work/h/hshao/aMCatNLO_EW','PS.input'),'w').write(ps)
     # Generate the HelasMatrixElement for the process
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
         matrix_element = helas_objects.HelasMatrixElement(amplitude,
@@ -2741,6 +2747,12 @@ def check_lorentz_process(process, evaluator):
     
     for boost in range(1,4):
         boost_p = boost_momenta(p, boost)
+        #ps=""
+        #for pi in boost_p:
+	#   for pij in pi:
+	#       ps=ps+str(pij)
+	#   ps=ps+"\n"
+	#open(os.path.join('/afs/cern.ch/work/h/hshao/aMCatNLO_EW','PS%s.input')%boost,'w').write(ps)
         results.append(evaluator.evaluate_matrix_element(matrix_element,
                                                          p=boost_p,
                                                          output='jamp'))
@@ -2929,7 +2941,7 @@ def boost_momenta(p, boost_direction=1, beta=0.5):
             boost_imp.append(pz) 
         #Add the momenta to the list
         boost_p.append(boost_imp)                   
-            
+        #print math.sqrt(boost_imp[0]**2-boost_imp[1]**2-boost_imp[2]**2-boost_imp[3]**2)    
     return boost_p
 
 def output_lorentz_inv(comparison_results, output='text'):
