@@ -115,7 +115,10 @@ class Block(list):
     """ list of parameter """
     
     def __init__(self, name=None):
-        self.name = name
+        if name:
+            self.name = name.lower()
+        else:
+            self.name = name
         self.scale = None
         self.comment = ''
         self.decay_table = {}
@@ -234,6 +237,7 @@ class ParamCard(dict):
     def __init__(self, input_path=None):
         self.order = []
         
+        self.input_path = input_path
         if input_path:
             self.read(input_path)
 
@@ -928,7 +932,7 @@ def convert_to_slha1(path, outputpath=None ):
         
         
 
-def convert_to_mg5card(path, outputpath=None ):
+def convert_to_mg5card(path, outputpath=None, writting=True):
     """ """
                                                       
     if not outputpath:
@@ -1109,8 +1113,9 @@ Parameter ad [2, 2] times yd [2,2] should be 0'''
     #################
     # WRITE OUTPUT
     #################
-    card.write(outputpath)
-    
+    if writting:
+        card.write(outputpath)
+    return card
     
                                                       
 def make_valid_param_card(path, restrictpath, outputpath=None):

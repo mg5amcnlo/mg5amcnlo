@@ -778,7 +778,7 @@ c     fs clustering
      $          pcl(4,imocl(n))
            endif
          endif
-
+         
          nleft=nleft-1
 c     create new imap
          imap(iwin,2)=imocl(n)
@@ -880,6 +880,7 @@ c     final state clustering
                                pt2ij(idij)=dj(pcl(0,idi),pcl(0,idj))
                              endif
                            endif
+                           zij(idij)=0d0
                         else
 c     initial state clustering, only if hadronic collision
 c     check whether 2->(n-1) process w/ cms energy > 0 remains
@@ -917,7 +918,6 @@ c                          endif
                            jwin=i
                            minpt2ij=pt2ij(idij)
                         endif                 
-
                      endif
                   enddo
                endif

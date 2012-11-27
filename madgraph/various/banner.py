@@ -38,6 +38,10 @@ logger = logging.getLogger('madevent.cards')
 #dict
 class Banner(dict):
     """ """
+
+    ordered_items = ['mgversion', 'mg5proccard', 'mgproccard', 'mgruncard',
+                     'slha', 'MGGenerationInfo', 'mgpythiacard', 'mgpgscard',
+                     'mgdelphescard', 'mgdelphestrigger']
     
     def __init__(self, banner_path=None):
         """ """
@@ -145,9 +149,12 @@ class Banner(dict):
             ff.write(open(pjoin(MEDIR, 'Source', 'banner_header.txt')).read())
         else:
             ff.write(open(pjoin(MG5DIR,'Template', 'Source', 'banner_header.txt')).read())
-        for tag, text in self.items():
+        for tag in [t for t in self.ordered_items if t in self.keys()]:
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
-                     {'tag':tag, 'text':text})
+                     {'tag':tag, 'text':self[tag].strip()})
+        for tag in [t for t in self.keys() if t not in self.ordered_items]:
+            ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
+                     {'tag':tag, 'text':self[tag].strip()})
         ff.write('</header>\n')    
         ff.write('</LesHouchesEvents>\n')
             

@@ -191,8 +191,8 @@ class Switcher(object):
     def check_set(self, *args, **opts):
         return self.cmd.check_set(self, *args, **opts)
         
-    def check_stored_line(self, *args, **opts):
-        return self.cmd.check_stored_line(self, *args, **opts)
+    def get_stored_line(self, *args, **opts):
+        return self.cmd.get_stored_line(self, *args, **opts)
         
     def complete_add(self, *args, **opts):
         return self.cmd.complete_add(self, *args, **opts)
@@ -387,7 +387,7 @@ class MasterCmd(Switcher, MGcmd.MadGraphCmd, cmd.CmdShell):
         if __debug__:
             self.debug_link_to_command()      
         
-class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
+class MasterCmdWeb(MGcmd.MadGraphCmdWeb,Switcher):
    
     def __init__(self, *arg, **opt):
     

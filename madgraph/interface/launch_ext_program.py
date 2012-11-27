@@ -212,10 +212,10 @@ class MELauncher(ExtLauncher):
         set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
         for line in set_cmd:
             try:
-                usecmd.exec_cmd(line)
+                usecmd.do_set(line[3:], log=False)
             except:
                 pass
-        usecmd.exec_cmd('set stdout_level %s'  % stdout_level)
+        usecmd.do_set('stdout_level %s'  % stdout_level,log=False)
         #ensure that the logger level 
         launch = self.cmd_int.define_child_cmd_interface(
                      usecmd, interface=False)

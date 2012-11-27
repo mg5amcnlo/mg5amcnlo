@@ -100,7 +100,7 @@ class ProcessExporterFortran(object):
                                pjoin(self.dir_path, 'Cards',
                                             card + '_default.dat'))
                 except IOError:
-                    info.warning("Failed to copy " + card + ".dat to default")
+                    logger.warning("Failed to copy " + card + ".dat to default")
                     
         elif not os.path.isfile(pjoin(self.dir_path, 'TemplateVersion.txt')):
             assert self.mgme_dir, \
@@ -274,7 +274,12 @@ class ProcessExporterFortran(object):
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)'
-        model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc\n\tcd MODEL; make    
+        if self.opt['model'] == 'mssm' or self.opt['model'].startswith('mssm-'):
+            model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc\n\tcd MODEL; make
+MODEL/MG5_param.dat: ../Cards/param_card.dat\n\t../bin/madevent treatcards param
+param_card.inc: MODEL/MG5_param.dat\n\t../bin/madevent treatcards param\n'''
+        else:
+            model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc\n\tcd MODEL; make    
 param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         text = open(path).read() % {'libraries': set_of_lib, 'model':model_line} 
         writer.write(text)
@@ -1357,6 +1362,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'driver.f',
                      'genps.f',
                      'genps.inc',
+                     'idenparts.f',
                      'initcluster.f',
                      'makefile',
                      'message.inc',
@@ -1405,7 +1411,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         """Finalize ME v4 directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
         
-        modelname = self.model.get('name')
+        modelname = self.opt['model']
         if modelname == 'mssm' or modelname.startswith('mssm-'):
             param_card = pjoin(self.dir_path, 'Cards','param_card.dat')
             mg5_param = pjoin(self.dir_path, 'Source', 'MODEL', 'MG5_param.dat')
@@ -2621,6 +2627,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                      'driver.f',
                      'genps.f',
                      'genps.inc',
+                     'idenparts.f',
                      'initcluster.f',
                      'makefile',
                      'message.inc',
@@ -3407,8 +3414,9 @@ def ExportV4Factory(cmd, noclean):
     
     opt = {'clean': not noclean, 
            'complex_mass': cmd.options['complex_mass_scheme'],
-           'export_format':cmd._export_format}
-
+           'export_format':cmd._export_format,
+           'model': cmd._curr_model.get('name')}
+    
     if cmd._export_format in ['standalone', 'matrix']:
         return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt)
     elif cmd._export_format in ['madevent'] and group_subprocesses:

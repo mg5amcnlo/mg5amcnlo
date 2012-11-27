@@ -367,8 +367,8 @@ c     FS clustering
 
       logical function setclscales(p)
 c**************************************************
-c   reweight the hard me according to ckkw
-c   employing the information in common/cl_val/
+c     Calculate dynamic scales based on clustering
+c     Also perform xqcut and xmtc cuts
 c**************************************************
       implicit none
 
@@ -417,9 +417,9 @@ c     q2bck holds the central q2fact scales
       integer nqcd(lmaxconfigs)
       include 'config_nqcd.inc'
 
-      logical isqcd,isjet,isparton,cluster
+      logical isqcd,isjet,isparton,cluster,isjetvx
       double precision alphas
-      external isqcd, isjet, isparton, cluster, alphas
+      external isqcd, isjet, isparton, cluster, isjetvx, alphas
 
       setclscales=.true.
 
@@ -484,19 +484,15 @@ C   anyway already set by "scale" above)
             q2fact(2)=q2bck(2)
          endif
       endif
-      jfirst(1)=0
-      jfirst(2)=0
 
-      ibeam(1)=ishft(1,0)
-      ibeam(2)=ishft(1,1)
-      jlast(1)=1
-      jlast(2)=1
-      jcentral(1)=1
-      jcentral(2)=1
-      partonline(1)=isjet(ipdgcl(ibeam(1),igraphs(1),iproc))
-      partonline(2)=isjet(ipdgcl(ibeam(2),igraphs(1),iproc))
-      qcdline(1)=isqcd(ipdgcl(ibeam(1),igraphs(1),iproc))
-      qcdline(2)=isqcd(ipdgcl(ibeam(2),igraphs(1),iproc))
+      do i=1,2
+         ibeam(i)=ishft(1,i-1)
+         jfirst(i)=0
+         jlast(i)=0
+         jcentral(i)=0
+         partonline(i)=isparton(ipdgcl(ibeam(i),igraphs(1),iproc))
+         qcdline(i)=isqcd(ipdgcl(ibeam(i),igraphs(1),iproc))
+      enddo
 
 c   Go through clusterings and set factorization scales for use in dsig
       if (nexternal.eq.3) goto 10
@@ -510,7 +506,8 @@ c             Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
 c             f1(x1,pt2E) is given by DSIG, just need to set scale.
                  ibeam(j)=imocl(n)
                  if(jfirst(j).eq.0)then
-                    if(isjet(ipdgcl(imocl(n),igraphs(1),iproc))) then
+                    if(isjetvx(imocl(n),idacl(n,1),idacl(n,2),
+     $                 ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)) then
                        jfirst(j)=n
                     else
                        jfirst(j)=-1
@@ -528,7 +525,7 @@ c                Trace QCD line through event
             enddo
         enddo
       enddo
-      
+
  10   if(jfirst(1).le.0) jfirst(1)=jlast(1)
       if(jfirst(2).le.0) jfirst(2)=jlast(2)
 
@@ -538,16 +535,21 @@ c                Trace QCD line through event
      $     ' and jcentral is ',jcentral(1),jcentral(2)
 
 c     Set central scale to mT2
-      if(jcentral(1).gt.0.and.mt2ij(jcentral(1)).gt.0d0)
-     $     pt2ijcl(jcentral(1))=mt2ij(jcentral(1))
-      if(jcentral(2).gt.0.and.mt2ij(jcentral(2)).gt.0d0)
+      if(jcentral(1).gt.0) then
+         if(mt2ij(jcentral(1)).gt.0d0)
+     $        pt2ijcl(jcentral(1))=mt2ij(jcentral(1))
+      endif
+      if(jcentral(2).gt.0)then
+         if(mt2ij(jcentral(2)).gt.0d0)
      $     pt2ijcl(jcentral(2))=mt2ij(jcentral(2))
-      if(btest(mlevel,4))
-     $     write(*,*)'pt2ijcl is: ',jlast(1), sqrt(pt2ijcl(jlast(1))),
-     $     jlast(2), sqrt(pt2ijcl(jlast(2))),
-     $     jcentral(1), sqrt(pt2ijcl(jcentral(1))),
-     $     jcentral(2), sqrt(pt2ijcl(jcentral(2)))
-
+      endif
+      if(btest(mlevel,4))then
+         print *,'jlast, jcentral: ',(jlast(i),i=1,2),(jcentral(i),i=1,2)
+         if(jlast(1).gt.0) write(*,*)'pt(jlast 1): ', sqrt(pt2ijcl(jlast(1)))
+         if(jlast(2).gt.0) write(*,*)'pt(jlast 2): ', sqrt(pt2ijcl(jlast(2)))
+         if(jcentral(1).gt.0) write(*,*)'pt(jcentral 1): ', sqrt(pt2ijcl(jcentral(1)))
+         if(jcentral(2).gt.0) write(*,*)'pt(jcentral 2): ', sqrt(pt2ijcl(jcentral(2)))
+      endif
 c     Check xqcut for vertices with jet daughters only
       ibeam(1)=ishft(1,0)
       ibeam(2)=ishft(1,1)
@@ -597,23 +599,29 @@ c           FSR
       endif
 
 c     JA: Check xmtc cut for central process
-      if(pt2ijcl(jcentral(1)).lt.xmtc**2.or.pt2ijcl(jcentral(2)).lt.xmtc**2)then
-         setclscales=.false.
-         clustered = .false.
-         if(btest(mlevel,3)) write(*,*)'Failed xmtc cut ',
-     $        sqrt(pt2ijcl(jcentral(1))),sqrt(pt2ijcl(jcentral(1))),
-     $        ' < ',xmtc
-         return
+      if(xmtc**2.gt.0) then
+         if(jcentral(1).gt.0.and.pt2ijcl(jcentral(1)).lt.xmtc**2
+     $      .or.jcentral(2).gt.0.and.pt2ijcl(jcentral(2)).lt.xmtc**2)then
+            setclscales=.false.
+            clustered = .false.
+            if(btest(mlevel,3)) write(*,*)'Failed xmtc cut ',
+     $           sqrt(pt2ijcl(jcentral(1))),sqrt(pt2ijcl(jcentral(1))),
+     $           ' < ',xmtc
+            return
+         endif
       endif
       
       if(ickkw.eq.0.and.(fixed_fac_scale.or.q2fact(1).gt.0).and.
      $     (fixed_ren_scale.or.scale.gt.0)) return
 
 c     Ensure that last scales are at least as big as first scales
-      pt2ijcl(jlast(1))=max(pt2ijcl(jlast(1)),pt2ijcl(jfirst(1)))
-      pt2ijcl(jlast(2))=max(pt2ijcl(jlast(2)),pt2ijcl(jfirst(2)))
+      if(jlast(1).gt.0)
+     $     pt2ijcl(jlast(1))=max(pt2ijcl(jlast(1)),pt2ijcl(jfirst(1)))
+      if(jlast(2).gt.0)
+     $     pt2ijcl(jlast(2))=max(pt2ijcl(jlast(2)),pt2ijcl(jfirst(2)))
 
 c     Set renormalization scale to geom. aver. of central scales
+c     if both beams are qcd
       if(scale.eq.0d0) then
          if(jcentral(1).gt.0.and.jcentral(2).gt.0) then
             scale=(pt2ijcl(jcentral(1))*pt2ijcl(jcentral(2)))**0.25d0
@@ -621,7 +629,7 @@ c     Set renormalization scale to geom. aver. of central scales
             scale=sqrt(pt2ijcl(jcentral(1)))
          elseif(jcentral(2).gt.0) then
             scale=sqrt(pt2ijcl(jcentral(2)))
-         elseif(lpp(1).eq.0.and.lpp(2).eq.0) then
+         else
             scale=sqrt(pt2ijcl(nexternal-2))
          endif
          scale = scalefact*scale
@@ -647,7 +655,7 @@ c     Use the fixed or previously set scale for central scale
 c     Use the geom. average of central scale and first non-radiation vertex
          if(jlast(1).gt.0) q2fact(1)=sqrt(pt2ijcl(jlast(1))*pt2ijcl(jcentral(1)))
          if(jlast(2).gt.0) q2fact(2)=sqrt(pt2ijcl(jlast(2))*pt2ijcl(jcentral(2)))
-         if(jcentral(1).eq.jcentral(2))then
+         if(jcentral(1).gt.0.and.jcentral(1).eq.jcentral(2))then
 c     We have a qcd line going through the whole event, use single scale
             q2fact(1)=max(q2fact(1),q2fact(2))
             q2fact(2)=q2fact(1)
@@ -662,7 +670,7 @@ c     We have a qcd line going through the whole event, use single scale
      $      write(*,*) 'Set central fact scales to ',sqrt(q2bck(1)),sqrt(q2bck(2))
       endif
          
-      if(lpp(1).eq.0.and.lpp(2).eq.0)then
+      if(jcentral(1).eq.0.and.jcentral(2).eq.0)then
          if(q2fact(1).gt.0)then
             pt2ijcl(nexternal-2)=q2fact(1)
             pt2ijcl(nexternal-3)=q2fact(1)
