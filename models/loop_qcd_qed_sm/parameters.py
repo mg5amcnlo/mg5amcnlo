@@ -66,13 +66,21 @@ aEWM1 = Parameter(name = 'aEWM1',
                   lhablock = 'SMINPUTS',
                   lhacode = [ 1 ])
 
-Gf = Parameter(name = 'Gf',
+#Gf = Parameter(name = 'Gf',
+#               nature = 'external',
+#               type = 'real',
+#               value = 0.0000116637,
+#               texname = 'G_f',
+#               lhablock = 'SMINPUTS',
+#               lhacode = [ 2 ])
+
+MW = Parameter(name = 'MW',
                nature = 'external',
                type = 'real',
-               value = 0.0000116637,
-               texname = 'G_f',
-               lhablock = 'SMINPUTS',
-               lhacode = [ 2 ])
+               value = 80.419,
+               texname = '\\text{MW}',
+               lhablock = 'MASS',
+               lhacode = [ 24 ])
 
 aS = Parameter(name = 'aS',
                nature = 'external',
@@ -80,7 +88,7 @@ aS = Parameter(name = 'aS',
                value = 0.1184,
                texname = '\\alpha _s',
                lhablock = 'SMINPUTS',
-               lhacode = [ 3 ])
+               lhacode = [ 2 ])
 
 lamWS = Parameter(name = 'lamWS',
                   nature = 'external',
@@ -379,13 +387,11 @@ CKM33 = Parameter(name = 'CKM33',
 #               value = 'cmath.sqrt(MZ**2/2. + cmath.sqrt(MZ**4/4. - (aEW*cmath.pi*MZ**2)/(Gf*cmath.sqrt(2))))',
 #               texname = 'M_W')
 
-MW = Parameter(name = 'MW',
-               nature = 'external',
-               type = 'real',
-               value = 80.419,
-               texname = '\\text{MW}',
-               lhablock = 'MASS',
-               lhacode = [ 24 ])
+Gf = Parameter(name = 'Gf',
+               nature = 'internal',
+               type = 'complex',
+               value = '-aEW*MZ**2*cmath.pi/(cmath.sqrt(2)*MW**2*(MW**2 - MZ**2))',
+               texname = 'G_f',)
 
 ee = Parameter(name = 'ee',
                nature = 'internal',
