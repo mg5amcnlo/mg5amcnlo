@@ -438,6 +438,7 @@ c
 c     JA 4/8/11 always check pass_bw
       if ( pass_bw ) then
          passcuts=.false.
+         if(debug) write (*,*) ' pass_bw -> fails'
          return
       endif
 C     $E$DESACTIVATE_BW_CUT$E$ This is a Tag for MadWeight
@@ -671,6 +672,7 @@ C     REQUIRE AT LEAST ONE LEPTON  WITH PT>XPTL
             enddo
             if (xvar .lt. xptl) then
                passcuts=.false.
+               if(debug) write (*,*) ' xptl -> fails'
                return
             endif
          ENDIF
@@ -755,6 +757,7 @@ c     scales on an event-by-event basis, as well as check xqcut for jets
 c
       if(xqcut.gt.0d0.or.ickkw.gt.0.or.scale.eq.0.or.q2fact(1).eq.0)then
         if(.not.setclscales(p))then
+         if(debug) write (*,*) ' setclscales -> fails'
          passcuts=.false.
          return
        endif

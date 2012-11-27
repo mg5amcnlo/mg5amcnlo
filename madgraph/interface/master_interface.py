@@ -573,9 +573,10 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
             self.cmd.setup(self)
         
         if __debug__:
-            self.debug_link_to_command() 
-     
-class MasterCmdWeb(Switcher, LoopCmd.LoopInterfaceWeb):
+            self.debug_link_to_command()      
+        
+
+class MasterCmdWeb(LoopCmd.LoopInterfaceWeb, Switcher):
    
     def __init__(self, *arg, **opt):
     
