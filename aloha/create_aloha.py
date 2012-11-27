@@ -253,7 +253,6 @@ in presence of majorana particle/flow violation"""
         else:
             lorentz = copy.copy(self.routine_kernel)
             aloha_lib.KERNEL.use_tag = set(self.kernel_tag) 
-        
         for (i, spin ) in enumerate(self.spins):   
             id = i + 1
             #Check if this is the outgoing particle
@@ -352,7 +351,7 @@ in presence of majorana particle/flow violation"""
         Pdep = [aloha_lib.KERNEL.get(P) for P in lorentz.get_all_var_names()
                                                       if P.startswith('_P')]
 
-        Pdep = [P for P in Pdep if P.particle in [outgoing, l_in]]
+        Pdep = set([P for P in Pdep if P.particle in [outgoing, l_in]])
         for P in Pdep:
             if P.particle == l_in:
                 sign = 1

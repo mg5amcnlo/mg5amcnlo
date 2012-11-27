@@ -5,3 +5,18 @@
 == Latest modifs at the bottom, and feel free to flush the old first ones when becoming irrelevant.  ==
 =======================================================================================================
 
+ 
+Modifications performed on 2012-11-26 at 23h51 in
+   MadGraph 5 v. 2.0.0.beta2, 2012-11-24
+The following reference files have been updated :
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%DHELAS%MP_R2_QQ_1_0.f
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%DHELAS%MP_R2_QQ_2_0.f
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%DHELAS%R2_QQ_1_0.f
+   long_ML_SMQCD_optimized/gg_wmtbx/%..%..%Source%DHELAS%MP_R2_GG_1_R2_GG_3_0.f
+   long_ML_SMQCD_optimized/dux_mumvmxg/%..%..%Source%DHELAS%FFV2_1.f
+   short_ML_SMQCD_LoopInduced/gg_hh/%..%..%Source%DHELAS%FFV1L_1.f
+   short_ML_SMQCD_LoopInduced/gg_hh/%..%..%Source%DHELAS%FFV1L_2.f
+   short_ML_SMQCD_LoopInduced/gg_hh/%..%..%Source%DHELAS%MP_FFS1L_1.f
+   short_ML_SMQCD_LoopInduced/gg_hh/%..%..%Source%DHELAS%MP_FFS1L_2.f
+   short_ML_SMQCD_LoopInduced/gg_hh/%..%..%Source%DHELAS%MP_FFV1L_1.f
+   short_ML_SMQCD_LoopInduced/gg_hh/%..%..%Source%DHELAS%MP_FFV1L_2.f
