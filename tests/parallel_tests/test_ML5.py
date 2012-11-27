@@ -64,10 +64,16 @@ ML5_processes_long =  [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':
 ML4_processes_short = [('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
                        ('d g > d g',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0})]
 
-ML5_processes_short = ML4_processes_short 
-ML5_processes_long = ML4_processes_short + [('d~ d > z z g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4})]
-ML4_processes_short = ML4_processes_short
-ML4_processes_long = ML4_processes_short + [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2})]
+
+ML4_processes_short = [('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0})]
+ML5_processes_short = ML4_processes_short
+ML5_processes_long = ML4_processes_short
+ML4_processes_long = ML4_processes_short
+
+#ML5_processes_short = ML4_processes_short 
+#ML5_processes_long = ML4_processes_short + [('d~ d > z z g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4})]
+#ML4_processes_short = ML4_processes_short
+#ML4_processes_long = ML4_processes_short + [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2})]
 
 class ML5Test(unittest.TestCase):
     """ A class to test ML5 versus runs from older versions or ML4 """

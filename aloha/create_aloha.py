@@ -636,12 +636,48 @@ class AbstractALOHAModel(dict):
             if not hasattr(self.model.lorentz, lor.name):
                 setattr(self.model.lorentz, lor.name, lor)
     
-    def compute_subset(self, data):
+    # Notice that when removing the quick fix, one should also remove the two
+    # additional arguments byPassFix and forceLoop
+    # To emulate the behavior without the quick fix, simply replace the default
+    # value of byPassFix by True.
+    # == START AD-HOC QUICK FIX ==
+    def compute_subset(self, data, byPassFix=False, forceLoop=False):
+    # == END AD-HOC QUICK FIX ==
         """ create the requested ALOHA routine. 
         data should be a list of tuple (lorentz, tag, outgoing)
         tag should be the list of special tag (like conjugation on pair)
         to apply on the object """
+
+        # == START AD-HOC QUICK FIX WARNING ==        
+
+        # In order to be able to use open loops in unitary gauge, one must make
+        # sure ALOHA does not include the longitudinal part of the loop
+        # propagator for the gluon.
+        # In further versions, this will be insured by having separate routines
+        # for the massive and massless vector propagators. For now, I use a 
+        # quick fix which consists in calling twice aloha (rather compute_subset)
+        # with only the loop routines (then in feynman gauge not matter what)
+        # and a second time with the rest as usual.
+
+        if not byPassFix: 
+            
+            data_loop = [d for d in data if any((t.startswith('L') for t in d[1]))]
+            data_tree = [d for d in data if not any((t.startswith('L') for t in d[1]))]
+            
+            if data_loop == []:
+                self.compute_subset(data,byPassFix=True)
+                return
+            
+            self.compute_subset(data_tree, byPassFix=True, forceLoop=True)
+            old_aloha_gauge = aloha.unitary_gauge
+            aloha.unitary_gauge = False
+            self.compute_subset(data_loop, byPassFix=True, forceLoop=True)
+            aloha.unitary_gauge = old_aloha_gauge
+            return
+            
+        # == END AD-HOC QUICK FIX ==
         
+        aloha.loop_mode = False
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
         self.look_for_symmetries()
@@ -657,9 +693,12 @@ class AbstractALOHAModel(dict):
             
             conjugate = tuple([int(c[1:]) for c in tag if c.startswith('C')])
             loop = any((t.startswith('L') for t in tag))
-            if loop:
+            # When removing the QUICK FIX, also remove 'forceLoop'
+            # == START AD-HOC QUICK FIX ==
+            if loop or forceLoop:
+            # == END AD-HOC QUICK FIX ==
                 aloha.loop_mode = True
-                self.explicit_combine = True                
+                self.explicit_combine = True
            
             for l_name in list_l_name:
                 try:

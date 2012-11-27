@@ -2770,8 +2770,11 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
     """Check gauge invariance of the processes by flipping
        the gauge of the model
     """
+    ### TO CLEAN LATER ###
     global loop_optimized_output
-    loop_optimized_bu = loop_optimized_output
+    old_loop_optimized_output = loop_optimized_output
+    ### TO CLEAN LATER ###
+    
     mg_root = cmd._mgme_dir
     cmass_scheme = cmd.options['complex_mass_scheme']
     if isinstance(processes_unit, base_objects.ProcessDefinition):
@@ -2783,8 +2786,10 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         model = multiprocess_unit.get('model')
 
         # Initialize matrix element evaluation
-        loop_optimized_output = False
         aloha.unitary_gauge = True
+        ### TO CLEAN LATER ###
+        loop_optimized_output = True
+        ### TO CLEAN LATER ###
         if processes_unit.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model, param_card,
                                        cmd= cmd,auth_skipping = False, reuse = True)
@@ -2816,9 +2821,9 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
 
         # Initialize matrix element evaluation
         aloha.unitary_gauge = False
-        # We could use the default output as well for Feynman, but it provides
-        # an additional check this way
+        ### TO CLEAN LATER ###
         loop_optimized_output = False
+        ### TO CLEAN LATER ###
         if processes_feynm.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model, param_card,
                                        cmd= cmd, auth_skipping = False, reuse = False)
@@ -2848,10 +2853,11 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         
         if processes_feynm.get('perturbation_couplings')!=[]:
             # Clean temporary folders created for the running of the loop processes
-            clean_up(mg_root)        
+            clean_up(mg_root)
 
-        # Reset the original global variable loop_optimized_output.
-        loop_optimized_output = loop_optimized_bu
+        ### TO CLEAN LATER ###
+        loop_optimized_output = old_loop_optimized_output
+        ### TO CLEAN LATER ###
 
         return output
 #    elif isinstance(processes, base_objects.Process):
@@ -2897,12 +2903,12 @@ def get_value(process, evaluator, p=None):
         p, w_rambo = evaluator.get_momenta(process)
     
 
-    reset_global_loo = False
+    reset_global_loop = False
     if not amplitude.get('process').get('has_born') and loop_optimized_output:
         logging.debug("Setting loop_optimized_output to false for processes"+\
                                     " without an underlying born contribution.")
         loop_optimized_output = False
-        reset_global_loo = True
+        reset_global_loop = True
 
     # Generate the HelasMatrixElement for the process
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
@@ -2914,7 +2920,7 @@ def get_value(process, evaluator, p=None):
 
     mvalue = evaluator.evaluate_matrix_element(matrix_element, p=p,
                                                                   output='jamp')
-    if reset_global_loo:
+    if reset_global_loop:
         loop_optimized_output = True
     
     if mvalue and mvalue['m2']:
