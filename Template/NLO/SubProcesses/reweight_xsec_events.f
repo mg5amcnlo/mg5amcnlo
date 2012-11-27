@@ -448,7 +448,7 @@ c Write the accumulated results to a file
       close(34)
 
 
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
+ 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
 
 
       end
