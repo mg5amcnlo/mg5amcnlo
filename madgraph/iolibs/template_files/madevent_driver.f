@@ -149,7 +149,7 @@ c
       ninvar = ndim
       do j=mincfig,maxcfig
          if (abs(lpp(1)) .ge. 1 .and. abs(lpp(1)) .ge. 1) then
-            minvar(ndim-1,j)=ninvar-1
+            if(ndim.gt.1) minvar(ndim-1,j)=ninvar-1
             minvar(ndim,j) = ninvar
          elseif (abs(lpp(1)) .ge. 1 .or. abs(lpp(1)) .ge. 1) then
             minvar(ndim,j) = ninvar

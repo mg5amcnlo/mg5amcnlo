@@ -674,7 +674,7 @@ c     We have a qcd line going through the whole event, use single scale
       if(jcentral(1).eq.0.and.jcentral(2).eq.0)then
          if(q2fact(1).gt.0)then
             pt2ijcl(nexternal-2)=q2fact(1)
-            pt2ijcl(nexternal-3)=q2fact(1)
+            if(nexternal.gt.3) pt2ijcl(nexternal-3)=q2fact(1)
          else
             q2fact(1)=pt2ijcl(nexternal-2)
             q2fact(2)=q2fact(1)

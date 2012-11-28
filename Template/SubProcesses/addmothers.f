@@ -346,7 +346,7 @@ c     Set correct mother number for clustering info
 c
         if (icluster(1,1).ne.0) then
            do i=1,nexternal-2
-              if(icluster(4,i).ne.0)then
+              if(icluster(4,i).gt.0)then
                  icluster(4,i)=ito(icluster(4,i))
               else
                  icluster(4,i)=-1

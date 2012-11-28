@@ -103,11 +103,14 @@ otherwise 0
 Each line in the syst.dat file has the entries:
 ===============================================
 
-Event_num ren_scale n_qcd n_alpsem alpsem_scale*n_alpsem n_pdfrw1 n_pdfrw2 \
-pdf_pdg_code1*n_pdgrw1 pdf_pdg_code2*n_pdgrw2 \
-pdf_x1*n_pdfrw1 pdf_x2*n_pdfrw2 pdf_q1*n_pdfrw1 pdf_q2*n_pdfrw2 \
-total_reweight_factor \
-SMIN SCOMP SMAX
+<mgrwt event="event_num">
+<rscale>n_qcd ren_scale</rscale>
+<asrwt>n_alpsem n_alpsem*alpsem_scale</asrwt>
+<pdfrwt>n_pdfrw1 n_pdgrw1*pdf_pdg_code1 n_pdfrw1*pdf_x1 n_pdfrw1*pdf_q1 \
+n_pdfrw2 n_pdgrw2*pdf_pdg_code2 n_pdfrw2*pdf_x2 n_pdfrw2*pdf_q2</pdfrwt>
+<totfact>total_reweight_factor</totfact>
+<matchscale>SMIN SCOMP SMAX</matchscale>
+</mgrwt>
 
 Total event weight for event event_num given by:
 ------------------------------------------------

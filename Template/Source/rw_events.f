@@ -1,4 +1,6 @@
-      subroutine read_event(lun,P,wgt,nexternal,ic,ievent,sscale,aqcd,aqed,buff,buff2,nclus,buffclus,done)
+      subroutine read_event(lun,P,wgt,nexternal,ic,ievent,sscale,
+     $                      aqcd,aqed,buff,u_syst,s_buff,nclus,buffclus,
+     $                      done)
 c********************************************************************
 c     Reads one event from data file #lun
 c     ic(*,1) = Particle ID
@@ -23,7 +25,8 @@ c
       double precision P(0:4,*),wgt,aqcd,aqed,sscale
       integer ievent
       character*(*) buff
-      character*(*) buff2
+      logical u_syst
+      character*(s_bufflen) s_buff(*)
       integer nclus
       character*(clus_bufflen) buffclus(*)
 
@@ -70,10 +73,18 @@ c     Clustering scales
          buff=''
       endif
 c     Systematics info
-      read(lun,'(a)',end=99,err=99) buff2
-      if(buff2(1:1).ne.'#') then
+      read(lun,'(a)',end=99,err=99) s_buff(1)
+      if(s_buff(1).ne.'<mgrwt>') then
+         s_buff(1)=' '
          backspace(lun)
-         buff2=''
+         u_syst=.false.
+      else
+         i=1
+         do while(s_buff(i).ne.'</mgrwt>')
+            i=i+1
+            read(lun,'(a)',end=99,err=99) s_buff(i)
+         enddo
+         u_syst=.true.
       endif
 c     Clustering info
       read(lun,'(a)',end=99,err=99) buffclus(1)
@@ -96,7 +107,7 @@ c     Clustering info
       end
 
       subroutine write_event(lun,P,wgt,nexternal,ic,ievent,scale,aqcd,
-     $     aqed,buff,buff2,nclus,buffclus)
+     $     aqed,buff,u_syst,s_buff,nclus,buffclus)
 c********************************************************************
 c     Writes one event from data file #lun according to LesHouches
 c     ic(1,*) = Particle ID
@@ -124,7 +135,8 @@ c
       double precision P(0:4,*),wgt
       double precision aqcd, aqed, scale
       character*300 buff
-      character*(*) buff2
+      logical u_syst
+      character*(s_bufflen) s_buff(*)
       integer nclus
       character*(clus_bufflen) buffclus(*)
 c
@@ -148,9 +160,13 @@ c      aqcd = g*g/4d0/pi
      $     (p(j,i),j=1,3),p(0,i),p(4,i),0.,real(ic(7,i))
       enddo
       if(buff(1:1).eq.'#') write(lun,'(a)') buff(1:len_trim(buff))
-      if(buff2(1:1).eq.'#') write(lun,'(a)') buff2(1:len_trim(buff2))
+      if(u_syst)then
+         do i=1,6
+            write(lun,'(a)') s_buff(i)(1:len_trim(s_buff(i)))
+         enddo
+      endif
       do i=1,nclus
-         write(lun,'(a)') buffclus(i)
+         write(lun,'(a)') buffclus(i)(1:len_trim(buffclus(i)))
       enddo
       write(lun,'(a)') '</event>'
       return

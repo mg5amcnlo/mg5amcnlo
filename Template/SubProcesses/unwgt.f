@@ -242,7 +242,8 @@ c
       double precision scale,aqcd,aqed
       integer ievent
       character*300 buff
-      character*(s_bufflen) buff2
+      logical u_syst
+      character*(s_bufflen) s_buff(6)
       integer nclus
       character*(clus_bufflen) buffclus(nexternal)
 C     
@@ -301,7 +302,7 @@ c
       do i=1,nw
          if (.not. done) then
             call read_event(lun,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,
-     $           buff2,nclus,buffclus,done)
+     $           u_syst,s_buff,nclus,buffclus,done)
          else
             wgt = 0d0
          endif
@@ -331,7 +332,7 @@ c      endif
       do j=1,nw
          if (.not. done) then
             call read_event(lun,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,
-     $           buff2,nclus,buffclus,done)
+     $           u_syst,s_buff,nclus,buffclus,done)
          else
             write(*,*) 'Error done early',j,nw
          endif
@@ -345,7 +346,7 @@ c      endif
             xtot = xtot + dabs(wgt)
             i=i+1
             call write_Event(lunw,p,wgt,n,ic,ngroup,scale,aqcd,aqed,
-     $           buff,buff2,nclus,buffclus)
+     $           buff,u_syst,s_buff,nclus,buffclus)
          endif
       enddo
       write(*,*) 'Found ',nw,' events.'
@@ -408,10 +409,10 @@ c
       external ran1
 
       character*300 buff
-      character*(s_bufflen) buff2
+      character*(s_bufflen) s_buff(6)
       integer nclus
       character*(clus_bufflen) buffclus(nexternal)
-      character*20 cfmt
+      character*40 cfmt
 C     
 C     GLOBAL
 C
@@ -588,7 +589,6 @@ c      write(*,*) 'Writing event'
       
 c     Write out buffer for systematics studies
       ifin=1
-      buff2(1:1) = ' '
       if(use_syst)then
 c         print *,'Systematics:'
 c         print *,'s_scale: ',s_scale
@@ -598,42 +598,48 @@ c         print *,'n_pdfrw: ',n_pdfrw
 c         print *,'i_pdgpdf: ',((i_pdgpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
 c         print *,'s_xpdf: ',((s_xpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
 c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
-         buff2(1:1) = '#'
-         iini=2
-         ifin=1+1*15
-         write(buff2(iini:ifin), '(1E15.8)') s_scale
-         iini=1+ifin
-         ifin=ifin+2*3
-         write(buff2(iini:ifin), '(2I3)') n_qcd,n_alpsem
-         if(n_alpsem.gt.0)then
-            iini=1+ifin
-            ifin=ifin+n_alpsem*15
-            write(cfmt,'(a,I1,a)') '(',n_alpsem,'E15.8)'
-            write(buff2(iini:ifin), cfmt) (s_qalps(I),I=1,n_alpsem) 
+         s_buff(1) = '<mgrwt>'
+         write(s_buff(2), '(a,I3,E15.8,a)') '<rscale>',n_qcd-n_alpsem,
+     $        s_scale,'</rscale>'
+         if(n_alpsem.gt.0) then
+            write(cfmt,'(a,I1,a)') '(a,I3,',n_alpsem,'E15.8,a)'
+            write(s_buff(3), cfmt) '<asrwt>',n_alpsem,
+     $           (s_qalps(I),I=1,n_alpsem) ,'</asrwt>'
+         else
+            write(s_buff(3), '(a)') '<asrwt>0</asrwt>'
          endif
-         iini=1+ifin
-         ifin=ifin+2*3
-         write(buff2(iini:ifin), '(2I3)') n_pdfrw
          if(n_pdfrw(1)+n_pdfrw(2).gt.0)then
-            iini=1+ifin
-            ifin=ifin+(n_pdfrw(1)+n_pdfrw(2))*(9+2*15)
-            if(2*(n_pdfrw(1)+n_pdfrw(2)).lt.10)then
-               write(cfmt,'(a,I1,a,I1,a)') '(',n_pdfrw(1)+n_pdfrw(2),'I9,',
-     $              2*(n_pdfrw(1)+n_pdfrw(2)),'E15.8)'
+            if(2*n_pdfrw(1).lt.10.and.2*n_pdfrw(2).lt.10) then
+               write(cfmt,'(a,I1,a,I1,a,I1,a,I1,a)') '(a,I3,',
+     $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,I3,',
+     $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
+            elseif(2*n_pdfrw(1).lt.10.and.2*n_pdfrw(2).ge.10) then
+               write(cfmt,'(a,I1,a,I1,a,I1,a,I2,a)') '(a,I3,',
+     $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,I3,',
+     $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
+            elseif(2*n_pdfrw(1).ge.10.and.2*n_pdfrw(2).lt.10) then
+               write(cfmt,'(a,I1,a,I2,a,I1,a,I1,a)') '(a,I3,',
+     $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,I3,',
+     $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
             else
-               write(cfmt,'(a,I1,a,I2,a)') '(',n_pdfrw(1)+n_pdfrw(2),'I9,',
-     $              2*(n_pdfrw(1)+n_pdfrw(2)),'E15.8)'
+               write(cfmt,'(a,I1,a,I2,a,I1,a,I2,a)') '(a,I3,',
+     $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,I3,',
+     $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
             endif
-            write(buff2(iini:ifin), cfmt) ((i_pdgpdf(i,j),i=1,n_pdfrw(j)),j=1,2),
-     $           ((s_xpdf(i,j),i=1,n_pdfrw(j)),j=1,2),
-     $           ((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
+            write(s_buff(4), cfmt) '<pdfrwt>',
+     $           n_pdfrw(1),(i_pdgpdf(i,1),i=1,n_pdfrw(1)),
+     $           (s_xpdf(i,1),i=1,n_pdfrw(1)),
+     $           (s_qpdf(i,1),i=1,n_pdfrw(1)),
+     $           n_pdfrw(2),(i_pdgpdf(i,2),i=1,n_pdfrw(2)),
+     $           (s_xpdf(i,2),i=1,n_pdfrw(2)),
+     $           (s_qpdf(i,2),i=1,n_pdfrw(2)),
+     $           '</pdfrwt>'
+         else
+            write(s_buff(3), '(a)') '<pdfrwt>0</pdfrwt>'
          endif
-         iini=1+ifin
-         ifin=ifin+15
-         write(buff2(iini:ifin), '(E15.8)') s_rwfact
-c         print *,'systematics buffer:'
-c         write(*,'(a)') buff2(1:ifin)
-c         print *,'max and actual length: ',s_bufflen,ifin
+         write(s_buff(5), '(a,E15.8,a)') '<totfact>',s_rwfact,
+     $        '</totfact>'
+         s_buff(6) = '</mgrwt>'
       endif
 
 c     Write out buffers for clustering info
@@ -649,10 +655,10 @@ c     Write out buffers for clustering info
       endif
 
       call write_event(lun,pb(0,1),wgt,npart,jpart(1,1),ngroup,
-     &   sscale,aaqcd,aaqed,buff,buff2(1:ifin),nclus,buffclus)
+     &   sscale,aaqcd,aaqed,buff,use_syst,s_buff,nclus,buffclus)
       if(btest(mlevel,1))
      &   call write_event(6,pb(0,1),wgt,npart,jpart(1,1),ngroup,
-     &   sscale,aaqcd,aaqed,buff,buff2(1:ifin),nclus,buffclus)
+     &   sscale,aaqcd,aaqed,buff,use_syst,s_buff,nclus,buffclus)
 
       end
       

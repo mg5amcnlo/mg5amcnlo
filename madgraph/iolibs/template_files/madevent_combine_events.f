@@ -51,10 +51,11 @@ c
       common/to_param_card_name/param_card_name
 
       character*300 buff
-      character*(s_bufflen) buff2
+      logical u_syst
+      character*(s_bufflen) s_buff(6)
       integer nclus
       character*(clus_bufflen) buffclus(max_particles)
-      data buff2/''/
+      data s_buff/6*''/
       data iseed/-1/
       data buffclus/max_particles*' '/
 c-----
@@ -107,8 +108,7 @@ c
       I4 = 4
       R8 = 8
       record_length = 4*I4+maxexternal*I4*7+maxexternal*5*R8+3*R8+
-     &   300+max_particles*clus_bufflen
-      if (use_syst) record_length=record_length+s_bufflen
+     &   300+6*s_bufflen+max_particles*clus_bufflen
 C $B$ scratch_name $B$ !this is tag for automatic modification by MW
       filename='scratch'
 C $E$ scratch_name $E$ !this is tag for automatic modification by MW
@@ -150,16 +150,15 @@ C $E$ output_file1 $E$ !this is tag for automatic modification by MW
       open(unit=15,file=filename,status='unknown',err=98)
       call writebanner(15,kevent,rxsec,maxwgt,xsec/kevent,xerr)
       do i=1,kevent
-         if(use_syst) then
             read(sfnum,rec=iarray(i)) wgt,n,
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     &           buff,buff2,(buffclus(j),j=1,max_particles)
+     &           buff,(s_buff(j),j=1,6),(buffclus(j),j=1,max_particles)
+c     Systematics info on/off
+         if(s_buff(1)(1:7).eq.'<mgrwt>') then
+            u_syst=.true.
          else
-            read(sfnum,rec=iarray(i)) wgt,n,
-     &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
-     &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     &           buff,(buffclus(j),j=1,max_particles)
+            u_syst=.false.
          endif
 c        Find nclus
          nclus=max_particles
@@ -172,8 +171,8 @@ c        Find nclus
                exit
             endif
          enddo
-         call write_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,buff,buff2,
-     $        nclus,buffclus)
+         call write_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,buff,
+     $        u_syst,s_buff,nclus,buffclus)
       enddo
       close(15)
 c
@@ -244,32 +243,31 @@ C $E$ output_file2 $E$ !this is tag for automatic modification by MW
       ntry = 0
       do i=1,kevent
          if (keep(i) .and. ntry .lt. nreq) then
-            if (use_syst) then
-               read(sfnum,rec=iarray(i)) wgt,n,
-     &              ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
-     &              ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     $              buff, buff2,(buffclus(j),j=1,max_particles)
-            else
-               read(sfnum,rec=iarray(i)) wgt,n,
-     &              ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
-     &              ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,buff,
-     $              (buffclus(j),j=1,max_particles)
+            read(sfnum,rec=iarray(i)) wgt,n,
+     &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
+     &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
+     &           buff,(s_buff(j),j=1,6),(buffclus(j),j=1,max_particles)
             endif
             wgt=dsign(xsec/nreq,wgt)
-c        Find nclus
-            do j=1,max_particles
-               if(buffclus(j).eq.' ')then
-                  nclus=j-1
-                  exit
-               elseif(buffclus(j).eq.'</clustering>') then
-                  nclus=j
-                  exit
-               endif
-            enddo
-            call write_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,
-     $           buff,buff2,nclus,buffclus)
-            ntry=ntry+1
+c     Systematics info on/off
+         if(s_buff(1)(1:7).eq.'<mgrwt>') then
+            u_syst=.true.
+         else
+            u_syst=.false.
          endif
+c        Find nclus
+         do j=1,max_particles
+            if(buffclus(j).eq.' ')then
+               nclus=j-1
+               exit
+            elseif(buffclus(j).eq.'</clustering>') then
+               nclus=j
+               exit
+            endif
+         enddo
+         call write_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,
+     $        buff,u_syst,s_buff,nclus,buffclus)
+         ntry=ntry+1
       enddo
       close(15)
       close(sfnum)
@@ -579,7 +577,8 @@ c
       integer ievent,iseed
       logical done,found
       character*300 buff
-      character*(s_bufflen) buff2
+      logical u_syst
+      character*(s_bufflen) s_buff(6)
       character*300 fullname
       integer nclus
       character*(clus_bufflen) buffclus(max_particles)
@@ -631,8 +630,8 @@ c
 c     Now loop through events
 c
       do while (.not. done)
-         call read_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,buff,buff2,
-     $        nclus,buffclus,done)
+         call read_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,buff,
+     $        u_syst,s_buff,nclus,buffclus,done)
          if (.not. done) then
             revent = revent+1
             wgt = wgt*nj*gsfact                 !symmetry factor * grid factor
@@ -640,17 +639,10 @@ c
             if (dabs(wgt) .ge. goal_wgt*xran1(iseed)) then
                kevent=kevent+1
                if (dabs(wgt) .lt. goal_wgt) wgt = dsign(goal_wgt,wgt)
-               if (use_syst) then
-                  write(sfnum,rec=kevent) wgt,n,
-     &                 ((ic(i,j),j=1,maxexternal),i=1,7),ievent,
-     &                 ((p(i,j),i=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     $                 buff,buff2,(buffclus(i),i=1,max_particles)
-               else
-                  write(sfnum,rec=kevent) wgt,n,
-     &              ((ic(i,j),j=1,maxexternal),i=1,7),ievent,
-     &              ((p(i,j),i=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     $                 buff,(buffclus(i),i=1,max_particles)
-               endif
+               write(sfnum,rec=kevent) wgt,n,
+     &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
+     &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
+     &           buff,(s_buff(j),j=1,6),(buffclus(j),j=1,max_particles)
                sum=sum+dabs(wgt)
                found=.false.
                do i=1,nprup
