@@ -180,7 +180,6 @@ class Event:
         line="<event> \n"
         line1=' %2d %6d %+13.7e %14.8e %14.8e %14.8e' % \
         (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
-        line1=line1.replace("e","d")
         line+=line1+"\n"
         for item in range(1,len(self.event2mg.keys())+1):
             part=self.event2mg[item]
@@ -205,7 +204,6 @@ class Event:
                leg["colup1"],leg["colup2"],leg["momentum"].px,leg["momentum"].py,\
                 leg["momentum"].pz,leg["momentum"].E, leg["momentum"].m,\
                  0.0,float(leg["helicity"]) )
-        line=line.replace("e","d")
         line+="\n"
         return line
 
@@ -271,10 +269,10 @@ class Event:
         assert len(inputs) == 6
         self.nexternal=int(inputs[0])
         self.ievent=int(inputs[1])
-        self.wgt=float(inputs[2].replace("d","e"))
-        self.scale=float(inputs[3].replace("d","e"))
-        self.aqed=float(inputs[4].replace("d","e"))
-        self.aqcd=float(inputs[5].replace("d","e"))        
+        self.wgt=float(inputs[2])
+        self.scale=float(inputs[3])
+        self.aqed=float(inputs[4])
+        self.aqcd=float(inputs[5])        
         
         
 
@@ -329,7 +327,6 @@ class Event:
             elif line_type == 'event':
                 index_prod+=1
                 line=line.replace("\n","")
-                line=line.replace("d","e")
                 inputs=line.split()
                 pid=int(inputs[0])
                 istup=int(inputs[1])
@@ -1495,7 +1492,8 @@ class width_estimate:
 	    if line=="": break
 	    list1=line.split()
 	    if len(list1)<2: continue
-	    if list1[0]=='DECAY' and list1[1] in self.pid2label.keys():
+	    if list1[0]=='DECAY': 
+              if int(list1[1]) in self.pid2label.keys():
 		label_mother=self.pid2label[int(list1[1])]
                 pos=trappe.tell()
                 line=trappe.readline()  
@@ -1528,22 +1526,33 @@ class width_estimate:
 	self.br=branching_fractions
 
 
-    def generate_code_for_width_evaluation(self,mgcmd):
+    def generate_code_for_width_evaluation(self,mgcmd,label2pid):
         """ use madgraph to generate me's for res > all all  
             OBSELETE: NOW WE USE THE FR IMPLEMENTATION
         """
-   
+  
+        # first build a set resonances with pid>0
+
+        particle_set=[]
+        for part in self.resonances:
+            if label2pid[part]>0: particle_set.append(part)
+        for part in self.resonances:
+            if label2pid[part]<0:
+                pid_part=-label2pid[part]
+                if self.pid2label[pid_part] not in particle_set:
+                    particle_set.append(self.pid2label[pid_part])
+ 
         commandline="import model "+self.model
         mgcmd.exec_cmd(commandline)#
 
-	logger.info("generate "+self.resonances[0]+" > all all")
-        commandline="generate "+self.resonances[0]+" > all all"
+	logger.info("generate "+particle_set[0]+" > all all")
+        commandline="generate "+particle_set[0]+" > all all"
 	mgcmd.exec_cmd(commandline)
 
-        if len(self.resonances)>1:
-	    for index in range(1,len(self.resonances)):
-		logger.info("add process "+self.resonances[index]+" > all all")		
-	        commandline="add process "+self.resonances[index]+" > all all "
+        if len(particle_set)>1:
+	    for index in range(1,len(particle_set)):
+		logger.info("add process "+particle_set[index]+" > all all")		
+	        commandline="add process "+particle_set[index]+" > all all "
 		mgcmd.exec_cmd(commandline)
 
 	commandline="output width_calculator -f"
@@ -2670,6 +2679,7 @@ class decay_all_events:
         if os.path.isdir(pjoin(path_me,"full_me")):
             shutil.rmtree(pjoin(path_me,"full_me"))
         decay_tools=decay_misc()
+
          
         # process a bit the decay chain strings, so that the code is not confused by the syntax
         decay_tools.process_decay_syntax(decay_processes)        
@@ -2760,16 +2770,30 @@ class decay_all_events:
         # check that we get branching fractions for all resonances to be decayed:
         
 	if(branching_per_channel==0):
-	    #calculate_br.generate_code_for_width_evaluation(mgcmd)#NOT USED ANYMORE, USE THE FR IMPLEMENTATION INSTEAD
-	    logger.info('We need to recalculate the branching fractions')
-	    logger.info('using the compute_width module of madevent')
-	    calculate_br.launch_width_evaluation(resonances,label2pid_dict,pid2label_dict,base_model) # use FR to get all partial widths
-            calculate_br.extract_br_from_width()                                       # set the br to partial_width/total_width
-            calculate_br.extract_br_for_antiparticle(label2pid_dict,pid2label_dict)    # set the partial widths of antiparticles equal to the one of the CC channel  
-    	    calculate_br.print_branching_fractions()
-            branching_per_channel=calculate_br.get_BR_for_each_decay(decay_processes,multiparticles,\
+   	    logger.info('We need to recalculate the branching fractions')
+            try:
+	        logger.info('using the compute_width module of madevent')
+	        calculate_br.launch_width_evaluation(resonances,label2pid_dict,pid2label_dict,base_model) # use FR to get all partial widths
+                calculate_br.extract_br_from_width()                                       # set the br to partial_width/total_width
+                calculate_br.extract_br_for_antiparticle(label2pid_dict,pid2label_dict)    # set the partial widths of antiparticles equal to the one of the CC channel  
+    	        calculate_br.print_branching_fractions()
+                branching_per_channel=calculate_br.get_BR_for_each_decay(decay_processes,multiparticles,\
 						mybanner.get("model"),base_model,pid2label_dict)       
-
+            except:
+	        logger.info('compute_width module not available, use numerical estimates instead ')
+                if os.path.isdir(pjoin(path_me,"width_calculator")):
+                    shutil.rmtree(pjoin(path_me,"width_calculator"))
+	        calculate_br.generate_code_for_width_evaluation(mgcmd, label2pid_dict)#NOT USED ANYMORE, USE THE FR IMPLEMENTATION INSTEAD
+                shutil.copyfile(pjoin(path_me,"param_card.dat"), pjoin(path_me,'width_calculator','Cards','param_card.dat'))
+                os.chdir(pjoin(path_me, 'width_calculator'))
+                os.system('./bin/madevent calculate_decay_widths -f') 
+                os.chdir(path_me)
+	        filename=pjoin(path_me,'width_calculator','Events','run_01','param_card.dat')
+                calculate_br.extract_br_from_card(filename)
+                calculate_br.extract_br_for_antiparticle(label2pid_dict,pid2label_dict)
+	        calculate_br.print_branching_fractions()
+                branching_per_channel=calculate_br.get_BR_for_each_decay(decay_processes,multiparticles,\
+						mybanner.get("model"),base_model,pid2label_dict)       
 
         if branching_per_channel==0:
 	    raise Exception, 'Failed to extract the branching fraction associated with each decay channel'
