@@ -243,7 +243,7 @@ c
       integer ievent
       character*300 buff
       logical u_syst
-      character*(s_bufflen) s_buff(6)
+      character*(s_bufflen) s_buff(7)
       integer nclus
       character*(clus_bufflen) buffclus(nexternal)
 C     
@@ -409,7 +409,7 @@ c
       external ran1
 
       character*300 buff
-      character*(s_bufflen) s_buff(6)
+      character*(s_bufflen) s_buff(7)
       integer nclus
       character*(clus_bufflen) buffclus(nexternal)
       character*40 cfmt
@@ -608,38 +608,41 @@ c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
          else
             write(s_buff(3), '(a)') '<asrwt>0</asrwt>'
          endif
-         if(n_pdfrw(1)+n_pdfrw(2).gt.0)then
-            if(2*n_pdfrw(1).lt.10.and.2*n_pdfrw(2).lt.10) then
-               write(cfmt,'(a,I1,a,I1,a,I1,a,I1,a)') '(a,I3,',
-     $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,I3,',
-     $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
-            elseif(2*n_pdfrw(1).lt.10.and.2*n_pdfrw(2).ge.10) then
-               write(cfmt,'(a,I1,a,I1,a,I1,a,I2,a)') '(a,I3,',
-     $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,I3,',
-     $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
-            elseif(2*n_pdfrw(1).ge.10.and.2*n_pdfrw(2).lt.10) then
-               write(cfmt,'(a,I1,a,I2,a,I1,a,I1,a)') '(a,I3,',
-     $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,I3,',
-     $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
+         if(n_pdfrw(1).gt.0)then
+            if(2*n_pdfrw(1).lt.10) then
+               write(cfmt,'(a,I1,a,I1,a)') '(a,I3,',
+     $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,a)'
             else
-               write(cfmt,'(a,I1,a,I2,a,I1,a,I2,a)') '(a,I3,',
-     $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,I3,',
-     $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
+               write(cfmt,'(a,I1,a,I2,a)') '(a,I3,',
+     $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,a)'
             endif
-            write(s_buff(4), cfmt) '<pdfrwt>',
+            write(s_buff(4), cfmt) '<pdfrwt beam="1">',
      $           n_pdfrw(1),(i_pdgpdf(i,1),i=1,n_pdfrw(1)),
      $           (s_xpdf(i,1),i=1,n_pdfrw(1)),
      $           (s_qpdf(i,1),i=1,n_pdfrw(1)),
+     $           '</pdfrwt>'
+         else
+            write(s_buff(4), '(a)') '<pdfrwt beam="1">0</pdfrwt>'
+         endif
+         if(n_pdfrw(2).gt.0)then
+            if(2*n_pdfrw(2).lt.10) then
+               write(cfmt,'(a,I1,a,I1,a)') '(a,I3,',
+     $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
+            else
+               write(cfmt,'(a,I1,a,I2,a)') '(a,I3,',
+     $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
+            endif
+            write(s_buff(5), cfmt) '<pdfrwt beam="2">',
      $           n_pdfrw(2),(i_pdgpdf(i,2),i=1,n_pdfrw(2)),
      $           (s_xpdf(i,2),i=1,n_pdfrw(2)),
      $           (s_qpdf(i,2),i=1,n_pdfrw(2)),
      $           '</pdfrwt>'
          else
-            write(s_buff(3), '(a)') '<pdfrwt>0</pdfrwt>'
+            write(s_buff(5), '(a)') '<pdfrwt beam="2">0</pdfrwt>'
          endif
-         write(s_buff(5), '(a,E15.8,a)') '<totfact>',s_rwfact,
+         write(s_buff(6), '(a,E15.8,a)') '<totfact>',s_rwfact,
      $        '</totfact>'
-         s_buff(6) = '</mgrwt>'
+         s_buff(7) = '</mgrwt>'
       endif
 
 c     Write out buffers for clustering info

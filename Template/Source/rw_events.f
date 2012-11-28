@@ -161,7 +161,7 @@ c      aqcd = g*g/4d0/pi
       enddo
       if(buff(1:1).eq.'#') write(lun,'(a)') buff(1:len_trim(buff))
       if(u_syst)then
-         do i=1,6
+         do i=1,7
             write(lun,'(a)') s_buff(i)(1:len_trim(s_buff(i)))
          enddo
       endif

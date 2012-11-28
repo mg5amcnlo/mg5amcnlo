@@ -106,20 +106,19 @@ Each line in the syst.dat file has the entries:
 <mgrwt event="event_num">
 <rscale>n_qcd ren_scale</rscale>
 <asrwt>n_alpsem n_alpsem*alpsem_scale</asrwt>
-<pdfrwt>n_pdfrw1 n_pdgrw1*pdf_pdg_code1 n_pdfrw1*pdf_x1 n_pdfrw1*pdf_q1 \
-n_pdfrw2 n_pdgrw2*pdf_pdg_code2 n_pdfrw2*pdf_x2 n_pdfrw2*pdf_q2</pdfrwt>
+<pdfrwt beam="1">n_pdfrw1 n_pdgrw1*pdf_pdg_code1 n_pdfrw1*pdf_x1 n_pdfrw1*pdf_q1</pdfwgt>
+<pdfrwt beam="2">n_pdfrw2 n_pdgrw2*pdf_pdg_code2 n_pdfrw2*pdf_x2 n_pdfrw2*pdf_q2</pdfrwt>
 <totfact>total_reweight_factor</totfact>
 <matchscale>SMIN SCOMP SMAX</matchscale>
 </mgrwt>
 
 Total event weight for event event_num given by:
 ------------------------------------------------
-alpha_s(scalefact*ren_scale)^(n_qcd-n_alpsem) *  # central ren scale
+alpha_s(scalefact*ren_scale)^(n_qcd) *  # central ren scale
 alpha_s(alpsfact*alpsem_scale(1)) *              # emission ren scale
 alpha_s(alpsfact*alpsem_scale(2)) *              # emission ren scale
 ...
-pdf(pdf_pdg_code1(1),pdf_x1(1),pdf_q1(1))*
-pdf(pdf_pdg_code2(1),pdf_x2(1),pdf_q2(1))*       # initial state pdfs
+pdf(pdf_pdg_code1(1),pdf_x1(1),pdf_q1(1))*       # initial state pdf
 pdf(pdf_pdg_code1(2),pdf_x1(2),pdf_q1(2))/
 pdf(pdf_pdg_code1(2),pdf_x1(2),pdf_q1(1))*       # pdf reweighting
 pdf(pdf_pdg_code1(3),pdf_x1(3),pdf_q1(3))/

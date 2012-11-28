@@ -52,10 +52,10 @@ c
 
       character*300 buff
       logical u_syst
-      character*(s_bufflen) s_buff(6)
+      character*(s_bufflen) s_buff(7)
       integer nclus
       character*(clus_bufflen) buffclus(max_particles)
-      data s_buff/6*''/
+      data s_buff/7*''/
       data iseed/-1/
       data buffclus/max_particles*' '/
 c-----
@@ -108,7 +108,7 @@ c
       I4 = 4
       R8 = 8
       record_length = 4*I4+maxexternal*I4*7+maxexternal*5*R8+3*R8+
-     &   300+6*s_bufflen+max_particles*clus_bufflen
+     &   300+7*s_bufflen+max_particles*clus_bufflen
 C $B$ scratch_name $B$ !this is tag for automatic modification by MW
       filename='scratch'
 C $E$ scratch_name $E$ !this is tag for automatic modification by MW
@@ -153,7 +153,7 @@ C $E$ output_file1 $E$ !this is tag for automatic modification by MW
             read(sfnum,rec=iarray(i)) wgt,n,
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     &           buff,(s_buff(j),j=1,6),(buffclus(j),j=1,max_particles)
+     &           buff,(s_buff(j),j=1,7),(buffclus(j),j=1,max_particles)
 c     Systematics info on/off
          if(s_buff(1)(1:7).eq.'<mgrwt>') then
             u_syst=.true.
@@ -219,7 +219,8 @@ c            write(*,*) min_goal,goal_wgt,max_goal
 c            write(*,*) min_goal,goal_wgt,max_goal
             if (goal_wgt .lt. min_goal) then
                done=.true.
-               write(*,*) 'Failed to find requested number of unweighted events',nreq,nunwgt
+               write(*,*) 'Failed to find requested number ',
+     $              'of unweighted events',nreq,nunwgt
             endif
          endif
          ntry=ntry+1
@@ -232,7 +233,8 @@ c            write(*,*) min_goal,goal_wgt,max_goal
          write(*,*) 'Found ',nunwgt,' events writing first ',nreq
       endif
       write(*,*) 'Unweighting selected ',nreq, ' events.'
-      write(*,'(a,f5.2,a)') 'Truncated ',xtrunc*100./sum, '%% of cross section'
+      write(*,'(a,f5.2,a)') 'Truncated ',xtrunc*100./sum,
+     $     '%% of cross section'
 
 C $B$ output_file2 $B$ !this is tag for automatic modification by MW
       filename='../Events/unweighted_events.lhe'
@@ -246,28 +248,28 @@ C $E$ output_file2 $E$ !this is tag for automatic modification by MW
             read(sfnum,rec=iarray(i)) wgt,n,
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     &           buff,(s_buff(j),j=1,6),(buffclus(j),j=1,max_particles)
-            endif
+     &           buff,(s_buff(j),j=1,7),(buffclus(j),j=1,max_particles)
             wgt=dsign(xsec/nreq,wgt)
 c     Systematics info on/off
-         if(s_buff(1)(1:7).eq.'<mgrwt>') then
-            u_syst=.true.
-         else
-            u_syst=.false.
-         endif
-c        Find nclus
-         do j=1,max_particles
-            if(buffclus(j).eq.' ')then
-               nclus=j-1
-               exit
-            elseif(buffclus(j).eq.'</clustering>') then
-               nclus=j
-               exit
+            if(s_buff(1)(1:7).eq.'<mgrwt>') then
+               u_syst=.true.
+            else
+               u_syst=.false.
             endif
-         enddo
-         call write_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,
-     $        buff,u_syst,s_buff,nclus,buffclus)
-         ntry=ntry+1
+c        Find nclus
+            do j=1,max_particles
+               if(buffclus(j).eq.' ')then
+                  nclus=j-1
+                  exit
+               elseif(buffclus(j).eq.'</clustering>') then
+                  nclus=j
+                  exit
+               endif
+            enddo
+            call write_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,
+     $           buff,u_syst,s_buff,nclus,buffclus)
+            ntry=ntry+1
+         endif
       enddo
       close(15)
       close(sfnum)
@@ -578,7 +580,7 @@ c
       logical done,found
       character*300 buff
       logical u_syst
-      character*(s_bufflen) s_buff(6)
+      character*(s_bufflen) s_buff(7)
       character*300 fullname
       integer nclus
       character*(clus_bufflen) buffclus(max_particles)
@@ -642,7 +644,7 @@ c
                write(sfnum,rec=kevent) wgt,n,
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     &           buff,(s_buff(j),j=1,6),(buffclus(j),j=1,max_particles)
+     &           buff,(s_buff(j),j=1,7),(buffclus(j),j=1,max_particles)
                sum=sum+dabs(wgt)
                found=.false.
                do i=1,nprup
