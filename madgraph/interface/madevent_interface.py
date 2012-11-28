@@ -858,11 +858,7 @@ class CheckValidForCmd(object):
         if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'unweighted_events.lhe.gz')):
             raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
 
-        if os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'unweighted_events_decayed.lhe.gz')):
-            input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events_decayed.lhe')
-        else:
-            input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
-        misc.sprint(input_file)
+        input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
         output_file = pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')
         os.system('gunzip -c %s > %s' % (input_file, output_file))
         
@@ -1681,7 +1677,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.print_results_in_shell(self.results.current)
             self.create_plot('parton')
             self.exec_cmd('store_events', postcmd=False)
-            self.exec_cmd('decay_events -from_cards')
+            self.exec_cmd('decay_events -from_cards', postcmd=False)
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             # pythia launches pgs/delphes if needed
             self.store_result()
@@ -3116,9 +3112,10 @@ calculator."""
         except Exception:
             # If nothing runs they they are no result to update
             pass
+        
         try:
             self.update_status('', level=None)
-        except Exception, error:         
+        except Exception, error:        
             pass
         try:
             devnull = open(os.devnull, 'w') 

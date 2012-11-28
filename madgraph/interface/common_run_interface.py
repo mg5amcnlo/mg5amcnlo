@@ -528,7 +528,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         """
         
         text = open(path).read()
-        text = re.findall('(<MGVersion>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY)', text, re.I)
+        text = re.findall('(<MGVersion>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin)', text, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text:
             return 'banner'
@@ -554,6 +554,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         elif 'decay' in text and 'launch' in text and 'madspin' in text:
             return 'madspin_card.dat'
         else:
+            misc.sprint
+            misc.sprint('decay' in text, 'launch' in text, 'madspin' in text)
             return 'unknown'
 
     ############################################################################
@@ -597,7 +599,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
 
         if not event_path:
             if mode == 'parton':
-                event_path = pjoin(self.me_dir, 'Events','unweighted_events.lhe')
+                possibilities=[
+                    pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'),
+                    pjoin(self.me_dir, 'Events', 'unweighted_events.lhe.gz'),  
+                    pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe'),
+                    pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz')]
+                for event_path in possibilities:
+                    if os.path.exists(event_path):
+                        break
                 output = pjoin(self.me_dir, 'HTML',self.run_name, 'plots_parton.html')
             elif mode == 'Pythia':
                 event_path = pjoin(self.me_dir, 'Events','pythia_events.lhe')
@@ -1054,7 +1063,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                       error=False, starttime = None, update_results=True):
         """ update the index status """
         
-        if makehtml or not force:
+        if makehtml and not force:
             if hasattr(self, 'next_update') and time.time() < self.next_update:
                 return
             else:
@@ -1072,6 +1081,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         
         if update_results:
             self.results.update(status, level, makehtml=makehtml, error=error)
+        else:
+            misc.sprint('No update')
         
         
     ############################################################################
@@ -1228,7 +1239,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             raise self.ConfigurationError, '''Can\'t load MadSpin
             The variable mg5_path might not be correctly configured.'''
         
-        
+        self.update_status('Running MadSpin', level='madspin')        
         
         self.help_decay_events(skip_syntax=True)
 
@@ -1241,31 +1252,51 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         if '-from_cards' in args:
             path = pjoin(self.me_dir, 'Cards', 'madspin_card.dat')
             madspin_cmd.import_command_file(path)
-            return
+        else:        
+            logger.info('Please enter the definition of each branch ')
+            logger.info('associated with the decay channel you want to consider')
+            logger.info('Please use the mg5 syntax, e.g. ')
+            logger.info(' A > B C , ( C > D E , E > F G )')
+            while 1: 
+                decaybranch=self.ask('New branch: (if you are done, type enter) \n','done')
+                if decaybranch == 'done' or decaybranch == '':
+                    break
+                else: 
+                    madspin_cmd.exec_cmd('decay %s' % decaybranch, printcmd=True, precmd=True)
+                            
+            logger.info("An estimation of the maximum weight is needed for the unweighting ")
+            answer=self.ask("Enter the maximum weight, or enter a negative number if unknown \n",-1.0)
+            answer=answer.replace("\n","") 
+            if float(answer) < 0:
+                madspin_cmd.exec_cmd('set max_weight %s' % answer)
+            else:
+                logger.info("The maximum weight will be evaluated")
+    
+                madspin_cmd.exec_cmd('launch')
                 
-        logger.info('Please enter the definition of each branch ')
-        logger.info('associated with the decay channel you want to consider')
-        logger.info('Please use the mg5 syntax, e.g. ')
-        logger.info(' A > B C , ( C > D E , E > F G )')
-        list_branches={}
-        while 1: 
-            decaybranch=self.ask('New branch: (if you are done, type enter) \n','done')
-            if decaybranch == 'done' or decaybranch == '':
-                break
-            else: 
-                madspin_cmd.exec_cmd('decay %s' % decaybranch, printcmd=True, precmd=True)
-                        
-        logger.info("An estimation of the maximum weight is needed for the unweighting ")
-        answer=self.ask("Enter the maximum weight, or enter a negative number if unknown \n",-1.0)
-        max_weight=-1
-        answer=answer.replace("\n","") 
-        if not '-' in answer:
-            madspin_cmd.exec_cmd('set max_weight %s' % answer)
-        else:
-            logger.info("The maximum weight will be evaluated")
-
-            madspin_cmd.exec_cmd('launch')
-
+        # create a new run_name directory for this output
+        i = 1
+        while os.path.exists(pjoin(self.me_dir,'Events', '%s_decayed_%i' % (self.run_name,i))):
+            i+1
+        new_run = '%s_decayed_%i' % (self.run_name,i)
+        evt_dir = pjoin(self.me_dir, 'Events')
+        
+        os.mkdir(pjoin(evt_dir, new_run))
+        current_file = args[0].replace('.lhe', '_decayed.lhe')
+        new_file = pjoin(evt_dir, new_run, os.path.basename(args[0]))
+        files.mv(current_file, new_file)
+        
+        if hasattr(self, 'results'):
+            nb_event = self.results.current['nb_event']
+            cross = self.results.current['cross']
+            error = self.results.current['error']
+            self.results.add_run( new_run, self.run_card)
+            self.results.add_detail('nb_event', nb_event)
+            self.results.add_detail('cross', cross * madspin_cmd.branching_ratio)
+            self.results.add_detail('error', error * madspin_cmd.branching_ratio)
+        self.run_name = new_run
+        self.update_status('MadSpin Done', level='parton', makehtml=False)
+        self.create_plot('parton')
     
     def complete_decay_events(self, text, line, begidx, endidx):
         args = self.split_arg(line[0:begidx], error=False)

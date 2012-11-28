@@ -186,7 +186,7 @@ class MadSpinInterface(extended_cmd.Cmd):
     
         if args[0] == 'max_weight':
             try:
-                args[1] == float(args[1])
+                args[1] = float(args[1].replace('d','e'))
             except ValueError:
                 raise self.InvalidCmd('second argument should be a real number.')
         
@@ -206,6 +206,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         """ add one of the options """
         
         args = self.split_arg(line)
+        self.check_set(args)
         
         if args[0] not in self.options:
             raise self.InvalidCmd('Unknown options')
@@ -263,7 +264,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                                               self.prod_branches, 
                                               self.proc_option, 
                                               self.options)
-
+        self.branching_ratio = generate_all.branching_ratio
         evt_path = self.events_file.name
         misc.call(['gzip %s' % evt_path], shell=True)
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')

@@ -358,113 +358,6 @@ class Event:
                     logger.warning('unknown status in lhe file')
         return "no_event"
 
-#
-#class Banner:
-#    """ A banner object contains all the information about the process,
-#    the run and the parameters of the model"""
-# 
-#    def __init__(self,inputfile):
-#        misc.sprint('DEPRECIATION WARNING')
-#        """Initialize self.file=input file """
-#        self.inputfile =inputfile
-#        self.proc={}
-#        self.run={}
-#        self.param={}
-##
-#        self.proc_keys=["model","generate"]
-#        self.param_keys=["Block mass","Block sminputs","Block yukawa", "DECAY"]
-#        self.whole_banner=""
-##       to improve the reading use regular expression
-#        self.re_search={}
-#        self.re_search['model']="^import.*model.*"
-#        self.re_search['generate']="^generate.*"
-#
-#    def check_pid(self,pid2label):
-#        """Remove any info from the banner related to a PID that is not in the model """
-#
-#        for item1 in self.param_keys:
-#            pid_set=self.param[item1].keys()
-#            for pid in pid_set:
-#                if pid not in pid2label.keys(): del self.param[item1][pid]
-#                
-#            
-#
-#
-#
-#    def ReadBannerFromFile(self):
-#        """Read the whole banner"""    
-#        misc.sprint('DEPRECIATED WARNING')
-#        while 1:
-#            line=self.inputfile.readline()
-#            if line=="": break
-#            self.whole_banner+=line
-#            if line.find("</init>")>-1: break
-#            if string.find(line,"MG5ProcCard")>-1:self.ReadProc()
-#            if string.find(line,"slha")>-1:self.ReadParam()
-#            if string.find(line,"MGRunCard")>-1:self.ReadRun()
-#
-#        if "model" not in self.proc.keys():
-#            logger.warning('The model was not found in the banner, assuming the Standard Model')
-##        if len(self.proc)!=len(self.proc_keys):     
-##            logger.warning('Some parameters have not been read in the proc card')
-##        if len(self.param)!=len(self.param_keys): 
-##            logger.warning('Some parameters have not been read in the param card')
-#
-#    def GetProcValue(self,line,keyword):
-#        """Extract a parameter from a line in the Proc Card"""
-#
-#        line = line.split("#", 2)[0]
-#        index=string.find(line,keyword)+len(keyword)
-#        line=line[index:-1]
-#        while 1:
-#            if line[0]==" ":line=line[1:]
-#            elif line[-1]==" ":line=line[:-1]
-#            else: break
-#        return line
-#
-#    def ReadProc(self): 
-#        """ Read the parameters associated with the Proc Card """
-#        misc.sprint('DEPRECIATED WARNING')
-#        while 1:
-#            line=self.inputfile.readline()
-#            self.whole_banner+=line
-#            if line=="" or string.find(line,"MG5ProcCard")>-1: break
-#            for key in self.proc_keys:
-#                if re.match(self.re_search[key],line): self.proc[key]=self.GetProcValue(line,key)
-#        # if self.proc["model"].find("loop_sm")>-1:self.proc["model"]="sm"
-#
-#    def GetParamValue(self,line,keyword):
-#        """Extract the tag and the value from a line in the Param Card"""
-#
-#        if line[0]=="#": return 
-#        line = line.split("#", 2)[0]
-#        line=line.split()
-#        if len(line)==2: return int(line[0]), line[1]
-#        elif line[0]==keyword: return int(line[1]), line[2]
-##       Here I need to check if 
-#
-#    def ReadParam(self): 
-#        """ Read the paramters associated with the Param Card """
-#        misc.sprint('DEPRECIATED WARNING')
-#        while 1:
-#            line=self.inputfile.readline()
-#            self.whole_banner+=line
-#            if line=="" or string.find(line,"slha")>-1: break
-#            for key in self.param_keys:
-#                if string.find(line,key)>-1:
-#                    currentkey=key
-#                    if currentkey not in self.param: self.param[currentkey]={}     
-#                    
-#            try:
-#                tag, value=self.GetParamValue(line,currentkey)
-#                self.param[currentkey][tag]=value
-#            except Exception, error: continue
-#
-#    def ReadRun(self):
-#        """ Read the paramters associated with the Run Card """
-#        pass
-
-
 class pid2label(dict):
     """ dico pid:label for a given model"""
 
@@ -3339,15 +3232,32 @@ class decay_all_events:
         outputfile = open(pjoin(path_me,'decayed_events.lhe'), 'w')
         curr_event=Event(inputfile)
         ms_banner = ""
+        total_br = 0
         for index,tag_decay in enumerate(decay_tags):
             ms_banner+="# Decay channel "+str(index+1)+"\n"
             for part in multi_decay_processes[tag_decay]['config'].keys():
                 ms_banner+="# "+multi_decay_processes[tag_decay]['config'][part]+"\n"
             ms_banner+="# branching fraction: "+str(multi_decay_processes[tag_decay]['br']) + "\n"
             ms_banner+="# estimate of the maximum weight: "+str(max_weight[map_decay_me[tag_decay]]) + "\n"
-    
+            total_br += multi_decay_processes[tag_decay]['br']
+        self.branching_ratio = total_br
         mybanner.add_text('madspin', ms_banner)
-        mybanner.write(outputfile)
+        # Update cross-section in the banner
+        mg_info = mybanner['mggenerationinfo'].split('\n')
+        for i,line in enumerate(mg_info):
+            if 'Events' in line:
+                continue
+            if ':' not in line:
+                continue
+            info, value = line.rsplit(':',1)
+            try:
+                value = float(value)
+            except:
+                continue
+            mg_info[i] = '%s : %s' % (info, value * total_br)
+        mybanner['mggenerationinfo'] = '\n'.join(mg_info)
+        
+        mybanner.write(outputfile, close_tag=False)
         
         event_nb=0
         trial_nb_all_events=0

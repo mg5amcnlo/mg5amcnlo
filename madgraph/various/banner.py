@@ -69,7 +69,8 @@ class Banner(dict):
       'mgdelphestrigger':'delphes_trigger.dat',
       'mg5proccard':'proc_card_mg5.dat',
       'mgproccard': 'proc_card.dat',
-      'init': ''
+      'init': '',
+      'mggenerationinfo':''
       }
     
     def read_banner(self, input_path):
@@ -166,7 +167,7 @@ class Banner(dict):
     ############################################################################
     #  WRITE BANNER
     ############################################################################
-    def write(self, output_path):
+    def write(self, output_path, close_tag=True):
         """write the banner"""
         
         if isinstance(output_path, str):
@@ -183,11 +184,13 @@ class Banner(dict):
                 ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
                      {'tag':tag, 'text':text})
         ff.write('</header>\n')    
-        ff.write('</LesHouchesEvents>\n')
+
         if 'init' in self:
             text = self['init']
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
-                     {'tag':'init', 'text':text})            
+                     {'tag':'init', 'text':text})  
+        if close_tag:          
+            ff.write('</LesHouchesEvents>\n')
         
     ############################################################################
     # BANNER
