@@ -1081,8 +1081,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         
         if update_results:
             self.results.update(status, level, makehtml=makehtml, error=error)
-        else:
-            misc.sprint('No update')
         
         
     ############################################################################
