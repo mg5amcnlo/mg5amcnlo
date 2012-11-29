@@ -10,7 +10,7 @@ import write_param_card
 import coupling_orders
 
 # model options
-gauge = [0]
+gauge = [0, 1]
 
 all_particles = particles.all_particles
 all_vertices = vertices.all_vertices

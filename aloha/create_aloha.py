@@ -673,10 +673,8 @@ class AbstractALOHAModel(dict):
             self.compute_subset(data_loop, byPassFix=True, forceLoop=True)
             aloha.unitary_gauge = old_aloha_gauge
             return
-            
         # == END AD-HOC QUICK FIX ==
-        
-        aloha.loop_mode = False
+
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
         self.look_for_symmetries()
@@ -688,7 +686,6 @@ class AbstractALOHAModel(dict):
             conjugate = [i for i in tag if isinstance(i, int)]
             tag =  [i for i in tag if isinstance(i, str)]
             tag = tag + ['C%s'%i for i in conjugate] 
-            #
             
             conjugate = tuple([int(c[1:]) for c in tag if c.startswith('C')])
             loop = any((t.startswith('L') for t in tag))
@@ -783,11 +780,7 @@ class AbstractALOHAModel(dict):
                         conjg_builder = builder.define_conjugate_builder(conjg)
                         # Compute routines
                         self.compute_aloha(conjg_builder, symmetry=lorentz.name,
-                                        routines=routines)
-        #
-                      
-  
-                
+                                        routines=routines)             
                         
     def compute_aloha(self, builder, symmetry=None, routines=None, tag=[]):
         """ define all the AbstractRoutine linked to a given lorentz structure

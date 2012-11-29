@@ -2770,11 +2770,7 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
     """Check gauge invariance of the processes by flipping
        the gauge of the model
     """
-    ### TO CLEAN LATER ###
-    global loop_optimized_output
-    old_loop_optimized_output = loop_optimized_output
-    ### TO CLEAN LATER ###
-    
+
     mg_root = cmd._mgme_dir
     cmass_scheme = cmd.options['complex_mass_scheme']
     if isinstance(processes_unit, base_objects.ProcessDefinition):
@@ -2785,9 +2781,6 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
 
         # Initialize matrix element evaluation
         aloha.unitary_gauge = True
-        ### TO CLEAN LATER ###
-        loop_optimized_output = True
-        ### TO CLEAN LATER ###
         if processes_unit.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model, param_card,
                                        cmd= cmd,auth_skipping = False, reuse = True)
@@ -2819,9 +2812,6 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
 
         # Initialize matrix element evaluation
         aloha.unitary_gauge = False
-        ### TO CLEAN LATER ###
-        loop_optimized_output = False
-        ### TO CLEAN LATER ###
         if processes_feynm.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model, param_card,
                                        cmd= cmd, auth_skipping = False, reuse = False)
@@ -2852,10 +2842,6 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         if processes_feynm.get('perturbation_couplings')!=[]:
             # Clean temporary folders created for the running of the loop processes
             clean_up(mg_root)
-
-        ### TO CLEAN LATER ###
-        loop_optimized_output = old_loop_optimized_output
-        ### TO CLEAN LATER ###
 
         return output
 #    elif isinstance(processes, base_objects.Process):

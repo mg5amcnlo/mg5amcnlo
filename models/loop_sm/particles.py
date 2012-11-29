@@ -279,6 +279,39 @@ tt__minus__ = Particle(pdg_code = 15,
 
 tt__plus__ = tt__minus__.anti()
 
+# ======================================================================
+# Goldstones 
+# ======================================================================
+
+G0 = Particle(pdg_code = 250,
+              name = 'G0',
+              antiname = 'G0',
+              spin = 1,
+              color = 1,
+              mass = Param.MZ,
+              width = Param.ZERO,
+              texname = 'G0',
+              antitexname = 'G0',
+              GoldstoneBoson = True,
+              charge = 0,
+              GhostNumber = 0,
+              LeptonNumber = 0)
+
+G__plus__ = Particle(pdg_code = 251,
+                     name = 'G+',
+                     antiname = 'G-',
+                     spin = 1,
+                     color = 1,
+                     mass = Param.MW,
+                     width = Param.ZERO,
+                     texname = 'G+',
+                     antitexname = 'G-',
+                     GoldstoneBoson = True,
+                     charge = 1,
+                     GhostNumber = 0,
+                     LeptonNumber = 0)
+
+G__minus__ = G__plus__.anti()
 
 # Set counterterms values
 

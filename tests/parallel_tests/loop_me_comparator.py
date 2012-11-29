@@ -270,6 +270,11 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         if verbose: logging.info("Working on process %s in dir %s"%(str(proc), shell_name))
         
         dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
+        # Make sure the modified source file are recompiled
+        if os.path.isfile(os.path.join(dir_name,'check')):
+            os.remove(os.path.join(dir_name,'check'))
+        if os.path.isfile(os.path.join(dir_name,'check_sa.o')):        
+            os.remove(os.path.join(dir_name,'check_sa.o'))
         # Run make
         devnull = open(os.devnull, 'w')
         retcode = subprocess.call('make',
@@ -365,10 +370,11 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         file = open(os.path.join(dir_name,'Cards','MadLoopParams.dat'), 'r')
         MLParams = file.read()
         file.close()
-        mode = 4 if mp else 1
+        run_mode = 4 if mp else -1
+        init_mode = 4 if mp else 1
         file = open(os.path.join(dir_name,'Cards','MadLoopParams.dat'), 'w')
-        MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%mode, MLParams)
-        MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%mode, MLParams)
+        MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%run_mode, MLParams)
+        MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%init_mode, MLParams)
         MLParams = re.sub(r"#UseLoopFilter\n\S+","#UseLoopFilter\n.FALSE.", 
                                                                        MLParams)                
         MLParams = re.sub(r"#DoubleCheckHelicityFilter\n\S+",
@@ -408,7 +414,6 @@ class LoopMG4Runner(me_comparator.MERunner):
         the specified model and the specified orders with a given c.o.m energy
         or the given Phase-Space points if specified.
         """
-        
         self.res_list = [] # ensure that to be void, and avoid pointer problem 
         self.proc_list = proc_list
         self.model = model

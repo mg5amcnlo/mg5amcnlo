@@ -66,7 +66,7 @@ GWcft_UV_b = CTParameter(name = 'GWcft_UV_b',
                          texname = '\delta G_{wfct\_b}')
 
 GWcft_UV_t = CTParameter(name = 'GWcft_UV_t',
-                         type = 'real ',
+                         type = 'real',
                          value = {-1:'cond(MT,0.0,-((G**2)/(2.0*48.0*cmath.pi**2))*4.0*TF)',
                                    0:'cond(MT,0.0,((G**2)/(2.0*48.0*cmath.pi**2))*4.0*TF*reglog(MT**2/MU_R**2))'
                                  },
@@ -104,13 +104,6 @@ tMass_UV = CTParameter(name = 'tMass_UV',
 # Mixed QCD-QED  #
 # ============== #
 
-UV_yuk_c = CTParameter(name = 'UV_yuk_c',
-                       type = 'real',
-                       value = {-1:'-(1.0/2.0)*((G**2)/(16.0*cmath.pi**2))*3.0*CF*2.0',
-                                 0:'cond(MC,0.0,-(1.0/2.0)*((G**2)/(16.0*cmath.pi**2))*CF*(-3.0*reglog(MC**2/MU_R**2)+4.0)*2.0)'
-                               },
-                       texname = '\delta y_c')
-
 UV_yuk_b = CTParameter(name = 'UV_yuk_b',
                        type = 'real',
                        value = {-1:'-(1.0/2.0)*((G**2)/(16.0*cmath.pi**2))*3.0*CF*2.0',
@@ -124,17 +117,3 @@ UV_yuk_t = CTParameter(name = 'UV_yuk_t',
                                  0:'cond(MT,0.0,-(1.0/2.0)*((G**2)/(16.0*cmath.pi**2))*CF*(-3.0*reglog(MT**2/MU_R**2)+4.0)*2.0)'
                                },
                        texname = '\delta y_t')
-
-# ============================== #
-# Goldstone UV CT parameters     #
-# ============================== #
-
-R2_GGGpGm_factor = CTParameter(name = 'R2_GGGpGm_factor',
-              type = 'real',
-              value = {0:'G**2/(8.0*cmath.pi**2)'},
-              texname = 'R2_GGGpGm_factor')
-
-R2_GGG0G0_factor = CTParameter(name = 'R2_GGG0G0_factor',
-              type = 'real',
-              value = {0:'G**2/(8.0*cmath.pi**2)'},
-              texname = 'R2_GGG0G0_factor')

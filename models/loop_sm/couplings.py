@@ -196,3 +196,233 @@ GC_47 = Coupling(name = 'GC_47',
                  value = '(ee*complex(0,1)*complexconjugate(CKM33))/(sw*cmath.sqrt(2))',
                  order = {'QED':1})
 
+
+# == Additional coupling for the goldstones for Feynman gauge
+
+GC_1033 = Coupling(name = 'GC_1033',
+                 value = '-6*complex(0,1)*lam',
+                 order = {'QED':2})
+
+GC_1031 = Coupling(name = 'GC_1031',
+                 value = '-2*complex(0,1)*lam',
+                 order = {'QED':2})
+
+GC_1032 = Coupling(name = 'GC_1032',
+                 value = '-4*complex(0,1)*lam',
+                 order = {'QED':2})
+
+GC_1068 = Coupling(name = 'GC_1068',
+                 value = '-2*complex(0,1)*lam*v',
+                 order = {'QED':1})
+
+GC_1006 = Coupling(name = 'GC_1006',
+                value = '2*ee**2*complex(0,1)',
+                order = {'QED':2})
+
+GC_1003 = Coupling(name = 'GC_1003',
+                value = '-(ee*complex(0,1))',
+                order = {'QED':1})
+
+GC_1055 = Coupling(name = 'GC_1055',
+                 value = '-(ee**2*complex(0,1))/(2.*sw)',
+                 order = {'QED':2})
+
+GC_1054 = Coupling(name = 'GC_1054',
+                 value = '-ee**2/(2.*sw)',
+                 order = {'QED':2})
+
+GC_1074 = Coupling(name = 'GC_1074',
+                 value = '-(ee**2*v)/(2.*sw)',
+                 order = {'QED':1})
+
+GC_1039 = Coupling(name = 'GC_1039',
+                 value = '(ee*complex(0,1))/(2.*sw)',
+                 order = {'QED':1})
+
+GC_1037 = Coupling(name = 'GC_1037',
+                 value = '-ee/(2.*sw)',
+                 order = {'QED':1})
+
+GC_1056 = Coupling(name = 'GC_1056',
+                 value = 'ee**2/(2.*sw)',
+                 order = {'QED':2})
+
+GC_1075 = Coupling(name = 'GC_1075',
+                 value = '(ee**2*v)/(2.*sw)',
+                 order = {'QED':1})
+
+GC_1038 = Coupling(name = 'GC_1038',
+                 value = '-(ee*complex(0,1))/(2.*sw)',
+                 order = {'QED':1})
+
+GC_1034 = Coupling(name = 'GC_1034',
+                 value = '(ee**2*complex(0,1))/(2.*sw**2)',
+                 order = {'QED':2})
+
+GC_1063 = Coupling(name = 'GC_1063',
+                 value = '(cw*ee**2*complex(0,1))/sw - (ee**2*complex(0,1)*sw)/cw',
+                 order = {'QED':2})
+
+GC_1060 = Coupling(name = 'GC_1060',
+                 value = '-(cw*ee)/(2.*sw) - (ee*sw)/(2.*cw)',
+                 order = {'QED':1})
+
+GC_1061 = Coupling(name = 'GC_1061',
+                 value = '-(cw*ee*complex(0,1))/(2.*sw) + (ee*complex(0,1)*sw)/(2.*cw)',
+                 order = {'QED':1})
+
+GC_1008 = Coupling(name = 'GC_1008',
+                value = '(ee**2*complex(0,1))/(2.*cw)',
+                order = {'QED':2})
+
+GC_1009 = Coupling(name = 'GC_1009',
+                value = 'ee**2/(2.*cw)',
+                order = {'QED':2})
+
+GC_1067 = Coupling(name = 'GC_1067',
+                 value = '(ee**2*v)/(2.*cw)',
+                 order = {'QED':1})
+
+GC_1007 = Coupling(name = 'GC_1007',
+                value = '-ee**2/(2.*cw)',
+                order = {'QED':2})
+
+GC_1066 = Coupling(name = 'GC_1066',
+                 value = '-(ee**2*v)/(2.*cw)',
+                 order = {'QED':1})
+
+GC_1065 = Coupling(name = 'GC_1065',
+                 value = 'ee**2*complex(0,1) + (cw**2*ee**2*complex(0,1))/(2.*sw**2) + (ee**2*complex(0,1)*sw**2)/(2.*cw**2)',
+                 order = {'QED':2})
+
+GC_1064 = Coupling(name = 'GC_1064',
+                 value = '-(ee**2*complex(0,1)) + (cw**2*ee**2*complex(0,1))/(2.*sw**2) + (ee**2*complex(0,1)*sw**2)/(2.*cw**2)',
+                 order = {'QED':2})
+
+GC_1082 = Coupling(name = 'GC_1082',
+                 value = '-(yb/cmath.sqrt(2))',
+                 order = {'QED':1})
+
+GC_1016 = Coupling(name = 'GC_1016',
+                 value = '-I2x12',
+                 order = {'QED':1})
+
+GC_1017 = Coupling(name = 'GC_1017',
+                 value = '-I2x13',
+                 order = {'QED':1})
+
+GC_1018 = Coupling(name = 'GC_1018',
+                 value = '-I2x22',
+                 order = {'QED':1})
+
+GC_1019 = Coupling(name = 'GC_1019',
+                 value = '-I2x23',
+                 order = {'QED':1})
+
+GC_1013 = Coupling(name = 'GC_1013',
+                 value = 'I1x31',
+                 order = {'QED':1})
+
+GC_1014 = Coupling(name = 'GC_1014',
+                 value = 'I1x32',
+                 order = {'QED':1})
+
+GC_1020 = Coupling(name = 'GC_1020',
+                 value = '-I2x32',
+                 order = {'QED':1})
+
+GC_1015 = Coupling(name = 'GC_1015',
+                 value = 'I1x33',
+                 order = {'QED':1})
+
+GC_1021 = Coupling(name = 'GC_1021',
+                 value = '-I2x33',
+                 order = {'QED':1})
+
+GC_1088 = Coupling(name = 'GC_1088',
+                 value = '-(ye/cmath.sqrt(2))',
+                 order = {'QED':1})
+
+GC_1092 = Coupling(name = 'GC_1092',
+                 value = '-(ym/cmath.sqrt(2))',
+                 order = {'QED':1})
+
+GC_1098 = Coupling(name = 'GC_1098',
+                 value = '-(ytau/cmath.sqrt(2))',
+                 order = {'QED':1})
+
+GC_1087 = Coupling(name = 'GC_1087',
+                 value = 'ye',
+                 order = {'QED':1})
+
+GC_1091 = Coupling(name = 'GC_1091',
+                 value = 'ym',
+                 order = {'QED':1})
+
+GC_1097 = Coupling(name = 'GC_1097',
+                 value = 'ytau',
+                 order = {'QED':1})
+
+GC_1028 = Coupling(name = 'GC_1028',
+                 value = '-I4x13',
+                 order = {'QED':1})
+
+GC_1022 = Coupling(name = 'GC_1022',
+                 value = 'I3x21',
+                 order = {'QED':1})
+
+GC_1023 = Coupling(name = 'GC_1023',
+                 value = 'I3x22',
+                 order = {'QED':1})
+
+GC_1024 = Coupling(name = 'GC_1024',
+                 value = 'I3x23',
+                 order = {'QED':1})
+
+GC_1025 = Coupling(name = 'GC_1025',
+                 value = 'I3x31',
+                 order = {'QED':1})
+
+GC_1029 = Coupling(name = 'GC_1029',
+                 value = '-I4x23',
+                 order = {'QED':1})
+
+GC_1026 = Coupling(name = 'GC_1026',
+                 value = 'I3x32',
+                 order = {'QED':1})
+
+GC_1027 = Coupling(name = 'GC_1027',
+                 value = 'I3x33',
+                 order = {'QED':1})
+
+GC_1030 = Coupling(name = 'GC_1030',
+                 value = '-I4x33',
+                 order = {'QED':1})
+
+GC_1085 = Coupling(name = 'GC_1085',
+                 value = 'yc/cmath.sqrt(2)',
+                 order = {'QED':1})
+
+GC_1095 = Coupling(name = 'GC_1095',
+                 value = 'yt/cmath.sqrt(2)',
+                 order = {'QED':1})
+
+GC_1086 = Coupling(name = 'GC_1086',
+                 value = '-ye',
+                 order = {'QED':1})
+
+GC_1090 = Coupling(name = 'GC_1090',
+                 value = '-ym',
+                 order = {'QED':1})
+
+GC_1096 = Coupling(name = 'GC_1096',
+                 value = '-ytau',
+                 order = {'QED':1})
+
+
+
+
+
+
+
+
