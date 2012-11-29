@@ -269,7 +269,7 @@ class SALauncher(ExtLauncher):
 class aMCatNLOLauncher(ExtLauncher):
     """A class to launch MadEvent run"""
     
-    def __init__(self, running_dir, cmd_int, run_mode='aMC@NLO', unit='pb', **option):
+    def __init__(self, running_dir, cmd_int, run_mode='', unit='pb', **option):
         """ initialize the StandAlone Version"""
 
         ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **option)

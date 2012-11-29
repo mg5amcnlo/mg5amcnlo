@@ -3447,6 +3447,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # Import files
     def do_import(self, line):
         """Main commands: Import files with external formats"""
+        
         args = self.split_arg(line)
         # Check argument's validity
         self.check_import(args)

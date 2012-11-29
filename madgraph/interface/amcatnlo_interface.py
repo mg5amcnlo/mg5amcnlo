@@ -118,7 +118,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         if not args:
             if self._done_export:
                 args.append(self._done_export[0])
-                args.append('aMC@NLO')
+                args.append('auto')
 
                 return
             else:
@@ -131,15 +131,15 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             return self.InvalidCmd, 'Invalid Syntax: Too many argument'
 
         elif len(args) == 2:
-            if not args[1] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO']:
+            if not args[1] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'auto']:
                 raise self.InvalidCmd, '%s is not a valid mode, please use "LO", "NLO", "aMC@NLO" or "aMC@LO"' % args[1]
         else:
             #check if args[0] is path or mode
-            if args[0] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO'] and self._done_export:
+            if args[0] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'auto'] and self._done_export:
                 args.insert(0, self._done_export[0])
             elif os.path.isdir(args[0]) or os.path.isdir(pjoin(MG5DIR, args[0]))\
                     or os.path.isdir(pjoin(MG4DIR, args[0])):
-                args.append('aMC@NLO')
+                args.append('auto')
         mode = args[1]
         
         # search for a valid path
@@ -568,8 +568,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             if hasattr(self, 'do_shell'):
                 ME = run_interface.aMCatNLOCmdShell(me_dir=argss[0], options=self.options)
             else:
-                 ME = run_interface.aMCatNLOCmd(me_dir=argss[0],options=self.options)
-                 ME.pass_in_web_mode()
+                ME = run_interface.aMCatNLOCmd(me_dir=argss[0],options=self.options)
+                ME.pass_in_web_mode()
             # transfer interactive configuration
             config_line = [l for l in self.history if l.strip().startswith('set')]
             for line in config_line:

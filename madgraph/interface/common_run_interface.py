@@ -1265,12 +1265,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             logger.info("An estimation of the maximum weight is needed for the unweighting ")
             answer=self.ask("Enter the maximum weight, or enter a negative number if unknown \n",-1.0)
             answer=answer.replace("\n","") 
-            if float(answer) < 0:
+            if float(answer) > 0:
                 madspin_cmd.exec_cmd('set max_weight %s' % answer)
             else:
                 logger.info("The maximum weight will be evaluated")
     
-                madspin_cmd.exec_cmd('launch')
+            madspin_cmd.exec_cmd('launch')
                 
         # create a new run_name directory for this output
         i = 1
@@ -1282,6 +1282,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         os.mkdir(pjoin(evt_dir, new_run))
         current_file = args[0].replace('.lhe', '_decayed.lhe')
         new_file = pjoin(evt_dir, new_run, os.path.basename(args[0]))
+        if not os.path.exists(current_file):
+            misc.sprint(current_file)
+            logger.error('MadSpin fails to create any decayed file.')
+            return
+        
         files.mv(current_file, new_file)
         
         if hasattr(self, 'results'):

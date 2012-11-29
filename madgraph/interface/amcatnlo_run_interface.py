@@ -549,12 +549,12 @@ class CheckValidForCmd(object):
 
     def check_launch(self, args, options):
         """check the validity of the line. args is MODE
-        MODE being LO, NLO, aMC@NLO or aMC@LO. If no mode is passed, aMC@NLO is used"""
+        MODE being LO, NLO, aMC@NLO or aMC@LO. If no mode is passed, auto is used"""
         # modify args in order to be DIR 
         # mode being either standalone or madevent
         
         if not args:
-            args.append('aMC@NLO')
+            args.append('auto')
             return
         
         if len(args) > 1:
@@ -562,7 +562,7 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd, 'Invalid Syntax: Too many argument'
 
         elif len(args) == 1:
-            if not args[0] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO']:
+            if not args[0] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO','auto']:
                 raise self.InvalidCmd, '%s is not a valid mode, please use "LO", "NLO", "aMC@NLO" or "aMC@LO"' % args[0]
         mode = args[0]
         
@@ -1010,10 +1010,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         mode = argss[0]
         if mode in ['LO', 'NLO']:
             options['parton'] = True
-        self.ask_run_configuration(mode, options)
+        mode = self.ask_run_configuration(mode, options)
+        if '+' in mode:
+            mode = mode.split('+')[0]
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
-        if self.check_mcatnlo_dir() and not options['parton']:
+        self.exec_cmd('decay_events -from_cards', postcmd=False)
+        if self.check_mcatnlo_dir() and not options['parton'] and mode !='noshower':
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
 
@@ -2025,6 +2028,8 @@ Integrated cross-section
         nb_core = multiprocessing.cpu_count()
 
         #define which executable/tests to compile
+        if '+' in mode:
+            mode = mode.split('+')[0]
         if mode in ['NLO', 'LO']:
             exe = 'madevent_vegas'
             tests = ['test_ME']
@@ -2236,16 +2241,63 @@ Integrated cross-section
     def ask_run_configuration(self, mode, options):
         """Ask the question when launching generate_events/multi_run"""
         
-        if 'parton' in options.keys():
-            if options['parton'] == False:
-                cards = ['param_card.dat', 'run_card.dat', 'shower_card.dat']
-            elif options['parton'] == 'onlyshower':
-                cards = ['shower_card.dat']
-            else:  
-                cards = ['param_card.dat', 'run_card.dat']
-        else:  
-            cards = ['param', 'run', 'shower']
-
+        if mode == 'auto': 
+            mode = None
+                
+        available_mode = ['0', '1', '2', '3']
+        name = {'0': 'auto', '1': 'NLO', '2':'aMC@NLO', '3':'noshower'}
+        answers = []
+        for opt in available_mode:
+            value = int(opt)
+            tag = name[opt]
+            answers += [opt, tag]
+            if value > 1:
+                answers.append(10+value)
+                answers.append('%s+madspin' % tag)
+            
+        question = """Which programs do you want to run?
+  0 / auto     : Running existing card.
+  1 / NLO      : Fix order NLO cross-section (No event generation).
+  2 / aMC@NLO  : Event generation (including shower).
+  3 / noshower: Event generation (No shower) NOT PHYSICAL!.
++10 / +madspin : Adding decay with MadSpin [before the shower].\n"""
+        
+        if not self.force:
+            if not mode:
+                mode = self.ask(question, '0', answers)
+        elif not mode:
+            mode = 'auto'
+            
+        if mode.isdigit():
+            value =  int(mode)
+            if value > 10:
+                # Running MadSpin
+                mode = str(value-10)
+                mode = name[mode] + '+madspin'
+            else:
+                mode = name[mode]
+        
+        auto = False
+        if mode == 'auto':
+            auto = True
+            if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
+                mode = 'aMC@NLO'
+            else:
+                mode = 'noshower'
+            if os.path.exists(pjoin(self.me_dir, 'Cards', 'madspin_card.dat')):
+                mode += '+madspin'         
+        logger.info('Will run in mode %s' % mode)
+                
+        # specify the cards which are needed for this run.
+        cards = ['param_card.dat', 'run_card.dat']
+        if mode in ['LO', 'NLO']:
+            options['parton'] = True
+        elif 'madspin' in mode:
+            cards.append('madspin_card.dat')
+        if 'aMC@NLO' in mode:
+            cards.append('shower_card.dat')
+        self.keep_cards(cards)
+        
         if not options['force'] and not  self.force:
             self.ask_edit_cards(cards)   
 
@@ -2254,10 +2306,16 @@ Integrated cross-section
         self.run_tag = self.run_card['run_tag']
         self.run_name = self.find_available_run_name(self.me_dir)
         self.set_run_name(self.run_name, self.run_tag, 'parton')
-        shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
-        self.shower_card = shower_card.ShowerCard(shower_card_path)
-        #self.do_treatcards_nlo('')
-        return
+        if 'aMC@NLO' in mode:
+            shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
+            self.shower_card = shower_card.ShowerCard(shower_card_path)
+        
+        # check if we need to install the shower
+        if 'aMC@NLO' in mode and not self.options['MCatNLO-utilities_path']:
+            self.exec_cmd('import MCatNLO-utilities', printcmd=True, precmd=False)
+        
+        
+        return mode
 
     def do_quit(self, line):
         """ """

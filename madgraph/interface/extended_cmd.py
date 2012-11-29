@@ -496,18 +496,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             return line
         line = line.lstrip()
 
-        # Update the history of this suite of command,
-        # except for useless commands (empty history and help calls)
-        if ';' in line: 
-            lines = line.split(';')
-        else:
-            lines = [line]
-        for l in lines:
-            l = l.strip()
-            if not (l.startswith("history") or l.startswith('help') or \
-                                                            l.startswith('#*')):
-                self.history.append(l)
-
         # Check if we are continuing a line:
         if self.save_line:
             line = self.save_line + line 
@@ -517,18 +505,22 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if line.endswith('\\'):
             self.save_line = line[:-1]
             return '' # do nothing   
-        
+                
         # Remove comment
         if '#' in line:
             line = line.split('#')[0]
 
         # Deal with line splitting
-        if ';' in line and not (line.startswith('!') or line.startswith('shell')):
-            for subline in line.split(';'):
+        if ';' in line: 
+            lines = line.split(';')
+            for subline in lines:
+                if not (subline.startswith("history") or subline.startswith('help') \
+                        or subline.startswith('#*')): 
+                    self.history.append(subline)           
                 stop = self.onecmd(subline)
                 stop = self.postcmd(stop, subline)
             return ''
-        
+            
         # execute the line command
         return line
 
