@@ -76,6 +76,10 @@ R2_GGb = Coupling(name = 'R2_GGb',
                  value = '(2.0)*complex(0,1)*G**2*(-6.0*MB**2)/(48.0*cmath.pi**2)',
                  order = {'QCD':2})
 
+R2_GGc = Coupling(name = 'R2_GGc',
+                 value = '(2.0)*complex(0,1)*G**2*(-6.0*MC**2)/(48.0*cmath.pi**2)',
+                 order = {'QCD':2})
+
 R2_GGt = Coupling(name = 'R2_GGt',
                  value = '(2.0)*complex(0,1)*G**2*(-6.0*MT**2)/(48.0*cmath.pi**2)',
                  order = {'QCD':2})
@@ -90,6 +94,10 @@ R2_GGg_2 = Coupling(name = 'R2_GGg_2',
 
 R2_QQq = Coupling(name = 'R2_QQq',
                  value =  'lhv*complex(0,1)*G**2*(Ncol**2-1)/(32.0*cmath.pi**2*Ncol)',
+                 order = {'QCD':2})
+
+R2_QQc = Coupling(name = 'R2_QQc',
+                 value =  'lhv*complex(0,1)*G**2*(Ncol**2-1)*(2.0*MC)/(32.0*cmath.pi**2*Ncol)',
                  order = {'QCD':2})
 
 R2_QQb = Coupling(name = 'R2_QQb',

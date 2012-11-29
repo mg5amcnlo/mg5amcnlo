@@ -187,9 +187,9 @@ def runIOTests(arg=[''],update=True,force=False,synchronize=False):
             os.makedirs(_hc_comparison_files)
     
     # Make a backup of the comparison file directory in order to revert it if
-    # the user wants to ignore the changes detected
+    # the user wants to ignore the changes detected (only when updating the refs)
     hc_comparison_files_BackUp = _hc_comparison_files+'_BackUp'
-    if path.isdir(_hc_comparison_files):
+    if update and path.isdir(_hc_comparison_files):
         if path.isdir(hc_comparison_files_BackUp):        
             shutil.rmtree(hc_comparison_files_BackUp)
         shutil.copytree(_hc_comparison_files,hc_comparison_files_BackUp)
@@ -214,8 +214,23 @@ def runIOTests(arg=[''],update=True,force=False,synchronize=False):
     
     # runIOTests cannot be made a classmethod, so I use an instance, but it does 
     # not matter which one as no instance attribute will be used.
-    modifications = IOTestsInstances[-1].runIOTests( update = update, force = force,\
-                          verbose=True, testKeys=IOTestManager.all_tests.keys()) 
+    try:
+        modifications = IOTestsInstances[-1].runIOTests( update = update, 
+           force = force, verbose=True, testKeys=IOTestManager.all_tests.keys())
+    except KeyboardInterrupt:
+        if update:
+            # Remove the BackUp of the reference files.
+            if not path.isdir(hc_comparison_files_BackUp):
+                print "\nWARNING:: Update interrupted and modifications already "+\
+                                              "performed could not be reverted."
+            else:
+                shutil.rmtree(_hc_comparison_files)
+                mv(hc_comparison_files_BackUp,_hc_comparison_files)
+                print "\nINFO:: Update interrupted, existing modifications reverted."
+            sys.exit(0)
+        else:
+            print "\nINFO:: IOTest runs interrupted."
+            sys.exit(0)
  
     tot_time = time.time() - start
     
@@ -261,7 +276,7 @@ def runIOTests(arg=[''],update=True,force=False,synchronize=False):
         print "\nNo modifications performed. No update necessary."
     
     # Remove the BackUp of the reference files.
-    if path.isfile(hc_comparison_files_BackUp):
+    if path.isdir(hc_comparison_files_BackUp):
         shutil.rmtree(hc_comparison_files_BackUp)
 
 #===============================================================================

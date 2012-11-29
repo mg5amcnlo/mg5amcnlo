@@ -143,6 +143,9 @@ c Initialize upper bounding envelope
       enddo
 c Main loop over the iterations
  10   continue
+c This makes sure that current stdout is written to log.txt and cache is
+c emptied.
+      call flush(6)
       if(nit.ge.nitmax) then
 c We did enough iterations, update arguments and return
          if(imode.eq.0) xint=ans_abs

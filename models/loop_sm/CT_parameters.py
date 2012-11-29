@@ -46,6 +46,12 @@ G_UVq = CTParameter(name = 'G_UVq',
                     value = {-1:'((G**2)/(2.0*48.0*cmath.pi**2))*4.0*TF'},
                     texname = '\delta Gq')
 
+G_UVc = CTParameter(name = 'G_UVc',
+                    type = 'real',
+                    value = {-1:'((G**2)/(2.0*48.0*cmath.pi**2))*4.0*TF',
+                              0:'cond(MC,0.0,-((G**2)/(2.0*48.0*cmath.pi**2))*4.0*TF*reglog(MC**2/MU_R**2))'},
+                    texname = '\delta Gc')
+
 G_UVb = CTParameter(name = 'G_UVb',
                     type = 'real',
                     value = {-1:'((G**2)/(2.0*48.0*cmath.pi**2))*4.0*TF',
@@ -57,6 +63,13 @@ G_UVt = CTParameter(name = 'G_UVt',
                     value = {-1:'((G**2)/(2.0*48.0*cmath.pi**2))*4.0*TF',
                               0:'cond(MT,0.0,-((G**2)/(2.0*48.0*cmath.pi**2))*4.0*TF*reglog(MT**2/MU_R**2))'},
                     texname = '\delta Gt')
+
+GWcft_UV_c = CTParameter(name = 'GWcft_UV_c',
+                         type = 'real',
+                         value = {-1:'cond(MC,0.0,-((G**2)/(2.0*48.0*cmath.pi**2))*4.0*TF)',
+                                   0:'cond(MC,0.0,((G**2)/(2.0*48.0*cmath.pi**2))*4.0*TF*reglog(MC**2/MU_R**2))'
+                                 },
+                         texname = '\delta G_{wfct\_c}')
 
 GWcft_UV_b = CTParameter(name = 'GWcft_UV_b',
                          type = 'real',
@@ -71,6 +84,13 @@ GWcft_UV_t = CTParameter(name = 'GWcft_UV_t',
                                    0:'cond(MT,0.0,((G**2)/(2.0*48.0*cmath.pi**2))*4.0*TF*reglog(MT**2/MU_R**2))'
                                  },
                          texname = '\delta G_{wfct\_t}')
+
+cWcft_UV = CTParameter(name = 'cWcft_UV',
+                       type = 'real',
+                       value = {-1:'cond(MC,0.0,-((G**2)/(2.0*16.0*cmath.pi**2))*3.0*CF)',
+                                 0:'cond(MC,0.0,-((G**2)/(2.0*16.0*cmath.pi**2))*CF*(4.0-3.0*reglog(MC**2/MU_R**2)))'
+                               },
+                       texname = '\delta Z_c')
 
 bWcft_UV = CTParameter(name = 'bWcft_UV',
                        type = 'real',
@@ -92,6 +112,13 @@ bMass_UV = CTParameter(name = 'bMass_UV',
                                  0:'cond(MB,0.0,complex(0,1)*((G**2)/(16.0*cmath.pi**2))*CF*(4.0-3.0*reglog(MB**2/MU_R**2))*MB)'
                                },
                        texname = '\delta m_b')
+
+cMass_UV = CTParameter(name = 'cMass_UV',
+                       type = 'complex',
+                       value = {-1:'cond(MC,0.0,complex(0,1)*((G**2)/(16.0*cmath.pi**2))*(3.0*CF)*MC)',
+                                 0:'cond(MC,0.0,complex(0,1)*((G**2)/(16.0*cmath.pi**2))*CF*(4.0-3.0*reglog(MC**2/MU_R**2))*MC)'
+                               },
+                       texname = '\delta m_c')
 
 tMass_UV = CTParameter(name = 'tMass_UV',
                        type = 'cocomplex',

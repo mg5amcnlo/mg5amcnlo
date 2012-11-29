@@ -2953,7 +2953,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
         # Output the result to the interface directly if short enough or if it
         # was anyway not output to the pager
-        if (len(text.split('\n'))<=20 or reuse):
+        if len(text.split('\n'))<=20 or reuse:
             logger.info(text)
         else:
             logger.debug(text)            
@@ -4965,8 +4965,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             # copy the MCatNLO directory from mcatnlo-utils inside the exported dir
             if os.path.isdir(pjoin(MG5DIR, 'MCatNLO-utilities')):
-                os.system('cp -r %s %s' % \
-                        (pjoin(MG5DIR, 'MCatNLO-utilities', 'MCatNLO'), self._export_dir))
+                files.cp(pjoin(MG5DIR, 'MCatNLO-utilities', 'MCatNLO'), self._export_dir)
             else:
                 logger.warning('MCatNLO-utilities is not installed.')
                 logger.warning('If you want to shower events ' + \

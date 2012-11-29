@@ -204,14 +204,16 @@ class ML5Test(unittest.TestCase):
     def test_short_ML5_sm_vs_stored_ML5(self):
         self.compare_processes(ML5_processes_short,model = self.test_model_name,
                                    pickle_file = 'ml5_short_parallel_tests.pkl',
-                                        filename = 'ptest_short_ml5_vs_old_ml5')
+                                        filename = 'ptest_short_ml5_vs_old_ml5',
+                                                            chosen_runner='ML5')
 
     # In principle since previous version of ML5 has been validated against ML4, 
     # it is not necessary to test both against ML4 and the old ML5.
     def test_short_ML5_sm_vs_stored_ML4(self):
         self.compare_processes(ML4_processes_short,model = self.test_model_name,
                                     pickle_file = 'ml4_short_parallel_test.pkl',
-                                            filename = 'ptest_short_ml5_vs_ml4')
+                                            filename = 'ptest_short_ml5_vs_ml4',
+                                                            chosen_runner='ML4')
 
     # The tests below probe one quite long process at a time individually, so
     # one can better manage them.
@@ -220,7 +222,7 @@ class ML5Test(unittest.TestCase):
     # First the long checks against results available in MadLoop4
     #===========================================================================
 
-#   Use the quick process below only for testing the parallel tests
+#   Use the quick process below for testing the parallel test
     def notest_long_sm_vs_stored_ML4_epem_ddx(self):
         proc = 'epem_ddx'
         self.compare_processes([ML4_processes_long_dic[proc]], 

@@ -113,14 +113,16 @@ V_R2GG = CTVertex(name = 'V_R2GG',
                particles = [ P.G, P.G ],
                color = [ 'Tr(1,2)' ],
                lorentz = [ L.R2_GG_1, L.R2_GG_2, L.R2_GG_3],
-               loop_particles = [ [[P.u],[P.d],[P.c],[P.s]],
+               loop_particles = [ [[P.u],[P.d],[P.s]],
+                                  [[P.c]],
                                   [[P.b]],
                                   [[P.t]],
                                   [[P.G]] ],
                couplings = {(0,0,0):C.R2_GGq,
-                            (0,0,1):C.R2_GGq,(0,2,1):C.R2_GGb,
-                            (0,0,2):C.R2_GGq,(0,2,2):C.R2_GGt,
-                            (0,0,3):C.R2_GGg_1, (0,1,3):C.R2_GGg_2},
+                            (0,0,1):C.R2_GGq,(0,2,1):C.R2_GGc,                            
+                            (0,0,2):C.R2_GGq,(0,2,2):C.R2_GGb,
+                            (0,0,3):C.R2_GGq,(0,2,3):C.R2_GGt,
+                            (0,0,4):C.R2_GGg_1, (0,1,4):C.R2_GGg_2},
                type = 'R2')
 
 # d~d            
@@ -154,10 +156,10 @@ V_R2SS = CTVertex(name = 'V_R2SS',
 V_R2CC = CTVertex(name = 'V_R2CC',
                particles = [ P.c__tilde__, P.c ],
                color = [ 'Identity(1,2)' ],
-               lorentz = [ L.R2_QQ_1 ],
+               lorentz = [ L.R2_QQ_1, L.R2_QQ_2 ],
                loop_particles = [[[P.c,P.G]]],
-               couplings = {(0,0,0):C.R2_QQq},                
-               type = 'R2') 
+               couplings = {(0,0,0):C.R2_QQq,(0,1,0):C.R2_QQc},                
+               type = 'R2')
 
 # b~b            
 V_R2BB = CTVertex(name = 'V_R2BB',

@@ -77,7 +77,6 @@ C-----
 
       nfail = 0
       npointsChecked = 0
-      open (unit=60, file='check_poles.log',status='unknown')
 
 200   continue
           calculatedborn = .false.
@@ -166,43 +165,42 @@ C         Otherwise, perform the check
              if ((dabs((double-fks_double)/double).gt.tolerance).or. 
      1            (dabs((single-fks_single)/single).gt.tolerance)) then
                 nfail = nfail + 1
-                write(60,*) 'FAILED', tolerance
+                write(*,*) 'FAILED', tolerance
              else
-                write(60,*) 'PASSED', tolerance
+                write(*,*) 'PASSED', tolerance
              endif
           elseif ( fks_double.ne.0d0 ) then
              if ((dabs((double-fks_double)/fks_double).gt.tolerance).or. 
      1            (dabs((single-fks_single)/single).gt.tolerance)) then
                 nfail = nfail + 1
-                write(60,*) 'FAILED', tolerance
+                write(*,*) 'FAILED', tolerance
              else
-                write(60,*) 'PASSED', tolerance
+                write(*,*) 'PASSED', tolerance
              endif
           else
              if (dabs((single-fks_single)/single).gt.tolerance) then
                 nfail = nfail + 1
-                write(60,*) 'FAILED', tolerance
+                write(*,*) 'FAILED', tolerance
              else
-                write(60,*) 'PASSED', tolerance
+                write(*,*) 'PASSED', tolerance
              endif
           endif
 
-          write(60,*) 'MU_R    = ', ren_scale
-          write(60,*) 'ALPHA_S = ', G**2/4d0/pi
-          write(60,*) 'BORN                 ', real(born(1))
-          write(60,*) 'SINGLE POLE (MadFKS) ', fks_single 
-          write(60,*) 'DOUBLE POLE (MadFKS) ', fks_double 
-          write(60,*) 'SINGLE POLE (MadLoop)', single 
-          write(60,*) 'DOUBLE POLE (MadLoop)', double 
-          write(60,*) 'FINITE PART (MadLoop)', finite 
+          write(*,*) 'MU_R    = ', ren_scale
+          write(*,*) 'ALPHA_S = ', G**2/4d0/pi
+          write(*,*) 'BORN                 ', real(born(1))
+          write(*,*) 'SINGLE POLE (MadFKS) ', fks_single 
+          write(*,*) 'DOUBLE POLE (MadFKS) ', fks_double 
+          write(*,*) 'SINGLE POLE (MadLoop)', single 
+          write(*,*) 'DOUBLE POLE (MadLoop)', double 
+          write(*,*) 'FINITE PART (MadLoop)', finite 
           do j = 1, nexternal - 1
-            write(60,*) p(0,j), p(1,j), p(2,j), p(3,j), pmass(j)
+            write(*,*) p(0,j), p(1,j), p(2,j), p(3,j), pmass(j)
           enddo
-          write(60,*)
+          write(*,*)
 
       if (npointsChecked.lt.npoints) goto 200 
 
-      close(60)
 
           write(*,*) 'NUMBER OF POINTS PASSING THE CHECK', 
      1     npoints - nfail

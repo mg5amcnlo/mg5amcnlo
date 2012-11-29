@@ -9,7 +9,7 @@ FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
 #FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins )
 #FJLIBS=
 
-NLOLIBS=$(libmadloop)
+NLOLIBS=$(libmadloop) $(libcuttools)
 # Uncomment the line below to compile 'by hand'
 # NLOLIBS= -L. -lmadloop -L$(LIBDIR) -lcts
 LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf $(lhapdf)
@@ -81,16 +81,16 @@ test_MC: symmetry_fks_test_MC.o $(TEST)
 	$(FC) $(FFLAGS) -o test_MC symmetry_fks_test_MC.o $(TEST) $(LINKLIBS) $(FJLIBS)
 	rm symmetry_fks_test_MC.o
 
-check_poles: $(POLES)
+check_poles: $(POLES) $(libmadloop)
 	$(FC) $(FFLAGS) -o check_poles $(POLES) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
-madevent_vegas: $(VEGAS) makefile $(LIBS)
+madevent_vegas: $(VEGAS) $(libmadloop) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
-madevent_mintMC: $(MINTMC) makefile $(LIBS)
+madevent_mintMC: $(MINTMC) $(libmadloop) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
-madevent_reweight: $(BORN_REWEIGHT) makefile $(LIBS)
+madevent_reweight: $(BORN_REWEIGHT) $(libmadloop) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS)
 
 reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
@@ -98,3 +98,12 @@ reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
 
 write_ajob_basic: $(WRITE_AJOB_BASIC)
 	$(FC) $(FFLAGS) -o write_ajob_basic $(WRITE_AJOB_BASIC)
+
+libMadLoop.a:
+	for dir in `ls -d V*`; do cd $$dir; make; cd ../; done
+
+clean:
+	@rm -f *.o write_ajob_basic reweight_xsec_events madevent_* check_poles\
+	    test_M* gensym
+	for dir in `ls -d V*`; do cd $$dir; make clean; cd ../; done
+

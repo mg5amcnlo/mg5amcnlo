@@ -137,11 +137,29 @@ def cp(path1, path2, log=True):
     try:
         shutil.copy(path1, path2)
     except IOError, why:
-        if log:
-            logger.warning(why)
+        try: 
+            if os.path.exists(path2):
+                path2 = os.path.join(path2, os.path.split(path1)[1])
+            shutil.copytree(path1, path2)
+        except IOError, why:
+            if log:
+                logger.warning(why)
     except shutil.Error:
         # idetical file
         pass
+
+def rm(path, log=True):
+    """removes path, that can be a single element or a list"""
+    if type(path) == list:
+        for p in path:
+            rm(p, log)
+    else:
+        path = format_path(path)
+        try:
+            os.remove(path)
+        except OSError:
+            shutil.rmtree(path, ignore_errors = True)
+
         
     
 def mv(path1, path2):
