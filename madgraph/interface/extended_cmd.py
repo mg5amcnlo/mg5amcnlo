@@ -522,6 +522,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             return ''
             
         # execute the line command
+        self.history.append(line) 
         return line
 
     def postcmd(self,stop, line):

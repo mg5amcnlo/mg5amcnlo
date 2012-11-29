@@ -48,6 +48,7 @@ import models.import_ufo as import_ufo
 #from time import strftime
 #from madgraph.interface.madgraph_interface import MadGraphCmd
 import madgraph.interface.master_interface as Cmd
+import madgraph.interface.madevent_interface as me_interface
 logger = logging.getLogger('decay.stdout') # -> stdout
 logger_stderr = logging.getLogger('decay.stderr') # ->stderr
 
@@ -180,7 +181,6 @@ class Event:
         line="<event> \n"
         line1=' %2d %6d %+13.7e %14.8e %14.8e %14.8e' % \
         (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
-        line1=line1.replace("e","d")
         line+=line1+"\n"
         for item in range(1,len(self.event2mg.keys())+1):
             part=self.event2mg[item]
@@ -205,7 +205,6 @@ class Event:
                leg["colup1"],leg["colup2"],leg["momentum"].px,leg["momentum"].py,\
                 leg["momentum"].pz,leg["momentum"].E, leg["momentum"].m,\
                  0.0,float(leg["helicity"]) )
-        line=line.replace("e","d")
         line+="\n"
         return line
 
@@ -271,10 +270,10 @@ class Event:
         assert len(inputs) == 6
         self.nexternal=int(inputs[0])
         self.ievent=int(inputs[1])
-        self.wgt=float(inputs[2].replace("d","e"))
-        self.scale=float(inputs[3].replace("d","e"))
-        self.aqed=float(inputs[4].replace("d","e"))
-        self.aqcd=float(inputs[5].replace("d","e"))        
+        self.wgt=float(inputs[2])
+        self.scale=float(inputs[3])
+        self.aqed=float(inputs[4])
+        self.aqcd=float(inputs[5])        
         
         
 
@@ -329,7 +328,6 @@ class Event:
             elif line_type == 'event':
                 index_prod+=1
                 line=line.replace("\n","")
-                line=line.replace("d","e")
                 inputs=line.split()
                 pid=int(inputs[0])
                 istup=int(inputs[1])
@@ -1325,37 +1323,42 @@ class branching(dict):
 class width_estimate:
     """All methods used to calculate branching fractions"""
 
-    def __init__(self,resonances,path_me,pid2label_dic,model,base_model):
+    def __init__(self,resonances,path_me,pid2label_dic,banner,base_model):
 
-	self.resonances=resonances
-	self.path_me=path_me
-	self.pid2label=pid2label_dic
-	self.model=model
-	self.base_model=base_model
+        self.resonances=resonances
+        self.path_me=path_me
+        self.pid2label=pid2label_dic
+        self.label2pid = self.pid2label 
+        self.model=banner.get('model')
+        self.banner = banner
+        self.base_model=base_model
 
     def update_branch(self,branches,to_add):
-	""" complete the definition of the branch by appending each element of to_add"""
+        """ complete the definition of the branch by appending each element of to_add"""
         newbranches={}
 
         for item1 in branches.keys():
             for item2 in to_add.keys():
-              tag=item1+item2
-              newbranches[tag]={}
-              newbranches[tag]['config']=branches[item1]['config']+to_add[item2]['config']
-              newbranches[tag]['br']=branches[item1]['br']*to_add[item2]['br']
+                tag=item1+item2
+                newbranches[tag]={}
+                newbranches[tag]['config']=branches[item1]['config']+to_add[item2]['config']
+                newbranches[tag]['br']=branches[item1]['br']*to_add[item2]['br']
 
         return newbranches
 
-    def get_BR_for_each_decay(self,decay_processes,multiparticles,model,base_model,pid2label):
-	""" get the list for possible decays & the associated branching fraction  """
+    def get_BR_for_each_decay(self, decay_processes, multiparticles):
+        """ get the list for possible decays & the associated branching fraction  """
         
+        model = self.model
+        base_model = self.base_model
+        pid2label = self.pid2label
 
         ponctuation=[',','>',')','(']
         new_decay_processes={}       
 
         for part in decay_processes.keys():
-	    pos_symbol=-1
-	    branch_list=decay_processes[part].split()
+            pos_symbol=-1
+            branch_list=decay_processes[part].split()
             new_decay_processes[part]={}
             new_decay_processes[part]['']={}
             new_decay_processes[part]['']['config']=""
@@ -1365,11 +1368,10 @@ class width_estimate:
             final=[]
             for index, item in enumerate(branch_list):
                 # First get the symbol at the next position
-		if index<len(branch_list)-1:
+                if index<len(branch_list)-1:
                     next_symbol=branch_list[index+1]
-		else:
-		    next_symbol=''
-
+                else:
+                    next_symbol=''
                 # Then handle the symbol item case by case 
                 if next_symbol=='>':              # case1: we have a particle initiating a branching
                     initial=item
@@ -1405,7 +1407,7 @@ class width_estimate:
 
                         splittings={}
                         counter=0
-			for chan in self.br[initial].keys(): # loop over all channels
+			for chan in range(len(self.br[initial])): # loop over all channels
 			    got_it=0
                             for d1 in set_B: 
 				for d2 in set_C:
@@ -1443,211 +1445,185 @@ class width_estimate:
 
         return new_decay_processes
 
-
-
     def print_branching_fractions(self):
-	""" print a list of all known branching fractions"""
+        """ print a list of all known branching fractions"""
 
-	for res in self.br.keys():
-	    logger.info('  ')
- 	    logger.info('decay channels for '+res+' :')
-	    logger.info('       BR                 d1  d2' )
-
- 	    for chan in self.br[res].keys():
-		bran=self.br[res][chan]['br']
-		d1=self.br[res][chan]['daughters'][0]
-		d2=self.br[res][chan]['daughters'][1]
-	        logger.info('   %e            %s  %s ' % (bran, d1, d2) )
-	logger.info('  ')
+        for res in self.br.keys():
+            logger.info('  ')
+            logger.info('decay channels for '+res+' :')
+            logger.info('       BR                 d1  d2' )
+            for decay in self.br[res]:
+                bran = decay['br']
+                d1 = decay['daughters'][0]
+                d2 = decay['daughters'][1]
+                logger.info('   %e            %s  %s ' % (bran, d1, d2) )
+            logger.info('  ')
 
     def print_partial_widths(self):
-	""" print a list of all known partial widths"""
+        """ print a list of all known partial widths"""
 
-	for res in self.br.keys():
-	    logger.info('  ')
- 	    logger.info('decay channels for '+res+' :')
-	    logger.info('       width                     d1  d2' )
+        for res in self.br.keys():
+            logger.info('  ')
+            logger.info('decay channels for '+res+' :')
+            logger.info('       width                     d1  d2' )
 
- 	    for chan in self.br[res].keys():
-		width=self.br[res][chan]['width']
-		d1=self.br[res][chan]['daughters'][0]
-		d2=self.br[res][chan]['daughters'][1]
-	        logger.info('   %e            %s  %s ' % (width, d1, d2) )
-	logger.info('  ')
-
-    def extract_br_from_card(self,filename):
-        """read the file width_calculator/Events/run_width/param_card.dat
-	   and extrach the branching fractions
-
-           for each resonance with label 'res', and for each channel with index i,
-	   returns a dictionary 
-		branching_fractions[res][i]
-           with keys
-		'd1' : label of the first daughter
-		'd2' : label of the second daughter
-		'br' : value of the branching fraction 
-	"""
-	os.chdir(self.path_me)
-	trappe=open(filename)
-        branching_fractions={}
-        while 1:
- 	    line=trappe.readline()
-	    if line=="": break
-	    list1=line.split()
-	    if len(list1)<2: continue
-	    if list1[0]=='DECAY' and list1[1] in self.pid2label.keys():
-		label_mother=self.pid2label[int(list1[1])]
-                pos=trappe.tell()
-                line=trappe.readline()  
-		if line=="": break
-     	        list2=line.split()
-	        if len(list2)<2:
-		    trappe.seek(pos) 
-                    continue
-		if list2[1]=='BR':
-		    channel_index=0
-		    branching_fractions[label_mother]={}	
-		    while 1:
-		        line=trappe.readline()  
-		        if line=="" or line[0]=='#': break
-			channel_index+=1
-			#logger.info('Found a new channel in the param_card.dat')
-			branching_fractions[label_mother][channel_index]={}
-			list3=line.split()
-			if list3[1]=='2':
-			    branching_fractions[label_mother][channel_index]['daughters']=[]
-			    branching_fractions[label_mother][channel_index]['br']=\
-							float(list3[0]) 
-			    branching_fractions[label_mother][channel_index]\
-                                   ['daughters'].append(self.pid2label[int(list3[2])])
-			    branching_fractions[label_mother][channel_index]\
-                                   ['daughters'].append(self.pid2label[int(list3[3])])
-                else:
-                    trappe.seek(pos)
-
-	self.br=branching_fractions
+            for chan, decay in enumerate(self.br[res]):
+                width=self.br[res][chan]['width']
+                d1=self.br[res][chan]['daughters'][0]
+                d2=self.br[res][chan]['daughters'][1]
+                logger.info('   %e            %s  %s ' % (width, d1, d2) )
+            logger.info('  ')
 
 
-    def generate_code_for_width_evaluation(self,mgcmd):
+    def extract_br_from_width_evaluation(self):
         """ use madgraph to generate me's for res > all all  
-            OBSELETE: NOW WE USE THE FR IMPLEMENTATION
         """
-   
+        if os.path.isdir(pjoin(self.path_me,"width_calculator")):
+            shutil.rmtree(pjoin(self.path_me,"width_calculator"))
+        
+        path_me = self.path_me 
+        label2pid = self.label2pid
+        # first build a set resonances with pid>0
+
+        particle_set=[]
+        for part in self.resonances:
+            if label2pid[part]>0: particle_set.append(part)
+        for part in self.resonances:
+            if label2pid[part]<0:
+                pid_part=-label2pid[part]
+                if self.pid2label[pid_part] not in particle_set:
+                    particle_set.append(self.pid2label[pid_part])
+ 
+        mgcmd = Cmd.MasterCmd()
         commandline="import model "+self.model
         mgcmd.exec_cmd(commandline)#
 
-	logger.info("generate "+self.resonances[0]+" > all all")
-        commandline="generate "+self.resonances[0]+" > all all"
-	mgcmd.exec_cmd(commandline)
+        logger.info("generate "+particle_set[0]+" > all all")
+        commandline="generate "+particle_set[0]+" > all all"
+        mgcmd.exec_cmd(commandline)
 
-        if len(self.resonances)>1:
-	    for index in range(1,len(self.resonances)):
-		logger.info("add process "+self.resonances[index]+" > all all")		
-	        commandline="add process "+self.resonances[index]+" > all all "
-		mgcmd.exec_cmd(commandline)
+        if len(particle_set)>1:
+            for index in range(1,len(particle_set)):
+                logger.info("add process "+particle_set[index]+" > all all")		
+                commandline="add process "+particle_set[index]+" > all all "
+                mgcmd.exec_cmd(commandline)
 
-	commandline="output width_calculator -f"
-	mgcmd.exec_cmd(commandline)
-	
-    def extract_br_for_antiparticle(self,label2pid,pid2label):
+        commandline="output width_calculator -f"
+        mgcmd.exec_cmd(commandline)
+        shutil.copyfile(pjoin(path_me,"param_card.dat"), pjoin(path_me,'width_calculator','Cards','param_card.dat'))
+        
+        me_cmd = me_interface.MadEventCmd(pjoin(path_me,'width_calculator'))
+        me_cmd.exec_cmd('set automatic_html_opening False --no_save')
+        me_cmd.exec_cmd('calculate_decay_widths -f')
+        filename=pjoin(path_me,'width_calculator','Events','run_01','param_card.dat')
+        self.extract_br_from_card(filename)
+
+    def extract_br_for_antiparticle(self):
         '''  
             for each channel with a specific br value, 
             set the branching fraction of the complex conjugated channel 
             to the same br value 
         '''
-
-	for res in self.br.keys():
+        
+        label2pid = self.label2pid
+        pid2label = self.label2pid
+        
+        for res in self.br.keys():
             particle=self.base_model.get_particle(label2pid[res])
-            if particle['self_antipart']: continue
+            if particle['self_antipart']: 
+                continue
             anti_res=pid2label[-label2pid[res]]
-            self.br[anti_res]={}
- 	    for chan in self.br[res].keys():
-                self.br[anti_res][chan]={}
-		bran=self.br[res][chan]['br']
-		d1=self.br[res][chan]['daughters'][0]
-		d2=self.br[res][chan]['daughters'][1]
+            self.br[anti_res] = []
+            for chan, decay in enumerate(self.br[res]):
+                self.br[anti_res].append({})
+                bran=decay['br']
+                d1=decay['daughters'][0]
+                d2=decay['daughters'][1]
                 d1bar=pid2label[-label2pid[d1]]
                 d2bar=pid2label[-label2pid[d2]]
                 self.br[anti_res][chan]['br']=bran
                 self.br[anti_res][chan]['daughters']=[]
                 self.br[anti_res][chan]['daughters'].append(d1bar)
                 self.br[anti_res][chan]['daughters'].append(d2bar)
-                if self.br[res][chan].has_key('width'):
-		    self.br[anti_res][chan]['width']=self.br[res][chan]['width']
-		    
-    def extract_br_from_width(self):
-        """
-          If compute_width is used to get the partial width values from FR formulae,
-          we still need to evaluate the br's from the partial widths
-        """
-	for res in self.br.keys():
-            total_width=0.0
- 	    for chan in self.br[res].keys():
- 		total_width+=self.br[res][chan]['width']
- 	    for chan in self.br[res].keys():
- 		self.br[res][chan]['br']=self.br[res][chan]['width']/total_width                   
+                if decay.has_key('width'):
+                    self.br[anti_res][chan]['width']=decay['width']                  
 
-
-    def launch_width_evaluation(self,resonances,label2pid,pid2label,model):
+    def launch_width_evaluation(self,resonances, model, mg5cmd):
         """ launch the calculation of the partial widths """
 
+        label2pid = self.label2pid
+        pid2label = self.label2pid
         # first build a set resonances with pid>0
-	# since compute_width cannot be used for particle with pid<0
+        # since compute_width cannot be used for particle with pid<0
         
         particle_set=[]
         for part in resonances:
-            if label2pid[part]>0: particle_set.append(part)
-        for part in resonances:
-	    if label2pid[part]<0:
-                pid_part=-label2pid[part]
-                if pid2label[pid_part] not in particle_set:
-		    particle_set.append(pid2label[pid_part])  
-
+            pid_part = abs(label2pid[part]) 
+            if pid_part not in particle_set:
+                particle_set.append(pid_part)  
         # erase old info
         del self.br
         self.br={}
+        
 
-        data = model.set_parameters_and_couplings(pjoin(self.path_me,
-                                                              'param_card.dat'))
+        
+        argument = {'particles': particle_set, 
+                    'input': pjoin(self.path_me, 'param_card.dat'),
+                    'output': pjoin(self.path_me, 'param_card.dat')}
+        
+        me_interface.MadEventCmd.compute_widths(model, argument)
+        self.extract_br_from_card(pjoin(self.path_me, 'param_card.dat'))
+        return      
+                                         
 
-        # find UFO particles linked to the require names. COPIED FROM madevent_interface.py
-        for part in particle_set:
-            self.br[part]={}
-            chan=0
-            pid=label2pid[part] 
-            particle = model.get_particle(pid)
+    def extract_br_from_banner(self, banner):
+        """get the branching ratio from the banner object:
+           for each resonance with label 'res', and for each channel with index i,
+           returns a dictionary branching_fractions[res][i]
+           with keys
+            'daughters' : label of the daughters (only 2 body)
+            'br' : value of the branching fraction"""
+        
+        self.br = {}
+        
+        # read the param_card internally to the banner
+        if not hasattr(banner, 'param_card'):
+            banner.charge_card('param_card')
+        param_card = banner.param_card
+        return self.extract_br_from_card(param_card)
 
-            mass = abs(eval(str(particle.get('mass')), data).real)
-            data = model.set_parameters_and_couplings(pjoin(self.path_me,
-                                            'param_card.dat'), scale= mass)
-            for mode, expr in particle.partial_widths.items():
-                tmp_mass = mass
-                for p in mode:
-                    tmp_mass -= abs(eval(str(p.mass), data))
-                if tmp_mass <=0:
-                    continue
+    def extract_br_from_card(self, param_card):
+        """get the branching ratio from the banner object:
+           for each resonance with label 'res', and for each channel with index i,
+           returns a dictionary branching_fractions[res][i]
+           with keys
+            'daughters' : label of the daughters (only 2 body)
+            'br' : value of the branching fraction"""        
+        
+        if isinstance(param_card, str):
+            import models.check_param_card as check_param_card
+            param_card = check_param_card.ParamCard(param_card)
+        
+        if 'decay' not in param_card or not hasattr(param_card['decay'], 'decay_table'):
+            return self.br
 
-                decay_to = [p.get('pdg_code') for p in mode]
-                value = eval(expr,{'cmath':cmath},data).real
-                if -1e-10 < value < 0:
-                    value = 0
-                if -1e-5 < value < 0:
-                    logger.warning('Partial width for %s > %s negative: %s automatically set to zero' %
-                                   (particle.get('name'), ' '.join([p.get('name') for p in mode]), value))
-                    value = 0
-                elif value < 0:
-                    raise Exception, 'Partial width for %s > %s negative: %s' % \
-                                   (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
+        for id, data in param_card['decay'].decay_table.items():
+            label = self.pid2label[id]
+            current = [] # tmp name for  self.br[label]
+            for parameter in data:
+                if parameter.lhacode[0] == 2:
+                    d = [self.pid2label[pid] for pid in  parameter.lhacode[1:]]
+                    current.append({'daughters':d, 'br': parameter.value})
+            self.br[label] = current
+        
+        self.extract_br_for_antiparticle()
+        return self.br
 
-                if value>0:
-                    #print "found one channel:"
-                    #print decay_to
-                    chan+=1
-                    self.br[part][chan]={}
-                    self.br[part][chan]['width']=value
-                    self.br[part][chan]['daughters']=[]
-                    for pid in decay_to:
-                        self.br[part][chan]['daughters'].append(pid2label[pid])
+
+
+ 
+
+
 
 
 class decay_misc:
@@ -2670,6 +2646,7 @@ class decay_all_events:
         if os.path.isdir(pjoin(path_me,"full_me")):
             shutil.rmtree(pjoin(path_me,"full_me"))
         decay_tools=decay_misc()
+
          
         # process a bit the decay chain strings, so that the code is not confused by the syntax
         decay_tools.process_decay_syntax(decay_processes)        
@@ -2677,9 +2654,9 @@ class decay_all_events:
 
 # we will need a dictionary pid > label
         pid2label_dict=pid2label(base_model)
-        label2pid_dict=label2pid(base_model)
 
         mybanner.check_pid(pid2label_dict)
+        pid2label_dict.update(label2pid(base_model))
                 
 # we will also need a dictionary pid > color_rep
         pid2color_dict=pid2color(base_model)
@@ -2709,13 +2686,11 @@ class decay_all_events:
 # now extract the width of the resonances:
         for particle_label in resonances:
             try:
-                part=label2pid_dict[particle_label]
+                part=pid2label_dict[particle_label]
                 mass = mybanner.get('param_card','mass', abs(part))
                 width = mybanner.get('param_card','decay', abs(part))
             except ValueError, error:
-                misc.sprint(error)
                 continue
-                misc.sprint(width.value)
             else:
                 label2width[particle_label]=float(width.value)
                 label2mass[particle_label]=float(mass.value)
@@ -2741,38 +2716,40 @@ class decay_all_events:
 
 # now we need to evaluate the branching fractions:
 # =================================================
-	logger.info('We need information on the partial widhts ')
-	logger.info('First look inside the banner of the event file ')
-	logger.info('and check whether this information is available ')
+        logger.info('We need information on the partial widhts ')
+        logger.info('First look inside the banner of the event file ')
+        logger.info('and check whether this information is available ')
 
-        calculate_br=width_estimate(resonances,path_me,pid2label_dict,mybanner.get("model"),base_model)#
+        calculate_br = width_estimate(resonances, path_me, pid2label_dict,
+                                                           mybanner, base_model)
 #       Maybe the branching fractions are already given in the banner:
-	filename=pjoin(path_me,'param_card.dat')
-        calculate_br.extract_br_from_card(filename)
-        calculate_br.extract_br_for_antiparticle(label2pid_dict,pid2label_dict)
-	calculate_br.print_branching_fractions()
+        calculate_br.extract_br_from_banner(mybanner)
+        calculate_br.print_branching_fractions()
 #
 #        now we check that we have all needed pieces of info regarding the branching fraction:
-        multiparticles=mgcmd._multiparticles
-        branching_per_channel=calculate_br.get_BR_for_each_decay(decay_processes,multiparticles,\
-						mybanner.get("model"),base_model,pid2label_dict)       
+        multiparticles = mgcmd._multiparticles
+        branching_per_channel=calculate_br.get_BR_for_each_decay(decay_processes,
+                                                                 multiparticles)
+        
 
         # check that we get branching fractions for all resonances to be decayed:
         
-	if(branching_per_channel==0):
-	    #calculate_br.generate_code_for_width_evaluation(mgcmd)#NOT USED ANYMORE, USE THE FR IMPLEMENTATION INSTEAD
-	    logger.info('We need to recalculate the branching fractions')
-	    logger.info('using the compute_width module of madevent')
-	    calculate_br.launch_width_evaluation(resonances,label2pid_dict,pid2label_dict,base_model) # use FR to get all partial widths
-            calculate_br.extract_br_from_width()                                       # set the br to partial_width/total_width
-            calculate_br.extract_br_for_antiparticle(label2pid_dict,pid2label_dict)    # set the partial widths of antiparticles equal to the one of the CC channel  
-    	    calculate_br.print_branching_fractions()
-            branching_per_channel=calculate_br.get_BR_for_each_decay(decay_processes,multiparticles,\
-						mybanner.get("model"),base_model,pid2label_dict)       
-
+        if branching_per_channel == 0:
+            logger.info('We need to recalculate the branching fractions')
+            if hasattr(base_model.get('particles')[0], 'partial_widths'):
+                logger.info('using the compute_width module of madevent')
+                calculate_br.launch_width_evaluation(resonances,base_model, mgcmd) # use FR to get all partial widths                                      # set the br to partial_width/total_width
+            else:
+                logger.info('compute_width module not available, use numerical estimates instead ')
+                calculate_br.extract_br_from_width_evaluation()
+            calculate_br.print_branching_fractions()
+            branching_per_channel=calculate_br.get_BR_for_each_decay(decay_processes,multiparticles)       
 
         if branching_per_channel==0:
-	    raise Exception, 'Failed to extract the branching fraction associated with each decay channel'
+            raise Exception, 'Failed to extract the branching fraction associated with each decay channel'
+
+
+
 
 
 # now we need to sort all the different decay configurations, and get the br for each of them

@@ -1774,11 +1774,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         initial = pjoin(self.me_dir, 'Cards', 'param_card.dat'),
                         output=pjoin(self.me_dir, 'Events', run_name, "param_card.dat"))
     
-    def update_width_in_param_card(self, decay_info, initial=None, output=None):
+    @staticmethod
+    def update_width_in_param_card(decay_info, initial, output=None):
         # Open the param_card.dat and insert the calculated decays and BRs
         
-        if not initial:
-            initial = pjoin(self.me_dir,'Cards','param_card.dat')
         if not output:
             output = initial
         
@@ -1924,7 +1923,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         args = self.split_arg(line)
         mode,  opt  = self.check_treatcards(args)
-
+        
+        #check if no 'Auto' are present in the file
+        self.check_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
+        
+        
         if mode in ['run', 'all']:
             if not hasattr(self, 'run_card'):
                 run_card = banner_mod.RunCard(opt['run_card'])
@@ -2228,9 +2231,12 @@ calculator."""
             self.ask_edit_cards(['param_card.dat'], plot=False)
         
         model = args['model']
+        self.compute_widths(model, args)
+    
+    @staticmethod
+    def compute_widths(model, args):
         
-        data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 
-                                                              'param_card.dat'))
+        data = model.set_parameters_and_couplings(args['input'])
         
         # find UFO particles linked to the require names. 
         decay_info = {}        
@@ -2238,8 +2244,7 @@ calculator."""
             particle = model.get_particle(pid)
             decay_info[pid] = []
             mass = abs(eval(str(particle.get('mass')), data).real)
-            data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 
-                                            'param_card.dat'), scale= mass)
+            data = model.set_parameters_and_couplings(args['input'], scale= mass)
             for mode, expr in particle.partial_widths.items():
                 tmp_mass = mass    
                 for p in mode:
@@ -2260,7 +2265,7 @@ calculator."""
                                    (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
                 decay_info[particle.get('pdg_code')].append([decay_to, value])
                           
-        self.update_width_in_param_card(decay_info, args['input'], args['output'])
+        MadEventCmd.update_width_in_param_card(decay_info, args['input'], args['output'])
         
     ############################################################################ 
     def do_store_events(self, line):
