@@ -885,9 +885,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         """ Output the matrix_element in argument and perform the initialization
         while providing some details about the output in the dictionary returned. 
         Returns None if anything fails"""
-
-        model = matrix_element['processes'][0].get('model')
-        
+                
         infos={'Process_output': None,
                'HELAS_MODEL_compilation' : None,
                'dir_path' : None,
@@ -908,6 +906,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
 
         if not reusing:
+            model = matrix_element['processes'][0].get('model')
             # I do the import here because there is some cyclic import of export_v4
             # otherwise
             import madgraph.loop.loop_exporters as loop_exporters

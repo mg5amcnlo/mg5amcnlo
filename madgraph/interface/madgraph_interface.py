@@ -2745,7 +2745,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
 
         if args[0] in ['timing','stability', 'profile'] and \
-                                    myprocdef.get('perturbation_couplings')!=[]:
+                                    myprocdef.get('perturbation_couplings')==[]:
             raise self.InvalidCmd("Only loop processes can have their "+
                                   " timings or stability checked.")
         
@@ -2954,9 +2954,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Output the result to the interface directly if short enough or if it
         # was anyway not output to the pager
         if len(text.split('\n'))<=20 or reuse:
-            logger.info(text)
+            # Useful to really specify what logger is used for ML acceptance tests
+            logging.getLogger('madgraph.check_cmd').info(text)
         else:
-            logger.debug(text)            
+            logging.getLogger('madgraph.check_cmd').debug(text)            
         # Restore the default global for checks
         process_checks.loop_optimized_output = old_process_checks_loop_opt
 
