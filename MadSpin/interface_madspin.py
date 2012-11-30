@@ -76,6 +76,12 @@ class MadSpinInterface(extended_cmd.Cmd):
     def do_import(self, inputfile):
         """import the event file"""
         
+        # change directory where to write the output
+        self.options['curr_dir'] = os.path.dirname(inputfile)
+        if os.path.basename(os.path.dirname(os.path.dirname(inputfile))) == 'Events':
+            self.options['curr_dir'] = pjoin(self.options['curr_dir'], 
+                                                      os.path.pardir, os.pardir)
+        
         if not os.path.exists(inputfile):
             if inputfile.endswith('.gz'):
                 if not os.path.exists(inputfile[:-3]):

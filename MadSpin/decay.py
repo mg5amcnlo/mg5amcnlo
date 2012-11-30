@@ -2631,6 +2631,7 @@ class decay_all_events:
         max_weight_arg = options['max_weight']  
         BW_effects = options['BW_effect']
         path_me = options['curr_dir']
+        misc.sprint(path_me)
         self.path_me = path_me                             
                                      
         # need to unbuffer all I/O in fortran, otherwise
