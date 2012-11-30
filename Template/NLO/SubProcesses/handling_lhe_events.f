@@ -100,7 +100,7 @@ c
       enddo
  88   close(92)
       write(ifile,'(a)') '  </slha>'
-      write(ifile,'(a)') '  <MG5RunCard>'
+      write(ifile,'(a)') '  <MGRunCard>'
       open (unit=92,file=path(1:index(path," ")-1)//'run_card.dat'
      &     ,err=97)
       do
@@ -121,7 +121,7 @@ c Replace the random number seed with the one used...
  95      write(ifile,'(a)') buffer
       enddo
  87   close(92)
-      write(ifile,'(a)') '  </MG5RunCard>'
+      write(ifile,'(a)') '  </MGRunCard>'
       write(ifile,'(a)') '  <MonteCarloMasses>'
       call fill_MC_mshell_wrap(MonteCarlo,mcmass)
       do i=1,5

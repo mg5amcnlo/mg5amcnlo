@@ -177,9 +177,12 @@ class Banner(dict):
             ff = output_path
             
         if MADEVENT:
-            ff.write(open(pjoin(MEDIR, 'Source', 'banner_header.txt')).read())
+            header = open(pjoin(MEDIR, 'Source', 'banner_header.txt')).read()
         else:
-            ff.write(open(pjoin(MG5DIR,'Template', 'LO', 'Source', 'banner_header.txt')).read())
+            header = open(pjoin(MG5DIR,'Template', 'LO', 'Source', 'banner_header.txt')).read()
+        
+            
+        ff.write(header)
         for tag, text in self.items():
             if not tag == 'init':
                 ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
@@ -192,6 +195,7 @@ class Banner(dict):
                      {'tag':'init', 'text':text})  
         if close_tag:          
             ff.write('</LesHouchesEvents>\n')
+        
         
     ############################################################################
     # BANNER
