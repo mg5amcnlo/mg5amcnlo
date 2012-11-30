@@ -70,7 +70,8 @@ class Banner(dict):
       'mg5proccard':'proc_card_mg5.dat',
       'mgproccard': 'proc_card.dat',
       'init': '',
-      'mggenerationinfo':''
+      'mggenerationinfo':'',
+      'montecarlomasses':''
       }
     
     def read_banner(self, input_path):
@@ -684,6 +685,13 @@ class ProcCard(list):
         
         for line in init:
             self.append(line)
+            
+    def move_to_last(self, cmd):
+        """move an element to the last history."""
+        for line in self[:]:
+            if line.startswith(cmd):
+                self.remove(line)
+                list.append(self, line)
     
     def append(self, line):
         """"add a line in the proc_card perform automatically cleaning"""

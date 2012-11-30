@@ -288,9 +288,11 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                       " loop processes. MG5 now loads 'loop_sm' instead.")
                     mpath = pjoin(model_dir, 'loop_'+model_name)
                     #import model with correct treatment of the history
+                    self.history.move_to_last('generate')
                     last_command = self.history[-1]
                     self.exec_cmd(" import model %s" % str(mpath), precmd=True)
                     self.history.append(last_command)
+                    
                 elif stop:
                     raise MadGraph5Error(
                       "The model %s cannot handle loop processes"%model_name)    

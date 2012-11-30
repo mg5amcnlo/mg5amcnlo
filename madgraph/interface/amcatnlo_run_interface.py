@@ -1015,7 +1015,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             mode = mode.split('+')[0]
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
+        assert evt_file == pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'), '%s != %s' %(evt_file, pjoin(self.me_dir,'Events', self.run_name, 'events.lhe.gz'))
         self.exec_cmd('decay_events -from_cards', postcmd=False)
+        evt_file = pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')
+        
         if self.check_mcatnlo_dir() and not options['parton'] and mode !='noshower':
             self.run_mcatnlo(evt_file)
         os.chdir(root_path)
@@ -1703,26 +1706,11 @@ Integrated cross-section
     def evt_file_to_mcatnlo(self, evt_file):
         """creates the mcatnlo input script using the values set in the header of the event_file.
         It also checks if the lhapdf library is used"""
-        file = open(evt_file)
-        shower = ''
-        pdlabel = ''
-        itry = 0
-        nevents = self.shower_card['nevents']
-        while True:
-            line = file.readline()
-            #print line
-            if not shower and 'parton_shower' in line.split():
-                shower = line.split()[0]
-            if not pdlabel and 'pdlabel' in line.split():
-                pdlabel = line.split()[0]
-            if nevents and shower and pdlabel:
-                break
-            itry += 1
-            if itry > 300:
-                file.close()
-                raise aMCatNLOError('Event file does not contain run information')
-        file.close()
 
+        nevents = self.shower_card['nevents']
+        shower = self.run_card['parton_shower']
+        pdlabel = self.run_card['pdlabel']
+        
         # check if need to link lhapdf
         if pdlabel =='\'lhapdf\'':
             self.link_lhapdf(pjoin(self.me_dir, 'lib'))

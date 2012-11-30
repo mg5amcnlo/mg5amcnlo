@@ -279,7 +279,7 @@ class CheckValidForCmd(object):
                 return
 
         if args[0] != self.run_name:
-            self.run_name=args[0]
+            self.set_run_name(args[0])
         
         if self.mode == 'madevent':
             possible_path = [
@@ -528,8 +528,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         """
         
         text = open(path).read()
+        misc.sprint([text], type(text))
+        if not text.strip() or text == '':
+            misc.sprint(path, os.getcwd())
+            raise Exception, 'invalid file'
         text = re.findall('(<MGVersion>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin)', text, re.I)
         text = [t.lower() for t in text]
+        misc.sprint(text)
         if '<mgversion>' in text:
             return 'banner'
         elif 'cen_max_tracker' in text:
@@ -554,8 +559,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         elif 'decay' in text and 'launch' in text and 'madspin' in text:
             return 'madspin_card.dat'
         else:
-            misc.sprint
-            misc.sprint('decay' in text, 'launch' in text, 'madspin' in text)
+            misc.sprint(text)
+            misc.sprint('decay' in text, 'launch' in text, 'madspin' in text,
+                        'block' in text)
             return 'unknown'
 
     ############################################################################
@@ -1275,7 +1281,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         # create a new run_name directory for this output
         i = 1
         while os.path.exists(pjoin(self.me_dir,'Events', '%s_decayed_%i' % (self.run_name,i))):
-            i+1
+            i+=1
         new_run = '%s_decayed_%i' % (self.run_name,i)
         evt_dir = pjoin(self.me_dir, 'Events')
         
@@ -1283,9 +1289,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         current_file = args[0].replace('.lhe', '_decayed.lhe')
         new_file = pjoin(evt_dir, new_run, os.path.basename(args[0]))
         if not os.path.exists(current_file):
-            misc.sprint(current_file)
-            logger.error('MadSpin fails to create any decayed file.')
-            return
+            if os.path.exists(current_file+'.gz'):
+                current_file += '.gz'
+            else:
+                misc.sprint(current_file)
+                logger.error('MadSpin fails to create any decayed file.')
+                return
         
         files.mv(current_file, new_file)
         
@@ -1299,7 +1308,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             self.results.add_detail('error', error * madspin_cmd.branching_ratio)
         self.run_name = new_run
         self.update_status('MadSpin Done', level='parton', makehtml=False)
-        self.create_plot('parton')
+        if 'unweighted' in os.path.basename(args[0]):
+            self.create_plot('parton')
     
     def complete_decay_events(self, text, line, begidx, endidx):
         args = self.split_arg(line[0:begidx], error=False)

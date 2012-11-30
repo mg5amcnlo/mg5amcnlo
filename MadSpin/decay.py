@@ -49,6 +49,8 @@ import models.import_ufo as import_ufo
 #from madgraph.interface.madgraph_interface import MadGraphCmd
 import madgraph.interface.master_interface as Cmd
 import madgraph.interface.madevent_interface as me_interface
+import madgraph.iolibs.files as files
+import aloha
 logger = logging.getLogger('decay.stdout') # -> stdout
 logger_stderr = logging.getLogger('decay.stderr') # ->stderr
 
@@ -266,6 +268,7 @@ class Event:
         format of the line is:
         Nexternal IEVENT WEIGHT SCALE AEW AS
         """
+        line = line.replace('d','e').replace('D','e')
         inputs = line.split()
         assert len(inputs) == 6
         self.nexternal=int(inputs[0])
@@ -328,6 +331,7 @@ class Event:
             elif line_type == 'event':
                 index_prod+=1
                 line=line.replace("\n","")
+                line = line.replace('d','e').replace('D','e')
                 inputs=line.split()
                 pid=int(inputs[0])
                 istup=int(inputs[1])
@@ -1480,6 +1484,8 @@ class width_estimate:
         """
         if os.path.isdir(pjoin(self.path_me,"width_calculator")):
             shutil.rmtree(pjoin(self.path_me,"width_calculator"))
+            
+        assert not os.path.exists(pjoin(self.path_me, "width_calculator"))
         
         path_me = self.path_me 
         label2pid = self.label2pid
@@ -1494,28 +1500,32 @@ class width_estimate:
                 if self.pid2label[pid_part] not in particle_set:
                     particle_set.append(self.pid2label[pid_part])
  
-        mgcmd = Cmd.MasterCmd()
-        commandline="import model "+self.model
-        mgcmd.exec_cmd(commandline)#
-
-        logger.info("generate "+particle_set[0]+" > all all")
-        commandline="generate "+particle_set[0]+" > all all"
-        mgcmd.exec_cmd(commandline)
-
+    
+        commandline="import model %s\n" % self.model
+        commandline+="generate %s > all all \n" % particle_set[0]
+        commandline+= "set automatic_html_opening False --no_save\n"
         if len(particle_set)>1:
             for index in range(1,len(particle_set)):
-                logger.info("add process "+particle_set[index]+" > all all")		
-                commandline="add process "+particle_set[index]+" > all all "
-                mgcmd.exec_cmd(commandline)
+                commandline+="add process %s > all all \n" % particle_set[index]
 
-        commandline="output width_calculator -f"
-        mgcmd.exec_cmd(commandline)
-        shutil.copyfile(pjoin(path_me,"param_card.dat"), pjoin(path_me,'width_calculator','Cards','param_card.dat'))
+        commandline += "output %s/width_calculator -f \n" % path_me
+
+
+        aloha.loop_mode = False
+        aloha.unitary_gauge = False
+        cmd = Cmd.MasterCmd()        
+        for line in commandline.split('\n'):
+            cmd.run_cmd(line)
+        files.cp(pjoin(path_me, 'Cards', 'param_card.dat'), 
+                 pjoin(path_me, 'width_calculator', 'Cards'))
         
-        me_cmd = me_interface.MadEventCmd(pjoin(path_me,'width_calculator'))
-        me_cmd.exec_cmd('set automatic_html_opening False --no_save')
-        me_cmd.exec_cmd('calculate_decay_widths -f')
+        cmd.run_cmd('launch -f')
+                
+        #me_cmd = me_interface.MadEventCmd(pjoin(path_me,'width_calculator'))
+        #me_cmd.exec_cmd('set automatic_html_opening False --no_save')
+
         filename=pjoin(path_me,'width_calculator','Events','run_01','param_card.dat')
+        misc.sprint(pjoin(path_me,'width_calculator','Events','run_01','param_card.dat'))
         self.extract_br_from_card(filename)
 
     def extract_br_for_antiparticle(self):
@@ -2567,9 +2577,8 @@ class decay_misc:
         return 0
 
     def check_param_card(self, param_card):
-
+        raise Exception
         list_line=param_card.split('\n')
-
         output=""
         loop_block=0
         for line in list_line:
@@ -2578,8 +2587,8 @@ class decay_misc:
 
             if loop_block==1 and line[0]!='#': continue
             if loop_block==1 and line[0]=='#': 
-               loop_block=0
-               continue
+                loop_block=0
+                continue
             
             if len(current_line)<2:
                 output+=line+"\n" 
@@ -2664,9 +2673,8 @@ class decay_all_events:
 
 # now overwrite the param_card.dat in Cards:
         param_card=mybanner['slha']
-        param_card=decay_tools.check_param_card( param_card)
+        #param_card=decay_tools.check_param_card( param_card)
 
-        decay_tools.check_param_card(param_card)
 # now we can write the param_card.dat:
 # Note that the width of each resonance in the    
 # decay chain should be >0 , we will check that later on
@@ -3220,19 +3228,20 @@ class decay_all_events:
         self.branching_ratio = total_br
         mybanner.add_text('madspin', ms_banner)
         # Update cross-section in the banner
-        mg_info = mybanner['mggenerationinfo'].split('\n')
-        for i,line in enumerate(mg_info):
-            if 'Events' in line:
-                continue
-            if ':' not in line:
-                continue
-            info, value = line.rsplit(':',1)
-            try:
-                value = float(value)
-            except:
-                continue
-            mg_info[i] = '%s : %s' % (info, value * total_br)
-        mybanner['mggenerationinfo'] = '\n'.join(mg_info)
+        if 'mggenerationinfo' in mybanner:
+            mg_info = mybanner['mggenerationinfo'].split('\n')
+            for i,line in enumerate(mg_info):
+                if 'Events' in line:
+                    continue
+                if ':' not in line:
+                    continue
+                info, value = line.rsplit(':',1)
+                try:
+                    value = float(value)
+                except:
+                    continue
+                mg_info[i] = '%s : %s' % (info, value * total_br)
+            mybanner['mggenerationinfo'] = '\n'.join(mg_info)
         
         mybanner.write(outputfile, close_tag=False)
         

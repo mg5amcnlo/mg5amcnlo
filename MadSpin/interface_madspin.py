@@ -105,6 +105,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         # load information
         process = self.banner.get_detail('proc_card', 'generate')
+        if not process:
+            msg = 'Invalid proc_card information in the file (no generate line):\n %s' % self.banner['mg5proccard']
+            raise Exception, msg
         process, option = mg_interface.MadGraphCmd.split_process_line(process)
         self.proc_option = option
         
@@ -322,12 +325,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         """load the model"""
         
         loop = False
-        if (name.startswith('loop_')):
-            logger.info("The model in the banner is %s" % name)
-            logger.info("Set the model to %s since only" % name[:5])
-            logger.info("tree-level amplitudes are used for the decay ")
-            name = name[5:]
-            self.banner.proc_card.info['full_model_line'].replace('loop_','')
+        #if (name.startswith('loop_')):
+        #    logger.info("The model in the banner is %s" % name)
+        #    logger.info("Set the model to %s since only" % name[:5])
+        #    logger.info("tree-level amplitudes are used for the decay ")
+        #    name = name[5:]
+        #    self.banner.proc_card.info['full_model_line'].replace('loop_','')
 
         logger.info('detected model: %s. Loading...' % name)
         model_path = name

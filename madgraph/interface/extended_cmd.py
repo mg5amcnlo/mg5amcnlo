@@ -950,7 +950,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             self.history.pop()
         
         # Read the lines of the file and execute them
-        commandline = open(filepath).readlines()
+        if isinstance(filepath, str):
+            commandline = open(filepath).readlines()
+        else:
+            commandline = filepath
         oldinputfile = self.inputfile
         oldraw = self.use_rawinput
         self.inputfile = (l for l in commandline) # make a generator
@@ -1396,9 +1399,9 @@ class SmartQuestion(BasicCmd):
         except Exception,error:
             if self.wrong_answer < 100:
                 self.wrong_answer += 1
-                print """%s not valid argument. Valid argument are in (%s).""" \
-                          % (self.value,','.join(self.allow_arg))
-                print 'please retry'
+                logger.warning("""%s not valid argument. Valid argument are in (%s).""" \
+                          % (self.value,','.join(self.allow_arg)))
+                logger.warning('please retry')
                 return False
             else:
                 self.value = self.default_value
