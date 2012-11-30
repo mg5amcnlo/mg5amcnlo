@@ -329,6 +329,9 @@ class MatrixElementEvaluator(object):
 
         if nfinal == 1:
             energy = masses[1]
+            if masses[1] == 0.0:
+                raise rambo.RAMBOError('The kinematic 2 > 1 with the final'+\
+                                          ' state particle massless is invalid')
 
         e2 = energy**2
 
@@ -1116,7 +1119,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
         # Accuracy threshold of double precision evaluations above which the
         # PS points is also evaluated in quadruple precision
-        accuracy_threshold=1.0e0
+        accuracy_threshold=0.1e0
         
         # Each evaluations is performed in different ways to assess its stability.
         # There are two dictionaries, one for the double precision evaluation
@@ -1255,6 +1258,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
         # First create the stability check fortran driver executable if not 
         # already present.
+        
         if not os.path.isfile(os.path.join(dir_path,'StabilityCheckDriver.f')):
             # Use the presence of the file born_matrix.f to check if this output
             # is a loop_induced one or not.
@@ -1264,7 +1268,14 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 checkerName = 'StabilityCheckDriver_loop_induced.f'                
             cp(os.path.join(self.mg_root,'Template','loop_material','Checks',\
                    checkerName),os.path.join(dir_path,'StabilityCheckDriver.f'))
-            misc.compile(arg=['StabilityCheckDriver'], cwd=dir_path, \
+        
+        # Make sure to recompile the possibly modified files (time stamps can be
+        # off).
+        if os.path.isfile(os.path.join(dir_path,'StabilityCheckDriver')):
+            os.remove(os.path.join(dir_path,'StabilityCheckDriver'))
+        if os.path.isfile(os.path.join(dir_path,'loop_matrix.o')):
+            os.remove(os.path.join(dir_path,'loop_matrix.o'))
+        misc.compile(arg=['StabilityCheckDriver'], cwd=dir_path, \
                                               mode='fortran', job_specs = False)
 
         StabChecker = subprocess.Popen([os.path.join(dir_path,'StabilityCheckDriver')], 
@@ -2143,10 +2154,6 @@ def output_stability(stability, mg_root, opt, reusing=False):
     logFile.write('\nData entries for the stability plot.\n')
     logFile.write('First row is a maximal accuracy delta, second is the '+\
                   'fraction of events with DP accuracy worse than delta.\n\n')
-    logFile.write('First row is DP, second is QP.\n\n')
-    logFile.writelines('%.3e  '%DP_stability[i]+('NA\n' if QP_stability[i]==-1.0 \
-                             else '%.3e\n'%QP_stability[i]) for i in range(nPS))
-
     # Set the x-range so that it spans [10**-17,10**(min_digit_accuracy)]
     if max(DP_stability)>0.0:
         min_digit_acc=int(math.log(max(DP_stability))/math.log(10))
@@ -2168,6 +2175,9 @@ def output_stability(stability, mg_root, opt, reusing=False):
     logFile.writelines('%.3e  %.3e\n'%(accuracies[i], data_plot[i]) for i in \
                                                          range(len(accuracies)))
     logFile.write('\nList of accuracies recorded for the %i evaluations.\n'%nPS)
+    logFile.write('First row is DP, second is QP.\n\n')
+    logFile.writelines('%.3e  '%DP_stability[i]+('NA\n' if QP_stability[i]==-1.0 \
+                             else '%.3e\n'%QP_stability[i]) for i in range(nPS))
     logFile.close()
     try:
         import matplotlib.pyplot as plt

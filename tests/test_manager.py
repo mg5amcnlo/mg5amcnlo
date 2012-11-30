@@ -608,7 +608,10 @@ class IOTestFinder(TestFinder):
 
 if __name__ == "__main__":
 
-    help = """ 
+    help = """
+    Detailed information about the IOTests at the wiki webpage:
+https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
+
     Use the argument -i U to update the hardcoded tests used by the IOTests.
     When provided with no argument, it will update everything.
     Otherwise  it can be called like this:
