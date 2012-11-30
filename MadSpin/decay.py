@@ -2573,7 +2573,7 @@ class decay_misc:
             ratio=[ check_weights[x][index]/item for index, item in enumerate(check_weights[tag])]
             mean, sd = self.get_mean_sd(ratio)
  
-            if sd<mean*1e-5: return x
+            if sd<mean*1e-6: return x
         return 0
 
     def check_param_card(self, param_card):
@@ -2820,6 +2820,7 @@ class decay_all_events:
 #    consider the possibility of several production process
         set_of_processes=[]
         decay_struct={}
+        full_proc_line={}
         decay_path={}     # dictionary to record the name of the directory with decay fortran me
         production_path={} # dictionary to record the name of the directory with production fortran me
 #    also for production matrix elements, 
@@ -2916,8 +2917,8 @@ class decay_all_events:
                         misc.sprint('pass at %s' % try_reshuffle)
                     break
                 if try_reshuffle % 10 == 0:
-                    logger.warning( 'tried %ix to reshuffle the momenta, failed'% try_reshuffle)
-                    logger.warning( ' So let us try with another topology')
+                    logger.debug( 'tried %ix to reshuffle the momenta, failed'% try_reshuffle)
+                    logger.debug( ' So let us try with another topology')
                     tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
                     topologies[tag_production][tag_topo].dress_topo_from_event(\
                                                              curr_event,to_decay_label)
@@ -2982,6 +2983,8 @@ class decay_all_events:
                  shutil.rmtree(pjoin(self.path_me,'full_me', 'SubProcesses',decay_path[tag_production][tag_decay]))
 
         logger.info('Out of %d decay channels, %s matrix elements are independent ' % (len(decay_tags), len(decay_me_tags)))
+#        for tag in decay_me_tags:
+#            logger.info(multi_decay_processes[tag])
         del check_weights
 # Estimation of the maximum weight
 #=================================
@@ -3045,8 +3048,11 @@ class decay_all_events:
                             decay_tools.get_full_process_structure(multi_decay_processes[tag_decay]['config'],\
                             extended_prod_process, base_model, mybanner,proc_option)
                         decay_struct[tag_production][tag_decay]=new_decay_struct
+                        if tag_decay in decay_me_tags:
+                            full_proc_line[tag_decay]=new_full_proc_line
 #
                     for tag_decay in decay_me_tags:
+                        new_full_proc_line=full_proc_line[tag_decay]
                         decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
                                                     mybanner.get("model"), 1,mgcmd,path_me)
 
@@ -3126,8 +3132,8 @@ class decay_all_events:
                             # end sanity check
                             if succeed: break
                             if try_reshuffle==10:
-                                logger.warning( 'tried 10x to reshuffle the momenta, failed')
-                                logger.warning( ' So let us try with another topology')
+                                logger.debug( 'tried 10x to reshuffle the momenta, failed')
+                                logger.debug( ' So let us try with another topology')
                                 tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
                                 topologies[tag_production][tag_topo].dress_topo_from_event(\
                                                                                     curr_event,to_decay_label)
@@ -3293,8 +3299,11 @@ class decay_all_events:
                         decay_tools.get_full_process_structure(multi_decay_processes[tag_decay]['config'],\
                         extended_prod_process, base_model, mybanner,proc_option)
                     decay_struct[tag_production][tag_decay]=new_decay_struct
+                    if tag_decay in decay_me_tags:
+                        full_proc_line[tag_decay]=new_full_proc_line
 #
                 for tag_decay in decay_me_tags:
+                    new_full_proc_line=full_proc_line[tag_decay]
                     decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
                                                 mybanner.get("model"), 1,mgcmd,path_me)
 
@@ -3336,8 +3345,8 @@ class decay_all_events:
                         succeed=topologies[tag_production][tag_topo].reshuffle_momenta()
                         if succeed: break
                         if try_reshuffle==10:
-                            logger.info('WARNING: tried 10x to reshuffle the momenta, failed')
-                            logger.info(' So let us try with another topology')
+                            logger.debug('WARNING: tried 10x to reshuffle the momenta, failed')
+                            logger.debug(' So let us try with another topology')
 #                        print "Event: "+str(event_nb)
 #                        topologies[tag_production][tag_topo].print_topo()
                             tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
@@ -3388,6 +3397,8 @@ class decay_all_events:
                 if weight>max_weight[map_decay_me[tag_decay]]: 
                     logger.info('warning: got a larger weight than max_weight estimate')
                     logger.info('the ratio with the max_weight estimate is '+str(weight/max_weight[map_decay_me[tag_decay]]))
+                    logger.info('decay channel ')
+                    logger.info(multi_decay_processes[tag_decay])
                     
                 if (weight/max_weight[map_decay_me[tag_decay]]> random.random()):
 
