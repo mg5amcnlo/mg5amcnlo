@@ -1178,7 +1178,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             os.chdir(old_cwd)
             return
 
-        elif mode in ['aMC@NLO', 'aMC@LO']:
+        elif mode in ['aMC@NLO', 'aMC@LO','noshower']:
             shower = self.run_card['parton_shower']
             nevents = int(self.run_card['nevents'])
             #shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
@@ -1187,7 +1187,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 raise aMCatNLOError('%s is not a valid parton shower. Please use one of the following: %s' \
                     % (shower, ', '.join(shower_list)))
 
-            if mode == 'aMC@NLO':
+            if mode in ['aMC@NLO', 'noshower']:
                 if not options['only_generation']:
                     logger.info('Doing NLO matched to parton shower')
                     logger.info('   Cleaning previous results')
@@ -1257,7 +1257,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         for NLO/LO
         The cross_sect_dict is returned"""
         res = {}
-        if mode in ['aMC@LO', 'aMC@NLO']:
+        if mode in ['aMC@LO', 'aMC@NLO', 'noshower']:
             pat = re.compile(\
 '''Found (\d+) correctly terminated jobs 
 random seed found in 'randinit' is (\d+)
@@ -1279,7 +1279,7 @@ Integrated cross-section
             raise aMCatNLOError('An error occurred during the collection of results')
 #        if int(match.groups()[0]) != self.njobs:
 #            raise aMCatNLOError('Not all jobs terminated successfully')
-        if mode in ['aMC@LO', 'aMC@NLO']:
+        if mode in ['aMC@LO', 'aMC@NLO', 'noshower']:
             return {'randinit' : int(match.groups()[1]),
                     'xseca' : float(match.groups()[2]),
                     'erra' : float(match.groups()[3]),
@@ -1308,7 +1308,7 @@ Integrated cross-section
         # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
         # > Errors is a list of tuples with this format (log_file,nErrors)
         stats = {'UPS':{}, 'Errors':[]}
-        if mode in ['aMC@NLO', 'aMC@LO']: 
+        if mode in ['aMC@NLO', 'aMC@LO', 'noshower']: 
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
                                     'SubProcesses', 'P*','GV*','log_MINT*.txt'))
             all_log_files = glob.glob(pjoin(self.me_dir, \
@@ -1353,7 +1353,7 @@ Integrated cross-section
                 stats['Errors'].append((str(log),nErrors))
             
         
-        if mode in ['aMC@NLO', 'aMC@LO']:
+        if mode in ['aMC@NLO', 'aMC@LO', 'noshower']:
             status = ['Determining the number of unweighted events per channel',
                       'Updating the number of unweighted events per channel',
                       'Summary:']
@@ -1393,7 +1393,7 @@ Integrated cross-section
                              self.cross_sect_dict
         
         if (mode in ['NLO', 'LO'] and step!=1) or \
-           (mode in ['aMC@NLO', 'aMC@LO'] and step!=2):
+           (mode in ['aMC@NLO', 'aMC@LO', 'noshower'] and step!=2):
             logger.info(message+'\n')
             return
 
@@ -2021,7 +2021,7 @@ Integrated cross-section
         if mode in ['NLO', 'LO']:
             exe = 'madevent_vegas'
             tests = ['test_ME']
-        if mode in ['aMC@NLO', 'aMC@LO']:
+        if mode in ['aMC@NLO', 'aMC@LO','noshower']:
             exe = 'madevent_mintMC'
             tests = ['test_ME', 'test_MC']
         #directory where to compile exe
@@ -2137,7 +2137,7 @@ Integrated cross-section
                 os.unsetenv('madloop')
                 if not os.path.exists(pjoin(this_dir, exe)):
                     raise aMCatNLOError('Compilation failed, check %s for details' % amcatnlo_log)
-            if mode in ['aMC@NLO', 'aMC@LO'] and not options['noreweight']:
+            if mode in ['aMC@NLO', 'aMC@LO', 'noshower'] and not options['noreweight']:
                 logger.info('   Compiling reweight_xsec_events')
                 misc.call(['make -j%d reweight_xsec_events >> %s 2>&1' % (nb_core, reweight_log)], shell=True)
                 if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
@@ -2231,6 +2231,8 @@ Integrated cross-section
         
         if mode == 'auto': 
             mode = None
+        if options['parton'] and not mode:
+            mode = 'noshower' 
                 
         available_mode = ['0', '1', '2', '3']
         name = {'0': 'auto', '1': 'NLO', '2':'aMC@NLO', '3':'noshower'}

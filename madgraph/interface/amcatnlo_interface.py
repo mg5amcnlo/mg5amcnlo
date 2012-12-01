@@ -580,21 +580,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         ext_program = launch_ext.aMCatNLOLauncher(argss[0], self, run_mode=argss[1], **options)
         ext_program.run()
         
-#        mode = argss[1]
-#        if options['multicore']:
-#            run.cluster_mode = 2
-#        elif options['cluster']:
-#            run.cluster_mode = 1
-#        else:
- #           run.cluster_mode = int(self.options['run_mode'])
-
-
-#        run.ask_run_configuration(mode)
-#        run.compile(mode, options) 
-#        evt_file = run.run(mode, options)
-#        if run.check_mcatnlo_dir():
-#            run.run_mcatnlo(evt_file)
-#        os.chdir(old_cwd)
                     
    
 class aMCatNLOInterfaceWeb(mg_interface.CheckValidForCmdWeb, aMCatNLOInterface):

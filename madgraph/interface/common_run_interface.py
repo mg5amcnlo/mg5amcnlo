@@ -528,13 +528,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         """
         
         text = open(path).read()
-        misc.sprint([text], type(text))
-        if not text.strip() or text == '':
-            misc.sprint(path, os.getcwd())
-            raise Exception, 'invalid file'
+        if text == '':
+            logger.warning('File %s is empty' % path)
+            return 'unknown'
         text = re.findall('(<MGVersion>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin)', text, re.I)
         text = [t.lower() for t in text]
-        misc.sprint(text)
         if '<mgversion>' in text:
             return 'banner'
         elif 'cen_max_tracker' in text:
@@ -559,9 +557,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         elif 'decay' in text and 'launch' in text and 'madspin' in text:
             return 'madspin_card.dat'
         else:
-            misc.sprint(text)
-            misc.sprint('decay' in text, 'launch' in text, 'madspin' in text,
-                        'block' in text)
             return 'unknown'
 
     ############################################################################
@@ -1292,7 +1287,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
             if os.path.exists(current_file+'.gz'):
                 current_file += '.gz'
             else:
-                misc.sprint(current_file)
                 logger.error('MadSpin fails to create any decayed file.')
                 return
         
