@@ -430,6 +430,7 @@ class cluster:
         #3 ##############################################################################################
         def all_MadEvent(self,main=0):
             """ creates all the submission for MadEvent """
+            return
             nb_create_file =len(self.MWparam.P_listdir)*len(self.MWparam.actif_param)*self.MWparam.norm_with_cross
 
             #if hasattr(self.MWparam,'n_join'):
@@ -635,8 +636,8 @@ class cluster:
                 self.pbar=progressbar.progbar('Submission',self.mother.submission_file.nbfile)
                 
             self.all_MadWeight()
-            if self.MWparam.norm_with_cross:
-                self.all_MadEvent()
+            #if self.MWparam.norm_with_cross:
+            #    self.all_MadEvent()
             if self.pbar:
                 self.pbar.finish()
                 
@@ -650,7 +651,7 @@ class cluster:
         #3 ##############################################################################################            
         def all_MadEvent(self):
             """ creates all the submission for MadEvent """
-
+            return
             for directory in self.MWparam.P_listdir:
                 self.directory(directory,'P')
 
@@ -805,8 +806,8 @@ class cluster:
             while 1:
                 self.idle,self.running,self.finish,self.unkown = 0,0,0,0
                 self.all_MadWeight(main=0)
-                if self.MWparam.norm_with_cross:
-                    self.all_MadEvent(main=0)
+                #if self.MWparam.norm_with_cross:
+                #    self.all_MadEvent(main=0)
                 print self
                 if self.to_launch+self.idle+self.running==0 or self.control_iden_state():
                     break
@@ -838,7 +839,7 @@ class cluster:
         #3 ##############################################################################################            
         def all_MadEvent(self,main=1):
             """ control all the submission for MadEvent """
-
+            return
             if main:
                 while 1:
                     self.idle,self.running,self.finish,self.unkown = 0,0,0,0

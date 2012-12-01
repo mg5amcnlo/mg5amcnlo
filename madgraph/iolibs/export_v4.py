@@ -3048,7 +3048,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         cwd = os.getcwd()
         path = pjoin(self.dir_path, 'SubProcesses')
         
-        misc.sprint('change directory', level=50)
         os.chdir(path)
         pathdir = os.getcwd()
 
@@ -3256,8 +3255,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         ln('leshouche.inc', '../../Source', log=False)
         ln('maxamps.inc', '../../Source', log=False)
 
-        # Return to SubProcesses dir
-        misc.sprint('changedir')
+        # Return to SubProcesses dir)
         os.chdir(pathdir)
 
         # Add subprocess to subproc.mg
@@ -3270,7 +3268,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         gen_infohtml.make_info_html(os.path.pardir)
         
         # Return to original dir
-        misc.sprint('changedir')
         os.chdir(cwd)
 
         if not tot_calls:

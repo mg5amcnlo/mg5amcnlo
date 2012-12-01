@@ -8,7 +8,7 @@ mw_run  nb_exp_events   integer  10                     # number of experimental
 mw_run  2               integer  mw_run@@nb_exp_events          
 mw_run  3               logical  F                      # control efficiency
 mw_run  write_log       logical  mw_run@@3              # write the log/out/err for each job
-mw_run  normalize       logical  T                      # normalize wegiht by cross section
+mw_run  normalize       logical  F                      # normalize wegiht by cross section #NOT SUPPORTED !!!
 mw_run  4               logical  mw_run@@normalize
 mw_run  acceptance_run  logical  F                      # compute the acceptance run 
 mw_run  ME_int_points   interger 10000                  # number of points for MadEvent integration

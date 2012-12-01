@@ -24,13 +24,12 @@
 Block MW_Run 
 #   TAG                 VALUE                    UTILITY
      name                fermi    # name for the run  
-     cluster              1       # 0:single machine, 1: condor, 2: SGE
+     cluster              0       # 0:single machine, 1: condor, 2: SGE
                                   # 3: Bash cluster, 4: multiprocessor, 5: qsub
                                   # For more info, see the wiki
      queue       'madgraph==True' # queue condition (usage depend of the cluster)
      nb_exp_events        10      # number of experimental events to consider
      write_log            F       # avoid writting of a lot of log files
-     normalize            T       # normalizes weight  (1/sigma prefactor)
      ME_int_points        10000   # number of points in MadEvent integration 
      MW_int_points        50000   # number of points in MadWeight integration
      use_cut              F       # use the cut defined in run_card.dat

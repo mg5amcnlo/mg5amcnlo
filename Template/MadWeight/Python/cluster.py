@@ -85,6 +85,7 @@ class single_machine(cluster):
                 pos='./SubProcesses/'+directory+'/'+name+'/card_'+str(nbcard)+'/event_'+str(nbevent)
                 dirup=5
             elif dir_type=='P':
+                return
                 if not prog: prog='../../madevent.py'
                 else: prog = '../../'+prog
                 pos='./SubProcesses/'+directory+'/'+name+'/card_'+str(nbcard)
