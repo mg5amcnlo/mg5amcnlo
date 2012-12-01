@@ -1664,7 +1664,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 text = '''Survey return zero cross section. 
    Typical reasons are the following:
    1) A massive s-channel particle has a width set to zero.
-   2) The pdf are zero for at least one of the initial state particles.
+   2) The pdf are zero for at least one of the initial state particles
+      or you are using maxjetflavor=4 for initial state b:s.
    3) The cuts are too strong.
    Please check/correct your param_card and/or your run_card.'''
                 logger_stderr.critical(text)
