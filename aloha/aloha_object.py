@@ -226,7 +226,7 @@ class L_Width(aloha_lib.LorentzObject):
     """ Helas Object for an Impulsion """
  
     
-    def __init__(self, name):
+    def __init__(self, name, particle):
         self.particle = particle
         aloha_lib.LorentzObject.__init__(self, name, [], [])
         
@@ -267,6 +267,8 @@ class Param(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, name):
+        if name == 'Pi':
+            KERNEL.has_pi = True
         return 'Param_%s' % name
 
 #===============================================================================

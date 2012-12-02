@@ -17,6 +17,7 @@ from cStringIO import StringIO
 # For knowing how to deal with long strings efficiently.
 import itertools
 
+KERNEL = aloha_lib.KERNEL
 
 class WriteALOHA: 
     """ Generic writing functions """ 
@@ -499,13 +500,16 @@ class ALOHAWriterForFortran(WriteALOHA):
         # define the complex number CI = 0+1j
         if 'MP' in self.tag:
             out.write(' complex*32 CI\n')
-            out.write(' double*16 PI\n')
+            if KERNEL.has_pi:
+                out.write(' double*16 PI\n')
         else:
             out.write(' complex*16 CI\n')
-            out.write(' double precision PI\n')
+            if KERNEL.has_pi:
+                out.write(' double precision PI\n')
         out.write(' parameter (CI=(%s,%s))\n' % 
                     (self.change_number_format(0),self.change_number_format(1)))
-        out.write(' parameter (PI=%sD0)\n' % cmath.pi)
+        if KERNEL.has_pi:
+            out.write(' parameter (PI=%s)\n' % self.change_number_format(cmath.pi))
         for type, name in self.declaration:
             if type.startswith('list'):
                 type = type[5:]
@@ -695,6 +699,8 @@ class ALOHAWriterForFortran(WriteALOHA):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
+                self.declaration.add(('complex', name))
+                
         
         def sort_fct(a, b):
             if len(a) < len(b):
@@ -898,6 +904,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
+                self.declaration.add(('complex', name))
 
 
         OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
@@ -1448,10 +1455,12 @@ class ALOHAWriterForCPP(WriteALOHA):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s;\n' % (name, self.write_obj(obj)))
+                self.declaration.add(('complex', name))
                 
         for name, (fct, objs) in self.routine.fct.items():
             format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
             out.write(format % ','.join([self.write_obj(obj) for obj in objs]))
+            
         
 
         numerator = self.routine.expr
@@ -1725,7 +1734,9 @@ class ALOHAWriterForPython(WriteALOHA):
                 return '%ij' % obj.imag
             else:
                 return '%sj' % str(obj.imag)
-        else: 
+        elif obj.imag == 0 and int(obj.real) == obj:
+            return '%i' % obj.real 
+        else:
             return str(obj)
     
     

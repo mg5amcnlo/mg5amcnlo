@@ -71,9 +71,9 @@ class Cluster(object):
         """How to make one submission. Return status id on the cluster.
         NO SHARE DISK"""
         
-        if not hasattr(self, 'temp_dir'):
+        if not hasattr(self, 'temp_dir') or not self.temp_dir:
             return self.submit(prog, argument, cwd, stdout, stderr, log)
-            
+        print self.temp_dir
         if cwd is None:
             cwd = os.getcwd()
         if not os.path.exists(prog):
@@ -688,7 +688,7 @@ class LSFCluster(Cluster):
         command = ['bsub','-o', stdout,
                    '-J', me_dir, 
                    '-e', stderr]
-
+        
         if self.cluster_queue and self.cluster_queue != 'None':
             command.extend(['-q', self.cluster_queue])
 

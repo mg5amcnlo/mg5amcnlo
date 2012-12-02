@@ -590,7 +590,7 @@ class AbstractALOHAModel(dict):
                 continue 
             
             if lorentz.structure == 'external':
-                for i in range(len(lorent.spins)):
+                for i in range(len(lorentz.spins)):
                     self.external_routines.append('%s_%s' % (lorentz.name, i))
                 continue
             

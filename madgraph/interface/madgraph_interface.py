@@ -702,9 +702,10 @@ This will take effect only in a NEW terminal
                 args.append(self._done_export[0])
                 return
             else:
-                self.help_launch()
-                raise self.InvalidCmd, \
-                       'No default location available, please specify location.'
+                logger.warning('output command missing, run it automatically (with default argument)')
+                self.do_output('')
+                logger.warning('output done: running launch')
+                return self.check_launch(args, options)
         
         if len(args) != 1:
             self.help_launch()
@@ -4250,7 +4251,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             else: 
                 last_action_2 = 'none'
 
-class MadGraphCmdWeb(CheckValidForCmdWeb,MadGraphCmd):
+class MadGraphCmdWeb(CheckValidForCmdWeb, MadGraphCmd):
     """Temporary parser"""
                 
 #===============================================================================
