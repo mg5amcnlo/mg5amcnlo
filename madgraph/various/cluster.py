@@ -80,6 +80,10 @@ class Cluster(object):
         if not hasattr(self, 'temp_dir') or not self.temp_dir:
             return self.submit(prog, argument, cwd, stdout, stderr, log)
 
+        if not input_files and not output_files:
+            misc.sprint('not using submit2: no input/output')
+            return self.submit(prog, argument, cwd, stdout, stderr, log)
+
         if cwd is None:
             cwd = os.getcwd()
         if not os.path.exists(prog):
@@ -94,7 +98,7 @@ class Cluster(object):
         input_files=( %(input_files)s )
         for i in ${input_files[@]}
         do
-            cp -rL $i $MYTMP
+            cp -r $i $MYTMP
         done
         cd $MYTMP
         bash ./%(script)s %(arguments)s
