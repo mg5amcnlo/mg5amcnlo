@@ -921,7 +921,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         nb_init = self.ninitial
         pat = re.compile(r'''DATA \(IDUP\(I,\d+\),I=1,\d+\)/([\+\-\d,\s]*)/''', re.I)
         for Pdir in subproc:
-            text = open(pjoin(Pdir, 'born_leshouche.inc')).read()
+            text = open(pjoin(self.me_dir, 'SubProcesses', Pdir, 'born_leshouche.inc')).read()
             group = pat.findall(text)
             for particles in group:
                 particles = particles.split(',')
@@ -1514,8 +1514,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 except NameError:
                     val = args[start+1]
                 self.setR(args[start], val)
-            self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'),
-                              pjoin(self.me_dir,'Cards','run_card_default.dat'))
+            self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'))
             
         ### PARAM_CARD WITH BLOCK NAME
         elif (args[start] in self.param_card or args[start] == 'width') \

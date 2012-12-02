@@ -20,7 +20,9 @@ fi
 
 arg1=$1
 arg2=$2
-# shift the list of arguments by 2
+arg3=$3
+# shift the list of arguments by 3
+shift
 shift
 shift
 if [[ "$@" == "" ]]; then
@@ -44,7 +46,7 @@ if [[ $arg1 == '0' ]] ; then
 elif [[ $arg1 == '1' ]] ; then
     echo 'Updating the number of unweighted events per channel'
 fi
-./sumres.py $NTOT $arg2
+./sumres.py $NTOT $arg2 $arg3
 echo 'Integrated abs(cross-section)' 
 tail -n1 res.txt
 mv res.txt res_$arg1\_abs.txt
@@ -58,7 +60,7 @@ for dir in "$@" ; do
     ls -d P*/$dir >> dirs.txt
     grep -H 'Final result:' P*/$dir/res_$arg1 >> res.txt
 done
-./sumres.py $NTOT -1
+./sumres.py $NTOT -1 -1
 echo 'Integrated cross-section' 
 tail -n1 res.txt
 mv res.txt res_$arg1\_tot.txt

@@ -40,6 +40,10 @@ logger = logging.getLogger('madevent.cards')
 #dict
 class Banner(dict):
     """ """
+
+    ordered_items = ['mgversion', 'mg5proccard', 'mgproccard', 'mgruncard',
+                     'slha', 'MGGenerationInfo', 'mgpythiacard', 'mgpgscard',
+                     'mgdelphescard', 'mgdelphestrigger']
     
     def __init__(self, banner_path=None):
         """ """
@@ -181,12 +185,18 @@ class Banner(dict):
         else:
             header = open(pjoin(MG5DIR,'Template', 'LO', 'Source', 'banner_header.txt')).read()
         
-            
         ff.write(header)
-        for tag, text in self.items():
-            if not tag == 'init':
-                ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
-                     {'tag':tag, 'text':text})
+
+
+        for tag in [t for t in self.ordered_items if t in self.keys()]:
+            ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
+                     {'tag':tag, 'text':self[tag].strip()})
+        for tag in [t for t in self.keys() if t not in self.ordered_items]:
+            if tag in ['init']:
+                pass
+            ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
+                     {'tag':tag, 'text':self[tag].strip()})
+
         ff.write('</header>\n')    
 
         if 'init' in self:
@@ -388,9 +398,12 @@ class RunCard(dict):
     
 
         
-    def write(self, output_file, template):
+    def write(self, output_file, template=None):
         """Write the run_card in output_file according to template 
            (a path to a valid run_card)"""
+        
+        if not template:
+            template = output_file
         
         text = ""
         for line in file(template,'r'):

@@ -210,7 +210,7 @@ class MadLoopLauncher(ExtLauncher):
                 # I should have used a dictionary instead.
                 result = evaluator.parse_check_output(rFile.readlines(),\
                                                                   format='dict')
-                print self.format_res_string(result)%shell_name
+                logger.info(self.format_res_string(result)%shell_name)
 
     def format_res_string(self, res):
         """ Returns a good-looking string presenting the results.
@@ -229,7 +229,7 @@ class MadLoopLauncher(ExtLauncher):
                                                      for pmom in res['res_p']]),
                   '\n|| Born contribution (GeV^%d):'%res['gev_pow'],
                   '|    Born        = %s'%special_float_format(res['born']),
-                  '|| Virtual contribution normalized with alpha_S/(2*pi):',
+                  '|| Virtual contribution normalized with born*alpha_S/(2*pi):',
                   '|    Finite      = %s'%special_float_format(res['finite']),
                   '|    Single pole = %s'%special_float_format(res['1eps']),
                   '|    Double pole = %s'%special_float_format(res['2eps']),

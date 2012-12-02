@@ -709,16 +709,18 @@ class CheckValidForCmd(cmd.CheckCmd):
             self.help_check()
             raise self.InvalidCmd("\"check\" requires a process.")
 
+        if args[0] not in self._check_opts:
+            args.insert(0, 'full')
+
         param_card = None
         if args[0] not in ['stability','profile','timing'] and os.path.isfile(args[1]):
             param_card = args.pop(1)
 
-        if args[0] in ['stability','profile','timing'] and len(args)>1:
+        if len(args)>1:
             if args[1] != "-reuse":
-                if args[1][0] == '-':
-                    raise self.InvalidCmd("Command option %s not recognized."%args[1])
-                else:    
-                    args.insert(1, '-no_reuse')
+                args.insert(1, '-no_reuse')
+        else:
+            args.append('-no_reuse')
 
         if args[0] in ['timing'] and os.path.isfile(args[2]):
             param_card = args.pop(2)
@@ -734,9 +736,6 @@ class CheckValidForCmd(cmd.CheckCmd):
             
         if args[0] in ['stability', 'profile'] and os.path.isfile(args[3]):
             param_card = args.pop(3)
-                
-        if args[0] not in self._check_opts:
-            args.insert(0, 'full')
 
         if any([',' in elem for elem in args]):
             raise self.InvalidCmd('Decay chains not allowed in check')
@@ -2728,12 +2727,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Check args validity
         param_card = self.check_check(args)
         
+        reuse = args[1]=="-reuse"       
+        args = args[:1]+args[2:] 
         # For the stability check the user can specify the statistics (i.e
         # number of trial PS points) as a second argument
-        reuse = False
-        if args[0] in ['stability','profile','timing']:        
-            reuse = args[1]=="-reuse"       
-            args = args[:1]+args[2:] 
         if args[0] in ['stability', 'profile']:
             stab_statistics = int(args[1])
             args = args[:1]+args[2:]
@@ -2914,13 +2911,20 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text += process_checks.output_comparisons(comparisons[0]) + '\n'
             self._comparisons = comparisons
 
-        logger.info(text)
-        if not (reuse and args[0] in ['profile']) and text!='':
+        # We use the reuse tag for an alternative way of skipping the pager.
+        if not reuse and text!='':
             pydoc.pager(text)
+            
         # Restore diagram logger
         for i, logger in enumerate(loggers):
             logger.setLevel(old_levels[i])
-
+            
+        # Output the result to the interface directly if short enough or if it
+        # was anyway not output to the pager
+        if len(text.split('\n'))<=20 or reuse:
+            logger.info(text)
+        else:
+            logger.debug(text)            
         # Restore the default global for checks
         process_checks.loop_optimized_output = old_process_checks_loop_opt
 
@@ -5031,8 +5035,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             # copy the MCatNLO directory from mcatnlo-utils inside the exported dir
             if os.path.isdir(pjoin(MG5DIR, 'MCatNLO-utilities')):
-                os.system('cp -r %s %s' % \
-                        (pjoin(MG5DIR, 'MCatNLO-utilities', 'MCatNLO'), self._export_dir))
+                files.cp(pjoin(MG5DIR, 'MCatNLO-utilities', 'MCatNLO'), self._export_dir)
             else:
                 logger.warning('MCatNLO-utilities is not installed.')
                 logger.warning('If you want to shower events ' + \
@@ -5081,8 +5084,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             else: 
                 last_action_2 = 'none'
 
-class MadGraphCmdWeb(CheckValidForCmdWeb,MadGraphCmd):
-    """Temporary parser"""               
+class MadGraphCmdWeb(CheckValidForCmdWeb, MadGraphCmd):
+    """Temporary parser"""
+                
 #===============================================================================
 # Command Parser
 #=============================================================================== 

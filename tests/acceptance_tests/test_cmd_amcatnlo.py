@@ -39,16 +39,11 @@ from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 
 pjoin = os.path.join
 
-    
-    
-
-
 #===============================================================================
 # TestCmd
 #===============================================================================
 class TestMECmdShell(unittest.TestCase):
     """this treats all the command not related to MG_ME"""
-    
     
     def generate(self, process, model):
         """Create a process"""
@@ -106,6 +101,10 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
         # test the hep event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz'))
         
@@ -125,6 +124,10 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
         # test the hep event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q_0.hep.gz'))
         
@@ -140,6 +143,10 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
         # test the hep event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz'))
         
@@ -158,6 +165,10 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
         # test the hep event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q_0.hep.gz'))
         
@@ -174,6 +185,7 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the plot file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res.txt'))
 
 
     def test_calculate_xsect_lo(self):
@@ -187,6 +199,7 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the plot file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res.txt'))
     
     def test_amcatnlo_from_file(self):
         """ """
@@ -213,7 +226,7 @@ class TestMECmdShell(unittest.TestCase):
                         stdout=stdout,stderr=stderr)
         stdout.close()
         text = open('/tmp/test.log','r').read()
-        
+        misc.sprint(text)
         data = text.split('\n')
         for i,line in enumerate(data):
             if 'Summary:' in line:
@@ -227,12 +240,6 @@ class TestMECmdShell(unittest.TestCase):
         #      Number of events generated: 10000        
         self.assertTrue('Number of events generated: 100' in data[i+4])
         
-        
-
-        
-        
-        
-        
 
     def load_result(self, run_name):
         
@@ -241,4 +248,3 @@ class TestMECmdShell(unittest.TestCase):
         
         result = save_load_object.load_from_file('/tmp/MGPROCESS/HTML/results.pkl')
         return result[run_name]
-
