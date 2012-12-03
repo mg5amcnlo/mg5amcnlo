@@ -1134,13 +1134,20 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'],
                                               self.options['cluster_temp_path'])
         if self.cluster_mode == 2:
-            import multiprocessing
-            if not self.nb_core:
-                try:
-                    self.nb_core = int(self.options['nb_core'])
-                except TypeError:
-                    self.nb_core = multiprocessing.cpu_count()
-            logger.info('Using %d cores' % self.nb_core)
+            try:
+                import multiprocessing
+                if not self.nb_core:
+                    try:
+                        self.nb_core = int(self.options['nb_core'])
+                    except TypeError:
+                        self.nb_core = multiprocessing.cpu_count()
+                logger.info('Using %d cores' % self.nb_core)
+            except ImportError:
+                self.nb_core = 1
+                logger.warning('Impossible to detect the number of cores => Using One.\n'+
+                        'Use set nb_core X in order to set this number and be able to'+
+                        'run in multicore.')
+
             self.cluster = cluster.MultiCore(self.nb_core, 
                                      temp_dir=self.options['cluster_temp_path'])
         self.update_random_seed()
@@ -2023,7 +2030,6 @@ Integrated cross-section
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
 
-        import multiprocessing
 
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
@@ -2098,15 +2104,25 @@ Integrated cross-section
         for test in tests:
             self.write_test_input(test)
 
-        if not self.nb_core:
-            try:
-                self.nb_core = int(self.options['nb_core'])
-            except TypeError:
-                self.nb_core = multiprocessing.cpu_count()
+        try:
+            import multiprocessing
+            if not self.nb_core:
+                try:
+                    self.nb_core = int(self.options['nb_core'])
+                except TypeError:
+                    self.nb_core = multiprocessing.cpu_count()
 
-        mypool = multiprocessing.Pool(self.nb_core, init_worker) 
-        mypool.map(compile_dir,
-                ((self.me_dir, p_dir, mode, options, tests, exe, self.options['run_mode']) for p_dir in p_dirs))
+            mypool = multiprocessing.Pool(self.nb_core, init_worker) 
+            logger.info('Compiling on %d cores' % self.nb_core)
+            mypool.map(compile_dir,
+                    ((self.me_dir, p_dir, mode, options, 
+                        tests, exe, self.options['run_mode']) for p_dir in p_dirs))
+        except ImportError: 
+            self.nb_core = 1
+            logger.info('Multiprocessing module not found. Compiling on 1 core')
+            for p_dir in p_dirs:
+                compile_dir(self.me_dir, p_dir, mode, options, 
+                        tests, exe, self.options['run_mode'])
 
         logger.info('Checking test output:')
         for p_dir in p_dirs:
