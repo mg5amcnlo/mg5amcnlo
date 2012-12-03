@@ -536,6 +536,8 @@ c variable, not yet defined) will not be needed in the computation of probne
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
+        if(scalemax.ge.etot)scalemax=etot
+        if(scalemin.ge.scalemax)scalemin=scalemax
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -1016,7 +1018,8 @@ c
 c End of loop over colour partners
       enddo
 c Assign emsca on statistical basis
-      if(extra.and.wgt.gt.1.d-30)then
+c$$$      if(extra.and.wgt.gt.1.d-30)then
+      if(dampMCsubt.and.wgt.gt.1.d-30)then
         rrnd=ran2()
         wgt1=0.d0
         jpartner=0
@@ -1239,6 +1242,8 @@ c variable, not yet defined) will not be needed in the computation of probne
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
+        if(scalemax.ge.etot)scalemax=etot
+        if(scalemin.ge.scalemax)scalemin=scalemax
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -1688,7 +1693,8 @@ c
 c End of loop over colour partners
       enddo
 c Assign emsca on statistical basis
-      if(extra.and.wgt.gt.1.d-30)then
+c$$$      if(extra.and.wgt.gt.1.d-30)then
+      if(dampMCsubt.and.wgt.gt.1.d-30)then
         rrnd=ran2()
         wgt1=0.d0
         jpartner=0
@@ -1871,8 +1877,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 
       integer mstj50,mstp67
       double precision en_fks,en_mother,theta2,theta2_cc
-      double precision upper_scale,fff
-      common/cupscale/upper_scale,fff
+      double precision upper_scale
+      common/cupscale/upper_scale
 
 c
       double precision sum_mass
@@ -1926,11 +1932,10 @@ c variable, not yet defined) will not be needed in the computation of probne
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
-
         scalemin=max(scalemin,sum_mass)
-        scalemax=min(scalemax,sqrt((1-xi_i_fks)*shat))
-        if(scalemax.lt.scalemin)scalemax=scalemin
-
+        scalemax=min(scalemax,ref_scale)
+        if(scalemax.ge.etot)scalemax=etot
+        if(scalemin.ge.scalemax)scalemin=scalemax
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -2041,18 +2046,7 @@ c authors of Pythia don't know
          endif
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
-            sum_mass=0d0
-            do i=1,nexternal
-               sum_mass=sum_mass+pmass(i)
-            enddo
-            sum_mass=max(sum_mass,delta_scale)
-
-            fff=1d0
-            upper_scale=sqrt(x*shat)
-            upper_scale=upper_scale*fff
-            upper_scale=max(upper_scale,sum_mass)
-            upper_scale=min(upper_scale,sqrt(x*shat))
-
+            call assign_scalemax(shat,xi_i_fks,upper_scale)
             xifake(npartner)=xi(npartner)
             if(ileg.eq.3)xifake(npartner)=xi(npartner)+xm12
             if(sqrt(xifake(npartner)).gt.upper_scale)lzone(npartner)=.false.
@@ -2469,7 +2463,8 @@ c
 c End of loop over colour partners
       enddo
 c Assign emsca on statistical basis
-      if(extra.and.wgt.gt.1.d-30)then
+c$$$      if(extra.and.wgt.gt.1.d-30)then
+      if(dampMCsubt.and.wgt.gt.1.d-30)then
         rrnd=ran2()
         wgt1=0.d0
         jpartner=0
@@ -2570,7 +2565,7 @@ c      include "fks.inc"
       common/cileg/ileg
       double precision tk,uk,q1q,q2q,E0sq(nexternal),dE0sqdx(nexternal),
      # dE0sqdc(nexternal),x,yi,yj,xij,z(nexternal),xi(nexternal),
-     # xjac(nexternal),zPY6PT,xiPY6PT,xjacPY6PT_xiztoxy,ap,Q,
+     # xjac(nexternal),xifake(nexternal),zPY6PT,xiPY6PT,xjacPY6PT_xiztoxy,ap,Q,
      # beta,xfact,prefact,kn,knbar,kn0,beta3,betad,betas,
      # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,
@@ -2648,8 +2643,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       parameter (vca=3.d0)
 
       integer mstj50,mstp67,en_fks,en_mother,theta2,theta2_cc
-      double precision upper_scale,fff
-      common/cupscale/upper_scale,fff
+      double precision upper_scale
+      common/cupscale/upper_scale
 
 c
       double precision ma2,mb2
@@ -2696,6 +2691,8 @@ c variable, not yet defined) will not be needed in the computation of probne
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
+        if(scalemax.ge.etot)scalemax=etot
+        if(scalemin.ge.scalemax)scalemin=scalemax
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -2780,15 +2777,13 @@ c$$$c Compute deadzones
 c$$$
 c$$$
 
-c Implementation of a maximum scale for the shower: the following scale
-c simulates boson mass for VB production. It could be modified in future
-        if(.not.dampMCsubt)then
-           lzone(npartner)=.false.
-           fff=1.d0
-           upper_scale=sqrt(x*shat)
-           upper_scale=upper_scale*fff
-           if(sqrt(xi(npartner)).le.upper_scale)lzone(npartner)=.true.
-        endif
+c Implementation of a maximum scale for the shower if the shape is not active.
+         if(.not.dampMCsubt)then
+            call assign_scalemax(shat,xi_i_fks,upper_scale)
+            xifake(npartner)=xi(npartner)
+            if(ileg.eq.3)xifake(npartner)=xi(npartner)+xm12
+            if(sqrt(xifake(npartner)).gt.upper_scale)lzone(npartner)=.false.
+         endif
 c
 c Compute MC subtraction terms
         if(lzone(npartner))then
@@ -3135,7 +3130,8 @@ c
 c End of loop over colour partners
       enddo
 c Assign emsca on statistical basis
-      if(extra.and.wgt.gt.1.d-30)then
+c$$$      if(extra.and.wgt.gt.1.d-30)then
+      if(dampMCsubt.and.wgt.gt.1.d-30)then
         rrnd=ran2()
         wgt1=0.d0
         jpartner=0
@@ -3320,8 +3316,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 
       integer mstj50,mstp67
       double precision en_fks,en_mother,theta2,theta2_cc
-      double precision upper_scale,fff
-      common/cupscale/upper_scale,fff
+      double precision upper_scale
+      common/cupscale/upper_scale
 
       double precision xma2,xmb2,sb
 c
@@ -3376,11 +3372,10 @@ c variable, not yet defined) will not be needed in the computation of probne
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
-
         scalemin=max(scalemin,sum_mass)
         scalemax=min(scalemax,sqrt((1-xi_i_fks)*shat))
-        if(scalemax.lt.scalemin)scalemax=scalemin
-
+        if(scalemax.ge.etot)scalemax=etot
+        if(scalemin.ge.scalemax)scalemin=scalemax
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -3472,18 +3467,7 @@ c
 c Compute deadzones:
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
-            sum_mass=0d0
-            do i=1,nexternal
-               sum_mass=sum_mass+pmass(i)
-            enddo
-            sum_mass=max(sum_mass,delta_scale)
-
-            fff=1d0
-            upper_scale=sqrt(x*shat)
-            upper_scale=upper_scale*fff
-            upper_scale=max(upper_scale,sum_mass)
-            upper_scale=min(upper_scale,sqrt(x*shat))
-
+            call assign_scalemax(shat,xi_i_fks,upper_scale)
             xifake(npartner)=xi(npartner)
             if(ileg.eq.3)xifake(npartner)=xi(npartner)+xm12
             if(sqrt(xifake(npartner)).gt.upper_scale)lzone(npartner)=.false.
@@ -3927,7 +3911,8 @@ c
 c End of loop over colour partners
       enddo
 c Assign emsca on statistical basis
-      if(extra.and.wgt.gt.1.d-30)then
+c$$$      if(extra.and.wgt.gt.1.d-30)then
+      if(dampMCsubt.and.wgt.gt.1.d-30)then
         rrnd=ran2()
         wgt1=0.d0
         jpartner=0
@@ -6309,11 +6294,12 @@ c
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
 
-      double precision sum_mass
+      double precision sum_mass,eetot
       double precision pmass(nexternal)
       include "pmass.inc"
 c
 c
+      eetot=2d0*sqrt( ebeam(1)*ebeam(2) )
 c Consistency check -- call to set_cms_stuff() must be done prior to
 c entering this function
       shattmp=2d0*dot(pp(0,1),pp(0,2))
@@ -6324,22 +6310,23 @@ c entering this function
       endif
 
       if(dampMCsubt)then
-        sum_mass=0d0
-        do i=1,nexternal
-           sum_mass=sum_mass+pmass(i)
-        enddo
-        sum_mass=max(sum_mass,delta_scale)
-
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
 
-        if(MonteCarlo(1:7).eq.'PYTHIA6')then
+        if(MonteCarlo(1:6).eq.'PYTHIA')then
+           sum_mass=0d0
+           do i=1,nexternal
+              sum_mass=sum_mass+pmass(i)
+           enddo
+           sum_mass=max(sum_mass,delta_scale)
+
            scalemin=max(scalemin,sum_mass)
-           scalemax=min(scalemax,sqrt((1-xi_i_fks)*shat))
-           if(scalemax.lt.scalemin)scalemax=scalemin
+           scalemax=min(scalemax,ref_scale)
         endif
 
+        if(scalemax.ge.eetot)scalemax=eetot
+        if(scalemin.ge.scalemax)scalemin=scalemax
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -6348,30 +6335,29 @@ c entering this function
           rrnd=emscainv(rrnd,one)
           emsca_bare=scalemin+rrnd*(scalemax-scalemin)
         endif
-      else
-        emsca=2d0*sqrt( ebeam(1)*ebeam(2) )
-        return
-      endif
 
-      extra=.true.
-      call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,idum,
+        extra=.true.
+        call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,idum,
      &                dum1,dum2,dum3,dum4,dum5,dum6,qMC,extra)
 
-      if(emscasharp)then
-        if(qMC.le.scalemax)then
-          emsca=emsca_bare
+        if(emscasharp)then
+           if(qMC.le.scalemax)then
+              emsca=emsca_bare
+           else
+              emsca=scalemax
+           endif
         else
-          emsca=scalemax
+           ptresc=(qMC-scalemin)/(scalemax-scalemin)
+           if(ptresc.le.0.d0)then
+              emsca=emsca_bare
+           elseif(ptresc.lt.1.d0)then
+              emsca=emsca_bare
+           else
+              emsca=scalemax
+           endif
         endif
       else
-        ptresc=(qMC-scalemin)/(scalemax-scalemin)
-        if(ptresc.le.0.d0)then
-          emsca=emsca_bare
-        elseif(ptresc.lt.1.d0)then
-          emsca=emsca_bare
-        else
-          emsca=scalemax
-        endif
+         emsca=eetot
       endif
 
       return
@@ -6381,12 +6367,13 @@ c entering this function
       subroutine assign_scalemax(sh,xi,xxscalemax)
       implicit none
       include "nexternal.inc"
-      include "coupl.inc"
       include "madfks_mcatnlo.inc"
+      include "run.inc"
+      include "coupl.inc"
 
       integer i
       double precision sh,xi,ref_scale,xxscalemax,xxscalemin,
-     &     delta_scale,zero
+     &     delta_scale,zero,eetot
       parameter(delta_scale=10d0)
       parameter(zero=0d0)
 
@@ -6397,6 +6384,8 @@ c entering this function
       double precision pmass(nexternal)
       include "pmass.inc"
 c
+      eetot=2d0*sqrt( ebeam(1)*ebeam(2) )
+
       ref_scale=sqrt((1-xi)*sh)
       xxscalemin=max(frac_low*ref_scale,scaleMClow)
       xxscalemax=max(frac_upp*ref_scale,xxscalemin+scaleMCdelta)
@@ -6410,8 +6399,10 @@ c
 
          xxscalemin=max(xxscalemin,sum_mass)
          xxscalemax=min(xxscalemax,ref_scale)
-         if(xxscalemax.lt.xxscalemin)xxscalemax=xxscalemin
       endif
+
+      if(xxscalemax.ge.eetot)xxscalemax=eetot
+      if(xxscalemin.ge.xxscalemax)xxscalemin=xxscalemax
 
       return
       end
