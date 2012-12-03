@@ -2096,9 +2096,12 @@ c based on previous PS points (done in BinothLHA.f)
      &     ,pt_hardness
       double precision xscalemax,xxscalemax
       logical condition
-
-      xscalemax = scalemax
-
+c
+      SCALUP(iFKS)=0d0
+      xscalemax=0d0
+      xxscalemax=0d0
+c
+      xscalemax=scalemax
       if(MonteCarlo(1:6).eq.'HERWIG')condition=.not.Hevents
       if(MonteCarlo(1:6).eq.'PYTHIA')condition=.true.
 
@@ -2111,7 +2114,8 @@ c based on previous PS points (done in BinothLHA.f)
             SCALUP(iFKS)=xxscalemax
          endif
       else
-         if (emsca.ne.0d0) then
+c$$$         if(emsca.ne.0d0)then
+         if(dampMCsubt.and.emsca.ne.0d0)then
             SCALUP(iFKS)=xscalemax
          else
             call assign_scalemax(shat_ev,xi_i_fks_ev,xxscalemax)
