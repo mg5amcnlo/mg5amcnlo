@@ -118,10 +118,18 @@ class Computation(dict):
         new_2 = new_2.factorize()
         self.reduced_expr2[tag] = new_2
         self.add_tag((tag,))
+        self.unknow_fct = []
         #return expression
         return new
     
+    known_fct = ['/', 'log', 'pow', 'sin', 'cos', 'asin', 'acos', 'tan', 'cot', 'acot',
+                 'theta_function', 'exp']
     def add_function_expression(self, fct_tag, *args):
+
+        if not (fct_tag.startswith('cmath.') or fct_tag in self.known_fct or
+                                       (fct_tag, len(args)) in self.unknow_fct):
+            self.unknow_fct.append( (fct_tag, len(args)) )
+        
         argument = []
         for expression in args:
             if isinstance(expression, (MultLorentz, AddVariable, LorentzObject)):

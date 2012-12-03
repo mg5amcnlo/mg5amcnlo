@@ -204,6 +204,7 @@ class ALOHAExpressionParser(UFOExpressionParser):
 
     def p_expression_pi(self, p):
         '''expression : PI'''
+        KERNEL.has_pi = True
         p[0] = 'Param(\'PI\')'
 
     def p_expression_power(self, p):
@@ -291,6 +292,7 @@ class ALOHAExpressionParser(UFOExpressionParser):
         re_groups = self.re_cmath_function.match(p1)
         if re_groups:
             p1 = re_groups.group("name")
+
         new = aloha_lib.KERNEL.add_function_expression(p1, eval(p[3]), eval(p[5]),eval(p[7]))
         p[0] = str(new)
 

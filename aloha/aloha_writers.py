@@ -18,6 +18,7 @@ from cStringIO import StringIO
 import itertools
 
 KERNEL = aloha_lib.KERNEL
+pjoin = os.path.join
 
 class WriteALOHA: 
     """ Generic writing functions """ 
@@ -2045,6 +2046,35 @@ class WriterFactory(object):
             raise Exception, 'Unknown output format'
 
 
+    
+unknow_fct_template = """
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+       double complex %(fct_name)s(%(args)s)
+       implicit none
+c      Include Model parameter / coupling
+       include \"../MODEL/input.inc\"
+       include \"../MODEL/coupl.inc\"
+c      Defintion of the arguments       
+%(definitions)s
+       
+c      enter HERE the code corresponding to your function.
+c      The output value should be put to the %(fct_name)s variable.
 
 
+       return
+       end
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+"""
+        
+def write_template_fct(fct_name, nb_args, output_dir):
+        """create a template for function not recognized by ALOHA"""
+
+        dico = {'fct_name' : fct_name,
+                'args': ','.join(['S%i' %(i+1) for i in range(nb_args)]),
+                'definitions': '\n'.join(['       double complex S%i' %(i+1) for i in range(nb_args)])}
+
+        ff = open(pjoin(output_dir, 'additional_aloha_function.f'), 'a')
+        ff.write(unknow_fct_template % dico)
+        ff.close()
 
