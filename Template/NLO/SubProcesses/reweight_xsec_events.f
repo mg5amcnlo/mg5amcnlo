@@ -431,19 +431,19 @@ c Write event to disk:
 
 c Write the accumulated results to a file
       open (unit=34,file='scale_pdf_dependence.dat',status='unknown')
-      write (34,*) numscales
+      write (34,*) numscales**2
       if (numscales.gt.0) then
-         do ii=1,numscales
-            do jj=1,numscales
-               write (34,*) xsecScale_acc(ii,jj)
-            enddo
-         enddo
+         write (34,*) ((xsecScale_acc(ii,jj),ii=1,numscales),jj=1
+     $        ,numscales)
+      else
+         write (34,*) ''
       endif
       write (34,*) nsets
       if (nsets.gt.0) then
-         do n=0,nsets
-            write (34,*) xsecPDFr_acc(n)
-         enddo
+         write (34,*) (xsecPDFr_acc(n),n=0,nsets)
+      else
+         write (34,*) ''
+      endif
       endif
       close(34)
 
