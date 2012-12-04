@@ -382,7 +382,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
     # Helper function evaluate_matrix_element for loops
     #===============================================================================
     def evaluate_matrix_element(self, matrix_element, p=None, 
-                                gauge_check=False, auth_skipping=None, output='m2'):
+              gauge_check=False, auth_skipping=None, output='m2', MLOptions={}):
         """Calculate the matrix element and evaluate it for a phase space point
            Output can only be 'm2. The 'jamp' and 'amp' returned values are just
            empty lists at this point.
@@ -456,7 +456,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'))
         self.fix_MadLoopParamCard(os.path.join(export_dir,'Cards'),
-                                     mp = gauge_check and loop_optimized_output)
+                mp = gauge_check and loop_optimized_output, MLOptions=MLOptions)
         
         if gauge_check:
             file_path, orig_file_content, new_file_content = \
@@ -498,7 +498,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         else:
             return {'m2': finite_m2, output:[]}
 
-    def fix_MadLoopParamCard(self,dir_name, mp=False, loop_filter=False):
+    def fix_MadLoopParamCard(self,dir_name, mp=False, loop_filter=False,
+                                                                  MLOptions={}):
         """ Set parameters in MadLoopParams.dat suited for these checks.MP
             stands for multiple precision and can either be a bool or an integer
             to specify the mode."""
@@ -507,16 +508,34 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             mode = 4 if mp else 1
         else:
             mode = mp
+        
+        # Read the existing option card
         file = open(os.path.join(dir_name,'MadLoopParams.dat'), 'r')
         MLParams = file.read()
         file.close()
-        file = open(os.path.join(dir_name,'MadLoopParams.dat'), 'w')
+        
+        # Additional option specifications
+        for key in MLOptions.keys():
+            if key == "ImprovePS":
+                MLParams = re.sub(r"#ImprovePS\n\S+","#ImprovePS\n%s"%(\
+                            '.TRUE.' if MLOptions[key] else '.FALSE.'),MLParams)
+            elif key == "ForceMP":
+                if MLOptions[key]:
+                    mode = 4
+            else:
+                logger.error("Key %s is not a valid MadLoop option."%key)
+
+        # Mandatory option specificaitons
         MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%mode, MLParams)
         MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%mode, MLParams)
         MLParams = re.sub(r"#UseLoopFilter\n\S+","#UseLoopFilter\n%s"%(\
                                '.TRUE.' if loop_filter else '.FALSE.'),MLParams)                
         MLParams = re.sub(r"#DoubleCheckHelicityFilter\n\S+",
                                  "#DoubleCheckHelicityFilter\n.FALSE.",MLParams)
+
+
+        # Write out the modfied MadLoop option card
+        file = open(os.path.join(dir_name,'MadLoopParams.dat'), 'w')
         file.write(MLParams)
         file.close()
 
@@ -1119,7 +1138,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
         # Accuracy threshold of double precision evaluations above which the
         # PS points is also evaluated in quadruple precision
-        accuracy_threshold=0.1e0
+        accuracy_threshold=1.0e-1
         
         # Each evaluations is performed in different ways to assess its stability.
         # There are two dictionaries, one for the double precision evaluation
@@ -1132,7 +1151,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         Unstable_PS_points = []
         # The exceptional PS points are those which stay unstable in quad prec.
         Exceptional_PS_points = []
-        
+
         # Normally, this should work for loop-induced processes as well
         if not reusing:
             process = matrix_element['processes'][0]
@@ -1158,6 +1177,21 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                     QP_stability = saved_run['QP_stability']
                     Unstable_PS_points = saved_run['Unstable_PS_points']
                     Exceptional_PS_points = saved_run['Exceptional_PS_points']
+        
+        return_dict = {'DP_stability':DP_stability,
+               'QP_stability':QP_stability,
+               'Unstable_PS_points':Unstable_PS_points,
+               'Exceptional_PS_points':Exceptional_PS_points}
+
+        if nPoints==0:
+            if len(return_dict['DP_stability'])!=0:
+                return_dict['Process'] =  matrix_element.get('processes')[0] if not \
+                                                     reusing else matrix_element
+                return return_dict
+            else: 
+                logging.info("ERROR: Not reusing a directory and the number"+\
+                                             " of point for the check is zero.")
+                return None
 
         logger.info("Checking stability of process %s "%proc_name+\
                     "with %d PS points."%nPoints)
@@ -1281,14 +1315,15 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         StabChecker = subprocess.Popen([os.path.join(dir_path,'StabilityCheckDriver')], 
           stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
                                                                    cwd=dir_path)
+        start_index = len(DP_stability)
         if progress_bar!=None:
                 progress_bar.start()
-        for i in range(nPoints): 
+        for i in range(start_index,start_index+nPoints): 
             # Pick an eligible PS point with rambo
             p = pick_PS_point(process)
 #            print "I use P_%i="%i,p
             if progress_bar!=None:
-                progress_bar.update(i+1)
+                progress_bar.update(i+1-start_index)
             # Write it in the input file
             PSPoint = format_PS_point(p,0)
             dp_dict={}
@@ -1340,11 +1375,6 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
         # Close the StabChecker process.
         StabChecker.stdin.write('y\n')
-        
-        return_dict = {'DP_stability':DP_stability,
-                       'QP_stability':QP_stability,
-                       'Unstable_PS_points':Unstable_PS_points,
-                       'Exceptional_PS_points':Exceptional_PS_points}
         
         # Save the run for possible future use
         save_load_object.save_to_file(os.path.join(dir_path,\
@@ -2752,21 +2782,51 @@ def check_lorentz_process(process, evaluator):
     else:
         matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                                        optimized_output = loop_optimized_output)
-    
-    data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
-                                             auth_skipping = True)
+
+    MLOptions = {'ImprovePS':True,'ForceMP':False}
+
+    if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
+        data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
+                                                 auth_skipping = True)
+    else:
+        data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
+                                      auth_skipping = True, MLOptions=MLOptions)
 
     if data and data['m2']:
         results = [data]
     else:
         return  {'process':process, 'results':'pass'}
     
-    for boost in range(1,4):
-        boost_p = boost_momenta(p, boost)
+    # The boosts are not precise enough for the loop evaluations and one need the
+    # fortran improve_ps function of MadLoop to work. So we only consider the 
+    # boosts along the z directions for loops or simple rotations.
+    if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
+        for boost in range(1,4):
+            boost_p = boost_momenta(p, boost)
+            results.append(evaluator.evaluate_matrix_element(matrix_element,
+                                                       p=boost_p,output='jamp'))
+    else:
+        boost_p = boost_momenta(p, 3)
         results.append(evaluator.evaluate_matrix_element(matrix_element,
-                                                         p=boost_p,
-                                                         output='jamp'))
-        
+                                 p=boost_p,output='jamp',MLOptions = MLOptions))
+        # If 2 incoming particles, we can afford to only rotate the final state
+        # particles so that improve_ps will work.
+        if matrix_element.get_nexternal_ninitial()[1]==2 and \
+                                   matrix_element.get_nexternal_ninitial()[0]>3: 
+            rot_p = p[:2]+[[pm[0],pm[3],-pm[1],-pm[2]] for pm in p[2:]]
+        else:
+            rot_p = [[pm[0],pm[3],-pm[1],-pm[2]] for pm in p]
+        results.append(evaluator.evaluate_matrix_element(matrix_element,
+                                 p=boost_p,output='jamp',MLOptions = MLOptions))
+        # Another rotation
+        if matrix_element.get_nexternal_ninitial()[1]==2 and \
+                                   matrix_element.get_nexternal_ninitial()[0]>3: 
+            rot_p = p[:2]+[[pm[0],pm[3],-pm[1],-pm[2]] for pm in p[2:]]
+        else:
+            rot_p = [[pm[0],pm[3],-pm[1],-pm[2]] for pm in p]
+        rot_p = [[pm[0],-pm[3],pm[2],pm[1]] for pm in p]
+
+            
         
     return {'process': process, 'results': results}
 
