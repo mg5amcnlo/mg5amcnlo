@@ -1596,7 +1596,7 @@ def generate_loop_matrix_element(process_definition, reuse,
     amplitude = loop_diagram_generation.LoopAmplitude(process)
     # Make sure to disable loop_optimized_output when considering loop induced 
     # processes
-    loop_optimized_output = cmd.get('options')['loop_optimized_output']
+    loop_optimized_output = cmd.options['loop_optimized_output']
     if not amplitude.get('process').get('has_born'):
         loop_optimized_output = False
     timing['Diagrams_generation']=time.time()-start
@@ -1634,7 +1634,7 @@ def check_profile(process_definition, param_card = None,cuttools="",
                                                                   reuse,cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
     myProfiler = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
-    if not matrix_element.get('processes')[0].get('has_born'):
+    if not reusing and not matrix_element.get('processes')[0].get('has_born'):
         myProfiler.loop_optimized_output=False
     timing2 = myProfiler.time_matrix_element(matrix_element, reusing, 
                                             param_card, keep_folder=keep_folder)
@@ -1671,7 +1671,7 @@ def check_stability(process_definition, param_card = None,cuttools="",
     reusing = isinstance(matrix_element, base_objects.Process)
     myStabilityChecker = LoopMatrixElementTimer(cuttools_dir=cuttools,
                                                             model=model,cmd=cmd)
-    if not matrix_element.get('processes')[0].get('has_born'):
+    if not reusing and not matrix_element.get('processes')[0].get('has_born'):
         myStabilityChecker.loop_optimized_output=False
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
                         nPoints=nPoints,reusing=reusing,param_card=param_card, 
@@ -1697,7 +1697,7 @@ def check_timing(process_definition, param_card= None, cuttools="",
                                                                  reuse, cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
     myTimer = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
-    if not matrix_element.get('processes')[0].get('has_born'):
+    if not reusing and not matrix_element.get('processes')[0].get('has_born'):
         myTimer.loop_optimized_output=False
     timing2 = myTimer.time_matrix_element(matrix_element, reusing, param_card,
                                                       keep_folder = keep_folder)
@@ -2245,7 +2245,7 @@ def output_stability(stability, mg_root, reusing=False):
                    "graphical display of the results of this check."
         return res_str
   
-def output_timings(process, timings, loop_optimized_output):
+def output_timings(process, timings):
     """Present the result of a timings check in a nice format """
     
     # Define shortcut
