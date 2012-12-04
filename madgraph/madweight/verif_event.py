@@ -38,11 +38,19 @@ import re
 import sys
 import time
 import math
-import diagram_class
-import substructure_class
-from MW_param import go_to_main_dir
 
-split=re.compile(r'''\s''')
+try: 
+    import madgraph.madweight.diagram_class as diagram_class
+    import madgraph.madweight.substructure_class as substructure_class
+    import madgraph.madweight.MW_info as MW_param
+    
+except ImportError:
+    import internal.diagram_class as diagram_class
+    import internal.madweight.substructure_class as substructure_class
+    import internal.madweight.MW_info as MW_param
+
+go_to_main_dir = MW_param.go_to_main_dir
+
 
 #1 ##############################################
 def verif_event(MWparam):

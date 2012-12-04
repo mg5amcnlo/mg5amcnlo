@@ -18,6 +18,7 @@ A user friendly interface to access all the function associated to MadWeight
 
 import logging
 import os
+import subprocess
 
 logger = logging.getLogger('cmdprint')
 
@@ -26,14 +27,17 @@ try:
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     import madgraph.interface.extended_cmd as cmd
     import madgraph.interface.common_run_interface as common_run
+    
     import madgraph.madweight.MW_info as MW_info
     import madgraph.madweight.change_tf as change_tf
     import madgraph.madweight.create_param as create_param
     import madgraph.madweight.create_run as create_run
     import madgraph.madweight.Cards as Cards
     import madgraph.madweight.write_MadWeight as write_MadWeight
+    import madgraph.madweight.verif_event as verif_event
     
     import madgraph.various.misc as misc
+    import madgraph.iolibs.files as files
     MADEVENT = False
 except ImportError, error:
     logger.debug(error)
@@ -48,6 +52,8 @@ except ImportError, error:
     import internal.madweight.create_run as create_run
     import internal.madweight.Cards as Cards
     import internal.madweight.write_MadWeight as write_MadWeight
+    import internal.madweight.verif_event as verif_event
+    import internal.files as files
     
     import internal.misc as misc 
     MADEVENT = True
@@ -232,37 +238,86 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
     
         write_MadWeight.create_all_fortran_code(self.MWparam)
         
-    def compile(self, line):
+    def do_compile(self, line):
         """compile the code"""
         
-        misc.compile()
+        misc.compile(arg=["../lib/libtools.a"], cwd=pjoin(self.me_dir,'Source')) 
+        misc.compile(arg=["../lib/libblocks.a"], cwd=pjoin(self.me_dir,'Source')) 
+        misc.compile(arg=["../lib/libTF.a"], cwd=pjoin(self.me_dir,'Source')) 
+        misc.compile(arg=["../lib/libpdf.a"], cwd=pjoin(self.me_dir,'Source')) 
+        misc.compile(arg=["../lib/libdhelas.a"], cwd=pjoin(self.me_dir,'Source')) 
+        misc.compile(arg=["../lib/libmodel.a"], cwd=pjoin(self.me_dir,'Source')) 
+        misc.compile(arg=["../lib/libgeneric.a"], cwd=pjoin(self.me_dir,'Source')) 
+        misc.compile(arg=["../lib/libcernlib.a"], cwd=pjoin(self.me_dir,'Source')) 
+        
+        for MW_dir in self.MWparam.MW_listdir:
+            misc.compile(cwd=pjoin(self.me_dir,'SubProcesses', MW_dir))
+            if not os.path.exists(pjoin(self.me_dir,'SubProcesses',MW_dir, 'comp_madweight')):
+                raise Exception, 'compilation fails'
+        logger.info('MadWeight code has been compiled.')
+        
     
-    
-    def   compile_SubProcesses(process_list):
-    os.chdir("./Source")
-    os.system("make ../lib/libtools.a")
-    os.system("make ../lib/libblocks.a")
-    os.system("make ../lib/libTF.a")
-    os.system("make ../lib/libpdf.a")
-    os.system("make ../lib/libdhelas.a")
-    os.system("make ../lib/libmodel.a")
-    os.system("make ../lib/libgeneric.a")
-    os.system("make ../lib/libcernlib.a")
-    #os.system("make ../bin/sum_html")
-    # os.system("make ../bin/gen_ximprove")
-
-    os.chdir("../SubProcesses")
-    for name in process_list:
-        os.chdir("./"+name)
-        #os.system(" rm madweight")
-        exit_status=os.system("make > /dev/null")
-        if  os.path.isfile("./comp_madweight") and exit_status==0 :
-            os.chdir("..")
+    def do_check_events(self, line):
+        """check that the events are valid"""
+        
+        evt_file = pjoin(self.me_dir,'Events','input.lhco')
+        if not os.path.exists(evt_file):
+            question = 'Which LHCO file do you want to use?'
+            default = ''            
+            
+            input_file = self.ask(question, default, path_msg='valid path')
+            
+            if not input_file:
+                raise self.InvalidCmd('Please specify a valid LHCO File')
+            
+            if input_file.endswith('.gz'):
+                fsock = open(evt_file, 'w') 
+                subprocess.call(['gunzip', '-c', input_file], stdout=fsock)
+            else:
+                files.cp(input_file, evt_file)
+            
+        verif_event.verif_event(self.MWparam)
+        
+    def check_launch_jobs(self, args):
+        """format the argument to retrun a list with two argument,
+        The first corresponding to the fact if we need te create the output dir
+        The second if we can launch the job on the cluster."""
+        
+        if not args:
+            #use default
+            args[:] = [True, True]
+            return
         else:
-            print "fortran compilation error"
-            sys.exit()
-    os.chdir("..")   
-    return
+            create_dir = True
+            launch = True
+            for arg in args:
+                if arg.count('=') !=1 :
+                    logger.warning('command launch_jobs does not recognized argument %s. This argument is ignored' % arg)
+                restrict, value = arg.split('=')
+                if restrict == '--create_dir=':
+                    if value in self.True:
+                        create_dir = True
+                    else: 
+                        create_dir = False
+                elif restrict == '--submit=':
+                    if value in self.True:
+                        launch = True
+                    else: 
+                        launch = False                
+            args[:] = [create_dir, launch]
+            return
+        
+    def do_launch_jobs(self, line):
+        
+        args = self.split_arg(line)
+        self.check_launch_jobs(args)
+        # now args is of the type [True True]
+        create_dir, launch_jobs = args[0], args[1]
+        
+        
+        
+        
+
     
     
 #===============================================================================
