@@ -3194,6 +3194,7 @@ class decay_all_events:
                   logger.info('Max weight,  event '+str(ev+1)+\
                             ' , dk config '+str(index+1)+' : '+str(probe_weight[ev][tag_decay]))
 
+# Below comes a new formula to determine the maximum weight
             max_weight={}
             min_weight={}
 
