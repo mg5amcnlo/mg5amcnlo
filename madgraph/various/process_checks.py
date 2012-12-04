@@ -69,8 +69,6 @@ from aloha.template_files.wavefunctions import \
 
 ADDED_GLOBAL = []
 
-loop_optimized_output = False
-
 temp_dir_prefix = "TMP_CHECK"
 
 def clean_added_globals(to_clean):
@@ -365,15 +363,15 @@ class MatrixElementEvaluator(object):
 class LoopMatrixElementEvaluator(MatrixElementEvaluator):
     """Class taking care of matrix element evaluation for loop processes."""
 
-    def __init__(self, cuttools_dir=None, *args, **kwargs):
-
+    def __init__(self,cuttools_dir=None,cmd=FakeInterface(),*args,**kwargs):
         """Allow for initializing the MG5 root where the temporary fortran
         output for checks is placed."""
         
-        super(LoopMatrixElementEvaluator,self).__init__(*args, **kwargs)
+        super(LoopMatrixElementEvaluator,self).__init__(*args,cmd=cmd,**kwargs)
 
         self.mg_root=self.cmd._mgme_dir
         self.cuttools_dir=cuttools_dir
+        self.loop_optimized_output = cmd.options['loop_optimized_output']
         # Set proliferate to true if you want to keep the produced directories
         # and eventually reuse them if possible
         self.proliferate=True
@@ -430,7 +428,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             # I do the import here because there is some cyclic import of export_v4
             # otherwise
             import madgraph.loop.loop_exporters as loop_exporters
-            if loop_optimized_output:
+            if self.loop_optimized_output:
                 exporter_class=loop_exporters.LoopProcessOptimizedExporterFortranSA
             else:
                 exporter_class=loop_exporters.LoopProcessExporterFortranSA
@@ -456,7 +454,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'))
         self.fix_MadLoopParamCard(os.path.join(export_dir,'Cards'),
-                mp = gauge_check and loop_optimized_output, MLOptions=MLOptions)
+           mp = gauge_check and self.loop_optimized_output, MLOptions=MLOptions)
         
         if gauge_check:
             file_path, orig_file_content, new_file_content = \
@@ -465,7 +463,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             file = open(file_path,'w')
             file.write(new_file_content)
             file.close()
-            if loop_optimized_output:
+            if self.loop_optimized_output:
                 mp_file_path, mp_orig_file_content, mp_new_file_content = \
                   self.setup_ward_check(os.path.join(export_dir,'SubProcesses'), 
                   ['mp_helas_calls_ampb_1.f','mp_compute_loop_coefs.f'],mp=True)
@@ -482,7 +480,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             file = open(file_path,'w')
             file.write(orig_file_content)
             file.close()
-            if loop_optimized_output:
+            if self.loop_optimized_output:
                 mp_file = open(mp_file_path,'w')
                 mp_file.write(mp_orig_file_content)
                 mp_file.close()
@@ -932,7 +930,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             # I do the import here because there is some cyclic import of export_v4
             # otherwise
             import madgraph.loop.loop_exporters as loop_exporters
-            if loop_optimized_output:
+            if self.loop_optimized_output:
                 exporter_class=loop_exporters.LoopProcessOptimizedExporterFortranSA
             else:
                 exporter_class=loop_exporters.LoopProcessExporterFortranSA
@@ -1057,7 +1055,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         n_contrib_hel=0
         helicities = file(os.path.join(dir_name,'HelFilter.dat')).read().split()
         for i, hel in enumerate(helicities):
-            if (loop_optimized_output and int(hel)>-10000) or hel=='T':
+            if (self.loop_optimized_output and int(hel)>-10000) or hel=='T':
                 if contributing_hel==0:
                     contributing_hel=i+1
                 n_contrib_hel += 1
@@ -1091,7 +1089,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         res_timings['run_unpolarized_total']=\
                    (run_time-res_timings['Booting_time'])/target_pspoints_number
         
-        if not loop_optimized_output:
+        if not self.loop_optimized_output:
             return res_timings
         
         # For the loop optimized output, we also check the time spent in
@@ -1599,8 +1597,8 @@ def generate_loop_matrix_element(process_definition, reuse,
     amplitude = loop_diagram_generation.LoopAmplitude(process)
     # Make sure to disable loop_optimized_output when considering loop induced 
     # processes
+    loop_optimized_output = cmd.get('options')['loop_optimized_output']
     if not amplitude.get('process').get('has_born'):
-        global loop_optimized_output
         loop_optimized_output = False
     timing['Diagrams_generation']=time.time()-start
     timing['n_loops']=len(amplitude.get('loop_diagrams'))
@@ -1637,6 +1635,8 @@ def check_profile(process_definition, param_card = None,cuttools="",
                                                                   reuse,cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
     myProfiler = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
+    if not matrix_element.get('processes')[0].get('has_born'):
+        myProfiler.loop_optimized_output=False
     timing2 = myProfiler.time_matrix_element(matrix_element, reusing, 
                                             param_card, keep_folder=keep_folder)
     
@@ -1652,6 +1652,8 @@ def check_profile(process_definition, param_card = None,cuttools="",
     if stability == None:
         return None, None
     else:
+        timing['loop_optimized_output']=myProfiler.loop_optimized_output
+        stability['loop_optimized_output']=myProfiler.loop_optimized_output
         return timing, stability
 
 #===============================================================================
@@ -1670,6 +1672,8 @@ def check_stability(process_definition, param_card = None,cuttools="",
     reusing = isinstance(matrix_element, base_objects.Process)
     myStabilityChecker = LoopMatrixElementTimer(cuttools_dir=cuttools,
                                                             model=model,cmd=cmd)
+    if not matrix_element.get('processes')[0].get('has_born'):
+        myStabilityChecker.loop_optimized_output=False
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
                         nPoints=nPoints,reusing=reusing,param_card=param_card, 
                                                         keep_folder=keep_folder)
@@ -1677,6 +1681,7 @@ def check_stability(process_definition, param_card = None,cuttools="",
     if stability == None:
         return None
     else:
+        stability['loop_optimized_output']=myStabilityChecker.loop_optimized_output
         return stability
 
 #===============================================================================
@@ -1693,6 +1698,8 @@ def check_timing(process_definition, param_card= None, cuttools="",
                                                                  reuse, cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
     myTimer = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
+    if not matrix_element.get('processes')[0].get('has_born'):
+        myTimer.loop_optimized_output=False
     timing2 = myTimer.time_matrix_element(matrix_element, reusing, param_card,
                                                       keep_folder = keep_folder)
     
@@ -1700,7 +1707,9 @@ def check_timing(process_definition, param_card= None, cuttools="",
         return None
     else:    
         # Return the merged two dictionaries
-        return dict(timing1.items()+timing2.items())
+        res = dict(timing1.items()+timing2.items())
+        res['loop_optimized_output']=myTimer.loop_optimized_output
+        return res
 
 #===============================================================================
 # check_processes
@@ -1875,8 +1884,7 @@ def check_process(process, evaluator, quick):
                                             number_checked%2 == 0 else 'default'
                 amplitude = loop_diagram_generation.LoopAmplitude(newproc)
                 if not amplitude.get('process').get('has_born'):
-                    global loop_optimized_output
-                    loop_optimized_output = False
+                    evaluator.loop_optimized_output = False
                     
         except InvalidCmd:
             result=False
@@ -1901,7 +1909,7 @@ def check_process(process, evaluator, quick):
                                                           gen_color=False)
         else:
             matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
-                                         optimized_output=loop_optimized_output)
+                               optimized_output=evaluator.loop_optimized_output)
 
         # The loop diagrams are always the same in the basis, so that the
         # LoopHelasMatrixElement always look alike. One needs to consider
@@ -1972,16 +1980,18 @@ def format_output(output,format):
     else:
         return 'NA'
 
-def output_profile(myprocdef, stability, timing, mg_root, opt, reusing=False):
+def output_profile(myprocdef, stability, timing, mg_root, reusing=False):
     """Present the results from a timing and stability consecutive check"""
+
+    opt = timing['loop_optimized_output']
 
     text = 'Timing result for the '+('optimized' if opt else 'default')+\
                                                                     ' output:\n'
-    text += output_timings(myprocdef,timing,opt)
+    text += output_timings(myprocdef,timing)
 
     text += '\nStability result for the '+('optimized' if opt else 'default')+\
                                                                     ' output:\n'
-    text += output_stability(stability,mg_root=mg_root,opt = opt, reusing=reusing)
+    text += output_stability(stability,mg_root=mg_root, reusing=reusing)
 
     mode = 'optimized' if opt else 'default'
     logFilePath =  os.path.join(mg_root, 'profile_%s_%s.log'\
@@ -1993,7 +2003,7 @@ def output_profile(myprocdef, stability, timing, mg_root, opt, reusing=False):
                                                               %str(logFilePath))
     return text
 
-def output_stability(stability, mg_root, opt, reusing=False):
+def output_stability(stability, mg_root, reusing=False):
     """Present the result of a stability check in a nice format.
     The full info is printed out in 'Stability_result_<proc_shell_string>.dat'
     under the MadGraph root folder (mg_root)"""
@@ -2071,6 +2081,7 @@ def output_stability(stability, mg_root, opt, reusing=False):
 
     # Define shortcut
     f = format_output
+    opt = stability['loop_optimized_output']
 
     mode = 'optimized' if opt else 'default'
     DP_stability = [eval['Accuracy'] for eval in stability['DP_stability']]
@@ -2240,6 +2251,7 @@ def output_timings(process, timings, loop_optimized_output):
     
     # Define shortcut
     f = format_output
+    loop_optimized_output = timings['loop_optimized_output']
     
     res_str = "%s \n"%process.nice_string()
     try:
@@ -2511,8 +2523,7 @@ def check_gauge_process(process, evaluator):
         else:
             amplitude = loop_diagram_generation.LoopAmplitude(process)
             if not amplitude.get('process').get('has_born'):
-                global loop_optimized_output
-                loop_optimized_output = False
+                evaluator.loop_optimized_output = False
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
@@ -2530,7 +2541,7 @@ def check_gauge_process(process, evaluator):
                                                       gen_color = False)
     else:
         matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
-                                         optimized_output=loop_optimized_output)
+                               optimized_output=evaluator.loop_optimized_output)
         
     brsvalue = evaluator.evaluate_matrix_element(matrix_element, gauge_check = True,
                                                  output='jamp')
@@ -2759,8 +2770,7 @@ def check_lorentz_process(process, evaluator):
         else:
             amplitude = loop_diagram_generation.LoopAmplitude(process)
             if not amplitude.get('process').get('has_born'):
-                global loop_optimized_output
-                loop_optimized_output = False 
+                evaluator.loop_optimized_output = False 
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
@@ -2781,7 +2791,7 @@ def check_lorentz_process(process, evaluator):
                                                       gen_color = True)
     else:
         matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
-                                       optimized_output = loop_optimized_output)
+                             optimized_output = evaluator.loop_optimized_output)
 
     MLOptions = {'ImprovePS':True,'ForceMP':False}
 
@@ -2923,8 +2933,6 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
 def get_value(process, evaluator, p=None):
     """Return the value/momentum for a phase space point"""
     
-    global loop_optimized_output
-    
     for i, leg in enumerate(process.get('legs')):
         leg.set('number', i+1)
 
@@ -2939,7 +2947,9 @@ def get_value(process, evaluator, p=None):
         if process.get('perturbation_couplings')==[]:
             amplitude = diagram_generation.Amplitude(process)
         else:
-            amplitude = loop_diagram_generation.LoopAmplitude(process)  
+            amplitude = loop_diagram_generation.LoopAmplitude(process)
+            if not amplitude.get('process').get('has_born'):
+                evaluator.loop_optimized_output = False
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
@@ -2954,14 +2964,6 @@ def get_value(process, evaluator, p=None):
     if not p:
         # Generate phase space point to use
         p, w_rambo = evaluator.get_momenta(process)
-    
-
-    reset_global_loop = False
-    if not amplitude.get('process').get('has_born') and loop_optimized_output:
-        logging.debug("Setting loop_optimized_output to false for processes"+\
-                                    " without an underlying born contribution.")
-        loop_optimized_output = False
-        reset_global_loop = True
 
     # Generate the HelasMatrixElement for the process
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
@@ -2969,12 +2971,10 @@ def get_value(process, evaluator, p=None):
                                                       gen_color = True)
     else:
         matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude, 
-                     gen_color = True, optimized_output = loop_optimized_output)
+           gen_color = True, optimized_output = evaluator.loop_optimized_output)
 
     mvalue = evaluator.evaluate_matrix_element(matrix_element, p=p,
                                                                   output='jamp')
-    if reset_global_loop:
-        loop_optimized_output = True
     
     if mvalue and mvalue['m2']:
         return {'process':process.base_string(),'value':mvalue,'p':p}

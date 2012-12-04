@@ -2777,11 +2777,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # run the check
         cpu_time1 = time.time()
         # Run matrix element generation check on processes
-        # The loop optimization output flag is passed as a global to 
-        # process_checks because I am fed up with passing it through each single
-        # damn little function of process_checks.
-        old_process_checks_loop_opt = process_checks.loop_optimized_output
-        process_checks.loop_optimized_output = self.options['loop_optimized_output']
         
         # The aloha python output has trouble when doing (tree level of course)
         # python output and that loop_mode is True at the beginning.
@@ -2833,11 +2828,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         if args[0] in  ['gauge', 'full'] and \
           len(self._curr_model.get('gauge')) == 2 and\
-          myprocdef.get('perturbation_couplings') in [[],['QCD']]:
-            opt_loop_output = str(self.options['loop_optimized_output'])
-            # In order to be able to switch gauges, we put ourselves in the
-            # default output mode.
-            self.do_set('loop_optimized_output False', log=False)
+                        myprocdef.get('perturbation_couplings') in [[],['QCD']]:
             line = " ".join(args[1:])
             myprocdef = self.extract_process(line)
             if gauge == 'unitary':
@@ -2851,7 +2842,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
             nb_part_unit = len(myprocdef_unit.get('model').get('particles'))
             nb_part_feyn = len(myprocdef_feyn.get('model').get('particles'))
-            
             if nb_part_feyn == nb_part_unit:
                 logger.error('No Goldstone present for this check!!')
             gauge_result_no_brs = process_checks.check_unitary_feynman(
@@ -2863,7 +2853,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
-            self.do_set('loop_optimized_output %s' % opt_loop_output, log=False)
             
             nb_processes += len(gauge_result_no_brs)
 
@@ -2911,22 +2900,18 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text += 'Timing result for the '+('optimized' if \
               self.options['loop_optimized_output'] else 'default')+' output:\n'
                 
-            text += process_checks.output_timings(myprocdef, timings,
-                                         process_checks.loop_optimized_output)
+            text += process_checks.output_timings(myprocdef, timings)
         if stability:
             text += 'Stability result for the '+('optimized' if \
               self.options['loop_optimized_output'] else 'default')+' output:\n'
             text += process_checks.output_stability(stability,
-                                    mg_root=self._mgme_dir, 
-                                    opt = process_checks.loop_optimized_output)
+                                    mg_root=self._mgme_dir)
         
         if profile_time and profile_stab:
             text += 'Timing result '+('optimized' if \
                     self.options['loop_optimized_output'] else 'default')+':\n'
             text += process_checks.output_profile(myprocdef, profile_stab,
-                                   profile_time, self._mgme_dir,
-                                   process_checks.loop_optimized_output,
-                                   reuse) + '\n'
+                                   profile_time, self._mgme_dir,reuse) + '\n'
         if gauge_result:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'
@@ -2957,9 +2942,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # Useful to really specify what logger is used for ML acceptance tests
             logging.getLogger('madgraph.check_cmd').info(text)
         else:
-            logging.getLogger('madgraph.check_cmd').debug(text)            
-        # Restore the default global for checks
-        process_checks.loop_optimized_output = old_process_checks_loop_opt
+            logging.getLogger('madgraph.check_cmd').debug(text)
 
         # clean the globals created.
         process_checks.clean_added_globals(process_checks.ADDED_GLOBAL)
