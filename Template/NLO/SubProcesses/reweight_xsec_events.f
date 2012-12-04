@@ -438,12 +438,12 @@ c Write the accumulated results to a file
       else
          write (34,*) ''
       endif
-      write (34,*) nsets
       if (nsets.gt.0) then
+        write (34,*) nsets + 1
          write (34,*) (xsecPDFr_acc(n),n=0,nsets)
       else
+         write(34,*) nsets
          write (34,*) ''
-      endif
       endif
       close(34)
 

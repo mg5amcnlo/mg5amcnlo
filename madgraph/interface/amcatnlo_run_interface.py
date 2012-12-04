@@ -1888,31 +1888,43 @@ Integrated cross-section
         written by the reweight_xsec_events.f code
         (P*/G*/pdf_scale_uncertainty.dat) and computes the overall
         scale and PDF uncertainty (the latter is computed using the
-        Hessian method) and returns it in percents"""
+        Hessian method) and returns it in percents.
+        The expected format of the file is:
+        n_scales
+        xsec_scale_central xsec_scale1 ...
+        n_pdf
+        xsec_pdf0 xsec_pdf1 ...."""
         scales=[]
         pdfs=[]
-        for ii,evt_file in enumerate(evt_files):
+        numofpdf = 0
+        numofscales = 0
+        for evt_file in evt_files:
             path, evt=os.path.split(evt_file)
-            data_file=open(pjoin(self.me_dir, 'SubProcesses', path, 'scale_pdf_dependence.dat')).readlines()
-            for i,line in enumerate(data_file):
-                if ii==0 and i==0:
-                    numofscales=int(line)
-                elif ii==0 and i<=numofscales*numofscales:
-                    scales.append(float(line.replace("D","E")))
-                elif ii==0 and i==numofscales*numofscales+1:
-                    numofpdf=int(line)
-                elif ii==0 and i>=numofscales*numofscales+2:
-                    pdfs.append(float(line.replace("D","E")))
-                elif ii!=0 and i==0:
-                    if numofscales!=int(line):
-                        raise aMCatNLOError('inconsistent scale_pdf_dependence.dat')
-                elif ii!=0 and i<=numofscales*numofscales:
-                    scales[i-1]=scales[i-1]+float(line.replace("D","E"))
-                elif ii!=0 and i==numofscales*numofscales+1:
-                    if numofpdf!=int(line):
-                        raise aMCatNLOError('inconsistent scale_pdf_dependence.dat')
-                elif ii!=0 and i>=numofscales*numofscales+2:
-                    pdfs[i-(numofscales*numofscales+2)]=pdfs[i-(numofscales*numofscales+2)]+float(line.replace("D","E"))
+            data_file=open(pjoin(self.me_dir, 'SubProcesses', path, 'scale_pdf_dependence.dat')).read()
+            lines = data_file.replace("D", "E").split("\n")
+            if not numofscales:
+                numofscales = int(lines[0])
+            if not numofpdf:
+                numofpdf = int(lines[2])
+            scales_this = [float(val) for val in lines[1].split()]
+            pdfs_this = [float(val) for val in lines[3].split()]
+
+            if numofscales != len(scales_this) or numofpdf !=len(pdfs_this):
+                # the +1 takes the 0th (central) set into account
+                logger.info(data_file)
+                logger.info((' Expected # of scales: %d\n'+
+                             ' Found # of scales: %d\n'+
+                             ' Expected # of pdfs: %d\n'+
+                             ' Found # of pdfs: %d\n') %
+                        (numofscales, len(scales_this), numofpdf, len(pdfs_this)))
+                raise aMCatNLOError('inconsistent scale_pdf_dependence.dat')
+            if not scales:
+                scales = [0.] * numofscales
+            if not pdfs:
+                pdfs = [0.] * numofpdf
+
+            scales = [a + b for a, b in zip(scales, scales_this)]
+            pdfs = [a + b for a, b in zip(pdfs, pdfs_this)]
 
         # get the central value
         if numofscales>0 and numofpdf==0:
