@@ -409,7 +409,7 @@ class Amplitude(base_objects.PhysicsObject):
         if len(filter(lambda leg: model.get('particle_dict')[\
                         leg.get('id')].is_fermion(), legs)) % 2 == 1:
             self['diagrams'] = res
-            raise InvalidCmd, 'The number of fermion is odd' 
+            raise InvalidCmd, 'The number of fermions is odd' 
             return res
 
         # Then check same number of incoming and outgoing fermions (if

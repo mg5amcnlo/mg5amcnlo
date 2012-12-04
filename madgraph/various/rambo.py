@@ -96,15 +96,15 @@ def RAMBO(N,ET,XM):
 
 # INITIALIZATION STEP: FACTORIALS FOR THE PHASE SPACE WEIGHT                                                                               
     if not ibegin:
-      ibegin = 1
-      twopi = 8 * math.atan(1)
-      po2log = math.log(twopi/4)
-      Z[2] = po2log
-      for k in range(3, N+1):
-          Z[k] = Z[k-1] + po2log - 2.*math.log(k-2) - math.log(k-1)
+        ibegin = 1
+        twopi = 8 * math.atan(1)
+        po2log = math.log(twopi/4)
+        Z[2] = po2log
+        for k in range(3, N+1):
+            Z[k] = Z[k-1] + po2log - 2.*math.log(k-2) - math.log(k-1)
           
 # CHECK ON THE NUMBER OF PARTICLES
-      assert 1 < N < 101
+        assert 1 < N < 101
 
 # CHECK WHETHER TOTAL ENERGY IS SUFFICIENT; COUNT NONZERO MASSES
     xmt =  0
@@ -157,12 +157,12 @@ def RAMBO(N,ET,XM):
     wt = po2log
     if N != 2:
         wt = (2 * N-4) * math.log(ET) + Z[N]
-    if wt < -180 and IWARN[1] < 5:
+    if wt < -180 and iwarn[1] < 5:
         print "RAMBO WARNS: WEIGHT = EXP(%f20.9) MAY UNDERFLOW" % wt
-        IWARN[1] += 1
-    if wt > 174 and IWARN[2] < 5:      
+        iwarn[1] += 1
+    if wt > 174 and iwarn[2] < 5:      
         print " RAMBO WARNS: WEIGHT = EXP(%f20.9) MAY  OVERFLOW" % wt
-        IWARN[2] += 1
+        iwarn[2] += 1
 
                                                                                                                                           
 # RETURN FOR WEIGHTED MASSLESS MOMENTA                                                                                                     
@@ -175,7 +175,7 @@ def RAMBO(N,ET,XM):
     for i in range(1,N+1):
         XM2[i] = XM[i] **2
         P2[i] = P[(4,i)]**2
-    iter = 0
+    n_iter  = 0
     x= xmax
     accu = ET * acc
   
@@ -189,10 +189,10 @@ def RAMBO(N,ET,XM):
             g0 += P2[i]/E[i] 
         if abs(f0) <= accu:
             break
-        iter += 1
-        if iter > itmax:
+        n_iter  += 1
+        if n_iter  > itmax:
             print "RAMBO WARNS: %s ITERATIONS DID NOT GIVE THE DESIRED ACCURACY = %s" \
-                    %(iter, f0)
+                    %(n_iter , f0)
             break
         x=x-f0/(x*g0)
     for i in range(1, N+1):
