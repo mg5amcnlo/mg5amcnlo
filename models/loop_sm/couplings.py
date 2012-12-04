@@ -7,9 +7,12 @@ from object_library import all_couplings, Coupling
 
 from function_library import complexconjugate, re, im, csc, sec, acsc, asec
 
+GC_HHHH = Coupling(name = 'GC_HHHH',
+                 value = '-6*complex(0,1)*lam',
+                order = {'QED':2})
 
 GC_1 = Coupling(name = 'GC_1',
-                value = '-(ee*complex(0,1))/3.',
+                 value = '-(ee*complex(0,1))/3.',
                 order = {'QED':1})
 
 GC_2 = Coupling(name = 'GC_2',

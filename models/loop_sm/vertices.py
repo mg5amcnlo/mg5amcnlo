@@ -71,6 +71,12 @@ V_Ggh = Vertex(name = 'V_Ggh',
 # Non-QCD base vertices
 # ======================================================================
 
+V_HHHH = Vertex(name = 'V_HHHH',
+             particles = [ P.H, P.H, P.H, P.H ],
+             color = [ '1' ],
+             lorentz = [ L.SSSS1 ],
+             couplings = {(0,0):C.GC_HHHH})
+
 V_1 = Vertex(name = 'V_1',
              particles = [ P.H, P.H, P.H ],
              color = [ '1' ],
