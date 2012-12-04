@@ -324,7 +324,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
         shutil.move(pjoin(self.options['curr_dir'],'decayed_events.lhe'), decayed_evt_file)
         misc.call(['gzip %s' % decayed_evt_file], shell=True)
-        logger.info("Decayed events have been written in %s" % decayed_evt_file)
+        if not self.mother:
+            logger.info("Decayed events have been written in %s" % decayed_evt_file)
     
     
     def load_model(self, name, use_mg_default):

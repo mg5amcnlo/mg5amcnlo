@@ -1291,7 +1291,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
                 return
         
         files.mv(current_file, new_file)
-        
+        logger.info("The decayed event file has been moved to the following location: ")
+        logger.info(new_file)        
+ 
         if hasattr(self, 'results'):
             nb_event = self.results.current['nb_event']
             cross = self.results.current['cross']

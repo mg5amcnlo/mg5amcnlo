@@ -3024,8 +3024,8 @@ class decay_all_events:
                 if tag_production not in set_of_processes: # we need to generate new matrix elements
                     logger.info('  ')
                     logger.info('Found a new production process: ')
-                    logger.info(prod_process)
-                    logger.info('Re-interpreted as    ')
+#                    logger.info(prod_process)
+#                    logger.info('Re-interpreted as    ')
                     logger.info(extended_prod_process+proc_option)
                     logger.info( tag_production)
                     logger.info( ' -> need to generate the corresponding fortran matrix element ... ')
@@ -3275,8 +3275,8 @@ class decay_all_events:
             if tag_production not in set_of_processes: # we need to generate new matrix elements
                 logger.info(' ')
                 logger.info('Found a new production process: ')
-                logger.info(prod_process)
-                logger.info('Re-interpreted as    ')
+#                logger.info(prod_process)
+#                logger.info('Re-interpreted as    ')
                 logger.info(extended_prod_process+proc_option)
                 logger.info( tag_production)
                 logger.info( ' -> need to generate the corresponding fortran matrix element ... ')
