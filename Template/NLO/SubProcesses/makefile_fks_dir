@@ -12,8 +12,9 @@ FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
 NLOLIBS=$(libmadloop) $(libcuttools)
 # Uncomment the line below to compile 'by hand'
 # NLOLIBS= -L. -lmadloop -L$(LIBDIR) -lcts
-LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf $(lhapdf)
-LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libmodel.a $(LIBDIR)libpdf.a
+LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf -lcernlib $(lhapdf)
+LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libmodel.a	\
+$(LIBDIR)libpdf.a $(LIBDIR)libcernlib.a
 
 # Files for all executables
 FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
@@ -32,8 +33,9 @@ RUN= $(FILES) cuts.o add_write_info.o BinothLHA.o madfks_dbook.o	\
 VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o
 
 # Files for mintMC
-MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o	\
-	handling_lhe_events.o
+MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o		\
+	handling_lhe_events.o initcluster.o cluster.o reweight.o	\
+	get_color.o
 
 # Files for Born reweighting
 BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o	\

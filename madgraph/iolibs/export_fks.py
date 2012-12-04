@@ -448,6 +448,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'write_event.f',
                      'fill_MC_mshell.f',
                      'maxparticles.inc',
+                     'message.inc',
+                     'initcluster.f',
+                     'cluster.inc',
+                     'cluster.f',
+                     'reweight.f',
+                     'sudakov.inc',
                      'maxconfigs.inc']
 
         for file in linkfiles:
@@ -743,6 +749,28 @@ end
         filename = 'born_ngraphs.inc'
         self.write_ngraphs_file(writers.FortranWriter(filename),
                             nconfigs)
+
+        filename = 'born_ncombs.inc'
+        self.write_ncombs_file(writers.FortranWriter(filename),
+                               matrix_element.born_matrix_element,
+                               fortran_model)
+
+        filename = 'get_color.f'
+        self.write_colors_file(writers.FortranWriter(filename),
+                               matrix_element.born_matrix_element)
+
+        filename = 'born_maxamps.inc'
+        maxamps = len(matrix_element.get('diagrams'))
+        maxflows = ncolor_born
+        self.write_maxamps_file(writers.FortranWriter(filename),
+                           maxamps,
+                           maxflows,
+                           max([len(matrix_element.get('processes')) for me in \
+                                matrix_element.born_matrix_element]),1)
+
+        filename = 'config_subproc_map.inc'
+        self.write_config_subproc_map_file(writers.FortranWriter(filename),
+                                           s_and_t_channels)
 
         filename = 'coloramps.inc'
         self.write_coloramps_file(writers.FortranWriter(filename),
@@ -1863,9 +1891,25 @@ C
                                      ','.join(["%5r" % i for i in num_list[k:k + n]])))
 
             return ret_list
-    
-    
-    
+
+    #===========================================================================
+    # write_maxamps_file
+    #===========================================================================
+    def write_maxamps_file(self, writer, maxamps, maxflows,
+                           maxproc,maxsproc):
+        """Write the maxamps.inc file for MG4."""
+
+        file = "       integer    maxamps, maxflow, maxproc, maxsproc\n"
+        file = file + "parameter (maxamps=%d, maxflow=%d)\n" % \
+               (maxamps, maxflows)
+        file = file + "parameter (maxproc=%d, maxsproc=%d)" % \
+               (maxproc, maxsproc)
+
+        # Write the file
+        writer.writelines(file)
+
+        return True
+
     #===============================================================================
     # write_ncombs_file
     #===============================================================================
@@ -1876,16 +1920,91 @@ C
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
     
-        # ncomb (used for clustering) is 2^(nexternal + 1)
+        # ncomb (used for clustering) is 2^(nexternal)
         file = "       integer    n_max_cl\n"
-        file = file + "parameter (n_max_cl=%d)" % (2 ** (nexternal + 1))
+        file = file + "parameter (n_max_cl=%d)" % (2 ** nexternal)
     
         # Write the file
         writer.writelines(file)
    
         return True
     
+    #===========================================================================
+    # write_config_subproc_map_file
+    #===========================================================================
+    def write_config_subproc_map_file(self, writer, s_and_t_channels):
+        """Write a dummy config_subproc.inc file for MadEvent"""
+
+        lines = []
+
+        for iconfig in range(len(s_and_t_channels)):
+            lines.append("DATA CONFSUB(1,%d)/1/" % \
+                         (iconfig + 1))
+
+        # Write the file
+        writer.writelines(lines)
+
+        return True
     
+    #===========================================================================
+    # write_colors_file
+    #===========================================================================
+    def write_colors_file(self, writer, matrix_elements):
+        """Write the get_color.f file for MadEvent, which returns color
+        for all particles used in the matrix element."""
+
+        if isinstance(matrix_elements, helas_objects.HelasMatrixElement):
+            matrix_elements = [matrix_elements]
+
+        model = matrix_elements[0].get('processes')[0].get('model')
+
+        # We need the both particle and antiparticle wf_ids, since the identity
+        # depends on the direction of the wf.
+        wf_ids = set(sum([sum([sum([[wf.get_pdg_code(),wf.get_anti_pdg_code()] \
+                                    for wf in d.get('wavefunctions')],[]) \
+                               for d in me.get('diagrams')], []) \
+                          for me in matrix_elements], []))
+
+        leg_ids = set(sum([sum([[l.get('id') for l in \
+                                 p.get_legs_with_decays()] for p in \
+                                me.get('processes')], []) for me in
+                           matrix_elements], []))
+        particle_ids = sorted(list(wf_ids.union(leg_ids)))
+
+        lines = """function get_color(ipdg)
+        implicit none
+        integer get_color, ipdg
+
+        if(ipdg.eq.%d)then
+        get_color=%d
+        return
+        """ % (particle_ids[0], model.get_particle(particle_ids[0]).get_color())
+
+        for part_id in particle_ids[1:]:
+            lines += """else if(ipdg.eq.%d)then
+            get_color=%d
+            return
+            """ % (part_id, model.get_particle(part_id).get_color())
+        # Dummy particle for multiparticle vertices with pdg given by
+        # first code not in the model
+        lines += """else if(ipdg.eq.%d)then
+c           This is dummy particle used in multiparticle vertices
+            get_color=2
+            return
+            """ % model.get_first_non_pdg()
+        lines += """else
+        write(*,*)'Error: No color given for pdg ',ipdg
+        get_color=0        
+        return
+        endif
+        end
+        """
+        
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
     #===============================================================================
     # write_props_file
     #===============================================================================
