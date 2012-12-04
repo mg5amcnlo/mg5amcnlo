@@ -507,7 +507,10 @@ class move:
 
 def detect_SubProcess(P_mode=1):
         MW_SubProcess_list=[]
-        P_SubProcess_list=[]
+        
+        if P_mode:
+            print '''WARNING: automatic normalize run is not supported anymore!!
+                  pass in non-normalize run.'''
 
         list_dir=os.listdir("./SubProcesses/")
         for name in list_dir:
@@ -516,11 +519,9 @@ def detect_SubProcess(P_mode=1):
             except os.error:
                 continue
             if stat.S_ISDIR(st.st_mode):
-                if name[:2]=="MW":
-                    MW_SubProcess_list.append(name)
-                elif P_mode and name[0]=='P':
-                    P_SubProcess_list.append(name)                
-
-# Pierre: set MW_SubProcess_list to SubProcess_list, set SubProcess_list to []
-        return [],P_SubProcess_list
+                #
+                if name[0]=='P':
+                    MW_SubProcess_list.append(name)   
+        
+        return [], MW_SubProcess_list
 
