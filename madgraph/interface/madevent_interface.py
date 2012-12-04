@@ -1394,29 +1394,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         'delphes' : ['generate_events [OPTIONS]', 'multi_run [OPTIONS]']
     }
     
-    # The three options categories are treated on a different footage when a 
-    # set/save configuration occur. current value are kept in self.options
-    options_configuration = {'pythia8_path': './pythia8',
-                       'madanalysis_path': './MadAnalysis',
-                       'pythia-pgs_path':'./pythia-pgs',
-                       'td_path':'./td',
-                       'delphes_path':'./Delphes',
-                       'exrootanalysis_path':'./ExRootAnalysis',
-                       'timeout': 60,
-                       'web_browser':None,
-                       'eps_viewer':None,
-                       'text_editor':None,
-                       'fortran_compiler':None,
-                       'auto_update':7,
-                       'cluster_type': 'condor'}
-    
-    options_madgraph= {'stdout_level':None}
-    
-    options_madevent = {'automatic_html_opening':True,
-                         'run_mode':2,
-                         'cluster_queue':'madgraph',
-                         'nb_core': None,
-                         'cluster_temp_path':None}
+
     
     
     ############################################################################

@@ -884,6 +884,7 @@ This will take effect only in a NEW terminal
             if self._done_export:
                 mode = self.find_output_type(self._done_export[0])
                 if mode != self._done_export[1]:
+                    print mode, self._done_export[1]
                     raise self.InvalidCmd, \
                           '%s not valid directory for launch' % self._done_export[0]
                 args.append(self._done_export[1])
@@ -962,6 +963,7 @@ This will take effect only in a NEW terminal
         src_path = pjoin(path,'src')
         include_path = pjoin(path,'include')
         subproc_path = pjoin(path,'SubProcesses')
+        mw_path = pjoin(path,'Source','MadWeight')
 
         if os.path.isfile(pjoin(include_path, 'Pythia.h')):
             return 'pythia8'
@@ -970,6 +972,8 @@ This will take effect only in a NEW terminal
         
         if os.path.isdir(src_path):
             return 'standalone_cpp'
+        elif os.path.isdir(mw_path):
+            return 'madweight'
         elif os.path.isfile(pjoin(bin_path,'madevent')):
             return 'madevent'
         elif os.path.isfile(pjoin(bin_path,'aMCatNLO')):
@@ -4073,6 +4077,20 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 stop = self.define_child_cmd_interface(ME)                
                 return stop
             ext_program = launch_ext.aMCatNLOLauncher( args[1], self, **options)
+        elif args[0] == 'madweight':
+            import madgraph.interface.madweight_interface as madweight_interface
+            if 1:#options['interactive']:
+                if hasattr(self, 'do_shell'):
+                    MW = madweight_interface.MadWeightCmdShell(me_dir=args[1], options=self.options)
+                else:
+                    MW = madweight_interfaces.MadWeightCmd(me_dir=args[1],options=self.options)
+                # transfer interactive configuration
+                config_line = [l for l in self.history if l.strip().startswith('set')]
+                for line in config_line:
+                    MW.exec_cmd(line)
+                stop = self.define_child_cmd_interface(MW)                
+                return stop
+            ext_program = launch_ext.MWLauncher( args[1], self, **options)            
         else:
             os.chdir(start_cwd) #ensure to go to the initial path
             raise self.InvalidCmd , '%s cannot be run from MG5 interface' % args[0]
@@ -4951,7 +4969,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 logger.warning('If you want to shower events ' + \
                         'with MC@NLO please install it by typing "install MCatNLO-utilities"')
 
-        elif self._export_format == 'madevent':          
+        elif self._export_format in ['madevent', 'madweight']:          
             # Create configuration file [path to executable] for madevent
             filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False, 

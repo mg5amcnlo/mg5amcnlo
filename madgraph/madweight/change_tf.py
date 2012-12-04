@@ -8,12 +8,18 @@ import string
 import sys
 import xml.sax.handler
 
-sys.path.append('../Python')
-sys.path.append('./Source/MadWeight/Python')
-import Cards
-import mod_file
-import particle_class
-from MW_fct import put_in_fortran_format
+try:
+    import madgraph.madweight.Cards as Cards
+    import madgraph.madweight.mod_file as mod_file
+    import madgraph.madweight.particle_class as particle_class
+    import madgraph.madweight.MW_fct as MW_fct
+except ImportError:
+    raise
+    import internal.madweight.Cards as Cards
+    import internal.madweight.mod_file as mod_file
+    import internal.madweight.particle_class as particle_class
+    import internal.madweight.MW_fct as MW_fct
+    
 
 ###f77 forbiden term
 #forbiden=["goto","return","stop","call","write","read","do","while","end ","continue","asign","pause","print","rewind","backspace","endfile","open","close","inquire","entry","optional","save","equivalence","intent","target","rule","compute","system","enddo"]
@@ -212,10 +218,10 @@ class TF_input(XML_input):
                 new_rule['width_definition']=block[variable].width_code
                 new_text=mod_file.mod_text(new_text,new_rule) #change default variable in real one
                 new_text,list_var=create_optional_variable(new_text,block.name,variable,list_var)
-                new_text=put_in_fortran_format(new_text)
+                new_text=MW_fct.put_in_fortran_format(new_text)
                 text+=new_text
                 
-        text=put_in_fortran_format(text)
+        text=MW_fct.put_in_fortran_format(text)
         ff=open('./transfer_function.f','w')
         ff.writelines(text)
         return list_var
@@ -400,7 +406,7 @@ class TF_in_SubProcesses:
         
         template = mod_file.Mod_file(rule_file='./Source/MadWeight/transfer_function/input/mod_generic')
         text=mod_file.mod_text(text,template.dico)
-        text=put_in_fortran_format(text)
+        text=MW_fct.put_in_fortran_format(text)
         
         ff=open(self.dir+'/call_TF.f','w')
         ff.writelines(text)
@@ -571,7 +577,7 @@ def create_param_inc(list_var):
     common_text=common_text[:-1] #suppress last coma
 
     line="       Common/to_TF_param/"+common_text
-    line=put_in_fortran_format(line)
+    line=MW_fct.put_in_fortran_format(line)
     out.writelines(line)
     out.close()
     return
@@ -723,5 +729,5 @@ if(__name__=="__main__"):
 ##    ff=open(file,'r')
 ##    gg=open(file+'_70.f','w')
 ##    text=ff.read()
-##    text=put_in_fortran_format(text)
+##    text=MW_fct.put_in_fortran_format(text)
 ##    gg.writelines(text)
