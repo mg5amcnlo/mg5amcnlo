@@ -328,7 +328,8 @@ class aMCatNLOLauncher(ExtLauncher):
             try:
                 usecmd.exec_cmd(line)
             except Exception, error:
-                misc.sprint('command %s fails with msg: %s' % error)
+                misc.sprint('Command %s fails with msg: %s'%(str(line), \
+                                                                    str(error)))
                 pass
         launch = self.cmd_int.define_child_cmd_interface(
                      usecmd, interface=False)
