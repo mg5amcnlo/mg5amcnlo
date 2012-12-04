@@ -2,8 +2,13 @@
 
 import re
 import sys
-import Cards
 import string
+
+
+try: 
+    import Cards
+except ImportError:
+    import internal.madweight.Cards as Cards
 
 class Decay_info:
     """ all routine linked to the reconaissance of the topology from the proc card

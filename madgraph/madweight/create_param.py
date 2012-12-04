@@ -42,7 +42,10 @@
 ##
 ## BEGIN INCLUDE
 ##
-import MW_param
+try:
+    import madgraph.madweight.MW_info as MW_param
+except ImportError:
+    import internal.madweight.MW_info as MW_param
 import sys
 import os
 import re

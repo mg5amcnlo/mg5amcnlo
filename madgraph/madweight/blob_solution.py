@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 
-from particle_class import Particle
+try:
+    import madgraph.madweight.particle_class as particle_class
+except ImportError:
+    import internal.madweight.particle_class as particle_class
+
+Particle = particle_class.Particle
+
 import sys
 
 class Level_generation:

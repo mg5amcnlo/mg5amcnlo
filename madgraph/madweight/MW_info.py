@@ -146,8 +146,6 @@ class P_info:
         P_SubProcess_list,MW_SubProcess_list=detect_SubProcess(P_mode)
         return P_SubProcess_list,MW_SubProcess_list 
 
-    
-
 
 
 #1#########################################################################
@@ -526,5 +524,5 @@ def detect_SubProcess(P_mode=0):
                     MW_SubProcess_list.append(name)                
 
 # Pierre: set MW_SubProcess_list to SubProcess_list, set SubProcess_list to []
-        return [],P_SubProcess_list
+        return [],MW_SubProcess_list
 
