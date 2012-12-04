@@ -56,7 +56,9 @@ class IOTest(object):
                    '-../../Source/MODEL/param_read.inc',
                    '-../../Source/MODEL/param_write.inc']            
     helas_files = ['../../Source/DHELAS/[.+\.(f|inc)]']
-    all_files = proc_files+helas_files+model_files
+    # We also exclude the helas_files because they are sourced from unordered
+    # dictionaries.
+    all_files = proc_files+model_files
 
     def __init__(self, hel_amp=None,
                        exporter=None,
