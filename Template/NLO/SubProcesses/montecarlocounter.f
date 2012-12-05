@@ -6384,6 +6384,7 @@ c
       include "pmass.inc"
 c
 c
+      MonteCarlo=shower_mc
       eetot=2d0*sqrt( ebeam(1)*ebeam(2) )
 c Consistency check -- call to set_cms_stuff() must be done prior to
 c entering this function
@@ -6469,6 +6470,7 @@ c entering this function
       double precision pmass(nexternal)
       include "pmass.inc"
 c
+      MonteCarlo=shower_mc
       eetot=2d0*sqrt( ebeam(1)*ebeam(2) )
 
       ref_scale=sqrt((1-xi)*sh)

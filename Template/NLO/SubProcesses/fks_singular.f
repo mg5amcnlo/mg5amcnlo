@@ -1090,6 +1090,7 @@ c
       double precision pmass(nexternal)
       include "pmass.inc"
 
+      MonteCarlo=shower_mc
       vegas_weight=vegaswgt
 
 c If there was an exceptional phase-space point found for the 
@@ -3201,8 +3202,6 @@ c do the same as above for the counterevents
       
       double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt
-      character*10 MonteCarlo
-      common/cMonteCarloType/MonteCarlo
 
       if(zhw_used.lt.0.d0.or.zhw_used.gt.1.d0)then
         write(*,*)'Error #1 in get_mc_lum',zhw_used
