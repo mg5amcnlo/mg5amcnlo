@@ -105,9 +105,11 @@ Each line in the syst.dat file has the entries:
 
 <mgrwt event="event_num">
 <rscale>n_qcd ren_scale</rscale>
-<asrwt>n_alpsem n_alpsem*alpsem_scale</asrwt>
-<pdfrwt beam="1">n_pdfrw1 n_pdgrw1*pdf_pdg_code1 n_pdfrw1*pdf_x1 n_pdfrw1*pdf_q1</pdfwgt>
-<pdfrwt beam="2">n_pdfrw2 n_pdgrw2*pdf_pdg_code2 n_pdfrw2*pdf_x2 n_pdfrw2*pdf_q2</pdfrwt>
+<asrwt>n_alpsem alpsem_scale(1) ... alpsem_scale(n_alpsem)</asrwt>
+<pdfrwt beam="1">n_pdfrw1 pdf_pdg_code1(1) ... pdf_pdg_code1(n_pdgrw1) \
+ pdf_x1(1) ... pdf_x1(n_pdfrw1) pdf_q1(1) ... pdf_q1(n_pdfrw1)</pdfwgt>
+<pdfrwt beam="2">n_pdfrw2 pdf_pdg_code2(1) ... pdf_pdg_code2(n_pdgrw2) \
+ pdf_x2(1) ... pdf_x2(n_pdfrw2) pdf_q2(1) ... pdf_q2(n_pdfrw2)</pdfwgt>
 <totfact>total_reweight_factor</totfact>
 <matchscale>SMIN SCOMP SMAX</matchscale>
 </mgrwt>
@@ -125,9 +127,13 @@ pdf(pdf_pdg_code1(3),pdf_x1(3),pdf_q1(3))/
 pdf(pdf_pdg_code1(3),pdf_x1(3),pdf_q1(2))*       # pdf reweighting
  ...
 pdf(pdf_pdg_code1(n_pdfrw1),pdf_x1(n_pdfrw1),scalefact*pdf_q1(n_pdfrw1))/
-pdf(pdf_pdg_code1(n_pdfrw1),pdf_x1(n_pdfrw1),pdf_q1(2))*
-# note the central scale reweighting above
-# and now the same thing for all pdfs in beam 2 (n_pdfrw2)
-...
+pdf(pdf_pdg_code1(n_pdfrw1),pdf_x1(n_pdfrw1),pdf_q1(n_pdfrw1-1))*
+# Note the central scale reweighting by scalefact above
+# (if n_pdfrw1 = 1, need to reweight the initial state pdf scale)
+# Now the same thing for all pdfs in beam 2 (n_pdfrw2)
+pdf(pdf_pdg_code2(1),pdf_x2(1),pdf_q2(1))*       # initial state pdf
+ ...
+pdf(pdf_pdg_code2(n_pdfrw2),pdf_x2(n_pdfrw2),scalefact*pdf_q2(n_pdfrw2))/
+pdf(pdf_pdg_code2(n_pdfrw2),pdf_x2(n_pdfrw2),pdf_q2(n_pdfrw2-1))*
 / total_reweight_factor                          # corr. factor from MG run
 * 0 if (QCUT > SMIN or SMAX > max(QCUT, SCOMP)), otherwise 1
