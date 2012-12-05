@@ -2815,26 +2815,22 @@ def check_lorentz_process(process, evaluator):
             results.append(evaluator.evaluate_matrix_element(matrix_element,
                                                        p=boost_p,output='jamp'))
     else:
+        # The boosts are not precise enough for the loop evaluations and one
+        # need the fortran improve_ps function of MadLoop to work. So we only
+        # consider the boosts along the z directions for loops or simple rotations.
         boost_p = boost_momenta(p, 3)
         results.append(evaluator.evaluate_matrix_element(matrix_element,
                                  p=boost_p,output='jamp',MLOptions = MLOptions))
-        # If 2 incoming particles, we can afford to only rotate the final state
-        # particles so that improve_ps will work.
-        if matrix_element.get_nexternal_ninitial()[1]==2 and \
-                                   matrix_element.get_nexternal_ninitial()[0]>3: 
-            rot_p = p[:2]+[[pm[0],pm[3],-pm[1],-pm[2]] for pm in p[2:]]
-        else:
-            rot_p = [[pm[0],pm[3],-pm[1],-pm[2]] for pm in p]
+        # We only consider the rotations around the z axis so to have the 
+        # improve_ps fortran routine work.
+        rot_p = [[pm[0],-pm[2],pm[1],pm[3]] for pm in p]
         results.append(evaluator.evaluate_matrix_element(matrix_element,
-                                 p=boost_p,output='jamp',MLOptions = MLOptions))
-        # Another rotation
-        if matrix_element.get_nexternal_ninitial()[1]==2 and \
-                                   matrix_element.get_nexternal_ninitial()[0]>3: 
-            rot_p = p[:2]+[[pm[0],pm[3],-pm[1],-pm[2]] for pm in p[2:]]
-        else:
-            rot_p = [[pm[0],pm[3],-pm[1],-pm[2]] for pm in p]
-        rot_p = [[pm[0],-pm[3],pm[2],pm[1]] for pm in p]
-
+                                     p=rot_p,output='jamp',MLOptions = MLOptions))
+        # Now a pi/4 rotation around the z-axis
+        sq2 = math.sqrt(2.0)
+        rot_p = [[pm[0],(pm[1]-pm[2])/sq2,(pm[1]+pm[2])/sq2,pm[3]] for pm in p]
+        results.append(evaluator.evaluate_matrix_element(matrix_element,
+                                     p=rot_p,output='jamp',MLOptions = MLOptions))
             
         
     return {'process': process, 'results': results}
@@ -3059,7 +3055,7 @@ def output_lorentz_inv(comparison_results, output='text'):
             no_check_proc += 1
             no_check_proc_list.append(proc)
             continue
-        
+
         values = [data[i]['m2'] for i in range(len(data))]
         
         min_val = min(values)
