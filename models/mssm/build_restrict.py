@@ -22,12 +22,9 @@ all_categories = []
 first_category = build_restrict_lib.Category('sm customization')
 all_categories.append(first_category)
 
-first_category.add_options(name='light mass = 0 (u d s c e mu)', # name
+first_category.add_options(name='light mass = 0 (e mu)', # name
                            default=True,        # default
-                           rules=[('MASS',[1], 0.0),
-                                  ('MASS',[2], 0.0),
-                                  ('MASS',[3], 0.0),
-                                  ('MASS',[11], 0.0),                 
+                           rules=[('MASS',[11], 0.0),                 
                                   ('MASS',[13], 0.0)]
                            )
 
@@ -44,37 +41,25 @@ first_category.add_options(name='tau mass = 0',
 sec_category = build_restrict_lib.Category('mssm customization')
 all_categories.append(sec_category)
 
-sec_category.add_options(name='diagonal usqmix matrices',
+sec_category.add_options(name='diagonal usqmix (stop) matrix',
                            default=False,        # default
-                           rules=[('USQMIX',[1,1], 1.0),
-                                  ('USQMIX',[2,2], 1.0),
-                                  ('USQMIX',[3,3], 1.0),
-                                  ('USQMIX',[4,4], 1.0),
-                                  ('USQMIX',[5,5], 1.0),
+                           rules=[('USQMIX',[3,3], 1.0),
                                   ('USQMIX',[6,6], 1.0),
                                   ('USQMIX',[3,6], 0.0),
                                   ('USQMIX',[6,3], 0.0)]
                            )
 
-sec_category.add_options(name='diagonal dsqmix matrices',
+sec_category.add_options(name='diagonal dsqmix (sbottom) matrix',
                            default=False,        # default
-                           rules=[('DSQMIX',[1,1], 1.0),
-                                  ('DSQMIX',[2,2], 1.0),
-                                  ('DSQMIX',[3,3], 1.0),
-                                  ('DSQMIX',[4,4], 1.0),
-                                  ('DSQMIX',[5,5], 1.0),
+                           rules=[('DSQMIX',[3,3], 1.0),
                                   ('DSQMIX',[6,6], 1.0),
                                   ('DSQMIX',[3,6], 0.0),
                                   ('DSQMIX',[6,3], 0.0)]
                            )
 
-sec_category.add_options(name='diagonal selmix matrices',
+sec_category.add_options(name='diagonal selmix (stau) matrix',
                            default=False,        # default
-                           rules=[('SELMIX',[1,1], 1.0),
-                                  ('SELMIX',[2,2], 1.0),
-                                  ('SELMIX',[3,3], 1.0),
-                                  ('SELMIX',[4,4], 1.0),
-                                  ('SELMIX',[5,5], 1.0),
+                           rules=[('SELMIX',[3,3], 1.0),
                                   ('SELMIX',[6,6], 1.0),
                                   ('SELMIX',[3,6], 0.0),
                                   ('SELMIX',[6,3], 0.0)]

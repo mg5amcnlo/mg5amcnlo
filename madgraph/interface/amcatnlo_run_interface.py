@@ -31,6 +31,7 @@ import subprocess
 import sys
 import traceback
 import time
+import signal
 
 try:
     import readline
@@ -80,8 +81,54 @@ except ImportError, error:
 
 
 
+
 class aMCatNLOError(Exception):
     pass
+
+def init_worker():
+    """this is to catch ctrl+c with Pool""" 
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+def compile_dir(arguments):
+    """compile the direcory p_dir
+    arguments is the tuple (me_dir, p_dir, mode, options, tests, exe, run_mode)
+    this function needs not to be a class method in order to use pool to do
+    the compilation on multicore"""
+
+    (me_dir, p_dir, mode, options, tests, exe, run_mode) = arguments
+    logger.info(' Compiling %s...' % p_dir)
+
+    gensym_log = pjoin(me_dir, 'gensym.log')
+    this_dir = pjoin(me_dir, 'SubProcesses', p_dir) 
+    #compile everything
+
+    # compile and run tests
+    for test in tests:
+        misc.compile([test], cwd = this_dir, job_specs = False)
+        if not os.path.exists(pjoin(this_dir, test)):
+            raise aMCatNLOError('%s compilation failed' % test)
+        input = pjoin(me_dir, '%s_input.txt' % test)
+        #this can be improved/better written to handle the output
+        misc.call(['./%s' % (test)], cwd=this_dir, 
+                stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
+        
+    if not options['reweightonly']:
+        misc.compile(['gensym'], cwd=this_dir, job_specs = False)
+        if not os.path.exists(pjoin(this_dir, 'gensym')):
+            raise aMCatNLOError('gensym compilation failed')
+
+        open(pjoin(this_dir, 'gensym_input.txt'), 'w').write('%s\n' % run_mode)
+        p = misc.Popen(['./gensym'], stdin=open(pjoin(this_dir, 'gensym_input.txt')),
+                 stdout=open(gensym_log, 'w'),cwd= this_dir) 
+        #compile madevent_mintMC/vegas
+        misc.compile([exe], cwd=this_dir, job_specs = False)
+        if not os.path.exists(pjoin(this_dir, exe)):
+            raise aMCatNLOError('%s compilation failed' % exe)
+    if mode in ['aMC@NLO', 'aMC@LO'] and not options['noreweight']:
+        misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
+        if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
+            raise aMCatNLOError('reweight_xsec_events compilation failed')
+    logger.info('    %s done.' % p_dir) 
 
 
 def check_compiler(options, block=False):
@@ -204,7 +251,7 @@ class CmdExtended(cmd.Cmd):
         info_line + \
         "*                                                          *\n" + \
         "*    The MadGraph Development Team - Please visit us at    *\n" + \
-        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "*                 http://amcatnlo.cern.ch                  *\n" + \
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
         "*                                                          *\n" + \
@@ -777,6 +824,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
        
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = banner_mod.RunCardNLO(run_card)
+        self.nb_core = 0
 
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
@@ -1086,12 +1134,20 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'],
                                               self.options['cluster_temp_path'])
         if self.cluster_mode == 2:
-            import multiprocessing
             try:
-                self.nb_core = int(self.options['nb_core'])
-            except TypeError:
-                self.nb_core = multiprocessing.cpu_count()
-            logger.info('Using %d cores' % self.nb_core)
+                import multiprocessing
+                if not self.nb_core:
+                    try:
+                        self.nb_core = int(self.options['nb_core'])
+                    except TypeError:
+                        self.nb_core = multiprocessing.cpu_count()
+                logger.info('Using %d cores' % self.nb_core)
+            except ImportError:
+                self.nb_core = 1
+                logger.warning('Impossible to detect the number of cores => Using One.\n'+
+                        'Use set nb_core X in order to set this number and be able to'+
+                        'run in multicore.')
+
             self.cluster = cluster.MultiCore(self.nb_core, 
                                      temp_dir=self.options['cluster_temp_path'])
         self.update_random_seed()
@@ -2044,11 +2100,12 @@ Integrated cross-section
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
+
+
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
         madloop_log = pjoin(self.me_dir, 'compile_madloop.log')
         reweight_log = pjoin(self.me_dir, 'compile_reweight.log')
-        gensym_log = pjoin(self.me_dir, 'gensym.log')
         test_log = pjoin(self.me_dir, 'test.log')
 
         libdir = pjoin(self.me_dir, 'lib')
@@ -2056,7 +2113,7 @@ Integrated cross-section
 
         #clean files
         misc.call(['rm -f %s' % 
-                ' '.join([amcatnlo_log, madloop_log, reweight_log, gensym_log, test_log])], \
+                ' '.join([amcatnlo_log, madloop_log, reweight_log, test_log])], \
                   cwd=self.me_dir, shell=True)
 
         #define which executable/tests to compile
@@ -2115,48 +2172,43 @@ Integrated cross-section
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)
 
+        for test in tests:
+            self.write_test_input(test)
+
+        try:
+            import multiprocessing
+            if not self.nb_core:
+                try:
+                    self.nb_core = int(self.options['nb_core'])
+                except TypeError:
+                    self.nb_core = multiprocessing.cpu_count()
+
+            mypool = multiprocessing.Pool(self.nb_core, init_worker) 
+            logger.info('Compiling on %d cores' % self.nb_core)
+            mypool.map(compile_dir,
+                    ((self.me_dir, p_dir, mode, options, 
+                        tests, exe, self.options['run_mode']) for p_dir in p_dirs))
+        except ImportError: 
+            self.nb_core = 1
+            logger.info('Multiprocessing module not found. Compiling on 1 core')
+            for p_dir in p_dirs:
+                compile_dir(self.me_dir, p_dir, mode, options, 
+                        tests, exe, self.options['run_mode'])
+
+        logger.info('Checking test output:')
         for p_dir in p_dirs:
             logger.info(p_dir)
-            this_dir = pjoin(self.me_dir, 'SubProcesses', p_dir) 
-            #compile everything
-
-            # compile and run tests
             for test in tests:
-                logger.info('   Compiling %s...' % test)
-                misc.compile([test], cwd = this_dir)
-                if not os.path.exists(pjoin(this_dir, test)):
-                    raise aMCatNLOError('Compilation failed')
-                logger.info('   Running %s...' % test)
-                self.write_test_input(test)
-                input = pjoin(self.me_dir, '%s_input.txt' % test)
-                #this can be improved/better written to handle the output
-                misc.call(['./%s' % (test)], cwd=this_dir, 
-                        stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
+                logger.info(' Result for %s:' % test)
+
+                this_dir = pjoin(self.me_dir, 'SubProcesses', p_dir) 
                 #check that none of the tests failed
                 self.check_tests(test, this_dir)
-                
-            if not options['reweightonly']:
-                logger.info('   Compiling gensym...')
-                misc.compile(['gensym'], cwd=this_dir)
-                if not os.path.exists(pjoin(this_dir, 'gensym')):
-                    raise aMCatNLOError('Compilation failed')
-
-                logger.info('   Running gensym...')
-                p = misc.Popen(['./gensym'], stdin=subprocess.PIPE, stdout=open(gensym_log, 'w'),\
-                        cwd= this_dir) 
-                p.communicate(input = '%s\n' % self.options['run_mode'])
-                #compile madevent_mintMC/vegas
-                logger.info('   Compiling %s' % exe)
-                misc.compile([exe], cwd=this_dir)
-                if not os.path.exists(pjoin(this_dir, exe)):
-                    raise aMCatNLOError('Compilation failed')
-            if mode in ['aMC@NLO', 'aMC@LO'] and not options['noreweight']:
-                logger.info('   Compiling reweight_xsec_events')
-                misc.compile(['reweight_xsec_events'], cwd=this_dir)
-                if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
-                    raise aMCatNLOError('Compilation failed')
 
         os.unsetenv('madloop')
+
+
+
 
     def check_tests(self, test, dir):
         """just call the correct parser for the test log"""

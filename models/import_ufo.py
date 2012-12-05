@@ -250,7 +250,6 @@ class UFOMG5Converter(object):
          
 	if hasattr(self.ufomodel, 'gauge'):    
             self.model.set('gauge', self.ufomodel.gauge)
-	
         logger.info('load particles')
         # Check if multiple particles have the same name but different case.
         # Otherwise, we can use lowercase particle names.

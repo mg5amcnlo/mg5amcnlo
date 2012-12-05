@@ -189,8 +189,8 @@ c
       write(ifile,502)XSECUP,XERRUP,XMAXUP,LPRUP
       write(ifile,'(a)')
      # '  </init>'
- 501  format(2(1x,i6),2(1x,d14.8),2(1x,i2),2(1x,i6),1x,i2,1x,i3)
- 502  format(3(1x,d14.8),1x,i6)
+ 501  format(2(1x,i6),2(1x,e14.8),2(1x,i2),2(1x,i6),1x,i2,1x,i3)
+ 502  format(3(1x,e14.8),1x,i6)
 c
       return
       end
@@ -205,13 +205,13 @@ c
       character*80 string
 c
       read(ifile,'(a)')string
-      read(ifile,501)IDBMUP(1),IDBMUP(2),EBMUP(1),EBMUP(2),
+      read(ifile,*)IDBMUP(1),IDBMUP(2),EBMUP(1),EBMUP(2),
      #                PDFGUP(1),PDFGUP(2),PDFSUP(1),PDFSUP(2),
      #                IDWTUP,NPRUP
-      read(ifile,502)XSECUP,XERRUP,XMAXUP,LPRUP
+      read(ifile,*)XSECUP,XERRUP,XMAXUP,LPRUP
       read(ifile,'(a)')string
- 501  format(2(1x,i6),2(1x,d14.8),2(1x,i2),2(1x,i6),1x,i2,1x,i3)
- 502  format(3(1x,d14.8),1x,i6)
+c 501  format(2(1x,i6),2(1x,d14.8),2(1x,i2),2(1x,i6),1x,i2,1x,i3)
+c 502  format(3(1x,d14.8),1x,i6)
 c
       return
       end
@@ -285,28 +285,28 @@ c
             write(ifile,442)wgtwmcxsecE(i),
      #                      wgtmcxbjE(1,i),wgtmcxbjE(2,i)
           enddo
-          if(jwgtinfo.eq.4) write(ifile,'(1x,d14.8,1x,i4,1x,i4)')
+          if(jwgtinfo.eq.4) write(ifile,'(1x,e14.8,1x,i4,1x,i4)')
      &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
           write(ifile,'(a)')
      # '  </rwgt>'
          elseif(jwgtinfo.eq.5) then
            write(ifile,'(a)')'  <rwgt>'
            if (iSorH_lhe.eq.1) then ! S-event
-              write(ifile,'(1x,d14.8,i4)') wgtbpower,nScontributions
-              write(ifile,'(1x,i4,1x,d14.8)') nFKSprocess_used_born
+              write(ifile,'(1x,e14.8,i4)') wgtbpower,nScontributions
+              write(ifile,'(1x,i4,1x,e14.8)') nFKSprocess_used_born
      &             ,wgtref_nbody
               do i=1,mexternal
                  write(ifile,405)(wgtkin_all(j,i,2,0),j=0,3)
               enddo
               write(ifile,402) wgtxbj_all(1,2,0),wgtxbj_all(2,2,0)
-              write(ifile,'(1x,d14.8)') wgtqes2_all(2,0)
+              write(ifile,'(1x,e14.8)') wgtqes2_all(2,0)
               write(ifile,405)wgtwborn_all,wgtwns_all,
      &             wgtwnsmuf_all,wgtwnsmur_all
               
               do ii=1,nScontributions
                  write(ifile,'(1x,i4)') nFKSprocess_reweight(ii)
                  iFKS=nFKSprocess_reweight(ii)*2-1
-                 write(ifile,'(1x,d14.8,1x,i4)')
+                 write(ifile,'(1x,e14.8,1x,i4)')
      &                wgtref_all(iFKS),iwgtnumpartn_all(iFKS)
                  do i=1,mexternal
                     write(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
@@ -319,7 +319,7 @@ c$$$                 enddo
      &                wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
      &                wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
      &                wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
-                 write(ifile,'(1x,d14.8)') wgtqes2_all(2,iFKS)
+                 write(ifile,'(1x,e14.8)') wgtqes2_all(2,iFKS)
                  write(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
      &                ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
                  write(ifile,441)wgtwdeg_all(3,iFKS),wgtwdeg_all(4,iFKS)
@@ -331,10 +331,10 @@ c$$$                 enddo
                  
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
-              write(ifile,'(1x,d14.8)') wgtbpower
+              write(ifile,'(1x,e14.8)') wgtbpower
               iFKS=nFKSprocess_used*2
               write(ifile,'(1x,i4)') nFKSprocess_used
-              write(ifile,'(1x,d14.8,1x,i4)') wgtref_all(iFKS)
+              write(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS)
      &             ,iwgtnumpartn_all(iFKS)
               do i=1,mexternal
                  write(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
@@ -377,17 +377,17 @@ c$$$                 enddo
       endif
       write(ifile,'(a)')
      # '  </event>'
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
- 401  format(2(1x,d14.8))
- 402  format(8(1x,d14.8))
- 403  format(6(1x,d14.8))
- 404  format(3(1x,d14.8))
- 405  format(4(1x,d14.8))
- 406  format(2(1x,d14.8),2(1x,i3))
- 441  format(4(1x,d16.10))
- 442  format(1x,d16.10,2(1x,d14.8))
- 503  format(1x,i2,1x,i6,4(1x,d14.8))
- 504  format(1x,i8,1x,i2,4(1x,i4),5(1x,d14.8),2(1x,d10.4))
+ 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
+ 401  format(2(1x,e14.8))
+ 402  format(8(1x,e14.8))
+ 403  format(6(1x,e14.8))
+ 404  format(3(1x,e14.8))
+ 405  format(4(1x,e14.8))
+ 406  format(2(1x,e14.8),2(1x,i3))
+ 441  format(4(1x,e16.10))
+ 442  format(1x,e16.10,2(1x,e14.8))
+ 503  format(1x,i2,1x,i6,4(1x,e14.8))
+ 504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
 c
       return
       end
@@ -460,27 +460,27 @@ c
             read(ifile,442)wgtwmcxsecE(i),
      #                     wgtmcxbjE(1,i),wgtmcxbjE(2,i)
           enddo
-          if(jwgtinfo.eq.4) read(ifile,'(1x,d14.8,1x,i4,1x,i4)')
+          if(jwgtinfo.eq.4) read(ifile,'(1x,e14.8,1x,i4,1x,i4)')
      &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
           read(ifile,'(a)')string
         elseif(jwgtinfo.eq.5) then
            read(ifile,'(a)')string
            if (iSorH_lhe.eq.1) then ! S-event
-              read(ifile,'(1x,d14.8,i4)') wgtbpower,nScontributions
-              read(ifile,'(1x,i4,1x,d14.8)') nFKSprocess_used_born
+              read(ifile,'(1x,e14.8,i4)') wgtbpower,nScontributions
+              read(ifile,'(1x,i4,1x,e14.8)') nFKSprocess_used_born
      &             ,wgtref_nbody
               do i=1,mexternal
                  read(ifile,405)(wgtkin_all(j,i,2,0),j=0,3)
               enddo
               read(ifile,402) wgtxbj_all(1,2,0),wgtxbj_all(2,2,0)
-              read(ifile,'(1x,d14.8)') wgtqes2_all(2,0)
+              read(ifile,'(1x,e14.8)') wgtqes2_all(2,0)
               read(ifile,405)wgtwborn_all,wgtwns_all,
      &             wgtwnsmuf_all,wgtwnsmur_all
               
               do ii=1,nScontributions
                  read(ifile,'(1x,i4)') nFKSprocess_reweight(ii)
                  iFKS=nFKSprocess_reweight(ii)*2-1
-                 read(ifile,'(1x,d14.8,1x,i4)') wgtref_all(iFKS)
+                 read(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS)
      &                ,iwgtnumpartn_all(iFKS)
                  do i=1,mexternal
                     read(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
@@ -495,7 +495,7 @@ c
      &                wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
      &                wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
      &                wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
-                 read(ifile,'(1x,d14.8)') wgtqes2_all(2,iFKS)
+                 read(ifile,'(1x,e14.8)') wgtqes2_all(2,iFKS)
                  read(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
      &                ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
                  read(ifile,441)wgtwdeg_all(3,iFKS),wgtwdeg_all(4,iFKS)
@@ -507,10 +507,10 @@ c
               
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
-              read(ifile,'(1x,d14.8)') wgtbpower
+              read(ifile,'(1x,e14.8)') wgtbpower
               read(ifile,'(1x,i4)') nFKSprocess_used
               iFKS=nFKSprocess_used*2
-              read(ifile,'(1x,d14.8,1x,i4)') wgtref_all(iFKS)
+              read(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS)
      &             ,iwgtnumpartn_all(iFKS)
               do i=1,mexternal
                  read(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
@@ -553,17 +553,17 @@ c
         string=buff(1:len_trim(buff))
         buff=' '
       endif
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
- 401  format(2(1x,d14.8))
- 402  format(8(1x,d14.8))
- 403  format(6(1x,d14.8))
- 404  format(3(1x,d14.8))
- 405  format(4(1x,d14.8))
- 406  format(2(1x,d14.8),2(1x,i3))
- 441  format(4(1x,d16.10))
- 442  format(1x,d16.10,2(1x,d14.8))
- 503  format(1x,i2,1x,i6,4(1x,d14.8))
- 504  format(1x,i8,1x,i2,4(1x,i4),5(1x,d14.8),2(1x,d10.4))
+ 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
+ 401  format(2(1x,e14.8))
+ 402  format(8(1x,e14.8))
+ 403  format(6(1x,e14.8))
+ 404  format(3(1x,e14.8))
+ 405  format(4(1x,e14.8))
+ 406  format(2(1x,e14.8),2(1x,i3))
+ 441  format(4(1x,e16.10))
+ 442  format(1x,e16.10,2(1x,e14.8))
+ 503  format(1x,i2,1x,i6,4(1x,e14.8))
+ 504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
 c
       return
       end
@@ -647,27 +647,27 @@ c
             read(ifile,442)wgtwmcxsecE(i),
      #                     wgtmcxbjE(1,i),wgtmcxbjE(2,i)
           enddo
-          if(jwgtinfo.eq.4) read(ifile,'(1x,d14.8,1x,i4,1x,i4)')
+          if(jwgtinfo.eq.4) read(ifile,'(1x,e14.8,1x,i4,1x,i4)')
      &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
           read(ifile,'(a)')string
         elseif(jwgtinfo.eq.5) then
            read(ifile,'(a)')string
            if (iSorH_lhe.eq.1) then ! S-event
-              read(ifile,'(1x,d14.8,i4)') wgtbpower,nScontributions
-              read(ifile,'(1x,i4,1x,d14.8)') nFKSprocess_used_born
+              read(ifile,'(1x,e14.8,i4)') wgtbpower,nScontributions
+              read(ifile,'(1x,i4,1x,e14.8)') nFKSprocess_used_born
      &             ,wgtref_nbody
               do i=1,mexternal
                  read(ifile,405)(wgtkin_all(j,i,2,0),j=0,3)
               enddo
               read(ifile,402) wgtxbj_all(1,2,0),wgtxbj_all(2,2,0)
-              read(ifile,'(1x,d14.8)') wgtqes2_all(2,0)
+              read(ifile,'(1x,e14.8)') wgtqes2_all(2,0)
               read(ifile,405)wgtwborn_all,wgtwns_all,
      &             wgtwnsmuf_all,wgtwnsmur_all
               
               do ii=1,nScontributions
                  read(ifile,'(1x,i4)') nFKSprocess_reweight(ii)
                  iFKS=nFKSprocess_reweight(ii)*2-1
-                 read(ifile,'(1x,d14.8,1x,i4)') wgtref_all(iFKS)
+                 read(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS)
      &                ,iwgtnumpartn_all(iFKS)
                  do i=1,mexternal
                     read(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
@@ -682,7 +682,7 @@ c
      &                wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
      &                wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
      &                wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
-                 read(ifile,'(1x,d14.8)') wgtqes2_all(2,iFKS)
+                 read(ifile,'(1x,e14.8)') wgtqes2_all(2,iFKS)
                  read(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
      &                ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
                  read(ifile,441)wgtwdeg_all(3,iFKS),wgtwdeg_all(4,iFKS)
@@ -694,10 +694,10 @@ c
                  
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
-              read(ifile,'(1x,d14.8)') wgtbpower
+              read(ifile,'(1x,e14.8)') wgtbpower
               read(ifile,'(1x,i4)') nFKSprocess_used
               iFKS=nFKSprocess_used*2
-              read(ifile,'(1x,d14.8,1x,i4)') wgtref_all(iFKS)
+              read(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS)
      &             ,iwgtnumpartn_all(iFKS)
               do i=1,mexternal
                  read(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
@@ -740,17 +740,17 @@ c
         string=buff(1:len_trim(buff))
         buff=' '
       endif
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
- 401  format(2(1x,d14.8))
- 402  format(8(1x,d14.8))
- 403  format(6(1x,d14.8))
- 404  format(3(1x,d14.8))
- 405  format(4(1x,d14.8))
- 406  format(2(1x,d14.8),2(1x,i3))
- 441  format(4(1x,d16.10))
- 442  format(1x,d16.10,2(1x,d14.8))
- 503  format(1x,i2,1x,i6,4(1x,d14.8))
- 504  format(1x,i8,1x,i2,4(1x,i4),5(1x,d14.8),2(1x,d10.4))
+ 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
+ 401  format(2(1x,e14.8))
+ 402  format(8(1x,e14.8))
+ 403  format(6(1x,e14.8))
+ 404  format(3(1x,e14.8))
+ 405  format(4(1x,e14.8))
+ 406  format(2(1x,e14.8),2(1x,i3))
+ 441  format(4(1x,e16.10))
+ 442  format(1x,e16.10,2(1x,e14.8))
+ 503  format(1x,i2,1x,i6,4(1x,e14.8))
+ 504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
 c
       return
       end

@@ -937,7 +937,6 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         poly_object = q_polynomial.Polynomial(rank)
         nb_coeff = q_polynomial.get_number_of_coefs_for_rank(rank)
         size = self.type_to_size[self.particles[self.l_id-1]] - 2
-        
         for K in range(size):
             for J in range(nb_coeff):
                 data = poly_object.get_coef_at_position(J)

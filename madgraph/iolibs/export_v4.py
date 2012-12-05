@@ -367,16 +367,25 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         model_builder = UFO_model_to_mg4(model, write_dir, self.opt)
         model_builder.build(wanted_couplings)
 
-        # Create and write ALOHA Routine
+        # Backup the loop mode, because it can be changed in what follows.
+        old_loop_mode = aloha.loop_mode
+
+        # Create the aloha model
         aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
         aloha_model.add_Lorentz_object(model.get('lorentz'))
+
+        # Compute the subroutines
         if wanted_lorentz:
             aloha_model.compute_subset(wanted_lorentz)
         else:
             aloha_model.compute_all(save=False)
 
+        # Write them out
         write_dir=pjoin(self.dir_path, 'Source', 'DHELAS')
         aloha_model.write(write_dir, 'Fortran')
+
+        # Revert the original aloha loop mode
+        aloha.loop_mode = old_loop_mode
 
         #copy Helas Template
         cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')

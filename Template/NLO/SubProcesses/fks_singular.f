@@ -2096,9 +2096,12 @@ c based on previous PS points (done in BinothLHA.f)
      &     ,pt_hardness
       double precision xscalemax,xxscalemax
       logical condition
-
-      xscalemax = scalemax
-
+c
+      SCALUP(iFKS)=0d0
+      xscalemax=0d0
+      xxscalemax=0d0
+c
+      xscalemax=scalemax
       if(MonteCarlo(1:6).eq.'HERWIG')condition=.not.Hevents
       if(MonteCarlo(1:6).eq.'PYTHIA')condition=.true.
 
@@ -2111,7 +2114,8 @@ c based on previous PS points (done in BinothLHA.f)
             SCALUP(iFKS)=xxscalemax
          endif
       else
-         if (emsca.ne.0d0) then
+c$$$         if(emsca.ne.0d0)then
+         if(dampMCsubt.and.emsca.ne.0d0)then
             SCALUP(iFKS)=xscalemax
          else
             call assign_scalemax(shat_ev,xi_i_fks_ev,xxscalemax)
@@ -3585,7 +3589,7 @@ c closer to xseclvc than xsecvc(i), the condition
 c   |xsecvc(i)/xseclvc-1|/|xsecvc(i+1)/xseclvc-1| > rat
 c if xseclvc#0, or 
 c   |xsecvc(i)|/|xsecvc(i+1)| > rat
-c if xseclvc=0 must be fulfilled; the value of rat is set equal to 8 and to 2
+c if xseclvc=0 must be fulfilled; the value of rat is set equal to 4 and to 2
 c for soft and collinear limits respectively, since the cross section is 
 c expected to scale as xii**2 and sqrt(1-yi**2), and the values of xii and yi
 c are chosen as powers of 10 (thus, if scaling would be exact, rat should
@@ -3616,7 +3620,7 @@ c
         endif
       enddo
       if(iflag.eq.0)then
-        rat=8.d0
+        rat=4.d0
       elseif(iflag.eq.1)then
         rat=2.d0
       else

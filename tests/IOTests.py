@@ -56,7 +56,10 @@ class IOTest(object):
                    '-../../Source/MODEL/param_read.inc',
                    '-../../Source/MODEL/param_write.inc']            
     helas_files = ['../../Source/DHELAS/[.+\.(f|inc)]']
-    all_files = proc_files+helas_files+model_files
+    
+    # We also exclude the helas_files because they are sourced from unordered
+    # dictionaries.
+    all_files = proc_files+model_files
 
     def __init__(self, hel_amp=None,
                        exporter=None,
@@ -471,7 +474,6 @@ class IOTestManager(unittest.TestCase):
                                 text += misc.Popen(['diff',str(comparison_path),
                                   str(tmp_path)],stdout=subprocess.PIPE).\
                                                                 communicate()[0]
-                                os.remove(tmp_path)
                                 # Remove the last newline
                                 if text[-1]=='\n':
                                     text=text[:-1]
@@ -482,7 +484,8 @@ class IOTestManager(unittest.TestCase):
                                     print "Difference displayed in editor."
                                 answer = Cmd.timed_input(question=
 """Ref. file %s differs from the new one (see diff. before), update it? [y/n] >"""%fname
-                                                                   ,default="y")                      
+                                                                   ,default="y")
+                                os.remove(tmp_path)                   
                                 if answer not in ['Y','y','']:
                                     if verbose: print "    > [ IGNORED ] %s"\
                                                                           %fname
@@ -522,4 +525,4 @@ class IOTestManager(unittest.TestCase):
             return modifications
         else:
             return 'test_over'
-        
+ 

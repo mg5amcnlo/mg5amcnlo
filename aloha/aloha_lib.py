@@ -106,6 +106,8 @@ class Computation(dict):
             out, tag = self.reduced_expr[str_expr]
             self.add_tag((tag,))
             return out          
+        if expression == 0:
+            return 0
         new_2 = expression.simplify()
         if new_2 == 0:
             return 0
@@ -273,7 +275,6 @@ class AddVariable(list):
            Note that this should be canonical form (this should contains ONLY
            MULTVARIABLE) --so this should be called before a factorize.
         """
-
         new = self.__class__()
         
         for obj in self:
@@ -901,7 +902,8 @@ class MultLorentz(MultVariable):
                     if not veto or not scalar.contains(veto):
                         scalar = scalar.simplify()
                         prefactor = 1
-                        if scalar.prefactor not in  [1,-1]:
+
+                        if hasattr(scalar, 'vartype') and scalar.prefactor not in  [1,-1]:
                             prefactor = scalar.prefactor
                             scalar.prefactor = 1
                         new = KERNEL.add_expression_contraction(scalar)

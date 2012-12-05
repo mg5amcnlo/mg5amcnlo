@@ -767,7 +767,7 @@ class ColorString(list):
     def create_copy(self):
         """Returns a real copy of self, non trivial because bug in 
         copy.deepcopy"""
-
+        
         res = ColorString()
         for col_obj in self:
             assert type(col_obj) != array.array
