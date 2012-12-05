@@ -1,5 +1,6 @@
 !
-! in this version numfunc is always called instead of numfuncrec
+! in this version numfunc or numfuncrec is used if 
+! ext_num_for_r1=.true. or .false, in  ctsinit
 !
  module scale
   implicit none                    
@@ -7,7 +8,7 @@
   include 'cts_dpr.h'
    , public :: roots,limit,musq,muscale
   integer, public :: scaloop
-  logical, public :: stablen=.true.
+  logical, public :: stablen=.true.,ext_num_for_r1=.true.
   include 'cts_dpr.h'
    , public :: precstablen,n_mp= 0,n_unst= 0,n_tot= 0
   include 'cts_dpr.h'
@@ -3664,6 +3665,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_dpr.h' 
     :: p
    include 'cts_dpc.h' 
@@ -3677,11 +3679,15 @@
    mprec=.false.
    dpq  = cut4%q(:,j)
 ! comment
-!!   if (rational.and.(.not.inf)) then 
-!!    call numfuncrec(np,cut4%q(:,j),j,dpres) 
-!!   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
-!!   endif
+   else 
+    if (rational.and.(.not.inf)) then 
+     call numfuncrec(np,cut4%q(:,j),j,dpres) 
+    else
+     call numfunc(numdummy)
+    endif
+   endif
 ! comment
    fnum= dpres/allden
    end function fnum
@@ -3903,6 +3909,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_dpr.h' 
     :: p
    include 'cts_dpc.h' 
@@ -3916,11 +3923,15 @@
    mprec=.false.
    dpq  = cut3%q(:,j)
 ! comment
-!!   if (rational) then
-!!    call numfuncrec(np,cut3%q(:,j),j,dpres) 
-!!   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
-!!   endif
+   else 
+    if (rational) then
+     call numfuncrec(np,cut3%q(:,j),j,dpres) 
+    else
+     call numfunc(numdummy)
+    endif
+   endif
 ! comment
    fnum=  (dpres-numd(np,cut3%q(:,j),j))/allden
    end function fnum
@@ -4142,6 +4153,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_dpr.h' 
     :: p
    include 'cts_dpc.h' 
@@ -4155,11 +4167,15 @@
    mprec=.false.
    dpq  = cut2%q(:,j)
 ! comment
-!!   if (rational) then
-!!    call numfuncrec(np,cut2%q(:,j),j,dpres) 
-!!   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
-!!   endif
+   else 
+    if (rational) then
+     call numfuncrec(np,cut2%q(:,j),j,dpres) 
+    else
+     call numfunc(numdummy)
+    endif
+   endif
 ! comment
    fnum =  (dpres                                  &
            -numd(number_propagators,cut2%q(:,j),j) &
@@ -4272,6 +4288,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_dpr.h' 
     :: p
    include 'cts_dpc.h' 
@@ -4285,11 +4302,15 @@
    mprec=.false.
    dpq= cut1%q(:,j)
 ! comment
-!!   if (rational) then
-!!    call numfuncrec(np,cut1%q(:,j),j,dpres) 
-!!   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
-!!   endif
+   else 
+    if (rational) then
+     call numfuncrec(np,cut1%q(:,j),j,dpres) 
+    else
+     call numfunc(numdummy)
+    endif
+   endif
 ! comment
    fnum =  (dpres                                  &
            -numd(number_propagators,cut1%q(:,j),j) &
@@ -4365,6 +4386,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_dpr.h' 
     :: p
    include 'cts_dpc.h' 
@@ -4378,11 +4400,15 @@
    mprec=.false.
    dpq= cut1%q(:,j)
 ! comment
-!!   if (rational) then
-!!    call numfuncrec(np,cut1%q(:,j),j,dpres) 
-!!   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
-!!   endif
+   else 
+    if (rational) then
+     call numfuncrec(np,cut1%q(:,j),j,dpres) 
+    else
+     call numfunc(numdummy)
+    endif
+   endif
 ! comment
    fnum =  (dpres                                  &
            -numd(number_propagators,cut1%q(:,j),j) &
@@ -4707,6 +4733,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_mpr.h' 
     :: p
    include 'cts_mpc.h' 
@@ -4720,11 +4747,15 @@
    mprec=.true.
    mpq= cut4%q(:,j)
 ! comment
-!!   if (rational.and.(.not.inf)) then 
-!!    call numfuncrec(np,cut4%q(:,j),j,mpres) 
-!!   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
-!!   endif
+   else 
+    if (rational.and.(.not.inf)) then 
+     call numfuncrec(np,cut4%q(:,j),j,mpres) 
+    else
+     call numfunc(numdummy)
+    endif
+   endif
 ! comment
    fnum= mpres/allden
    end function fnum
@@ -4946,6 +4977,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_mpr.h' 
     :: p
    include 'cts_mpc.h' 
@@ -4959,11 +4991,15 @@
    mprec=.true.
    mpq= cut3%q(:,j)
 ! comment
-!!   if (rational) then
-!!    call numfuncrec(np,cut3%q(:,j),j,mpres) 
-!!   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
-!!   endif
+   else 
+    if (rational) then
+     call numfuncrec(np,cut3%q(:,j),j,mpres) 
+    else
+     call numfunc(numdummy)
+    endif
+   endif
 ! comment
    fnum=  (mpres-numd(np,cut3%q(:,j),j))/allden
    end function fnum
@@ -5184,6 +5220,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_mpr.h' 
     :: p
    include 'cts_mpc.h' 
@@ -5197,11 +5234,15 @@
    mprec=.true.
    mpq= cut2%q(:,j)
 ! comment
-!!   if (rational) then
-!!    call numfuncrec(np,cut2%q(:,j),j,mpres) 
-!!   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
-!!   endif
+   else 
+    if (rational) then
+     call numfuncrec(np,cut2%q(:,j),j,mpres) 
+    else
+     call numfunc(numdummy)
+    endif
+   endif
 ! comment
    fnum =  (mpres                                  &
            -numd(number_propagators,cut2%q(:,j),j) &
@@ -5314,6 +5355,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_mpr.h' 
     :: p
    include 'cts_mpc.h' 
@@ -5327,11 +5369,15 @@
    mprec=.true.
    mpq= cut1%q(:,j)
 ! comment
-!!   if (rational) then
-!!    call numfuncrec(np,cut1%q(:,j),j,mpres) 
-!!   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
-!!   endif
+   else 
+    if (rational) then
+     call numfuncrec(np,cut1%q(:,j),j,mpres) 
+    else
+     call numfunc(numdummy)
+    endif
+   endif
 ! comment
    fnum =  (mpres                                  &
            -numd(number_propagators,cut1%q(:,j),j) &
@@ -5408,6 +5454,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_mpr.h' 
     :: p
    include 'cts_mpc.h' 
@@ -5421,11 +5468,15 @@
    mprec=.true.
    mpq= cut1%q(:,j)
 ! comment
-!!   if (rational) then
-!!    call numfuncrec(np,cut1%q(:,j),j,mpres) 
-!!   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
-!!   endif
+   else 
+    if (rational) then
+     call numfuncrec(np,cut1%q(:,j),j,mpres) 
+    else
+     call numfunc(numdummy)
+    endif
+   endif
 ! comment
    fnum =  (mpres                                  &
            -numd(number_propagators,cut1%q(:,j),j) &

@@ -380,11 +380,13 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
     # Helper function evaluate_matrix_element for loops
     #===============================================================================
     def evaluate_matrix_element(self, matrix_element, p=None, 
-              gauge_check=False, auth_skipping=None, output='m2', MLOptions={}):
+                             gauge_check=False, auth_skipping=None, output='m2', 
+                                                  PS_name = None, MLOptions={}):
         """Calculate the matrix element and evaluate it for a phase space point
            Output can only be 'm2. The 'jamp' and 'amp' returned values are just
            empty lists at this point.
-        """
+           If PS_name is not none the written out PS.input will be saved in 
+           the file PS.input_<PS_name> as well."""
 
         process = matrix_element.get('processes')[0]
         model = process.get('model')
@@ -473,7 +475,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
         # Evaluate the matrix element for the momenta p        
         finite_m2 = self.get_me_value(process.shell_string_v4(), 0,\
-                                               export_dir, p,verbose=False)[0][0]
+                          export_dir, p, PS_name = PS_name, verbose=False)[0][0]
 
         # Restore the original loop_matrix.f code so that it could be reused
         if gauge_check:
@@ -561,9 +563,12 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         file.write(check_sa)
         file.close()
 
-    def get_me_value(self, proc, proc_id, working_dir, PSpoint=[], verbose=True):
+    def get_me_value(self, proc, proc_id, working_dir, PSpoint=[], \
+                                                  PS_name = None, verbose=True):
         """Compile and run ./check, then parse the output and return the result
-        for process with id = proc_id and PSpoint if specified."""  
+        for process with id = proc_id and PSpoint if specified.
+        If PS_name is not none the written out PS.input will be saved in 
+        the file PS.input_<PS_name> as well"""  
         if verbose:
             sys.stdout.write('.')
             sys.stdout.flush()
@@ -603,7 +608,11 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         # If a PS point is specified, write out the corresponding PS.input
         if PSpoint:
             misc.write_PS_input(os.path.join(dir_name, 'PS.input'),PSpoint)
-        
+            # Also save the PS point used in PS.input_<PS_name> if the user
+            # wanted so. It is used for the lorentz check. 
+            if not PS_name is None:
+                misc.write_PS_input(os.path.join(dir_name, \
+                                                 'PS.input_%s'%PS_name),PSpoint)        
         # Run ./check
         try:
             output = subprocess.Popen('./check',
@@ -1714,8 +1723,8 @@ def check_timing(process_definition, param_card= None, cuttools="",
 # check_processes
 #===============================================================================
 
-def check_processes(processes, param_card = None, quick = [],cuttools="", 
-                                                         cmd = FakeInterface()):
+def check_processes(processes, param_card = None, quick = [],cuttools="",
+                                          reuse = False, cmd = FakeInterface()):
     """Check processes by generating them with all possible orderings
     of particles (which means different diagram building and Helas
     calls), and comparing the resulting matrix element values."""
@@ -1745,7 +1754,7 @@ def check_processes(processes, param_card = None, quick = [],cuttools="",
         if "used_lorentz" not in evaluator.stored_quantities:
             evaluator.stored_quantities["used_lorentz"] = []
             
-        if multiprocess.get('perturbation_couplings')!=[]:
+        if multiprocess.get('perturbation_couplings')!=[] and not reuse:
             # Clean temporary folders created for the running of the loop processes
             clean_up(mg_root)
             
@@ -1796,7 +1805,7 @@ def check_processes(processes, param_card = None, quick = [],cuttools="",
     if "used_lorentz" not in evaluator.stored_quantities:
         evaluator.stored_quantities["used_lorentz"] = []
     
-    if processes[0].get('perturbation_couplings')!=[]:
+    if processes[0].get('perturbation_couplings')!=[] and not reuse:
         # Clean temporary folders created for the running of the loop processes
         clean_up(mg_root)    
     
@@ -2404,7 +2413,8 @@ def fixed_string_length(mystr, length):
 #===============================================================================
 # check_gauge
 #===============================================================================
-def check_gauge(processes, param_card = None,cuttools="", cmd = FakeInterface()):
+def check_gauge(processes, param_card = None,cuttools="", reuse = False, 
+                                                         cmd = FakeInterface()):
     """Check gauge invariance of the processes by using the BRS check.
     For one of the massless external bosons (e.g. gluon or photon), 
     replace the polarization vector (epsilon_mu) with its momentum (p_mu)
@@ -2436,7 +2446,7 @@ def check_gauge(processes, param_card = None,cuttools="", cmd = FakeInterface())
                                            multiprocess,
                                            evaluator)
         
-        if multiprocess.get('perturbation_couplings')!=[]:
+        if multiprocess.get('perturbation_couplings')!=[] and not reuse:
             # Clean temporary folders created for the running of the loop processes
             clean_up(mg_root)
         
@@ -2481,7 +2491,7 @@ def check_gauge(processes, param_card = None,cuttools="", cmd = FakeInterface())
         if result:
             comparison_results.append(result)
 
-    if processes[0].get('perturbation_couplings')!=[]:
+    if processes[0].get('perturbation_couplings')!=[] and not reuse:
         # Clean temporary folders created for the running of the loop processes
         clean_up(mg_root)
             
@@ -2665,7 +2675,8 @@ def output_gauge(comparison_results, output='text'):
 #===============================================================================
 # check_lorentz
 #===============================================================================
-def check_lorentz(processes, param_card = None,cuttools="", cmd = FakeInterface()):
+def check_lorentz(processes, param_card = None,cuttools="", \
+                                          reuse = False, cmd = FakeInterface()):
     """ Check if the square matrix element (sum over helicity) is lorentz 
         invariant by boosting the momenta with different value."""
 
@@ -2696,7 +2707,7 @@ def check_lorentz(processes, param_card = None,cuttools="", cmd = FakeInterface(
                                            multiprocess,
                                            evaluator)
         
-        if multiprocess.get('perturbation_couplings')!=[]:
+        if multiprocess.get('perturbation_couplings')!=[] and not reuse:
             # Clean temporary folders created for the running of the loop processes
             clean_up(mg_root)
         
@@ -2741,7 +2752,7 @@ def check_lorentz(processes, param_card = None,cuttools="", cmd = FakeInterface(
         if result:
             comparison_results.append(result)
 
-    if processes[0].get('perturbation_couplings')!=[]:
+    if processes[0].get('perturbation_couplings')!=[] and not reuse:
         # Clean temporary folders created for the running of the loop processes
         clean_up(mg_root)
 
@@ -2792,14 +2803,14 @@ def check_lorentz_process(process, evaluator):
         matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                              optimized_output = evaluator.loop_optimized_output)
 
-    MLOptions = {'ImprovePS':True,'ForceMP':False}
+    MLOptions = {'ImprovePS':True,'ForceMP':True}
 
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
         data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
                                                  auth_skipping = True)
     else:
         data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
-                                      auth_skipping = True, MLOptions=MLOptions)
+                auth_skipping = True, PS_name = 'original', MLOptions=MLOptions)
 
     if data and data['m2']:
         results = [data]
@@ -2820,17 +2831,17 @@ def check_lorentz_process(process, evaluator):
         # consider the boosts along the z directions for loops or simple rotations.
         boost_p = boost_momenta(p, 3)
         results.append(evaluator.evaluate_matrix_element(matrix_element,
-                                 p=boost_p,output='jamp',MLOptions = MLOptions))
+            p=boost_p, PS_name='zBoost', output='jamp',MLOptions = MLOptions))
         # We only consider the rotations around the z axis so to have the 
         # improve_ps fortran routine work.
         rot_p = [[pm[0],-pm[2],pm[1],pm[3]] for pm in p]
         results.append(evaluator.evaluate_matrix_element(matrix_element,
-                                     p=rot_p,output='jamp',MLOptions = MLOptions))
+            p=rot_p, PS_name='Rotation1', output='jamp',MLOptions = MLOptions))
         # Now a pi/4 rotation around the z-axis
         sq2 = math.sqrt(2.0)
         rot_p = [[pm[0],(pm[1]-pm[2])/sq2,(pm[1]+pm[2])/sq2,pm[3]] for pm in p]
         results.append(evaluator.evaluate_matrix_element(matrix_element,
-                                     p=rot_p,output='jamp',MLOptions = MLOptions))
+            p=rot_p, PS_name='Rotation2', output='jamp',MLOptions = MLOptions))
             
         
     return {'process': process, 'results': results}
@@ -2840,7 +2851,7 @@ def check_lorentz_process(process, evaluator):
 # check_gauge
 #===============================================================================
 def check_unitary_feynman(processes_unit, processes_feynm, param_card=None, 
-                                            cuttools="", cmd = FakeInterface()):
+                               cuttools="", reuse=False, cmd = FakeInterface()):
     """Check gauge invariance of the processes by flipping
        the gauge of the model
     """
@@ -2913,7 +2924,7 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
                                       if d['process'] == data['process']][0]
             output.append(local_dico)
         
-        if processes_feynm.get('perturbation_couplings')!=[]:
+        if processes_feynm.get('perturbation_couplings')!=[] and not reuse:
             # Clean temporary folders created for the running of the loop processes
             clean_up(mg_root)
 

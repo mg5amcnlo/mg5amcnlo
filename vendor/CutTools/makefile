@@ -1,6 +1,6 @@
 PRECISION= QP
 #PRECISION= MP
-CTS_VERSION = v1.8.0
+CTS_VERSION = v1.8.2
 SRC = ./src
 EXE = 
 FC  = gfortran

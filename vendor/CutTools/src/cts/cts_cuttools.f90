@@ -22,7 +22,7 @@
    end subroutine ctscountdigits
   end module countdigits
 !
-  subroutine ctsinit(limitvalue,scaloopin)
+  subroutine ctsinit(limitvalue,scaloopin,ext_num_for_r1in)
    use combinatorics
    use scale
    use countdigits
@@ -38,11 +38,12 @@
    include 'cts_mpr.h' 
     :: one
    include 'cts_mpinit.h'
+   logical, intent(in) :: ext_num_for_r1in
    limit= limitvalue ! limit of precision below which the mp routines activate
    call ctscountdigits(ncountd)
    write (*,*) ' '
    write (*,'(a72)') '------------------------------------------------------------------------'
-   write (*,'(a72)') '|              You are using CutTools - Version 1.8.0                  |'  
+   write (*,'(a72)') '|              You are using CutTools - Version 1.8.2                  |'  
    write (*,'(a72)') '|              Authors: G. Ossola, C. Papadopoulos, R. Pittau          |' 
    write (*,'(a72)') '|              Published in JHEP 0803:042,2008                         |'
    write (*,'(a72)') '|              http://www.ugr.es/~pittau/CutTools                      |'
@@ -70,7 +71,8 @@
 !  scaloop= 2 -> avh       1-loop scalar functions (massive with complex masses)
 !  scaloop= 3 -> qcdloop   1-loop scalar functions (Ellis and Zanderighi)
 !
-   scaloop= scaloopin
+   scaloop= scaloopin 
+   ext_num_for_r1= ext_num_for_r1in
    if    (scaloop.eq.2) then
 !                               
 !    avh initialization:

@@ -133,6 +133,9 @@ class TestCmdLoop(unittest.TestCase):
         cmd = os.getcwd()
         self.do('import model loop_sm')
         self.do('check brs -reuse g d > g d [virt=QCD]')
+        self.assertTrue(path.isfile(pjoin(MG5DIR,'TMP_CHECK',\
+                                           'SubProcesses/P0_gd_gd/result.dat')))
+        shutil.rmtree(pjoin(MG5DIR,'TMP_CHECK'))
         self.assertEqual(cmd, os.getcwd())
         self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
         res = open('/tmp/madgraph.check_cmd.log').read()
@@ -150,6 +153,9 @@ class TestCmdLoop(unittest.TestCase):
         self.do('import model loop_sm')
         self.do('check full -reuse e+ e- > t t~ [virt=QCD]')
         self.assertEqual(cmd, os.getcwd())
+        self.assertTrue(path.isfile(pjoin(MG5DIR,'TMP_CHECK',\
+                                        'SubProcesses/P0_epem_ttx/result.dat')))
+        shutil.rmtree(pjoin(MG5DIR,'TMP_CHECK'))
         self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
         res = open('/tmp/madgraph.check_cmd.log').read()
         # Needs the loop_sm feynman model to successfully run the gauge check.

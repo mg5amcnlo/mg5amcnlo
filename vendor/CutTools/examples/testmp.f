@@ -31,7 +31,7 @@
       integer rnk,i,j,l,iter,idig,rango
       integer scaloop
       integer npoints
-      logical stable,discarded
+      logical stable,discarded,ext_num_for_r1
 !
       npoints           = 10
       imode             = 0
@@ -39,6 +39,7 @@
       rnk               = 6    
       scaloop           = 2   
       muscale           = 1.d0 
+      ext_num_for_r1    =.true.
       limitvalue        = 1.d-18
 !
       rango= rnk        ! only used by the toy numerators 
@@ -66,7 +67,7 @@
          xm(i) = 0.d0
       enddo
 !---------------------------------------------------------------------
-! To initialize CutTools call ctsinit(limitvalue,scaloop)
+! To initialize CutTools call ctsinit(limitvalue,scaloop,ext_num_for_r1)
 !
 ! INPUT:
 !
@@ -79,9 +80,13 @@
 !                               scaloop= 1 -> looptools (not implemented) 
 !                               scaloop= 2 -> avh (complex masses)   
 !                               scaloop= 3 -> qcdloop.  
+!
+!      logical ext_num_for_r1 -> numfunc or numfuncrec is used in the
+!                                computation of R1 if put to .true. 
+!                                or .false
 ! OUTPUT: none
 !---------------------------------------------------------------------
-      call ctsinit(limitvalue,scaloop)
+      call ctsinit(limitvalue,scaloop,ext_num_for_r1)
       print*,'  '
       do iter= 1,npoints   ! do-loop over events 
         print*,'I am running to check event n.',iter,' over 10'

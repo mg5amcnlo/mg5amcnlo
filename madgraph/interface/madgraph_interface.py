@@ -2848,6 +2848,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
                                                 cuttools=CT_dir,
+                                                reuse = reuse,
                                                 cmd = self)
             
             
@@ -2861,6 +2862,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                             param_card = param_card,
                                             quick = True,
                                             cuttools=CT_dir,
+                                            reuse = reuse,
                                             cmd = self)
             nb_processes += len(comparisons[0])
 
@@ -2869,6 +2871,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             lorentz_result = process_checks.check_lorentz(myprocdeff,
                                           param_card = param_card,
                                           cuttools=CT_dir,
+                                          reuse = reuse,
                                           cmd = self)
             nb_processes += len(lorentz_result)
         
@@ -2876,6 +2879,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             gauge_result = process_checks.check_gauge(myprocdef,
                                           param_card = param_card,
                                           cuttools=CT_dir,
+                                          reuse = reuse,
                                           cmd = self)
             nb_processes += len(gauge_result)     
             

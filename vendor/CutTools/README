@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------
 ------------------------------------------------------------------------
  
-              CutTools V1.8.0 (Nov 30 2012)
+              CutTools V1.8.2 (Dec 05 2012)
 
               contact author: pittau@ugr.es
 
@@ -448,6 +448,12 @@ compiling and running example0.f in the directory "examples"
   1 denominator is always reconstructed in the numerator function
 - The external numerator is always called when computing R1
 
+- Dec 05 2012:
+
+- logical flag "ext_num_for_r1" added in ctsinit to use the external 
+  numerator (ext_num_for_r1=.true.) or the reconstructed one 
+  (ext_num_for_r1=.false.) when computing R1 
+
 ---------------------------------------------------------------------------
-Last modification of this document: Nov 30 2012
+Last modification of this document: Dec 05 2012
 ---------------------------------------------------------------------------
