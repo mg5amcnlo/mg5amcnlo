@@ -39,7 +39,7 @@
       rnk               = 6    
       scaloop           = 2   
       muscale           = 1.d0 
-      limitvalue        = 1.d-21
+      limitvalue        = 1.d-18
 !
       rango= rnk        ! only used by the toy numerators 
                         ! located in numerators.f and  
@@ -267,13 +267,15 @@
       if (.not.discarded) then
         print*,'  '  
         print*,'  '  
-        print*,'Test on Multiprecision passed'
+        print*,'Test on Multiprecision PASSED'
+        print*,'with limitvalue=',limitvalue
         print*,'  '  
         print*,'  '  
       else
         print*,'  '  
         print*,'  '  
-        print*,'Test on Multiprecision NOT passed !!!'
+        print*,'Test on Multiprecision NOT PASSED!!!'
+        print*,'with limitvalue=',limitvalue
         print*,'  '  
         print*,'  '  
       endif

@@ -48,11 +48,17 @@
 !                                                                            !  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
+  include 'cts_mprec.h'
   use scale
   use loopfunctions
   use mp_loopfunctions
   use coefficients
   use avh_olo
+  use dimensions
+  use denominators 
+  use maxnumden
+  use def_propagator                                       
+  use def_mp_propagator                                       
   implicit none
   integer, intent(in) :: imode
   integer, intent(in) :: number_propagators
@@ -78,7 +84,7 @@
    :: dbl_prec
   type(propagator), dimension(0:(number_propagators-1)) :: dn
   type(mp_propagator), dimension(0:number_propagators-1) :: mp_dn 
-  integer :: i,j,ib,k,dmr
+  integer :: i,j,ib,k,dmr,npold= -1
   logical, intent(out) :: stable
   logical :: stablen1,stablen2
   logical :: passeddp,passedmp
@@ -86,13 +92,17 @@
   logical :: firsttime=.true.
   include 'cts_dpr.h' 
    :: precstablen1,precstablen2
-  save firsttime
+  save firsttime,npold
   if (number_propagators.gt.maxden) then
    stop 'increase maxden in cts_combinatorics.f90'
   endif
   if ((imode.lt.0).or.(imode.gt.6)) then
    stop 'wrong input value of imode in ctsxcut'
   endif
+  if (number_propagators.ne.npold) then
+    call load_local_dimensions(number_propagators)
+  endif
+  npold= number_propagators
 !
 ! count the number of calls to ctsxcut
 !
@@ -118,13 +128,16 @@
   endif
 !
   dmr =  number_propagators-rnk
-  if (dmr.eq.-1) then
-    if (number_propagators.gt.4) then
-      print*,'dmr=',dmr,' not implemented yet with',&
-     ' number_propagators=',number_propagators
-      stop
-    endif 
-  endif
+!
+! comment
+!  if (dmr.eq.-1) then
+!    if (number_propagators.gt.4) then
+!      print*,'dmr=',dmr,' not implemented yet with',&
+!     ' number_propagators=',number_propagators
+!      stop
+!    endif 
+!  endif
+! comment
 !
   stable  =.true.
   passeddp=.true.
@@ -403,20 +416,17 @@
      , intent(out) :: camp(0:2),campcc,campr1
     camp = 0.d0
     if (number_propagators.ge.4) then
-     do i= 1,nbn4(number_propagators)
-      ib= mbn4(number_propagators,i) 
+     do ib= 1,dmns_d
       do k= 0,2; camp(k)= camp(k)+save_dcoeff(0,ib)*dloopfun(k,ib); enddo
      enddo
     endif
     if (number_propagators.ge.3) then
-     do i= 1,nbn3(number_propagators)
-      ib= mbn3(number_propagators,i)
+     do ib= 1,dmns_c
       do k= 0,2; camp(k)= camp(k)+save_ccoeff(0,ib)*cloopfun(k,ib); enddo
      enddo
     endif
     if (number_propagators.ge.2) then
-     do i= 1,nbn2(number_propagators)
-      ib= mbn2(number_propagators,i)
+     do ib= 1,dmns_b
       do k= 0,2
        camp(k)= camp(k)+ save_bcoeff(0,ib)               *bloopfun(k,ib)  &
                        +(save_bcoeff(3,ib)*vveck1(ib))   *b1loopfun(k,ib) &
@@ -425,8 +435,7 @@
      enddo
     endif
     if (number_propagators.ge.1) then
-     do i= 1,nbn1(number_propagators)
-      ib= mbn1(number_propagators,i)
+     do ib= 1,dmns_a
       do k= 0,2; camp(k)= camp(k)+save_acoeff(0,ib)*aloopfun(k,ib); enddo
      enddo
     endif 
@@ -444,24 +453,21 @@
      , intent(out) :: mp_camp(0:2),mp_campcc,mp_campr1
     do k= 0,2; mp_camp(k)= 0.d0; enddo
     if (number_propagators.ge.4) then
-     do i= 1,nbn4(number_propagators)
-      ib= mbn4(number_propagators,i) 
+     do ib= 1,dmns_d
       do k= 0,2
         mp_camp(k)= mp_camp(k)+save_mp_dcoeff(0,ib)*mp_dloopfun(k,ib)
       enddo
      enddo
     endif
     if (number_propagators.ge.3) then
-     do i= 1,nbn3(number_propagators)
-      ib= mbn3(number_propagators,i)
+     do ib= 1,dmns_c
       do k= 0,2
        mp_camp(k)= mp_camp(k)+save_mp_ccoeff(0,ib)*mp_cloopfun(k,ib)
       enddo
      enddo
     endif
     if (number_propagators.ge.2) then
-     do i= 1,nbn2(number_propagators)
-      ib= mbn2(number_propagators,i)
+     do ib= 1,dmns_b
       do k= 0,2
        mp_camp(k)= mp_camp(k)+ save_mp_bcoeff(0,ib)    *mp_bloopfun(k,ib)  &
                +(save_mp_bcoeff(3,ib)*mp_vveck1(ib))   *mp_b1loopfun(k,ib) &
@@ -470,8 +476,7 @@
      enddo
     endif
     if (number_propagators.ge.1) then
-     do i= 1,nbn1(number_propagators)
-      ib= mbn1(number_propagators,i)
+     do ib= 1,dmns_a
       do k= 0,2
        mp_camp(k)= mp_camp(k)+save_mp_acoeff(0,ib)*mp_aloopfun(k,ib)
       enddo
@@ -490,7 +495,7 @@
     dir_stable=.true.
     if (precstablen2.lt.precstablen1) dir_stable=.false.
 ! comment
-!     prec= abs(amp1(0)-amp(0))/max(tiny(prec),abs(amp1(0)))
+!     prec= abs(amp1(0)-amp(0))/max(my_tiny(prec),abs(amp1(0)))
 !     print*,'           '
 !     print*,'amp(0)      =',amp(0) 
 !     print*,'amp1(0)     =',amp1(0) 
@@ -523,7 +528,7 @@
     dir_stable=.true.
     if (precstablen2.lt.precstablen1) dir_stable=.false.
 ! comment
-!     mp_prec= max(mp_tiny(mp_prec),abs(mp_amp1(0)))
+!     mp_prec= max(my_tiny(mp_prec),abs(mp_amp1(0)))
 !     mp_prec= abs(mp_amp1(0)-mp_amp(0))/mp_prec
 !     print*,'           '
 !     aus= mp_amp(0)

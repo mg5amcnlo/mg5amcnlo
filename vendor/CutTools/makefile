@@ -1,10 +1,11 @@
-#PRECISION= MP
 PRECISION= QP
-CTS_VERSION = v1.7.4
+#PRECISION= MP
+CTS_VERSION = v1.8.0
 SRC = ./src
 EXE = 
 FC  = gfortran
 FFLAGS = -fno-automatic -O2 -funroll-all-loops  
+#FFLAGS = -fno-automatic -Ofast -funroll-all-loops  
 BLD = includects
 CTS_DIR = cuttools_$(CTS_VERSION)
 CTS_TAR = $(CTS_DIR).tar.gz
@@ -29,10 +30,13 @@ endif
 cpmp:   
 	cp  -p ./src/cts/cts_mpr.in ./src/cts/cts_mpr.h
 	cp  -p ./src/cts/cts_mpc.in ./src/cts/cts_mpc.h
-
+	cp  -p ./src/cts/cts_mprec.in ./src/cts/cts_mprec.h 
+	cp  -p ./src/cts/cts_mpinit.in ./src/cts/cts_mpinit.h
 cpqp:   
 	cp  -p ./src/cts/cts_qpr.in ./src/cts/cts_mpr.h
 	cp  -p ./src/cts/cts_qpc.in ./src/cts/cts_mpc.h
+	cp  -p ./src/cts/cts_qprec.in ./src/cts/cts_mprec.h
+	cp  -p ./src/cts/cts_qpinit.in ./src/cts/cts_mpinit.h
 
 clean$(BLD): default
 	rm -fr  $(BLD)/*.f
