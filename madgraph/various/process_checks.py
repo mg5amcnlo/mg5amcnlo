@@ -2832,6 +2832,10 @@ def check_lorentz_process(process, evaluator):
             results.append(evaluator.evaluate_matrix_element(matrix_element,
                                                        p=boost_p,output='jamp'))
     else:
+        #for boost in range(1,4):
+        #    boost_p = boost_momenta(p,boost)
+        #    results.append(evaluator.evaluate_matrix_element(matrix_element,
+                # p=boost_p,output='jamp',MLOptions = MLOptions))
         # The boosts are not precise enough for the loop evaluations and one
         # need the fortran improve_ps function of MadLoop to work. So we only
         # consider the boosts along the z directions for loops or simple rotations.
