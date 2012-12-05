@@ -603,8 +603,6 @@ C theta-function: The radiation from the shower should always be softer
 C than the jets at the Born, hence no need to include the MC counter
 C terms when the radiation is hard.
 C
-C THIS NEEDS TO BE UPDATED FOR OTHER MC'S AS WELL
-C
       if(pt_hardness.gt.shower_S_scale(nFKSprocess*2-1))then
          emsca=etot
          wgt=0.d0
@@ -1172,6 +1170,14 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
 
+c Radiation hardness needed (pt_hardness) for the theta function
+c Should be zero if there are no jets at the Born
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
+     &     ,pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
+     &     ,pt_hardness
+
       double precision becl,delta
 c alsf and besf are the parameters that control gfunsoft
       double precision alsf,besf
@@ -1303,6 +1309,19 @@ c this is standard MC@NLO
         probne=bogus_probne_fun(ptHWPP)
       endif
 c
+C
+C For processes that have jets at the Born level, we need to include a
+C theta-function: The radiation from the shower should always be softer
+C than the jets at the Born, hence no need to include the MC counter
+C terms when the radiation is hard.
+C
+      if(pt_hardness.gt.shower_S_scale(nFKSprocess*2-1))then
+         emsca=etot
+         wgt=0.d0
+         flagmc=.false.
+         return
+      endif
+C
       wgt=0.d0
       nofpartners=ipartners(0)
       flagmc=.false.
@@ -1723,7 +1742,8 @@ c
           emsca=emscav(mpartner)
         endif
       endif
-      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
+c$$$      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
+      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=scalemax
 c Additional information for LHE
       if(AddInfoLHE)then
         fksfather_lhe(nFKSprocess)=fksfather
@@ -1848,6 +1868,14 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
+
+c Radiation hardness needed (pt_hardness) for the theta function
+c Should be zero if there are no jets at the Born
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
+     &     ,pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
+     &     ,pt_hardness
 
       double precision becl,delta
 c alsf and besf are the parameters that control gfunsoft
@@ -1995,6 +2023,20 @@ c this is standard MC@NLO
         probne=bogus_probne_fun(tPY6Q)
       endif
 c
+c
+C
+C For processes that have jets at the Born level, we need to include a
+C theta-function: The radiation from the shower should always be softer
+C than the jets at the Born, hence no need to include the MC counter
+C terms when the radiation is hard.
+C
+      if(pt_hardness.gt.shower_S_scale(nFKSprocess*2-1))then
+         emsca=etot
+         wgt=0.d0
+         flagmc=.false.
+         return
+      endif
+C
       wgt=0.d0
       nofpartners=ipartners(0)
       flagmc=.false.
@@ -2063,19 +2105,19 @@ c strictly page 354 of hep-ph/0603175
                xmrec2=xm12
                www=-q2q+q1q-uk
             endif
-            ma2=xmm2+www
-c Recall that xm22 = 0 if ileg = 4
-            if(ma2/s.lt.-tiny)then
-               write(*,*)'error A in xmcsubt_PY6Q'
-               stop
-            elseif(ma2/s.lt.0d0)then
-               ma2=0d0
-            endif
+c
             if(www.lt.-tiny)then
-               write(*,*)'error C in xmcsubt_PY6Q'
+               write(*,*)'error A in xmcsubt_PY6Q'
                stop
             elseif(www.lt.0d0)then
                www=0d0
+            endif
+            ma2=xmm2+www
+            if(ma2/s.lt.-tiny)then
+               write(*,*)'error B in xmcsubt_PY6Q'
+               stop
+            elseif(ma2/s.lt.0d0)then
+               ma2=0d0
             endif
             ma=sqrt(ma2)
             mbeff=sqrt(xmm2)
@@ -2085,7 +2127,7 @@ c Recall that xm22 = 0 if ileg = 4
 c The following constraint is deduced by imposing (p1+p2-kmother)**2=krecoil**2 and
 c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=ma**2
             if(abs(en_mother-(s-xmrec2+ma2)/(2*sqrt(s)))/en_mother.ge.tiny)then
-               write(*,*)'error B in xmcsubt_PY6Q'
+               write(*,*)'error C in xmcsubt_PY6Q'
                write(*,*)en_mother,(s-xmrec2+ma2)/(2*sqrt(s))
                stop
             endif
@@ -2493,7 +2535,8 @@ c
           emsca=emscav(mpartner)
         endif
       endif
-      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
+c$$$      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
+      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=scalemax
 c Additional information for LHE
       if(AddInfoLHE)then
         fksfather_lhe(nFKSprocess)=fksfather
@@ -2615,6 +2658,14 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
+
+c Radiation hardness needed (pt_hardness) for the theta function
+c Should be zero if there are no jets at the Born
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
+     &     ,pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
+     &     ,pt_hardness
 
       double precision becl,delta
 c alsf and besf are the parameters that control gfunsoft
@@ -2752,6 +2803,19 @@ c this is standard MC@NLO
         probne=bogus_probne_fun(ptPY6PT)
       endif
 c
+C
+C For processes that have jets at the Born level, we need to include a
+C theta-function: The radiation from the shower should always be softer
+C than the jets at the Born, hence no need to include the MC counter
+C terms when the radiation is hard.
+C
+      if(pt_hardness.gt.shower_S_scale(nFKSprocess*2-1))then
+         emsca=etot
+         wgt=0.d0
+         flagmc=.false.
+         return
+      endif
+C
       wgt=0.d0
       nofpartners=ipartners(0)
       flagmc=.false.
@@ -3288,6 +3352,14 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
 
+c Radiation hardness needed (pt_hardness) for the theta function
+c Should be zero if there are no jets at the Born
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
+     &     ,pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
+     &     ,pt_hardness
+
       double precision becl,delta
 c alsf and besf are the parameters that control gfunsoft
       double precision alsf,besf
@@ -3435,6 +3507,19 @@ c this is standard MC@NLO
         probne=bogus_probne_fun(ptPY8)
       endif
 c
+C
+C For processes that have jets at the Born level, we need to include a
+C theta-function: The radiation from the shower should always be softer
+C than the jets at the Born, hence no need to include the MC counter
+C terms when the radiation is hard.
+C
+      if(pt_hardness.gt.shower_S_scale(nFKSprocess*2-1))then
+         emsca=etot
+         wgt=0.d0
+         flagmc=.false.
+         return
+      endif
+C
       wgt=0.d0
       nofpartners=ipartners(0)
       flagmc=.false.
