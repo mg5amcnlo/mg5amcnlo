@@ -314,6 +314,40 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         # now args is of the type [True True]
         create_dir, launch_jobs = args[0], args[1]
         
+        for nb_card in self.MWparam.actif_param:
+            for dirname in self.MWparam.MW_listdir:
+                for event_sample in range(self.MWparam.nb_event_MW[dirname]//self.MWparam['mw_run']['nb_event_by_node']):
+                    self.submit_job(dirname, nb_card, event_sample)
+                    
+    
+    def submit_job(self, dirname, nb_card, sample_nb):
+        """launch on the cluster the job which creates the computation"""
+        
+        input_files = [pjoin(self.me_dir, 'SubProcesses', dirname, 'comp_madweight'), 
+                       pjoin(self.me_dir, 'SubProcesses','randinit'),
+                       pjoin(self.me_dir,'Source','MadWeight','src','MW_driver.py'),
+                       pjoin(self.me_dir, 'Cards', 'param_card_%i.dat' % nb_card),
+                       ]
+        
+        # add event_file:
+        evt = 'input_%i.lhco' % (sample_nb // self.MWparam['mw_run']['event_packing'])
+        first_event = (sample_nb % self.MWparam['mw_run']['event_packing'])
+        name = self.MWparam.name
+        input_files.append(pjoin(self.me_dir, 'SubProcesses', dirname, name, evt))
+                           
+        # Need to add PDF (maybe also symfact, ...) ?
+        
+        output_file = ['output_%s_%s.xml' % (nb_card, sample_nb)]
+        
+        # need to define
+        #1) the bash script
+        #2) the associated python script
+        #3) the argument to be passed to the function this should include
+        #   first_event, card_nb, MW_param.integration_point, sample_nb, evt_name
+        #4) adding the loop on the events
+
+        
+        
         
         
         

@@ -29,7 +29,9 @@ mw_run  mw_bw_cut       logical  mw_run@@bw_cut         # use the BW cut for the
 mw_run  histo           logical F                       # put one creates histogram for value defined in topgraph.f
 mw_run  histo_by_events logical F                       # decide if we create the histograms for each events
 mw_run  weight_format   string  %(card)s.%(event)s\t%(value)s\t%(error)s\n # decide how to write the weight output file
-mw_run  cross_format    string  %(card)s\t%(value)s\t%(error)s\n   # decide how to write the cross-section output files
+#mw_run  cross_format    string  %(card)s\t%(value)s\t%(error)s\n   # decide how to write the cross-section output files
+mw_run  nb_event_by_node integer  10                    # decide how many events weight are computed in a single cluster submission
+mw_run  event_packing    integer  20                    # the input event files will be splitted in event_packing*nb_event_by_node 
 
 
 mw_parameter mode logical 1                         
