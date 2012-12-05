@@ -306,7 +306,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 raise MadGraph5Error, "Before using the user_filter, please "+\
                        "make sure that the loop diagrams have been tgged first."
             valid_diag = True
-            if i!=19:valid_diag=False
+            if i!=0:valid_diag=False
             #if 22 in diag.get_loop_lines_pdgs():
             #     valid_diag=False
             # Ex. 1: Chose the topology, i.e. number of loop line.
