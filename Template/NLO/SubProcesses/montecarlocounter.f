@@ -1909,7 +1909,7 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       common/cupscale/upper_scale
 
 c
-      double precision sum_mass
+      double precision em_mass
       double precision pmass(nexternal)
       include "pmass.inc"
 c
@@ -1950,17 +1950,14 @@ c variable, not yet defined) will not be needed in the computation of probne
       etot=2d0*sqrt( ebeam(1)*ebeam(2) )
       emsca=etot
       if(dampMCsubt)then
-        sum_mass=0d0
-        do i=1,nexternal
-           sum_mass=sum_mass+pmass(i)
-        enddo
-        sum_mass=max(sum_mass,delta_scale)
-
+        em_mass=0d0
+        if(ileg.eq.3)em_mass=sqrt(xm12)
+        em_mass=max(em_mass,delta_scale)
         emsca=0.d0
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
-        scalemin=max(scalemin,sum_mass)
+        scalemin=max(scalemin,em_mass)
         scalemax=min(scalemax,ref_scale)
         if(scalemax.ge.etot)scalemax=etot
         if(scalemin.ge.scalemax)scalemin=scalemax
@@ -3393,7 +3390,7 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 
       double precision xma2,xmb2,sb
 c
-      double precision sum_mass
+      double precision em_mass
       double precision pmass(nexternal)
       include "pmass.inc"
 c
@@ -3434,17 +3431,14 @@ c variable, not yet defined) will not be needed in the computation of probne
       etot=2d0*sqrt( ebeam(1)*ebeam(2) )
       emsca=etot
       if(dampMCsubt)then
-        sum_mass=0d0
-        do i=1,nexternal
-           sum_mass=sum_mass+pmass(i)
-        enddo
-        sum_mass=max(sum_mass,delta_scale)
-
+        em_mass=0d0
+        if(ileg.eq.3)em_mass=sqrt(xm12)
+        em_mass=max(em_mass,delta_scale)
         emsca=0.d0
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
-        scalemin=max(scalemin,sum_mass)
+        scalemin=max(scalemin,em_mass)
         scalemax=min(scalemax,sqrt((1-xi_i_fks)*shat))
         if(scalemax.ge.etot)scalemax=etot
         if(scalemin.ge.scalemax)scalemin=scalemax
@@ -6358,13 +6352,13 @@ c
 
       double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks
       double precision shattmp,dot,emsca_bare,ref_scale,scalemin,
-     & scalemax,rrnd,ran2,emscainv,dum1,dum2,dum3,dum4,dum5,dum6,
+     & scalemax,rrnd,ran2,emscainv,dum1,dum2,dum3,dum4,dum5,xxm12,
      & qMC,ptresc,one,zero,delta_scale
       parameter(zero=0d0)
       parameter(one=1d0)
       parameter(delta_scale=10d0)
 
-      integer idum,i
+      integer iileg,i
 
       logical emscasharp
       logical extra
@@ -6379,7 +6373,7 @@ c
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
 
-      double precision sum_mass,eetot
+      double precision em_mass,eetot
       double precision pmass(nexternal)
       include "pmass.inc"
 c
@@ -6395,19 +6389,20 @@ c entering this function
         stop
       endif
 
+      extra=.true.
+      call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,iileg,
+     &                xxm12,dum1,dum2,dum3,dum4,dum5,qMC,extra)
+
       if(dampMCsubt)then
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
 
         if(MonteCarlo(1:6).eq.'PYTHIA')then
-           sum_mass=0d0
-           do i=1,nexternal
-              sum_mass=sum_mass+pmass(i)
-           enddo
-           sum_mass=max(sum_mass,delta_scale)
-
-           scalemin=max(scalemin,sum_mass)
+           em_mass=0d0
+           if(iileg.eq.3)em_mass=sqrt(xxm12)
+           em_mass=max(em_mass,delta_scale)
+           scalemin=max(scalemin,em_mass)
            scalemax=min(scalemax,ref_scale)
         endif
 
@@ -6421,10 +6416,6 @@ c entering this function
           rrnd=emscainv(rrnd,one)
           emsca_bare=scalemin+rrnd*(scalemax-scalemin)
         endif
-
-        extra=.true.
-        call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,idum,
-     &                dum1,dum2,dum3,dum4,dum5,dum6,qMC,extra)
 
         if(emscasharp)then
            if(qMC.le.scalemax)then
@@ -6452,44 +6443,22 @@ c entering this function
 
       subroutine assign_scalemax(sh,xi,xxscalemax)
       implicit none
-      include "nexternal.inc"
       include "madfks_mcatnlo.inc"
       include "run.inc"
-      include "coupl.inc"
 
       integer i
-      double precision sh,xi,ref_scale,xxscalemax,xxscalemin,
-     &     delta_scale,zero,eetot
-      parameter(delta_scale=10d0)
-      parameter(zero=0d0)
+      double precision sh,xi,ref_scale,xxscalemax,xxscalemin,eetot
 
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
-
-      double precision sum_mass
-      double precision pmass(nexternal)
-      include "pmass.inc"
 c
       MonteCarlo=shower_mc
       eetot=2d0*sqrt( ebeam(1)*ebeam(2) )
-
       ref_scale=sqrt((1-xi)*sh)
       xxscalemin=max(frac_low*ref_scale,scaleMClow)
       xxscalemax=max(frac_upp*ref_scale,xxscalemin+scaleMCdelta)
-
-      if(MonteCarlo(1:6).eq.'PYTHIA')then
-         sum_mass=0d0
-         do i=1,nexternal
-            sum_mass=sum_mass+pmass(i)
-         enddo
-         sum_mass=max(sum_mass,delta_scale)
-
-         xxscalemin=max(xxscalemin,sum_mass)
-         xxscalemax=min(xxscalemax,ref_scale)
-      endif
-
+      if(MonteCarlo(1:6).eq.'PYTHIA')xxscalemax=min(xxscalemax,ref_scale)
       if(xxscalemax.ge.eetot)xxscalemax=eetot
-      if(xxscalemin.ge.xxscalemax)xxscalemin=xxscalemax
 
       return
       end
