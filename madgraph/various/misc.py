@@ -516,7 +516,7 @@ class open_file(object):
     @classmethod
     def configure(cls, configuration=None):
         """ configure the way to open the file """
-        
+         
         cls.configured = True
         
         # start like this is a configuration for mac

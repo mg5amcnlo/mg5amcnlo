@@ -2798,7 +2798,12 @@ def check_lorentz_process(process, evaluator):
     #                                 auth_skipping = True)
 
     MLOptions = {'ImprovePS':True,'ForceMP':False}
-
+    ps=""
+    for pi in p:
+        for pij in pi:
+            ps=ps+str(pij)+"   "
+        ps=ps+"\n"
+    open(os.path.join('/Users/erdissshaw/Works/aMCatNLO_EW','PS0.input'),'w').write(ps)
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
         data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
                                                  auth_skipping = True)
@@ -2832,26 +2837,39 @@ def check_lorentz_process(process, evaluator):
             results.append(evaluator.evaluate_matrix_element(matrix_element,
                                                        p=boost_p,output='jamp'))
     else:
-        #for boost in range(1,4):
-        #    boost_p = boost_momenta(p,boost)
-        #    results.append(evaluator.evaluate_matrix_element(matrix_element,
-                # p=boost_p,output='jamp',MLOptions = MLOptions))
+        for boost in range(1,4):
+            boost_p = boost_momenta(p,boost)
+            ps=""
+            for pi in boost_p:
+                for pij in pi:
+                    ps=ps+str(pij)+"      "
+                ps=ps+"\n"
+            open(os.path.join('/Users/erdissshaw/Works/aMCatNLO_EW','PS%s.input')%boost,'w').write(ps)
+
+            results.append(evaluator.evaluate_matrix_element(matrix_element,
+                p=boost_p,output='jamp',MLOptions = MLOptions))
         # The boosts are not precise enough for the loop evaluations and one
         # need the fortran improve_ps function of MadLoop to work. So we only
         # consider the boosts along the z directions for loops or simple rotations.
-        boost_p = boost_momenta(p, 3)
-        results.append(evaluator.evaluate_matrix_element(matrix_element,
-                                 p=boost_p,output='jamp',MLOptions = MLOptions))
+        #boost_p = boost_momenta(p, 3)
+        #ps=""
+        #for pi in boost_p:
+        #    for pij in pi:
+        #        ps=ps+str(pij)+"      "
+        #    ps=ps+"\n"
+        #open(os.path.join('/Users/erdissshaw/Works/aMCatNLO_EW','PS%s.input')%3,'w').write(ps)
+        #results.append(evaluator.evaluate_matrix_element(matrix_element,
+        #                         p=boost_p,output='jamp',MLOptions = MLOptions))
         # We only consider the rotations around the z axis so to have the
         # improve_ps fortran routine work.
-        rot_p = [[pm[0],-pm[2],pm[1],pm[3]] for pm in p]
-        results.append(evaluator.evaluate_matrix_element(matrix_element,
-                                     p=rot_p,output='jamp',MLOptions = MLOptions))
+        #rot_p = [[pm[0],-pm[2],pm[1],pm[3]] for pm in p]
+        #results.append(evaluator.evaluate_matrix_element(matrix_element,
+        #                             p=rot_p,output='jamp',MLOptions = MLOptions))
         # Now a pi/4 rotation around the z-axis
-        sq2 = math.sqrt(2.0)
-        rot_p = [[pm[0],(pm[1]-pm[2])/sq2,(pm[1]+pm[2])/sq2,pm[3]] for pm in p]
-        results.append(evaluator.evaluate_matrix_element(matrix_element,
-                                     p=rot_p,output='jamp',MLOptions = MLOptions))
+        #sq2 = math.sqrt(2.0)
+        #rot_p = [[pm[0],(pm[1]-pm[2])/sq2,(pm[1]+pm[2])/sq2,pm[3]] for pm in p]
+        #results.append(evaluator.evaluate_matrix_element(matrix_element,
+        #                             p=rot_p,output='jamp',MLOptions = MLOptions))
             
         
     return {'process': process, 'results': results}

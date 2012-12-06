@@ -306,7 +306,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 raise MadGraph5Error, "Before using the user_filter, please "+\
                        "make sure that the loop diagrams have been tgged first."
             valid_diag = True
-            if i>146:valid_diag=False
+            if i!=37:valid_diag=False
             #if 22 in diag.get_loop_lines_pdgs():
             #     valid_diag=False
             # Ex. 1: Chose the topology, i.e. number of loop line.
@@ -754,10 +754,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Reset the l-cut particle list
         self.lcutpartemployed=[]
 
-	# HSS 19/09/2012
-	return totloopsuccessful
+        # HSS 19/09/2012
+        return totloopsuccessful
         # return loopsuccessful
-	# HSS
+        # HSS
 
 
     def setUVCT(self):
@@ -1036,16 +1036,16 @@ class LoopAmplitude(diagram_generation.Amplitude):
         looplegs=[leg for leg in legs if leg['loop_line']]
         
         # Get rid of all vanishing tadpoles
-	# HSS 19/09/2012
+        # HSS 19/09/2012
         #Ease the access to the model
         model=self['process']['model']
-	exlegs=[leg for leg in looplegs if leg['depth']==0]
+        exlegs=[leg for leg in looplegs if leg['depth']==0]
         if(len(exlegs)==2):
-	    if(any([part['mass'].lower()=='zero' for pdg,part in model.get('particle_dict').items() if pdg==abs(exlegs[0]['id'])])):
+            if(any([part['mass'].lower()=='zero' for pdg,part in model.get('particle_dict').items() if pdg==abs(exlegs[0]['id'])])):
             	return []
         #if(len([1 for leg in looplegs if leg['depth']==0])==2):
         #    return []
-	# HSS
+        # HSS
 
         # Correctly propagate the loopflow
         loopline=(len(looplegs)==1)    
@@ -1110,10 +1110,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         # Get rid of all vanishing tadpoles
 	# HSS 19/09/2012
-	model=self['process']['model']
-	exlegs=[leg for leg in looplegs if leg['depth']==0]
+        model=self['process']['model']
+        exlegs=[leg for leg in looplegs if leg['depth']==0]
         if(len(exlegs)==2):
-	    if(any([part['mass'].lower()=='zero' for pdg,part in model.get('particle_dict').items() if pdg==abs(exlegs[0]['id'])])):
+            if(any([part['mass'].lower()=='zero' for pdg,part in model.get('particle_dict').items() if pdg==abs(exlegs[0]['id'])])):
             	return []
         #if(len([1 for leg in looplegs if leg['depth']==0])==2):
         #    return []

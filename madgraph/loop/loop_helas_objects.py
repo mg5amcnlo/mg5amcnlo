@@ -489,10 +489,13 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         exhibits a factor 2."""
         
         # HSS 27/09/2012
-        if len(self.get('wavefunctions'))==2 and \
-           len([wf for wf in self.get('wavefunctions') if wf.get('self_antipart')])==2 or\
-	   len(self.get('wavefunctions'))==3 and \
-	   len([wf for wf in self.get('wavefunctions') if wf.get('self_antipart')])==3 and\
+        #print len(self.get('wavefunctions'))
+        #print len([wf for wf in self.get('wavefunctions') if wf.get('self_antipart')])
+        #print len(set([wf.get('pdg_code') for wf in self.get('wavefunctions')]))
+        if len(self.get('wavefunctions'))==3 and \
+           len([wf for wf in self.get('wavefunctions') if wf.get('self_antipart')])==3 or\
+	   len(self.get('wavefunctions'))==4 and \
+	   len([wf for wf in self.get('wavefunctions') if wf.get('self_antipart')])==4 and\
 	   len(set([wf.get('pdg_code') for wf in self.get('wavefunctions')]))==1:
         #if len(self.get('wavefunctions'))==4 and \
         #   len([wf for wf in self.get('wavefunctions') if wf.get('pdg_code')==21])==4:
@@ -500,6 +503,8 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
             self['loopsymmetryfactor']=2
         else:
             self['loopsymmetryfactor']=1
+        #print self['loopsymmetryfactor']
+        #raise TypeError,"haha"
         
 #===============================================================================
 # LoopHelasDiagram

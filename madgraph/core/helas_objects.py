@@ -644,7 +644,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 	if len([wf for wf in self.get('mothers')])!=2:return False
 	if len([wf for wf in self.get('mothers') if wf.is_boson()])!=2:return False
 
-	if self.get('spin')==1:
+	if self.get('spin')==1 and not self.get('particle').get('ghost'):
 	   scalar_num=1
 	else:
 	   scalar_num=0
@@ -669,12 +669,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # lorentz structure but just use an SM ad-hoc rule that only 
         # the feynman rules for a three point vertex with only bosons bring
         # in one power of q.
-	# HSS, 22/10/2012
+        # HSS, 22/10/2012
         # if self.is_boson() and len([w for w in self.get('mothers') \
         #                                                   if w.is_boson()])==2:
-	if self.incr_rank():
+        if self.incr_rank():
             rank=rank+1
-	# HSS
+        # HSS
         return rank
         
     def get_rank(self):
@@ -4031,12 +4031,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Gives (number or external particles, number of
         incoming particles)"""
 
-	# HSS 25/09/2012
-	external_wfs = filter(lambda wf: not wf.get('mothers'),self.get_all_wavefunctions())
+        # HSS 25/09/2012
+        external_wfs = filter(lambda wf: not wf.get('mothers'),self.get_all_wavefunctions())
         #external_wfs = filter(lambda wf: wf.get('leg_state') != \
         #                      'intermediate',
         #                      self.get_all_wavefunctions())
-	# HSS
+        # HSS
 
         return (len(set([wf.get('number_external') for wf in \
                          external_wfs])),
