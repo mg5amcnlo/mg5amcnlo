@@ -2797,7 +2797,7 @@ def check_lorentz_process(process, evaluator):
     #data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
     #                                 auth_skipping = True)
 
-    MLOptions = {'ImprovePS':True,'ForceMP':False}
+    MLOptions = {'ImprovePS':True,'ForceMP':True}
     ps=""
     for pi in p:
         for pij in pi:
