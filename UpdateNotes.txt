@@ -2,7 +2,9 @@ Update notes for MadGraph 5 (in reverse time order)
 
 1.5.6 (XX/12/12)  JA: Replaced error with warning when there are decay processes
                       without corresponding core processes final state (see 
-                      Question #216037)
+                      Question #216037). If you get this warning, please check
+                      carefully the process list and diagrams to make sure you
+                      have the processes you were expecting.
 
 1.5.5 (18/11/12)  JA: Fixed Bug #1078168, giving asymmetries in X+gamma generation
                       (e.g. Z+gamma) when ickkw=1 and pdfwgt=T. Thanks Irakli!
