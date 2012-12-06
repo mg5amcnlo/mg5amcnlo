@@ -2916,16 +2916,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     self.options['loop_optimized_output'] else 'default')+':\n'
             text += process_checks.output_profile(myprocdef, profile_stab,
                                    profile_time, self._mgme_dir,reuse) + '\n'
+        if lorentz_result:
+            text += 'Lorentz invariance results:\n'
+            text += process_checks.output_lorentz_inv(lorentz_result) + '\n'
         if gauge_result:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'
         if gauge_result_no_brs:
             text += 'Gauge results (switching between Unitary/Feynman):\n'
             text += process_checks.output_unitary_feynman(gauge_result_no_brs) + '\n'
-
-        if lorentz_result:
-            text += 'Lorentz invariance results:\n'
-            text += process_checks.output_lorentz_inv(lorentz_result) + '\n'
 
         if comparisons and len(comparisons[0])>0:
             text += 'Process permutation results:\n'

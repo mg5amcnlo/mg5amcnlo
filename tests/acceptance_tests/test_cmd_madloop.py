@@ -162,8 +162,11 @@ class TestCmdLoop(unittest.TestCase):
         # self.assertTrue('Gauge results' in res)
         self.assertTrue('Lorentz invariance results' in res)
         self.assertTrue('Process permutation results:' in res)
-        self.assertTrue('Summary: 1/1 passed, 0/1 failed' in res)
-        self.assertTrue(res.count('Passed')==3)
+        self.assertTrue('Gauge results' in res)
+        self.assertTrue('Summary: passed' in res)
+        self.assertTrue('Passed' in res)
+        self.assertTrue('Failed' not in res)
+        self.assertTrue('1/1 failed' not in res)
         self.assertTrue('1/1 passed' in res) 
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
 

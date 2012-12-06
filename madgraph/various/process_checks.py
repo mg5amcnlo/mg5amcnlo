@@ -2813,7 +2813,10 @@ def check_lorentz_process(process, evaluator):
                 auth_skipping = True, PS_name = 'original', MLOptions=MLOptions)
 
     if data and data['m2']:
-        results = [data]
+        if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
+            results = [data]
+        else:
+            results = [('Original evaluation',data)]
     else:
         return  {'process':process, 'results':'pass'}
     
@@ -2824,24 +2827,38 @@ def check_lorentz_process(process, evaluator):
         for boost in range(1,4):
             boost_p = boost_momenta(p, boost)
             results.append(evaluator.evaluate_matrix_element(matrix_element,
-                                                       p=boost_p,output='jamp'))
+                                                    p=boost_p,output='jamp'))
     else:
         # The boosts are not precise enough for the loop evaluations and one
         # need the fortran improve_ps function of MadLoop to work. So we only
         # consider the boosts along the z directions for loops or simple rotations.
         boost_p = boost_momenta(p, 3)
-        results.append(evaluator.evaluate_matrix_element(matrix_element,
-            p=boost_p, PS_name='zBoost', output='jamp',MLOptions = MLOptions))
+        results.append(('Z-axis boost',
+                       evaluator.evaluate_matrix_element(matrix_element,
+            p=boost_p, PS_name='zBoost', output='jamp',MLOptions = MLOptions)))
+        # We add here also the boost along x and y for reference. In the output
+        # of the check, it is now clearly stated that MadLoop improve_ps script
+        # will not work for them.
+        boost_p = boost_momenta(p, 1)
+        results.append(('X-axis boost',
+                       evaluator.evaluate_matrix_element(matrix_element,
+            p=boost_p, PS_name='zBoost', output='jamp',MLOptions = MLOptions)))
+        boost_p = boost_momenta(p, 2)
+        results.append(('Y-axis boost',
+                       evaluator.evaluate_matrix_element(matrix_element,
+            p=boost_p, PS_name='zBoost', output='jamp',MLOptions = MLOptions)))
         # We only consider the rotations around the z axis so to have the 
         # improve_ps fortran routine work.
         rot_p = [[pm[0],-pm[2],pm[1],pm[3]] for pm in p]
-        results.append(evaluator.evaluate_matrix_element(matrix_element,
-            p=rot_p, PS_name='Rotation1', output='jamp',MLOptions = MLOptions))
+        results.append(('Z-axis pi/2 rotation',
+                       evaluator.evaluate_matrix_element(matrix_element,
+            p=rot_p, PS_name='Rotation1', output='jamp',MLOptions = MLOptions)))
         # Now a pi/4 rotation around the z-axis
         sq2 = math.sqrt(2.0)
         rot_p = [[pm[0],(pm[1]-pm[2])/sq2,(pm[1]+pm[2])/sq2,pm[3]] for pm in p]
-        results.append(evaluator.evaluate_matrix_element(matrix_element,
-            p=rot_p, PS_name='Rotation2', output='jamp',MLOptions = MLOptions))
+        results.append(('Z-axis pi/4 rotation',
+                       evaluator.evaluate_matrix_element(matrix_element,
+            p=rot_p, PS_name='Rotation2', output='jamp',MLOptions = MLOptions)))
             
         
     return {'process': process, 'results': results}
@@ -3018,23 +3035,79 @@ def boost_momenta(p, boost_direction=1, beta=0.5):
             
     return boost_p
 
+
+def output_lorentz_inv_loop(comparison_results, output='text'):
+    """Present the results of a comparison in a nice list format for loop 
+    processes. It detail the results from each lorentz transformation performed.
+    """
+
+    process = comparison_results[0]['process']
+    results = comparison_results[0]['results']
+    # Rotations do not change the reference vector for helicity projection,
+    # the loop ME are invarariant under them with a relatively good accuracy.
+    threshold_rotations = 1e-6
+    # This is typically not the case for the boosts when one cannot really 
+    # expect better than 1e-5. It turns out that this is even true in 
+    # quadruple precision, for an unknown reason so far.
+    threshold_boosts =  1e-3
+    res_str = "%s" % process.base_string()
+    
+    transfo_col_size = 17
+    col_size = 18
+    transfo_name_header = 'Transformation name'
+
+    if len(transfo_name_header) + 1 > transfo_col_size:
+        transfo_col_size = len(transfo_name_header) + 1
+    
+    for transfo_name, value in results:
+        if len(transfo_name) + 1 > transfo_col_size:
+            transfo_col_size = len(transfo_name) + 1
+        
+    res_str += '\n' + fixed_string_length(transfo_name_header, transfo_col_size) + \
+      fixed_string_length("Value", col_size) + \
+      fixed_string_length("Relative diff.", col_size) + "Result"
+    
+    ref_value = results[0]
+    res_str += '\n' + fixed_string_length(ref_value[0], transfo_col_size) + \
+                   fixed_string_length("%1.10e" % ref_value[1]['m2'], col_size)
+    # Now that the reference value has been recuperated, we can span all the 
+    # other evaluations
+    all_pass = True
+    for res in results[1:]:
+        threshold = threshold_boosts if 'BOOST' in res[0].upper() else \
+                                                             threshold_rotations
+        rel_diff = abs((ref_value[1]['m2']-res[1]['m2'])\
+                                       /((ref_value[1]['m2']+res[1]['m2'])/2.0))
+        this_pass = rel_diff <= threshold
+        if not this_pass: 
+            all_pass = False
+        res_str += '\n' + fixed_string_length(res[0], transfo_col_size) + \
+                   fixed_string_length("%1.10e" % res[1]['m2'], col_size) + \
+                   fixed_string_length("%1.10e" % rel_diff, col_size) + \
+                   ("Passed" if this_pass else "Failed")
+    res_str += '\n' + 'NB: Keep in mind that for the lorentz transformation '+\
+                                                 'which give a p_t to the \n'+\
+                 'initial momenta, MadLoop improve_ps routine will be bypassed.' 
+    if all_pass:
+        res_str += '\n' + 'Summary: passed'
+    else:
+        res_str += '\n' + 'Summary: failed'
+    
+    return res_str
+
 def output_lorentz_inv(comparison_results, output='text'):
     """Present the results of a comparison in a nice list format
         if output='fail' return the number of failed process -- for test-- 
     """
 
+    # Special output for loop processes
+    if comparison_results[0]['process']['perturbation_couplings']!=[]:
+        return output_lorentz_inv_loop(comparison_results, output)
+
     proc_col_size = 17
 
-    pert_coupl = comparison_results[0]['process']['perturbation_couplings']
-    # Of course, be more tolerant for loop processes
-    if pert_coupl:
-        threshold=1e-5
-    else:
-        threshold=1e-10
-    if pert_coupl:
-        process_header = "Process [virt="+" ".join(pert_coupl)+"]"
-    else:
-        process_header = "Process"
+    threshold=1e-10
+    process_header = "Process"
 
     if len(process_header) + 1 > proc_col_size:
         proc_col_size = len(process_header) + 1
