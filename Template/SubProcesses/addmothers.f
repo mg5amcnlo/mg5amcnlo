@@ -354,6 +354,10 @@ c
               if(icluster(3,i).eq.0)then
                  icluster(3,i)=-1
               endif
+              if(ito(icluster(1,i)).gt.0)
+     $             icluster(1,i)=ito(icluster(1,i))
+              if(ito(icluster(2,i)).gt.0)
+     $             icluster(2,i)=ito(icluster(2,i))
            enddo
         endif
 
