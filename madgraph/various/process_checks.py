@@ -2803,7 +2803,7 @@ def check_lorentz_process(process, evaluator):
         matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                              optimized_output = evaluator.loop_optimized_output)
 
-    MLOptions = {'ImprovePS':True,'ForceMP':True}
+    MLOptions = {'ImprovePS':True,'ForceMP':False}
 
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
         data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
@@ -2820,7 +2820,7 @@ def check_lorentz_process(process, evaluator):
     # The boosts are not precise enough for the loop evaluations and one need the
     # fortran improve_ps function of MadLoop to work. So we only consider the 
     # boosts along the z directions for loops or simple rotations.
-    if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
+    if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):     
         for boost in range(1,4):
             boost_p = boost_momenta(p, boost)
             results.append(evaluator.evaluate_matrix_element(matrix_element,
