@@ -263,9 +263,9 @@ class ParamCardWriter(object):
         if not text:
             return
          
-        pretext = "##  Not dependent paramater.\n"
+        pretext =  "## Dependent parameters, given by model restrictions.\n"
         pretext += "## Those values should be edited following the \n"
-        pretext += "## analytical expression. MG5 ignore those values \n"
+        pretext += "## analytical expression. MG5 ignores those values \n"
         pretext += "## but they are important for interfacing the output of MG5\n"
         pretext += "## to external program such as Pythia.\n"
         self.fsock.write(pretext + text)                
