@@ -5,6 +5,9 @@ Update notes for MadGraph 5 (in reverse time order)
                       Question #216037). If you get this warning, please check
                       carefully the process list and diagrams to make sure you
                       have the processes you were expecting.
+                  JA: Included option to set the highest flavor for alpha_s reweighting
+                      (useful for 4-flavor matching with massive b:s). Note that
+                      this does not affect the choice of factorization scale.
 
 1.5.5 (18/11/12)  JA: Fixed Bug #1078168, giving asymmetries in X+gamma generation
                       (e.g. Z+gamma) when ickkw=1 and pdfwgt=T. Thanks Irakli!

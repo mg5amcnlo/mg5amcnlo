@@ -170,13 +170,15 @@ c**************************************************
       implicit none
 
       include 'cuts.inc'
+      include 'run.inc'
 
       integer ipdg, irfl
 
       isparton=.true.
 
       irfl=abs(ipdg)
-      if (irfl.gt.5.and.irfl.ne.21) isparton=.false.
+      if (irfl.gt.max(asrwgtflavor,maxjetflavor).and.irfl.ne.21)
+     $     isparton=.false.
 c      write(*,*)'isparton? pdg = ',ipdg,' -> ',irfl,' -> ',isparton
 
       return
