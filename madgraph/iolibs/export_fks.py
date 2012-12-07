@@ -367,6 +367,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                  matrix_element,
                                  fortran_model)
 
+        filename = 'configs_info.inc'
+        self.write_configs_info_file(writers.FortranWriter(filename), 
+                                 matrix_element,
+                                 fortran_model)
+
 #write the wrappers
         filename = 'real_me_chooser.f'
         self.write_real_me_wrapper(writers.FortranWriter(filename), 
@@ -573,6 +578,92 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         #return to the initial dir
         os.chdir(old_pos)               
+
+    def write_configs_info_file(self, writer, matrix_element, fortran_model):
+        """writes the configs_info.inc file that cointains all the
+        (real-emission) configurations (IFOREST) as well as the masses
+        and widths of intermediate particles"""
+        lines = []
+        nconfs = len(matrix_element.get_fks_info_list())
+        (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
+
+        lines.append("integer ifr")
+        max_iconfig=0
+        max_leg_number=0
+
+        for iFKS, conf in enumerate(matrix_element.get_fks_info_list()):
+            iFKS=iFKS+1
+            iconfig = 0
+            s_and_t_channels = []
+            mapconfigs = []
+            fks_matrix_element=matrix_element.real_processes[conf['n_me'] - 1].matrix_element
+            base_diagrams = fks_matrix_element.get('base_amplitude').get('diagrams')
+            minvert = min([max([len(vert.get('legs')) for vert in \
+                                    diag.get('vertices')]) for diag in base_diagrams])
+    
+            lines.append("# ")
+            lines.append("# nFKSprocess %d" % iFKS)
+            for idiag, diag in enumerate(base_diagrams):
+                if any([len(vert.get('legs')) > minvert for vert in
+                        diag.get('vertices')]):
+                # Only 3-vertices allowed in configs.inc
+                    continue
+                iconfig = iconfig + 1
+                helas_diag = fks_matrix_element.get('diagrams')[idiag]
+                mapconfigs.append(helas_diag.get('number'))
+                lines.append("# Diagram %d for nFKSprocess %d" % \
+                                 (helas_diag.get('number'),iFKS))
+                # Correspondance between the config and the amplitudes
+                lines.append("data mapconfig_d(%3d,%4d)/%4d/" % (iFKS,iconfig,
+                                                           helas_diag.get('number')))
+    
+                # Need to reorganize the topology so that we start with all
+                # final state external particles and work our way inwards
+                schannels, tchannels = helas_diag.get('amplitudes')[0].\
+                    get_s_and_t_channels(ninitial, 990)
+    
+                s_and_t_channels.append([schannels, tchannels])
+    
+                # Write out propagators for s-channel and t-channel vertices
+                allchannels = schannels
+                if len(tchannels) > 1:
+                    # Write out tchannels only if there are any non-trivial ones
+                    allchannels = schannels + tchannels
+    
+                for vert in allchannels:
+                    daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
+                    last_leg = vert.get('legs')[-1]
+                    lines.append("data (iforest_d(%3d, ifr,%3d,%4d),ifr=1,%d)/%s/" % \
+                                     (iFKS,last_leg.get('number'), iconfig, len(daughters),
+                                      ",".join(["%3d" % d for d in daughters])))
+                    if vert in schannels:
+                        lines.append("data sprop_d(%3d,%4d,%4d)/%8d/" % \
+                                         (iFKS,last_leg.get('number'), iconfig,
+                                          last_leg.get('id')))
+                    elif vert in tchannels[:-1]:
+                        lines.append("data tprid_d(%3d,%4d,%4d)/%8d/" % \
+                                         (iFKS,last_leg.get('number'), iconfig,
+                                          abs(last_leg.get('id'))))
+
+                # update what the array sizes (mapconfig,iforest,etc) will be
+                    max_leg_number = min(max_leg_number,last_leg.get('number'))
+                max_iconfig = max(max_iconfig,iconfig)
+    
+        # Write out number of configs
+            lines.append("# Number of configs for nFKSprocess %d" % iFKS)
+            lines.append("data mapconfig_d(%3d,0)/%4d/" % (iFKS,iconfig))
+    
+        # insert the declaration of the arrays at the beginning of the file
+        lines.insert(1,"integer mapconfig_d(%3d,%4d)" % (nconfs,max_iconfig))
+        lines.insert(2,"integer iforest_d(%3d,2,%3d:-1,%4d)" % (nconfs,max_leg_number,max_iconfig))
+        lines.insert(3,"integer sprop_d(%3d,%3d:-1,%4d)" % (nconfs,max_leg_number,max_iconfig))
+        lines.insert(4,"integer tprid_d(%3d,%3d:-1,%4d)" % (nconfs,max_leg_number,max_iconfig))
+
+        # Write the file
+        writer.writelines(lines)
+
+
+
 
 
     def write_leshouche_info_file(self, writer, matrix_element, fortran_model):
