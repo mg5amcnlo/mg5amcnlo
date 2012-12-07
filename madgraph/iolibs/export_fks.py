@@ -585,11 +585,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         all the (real-emission) configurations (IFOREST) as well as
         the masses and widths of intermediate particles"""
         lines = []
+        lines2 = []
         nconfs = len(matrix_element.get_fks_info_list())
         (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
 
         lines.append("integer ifr,lmaxconfigs_used,max_branch_used")
-        lines.append("integer mapconfig_d(%3d,lmaxconfigs_used)" % nconfs)
+        lines.append("integer mapconfig_d(%3d,0:lmaxconfigs_used)" % nconfs)
         lines.append("integer iforest_d(%3d,2,-max_branch_used:-1,lmaxconfigs_used)" % nconfs)
         lines.append("integer sprop_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nconfs)
         lines.append("integer tprid_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nconfs)
@@ -663,7 +664,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             lines.append("data mapconfig_d(%3d,0)/%4d/" % (iFKS,iconfig))
             
             # write the props.inc information
-            lines.append("# ")
+            lines2.append("# ")
             particle_dict = fks_matrix_element.get('processes')[0].get('model').\
                 get('particle_dict')
     
@@ -690,23 +691,23 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     
                         pow_part = 1 + int(particle.is_boson())
     
-                    lines.append("data pmass_d (%3d,%3d,%4d) / %s /" % \
+                    lines2.append("pmass_d (%3d,%3d,%4d) = %s " % \
                                      (iFKS,leg.get('number'), iconf + 1, mass))
-                    lines.append("data pwidth_d(%3d,%3d,%4d) / %s /" % \
+                    lines2.append("pwidth_d(%3d,%3d,%4d) = %s " % \
                                      (iFKS,leg.get('number'), iconf + 1, width))
-                    lines.append("data pow_d   (%3d,%3d,%4d) / %d /" % \
+                    lines2.append("pow_d   (%3d,%3d,%4d) = %d " % \
                                      (iFKS,leg.get('number'), iconf + 1, pow_part))
-            lines.append("# ")
 
 
 
     
+        lines.append("# ")
         # insert the declaration of the sizes arrays at the beginning of the file
         lines.insert(1,"parameter (lmaxconfigs_used=%4d)" % max_iconfig)
         lines.insert(2,"parameter (max_branch_used =%4d)" % -max_leg_number)
 
         # Write the file
-        writer.writelines(lines)
+        writer.writelines(lines+lines2)
 
 
 

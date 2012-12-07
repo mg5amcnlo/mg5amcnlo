@@ -24,7 +24,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o		\
 	 fastjetfortran_madfks.o ktclusdble.o fks_singular.o		\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o		\
-	 configs_inc_chooser.o
+	 configs_and_props_inc_chooser.o
 
 # Files needed for vegas, mint & mintMC
 RUN= $(FILES) cuts.o add_write_info.o BinothLHA.o madfks_dbook.o	\

@@ -7,7 +7,6 @@ c MAPCONFIG())
       include 'coupl.inc'
       double precision ZERO
       parameter (ZERO=0d0)
-      include 'configs_and_props_info.inc'
       include 'maxparticles.inc'
       integer max_branch
       parameter (max_branch=max_particles-1)
@@ -15,16 +14,17 @@ c MAPCONFIG())
       integer i,j,k
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
-      integer iforest(2,-max_branch:-1,lmaxconfigs),
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
       integer sprop(-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       integer mapconfig(0:lmaxconfigs)
       common/c_configs_inc/iforest,sprop,tprid,mapconfig
-
       double precision ppmass(-max_branch:nexternal,lmaxconfigs)
       double precision ppwidth(-max_branch:-1,lmaxconfigs)
       integer ppow(-max_branch:-1,lmaxconfigs)
       common/c_props_inc/ppmass,ppwidth,ppow
+      double precision pmass(nexternal)
+      include 'configs_and_props_info.inc'
       include "pmass.inc"
 c     
       if (max_branch_used.gt.max_branch) then
@@ -46,7 +46,7 @@ c information.
       do i=0,MAPCONFIG_D(nFKSprocess,0)
          mapconfig(i)=MAPCONFIG_D(nFKSprocess,i)
          if (i.ne.0) then
-            do j=-maxbranch_used,-1
+            do j=-max_branch_used,-1
                do k=1,2
                   iforest(k,j,i)=IFOREST_D(nFKSprocess,k,j,i)
                enddo
