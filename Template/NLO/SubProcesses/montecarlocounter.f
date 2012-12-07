@@ -1742,6 +1742,7 @@ c
           emsca=emscav(mpartner)
         endif
       endif
+c Where in the dead zone, so we can set emsca to shat or scalemax 
 c$$$      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
       if(dampMCsubt.and.wgt.lt.1.d-30)emsca=scalemax
 c Additional information for LHE
@@ -1821,8 +1822,7 @@ c      include "fks.inc"
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_partner(0:3),p_born_fksfather(0:3),
      # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
-     # xmrec2,www,massmax,massmin,delta_scale,ma2
-      parameter(delta_scale=10d0)
+     # xmrec2,www,massmax,massmin,ma2
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -1909,7 +1909,6 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       common/cupscale/upper_scale
 
 c
-      double precision em_mass
       double precision pmass(nexternal)
       include "pmass.inc"
 c
@@ -1950,14 +1949,10 @@ c variable, not yet defined) will not be needed in the computation of probne
       etot=2d0*sqrt( ebeam(1)*ebeam(2) )
       emsca=etot
       if(dampMCsubt)then
-        em_mass=0d0
-        if(ileg.eq.3)em_mass=sqrt(xm12)
-        em_mass=max(em_mass,delta_scale)
         emsca=0.d0
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
-        scalemin=max(scalemin,em_mass)
         scalemax=min(scalemax,ref_scale)
         if(scalemax.ge.etot)scalemax=etot
         if(scalemin.ge.scalemax)scalemin=scalemax
@@ -2019,7 +2014,6 @@ c this is standard MC@NLO
       else
         probne=bogus_probne_fun(tPY6Q)
       endif
-c
 c
 C
 C For processes that have jets at the Born level, we need to include a
@@ -2532,6 +2526,7 @@ c
           emsca=emscav(mpartner)
         endif
       endif
+c Where in the dead zone, so we can set emsca to shat or scalemax 
 c$$$      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
       if(dampMCsubt.and.wgt.lt.1.d-30)emsca=scalemax
 c Additional information for LHE
@@ -3301,8 +3296,7 @@ c      include "fks.inc"
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_partner(0:3),p_born_fksfather(0:3),
      # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
-     # xmrec2,www,massmax,massmin,delta_scale,ma2
-      parameter(delta_scale=10d0)
+     # xmrec2,www,massmax,massmin,ma2
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -3390,7 +3384,6 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 
       double precision xma2,xmb2,sb
 c
-      double precision em_mass
       double precision pmass(nexternal)
       include "pmass.inc"
 c
@@ -3431,15 +3424,11 @@ c variable, not yet defined) will not be needed in the computation of probne
       etot=2d0*sqrt( ebeam(1)*ebeam(2) )
       emsca=etot
       if(dampMCsubt)then
-        em_mass=0d0
-        if(ileg.eq.3)em_mass=sqrt(xm12)
-        em_mass=max(em_mass,delta_scale)
         emsca=0.d0
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
-        scalemin=max(scalemin,em_mass)
-        scalemax=min(scalemax,sqrt((1-xi_i_fks)*shat))
+        scalemax=min(scalemax,ref_scale)
         if(scalemax.ge.etot)scalemax=etot
         if(scalemin.ge.scalemax)scalemin=scalemax
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
@@ -6353,10 +6342,9 @@ c
       double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks
       double precision shattmp,dot,emsca_bare,ref_scale,scalemin,
      & scalemax,rrnd,ran2,emscainv,dum1,dum2,dum3,dum4,dum5,xxm12,
-     & qMC,ptresc,one,zero,delta_scale
+     & qMC,ptresc,one,zero
       parameter(zero=0d0)
       parameter(one=1d0)
-      parameter(delta_scale=10d0)
 
       integer iileg,i
 
@@ -6373,7 +6361,7 @@ c
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
 
-      double precision em_mass,eetot
+      double precision eetot
       double precision pmass(nexternal)
       include "pmass.inc"
 c
@@ -6397,15 +6385,7 @@ c entering this function
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
-
-        if(MonteCarlo(1:6).eq.'PYTHIA')then
-           em_mass=0d0
-           if(iileg.eq.3)em_mass=sqrt(xxm12)
-           em_mass=max(em_mass,delta_scale)
-           scalemin=max(scalemin,em_mass)
-           scalemax=min(scalemax,ref_scale)
-        endif
-
+        if(MonteCarlo(1:6).eq.'PYTHIA')scalemax=min(scalemax,ref_scale)
         if(scalemax.ge.eetot)scalemax=eetot
         if(scalemin.ge.scalemax)scalemin=scalemax
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)

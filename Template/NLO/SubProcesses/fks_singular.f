@@ -1379,8 +1379,6 @@ c Collinear subtraction term:
             call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,fx_c)
             xlum_c = dlum()
             xsec = fx_c*s_c*jac_cnt(1)*prefact_c*rwgt*(1-gfactcl)
-            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
             SxmcME=SxmcME+xlum_c*xsec
             do j=1,IPROC
                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
@@ -1479,8 +1477,6 @@ c Soft subtraction term:
      &           abrv(1:2).eq.'vi' .or. nbody) goto 546
             call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
             xsec=fx_s*s_s*jac_cnt(0)*prefact*rwgt
-            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
             SxmcME=SxmcME+xlum_s*xsec
             do j=1,IPROC
                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
@@ -1574,8 +1570,6 @@ c Soft-Collinear subtraction term:
             call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
             xlum_sc = dlum()
             xsec = fx_sc*s_sc*jac_cnt(2)*prefact_c*rwgt*(1-gfactcl)
-            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &           .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
             SxmcME=SxmcME-xlum_sc*xsec
             do j=1,IPROC
                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
@@ -2103,8 +2097,7 @@ c
       xxscalemax=0d0
 c
       xscalemax=scalemax
-      if(MonteCarlo(1:6).eq.'HERWIG')condition=.not.Hevents
-      if(MonteCarlo(1:6).eq.'PYTHIA')condition=.true.
+      condition=.not.Hevents
 
       if(condition)then
          if(dampMCsubt .and. abrv.ne.'born' .and. abrv.ne.'grid' .and.
@@ -2115,7 +2108,6 @@ c
             SCALUP(iFKS)=xxscalemax
          endif
       else
-c$$$         if(emsca.ne.0d0)then
          if(dampMCsubt.and.emsca.ne.0d0)then
             SCALUP(iFKS)=xscalemax
          else
