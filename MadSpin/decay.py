@@ -2995,18 +2995,21 @@ class decay_all_events:
             max_weight={}
             for tag_decay in decay_me_tags: max_weight[tag_decay]=max_weight_arg
         else:
+            numberev=20                   # number of events
+            numberps=10000                # number of phase pace points per event
+
             logger.info('  ')
             logger.info('   Estimating the maximum weight    ')
             logger.info('   *****************************    ')
-            logger.info('  => find the maximum value of |M_full|^2/|M_prod|^2')
-            logger.info('     for the 5 first events  ')
+            logger.info('     Probing the first '+str(numberev)+' events')
+            logger.info('     at '+str(numberps)+' phase space points')
             logger.info('  ')
 
             curr_event=Event(inputfile)
             probe_weight=[]
 
             starttime = time.time()
-            for ev in range(5):
+            for ev in range(numberev):
                 probe_weight.append({})
                 for tag_decay in decay_me_tags:
                     probe_weight[ev][tag_decay]=0.0
@@ -3109,7 +3112,7 @@ class decay_all_events:
                 if BW_effects:
                     decay_tools.set_light_parton_massless(topologies[tag_production][tag_topo])
 
-                for dec in range(10000):
+                for dec in range(numberps):
 
 #        try to reshuffle the momenta 
                     if  BW_effects:
@@ -3194,24 +3197,23 @@ class decay_all_events:
                   logger.info('Max weight,  event '+str(ev+1)+\
                             ' , dk config '+str(index+1)+' : '+str(probe_weight[ev][tag_decay]))
 
-# Below comes a new formula to determine the maximum weight
+# Computation of the maximum weight used in the unweighting procedure
             max_weight={}
-            min_weight={}
 
             for index,tag_decay in enumerate(decay_me_tags):
-                max_weight[tag_decay]=0.0
-                min_weight[tag_decay]=1e10
-                for ev in range(5):
-                    if(max_weight[tag_decay]<probe_weight[ev][tag_decay]): max_weight[tag_decay]=probe_weight[ev][tag_decay]
-                    if(min_weight[tag_decay]>probe_weight[ev][tag_decay]): min_weight[tag_decay]=probe_weight[ev][tag_decay]
+                weights=[]
+                for ev in range(numberev):
+                  weights.append(probe_weight[ev][tag_decay])
+                ave_weight, std_weight=decay_tools.get_mean_sd(weights)
+                std_weight=math.sqrt(std_weight)
                 logger.info(' ')
                 logger.info(' Decay channel '+str(index+1))
                 for part in multi_decay_processes[tag_decay]['config'].keys():
                      logger.info(multi_decay_processes[tag_decay]['config'][part])
-                logger.info('     maximum weight that we got is '+str(max_weight[tag_decay]))
-                logger.info('     with a fluctuation of '+str(max_weight[tag_decay]-min_weight[tag_decay]))
-                logger.info('     -> add 2x this fluctuation to the max. weight ')
-                max_weight[tag_decay]=3.0*max_weight[tag_decay]-2.0*min_weight[tag_decay]
+                logger.info('     average maximum weight that we got is '+str(ave_weight))
+                logger.info('     with a standard deviation of          '+str(std_weight))
+                logger.info('     -> W_max = average + 4 * standard deviation')
+                max_weight[tag_decay]=ave_weight+4.0*std_weight
             del curr_event
 
 
