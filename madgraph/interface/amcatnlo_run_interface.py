@@ -2245,6 +2245,10 @@ Integrated cross-section
                 nfail +=1
                 tolerance = float(line.split()[1])
 
+        if nfail + npass == 0:
+            logger.warning('0 points have been tried')
+            return
+
         if float(nfail)/float(nfail+npass) > 0.1:
             raise aMCatNLOError('Poles do not cancel, run cannot continue')
         else:
