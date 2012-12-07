@@ -194,7 +194,7 @@ class TestMECmdShell(unittest.TestCase):
         self.generate(['p p > e+ ve [QCD]'], 'loop_sm')
         self.assertEqual(cmd, os.getcwd())
         
-        self.do('calculate_xsect  NLO -f')        
+        self.do('calculate_xsect  LO -f')        
         
         # test the plot file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
