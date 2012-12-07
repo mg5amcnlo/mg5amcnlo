@@ -367,10 +367,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                  matrix_element,
                                  fortran_model)
 
-        filename = 'configs_info.inc'
-        self.write_configs_info_file(writers.FortranWriter(filename), 
-                                 matrix_element,
-                                 fortran_model)
+        filename = 'configs_and_props_info.inc'
+        self.write_configs_and_props_info_file(writers.FortranWriter(filename), 
+                                               matrix_element,
+                                               fortran_model)
 
 #write the wrappers
         filename = 'real_me_chooser.f'
@@ -417,6 +417,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fks_singular.f',
                      'fks_inc_chooser.f',
                      'leshouche_inc_chooser.f',
+                     'configs_and_props_inc_chooser.f',
                      'genps.inc',
                      'genps_fks.f',
                      'boostwdir2.f',
@@ -579,15 +580,23 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         #return to the initial dir
         os.chdir(old_pos)               
 
-    def write_configs_info_file(self, writer, matrix_element, fortran_model):
-        """writes the configs_info.inc file that cointains all the
-        (real-emission) configurations (IFOREST) as well as the masses
-        and widths of intermediate particles"""
+    def write_configs_and_props_info_file(self, writer, matrix_element, fortran_model):
+        """writes the configs_and_props_info.inc file that cointains
+        all the (real-emission) configurations (IFOREST) as well as
+        the masses and widths of intermediate particles"""
         lines = []
         nconfs = len(matrix_element.get_fks_info_list())
         (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
 
-        lines.append("integer ifr")
+        lines.append("integer ifr,lmaxconfigs_used,max_branch_used")
+        lines.append("integer mapconfig_d(%3d,lmaxconfigs_used)" % nconfs)
+        lines.append("integer iforest_d(%3d,2,-max_branch_used:-1,lmaxconfigs_used)" % nconfs)
+        lines.append("integer sprop_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nconfs)
+        lines.append("integer tprid_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nconfs)
+        lines.append("double precision pmass_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nconfs)
+        lines.append("double precision pwidth_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nconfs)
+        lines.append("integer pow_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nconfs)
+
         max_iconfig=0
         max_leg_number=0
 
@@ -649,15 +658,52 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                     max_leg_number = min(max_leg_number,last_leg.get('number'))
                 max_iconfig = max(max_iconfig,iconfig)
     
-        # Write out number of configs
+            # Write out number of configs
             lines.append("# Number of configs for nFKSprocess %d" % iFKS)
             lines.append("data mapconfig_d(%3d,0)/%4d/" % (iFKS,iconfig))
+            
+            # write the props.inc information
+            lines.append("# ")
+            particle_dict = fks_matrix_element.get('processes')[0].get('model').\
+                get('particle_dict')
     
-        # insert the declaration of the arrays at the beginning of the file
-        lines.insert(1,"integer mapconfig_d(%3d,%4d)" % (nconfs,max_iconfig))
-        lines.insert(2,"integer iforest_d(%3d,2,%3d:-1,%4d)" % (nconfs,max_leg_number,max_iconfig))
-        lines.insert(3,"integer sprop_d(%3d,%3d:-1,%4d)" % (nconfs,max_leg_number,max_iconfig))
-        lines.insert(4,"integer tprid_d(%3d,%3d:-1,%4d)" % (nconfs,max_leg_number,max_iconfig))
+            for iconf, configs in enumerate(s_and_t_channels):
+                for vertex in configs[0] + configs[1][:-1]:
+                    leg = vertex.get('legs')[-1]
+                    if leg.get('id') == 21 and 21 not in particle_dict:
+                        # Fake propagator used in multiparticle vertices
+                        mass = 'zero'
+                        width = 'zero'
+                        pow_part = 0
+                    else:
+                        particle = particle_dict[leg.get('id')]
+                    # Get mass
+                        if particle.get('mass').lower() == 'zero':
+                            mass = particle.get('mass')
+                        else:
+                            mass = "abs(%s)" % particle.get('mass')
+                    # Get width
+                            if particle.get('width').lower() == 'zero':
+                                width = particle.get('width')
+                            else:
+                                width = "abs(%s)" % particle.get('width')
+    
+                        pow_part = 1 + int(particle.is_boson())
+    
+                    lines.append("data pmass_d (%3d,%3d,%4d) / %s /" % \
+                                     (iFKS,leg.get('number'), iconf + 1, mass))
+                    lines.append("data pwidth_d(%3d,%3d,%4d) / %s /" % \
+                                     (iFKS,leg.get('number'), iconf + 1, width))
+                    lines.append("data pow_d   (%3d,%3d,%4d) / %d /" % \
+                                     (iFKS,leg.get('number'), iconf + 1, pow_part))
+            lines.append("# ")
+
+
+
+    
+        # insert the declaration of the sizes arrays at the beginning of the file
+        lines.insert(1,"parameter (lmaxconfigs_used=%4d)" % max_iconfig)
+        lines.insert(2,"parameter (max_branch_used =%4d)" % -max_leg_number)
 
         # Write the file
         writer.writelines(lines)
