@@ -1324,63 +1324,78 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         start_index = len(DP_stability)
         if progress_bar!=None:
                 progress_bar.start()
+        # Flag to know if the run was interrupted or not
+        interrupted = False
         for i in range(start_index,start_index+nPoints): 
-            # Pick an eligible PS point with rambo
-            p = pick_PS_point(process)
-#            print "I use P_%i="%i,p
-            if progress_bar!=None:
-                progress_bar.update(i+1-start_index)
-            # Write it in the input file
-            PSPoint = format_PS_point(p,0)
+            # To be added to the returned statistics  
+            qp_dict={}
             dp_dict={}
-            dp_res=[]
-            dp_res.append(self.get_me_value(StabChecker,PSPoint,1))
-            dp_dict['CTModeA']=dp_res[-1]
-            dp_res.append(self.get_me_value(StabChecker,PSPoint,2))
-            dp_dict['CTModeB']=dp_res[-1]
-            for rotation in range(1,3):
-                PSPoint = format_PS_point(p,rotation)
-                dp_res.append(self.get_me_value(StabChecker,PSPoint,1))
-                dp_dict['Rotation%i'%rotation]=dp_res[-1]
-            # Make sure all results make sense
-            if any([not res for res in dp_res]):
-                return None
-            dp_accuracy = (max(dp_res)-min(dp_res))/abs(sum(dp_res)/len(dp_res))
-            dp_dict['Accuracy'] = dp_accuracy
-            DP_stability.append(dp_dict)
-            if dp_accuracy>accuracy_threshold:
-                Unstable_PS_points.append([i,p])
-                qp_res=[]
-                qp_dict={}
+            UPS = None
+            EPS = None
+            try:
+                # Pick an eligible PS point with rambo
+                p = pick_PS_point(process)
+#                print "I use P_%i="%i,p
+                if progress_bar!=None:
+                    progress_bar.update(i+1-start_index)
+                # Write it in the input file
                 PSPoint = format_PS_point(p,0)
-                qp_res.append(self.get_me_value(StabChecker,PSPoint,4))
-                qp_dict['CTModeA']=qp_res[-1]
-                qp_res.append(self.get_me_value(StabChecker,PSPoint,5))
-                qp_dict['CTModeB']=qp_res[-1]
+                dp_res=[]
+                dp_res.append(self.get_me_value(StabChecker,PSPoint,1))
+                dp_dict['CTModeA']=dp_res[-1]
+                dp_res.append(self.get_me_value(StabChecker,PSPoint,2))
+                dp_dict['CTModeB']=dp_res[-1]
                 for rotation in range(1,3):
                     PSPoint = format_PS_point(p,rotation)
-                    qp_res.append(self.get_me_value(StabChecker,PSPoint,4))
-                    qp_dict['Rotation%i'%rotation]=qp_res[-1]
+                    dp_res.append(self.get_me_value(StabChecker,PSPoint,1))
+                    dp_dict['Rotation%i'%rotation]=dp_res[-1]
                 # Make sure all results make sense
-                if any([not res for res in qp_res]):
+                if any([not res for res in dp_res]):
                     return None
-                
-                qp_accuracy = (max(qp_res)-min(qp_res))/abs(sum(qp_res)/len(qp_res))
-                qp_dict['Accuracy']=qp_accuracy
-                QP_stability.append(qp_dict)
-                if qp_accuracy>accuracy_threshold:
-                    Exceptional_PS_points.append([i,p])
-            else:
-                QP_stability.append({})
+                dp_accuracy = (max(dp_res)-min(dp_res))/abs(sum(dp_res)/len(dp_res))
+                dp_dict['Accuracy'] = dp_accuracy
+                if dp_accuracy>accuracy_threshold:
+                    UPS = [i,p]
+                    qp_res=[]
+                    PSPoint = format_PS_point(p,0)
+                    qp_res.append(self.get_me_value(StabChecker,PSPoint,4))
+                    qp_dict['CTModeA']=qp_res[-1]
+                    qp_res.append(self.get_me_value(StabChecker,PSPoint,5))
+                    qp_dict['CTModeB']=qp_res[-1]
+                    for rotation in range(1,3):
+                        PSPoint = format_PS_point(p,rotation)
+                        qp_res.append(self.get_me_value(StabChecker,PSPoint,4))
+                        qp_dict['Rotation%i'%rotation]=qp_res[-1]
+                    # Make sure all results make sense
+                    if any([not res for res in qp_res]):
+                        return None
+                    
+                    qp_accuracy = (max(qp_res)-min(qp_res))/abs(sum(qp_res)/len(qp_res))
+                    qp_dict['Accuracy']=qp_accuracy
+                    if qp_accuracy>accuracy_threshold:
+                        EPS = [i,p]
+            except KeyboardInterrupt:
+                interrupted = True
+                break
+            # Update the returned statistics
+            DP_stability.append(dp_dict)
+            QP_stability.append(qp_dict)
+            if not EPS is None:
+                Exceptional_PS_points.append(EPS)
+            if not UPS is None:
+                Unstable_PS_points.append(UPS)
 
         if progress_bar!=None:
             progress_bar.finish()
         if time_info:
             logger.info('Finished check on %s.'%datetime.datetime.now().strftime(\
                                                               "%d-%m-%Y %H:%M"))
-        
+
         # Close the StabChecker process.
-        StabChecker.stdin.write('y\n')
+        if not interrupted:
+            StabChecker.stdin.write('y\n')
+        else:
+            StabChecker.kill()
         
         # Save the run for possible future use
         save_load_object.save_to_file(os.path.join(dir_path,\
