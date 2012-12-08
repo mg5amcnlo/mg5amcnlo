@@ -2370,8 +2370,8 @@ class DecayChainAmplitudeTest(unittest.TestCase):
                                         l.get('number') in external))
                         external.add(l.get('number'))
  
-    def test_failed_decay_chain_pp_jj(self):
-        """Test exception for decay chain qq > qq, j > jj
+    def test_unused_decays_in_decay_chain_pp_jj(self):
+        """Test removal of unused decays in decay chain qq > qq, j > jj
         """
 
         p = [1, -1, 2, -2, 21]
@@ -2399,9 +2399,11 @@ class DecayChainAmplitudeTest(unittest.TestCase):
                                   base_objects.ProcessDefinitionList(\
                                     [my_decay_processes]))
 
-        self.assertRaises(InvalidCmd,
-                          diagram_generation.DecayChainAmplitude,
-                          my_process_definition)
+        decay_chain = diagram_generation.DecayChainAmplitude(\
+                                                   my_process_definition)
+        # Check that all decays are quarks, no gluons
+        for dc_amp in decay_chain.get('decay_chains')[0].get('amplitudes'):
+            self.assertTrue(dc_amp.get('process').get('legs')[0].get('id') in q)
 
     def test_forbidden_s_channel_decay_chain(self):
         """Test decay chains with forbidden s-channel particles.
