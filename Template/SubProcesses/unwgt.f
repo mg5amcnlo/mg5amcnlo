@@ -553,19 +553,7 @@ c
 c     Add info on resonant mothers
 c
       call addmothers(ipsel,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
-     $                npart,numproc)
-
-c     Need to flip after addmothers, since color might get overwritten
-      if (flip) then
-         do i=1,7
-            j=jpart(i,1)
-            jpart(i,1)=jpart(i,2)
-            jpart(i,2)=j
-         enddo
-         ptcltmp(1)=ptclus(1)
-         ptclus(1)=ptclus(2)
-         ptclus(2)=ptcltmp(1)
-      endif
+     $                npart,numproc,flip)
 
 c
 c     Write events to lun
