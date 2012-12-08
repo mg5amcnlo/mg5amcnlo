@@ -171,6 +171,7 @@ c**************************************************
       implicit none
 
       include 'cuts.inc'
+      include 'genps.inc'
       include 'run.inc'
 
       integer ipdg, irfl
@@ -493,8 +494,8 @@ C   anyway already set by "scale" above)
          jfirst(i)=0
          jlast(i)=0
          jcentral(i)=0
-         partonline(i)=isparton(ipdgcl(ibeam(i),igraphs(1),iproc))
          qcdline(i)=isqcd(ipdgcl(ibeam(i),igraphs(1),iproc))
+         partonline(i)=qcdline(i)
       enddo
 
 c   Go through clusterings and set factorization scales for use in dsig
