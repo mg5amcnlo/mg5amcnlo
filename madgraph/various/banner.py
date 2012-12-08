@@ -309,6 +309,7 @@ class RunCard(dict):
     
         self.add_line('maxjetflavor', 'int', 4)
         self.add_line('auto_ptj_mjj', 'bool', True)
+        self.add_line('use_syst', 'bool', False)
         self.add_line('cut_decays', 'bool', True)
         # minimum pt
         self.add_line('ptj', 'float', 20)

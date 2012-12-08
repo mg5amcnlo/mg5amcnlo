@@ -1,4 +1,6 @@
-      subroutine read_event(lun,P,wgt,nexternal,ic,ievent,scale,aqcd,aqed,buff2,done)
+      subroutine read_event(lun,P,wgt,nexternal,ic,ievent,sscale,
+     $                      aqcd,aqed,buff,u_syst,s_buff,nclus,buffclus,
+     $                      done)
 c********************************************************************
 c     Reads one event from data file #lun
 c     ic(*,1) = Particle ID
@@ -10,7 +12,8 @@ c     ic(*,6) = ISTUP   -1=initial state +1=final  +2=decayed
 c     ic(*,7) = Helicity
 c********************************************************************
       implicit none
-
+      include 'maxparticles.inc'
+      include 'run_config.inc'
       double precision pi
       parameter (pi = 3.1415926d0)
 c
@@ -19,14 +22,19 @@ c
       integer lun
       integer nexternal, ic(7,*)
       logical done
-      double precision P(0:4,*),wgt,aqcd,aqed,scale
+      double precision P(0:4,*),wgt,aqcd,aqed,sscale
       integer ievent
-      character*300 buff2
+      character*(*) buff
+      logical u_syst
+      character*(s_bufflen) s_buff(*)
+      integer nclus
+      character*(clus_bufflen) buffclus(*)
+
 c
 c     Local
 c
       integer i,j,k
-      character*(300) buff
+      character*(s_bufflen) buftmp
       double precision xdum1,xdum2
 c
 c     Global
@@ -40,36 +48,66 @@ c
 c-----
 c  Begin Code
 c-----     
-      buff2=' '
+      buff=' '
       done=.false.
       if (.not. banner_open) then
          open (unit=lun_ban, status='scratch')
          banner_open=.true.
       endif
- 11   read(lun,'(a300)',end=99,err=99) buff
-      do while(index(buff,"<event") .eq. 0)
-         write(lun_ban,'(a)') buff
-         read(lun,'(a300)',end=99,err=99) buff
+ 11   read(lun,'(a300)',end=99,err=99) buftmp
+      do while(index(buftmp,"<event") .eq. 0)
+         write(lun_ban,'(a)') buftmp
+         read(lun,'(a300)',end=99,err=99) buftmp
       enddo
-      read(lun,*,err=11, end=11) nexternal,ievent,wgt,scale,aqed,aqcd
+      read(lun,*,err=11, end=11) nexternal,ievent,wgt,sscale,aqed,aqcd
       do i=1,nexternal
          read(lun,*,err=99,end=99) ic(1,i),ic(6,i),(ic(j,i),j=2,5),
      $     (p(j,i),j=1,3),p(0,i),p(4,i),xdum1,xdum2
          ic(7,i)=xdum2
       enddo
-      do while(index(buff,"</event") .eq. 0)
-         read(lun,'(a300)',end=99,err=99) buff
-         if(buff(1:1).eq.'#') buff2=buff(1:300)
-      enddo
-c      gal(1) = sqrt(4d0*pi*aqed)
-c      g      = sqrt(4d0*pi*aqcd)
+      
+c     Clustering scales
+      read(lun,'(a)',end=99,err=99) buff
+      if(buff(1:1).ne.'#') then
+         backspace(lun)
+         buff=''
+      endif
+c     Systematics info
+      read(lun,'(a)',end=99,err=99) s_buff(1)
+      if(s_buff(1).ne.'<mgrwt>') then
+         s_buff(1)=' '
+         backspace(lun)
+         u_syst=.false.
+      else
+         i=1
+         do while(s_buff(i).ne.'</mgrwt>')
+            i=i+1
+            read(lun,'(a)',end=99,err=99) s_buff(i)
+         enddo
+         u_syst=.true.
+      endif
+c     Clustering info
+      read(lun,'(a)',end=99,err=99) buffclus(1)
+      if(buffclus(1).ne.'<clustering>') then
+         buffclus(1)=' '
+         backspace(lun)
+         nclus=0
+      else
+         i=1
+         do while(buffclus(i).ne.'</clustering>')
+            i=i+1
+            read(lun,'(a)',end=99,err=99) buffclus(i)
+         enddo
+         nclus=i
+      endif
       return
  99   done=.true.
       return
  55   format(i3,5e19.11)         
       end
 
-      subroutine write_event(lun,P,wgt,nexternal,ic,ievent,scale,aqcd,aqed,buff)
+      subroutine write_event(lun,P,wgt,nexternal,ic,ievent,scale,aqcd,
+     $     aqed,buff,u_syst,s_buff,nclus,buffclus)
 c********************************************************************
 c     Writes one event from data file #lun according to LesHouches
 c     ic(1,*) = Particle ID
@@ -81,6 +119,9 @@ c     ic(6,*) = ISTUP   -1=initial state +1=final  +2=decayed
 c     ic(7,*) = Helicity
 c********************************************************************
       implicit none
+
+      include 'maxparticles.inc'
+      include 'run_config.inc'
 c
 c     parameters
 c
@@ -94,6 +135,10 @@ c
       double precision P(0:4,*),wgt
       double precision aqcd, aqed, scale
       character*300 buff
+      logical u_syst
+      character*(s_bufflen) s_buff(*)
+      integer nclus
+      character*(clus_bufflen) buffclus(*)
 c
 c     Local
 c
@@ -115,6 +160,14 @@ c      aqcd = g*g/4d0/pi
      $     (p(j,i),j=1,3),p(0,i),p(4,i),0.,real(ic(7,i))
       enddo
       if(buff(1:1).eq.'#') write(lun,'(a)') buff(1:len_trim(buff))
+      if(u_syst)then
+         do i=1,7
+            write(lun,'(a)') s_buff(i)(1:len_trim(s_buff(i)))
+         enddo
+      endif
+      do i=1,nclus
+         write(lun,'(a)') buffclus(i)(1:len_trim(buffclus(i)))
+      enddo
       write(lun,'(a)') '</event>'
       return
  51   format(i9,5i5,5e19.11,f3.0,f4.0)

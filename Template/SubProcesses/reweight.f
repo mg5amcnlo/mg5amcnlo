@@ -8,6 +8,7 @@ c**************************************************
       include 'maxamps.inc'
       include 'cluster.inc'
       include 'sudakov.inc'
+      include 'maxparticles.inc'
       include 'run.inc'
       integer i
       double precision q0, val, add, add2
@@ -381,6 +382,7 @@ c**************************************************
       include 'cluster.inc'
       include 'run.inc'
       include 'coupl.inc'
+      include 'run_config.inc'
 C   
 C   ARGUMENTS 
 C   
@@ -414,6 +416,8 @@ c     q2bck holds the central q2fact scales
       logical failed,first
       data first/.true./
       data nwarning/0/
+      integer nqcd(lmaxconfigs)
+      include 'config_nqcd.inc'
 
       logical isqcd,isjet,isparton,cluster,isjetvx
       double precision alphas
@@ -421,7 +425,8 @@ c     q2bck holds the central q2fact scales
 
       setclscales=.true.
 
-      if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.scale.gt.0) return
+      if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.scale.gt.0)
+     $     return
 
 c   
 c   Cluster the configuration
@@ -448,6 +453,7 @@ c      endif
      $       '&',idacl(i,2),'(',ipdgcl(idacl(i,2),igraphs(1),iproc),')',
      $       ' -> ',imocl(i),'(',ipdgcl(imocl(i),igraphs(1),iproc),')',
      $       ', ptij = ',dsqrt(pt2ijcl(i))
+          write(*,*)'   icluster(',i,')=',(icluster(j,i),j=1,4)
         enddo
         write(*,*)'  process: ',iproc
         write(*,*)'  graphs (',igraphs(0),'):',(igraphs(i),i=1,igraphs(0))
@@ -670,7 +676,7 @@ c     We have a qcd line going through the whole event, use single scale
       if(jcentral(1).eq.0.and.jcentral(2).eq.0)then
          if(q2fact(1).gt.0)then
             pt2ijcl(nexternal-2)=q2fact(1)
-            pt2ijcl(nexternal-3)=q2fact(1)
+            if(nexternal.gt.3) pt2ijcl(nexternal-3)=q2fact(1)
          else
             q2fact(1)=pt2ijcl(nexternal-2)
             q2fact(2)=q2fact(1)
@@ -702,6 +708,20 @@ c     Check that factorization scale is >= 2 GeV
 
       if (btest(mlevel,3))
      $     write(*,*) 'Set fact scales to ',sqrt(q2fact(1)),sqrt(q2fact(2))
+
+c
+c     Store information for systematics studies
+c
+
+      if(use_syst)then
+         s_scale=scale
+         n_qcd=nqcd(igraphs(1))
+         n_alpsem=0
+         do i=1,2
+            n_pdfrw(i)=0
+         enddo
+         s_rwfact=1d0
+      endif
       return
       end
       
@@ -720,11 +740,13 @@ c**************************************************
       include 'cluster.inc'
       include 'run.inc'
       include 'coupl.inc'
+      include 'run_config.inc'
 C   
 C   ARGUMENTS 
 C   
       DOUBLE PRECISION P(0:3,NEXTERNAL)
 
+C
 C   global variables
 C     Present process number
       INTEGER IMIRROR,IPROC
@@ -737,6 +759,10 @@ C     Present process number
 c     q2bck holds the central q2fact scales
       real*8 q2bck(2)
       common /to_q2bck/q2bck
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
+      include 'leshouche.inc'
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
 
@@ -773,8 +799,6 @@ c     ipart gives external particle number chain
       rewgt=1.0d0
       clustered=.false.
 
-      if(ickkw.le.0) return
-
 c   Set mimimum kt scale, depending on highest mult or not
       if(hmult.or.ickkw.eq.1)then
         pt2min=0
@@ -791,6 +815,28 @@ c   Since we use pdf reweighting, need to know particle identities
       if (btest(mlevel,1)) then
          write(*,*) 'Set process number ',ipsel
       endif
+c     Set incoming particle identities
+      ipdgcl(1,igraphs(1),iproc)=idup(1,ipsel,iproc)
+      ipdgcl(2,igraphs(1),iproc)=idup(2,ipsel,iproc)
+      if (btest(mlevel,2)) then
+         write(*,*) 'Set particle identities: ',
+     $        1,ipdgcl(1,igraphs(1),iproc),
+     $        ' and ',
+     $        2,ipdgcl(2,igraphs(1),iproc)
+
+      endif
+      
+c     Store pdf information for systematics studies (initial)
+      if(use_syst)then
+         do j=1,2
+            n_pdfrw(j)=1
+            i_pdgpdf(1,j)=ipdgcl(j,igraphs(1),iproc)
+            s_xpdf(1,j)=xbk(ib(j))
+            s_qpdf(1,j)=sqrt(q2fact(j))
+         enddo
+      endif
+
+      if(ickkw.le.0) goto 100
 
 c   Preparing graph particle information (ipart, needed to keep track of
 c   external particle clustering scales)
@@ -867,6 +913,11 @@ c     and not for the last clustering (use non-fixed ren. scale for these)
      $       ipdgcl(1,igraphs(1),iproc),ipart,.false.)) then
 c       alpha_s weight
               rewgt=rewgt*alphas(alpsfact*sqrt(q2now))/asref
+c     Store information for systematics studies
+              if(use_syst)then
+                 n_alpsem=n_alpsem+1
+                 s_qalps(n_alpsem)=sqrt(q2now)
+              endif
               if (btest(mlevel,3)) then
                  write(*,*)' reweight vertex: ',ipdgcl(imocl(n),igraphs(1),iproc),
      $                ipdgcl(idacl(n,1),igraphs(1),iproc),ipdgcl(idacl(n,2),igraphs(1),iproc)
@@ -1020,6 +1071,17 @@ c                          Scale too low for heavy quark
                            return
                         endif
                         rewgt=rewgt*pdfj1/pdfj2
+c     Store information for systematics studies
+                        if(use_syst)then
+                           n_pdfrw(j)=n_pdfrw(j)+1
+                           i_pdgpdf(n_pdfrw(j),j)=ipdgcl(idacl(n,i),igraphs(1),iproc)
+                           if (zcl(n).gt.0d0.and.zcl(n).lt.1d0) then
+                              s_xpdf(n_pdfrw(j),j)=xnow(j)/zcl(n)
+                           else
+                              s_xpdf(n_pdfrw(j),j)=xnow(j) 
+                           endif
+                           s_qpdf(n_pdfrw(j),j)=sqrt(q2now)
+                        endif
                         if (btest(mlevel,3)) then
                            write(*,*)' reweight ',n,i,ipdgcl(idacl(n,i),igraphs(1),iproc),' by pdfs: '
                            write(*,*)'     x, ptprev, ptnew: ',xnow(j),
@@ -1094,6 +1156,22 @@ c           fs sudakov weight
       if (btest(mlevel,3)) then
         write(*,*)'} ->  w = ',rewgt
       endif
+
+ 100  continue
+
+c     Set reweight factor for systematics studies
+      if(use_syst)then
+         s_rwfact = rewgt
+c     Need to multiply by: initial PDF, alpha_s^n_qcd to get
+c     factor in front of matrix element
+         do i=1,2
+            s_rwfact=s_rwfact*pdg2pdf(abs(lpp(IB(i))),
+     $           i_pdgpdf(1,i)*sign(1,lpp(IB(i))),
+     $           s_xpdf(1,i),s_qpdf(1,i))
+         enddo
+         s_rwfact=s_rwfact*asref**n_qcd
+      endif
+
       return
       end
       

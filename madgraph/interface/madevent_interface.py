@@ -2957,6 +2957,12 @@ calculator."""
                                                 cwd=pjoin(self.me_dir,'Events'))
             files.mv(pjoin(self.me_dir,'Events','beforeveto.tree.gz'), 
                      pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))
+             
+        if os.path.exists(pjoin(self.me_dir,'Events','syst.dat')):
+            subprocess.call(['gzip','-f','syst.dat'], 
+                            cwd=pjoin(self.me_dir,'Events'))          
+            files.mv(pjoin(self.me_dir,'Events','syst.dat.gz'), 
+                     pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_syst.dat.gz'))
 
         # Plot for pythia
         self.create_plot('Pythia')

@@ -52,6 +52,7 @@ c
 c
 c     Global
 c
+      include 'maxparticles.inc'
       include 'run.inc'
 
 c
