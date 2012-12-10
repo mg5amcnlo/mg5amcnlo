@@ -221,7 +221,6 @@
   integer, public, dimension(:,:), allocatable :: bbn3
   integer, public, dimension(:,:), allocatable :: bbn4
   public load_dimensions
-  public load_local_dimensions
   contains
 ! 
   subroutine load_dimensions
@@ -231,24 +230,5 @@
   dmns_b= nbn2(dmns)
   dmns_c= nbn3(dmns)
   dmns_d= nbn4(dmns)
-  end subroutine
-! 
-  subroutine load_local_dimensions(np)
-  integer, intent(in) :: np
-  integer :: ierr,i,j
-  dmns_1= nbn1(np)
-  dmns_2= nbn2(np)
-  dmns_3= nbn3(np)
-  dmns_4= nbn4(np)
-  allocate  (bbn1(np,dmns_1), stat=ierr)
-  allocate  (bbn2(np,dmns_2), stat=ierr)
-  allocate  (bbn3(np,dmns_3), stat=ierr)
-  allocate  (bbn4(np,dmns_4), stat=ierr)
-  do i= 1,np  
-    do j= 1,dmns_1; bbn1(i,j)= bn1(np,i,j); enddo
-    do j= 1,dmns_2; bbn2(i,j)= bn2(np,i,j); enddo
-    do j= 1,dmns_3; bbn3(i,j)= bn3(np,i,j); enddo
-    do j= 1,dmns_4; bbn4(i,j)= bn4(np,i,j); enddo
-  enddo
   end subroutine
  end module dimensions 

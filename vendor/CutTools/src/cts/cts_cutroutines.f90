@@ -50,6 +50,8 @@
 !
   include 'cts_mprec.h'
   use scale
+  use combinatorics
+  use mbnvalues
   use loopfunctions
   use mp_loopfunctions
   use coefficients
@@ -84,7 +86,7 @@
    :: dbl_prec
   type(propagator), dimension(0:(number_propagators-1)) :: dn
   type(mp_propagator), dimension(0:number_propagators-1) :: mp_dn 
-  integer :: i,j,ib,k,dmr,npold= -1
+  integer :: i,j,ib,k,dmr,ierr
   logical, intent(out) :: stable
   logical :: stablen1,stablen2
   logical :: passeddp,passedmp
@@ -92,17 +94,52 @@
   logical :: firsttime=.true.
   include 'cts_dpr.h' 
    :: precstablen1,precstablen2
-  save firsttime,npold
+  save firsttime
   if (number_propagators.gt.maxden) then
    stop 'increase maxden in cts_combinatorics.f90'
   endif
   if ((imode.lt.0).or.(imode.gt.6)) then
    stop 'wrong input value of imode in ctsxcut'
   endif
-  if (number_propagators.ne.npold) then
-    call load_local_dimensions(number_propagators)
+!
+! Allocating local arrays
+!
+  ierr= -1
+  if (number_propagators.ge.1) then 
+   dmns_1= nbn1(number_propagators)
+   allocate  (bbn1(number_propagators,dmns_1), stat=ierr)
+   if (ierr.ne.0) STOP "Not enough memory to allocate bbn1"
   endif
-  npold= number_propagators
+  if (number_propagators.ge.2) then 
+   dmns_2= nbn2(number_propagators)
+   allocate  (bbn2(number_propagators,dmns_2), stat=ierr)
+   if (ierr.ne.0) STOP "Not enough memory to allocate bbn2"
+  endif
+  if (number_propagators.ge.3) then 
+   dmns_3= nbn3(number_propagators)
+   allocate  (bbn3(number_propagators,dmns_3), stat=ierr)
+   if (ierr.ne.0) STOP "Not enough memory to allocate bbn3"
+  endif
+  if (number_propagators.ge.4) then 
+   dmns_4= nbn4(number_propagators)
+   allocate  (bbn4(number_propagators,dmns_4), stat=ierr)
+   if (ierr.ne.0) STOP "Not enough memory to allocate bbn4"
+  endif
+!
+  do i= 1,number_propagators  
+   if (number_propagators.ge.1) then
+    do j= 1,dmns_1; bbn1(i,j)= bn1(number_propagators,i,j); enddo
+   endif
+   if (number_propagators.ge.2) then
+    do j= 1,dmns_2; bbn2(i,j)= bn2(number_propagators,i,j); enddo
+   endif
+   if (number_propagators.ge.3) then
+    do j= 1,dmns_3; bbn3(i,j)= bn3(number_propagators,i,j); enddo
+   endif
+   if (number_propagators.ge.4) then
+    do j= 1,dmns_4; bbn4(i,j)= bn4(number_propagators,i,j); enddo
+   endif
+  enddo
 !
 ! count the number of calls to ctsxcut
 !
@@ -374,6 +411,26 @@
     endif 
   else
    stop 'wrong value of imode in ctsxcut'
+  endif
+!
+! Deallocating local arrays
+!
+  ierr= -1
+  if (number_propagators.ge.1) then 
+   deallocate  (bbn1, stat=ierr)
+   if (ierr.ne.0) STOP "bbn1 NOT deallocated"
+  endif
+  if (number_propagators.ge.2) then 
+   deallocate  (bbn2, stat=ierr)
+   if (ierr.ne.0) STOP "bbn2 NOT deallocated"
+  endif
+  if (number_propagators.ge.3) then 
+   deallocate  (bbn3, stat=ierr)
+   if (ierr.ne.0) STOP "bbn3 NOT deallocated"
+  endif
+  if (number_propagators.ge.4) then 
+   deallocate  (bbn4, stat=ierr)
+   if (ierr.ne.0) STOP "bbn4 NOT deallocated"
   endif
   contains
 !
