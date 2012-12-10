@@ -100,10 +100,10 @@ class TestCmdLoop(unittest.TestCase):
                 hdlr = logging.FileHandler('/tmp/%s.log'%logname)
                 my_logger.addHandler(hdlr)
         if not restore:
-            for logname in lognames:      
-                my_logger.info('Log of %s'%logname)
-
-    def test_ML_launch_gg_ddx(self):
+            for logname in lognames:
+                logging.getLogger(logname).info('Log of %s'%logname)
+    
+    def notest_ML_launch_gg_ddx(self):
         """test that the output works fine for g g > d d~ [virt=QCD]"""
 
         self.setup_logFile_for_logger('cmdprint.ext_program')
@@ -129,77 +129,83 @@ class TestCmdLoop(unittest.TestCase):
     def test_ML_check_brs_gd_gd(self):
         """test that the brs check works fine on g d > g d"""
         
-        self.setup_logFile_for_logger('madgraph.export_v4')
+        self.setup_logFile_for_logger('madgraph.check_cmd')
         cmd = os.getcwd()
         self.do('import model loop_sm')
         self.do('check brs -reuse g d > g d [virt=QCD]')
+        self.assertTrue(path.isfile(pjoin(MG5DIR,'TMP_CHECK',\
+                                           'SubProcesses/P0_gd_gd/result.dat')))
+        shutil.rmtree(pjoin(MG5DIR,'TMP_CHECK'))
         self.assertEqual(cmd, os.getcwd())
-        self.assertTrue(path.isfile('/tmp/madgraph.export_v4.log'))
-        res = open('/tmp/madgraph.export_v4.log').read()
-        self.assertTrue('Process [QCD]' in res)
+        self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
+        res = open('/tmp/madgraph.check_cmd.log').read()
+        self.assertTrue('Process [virt=QCD]' in res)
         self.assertTrue('Summary: 1/1 passed, 0/1 failed' in res)
         self.assertTrue('BRS' in res)
         self.assertTrue('Passed' in res)
-        self.setup_logFile_for_logger('madgraph.export_v4',restore=True)
+        self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
 
-    def test_ML_check_all_epem_ttx(self):
+    def test_ML_check_full_epem_ttx(self):
         """ Test that check full e+ e- > t t~ works fine """
         
-        self.setup_logFile_for_logger('madgraph.export_v4')
+        self.setup_logFile_for_logger('madgraph.check_cmd')
         cmd = os.getcwd()
         self.do('import model loop_sm')
         self.do('check full -reuse e+ e- > t t~ [virt=QCD]')
         self.assertEqual(cmd, os.getcwd())
-        self.assertTrue(path.isfile('/tmp/madgraph.export_v4.log'))
-        res = open('/tmp/madgraph.export_v4.log').read()
+        self.assertTrue(path.isfile(pjoin(MG5DIR,'TMP_CHECK',\
+                                        'SubProcesses/P0_epem_ttx/result.dat')))
+        shutil.rmtree(pjoin(MG5DIR,'TMP_CHECK'))
+        self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
+        res = open('/tmp/madgraph.check_cmd.log').read()
+        # Needs the loop_sm feynman model to successfully run the gauge check.
+        # self.assertTrue('Gauge results' in res)
         self.assertTrue('Lorentz invariance results' in res)
         self.assertTrue('Process permutation results:' in res)
-        self.assertTrue('Summary: 1/1 passed, 0/1 failed' in res)
-        self.assertTrue('Passed' in res) 
-        self.setup_logFile_for_logger('madgraph.export_v4',restore=True)
+        self.assertTrue('Gauge results' in res)
+        self.assertTrue('Summary: passed' in res)
+        self.assertTrue('Passed' in res)
+        self.assertTrue('Failed' not in res)
+        self.assertTrue('1/1 failed' not in res)
+        self.assertTrue('1/1 passed' in res) 
+        self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
 
     def test_ML_check_timing_epem_ttx(self):
         """ Test that check timing e+ e- > t t~ works fine """
         
-        self.setup_logFile_for_logger('madgraph.export_v4')
+        self.setup_logFile_for_logger('madgraph.check_cmd')
         cmd = os.getcwd()
         self.do('import model loop_sm')
         self.do('check timing -reuse e+ e- > t t~ [virt=QCD]')
         self.assertEqual(cmd, os.getcwd())
-        self.assertTrue(path.isdir(pjoin(MG5DIR,'TMP_CHECK_epem_ttx')))
-        self.assertTrue(path.isfile(pjoin(MG5DIR,'TMP_CHECK_epem_ttx',\
-                                        'SubProcesses/P0_epem_ttx/result.dat')))        
-        self.assertTrue(path.isfile('/tmp/madgraph.export_v4.log'))
-        res = open('/tmp/madgraph.export_v4.log').read()
+        self.assertTrue(path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')))
+        self.assertTrue(path.isfile(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx',\
+                                        'SubProcesses/P0_epem_ttx/result.dat')))
+        shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))        
+        self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
+        res = open('/tmp/madgraph.check_cmd.log').read()
         self.assertTrue('Generation time total' in res)
         self.assertTrue('Executable size' in res)
         self.assertTrue(not 'NA' in res)
-        try:
-            shutil.rmtree('TMP_CHECK_epem_ttx')
-        except Exception, error:
-            pass
-        self.setup_logFile_for_logger('madgraph.export_v4',restore=True)
+        self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
 
     def test_ML_check_profile_epem_ttx(self):
         """ Test that check profile e+ e- > t t~ works fine """
 
-        self.setup_logFile_for_logger('madgraph.export_v4')
+        self.setup_logFile_for_logger('madgraph.check_cmd')
         cmd = os.getcwd()
         self.do('import model loop_sm')
         self.do('check profile -reuse e+ e- > t t~ [virt=QCD]')
         self.assertEqual(cmd, os.getcwd())
-        self.assertTrue(path.isdir(pjoin(MG5DIR,'TMP_CHECK_epem_ttx')))
-        self.assertTrue(path.isfile(pjoin(MG5DIR,'TMP_CHECK_epem_ttx',\
-                                        'SubProcesses/P0_epem_ttx/result.dat')))        
-        self.assertTrue(path.isfile('/tmp/madgraph.export_v4.log'))
-        res = open('/tmp/madgraph.export_v4.log').read()        
+        self.assertTrue(path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')))
+        self.assertTrue(path.isfile(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx',\
+                                        'SubProcesses/P0_epem_ttx/result.dat')))
+        shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))        
+        self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
+        res = open('/tmp/madgraph.check_cmd.log').read()        
         self.assertTrue('Generation time total' in res)
         self.assertTrue('Executable size' in res)
         self.assertTrue('Double precision results' in res)
         self.assertTrue('Number of Exceptional PS points' in res)
         self.assertTrue(res.count('NA')<=3)
-        try:
-            shutil.rmtree('TMP_CHECK_epem_ttx')
-        except Exception, error:
-            pass
-        self.setup_logFile_for_logger('madgraph.export_v4',restore=True)
+        self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)

@@ -2,20 +2,10 @@
    include 'cts_mprec.h'
    implicit none
    private 
-   public :: ctscountdigits,radix,digits
-   private :: mp_radix,mp_digits
-!
-   interface radix
-    procedure mp_radix
-   end interface
-!
-   interface digits
-    procedure mp_digits
-   end interface
+   public :: ctscountdigits
    contains
 !
    subroutine ctscountdigits(mcountd)
-   implicit none
    include 'cts_mpr.h'
     :: x
    integer :: i,digit
@@ -30,69 +20,45 @@
    enddo
    mcountd  = mcountd-1
    end subroutine ctscountdigits
-!
-   function mp_radix(arg)
-   type(mp_real), intent(in) :: arg
-   integer :: mp_radix
-   mp_radix= 2
-   end function
-!
-   function mp_digits(arg)
-   type(mp_real), intent(in) :: arg
-   integer :: mp_digits
-   mp_digits= 64 
-   end function
   end module countdigits
 !
-  subroutine ctsinit(limitvalue,scaloopin)
+  subroutine ctsinit(limitvalue,scaloopin,ext_num_for_r1in)
    use combinatorics
    use scale
    use countdigits
    use avh_olo
-!  Edit VH:  module used for set_unit to switch on/off error messages
-!  in OneLoop
-!   use avh_olo_units
-!  END edit VH
    include 'cts_mprec.h'
    implicit none 
    integer, intent(in) :: scaloopin
    include 'cts_dpr.h' 
-    :: limitvalue
+    , intent(in) :: limitvalue
    integer :: idig,ncountd
    include 'cts_dpr.h' 
     :: thrsin
    include 'cts_mpr.h' 
     :: one
+   include 'cts_mpinit.h'
+   logical, intent(in) :: ext_num_for_r1in
    limit= limitvalue ! limit of precision below which the mp routines activate
-   idig = 64
-   call mpinit(idig)          ! set the max    n. of digits for the mp routines
-   call mpsetprec (idig)      ! set the actual n. of digits for the mp routines
-   call mpsetoutputprec(idig) ! set the max n.of digits in the mp output
    call ctscountdigits(ncountd)
    write (*,*) ' '
    write (*,'(a72)') '------------------------------------------------------------------------'
-   write (*,'(a72)') '|              You are using CutTools - Version 1.7.4                  |'  
+   write (*,'(a72)') '|              You are using CutTools - Version 1.8.5                  |'  
    write (*,'(a72)') '|              Authors: G. Ossola, C. Papadopoulos, R. Pittau          |' 
    write (*,'(a72)') '|              Published in JHEP 0803:042,2008                         |'
    write (*,'(a72)') '|              http://www.ugr.es/~pittau/CutTools                      |'
    write (*,'(a72)') '|                                                                      |'
    if (ncountd.gt.50) then
-    ncountd = 32
-    write(*,'(a72)') '|              Internal mproutines detected in CutTools                |'
-    write(*,'(a72)') '------------------------------------------------------------------------'
-    write(*,*) '  '
-   else
-    one= 1.d0
-    ncountd = int(digits(one)*log(radix(one)*one)/log(one*10))
-    write(*,'(a19,i4.2,a49)')'|     Compiler with',ncountd,'  significant digits detetected in CutTools.    |'
-    write (*,'(a72)') '---------------------------------------------------------------------- '
-    write (*,*) '  '
+    write(*,'(a72)') '|              Internal mproutines detected                            |'
    endif
+   write(*,'(a28,i4.2,a40)')'|              Compiler with',ncountd,'  significant digits detetected        |'
+   write (*,'(a72)') '---------------------------------------------------------------------- '
+   write (*,*) '  '
 !
-!  VH edit, temporary mute of OneLoop error message because of over-sensitivity
-!  of the message  ERROR in OneLOop dilog2_c
-!   call set_unit('error',0)
-!  end VH edit
+!  Too large values of ncountd are not supported by avh
+!
+   ncountd= min(34,ncountd)
+!
    call load_combinatorics
 !
 !  Allocate all the needed variables
@@ -105,15 +71,15 @@
 !  scaloop= 2 -> avh       1-loop scalar functions (massive with complex masses)
 !  scaloop= 3 -> qcdloop   1-loop scalar functions (Ellis and Zanderighi)
 !
-   scaloop= scaloopin
+   scaloop= scaloopin 
+   ext_num_for_r1= ext_num_for_r1in
    if    (scaloop.eq.2) then
 !                               
 !    avh initialization:
 !
      thrsin= 1.d-6 
-     call olo_onshell(thrsin) 
-!     call olo_unit(6,'printall') !DEBUG
      call olo_precision(ncountd)
+     call olo_onshell(thrsin) 
    elseif(scaloop.eq.3) then
 !                               
 !    qcdloop initialization:
@@ -123,6 +89,7 @@
 !    also OneLOop is used for rank 1 and 2 2-point functions:
 !
      thrsin= 1.d-6 
+     call olo_precision(ncountd) 
      call olo_onshell(thrsin) 
    else
     stop 'value of scaloop not allowed'
@@ -130,6 +97,8 @@
    contains
 !
    subroutine allocating
+    use dimensions
+    use denominators
     use coefficients
     use loopfunctions
     use mp_loopfunctions
@@ -145,11 +114,12 @@
 !
   subroutine ctsstatistics(discarded)
   use scale
+  implicit none 
   logical, intent(out) :: discarded
   write(*,*) 'n_tot =',n_tot  ! total n. of points
   write(*,*) 'n_mp  =',n_mp   ! n. of points evaluated in mult. prec.
-  write(*,*) 'n_disc=',n_disc ! n. of discarded points
-  if (n_disc.ne.0) then
+  write(*,*) 'n_unst=',n_unst ! n. of unstable points
+  if (n_unst.ne.0) then
    discarded=.true.
   else
    discarded=.false.

@@ -181,7 +181,7 @@ class TestMECmdShell(unittest.TestCase):
         self.generate(['p p > e+ ve [QCD]'], 'loop_sm')
         self.assertEqual(cmd, os.getcwd())
         
-        self.do('calculate_xsect  NLO -f')        
+        self.do('calculate_xsect NLO -f')        
         
         # test the plot file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
@@ -195,7 +195,7 @@ class TestMECmdShell(unittest.TestCase):
         self.generate(['p p > e+ ve [QCD]'], 'loop_sm')
         self.assertEqual(cmd, os.getcwd())
         
-        self.do('calculate_xsect  NLO -f')        
+        self.do('calculate_xsect  LO -f')        
         
         # test the plot file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
@@ -226,7 +226,6 @@ class TestMECmdShell(unittest.TestCase):
                         stdout=stdout,stderr=stderr)
         stdout.close()
         text = open('/tmp/test.log','r').read()
-        misc.sprint(text)
         data = text.split('\n')
         for i,line in enumerate(data):
             if 'Summary:' in line:
