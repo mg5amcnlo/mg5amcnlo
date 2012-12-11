@@ -48,19 +48,11 @@
 !                                                                            !  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
-  include 'cts_mprec.h'
   use scale
-  use combinatorics
-  use mbnvalues
   use loopfunctions
   use mp_loopfunctions
   use coefficients
   use avh_olo
-  use dimensions
-  use denominators 
-  use maxnumden
-  use def_propagator                                       
-  use def_mp_propagator                                       
   implicit none
   integer, intent(in) :: imode
   integer, intent(in) :: number_propagators
@@ -86,7 +78,7 @@
    :: dbl_prec
   type(propagator), dimension(0:(number_propagators-1)) :: dn
   type(mp_propagator), dimension(0:number_propagators-1) :: mp_dn 
-  integer :: i,j,ib,k,dmr,ierr
+  integer :: i,j,ib,k,dmr
   logical, intent(out) :: stable
   logical :: stablen1,stablen2
   logical :: passeddp,passedmp
@@ -101,45 +93,6 @@
   if ((imode.lt.0).or.(imode.gt.6)) then
    stop 'wrong input value of imode in ctsxcut'
   endif
-!
-! Allocating local arrays
-!
-  ierr= -1
-  if (number_propagators.ge.1) then 
-   dmns_1= nbn1(number_propagators)
-   allocate  (bbn1(number_propagators,dmns_1), stat=ierr)
-   if (ierr.ne.0) STOP "Not enough memory to allocate bbn1"
-  endif
-  if (number_propagators.ge.2) then 
-   dmns_2= nbn2(number_propagators)
-   allocate  (bbn2(number_propagators,dmns_2), stat=ierr)
-   if (ierr.ne.0) STOP "Not enough memory to allocate bbn2"
-  endif
-  if (number_propagators.ge.3) then 
-   dmns_3= nbn3(number_propagators)
-   allocate  (bbn3(number_propagators,dmns_3), stat=ierr)
-   if (ierr.ne.0) STOP "Not enough memory to allocate bbn3"
-  endif
-  if (number_propagators.ge.4) then 
-   dmns_4= nbn4(number_propagators)
-   allocate  (bbn4(number_propagators,dmns_4), stat=ierr)
-   if (ierr.ne.0) STOP "Not enough memory to allocate bbn4"
-  endif
-!
-  do i= 1,number_propagators  
-   if (number_propagators.ge.1) then
-    do j= 1,dmns_1; bbn1(i,j)= bn1(number_propagators,i,j); enddo
-   endif
-   if (number_propagators.ge.2) then
-    do j= 1,dmns_2; bbn2(i,j)= bn2(number_propagators,i,j); enddo
-   endif
-   if (number_propagators.ge.3) then
-    do j= 1,dmns_3; bbn3(i,j)= bn3(number_propagators,i,j); enddo
-   endif
-   if (number_propagators.ge.4) then
-    do j= 1,dmns_4; bbn4(i,j)= bn4(number_propagators,i,j); enddo
-   endif
-  enddo
 !
 ! count the number of calls to ctsxcut
 !
@@ -165,16 +118,13 @@
   endif
 !
   dmr =  number_propagators-rnk
-!
-! comment
-!  if (dmr.eq.-1) then
-!    if (number_propagators.gt.4) then
-!      print*,'dmr=',dmr,' not implemented yet with',&
-!     ' number_propagators=',number_propagators
-!      stop
-!    endif 
-!  endif
-! comment
+  if (dmr.eq.-1) then
+    if (number_propagators.gt.4) then
+      print*,'dmr=',dmr,' not implemented yet with',&
+     ' number_propagators=',number_propagators
+      stop
+    endif 
+  endif
 !
   stable  =.true.
   passeddp=.true.
@@ -412,26 +362,6 @@
   else
    stop 'wrong value of imode in ctsxcut'
   endif
-!
-! Deallocating local arrays
-!
-  ierr= -1
-  if (number_propagators.ge.1) then 
-   deallocate  (bbn1, stat=ierr)
-   if (ierr.ne.0) STOP "bbn1 NOT deallocated"
-  endif
-  if (number_propagators.ge.2) then 
-   deallocate  (bbn2, stat=ierr)
-   if (ierr.ne.0) STOP "bbn2 NOT deallocated"
-  endif
-  if (number_propagators.ge.3) then 
-   deallocate  (bbn3, stat=ierr)
-   if (ierr.ne.0) STOP "bbn3 NOT deallocated"
-  endif
-  if (number_propagators.ge.4) then 
-   deallocate  (bbn4, stat=ierr)
-   if (ierr.ne.0) STOP "bbn4 NOT deallocated"
-  endif
   contains
 !
   subroutine tag_as_unstable
@@ -473,17 +403,20 @@
      , intent(out) :: camp(0:2),campcc,campr1
     camp = 0.d0
     if (number_propagators.ge.4) then
-     do ib= 1,dmns_d
+     do i= 1,nbn4(number_propagators)
+      ib= mbn4(number_propagators,i) 
       do k= 0,2; camp(k)= camp(k)+save_dcoeff(0,ib)*dloopfun(k,ib); enddo
      enddo
     endif
     if (number_propagators.ge.3) then
-     do ib= 1,dmns_c
+     do i= 1,nbn3(number_propagators)
+      ib= mbn3(number_propagators,i)
       do k= 0,2; camp(k)= camp(k)+save_ccoeff(0,ib)*cloopfun(k,ib); enddo
      enddo
     endif
     if (number_propagators.ge.2) then
-     do ib= 1,dmns_b
+     do i= 1,nbn2(number_propagators)
+      ib= mbn2(number_propagators,i)
       do k= 0,2
        camp(k)= camp(k)+ save_bcoeff(0,ib)               *bloopfun(k,ib)  &
                        +(save_bcoeff(3,ib)*vveck1(ib))   *b1loopfun(k,ib) &
@@ -492,7 +425,8 @@
      enddo
     endif
     if (number_propagators.ge.1) then
-     do ib= 1,dmns_a
+     do i= 1,nbn1(number_propagators)
+      ib= mbn1(number_propagators,i)
       do k= 0,2; camp(k)= camp(k)+save_acoeff(0,ib)*aloopfun(k,ib); enddo
      enddo
     endif 
@@ -510,21 +444,24 @@
      , intent(out) :: mp_camp(0:2),mp_campcc,mp_campr1
     do k= 0,2; mp_camp(k)= 0.d0; enddo
     if (number_propagators.ge.4) then
-     do ib= 1,dmns_d
+     do i= 1,nbn4(number_propagators)
+      ib= mbn4(number_propagators,i) 
       do k= 0,2
         mp_camp(k)= mp_camp(k)+save_mp_dcoeff(0,ib)*mp_dloopfun(k,ib)
       enddo
      enddo
     endif
     if (number_propagators.ge.3) then
-     do ib= 1,dmns_c
+     do i= 1,nbn3(number_propagators)
+      ib= mbn3(number_propagators,i)
       do k= 0,2
        mp_camp(k)= mp_camp(k)+save_mp_ccoeff(0,ib)*mp_cloopfun(k,ib)
       enddo
      enddo
     endif
     if (number_propagators.ge.2) then
-     do ib= 1,dmns_b
+     do i= 1,nbn2(number_propagators)
+      ib= mbn2(number_propagators,i)
       do k= 0,2
        mp_camp(k)= mp_camp(k)+ save_mp_bcoeff(0,ib)    *mp_bloopfun(k,ib)  &
                +(save_mp_bcoeff(3,ib)*mp_vveck1(ib))   *mp_b1loopfun(k,ib) &
@@ -533,7 +470,8 @@
      enddo
     endif
     if (number_propagators.ge.1) then
-     do ib= 1,dmns_a
+     do i= 1,nbn1(number_propagators)
+      ib= mbn1(number_propagators,i)
       do k= 0,2
        mp_camp(k)= mp_camp(k)+save_mp_acoeff(0,ib)*mp_aloopfun(k,ib)
       enddo
@@ -552,7 +490,7 @@
     dir_stable=.true.
     if (precstablen2.lt.precstablen1) dir_stable=.false.
 ! comment
-!     prec= abs(amp1(0)-amp(0))/max(my_tiny(prec),abs(amp1(0)))
+!     prec= abs(amp1(0)-amp(0))/max(tiny(prec),abs(amp1(0)))
 !     print*,'           '
 !     print*,'amp(0)      =',amp(0) 
 !     print*,'amp1(0)     =',amp1(0) 
@@ -585,7 +523,7 @@
     dir_stable=.true.
     if (precstablen2.lt.precstablen1) dir_stable=.false.
 ! comment
-!     mp_prec= max(my_tiny(mp_prec),abs(mp_amp1(0)))
+!     mp_prec= max(mp_tiny(mp_prec),abs(mp_amp1(0)))
 !     mp_prec= abs(mp_amp1(0)-mp_amp(0))/mp_prec
 !     print*,'           '
 !     aus= mp_amp(0)

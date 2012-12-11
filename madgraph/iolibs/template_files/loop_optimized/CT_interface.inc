@@ -134,6 +134,9 @@ C MADLOOP'S NUMERATOR IN THE OPEN LOOP IS MUCH FASTER THAN THE RECONSTRUCTED ONE
       EXT_NUM_FOR_R1=.TRUE.
 C -------------------------------	  
 
-      CALL CTSINIT(THRS,LOOPLIB,EXT_NUM_FOR_R1)
+C The initialization below is for CT v1.8.+
+C      CALL CTSINIT(THRS,LOOPLIB,EXT_NUM_FOR_R1)
+C The initialization below is for the older stable CT v1.7, still used for now in the beta release.
+      CALL CTSINIT(THRS,LOOPLIB)
 
 	  END

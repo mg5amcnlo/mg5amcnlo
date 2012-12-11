@@ -1,8 +1,6 @@
  module tensor_operations                                                 
   include 'cts_mprec.h'
   implicit none
-  private
-  public :: contr
   interface contr 
 !
 !  Real Tensor by Real Tensor
@@ -20,6 +18,7 @@
 !  Complex Tensor by Real Tensor
 !
    module procedure  contract11_1cr 
+
 !
 !  mp_ Real Tensor by mp_Real Tensor
 !
