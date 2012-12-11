@@ -31,11 +31,11 @@ C LOCAL VARIABLES
 C
       INTEGER I,J, P1, P2, ERRCODE
 C     PT STANDS FOR PTOT
-      %(real_format)s PT(0:3), NEWP(0:3,NEXTERNAL)
+      %(real_format)s PT(0:3), NEWP(0:3,NEXTERNAL),OLDP(0:3,NEXTERNAL)
 	  %(real_format)s BUFF,REF,REF2,DISCR
 	  %(real_format)s MASSES(NEXTERNAL)
 	  %(real_format)s SHIFTE(2),SHIFTZ(2)
-      %(real_format)s cosphi,sinphi,costh,sinth
+      %(real_format)s cosphi,sinphi,costh,sinth,pp
 C
 C SAVED VARIABLES
 C
@@ -111,23 +111,28 @@ C WE CHOOSE P1 IN THE ALGORITHM TO ALWAYS BE THE PARTICLE WITH POSITIVE PZ
 C Rotate the P(1:3,P2), such that it is in the z direction
      cosphi = 1.0%(exp_letter)s+00%(mp_specifier)s
      sinphi = ZERO
-     IF(P(1,P2)**2+P(2,P2)**2.GT.ZERO)THEN
-       cosphi=P(1,P2)/SQRT(P(1,P2)**2+P(2,P2)**2)
-       sinphi=P(2,P2)/SQRT(P(1,P2)**2+P(2,P2)**2)
+     pp=SQRT(P(1,P2)**2+P(2,P2)**2+P(3,P2)**2)
+     IF(pp.GT.ZERO)THEN
+       IF(SQRT(P(1,P2)**2+P(2,P2)**2)/pp.GT.THRS_TEST)THEN
+          cosphi=P(1,P2)/SQRT(P(1,P2)**2+P(2,P2)**2)
+          sinphi=P(2,P2)/SQRT(P(1,P2)**2+P(2,P2)**2)
+       ENDIF
      ENDIF
      costh = 1.0%(exp_letter)s+00%(mp_specifier)s
      sinth = ZERO
-     IF(P(1,P2)**2+P(2,P2)**2+P(3,P2)**2.GT.ZERO)THEN
-       costh = P(3,P2)/SQRT(P(1,P2)**2+P(2,P2)**2+P(3,P2)**2)
-       sinth = SQRT(P(1,P2)**2+P(2,P2)**2)/SQRT(P(1,P2)**2+P(2,P2)**2+P(3,P2)**2)
+     IF(pp.GT.ZERO)THEN
+       costh = P(3,P2)/pp
+       sinth = SQRT(P(1,P2)**2+P(2,P2)**2)/pp
      ENDIF
-     NEWP(0:3,1:NEXTERNAL)=P(0:3,1:NEXTERNAL)
+     OLDP(0:3,1:NEXTERNAL)=P(0:3,1:NEXTERNAL)
      CALL %(mp_prefix)sROTATE(P,cosphi,sinphi,costh,sinth)
-     IF(P(1,P2)**2+P(2,P2)**2.GT.ZERO)THEN
-        WRITE(*,*)"Failed in rotate the initial momentum into the z direction"
-        P(0:3,1:NEXTERNAL)=NEWP(0:3,1:NEXTERNAL)
-        ERRCODE = 600
-        GOTO 100
+     IF(pp.GT.ZERO)THEN
+        IF(SQRT(P(1,P2)**2+P(2,P2)**2)/pp.GT.THRS_TEST)THEN
+           WRITE(*,*)"Failed in rotate the initial momentum into the z direction ",SQRT(P(1,P2)**2+P(2,P2)**2)/pp
+           P(0:3,1:NEXTERNAL)=OLDP(0:3,1:NEXTERNAL)
+           ERRCODE = 600
+           GOTO 100
+        ENDIF
      ENDIF
 
 C WE FIRST SHIFT ALL THE FINAL STATE PARTICLES TO MAKE THEM EXACTLY ONSHELL
@@ -202,7 +207,7 @@ C NOW MAKE SURE THE SHIFTED POINT IS NOT TOO FAR FROM THE ORIGINAL ONE
       
 C Rotate back
 
-      CALL %(mp_prefix)sROTATE(NEWP,cosphi,-sinphi,costh,-sinth)
+      CALL %(mp_prefix)sROTATE_INV(NEWP,cosphi,sinphi,costh,sinth)
 	  GOTO 101
 100   CONTINUE
       IF (WARNED.LT.4) THEN
@@ -212,6 +217,7 @@ C Rotate back
 	      WRITE(*,*) '##W23 Further warnings from the improve_ps routine will now be supressed.'	     
 	  ENDIF
       WARNED = WARNED+1
+      P(0:3,1:NEXTERNAL)=OLDP(0:3,1:NEXTERNAL)
 	  GOTO 102
 101   CONTINUE
       DO J=1,NEXTERNAL
@@ -346,6 +352,35 @@ C ----------
          NEWP(1,I)=P(1,I)*cosphi*costh+P(2,I)*costh*sinphi-P(3,I)*sinth
          NEWP(2,I)=P(2,I)*cosphi-P(1,I)*sinphi
          NEWP(3,I)=P(3,I)*costh+(P(1,I)*cosphi+P(2,I)*sinphi)*sinth
+	  ENDDO
+
+      P(1:3,1:NEXTERNAL)=NEWP(1:3,1:NEXTERNAL)
+	  END
+      
+      SUBROUTINE %(mp_prefix)sROTATE_INV(P,cosphi,sinphi,costh,sinth)
+C  
+C CONSTANTS 
+C 
+	  INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+C  
+C ARGUMENTS 
+C
+      %(real_format)s P(0:3,NEXTERNAL),cosphi,sinphi,costh,sinth
+      %(real_format)s NEWP(0:3,NEXTERNAL)
+C
+C LOCAL VARIABLES 
+C
+      INTEGER I,J
+
+C ----------
+C BEGIN CODE
+C ----------
+
+      DO I=1,NEXTERNAL
+         NEWP(1,I)=P(1,I)*cosphi*costh-P(2,I)*sinphi+P(3,I)*sinth*cosphi
+         NEWP(2,I)=P(2,I)*cosphi+sinphi*(P(1,I)*costh+P(3,I)*sinth)
+         NEWP(3,I)=P(3,I)*costh-P(1,I)*sinth
 	  ENDDO
 
       P(1:3,1:NEXTERNAL)=NEWP(1:3,1:NEXTERNAL)

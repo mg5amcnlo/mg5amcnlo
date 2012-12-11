@@ -12,8 +12,8 @@ import lorentz as L
 # ===================================================
 
 V_35 = Vertex(name = 'V_35',
-              particles = [ P.ghG__tilde__, P.ghG, P.G ],
-              color = [ 'f(1,3,2)' ],
+              particles = [ P.ghG, P.ghG__tilde__, P.G ],
+              color = [ 'f(2,3,1)' ],
               lorentz = [ L.UUV1 ],
               couplings = {(0,0):C.GC_10})
 

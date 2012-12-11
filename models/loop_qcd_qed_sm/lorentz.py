@@ -33,11 +33,11 @@ R2_QQ_2 = Lorentz(name = 'R2_QQ_2',
 
 R2_QQ_3 = Lorentz(name = 'R2_QQ_3',
                spins = [ 2, 2 ],
-               structure = 'P(-1,1)*Gamma(-1,2,-2)*ProjP(-2,1)')
+               structure = '-P(-1,1)*Gamma(-1,2,-2)*ProjP(-2,1)')
 
 R2_QQ_4 = Lorentz(name = 'R2_QQ_4',
                 spins = [ 2, 2 ],
-                structure = 'P(-1,1)*Gamma(-1,2,-2)*ProjM(-2,1)')
+                structure = '-P(-1,1)*Gamma(-1,2,-2)*ProjM(-2,1)')
 
 R2_SS_1 = Lorentz(name = 'R2_SS_1',
                   spins = [ 1, 1 ],

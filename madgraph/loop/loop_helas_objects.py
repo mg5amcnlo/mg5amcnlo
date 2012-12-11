@@ -491,11 +491,12 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         # HSS 27/09/2012
         #print len(self.get('wavefunctions'))
         #print len([wf for wf in self.get('wavefunctions') if wf.get('self_antipart')])
+        #print [wf.get('pdg_code') for wf in self.get('wavefunctions')]
         #print len(set([wf.get('pdg_code') for wf in self.get('wavefunctions')]))
-        if len(self.get('wavefunctions'))==3 and \
-           len([wf for wf in self.get('wavefunctions') if wf.get('self_antipart')])==3 or\
-	   len(self.get('wavefunctions'))==4 and \
-	   len([wf for wf in self.get('wavefunctions') if wf.get('self_antipart')])==4 and\
+        if ((len(self.get('wavefunctions'))==3 and \
+           len([wf for wf in self.get('wavefunctions') if wf.get('self_antipart')])==3) or\
+	   (len(self.get('wavefunctions'))==4 and \
+	   len([wf for wf in self.get('wavefunctions') if wf.get('self_antipart')])==4)) and\
 	   len(set([wf.get('pdg_code') for wf in self.get('wavefunctions')]))==1:
         #if len(self.get('wavefunctions'))==4 and \
         #   len([wf for wf in self.get('wavefunctions') if wf.get('pdg_code')==21])==4:

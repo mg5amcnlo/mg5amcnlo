@@ -298,7 +298,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # By default the user filter does nothing, if you want to turn it on
         # and edit it then remove the print statement below.
         return
-
+        
         new_diag_selection = base_objects.DiagramList()
         discarded_diags = base_objects.DiagramList()
         for i,diag in enumerate(self['loop_diagrams']):
@@ -306,7 +306,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 raise MadGraph5Error, "Before using the user_filter, please "+\
                        "make sure that the loop diagrams have been tgged first."
             valid_diag = True
-            if i!=37:valid_diag=False
+            if i!=43:valid_diag=False
+            #if i not in [1,3,10,12,19,29,30,46,21,33,34,48]:valid_diag=False
             #if 22 in diag.get_loop_lines_pdgs():
             #     valid_diag=False
             # Ex. 1: Chose the topology, i.e. number of loop line.
