@@ -1603,7 +1603,7 @@ class MultiProcess(base_objects.PhysicsObject):
 
             logger.info("Trying coupling order WEIGHTED=%d" % max_order_now)
 
-            oldloglevel = logger.getEffectiveLevel()
+            oldloglevel = logger.level
             logger.setLevel(logging.WARNING)
 
             # failed_procs are processes that have already failed

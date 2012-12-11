@@ -39,10 +39,11 @@ try:
     import madgraph.various.misc as misc
     from madgraph import MG5DIR
     MADEVENT = False
-except Exception, error:
-    if __debug__:
-       logger.info('extended_cmd:'+str(error))
-    import internal.misc as misc
+except ImportError, error:
+    try:
+        import internal.misc as misc
+    except:
+        raise error
     MADEVENT = True
 
 pjoin = os.path.join
@@ -495,18 +496,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             return line
         line = line.lstrip()
 
-        # Update the history of this suite of command,
-        # except for useless commands (empty history and help calls)
-        if ';' in line: 
-            lines = line.split(';')
-        else:
-            lines = [line]
-        for l in lines:
-            l = l.strip()
-            if not (l.startswith("history") or l.startswith('help') or \
-                                                            l.startswith('#*')):
-                self.history.append(l)
-
         # Check if we are continuing a line:
         if self.save_line:
             line = self.save_line + line 
@@ -516,19 +505,24 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if line.endswith('\\'):
             self.save_line = line[:-1]
             return '' # do nothing   
-        
+                
         # Remove comment
         if '#' in line:
             line = line.split('#')[0]
 
         # Deal with line splitting
-        if ';' in line and not (line.startswith('!') or line.startswith('shell')):
-            for subline in line.split(';'):
+        if ';' in line: 
+            lines = line.split(';')
+            for subline in lines:
+                if not (subline.startswith("history") or subline.startswith('help') \
+                        or subline.startswith('#*')): 
+                    self.history.append(subline)           
                 stop = self.onecmd(subline)
                 stop = self.postcmd(stop, subline)
             return ''
-        
+            
         # execute the line command
+        self.history.append(line) 
         return line
 
     def postcmd(self,stop, line):
@@ -568,7 +562,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     # Ask a question with nice options handling
     #===============================================================================    
     def ask(self, question, default, choices=[], path_msg=None, 
-            timeout = True, fct_timeout=None, ask_class=None):
+            timeout = True, fct_timeout=None, ask_class=None, **opt):
         """ ask a question with some pre-define possibility
             path info is
         """
@@ -596,6 +590,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if len(choices) > 9:
                 question += '... , ' 
             question = question[:-2]+']'
+        else:
+            question += "[\033[%dm%s\033[0m] " % (4, default)    
         if ask_class:
             obj = ask_class  
         elif path_msg:
@@ -604,11 +600,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             obj = SmartQuestion
 
         question_instance = obj(allow_arg=choices, default=default, 
-                                                          mother_interface=self)
+                                                   mother_interface=self, **opt)
         question_instance.question = question
 
         answer = self.check_answer_in_input_file(question_instance, default, path_msg)
         if answer is not None:
+            if ask_class:
+                question_instance.default(answer)
             return answer
         
         value =   Cmd.timed_input(question, default, timeout=timeout,
@@ -718,18 +716,23 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                                             str(error).replace('\n','\n\t'))
         error_text += self.error_debug % {'debug': self.debug_output}
         logger_stderr.critical(error_text)
+        
                 
         # Add options status to the debug file
         try:
             self.do_display('options', debug_file)
         except Exception, error:
             debug_file.write('Fail to write options with error %s' % error)
-        
+
+        debug_file.close()
+        text =  open(self.debug_output).read()        
 
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
             return True 
         return False
+
+
 
     def nice_user_error(self, error, line):
         if self.child:
@@ -876,8 +879,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                                                                 line.split()[0])
         if line.strip() in ['q', '.q', 'stop']:
             logger.info("If you want to quit mg5 please type \"exit\".")
-        
-        self.history.pop()
+
+        if self.history and self.history[-1] == line:        
+            self.history.pop()
         
 
 
@@ -937,79 +941,19 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 new_history.append(cur_line)
             
         new_history.reverse()
-        self.history = new_history
+        self.history[:] = new_history
         
-        
-    def clean_history(self, to_keep=['set','add','load'],
-                            remove_bef_last=None,
-                            to_remove=['open','display','launch', 'check'],
-                            allow_for_removal=None,
-                            keep_switch=False):
-        """Remove command in arguments from history.
-        All command before the last occurrence of  'remove_bef_last'
-        (including it) will be removed (but if another options tells the opposite).                
-        'to_keep' is a set of line to always keep.
-        'to_remove' is a set of line to always remove (don't care about remove_bef_ 
-        status but keep_switch acts.).
-        if 'allow_for_removal' is define only the command in that list can be 
-        remove of the history for older command that remove_bef_lb1. all parameter
-        present in to_remove are always remove even if they are not part of this 
-        list.
-        keep_switch force to keep the statement remove_bef_??? which changes starts
-        the removal mode.
-        """
-        
-        #check consistency
-        if __debug__ and allow_for_removal:
-            for arg in to_keep:
-                assert arg not in allow_for_removal
-            
-    
-        nline = -1
-        removal = False
-        #looping backward
-        while nline > -len(self.history):
-            switch  = False # set in True when removal pass in True
-
-            #check if we need to pass in removal mode
-            if not removal and remove_bef_last:
-                    if self.history[nline].startswith(remove_bef_last):
-                        removal = True
-                        switch = True  
-
-            # if this is the switch and is protected pass to the next element
-            if switch and keep_switch:
-                nline -= 1
-                continue
-
-            # remove command in to_remove (whatever the status of removal)
-            if any([self.history[nline].startswith(arg) for arg in to_remove]):
-                self.history.pop(nline)
-                continue
-            
-            # Only if removal mode is active!
-            if removal:
-                if allow_for_removal:
-                    # Only a subset of command can be removed
-                    if any([self.history[nline].startswith(arg) 
-                                                 for arg in allow_for_removal]):
-                        self.history.pop(nline)
-                        continue
-                elif not any([self.history[nline].startswith(arg) for arg in to_keep]):
-                    # All command have to be remove but protected
-                    self.history.pop(nline)
-                    continue
-            
-            # update the counter to pass to the next element
-            nline -= 1
-                
+                        
     def import_command_file(self, filepath):
         # remove this call from history
         if self.history:
             self.history.pop()
         
         # Read the lines of the file and execute them
-        commandline = open(filepath).readlines()
+        if isinstance(filepath, str):
+            commandline = open(filepath).readlines()
+        else:
+            commandline = filepath
         oldinputfile = self.inputfile
         oldraw = self.use_rawinput
         self.inputfile = (l for l in commandline) # make a generator
@@ -1446,14 +1390,18 @@ class SmartQuestion(BasicCmd):
                 return True
             elif line and hasattr(self, 'do_%s' % line.split()[0]):
                 return self.reask()
+            elif self.value == 'repeat':
+                return self.reask()
+            elif len(self.allow_arg)==0:
+                return True
             else: 
                 raise Exception
-        except Exception:
+        except Exception,error:
             if self.wrong_answer < 100:
                 self.wrong_answer += 1
-                print """%s not valid argument. Valid argument are in (%s).""" \
-                          % (self.value,','.join(self.allow_arg))
-                print 'please retry'
+                logger.warning("""%s not valid argument. Valid argument are in (%s).""" \
+                          % (self.value,','.join(self.allow_arg)))
+                logger.warning('please retry')
                 return False
             else:
                 self.value = self.default_value
@@ -1525,7 +1473,9 @@ class OneLinePathCompletion(SmartQuestion):
                 return True
             elif line and hasattr(self, 'do_%s' % line.split()[0]):
                 # go to retry
-                reprint_opt = True          
+                reprint_opt = True 
+            elif self.value == 'repeat':
+                reprint_opt = True         
             else:
                 raise Exception
         except Exception, error:            

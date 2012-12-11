@@ -302,7 +302,6 @@ class Banner(dict):
         if len(arg) == 1:
             if tag == 'mg5proccard':
                 return card.info[arg[0]]
-
             return card[arg[0]]
         elif len(arg) == 2 and tag == 'slha':
             return card[arg[0]].get(arg[1:])

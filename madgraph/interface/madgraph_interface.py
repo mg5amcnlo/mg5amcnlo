@@ -205,6 +205,8 @@ class CmdExtended(cmd.Cmd):
         "************************************************************")
         
         cmd.Cmd.__init__(self, *arg, **opt)
+        
+        self.history = banner_module.ProcCard()
     
     def postcmd(self,stop, line):
         """ finishing a command
@@ -2088,7 +2090,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 'MCatNLO-utilities','update']
-    _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
+    _v4_export_formats = ['madevent', 'standalone', 'standalone_ms', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
@@ -2199,13 +2201,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # interfaces
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
-        self.clean_history(remove_bef_last='import')
+        self.history.clean(remove_bef_last='import')
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()    
 
-        self._v4_export_formats = ['madevent', 'standalone', 'matrix'] 
+        self._v4_export_formats = ['madevent', 'standalone','standalone_ms', 'matrix'] 
         self._export_formats = self._v4_export_formats + ['standalone_cpp', 'pythia8']
         self._nlo_modes_for_completion = ['all','virt','real']
     
@@ -2966,10 +2968,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Also reset _export_format and _export_dir
         self._export_format = None
 
-        # Remove previous generations from history
-        self.clean_history(remove_bef_last='generate', keep_switch=True,
-                     allow_for_removal= ['generate', 'add process', 'output'])
-
 
         # Call add process
         args = self.split_arg(line)
@@ -3067,7 +3065,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Now check for forbidden particles, specified using "/"
         slash = line.find("/")
-        dollar = line.find("$")
         dollar = line.find("$")
         forbidden_particles = ""
         if slash > 0:
@@ -3196,7 +3193,134 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                               'has_born':HasBorn,
                               'NLO_mode':LoopOption
                               })
-      #                       'is_decay_chain': decay_process\
+        #                       'is_decay_chain': decay_process\
+
+    @staticmethod
+    def split_process_line(procline):
+        """Takes a valid process and return
+           a tuple (core_process, options). This removes 
+             - any NLO specifications.
+             - any options
+           [Used by MadSpin]
+        """
+         
+        # remove the tag "[*]": this tag is used in aMC@LNO , 
+        # but it is not a valid syntax for LO
+        line=procline
+        pos1=line.find("[")
+        if pos1>0:
+            pos2=line.find("]")
+            if pos2 >pos1:
+                line=line[:pos1]+line[pos2+1:]
+        #
+        # Extract the options:
+        #
+        # A. Remove process number (identified by "@")
+        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
+        proc_number_re = proc_number_pattern.match(line)
+        if proc_number_re:
+            line = proc_number_re.group(1) + proc_number_re.group(3)
+
+        # B. search for the beginning of the option string
+        pos=1000
+        # start with order
+        order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+        order_re = order_pattern.match(line)
+        if (order_re):
+            pos_order=line.find(order_re.group(2))
+            if pos_order>0 and pos_order < pos : pos=pos_order
+
+        # then look for slash or dollar
+        slash = line.find("/")
+        if slash > 0 and slash < pos: pos=slash
+        dollar = line.find("$")
+        if dollar > 0 and dollar < pos: pos=dollar
+
+        if pos<1000:
+            proc_option=line[pos:]
+            line=line[:pos]
+        else:
+            proc_option=""
+
+        return line, proc_option
+
+    def get_final_part(self, procline):
+        """Takes a valid process and return
+           a set of id of final states particles. [Used by MadSpin]
+        """
+                
+        if self._use_lower_part_names:
+            procline = procline.lower()
+        pids = self._curr_model.get('name2pdg')
+            
+        # method.
+        # 1) look for decay.
+        #     in presence of decay call this routine recursively and veto 
+        #     the particles which are decayed
+        
+        # Deal with decay chain
+        if ',' in procline:
+            core, decay = procline.split(',', 1)
+            core_final = self.get_final_part(core)
+            
+            #split the decay 
+            all_decays = decay.split(',')
+            nb_level,  tmp_decay = 0, ''
+            decays = []
+            # deal with ()
+            for one_decay in all_decays:
+                if '(' in one_decay:
+                    nb_level += 1
+                if ')' in one_decay:
+                    nb_level -= 1
+                    
+                if nb_level:
+                    if tmp_decay:
+                        tmp_decay += ', %s' % one_decay
+                    else: 
+                        tmp_decay = one_decay
+                elif tmp_decay:
+                    final = '%s,%s' % (tmp_decay, one_decay)
+                    final = final.strip()
+                    assert final[0] == '(' and final[-1] == ')'
+                    final = final[1:-1]
+                    decays.append(final)
+                    tmp_decay = ''
+                else:
+                    decays.append(one_decay)
+            # remove from the final states all particles which are decayed
+            for one_decay in decays:
+                first = one_decay.split('>',1)[0].strip()
+                if first in pids:
+                    pid = set([pids[first]])
+                elif first in self._multiparticles:
+                    pid = set(self._multiparticles[first])
+                else:
+                    raise Exception, 'invalid particle name: %s. ' % first
+                core_final.difference_update(pid)
+                core_final.update(self.get_final_part(one_decay))
+                
+            return core_final
+                
+        # NO DECAY CHAIN
+        final = set()
+        final_states = re.search(r'> ([^\/\$\=\@>]*)(\s\S+\=|\$|\/|\@|$)', procline)
+        particles = final_states.groups()[0]
+        for particle in particles.split():
+            if particle in pids:
+                final.add(pids[particle])
+            elif particle in self._multiparticles:
+                final.update(set(self._multiparticles[particle]))
+        return final
+            
+            
+            
+        
+        
+        
+        
+        
+
 
     def extract_particle_ids(self, args):
         """Extract particle ids from a list of particle names. If
@@ -3348,16 +3472,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # Import files
     def do_import(self, line, force=False):
         """Main commands: Import files with external formats"""
+        
         args = self.split_arg(line)
         # Check argument's validity
         self.check_import(args)
-        
         if args[0].startswith('model'):
             self._model_v4_path = None
-            # Clear history, amplitudes and matrix elements when a model is imported
-            # Remove previous imports, generations and outputs from history
-            self.clean_history(remove_bef_last='import', keep_switch=True,
-                        allow_for_removal=['generate', 'add process', 'output'])
             # Reset amplitudes and matrix elements
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -3462,7 +3582,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.exec_cmd('launch')
             
         elif args[0] == 'proc_v4':
-            self.history = []
 
             if len(args) == 1 and self._export_dir:
                 proc_card = pjoin(self._export_dir, 'Cards', \
@@ -4560,9 +4679,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Check Argument validity
         self.check_output(args)
 
-        # Remove previous outputs from history
-        self.clean_history(allow_for_removal = ['output'], keep_switch=True,
-                           remove_bef_last='output')
         
         noclean = '-noclean' in args
         force = '-f' in args 
@@ -4623,14 +4739,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 shutil.rmtree(self._export_dir)
 
         # Make a Template Copy
-        if self._export_format in ['madevent', 'standalone', 'matrix']:
+        if self._export_format in ['madevent', 'standalone','standalone_ms', 'matrix']:
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
-        if self._export_format in ['madevent', 'standalone']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_ms']:
             self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
 
         # Reset _done_export, since we have new directory
@@ -4727,7 +4843,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         calls = 0
 
         path = self._export_dir
-        if self._export_format in ['standalone_cpp', 'madevent', 'standalone']:
+        if self._export_format in ['standalone_cpp', 'madevent', 'standalone', 'standalone_ms']:
             path = pjoin(path, 'SubProcesses')
             
         cpu_time1 = time.time()
@@ -4761,7 +4877,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 try:
                     cmd.Cmd.onecmd(self, 'history .')
                 except Exception:
-                    misc.sprint('command history fails.')
+                    misc.sprint('command history fails.', 10)
                     pass
                 
         # Pythia 8
@@ -4798,7 +4914,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         self._curr_matrix_elements.get_matrix_elements()
 
         # Fortran MadGraph Standalone
-        if self._export_format == 'standalone':
+        if self._export_format in ['standalone', 'standalone_ms']:
             for me in matrix_elements:
                 calls = calls + \
                         self._curr_exporter.generate_subprocess_directory_v4(\
@@ -4859,7 +4975,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
         
-        if self._export_format in ['madevent', 'standalone', 'NLO']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_ms', 'NLO']:
             # For v4 models, copy the model/HELAS information.
             if self._model_v4_path:
                 logger.info('Copy %s model files to directory %s' % \
@@ -4968,7 +5084,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False, 
                          to_keep={'mg5_path':MG5DIR})
 
-        if self._export_format in ['madevent', 'standalone']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_ms']:
             
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
