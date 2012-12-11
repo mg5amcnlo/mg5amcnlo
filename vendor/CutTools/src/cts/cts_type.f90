@@ -1,7 +1,5 @@
  module def_propagator
   implicit none
-  private
-  public :: propagator 
   type propagator
    integer :: i
    include 'cts_dpc.h'
@@ -13,8 +11,6 @@
 !
  module def_solcut
   implicit none
-  private
-  public :: solcut4,solcut3,solcut2,solcut1
   type solcut4
    include 'cts_dpc.h'
     , dimension(0:3,1:2) :: q
@@ -56,8 +52,6 @@
  module def_mp_propagator
   include 'cts_mprec.h'
   implicit none
-  private
-  public :: mp_propagator
   type mp_propagator
    integer :: i
    include 'cts_mpc.h'
@@ -72,8 +66,6 @@
  module def_mp_solcut
   include 'cts_mprec.h'
   implicit none
-  private
-  public :: mp_solcut4,mp_solcut3,mp_solcut2,mp_solcut1
   type mp_solcut4
    include 'cts_mpc.h'
     , dimension(0:3,1:2) :: q

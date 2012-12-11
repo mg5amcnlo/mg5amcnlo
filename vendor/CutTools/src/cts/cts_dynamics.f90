@@ -2,7 +2,6 @@
  module inout
   include 'cts_mprec.h'
   implicit none 
-  private
   logical, public :: mprec
   include 'cts_mpc.h'
    , public, dimension(0:3) :: mpq
@@ -14,7 +13,7 @@
    , public :: dpres
  endmodule inout
 !
- subroutine numfunc(numdummy)
+  subroutine numfunc(numdummy)
 !
 ! Numerator function
 !
@@ -27,4 +26,4 @@
   else
     call numdummy(mpq,mpres)
   endif
- end subroutine numfunc
+  end subroutine numfunc
