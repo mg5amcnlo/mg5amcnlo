@@ -448,7 +448,7 @@ C   local variables
 c     Variables for keeping track of jets
       logical goodjet(n_max_cl)
       integer njets,iqjets(nexternal-2,2)
-      integer fsnum(2)
+      integer fsnum(2),ida(2),imo
       logical chclusold,fail
       save chclusold
 
@@ -563,6 +563,15 @@ c   as well as which FS particles count as jets (from jet vertices)
           do j=1,2
             if(idacl(n,i).eq.ibeam(j))then
               ibeam(j)=imocl(n)
+              if(n.lt.nexternal-2) then
+                 ida(i)=idacl(n,i)
+                 ida(3-i)=idacl(n,3-i)
+                 imo=imocl(n)
+              else
+                 ida(i)=idacl(n,i)
+                 ida(3-i)=imocl(n)
+                 imo=idacl(n,3-i)
+              endif
 c             IS clustering
 c             Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
 c             f1(x1,pt2E) is given by DSIG, just need to set scale.
@@ -577,20 +586,16 @@ c             f1(x1,pt2E) is given by DSIG, just need to set scale.
               if(partonline(j))then
 c             Stop fact scale where parton line stops
                  jlast(j)=n
-                 if(n.lt.nexternal-2) then
-                    partonline(j)=goodjet(idacl(n,3-i)).and.
-     $                   isjet(ipdgcl(imocl(n),igraphs(1),iproc))
-                 else
-                    partonline(j)=goodjet(imocl(n)).and.
-     $                   isjet(ipdgcl(idacl(n,3-i),igraphs(1),iproc))
-                 endif
+                 partonline(j)=goodjet(ida(3-i)).and.
+     $                isjet(ipdgcl(imo,igraphs(1),iproc))
               else
-                 goodjet(imocl(n))=.false.
+                 goodjet(imo)=.false.
               endif
 c             Consider t-channel jet radiations as jets only if
 c             FS line is a jet line and it's final state
-              fsnum(1)=ifsno(idacl(n,3-i),ipart)
-              if(goodjet(idacl(n,3-i)).and.fsnum(1).gt.0)then
+              fsnum(1)=ifsno(ida(3-i),ipart)
+              if(goodjet(ida(3-i)).and.fsnum(1).gt.0.and.
+     $           iqjets(njets,1).ne.fsnum(1))then
                  njets=njets+1
                  iqjets(njets,1)=fsnum(1)
                  if(partonline(j))then
@@ -602,7 +607,7 @@ c             FS line is a jet line and it's final state
 c             Trace QCD line through event
               if(qcdline(j))then
                  jcentral(j)=n
-                 qcdline(j)=isqcd(ipdgcl(imocl(n),igraphs(1),iproc))
+                 qcdline(j)=isqcd(ipdgcl(imo,igraphs(1),iproc))
               endif
             endif
           enddo
@@ -661,6 +666,11 @@ c       Possible jets are not jets
  10   if(jfirst(1).le.0) jfirst(1)=jlast(1)
       if(jfirst(2).le.0) jfirst(2)=jlast(2)
 
+      if (btest(mlevel,3))
+     $     write(*,*) 'jfirst is ',jfirst(1),jfirst(2),
+     $     ' jlast is ',jlast(1),jlast(2),
+     $     ' and jcentral is ',jcentral(1),jcentral(2)
+
 c     Sort external jet numbers
       if(njets.gt.1) call sortint(njets,iqjets(1,1))
 
@@ -694,11 +704,6 @@ c     if not, recluster according to iconfig
          endif
       endif
       
-      if (btest(mlevel,3))
-     $     write(*,*) 'jfirst is ',jfirst(1),jfirst(2),
-     $     ' jlast is ',jlast(1),jlast(2),
-     $     ' and jcentral is ',jcentral(1),jcentral(2)
-
 c     Set central scale to mT2
       if(jcentral(1).gt.0) then
          if(mt2ij(jcentral(1)).gt.0d0)

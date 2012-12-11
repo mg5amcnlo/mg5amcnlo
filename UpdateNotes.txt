@@ -7,6 +7,15 @@ Update notes for MadGraph 5 (in reverse time order)
                       Note that the Pythia/PGS package v. 2.2 is needed.
                   JA: Included <clustering> tag in matched .lhe output,
                       to be used together with Pythia 8 CKKW-L matching.
+                  JA: New treatment of matching for diagrams that have no
+                      corresponding lower-multiplicity diagrams. Jets that
+                      are not classified as shower-type emission jets are
+                      flagged in the cluster scale info at the end of the event,
+                      which is recognized by the Pythia interface in Pythia-PGS
+                      package v. 2.2. For such jets, xqcut does not apply. This
+                      allows for consistent matching e.g. of p p > w+ b b~ in 
+                      the 4-flavor scheme. Note that auto_ptj_mjj must be set to
+                      .false. for this to work properly.
 
 1.5.6 (XX/12/12)  JA: Replaced error with warning when there are decay processes
                       without corresponding core processes final state (see 
