@@ -1860,52 +1860,50 @@ Integrated cross-section
             self.update_status((max([self.njobs - self.ijob - 1, 0]), 
                                 min([1, self.njobs - self.ijob]),
                                 self.ijob, run_type), level='parton')
-        # This is for cluster/multicore mode
-        # Have special treatment for ajob/reweight job
-        elif 'ajob' in exe:
-            input_files, output_files = self.get_ajob_IO_files(exe, args, cwd)
-            self.cluster.submit2(exe, args, cwd=cwd, 
-                             input_files=input_files, output_files=output_files) 
-
         elif 'reweight' in exe:
-            
-            #Find the correct PDF input file
-            input_files, output_files = [], []
-            input_files.append(self.get_pdf_input_filename())
-            input_files.append(pjoin(os.path.dirname(exe), os.path.pardir, 'reweight_xsec_events'))
-            input_files.append(args[0])
-            output_files.append('%s.rwgt' % os.path.basename(args[0]))
-            output_files.append('reweight_xsec_events.output')
+                #Find the correct PDF input file
+                input_files, output_files = [], []
+                input_files.append(self.get_pdf_input_filename())
+                input_files.append(pjoin(os.path.dirname(exe), os.path.pardir, 'reweight_xsec_events'))
+                input_files.append(args[0])
+                output_files.append('%s.rwgt' % os.path.basename(args[0]))
+                output_files.append('reweight_xsec_events.output')
+    
+                return self.cluster.submit2(exe, args, cwd=cwd, 
+                                 input_files=input_files, output_files=output_files) 
 
+            #this is for the cluster/multicore run
+        elif 'ajob' in exe:
+            input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
+            #submitting
             self.cluster.submit2(exe, args, cwd=cwd, 
-                             input_files=input_files, output_files=output_files)             
+                         input_files=input_files, output_files=output_files)
         else:
             return self.cluster.submit(exe, args, cwd=cwd)
-    
-    def get_ajob_IO_files(self, exe, args, cwd):
-        """return input/output file linked to ajob run"""
-    
+
+    def getIO_ajob(self,exe,cwd, args):
         # use local disk if possible => need to stands what are the 
         # input/output files
+        
         keep_fourth_arg = False
         output_files = []
         input_files = [pjoin(self.me_dir, 'MGMEVersion.txt'),
-                       pjoin(self.me_dir, 'SubProcesses', 'randinit'),
-                       pjoin(cwd, 'symfact.dat'),
-                       pjoin(cwd, 'iproc.dat')]
-        
+                     pjoin(self.me_dir, 'SubProcesses', 'randinit'),
+                     pjoin(cwd, 'symfact.dat'),
+                     pjoin(cwd, 'iproc.dat')]
+      
         # File for the loop (might not be present if MadLoop is not used)
         if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
             to_add = ['MadLoopParams.dat', 'ColorDenomFactors.dat', 
-                                     'ColorNumFactors.dat','HelConfigs.dat']
+                                   'ColorNumFactors.dat','HelConfigs.dat']
             for name in to_add:
                 input_files.append(pjoin(cwd, name))
-        
-            to_check = ['HelFilter.dat','LoopFilter.dat']
+
+                to_check = ['HelFilter.dat','LoopFilter.dat']
             for name in to_check:
                 if os.path.exists(pjoin(cwd, name)):
                     input_files.append(pjoin(cwd, name))
-        
+
         Ire = re.compile("for i in ([\d\s]*) ; do")
         try : 
             fsock = open(exe)
@@ -1914,7 +1912,7 @@ Integrated cross-section
         text = fsock.read()
         data = Ire.findall(text)
         subdir = ' '.join(data).split()
-                 
+               
         if args[0] == '0':
             # MADEVENT VEGAS MODE
             input_files.append(pjoin(cwd, 'madevent_vegas'))
@@ -1944,13 +1942,13 @@ Integrated cross-section
                                         pjoin(cwd,current))
                     files.cp(pjoin(cwd,base, 'grid.MC_integer'), 
                                         pjoin(cwd,current))
-                              
+                            
         elif args[0] == '2':
             # MINTMC MODE
             input_files.append(pjoin(cwd, 'madevent_mintMC'))
             if args[2] in ['0','2']:
                 input_files.append(pjoin(self.me_dir, 'SubProcesses','madinMMC_%s.2' % args[1]))
-        
+
             for i in subdir:
                 current = 'G%s%s' % (args[1], i)
                 if os.path.exists(pjoin(cwd,current)):
@@ -1962,31 +1960,22 @@ Integrated cross-section
                     files.ln(pjoin(cwd,base,'mint_grids'), name = 'preset_mint_grids', 
                                             starting_dir=pjoin(cwd,current))
                     files.ln(pjoin(cwd,base,'grid.MC_integer'), 
-                                            starting_dir=pjoin(cwd,current))
+                                          starting_dir=pjoin(cwd,current))
                 elif len(args) ==4:
                     keep_fourth_arg = True
-                
-        
+               
+
         else:
             raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
-        
+
         #Find the correct PDF input file
         input_files.append(self.get_pdf_input_filename())
-        
-                
-        
-        if len(args) == 4 and not keep_fourth_arg:
-            args.pop()
-        
-        return input_files, output_files
-    
-    def get_reweight_IO_files(self, exe, args):
-        """return the input and output files needed for reweight script"""
-        
 
-        
-    
-    
+        if len(args) == 4 and not keep_fourth_arg:
+            args = args[:3]
+            
+        return input_files, output_files, args
+            
     def write_madinMMC_file(self, path, run_mode, mint_mode):
         """writes the madinMMC_?.2 file"""
         #check the validity of the arguments
