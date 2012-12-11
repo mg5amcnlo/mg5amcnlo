@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 
+from __future__ import division
 
 ################################################################################
 #
@@ -766,7 +767,10 @@ class momentum:
                 else:
                     ppz=(self.px-q.px*q.pz/qq/qt*ppx+q.py/qt*ppy)*qq/q.px
             else:
-                ppz=(qt**2*self.py+q.py*q.pz*self.pz-q.px*qt*ppy)/qq/q.py
+                if (q.py!=0):
+                    ppz=(qt**2*self.py+q.py*q.pz*self.pz-q.px*qt*ppy)/qq/q.py
+                else:
+                    ppz=(q.px*self.px+q.pz*self.pz)/qq
                 ppx=(-self.pz+q.pz/qq*ppz)*qq/qt
         pp=momentum(ppE,ppx,ppy,ppz)
         return pp 
