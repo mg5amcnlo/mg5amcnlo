@@ -1,0 +1,34 @@
+#!/bin/bash
+
+##### NOT YET DECIDED
+# prepend this string to prefixes to avoid storage problems
+# leave blank to store event and data files in the running directory
+SCRTCH=
+FPREFIX=
+EXEPREFIX=
+PY8PATH=
+
+source banner.dat
+
+# path to source codes
+HWPATH="../srcHerwig"
+PYPATH="../srcPythia"
+# set the following variables equal to the name of the version of 
+# the MC that you use 
+HERWIGVER="herwig6520.o"
+PYTHIAVER="pythia6426.o"
+
+##### LOAD SETTINGS
+source shower_card.dat
+
+##### LOAD THE SCRIPTS: DO NOT REMOVE
+. Scripts/MCatNLO_MadFKS_$MCMODE.Script
+
+##### EXECUTION: DO NOT REMOVE
+# Type compileMC to compile the shower, runMC to compile and run
+runMC
+
+#### CLEAN UP
+rm -f `pwd`/MCatNLO_MadFKS_$MCMODE.Script
+rm -f `pwd`/*.o
+rm -f `pwd`/HWPPAnalyzer/*.o

@@ -1,0 +1,105 @@
+# Use this file as follows:
+# gmake -f Makefile_MadFKS EXTRAOBJ=<alpha,linux>.o VPATH=<vpath> <EXENAME>
+# See below for a list of name of executables. This is usually unnecessary,
+# the relevant operations being done by the scripts. If done manually, the
+# proper <vpath> must be entered at runtime
+
+ifeq ($(shell uname),AIX)
+F77=xlf -qextname -qflttrap=overflow:zerodivide:invalid:enable -O3 -qstrict \
+#       -qautodbl=dblpad
+SYSOBJ=
+AUTODBL=-qautodbl=dblpad
+endif
+ifeq ($(shell uname),SunOS)
+F77= f77 -fnonstd
+SYSOBJ=
+endif
+ifeq ($(shell uname),Linux)
+F77=gfortran -w -fno-automatic
+CPP= g++ $(INCLOPTION)
+SYSOBJ=trapfpe.o
+endif
+ifeq ($(shell uname),HP-UX)
+F77=gfortran -w -fno-automatic
+SYSOBJ=
+endif
+ifeq ($(shell uname),OSF1)
+F77= f77 
+CPP= g++ $(INCLOPTION)
+SYSOBJ=
+endif
+ifeq ($(shell uname),Darwin)
+F77=gfortran -w -fno-automatic
+CPP= g++ $(INCLOPTION)
+endif
+
+DEBUG=
+FF=$(F77) $(DEBUG)
+
+LIBS=`cernlib pdflib804 mathlib`
+#$LIBS gets replaced at compilation time by
+# /cern/pro/lib/libpdflib804.a /cern/pro/lib/libmathlib.a 
+# /cern/pro/lib/libpacklib.a -L/usr/local/lib -lshift -lnsl -lcrypt -ldl
+#on machines with a CERN installation. With a non-CERN installation,
+#replace the definition above with 
+#LIBS=/your/path/to/pdflib/libpdflib804.a .....
+
+%.o: $(HWSDIR)/%.f
+	$(F77) -I$(INCDIR) $(DEBUG) $(AUTODBL) -c $<
+%.o: $(PYSDIR)/%.f
+	$(F77) -I$(INCDIR) $(DEBUG) $(AUTODBL) -c $<
+%.o: $(SRCDIR)/%.f
+	$(F77) -I$(INCDIR) $(DEBUG) $(AUTODBL) -c $<
+%.o: $(COMSRC)/%.f
+	$(F77) -I$(INCDIR) $(DEBUG) $(AUTODBL) -c $<
+%.o: $(ANADIR)/%.f
+	$(F77) -I$(INCDIR) $(DEBUG) $(AUTODBL) -c $<
+
+%.o: $(SRCDIR)/%.for
+	$(F77) -I$(INCDIR) $(DEBUG) $(AUTODBL) -c $<
+%.o: $(COMSRC)/%.for
+	$(F77) -I$(INCDIR) $(DEBUG) $(AUTODBL) -c $<
+
+%.o: $(SRCDIR)/%.cc
+	$(CPP) -I$(INCDIR) $(DEBUG) -c $<
+%.o: $(COMSRC)/%.cc
+	$(CPP) -I$(INCDIR) $(DEBUG) -c $<
+%.o: $(ANADIR)/%.cc
+	$(CPP) -I$(INCDIR) $(DEBUG) -c $<
+
+%.o: $(SRCDIR)/%.c
+	$(CC) -I$(INCDIR) $(DEBUG) -c $^
+%.o: $(COMSRC)/%.c
+	$(CC) -I$(INCDIR) $(DEBUG) -c $^
+%.o: $(ANADIR)/%.c
+	$(CC) -I$(INCDIR) $(DEBUG) -c $<
+
+UTIFILES=mcatnlo_date.o mcatnlo_int.o mcatnlo_uxdate.o mcatnlo_uti.o \
+         mcatnlo_str.o $(EXTRAOBJ)
+LUTIFILES=mcatnlo_date.o mcatnlo_int.o mcatnlo_uxdate.o mcatnlo_uti.o \
+         mcatnlo_str.o $(EXTRAOBJ)
+PDFFILES=mcatnlo_pdftomlm.o mcatnlo_libofpdf.o dummies.o
+CPDFFILES=mcatnlo_mlmtopdf.o dummies.o
+LPDFFILES=mcatnlo_mlmtolha.o dummies.o
+HWFILES=madfks_hwdriver.o madfks_hwlhin.o \
+        mcatnlo_str.o $(HWUTI)
+PYFILES=madfks_pydriver.o madfks_pylhin.o \
+        mcatnlo_str.o $(PYUTI)
+
+HW_EXE_DEFAULT : $(HWFILES) $(HERWIGVER) $(PDFFILES)
+	$(FF) $^ $(EXTRAPATHS) $(EXTRALIBS) -o $@
+
+HW_EXE_PDFLIB : $(HWFILES) $(HERWIGVER) $(CPDFFILES) 
+	$(FF) $^ $(LIBS) $(EXTRAPATHS) $(EXTRALIBS) -o $@
+
+HW_EXE_LHAPDF : $(HWFILES) $(HERWIGVER) $(LPDFFILES)  
+	$(FF) $^ $(LHALIB) $(EXTRAPATHS) $(EXTRALIBS) -o $@
+
+PY_EXE_DEFAULT : $(PYFILES) $(PYTHIAVER) $(PDFFILES)
+	$(FF) $^ $(EXTRAPATHS) $(EXTRALIBS) -o $@
+
+PY_EXE_PDFLIB : $(PYFILES) $(PYTHIAVER) $(CPDFFILES) 
+	$(FF) $^ $(LIBS) $(EXTRAPATHS) $(EXTRALIBS) -o $@
+
+PY_EXE_LHAPDF : $(PYFILES) $(PYTHIAVER) $(LPDFFILES)  
+	$(FF) $^ $(LHALIB) $(EXTRAPATHS) $(EXTRALIBS) -o $@

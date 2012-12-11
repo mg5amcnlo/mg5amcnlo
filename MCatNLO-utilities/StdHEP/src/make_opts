@@ -1,0 +1,9 @@
+# Set FC unless it's defined by an environment variable
+ifeq ($(origin FC),default)
+  FC=gfortran
+endif
+
+# Set MBITS to the number of bits used by the system (used for Darwin)
+MBITS=64
+# Earlier versions of Mac OS X need to add -lSystemStubs to DARWINLIBS
+DARWINLIBS=

@@ -1,0 +1,299 @@
+      STDHEP_DIR:HISTORY
+-------------------------------------------------------------------------------
+20-Nov-2007		Lynn Garren
+     make sure numbers match PDG 2006
+     save charge when reading new style PDG table
+-------------------------------------------------------------------------------
+05-Nov-2007		Lynn Garren
+     StdHep 5.06.01
+     use Pythia 6.413
+-------------------------------------------------------------------------------
+15-Sep-2006		Lynn Garren
+     use Pythia 6.404
+     adding some fixes for MacOSX
+     get 2006 mass and width tables
+-------------------------------------------------------------------------------
+2-Jun-2006		Lynn Garren
+     StdHep 5.05.05
+     Add stdhd.inc, stdhd.h, StdHepPrintHeader, and stdprthd to
+     make title, comment, and date available when reading or writing mcfio files
+-------------------------------------------------------------------------------
+22-Mar-2006		Lynn Garren
+     StdHep 5.05.04
+     bug fix for stdstdsclst
+-------------------------------------------------------------------------------
+10-Mar-2006		Lynn Garren
+     StdHep 5.05.03
+     read mass_width_2004.csv, which has a new format
+     build static libraries by default, do not build shared libraries
+-------------------------------------------------------------------------------
+2-Mar-2006		Lynn Garren
+     StdHep 5.05.02
+     translate new color octect particles for pythia
+     translate IDTAUL and IDTAUR for isajet
+-------------------------------------------------------------------------------
+28-Feb-2006		Lynn Garren
+     StdHep 5.05.01
+     use pythia v6_325, herwig v6_510a, and isajet v7_72a
+-------------------------------------------------------------------------------
+14-Dec-2005		Lynn Garren
+     StdHep 5.05.00
+     using pythia v6_325 and herwig v6_510
+     move generator includes into subdirectories of src/inc
+-------------------------------------------------------------------------------
+29-Sep-2005		Lynn Garren
+     StdHep 5.04.02
+     fix the makefiles so it works when motif and cern are not present
+     use Pythia v6_323
+-------------------------------------------------------------------------------
+26-Aug-2005		Lynn Garren
+     StdHep 5.04.01
+     standalone version - can build this without any other products
+-------------------------------------------------------------------------------
+28-Jun-2005		Lynn Garren
+     StdHep 5.04
+     use Herwig v6_507 and Pythia v6_319
+-------------------------------------------------------------------------------
+17-Aug-2004		Lynn Garren
+     build shared and static libraries for Linux
+-------------------------------------------------------------------------------
+3-June-2004		Lynn Garren
+     StdHep 5.03
+     use Herwig v6_505 and lund v6_223
+     use mcfio v5_3
+     use PDG 2004 numbers
+     add routine to convert from 2000 numbers to 2004 numbers
+-------------------------------------------------------------------------------
+4-June-2003		Lynn Garren
+     add ascii dump option for hepeup and heprup
+     use PDG name for mass and width table file
+-------------------------------------------------------------------------------
+1-May-2003		Lynn Garren
+     StdHep 5.02
+     use Herwig v6_5 and lund v6_216
+     add functions for MadGraph
+-------------------------------------------------------------------------------
+10-Jun-2002		Lynn Garren
+     use Herwig v6_4a and lund v6_203a
+-------------------------------------------------------------------------------
+27-Feb-2002		Lynn Garren
+     StdHep 5.01
+     removing C++ code (it is now in CLHEP)
+     Use Herwig 6.4 and Pythia 6.203
+-------------------------------------------------------------------------------
+ 29-Mar-2001		Lynn Garren
+     StdHep 5.00
+     major changes to StdHepC++
+-------------------------------------------------------------------------------
+ 8-Mar-2001		Lynn Garren
+     Use Herwig 6.2 and Pythia 6.155
+     Use PDG 2000 numbering.  
+         [changes f_0(1710), rho(2150), pi_2(2100), f_0(2020), f_0(2060),
+	  f_0(2200), and eta(2225) and adds pi_1(1600), a_1(1640),
+	  a_2(1660), a_2(1750), and psi(3836)]
+-------------------------------------------------------------------------------
+ 26-Jul-2000		Lynn Garren
+STDHEP 4.10
+     More changes to StdHepC++.
+     Use Isajet 7.51.
+-------------------------------------------------------------------------------
+ 27-Mar-2000		Lynn Garren
+STDHEP 4.09
+     StdHepC++ classes have been reorganized.
+-------------------------------------------------------------------------------
+ 24-Feb-2000		Lynn Garren
+     Use gcc v2_95_2.
+-------------------------------------------------------------------------------
+ 5-Jan-2000		Lynn Garren
+STDHEP 4.08
+     Use Herwig 6.1 - NOT BACKWARDS COMPATIBLE with prior Herwig releases
+-------------------------------------------------------------------------------
+ 22-Nov-99		Lynn Garren
+STDHEP 4.08
+     Modify hep2geant to only add non-degenerate vertices
+-------------------------------------------------------------------------------
+ 1-Sep-99		Lynn Garren
+     Pythia 6.129 support - no difference between 6.125 and 6.129.
+-------------------------------------------------------------------------------
+ 22-Jun-99		Lynn Garren
+     Add C++ binding
+-------------------------------------------------------------------------------
+ 7-Apr-99 		Lynn Garren
+STDHEP 4.07
+     Isajet "initial" partons now have status 23, instead of 22.
+     Makefiles support building debug libraries (gmake DEBUG=-g all).
+-------------------------------------------------------------------------------
+ 2-Mar-99 		Lynn Garren
+STDHEP 4.06
+     Fix typo in hepchg.
+     Pythia 6.125 support.
+     Linked with Isajet 7.37 and tested with Isajet 7.42.
+     Fix Isajet neutralino translation.
+-------------------------------------------------------------------------------
+ 21-Sep-98		Lynn Garren
+STDHEP 4.04
+     Herwig 5.9 support.
+     Isajet 7.37 support.
+     Pythia 6.115 support.
+     QQ 9.2b support.
+     Add hepev3 common block.
+-------------------------------------------------------------------------------
+ 24-Aug-98		Lynn Garren
+STDHEP 4.03
+     Isajet 7.37 support (no changes necessary).
+     bug fix for qqtran and stdtcopy
+     new machine readable PDG mass table 
+-------------------------------------------------------------------------------
+ 13-May-98		Lynn Garren
+STDHEP 4.02
+     Late-breaking changes to the new numbering scheme.
+-------------------------------------------------------------------------------
+ 21-Feb-98		Lynn Garren
+STDHEP 4.01
+     Switch to the new numbering scheme.
+-------------------------------------------------------------------------------
+ 28-Jan-98		Lynn Garren
+STDHEP 4.00
+     Use the same hepevt common block for both Herwig and StdHep.
+-------------------------------------------------------------------------------
+ 6-Nov-97		Lynn Garren
+STDHEP 4.00
+     Herwig 5.9 support.
+     Isajet 7.31 support.
+     Pythia 6.114 support.
+     DPMJET 2.4 support.
+     Drop support for native binary and zebra I/O - leaving only XDR.
+     Use cpp for fortran preprocessing.
+-------------------------------------------------------------------------------
+  4-Nov-97		Lynn Garren
+STDHEP 3.04
+     Fix XDR I/O bug (affected final particle in event list).
+-------------------------------------------------------------------------------
+ 21-Jan-97		Lynn Garren
+STDHEP 3.03
+     Add qqufile to stdluns.inc.
+-------------------------------------------------------------------------------
+ 12-Dec-96		Lynn Garren
+STDHEP 3.03
+     Add stdfixmass to adjust particle energy if mass is off shell.
+-------------------------------------------------------------------------------
+ 27-Nov-96		Lynn Garren
+STDHEP 3.03
+     Add 4 vector sum routines (Rob Kutschke).
+     Improved logic for stdchgdsclst (Rob Kutschke).
+-------------------------------------------------------------------------------
+ 14-Oct-96		Lynn Garren
+STDHEP 3.03
+     Fix hep2geant interface to convert double precision to real.
+     Build with new includes in qq v9_2.
+     Get latest mcfio release.
+-------------------------------------------------------------------------------
+  3-Apr-96		Lynn Garren
+STDHEP 3.02
+     Compile OSF1 version with floating point checking on 
+     (Needed for QQ interface)
+-------------------------------------------------------------------------------
+  8-Feb-96		Lynn Garren
+STDHEP 3.02
+     Fix some bugs in display package (Phase and Space)
+-------------------------------------------------------------------------------
+ 17-Nov-95		Lynn Garren
+STDHEP 3.01
+     Add ad-hoc ion numbering scheme
+-------------------------------------------------------------------------------
+  9-Oct-95		Lynn Garren
+STDHEP 3.01
+     Add c interface routines for mcfio I/O.
+     Phase and Space display programs now accept mcfio files.
+-------------------------------------------------------------------------------
+ 30-Aug-95		Lynn Garren
+STDHEP 3.00
+     Check against Jetset 7.408 and Pythia 5.717
+     Check against Herwig 5.8
+     Check against Isajet 7.13
+     Check against 1994 PDG
+-------------------------------------------------------------------------------
+ 26-Jul-95		Lynn Garren
+ Finish enabling mcfio interface
+-------------------------------------------------------------------------------
+ 21-Jun-95		Lynn Garren
+Begin development of STDHEP 3.00
+      Include mcfio I/O routines.
+      Translation for QQ 9.1.
+      Fix bug in heprd/hepwrt (affects backward compatibility)
+-------------------------------------------------------------------------------
+ 13-Jan-95		Lynn Garren
+Begin development of STDHEP 2.03
+-------------------------------------------------------------------------------
+ 5-Jul-94		Lynn Garren
+Final modifications to STDHEP 2.02
+      Modify HEP2GEANT, STDQUARKS, and STDSPIN
+      STDROTBOOST and STDCQUARKS added
+-------------------------------------------------------------------------------
+ 15-Jun-94		Lynn Garren
+Install STDHEP 2.02
+      Allow for more than one event to be read into the HEPEVT common block
+      to mimic multiple interactions.
+      Cross-section written upon request
+      Add pythia example
+      Fix a minor bug in ISTRAN, which translated states not known to ISAJET.
+-------------------------------------------------------------------------------
+ 18-May-94		Lynn Garren
+Install STDHEP 2.01
+      Modify STDDECAYQQ to spawn another routine
+      Clean up begin-run and end-run output options
+      First attempt to get cross-sections, etc. in a standard common block
+      Expand read/write options
+      Resolve Xi and Xi' translation issue
+      Add more utility routines
+      QQ translation routines
+      read/write routine changes
+      Version 2.01 is NOT BACKWARDS COMPATIBLE
+-------------------------------------------------------------------------------
+ 8-Mar-94		Lynn Garren
+Install STDHEP 2.00
+      QQ translation and utility routines are now functional.
+      Add routine to print STDHEP version number.
+      Add more diffractive particles for JETSET 7.4.
+      Replace local routines ISFLAVR and ISLABL with ISAJET routines.
+      Replace local routine ISAPRTLST with ISAJET routine PRTLST.
+      Add utility routines
+      Version 2.00 is NOT BACKWARDS COMPATIBLE
+-------------------------------------------------------------------------------
+ 11-Feb-94		Lynn Garren
+Install development version of STDHEP 1.06
+      Add utility routines
+      Modify native mode output routines to use keyword for identification
+      Add QQ translation routines
+      Add Z0' for HERWIG 5.7
+      Use HERWIG include file
+-------------------------------------------------------------------------------
+ 20-SEP-93		Lynn Garren
+Install STDHEP 1.05
+      Make compatible with new SUSY particles in ISAJET 7.02
+      Add HPTRLST subroutines to stdhep library
+      Add routines to read and print the particle info supplied by PDG
+-------------------------------------------------------------------------------
+ 1-OCT-92		Lynn Garren
+Release STDHEP 1.04 as a separate product.  Include minor changes.
+      Add new JETSET particles
+-------------------------------------------------------------------------------
+ 30-OCT-91              Lynn Garren
+Install STDHEP 1.03 with zebra I/O routines.
+      Add ZEBRA I/O routines
+      Add flag HEPDBG for extra debugging code
+      Add flag HPZTST to select ZEBRA output in test jobs
+-------------------------------------------------------------------------------
+ 29-AUG-91              Lynn Garren
+Install STDHEP 1.02 with simple I/O routines and HERWIG conversion.
+      Add I/O of HEPEVT
+      Add test programs
+      Add HERWIG event conversion
+            --- all that changes is IDHEP convention
+            --- also move from double precision to single precision
+      Improve HEPNAM and HEPCMP
+-------------------------------------------------------------------------------
+ 20-MAR-91		Lynn Garren
+First version of STDHEP translation package.
+      Convert ISAJET and JETSET events
+-------------------------------------------------------------------------------

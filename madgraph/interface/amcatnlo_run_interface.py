@@ -1546,7 +1546,10 @@ Integrated cross-section
             misc.call(['gunzip %s.gz' % evt_file], shell=True)
         except Exception:
             pass
-        shower = self.evt_file_to_mcatnlo(evt_file)
+
+        self.banner = banner_mod.Banner(evt_file)
+        shower = self.banner.get_detail('run_card', 'parton_shower')
+        self.banner_to_mcatnlo(evt_file)
         shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
 
         if 'LD_LIBRARY_PATH' in os.environ.keys():
@@ -1599,6 +1602,7 @@ Integrated cross-section
         evt_name = os.path.basename(evt_file)
         misc.call(['ln -s %s %s' % (os.path.split(evt_file)[0], 
             pjoin(rundir,self.run_name))], shell=True)
+
         misc.call(['./%s' % exe], cwd = rundir, 
                 stdin=open(pjoin(rundir,'MCATNLO_%s_input' % shower)),
                 stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
@@ -1767,47 +1771,53 @@ Integrated cross-section
                     return tagRun['tag']
             
 
-    def evt_file_to_mcatnlo(self, evt_file):
+    def banner_to_mcatnlo(self, evt_file):
         """creates the mcatnlo input script using the values set in the header of the event_file.
         It also checks if the lhapdf library is used"""
-        file = open(evt_file)
-        shower = ''
-        pdlabel = ''
+        shower = self.banner.get('run_card', 'parton_shower')
+        pdlabel = self.banner.get('run_card', 'pdlabel')
         itry = 0
         nevents = self.shower_card['nevents']
-        while True:
-            line = file.readline()
-            #print line
-            if not shower and 'parton_shower' in line.split():
-                shower = line.split()[0]
-            if not pdlabel and 'pdlabel' in line.split():
-                pdlabel = line.split()[0]
-            if nevents and shower and pdlabel:
-                break
-            itry += 1
-            if itry > 300:
-                file.close()
-                raise aMCatNLOError('Event file does not contain run information')
-        file.close()
+        if nevents < 0 or nevents > self.banner.get_detail('run_card', 'nevents'):
+            nevents = self.banner.get_detail('run_card', 'nevents')
+        mcmass_dict = {}
+        for line in [l for l in self.banner['montecarlomasses'].split('\n') if l]:
+            pdg = int(line.split()[0])
+            mass = float(line.split()[1])
+            mcmass_dict[pdg] = mass
 
         # check if need to link lhapdf
         if pdlabel =='\'lhapdf\'':
             self.link_lhapdf(pjoin(self.me_dir, 'lib'))
+
+        content = 'EVPREFIX=%s\n' % pjoin(self.run_name, os.path.split(evt_file)[1])
+        content += 'NEVENTS=%s\n' % nevents
+        content += 'MCMODE=%s\n' % shower
+        content += 'PDLABEL=%s\n' % pdlabel
+        content += 'PDFSET=%s\n' % self.banner.get_detail('run_card', 'lhaid')
+        content += 'TMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 6).value
+        content += 'TWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 6).value
+        content += 'ZMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 23).value
+        content += 'ZWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 23).value
+        content += 'WMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 24).value
+        content += 'WWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 24).value
+        content += 'HGGMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 25).value
+        content += 'HGGWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 25).value
+        content += 'beammom1=%s\n' % self.banner.get_detail('run_card', 'ebeam1')
+        content += 'beammom2=%s\n' % self.banner.get_detail('run_card', 'ebeam2')
+        content += 'BEAM1=%s\n' % self.banner.get_detail('run_card', 'lpp1')
+        content += 'BEAM2=%s\n' % self.banner.get_detail('run_card', 'lpp2')
+        content += 'DMASS=%s\n' % mcmass_dict[1]
+        content += 'UMASS=%s\n' % mcmass_dict[2]
+        content += 'SMASS=%s\n' % mcmass_dict[3]
+        content += 'CMASS=%s\n' % mcmass_dict[4]
+        content += 'BMASS=%s\n' % mcmass_dict[5]
+        content += 'GMASS=%s\n' % mcmass_dict[21]
+        print content
                 
-        input = open(pjoin(self.me_dir, 'MCatNLO', 'MCatNLO_MadFKS.inputs'))
-        lines = input.read().split('\n')
-        input.close()
-        for i in range(len(lines)):
-            if lines[i].startswith('EVPREFIX'):
-                lines[i]='EVPREFIX=%s' % pjoin(self.run_name, os.path.split(evt_file)[1])
-            if lines[i].startswith('NEVENTS'):
-                lines[i]='NEVENTS=%d' % nevents
-            if lines[i].startswith('MCMODE'):
-                lines[i]='MCMODE=%s' % shower
-            #the following variables are actually relevant only if running hw++
         
-        output = open(pjoin(self.me_dir, 'MCatNLO', 'MCatNLO_MadFKS.inputs'), 'w')
-        output.write('\n'.join(lines))
+        output = open(pjoin(self.me_dir, 'MCatNLO', 'banner.dat'), 'w')
+        output.write(content)
         output.close()
         return shower
 

@@ -1,0 +1,657 @@
+
+\section {  Introduction }
+
+A basic particle numbering scheme was proposed by the Particle Data
+Group in 1988\cite{pdg88}.  
+Practical application of this scheme exposed some limitations.
+After consultation\cite{knowles}, the scheme has been revised to 
+better match the practice of program authors.  The revised scheme
+includes numbering states by orbital and radial quantum numbers
+to allow systematic inclusion of quark model states which are
+as yet undiscovered.  The new scheme also includes numbering for
+hypothetical particles such as SUSY particles.
+A standard output common block \cite{hepevt} has also been agreed to.  
+Because the old P.D.G. convention allowed a fair amount of room for 
+interpretation,
+the implementation tended to have minor variations among packages.
+With the new scheme, there is much less variation, but occasional differences
+remain.  StdHep provides routines to convert 
+Isajet, Pythia, Herwig, and QQ output to the standard, agreed-upon, format,
+as interpreted at FNAL.  The StdHep library also contains various utility
+routines for use with standard format events.
+
+This document is particular to the Fortran and C implentatons of StdHep.
+
+The C++ implementation may be found in CLHEP\cite{clhep}, 
+available at http://savannah.cern.ch/projects/clhep.
+
+\section { Particle Numbering Scheme }
+
+The standard particle numbering scheme is explained in full detail in
+reference \cite{newscheme}.
+The particle ID numbers between 1 and 80 are for elementary particles:
+quarks, gluons, leptons, gauge and higgs bosons, etc.
+Numbers 81-100 are for generator specific use.
+The list of elementary particles is in Appendix \ref{elem}.
+
+The PDG numbering algorithm for composite particles uses a 
+signed 7 digit number for each particle:  $\pm nn_rn_Ln_{q_1}n_{q_2}n_{q_3}n_J$.
+$n_{q_{1-3}}$ are quark numbers used to specify the quark content.
+The rightmost digit, $n_J$ = 2J + 1, gives the spin of the composite particle.
+The scheme does not cover particles of spin $J>4$.
+The fifth digit, $n_L$, is reserved to distinguish mesons of the
+same total ($J$) but different spin ($S$) and orbital ($L$)
+angular momentum quantum numbers.
+The sixth digit, $n_r$, is used to label mesons radially excited
+above the ground state.
+Many states appearing in the PDG meson listing do not yet have definite
+$q\bar q$ model assignments.  For these states, $n_{q_{2-3}}$
+and $n_J$ are assigned according to the state's most likely flavors
+and spin.  Within these groups $n_L=0,1,2,\dots$ is used to distinguish
+states of increasing mass. These states are flagged with $n=9$.
+The numbering scheme does not extend to baryons with $n>0$, $n_r>0$, or $n_L>0$.
+Digits $n_{q_2}$ and $n_{q_3}$ are used for mesons, with $n_{q_1}$ = 0.
+Digits $n_{q_1}$, $n_{q_2}$, and $n_{q_3}$ are used for baryons.
+Digits $n_{q_1}$ and $n_{q_2}$ are used for diquarks, with $n_{q_3}$ = 0. 
+(A list of diquark states is in Appendix \ref{elem}.)  A negative number
+indicates an antiparticle.  The states are generally listed in order of
+increasing mass.  $K_L^0$ and $K_S^0$ are exceptions.  Their assigned
+identification numbers are 130 and 310, respectively.
+
+SUSY particles are indicated with $n=1$ for right-handed particles or $n=2$
+for left-handed particles.  Technicolor states have $n=3$.
+Excited (composite) quarks and leptons are identified by setting $n=4$.
+
+The Isajet particle identification algorithm uses a signed four digit
+number: $\pm$MLKJ.  M, L, and K are quarks and J is the spin.  A negative
+number indicates the antiparticle, and is meant to associate with the
+lightest quark.  For mesons, M = 0, and for diquarks, K = 0.
+
+Pythia, Herwig, and QQ use the PDG algorithm in addition to internal
+compressed numbering schemes.
+Although the latest implementations of Pythia, Herwig, and QQ conform closely
+to the new numbering scheme, some differences remain.
+The new numbering scheme attemts to list all states needed by the
+Monte Carlo generators.  Appendix \ref{meson}
+contains a full list of meson states and their ID numbers, up through the
+top quark states.  Isajet, Herwig, and Pythia contain the possibility of
+defining fourth family states.  
+
+With StdHep 2.02 and later, the confusion about numbering 
+baryon $\Xi$ and $\Omega$ states for charmed
+and heavier quarks has been resolved.  Three spin 1/2 states are recognized
+for cxy, bxy, etc., where x and y are lighter, non-identical quarks.
+The non-primed states are antisymmetric under interchange of the lighter quarks.
+and the primed states are symmetric.  The numbering for these states is 
+explicitly stated in the new numbering scheme.
+Appendix \ref{baryon} contains a full list of the baryon states.
+
+An ad-hoc numbering scheme for ions was added as of StdHep 3.01.  
+Ion numbers are FAAAZZZ00L. F = 1 and flags this
+as an ion.  AAA, and ZZZ are the ion's A and Z respectively.
+The first digit, L, contains the J-spin as L = 2J + 1.
+
+\section { Event Structure }
+\subsection { HEPEVT }
+
+In principle, a standard Monte Carlo event structure has been agreed to.
+Using this standard means that you only need one interface to use events
+from many different generators.  Since no one is anxious to rewrite their
+code to use the new structure, an interface routine is generally needed.
+Also, it should be noted that some generator-specific information is usually
+lost in translating the output to standard format.  Therefore the recommended
+proceedure at this point is either to write both the generator-specific
+information and the standard information for each event or to make
+the translation to the standard common block when the events are input for
+further processing.  In either case, the standard does not attempt to address
+initialization or final information, but does provide a flag for such "events".
+
+\noindent The standard output common block has the following form:
+\begin{verbatim}
+      integer nmxhep
+      parameter (nmxhep=4000)
+      integer nevhep,nhep,isthep,idhep,jmohep,jdahep
+      double precision phep,vhep
+      common /hepevt/ nevhep, nhep, isthep(nmxhep), idhep(nmxhep),
+     & jmohep(2,nmxhep), jdahep(2,nmxhep), phep(5,nmxhep), vhep(4,nmxhep)
+\end{verbatim}
+\begin{center}
+\begin{tabular}{lcl}
+nevhep      &-&event number \\
+nhep        &-&number of entries in this event record \\
+isthep(..)  &-&status code \\
+idhep(..)   &-&particle ID, P.D.G. standard \\
+jmohep(1,..)&-&position of mother particle in list \\
+jmohep(2,..)&-&position of second mother particle in list \\ 
+jdahep(1,..)&-&position of first daughter in list \\
+jdahep(2,..)&-&position of last daughter in list \\
+phep(1,..)  &-&x momentum in GeV/c \\
+phep(2,..)  &-&y momentum in GeV/c \\
+phep(3,..)  &-&z momentum in GeV/c \\
+phep(4,..)  &-&energy in GeV \\
+phep(5,..)  &-&mass in GeV/c**2\\
+vhep(1,..)  &-&x vertex position in mm \\
+vhep(2,..)  &-&y vertex position in mm \\
+vhep(3,..)  &-&z vertex position in mm \\
+vhep(4,..)  &-&production time in mm/c \\
+\end{tabular}
+\end{center}
+
+Note that phep and vhep have been changed from real to double precision
+as of StdHep 3.00 and Jetset 7.0407. 
+This is now the standard, as proposed for LEP 2 \cite{lund}.
+
+Nevhep is -1 for initialization records and -2 for final records.  
+Pythia does not use event numbers, so nevhep is initialized the first time
+you call the Pythia translation routine and incremented by one for 
+each call thereafter.
+In order to keep Isajet information available, jmohep(2,..) contains the
+jet identification.  Neither Herwig nor Isajet have any vertex information,
+so vhep is zero.  The /HEPEVT/ common block is in
+the include file stdhep.inc (or stdhep.h) from the \$STDHEP\_DIR/src/inc 
+subdirectory.
+
+\noindent The isthep convention is as follows:
+
+\begin{center}
+\begin{tabular}{lcl}
+ 0      &-&null\\
+ 1      &-&final state particle\\
+ 2      &-&intermediate state\\
+ 3      &-&documentation line\\
+ 4-10   &-&reserved for future use\\
+ 11-200 &-&reserved for specific model use\\
+ 201-...&-&reserved for users\\
+\end{tabular}
+\end{center}
+
+\noindent StdHep defines isthep = 11, 12, and 13 as the initial jets, W jet, 
+and pair jet information from the Isajet /PJETS/ common block.  In addition,
+isthep = 21 or 22 for "final" or decaying partons from the Isajet /JETSET/ 
+common block.  Know values of isthep are listed in Appendix \ref{isthep}.
+
+\subsection { Parton Generators }
+
+A generic user process interface has been defined\cite{leshouches}
+to transfer event configurations from parton level generators 
+to showering and hadronization event generators.  This information is
+in the HEPRUP common block.   
+Parton generator run information is in the HEPEUP common block.
+These common blocks can be found in \$STDHEP\_DIR/src/inc/hepeup.inc, 
+hepeup.h, heprup.inc, and heprup.h.
+
+StdHep provides I/O routines for these common blocks.  
+In addition, there are routines to read various parton generator data files.
+
+\noindent The user process event (hepeup) common block has the following form:
+\begin{verbatim}
+      integer maxnup
+      parameter (maxnup=500)
+      integer nup,idprup,idup,istup,mothup,icolup
+      double precision xwgtup,scalup,aqedup,aqcdup,pup,vtimup,spinup
+      common/hepeup/nup,idprup,xwgtup,scalup,aqedup,aqcdup,idup(maxnup),
+     &istup(maxnup),mothup(2,maxnup),icolup(2,maxnup),pup(5,maxnup),
+     &vtimup(maxnup),spinup(maxnup)
+\end{verbatim}
+
+\begin{center}
+\begin{tabular}{lcl}
+  nup    & - & number of particle entries in this event\\
+  idprup & - & ID of the process for this event (ID's are generator-specific)\\
+  xwgtup & - & event weight\\
+  scalup & - & scale of the event in GeV, as used to calculate PDFs\\
+  aqedup & - & QED coupling used for this event\\
+  aqcdup & - & QCD coupling used for this event\\
+  idup   & - & particle ID according to PDG convention\\
+  istup  & - & status code:\\
+  	 & - & $-1$ incoming particle\\
+  	 & - & $+1$ outgoing final state particle\\
+  	 & - & $-2$ intermediate space like propagator\\
+  	 & - & $+2$ intermediate resonance, mass should be preserved\\
+  	 & - & $+3$ intermediate resonance for documentation only\\
+  	 & - & $-9$ incoming beam particles (generally not needed)\\
+  mothup & - & index of first and last mother\\
+  icolup & - & tag for color flow lines\\
+  pup    & - & lab frame 4 momentum and mass in GeV\\
+  vtimup & - & invariant lifetime\\
+  spinup & - & cos of angle between spin-vector of particle and 3 momentum of decaying particle\\
+\end{tabular}
+\end{center}
+
+Scales 1 to 6 are defined for standard $2\rightarrow1\rightarrow2$ or $2\rightarrow2$ processes 
+with $p1 + p2 \rightarrow q1 + q2$ kinematics.
+Additionally, scale 7 is defined for $2\rightarrow3$ processes,
+with $p1 + p2 \rightarrow q1 + q2 + q3$.  
+Scales 8 to 10 are user defined.
+\begin{center}
+\begin{tabular}{lcl}
+     scalup(1)&-& Q2 hard scale (used in PDF and couplings)\\
+     scalup(2)&-& Q2 scale of parton shower\\
+     scalup(3)&-& s-hat, invariant (p1+p2)**2\\
+     scalup(4)&-& t-hat, invariant (p1-q1)**2\\
+     scalup(5)&-& u-hat, invariant (p1-q2)**2\\
+     scalup(6)&-& squared transverse momentum of q1 (i.e., pt-hat**2)\\
+     scalup(7)&-& squared transverse momentum of q2\\
+     scalup(8)&-& user defined, 0 by default\\
+     scalup(9)&-& user defined, 0 by default\\
+     scalup(10)&-& user defined, 0 by default\\
+\end{tabular}
+\end{center}
+
+\noindent The user process initialization (heprup) common block has the following form:
+\begin{verbatim}
+      integer maxpup
+      parameter (maxpup=100)
+      integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
+      double precision ebmup,xsecup,xerrup,xmaxup
+      common/heprup/idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
+     &idwtup,nprup,xsecup(maxpup),xerrup(maxpup),xmaxup(maxpup),
+     &lprup(maxpup)
+\end{verbatim}
+
+\begin{center}
+\begin{tabular}{lcl}
+  maxpup & - & max. number of different processes to be interfaced at one time\\
+  idbmup & - & ID of beam particles 1 and 2 according to the PDG convention\\
+  ebmup  & - & energy in GeV of beam particles 1 and 2\\
+  pdfgup & - & author group for beam particles 1 and 2 according to 
+               PDFlib specifications\\
+  pdfsup & - & PDF set ID for beam particles 1 and 2 according to 
+               PDFlib specifications\\
+  idwtup & - & master switch dictating how the event weights are interpreted\\
+  nprup  & - & number of different user subprocesses\\
+  xsecup & - & cross section for process in pb\\
+  xerrup & - & statistical error associated with XSECUP\\
+  xmaxup & - & maximum XWGTUP (in common block HEPEUP) for this process\\
+  lprup  & - & user process ID's for this run\\
+\end{tabular}
+\end{center}
+
+For e+e- or when the SHG defaults are to be used, set PDFGUP=-1 and PDFSUP=-1.
+
+\begin{center}
+\begin{tabular}{cllll}
+idwtup & event selection criteria & control of mixing &
+    xwgtup input & output \\
+ &  &  or unweighting & & \\
+  $+1$	& xmaxup	&	SHG		& +weighted	& +1 \\
+  $-1$	& xmaxup	&	SHG		& $\pm$weighted	& $\pm$1 \\
+  $+2$	& xsecup	&	SHG		& + weighted	& +1 \\
+  $-2$	& xsecup	&	SHG		& $\pm$weighted	& $\pm$1 \\
+  $+3$	& 		& user interface	& +1		& +1 \\
+  $-3$	& 		& user interface	& $\pm$1	& $\pm$1 \\
+  $+4$	& 		& user interface	& +weighted	& +weighted \\
+  $-4$	& 		& user interface	& $\pm$weighted	& $\pm$weighted \\
+\end{tabular}
+\end{center}
+
+
+\subsection { Additional Information }
+
+Because much of the information in HEPEUP is also in HEPEVT, 
+we have collected the extra information in the HEPEV4 common block.  
+HEPEV4 is to be used after full event generation is finished.  
+This common block is not intended for use when interfacing a parton 
+generator to a hadron generator.
+
+\noindent The HEPEV4 common block has the following form:
+\begin{verbatim}
+      double precision eventweightlh, scalelh
+      double precision alphaqedlh, alphaqcdlh, spinlh
+      integer          icolorflowlh, idruplh
+      common/hepev4/eventweightlh, alphaqedlh, alphaqcdlh, scalelh(10),
+     1              spinlh(3,nmxhep), icolorflowlh(2,nmxhep), idruplh
+\end{verbatim}
+\begin{center}
+\begin{tabular}{lcl}
+idruplh        &-& The identity of the current process, as given by the LPRUP codes.\\
+eventweightlh  &-& The event weight: Equal to (total cross section)/(total generated)\\
+               & &  for the output of Pythia, Herwig, etc. \\
+alphaqedlh         &-& QED coupling $\alpha_{em}$. \\
+alphaqcdlh         &-& QCD coupling $\alpha_s$. \\
+scalelh(10)        &-& Squared Scale Q of the event \\
+spinlh(3,...)       &-& spin information \\
+icolorflowlh(2,..) &-& (Anti-)Colour flow. \\
+\end{tabular}
+\end{center}
+
+StdHep provides a routine to fill HEPEV4 from Pythia, as well as a MCFio 
+interface to allow the user to read or write this information.
+
+\subsection { Multiple Interactions }
+
+Users sometimes want to combine signal events from one file with background 
+events from another - usually in the context of simulating multiple beam
+collisions.  StdHep provides common blocks and tools to enable the user
+to combine several events into a single "observed" event and to get
+information about the original events when requested.
+
+\noindent Common blocks HEPEV2, HEPEV3, and HEPEV5 track the 
+multiple interaction information.
+\begin{verbatim}
+      integer nmulti,jmulti
+      common/hepev2/nmulti,jmulti(nmxhep)
+
+      integer nmxmlt
+      parameter (nmxmlt=16)
+      integer nevmulti,itrkmulti,mltstr
+      common/hepev3/nevmulti(nmxmlt),itrkmulti(nmxmlt),mltstr(nmxmlt)
+
+      double precision eventweightmulti, scalemulti
+      double precision alphaqedmulti, alphaqcdmulti
+      integer          idrupmulti
+      common/hepev5/eventweightmulti(nmxmlt),alphaqedmulti(nmxmlt),
+     1              alphaqcdmulti(nmxmlt),scalemulti(10,nmxmlt),
+     2              idrupmulti(nmxmlt)
+\end{verbatim}
+\begin{center}
+\begin{tabular}{lcl}
+  nmulti              &-& number of interactions in the list\\
+  jmulti(...)         &-& multiple interaction number\\
+  nevmulti(i)         &-& event number of original interaction\\
+  itrkmulti(i)        &-& first particle in the original interaction\\
+  mltstr(i)           &-& input stream identifier\\
+  idrupmulti(i)       &-& identity of the original interaction\\
+  eventweightmulti(i) &-& event weight of the original interaction\\
+  alphaqedmulti(i)    &-& QED coupling of the original interaction\\
+  alphaqcdmulti(i)    &-& QCD coupling of the original interaction\\
+  scalemulti(...,i)   &-& Scales of the original interaction\\
+\end{tabular}
+\end{center}
+
+
+\section { Doing the Translation }
+
+\sloppy{To convert Monte Carlo events to standard output, call the routines 
+lunhep(mconv), hwghep(mconv), isahep(mconv), or qqhep(mconv), where mconv = 1 
+converts from Isajet, Pythia, Herwig, or QQ event format 
+to standard output format
+and mconv = 2 converts standard output format to Isajet, Pythia,
+Herwig, or QQ event format.  
+Please note that some information is lost if you convert back to generator 
+format.}  
+
+The routine pythia2ev4 fills the non-track related part of HEPEV4.
+This routine is called by lunhep(1).
+
+Doug Wright of LLNL has supplied hep2geant, which takes undecayed /HEPEVT/
+particles and puts them on the Geant KINE stack.  
+Vertex positions are recorded properly via calls to GSVERT.
+The Geant particles in the stack are cross referenced to the 
+line numbers in StdHep through the user words in GSKINE.
+/HEPEVT/ particles unknown to Geant are entered as geantino's and
+a warning message is printed.  
+
+Use readmadgraph(version,lok) to read a MadGraph data file.
+Because we expect the MadGraph data file format to change, this routine 
+takes a real argument "version", which is the MadGraph version number.
+
+The particle ID translation is done by the functions gtran(id,mconv) for Geant, 
+\linebreak
+hwtran(id,mconv) for Herwig, istran(id,mconv) for Isajet, lutran(id,mconv)
+for Pythia, and qqtran(id,mconv) for QQ.  Id is the particle identification
+number to be translated to or from StdHep. 
+
+The routine std3to4(mconv) will translate from the old StdHep 3.x
+numbering scheme to the StdHep 4.06 numbering scheme.  Particle ID
+translation is done by the function std3to4tran(id,mconv).
+
+Integer function cnv1998to2000(id,mconv) translates particle ID numbers from
+the 1998 convention (last used for StdHep 4.09) to the 2000 convention\cite{pdg2000}.
+Integer function cnv2000to2004(id,mconv) translates particle ID numbers from
+the 2000 convention (last used for StdHep 5.01) to the 2004 convention\cite{pdg2004}.
+Integer function cnv2004to2006(id,mconv) translates particle ID numbers from
+the 2004 convention (last used for StdHep 5.05.05) to the 2006 convention\cite{pdg2006}.
+These are small changes compared to the changes invoked by the new 
+numbering scheme.
+
+\section{QQ interface}
+
+QQ currently contains the best known routines for decaying b particles.
+Therefore, a set of routines have been written to allow users to decay 
+particles with QQ.  In general, you should call stdqquset to initialize 
+QQ and stddecayqq for each event.  Stddecayqq will search the /HEPEVT/
+list for particles which QQ recognizes and decay them one by one, adding
+the results to /HEPEVT/.  Optionally, you may wish to call stdqqdcy(it)
+to decay only particle $it$ via QQ.
+
+The QQ particles and their decay properties are defined in \$QQ\_DIR/decay.dec.
+To redefine any of these decays or particle properties, provide a user
+decay file, which is read after decay.dec.  Define the environmental
+variable QQ\_USER\_FILE to point to your user decay file.
+
+The masses assigned to a given particle vary between generators.
+An attempt has been made to provide a consistent set of masses.
+However, particles can also be generated to lie quite far off the mass shell.
+The routine stdfixmass is called by stddecayqq to force particles
+onto the mass shell before passing them to QQ.  Alternatively,
+stdfixpart(it) can be used to force a single particle to lie on 
+the mass shell.
+
+See the source code in \$QQ\_DIR/example for examples of using QQ with
+Isajet, Pythia, or Herwig.  It is necessary to turn off appropriate decays in
+the generator if QQ is to be called.
+
+\section { Particle Properties }
+
+The Particle Data Group provides tables of particle masses and widths 
+for known particles.  
+These tables are distributed with the StdHep package. 
+
+
+The old style table (mass\_width\_2006.mc) is
+defined as environmental variable PDG\_MASS\_TBL.
+Two routines are supplied to read (pdgrdtb) or print (pdgprtb) the
+contents of this table.  The table can also be read directly, since it
+is in ascii format.  Because this table only contains known particles,
+it is of limited use.  The user should check the mass and width information
+in the context of the Monte Carlo generator being used.  Pdgrdtb uses
+lnhdcy from the /HEPLUN/ common block as the unit number for the PDG table.
+The file is opened and closed within pdgrdtb.  PDG\_MASS\_TBL points
+to the PDG table and may be redefined by the user.
+
+The new style table is mass\_width\_2006.csv, which can be read with pdgrdcsvtb.
+
+\noindent The routine pdgrdtb fills the /STDTBL/ common block:
+
+\begin{verbatim}
+      integer nmxln
+      parameter (nmxln=2000)
+      integer idt
+      real stmerr,stwerr
+      double precision stmass,stwidth
+      character*21 stname
+      common/stdtbl/ idt(nmxln),stmerr(2,nmxln),stwerr(2,nmxln),
+     1             stmass(nmxln),stwidth(nmxln),stname(nmxln)
+\end{verbatim}
+\begin{center}
+\begin{tabular}{lcl}
+idt(..)     &-&particle ID, P.D.G. standard \\
+stmass(..)  &-&particle mass in $GeV/c^2$ \\
+stmerr(1,..)&-&positive error on particle mass in $GeV/c^2$ \\
+stmerr(2,..)&-&negative error on particle mass in $GeV/c^2$ \\
+stwidth(..) &-&particle width in $GeV/c^2$ \\
+stwerr(1,..)&-&positive error on particle width in $GeV/c^2$ \\
+stwerr(2,..)&-&negative error on particle width in $GeV/c^2$ \\ 
+stname(..)  &-&particle name \\
+\end{tabular}
+\end{center}
+
+The routine pdgprtb(i,lun) will print either the contents of /STDTBL/ 
+(i=1) or the complete list of particles supplied by the Particle 
+Data Group (i=2 for old style, i=3 for new style).  
+The complete list contains particles like N(1650), 
+which are not defined by StdHep.
+Lun is the unit number of the output file for the list.
+
+\section { Utility Routines }
+
+If you wish to print an event from the standard common block, call 
+heplst(mlst), where mlst = 1 for output without vertex information and
+mlst = 2 for output with vertex information.  If heplst is
+called with mlst equal to anything other than 1 or 2, it changes mlst to 1.
+
+A machine independent binary (xdr) event I/O option is provided.
+It is expected that the serious user
+will include the generator as part of a much larger Monte Carlo, and
+therefore write his/her own I/O routines.  
+
+Stdxrd(ilbl,istream,lok) and stdxwrt(ilbl,istream,lok) are interfaces
+to the xdr I/O protocol, which is machine independent.  
+Lok is an integer variable which returns the status of the I/O attempt.
+Ilbl is an integer which defines the type of record to read or write.
+Istream is used to keep track of the xdr output stream.  It is the index
+for array ixdrstr(15), which is filled by stdxrinit or stdxwinit.
+The xdr implementation used is MCFio.  
+The routine stdxrinit(filename,ntries,istream,lok)
+or stdwrinit(filename,title,ntries,istream,lok) must be called 
+to initialize the xdr stream and open the file, filename.  
+Ntries is the expected number of events.
+Filename and title are character variables.
+There is also a C binding for this interface.  The C routines are
+in libstdhepC.a.
+
+\begin{verbatim}
+      call stdxwinit('stdtstpx.io','StdHep/Pythia example',
+     1               nevt,istr,lok)	! open output stream
+      call stdflpyxsec(nevt)		! get run information from Pythia
+      call stdxwrt(100,istr,lok)	! write begin run record
+      ....
+      do i=1,nevt
+        call pyevnt			! generate Pythia event
+        call lunhep(1)			! fill HEPEVT common block
+        call stdxwrt(1,istr,lok)	! write event record
+      enddo
+      ....
+      call stdflpyxsec(nevt)		! get run information from Pythia
+      call stdxwrt(200,istr,lok)	! write end run record
+      call stdxend(istr)		! close output stream
+\end{verbatim}
+
+\noindent The supported values of ilbl are:
+
+\begin{center}
+\begin{tabular}{lcll}
+ilbl = 1   &-& standard HEPEVT common block \\
+ilbl = 2   &-& HEPEVT, HEPEV2, and HEPEV3 common blocks \\
+ilbl = 4   &-& HEPEVT and HEPEV4 common blocks \\
+ilbl = 5   &-& HEPEVT, HEPEV2, HEPEV3, HEPEV4, and HEPEV5 common blocks \\
+ilbl = 11  &-& HEPEUP common block \\
+ilbl = 12  &-& HEPRUP common block \\
+ilbl = 100 &-& StdHep begin run record \\
+ilbl = 200 &-& StdHep end run record \\
+\end{tabular}
+\end{center}
+
+You must call stdflhwxsec, stdflisxsec, or stdflpyxsec(n1) to fill
+common block /STDCM1/ before calling hepwrt with ilbl of 100 or 200.  
+N1 is the number of events to be generated.
+StdHep writes the information in common block /STDCM1/ as the begin and
+end run records.  Common block /STDCM1/ is in include file stdcm1.inc 
+(or stdcm1.h).
+
+The routine stdxrdm(ilbl,istream,lok) allows users the option
+of reading events from multiple input streams.  
+Stdxrdm adds each event to the end of the existing data in /HEPEVT/.  
+The user must call stdzero to initialize the arrays in /HEPEVT/.
+This is intended as a tool to fake multiple interactions.
+
+The logical unit numbers used by StdHep are found in the include file
+stdlun.inc (or stdlun.h):
+
+\begin{verbatim}
+      integer lnhwrt,lnhrd,lnhout,lnhdcy,lnhpdf,lnhdmp,lnhrdm,ixdrstr
+      common/heplun/lnhwrt,lnhrd,lnhout,lnhdcy,lnhpdf,lnhdmp,lnhrdm(16)
+      common/stdstr/ixdrstr(16)
+\end{verbatim}
+\begin{center}
+\begin{tabular}{lcl}
+lnhwrt&-&output unit for standard format events \\
+lnhrd &-&input unit for standard format events \\
+lnhout&-&lineprinter output unit\\ 
+lnhdcy&-&input unit for standard decay table \\
+lnhpdf&-&parton data function file unit number\\
+lnhdmp&-&ascii dump file unit number \\
+lnhrdm&-&array of input unit numbers for reading multiple files\\
+ixdrstr&-&array of input streams for use by MCFio \\
+\end{tabular}
+\end{center}
+
+Many new routines have been created to
+interrogate the standard event common block.  
+Routines exist to return lists of descendants,
+lists of anncestors, lists of particles containing a specific quark, etc.
+Section \ref{routines} contains a list of the available StdHep routines.  
+More extensive details on the StdHep routines can be found in Section 
+\ref{routines} or in \$STDHEP\_DIR/doc/stdhep.doc.
+
+\section { Linking}
+
+\sloppy{
+All routines are in the StdHep library and may be included by linking 
+\$STDHEP\_DIR/lib/libstdhep.a after setting up stdhep.}
+Pythia provides a similar translation routine, pyhepc, 
+which does not give identical results.
+A version of the Isajet translation routine has been included in the Isajet 
+library by Frank Paige.  Be sure to link StdHep before Isajet if you want
+the routines described in this document.
+The StdHep test routines, in the example subdirectory, 
+provide working examples.
+
+To use the xdr I/O interface, link with libFmcfio.a.
+If you use the C interface routines for MCFio, link with libstdhepC.a.
+MCFio documentation can be found in \$MCFIO\_DIR/doc.
+
+\section { Event Display}
+
+A motif-based event display has been written by Paul Lebrun, using
+the Nirvana spin widget.
+Aliases Space and Phase are defined
+upon setup of StdHep to point to StdHep Space Display and StdHep Phase
+Display, respectively.
+StdHep Space Display is a tool to select, display, and browse 
+tracks and vertices from the /HEPEVT/ common block, 
+in order to understand the kinematics, 
+spatial relationships among these vertices, and the decay chain.
+StdHep Phase Display is a tool to select, display, and browse StdHep events, 
+in order to understand the kinematics, topology, and the decay chain.
+PhaseD can be invoked from Space, but Space cannot be invoked from Phase.
+
+After invoking Space or Phase, open a 
+file containing StdHep events by means of the File pull-down menu.  
+
+After specifying the file to browse, specify the event to view.
+Use the arrow buttons on the top of the panel to select the event you 
+wish to see. 
+At the outset, the first event in the file is shown.
+The length of the track is mapped to the norm of the 3-momentum vector.  
+Sliders are available to manipulate the event.
+Note that Space has a transverse magnification factor 
+since most, if not all, event generators have the beam axis along the z
+(longitudinal) direction.
+The color is mapped to the particle identification. 
+The Color Code is available in the Event pull-down menu. 
+
+To relate the kinematics to the decay chain in either Space or Phase, 
+select the Event Tree option under the Event pull-down menu.
+Help on node or track selection in this display is available 
+in the Help pull down menu.  
+Further information about tracks or nodes in the tree is available. 
+In fact, all the information in the /HEPEVT/ common block
+can be accessed by interacting with this display.
+    
+You can pick a selected track on the drawing area by pointing 
+the cursor to the middle of the track segment and depressing 
+the central button (the left button controls the motion of the display). 
+The selected track (or a portion of it) is highlighted on the display, 
+and a small text box should appear, 
+indicating the particle identity, its place in the /HEPEVT/ common block, 
+and various kinematic quantities. If the Event Tree is also displayed,
+the node to which the tracks belong is highlighted, 
+indicating the position of the selected particle in the hierarchy.
+You can also get more information about a given node in the tree
+by pressing  the left mouse button on a tree element.
+The corresponding tracks are  highlighted on the event display.
+The highlight may not work properly if the main panel is resized.
+If this occurs, resize the window to readjust graphical context.
+

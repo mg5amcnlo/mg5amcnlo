@@ -1,0 +1,21 @@
+0.2:
+    The basic package with StdHEP, HW6 and PY6.
+    PY6 and StdHEP conflict sometimes (to be investigated)
+
+0.3: 
+    updated the hw++ script, this is the first working version
+    moved g77 to gfortran everywhere
+    added a file (not yet working) to output n-tuples with hw++
+0.7
+    updated the hw++ script in order to work with ntuples
+    changed stdhep files in order not to overwrite event file when using pythia
+0.8
+    fixed case of libraries inside Makefile
+0.9
+    added #!/bin/bash as first line of all the scripts
+1.0
+    changed gmake to make in all the scripts for Linux
+1.2
+    renamed mcatnlo_cards.dat in the scripts as shower_card.dat (consistently with aMCatNLO r348)
+1.5 added make_opts for Stdhep (included in arch_stdhep and mcfio_arch)
+2.0 changed all Scripts and MCatNLO_MadFKS.inputs in order not to read (with head command) the parameters from the file anymore
