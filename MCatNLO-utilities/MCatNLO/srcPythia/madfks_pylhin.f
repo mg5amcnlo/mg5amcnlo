@@ -39,11 +39,11 @@ C
       ISORH_LHE=0
       EVWEIGHT=0.D0
 
-      read(iunit,'(a)')string
-      if(INDEX(STRING,'<event>').eq.0)then
-        write(*,*)'FATAL ERROR #1 IN UPEVNT'
-        stop
-      endif
+c Find the start of the events
+      do while (.true.)
+         read(iunit,'(a)')string
+         if(INDEX(STRING,'<event>').ne.0) exit
+      enddo
       read(iunit,*)NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP
 C---Les Houches expects mean weight to be the cross section in pb
       EVWGT_LH=XWGTUP
@@ -175,7 +175,6 @@ C--Les Houches Common Blocks
 c Hard event file (to be entered in Herwig driver)
       CHARACTER*50 QQIN
       COMMON/VVJIN/QQIN
-      LOGICAL HEADERS
       CHARACTER*80 STRING
       common/pypars/mstp(200),parp(200),msti(200),pari(200)
       double precision xsecup2
@@ -184,28 +183,27 @@ c Hard event file (to be entered in Herwig driver)
 C--SET UP INPUT FILES
       OPEN(UNIT=61,FILE=QQIN,STATUS='UNKNOWN')
 C--Read (non compulsory) headers here if need be
-      HEADERS=.TRUE.
-      DO WHILE(HEADERS)
+      DO WHILE(.TRUE.)
          READ(61,'(a)')STRING
-        HEADERS=INDEX(STRING,'<init>').eq.0
+         IF ( INDEX(STRING,'</header>').ne.0 .and.
+     &        STRING(1:1).ne.'#' ) exit
+      ENDDO
+c--Find the start of the <init> block
+      DO WHILE(.TRUE.)
+         READ(61,'(a)')STRING
+         IF ( INDEX(STRING,'<init>').ne.0 .and.
+     &        STRING(1:1).ne.'#' ) exit
       ENDDO
 C--Read up to </init> in the event file
-      read(61,*)IDBMUP(1),IDBMUP(2),EBMUP(1),EBMUP(2),
+      read(61,*,err=998,end=998)IDBMUP(1),IDBMUP(2),EBMUP(1),EBMUP(2),
      #            PDFGUP(1),PDFGUP(2),PDFSUP(1),PDFSUP(2),
      #            IDWTUP,NPRUP
-      read(61,*)XSECUP(1),XERRUP(1),XMAXUP(1),LPRUP(1)
-      read(61,'(a)')string
-      if(INDEX(STRING,'</init>').eq.0)then
-        write(*,*)'FATAL ERROR #2 IN UPINIT'
-        stop
-      endif
-c
+      read(61,*,err=998,end=998)XSECUP(1),XERRUP(1),XMAXUP(1),LPRUP(1)
       xsecup2=XSECUP(1)
-c 501  format(2(1x,i6),2(1x,d14.8),2(1x,i2),2(1x,i6),1x,i2,1x,i3)
-c 502  format(3(1x,d14.8),1x,i6)
       return
+ 998  write(*,*)'FATAL ERROR #2 IN UPINIT'
+      stop
  999  END
-
 
 C----------------------------------------------------------------------
       SUBROUTINE HWURSC(NP,PP)
