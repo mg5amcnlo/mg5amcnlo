@@ -278,7 +278,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                       "You are entering aMC@NLO with a model which does not "+\
                                                    " support loop corrections.")
             else:
-                model_path = self._curr_model.get('version_tag').split('##')[0]
+                model_path = self._curr_model.get('modelpath')
                 model_name = self._curr_model.get('name')
                 if model_name.split('-')[0]=='sm':
                     # Once the loop_sm model will support Feynman gauge, please
