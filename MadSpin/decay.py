@@ -1393,7 +1393,7 @@ class width_estimate:
                     if next_symbol=='' or next_symbol in ponctuation:
                                                   #end of a splitting, verify that it exists
                         if initial not in self.br.keys():
-                            logger.info('Branching fractions of particle '+initial+' are unknown')
+                            logger.debug('Branching fractions of particle '+initial+' are unknown')
 	        	    return 0
                         if len(final)>2:
                             raise Exception, 'splittings different from A > B +C are currently not implemented '
@@ -1529,7 +1529,7 @@ class width_estimate:
         #me_cmd.exec_cmd('set automatic_html_opening False --no_save')
 
         filename=pjoin(path_me,'width_calculator','Events','run_01','param_card.dat')
-        misc.sprint(pjoin(path_me,'width_calculator','Events','run_01','param_card.dat'))
+#        misc.sprint(pjoin(path_me,'width_calculator','Events','run_01','param_card.dat'))
         self.extract_br_from_card(filename)
 
     def extract_br_for_antiparticle(self):
@@ -2077,7 +2077,7 @@ class decay_misc:
 
         list_prod=os.listdir(pjoin(path_me,"production_me/SubProcesses"))
         counter=0
-        logger.info("""Finalizing production me's """)
+        logger.debug("""Finalizing production me's """)
 
          
         for direc in list_prod:
@@ -2141,7 +2141,7 @@ class decay_misc:
  
         list_full=os.listdir(pjoin(path_me,"full_me","SubProcesses"))
 
-        logger.info("""Finalizing decay chain me's """)
+        logger.debug("""Finalizing decay chain me's """)
         for direc in list_full:
             if direc[0]=="P":
                 
@@ -2728,9 +2728,7 @@ class decay_all_events:
 
 # now we need to evaluate the branching fractions:
 # =================================================
-        logger.info('We need information on the partial widhts ')
-        logger.info('First look inside the banner of the event file ')
-        logger.info('and check whether this information is available ')
+        logger.info('Determining partial decay widths...')
 
         calculate_br = width_estimate(resonances, path_me, pid2label_dict,
                                                            mybanner, base_model)
@@ -2747,12 +2745,12 @@ class decay_all_events:
         # check that we get branching fractions for all resonances to be decayed:
         
         if branching_per_channel == 0:
-            logger.info('We need to recalculate the branching fractions')
+            logger.debug('We need to recalculate the branching fractions')
             if hasattr(base_model.get('particles')[0], 'partial_widths'):
-                logger.info('using the compute_width module of madevent')
+                logger.debug('using the compute_width module of madevent')
                 calculate_br.launch_width_evaluation(resonances,base_model, mgcmd) # use FR to get all partial widths                                      # set the br to partial_width/total_width
             else:
-                logger.info('compute_width module not available, use numerical estimates instead ')
+                logger.debug('compute_width module not available, use numerical estimates instead ')
                 calculate_br.extract_br_from_width_evaluation()
             calculate_br.print_branching_fractions()
             branching_per_channel=calculate_br.get_BR_for_each_decay(decay_processes,multiparticles)       
@@ -2857,7 +2855,7 @@ class decay_all_events:
         tag_production=tag_production.replace("~","x")
         set_of_processes.append(tag_production) 
         # generate fortran me for production only
-        logger.info(tag_production)
+        logger.debug(tag_production)
         topologies[tag_production]=\
                decay_tools.generate_fortran_me([extended_prod_process+proc_option],\
                mybanner.get("model"), 0,mgcmd,path_me)
@@ -3029,13 +3027,12 @@ class decay_all_events:
                 tag_production=tag_production.replace(" ","")
                 tag_production=tag_production.replace("~","x")
                 if tag_production not in set_of_processes: # we need to generate new matrix elements
-                    logger.info('  ')
-                    logger.info('Found a new production process: ')
+                    logger.info('Found a new process: '+extended_prod_process+proc_option)
 #                    logger.info(prod_process)
 #                    logger.info('Re-interpreted as    ')
-                    logger.info(extended_prod_process+proc_option)
-                    logger.info( tag_production)
-                    logger.info( ' -> need to generate the corresponding fortran matrix element ... ')
+#                    logger.info(extended_prod_process+proc_option)
+#                    logger.info( tag_production)
+                    logger.debug( ' -> need to generate the corresponding fortran matrix element ... ')
                     set_of_processes.append(tag_production)
 
                     # generate fortran me for production only
@@ -3065,7 +3062,7 @@ class decay_all_events:
                         decay_name=decay_tools.compile_fortran_me_full(path_me)
                         decay_path[tag_production][tag_decay]=decay_name
                     
-                    logger.info('Done.')
+                    logger.debug('Done.')
 
 #    Now the relevant matrix elements for the current event are there.
 #    But we still need to select a production topology 
@@ -3088,14 +3085,14 @@ class decay_all_events:
 
                 tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
 
-                logger.info(' ')
+#                logger.debug(' ')
                 running_time = misc.format_timer(time.time()-starttime)
-                logger.info('Event %s %s: ' % (ev+1, running_time))
+                logger.debug('Event %s %s: ' % (ev+1, running_time))
 #     print "Shat: "+str(curr_event.shat)
-                logger.info('Number of production topologies : '\
+                logger.debug('Number of production topologies : '\
                             +str(len(topologies[tag_production].keys())))
 #         print "Cumulative probabilities                : "+str(cumul_proba)
-                logger.info('Selected topology               : '\
+                logger.debug('Selected topology               : '\
                             +str(tag_topo))
 #         topologies[tag_production][tag_topo].print_topo()
  
@@ -3198,8 +3195,8 @@ class decay_all_events:
                         if (weight>probe_weight[ev][tag_decay]): probe_weight[ev][tag_decay]=weight
 
                 for  index,tag_decay in enumerate(decay_me_tags):
-                  logger.info('Max weight,  event '+str(ev+1)+\
-                            ' , dk config '+str(index+1)+' : '+str(probe_weight[ev][tag_decay]))
+                  logger.info('Event '+str(ev+1)+\
+                            ' , decay config '+str(index+1)+' : '+str(probe_weight[ev][tag_decay])+' %s' % running_time)
 
 # Computation of the maximum weight used in the unweighting procedure
             max_weight={}
@@ -3214,10 +3211,11 @@ class decay_all_events:
                 logger.info(' Decay channel '+str(index+1))
                 for part in multi_decay_processes[tag_decay]['config'].keys():
                      logger.info(multi_decay_processes[tag_decay]['config'][part])
-                logger.info('     average maximum weight that we got is '+str(ave_weight))
-                logger.info('     with a standard deviation of          '+str(std_weight))
-                logger.info('     -> W_max = average + 4 * standard deviation')
+#                logger.info('     average maximum weight that we got is '+str(ave_weight))
+#                logger.info('     with a standard deviation of          '+str(std_weight))
+#                logger.info('     -> W_max = average + 4 * standard deviation')
                 max_weight[tag_decay]=ave_weight+4.0*std_weight
+                logger.info('      Using maximum weight '+str(max_weight[tag_decay]))
             del curr_event
 
 
@@ -3264,7 +3262,7 @@ class decay_all_events:
         while 1:
             if (curr_event.get_next_event()=="no_event"): break
             event_nb+=1
-            if (event_nb % 250==0): 
+            if (event_nb % max(int(10**int(math.log10(float(event_nb)))),10)==0): 
                 running_time = misc.format_timer(time.time()-starttime)
                 logger.info('Event nb %s %s' % (event_nb, running_time))
             trial_nb=0
@@ -3280,13 +3278,13 @@ class decay_all_events:
             tag_production=tag_production.replace(" ","")
             tag_production=tag_production.replace("~","x")
             if tag_production not in set_of_processes: # we need to generate new matrix elements
-                logger.info(' ')
-                logger.info('Found a new production process: ')
+#                logger.info(' ')
+                logger.info('Found a new process: '+extended_prod_process+proc_option)
 #                logger.info(prod_process)
 #                logger.info('Re-interpreted as    ')
-                logger.info(extended_prod_process+proc_option)
-                logger.info( tag_production)
-                logger.info( ' -> need to generate the corresponding fortran matrix element ... ')
+#                logger.info(extended_prod_process+proc_option)
+                logger.debug( tag_production)
+                logger.debug( ' -> need to generate the corresponding fortran matrix element ... ')
                 set_of_processes.append(tag_production)
 
                 # generate fortran me for production only
@@ -3316,7 +3314,7 @@ class decay_all_events:
                     decay_name=decay_tools.compile_fortran_me_full(path_me)
                     decay_path[tag_production][tag_decay]=decay_name
                     
-                logger.info('Done.')
+                logger.debug('Done.')
 
 
 # First evaluate production matrix element

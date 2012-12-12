@@ -134,13 +134,13 @@ class HelpToCmd(object):
     def help_decay_events(self, skip_syntax=False):
         if not skip_syntax:
             logger.info("syntax: decay_events [RUN]")
-        logger.info("This functionality allows for the decay of  resonances")
+        logger.info("This functionality allows for the decay of resonances")
         logger.info("in a .lhe file, keeping track of the spin correlation effets.")
         logger.info("BE AWARE OF THE CURRENT LIMITATIONS:")
         logger.info("  (1) you can use multiparticle tag ONLY on final-state ")
         logger.info("      particles, not for intermediate resonances ")
         logger.info("  (2) only decay channels with splitting of the type")
-        logger.info("      A -> B(stable) + C(unstable)")
+        logger.info("      A -> B(stable) + C((un)stable)")
         logger.info("      have been tested so far")
         logger.info("  (3) when entering the decay chain structure,")
         logger.info("      please note that the reading module is ")
