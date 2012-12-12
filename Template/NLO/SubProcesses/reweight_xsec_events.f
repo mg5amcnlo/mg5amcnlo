@@ -199,7 +199,7 @@ c$$$      call fk88strcat(event_file,'.rwgt',fname1)
 c To keep track of the accumulated results:
         do ii=1,numscales
            do jj=1,numscales
-              xsecScale_acc(ii,jj)=0d0
+              xsecScale_acc(jj,ii)=0d0
            enddo
         enddo
         do n=0,nsets
@@ -288,7 +288,8 @@ c
              if (iSorH_lhe.eq.1) then
                 wgtref=wgtref_nbody
                 do ii=1,nScontributions
-                   wgtref=wgtref+wgtref_all(nFKSprocess_reweight(ii)*2-1)
+                   wgtref=wgtref+
+     &                  wgtref_all(nFKSprocess_reweight(ii)*2-1)
                 enddo
              else
                 wgtref=wgtref_all(nFKSprocess_used*2)
@@ -439,7 +440,7 @@ c Write the accumulated results to a file
          write (34,*) ''
       endif
       if (nsets.gt.0) then
-        write (34,*) nsets + 1
+         write (34,*) nsets + 1
          write (34,*) (xsecPDFr_acc(n),n=0,nsets)
       else
          write(34,*) nsets

@@ -1356,7 +1356,7 @@ Integrated cross-section
             return {'xsect' : float(match.groups()[1]),
                     'errt' : float(match.groups()[2])}
 
-    def print_summary(self, step, mode, scale_upp=0.0, scale_low=0.0, pdf_upp=0.0, pdf_low=0.0):
+    def print_summary(self, step, mode, scale_pdf_info={}):
         """print a summary of the results contained in self.cross_sect_dict.
         step corresponds to the mintMC step, if =2 (i.e. after event generation)
         some additional infos are printed"""
@@ -1439,11 +1439,11 @@ Integrated cross-section
                 if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.':
                    message = message + \
                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
-                       (scale_upp, scale_low)
+                       (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
                 if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_PDF']=='.true.':
                    message = message + \
                        ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
-                       (pdf_upp, pdf_low)
+                       (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
 
                 neg_frac = (self.cross_sect_dict['xseca'] - self.cross_sect_dict['xsect'])/\
                        (2. * self.cross_sect_dict['xseca'])
@@ -1522,8 +1522,9 @@ Integrated cross-section
         """this function calls the reweighting routines and creates the event file in the 
         Event dir. Return the name of the event file created
         """
+        scale_pdf_info={}
         if not options['noreweight']:
-            scale_upp,scale_low,pdf_upp,pdf_low = self.run_reweight(options['reweightonly'])
+            scale_pdf_info = self.run_reweight(options['reweightonly'])
 
         self.update_status('Collecting events', level='parton')
         misc.compile(['collect_events'], 
@@ -1543,10 +1544,7 @@ Integrated cross-section
         files.mv(pjoin(self.me_dir, 'SubProcesses', filename), evt_file)
         misc.call(['gzip %s' % evt_file], shell=True)
         if not options['reweightonly']:
-            if not options['noreweight']:
-                self.print_summary(2, mode, scale_upp, scale_low, pdf_upp, pdf_low)
-            else:
-                self.print_summary(2, mode)
+            self.print_summary(2, mode, scale_pdf_info)
         logger.info('The %s.gz file has been generated.\n' \
                 % (evt_file))
         return evt_file
@@ -1894,6 +1892,7 @@ Integrated cross-section
         xsec_scale_central xsec_scale1 ...
         n_pdf
         xsec_pdf0 xsec_pdf1 ...."""
+        scale_pdf_info={}
         scales=[]
         pdfs=[]
         numofpdf = 0
@@ -1941,8 +1940,8 @@ Integrated cross-section
         scale_upp=0.0
         scale_low=0.0
         if numofscales>0:
-            scale_upp=(max(scales)/cntrl_val-1)*100
-            scale_low=(1-min(scales)/cntrl_val)*100
+            scale_pdf_info['scale_upp'] = (max(scales)/cntrl_val-1)*100
+            scale_pdf_info['scale_low'] = (1-min(scales)/cntrl_val)*100
 
         # get the pdf uncertainty in percent (according to the Hessian method)
         pdf_upp=0.0
@@ -1951,10 +1950,10 @@ Integrated cross-section
             for i in range(int(numofpdf/2)):
                 pdf_upp=pdf_upp+math.pow(max(0.0,pdfs[2*i+1]-cntrl_val,pdfs[2*i+2]-cntrl_val),2)
                 pdf_low=pdf_low+math.pow(max(0.0,cntrl_val-pdfs[2*i+1],cntrl_val-pdfs[2*i+2]),2)
-            pdf_upp=math.sqrt(pdf_upp)/cntrl_val*100
-            pdf_low=math.sqrt(pdf_low)/cntrl_val*100
+            scale_pdf_info['pdf_upp'] = math.sqrt(pdf_upp)/cntrl_val*100
+            scale_pdf_info['pdf_low'] = math.sqrt(pdf_low)/cntrl_val*100
 
-        return scale_upp,scale_low,pdf_upp,pdf_low
+        return scale_pdf_info
 
 
     def wait_for_complete(self, run_type):
