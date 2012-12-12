@@ -2361,11 +2361,11 @@ Integrated cross-section
                 answers.append('%s+madspin' % tag)
             
         question = """Which programs do you want to run?
-  0 / auto     : Running existing card.
-  1 / NLO      : Fix order NLO cross-section (No event generation).
-  2 / aMC@NLO  : Event generation (including shower).
-  3 / noshower: Event generation (No shower) NOT PHYSICAL!.
-+10 / +madspin : Adding decay with MadSpin [before the shower].\n"""
+  0 / auto     : All for which cards exist.
+  1 / NLO      : Fixed order NLO calculation (no event generation).
+  2 / aMC@NLO  : Event generation (include running the shower).
+  3 / noshower : Event generation (without running the shower).
++10 / +madspin : Add decays with MadSpin (before the shower).\n"""
         
         if not self.force:
             if not mode:
@@ -2392,6 +2392,9 @@ Integrated cross-section
             if os.path.exists(pjoin(self.me_dir, 'Cards', 'madspin_card.dat')):
                 mode += '+madspin'         
         logger.info('Will run in mode %s' % mode)
+        
+        if 'noshower' in mode:
+            logger.warning('You have chosen not to run a parton shower. NLO events without showering are not physical. Please, shower the Les Houches events before using them for physics analyses.')
                 
         # specify the cards which are needed for this run.
         cards = ['param_card.dat', 'run_card.dat']
