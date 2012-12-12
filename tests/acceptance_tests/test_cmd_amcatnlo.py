@@ -91,6 +91,52 @@ class TestMECmdShell(unittest.TestCase):
         self.cmd_line.exec_cmd(line)
 
 
+    def test_calculate_xsect_script(self):
+        """test if the calculate_xsect script in the bin directory
+        works fine"""
+        
+        cmd = os.getcwd()
+        self.generate(['p p > e+ ve [QCD]'], 'loop_sm')
+        self.assertEqual(cmd, os.getcwd())
+        self.do('quit')
+        misc.call([pjoin('.','bin','calculate_xsect'), '-f'], cwd='/tmp/MGPROCESS',
+                stdout = open(os.devnull, 'w'))
+
+        # test the plot file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res.txt'))
+
+        
+
+    def test_generate_events_shower_scripts(self):
+        """test if the generate_events and successively the shower script in 
+        the bin directory works fine"""
+        
+        cmd = os.getcwd()
+        self.generate(['p p > e+ ve [QCD]'], 'loop_sm')
+        self.assertEqual(cmd, os.getcwd())
+        self.do('quit')
+        misc.call([pjoin('.','bin','generate_events'), '-f'], cwd='/tmp/MGPROCESS',
+                stdout = open(os.devnull, 'w'))
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
+        # test the hep event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz'))
+        misc.call([pjoin('.','bin','shower'), 'run_01', '-f'], cwd='/tmp/MGPROCESS',
+                stdout = open(os.devnull, 'w'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_1.hep.gz'))
+        # sanity check on the size
+        self.assertTrue(os.path.getsize('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz') > \
+                        os.path.getsize('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.getsize('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_1.hep.gz') > \
+                        os.path.getsize('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+
+
+
     def test_generate_events_lo_hw6_stdhep(self):
         """test the param_card created is correct"""
         
@@ -107,6 +153,9 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
         # test the hep event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz'))
+        # sanity check on the size
+        self.assertTrue(os.path.getsize('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz') > \
+                        os.path.getsize('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
         
 
 
@@ -130,6 +179,9 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
         # test the hep event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q_0.hep.gz'))
+        # sanity check on the size
+        self.assertTrue(os.path.getsize('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q_0.hep.gz') > \
+                        os.path.getsize('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
         
 
         
