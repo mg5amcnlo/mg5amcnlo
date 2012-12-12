@@ -2222,7 +2222,7 @@ Integrated cross-section
         """read and parse the test_ME/MC.log file"""
         content = open(log).read()
         if 'FAILED' in content:
-            logger.info('Output of the failing test:\n'+output[0][:-1],'$MG:color:BLACK')
+            logger.info('Output of the failing test:\n'+content[:-1],'$MG:color:BLACK')
             raise aMCatNLOError('Some tests failed, run cannot continue.\n' + \
                 'Please check that widths of final state particles (e.g. top) have been' + \
                 ' set to 0 in the param_card.dat.')
