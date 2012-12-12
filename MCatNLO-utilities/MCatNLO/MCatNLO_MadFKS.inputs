@@ -8,6 +8,7 @@ FPREFIX=
 EXEPREFIX=
 PY8PATH=
 
+source shower_card.dat
 source banner.dat
 
 # path to source codes
@@ -19,7 +20,6 @@ HERWIGVER="herwig6520.o"
 PYTHIAVER="pythia6426.o"
 
 ##### LOAD SETTINGS
-source shower_card.dat
 
 ##### LOAD THE SCRIPTS: DO NOT REMOVE
 . Scripts/MCatNLO_MadFKS_$MCMODE.Script
