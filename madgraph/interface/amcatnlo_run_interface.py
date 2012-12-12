@@ -1805,6 +1805,7 @@ Integrated cross-section
         content += 'NEVENTS=%s\n' % nevents
         content += 'MCMODE=%s\n' % shower
         content += 'PDLABEL=%s\n' % pdlabel
+        content += 'ALPHAEW=%s\n' % self.banner.get_detail('param_card', 'sminputs', 1).value
         content += 'PDFSET=%s\n' % self.banner.get_detail('run_card', 'lhaid')
         content += 'TMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 6).value
         content += 'TWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 6).value
