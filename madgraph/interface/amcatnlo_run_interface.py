@@ -851,9 +851,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         # check argument validity and normalise argument
         options = options.__dict__
         self.check_shower(argss, options)
-        options['parton'] = 'onlyshower'
         evt_file = pjoin(os.getcwd(), argss[0], 'events.lhe')
-        self.ask_run_configuration('', options)
+        self.ask_run_configuration('onlyshower', options)
         if self.check_mcatnlo_dir():
             self.run_mcatnlo(evt_file)
 
@@ -2402,6 +2401,9 @@ Integrated cross-section
             cards.append('madspin_card.dat')
         if 'aMC@' in mode:
             cards.append('shower_card.dat')
+        if mode == 'onlyshower':
+            cards = ['shower_card.dat']
+
         self.keep_cards(cards)
         
         if not options['force'] and not  self.force:
@@ -2412,7 +2414,7 @@ Integrated cross-section
         self.run_tag = self.run_card['run_tag']
         self.run_name = self.find_available_run_name(self.me_dir)
         self.set_run_name(self.run_name, self.run_tag, 'parton')
-        if 'aMC@' in mode:
+        if 'aMC@' in mode or mode == 'onlyshower':
             shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
             self.shower_card = shower_card.ShowerCard(shower_card_path)
         
