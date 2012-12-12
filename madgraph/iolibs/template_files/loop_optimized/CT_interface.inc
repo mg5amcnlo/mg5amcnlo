@@ -112,6 +112,7 @@ C
 C LOCAL VARIABLES 
 C
 	  %(real_dp_format)s THRS
+	  LOGICAL EXT_NUM_FOR_R1
 C  
 C GLOBAL VARIABLES 
 C
@@ -129,8 +130,13 @@ C 1 -> LOOPTOOLS
 C 2 -> AVH
 C 3 -> QCDLOOP
       LOOPLIB=CTLOOPLIBRARY
+C MADLOOP'S NUMERATOR IN THE OPEN LOOP IS MUCH FASTER THAN THE RECONSTRUCTED ONE IN CT. SO WE BETTER USE MADLOOP ONE IN THIS CASE.
+      EXT_NUM_FOR_R1=.TRUE.
 C -------------------------------	  
 
+C The initialization below is for CT v1.8.+
+C      CALL CTSINIT(THRS,LOOPLIB,EXT_NUM_FOR_R1)
+C The initialization below is for the older stable CT v1.7, still used for now in the beta release.
       CALL CTSINIT(THRS,LOOPLIB)
 
 	  END

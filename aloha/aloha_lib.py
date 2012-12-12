@@ -275,7 +275,6 @@ class AddVariable(list):
            Note that this should be canonical form (this should contains ONLY
            MULTVARIABLE) --so this should be called before a factorize.
         """
-
         new = self.__class__()
         
         for obj in self:

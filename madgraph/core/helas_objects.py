@@ -647,6 +647,20 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # propagator does not bring in any power of the loop momentum.
         if self.get('spin')==2:
             rank=rank+1
+
+        # Treat in an ad-hoc way the higgs effective theory
+        spin_cols = [(self.get('spin'),abs(self.get('color')))]+\
+              [(w.get('spin'),abs(w.get('color'))) for w in self.get('mothers')]
+        # HGG effective vertex
+        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8)]):
+            return rank+2
+        # HGGG effective vertex
+        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8),(3,8)]):
+            return rank+1
+        # HGGGG effective vertex
+        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8),(3,8),(3,8)]):
+            return rank
+            
         # Now add a possible power of the loop momentum depending on the
         # vertex creating this loop wavefunction. For now we don't read the
         # lorentz structure but just use an SM ad-hoc rule that only 
