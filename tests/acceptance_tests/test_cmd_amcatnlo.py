@@ -77,7 +77,7 @@ class TestMECmdShell(unittest.TestCase):
         
         self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '/tmp/MGPROCESS')
         self.cmd_line.exec_cmd('set MCatNLO-utilities_path %s --no_save' % pjoin(MG5DIR, 'MCatNLO-utilities') )
-        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        self.cmd_line.exec_cmd('set automatic_html_opening False --no_save')
 
     @staticmethod
     def join_path(*path):
