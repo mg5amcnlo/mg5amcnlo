@@ -59,13 +59,24 @@ class TestMECmdShell(unittest.TestCase):
             interface.onecmd('generate %s' % process)
         else:
             for p in process:
-                interface.onecmd('add process %s' % p)    
+                interface.onecmd('add process %s' % p)
+                
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+                
+                
+                    
         if not os.path.exists(pjoin(MG5DIR, 'MCatNLO-utilities','MCatNLO','lib','libstdhep.a')):
-            interface.onecmd('install MCatNLO-utilities')
-            self.assertTrue(os.path.exists(\
-                    pjoin(MG5DIR, 'MCatNLO-utilities','MCatNLO','lib','libstdhep.a')))
-            self.assertTrue(os.path.exists(\
-                    pjoin(MG5DIR, 'MCatNLO-utilities','MCatNLO','lib','libFmcfio.a')))
+            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
+                             stdin=subprocess.PIPE,
+                             stdout=stdout,stderr=stderr)
+            out = p.communicate('install MCatNLO-utilities')
+        misc.compile(cwd=pjoin(MG5DIR,'MCatNLO-utilities'))
         interface.exec_cmd('set MCatNLO-utilities_path %s --no_save' % pjoin(MG5DIR, 'MCatNLO-utilities') )
 
         interface.onecmd('output /tmp/MGPROCESS/ -f')
@@ -77,7 +88,6 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/MCatNLO/lib/libFmcfio.a'))        
         
         self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '/tmp/MGPROCESS')
-        self.cmd_line.exec_cmd('set MCatNLO-utilities_path %s --no_save' % pjoin(MG5DIR, 'MCatNLO-utilities') )
         self.cmd_line.exec_cmd('set automatic_html_opening False --no_save')
 
     @staticmethod
