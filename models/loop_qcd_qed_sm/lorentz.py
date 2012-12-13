@@ -33,11 +33,11 @@ R2_QQ_2 = Lorentz(name = 'R2_QQ_2',
 
 R2_QQ_3 = Lorentz(name = 'R2_QQ_3',
                spins = [ 2, 2 ],
-               structure = '-P(-1,1)*Gamma(-1,2,-2)*ProjP(-2,1)')
+               structure = 'P(-1,1)*Gamma(-1,2,-2)*ProjP(-2,1)')
 
 R2_QQ_4 = Lorentz(name = 'R2_QQ_4',
                 spins = [ 2, 2 ],
-                structure = '-P(-1,1)*Gamma(-1,2,-2)*ProjM(-2,1)')
+                structure = 'P(-1,1)*Gamma(-1,2,-2)*ProjM(-2,1)')
 
 R2_SS_1 = Lorentz(name = 'R2_SS_1',
                   spins = [ 1, 1 ],
@@ -130,6 +130,10 @@ FFS3 = Lorentz(name = 'FFS3',
 FFS4 = Lorentz(name = 'FFS4',
                spins = [ 2, 2, 1 ],
                structure = 'ProjM(2,1) + ProjP(2,1)')
+
+FFS5 = Lorentz(name = 'FFS5',
+               spins = [ 2, 2, 1 ],
+               structure = 'Identity(2,1)')
 
 FFV1 = Lorentz(name = 'FFV1',
                spins = [ 2, 2, 3 ],
@@ -237,12 +241,12 @@ l_HMass7 = Lorentz(name = 'l_HMass7',
 
 l_vevexMass8 = Lorentz(name = 'l_vevexMass8',
                        spins = [ 2, 2 ],
-                       structure = 'P(-1,1)*Gamma(-1,2,-2)*ProjM(-2,1)')
+                       structure = 'P(-1,2)*Gamma(-1,2,-2)*ProjM(-2,1)')
 
 
 l_vevexMass9 = Lorentz(name = 'l_vevexMass9',
                        spins = [ 2, 2 ],
-                       structure = 'P(-1,2)*Gamma(-1,2,-2)*ProjP(-2,1)')
+                       structure = 'P(-1,1)*Gamma(-1,2,-2)*ProjP(-2,1)')
 
 
 l_vevexMass10 = Lorentz(name = 'l_vevexMass10',

@@ -2798,12 +2798,12 @@ def check_lorentz_process(process, evaluator):
     #                                 auth_skipping = True)
 
     MLOptions = {'ImprovePS':True,'ForceMP':True}
-    ps=""
-    for pi in p:
-        for pij in pi:
-            ps=ps+str(pij)+"   "
-        ps=ps+"\n"
-    open(os.path.join('/Users/erdissshaw/Works/aMCatNLO_EW','PS0.input'),'w').write(ps)
+#ps=""
+        #for pi in p:
+        #for pij in pi:
+        #ps=ps+str(pij)+"   "
+            #ps=ps+"\n"
+            #open(os.path.join('/Users/erdissshaw/Works/aMCatNLO_EW','PS0.input'),'w').write(ps)
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
         data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
                                                  auth_skipping = True)
@@ -2839,12 +2839,12 @@ def check_lorentz_process(process, evaluator):
     else:
         for boost in range(1,4):
             boost_p = boost_momenta(p,boost)
-            ps=""
-            for pi in boost_p:
-                for pij in pi:
-                    ps=ps+str(pij)+"      "
-                ps=ps+"\n"
-            open(os.path.join('/Users/erdissshaw/Works/aMCatNLO_EW','PS%s.input')%boost,'w').write(ps)
+            #ps=""
+                #for pi in boost_p:
+                #for pij in pi:
+                #    ps=ps+str(pij)+"      "
+            #ps=ps+"\n"
+            #open(os.path.join('/Users/erdissshaw/Works/aMCatNLO_EW','PS%s.input')%boost,'w').write(ps)
 
             results.append(evaluator.evaluate_matrix_element(matrix_element,
                     p=boost_p,output='jamp',MLOptions = MLOptions))

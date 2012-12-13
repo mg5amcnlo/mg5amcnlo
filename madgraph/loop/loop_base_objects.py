@@ -986,6 +986,7 @@ class LoopDiagram(base_objects.Diagram):
                         loop_orders[order]=vertex_orders[order]
         return loop_orders
     
+
     @classmethod
     def make_canonical_cyclic(cls,atag):
         """ Perform cyclic permutations on the tag given in parameter such that 

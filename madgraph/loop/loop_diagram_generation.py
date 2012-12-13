@@ -306,8 +306,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 raise MadGraph5Error, "Before using the user_filter, please "+\
                        "make sure that the loop diagrams have been tgged first."
             valid_diag = True
-            if i!=43:valid_diag=False
-            #if i not in [1,3,10,12,19,29,30,46,21,33,34,48]:valid_diag=False
+            #if i!=14:valid_diag=False
+            if i in [1,3,10,12,19,21,29,30,33,34,46,48]:valid_diag=False
             #if 22 in diag.get_loop_lines_pdgs():
             #     valid_diag=False
             # Ex. 1: Chose the topology, i.e. number of loop line.
@@ -355,13 +355,14 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 if part.is_perturbating(order,self['process']['model']):
                     allowedpart.append(part.get_pdg_code())
                     break
+        
         newloopselection=base_objects.DiagramList()
         warned=False
         warning_msg = ("Some loop diagrams contributing to this process"+\
           " are discarded because they are not pure (%s)-perturbation.\nMake sure"+\
           " you did not want to include them.")%\
                            ('+'.join(self['process']['perturbation_couplings']))
-        for diag in self['loop_diagrams']:
+        for i,diag in enumerate(self['loop_diagrams']):
             # Now collect what are the coupling orders building the loop which
             # are also perturbed order.        
             loop_orders=diag.get_loop_orders(self['process']['model'])
@@ -377,7 +378,11 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 if not warned:
                     logger.warning(warning_msg)
                     warned=True
-            if sum([loop_orders[order] for order in pert_loop_order])<2:
+            # HSS, 13/12/2012
+            # add 'and ...'
+            if sum([loop_orders[order] for order in pert_loop_order])<2 and 'QED' not in self['process']['perturbation_couplings']:
+            # HSS
+            #if sum([loop_orders[order] for order in pert_loop_order])>=2:
                 valid_diag=False
             if valid_diag:
                 newloopselection.append(diag)
@@ -485,7 +490,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         if self['process']['squared_orders']=={} and \
                   self['process']['orders']=={} and self['process']['has_born']:
             chosen_order_config = self.choose_order_config()           
-    
+        
         discarded_configurations = []
         # The born diagrams are now filtered according to the chose configuration
         if chosen_order_config != {}:
@@ -502,7 +507,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Now if the user specified some squared order, we can use them as an 
         # upper bound for the loop diagram generation.
         self.guess_loop_orders_from_squared()
-        
+    
         # If the user had not specified any fixed squared order other than 
         # WEIGHTED, we will use the guessed weighted order to assign a bound to
         # the loop diagram order. Later we will check if the order deduced from
@@ -526,9 +531,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
             self['process']['orders']['WEIGHTED']=user_orders['WEIGHTED']+\
                                      2*min([hierarchy[order] for order in \
                                      self['process']['perturbation_couplings']])
-                
+        
         ldg_debug_info("Orders used for loop generation",\
                                                       self['process']['orders'])
+    
         # Make sure to warn the user if we already possibly excluded mixed order
         # loops by smartly setting up the orders
         warning_msg = ("Some loop diagrams contributing to this process might "+\
@@ -538,6 +544,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
         if self['process']['has_born']:
             for order in self['process']['model']['coupling_orders']:
                 if order not in self['process']['perturbation_couplings']:
+                    # HSS, 13/12/2012
+                    if order not in self['process']['orders'].keys():continue
+                    # HSS
                     if self['process']['orders'][order]< \
                                      self['born_diagrams'].get_max_order(order):
                         logger.warning(warning_msg)
@@ -902,6 +911,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
         for inter in self['process']['model']['interactions']:
             if inter.is_UVmass() or inter.is_R2() and len(inter['particles'])>1 \
                and inter.is_perturbating(self['process']['perturbation_couplings']):
+                   #if inter.is_UVmass():
+                   #print inter['type'],[part.get_pdg_code() for part in inter['particles']]
+                   #print [[part for part in parts] for parts in inter['loop_particles']]
                 # This interaction might have several possible loop particles 
                 # yielding the same counterterm. So we add this interaction ID 
                 # for each entry in the list loop_particles.

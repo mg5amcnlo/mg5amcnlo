@@ -1070,43 +1070,43 @@ AxialGmDx3U3 = Parameter(name = 'AxialGmDx3U3',
 I3d = Parameter(name = 'I3d',
                 nature = 'internal',
                 type = 'real',
-                value = '-1./2.',
+                value = '(-1.0/2.0)',
                 texname = 'I_{3d}')
 
 I3u = Parameter(name = 'I3u',
                 nature = 'internal',
                 type = 'real',
-                value = '1./2.',
+                value = '(1.0/2.0)',
                 texname = 'I_{3u}')
 
 I3l = Parameter(name = 'I3l',
                 nature = 'internal',
                 type = 'real',
-                value = '-1./2.',
+                value = '(-1.0/2.0)',
                 texname = 'I_{3l}')
 
 I3v = Parameter(name = 'I3v',
                 nature = 'internal',
                 type = 'real',
-                value = '1./2.',
+                value = '(1.0/2.0)',
                 texname = 'I_{3v}')
 
 Qd = Parameter(name = 'Qd',
                 nature = 'internal',
                 type = 'real',
-                value = '-1./3.',
+                value = '(-1.0/3.0)',
                 texname = 'Q_{d}')
 
 Qu = Parameter(name = 'Qu',
                 nature = 'internal',
                 type = 'real',
-                value = '2./3.',
+                value = '(2.0/3.0)',
                 texname = 'Q_{u}')
 
 Ql = Parameter(name = 'Ql',
                 nature = 'internal',
                 type = 'real',
-                value = '-1.',
+                value = '(-1.0)',
                 texname = 'Q_{l}')
 
 
