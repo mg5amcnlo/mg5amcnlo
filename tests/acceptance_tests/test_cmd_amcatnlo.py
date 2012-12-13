@@ -287,7 +287,8 @@ class TestMECmdShell(unittest.TestCase):
         #      Total cross-section: 1.249e+03 +- 3.2e+00 pb        
         cross_section = data[i+3]
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
-        self.assertAlmostEqual(1.005e+03, cross_section,2)
+        # warning, delta may not be compatible with python 2.6 
+        self.assertAlmostEqual(1.005e+03, cross_section,delta=50)
         #      Number of events generated: 10000        
         self.assertTrue('Number of events generated: 100' in data[i+4])
         
