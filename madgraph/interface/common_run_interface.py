@@ -19,6 +19,7 @@ from __future__ import division
 
 import atexit
 import cmath
+import cmd
 import glob
 import logging
 import math
@@ -27,13 +28,13 @@ import os
 import pydoc
 import random
 import re
-import signal
 import shutil
+import signal
 import stat
 import subprocess
 import sys
-import traceback
 import time
+import traceback
 
 
 try:
@@ -307,16 +308,17 @@ class MadEventAlreadyRunning(InvalidCmd):
 #===============================================================================
 # CommonRunCmd
 #===============================================================================
-class CommonRunCmd(HelpToCmd, CheckValidForCmd):
+class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
     debug_output = 'ME5_debug'
     helporder = ['Main commands', 'Documented commands', 'Require MG5 directory',
                    'Advanced commands']
 
 
-    def __init__(self, me_dir, options):
+    def __init__(self, me_dir, options, *args, **opts):
         """common"""
         
+        cmd.Cmd.__init__(self, *args, **opts)
         # Define current MadEvent directory
         if me_dir is None and MADEVENT:
             me_dir = root_path
@@ -356,7 +358,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd):
         nexternal = open(pjoin(self.me_dir,'Source','nexternal.inc')).read()
         found = re.search("PARAMETER\s*\(NINCOMING=(\d)\)", nexternal)
         self.ninitial = int(found.group(1))
-
+        
 
     ############################################################################    
     def split_arg(self, line, error=False):

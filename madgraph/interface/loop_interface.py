@@ -298,12 +298,12 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                       "The default sm model does not allow to generate"+
                       " loop processes. MG5 now loads 'loop_sm' instead.")
                     #mpath = pjoin(model_dir, 'loop_'+model_name)
-                    mpath=os.path.join(os.path.dirname(os.path.join(model_path)),
-                                                            'loop_'+model_name)
+                    #mpath=os.path.join(os.path.dirname(os.path.join(model_path)),
+                    #                                        'loop_'+model_name)
                     #import model with correct treatment of the history
                     self.history.move_to_last('generate')
                     last_command = self.history[-1]
-                    self.exec_cmd(" import model %s" % str(mpath), precmd=True)
+                    self.exec_cmd(" import model loop_%s" % model_name, precmd=True)
                     self.history.append(last_command)
                     
                 elif stop:

@@ -161,7 +161,7 @@ def check_compiler(options, block=False):
 #===============================================================================
 # CmdExtended
 #===============================================================================
-class CmdExtended(cmd.Cmd):
+class CmdExtended(common_run.CommonRunCmd):
     """Particularisation of the cmd command for aMCatNLO"""
 
     #suggested list of command
@@ -184,7 +184,7 @@ class CmdExtended(cmd.Cmd):
     InvalidCmd = InvalidCmd
     ConfigurationError = aMCatNLOError
 
-    def __init__(self, *arg, **opt):
+    def __init__(self, me_dir, options, *arg, **opt):
         """Init history and line continuation"""
         
         # Tag allowing/forbiding question
@@ -256,11 +256,8 @@ class CmdExtended(cmd.Cmd):
         "*               Type 'help' for in-line help.              *\n" + \
         "*                                                          *\n" + \
         "************************************************************")
+        super(CmdExtended, self).__init__(me_dir, options, *arg, **opt)
         
-        cmd.Cmd.__init__(self, *arg, **opt)
-        
-
-
 
     def get_history_header(self):
         """return the history header""" 
@@ -374,6 +371,10 @@ class CheckValidForCmd(object):
 
     def check_shower(self, args, options):
         """Check the validity of the line. args[0] is the run_directory"""
+        
+        if options['force']:
+            self.force = True
+        
         if len(args) == 0:
             self.help_shower()
             raise self.InvalidCmd, 'Invalid syntax, please specify the run name'
@@ -385,6 +386,9 @@ class CheckValidForCmd(object):
     def check_plot(self, args):
         """Check the argument for the plot command
         plot run_name modes"""
+
+        if options['force']:
+            self.force = True
 
         madir = self.options['madanalysis_path']
         td = self.options['td_path']
@@ -547,6 +551,9 @@ class CheckValidForCmd(object):
         # modify args in order to be DIR 
         # mode being either standalone or madevent
         
+        if options['force']:
+            self.force = True
+        
         if not args:
             args.append('NLO')
             return
@@ -600,6 +607,10 @@ class CheckValidForCmd(object):
         # modify args in order to be DIR 
         # mode being either standalone or madevent
         
+        if options['force']:
+            self.force = True
+        
+        
         if not args:
             args.append('auto')
             return
@@ -629,6 +640,9 @@ class CheckValidForCmd(object):
         MODE being FO or MC. If no mode is passed, MC is used"""
         # modify args in order to be DIR 
         # mode being either standalone or madevent
+        
+        if options['force']:
+            self.force = True
         
         if not args:
             args.append('MC')
@@ -819,8 +833,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         """ add information to the cmd """
 
         self.start_time = 0
-        CmdExtended.__init__(self, *completekey, **stdin)
-        common_run.CommonRunCmd.__init__(self, me_dir, options)
+        CmdExtended.__init__(self, me_dir, options, *completekey, **stdin)
+        #common_run.CommonRunCmd.__init__(self, me_dir, options)
 
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = banner_mod.RunCardNLO(run_card)
@@ -1066,6 +1080,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if not mode in ['LO', 'NLO', 'noshower'] and self.check_mcatnlo_dir() \
                                                       and not options['parton']:
             self.run_mcatnlo(evt_file)
+        elif mode == 'noshower':
+            logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
+Please, shower the Les Houches events before using them for physics analyses.""")
 
 
     ############################################################################      
@@ -2366,7 +2383,7 @@ Integrated cross-section
   2 / aMC@NLO  : Event generation (include running the shower).
   3 / noshower : Event generation (without running the shower).
 +10 / +madspin : Add decays with MadSpin (before the shower).\n"""
-        
+
         if not self.force:
             if not mode:
                 mode = self.ask(question, '0', answers)
@@ -2392,10 +2409,10 @@ Integrated cross-section
             if os.path.exists(pjoin(self.me_dir, 'Cards', 'madspin_card.dat')):
                 mode += '+madspin'         
         logger.info('Will run in mode %s' % mode)
-        
         if 'noshower' in mode:
-            logger.warning('You have chosen not to run a parton shower. NLO events without showering are not physical. Please, shower the Les Houches events before using them for physics analyses.')
-                
+            logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
+Please, shower the Les Houches events before using them for physics analyses.""")
+        
         # specify the cards which are needed for this run.
         cards = ['param_card.dat', 'run_card.dat']
         if mode in ['LO', 'NLO']:
@@ -2408,6 +2425,9 @@ Integrated cross-section
             cards = ['shower_card.dat']
 
         self.keep_cards(cards)
+        
+        if mode =='onlyshower':
+            cards = ['shower_card.dat']
         
         if not options['force'] and not  self.force:
             self.ask_edit_cards(cards)   
@@ -2423,7 +2443,10 @@ Integrated cross-section
         
         # check if we need to install the shower
         if 'aMC@' in mode and not self.options['MCatNLO-utilities_path']:
-            self.exec_cmd('import MCatNLO-utilities', printcmd=True, precmd=False)
+            error = '''MCatNLO-utilities needs to be installed in order to run the shower.
+    You can install this program by typing "install MCatNLO-utilities" in the MG5 interface.
+            '''
+            raise self.InvalidCmd(error)
         
         
         return mode

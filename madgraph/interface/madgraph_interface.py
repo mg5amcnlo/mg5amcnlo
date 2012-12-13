@@ -2772,7 +2772,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    logging.getLogger('cmdprint'),
                    logging.getLogger('madgraph.model'),
                    logging.getLogger('madgraph.base_objects')]
-        old_levels = [logger.getEffectiveLevel() for logger in loggers]
+        old_levels = [logger.level for logger in loggers]
         for logger in loggers:
             logger.setLevel(logging.WARNING)
         

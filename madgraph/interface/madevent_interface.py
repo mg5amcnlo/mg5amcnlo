@@ -94,7 +94,7 @@ class ZeroResult(MadEventError):
 #===============================================================================
 # CmdExtended
 #===============================================================================
-class CmdExtended(cmd.Cmd):
+class CmdExtended(common_run.CommonRunCmd):
     """Particularisation of the cmd command for MadEvent"""
 
     #suggested list of command
@@ -117,7 +117,7 @@ class CmdExtended(cmd.Cmd):
     InvalidCmd = InvalidCmd
     ConfigurationError = MadGraph5Error
 
-    def __init__(self, *arg, **opt):
+    def __init__(self, me_dir, options, *arg, **opt):
         """Init history and line continuation"""
         
         # Tag allowing/forbiding question
@@ -189,8 +189,7 @@ class CmdExtended(cmd.Cmd):
         "*               Type 'help' for in-line help.              *\n" + \
         "*                                                          *\n" + \
         "************************************************************")
-        
-        cmd.Cmd.__init__(self, *arg, **opt)
+        super(CmdExtended, self).__init__(me_dir, options, *arg, **opt)
         
     def get_history_header(self):
         """return the history header""" 
@@ -1422,8 +1421,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     def __init__(self, me_dir = None, options={}, *completekey, **stdin):
         """ add information to the cmd """
 
-        CmdExtended.__init__(self, *completekey, **stdin)
-        common_run.CommonRunCmd.__init__(self, me_dir, options)
+        CmdExtended.__init__(self, me_dir, options, *completekey, **stdin)
+        #common_run.CommonRunCmd.__init__(self, me_dir, options)
         
 
         self.mode = 'madevent'

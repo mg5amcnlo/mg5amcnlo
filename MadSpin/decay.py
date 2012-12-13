@@ -2128,7 +2128,7 @@ class decay_misc:
                 misc.compile(cwd=new_path, mode='fortran')
 
                 if(os.path.getsize(pjoin(path_me,'production_me','SubProcesses', 'parameters.inc'))<10):
-		    raise Exception, "Parameters of the model were not written correctly ! " 
+                    raise Exception, "Parameters of the model were not written correctly ! " 
                 return prod_name
 
 
@@ -2859,7 +2859,6 @@ class decay_all_events:
         topologies[tag_production]=\
                decay_tools.generate_fortran_me([extended_prod_process+proc_option],\
                mybanner.get("model"), 0,mgcmd,path_me)
-
         prod_name=decay_tools.compile_fortran_me_production(path_me)
         production_path[tag_production]=prod_name
 
@@ -2899,7 +2898,7 @@ class decay_all_events:
             while 1:
                 try_reshuffle+=1
                 if try_reshuffle > 10:
-                    misc.sprint('current %s' % try_reshuffle)                
+                    logger.debug('current %s' % try_reshuffle)                
                 BW_weight_prod=decay_tools.generate_BW_masses(\
                        topologies[tag_production][tag_topo], \
                        to_decay_label.values(),pid2label_dict, pid2width,pid2mass, \
@@ -2915,7 +2914,7 @@ class decay_all_events:
                 # end sanity check
                 if succeed:
                     if try_reshuffle > 10:
-                        misc.sprint('pass at %s' % try_reshuffle)
+                        logger.debug('pass at %s' % try_reshuffle)
                     break
                 if try_reshuffle % 10 == 0:
                     logger.debug( 'tried %ix to reshuffle the momenta, failed'% try_reshuffle)
@@ -3291,7 +3290,6 @@ class decay_all_events:
                 topologies[tag_production]=\
                     decay_tools.generate_fortran_me([extended_prod_process+proc_option],\
                         mybanner.get("model"), 0,mgcmd,path_me)
-
                 prod_name=decay_tools.compile_fortran_me_production(path_me)
                 production_path[tag_production]=prod_name
 

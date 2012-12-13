@@ -1380,6 +1380,7 @@ class SmartQuestion(BasicCmd):
         if self.default_value is not None:
             self.value = self.default_value
 
+
     def postcmd(self, stop, line):
         
         try:    
@@ -1440,7 +1441,13 @@ class OneLinePathCompletion(SmartQuestion):
             return self.deal_multiple_categories(out)
         except Exception, error:
             print error
-
+            
+    def precmd(self, *args):
+        """ """
+        
+        signal.alarm(0)
+        return SmartQuestion.precmd(self, *args)
+        
     def completedefault(self,text, line, begidx, endidx):
         prev_timer = signal.alarm(0) # avoid timer if any
         if prev_timer:
