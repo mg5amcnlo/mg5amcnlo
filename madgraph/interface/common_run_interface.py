@@ -931,6 +931,26 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         return pids
                 
+    ############################################################################
+    def get_pdf_input_filename(self):
+        """return the name of the file which is used by the pdfset"""
+        
+        if hasattr(self, 'pdffile'):
+            return self.pdffile
+        else:
+            for line in open(pjoin(self.me_dir,'Source','PDF','pdf_list.txt')):
+                data = line.split()
+                if len(data) < 4:
+                    continue
+                if data[1].lower() == self.run_card['pdlabel'].lower():
+                    self.pdffile = pjoin(self.me_dir, 'lib', 'Pdfdata', data[2])
+                    return self.pdffile 
+            else:
+                # possible when using lhapdf
+                self.pdffile = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'], 
+                        shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+                #self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
+                return self.pdffile
                 
                 
         

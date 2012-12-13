@@ -597,7 +597,7 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd, 'options -m (--multicore) and -c (--cluster)' + \
                     ' are not compatible. Please choose one.'
         if options['noreweight'] and options['reweightonly']:
-            raise self.InvalidCmd, 'options -R (--noreweight) and -R (--reweightonly)' + \
+            raise self.InvalidCmd, 'options -R (--noreweight) and -r (--reweightonly)' + \
                     ' are not compatible. Please choose one.'
 
 
@@ -629,7 +629,7 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd, 'options -m (--multicore) and -c (--cluster)' + \
                     ' are not compatible. Please choose one.'
         if options['noreweight'] and options['reweightonly']:
-            raise self.InvalidCmd, 'options -R (--noreweight) and -R (--reweightonly)' + \
+            raise self.InvalidCmd, 'options -R (--noreweight) and -r (--reweightonly)' + \
                     ' are not compatible. Please choose one.'
         if mode == 'NLO' and options['reweightonly']:
             raise self.InvalidCmd, 'option -r (--reweightonly) needs mode "aMC@NLO" or "aMC@LO"'
@@ -1073,9 +1073,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             mode = mode.split('+')[0]
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
-        assert evt_file == pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'), '%s != %s' %(evt_file, pjoin(self.me_dir,'Events', self.run_name, 'events.lhe.gz'))
-        self.exec_cmd('decay_events -from_cards', postcmd=False)
-        evt_file = pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')
+        
+        if not mode in ['LO', 'NLO']:
+            assert evt_file == pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'), '%s != %s' %(evt_file, pjoin(self.me_dir,'Events', self.run_name, 'events.lhe.gz'))
+            self.exec_cmd('decay_events -from_cards', postcmd=False)
+            evt_file = pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')
         
         if not mode in ['LO', 'NLO', 'noshower'] and self.check_mcatnlo_dir() \
                                                       and not options['parton']:
@@ -1184,12 +1186,13 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     if file.startswith('P') and \
                     os.path.isdir(pjoin(self.me_dir, 'SubProcesses', file))]
         #find jobs and clean previous results
-        self.update_status('Cleaning previous results', level=None)
+        if not options['only_generation'] and not options['reweightonly']:
+            self.update_status('Cleaning previous results', level=None)
         for dir in p_dirs:
             job_dict[dir] = [file for file in \
                                  os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
                                  if file.startswith('ajob')] 
-            if not options['only_generation']:
+            if not options['only_generation'] and not options['reweightonly']:
                 for obj in folder_names[mode]:
                     to_rm = [file for file in \
                                  os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
@@ -1201,7 +1204,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
         if options['reweightonly']:
-            nevents = self.run_card['nevents']
+            nevents=int(self.run_card['nevents'])
             self.reweight_and_collect_events(options, mode, nevents)
             return
 
@@ -1381,7 +1384,7 @@ Integrated cross-section
             return {'xsect' : float(match.groups()[1]),
                     'errt' : float(match.groups()[2])}
 
-    def print_summary(self, step, mode):
+    def print_summary(self, step, mode, scale_pdf_info={}):
         """print a summary of the results contained in self.cross_sect_dict.
         step corresponds to the mintMC step, if =2 (i.e. after event generation)
         some additional infos are printed"""
@@ -1460,6 +1463,16 @@ Integrated cross-section
                 message = '\n      ' + status[step] + proc_info + \
                           '\n      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb' % \
                         self.cross_sect_dict
+
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.':
+                   message = message + \
+                       ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
+                       (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_PDF']=='.true.':
+                   message = message + \
+                       ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
+                       (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
+
                 neg_frac = (self.cross_sect_dict['xseca'] - self.cross_sect_dict['xsect'])/\
                        (2. * self.cross_sect_dict['xseca'])
                 message = message + \
@@ -1471,6 +1484,7 @@ Integrated cross-section
                          self.run_card['parton_shower'],
                          neg_frac, 
                          misc.format_timer(time.time()-self.start_time))
+                   
 
         elif mode in ['NLO', 'LO']:
             status = ['Results after grid setup (cross-section is non-physical):',
@@ -1536,8 +1550,9 @@ Integrated cross-section
         """this function calls the reweighting routines and creates the event file in the 
         Event dir. Return the name of the event file created
         """
+        scale_pdf_info={}
         if not options['noreweight']:
-            self.run_reweight(options['reweightonly'])
+            scale_pdf_info = self.run_reweight(options['reweightonly'])
 
         self.update_status('Collecting events', level='parton')
         misc.compile(['collect_events'], 
@@ -1556,7 +1571,8 @@ Integrated cross-section
         evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
         files.mv(pjoin(self.me_dir, 'SubProcesses', filename), evt_file)
         misc.call(['gzip %s' % evt_file], shell=True)
-        self.print_summary(2, mode)
+        if not options['reweightonly']:
+            self.print_summary(2, mode, scale_pdf_info)
         logger.info('The %s.gz file has been generated.\n' \
                 % (evt_file))
         return evt_file
@@ -1872,10 +1888,7 @@ Integrated cross-section
         evt_files = [line.split()[0] for line in lines[:-1] if line.split()[1] != '0']
         #prepare the job_dict
         job_dict = {}
-        if self.cluster_mode == 1:
-            exe = 'reweight_xsec_events.cluster'
-        else:
-            exe = 'reweight_xsec_events.local'
+        exe = 'reweight_xsec_events.local'
         for i, evt_file in enumerate(evt_files):
             path, evt = os.path.split(evt_file)
             files.ln(pjoin(self.me_dir, 'SubProcesses', exe), \
@@ -1900,6 +1913,82 @@ Integrated cross-section
             if line:
                 newfile.write(line.replace(line.split()[0], line.split()[0] + '.rwgt') + '\n')
         newfile.close()
+
+        return self.pdf_scale_from_reweighting(evt_files)
+
+    def pdf_scale_from_reweighting(self, evt_files):
+        """This function takes the files with the scale and pdf values
+        written by the reweight_xsec_events.f code
+        (P*/G*/pdf_scale_uncertainty.dat) and computes the overall
+        scale and PDF uncertainty (the latter is computed using the
+        Hessian method) and returns it in percents.
+        The expected format of the file is:
+        n_scales
+        xsec_scale_central xsec_scale1 ...
+        n_pdf
+        xsec_pdf0 xsec_pdf1 ...."""
+        scale_pdf_info={}
+        scales=[]
+        pdfs=[]
+        numofpdf = 0
+        numofscales = 0
+        for evt_file in evt_files:
+            path, evt=os.path.split(evt_file)
+            data_file=open(pjoin(self.me_dir, 'SubProcesses', path, 'scale_pdf_dependence.dat')).read()
+            lines = data_file.replace("D", "E").split("\n")
+            if not numofscales:
+                numofscales = int(lines[0])
+            if not numofpdf:
+                numofpdf = int(lines[2])
+            scales_this = [float(val) for val in lines[1].split()]
+            pdfs_this = [float(val) for val in lines[3].split()]
+
+            if numofscales != len(scales_this) or numofpdf !=len(pdfs_this):
+                # the +1 takes the 0th (central) set into account
+                logger.info(data_file)
+                logger.info((' Expected # of scales: %d\n'+
+                             ' Found # of scales: %d\n'+
+                             ' Expected # of pdfs: %d\n'+
+                             ' Found # of pdfs: %d\n') %
+                        (numofscales, len(scales_this), numofpdf, len(pdfs_this)))
+                raise aMCatNLOError('inconsistent scale_pdf_dependence.dat')
+            if not scales:
+                scales = [0.] * numofscales
+            if not pdfs:
+                pdfs = [0.] * numofpdf
+
+            scales = [a + b for a, b in zip(scales, scales_this)]
+            pdfs = [a + b for a, b in zip(pdfs, pdfs_this)]
+
+        # get the central value
+        if numofscales>0 and numofpdf==0:
+            cntrl_val=scales[0]
+        elif numofpdf>0 and numofscales==0:
+            cntrl_val=pdfs[0]
+        elif numofpdf>0 and numofscales>0:
+            if abs(1-scales[0]/pdfs[0])>0.0001:
+                raise aMCatNLOError('Central values for scale and PDF variation not identical')
+            else:
+                cntrl_val=scales[0]
+
+        # get the scale uncertainty in percent
+        scale_upp=0.0
+        scale_low=0.0
+        if numofscales>0:
+            scale_pdf_info['scale_upp'] = (max(scales)/cntrl_val-1)*100
+            scale_pdf_info['scale_low'] = (1-min(scales)/cntrl_val)*100
+
+        # get the pdf uncertainty in percent (according to the Hessian method)
+        pdf_upp=0.0
+        pdf_low=0.0
+        if numofpdf>1:
+            for i in range(int(numofpdf/2)):
+                pdf_upp=pdf_upp+math.pow(max(0.0,pdfs[2*i+1]-cntrl_val,pdfs[2*i+2]-cntrl_val),2)
+                pdf_low=pdf_low+math.pow(max(0.0,cntrl_val-pdfs[2*i+1],cntrl_val-pdfs[2*i+2]),2)
+            scale_pdf_info['pdf_upp'] = math.sqrt(pdf_upp)/cntrl_val*100
+            scale_pdf_info['pdf_low'] = math.sqrt(pdf_low)/cntrl_val*100
+
+        return scale_pdf_info
 
 
     def wait_for_complete(self, run_type):
@@ -1955,122 +2044,122 @@ Integrated cross-section
             self.update_status((max([self.njobs - self.ijob - 1, 0]), 
                                 min([1, self.njobs - self.ijob]),
                                 self.ijob, run_type), level='parton')
-        else:
+        elif 'reweight' in exe:
+                #Find the correct PDF input file
+                input_files, output_files = [], []
+                input_files.append(self.get_pdf_input_filename())
+                input_files.append(pjoin(os.path.dirname(exe), os.path.pardir, 'reweight_xsec_events'))
+                input_files.append(args[0])
+                output_files.append('%s.rwgt' % os.path.basename(args[0]))
+                output_files.append('reweight_xsec_events.output')
+                output_files.append('scale_pdf_dependence.dat')
+    
+                return self.cluster.submit2(exe, args, cwd=cwd, 
+                                 input_files=input_files, output_files=output_files) 
+
             #this is for the cluster/multicore run
-            if 'ajob' not  in exe:
-                return self.cluster.submit(exe, args, cwd=cwd)
-
-            # use local disk if possible => need to stands what are the 
-            # input/output files
-            keep_fourth_arg = False
-            output_files = []
-            input_files = [pjoin(self.me_dir, 'MGMEVersion.txt'),
-                           pjoin(self.me_dir, 'SubProcesses', 'randinit'),
-                           pjoin(cwd, 'symfact.dat'),
-                           pjoin(cwd, 'iproc.dat')]
-            
-            # File for the loop (might not be present if MadLoop is not used)
-            if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
-                to_add = ['MadLoopParams.dat', 'ColorDenomFactors.dat', 
-                                         'ColorNumFactors.dat','HelConfigs.dat']
-                for name in to_add:
-                    input_files.append(pjoin(cwd, name))
-
-                to_check = ['HelFilter.dat','LoopFilter.dat']
-                for name in to_check:
-                    if os.path.exists(pjoin(cwd, name)):
-                        input_files.append(pjoin(cwd, name))
-
-            Ire = re.compile("for i in ([\d\s]*) ; do")
-            try : 
-                fsock = open(exe)
-            except IOError:
-                fsock = open(pjoin(cwd,exe))
-            text = fsock.read()
-            data = Ire.findall(text)
-            subdir = ' '.join(data).split()
-                     
-            if args[0] == '0':
-                # MADEVENT VEGAS MODE
-                input_files.append(pjoin(cwd, 'madevent_vegas'))
-                input_files.append(pjoin(self.me_dir, 'SubProcesses','madin.%s' % args[1]))
-                #j=$2\_G$i
-                for i in subdir:
-                    current = '%s_G%s' % (args[1],i)
-                    if os.path.exists(pjoin(cwd,current)):
-                        input_files.append(pjoin(cwd, current))
-                    output_files.append(current)
-                    if len(args) == 4:
-                        # use a grid train on another part
-                        base = '%s_G%s' % (args[3],i)
-                        if args[0] == '0':
-                            to_move = [n for n in os.listdir(pjoin(cwd, base)) 
-                                                          if n.endswith('.sv1')]
-                            to_move.append('grid.MC_integer')
-                        elif args[0] == '1':
-                            to_move = ['mint_grids', 'grid.MC_integer']
-                        else: 
-                            to_move  = []
-                        if not os.path.exists(pjoin(cwd,current)):
-                            os.mkdir(pjoin(cwd,current))
-                            input_files.append(pjoin(cwd, current))
-                        for name in to_move:
-                            files.cp(pjoin(cwd,base, name), 
-                                            pjoin(cwd,current))
-                        files.cp(pjoin(cwd,base, 'grid.MC_integer'), 
-                                            pjoin(cwd,current))
-                                  
-            elif args[0] == '2':
-                # MINTMC MODE
-                input_files.append(pjoin(cwd, 'madevent_mintMC'))
-                if args[2] in ['0','2']:
-                    input_files.append(pjoin(self.me_dir, 'SubProcesses','madinMMC_%s.2' % args[1]))
-
-                for i in subdir:
-                    current = 'G%s%s' % (args[1], i)
-                    if os.path.exists(pjoin(cwd,current)):
-                        input_files.append(pjoin(cwd, current))
-                    output_files.append(current)
-                    if len(args) == 4 and args[3] in ['H','S','V','B','F']:
-                        # use a grid train on another part
-                        base = '%s_%s' % (args[3],i)
-                        files.ln(pjoin(cwd,base,'mint_grids'), name = 'preset_mint_grids', 
-                                                starting_dir=pjoin(cwd,current))
-                        files.ln(pjoin(cwd,base,'grid.MC_integer'), 
-                                                starting_dir=pjoin(cwd,current))
-                    elif len(args) ==4:
-                        keep_fourth_arg = True
-                    
-  
-            else:
-                raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
-
-            #Find the correct PDF input file
-            if hasattr(self, 'pdffile'):
-                input_files.append(self.pdffile)
-            else:
-                for line in open(pjoin(self.me_dir,'Source','PDF','pdf_list.txt')):
-                    data = line.split()
-                    if len(data) < 4:
-                        continue
-                    if data[1].lower() == self.run_card['pdlabel'].lower():
-                        self.pdffile = pjoin(self.me_dir, 'lib', 'Pdfdata', data[2])
-                        input_files.append(self.pdffile) 
-                        break
-                else:
-                    # possible when using lhapdf
-                    self.pdffile = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'], 
-                            shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-                    #self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
-                    input_files.append(self.pdffile)
-                    
-            
-            if len(args) == 4 and not keep_fourth_arg:
-                args = args[:3]
-
+        elif 'ajob' in exe:
+            input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
             #submitting
             self.cluster.submit2(exe, args, cwd=cwd, 
                          input_files=input_files, output_files=output_files)
+        else:
+            return self.cluster.submit(exe, args, cwd=cwd)
+
+    def getIO_ajob(self,exe,cwd, args):
+        # use local disk if possible => need to stands what are the 
+        # input/output files
+        
+        keep_fourth_arg = False
+        output_files = []
+        input_files = [pjoin(self.me_dir, 'MGMEVersion.txt'),
+                     pjoin(self.me_dir, 'SubProcesses', 'randinit'),
+                     pjoin(cwd, 'symfact.dat'),
+                     pjoin(cwd, 'iproc.dat')]
+      
+        # File for the loop (might not be present if MadLoop is not used)
+        if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
+            to_add = ['MadLoopParams.dat', 'ColorDenomFactors.dat', 
+                                   'ColorNumFactors.dat','HelConfigs.dat']
+            for name in to_add:
+                input_files.append(pjoin(cwd, name))
+
+                to_check = ['HelFilter.dat','LoopFilter.dat']
+            for name in to_check:
+                if os.path.exists(pjoin(cwd, name)):
+                    input_files.append(pjoin(cwd, name))
+
+        Ire = re.compile("for i in ([\d\s]*) ; do")
+        try : 
+            fsock = open(exe)
+        except IOError:
+            fsock = open(pjoin(cwd,exe))
+        text = fsock.read()
+        data = Ire.findall(text)
+        subdir = ' '.join(data).split()
+               
+        if args[0] == '0':
+            # MADEVENT VEGAS MODE
+            input_files.append(pjoin(cwd, 'madevent_vegas'))
+            input_files.append(pjoin(self.me_dir, 'SubProcesses','madin.%s' % args[1]))
+            #j=$2\_G$i
+            for i in subdir:
+                current = '%s_G%s' % (args[1],i)
+                if os.path.exists(pjoin(cwd,current)):
+                    input_files.append(pjoin(cwd, current))
+                output_files.append(current)
+                if len(args) == 4:
+                    # use a grid train on another part
+                    base = '%s_G%s' % (args[3],i)
+                    if args[0] == '0':
+                        to_move = [n for n in os.listdir(pjoin(cwd, base)) 
+                                                      if n.endswith('.sv1')]
+                        to_move.append('grid.MC_integer')
+                    elif args[0] == '1':
+                        to_move = ['mint_grids', 'grid.MC_integer']
+                    else: 
+                        to_move  = []
+                    if not os.path.exists(pjoin(cwd,current)):
+                        os.mkdir(pjoin(cwd,current))
+                        input_files.append(pjoin(cwd, current))
+                    for name in to_move:
+                        files.cp(pjoin(cwd,base, name), 
+                                        pjoin(cwd,current))
+                    files.cp(pjoin(cwd,base, 'grid.MC_integer'), 
+                                        pjoin(cwd,current))
+                            
+        elif args[0] == '2':
+            # MINTMC MODE
+            input_files.append(pjoin(cwd, 'madevent_mintMC'))
+            if args[2] in ['0','2']:
+                input_files.append(pjoin(self.me_dir, 'SubProcesses','madinMMC_%s.2' % args[1]))
+
+            for i in subdir:
+                current = 'G%s%s' % (args[1], i)
+                if os.path.exists(pjoin(cwd,current)):
+                    input_files.append(pjoin(cwd, current))
+                output_files.append(current)
+                if len(args) == 4 and args[3] in ['H','S','V','B','F']:
+                    # use a grid train on another part
+                    base = '%s_%s' % (args[3],i)
+                    files.ln(pjoin(cwd,base,'mint_grids'), name = 'preset_mint_grids', 
+                                            starting_dir=pjoin(cwd,current))
+                    files.ln(pjoin(cwd,base,'grid.MC_integer'), 
+                                          starting_dir=pjoin(cwd,current))
+                elif len(args) ==4:
+                    keep_fourth_arg = True
+               
+
+        else:
+            raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
+
+        #Find the correct PDF input file
+        input_files.append(self.get_pdf_input_filename())
+
+        if len(args) == 4 and not keep_fourth_arg:
+            args = args[:3]
+            
+        return input_files, output_files, args
             
     def write_madinMMC_file(self, path, run_mode, mint_mode):
         """writes the madinMMC_?.2 file"""
@@ -2136,7 +2225,6 @@ Integrated cross-section
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
-
 
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
