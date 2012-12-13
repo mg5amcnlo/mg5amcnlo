@@ -1,6 +1,15 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-2.0.0.beta2(xx/xx/12) MG5 Team: Include 1.5.4+1.5.5 modification
+2.0.0.beta2(13/12/12) MG5 Team: Include 1.5.4+1.5.5 modification
+                      MadSpin Team: Include MadSpin
+                      VH: Fix computation in the Feynman gauge
+                      RF: automatic computation of the NLO uncertainties
+                      OM: NLO can now be runned with no central disk
+                      MZ: change the format of number (using e and not d)
+                      MZ: compilation and tests are possible in multicore
+                      RF: allow to precise either uncertainty or number of events
+                          for aMC@NLO/NLO
+                      OM: ./bin/mg5 cmd.cmd is now working for NLO process
 
 2.0.0.beta1(31/10/12) aMCatNLO Team: First public (beta) version of aMCatNLO.
                         In order to learn aMCatNLO, please do "tutorial aMCatNLO"
