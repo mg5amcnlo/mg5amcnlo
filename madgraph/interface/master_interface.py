@@ -556,7 +556,6 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
                             %','.join(interface_quick_name.keys()))
 
     def change_principal_cmd(self, name):
-
         old_cmd=self.current_interface
         if name in self.interface_names.keys():
             self.prompt= self.interface_names[name][0]+'>'

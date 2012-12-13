@@ -21,6 +21,7 @@ import shutil
 import sys
 import logging
 import time
+from cStringIO import StringIO
 
 logger = logging.getLogger('test_cmd')
 
@@ -90,6 +91,52 @@ class TestMECmdShell(unittest.TestCase):
         self.cmd_line.exec_cmd(line)
 
 
+    def test_calculate_xsect_script(self):
+        """test if the calculate_xsect script in the bin directory
+        works fine"""
+        
+        cmd = os.getcwd()
+        self.generate(['p p > e+ ve [QCD]'], 'loop_sm')
+        self.assertEqual(cmd, os.getcwd())
+        self.do('quit')
+        misc.call([pjoin('.','bin','calculate_xsect'), '-f'], cwd='/tmp/MGPROCESS',
+                stdout = open(os.devnull, 'w'))
+
+        # test the plot file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res.txt'))
+
+        
+
+    def test_generate_events_shower_scripts(self):
+        """test if the generate_events and successively the shower script in 
+        the bin directory works fine"""
+        
+        cmd = os.getcwd()
+        self.generate(['p p > e+ ve [QCD]'], 'loop_sm')
+        self.assertEqual(cmd, os.getcwd())
+        self.do('quit')
+        misc.call([pjoin('.','bin','generate_events'), '-f'], cwd='/tmp/MGPROCESS',
+                stdout = open(os.devnull, 'w'))
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
+        # test the hep event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz'))
+        misc.call([pjoin('.','bin','shower'), 'run_01', '-f'], cwd='/tmp/MGPROCESS',
+                stdout = open(os.devnull, 'w'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_1.hep.gz'))
+        # sanity check on the size
+        self.assertTrue(os.path.getsize('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz') > \
+                        os.path.getsize('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.getsize('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_1.hep.gz') > \
+                        os.path.getsize('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+
+
+
     def test_generate_events_lo_hw6_stdhep(self):
         """test the param_card created is correct"""
         
@@ -106,6 +153,9 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
         # test the hep event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz'))
+        # sanity check on the size
+        self.assertTrue(os.path.getsize('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz') > \
+                        os.path.getsize('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
         
 
 
@@ -129,6 +179,9 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
         # test the hep event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q_0.hep.gz'))
+        # sanity check on the size
+        self.assertTrue(os.path.getsize('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q_0.hep.gz') > \
+                        os.path.getsize('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
         
 
         
@@ -199,6 +252,45 @@ class TestMECmdShell(unittest.TestCase):
         # test the plot file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res.txt'))
+    
+    def test_amcatnlo_from_file(self):
+        """ """
+        
+        cwd = os.getcwd()
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            pass
+        import subprocess
+        
+        stdout = open('/tmp/test.log','w')
+        if logging.getLogger('madgraph').level <= 20:
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stderr=devnull
+
+    
+            
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+                         pjoin(_file_path, 'input_files','test_amcatnlo')],
+                         cwd=pjoin(MG5DIR),
+                        stdout=stdout,stderr=stderr)
+        stdout.close()
+        text = open('/tmp/test.log','r').read()
+        data = text.split('\n')
+        for i,line in enumerate(data):
+            if 'Summary:' in line:
+                break
+        #      Run at p-p collider (4000 + 4000 GeV)
+        self.assertTrue('Run at p-p collider (4000 + 4000 GeV)' in data[i+2])
+        #      Total cross-section: 1.249e+03 +- 3.2e+00 pb        
+        cross_section = data[i+3]
+        cross_section = float(cross_section.split(':')[1].split('+-')[0])
+        # warning, delta may not be compatible with python 2.6 
+        self.assertAlmostEqual(1.005e+03, cross_section,delta=50)
+        #      Number of events generated: 10000        
+        self.assertTrue('Number of events generated: 100' in data[i+4])
         
 
     def load_result(self, run_name):
