@@ -193,7 +193,7 @@ class Banner(dict):
                      {'tag':tag, 'text':self[tag].strip()})
         for tag in [t for t in self.keys() if t not in self.ordered_items]:
             if tag in ['init']:
-                pass
+                continue
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
                      {'tag':tag, 'text':self[tag].strip()})
 
@@ -202,7 +202,7 @@ class Banner(dict):
         if 'init' in self:
             text = self['init']
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
-                     {'tag':'init', 'text':text})  
+                     {'tag':'init', 'text':text.strip()})  
         if close_tag:          
             ff.write('</LesHouchesEvents>\n')
         

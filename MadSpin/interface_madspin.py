@@ -58,7 +58,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.model = None
         
         self.options = {'max_weight': -1, 'BW_effect': 1, 
-                        'curr_dir': os.getcwd()}
+                        'curr_dir': os.path.realpath(os.getcwd())}
         
 
         
@@ -67,6 +67,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.list_branches = {}
         self.to_decay={}
         self.mg5cmd = master_interface.MasterCmd()
+        self.seed = None
+        
         
         if event_path:
             logger.info("Extracting the banner ...")
@@ -77,7 +79,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         """import the event file"""
         
         # change directory where to write the output
-        self.options['curr_dir'] = os.path.dirname(inputfile)
+        self.options['curr_dir'] = os.path.realpath(os.path.dirname(inputfile))
         if os.path.basename(os.path.dirname(os.path.dirname(inputfile))) == 'Events':
             self.options['curr_dir'] = pjoin(self.options['curr_dir'], 
                                                       os.path.pardir, os.pardir)
@@ -98,7 +100,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             inputfile = inputfile[:-3]
 
         # Read the banner of the inputfile
-        self.events_file = open(inputfile)
+        self.events_file = open(os.path.realpath(inputfile))
         self.banner = banner.Banner(self.events_file)
         
         # Check the validity of the banner:
@@ -189,9 +191,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         if len(args) < 2:
             raise self.InvalidCmd('set command requires at least two argument.')
-         
-        if args[0] not in self.options:
-            raise self.InvalidCmd('Unknown options')        
+        
+        valid = ['maz_weight','seed','curr_dir']
+        if args[0] not in self.options and args[0] not in valid:
+            raise self.InvalidCmd('Unknown options %s' % args[0])        
     
         if args[0] == 'max_weight':
             try:
@@ -210,21 +213,20 @@ class MadSpinInterface(extended_cmd.Cmd):
         elif args[0] == 'curr_dir':
             if not os.path.isdir(args[1]):
                 raise self.InvalidCmd('second argument should be a path to a existing directory')
-             
+
+        
     def do_set(self, line):
         """ add one of the options """
         
         args = self.split_arg(line)
         self.check_set(args)
         
-        if args[0] not in self.options:
-            raise self.InvalidCmd('Unknown options')
-        
         if args[0] in  ['max_weight', 'BW_effect']:
             self.options[args[0]] = args[1]
         elif args[0] == 'seed':
             import random
-            random.seed(int(args[1])) 
+            random.seed(int(args[1]))
+            self.seed = int(args[1]) 
     
     def complete_set(self,  text, line, begidx, endidx):
  
@@ -312,6 +314,17 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         model_line = self.banner.get('proc_card', 'full_model_line')
 
+        if not self.seed:
+            import random
+            self.seed = random.randint(0, int(2**32))
+            self.do_set('seed %s' % self.seed)
+            logger.info('Will use seed %s' % self.seed)
+            self.history.insert(0, 'set seed %s' % self.seed)
+        self.options['seed'] = self.seed
+        text = '%s\n' % '\n'.join([ line for line in self.history if line])
+        self.banner.add_text('madspin' , text)
+        
+        
         generate_all = madspin.decay_all_events(self,self.events_file,
                                               self.banner,
                                               self.decay_processes,
@@ -325,7 +338,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         shutil.move(pjoin(self.options['curr_dir'],'decayed_events.lhe'), decayed_evt_file)
         misc.call(['gzip %s' % decayed_evt_file], shell=True)
         if not self.mother:
-            logger.info("Decayed events have been written in %s" % decayed_evt_file)
+            logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
     
     
     def load_model(self, name, use_mg_default):

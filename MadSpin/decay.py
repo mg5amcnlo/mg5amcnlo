@@ -1988,7 +1988,6 @@ class decay_misc:
                 mode=1 : process fully decayed
         """
 
-
         commandline="import model "+base_model
         mgcmd.exec_cmd(commandline)
 
@@ -2069,7 +2068,7 @@ class decay_misc:
 
         return full_proc_line, decay_struct
 
-    def compile_fortran_me_production(self,path_me):
+    def compile_fortran_me_production(self, path_me):
         """ Compile the fortran executables associated with the evalutation of the 
                 matrix elements (production process)
                 Returns the path to the fortran executable
@@ -2116,15 +2115,15 @@ class decay_misc:
                 misc.compile(arg=['clean'], cwd=pjoin(path_me,"production_me","Source", "MODEL"), mode='fortran')
                 misc.compile( cwd=pjoin(path_me,"production_me","Source","MODEL"), mode='fortran')                   
 
-                os.chdir(new_path)
+                #os.chdir(new_path)
                 misc.compile(arg=['clean'], cwd=new_path, mode='fortran')
                 misc.compile(arg=['init'],cwd=new_path,mode='fortran')
-                misc.call('./init')
+                misc.call('./init', cwd=new_path)
 
-                shutil.copyfile('parameters.inc', '../parameters.inc')
+                shutil.copyfile(pjoin(new_path,'parameters.inc'), 
+                               pjoin(new_path,os.path.pardir, 'parameters.inc'))
                 os.chdir(path_me)
                     
-
                 misc.compile(cwd=new_path, mode='fortran')
 
                 if(os.path.getsize(pjoin(path_me,'production_me','SubProcesses', 'parameters.inc'))<10):
@@ -2634,7 +2633,7 @@ class decay_all_events:
         self.options = options
         max_weight_arg = options['max_weight']  
         BW_effects = options['BW_effect']
-        path_me = options['curr_dir']
+        path_me = os.path.realpath(options['curr_dir'])
         self.path_me = path_me                             
                                      
         # need to unbuffer all I/O in fortran, otherwise
@@ -2866,17 +2865,17 @@ class decay_all_events:
         decay_struct[tag_production]={}
         decay_path[tag_production]={}
         for tag_decay in decay_tags:
-             check_weights[tag_decay]=[]
-             new_full_proc_line, new_decay_struct=\
+            check_weights[tag_decay]=[]
+            new_full_proc_line, new_decay_struct=\
                 decay_tools.get_full_process_structure(multi_decay_processes[tag_decay]['config'],\
                 extended_prod_process, base_model, mybanner, proc_option)
-             decay_struct[tag_production][tag_decay]=new_decay_struct
+            decay_struct[tag_production][tag_decay]=new_decay_struct
 #
-             decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
+            decay_tools.generate_fortran_me([new_full_proc_line+proc_option],\
                                                     mybanner.get("model"), 1,mgcmd,path_me)
 
-             decay_name=decay_tools.compile_fortran_me_full(path_me)
-             decay_path[tag_production][tag_decay]=decay_name
+            decay_name=decay_tools.compile_fortran_me_full(path_me)
+            decay_path[tag_production][tag_decay]=decay_name
 
         # select a topology for the reshuffling
         p, p_str=curr_event.give_momenta()
@@ -3236,7 +3235,7 @@ class decay_all_events:
             ms_banner+="# estimate of the maximum weight: "+str(max_weight[map_decay_me[tag_decay]]) + "\n"
             total_br += multi_decay_processes[tag_decay]['br']
         self.branching_ratio = total_br
-        mybanner.add_text('madspin', ms_banner)
+        mybanner['madspin'] += ms_banner
         # Update cross-section in the banner
         if 'mggenerationinfo' in mybanner:
             mg_info = mybanner['mggenerationinfo'].split('\n')
@@ -3252,7 +3251,16 @@ class decay_all_events:
                     continue
                 mg_info[i] = '%s : %s' % (info, value * total_br)
             mybanner['mggenerationinfo'] = '\n'.join(mg_info)
-        
+        if 'init' in mybanner:
+            new_init =''
+            for line in mybanner['init'].split('\n'):
+                if len(line.split()) != 4:
+                    new_init += '%s\n' % line
+                else:
+                    data = [float(nb) for nb in line.split()]
+                    data[:3] = [ data[i] *total_br for i  in range(3)]
+                    new_init += ' %.12E %.12E %.12E %i\n' % tuple(data)
+            mybanner['init'] = new_init
         mybanner.write(outputfile, close_tag=False)
         
         event_nb=0
@@ -3448,8 +3456,12 @@ class decay_all_events:
                 external = self.calculator[(mode, production)]
                 external.terminate()
         else:
-            external = self.calculator[('full', path_to_decay)]
-            external.terminate()
+            try:
+                external = self.calculator[('full', path_to_decay)]
+            except Exception:
+                pass
+            else:
+                external.terminate()
 
     def calculate_matrix_element(self, mode, production, stdin_text):
         """routine to return the matrix element"""
