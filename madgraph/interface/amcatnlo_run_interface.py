@@ -2450,9 +2450,14 @@ Integrated cross-section
     def ask_run_configuration(self, mode, options):
         """Ask the question when launching generate_events/multi_run"""
         
+        if 'parton' not in options:
+            options['parton'] = False
+        if 'reweightonly' not in options:
+            options['reweightonly'] = False
+        
         if mode == 'auto': 
             mode = None
-        if (options['parton'] or options['reweightonly']) and not mode:
+        if not mode and (options['parton'] or options['reweightonly']):
             mode = 'noshower' 
                 
         available_mode = ['0', '1', '2', '3']

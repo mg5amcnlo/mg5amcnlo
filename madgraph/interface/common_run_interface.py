@@ -935,7 +935,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def get_pdf_input_filename(self):
         """return the name of the file which is used by the pdfset"""
         
-        if hasattr(self, 'pdffile'):
+        if hasattr(self, 'pdffile') and self.pdffile:
             return self.pdffile
         else:
             for line in open(pjoin(self.me_dir,'Source','PDF','pdf_list.txt')):
