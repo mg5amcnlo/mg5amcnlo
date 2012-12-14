@@ -1308,6 +1308,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not os.path.exists(current_file):
             if os.path.exists(current_file+'.gz'):
                 current_file += '.gz'
+                new_file += '.gz'
             else:
                 logger.error('MadSpin fails to create any decayed file.')
                 return

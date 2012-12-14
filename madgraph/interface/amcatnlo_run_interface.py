@@ -2451,7 +2451,7 @@ Integrated cross-section
         
         if mode == 'auto': 
             mode = None
-        if options['parton'] and not mode:
+        if (options['parton'] or options['reweightonly']) and not mode:
             mode = 'noshower' 
                 
         available_mode = ['0', '1', '2', '3']
@@ -2511,6 +2511,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
             cards.append('shower_card.dat')
         if mode == 'onlyshower':
             cards = ['shower_card.dat']
+        if options['reweightonly']:
+            cards = ['run_card.dat']
 
         self.keep_cards(cards)
         
