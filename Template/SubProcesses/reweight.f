@@ -447,7 +447,7 @@ C   local variables
 
 c     Variables for keeping track of jets
       logical goodjet(n_max_cl)
-      integer njets,iqjets(nexternal-2,2)
+      integer njets,iqjets(0:nexternal-2,2)
       integer fsnum(2),ida(2),imo
       logical chclusold,fail
       save chclusold
@@ -557,6 +557,9 @@ c     Prepare beam related variables for scale and jet determination
 c   Go through clusterings and set factorization scale points for use in dsig
 c   as well as which FS particles count as jets (from jet vertices)
       njets=0
+      do i=1,2
+         iqjets(0,i)=0
+      enddo
       if (nexternal.eq.3) goto 10
       do n=1,nexternal-2
         do i=1,2
@@ -595,7 +598,7 @@ c             Consider t-channel jet radiations as jets only if
 c             FS line is a jet line and it's final state
               fsnum(1)=ifsno(ida(3-i),ipart)
               if(goodjet(ida(3-i)).and.fsnum(1).gt.0.and.
-     $           iqjets(njets,1).ne.fsnum(1))then
+     $           iqjets(njets,1).ne.fsnum(1)) then
                  njets=njets+1
                  iqjets(njets,1)=fsnum(1)
                  if(partonline(j))then

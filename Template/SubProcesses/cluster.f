@@ -556,7 +556,7 @@ c**************************************************************************
       common/to_mconfigs/mapconfig, this_config
 
       integer nbw,ibwlist(2,nexternal)
-      data isbw/n_max_cl*.false./
+      logical isbw(n_max_cl)
 
       data (pz(i),i=0,3)/1d0,0d0,0d0,1d0/
 
@@ -887,26 +887,16 @@ c     final state clustering
 c     initial state clustering, only if hadronic collision
 c     check whether 2->(n-1) process w/ cms energy > 0 remains
                           iwinp=imap(3-j,2);
-                          do k=0,3
-                             pcl(k,idij)=pcl(k,idj)-pcl(k,idi)
-c                           pcmsp(k)=pcl(k,idij)+pcl(k,iwinp)
-                          enddo
-c                       ecms2=pcmsp(0)**2-pcmsp(1)**2-
-c                       $                          pcmsp(2)**2-pcmsp(3)**2
-c                       if (ecms2.gt.0.1d0.and.
-c                       if ((nleft.eq.4.or.ecms2.gt.0.1d0).and.
-c                         if((lpp(j).ne.0)) then
-                            if(ickkw.eq.2.or.ktscheme.eq.2)then
-                              pt2ij(idij)=pyjb(pcl(0,idi),
-     $                           pcl(0,idj),pcl(0,iwinp),zij(idij))
-                            else
-                              pt2ij(idij)=djb(pcl(0,idi))
-                              zij(idij)=zclus(pcl(0,idi),pcl(0,idj),pcl(0,iwinp))
-                            endif
+                          if(ickkw.eq.2.or.ktscheme.eq.2)then
+                             pt2ij(idij)=pyjb(pcl(0,idi),
+     $                            pcl(0,idj),pcl(0,iwinp),zij(idij))
+                          else
+                             pt2ij(idij)=djb(pcl(0,idi))
+                             zij(idij)=zclus(pcl(0,idi),pcl(0,idj),pcl(0,iwinp))
+                          endif
 c                 prefer clustering when outgoing in direction of incoming
-                            if(sign(1d0,pcl(3,idi)).ne.sign(1d0,pcl(3,idj)))
+                          if(sign(1d0,pcl(3,idi)).ne.sign(1d0,pcl(3,idj)))
      $                         pt2ij(idij)=pt2ij(idij)*(1d0+1d-6)
-c                          endif
                         endif
                         if (btest(mlevel,4)) then
                           write(*,*)'         ',idi,'&',idj,' part ',iwinp,' -> ',idij,
