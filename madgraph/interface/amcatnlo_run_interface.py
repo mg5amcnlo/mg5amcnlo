@@ -864,6 +864,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         (options, argss) = _generate_events_parser.parse_args(argss)
         # check argument validity and normalise argument
         options = options.__dict__
+        options['reweightonly'] = False
         self.check_shower(argss, options)
         evt_file = pjoin(os.getcwd(), argss[0], 'events.lhe')
         self.ask_run_configuration('onlyshower', options)

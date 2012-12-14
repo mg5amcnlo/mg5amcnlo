@@ -149,21 +149,25 @@ c Replace the random number seed with the one used...
       integer ifile,nevents
       character*10 MonteCarlo
       character*80 string,string0
+      nevents = -1
+      MonteCarlo = ''
 c
       string='  '
       dowhile(string.ne.'  -->')
         string0=string
+        if (index(string,'</header>').ne.0) return
         read(ifile,'(a)')string
       enddo
 c Works only if the name of the MC is the last line of the comments
       MonteCarlo=string0(1:10)
 c Here we are at the end of (user-defined) comments. Now go to end
 c of headers
-      dowhile(string.ne.'  </header>')
+      dowhile(index(string,'</header>').eq.0)
         string0=string
         read(ifile,'(a)')string
       enddo
-      read(string0,250)nevents
+c if the file is a partial file the header is non-standard   
+      if (MonteCarlo .ne. '') read(string0,250) nevents
  250  format(1x,i8)
       return
       end
