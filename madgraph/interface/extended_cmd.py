@@ -714,7 +714,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             error_text = ''
         error_text += '%s : %s\n' % (error.__class__.__name__, 
                                             str(error).replace('\n','\n\t'))
-        error_text += self.error_debug % {'debug': self.debug_output}
+        error_text += self.error_debug % self.debug_output
         logger_stderr.critical(error_text)
         
                 
@@ -1084,7 +1084,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 if not doc:
                     doc = getattr(self, name).__doc__
                 if not doc:
-                    print 'no infor on ', name
                     tag = "Documented commands"
                 elif ':' in doc:
                     tag = doc.split(':',1)[0]
@@ -1137,7 +1136,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             options = self.next_possibility[last_action_2]
         elif last_action in authorize:
             options = self.next_possibility[last_action]
-        
+        else:
+            return
         text = 'The following command(s) may be useful in order to continue.\n'
         for option in options:
             text+='\t %s \n' % option      

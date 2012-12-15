@@ -229,8 +229,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.seed = int(args[1]) 
     
     def complete_set(self,  text, line, begidx, endidx):
- 
-        args = self.split_arg(line[0:begidx], error=False)
+        
+     try:
+        args = self.split_arg(line[0:begidx])
 
         # Format
         if len(args) == 1:
@@ -239,7 +240,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         elif len(args) == 2:
             if args[1] == 'BW_effect':
                 return self.list_completion(text, ['True', 'False']) 
-    
+     except Exception, error:
+         print error
+         
     def help_set(self):
         """help the set command"""
         
@@ -280,6 +283,17 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise self.InvalidCmd("Nothing to decay ... Please specify some decay")
         if not self.events_file:
             raise self.InvalidCmd("No events files defined.")
+
+    def help_launch(self):
+        """help for the launch command"""
+        
+        print '''Running Madspin on the loaded events, following the decays enter
+        An example of a full run is the following:
+        import ../mssm_events.lhe.gz
+        define sq = ur ur~
+        decay go > sq j
+        launch
+        '''
 
     @misc.mute_logger()
     def do_launch(self, line):
