@@ -130,6 +130,9 @@ pdf(pdf_pdg_code1(n_pdfrw1),pdf_x1(n_pdfrw1),scalefact*pdf_q1(n_pdfrw1))/
 pdf(pdf_pdg_code1(n_pdfrw1),pdf_x1(n_pdfrw1),pdf_q1(n_pdfrw1-1))*
 # Note the central scale reweighting by scalefact above
 # (if n_pdfrw1 = 1, need to reweight the initial state pdf scale)
+# Also note that no scale should be larger than the last one (including
+# scalefact) for that beam.
+#
 # Now the same thing for all pdfs in beam 2 (n_pdfrw2)
 pdf(pdf_pdg_code2(1),pdf_x2(1),pdf_q2(1))*       # initial state pdf
  ...
