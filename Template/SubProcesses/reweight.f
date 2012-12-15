@@ -448,8 +448,8 @@ C   local variables
 c     Variables for keeping track of jets
       logical goodjet(n_max_cl)
       integer njets,iqjets(0:nexternal-2,2)
-      integer fsnum(2),ida(2),imo
-      logical chclusold,fail
+      integer fsnum(2),ida(2),imo,jcode
+      logical chclusold,fail,increasecode
       save chclusold
 
       logical isqcd,isjet,isparton,cluster,isjetvx
@@ -561,6 +561,8 @@ c   as well as which FS particles count as jets (from jet vertices)
          iqjets(0,i)=0
       enddo
       if (nexternal.eq.3) goto 10
+      jcode=1
+      increasecode=.false.
       do n=1,nexternal-2
         do i=1,2
           do j=1,2
@@ -594,6 +596,18 @@ c             Stop fact scale where parton line stops
               else
                  goodjet(imo)=.false.
               endif
+c             If not jet vertex, increase jcode. This is needed
+c             e.g. in VBF if we pass over to the other side and hit
+c             parton vertices again.
+              if(.not.goodjet(ida(3-i)).or.
+     $             .not.isjet(ipdgcl(ida(i),igraphs(1),iproc)).or.
+     $             .not.isjet(ipdgcl(imo,igraphs(1),iproc))) then
+                  jcode=jcode+1
+                  increasecode=.true.
+               else if(increasecode) then
+                  jcode=jcode+1
+                  increasecode=.false.
+               endif
 c             Consider t-channel jet radiations as jets only if
 c             FS line is a jet line and it's final state
               fsnum(1)=ifsno(ida(3-i),ipart)
@@ -604,7 +618,7 @@ c             FS line is a jet line and it's final state
                  if(partonline(j))then
                     iqjets(njets,2)=1 ! 1 means for sure jet
                  else
-                    iqjets(njets,2)=2 ! 2 means possible jet
+                    iqjets(njets,2)=jcode ! jcode means possible jet
                  endif
               endif
 c             Trace QCD line through event
@@ -654,13 +668,15 @@ c          Check QCD jet, take care so it's not a decay
          write(*,*) '    jet status:    ',(iqjets(i,2),i=1,njets)         
       endif
 c     Now take care of possible jets
-      if(.not. partonline(1).and..not. partonline(2))then
-c       Possible jets are not jets
+      if(.not. partonline(1).or..not.partonline(2))then
+c       First reduce jcode by one if one remaining partonline
+        if(partonline(1).or.partonline(2)) jcode=jcode-1
+c       There parton emissions with code <= jcode are not jets
          do i=njets,1,-1
-            if(iqjets(i,2).eq.2)then
+            if(iqjets(i,2).gt.1.and.iqjets(i,2).le.jcode)then
                njets=njets-1
                do j=i,njets
-                  iqjets(j,1)=iqjets(1,j+1)
+                  iqjets(j,1)=iqjets(j+1,1)
                enddo
             endif
          enddo
@@ -699,6 +715,18 @@ c     if not, recluster according to iconfig
             enddo
          endif
          if (fail) then
+            if (igraphs(1).eq.iconfig) then
+               open(unit=26,file='../../../error',status='unknown',err=999)
+               write(*,*) 'Error: Failed despite same graph: ',iconfig
+               write(*,*) 'Have jets ',(iqjets(i,1),i=1,njets)
+               write(*,*) 'Should be ',
+     $              (iqjetstore(i,iconfig),i=1,njetstore(iconfig))
+               write(26,*) 'Error: Failed despite same graph: ',iconfig,
+     $              '. Have jets ',(iqjets(i,1),i=1,njets)
+     $              ', should be ',
+     $              (iqjetstore(i,iconfig),i=1,njetstore(iconfig))
+               stop
+            endif
             if (btest(mlevel,3))
      $           write(*,*) 'Bad clustering, jets fail. Reclustering ',
      $           iconfig
