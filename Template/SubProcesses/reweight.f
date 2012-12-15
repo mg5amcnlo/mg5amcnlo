@@ -722,7 +722,7 @@ c     if not, recluster according to iconfig
                write(*,*) 'Should be ',
      $              (iqjetstore(i,iconfig),i=1,njetstore(iconfig))
                write(26,*) 'Error: Failed despite same graph: ',iconfig,
-     $              '. Have jets ',(iqjets(i,1),i=1,njets)
+     $              '. Have jets ',(iqjets(i,1),i=1,njets),
      $              ', should be ',
      $              (iqjetstore(i,iconfig),i=1,njetstore(iconfig))
                stop
@@ -904,35 +904,31 @@ c
 c     Store jet info for matching
 c
       etot=sqrt(stot)
+      do i=1,nexternal
+         ptclus(i)=0d0
+      enddo
 
       do n=1,nexternal-2
-         if(n.lt.nexternal-2)then
-            do i=1,2
-               fsnum(i)=ifsno(idacl(n,i),ipart)
-            enddo
+         if(n.lt.nexternal-2) then
+            ida(1)=idacl(n,1)
+            ida(2)=idacl(n,2)
+            imo=imocl(n)
          else
-            fsnum(1)=ifsno(imocl(n),ipart)
-            fsnum(2)=0
+            ida(1)=idacl(n,1)
+            ida(2)=imocl(n)
+            imo=idacl(n,2)
          endif
          do i=1,2
-            if(fsnum(i).gt.0)then
-c     Check if fsnum in jet list
-               fail=.true.
-               do j=1,njets
-                  if(fsnum(i).eq.iqjets(j,1))then
-                     fail=.false.
-                     exit
-                  endif
-               enddo
-               if(fail)then
-                  ptclus(fsnum(i))=etot
-               else
-                  ptclus(fsnum(i))=dsqrt(pt2ijcl(n))
+            do j=1,2
+               if(ipart(j,ida(i)).gt.2)then
+                  ptclus(ipart(j,ida(i)))=
+     $                 max(ptclus(ipart(j,ida(i))),dsqrt(pt2ijcl(n)))
+                  if(.not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
+     $               ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)
+     $               .or..not.goodjet(ida(i)))
+     $                 ptclus(ipart(j,ida(i)))=etot
                endif
-               if (btest(mlevel,3))
-     $              write(*,*) 'Set ptclus for ',fsnum(i),
-     $              ' to ', ptclus(fsnum(i))
-            endif
+            enddo
          enddo
       enddo
 c
