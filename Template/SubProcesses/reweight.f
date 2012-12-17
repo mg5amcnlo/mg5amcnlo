@@ -615,7 +615,9 @@ c             FS line is a jet line and it's final state
      $           iqjets(njets,1).ne.fsnum(1)) then
                  njets=njets+1
                  iqjets(njets,1)=fsnum(1)
-                 if(partonline(j))then
+                 if(partonline(j).or.
+     $              ipdgcl(ida(3-i),igraphs(1),iproc).eq.21)then
+c                   Need to include gluon to avoid soft singularity
                     iqjets(njets,2)=1 ! 1 means for sure jet
                  else
                     iqjets(njets,2)=jcode ! jcode means possible jet
