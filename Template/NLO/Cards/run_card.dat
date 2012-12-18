@@ -54,7 +54,7 @@
   10042    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
 #***********************************************************************
 # Include the NLO Monte Carlo subtr. terms for the following parton    *
-# shower (HERWIG6 | HERWIGPP | PYTHIA6Q )                              *
+# shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA8)                              *
 #***********************************************************************
   HERWIG6   = parton_shower
 #***********************************************************************
