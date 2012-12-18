@@ -872,13 +872,16 @@ class AbstractALOHAModel(dict):
             
             # assign each order/color to a set of lorentz routine
             combine = {}
-            for (id_col, id_lor), coup in vertex.couplings.items():
-                order = orders[coup.name]
-                key = (id_col, order)
-                if key in combine:
-                    combine[key].append(id_lor)
-                else:
-                    combine[key] = [id_lor]
+            for (id_col, id_lor), coups in vertex.couplings.items():
+                if not isinstance(coups, list):
+                    coups = [coups]
+                for coup in coups:
+                    order = orders[coup.name]
+                    key = (id_col, order)
+                    if key in combine:
+                        combine[key].append(id_lor)
+                    else:
+                        combine[key] = [id_lor]
                     
             # Check if more than one routine are associated
             for list_lor in combine.values():
