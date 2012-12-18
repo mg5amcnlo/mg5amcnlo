@@ -122,7 +122,7 @@ alpha_s(alpsfact*alpsem_scale(2)) *              # emission ren scale
 ...
 pdf(pdf_pdg_code1(1),pdf_x1(1),pdf_q1(1))*       # initial state pdf
 pdf(pdf_pdg_code1(2),pdf_x1(2),pdf_q1(2))/
-pdf(pdf_pdg_code1(2),pdf_x1(2),pdf_q1(1))*       # pdf reweighting
+pdf(pdf_pdg_code1(2),pdf_x1(2),pdf_q1(2))*       # pdf reweighting
 pdf(pdf_pdg_code1(3),pdf_x1(3),pdf_q1(3))/
 pdf(pdf_pdg_code1(3),pdf_x1(3),pdf_q1(2))*       # pdf reweighting
  ...

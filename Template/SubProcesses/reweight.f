@@ -1073,11 +1073,7 @@ c     Store information for systematics studies
                         if(use_syst)then
                            n_pdfrw(j)=n_pdfrw(j)+1
                            i_pdgpdf(n_pdfrw(j),j)=ipdgcl(idacl(n,i),igraphs(1),iproc)
-                           if (zcl(n).gt.0d0.and.zcl(n).lt.1d0) then
-                              s_xpdf(n_pdfrw(j),j)=xnow(j)/zcl(n)
-                           else
-                              s_xpdf(n_pdfrw(j),j)=xnow(j) 
-                           endif
+                           s_xpdf(n_pdfrw(j),j)=xnow(j) 
                            s_qpdf(n_pdfrw(j),j)=sqrt(q2now)
                         endif
                         if (btest(mlevel,3)) then
