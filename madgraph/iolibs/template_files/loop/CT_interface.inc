@@ -136,8 +136,8 @@ C MADLOOP'S NUMERATOR IN THE DEFAULT OUTPUT IS SLOWER THAN THE RECONSTRUCTED ONE
 C -------------------------------	  
 
 C The initialization below is for CT v1.8.+
-C      CALL CTSINIT(THRS,LOOPLIB,EXT_NUM_FOR_R1)
+      CALL CTSINIT(THRS,LOOPLIB,EXT_NUM_FOR_R1)
 C The initialization below is for the older stable CT v1.7, still used for now in the beta release.
-      CALL CTSINIT(THRS,LOOPLIB)
+C      CALL CTSINIT(THRS,LOOPLIB)
 
 	  END
