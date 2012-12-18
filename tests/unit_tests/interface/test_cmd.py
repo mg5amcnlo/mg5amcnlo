@@ -17,6 +17,7 @@
 import unittest
 import madgraph
 import madgraph.interface.master_interface as cmd
+import MadSpin.interface_madspin as ms_cmd
 import madgraph.interface.extended_cmd as ext_cmd
 import os
 
@@ -138,9 +139,36 @@ class TestValidCmd(unittest.TestCase):
         goal = [l.strip() for l in  goal.split('\n')]
         self.assertEqual(self.cmd.history, goal)
     
-    
-    
-    
+    def test_InvalidCmd(self):
+        """test that the Invalid Command are dealt with correctly"""
+        
+
+        
+        master = cmd.MasterCmd()
+        self.assertRaises(master.InvalidCmd, master.do_generate,('aa'))
+        try:
+            master.run_cmd('aa')
+        except Exception, error:
+            print error
+            self.assertTrue(False, 'error are not treated correctly')
+        
+        # Madspin
+        master = ms_cmd.MadSpinInterface()
+        self.assertRaises(Exception, master.do_define,('aa'))
+        
+        import tests.acceptance_tests.test_cmd_madloop as cmd_madloop
+        tmp = cmd_madloop.TestCmdLoop
+        tmp.setup_logFile_for_logger('fatalerror', level='WARNING')
+
+        try:
+            master.run_cmd('define aa')
+        except Exception:
+            self.assertTrue(False, 'error are not treated correctly')
+        
+        text = open('/tmp/fatalerror.log').read()
+        self.assertTrue('{' not in text)
+        self.assertTrue('MS_debug' in text)
+        
     def test_help_category(self):
         """Check that no help category are introduced by mistake.
            If this test fails, this is due to a un-expected ':' in a command of

@@ -34,6 +34,7 @@ import MadSpin.decay as madspin
 
 logger = logging.getLogger('decay.stdout') # -> stdout
 logger_stderr = logging.getLogger('decay.stderr') # ->stderr
+cmd_logger = logging.getLogger('cmdprint2') # -> print
 
 
 
@@ -47,11 +48,11 @@ class MadSpinInterface(extended_cmd.Cmd):
     def __init__(self, event_path=None, *completekey, **stdin):
         """initialize the interface with potentially an event_path"""
         
-        print '************************************************************'
-        print '*                                                          *'
-        print '*           W E L C O M E  to  M A D S P I N               *'
-        print '*                                                          *'
-        print '************************************************************'
+        cmd_logger.info('************************************************************')
+        cmd_logger.info('*                                                          *')
+        cmd_logger.info('*           W E L C O M E  to  M A D S P I N               *')
+        cmd_logger.info('*                                                          *')
+        cmd_logger.info('************************************************************')
         extended_cmd.Cmd.__init__(self, *completekey, **stdin)
         
         self.decay = madspin.decay_misc()

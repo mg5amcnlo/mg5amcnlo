@@ -461,7 +461,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
     debug_output = 'debug'
     error_debug = """Please report this bug to developers\n
-           More information is found in '%s'.\n
+           More information is found in '%(debug)s'.\n
            Please attach this file to your report."""
     config_debug = error_debug
            
@@ -714,7 +714,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             error_text = ''
         error_text += '%s : %s\n' % (error.__class__.__name__, 
                                             str(error).replace('\n','\n\t'))
-        error_text += self.error_debug % self.debug_output
+        error_text += self.error_debug % {'debug':self.debug_output}
         logger_stderr.critical(error_text)
         
                 
