@@ -79,7 +79,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         #swhich the other loggers off
         loggers_off = [logging.getLogger('madgraph.diagram_generation'), 
                        logging.getLogger('madgraph.loop_diagram_generation')]
-        old_levels = [logg.getEffectiveLevel() for logg in loggers_off]
+        old_levels = [logg.level for logg in loggers_off]
         for logg in loggers_off:
             logg.setLevel(logging.WARNING)
 

@@ -9,6 +9,8 @@
       common /c_i_orig/i_orig
       integer ioutput
       parameter(ioutput=99)
+      integer nevents_file(80)
+      common /to_nevents_file/nevents_file
 
       write (*,*) 'Keep the original weights from the event files, '
       write (*,*) 'or overwrite them by the (total Xsec)/(# events)?'
@@ -19,8 +21,8 @@
       write(*,*) i_orig
 
       istep=0
-      write (*,*) 'step #',istep
  1    continue
+      write (*,*) 'step #',istep
       outputfile='allevents_X_000'
       if(istep.eq.0) then
          basicfile='nevents_unweighted'
@@ -50,6 +52,8 @@
          if (ievents.eq.0) cycle
          nevents=nevents+ievents
          numoffiles=numoffiles+1
+c store here the number of events per file         
+         nevents_file(numoffiles) = ievents
          xtotal=xtotal+absxsec
          junit(numoffiles)=numoffiles+10
          open(unit=junit(numoffiles),file=eventfile,status='old',
@@ -159,7 +163,7 @@ c
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
       character*140 buff
-      character*10 MonteCarlo,MonteCarlo1
+      character*10 MonteCarlo,MonteCarlo1, MonteCarlo0
       character*100 path
       integer iseed
       data iseed/1/
@@ -167,6 +171,8 @@ c
       external fk88random
       logical debug
       parameter (debug=.false.)
+      integer nevents_file(80)
+      common /to_nevents_file/nevents_file
 c
       if(debug) then
          write (*,*) ioutput,numoffiles,(junit(ii),ii=1,numoffiles)
@@ -177,21 +183,48 @@ c
       xsecup=0.d0
       xerrup=0.d0
       call read_lhef_header(junit(ione),maxevt,MonteCarlo)
+      if (MonteCarlo .ne. '') MonteCarlo0 = MonteCarlo
       call read_lhef_init(junit(ione),
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      #  XSECUP,XERRUP,XMAXUP,LPRUP)
-      mx_of_evt(1)=maxevt
+c if the number of the events is in the header (as for evt files in the
+c     subchannel folders (P*/G*/), the number of events should be in the
+c      header. Check consistency in this case
+      if (maxevt .gt. 0) then
+        mx_of_evt(1)=maxevt
+        if (mx_of_evt(1) .ne. nevents_file(1)) then
+           write(*,*) 'Inconsistent event file 1, unit=', junit(1)
+           write(*,*) 'Expected # of events:', nevents_file(1)
+           write(*,*) 'Found # of events:', mx_of_evt(1)
+           stop
+        endif
+      else
+        mx_of_evt(1)=nevents_file(1)
+      endif
+      maxevt=mx_of_evt(1)
+
       xerrup=xerrup**2
       do ii=2,numoffiles
         call read_lhef_header(junit(ii),nevents,MonteCarlo1)
+        if (nevents .gt. 0) then
+            mx_of_evt(ii)=nevents
+            if (mx_of_evt(ii) .ne. nevents_file(ii)) then
+               write(*,*) 'Inconsistent event file, unit=',junit(ii)
+               write(*,*) 'Expected # of events:', nevents_file(ii)
+               write(*,*) 'Found # of events:', mx_of_evt(ii)
+               stop
+            endif
+        else
+            mx_of_evt(ii)=nevents_file(ii)
+        endif
         if(MonteCarlo.ne.MonteCarlo1)then
           write(*,*)'Error in collect_all_evfiles'
           write(*,*)'Files ',ione,' and ',ii,' are inconsistent'
           write(*,*)'Monte Carlo types are not the same'
+          write(*,*)'1', MonteCarlo, '2', MonteCarlo1
           stop
         endif
-        mx_of_evt(ii)=nevents
-        maxevt=maxevt+nevents
+        maxevt=maxevt+mx_of_evt(ii)
         call read_lhef_init(junit(ii),
      #    IDBMUP1,EBMUP1,PDFGUP1,PDFSUP1,IDWTUP1,NPRUP1,
      #    XSECUP1,XERRUP1,XMAXUP1,LPRUP1)
@@ -221,7 +254,7 @@ c
       endif
       xerrup=sqrt(xerrup)
       path="../Cards/"
-      call write_lhef_header_banner(ioutput,maxevt,MonteCarlo,path)
+      call write_lhef_header_banner(ioutput,maxevt,MonteCarlo0,path)
       call write_lhef_init(ioutput,
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      #  XSECUP,XERRUP,XMAXUP,LPRUP)

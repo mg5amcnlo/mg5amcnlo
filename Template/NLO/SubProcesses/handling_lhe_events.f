@@ -25,7 +25,7 @@ c
      #     '  -->'
       write(ifile,'(a)')
      #     '  <header>'
-      write(ifile,250)nevents
+      write(ifile,250) nevents
       write(ifile,'(a)')
      #     '  </header>'
  250  format(1x,i8)
@@ -77,11 +77,7 @@ c
       character*72 buffer,buffer2
 c
       write(ifile,'(a)') '<LesHouchesEvents version="1.0">'
-      write(ifile,'(a)') '  <!--'
-      write(ifile,'(a)') MonteCarlo
-      write(ifile,'(a)') '  -->'
       write(ifile,'(a)') '  <header>'
-      write(ifile,250) nevents
       write(ifile,'(a)') '  <MG5ProcCard>'
       open (unit=92,file=path(1:index(path," ")-1)//'proc_card_mg5.dat'
      &     ,err=99)
@@ -100,7 +96,7 @@ c
       enddo
  88   close(92)
       write(ifile,'(a)') '  </slha>'
-      write(ifile,'(a)') '  <MG5RunCard>'
+      write(ifile,'(a)') '  <MGRunCard>'
       open (unit=92,file=path(1:index(path," ")-1)//'run_card.dat'
      &     ,err=97)
       do
@@ -121,7 +117,7 @@ c Replace the random number seed with the one used...
  95      write(ifile,'(a)') buffer
       enddo
  87   close(92)
-      write(ifile,'(a)') '  </MG5RunCard>'
+      write(ifile,'(a)') '  </MGRunCard>'
       write(ifile,'(a)') '  <MonteCarloMasses>'
       call fill_MC_mshell_wrap(MonteCarlo,mcmass)
       do i=1,5
@@ -129,7 +125,6 @@ c Replace the random number seed with the one used...
       enddo
       write (ifile,'(2x,i6,3x,e12.6)')21,mcmass(21)
       write(ifile,'(a)') '  </MonteCarloMasses>'
-      write(ifile,250) nevents
       write(ifile,'(a)') '  </header>'
  250  format(1x,i8)
       return
@@ -154,21 +149,25 @@ c Replace the random number seed with the one used...
       integer ifile,nevents
       character*10 MonteCarlo
       character*80 string,string0
+      nevents = -1
+      MonteCarlo = ''
 c
       string='  '
       dowhile(string.ne.'  -->')
         string0=string
+        if (index(string,'</header>').ne.0) return
         read(ifile,'(a)')string
       enddo
 c Works only if the name of the MC is the last line of the comments
       MonteCarlo=string0(1:10)
 c Here we are at the end of (user-defined) comments. Now go to end
 c of headers
-      dowhile(string.ne.'  </header>')
+      dowhile(index(string,'</header>').eq.0)
         string0=string
         read(ifile,'(a)')string
       enddo
-      read(string0,250)nevents
+c if the file is a partial file the header is non-standard   
+      if (MonteCarlo .ne. '') read(string0,250) nevents
  250  format(1x,i8)
       return
       end

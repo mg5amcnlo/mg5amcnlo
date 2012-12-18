@@ -266,6 +266,11 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
     def validate_model(self, loop_type='virtual', stop=True):
         """ Upgrade the model sm to loop_sm if needed """
 
+        if not self._curr_model:
+            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
+            #import model with correct treatment of the history
+            return
+
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
            self._curr_model['perturbation_couplings']==[]:
             if loop_type.startswith('real'):
@@ -278,7 +283,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                       "You are entering aMC@NLO with a model which does not "+\
                                                    " support loop corrections.")
             else:
-                model_path = self._curr_model.get('version_tag').split('##')[0]
+                model_path = self._curr_model.get('modelpath')
                 model_name = self._curr_model.get('name')
                 if model_name.split('-')[0]=='sm':
                     # Once the loop_sm model will support Feynman gauge, please
@@ -288,10 +293,13 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
 #                        mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
                     logger.info(\
                       "The default sm model does not allow to generate"+
-                            " loop processes. MG5 now loads 'loop_sm' instead.")
-                    mpath=os.path.join(os.path.dirname(os.path.join(model_path)),
-                                                            'loop_'+model_name)
-                    self.do_import("model %s"%str(mpath))
+                      " loop processes. MG5 now loads 'loop_sm' instead.")
+                    #import model with correct treatment of the history
+                    self.history.move_to_last('generate')
+                    last_command = self.history[-1]
+                    self.exec_cmd(" import model loop_%s" % model_name, precmd=True)
+                    self.history.append(last_command)
+                    
                 elif stop:
                     raise self.InvalidCmd(
                       "The model %s cannot handle loop processes"%model_name)    
@@ -323,7 +331,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         # interfaces
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
-        self.clean_history(remove_bef_last='import')
+        self.history.clean(remove_bef_last='import')
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -364,10 +372,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         args = self.split_arg(line)
         # Check Argument validity
         self.check_output(args)
-
-        # Remove previous outputs from history
-        self.clean_history(to_remove=['display','open','history','launch','output'],
-                           remove_bef_last='generate')
         
         noclean = '-noclean' in args
         force = '-f' in args 

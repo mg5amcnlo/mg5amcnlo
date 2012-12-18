@@ -118,7 +118,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         if not args:
             if self._done_export:
                 args.append(self._done_export[0])
-                args.append('aMC@NLO')
+                args.append('auto')
 
                 return
             else:
@@ -131,15 +131,15 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             return self.InvalidCmd, 'Invalid Syntax: Too many argument'
 
         elif len(args) == 2:
-            if not args[1] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO']:
+            if not args[1] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'auto']:
                 raise self.InvalidCmd, '%s is not a valid mode, please use "LO", "NLO", "aMC@NLO" or "aMC@LO"' % args[1]
         else:
             #check if args[0] is path or mode
-            if args[0] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO'] and self._done_export:
+            if args[0] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'auto'] and self._done_export:
                 args.insert(0, self._done_export[0])
             elif os.path.isdir(args[0]) or os.path.isdir(pjoin(MG5DIR, args[0]))\
                     or os.path.isdir(pjoin(MG4DIR, args[0])):
-                args.append('aMC@NLO')
+                args.append('auto')
         mode = args[1]
         
         # search for a valid path
@@ -275,6 +275,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         """ Special init tasks for the Loop Interface """
 
         mg_interface.MadGraphCmd.__init__(self, mgme_dir = '', *completekey, **stdin)
+        misc.sprint(type(self.history))
         self.setup()
 
     def setup(self):
@@ -285,7 +286,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # interfaces
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
-        self.clean_history(remove_bef_last='import')
+        self.history.clean(remove_bef_last='import')
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -419,10 +420,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         args = self.split_arg(line)
         # Check Argument validity
         self.check_output(args)
-
-        # Remove previous outputs from history
-        self.clean_history(allow_for_removal = ['output'], keep_switch=True,
-                           remove_bef_last='output')
         
         noclean = '-noclean' in args
         force = '-f' in args 
@@ -571,8 +568,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             if hasattr(self, 'do_shell'):
                 ME = run_interface.aMCatNLOCmdShell(me_dir=argss[0], options=self.options)
             else:
-                 ME = run_interface.aMCatNLOCmd(me_dir=argss[0],options=self.options)
-                 ME.pass_in_web_mode()
+                ME = run_interface.aMCatNLOCmd(me_dir=argss[0],options=self.options)
+                ME.pass_in_web_mode()
             # transfer interactive configuration
             config_line = [l for l in self.history if l.strip().startswith('set')]
             for line in config_line:
@@ -583,21 +580,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         ext_program = launch_ext.aMCatNLOLauncher(argss[0], self, run_mode=argss[1], **options)
         ext_program.run()
         
-#        mode = argss[1]
-#        if options['multicore']:
-#            run.cluster_mode = 2
-#        elif options['cluster']:
-#            run.cluster_mode = 1
-#        else:
- #           run.cluster_mode = int(self.options['run_mode'])
-
-
-#        run.ask_run_configuration(mode)
-#        run.compile(mode, options) 
-#        evt_file = run.run(mode, options)
-#        if run.check_mcatnlo_dir():
-#            run.run_mcatnlo(evt_file)
-#        os.chdir(old_cwd)
                     
    
 class aMCatNLOInterfaceWeb(mg_interface.CheckValidForCmdWeb, aMCatNLOInterface):
