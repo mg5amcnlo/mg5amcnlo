@@ -36,7 +36,7 @@ class SystCalc
   void insert_tokens_int(vector<string>& tokens, vector<int>& var);
   void fillPDFData(XMLElement* element, vector<int>& pdg, 
 		   vector<double>& x, vector<double>& q);
-  double calculatePDFWeight(int pdfnum, double fact, 
+  double calculatePDFWeight(int pdfnum, double fact, int beam,
 			    vector<int>& pdg, 
 			    vector<double>& x, 
 			    vector<double>& q);
@@ -45,6 +45,8 @@ class SystCalc
   /*** Original PDF info, needed for alpha_s reweighting ***/
   string _orgPDF;
   int _org_member;
+  // Info about beams (+-1) needed for PDF calculation for Tevatron
+  int _beam[2];
 
   /*** Conversion variables ***/
   // Central scale factors (typically, 0.5,1,2)

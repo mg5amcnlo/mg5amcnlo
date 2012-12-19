@@ -78,7 +78,7 @@ SystCalc::SystCalc(istream& conffile,
 		   int org_member)
 {
   /** Supply config file as an istream. 
-      If sysfilename is set, read and parse full .sys file.
+      If sysfilename is set, read and parse full systematics file.
       If not, need to supply orgPDF and orgMember (for alpha_s)
 
       Example of config file:
@@ -98,6 +98,8 @@ SystCalc::SystCalc(istream& conffile,
    **/
 
   _parsed_events = 0;
+  _beam[0]=1;
+  _beam[1]=1;
   
   string line;
   vector<string> tokens;
@@ -165,7 +167,17 @@ SystCalc::SystCalc(istream& conffile,
 	_org_member = atoi(tokens[1].c_str());
     }
     else
-      cout << "Warning: Failed to read orgpdf from .sys file" << endl;
+      cout << "Warning: Failed to read orgpdf from systematics file" << endl;
+    element = _sysfile.FirstChildElement("beams");
+    if(element){
+      tokenize(element->GetText(), tokens);
+      if(tokens.size() < 2) cout << "Warning: <beams> info not correct" << endl;
+      _beam[0] = atoi(tokens[0].c_str());
+      _beam[1] = atoi(tokens[1].c_str());
+      cout << "Set beam info: " << _beam[0] << " " << _beam[1] << endl;
+    }
+    else
+      cout << "Warning: Failed to read beams from systematics file" << endl;
   }
   else
     _filestatus = XML_ERROR_FILE_NOT_FOUND;
@@ -348,7 +360,7 @@ bool SystCalc::parseEvent(string event)
   return true;
 }
 
-double SystCalc::calculatePDFWeight(int pdfnum, double fact, 
+double SystCalc::calculatePDFWeight(int pdfnum, double fact, int beam,
 				    vector<int>& pdg, 
 				    vector<double>& x, 
 				    vector<double>& q)
@@ -356,21 +368,21 @@ double SystCalc::calculatePDFWeight(int pdfnum, double fact,
   double weight = 1;
   int max = pdg.size()-1;
   double maxq = fact*q[max];
-  int maxpdg = pdg[max];
-  if(maxpdg == 21) maxpdg = 0;
+  int maxpdg = beam*pdg[max];
+  if(abs(maxpdg) == 21) maxpdg = 0;
   maxpdg += 6;
   vector<double> pdfs = xfx(pdfnum, x[max], maxq);
   weight *= pdfs[maxpdg]/x[max];
   int pdgnow;
   for(int i=0; i < max; i++){
     pdfs = xfx(pdfnum, x[i], min(q[i], maxq));
-    pdgnow = pdg[i];
-    if(pdgnow == 21) pdgnow = 0;
+    pdgnow = beam*pdg[i];
+    if(abs(pdgnow) == 21) pdgnow = 0;
     pdgnow += 6;
     weight *= pdfs[pdgnow]/x[i];
     pdfs = xfx(pdfnum, x[i+1], min(q[i], maxq));
-    pdgnow = pdg[i+1];
-    if(pdgnow == 21) pdgnow = 0;
+    pdgnow = beam*pdg[i+1];
+    if(abs(pdgnow) == 21) pdgnow = 0;
     pdgnow += 6;
     weight /= (pdfs[pdgnow]/x[i+1]);
   }
@@ -395,8 +407,8 @@ bool SystCalc::convertEvent()
   if (DEBUG) cout << "Org emission alps factor: " << org_em_alps << endl;
 
   double org_pdf_fact = 1;
-  org_pdf_fact *= calculatePDFWeight(orgnum, 1., _pdf_pdg1, _pdf_x1, _pdf_q1);
-  org_pdf_fact *= calculatePDFWeight(orgnum, 1., _pdf_pdg2, _pdf_x2, _pdf_q2);
+  org_pdf_fact *= calculatePDFWeight(orgnum, 1., _beam[0], _pdf_pdg1, _pdf_x1, _pdf_q1);
+  org_pdf_fact *= calculatePDFWeight(orgnum, 1., _beam[1], _pdf_pdg2, _pdf_x2, _pdf_q2);
   if (DEBUG) cout << "Org PDF factor: " << org_pdf_fact << endl;
 
   double org_weight = org_ren_alps*org_em_alps*org_pdf_fact;
@@ -430,8 +442,8 @@ bool SystCalc::convertEvent()
     if (DEBUG) cout << "New central alps factor: " << org_ren_alps << endl;
     
     double pdf_fact = 1;
-    pdf_fact *= calculatePDFWeight(orgnum, sf, _pdf_pdg1, _pdf_x1, _pdf_q1);
-    pdf_fact *= calculatePDFWeight(orgnum, sf, _pdf_pdg2, _pdf_x2, _pdf_q2);
+    pdf_fact *= calculatePDFWeight(orgnum, sf, _beam[0], _pdf_pdg1, _pdf_x1, _pdf_q1);
+    pdf_fact *= calculatePDFWeight(orgnum, sf, _beam[1], _pdf_pdg2, _pdf_x2, _pdf_q2);
     if (DEBUG) cout << "New PDF factor: " << pdf_fact << endl;
 
     _scaleweights.push_back(ren_alps*pdf_fact/(org_ren_alps*org_pdf_fact));
@@ -463,8 +475,8 @@ bool SystCalc::convertEvent()
       usePDFMember(i, j);
       // Recalculate PDF weights
       double pdf_fact = 1;
-      pdf_fact *= calculatePDFWeight(i, 1., _pdf_pdg1, _pdf_x1, _pdf_q1);
-      pdf_fact *= calculatePDFWeight(i, 1., _pdf_pdg2, _pdf_x2, _pdf_q2);
+      pdf_fact *= calculatePDFWeight(i, 1., _beam[0], _pdf_pdg1, _pdf_x1, _pdf_q1);
+      pdf_fact *= calculatePDFWeight(i, 1., _beam[1], _pdf_pdg2, _pdf_x2, _pdf_q2);
       if (DEBUG) cout << "PDF factor: " << pdf_fact << endl;
       pdffacts->push_back(pdf_fact/org_pdf_fact);
       if (DEBUG) cout << "PDF weight: " << (*pdffacts)[pdffacts->size()-1] << endl;

@@ -4,7 +4,7 @@
 #include "SystCalc.h"
 
 /**************************************************************************
-Main program to convert .sys files from MG5 to systematics variation files.
+Main program to convert systematics files from MG5 to systematics variation files.
 
 Usage: syst_calc sysfile configfile outfile
 
@@ -40,7 +40,8 @@ int main( int argc, const char ** argv)
   // Initialize SystCalc object with conffile and sysfile
   SystCalc* systcalc = new SystCalc(conffile, argv[1]);
   if (systcalc->noFile()) { 
-    cout << "Failed opening .sys file " << argv[1] << endl; 
+    cout << "Failed opening or parsing systematics file " << argv[1] << endl; 
+    cout << "XML Error: " << systcalc->fileStatus() << endl;
     exit(1); }
 
   ofstream outfile(argv[3]);
