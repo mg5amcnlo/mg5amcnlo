@@ -690,7 +690,6 @@ class ProcCard(list):
     
     def __init__(self, init=None):
         """ initialize a basic proc_card"""
-        self.model = None
         self.info = {'model': 'sm', 'generate':None,
                      'full_model_line':'import model sm'}
         list.__init__(self)

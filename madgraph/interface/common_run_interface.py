@@ -1262,7 +1262,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         self.update_status('Running MadSpin', level='madspin')        
         if not '-from_cards' in line:
-            self.ask_edit_cards(['madspin_cards.dat'], 'fixed', plot=False)        
+            self.keep_cards(['madspin_card.dat'])
+            self.ask_edit_cards(['madspin_card.dat'], 'fixed', plot=False)        
         self.help_decay_events(skip_syntax=True)
 
         # load the name of the event file
