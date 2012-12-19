@@ -399,7 +399,7 @@ class MasterCmd(Switcher, MGcmd.MadGraphCmd, cmd.CmdShell):
         if __debug__:
             self.debug_link_to_command()      
         
-class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
+class MasterCmdWeb(MGcmd.MadGraphCmdWeb,Switcher):
    
     def __init__(self, *arg, **opt):
     

@@ -518,12 +518,12 @@ c
             pboost(0)=xbk(1)*ebeam(1)+ebeam(2)
             pboost(3)=xbk(1)*ebeam(1)-
      $           sqrt(ebeam(2)**2-m2**2)
-         else if (xbk(2) .eq. 1d0 .and.
+         else if (xbk(1) .eq. 1d0 .and.
      $       xbk(2) .gt. 0d0 .and. xbk(2) .lt. 1d0) then
             pboost(0)=ebeam(1)+xbk(2)*ebeam(2)
             pboost(3)=sqrt(ebeam(1)**2-m1**2)-
      $           xbk(2)*ebeam(2)
-         else if (xbk(2) .eq. 1d0 .and. xbk(2) .eq. 1d0) then
+         else if (xbk(1) .eq. 1d0 .and. xbk(2) .eq. 1d0) then
             pboost(0)=ebeam(1)+ebeam(2)
             pboost(3)=sqrt(ebeam(1)**2-m1**2)-
      $           sqrt(ebeam(2)**2-m2**2)

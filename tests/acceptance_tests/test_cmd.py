@@ -187,7 +187,7 @@ class TestCmdShell2(unittest.TestCase,
         """Test outputting a MadEvent directory"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
         
         self.do('import model_v4 sm')
         self.do('set group_subprocesses False')
@@ -341,7 +341,7 @@ class TestCmdShell2(unittest.TestCase,
         """Test command 'output' with path"""
         
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('set group_subprocesses False')
         self.do('import model_v4 sm')
@@ -360,7 +360,7 @@ class TestCmdShell2(unittest.TestCase,
         """Test the import of models and the export of Helas Routine """
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model sm')
         self.do('generate e+ e->e+ e-')
@@ -420,7 +420,7 @@ class TestCmdShell2(unittest.TestCase,
         """Test standalone directory for UFO HEFT model"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model_v4 heft')
         self.do('generate g g > h g g')
@@ -462,7 +462,7 @@ class TestCmdShell2(unittest.TestCase,
         """Test MadEvent output with UFO/ALOHA"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model sm')
         self.do('set group_subprocesses False')
@@ -550,7 +550,7 @@ class TestCmdShell2(unittest.TestCase,
         """Test decay chain output"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model sm')
         self.do('define p = u u~ d d~')
@@ -656,7 +656,7 @@ class TestCmdShell2(unittest.TestCase,
         """Test MadEvent output using the SubProcess group functionality"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model sm')
         self.do('define p = g u d u~ d~')
@@ -762,7 +762,7 @@ class TestCmdShell2(unittest.TestCase,
         """Check that symmetry.f gives right output"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model mssm')
         self.do('define q = u d u~ d~')
@@ -837,7 +837,7 @@ class TestCmdShell2(unittest.TestCase,
         """Test decay chain output using the SubProcess group functionality"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model sm')
         self.do('define p = g u d u~ d~')
@@ -916,7 +916,7 @@ P1_qq_wp_wp_lvl
         """Test group_subprocesses=False for decay process"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model sm')
         self.do('set group_subprocesses False')
@@ -999,7 +999,7 @@ P1_qq_wp_wp_lvl
         """Test leshouche.inc output of sextet diquarks"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         devnull = open(os.devnull,'w')
 
@@ -1069,7 +1069,7 @@ P1_qq_wp_wp_lvl
         """Test Pythia 8 output"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
         # Create out_dir and out_dir/include
         os.makedirs(os.path.join(self.out_dir,'include'))
         # Touch the file Pythia.h, which is needed to verify that this is a Pythia dir
@@ -1104,7 +1104,7 @@ P1_qq_wp_wp_lvl
         """Test the C++ standalone output"""
 
         if os.path.isdir(self.out_dir):
-            shutil.rmdir(self.out_dir)
+            shutil.rmtree(self.out_dir)
 
         self.do('import model sm')
         self.do('generate e+ e- > e+ e- @2')

@@ -679,6 +679,8 @@ class ALOHAWriterForFortran(WriteALOHA):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
+                self.declaration.add(('complex', name))
+                
         
         def sort_fct(a, b):
             if len(a) < len(b):
@@ -882,6 +884,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
+                self.declaration.add(('complex', name))
 
 
         OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
@@ -1432,10 +1435,12 @@ class ALOHAWriterForCPP(WriteALOHA):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s;\n' % (name, self.write_obj(obj)))
+                self.declaration.add(('complex', name))
                 
         for name, (fct, objs) in self.routine.fct.items():
             format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
             out.write(format % ','.join([self.write_obj(obj) for obj in objs]))
+            
         
 
         numerator = self.routine.expr
@@ -1709,7 +1714,9 @@ class ALOHAWriterForPython(WriteALOHA):
                 return '%ij' % obj.imag
             else:
                 return '%sj' % str(obj.imag)
-        else: 
+        elif obj.imag == 0 and int(obj.real) == obj:
+            return '%i' % obj.real 
+        else:
             return str(obj)
     
     

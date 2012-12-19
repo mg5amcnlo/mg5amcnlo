@@ -29,8 +29,10 @@ C
 
 c     This will be called for any PDG code, but we only support up to 7
       if(iabs(ipart).gt.7)then
-         pdg2pdf=0d0
-         return 
+         write(*,*) 'PDF not supported for pdg ',ipdg
+         open(unit=26,file='../../../error',status='unknown')
+         write(26,*) 'Error: PDF not supported for pdg ',ipdg
+         stop 1
       endif
 
       ireuse = 0

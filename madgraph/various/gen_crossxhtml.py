@@ -419,7 +419,7 @@ class RunResults(list):
                 name1 = ' a'
             if run_card['lpp2'] == '-1':
                 name2 = 'p~'
-            elif run_card['lpp1']  == '1':
+            elif run_card['lpp2']  == '1':
                 name2 = ' p' 
             elif run_card['lpp2'] == '2':
                 name2 = ' a'                

@@ -2455,7 +2455,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             line = " ".join(args[1:])
             myprocdef = self.extract_process(line)
             model_name = self._curr_model['name']
-            if gauge == 'unitarity':
+            if gauge == 'unitary':
                 myprocdef_unit = myprocdef
                 self.do_set('gauge Feynman', log=False)
                 self.do_import('model %s' % model_name)
@@ -2466,10 +2466,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.do_import('model %s' % model_name)
                 myprocdef_unit = self.extract_process(line)            
             
+            nb_part_unit = len(myprocdef_unit.get('model').get('particles'))
+            nb_part_feyn = len(myprocdef_feyn.get('model').get('particles'))
+            
+            if nb_part_feyn == nb_part_unit:
+                logger.error('No Goldstone present for this check!!')
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
                                                 cmass_scheme = mass_scheme)
+            
             
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
@@ -4425,7 +4431,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         else:
             print "No decay is found"
 
-class MadGraphCmdWeb(CheckValidForCmdWeb,MadGraphCmd):
+class MadGraphCmdWeb(CheckValidForCmdWeb, MadGraphCmd):
     """Temporary parser"""
                 
 #===============================================================================
