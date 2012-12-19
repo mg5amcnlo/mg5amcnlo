@@ -5,6 +5,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       run_card.dat. Please read more in 
                       Template/README.systematics
                       Note that the Pythia/PGS package v. 2.2 is needed.
+                      In order to convert the output into event weights for
+                      plotting, please use the SysCalc tool included.
                   JA: Included <clustering> tag in matched .lhe output,
                       to be used together with Pythia 8 CKKW-L matching.
 
