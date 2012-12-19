@@ -473,12 +473,18 @@ bool SystCalc::convertEvent()
       if (DEBUG) cout << "PDF set member " << j << endl;      
       // Set PDF set member
       usePDFMember(i, j);
+      // First recalculate alpha_s weights, since alpha_s differs between PDFs
       // Recalculate PDF weights
       double pdf_fact = 1;
+      if(_n_qcd > 0) pdf_fact *= pow(alphasPDF(i, _ren_scale), _n_qcd);
+      if (DEBUG) cout << "After PDF central alps factor: " << org_ren_alps << endl;
+      for(int k=0; k < _alpsem_scales.size(); k++)
+	pdf_fact *= alphasPDF(i, _alpsem_scales[k]);
+      if (DEBUG) cout << "After PDF emission alps factor: " << org_em_alps << endl;
       pdf_fact *= calculatePDFWeight(i, 1., _beam[0], _pdf_pdg1, _pdf_x1, _pdf_q1);
       pdf_fact *= calculatePDFWeight(i, 1., _beam[1], _pdf_pdg2, _pdf_x2, _pdf_q2);
-      if (DEBUG) cout << "PDF factor: " << pdf_fact << endl;
-      pdffacts->push_back(pdf_fact/org_pdf_fact);
+      if (DEBUG) cout << "Total PDF factor: " << pdf_fact << endl;
+      pdffacts->push_back(pdf_fact/org_weight);
       if (DEBUG) cout << "PDF weight: " << (*pdffacts)[pdffacts->size()-1] << endl;
     }
     _PDFweights.push_back(*pdffacts);
