@@ -4122,20 +4122,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         
             cpu_time2 = time.time()
 
-            # Temporary output for calculate_width debug
-            try:
-                print "Debug: matrix elements generated. (mg interface l 4120)"
-                i = 3
-                print '(id, number) of legs in process #%d:' %i
-                all_legs = [p['legs'] for p in self._curr_matrix_elements.get_matrix_elements()[i]['processes']]
-                print [[(l['id'], l['number']) for l in leglist] \
-                           for leglist in all_legs]
-                print '(id, number) from get_decay_legs:'
-                leglist_decay = [p.get_legs_with_decays() for p in self._curr_matrix_elements.get_matrix_elements()[i]['processes']]
-                print [[(l['id'], l['number']) for l in leglist] \
-                           for leglist in leglist_decay]
-            except:
-                pass
 
             return ndiags, cpu_time2 - cpu_time1
 
