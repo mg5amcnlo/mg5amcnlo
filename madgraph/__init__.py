@@ -19,6 +19,9 @@ class MadGraph5Error(Exception):
 class InvalidCmd(MadGraph5Error):
     """a class for the invalid syntax call"""
 
+class aMCatNLOError(MadGraph5Error):
+    """A MC@NLO error"""
+
 import os
 
 #Look for basic file position MG5DIR and MG4DIR

@@ -12,8 +12,7 @@ c************************************************************************
       character*(*) param_name
       logical readlha
 
-      include 'coupl.inc'
-      include 'input.inc'
+      %(includes)s
 
       integer maxpara
       parameter (maxpara=5000)
@@ -21,8 +20,7 @@ c************************************************************************
       integer npara
       character*20 param(maxpara),value(maxpara)
 
-C     Please keep the next line in the template
-c     call LHA_loadcard(param_name,npara,param,value)
+      %(load_card)s
       include 'param_read.inc'
       call coup()
 

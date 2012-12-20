@@ -1,0 +1,188 @@
+ enter npoints,number_propagators,rank,scaloop,muscale
+     
+ scaloop= 1 -> looptools 1-loop 
+ scaloop= 2 -> avh 1-loop (massive with complex masses)
+ scaloop= 3 -> qcdloop   1-loop (Ellis and Zanderighi)
+ muscale (dimension of energy) is the scale
+ for the 1-loop integrals
+     
+  
+------------------------------------------------------------------------
+|              You are using CutTools - Version 1.6.9                  |
+|              Authors: G. Ossola, C. Papadopoulos, R. Pittau          |
+|              Published in JHEP 0803:042,2008                         |
+|              http://www.ugr.es/~pittau/CutTools                      |
+|                                                                      |
+|              Internal mproutines detected in CutTools                |
+------------------------------------------------------------------------
+   
+########################################################################
+#                                                                      #
+#                      You are using OneLOop-2.2                       #
+#                                                                      #
+# for the evaluation of 1-loop scalar 1-, 2-, 3- and 4-point functions #
+#                                                                      #
+# author: Andreas van Hameren <hamerenREMOVETHIS@ifj.edu.pl>           #
+#   date: 04-07-2011                                                   #
+#                                                                      #
+# Please cite                                                          #
+#    A. van Hameren,                                                   #
+#      Comput.Phys.Commun. 182 (2011) 2427-2438, arXiv:1007.4716       #
+#    A. van Hameren, C.G. Papadopoulos and R. Pittau,                  #
+#      JHEP 0909:106,2009, arXiv:0903.4665                             #
+# in publications with results obtained with the help of this program. #
+#                                                                      #
+########################################################################
+########################################################################
+#                                                                      #
+#          You are using OneLOop in multiple precision                 #
+#                                                                      #
+#             obtained by R. Pittau (pittau@ugr.es)                    #
+#             from the original OneLOop-2.2 package                    #
+#                                                                      #
+#                 Internal mproutines detected.                        #
+#                                                                      #
+########################################################################
+                
+   iter=            1
+                
+                
+  Complete Amplitude (without r2):     
+                
+                
+  finite part           amp(0)= (  53383957.821603358     ,  126986265.20322932     )
+  coeff of 1/eps   pole amp(1)= (-1.83719203050713986E-006,-1.19366438964925456E-006)
+  coeff of 1/eps^2 pole amp(2)= (  0.0000000000000000     ,  0.0000000000000000     )
+                         ampcc= (  431278153.45692199     ,  126986265.19815829     )
+                            R1= ( -377894195.63531864     , 5.07102403527225857E-003)
+                        stable= T
+                
+                
+   iter=            2
+                
+                
+  Complete Amplitude (without r2):     
+                
+                
+  finite part           amp(0)= ( -63797.267330532894     ,  72024.373127371844     )
+  coeff of 1/eps   pole amp(1)= ( 1.78472504330784432E-007, 1.03313419193830620E-006)
+  coeff of 1/eps^2 pole amp(2)= (  0.0000000000000000     ,  0.0000000000000000     )
+                         ampcc= ( -3360625.9998586932     ,  72024.383368513212     )
+                            R1= (  3296828.7325281603     ,-1.02411413715296131E-002)
+                        stable= T
+                
+                
+   iter=            3
+                
+                
+  Complete Amplitude (without r2):     
+                
+                
+  finite part           amp(0)= ( -10346822.767967053     ,  16882400.428735916     )
+  coeff of 1/eps   pole amp(1)= ( 1.14844879135489464E-005, 1.53785700553139993E-005)
+  coeff of 1/eps^2 pole amp(2)= (  0.0000000000000000     ,  0.0000000000000000     )
+                         ampcc= ( -58476273.675687447     ,  16882400.942168016     )
+                            R1= (  48129450.907720394     ,-0.51343210137290307     )
+                        stable= T
+                
+                
+   iter=            4
+                
+                
+  Complete Amplitude (without r2):     
+                
+                
+  finite part           amp(0)= ( -107788.54115603741     ,  82593.162090742990     )
+  coeff of 1/eps   pole amp(1)= (-3.31545493281737436E-007,-5.74360391982138995E-007)
+  coeff of 1/eps^2 pole amp(2)= (  0.0000000000000000     ,  0.0000000000000000     )
+                         ampcc= ( -110100.12516387260     ,  82593.161225902077     )
+                            R1= (  2311.5840078351903     , 8.64840916222184785E-004)
+                        stable= T
+                
+                
+   iter=            5
+                
+                
+  Complete Amplitude (without r2):     
+                
+                
+  finite part           amp(0)= (  1746787.3491039553     , -213717.61828033614     )
+  coeff of 1/eps   pole amp(1)= (-2.73849181553487142E-007,-7.50177417389876519E-008)
+  coeff of 1/eps^2 pole amp(2)= (  0.0000000000000000     ,  0.0000000000000000     )
+                         ampcc= (  1499191.4219587103     , -213717.61871116390     )
+                            R1= (  247595.92714524505     , 4.30827746285127066E-004)
+                        stable= T
+                
+                
+   iter=            6
+                
+                
+  Complete Amplitude (without r2):     
+                
+                
+  finite part           amp(0)= ( -370319.46383258700     ,  410967.74881594942     )
+  coeff of 1/eps   pole amp(1)= (-2.23808456212282181E-007, 3.00293339096918555E-007)
+  coeff of 1/eps^2 pole amp(2)= (  0.0000000000000000     ,  0.0000000000000000     )
+                         ampcc= ( -50668434.558390886     ,  410967.74885049212     )
+                            R1= (  50298115.094558299     ,-3.45426951028434236E-005)
+                        stable= T
+                
+                
+   iter=            7
+                
+                
+  Complete Amplitude (without r2):     
+                
+                
+  finite part           amp(0)= ( -106205.49520451674     ,  53749.144159631018     )
+  coeff of 1/eps   pole amp(1)= ( 1.75946843228302896E-006, 2.07983113305033296E-006)
+  coeff of 1/eps^2 pole amp(2)= (  0.0000000000000000     ,  0.0000000000000000     )
+                         ampcc= ( -595338.34606520692     ,  53749.144011794109     )
+                            R1= (  489132.85086069017     , 1.47836908745816023E-004)
+                        stable= T
+                
+                
+   iter=            8
+                
+                
+  Complete Amplitude (without r2):     
+                
+                
+  finite part           amp(0)= ( -89786.646990656503     ,  71990.294360415865     )
+  coeff of 1/eps   pole amp(1)= (-4.80277321912581101E-007, 4.57104165709099301E-007)
+  coeff of 1/eps^2 pole amp(2)= (  0.0000000000000000     ,  0.0000000000000000     )
+                         ampcc= (  274767.10738525318     ,  71990.294532927961     )
+                            R1= ( -364553.75437590969     ,-1.72512092435884323E-004)
+                        stable= T
+                
+                
+   iter=            9
+                
+                
+  Complete Amplitude (without r2):     
+                
+                
+  finite part           amp(0)= (  157694.15979564434     ,  1149733.9248735292     )
+  coeff of 1/eps   pole amp(1)= (-8.14672489468648564E-007, 5.63326800066400489E-007)
+  coeff of 1/eps^2 pole amp(2)= (  0.0000000000000000     ,  0.0000000000000000     )
+                         ampcc= (  1204418.9638915253     ,  1149733.9237926416     )
+                            R1= ( -1046724.8040958809     , 1.08088755855256834E-003)
+                        stable= T
+                
+                
+   iter=           10
+                
+                
+  Complete Amplitude (without r2):     
+                
+                
+  finite part           amp(0)= (  351241.21367723553     , -203084.81247688702     )
+  coeff of 1/eps   pole amp(1)= (-2.07678021979518235E-006,-2.96954463950521433E-007)
+  coeff of 1/eps^2 pole amp(2)= (  0.0000000000000000     ,  0.0000000000000000     )
+                         ampcc= (  91271.025886653573     , -203084.81041882327     )
+                            R1= (  259970.18779058193     ,-2.05806375047176996E-003)
+                        stable= T
+                
+ n_tot =   10.000000000000000     
+ n_mp  =   0.0000000000000000     
+ n_disc=           0

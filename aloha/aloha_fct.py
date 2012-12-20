@@ -102,7 +102,7 @@ def check_flow_validity(expression, nb_fermion):
     # Need to expand the expression in order to have a simple sum of expression
     try:
         expr = eval(expression)
-    except:
+    except Exception:
         return
     expr = expr.simplify()
     #expr is now a valid AddVariable object if they are a sum or
@@ -156,8 +156,8 @@ def guess_routine_from_name(names):
     output =[]
     for name in names:
         if name.startswith('MP_'):
-           name = name[3:]
-           tags = ['MP_']
+            name = name[3:]
+            tags = ['MP_']
         else: 
             tags = []
         
@@ -173,7 +173,6 @@ def guess_routine_from_name(names):
         allow_tag += ['L%s' % i for i in range(1,20)]
         allow_tag += ['L']
         tags = []
-        
         
         len_tag = -1
         while len(tags) != len_tag:

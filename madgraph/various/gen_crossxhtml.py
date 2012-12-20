@@ -23,7 +23,7 @@ import re
 try:
     import internal.files as files
     import internal.save_load_object as save_load_object
-except:
+except ImportError:
     import madgraph.iolibs.files as files
     import madgraph.iolibs.save_load_object as save_load_object
 
@@ -193,7 +193,7 @@ class AllResults(dict):
         if web is True:
             try:
                 web = os.environ['SERVER_NAME']
-            except:
+            except Exception:
                 web = 'my_computer'
         self['web'] = web
         self.web = web
@@ -397,6 +397,12 @@ class AllResults(dict):
         text = crossxhtml_template % text_dict
         open(pjoin(self.path,'crossx.html'),'w').write(text)
         
+
+class AllResultsNLO(AllResults):
+    """Store the results for a NLO run of a given directory"""
+    pass
+
+
        
 
 class RunResults(list):
@@ -439,7 +445,7 @@ class RunResults(list):
         try:
             self.web = opt['web']
             self.info['web'] = self.web
-        except:
+        except Exception:
             self.web = False
 
         # check if more than one parton output
@@ -809,10 +815,11 @@ class OneTagResults(dict):
                 self['nb_event'] = runresults[-2]['nb_event']
                 self['cross'] = runresults[-2]['cross']
                 self['error'] = runresults[-2]['error']
-            except:
+            except Exception:
                 pass
                 
-        elif (self.pgs or self.delphes) and not self['nb_event']:
+        elif (self.pgs or self.delphes) and not self['nb_event'] and \
+             len(runresults) > 1:
             if runresults[-2]['cross_pythia'] and runresults[-2]['cross']:
                 self['cross'] = runresults[-2]['cross_pythia']
                 self['error'] = runresults[-2]['error_pythia']

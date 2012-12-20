@@ -1,0 +1,223 @@
+################################################################################
+#
+# Copyright (c) 2009 The MadGraph Development team and Contributors
+#
+# This file is a part of the MadGraph 5 project, an application which 
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
+#
+# It is subject to the MadGraph license which should accompany this 
+# distribution.
+#
+# For more information, please visit: http://madgraph.phys.ucl.ac.be
+#
+################################################################################
+
+"""Unit test library for the various properties of objects in 
+   loop_helas_objects.py"""
+
+import copy
+import math
+import os
+import sys
+import shutil
+import tarfile
+import datetime
+
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
+
+import tests.unit_tests as unittest
+
+import tests.unit_tests.loop.test_loop_diagram_generation as looptest
+import madgraph.core.base_objects as base_objects
+import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.helas_objects as helas_objects
+import madgraph.core.color_amp as color_amp
+import madgraph.loop.loop_base_objects as loop_base_objects
+import madgraph.loop.loop_diagram_generation as loop_diagram_generation
+import madgraph.loop.loop_helas_objects as loop_helas_objects
+import madgraph.core.helas_objects as helas_objects
+import madgraph.loop.loop_exporters as loop_exporters
+import madgraph.iolibs.export_v4 as export_v4
+import madgraph.iolibs.save_load_object as save_load_object
+import madgraph.iolibs.helas_call_writers as helas_call_writers
+import models.import_ufo as import_ufo
+import madgraph.various.misc as misc
+import tests.IOTests as IOTests
+import aloha
+
+from madgraph.iolibs.files import cp, ln, mv
+from madgraph import MadGraph5Error
+
+pjoin = os.path.join
+path = os.path
+
+_file_path = os.path.dirname(os.path.realpath(__file__))
+
+_input_file_path = os.path.abspath(os.path.join(_file_path, \
+                                  os.path.pardir, os.path.pardir,'input_files'))
+_mgme_file_path = os.path.abspath(os.path.join(_file_path, *([os.path.pardir]*3)))
+_loop_file_path = os.path.join(_mgme_file_path,'Template','loop_material')
+_cuttools_file_path = os.path.join(_mgme_file_path, 'vendor','CutTools')
+_proc_file_path = os.path.join(_mgme_file_path, 'UNITTEST_proc')
+
+#===============================================================================
+# Tests that the ad-hoc solution for aloha open loop routine in unitary gauge
+# is still present and must be changed to something more elegant one day.
+#===============================================================================
+class CheckAdHocFixInAloha(unittest.TestCase):
+    """ Check if the adhoc fix is still present. """
+    
+    def setUp(self):
+        """ Initialize the model and aloha model. """
+        
+        self.model = import_ufo.import_model('loop_sm')
+        self.aloha_model = aloha.create_aloha.AbstractALOHAModel(\
+                                                         self.model.get('name'))
+        self.aloha_model.add_Lorentz_object(self.model.get('lorentz'))
+
+    def test_adHoc_aloha_fix(self):
+        """ Test if the adHoc aloha fix is still present, and if yes raise an 
+        error warning that for now it is fine like this, but it will have to be 
+        fixed more elegantly later."""
+        
+        old_aloha_gauge = aloha.unitary_gauge
+        aloha.unitary_gauge = True
+        LorentzToCheck = [(('FFV1',), ('L1',), 3)]
+        write_dir = os.path.join('/tmp/')
+        self.aloha_model.compute_subset(LorentzToCheck)
+        self.aloha_model.write(write_dir, 'Fortran')
+        aloha.unitary_gauge = old_aloha_gauge
+        file_path = os.path.join(write_dir,'FFV1L1_3.f')
+        assert os.path.isfile(file_path)
+        res = open(file_path).read()
+        os.remove(file_path)
+        if 'OM3' not in res and 'COEFF(1,1,1)' not in res:
+            print("\nThere is still the ad-hoc quick fix in aloha for having "+\
+            "open loops work in unitary gauge. It must be eventually replaced "+\
+            "by a cleaner solution! Read the (only) modifications brought by "+\
+            "this quick fix at the beginning of 'compute_subset(data)' in "+\
+            "create_aloha.py. This failing test is basically a reminder of "+\
+                                       "this and can be disregarded for now.\n")
+            self.assertTrue(False, "Reminder-Test for aloha quick fix. "+\
+                                                  "Can be disregarded for now.")
+        else:
+            print("\nApparently the quick fix for having open loops work"+\
+              " in unitary gauge has been replaced by a cleaner solution."+\
+                       " This test 'test_adHoc_aloha_fix' can now be removed\n")
+
+#===============================================================================
+# IOExportMadLoopUTest
+#===============================================================================
+class IOExportMadLoopUnitTest(IOTests.IOTestManager):
+    """Test class for the loop exporter modules. It uses hardcoded output 
+    for the comparisons."""
+
+    # A helper function to add more easily IOTests for several exporters.
+    def addIOTestsForProcess(self,testName,testFolder,particles_ids,exporters,orders,
+                             files_to_check=IOTests.IOTest.all_files,
+                             perturbation_couplings=['QCD'],
+                             NLO_mode='virt',
+                             model=None,
+                             fortran_model=None):
+        """ Simply adds a test for the process defined and all the exporters
+        specified."""
+        
+        if model==None:
+            model = self.models['loop_sm']
+        if fortran_model==None:
+            fortran_model = self.fortran_models['fortran_model']
+        
+        needed = False
+        if not isinstance(exporters,dict):
+            if self.need(testFolder,testName):
+                needed = True
+        elif any(self.need('%s_%s'%(testFolder,exporter) ,testName) for \
+                                                  exporter in exporters.keys()):
+            needed = True
+        if not needed:
+            return
+        
+        myleglist = base_objects.LegList()
+        for i, pid in enumerate(particles_ids):
+            myleglist.append(base_objects.Leg({'id':pid, 
+                                           'state':False if i<2 else True}))
+        myproc = base_objects.Process({'legs': myleglist,
+                        'model': model,
+                        'orders': orders,
+                        'perturbation_couplings': perturbation_couplings,
+                        'NLO_mode': NLO_mode})
+        
+        myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
+        # Exporter directly given
+        if not isinstance(exporters,dict):
+            test_list = [(testFolder,exporters)]
+        # Several exporters given in a dictionary
+        else:
+            test_list = [('%s_%s'%(testFolder,exp),exporters[exp]) for exp in \
+                                                               exporters.keys()]         
+        for (folderName, exporter) in test_list:
+            if self.need(folderName,testName): 
+                self.addIOTest(folderName,testName, IOTests.IOTest(\
+                  hel_amp=loop_helas_objects.LoopHelasMatrixElement(myloopamp),
+                  exporter=exporter,
+                  helasModel=fortran_model,
+                  testedFiles=files_to_check,
+                  outputPath=_proc_file_path))
+
+    def setUp(self):
+        """load the models and exporters if necessary."""
+            
+        if not hasattr(self, 'models') or \
+           not hasattr(self, 'fortran_models') or \
+           not hasattr(self, 'loop_exporters'):\
+           
+            self.models = { \
+                'loop_sm' : import_ufo.import_model('loop_sm') 
+                          }
+            self.fortran_models = {
+                'fortran_model' : helas_call_writers.FortranUFOHelasCallWriter(\
+                                                         self.models['loop_sm']) 
+                                  }
+            
+            self.loop_exporters = {
+                'default' : loop_exporters.LoopProcessExporterFortranSA(\
+                                  _mgme_file_path, _proc_file_path,
+                                  {'clean':False, 'complex_mass':False, 
+                                   'export_format':'madloop','mp':True,
+                                   'loop_dir':_loop_file_path,
+                                   'cuttools_dir':_cuttools_file_path,
+                                   'fortran_compiler':'gfortran'}),
+                'optimized' : loop_exporters.\
+                                  LoopProcessOptimizedExporterFortranSA(\
+                                  _mgme_file_path, _proc_file_path,
+                                  {'clean':False, 'complex_mass':False, 
+                                   'export_format':'madloop','mp':True,
+                                   'loop_dir':_loop_file_path,
+                                   'cuttools_dir':_cuttools_file_path,
+                                   'fortran_compiler':'gfortran'})
+                                  }
+            
+            # g g > t t~
+            self.addIOTestsForProcess( testName = 'gg_ttx',
+                                       testFolder = 'short_ML_SMQCD',
+                                       particles_ids = [21,21,6,-6],
+                                       exporters = self.loop_exporters,
+                                       orders = {'QCD':2,'QED':0} )
+
+            # d d > t t~ (only the proc files for this one)
+            self.addIOTestsForProcess( testName = 'ddx_ttx',
+                                       testFolder = 'short_ML_SMQCD',
+                                       particles_ids = [1,-1,6,-6],
+                                       exporters = self.loop_exporters,
+                                       orders = {'QCD':2,'QED':0},
+                                       files_to_check=IOTests.IOTest.proc_files)
+
+            # And the loop induced g g > h h for good measure 
+            # Use only one exporter only here
+            self.addIOTestsForProcess( testName = 'gg_hh',
+                                       testFolder = 'short_ML_SMQCD_LoopInduced',
+                                       particles_ids = [21,21,25,25],
+                                       exporters = self.loop_exporters['default'],
+                                       orders = {'QCD': 2, 'QED': 2} )

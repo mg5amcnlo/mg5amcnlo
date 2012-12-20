@@ -137,11 +137,29 @@ def cp(path1, path2, log=True):
     try:
         shutil.copy(path1, path2)
     except IOError, why:
-        if log:
-            logger.warning(why)
+        try: 
+            if os.path.exists(path2):
+                path2 = os.path.join(path2, os.path.split(path1)[1])
+            shutil.copytree(path1, path2)
+        except IOError, why:
+            if log:
+                logger.warning(why)
     except shutil.Error:
         # idetical file
         pass
+
+def rm(path, log=True):
+    """removes path, that can be a single element or a list"""
+    if type(path) == list:
+        for p in path:
+            rm(p, log)
+    else:
+        path = format_path(path)
+        try:
+            os.remove(path)
+        except OSError:
+            shutil.rmtree(path, ignore_errors = True)
+
         
     
 def mv(path1, path2):
@@ -150,7 +168,7 @@ def mv(path1, path2):
     path2 = format_path(path2)
     try:
         shutil.move(path1, path2)
-    except:
+    except Exception:
         # An error can occur if the files exist at final destination
         if os.path.isfile(path2):
             os.remove(path2)
@@ -165,7 +183,7 @@ def mv(path1, path2):
             raise
         
 def ln(file_pos, starting_dir='.', name='', log=True):
-    """a simple way to have a symbolic link whithout to have to change directory
+    """a simple way to have a symbolic link without to have to change directory
     starting_point is the directory where to write the link
     file_pos is the file to link
     WARNING: not the linux convention
@@ -176,14 +194,17 @@ def ln(file_pos, starting_dir='.', name='', log=True):
         name = os.path.split(file_pos)[1]    
 
     # Remove existing link if necessary
-    if os.path.islink(os.path.join(starting_dir, name)):
+    if os.path.exists(os.path.join(starting_dir, name)):
         os.remove(os.path.join(starting_dir, name))
 
     try:
         os.symlink(os.path.relpath(file_pos, starting_dir), \
                         os.path.join(starting_dir, name))
-    except:
+    except Exception:
         if log:
             logger.warning('Could not link %s at position: %s' % (file_pos, \
                                                 os.path.realpath(starting_dir)))
- 
+
+
+
+     

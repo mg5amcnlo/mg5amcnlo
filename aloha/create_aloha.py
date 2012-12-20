@@ -36,7 +36,7 @@ import aloha.aloha_parsers as aloha_parsers
 import aloha.aloha_fct as aloha_fct
 try:
     import madgraph.iolibs.files as files
-except:
+except Exception:
     import aloha.files as files
     
 aloha_path = os.path.dirname(os.path.realpath(__file__))
@@ -242,7 +242,7 @@ in presence of majorana particle/flow violation"""
                 lorentz = self.change_sign_for_outcoming_fermion()  
                 self.routine_kernel = lorentz
                 lorentz = eval(lorentz)
-            except NameError, error:
+            except NameError as error:
                 logger.error('unknow type in Lorentz Evaluation:%s'%str(error))
                 raise ALOHAERROR, 'unknow type in Lorentz Evaluation: %s ' % str(error) 
             else:
@@ -253,7 +253,6 @@ in presence of majorana particle/flow violation"""
         else:
             lorentz = copy.copy(self.routine_kernel)
             aloha_lib.KERNEL.use_tag = set(self.kernel_tag) 
-        
         for (i, spin ) in enumerate(self.spins):   
             id = i + 1
             #Check if this is the outgoing particle
@@ -345,13 +344,14 @@ in presence of majorana particle/flow violation"""
         
                     
         l_in = [int(tag[1:]) for tag in self.tag][0]
+        assert l_in != outgoing, 'incoming Open Loop can not be the outcoming one'
         
         # modify the expression for the momenta
         # P_i -> P_i + P_L and P_o -> -P_o - P_L
         Pdep = [aloha_lib.KERNEL.get(P) for P in lorentz.get_all_var_names()
                                                       if P.startswith('_P')]
 
-        Pdep = [P for P in Pdep if P.particle in [outgoing, l_in]]
+        Pdep = set([P for P in Pdep if P.particle in [outgoing, l_in]])
         for P in Pdep:
             if P.particle == l_in:
                 sign = 1
@@ -363,7 +363,7 @@ in presence of majorana particle/flow violation"""
             P_obj = aloha_object.P(lorentz_ind, P.particle)
             new_expr = sign*(P_Lid + P_obj)
             lorentz = lorentz.replace(id, new_expr)
-            
+
         # Compute the variable from which we need to split the expression
         var_veto =  ['PL_0', 'PL_1', 'PL_2', 'PL_3']
         spin = aloha_writers.WriteALOHA.type_to_variable[self.spins[l_in-1]]
@@ -373,13 +373,14 @@ in presence of majorana particle/flow violation"""
         veto_ids = aloha_lib.KERNEL.get_ids(var_veto)
         
         lorentz = lorentz.expand(veto = veto_ids)
+        lorentz = lorentz.simplify()
         coeff_expr = lorentz.split(veto_ids)
         
         for key, expr in coeff_expr.items():
             expr = expr.simplify()
             coeff_expr[key] = expr.factorize()
         coeff_expr.tag = set(aloha_lib.KERNEL.use_tag)
-        
+
         return coeff_expr
                         
     def define_lorentz_expr(self, lorentz_expr):
@@ -458,6 +459,7 @@ class AbstractALOHAModel(dict):
                  explicit_combine=False):
         """ load the UFO model and init the dictionary """
         
+        aloha_lib.KERNEL.clean()
         # Option
         self.explicit_combine = explicit_combine
         
@@ -476,7 +478,7 @@ class AbstractALOHAModel(dict):
         try:
             python_pos = model_name 
             __import__(python_pos)
-        except:
+        except Exception:
             python_pos = 'models.%s' % model_name 
             __import__(python_pos)
         self.model = sys.modules[python_pos]
@@ -554,7 +556,7 @@ class AbstractALOHAModel(dict):
         
         try:
             return self[(lorentzname, outgoing)]
-        except:
+        except Exception:
             logger.warning('(%s, %s) is not a valid key' % 
                                                        (lorentzname, outgoing) )
             return None
@@ -601,7 +603,7 @@ class AbstractALOHAModel(dict):
                     for outgoing in range(len(lorentz.spins)+1):
                         try:
                             self[(lorentz.name, outgoing)].add_combine(m)
-                        except:
+                        except Exception:
                             pass # this routine is a symmetric one, so it 
                                  # already has the combination.
                     
@@ -633,12 +635,46 @@ class AbstractALOHAModel(dict):
             if not hasattr(self.model.lorentz, lor.name):
                 setattr(self.model.lorentz, lor.name, lor)
     
-    def compute_subset(self, data):
+    # Notice that when removing the quick fix, one should also remove the two
+    # additional arguments byPassFix and forceLoop
+    # To emulate the behavior without the quick fix, simply replace the default
+    # value of byPassFix by True.
+    # == START AD-HOC QUICK FIX ==
+    def compute_subset(self, data, byPassFix=False, forceLoop=False):
+    # == END AD-HOC QUICK FIX ==
         """ create the requested ALOHA routine. 
         data should be a list of tuple (lorentz, tag, outgoing)
         tag should be the list of special tag (like conjugation on pair)
         to apply on the object """
-        
+
+        # == START AD-HOC QUICK FIX WARNING ==        
+
+        # In order to be able to use open loops in unitary gauge, one must make
+        # sure ALOHA does not include the longitudinal part of the loop
+        # propagator for the gluon.
+        # In further versions, this will be insured by having separate routines
+        # for the massive and massless vector propagators. For now, I use a 
+        # quick fix which consists in calling twice aloha (rather compute_subset)
+        # with only the loop routines (then in feynman gauge not matter what)
+        # and a second time with the rest as usual.
+
+        if not byPassFix: 
+            
+            data_loop = [d for d in data if any((t.startswith('L') for t in d[1]))]
+            data_tree = [d for d in data if not any((t.startswith('L') for t in d[1]))]
+            
+            if data_loop == []:
+                self.compute_subset(data,byPassFix=True)
+                return
+            
+            self.compute_subset(data_tree, byPassFix=True, forceLoop=True)
+            old_aloha_gauge = aloha.unitary_gauge
+            aloha.unitary_gauge = False
+            self.compute_subset(data_loop, byPassFix=True, forceLoop=True)
+            aloha.unitary_gauge = old_aloha_gauge
+            return
+        # == END AD-HOC QUICK FIX ==
+
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
         self.look_for_symmetries()
@@ -650,24 +686,23 @@ class AbstractALOHAModel(dict):
             conjugate = [i for i in tag if isinstance(i, int)]
             tag =  [i for i in tag if isinstance(i, str)]
             tag = tag + ['C%s'%i for i in conjugate] 
-            #
             
             conjugate = tuple([int(c[1:]) for c in tag if c.startswith('C')])
             loop = any((t.startswith('L') for t in tag))
-            if loop:
+            # When removing the QUICK FIX, also remove 'forceLoop'
+            # == START AD-HOC QUICK FIX ==
+            if loop or forceLoop:
+            # == END AD-HOC QUICK FIX ==
                 aloha.loop_mode = True
                 self.explicit_combine = True
-                
-            
-                
-                       
+           
             for l_name in list_l_name:
                 try:
                     request[l_name][conjugate].append((outgoing,tag))
-                except:
+                except Exception:
                     try:
                         request[l_name][conjugate] = [(outgoing,tag)]
-                    except:
+                    except Exception:
                         request[l_name] = {conjugate: [(outgoing,tag)]}
                         
         # Loop on the structure to build exactly what is request
@@ -745,12 +780,7 @@ class AbstractALOHAModel(dict):
                         conjg_builder = builder.define_conjugate_builder(conjg)
                         # Compute routines
                         self.compute_aloha(conjg_builder, symmetry=lorentz.name,
-                                        routines=routines)
-
-                
-                      
-  
-                
+                                        routines=routines)             
                         
     def compute_aloha(self, builder, symmetry=None, routines=None, tag=[]):
         """ define all the AbstractRoutine linked to a given lorentz structure
@@ -768,6 +798,9 @@ class AbstractALOHAModel(dict):
         for outgoing, tag in routines:
             symmetric = self.has_symmetries(symmetry, outgoing, valid_output=routines)
             realname = name + ''.join(tag)
+            if (realname, outgoing) in self:
+                continue # already computed
+            
             if symmetric:
                 self.get(realname, symmetric).add_symmetry(outgoing)
             else:
@@ -915,7 +948,7 @@ class AbstractALOHAModel(dict):
 
         try:
             equiv = self.symmetries[l_name][outgoing]
-        except:
+        except Exception:
             return out
         else:
             if not valid_output or equiv in valid_output:
@@ -967,7 +1000,7 @@ class AbstractALOHAModel(dict):
                 for lorentz in vertex.lorentz:
                     try:
                         conjugate_request[lorentz.name].add(i//2+1)
-                    except:
+                    except Exception:
                         conjugate_request[lorentz.name] = set([i//2+1])
         
         for elem in conjugate_request:

@@ -25,7 +25,7 @@ import logging
 try:
     import madgraph.various.sum_html as sum_html
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
-except:
+except ImportError:
     import internal.sum_html as sum_html
     from internal import InvalidCmd, MadGraph5Error
     

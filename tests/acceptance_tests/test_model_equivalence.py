@@ -280,7 +280,8 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
     def setUp(self):
         """ creating the full model from scratch """
         CheckFileCreate.setUp(self)
-        os.system('cp %s %s' % (pjoin(MG5DIR,'Template','Source','make_opts'), '/tmp'))
+        os.system('cp %s %s' % (pjoin(MG5DIR,'Template', 'LO','Source',
+                                      'make_opts'), '/tmp'))
         
         CheckFileCreate.clean_files(self)
         
@@ -352,7 +353,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
                 #try:
                     self.assertAlmostEqual(singlevalue,
                                            solutions[variable][i],
-                                           places=7,
+                                           places=6,
                         msg='fail to be equal for param %s : %s != %s' % \
                             (variable, singlevalue, solutions[variable][i]))
                 #except Exception as error:

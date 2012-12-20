@@ -67,7 +67,7 @@ class Models4FermionTest(unittest.TestCase):
                                            'model':base_model})
 
             evaluator = process_checks.MatrixElementEvaluator(base_model,
-                                                              reuse = False)
+                                                                  reuse = False)
             evaluator.full_model = full_model
             
             if not p:
@@ -179,7 +179,7 @@ class TestSchannelModels(Models4FermionTest):
                   group_subprocs.SubProcessGroup.group_amplitudes(amplitudes)[0]
 
         symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
-                                                subproc_group)
+                                                                  subproc_group)
 
         self.assertEqual(len([s for s in symmetry if s > 0]), 1)
 

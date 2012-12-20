@@ -1,0 +1,82 @@
+#!/usr/bin/perl -w
+
+#---------------------------------------------------------------------
+# Run GS to create jpeg files defined as $gs
+#---------------------------------------------------------------------
+system("/bin/bash -c \"rm -f matrix*.jpg born.jpg V*/loop_matrix.jpg\" ");
+
+$imatrix = "";
+if (! -e "matrix.ps") {$imatrix = 1;}
+$max_jpg = 2;
+if ($imatrix eq "") {$max_jpg = 5;}
+# add 1 to max_jpg, to get max_jpg pages
+$max_jpg += 1;
+open(PAGE,"> diagrams.html") || die "Error creating diagrams.html";
+print PAGE "\<HTML\> \n";
+print PAGE "\<HEAD\> \n";
+print PAGE "\<TITLE\>Feynman Diagrams \<\/TITLE\> \n";
+print PAGE "\<\/HEAD\> \n";
+print PAGE "\<BODY\> \n";
+while ( -e "matrix_$imatrix.ps"){
+  open(IN, "< matrix_$imatrix.ps") || die "No file matrix_$imatrix.ps";
+  open(OUT, "> matrix-1.ps") || die "Could not open file matrix-1.ps";
+  while (<IN>) {
+    if ($_ =~ m/^%%Page: $max_jpg $max_jpg/) {last;}
+    else {print OUT $_, "\n";}
+  }
+  close(OUT);
+  close(IN);
+  system "/bin/bash -c \"nice gs  \-sDEVICE\=jpeg \-sOutputFile\=matrix_$imatrix\%00d.jpg \-q \-dNOPAUSE \-dBATCH matrix-1.ps\"";
+  system "rm -f matrix-1.ps";
+
+# Determine how many jpg files we have
+  $pages=1;
+
+  while(-e "matrix_$imatrix$pages.jpg"){
+    $pages++;
+  }#end of while
+  #reduce it by one
+  if ($pages > $max_jpg){
+    $pages -= 1;
+  }
+# Find name of process
+  open PROCESS, "grep Process matrix_$imatrix.f |" or print "Error: can't do grep\n";
+  $proc = <PROCESS>;
+  if ($proc =~ /Process: (.+?)(\s\w+=\d+)*$/) { $proc = $1; }
+  print PAGE "<P>\<A HREF\=\"matrix_$imatrix.ps\" id\=\"$imatrix\"\> Postscript Diagrams for $proc\<\/A\> \<BR\> \n";
+  for($j=1;$j<$pages;$j++){
+    print PAGE "\<IMG SRC=\"matrix_$imatrix$j.jpg\" ALT=\"Page $j of $pages \" \> \<BR\> \n";
+  }#end of for
+#
+#   In case I didn't include all of the diagrams as jpeg, warn user
+#
+  if (-e "matrix_$imatrix$max_jpg.jpg" ) {
+    print PAGE "<P>To save bandwidth not all diagrams were converted to jpeg.";
+    print PAGE "<P> To view all diagrams click on ";
+    print PAGE "\<A HREF\=\"matrix_$imatrix.ps\"\> postscript. \<\/A\> \<BR\> \n";
+#
+#    Delete files which aren't included in diagrams.html
+#
+    system ("/bin/bash -c \"rm -f matrix_$max_jpg.jpg\" ");
+  }
+#
+#  Now create jpeg file for card
+#
+    system ("/bin/bash -c \"head -352 matrix_$imatrix.ps >& junk.ps\" ");
+    open(JUNK,">> junk.ps") || die "Error opening junk.ps";  
+
+    print JUNK "-30 -380 translate \n";
+    print JUNK "0.7 0.7 scale \n";
+    close(JUNK);
+
+    system ("/bin/bash -c \"cat matrix_$imatrix.ps | sed 1,352d >> junk.ps\" ");
+
+    system "/bin/bash -c \"nice gs  \-sDEVICE\=jpeg \-sOutputFile\=card.jpg \-q \-dNOPAUSE \-dBATCH \-g180x150 ./junk.ps; rm -f junk.ps; cp -p card.jpg ../../HTML/card.jpg\" ";
+  if ($imatrix eq "") {$imatrix = 0;}
+  $imatrix = $imatrix + 1;
+}
+
+print PAGE "\n";
+print PAGE "\<\/BODY\> \n";
+print PAGE "\<\/HTML\> \n";
+close(PAGE);

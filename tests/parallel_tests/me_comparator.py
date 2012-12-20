@@ -39,7 +39,6 @@ import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.master_interface as cmd_interface
-
 import madgraph.various.misc as misc
 
 
@@ -609,7 +608,8 @@ class PickleRunner(MERunner):
     orders = {}
     energy = 1000
 
-    def run(self, proc_list, model, orders, energy):
+#    def run(self, proc_list, model, orders, energy):
+    def run(self, *arg, **opt):
         """Simulate a run by simply returning res_list
         """
 

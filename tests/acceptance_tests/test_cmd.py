@@ -66,7 +66,7 @@ class TestCmdShell1(unittest.TestCase):
         self.do('define J P g')
         self.do('add process e+ e- > J')
         self.assertEqual(len(self.cmd._curr_amps), 2)
-        self.do('add process mu+ mu- > P, Z>mu+ mu-')
+        self.do('add process mu+ mu- > P, Z > mu+ mu-')
         self.assertEqual(len(self.cmd._curr_amps), 3)
         self.do('generate e+ e- > Z > e+ e-')
         self.assertEqual(len(self.cmd._curr_amps), 1)
@@ -76,7 +76,7 @@ class TestCmdShell1(unittest.TestCase):
         self.do('generate e+ e- > V > e+ e-')
         self.assertEqual(len(self.cmd._curr_amps), 1)
         self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 2)
-        self.do('generate e+ e- > z|a > e+ e-')
+        self.do('generate e+ e- > z | a > e+ e-')
         self.assertEqual(len(self.cmd._curr_amps), 1)
         self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 2)
         self.assertRaises(MadGraph5Error, self.do, 'generate a V > e+ e-')
@@ -132,10 +132,13 @@ class TestCmdShell1(unittest.TestCase):
                     'automatic_html_opening': True, 
 #                    'pythia8_path': None,
                     'group_subprocesses': 'Auto',
-                    'ignore_six_quark_processes': False,
                     'complex_mass_scheme': False,
                     'gauge': 'unitary',
+                    'lhapdf': 'lhapdf-config',  
+                    'loop_optimized_output': True,
+                    'fastjet': 'fastjet-config',
                     'timeout': 60,
+                    'ignore_six_quark_processes': False,
                     'auto_update': 7
                     }
 
@@ -313,7 +316,7 @@ class TestCmdShell2(unittest.TestCase,
 
     def test_read_madgraph4_proc_card(self):
         """Test reading a madgraph4 proc_card.dat"""
-        os.system('cp -rf %s %s' % (os.path.join(MG4DIR,'Template'),
+        os.system('cp -rf %s %s' % (os.path.join(MG5DIR,'Template','LO'),
                                     self.out_dir))
         os.system('cp -rf %s %s' % (
                             self.join_path(_pickle_path,'simple_v4_proc_card.dat'),
@@ -322,9 +325,12 @@ class TestCmdShell2(unittest.TestCase,
         self.cmd = Cmd.MasterCmd()
         pwd = os.getcwd()
         os.chdir(self.out_dir)
-        self.do('import proc_v4 %s' % os.path.join('Cards','proc_card.dat'))
+        try:
+            self.do('import proc_v4 %s' % os.path.join('Cards','proc_card.dat'))
+        except:
+            os.chdir(pwd)
+            raise
         os.chdir(pwd)
-
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                               'SubProcesses', 'P1_ll_vlvl')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -335,6 +341,7 @@ class TestCmdShell2(unittest.TestCase,
                                                     'matrix1.ps')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'madevent.tar.gz')))
+        
 
 
     def test_output_standalone_directory(self):
@@ -363,7 +370,7 @@ class TestCmdShell2(unittest.TestCase,
             shutil.rmtree(self.out_dir)
 
         self.do('import model sm')
-        self.do('generate e+ e->e+ e-')
+        self.do('generate e+ e- > e+ e-')
         self.do('output standalone %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
         files = ['aloha_file.inc', 
@@ -466,7 +473,7 @@ class TestCmdShell2(unittest.TestCase,
 
         self.do('import model sm')
         self.do('set group_subprocesses False')
-        self.do('generate e+ e->e+ e-')
+        self.do('generate e+ e- > e+ e-')
         self.do('output %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
         files = ['aloha_file.inc', 

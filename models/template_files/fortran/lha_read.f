@@ -305,16 +305,14 @@ c
       enddo
       if (.not.found) then
          write (*,*) "Warning: parameter ",name," not found"
-         write (*,*) "         setting it to default value ",def_value_num
+         write (*,*) "         setting it to default value ",
+     &def_value_num
          var=def_value_num
       endif
       return
 
       end
 c
-
-
-
 
       subroutine LHA_open_file(lun,filename,fopened)
 c***********************************************************************
