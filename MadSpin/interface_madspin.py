@@ -312,7 +312,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         # Ask the user which particle should be decayed        
         particle_index=2
-        counter=0
+        counter=-1
         for particle in self.final_state_compact.split():
             particle_index+=1
             if self.list_branches.has_key(str(particle)):
