@@ -564,9 +564,10 @@ bool SystCalc::writeHeader(ostream& outfile)
 
 bool SystCalc::writeEvent(ostream& outfile)
 {
-  outfile << "<rwgt";
-  if (_event_number > 0) outfile << " event=\"" << _event_number << "\"";
+  outfile << "<event";
+  if (_event_number > 0) outfile << " id=\"" << _event_number << "\"";
   outfile << ">\n";
+  outfile << "<rwgt>\n";
   if(_scaleweights.size() > 0) {
     outfile << "  <scale type=\"central\">";
     for (int i=0; i < _scaleweights.size(); i++) {
@@ -598,5 +599,6 @@ bool SystCalc::writeEvent(ostream& outfile)
     }
   }
   outfile << "</rwgt>\n";
+  outfile << "</event>\n";
   return true;
 }
