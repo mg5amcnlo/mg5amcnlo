@@ -82,7 +82,7 @@ class DecayParticle(base_objects.Particle):
                    'texname', 'antitexname', 'line', 'propagating',
                    'is_part', 'self_antipart', 'is_stable',
                    'decay_vertexlist', 'decay_channels', 'apx_decaywidth',
-                   'apx_decaywidth_err', 'decay_amplitudes', '2body_massdiff'
+                   'apx_decaywidth_err', '2body_massdiff'
                   ]
 
 
@@ -131,7 +131,7 @@ class DecayParticle(base_objects.Particle):
 
         self['decay_vertexlist'] = {}
         self['decay_channels'] = {}
-        self['decay_amplitudes'] = {}
+        self.decay_amplitudes = {}
         self['apx_decaywidth'] = 0.
         self['apx_decaywidth_err'] = 0.
         self['2body_massdiff'] = 0.
@@ -147,11 +147,20 @@ class DecayParticle(base_objects.Particle):
         elif name == 'apx_decaywidth_err' and not self[name]:
             self.estimate_width_error()
             return self[name]
+        elif name == 'decay_amplitudes':
+            return self.decay_amplitudes
         else:
             # call the mother routine
             return DecayParticle.__bases__[0].get(self, name)
 
+    def set(self, name, value, *args):
+        """assign a value"""
 
+        if name == 'decay_amplitudes':
+            self.decay_amplitudes = value
+        else:
+            out = super(DecayParticle, self).set(name, value, *args)
+            return out
     def check_vertex_condition(self, partnum, onshell, 
                               value = base_objects.VertexList(), model = {}):
         """Check the validity of decay condition, including,
@@ -408,7 +417,7 @@ class DecayParticle(base_objects.Particle):
         
         # Reset the branching ratio inside amplitudes
         if reset_br:
-            for n, amplist in self['decay_amplitudes'].items():
+            for n, amplist in self.decay_amplitudes.items():
                 for amp in amplist:
                     amp.reset_width_br()
 
@@ -428,7 +437,7 @@ class DecayParticle(base_objects.Particle):
         # (So the decaywidth_err and branching ratios can be calculated with
         # the new width.)
         if reset_width:
-            for n, amplist in self['decay_amplitudes'].items():
+            for n, amplist in self.decay_amplitudes.items():
                 for amp in amplist:
                     # Do not calculate the br in this moment
                     self['apx_decaywidth'] += amp.get('apx_decaywidth')
@@ -439,7 +448,7 @@ class DecayParticle(base_objects.Particle):
 
         # Update the branching ratio in the end with the updated total width
         if reset_br:
-            for n, amplist in self['decay_amplitudes'].items():
+            for n, amplist in self.decay_amplitudes.items():
                 for amp in amplist:
                     # Reset the br first, so the get function will recalculate
                     # br automatically.
@@ -745,12 +754,12 @@ class DecayParticle(base_objects.Particle):
         #Check the value by check_amplitudes
         if isinstance(value, DecayAmplitudeList):
             if self.check_amplitudes(partnum, value):
-                self['decay_amplitudes'][partnum] = value
+                self.decay_amplitudes[partnum] = value
         elif isinstance(value, list) and \
                 all([isinstance(a, DecayAmplitude) for a in value]):
             new_value = DecayAmplitudeList(value)
             if self.check_amplitudes(partnum, new_value):
-                self['decay_amplitudes'][partnum] = new_value
+                self.decay_amplitudes[partnum] = new_value
         else:
             raise self.PhysicsObjectError, \
                 "The input must be a list of decay amplitudes."
@@ -1060,7 +1069,7 @@ class DecayParticle(base_objects.Particle):
             # Check if there is a amplitude for it. Since the channels with 
             # the similar final states are put together. Use reversed order
             # of loop.
-            for amplt in reversed(self['decay_amplitudes'][clevel]):
+            for amplt in reversed(self.decay_amplitudes[clevel]):
                 # Do not include the first leg (initial id)
                 if sorted([l.get('id') for l in amplt['process']['legs'][1:]])\
                         == final_pid:
@@ -1588,183 +1597,6 @@ class DecayModel(model_reader.ModelReader):
         global amZ0, aS
         amZ0 = aS
 
-    def read_param_card_old(self, param_card):
-        """Read a param_card and set all parameters and couplings as
-        members of this module"""
-
-        if not os.path.isfile(param_card):
-            raise MadGraph5Error, \
-                  "No such file %s" % param_card
-
-        # Extract external parameters
-        external_parameters = self['parameters'][('external',)]
-
-        # Create a dictionary from LHA block name and code to parameter name
-        parameter_dict = {}
-        for param in external_parameters:
-            try:
-                dict = parameter_dict[param.lhablock.lower()]
-            except KeyError:
-                dict = {}
-                parameter_dict[param.lhablock.lower()] = dict
-            dict[tuple(param.lhacode)] = param.name
-        # Now read parameters from the param_card
-
-        # Read in param_card
-        param_lines = open(param_card, 'r').read().split('\n')
-
-        # Define regular expressions
-        re_block = re.compile("^block\s+(?P<name>\w+)")
-        re_decay = re.compile(\
-            "^decay\s+(?P<pid>\d+)\s+(?P<value>-*\d+\.\d+e(\+|-)\d+)\s*")
-        re_single_index = re.compile(\
-            "^\s*(?P<i1>\d+)\s+(?P<value>-*\d+\.\d+e(\+|-)\d+)\s*")
-        re_double_index = re.compile(\
-            "^\s*(?P<i1>\d+)\s+(?P<i2>\d+)\s+(?P<value>-*\d+\.\d+e(\+|-)\d+)\s*")
-        block = ""
-        # Go through lines in param_card
-        for line in param_lines:
-            if not line.strip() or line[0] == '#':
-                continue
-            line = line.lower()
-            # Look for blocks
-            block_match = re_block.match(line)
-            if block_match:
-                block = block_match.group('name')
-                continue
-            # Look for single indices
-            single_index_match = re_single_index.match(line)
-            double_index_match = re_double_index.match(line)
-            decay_match = re_decay.match(line)
-            if block and single_index_match:
-                i1 = int(single_index_match.group('i1'))
-                value = single_index_match.group('value')
-                try:
-                    exec("globals()[\'%s\'] = %s" % (parameter_dict[block][(i1,)],
-                                      value))
-                    logger.info("Set parameter %s = %f" % \
-                                (parameter_dict[block][(i1,)],\
-                                 eval(parameter_dict[block][(i1,)])))
-                except KeyError:
-                    logger.warning('No parameter found for block %s index %d' %\
-                                   (block, i1))
-                continue
-            double_index_match = re_double_index.match(line)
-            # Look for double indices
-            if block and double_index_match:
-                i1 = int(double_index_match.group('i1'))
-                i2 = int(double_index_match.group('i2'))
-                try:
-                    exec("globals()[\'%s\'] = %s" % (parameter_dict[block][(i1,i2)],
-                                      double_index_match.group('value')))
-                    logger.info("Set parameter %s = %f" % \
-                                (parameter_dict[block][(i1,i2)],\
-                                 eval(parameter_dict[block][(i1,i2)])))
-                except KeyError:
-                    logger.warning('No parameter found for block %s index %d %d' %\
-                                   (block, i1, i2))
-                continue
-            # Look for decays
-            decay_match = re_decay.match(line)
-            if decay_match:
-                block = ""
-                pid = int(decay_match.group('pid'))
-                value = decay_match.group('value')
-                self['decaywidth_list'][(pid, True)] = float(value)
-                try:
-                    exec("globals()[\'%s\'] = %s" % \
-                         (parameter_dict['decay'][(pid,)],
-                          value))
-                    logger.info("Set decay width %s = %f" % \
-                                (parameter_dict['decay'][(pid,)],\
-                                 eval(parameter_dict['decay'][(pid,)])))
-                except KeyError:
-                    logger.warning('No decay parameter found for %d' % pid)
-                continue
-
-        # Define all functions used
-        for func in self['functions']:
-            exec("def %s(%s):\n   return %s" % (func.name,
-                                                ",".join(func.arguments),
-                                                func.expr))
-
-        # Extract derived parameters
-        # TO BE IMPLEMENTED allow running alpha_s coupling
-        derived_parameters = []
-        try:
-            derived_parameters += self['parameters'][()]
-        except KeyError:
-            pass
-        try:
-            derived_parameters += self['parameters'][('aEWM1',)]
-        except KeyError:
-            pass
-        try:
-            derived_parameters += self['parameters'][('aS',)]
-        except KeyError:
-            pass
-        try:
-            derived_parameters += self['parameters'][('aS', 'aEWM1')]
-        except KeyError:
-            pass
-        try:
-            derived_parameters += self['parameters'][('aEWM1', 'aS')]
-        except KeyError:
-            pass
-
-
-        # Now calculate derived parameters
-        # TO BE IMPLEMENTED use running alpha_s for aS-dependent params
-        for param in derived_parameters:
-            exec("globals()[\'%s\'] = %s" % (param.name, param.expr))
-            if not eval(param.name) and eval(param.name) != 0:
-                logger.warning("%s has no expression: %s" % (param.name,
-                                                             param.expr))
-            try:
-                logger.info("Calculated parameter %s = %f" % \
-                            (param.name, eval(param.name)))
-            except TypeError:
-                logger.info("Calculated parameter %s = (%f, %f)" % \
-                            (param.name,\
-                             eval(param.name).real, eval(param.name).imag))
-        
-        # Extract couplings
-        couplings = []
-        try:
-            couplings += self['couplings'][()]
-        except KeyError:
-            pass
-        try:
-            couplings += self['couplings'][('aEWM1',)]
-        except KeyError:
-            pass
-        try:
-            couplings += self['couplings'][('aS',)]
-        except KeyError:
-            pass
-        try:
-            couplings += self['couplings'][('aS', 'aEWM1')]
-        except KeyError:
-            pass
-        try:
-            couplings += self['couplings'][('aEWM1', 'aS')]
-        except KeyError:
-            pass
-
-        # Now calculate all couplings
-        # TO BE IMPLEMENTED use running alpha_s for aS-dependent couplings
-        for coup in couplings:
-            exec("globals()[\'%s\'] = %s" % (coup.name, coup.expr))
-            if not eval(coup.name) and eval(coup.name) != 0:
-                logger.warning("%s has no expression: %s" % (coup.name,
-                                                             coup.expr))
-            logger.info("Calculated coupling %s = (%f, %f)" % \
-                        (coup.name,\
-                         eval(coup.name).real, eval(coup.name).imag))
-
-        # Set alpha_s original value
-        global amZ0, aS
-        amZ0 = aS
 
 
     def running_externals(self, q, loopnum=2):
@@ -5244,9 +5076,9 @@ class AbstractModel(base_objects.Model):
                 ab_amp = DecayAmplitude({'part_sn_dict': ini_sn_dict})
                 ab_amp['process'] = new_process
                 try:
-                    ab_ini['decay_amplitudes'][len(final_ids)].append(ab_amp)
+                    ab_ini.decay_amplitudes[len(final_ids)].append(ab_amp)
                 except KeyError:
-                    ab_ini['decay_amplitudes'][len(final_ids)] = DecayAmplitudeList([ab_amp])
+                    ab_ini.decay_amplitudes[len(final_ids)] = DecayAmplitudeList([ab_amp])
 
             # Create the Ab2RealDict for this real amplitude
             # Set the final_legs_dict, using the pseudo_pids.
@@ -5302,7 +5134,7 @@ class AbstractModel(base_objects.Model):
 
         # Generate all matrix elements in this model
         for part in self['particles']:            
-            for clevel, amps in part['decay_amplitudes'].items():
+            for clevel, amps in part.decay_amplitudes.items():
                 ab_matrix_elements.extend(self.generate_ab_matrixelements(amps))
 
         self['ab_matrix_elements'] = ab_matrix_elements

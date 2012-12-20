@@ -44,8 +44,6 @@ class Test_DecayParticle(unittest.TestCase):
 
     mydict = {}
     mypart = None
-    sm_path = import_ufo.find_ufo_path('sm')
-    my_testmodel_base = import_ufo.import_model(sm_path)
     my_2bodyvertexlist = base_objects.VertexList()
     my_3bodyvertexlist = base_objects.VertexList()
     my_2bodyvertexlist_wrongini = base_objects.VertexList()
@@ -54,7 +52,8 @@ class Test_DecayParticle(unittest.TestCase):
     def setUp(self):
 
         #Import a model from my_testmodel
-
+        self.sm_path = import_ufo.find_ufo_path('sm')
+        self.my_testmodel_base = import_ufo.import_model(self.sm_path)
         self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base, 
                                                      True)
         param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
@@ -2489,7 +2488,7 @@ class Test_Channel(unittest.TestCase):
         # Test if the calculated ratio is float or None
         """for part in model.get('particles'):
             print part.get_pdg_code(), part.get('2body_massdiff')
-            #n_max = len(part['decay_amplitudes'].keys())
+            #n_max = len(part.decay_amplitudes.keys())
             for n in range(2,n_max+2):
                 for amp in part.get_amplitudes(n):
                     self.assertTrue(isinstance(amp['exa_decaywidth'], bool) or \

@@ -212,8 +212,8 @@ class Particle(PhysicsObject):
         self['spin'] = 1
         self['color'] = 1
         self['charge'] = 1.
-        self['mass'] = 'zero'
-        self['width'] = 'zero'
+        self['mass'] = 'ZERO'
+        self['width'] = 'ZERO'
         self['pdg_code'] = 0
         self['texname'] = 'none'
         self['antitexname'] = 'none'
@@ -1212,6 +1212,12 @@ class Model(PhysicsObject):
                 pos = i + 1
         self.get('parameters')[new_param.depend].insert(pos, new_param)
 
+
+    #def __repr__(self):
+    #    """ """
+    #    raise Exception
+    #    return "Model(%s)" % self.get_name()
+    #__str__ = __repr__
 ################################################################################
 # Class for Parameter / Coupling
 ################################################################################
