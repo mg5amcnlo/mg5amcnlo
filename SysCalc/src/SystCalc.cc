@@ -75,7 +75,8 @@ void SystCalc::insert_tokens_int(vector<string>& tokens, vector<int>& var)
 SystCalc::SystCalc(istream& conffile,
 		   string sysfilename,
 		   string orgPDF,
-		   int org_member)
+		   int org_member,
+		   int beam1, int beam2)
 {
   /** Supply config file as an istream. 
       If sysfilename is set, read and parse full systematics file.
@@ -91,10 +92,11 @@ SystCalc::SystCalc(istream& conffile,
       # matching scales
       matchscale:
       20 30 40
-      # PDF sets and number of members
+      # PDF sets, number of members (default/0 means use all members), 
+      # combination method (default hessian, note that NNPDF uses gaussian)
       PDF:
-      CT10.LHgrid 52
-      MSTW2008nlo68cl.LHgrid 40
+      CT10.LHgrid 52 hessian
+      MSTW2008nlo68cl.LHgrid
    **/
 
   _parsed_events = 0;
@@ -145,19 +147,50 @@ SystCalc::SystCalc(istream& conffile,
 	_members.push_back(atoi(tokens[1].c_str()));
       else
 	_members.push_back(0);
+      if(tokens.size() > 2)
+	_combinations.push_back(tokens[2]);
+      else
+	_combinations.push_back("hessian");
     }
   }
 
-  // SET default original PDF and member
+  // Initialize LHAPDF
+  initLHAPDF();
+  // If too many PDF sets, remove the last ones
+  if(_PDFsets.size() > getMaxNumSets()-1) {
+    cout << "Warning! LHA only allows " << getMaxNumSets()-1
+	 << " PDF sets simultaneously (besides the original set)" << endl;
+    cout << "Ignoring additional sets" << endl;
+    _PDFsets.erase(_PDFsets.begin()+getMaxNumSets()-1,_PDFsets.end());
+  }
+  // Initialize all PDF sets
+  for(int i=0; i < max(int(_PDFsets.size()), getMaxNumSets()-1); i++) {
+    cout << "Init PDF set " << _PDFsets[i] << endl;
+    int pdfnum = i+1; // Has to start with 1, otherwise get segfault in LHAPDF
+    if(atoi(_PDFsets[i].c_str()) > 0)
+      initPDFSet(pdfnum, atoi(_PDFsets[i].c_str()));
+    else
+      initPDFSet(pdfnum, _PDFsets[i]);
+    if(_members[i] == 0) {
+      _members[i] = numberPDF(pdfnum);
+      if(_members[i] > 1) _members[i]++; // LHAPDF reports wrong for error PDFs
+    }
+    cout << "Using " << _members[i] << " members for this set" << endl;
+  }
+
+  // SET default original PDF and member and beam info
   _orgPDF = orgPDF;
   _org_member = org_member;
+  _beam[0] = beam1;
+  _beam[1] = beam2;
 
-  // Load systematics file
+  // Load systematics file and read orgpdf and beams info
   if(sysfilename != "") {
     _filestatus = _sysfile.LoadFile(sysfilename.c_str());
     if (_filestatus != 0) {
       return;
     }
+    // Read orgpdf info
     XMLElement* element = _sysfile.FirstChildElement("orgpdf");
     if(element){
       tokenize(element->GetText(), tokens);
@@ -168,6 +201,7 @@ SystCalc::SystCalc(istream& conffile,
     }
     else
       cout << "Warning: Failed to read orgpdf from systematics file" << endl;
+    // Read beams info
     element = _sysfile.FirstChildElement("beams");
     if(element){
       tokenize(element->GetText(), tokens);
@@ -184,28 +218,13 @@ SystCalc::SystCalc(istream& conffile,
 
   cout << "Set original PDF = " << _orgPDF << " with member " << _org_member << endl;
 
-  // Initialize PDFs
-  initLHAPDF();
-  if(_PDFsets.size() > getMaxNumSets()-1) {
-    cout << "Warning! LHA only allows " << getMaxNumSets()-1
-	 << " PDF sets simultaneously (besides the original set)" << endl;
-    cout << "Ignoring additional sets" << endl;
-    _PDFsets.erase(_PDFsets.begin()+getMaxNumSets()-1,_PDFsets.end());
-  }
-  for(int i=0; i < max(int(_PDFsets.size()), getMaxNumSets()-1); i++) {
-    cout << "Init PDF set " << _PDFsets[i] << endl;
-    initPDFSet(i, _PDFsets[i]);
-    if(_members[i] == 0) {
-      _members[i] = numberPDF(i);
-      if(_members[i] > 1) _members[i]++; // LHAPDF reports wrong for error PDFs
-    }
-    cout << "Using " << _members[i] << " members for this set" << endl;
-  }
+  // Initialize original PDF using _PDFsets.size() as number flag
   cout << "Init original PDF " << _orgPDF << endl;
+  int orgnum = _PDFsets.size()+1;
   if(atoi(_orgPDF.c_str()) > 0)
-    initPDFSet(_PDFsets.size(), atoi(_orgPDF.c_str()), _org_member);
+    initPDFSet(orgnum, atoi(_orgPDF.c_str()), _org_member);
   else
-    initPDFSet(_PDFsets.size(), _orgPDF, _org_member);
+    initPDFSet(orgnum, _orgPDF, _org_member);
   cout << "Initialization done" << endl;
 }
 
@@ -394,7 +413,7 @@ double SystCalc::calculatePDFWeight(int pdfnum, double fact, int beam,
 bool SystCalc::convertEvent()
 {
   // Set which member to use for alpha_s reweighting
-  int orgnum = _PDFsets.size();
+  int orgnum = _PDFsets.size() + 1;
   
   // Calculate original weight for the different factors
   double org_ren_alps = 1;
@@ -466,23 +485,24 @@ bool SystCalc::convertEvent()
 
   // Different PDF sets
   for(int i=0; i < _PDFsets.size(); i++){
+    int pdfnum = i+1;
     // Initialize a new vector for the values of the members of this PDF
     if (DEBUG) cout << "Reweighting with PDF set " << _PDFsets[i] << endl;
     vector<double>* pdffacts = new vector<double>;
     for(int j=0; j < _members[i]; j++) {
       if (DEBUG) cout << "PDF set member " << j << endl;      
       // Set PDF set member
-      usePDFMember(i, j);
+      usePDFMember(pdfnum, j);
       // First recalculate alpha_s weights, since alpha_s differs between PDFs
       // Recalculate PDF weights
       double pdf_fact = 1;
-      if(_n_qcd > 0) pdf_fact *= pow(alphasPDF(i, _ren_scale), _n_qcd);
+      if(_n_qcd > 0) pdf_fact *= pow(alphasPDF(pdfnum, _ren_scale), _n_qcd);
       if (DEBUG) cout << "After PDF central alps factor: " << org_ren_alps << endl;
       for(int k=0; k < _alpsem_scales.size(); k++)
-	pdf_fact *= alphasPDF(i, _alpsem_scales[k]);
+	pdf_fact *= alphasPDF(pdfnum, _alpsem_scales[k]);
       if (DEBUG) cout << "After PDF emission alps factor: " << org_em_alps << endl;
-      pdf_fact *= calculatePDFWeight(i, 1., _beam[0], _pdf_pdg1, _pdf_x1, _pdf_q1);
-      pdf_fact *= calculatePDFWeight(i, 1., _beam[1], _pdf_pdg2, _pdf_x2, _pdf_q2);
+      pdf_fact *= calculatePDFWeight(pdfnum, 1., _beam[0], _pdf_pdg1, _pdf_x1, _pdf_q1);
+      pdf_fact *= calculatePDFWeight(pdfnum, 1., _beam[1], _pdf_pdg2, _pdf_x2, _pdf_q2);
       if (DEBUG) cout << "Total PDF factor: " << pdf_fact << endl;
       pdffacts->push_back(pdf_fact/org_weight);
       if (DEBUG) cout << "PDF weight: " << (*pdffacts)[pdffacts->size()-1] << endl;
@@ -510,7 +530,7 @@ bool SystCalc::writeHeader(ostream& outfile)
   outfile << "<header>\n";
   outfile << "  <initrwgt>\n";
   if(_scalefacts.size() > 0) {
-    outfile << "    <scale type=\"central\" nentries=\"" << _scalefacts.size() 
+    outfile << "    <scale type=\"central\" entries=\"" << _scalefacts.size() 
 	    << "\">";
     for (int i=0; i < _scalefacts.size(); i++) {
       if(i > 0) outfile << " ";
@@ -518,7 +538,7 @@ bool SystCalc::writeHeader(ostream& outfile)
     outfile << "</scale>\n";
   }
   if(_alpsfacts.size() > 0) {
-    outfile << "    <scale type=\"emission\" nentries=\"" << _alpsfacts.size() 
+    outfile << "    <scale type=\"emission\" entries=\"" << _alpsfacts.size() 
 	    << "\">";
     for (int i=0; i < _alpsfacts.size(); i++) {
       if(i > 0) outfile << " ";
@@ -526,7 +546,7 @@ bool SystCalc::writeHeader(ostream& outfile)
     outfile << "</scale>\n";
   }
   if(_matchscales.size() > 0) {
-    outfile << "    <qmatch nentries=\"" << _matchscales.size() << "\">";
+    outfile << "    <qmatch entries=\"" << _matchscales.size() << "\">";
     for (int i=0; i < _matchscales.size(); i++) {
       if(i > 0) outfile << " ";
       outfile << _matchscales[i]; }
@@ -534,8 +554,8 @@ bool SystCalc::writeHeader(ostream& outfile)
   }
   if(_PDFsets.size() > 0){
     for (int i=0; i < _PDFsets.size(); i++)
-      outfile << "    <pdf type=\"" << _PDFsets[i] << "\" nentries=\"" << _members[i]
-	      << "\"></pdf>\n";
+      outfile << "    <pdf type=\"" << _PDFsets[i] << "\" entries=\"" << _members[i]
+	      << "\" combine=\"" << _combinations[i] << "\"></pdf>\n";
   }
   outfile << "  </initrwgt>\n";
   outfile << "</header>\n";

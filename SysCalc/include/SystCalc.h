@@ -15,7 +15,7 @@ class SystCalc
   SystCalc() {_parsed_events = 0; };
   SystCalc(istream& conffile, string sysfilename = "",
 	   string orgPDF = "cteq6ll.LHpdf",
-	   int orgMember = 0);
+	   int orgMember = 0, int beam1 = 1, int beam2 = 1);
   
   bool parseEvent(string event = "");
   bool convertEvent();
@@ -59,6 +59,8 @@ class SystCalc
   vector<string> _PDFsets;
   // Number of members in each of the sets
   vector<int> _members;
+  // Combination method for members in each of the sets
+  vector<string> _combinations;
   
   /*** Parser variables ***/
   XMLDocument _sysfile;

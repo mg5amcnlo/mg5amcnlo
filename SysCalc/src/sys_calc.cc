@@ -18,10 +18,11 @@ Example of a config file:
       # matching scales
       matchscale:
       20 30 40
-      # PDF sets and number of members
+      # PDF sets, number of members (default/0 means use all members), 
+      # combination method (default hessian, note that NNPDF uses gaussian)
       PDF:
-      CT10.LHgrid 52
-      MSTW2008nlo68cl.LHgrid 40
+      CT10.LHgrid 52 hessian
+      MSTW2008nlo68cl.LHgrid
 
 Using tinyXML2 for XML parsing of syst file.
 **************************************************************************/
