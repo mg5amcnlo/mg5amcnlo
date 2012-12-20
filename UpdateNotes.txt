@@ -30,6 +30,9 @@ Update notes for MadGraph 5 (in reverse time order)
                       Note that this only affects decay processes (A > B C ..) 
                       with multiple identical particles in the final state and 
                       some propagators not able to go on the mass shell.
+                  JA: Updated the restriction cards for the sm model to set 
+                      Yukawa couplings equal to the corresponding masses
+                      (in order to avoid stupid gauge check failures).
 
 
 1.5.5 (18/11/12)  JA: Fixed Bug #1078168, giving asymmetries in X+gamma generation
