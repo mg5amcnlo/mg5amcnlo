@@ -449,6 +449,7 @@ class RunCard(dict):
         self.add_line('ickkw', 'int', 0)
         self.add_line('chcluster', 'bool', False)
         self.add_line('ktscheme', 'int', 1)
+        self.add_line('asrwgtflavor', 'int', 5)
         if int(self['ickkw'])>0:
             self.add_line('alpsfact', 'float', 1.0)
             self.add_line('pdfwgt', 'bool', True)
