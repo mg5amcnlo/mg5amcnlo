@@ -2744,7 +2744,7 @@ calculator."""
             decay_info = self.get_partial_width_mg5(to_refine, decay_info, args['output'])
             self.update_width_in_param_card(decay_info, args['input'], args['output'])
     
-    #@misc.mute_logger()
+    @misc.mute_logger()
     def get_partial_width_mg5(self, particles, decay_info, card):
         """use the decay package to compute the additional partial width"""
     
