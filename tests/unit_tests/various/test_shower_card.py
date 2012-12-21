@@ -197,8 +197,42 @@ PY8PATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
+PY8UTI=""
 """
         text = self.card.write_card('PYTHIA8', '')
+        for a, b in zip(text.split('\n'), goal.split('\n')):
+            self.assertEqual(a,b)
+        self.assertEqual(text, goal)
+
+    def test_shower_card_py8_analyse(self):
+        """test that the py8 card is correctly written"""
+        goal = \
+"""NEVENTS=-1
+UE_PY8=.TRUE.
+HADRONIZE_PY8=.TRUE.
+MAXPR_PY8=2
+ERR_FR_PY8=0.010
+B_STABLE_PY8=.FALSE.
+PI_STABLE_PY8=.TRUE.
+WP_STABLE_PY8=.FALSE.
+WM_STABLE_PY8=.FALSE.
+Z_STABLE_PY8=.FALSE.
+H_STABLE_PY8=.FALSE.
+TAUP_STABLE_PY8=.FALSE.
+TAUM_STABLE_PY8=.FALSE.
+MUP_STABLE_PY8=.FALSE.
+MUM_STABLE_PY8=.FALSE.
+RNDEVSEED_PY8=0
+HWPPPATH=
+THEPEGPATH=
+HEPMCPATH=
+PY8PATH=
+EXTRALIBS="stdhep Fmcfio"
+EXTRAPATHS="../lib"
+INCLUDEPATHS=
+PY8UTI="myanalyse.o"
+"""
+        text = self.card_analyse.write_card('PYTHIA8', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
             self.assertEqual(a,b)
         self.assertEqual(text, goal)
