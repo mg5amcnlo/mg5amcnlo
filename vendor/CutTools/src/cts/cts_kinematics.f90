@@ -3736,7 +3736,7 @@
        l4vec(k,ib) =  cut3%l4(k)
        p0vecc(k,ib) =  den(bbn3(1,ib))%p(k) 
       enddo
-      cc = cut3%cc
+      cc = cut3%cc; if (abs(cc).lt.1.d-60) cc= 0.d0;! fix 20.12.2012
       tau= cut3%tau
       c34= -2.d0*cut3%gm
       cden1= cc*tau
