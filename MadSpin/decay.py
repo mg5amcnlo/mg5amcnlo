@@ -1395,7 +1395,7 @@ class width_estimate:
                 elif item not in ponctuation : # case 3: we have a particle originating from a branching
                     final.append(item)
                     if next_symbol=='' or next_symbol in ponctuation:
-                                                  #end of a splitting, verify that it exists
+                        #end of a splitting, verify that it exists
                         if initial not in self.br.keys():
                             logger.debug('Branching fractions of particle '+initial+' are unknown')
 	        	    return 0
@@ -1510,7 +1510,7 @@ class width_estimate:
                 pid_part=-label2pid[part]
                 if self.pid2label[pid_part] not in particle_set:
                     particle_set.append(self.pid2label[pid_part])
- 
+        particle_set = list(set(particle_set))
     
         commandline="import model %s\n" % self.model
         commandline+="generate %s > all all \n" % particle_set[0]
@@ -1585,9 +1585,8 @@ class width_estimate:
         # erase old info
         del self.br
         self.br={}
-        
-
-        
+        particle_set = list(set(particle_set))
+        misc.sprint('PASSS HERE')
         argument = {'particles': particle_set, 
                     'input': pjoin(self.path_me, 'param_card.dat'),
                     'output': pjoin(self.path_me, 'param_card.dat')}

@@ -177,7 +177,7 @@ class MadSpinInterface(extended_cmd.Cmd):
     def do_decay(self, decaybranch):
         """add a process in the list of decayed particles"""
         
-        if self.mg5cmd._use_lower_part_names:
+        if not self.model['case_sensitive']:
             decaybranch = decaybranch.lower()
         
         decay_process, init_part = self.decay.reorder_branch(decaybranch)
@@ -314,6 +314,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         particle_index=2
         counter=-1
         for particle in self.final_state_compact.split():
+            if not self.model['case_sensitive']:
+                particle = particle.lower()
             particle_index+=1
             if self.list_branches.has_key(str(particle)):
                 counter+=1
@@ -324,7 +326,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     del self.list_branches[str(particle)][0] 
                     
         if not self.decay_processes:
-            logger.info("Nothing to decay ...")
+            logger.info("327Nothing to decay ...")
             return
 
         model_line = self.banner.get('proc_card', 'full_model_line')
