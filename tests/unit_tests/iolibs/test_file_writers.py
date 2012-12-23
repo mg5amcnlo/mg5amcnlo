@@ -34,7 +34,7 @@ class CheckFileCreate():
 
     def assertFileContains(self, filename, solution):
         """ Check the content of a file """
-
+        
         current_value = open(self.give_pos(filename)).read()
         list_cur=current_value.split('\n')
         list_sol=solution.split('\n')

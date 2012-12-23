@@ -41,6 +41,8 @@ import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.master_interface as cmd_interface
 
+import madgraph.various.process_checks as process_checks
+
 import me_comparator
 from madgraph.iolibs.files import mv
 
@@ -165,6 +167,12 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         # Move the proc_card to the created folder
         mv(proc_card_location,os.path.join(dir_name,'Cards','proc_card_mg5.dat'))
         if self.non_zero:
+            # Initialize the processes (i.e. HelFilter)
+            initializations = []
+            for i, proc in enumerate(proc_list):
+                init = LoopMG5Runner.initialize_process(\
+                          proc,i,os.path.join(self.mg5_path,self.temp_dir_name))
+                initializations.append(init)
             self.fix_PSPoint_in_check(dir_name,PSpoints!=[])
             self.fix_MadLoopParamCard(dir_name)
             if PSpoints==[]:
@@ -172,9 +180,13 @@ class LoopMG5Runner(me_comparator.MG5Runner):
 
             # Get the ME value
             for i, proc in enumerate(proc_list):
-                value = LoopMG5Runner.get_me_value(proc, i, os.path.join(self.mg5_path,\
-                    self.temp_dir_name), ([] if PSpoints==[] else PSpoints[i]))
-                self.res_list.append(value)
+                if initializations[i]:
+                    value = LoopMG5Runner.get_me_value(proc, i, os.path.join(\
+                                              self.mg5_path,self.temp_dir_name), 
+                                          ([] if PSpoints==[] else PSpoints[i]))
+                    self.res_list.append(value)
+                else:
+                    self.res_list.append(((0.0, 0.0, 0.0, 0.0, 0), []))
 
             return self.res_list
         else:
@@ -206,6 +218,37 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         return v5_string
 
     @staticmethod
+    def initialize_process(proc, proc_id, working_dir, verbose=True):
+        """Compile and run ./check, then parse the output and return the result
+        for process with id = proc_id and PSpoint if specified."""  
+        if verbose:
+            sys.stdout.write('.')
+            sys.stdout.flush()
+         
+        shell_name = None
+        directories = glob.glob(os.path.join(working_dir, 'SubProcesses',
+                                                             'P%i_*' % proc_id))
+        if directories and os.path.isdir(directories[0]):
+            shell_name = os.path.basename(directories[0])
+
+        # If directory doesn't exist, skip and return 0
+        if not shell_name:
+            logging.info("Directory hasn't been created for process %s"%str(proc))
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+
+        if verbose: logging.info("Initializing process %s in dir %s"%(str(proc), shell_name))
+        
+        dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
+
+        init = process_checks.LoopMatrixElementTimer.run_initialization(\
+          run_dir=dir_name, SubProc_dir=os.path.join(working_dir, 'SubProcesses'))
+        
+        if init is None:
+            return False
+        else:
+            return True
+
+    @staticmethod
     def get_me_value(proc, proc_id, working_dir, PSpoint=[], verbose=True):
         """Compile and run ./check, then parse the output and return the result
         for process with id = proc_id and PSpoint if specified."""  
@@ -227,6 +270,11 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         if verbose: logging.info("Working on process %s in dir %s"%(str(proc), shell_name))
         
         dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
+        # Make sure the modified source file are recompiled
+        if os.path.isfile(os.path.join(dir_name,'check')):
+            os.remove(os.path.join(dir_name,'check'))
+        if os.path.isfile(os.path.join(dir_name,'check_sa.o')):        
+            os.remove(os.path.join(dir_name,'check_sa.o'))
         # Run make
         devnull = open(os.devnull, 'w')
         retcode = subprocess.call('make',
@@ -322,10 +370,11 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         file = open(os.path.join(dir_name,'Cards','MadLoopParams.dat'), 'r')
         MLParams = file.read()
         file.close()
-        mode = 4 if mp else 1
+        run_mode = 4 if mp else -1
+        init_mode = 4 if mp else 1
         file = open(os.path.join(dir_name,'Cards','MadLoopParams.dat'), 'w')
-        MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%mode, MLParams)
-        MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%mode, MLParams)
+        MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%run_mode, MLParams)
+        MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%init_mode, MLParams)
         MLParams = re.sub(r"#UseLoopFilter\n\S+","#UseLoopFilter\n.FALSE.", 
                                                                        MLParams)                
         MLParams = re.sub(r"#DoubleCheckHelicityFilter\n\S+",
@@ -365,7 +414,6 @@ class LoopMG4Runner(me_comparator.MERunner):
         the specified model and the specified orders with a given c.o.m energy
         or the given Phase-Space points if specified.
         """
-        
         self.res_list = [] # ensure that to be void, and avoid pointer problem 
         self.proc_list = proc_list
         self.model = model

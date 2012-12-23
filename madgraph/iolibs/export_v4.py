@@ -367,15 +367,25 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         model_builder = UFO_model_to_mg4(model, write_dir, self.opt)
         model_builder.build(wanted_couplings)
 
-        # Create and write ALOHA Routine
+        # Backup the loop mode, because it can be changed in what follows.
+        old_loop_mode = aloha.loop_mode
+
+        # Create the aloha model
         aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
         aloha_model.add_Lorentz_object(model.get('lorentz'))
+
+        # Compute the subroutines
         if wanted_lorentz:
             aloha_model.compute_subset(wanted_lorentz)
         else:
             aloha_model.compute_all(save=False)
+
+        # Write them out
         write_dir=pjoin(self.dir_path, 'Source', 'DHELAS')
         aloha_model.write(write_dir, 'Fortran')
+
+        # Revert the original aloha loop mode
+        aloha.loop_mode = old_loop_mode
 
         #copy Helas Template
         cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
@@ -1091,6 +1101,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         if not isinstance(writer, writers.FortranWriter):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
+            
+        if not self.opt.has_key('sa_for_decay'):
+            self.opt['sa_for_decay']=False
 
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
@@ -1143,13 +1156,22 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         color_data_lines = self.get_color_data_lines(matrix_element)
         replace_dict['color_data_lines'] = "\n".join(color_data_lines)
 
+        if self.opt['sa_for_decay'] :
+            amp2_lines = self.get_amp2_lines(matrix_element, [] )
+            replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
 
         # Extract JAMP lines
         jamp_lines = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
-        file = open(pjoin(_file_path, \
+        if not self.opt['sa_for_decay'] :
+            file = open(pjoin(_file_path, \
                           'iolibs/template_files/matrix_standalone_v4.inc')).read()
+        else:
+            file = open(pjoin(_file_path, \
+                          'iolibs/template_files/matrix_standalone_ms_v4.inc')).read()
+            
+
         file = file % replace_dict
 
         # Write the file
@@ -1239,25 +1261,26 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     def convert_model_to_mg4(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
          
-         super(ProcessExporterFortranME,self).convert_model_to_mg4(model, 
+        super(ProcessExporterFortranME,self).convert_model_to_mg4(model, 
                                                wanted_lorentz, wanted_couplings)
          
-         IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
-         try:
-             shutil.rmtree(pjoin(self.dir_path,'bin','internal','ufomodel'))
-         except OSError as error:
-             pass
-         # This is not safe if there is a '##' or '-' in the path.
-         shutil.copytree(model.get('version_tag').split('##')[0].split('-')[0], 
+        IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
+        try:
+            shutil.rmtree(pjoin(self.dir_path,'bin','internal','ufomodel'))
+        except OSError as error:
+            pass
+        model_path = model.get('modelpath')
+        # This is not safe if there is a '##' or '-' in the path.
+        shutil.copytree(model_path, 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
-         if hasattr(model, 'restrict_card'):
-             out_path = pjoin(self.dir_path, 'bin', 'internal','ufomodel',
+        if hasattr(model, 'restrict_card'):
+            out_path = pjoin(self.dir_path, 'bin', 'internal','ufomodel',
                                                          'restrict_default.dat')
-             if isinstance(model.restrict_card, check_param_card.ParamCard):
-                 model.restrict_card.write(out_path)
-             else:
-                 files.cp(model.restrict_card, out_path)
+            if isinstance(model.restrict_card, check_param_card.ParamCard):
+                model.restrict_card.write(out_path)
+            else:
+                files.cp(model.restrict_card, out_path)
 
                 
     #===========================================================================
@@ -1447,6 +1470,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'driver.f',
                      'genps.f',
                      'genps.inc',
+                     'idenparts.f',
                      'initcluster.f',
                      'makefile',
                      'message.inc',
@@ -2666,6 +2690,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                      'driver.f',
                      'genps.f',
                      'genps.inc',
+                     'idenparts.f',
                      'initcluster.f',
                      'makefile',
                      'message.inc',
@@ -3112,7 +3137,7 @@ class UFO_model_to_mg4(object):
         if self.opt['export_format'] in ['madloop','madloop_optimized']:
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read_mp.f'
-        elif self.opt['export_format'] == 'standalone':
+        elif self.opt['export_format'] in ['standalone', 'standalone_ms']:
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read.f'
         else:
@@ -3136,7 +3161,7 @@ class UFO_model_to_mg4(object):
                 text = text.replace('madevent','aMCatNLO')
                 open(path, 'w').writelines(text)
 
-        elif self.opt['export_format'] in ['standalone', 'madloop','madloop_optimized']:
+        elif self.opt['export_format'] in ['standalone', 'standalone_ms', 'madloop','madloop_optimized']:
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
         else:
@@ -3814,15 +3839,17 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
     
         assert group_subprocesses in [True, False]
         
-        
-        opt = {'clean': not noclean, 
+        opt = {'clean': not noclean,
                'complex_mass': cmd.options['complex_mass_scheme'],
                'export_format':cmd._export_format,
-               'mp': False,
-               'model': cmd._curr_model.get('name')}
+               'mp': False,  'sa_for_decay':False, 'model': cmd._curr_model.get('name') }
+
+        if cmd._export_format=='standalone_ms':
+            opt['sa_for_decay'] = True        
     
-        if cmd._export_format in ['standalone', 'matrix']:
+        if cmd._export_format in ['standalone', 'matrix','standalone_ms']:
             return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt)
+        
         elif cmd._export_format in ['madevent'] and group_subprocesses:
             return  ProcessExporterFortranMEGroup(cmd._mgme_dir, cmd._export_dir,
                                                                             opt)

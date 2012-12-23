@@ -184,7 +184,7 @@ def import_full_model(model_path, decay=False):
     if decay and hasattr(ufo_model, 'all_decays') and ufo_model.all_decays:
         for ufo_part in ufo_model.all_particles:
             name =  ufo_part.name
-            if ufo2mg5_converter.use_lower_part_names:
+            if not model['case_sensitive']:
                name = name.lower() 
             p = model['particles'].find_name(name)
             if hasattr(ufo_part, 'partial_widths'):
@@ -200,17 +200,18 @@ def import_full_model(model_path, decay=False):
     #    restrict_file = os.path.join(model_path, 'restrict_default.dat') 
     #    model = import_ufo.RestrictModel(model)
     #    model.restrict_model(restrict_file)
+
     return model
     
 
 class UFOMG5Converter(object):
     """Convert a UFO model to the MG5 format"""
 
-    use_lower_part_names = False
+
 
     def __init__(self, model, auto=False):
         """ initialize empty list for particles/interactions """
-        
+       
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
                         
@@ -251,9 +252,8 @@ class UFOMG5Converter(object):
                     raise InvalidModel, '''LHABlock should be single word which is not the case for
     \'%s\' parameter with lhablock \'%s\'''' % (param.name, param.lhablock)
          
-	if hasattr(self.ufomodel, 'gauge'):    
+        if hasattr(self.ufomodel, 'gauge'):    
             self.model.set('gauge', self.ufomodel.gauge)
-	
         logger.info('load particles')
         # Check if multiple particles have the same name but different case.
         # Otherwise, we can use lowercase particle names.
@@ -261,7 +261,8 @@ class UFOMG5Converter(object):
                    [p.antiname for p in self.ufomodel.all_particles])) == \
            len(set([p.name.lower() for p in self.ufomodel.all_particles] + \
                    [p.antiname.lower() for p in self.ufomodel.all_particles])):
-            self.use_lower_part_names = True
+            self.model['case_sensitive'] = False
+            
 
         # check which of the fermion/anti-fermion should be set as incoming
         self.detect_incoming_fermion()
@@ -369,7 +370,7 @@ class UFOMG5Converter(object):
             if key in base_objects.Particle.sorted_keys and not key=='counterterm':
                 nb_property +=1
                 if key in ['name', 'antiname']:
-                    if self.use_lower_part_names:
+                    if not self.model['case_sensitive']:
                         particle.set(key, value.lower())
                     else:
                         particle.set(key, value)
@@ -1044,7 +1045,7 @@ class RestrictModel(model_reader.ModelReader):
      - external parameter with zero/one input are changed into internal parameter.
      - identical coupling/mass/width are replace in the model by a unique one
      """
-     
+  
     def default_setup(self):
         """define default value"""
         self.del_coup = []

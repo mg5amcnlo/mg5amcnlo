@@ -647,6 +647,20 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # propagator does not bring in any power of the loop momentum.
         if self.get('spin')==2:
             rank=rank+1
+
+        # Treat in an ad-hoc way the higgs effective theory
+        spin_cols = [(self.get('spin'),abs(self.get('color')))]+\
+              [(w.get('spin'),abs(w.get('color'))) for w in self.get('mothers')]
+        # HGG effective vertex
+        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8)]):
+            return rank+2
+        # HGGG effective vertex
+        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8),(3,8)]):
+            return rank+1
+        # HGGGG effective vertex
+        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8),(3,8),(3,8)]):
+            return rank
+            
         # Now add a possible power of the loop momentum depending on the
         # vertex creating this loop wavefunction. For now we don't read the
         # lorentz structure but just use an SM ad-hoc rule that only 
@@ -4902,18 +4916,28 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 if combine_matrix_elements and matrix_element in matrix_elements:
                     me = matrix_elements[matrix_elements.index(matrix_element)]
                     me_procs = me.get('processes')
-                    logger.info("Combining process %s with %s" % \
-                            (matrix_element.get('processes')[0].nice_string().\
-                                 replace('Process: ', ''),
-                             me.get('processes')[0].nice_string().\
-                                 replace('Process: ', '')))
-                    for proc in matrix_element.get('processes'):
-                        if proc not in me_procs:
-                            me_procs.append(proc)
-                        else:
-                            raise InvalidCmd, "Duplicate process %s found. Please check your processes." % \
-                                proc.nice_string().replace('Process: ', '')
-                    continue
+                    procs = matrix_element.get('processes')
+                    if me_procs[0].get_ninitial() > 1 or \
+                            procs[0].get_initial_ids() == \
+                            me_procs[0].get_initial_ids():
+                        logger.info("Combining process %s with %s" % \
+                                (procs[0].nice_string().\
+                                     replace('Process: ', ''),
+                                 me_procs[0].nice_string().\
+                                     replace('Process: ', '')))
+                        for proc in procs:
+                            if proc not in me_procs:
+                                me_procs.append(proc)
+                            else:
+                                raise InvalidCmd,("Duplicate process %s found."\
+                                           +" Please check your processes.") % \
+                                    proc.nice_string().replace('Process: ', '')
+                        # Remove this matrix element from the lists
+                        if combine_matrix_elements and amplitude_tags:
+                            amplitude_tags.pop(-1)
+                            identified_matrix_elements.pop(-1)
+                            permutations.pop(-1)
+                        continue
 
                 # Otherwise, add this matrix element to list
                 matrix_elements.append(matrix_element)

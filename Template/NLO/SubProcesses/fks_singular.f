@@ -1090,6 +1090,7 @@ c
       double precision pmass(nexternal)
       include "pmass.inc"
 
+      MonteCarlo=shower_mc
       vegas_weight=vegaswgt
 
 c If there was an exceptional phase-space point found for the 
@@ -1378,8 +1379,6 @@ c Collinear subtraction term:
             call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,fx_c)
             xlum_c = dlum()
             xsec = fx_c*s_c*jac_cnt(1)*prefact_c*rwgt*(1-gfactcl)
-            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
             SxmcME=SxmcME+xlum_c*xsec
             do j=1,IPROC
                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
@@ -1478,8 +1477,6 @@ c Soft subtraction term:
      &           abrv(1:2).eq.'vi' .or. nbody) goto 546
             call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
             xsec=fx_s*s_s*jac_cnt(0)*prefact*rwgt
-            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
             SxmcME=SxmcME+xlum_s*xsec
             do j=1,IPROC
                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
@@ -1573,8 +1570,6 @@ c Soft-Collinear subtraction term:
             call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
             xlum_sc = dlum()
             xsec = fx_sc*s_sc*jac_cnt(2)*prefact_c*rwgt*(1-gfactcl)
-            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &           .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
             SxmcME=SxmcME-xlum_sc*xsec
             do j=1,IPROC
                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
@@ -2096,11 +2091,13 @@ c based on previous PS points (done in BinothLHA.f)
      &     ,pt_hardness
       double precision xscalemax,xxscalemax
       logical condition
-
-      xscalemax = scalemax
-
-      if(MonteCarlo(1:6).eq.'HERWIG')condition=.not.Hevents
-      if(MonteCarlo(1:6).eq.'PYTHIA')condition=.true.
+c
+      SCALUP(iFKS)=0d0
+      xscalemax=0d0
+      xxscalemax=0d0
+c
+      xscalemax=scalemax
+      condition=.not.Hevents
 
       if(condition)then
          if(dampMCsubt .and. abrv.ne.'born' .and. abrv.ne.'grid' .and.
@@ -2111,7 +2108,7 @@ c based on previous PS points (done in BinothLHA.f)
             SCALUP(iFKS)=xxscalemax
          endif
       else
-         if (emsca.ne.0d0) then
+         if(dampMCsubt.and.emsca.ne.0d0)then
             SCALUP(iFKS)=xscalemax
          else
             call assign_scalemax(shat_ev,xi_i_fks_ev,xxscalemax)
@@ -3197,8 +3194,6 @@ c do the same as above for the counterevents
       
       double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt
-      character*10 MonteCarlo
-      common/cMonteCarloType/MonteCarlo
 
       if(zhw_used.lt.0.d0.or.zhw_used.gt.1.d0)then
         write(*,*)'Error #1 in get_mc_lum',zhw_used
@@ -3585,7 +3580,7 @@ c closer to xseclvc than xsecvc(i), the condition
 c   |xsecvc(i)/xseclvc-1|/|xsecvc(i+1)/xseclvc-1| > rat
 c if xseclvc#0, or 
 c   |xsecvc(i)|/|xsecvc(i+1)| > rat
-c if xseclvc=0 must be fulfilled; the value of rat is set equal to 8 and to 2
+c if xseclvc=0 must be fulfilled; the value of rat is set equal to 4 and to 2
 c for soft and collinear limits respectively, since the cross section is 
 c expected to scale as xii**2 and sqrt(1-yi**2), and the values of xii and yi
 c are chosen as powers of 10 (thus, if scaling would be exact, rat should
@@ -3616,7 +3611,7 @@ c
         endif
       enddo
       if(iflag.eq.0)then
-        rat=8.d0
+        rat=4.d0
       elseif(iflag.eq.1)then
         rat=2.d0
       else

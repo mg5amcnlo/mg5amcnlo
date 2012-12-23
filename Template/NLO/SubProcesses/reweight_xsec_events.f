@@ -14,7 +14,7 @@ c Compile with makefile_rwgt
       character*7 pdlabel,epa_label
       integer lhaid
       common/to_pdf/lhaid,pdlabel,epa_label
-      integer maxevt,ifile,ofile,i,isave,ii
+      integer maxevt,ifile,ofile,i,jj,isave,ii
       double precision saved_weight
       logical unweighted
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
@@ -32,6 +32,8 @@ c Compile with makefile_rwgt
       double precision xmuR_over_ref,xmuF1_over_ref,xmuF2_over_ref,
      # xQES_over_ref,pr_muR_over_ref,pr_muF1_over_ref,pr_muF2_over_ref,
      # tmp,yfactR(maxscales),yfactF(maxscales),xsecPDFr(0:maxPDFs)
+      double precision xsecPDFr_acc(0:maxPDFs),xsecScale_acc(maxscales
+     $     ,maxscales)
       double precision compute_rwgt_wgt_Sev,compute_rwgt_wgt_Sev_nbody
      &     ,compute_rwgt_wgt_Hev
       integer kr,kf,n,nng,nps,npairs,nsets,izero,itmp,idpdf(0:maxPDFs)
@@ -194,6 +196,17 @@ c$$$      call fk88strcat(event_file,'.rwgt',fname1)
 
       nScontributions=1
 
+c To keep track of the accumulated results:
+        do ii=1,numscales
+           do jj=1,numscales
+              xsecScale_acc(jj,ii)=0d0
+           enddo
+        enddo
+        do n=0,nsets
+           xsecPDFr_acc(n)=0d0
+        enddo
+
+
       do i=1,maxevt
         call read_lhef_event(ifile,
      &       NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
@@ -275,7 +288,8 @@ c
              if (iSorH_lhe.eq.1) then
                 wgtref=wgtref_nbody
                 do ii=1,nScontributions
-                   wgtref=wgtref+wgtref_all(nFKSprocess_reweight(ii)*2-1)
+                   wgtref=wgtref+
+     &                  wgtref_all(nFKSprocess_reweight(ii)*2-1)
                 enddo
              else
                 wgtref=wgtref_all(nFKSprocess_used*2)
@@ -382,6 +396,23 @@ c Restore default PDFs
 
         endif
 
+c Keep track of the accumulated results:
+        if (numscales.gt.0) then
+           do ii=1,numscales
+              do jj=1,numscales
+                 xsecScale_acc(ii,jj)=xsecScale_acc(ii,jj)+wgtxsecmu(ii
+     $                ,jj)/wgtref*XWGTUP
+              enddo
+           enddo
+        endif
+        if (nsets.gt.0) then
+           do n=0,nsets
+              xsecPDFr_acc(n)=xsecPDFr_acc(n)+wgtxsecPDF(n)/wgtref
+     $             *XWGTUP
+           enddo
+        endif
+
+c Write event to disk:
         write(buff,200)'#',iSorH_lhe,ifks_lhe,jfks_lhe,
      #                     fksfather_lhe,ipartner_lhe,
      #                     scale1_lhe,scale2_lhe,
@@ -399,7 +430,26 @@ c Restore default PDFs
       close(34)
       close(35)
 
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
+c Write the accumulated results to a file
+      open (unit=34,file='scale_pdf_dependence.dat',status='unknown')
+      write (34,*) numscales**2
+      if (numscales.gt.0) then
+         write (34,*) ((xsecScale_acc(ii,jj),ii=1,numscales),jj=1
+     $        ,numscales)
+      else
+         write (34,*) ''
+      endif
+      if (nsets.gt.0) then
+         write (34,*) nsets + 1
+         write (34,*) (xsecPDFr_acc(n),n=0,nsets)
+      else
+         write(34,*) nsets
+         write (34,*) ''
+      endif
+      close(34)
+
+
+ 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
 
 
       end

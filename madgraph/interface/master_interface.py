@@ -45,6 +45,7 @@ import madgraph.interface.loop_interface as LoopCmd
 import madgraph.interface.amcatnlo_interface as amcatnloCmd
 import madgraph.fks.fks_base as fks_base
 import madgraph.iolibs.files as files
+import madgraph.various.misc as misc
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
@@ -246,12 +247,13 @@ class Switcher(object):
         if self._curr_model:
             if isinstance(self._curr_model, loop_base_objects.LoopModel) and \
                self._curr_model['perturbation_couplings']!=[] and \
-               self.current_interface not in ['aMC@NLO','MadLoop']:
+                            self.current_interface not in ['aMC@NLO','MadLoop']:
                 self.change_principal_cmd('aMC@NLO')
             if (not isinstance(self._curr_model, loop_base_objects.LoopModel) or \
                self._curr_model['perturbation_couplings']==[]) and \
-               self.current_interface in ['MadLoop']:
+                                          self.current_interface in ['MadLoop']:
                 self.change_principal_cmd('MadGraph')
+        import madgraph.various.misc as misc
         return
     
     def do_output(self, line, *args, **opts):
@@ -556,7 +558,6 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
                             %','.join(interface_quick_name.keys()))
 
     def change_principal_cmd(self, name):
-
         old_cmd=self.current_interface
         if name in self.interface_names.keys():
             self.prompt= self.interface_names[name][0]+'>'
@@ -573,9 +574,10 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
             self.cmd.setup(self)
         
         if __debug__:
-            self.debug_link_to_command() 
-     
-class MasterCmdWeb(Switcher, LoopCmd.LoopInterfaceWeb):
+            self.debug_link_to_command()      
+        
+
+class MasterCmdWeb(LoopCmd.LoopInterfaceWeb, Switcher):
    
     def __init__(self, *arg, **opt):
     

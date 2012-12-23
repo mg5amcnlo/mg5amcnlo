@@ -1,9 +1,68 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+
+2.0.0.beta2(23/12/12) MG5 Team: Include 1.5.4+1.5.5+1.5.6 modifications
+                      MadSpin Team: Include MadSpin
+                      VH: Fix computation in the Feynman gauge for the loops
+                      RF: automatic computation of the NLO uncertainties
+                      OM: NLO can now be runned with no central disk
+                      MZ: change the format of number (using e and not d)
+                      MZ: compilation and tests are possible in multicore
+                      RF: allow to precise either uncertainty or number of events
+                          for aMC@NLO/NLO
+                      OM: ./bin/mg5 cmd.cmd is now working for NLO process
+
 2.0.0.beta1(31/10/12) aMCatNLO Team: First public (beta) version of aMCatNLO.
                         In order to learn aMCatNLO, please do "tutorial aMCatNLO"
                         Please also visit: http://amcatnlo.cern.ch/list.htm for more
                         information.
+
+1.5.6 (20/12/12)  JA: Replaced error with warning when there are decay processes
+                      without corresponding core processes final state (see 
+                      Question #216037). If you get this warning, please check
+                      carefully the process list and diagrams to make sure you
+                      have the processes you were expecting.
+                  JA: Included option to set the highest flavor for alpha_s reweighting
+                      (useful for 4-flavor matching with massive b:s). Note that
+                      this does not affect the choice of factorization scale.
+                  JA: Fixed Bug #1089199, where decay processes with symmetric 
+                      diagrams were missing a symmetry factor. 
+                      Note that this only affects decay processes (A > B C ..) 
+                      with multiple identical particles in the final state and 
+                      some propagators not able to go on the mass shell.
+                  JA: Updated the restriction cards for the sm model to set 
+                      Yukawa couplings equal to the corresponding masses
+                      (in order to avoid stupid gauge check failures).
+
+
+1.5.5 (18/11/12)  JA: Fixed Bug #1078168, giving asymmetries in X+gamma generation
+                      (e.g. Z+gamma) when ickkw=1 and pdfwgt=T. Thanks Irakli!
+                  JA: Ensure that t-channel single top gives non-zero cross section
+                      even if maxjetflavor=4 (note that if run with matching,
+                      maxjetflavor=5 is necessary for correct PDF reweighting).
+                  OM: Fixed Bug #1077877. Aloha crashing for pseudo-scalar, 3 bosons 
+                      interactions (introduces in 1.5.4)
+                  OM: Fix Bug for the command "check gauge". The test of comparing
+                      results between the two gauge (unitary and Feynman) was not 
+                      changing the gauge correctly.
+                  OM: Improvment in LSF cluster support (see bug #1071765) Thanks to
+                      Brian Dorney.
+
+1.5.4 (11/11/12)  JA: Fixed bug in combine_runs.py (introduced in v. 1.5.0) for
+                      processes with 5 final-state particles, which might prevent
+                      matching to Pythia to work properly (thanks Priscila).
+                  OM: Fix Bug #1076043, error in kinematics for e- p collisions,
+ 		      thanks to Uta Klein (introduced in 1.5.0).
+                  JA: Fix Bug #1075525, combination of decay processes for 
+                      particle and antiparticle (e.g. w+ > all all and 
+                      w- > all all), thanks Pierre.
+                  OM: Fix a compilation crash due to aloha (thanks Tim T)
+                  JA: Fixed dynamical scale settings for e- p collisions.
+                  JA: Fixed running LHAPDF on a cluster with cluster_temp_path.
+                  JA: Ensure that the seed is stored in the banner even when Pythia
+                      is run (this was broken in v. 1.5.0).
+                  JA: Improved and clarified phase space presetting for processes
+                      with competing BWs.
 
 1.5.3 (01/11/12)  OM: Fix a crash in the gridpack mode (Thanks Baris Altunkaynak)
                   OM: Fix a crash occuring on cluster with no central disk (only

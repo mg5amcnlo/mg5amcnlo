@@ -69,8 +69,6 @@ from aloha.template_files.wavefunctions import \
 
 ADDED_GLOBAL = []
 
-loop_optimized_output = False
-
 temp_dir_prefix = "TMP_CHECK"
 
 def clean_added_globals(to_clean):
@@ -246,7 +244,7 @@ class MatrixElementEvaluator(object):
         try:
             matrix_methods = exporter.get_python_matrix_methods(\
                 gauge_check=gauge_check)
-#            print "I got matrix_methods=",str(matrix_methods.items()[0][1])
+            # print "I got matrix_methods=",str(matrix_methods.items()[0][1])
         except helas_call_writers.HelasWriterError, error:
             logger.info(error)
             return None
@@ -265,10 +263,10 @@ class MatrixElementEvaluator(object):
 
         # Evaluate the matrix element for the momenta p
         exec("data = Matrix_%s()" % process.shell_string())
-        if output == "m2": 
+        if output == "m2":
             return data.smatrix(p, self.full_model), data.amp2
         else:
-            m2 = data.smatrix(p, self.full_model)
+            m2 = data.smatrix(p,self.full_model)
             return {'m2': m2, output:getattr(data, output)}
     
     #===============================================================================
@@ -301,7 +299,6 @@ class MatrixElementEvaluator(object):
         energy = max(energy, sum(mass[:nincoming]) + 200.,
                      sum(mass[nincoming:]) + 200.)
 
-        e2 = energy**2
         m1 = mass[0]
 
         p = []
@@ -309,7 +306,7 @@ class MatrixElementEvaluator(object):
         masses = rambo.FortranList(nfinal)
         for i in range(nfinal):
             masses[i+1] = mass[nincoming + i]
-        
+
         if nincoming == 1:
 
             # Momenta for the incoming particle
@@ -329,7 +326,12 @@ class MatrixElementEvaluator(object):
             raise rambo.RAMBOError('Need 1 or 2 incoming particles')
 
         if nfinal == 1:
-            energy = masses[0]
+            energy = masses[1]
+            if masses[1] == 0.0:
+                raise rambo.RAMBOError('The kinematic 2 > 1 with the final'+\
+                                          ' state particle massless is invalid')
+
+        e2 = energy**2
 
         m2 = mass[1]
 
@@ -361,14 +363,15 @@ class MatrixElementEvaluator(object):
 class LoopMatrixElementEvaluator(MatrixElementEvaluator):
     """Class taking care of matrix element evaluation for loop processes."""
 
-    def __init__(self, cuttools_dir=None, *args, **kwargs):
+    def __init__(self,cuttools_dir=None,cmd=FakeInterface(),*args,**kwargs):
         """Allow for initializing the MG5 root where the temporary fortran
         output for checks is placed."""
         
-        super(LoopMatrixElementEvaluator,self).__init__(*args, **kwargs)
-        
+        super(LoopMatrixElementEvaluator,self).__init__(*args,cmd=cmd,**kwargs)
+
         self.mg_root=self.cmd._mgme_dir
         self.cuttools_dir=cuttools_dir
+        self.loop_optimized_output = cmd.options['loop_optimized_output']
         # Set proliferate to true if you want to keep the produced directories
         # and eventually reuse them if possible
         self.proliferate=True
@@ -376,27 +379,26 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
     #===============================================================================
     # Helper function evaluate_matrix_element for loops
     #===============================================================================
-    def evaluate_matrix_element(self, matrix_element, p=None, full_model=None, 
-                                gauge_check=False, auth_skipping=None, output='m2'):
+    def evaluate_matrix_element(self, matrix_element, p=None, 
+                             gauge_check=False, auth_skipping=None, output='m2', 
+                                                  PS_name = None, MLOptions={}):
         """Calculate the matrix element and evaluate it for a phase space point
            Output can only be 'm2. The 'jamp' and 'amp' returned values are just
            empty lists at this point.
-        """
-        if full_model:
-            self.full_model = full_model
+           If PS_name is not none the written out PS.input will be saved in 
+           the file PS.input_<PS_name> as well."""
 
         process = matrix_element.get('processes')[0]
         model = process.get('model')
             
-        if "matrix_elements" not in self.stored_quantities:
-            self.stored_quantities['matrix_elements'] = []
+        if "loop_matrix_elements" not in self.stored_quantities:
+            self.stored_quantities['loop_matrix_elements'] = []
 
         if (auth_skipping or self.auth_skipping) and matrix_element in \
-                [el[0] for el in self.stored_quantities['matrix_elements']]:
+                [el[0] for el in self.stored_quantities['loop_matrix_elements']]:
             # Exactly the same matrix element has been tested
             logger.info("Skipping %s, " % process.nice_string() + \
-                        "identical matrix element already tested" \
-                        )
+                        "identical matrix element already tested" )
             return None
 
         # Generate phase space point to use
@@ -404,9 +406,9 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             p, w_rambo = self.get_momenta(process)
         
         if matrix_element in [el[0] for el in \
-                                     self.stored_quantities['matrix_elements']]:  
-            export_dir=self.stored_quantities['matrix_elements'][\
-                [el[0] for el in self.stored_quantities['matrix_elements']\
+                                self.stored_quantities['loop_matrix_elements']]:  
+            export_dir=self.stored_quantities['loop_matrix_elements'][\
+                [el[0] for el in self.stored_quantities['loop_matrix_elements']\
                  ].index(matrix_element)][1]
             logger.debug("Reusing generated output %s"%str(export_dir))
         else:        
@@ -422,13 +424,13 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                     export_dir=os.path.join(self.mg_root,'%s_%i'%(temp_dir_prefix,id))
             
             if self.proliferate:
-                self.stored_quantities['matrix_elements'].append(\
+                self.stored_quantities['loop_matrix_elements'].append(\
                                                     (matrix_element,export_dir))
 
             # I do the import here because there is some cyclic import of export_v4
             # otherwise
             import madgraph.loop.loop_exporters as loop_exporters
-            if loop_optimized_output:
+            if self.loop_optimized_output:
                 exporter_class=loop_exporters.LoopProcessOptimizedExporterFortranSA
             else:
                 exporter_class=loop_exporters.LoopProcessExporterFortranSA
@@ -454,7 +456,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'))
         self.fix_MadLoopParamCard(os.path.join(export_dir,'Cards'),
-                                     mp = gauge_check and loop_optimized_output)
+           mp = gauge_check and self.loop_optimized_output, MLOptions=MLOptions)
         
         if gauge_check:
             file_path, orig_file_content, new_file_content = \
@@ -463,7 +465,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             file = open(file_path,'w')
             file.write(new_file_content)
             file.close()
-            if loop_optimized_output:
+            if self.loop_optimized_output:
                 mp_file_path, mp_orig_file_content, mp_new_file_content = \
                   self.setup_ward_check(os.path.join(export_dir,'SubProcesses'), 
                   ['mp_helas_calls_ampb_1.f','mp_compute_loop_coefs.f'],mp=True)
@@ -473,18 +475,18 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
         # Evaluate the matrix element for the momenta p        
         finite_m2 = self.get_me_value(process.shell_string_v4(), 0,\
-                                               export_dir, p,verbose=False)[0][0]
+                          export_dir, p, PS_name = PS_name, verbose=False)[0][0]
 
         # Restore the original loop_matrix.f code so that it could be reused
         if gauge_check:
             file = open(file_path,'w')
             file.write(orig_file_content)
             file.close()
-            if loop_optimized_output:
+            if self.loop_optimized_output:
                 mp_file = open(mp_file_path,'w')
                 mp_file.write(mp_orig_file_content)
                 mp_file.close()
-    
+        
         # Now erase the output directory
         if not self.proliferate:
             shutil.rmtree(export_dir)
@@ -496,7 +498,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         else:
             return {'m2': finite_m2, output:[]}
 
-    def fix_MadLoopParamCard(self,dir_name, mp=False, loop_filter=False):
+    def fix_MadLoopParamCard(self,dir_name, mp=False, loop_filter=False,
+                                                                  MLOptions={}):
         """ Set parameters in MadLoopParams.dat suited for these checks.MP
             stands for multiple precision and can either be a bool or an integer
             to specify the mode."""
@@ -505,16 +508,34 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             mode = 4 if mp else 1
         else:
             mode = mp
+        
+        # Read the existing option card
         file = open(os.path.join(dir_name,'MadLoopParams.dat'), 'r')
         MLParams = file.read()
         file.close()
-        file = open(os.path.join(dir_name,'MadLoopParams.dat'), 'w')
+        
+        # Additional option specifications
+        for key in MLOptions.keys():
+            if key == "ImprovePS":
+                MLParams = re.sub(r"#ImprovePS\n\S+","#ImprovePS\n%s"%(\
+                            '.TRUE.' if MLOptions[key] else '.FALSE.'),MLParams)
+            elif key == "ForceMP":
+                if MLOptions[key]:
+                    mode = 4
+            else:
+                logger.error("Key %s is not a valid MadLoop option."%key)
+
+        # Mandatory option specificaitons
         MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%mode, MLParams)
         MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%mode, MLParams)
         MLParams = re.sub(r"#UseLoopFilter\n\S+","#UseLoopFilter\n%s"%(\
                                '.TRUE.' if loop_filter else '.FALSE.'),MLParams)                
         MLParams = re.sub(r"#DoubleCheckHelicityFilter\n\S+",
                                  "#DoubleCheckHelicityFilter\n.FALSE.",MLParams)
+
+
+        # Write out the modfied MadLoop option card
+        file = open(os.path.join(dir_name,'MadLoopParams.dat'), 'w')
         file.write(MLParams)
         file.close()
 
@@ -542,9 +563,12 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         file.write(check_sa)
         file.close()
 
-    def get_me_value(self, proc, proc_id, working_dir, PSpoint=[], verbose=True):
+    def get_me_value(self, proc, proc_id, working_dir, PSpoint=[], \
+                                                  PS_name = None, verbose=True):
         """Compile and run ./check, then parse the output and return the result
-        for process with id = proc_id and PSpoint if specified."""  
+        for process with id = proc_id and PSpoint if specified.
+        If PS_name is not none the written out PS.input will be saved in 
+        the file PS.input_<PS_name> as well"""  
         if verbose:
             sys.stdout.write('.')
             sys.stdout.flush()
@@ -584,7 +608,11 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         # If a PS point is specified, write out the corresponding PS.input
         if PSpoint:
             misc.write_PS_input(os.path.join(dir_name, 'PS.input'),PSpoint)
-        
+            # Also save the PS point used in PS.input_<PS_name> if the user
+            # wanted so. It is used for the lorentz check. 
+            if not PS_name is None:
+                misc.write_PS_input(os.path.join(dir_name, \
+                                                 'PS.input_%s'%PS_name),PSpoint)        
         # Run ./check
         try:
             output = subprocess.Popen('./check',
@@ -618,10 +646,21 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                     'gev_pow':0,
                     'export_format':'Default'}
         res_p = []
-
-        for line in output:
+        
+        # output is supposed to be a file, if it is its content directly then
+        # I change it to be the list of line.
+        if isinstance(output,file) or isinstance(output,list):
+            text=output
+        elif isinstance(output,str):
+            text=output.split('\n')
+        else:
+            raise MadGraph5Error, 'Type for argument output not supported in'+\
+                                                          ' parse_check_output.'
+        for line in text:
             splitline=line.split()
-            if splitline[0]=='PS':
+            if len(splitline)==0:
+                continue
+            elif splitline[0]=='PS':
                 res_p.append([float(s) for s in splitline[1:]])
             elif splitline[0]=='BORN':
                 res_dict['born']=float(splitline[1])
@@ -664,7 +703,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         if ind==len(file_names):
             raise Exception, "No helas calls output file found."
         
-        helas_file_name=os.path.join(dir_name,file_names[ind])  
+        helas_file_name=os.path.join(dir_name,file_names[ind])
         file = open(os.path.join(dir_name,helas_file_name), 'r')
         
         helas_calls_out=""
@@ -703,7 +742,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
     """Class taking care of matrix element evaluation and running timing for 
        loop processes."""
-   
+
     def __init__(self, *args, **kwargs):
         """ Same as the mother for now """
         LoopMatrixElementEvaluator.__init__(self,*args, **kwargs)
@@ -761,7 +800,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                                            'not well formatted.'
         
     @classmethod    
-    def run_initialization(cls, run_dir, check_sa_dir, infos,\
+    def run_initialization(cls, run_dir=None, SubProc_dir=None, infos=None,\
                             req_files = ['HelFilter.dat','LoopFilter.dat'],
                             attempts = [3,15]):
         """ Run the initialization of the process in 'run_dir' with success 
@@ -769,14 +808,38 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         The directory containing the driving source code 'check_sa.f'.
         The list attempt gives the successive number of PS points the 
         initialization should be tried with before calling it failed.
-        Returns the number of PS points which were necessary for the init."""
+        Returns the number of PS points which were necessary for the init.
+        Notice at least run_dir or SubProc_dir must be provided."""
         
+        # If the user does not want detailed info, then set the dictionary
+        # to a dummy one.
+        if infos is None:
+            infos={}
+        
+        if SubProc_dir is None and run_dir is None:
+            raise MadGraph5Error, 'At least one of [SubProc_dir,run_dir] must'+\
+                                           ' be provided in run_initialization.'
+        
+        # If the user does not specify where is check_sa.f, then it is assumed
+        # to be one levels above run_dir
+        if SubProc_dir is None:
+            SubProc_dir = os.path.abspath(os.path.join(run_dir,os.pardir))
+            
+        if run_dir is None:
+            directories =[ dir for dir in glob.glob(os.path.join(SubProc_dir,\
+                                             'P[0-9]*')) if os.path.isdir(dir) ]
+            if directories:
+                run_dir = directories[0]
+            else:
+                raise MadGraph5Error, 'Could not find a valid running directory'+\
+                                                      ' in %s.'%str(SubProc_dir)
+
         to_attempt = copy.copy(attempts)
         to_attempt.reverse()
         my_req_files = copy.copy(req_files)
         
         # Make sure that LoopFilter really is needed.
-        MLCardPath = os.path.join(check_sa_dir,os.pardir,'Cards',\
+        MLCardPath = os.path.join(SubProc_dir,os.pardir,'Cards',\
                                                             'MadLoopParams.dat')
         if not os.path.isfile(MLCardPath):
             raise MadGraph5Error, 'Could not find MadLoopParams.dat at %s.'\
@@ -799,11 +862,12 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             curr_attempt = to_attempt.pop()+1
             # Plus one because the filter are written on the next PS point after
             # initialization is performed.
-            cls.fix_PSPoint_in_check(check_sa_dir, read_ps = False, 
+            cls.fix_PSPoint_in_check(SubProc_dir, read_ps = False, 
                                                          npoints = curr_attempt)
             compile_time, run_time = cls.make_and_run(run_dir)
             if compile_time==None:
                 logging.error("Failed at running the process in %s."%run_dir)
+                attempts = None
                 return None
             # Only set process_compilation time for the first compilation.
             if 'Process_compilation' not in infos.keys() or \
@@ -845,12 +909,12 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         file.write(loop_matrix)
         file.close()
 
-    def setup_process(self, matrix_element, model, export_dir, reusing = False,
+    def setup_process(self, matrix_element, export_dir, reusing = False,
                                                              param_card = None):
         """ Output the matrix_element in argument and perform the initialization
         while providing some details about the output in the dictionary returned. 
         Returns None if anything fails"""
-
+                
         infos={'Process_output': None,
                'HELAS_MODEL_compilation' : None,
                'dir_path' : None,
@@ -871,10 +935,11 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
 
         if not reusing:
+            model = matrix_element['processes'][0].get('model')
             # I do the import here because there is some cyclic import of export_v4
             # otherwise
             import madgraph.loop.loop_exporters as loop_exporters
-            if loop_optimized_output:
+            if self.loop_optimized_output:
                 exporter_class=loop_exporters.LoopProcessOptimizedExporterFortranSA
             else:
                 exporter_class=loop_exporters.LoopProcessExporterFortranSA
@@ -925,21 +990,22 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                 os.path.join(export_dir,'SubProcesses'),infos,\
                                 req_files = ['HelFilter.dat','LoopFilter.dat'],
                                 attempts = attempts)
-        if infos['Process_compilation'] == None:
+        if attempts is None:
             logger.error("Could not compile the process %s,"%shell_name+\
                               " try to generate it via the 'generate' command.")
             return None
-        if nPS_necessary == None:
+        if nPS_necessary is None:
             logger.error("Could not initialize the process %s"%shell_name+\
                                             " with %s PS points."%max(attempts))
+            return None
         elif nPS_necessary > min(attempts):
             logger.warning("Could not initialize the process %s"%shell_name+\
               " with %d PS points. It needed %d."%(min(attempts),nPS_necessary))
 
         return infos
 
-    def time_matrix_element(self, matrix_element, model, reusing = False,
-                                                             param_card = None):
+    def time_matrix_element(self, matrix_element, reusing = False,
+                                        param_card = None, keep_folder = False):
         """ Output the matrix_element in argument and give detail information
         about the timing for its output and running"""
         
@@ -954,10 +1020,11 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             proc_name = matrix_element['processes'][0].shell_string()[2:]
         else:
             proc_name = matrix_element.shell_string()[2:]
-            
-        export_dir=os.path.join(self.mg_root,temp_dir_prefix+"_%s"%proc_name)
+        
+        export_dir=os.path.join(self.mg_root,('SAVED' if keep_folder else '')+\
+                                                temp_dir_prefix+"_%s"%proc_name)
 
-        res_timings = self.setup_process(matrix_element, model,export_dir, \
+        res_timings = self.setup_process(matrix_element,export_dir, \
                                                             reusing, param_card)
         
         if res_timings == None:
@@ -997,7 +1064,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         n_contrib_hel=0
         helicities = file(os.path.join(dir_name,'HelFilter.dat')).read().split()
         for i, hel in enumerate(helicities):
-            if (loop_optimized_output and int(hel)>-10000) or hel=='T':
+            if (self.loop_optimized_output and int(hel)>-10000) or hel=='T':
                 if contributing_hel==0:
                     contributing_hel=i+1
                 n_contrib_hel += 1
@@ -1031,7 +1098,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         res_timings['run_unpolarized_total']=\
                    (run_time-res_timings['Booting_time'])/target_pspoints_number
         
-        if not loop_optimized_output:
+        if not self.loop_optimized_output:
             return res_timings
         
         # For the loop optimized output, we also check the time spent in
@@ -1064,8 +1131,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 # Global helper function run_multiprocs
 #===============================================================================
 
-    def check_matrix_element_stability(self, matrix_element, model, nPoints,
-                              infos = None, reusing = False, param_card = None):
+    def check_matrix_element_stability(self, matrix_element, nPoints,
+         infos = None, reusing = False, param_card = None, keep_folder = False):
         """ Output the matrix_element in argument, run in for nPoints and return
         a dictionary containing the stability information on each of these points.
         If infos are provided, then the matrix element output is skipped and 
@@ -1078,7 +1145,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
         # Accuracy threshold of double precision evaluations above which the
         # PS points is also evaluated in quadruple precision
-        accuracy_threshold=1.0e0
+        accuracy_threshold=1.0e-1
         
         # Each evaluations is performed in different ways to assess its stability.
         # There are two dictionaries, one for the double precision evaluation
@@ -1090,24 +1157,49 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         # The unstable point encountered are stored in this list
         Unstable_PS_points = []
         # The exceptional PS points are those which stay unstable in quad prec.
-        Exceptional_PS_points = []       
+        Exceptional_PS_points = []
         
         # Normally, this should work for loop-induced processes as well
-#        if not matrix_element.get('processes')[0]['has_born']:
-#            return None
         if not reusing:
             process = matrix_element['processes'][0]
         else:
             process = matrix_element
         proc_name = process.shell_string()[2:]
-        export_dir=os.path.join(self.mg_root,temp_dir_prefix+"_%s"%proc_name)
+        export_dir=os.path.join(self.mg_root,("SAVED" if keep_folder else "")+\
+                                                temp_dir_prefix+"_%s"%proc_name)
         if not infos:
-            infos = self.setup_process(matrix_element, model,export_dir, \
+            infos = self.setup_process(matrix_element,export_dir, \
                                                             reusing, param_card)
             if not infos:
-                return None            
+                return None
         dir_path=infos['dir_path']
+
+        # Reuse old stability runs if present
+        if reusing:
+            if os.path.isfile(os.path.join(dir_path,'SavedStabilityRun.pkl')):
+                saved_run = save_load_object.load_from_file(os.path.join(\
+                                              dir_path,'SavedStabilityRun.pkl'))
+                for key in saved_run.keys():
+                    DP_stability = saved_run['DP_stability']
+                    QP_stability = saved_run['QP_stability']
+                    Unstable_PS_points = saved_run['Unstable_PS_points']
+                    Exceptional_PS_points = saved_run['Exceptional_PS_points']
         
+        return_dict = {'DP_stability':DP_stability,
+               'QP_stability':QP_stability,
+               'Unstable_PS_points':Unstable_PS_points,
+               'Exceptional_PS_points':Exceptional_PS_points}
+
+        if nPoints==0:
+            if len(return_dict['DP_stability'])!=0:
+                return_dict['Process'] =  matrix_element.get('processes')[0] if not \
+                                                     reusing else matrix_element
+                return return_dict
+            else: 
+                logging.info("ERROR: Not reusing a directory and the number"+\
+                                             " of point for the check is zero.")
+                return None
+
         logger.info("Checking stability of process %s "%proc_name+\
                     "with %d PS points."%nPoints)
         if infos['Initialization'] != None:
@@ -1148,20 +1240,23 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             logging.info("Error while executing make in %s" % dir_path)
             return None
 
-        def output_PS_point(dir_path, p, rotation=0):
+        def format_PS_point(ps, rotation=0):
             """ Write out the specified PS point to the file dir_path/PS.input
             while rotating it if rotation!=0. We consider only rotations of 90
             but one could think of having rotation of arbitrary angle too.
             rotation=1 => (x'=z,y'=-x,z'=-y)
             rotation=2 => (x'=-z,y'=y,z'=x)"""
             if rotation==0:
-                p_out=copy.copy(p)
+                p_out=copy.copy(ps)
             elif rotation==1:
-                p_out=[[pm[0],pm[3],-pm[1],-pm[2]] for pm in p]
+                p_out=[[pm[0],pm[3],-pm[1],-pm[2]] for pm in ps]
             elif rotation==2:
-                p_out=[[pm[0],-pm[3],pm[2],pm[1]] for pm in p]
+                p_out=[[pm[0],-pm[3],pm[2],pm[1]] for pm in ps]
             else:
                 raise MadGraph5Error("Rotation id %i not implemented"%rotation)
+            
+            return '\n'.join([' '.join(['%.16E'%pi for pi in p]) for p in ps])
+            
             misc.write_PS_input(os.path.join(dir_path, 'PS.input'),p_out)  
   
         def pick_PS_point(proc):
@@ -1202,90 +1297,141 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 p, w_rambo = self.get_momenta(proc)
             return p                
 
+        # First create the stability check fortran driver executable if not 
+        # already present.
+        if not os.path.isfile(os.path.join(dir_path,'StabilityCheckDriver.f')):
+            # Use the presence of the file born_matrix.f to check if this output
+            # is a loop_induced one or not.
+            if os.path.isfile(os.path.join(dir_path,'born_matrix.f')):
+                checkerName = 'StabilityCheckDriver.f'
+            else:
+                checkerName = 'StabilityCheckDriver_loop_induced.f'                
+            cp(os.path.join(self.mg_root,'Template','loop_material','Checks',\
+                   checkerName),os.path.join(dir_path,'StabilityCheckDriver.f'))
+        
+        # Make sure to recompile the possibly modified files (time stamps can be
+        # off).
+        if os.path.isfile(os.path.join(dir_path,'StabilityCheckDriver')):
+            os.remove(os.path.join(dir_path,'StabilityCheckDriver'))
+        if os.path.isfile(os.path.join(dir_path,'loop_matrix.o')):
+            os.remove(os.path.join(dir_path,'loop_matrix.o'))
+        misc.compile(arg=['StabilityCheckDriver'], cwd=dir_path, \
+                                              mode='fortran', job_specs = False)
+
+        StabChecker = subprocess.Popen([os.path.join(dir_path,'StabilityCheckDriver')], 
+          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                                                                   cwd=dir_path)
+        start_index = len(DP_stability)
         if progress_bar!=None:
                 progress_bar.start()
-        for i in range(nPoints):
-            cards_path = os.path.join(export_dir,'Cards')
-            # Pick an eligible PS point with rambo
-            p = pick_PS_point(process)
-#            print "I use P_%i="%i,p
-            if progress_bar!=None:
-                progress_bar.update(i+1)
-            # Write it in the input file
-            output_PS_point(dir_path,p,0)
+        # Flag to know if the run was interrupted or not
+        interrupted = False
+        for i in range(start_index,start_index+nPoints): 
+            # To be added to the returned statistics  
+            qp_dict={}
             dp_dict={}
-            dp_res=[]
-            dp_res.append(self.get_me_value(1,cards_path,dir_path))
-            dp_dict['CTModeA']=dp_res[-1]
-            dp_res.append(self.get_me_value(2,cards_path,dir_path))
-            dp_dict['CTModeB']=dp_res[-1]
-            for rotation in range(1,3):
-                output_PS_point(dir_path,p,rotation)
-                dp_res.append(self.get_me_value(1,cards_path,dir_path))
-                dp_dict['Rotation%i'%rotation]=dp_res[-1]
-            # Make sure all results make sense
-            if any([not res for res in dp_res]):
-                return None
-            dp_accuracy = (max(dp_res)-min(dp_res))/abs(sum(dp_res)/len(dp_res))
-            dp_dict['Accuracy'] = dp_accuracy
-            DP_stability.append(dp_dict)
-            if dp_accuracy>accuracy_threshold:
-                Unstable_PS_points.append([i,p])
-                qp_res=[]
-                qp_dict={}
-                qp_res.append(self.get_me_value(4,cards_path,dir_path))
-                qp_dict['CTModeA']=qp_res[-1]
-                qp_res.append(self.get_me_value(5,cards_path,dir_path))
-                qp_dict['CTModeB']=qp_res[-1]
+            UPS = None
+            EPS = None
+            try:
+                # Pick an eligible PS point with rambo
+                p = pick_PS_point(process)
+#                print "I use P_%i="%i,p
+                if progress_bar!=None:
+                    progress_bar.update(i+1-start_index)
+                # Write it in the input file
+                PSPoint = format_PS_point(p,0)
+                dp_res=[]
+                dp_res.append(self.get_me_value(StabChecker,PSPoint,1))
+                dp_dict['CTModeA']=dp_res[-1]
+                dp_res.append(self.get_me_value(StabChecker,PSPoint,2))
+                dp_dict['CTModeB']=dp_res[-1]
                 for rotation in range(1,3):
-                    output_PS_point(dir_path,p,rotation)                
-                    qp_res.append(self.get_me_value(4,cards_path,dir_path))
-                    qp_dict['Rotation%i'%rotation]=qp_res[-1]
+                    PSPoint = format_PS_point(p,rotation)
+                    dp_res.append(self.get_me_value(StabChecker,PSPoint,1))
+                    dp_dict['Rotation%i'%rotation]=dp_res[-1]
                 # Make sure all results make sense
-                if any([not res for res in qp_res]):
+                if any([not res for res in dp_res]):
                     return None
-                
-                qp_accuracy = (max(qp_res)-min(qp_res))/abs(sum(qp_res)/len(qp_res))
-                qp_dict['Accuracy']=qp_accuracy
-                QP_stability.append(qp_dict)
-                if qp_accuracy>accuracy_threshold:
-                    Exceptional_PS_points.append([i,p])
-            else:
-                QP_stability.append({})
+                dp_accuracy = (max(dp_res)-min(dp_res))/abs(sum(dp_res)/len(dp_res))
+                dp_dict['Accuracy'] = dp_accuracy
+                if dp_accuracy>accuracy_threshold:
+                    UPS = [i,p]
+                    qp_res=[]
+                    PSPoint = format_PS_point(p,0)
+                    qp_res.append(self.get_me_value(StabChecker,PSPoint,4))
+                    qp_dict['CTModeA']=qp_res[-1]
+                    qp_res.append(self.get_me_value(StabChecker,PSPoint,5))
+                    qp_dict['CTModeB']=qp_res[-1]
+                    for rotation in range(1,3):
+                        PSPoint = format_PS_point(p,rotation)
+                        qp_res.append(self.get_me_value(StabChecker,PSPoint,4))
+                        qp_dict['Rotation%i'%rotation]=qp_res[-1]
+                    # Make sure all results make sense
+                    if any([not res for res in qp_res]):
+                        return None
+                    
+                    qp_accuracy = (max(qp_res)-min(qp_res))/abs(sum(qp_res)/len(qp_res))
+                    qp_dict['Accuracy']=qp_accuracy
+                    if qp_accuracy>accuracy_threshold:
+                        EPS = [i,p]
+            except KeyboardInterrupt:
+                interrupted = True
+                break
+            # Update the returned statistics
+            DP_stability.append(dp_dict)
+            QP_stability.append(qp_dict)
+            if not EPS is None:
+                Exceptional_PS_points.append(EPS)
+            if not UPS is None:
+                Unstable_PS_points.append(UPS)
 
         if progress_bar!=None:
             progress_bar.finish()
         if time_info:
             logger.info('Finished check on %s.'%datetime.datetime.now().strftime(\
                                                               "%d-%m-%Y %H:%M"))
-        
-        return {'DP_stability':DP_stability,
-                'QP_stability':QP_stability,
-                'Unstable_PS_points':Unstable_PS_points,
-                'Exceptional_PS_points':Exceptional_PS_points,
-                'Process': matrix_element.get('processes')[0] if not reusing\
-                                                            else matrix_element}
 
-    def get_me_value(self,mode,param_card_path,dir_path):
+        # Close the StabChecker process.
+        if not interrupted:
+            StabChecker.stdin.write('y\n')
+        else:
+            StabChecker.kill()
+        
+        # Save the run for possible future use
+        save_load_object.save_to_file(os.path.join(dir_path,\
+                                           'SavedStabilityRun.pkl'),return_dict)
+
+        return_dict['Process'] =  matrix_element.get('processes')[0] if not \
+                                                     reusing else matrix_element
+        return return_dict
+
+    @classmethod
+    def get_me_value(cls, StabChecker, PSpoint, mode, hel=-1, mu_r=-1.0):
         """ This version of get_me_value is simplified for the purpose of this
         class. No compilation is necessary. The CT mode can be specified."""
 
-        self.fix_MadLoopParamCard(param_card_path,mp=mode,loop_filter=True)
+        # Reset the stdin with EOF character without closing it.
+        StabChecker.stdin.write('\x1a')
+        StabChecker.stdin.write('1\n')
+        StabChecker.stdin.write('%d\n'%mode)   
+        StabChecker.stdin.write('%s\n'%PSpoint)
+        StabChecker.stdin.write('%.16E\n'%mu_r) 
+        StabChecker.stdin.write('%d\n'%hel)
         try:
-            output = subprocess.Popen('./check',
-                        cwd=dir_path,
-                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
-            output.read()
-            output.close()
-            if os.path.exists(os.path.join(dir_path,'result.dat')):
-                return self.parse_check_output(file(os.path.join(dir_path,\
-                                'result.dat')),format='tuple')[0][0]
-            else:
-                logging.warning("Error while looking for file %s"%str(os.path\
-                                                  .join(dir_path,'result.dat')))
-                return None
+            while True:
+                output = StabChecker.stdout.readline()  
+                if output==' ##TAG#RESULT_START#TAG##\n':
+                    break
+            res = ""
+            while True:
+                output = StabChecker.stdout.readline()
+                if output==' ##TAG#RESULT_STOP#TAG##\n':
+                    break
+                else:
+                    res += output
+            return cls.parse_check_output(res,format='tuple')[0][0]
         except IOError:
-            logging.warning("Error while executing ./check in %s"%str(dir_path))
+            logging.warning("Error while running MadLoop. Exception = %s")
             return None    
 
 def evaluate_helicities(process, param_card = None, mg_root="", 
@@ -1337,7 +1483,7 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
     (which makes a big difference for very large multiprocesses.
     stored_quantities is a dictionary for any quantities that we want
     to reuse between runs."""
-                   
+    
     model = multiprocess.get('model')
     isids = [leg.get('ids') for leg in multiprocess.get('legs') \
               if not leg.get('state')]
@@ -1449,8 +1595,6 @@ def generate_loop_matrix_element(process_definition, reuse,
               'n_loop_wfs': None,
               'loop_wfs_ranks': None}
     
-    model=process_definition.get('model')
-    
     if any(len(l.get('ids'))>1 for l in process_definition.get('legs')):
         raise InvalidCmd("This check can only be performed on single "+
                          " processes. (i.e. without multiparticle labels).")
@@ -1463,7 +1607,7 @@ def generate_loop_matrix_element(process_definition, reuse,
     # Now generate a process based on the ProcessDefinition given in argument.
     process = process_definition.get_process(isids,fsids)
     
-    proc_dir = os.path.join(mg_root,temp_dir_prefix+"_%s"%(
+    proc_dir = os.path.join(mg_root,"SAVED"+temp_dir_prefix+"_%s"%(
                                '_'.join(process.shell_string().split('_')[1:])))
     if reuse and os.path.isdir(proc_dir):
         logger.info("Reusing directory %s"%str(proc_dir))
@@ -1476,8 +1620,8 @@ def generate_loop_matrix_element(process_definition, reuse,
     amplitude = loop_diagram_generation.LoopAmplitude(process)
     # Make sure to disable loop_optimized_output when considering loop induced 
     # processes
+    loop_optimized_output = cmd.options['loop_optimized_output']
     if not amplitude.get('process').get('has_born'):
-        global loop_optimized_output
         loop_optimized_output = False
     timing['Diagrams_generation']=time.time()-start
     timing['n_loops']=len(amplitude.get('loop_diagrams'))
@@ -1506,14 +1650,18 @@ def check_profile(process_definition, param_card = None,cuttools="",
     """For a single loop process, check both its timings and then its stability
     in one go without regenerating it."""
 
+    keep_folder = reuse
+
     model=process_definition.get('model')
 
     timing1, matrix_element = generate_loop_matrix_element(process_definition,
                                                                   reuse,cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
     myProfiler = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
-    timing2 = myProfiler.time_matrix_element(matrix_element, \
-                                                     model, reusing, param_card)
+    if not reusing and not matrix_element.get('processes')[0].get('has_born'):
+        myProfiler.loop_optimized_output=False
+    timing2 = myProfiler.time_matrix_element(matrix_element, reusing, 
+                                            param_card, keep_folder=keep_folder)
     
     if timing2 == None:
         return None, None
@@ -1522,10 +1670,13 @@ def check_profile(process_definition, param_card = None,cuttools="",
     timing = dict(timing1.items()+timing2.items())
 
     stability = myProfiler.check_matrix_element_stability(matrix_element, 
-     model,nPoints=nPoints, infos=timing, reusing=reusing,param_card=param_card)
+           nPoints=nPoints, infos=timing, reusing=reusing,param_card=param_card,
+                                                      keep_folder = keep_folder)
     if stability == None:
         return None, None
     else:
+        timing['loop_optimized_output']=myProfiler.loop_optimized_output
+        stability['loop_optimized_output']=myProfiler.loop_optimized_output
         return timing, stability
 
 #===============================================================================
@@ -1535,20 +1686,25 @@ def check_stability(process_definition, param_card = None,cuttools="",
                                nPoints=100, reuse=False, cmd = FakeInterface()):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
-
+    
+    keep_folder = reuse
     model=process_definition.get('model')
 
     timing, matrix_element = generate_loop_matrix_element(process_definition,
                                                                  reuse, cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
-    myStabilityChecker = LoopMatrixElementTimer(cuttools_dir=cuttools, model=model, 
-                                                                        cmd=cmd)
+    myStabilityChecker = LoopMatrixElementTimer(cuttools_dir=cuttools,
+                                                            model=model,cmd=cmd)
+    if not reusing and not matrix_element.get('processes')[0].get('has_born'):
+        myStabilityChecker.loop_optimized_output=False
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
-                    model,nPoints=nPoints,reusing=reusing,param_card=param_card)
+                        nPoints=nPoints,reusing=reusing,param_card=param_card, 
+                                                        keep_folder=keep_folder)
     
     if stability == None:
         return None
     else:
+        stability['loop_optimized_output']=myStabilityChecker.loop_optimized_output
         return stability
 
 #===============================================================================
@@ -1559,26 +1715,31 @@ def check_timing(process_definition, param_card= None, cuttools="",
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
 
+    keep_folder = reuse
     model=process_definition.get('model')
     timing1, matrix_element = generate_loop_matrix_element(process_definition,
                                                                  reuse, cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
     myTimer = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
-    timing2 = myTimer.time_matrix_element(matrix_element, model, reusing, \
-                                                                     param_card)
+    if not reusing and not matrix_element.get('processes')[0].get('has_born'):
+        myTimer.loop_optimized_output=False
+    timing2 = myTimer.time_matrix_element(matrix_element, reusing, param_card,
+                                                      keep_folder = keep_folder)
     
     if timing2 == None:
         return None
     else:    
         # Return the merged two dictionaries
-        return dict(timing1.items()+timing2.items())
+        res = dict(timing1.items()+timing2.items())
+        res['loop_optimized_output']=myTimer.loop_optimized_output
+        return res
 
 #===============================================================================
 # check_processes
 #===============================================================================
 
-def check_processes(processes, param_card = None, quick = [],cuttools="", 
-                                                         cmd = FakeInterface()):
+def check_processes(processes, param_card = None, quick = [],cuttools="",
+                                          reuse = False, cmd = FakeInterface()):
     """Check processes by generating them with all possible orderings
     of particles (which means different diagram building and Helas
     calls), and comparing the resulting matrix element values."""
@@ -1608,7 +1769,7 @@ def check_processes(processes, param_card = None, quick = [],cuttools="",
         if "used_lorentz" not in evaluator.stored_quantities:
             evaluator.stored_quantities["used_lorentz"] = []
             
-        if multiprocess.get('perturbation_couplings')!=[]:
+        if multiprocess.get('perturbation_couplings')!=[] and not reuse:
             # Clean temporary folders created for the running of the loop processes
             clean_up(mg_root)
             
@@ -1659,7 +1820,7 @@ def check_processes(processes, param_card = None, quick = [],cuttools="",
     if "used_lorentz" not in evaluator.stored_quantities:
         evaluator.stored_quantities["used_lorentz"] = []
     
-    if processes[0].get('perturbation_couplings')!=[]:
+    if processes[0].get('perturbation_couplings')!=[] and not reuse:
         # Clean temporary folders created for the running of the loop processes
         clean_up(mg_root)    
     
@@ -1677,8 +1838,8 @@ def check_process(process, evaluator, quick):
     for i, leg in enumerate(process.get('legs')):
         leg.set('number', i+1)
 
-    logger.info("Checking %s" % \
-                process.nice_string().replace('Process', 'process'))
+    logger.info("Checking crossings of %s" % \
+                process.nice_string().replace('Process:', 'process'))
 
     process_matrix_elements = []
 
@@ -1746,8 +1907,7 @@ def check_process(process, evaluator, quick):
                                             number_checked%2 == 0 else 'default'
                 amplitude = loop_diagram_generation.LoopAmplitude(newproc)
                 if not amplitude.get('process').get('has_born'):
-                    global loop_optimized_output
-                    loop_optimized_output = False
+                    evaluator.loop_optimized_output = False
                     
         except InvalidCmd:
             result=False
@@ -1772,7 +1932,7 @@ def check_process(process, evaluator, quick):
                                                           gen_color=False)
         else:
             matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
-                                         optimized_output=loop_optimized_output)
+                               optimized_output=evaluator.loop_optimized_output)
 
         # The loop diagrams are always the same in the basis, so that the
         # LoopHelasMatrixElement always look alike. One needs to consider
@@ -1830,7 +1990,7 @@ def clean_up(mg_root):
 
     directories = glob.glob(os.path.join(mg_root, '%s*'%temp_dir_prefix))
     if directories != []:
-        logger.info("Cleaning temporary %s* check runs."%temp_dir_prefix)
+        logger.debug("Cleaning temporary %s* check runs."%temp_dir_prefix)
     for dir in directories:
         shutil.rmtree(dir)
 
@@ -1843,16 +2003,18 @@ def format_output(output,format):
     else:
         return 'NA'
 
-def output_profile(myprocdef, stability, timing, mg_root, opt, reusing=False):
+def output_profile(myprocdef, stability, timing, mg_root, reusing=False):
     """Present the results from a timing and stability consecutive check"""
+
+    opt = timing['loop_optimized_output']
 
     text = 'Timing result for the '+('optimized' if opt else 'default')+\
                                                                     ' output:\n'
-    text += output_timings(myprocdef,timing,opt)
+    text += output_timings(myprocdef,timing)
 
     text += '\nStability result for the '+('optimized' if opt else 'default')+\
                                                                     ' output:\n'
-    text += output_stability(stability,mg_root=mg_root,opt = opt, reusing=reusing)
+    text += output_stability(stability,mg_root=mg_root, reusing=reusing)
 
     mode = 'optimized' if opt else 'default'
     logFilePath =  os.path.join(mg_root, 'profile_%s_%s.log'\
@@ -1864,7 +2026,7 @@ def output_profile(myprocdef, stability, timing, mg_root, opt, reusing=False):
                                                               %str(logFilePath))
     return text
 
-def output_stability(stability, mg_root, opt, reusing=False):
+def output_stability(stability, mg_root, reusing=False):
     """Present the result of a stability check in a nice format.
     The full info is printed out in 'Stability_result_<proc_shell_string>.dat'
     under the MadGraph root folder (mg_root)"""
@@ -1942,6 +2104,7 @@ def output_stability(stability, mg_root, opt, reusing=False):
 
     # Define shortcut
     f = format_output
+    opt = stability['loop_optimized_output']
 
     mode = 'optimized' if opt else 'default'
     DP_stability = [eval['Accuracy'] for eval in stability['DP_stability']]
@@ -2055,10 +2218,6 @@ def output_stability(stability, mg_root, opt, reusing=False):
     logFile.write('\nData entries for the stability plot.\n')
     logFile.write('First row is a maximal accuracy delta, second is the '+\
                   'fraction of events with DP accuracy worse than delta.\n\n')
-    logFile.write('First row is DP, second is QP.\n\n')
-    logFile.writelines('%.3e  '%DP_stability[i]+('NA\n' if QP_stability[i]==-1.0 \
-                             else '%.3e\n'%QP_stability[i]) for i in range(nPS))
-
     # Set the x-range so that it spans [10**-17,10**(min_digit_accuracy)]
     if max(DP_stability)>0.0:
         min_digit_acc=int(math.log(max(DP_stability))/math.log(10))
@@ -2080,6 +2239,9 @@ def output_stability(stability, mg_root, opt, reusing=False):
     logFile.writelines('%.3e  %.3e\n'%(accuracies[i], data_plot[i]) for i in \
                                                          range(len(accuracies)))
     logFile.write('\nList of accuracies recorded for the %i evaluations.\n'%nPS)
+    logFile.write('First row is DP, second is QP.\n\n')
+    logFile.writelines('%.3e  '%DP_stability[i]+('NA\n' if QP_stability[i]==-1.0 \
+                             else '%.3e\n'%QP_stability[i]) for i in range(nPS))
     logFile.close()
     try:
         import matplotlib.pyplot as plt
@@ -2088,8 +2250,8 @@ def output_stability(stability, mg_root, opt, reusing=False):
                                10**(-int(math.log(nPS-0.5)/math.log(10))-1), 1])
         plt.yscale('log')
         plt.xscale('log')
-        plt.title('Stability plot for %s (%s mode)'%\
-                                               (process.nice_string()[9:],mode))
+        plt.title('Stability plot for %s (%s mode, %d points)'%\
+                                           (process.nice_string()[9:],mode,nPS))
         plt.ylabel('Fraction of events')
         plt.xlabel('Maximal precision')
         if not reusing:
@@ -2107,11 +2269,12 @@ def output_stability(stability, mg_root, opt, reusing=False):
                    "graphical display of the results of this check."
         return res_str
   
-def output_timings(process, timings, loop_optimized_output):
+def output_timings(process, timings):
     """Present the result of a timings check in a nice format """
     
     # Define shortcut
     f = format_output
+    loop_optimized_output = timings['loop_optimized_output']
     
     res_str = "%s \n"%process.nice_string()
     try:
@@ -2187,15 +2350,14 @@ def output_comparisons(comparison_results):
     """
     
     proc_col_size = 17
-
     pert_coupl = comparison_results[0]['process']['perturbation_couplings']
     if pert_coupl:
-        process_header = "Process ["+" ".join(pert_coupl)+"]"
+        process_header = "Process [virt="+" ".join(pert_coupl)+"]"
     else:
         process_header = "Process"
 
     if len(process_header) + 1 > proc_col_size:
-        proc_col_size = process_header + 1
+        proc_col_size = len(process_header) + 1
 
     for proc in comparison_results:
         if len(proc['process'].base_string()) + 1 > proc_col_size:
@@ -2266,12 +2428,12 @@ def fixed_string_length(mystr, length):
 #===============================================================================
 # check_gauge
 #===============================================================================
-def check_gauge(processes, param_card = None,cuttools="", cmd = FakeInterface()):
+def check_gauge(processes, param_card = None,cuttools="", reuse = False, 
+                                                         cmd = FakeInterface()):
     """Check gauge invariance of the processes by using the BRS check.
     For one of the massless external bosons (e.g. gluon or photon), 
     replace the polarization vector (epsilon_mu) with its momentum (p_mu)
     """
-
     mg_root = cmd._mgme_dir
     cmass_scheme = cmd.options['complex_mass_scheme']
     if isinstance(processes, base_objects.ProcessDefinition):
@@ -2279,8 +2441,7 @@ def check_gauge(processes, param_card = None,cuttools="", cmd = FakeInterface())
         # Extract IS and FS ids
         multiprocess = processes
 
-        model = multiprocess.get('model')
-        
+        model = multiprocess.get('model')        
         # Initialize matrix element evaluation
         if multiprocess.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model, param_card,cmd= cmd,
@@ -2290,18 +2451,17 @@ def check_gauge(processes, param_card = None,cuttools="", cmd = FakeInterface())
                                            cmd= cmd,model=model, param_card=param_card,
                                            auth_skipping = False, reuse = False)
 
-        if not cmass_scheme:
+        if not cmass_scheme and multiprocess.get('perturbation_couplings')==[]:
             # Set all widths to zero for gauge check
             logger.info('Set All width to zero for non complex mass scheme checks')
             for particle in evaluator.full_model.get('particles'):
                 if particle.get('width') != 'ZERO':
                     evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
-
         results = run_multiprocs_no_crossings(check_gauge_process,
                                            multiprocess,
                                            evaluator)
         
-        if multiprocess.get('perturbation_couplings')!=[]:
+        if multiprocess.get('perturbation_couplings')!=[] and not reuse:
             # Clean temporary folders created for the running of the loop processes
             clean_up(mg_root)
         
@@ -2346,7 +2506,7 @@ def check_gauge(processes, param_card = None,cuttools="", cmd = FakeInterface())
         if result:
             comparison_results.append(result)
 
-    if processes[0].get('perturbation_couplings')!=[]:
+    if processes[0].get('perturbation_couplings')!=[] and not reuse:
         # Clean temporary folders created for the running of the loop processes
         clean_up(mg_root)
             
@@ -2367,13 +2527,15 @@ def check_gauge_process(process, evaluator):
             break
 
     if not found_gauge:
+        logger.info("No ward identity for %s" % \
+                process.nice_string().replace('Process', 'process'))
         # This process can't be checked
         return None
 
     for i, leg in enumerate(process.get('legs')):
         leg.set('number', i+1)
 
-    logger.info("Checking gauge %s" % \
+    logger.info("Checking ward identities for %s" % \
                 process.nice_string().replace('Process', 'process'))
 
     legs = process.get('legs')
@@ -2385,8 +2547,7 @@ def check_gauge_process(process, evaluator):
         else:
             amplitude = loop_diagram_generation.LoopAmplitude(process)
             if not amplitude.get('process').get('has_born'):
-                global loop_optimized_output
-                loop_optimized_output = False
+                evaluator.loop_optimized_output = False
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
@@ -2404,7 +2565,7 @@ def check_gauge_process(process, evaluator):
                                                       gen_color = False)
     else:
         matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
-                                         optimized_output=loop_optimized_output)
+                               optimized_output=evaluator.loop_optimized_output)
         
     brsvalue = evaluator.evaluate_matrix_element(matrix_element, gauge_check = True,
                                                  output='jamp')
@@ -2433,12 +2594,12 @@ def output_gauge(comparison_results, output='text'):
         threshold=1e-10
         
     if pert_coupl:
-        process_header = "Process ["+" ".join(pert_coupl)+"]"
+        process_header = "Process [virt="+" ".join(pert_coupl)+"]"
     else:
         process_header = "Process"
 
     if len(process_header) + 1 > proc_col_size:
-        proc_col_size = process_header + 1
+        proc_col_size = len(process_header) + 1
 
     for one_comp in comparison_results:
         proc = one_comp['process'].base_string()
@@ -2529,7 +2690,8 @@ def output_gauge(comparison_results, output='text'):
 #===============================================================================
 # check_lorentz
 #===============================================================================
-def check_lorentz(processes, param_card = None,cuttools="", cmd = FakeInterface()):
+def check_lorentz(processes, param_card = None,cuttools="", \
+                                          reuse = False, cmd = FakeInterface()):
     """ Check if the square matrix element (sum over helicity) is lorentz 
         invariant by boosting the momenta with different value."""
 
@@ -2541,18 +2703,15 @@ def check_lorentz(processes, param_card = None,cuttools="", cmd = FakeInterface(
         multiprocess = processes
 
         model = multiprocess.get('model')
-        
         # Initialize matrix element evaluation
         if multiprocess.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model,
-                                           cmd= cmd,
-                                           auth_skipping = False, reuse = True)
+                                cmd= cmd, auth_skipping = False, reuse = True)
         else:
-            evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools, model=model,
-                                           auth_skipping = False, reuse = True,
-                                           cmd = cmd)
+            evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,
+                     model=model, auth_skipping = False, reuse = True,cmd = cmd)
 
-        if not cmass_scheme:
+        if not cmass_scheme and processes.get('perturbation_couplings')==[]:
             # Set all widths to zero for lorentz check
             logger.info('Set All width to zero for non complex mass scheme checks')
             for particle in evaluator.full_model.get('particles'):
@@ -2563,7 +2722,7 @@ def check_lorentz(processes, param_card = None,cuttools="", cmd = FakeInterface(
                                            multiprocess,
                                            evaluator)
         
-        if multiprocess.get('perturbation_couplings')!=[]:
+        if multiprocess.get('perturbation_couplings')!=[] and not reuse:
             # Clean temporary folders created for the running of the loop processes
             clean_up(mg_root)
         
@@ -2608,7 +2767,7 @@ def check_lorentz(processes, param_card = None,cuttools="", cmd = FakeInterface(
         if result:
             comparison_results.append(result)
 
-    if processes[0].get('perturbation_couplings')!=[]:
+    if processes[0].get('perturbation_couplings')!=[] and not reuse:
         # Clean temporary folders created for the running of the loop processes
         clean_up(mg_root)
 
@@ -2624,8 +2783,8 @@ def check_lorentz_process(process, evaluator):
     for i, leg in enumerate(process.get('legs')):
         leg.set('number', i+1)
 
-    logger.info("Checking lorentz %s" % \
-                process.nice_string().replace('Process', 'process'))
+    logger.info("Checking lorentz transformations for %s" % \
+                process.nice_string().replace('Process:', 'process'))
 
     legs = process.get('legs')
     # Generate a process with these legs
@@ -2636,8 +2795,7 @@ def check_lorentz_process(process, evaluator):
         else:
             amplitude = loop_diagram_generation.LoopAmplitude(process)
             if not amplitude.get('process').get('has_born'):
-                global loop_optimized_output
-                loop_optimized_output = False 
+                evaluator.loop_optimized_output = False 
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
@@ -2658,22 +2816,65 @@ def check_lorentz_process(process, evaluator):
                                                       gen_color = True)
     else:
         matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
-                                       optimized_output = loop_optimized_output)
+                             optimized_output = evaluator.loop_optimized_output)
 
-    data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
-                                             auth_skipping = True)
+    MLOptions = {'ImprovePS':True,'ForceMP':False}
+
+    if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
+        data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
+                                                 auth_skipping = True)
+    else:
+        data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
+                auth_skipping = True, PS_name = 'original', MLOptions=MLOptions)
 
     if data and data['m2']:
-        results = [data]
+        if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
+            results = [data]
+        else:
+            results = [('Original evaluation',data)]
     else:
         return  {'process':process, 'results':'pass'}
     
-    for boost in range(1,4):
-        boost_p = boost_momenta(p, boost)
-        results.append(evaluator.evaluate_matrix_element(matrix_element,
-                                                         p=boost_p,
-                                                         output='jamp'))
-        
+    # The boosts are not precise enough for the loop evaluations and one need the
+    # fortran improve_ps function of MadLoop to work. So we only consider the 
+    # boosts along the z directions for loops or simple rotations.
+    if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):     
+        for boost in range(1,4):
+            boost_p = boost_momenta(p, boost)
+            results.append(evaluator.evaluate_matrix_element(matrix_element,
+                                                    p=boost_p,output='jamp'))
+    else:
+        # The boosts are not precise enough for the loop evaluations and one
+        # need the fortran improve_ps function of MadLoop to work. So we only
+        # consider the boosts along the z directions for loops or simple rotations.
+        boost_p = boost_momenta(p, 3)
+        results.append(('Z-axis boost',
+                       evaluator.evaluate_matrix_element(matrix_element,
+            p=boost_p, PS_name='zBoost', output='jamp',MLOptions = MLOptions)))
+        # We add here also the boost along x and y for reference. In the output
+        # of the check, it is now clearly stated that MadLoop improve_ps script
+        # will not work for them.
+        boost_p = boost_momenta(p, 1)
+        results.append(('X-axis boost',
+                       evaluator.evaluate_matrix_element(matrix_element,
+            p=boost_p, PS_name='zBoost', output='jamp',MLOptions = MLOptions)))
+        boost_p = boost_momenta(p, 2)
+        results.append(('Y-axis boost',
+                       evaluator.evaluate_matrix_element(matrix_element,
+            p=boost_p, PS_name='zBoost', output='jamp',MLOptions = MLOptions)))
+        # We only consider the rotations around the z axis so to have the 
+        # improve_ps fortran routine work.
+        rot_p = [[pm[0],-pm[2],pm[1],pm[3]] for pm in p]
+        results.append(('Z-axis pi/2 rotation',
+                       evaluator.evaluate_matrix_element(matrix_element,
+            p=rot_p, PS_name='Rotation1', output='jamp',MLOptions = MLOptions)))
+        # Now a pi/4 rotation around the z-axis
+        sq2 = math.sqrt(2.0)
+        rot_p = [[pm[0],(pm[1]-pm[2])/sq2,(pm[1]+pm[2])/sq2,pm[3]] for pm in p]
+        results.append(('Z-axis pi/4 rotation',
+                       evaluator.evaluate_matrix_element(matrix_element,
+            p=rot_p, PS_name='Rotation2', output='jamp',MLOptions = MLOptions)))
+            
         
     return {'process': process, 'results': results}
 
@@ -2682,19 +2883,19 @@ def check_lorentz_process(process, evaluator):
 # check_gauge
 #===============================================================================
 def check_unitary_feynman(processes_unit, processes_feynm, param_card=None, 
-                                            cuttools="", cmd = FakeInterface()):
+                               cuttools="", reuse=False, cmd = FakeInterface()):
     """Check gauge invariance of the processes by flipping
        the gauge of the model
     """
+
     mg_root = cmd._mgme_dir
     cmass_scheme = cmd.options['complex_mass_scheme']
     if isinstance(processes_unit, base_objects.ProcessDefinition):
         # Generate a list of unique processes
         # Extract IS and FS ids
         multiprocess_unit = processes_unit
-        results = []
         model = multiprocess_unit.get('model')
-        
+
         # Initialize matrix element evaluation
         aloha.unitary_gauge = True
         if processes_unit.get('perturbation_couplings')==[]:
@@ -2704,11 +2905,8 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
             evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,
                                            cmd=cmd, model=model,
                                            param_card=param_card,
-                                           auth_skipping = False, reuse = True)
-
-                
-        if not cmass_scheme:
-            # Set all widths to zero for gauge check
+                                           auth_skipping = False, reuse = False)
+        if not cmass_scheme and multiprocess_unit.get('perturbation_couplings')==[]:
             logger.info('Set All width to zero for non complex mass scheme checks')
             for particle in evaluator.full_model.get('particles'):
                 if particle.get('width') != 'ZERO':
@@ -2717,16 +2915,18 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         output_u = run_multiprocs_no_crossings(get_value,
                                            multiprocess_unit,
                                            evaluator)
-        
         clean_added_globals(ADDED_GLOBAL)
-        
+       # Clear up previous run if checking loop output
+        if processes_unit.get('perturbation_couplings')!=[]:
+            clean_up(mg_root)
+
         momentum = {}
         for data in output_u:
             momentum[data['process']] = data['p']
         
         multiprocess_feynm = processes_feynm
         model = multiprocess_feynm.get('model')
-        
+
         # Initialize matrix element evaluation
         aloha.unitary_gauge = False
         if processes_feynm.get('perturbation_couplings')==[]:
@@ -2737,19 +2937,17 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
                                            cmd= cmd, model=model,
                                            param_card=param_card,
                                            auth_skipping = False, reuse = False)
-                
-        if not cmass_scheme:
+
+        if not cmass_scheme and multiprocess_feynm.get('perturbation_couplings')==[]:
             # Set all widths to zero for gauge check
-            logger.info('Set All width to zero for non complex mass scheme checks')
             for particle in evaluator.full_model.get('particles'):
                 if particle.get('width') != 'ZERO':
                     evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
 
-        output_f = run_multiprocs_no_crossings(get_value,
-                                           multiprocess_feynm,
-                                           evaluator, momentum)  
-        
-        output = []
+        output_f = run_multiprocs_no_crossings(get_value, multiprocess_feynm,
+                                                            evaluator, momentum)  
+        output = [processes_unit]        
+
         for data in output_f:
             local_dico = {}
             local_dico['process'] = data['process']
@@ -2757,10 +2955,10 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
             local_dico['value_unit'] = [d['value'] for d in output_u 
                                       if d['process'] == data['process']][0]
             output.append(local_dico)
-
-        if processes_feynm.get('perturbation_couplings')!=[]:
+        
+        if processes_feynm.get('perturbation_couplings')!=[] and not reuse:
             # Clean temporary folders created for the running of the loop processes
-            clean_up(mg_root)        
+            clean_up(mg_root)
 
         return output
 #    elif isinstance(processes, base_objects.Process):
@@ -2772,15 +2970,13 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
 
 def get_value(process, evaluator, p=None):
     """Return the value/momentum for a phase space point"""
-
-    model = process.get('model')
-
+    
     for i, leg in enumerate(process.get('legs')):
         leg.set('number', i+1)
 
-
-    logger.info("Checking gauge %s" % \
-                process.nice_string().replace('Process', 'process'))
+    logger.info("Checking %s in %s gauge" % \
+        ( process.nice_string().replace('Process:', 'process'),
+                               'unitary' if aloha.unitary_gauge else 'feynman'))
 
     legs = process.get('legs')
     # Generate a process with these legs
@@ -2789,11 +2985,13 @@ def get_value(process, evaluator, p=None):
         if process.get('perturbation_couplings')==[]:
             amplitude = diagram_generation.Amplitude(process)
         else:
-            amplitude = loop_diagram_generation.LoopAmplitude(process)  
+            amplitude = loop_diagram_generation.LoopAmplitude(process)
+            if not amplitude.get('process').get('has_born'):
+                evaluator.loop_optimized_output = False
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
-        return None    
+        return None
     
     if not amplitude.get('diagrams'):
         # This process has no diagrams; go to next process
@@ -2804,16 +3002,15 @@ def get_value(process, evaluator, p=None):
     if not p:
         # Generate phase space point to use
         p, w_rambo = evaluator.get_momenta(process)
-        
-    # Generate the HelasMatrixElement for the process
+
     # Generate the HelasMatrixElement for the process
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
         matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = True)
     else:
         matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude, 
-                                                              gen_color = False)    
-      
+           gen_color = True, optimized_output = evaluator.loop_optimized_output)
+
     mvalue = evaluator.evaluate_matrix_element(matrix_element, p=p,
                                                                   output='jamp')
     
@@ -2853,26 +3050,82 @@ def boost_momenta(p, boost_direction=1, beta=0.5):
             
     return boost_p
 
+
+def output_lorentz_inv_loop(comparison_results, output='text'):
+    """Present the results of a comparison in a nice list format for loop 
+    processes. It detail the results from each lorentz transformation performed.
+    """
+
+    process = comparison_results[0]['process']
+    results = comparison_results[0]['results']
+    # Rotations do not change the reference vector for helicity projection,
+    # the loop ME are invarariant under them with a relatively good accuracy.
+    threshold_rotations = 1e-6
+    # This is typically not the case for the boosts when one cannot really 
+    # expect better than 1e-5. It turns out that this is even true in 
+    # quadruple precision, for an unknown reason so far.
+    threshold_boosts =  1e-3
+    res_str = "%s" % process.base_string()
+    
+    transfo_col_size = 17
+    col_size = 18
+    transfo_name_header = 'Transformation name'
+
+    if len(transfo_name_header) + 1 > transfo_col_size:
+        transfo_col_size = len(transfo_name_header) + 1
+    
+    for transfo_name, value in results:
+        if len(transfo_name) + 1 > transfo_col_size:
+            transfo_col_size = len(transfo_name) + 1
+        
+    res_str += '\n' + fixed_string_length(transfo_name_header, transfo_col_size) + \
+      fixed_string_length("Value", col_size) + \
+      fixed_string_length("Relative diff.", col_size) + "Result"
+    
+    ref_value = results[0]
+    res_str += '\n' + fixed_string_length(ref_value[0], transfo_col_size) + \
+                   fixed_string_length("%1.10e" % ref_value[1]['m2'], col_size)
+    # Now that the reference value has been recuperated, we can span all the 
+    # other evaluations
+    all_pass = True
+    for res in results[1:]:
+        threshold = threshold_boosts if 'BOOST' in res[0].upper() else \
+                                                             threshold_rotations
+        rel_diff = abs((ref_value[1]['m2']-res[1]['m2'])\
+                                       /((ref_value[1]['m2']+res[1]['m2'])/2.0))
+        this_pass = rel_diff <= threshold
+        if not this_pass: 
+            all_pass = False
+        res_str += '\n' + fixed_string_length(res[0], transfo_col_size) + \
+                   fixed_string_length("%1.10e" % res[1]['m2'], col_size) + \
+                   fixed_string_length("%1.10e" % rel_diff, col_size) + \
+                   ("Passed" if this_pass else "Failed")
+    res_str += '\n' + 'NB: Keep in mind that for the lorentz transformation '+\
+                                                 'which give a p_t to the \n'+\
+                 'initial momenta, MadLoop improve_ps routine will be bypassed.' 
+    if all_pass:
+        res_str += '\n' + 'Summary: passed'
+    else:
+        res_str += '\n' + 'Summary: failed'
+    
+    return res_str
+
 def output_lorentz_inv(comparison_results, output='text'):
     """Present the results of a comparison in a nice list format
         if output='fail' return the number of failed process -- for test-- 
     """
 
+    # Special output for loop processes
+    if comparison_results[0]['process']['perturbation_couplings']!=[]:
+        return output_lorentz_inv_loop(comparison_results, output)
+
     proc_col_size = 17
 
-    pert_coupl = comparison_results[0]['process']['perturbation_couplings']
-    # Of course, be more tolerant for loop processes
-    if pert_coupl:
-        threshold=1e-5
-    else:
-        threshold=1e-10
-    if pert_coupl:
-        process_header = "Process ["+" ".join(pert_coupl)+"]"
-    else:
-        process_header = "Process"
+    threshold=1e-10
+    process_header = "Process"
 
     if len(process_header) + 1 > proc_col_size:
-        proc_col_size = process_header + 1
+        proc_col_size = len(process_header) + 1
     
     for proc, values in comparison_results:
         if len(proc) + 1 > proc_col_size:
@@ -2901,7 +3154,7 @@ def output_lorentz_inv(comparison_results, output='text'):
             no_check_proc += 1
             no_check_proc_list.append(proc)
             continue
-        
+
         values = [data[i]['m2'] for i in range(len(data))]
         
         min_val = min(values)
@@ -2979,12 +3232,24 @@ def output_unitary_feynman(comparison_results, output='text'):
     """
     
     proc_col_size = 17
+    
+    # We use the first element of the comparison_result list to store the
+    # process definition object
+    pert_coupl = comparison_results[0]['perturbation_couplings']
+    comparison_results = comparison_results[1:]
+    
+    if pert_coupl:
+        process_header = "Process [virt="+" ".join(pert_coupl)+"]"
+    else:
+        process_header = "Process"
+    
+    if len(process_header) + 1 > proc_col_size:
+        proc_col_size = len(process_header) + 1
+    
     for data in comparison_results:
         proc = data['process']
         if len(proc) + 1 > proc_col_size:
             proc_col_size = len(proc) + 1
-
-    col_size = 17
 
     pass_proc = 0
     fail_proc = 0
@@ -2993,7 +3258,9 @@ def output_unitary_feynman(comparison_results, output='text'):
     failed_proc_list = []
     no_check_proc_list = []
 
-    res_str = fixed_string_length("Process", proc_col_size) + \
+    col_size = 18
+
+    res_str = fixed_string_length(process_header, proc_col_size) + \
               fixed_string_length("Unitary", col_size) + \
               fixed_string_length("Feynman", col_size) + \
               fixed_string_length("Relative diff.", col_size) + \
@@ -3032,35 +3299,38 @@ def output_unitary_feynman(comparison_results, output='text'):
 
         #check all the JAMP
         # loop over jamp
-        for k in range(len(data[0]['jamp'][0])):
-            sum = [0, 0]
-            # loop over helicity
-            for j in range(len(data[0]['jamp'])):
-                #values for the different lorentz boost
-                values = [abs(data[i]['jamp'][j][k])**2 for i in range(len(data))]
-                sum = [sum[i] + values[i] for i in range(len(values))]
-
-            # Compare the different lorentz boost  
-            min_val = min(sum)
-            max_val = max(sum)
-            if not max_val:
-                continue
-            diff = (max_val - min_val) / max_val 
-        
-            tmp_str = '\n' + fixed_string_length('   JAMP %s'%k , proc_col_size) + \
-                       fixed_string_length("%1.10e" % sum[0], col_size) + \
-                       fixed_string_length("%1.10e" % sum[1], col_size) + \
-                       fixed_string_length("%1.10e" % diff, col_size)
-                   
-            if diff > 1e-10:
-                if not len(failed_proc_list) or failed_proc_list[-1] != proc:
-                    fail_proc += 1
-                    pass_proc -= 1
-                    failed_proc_list.append(proc)
-                res_str += tmp_str + "Failed"
-            elif not proc_succeed:
-                 res_str += tmp_str + "Passed" 
+        # This is not available for loop processes where the jamp list returned
+        # is empty.
+        if len(data[0]['jamp'])>0:
+            for k in range(len(data[0]['jamp'][0])):
+                sum = [0, 0]
+                # loop over helicity
+                for j in range(len(data[0]['jamp'])):
+                    #values for the different lorentz boost
+                    values = [abs(data[i]['jamp'][j][k])**2 for i in range(len(data))]
+                    sum = [sum[i] + values[i] for i in range(len(values))]
+    
+                # Compare the different lorentz boost  
+                min_val = min(sum)
+                max_val = max(sum)
+                if not max_val:
+                    continue
+                diff = (max_val - min_val) / max_val 
             
+                tmp_str = '\n' + fixed_string_length('   JAMP %s'%k , col_size) + \
+                           fixed_string_length("%1.10e" % sum[0], col_size) + \
+                           fixed_string_length("%1.10e" % sum[1], col_size) + \
+                           fixed_string_length("%1.10e" % diff, col_size)
+                       
+                if diff > 1e-10:
+                    if not len(failed_proc_list) or failed_proc_list[-1] != proc:
+                        fail_proc += 1
+                        pass_proc -= 1
+                        failed_proc_list.append(proc)
+                    res_str += tmp_str + "Failed"
+                elif not proc_succeed:
+                     res_str += tmp_str + "Passed" 
+                
             
         
     res_str += "\nSummary: %i/%i passed, %i/%i failed" % \
@@ -3073,7 +3343,6 @@ def output_unitary_feynman(comparison_results, output='text'):
         res_str += "\nNot checked processes: %s" % ', '.join(no_check_proc_list)
     
     
-    print res_str
     if output == 'text':
         return res_str        
     else: 

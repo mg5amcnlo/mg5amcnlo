@@ -2194,6 +2194,8 @@ contains
   integer :: ii,jj
   real(kindr2) &
     :: fact,tt(rank)
+! fix by R. Pittau (December 2012)
+  coeff= 0.d0
 !
   call enlarge( coeff ,2,ncf ,0,rank )
 !

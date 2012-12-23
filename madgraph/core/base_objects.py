@@ -924,6 +924,10 @@ class Model(PhysicsObject):
         self['expansion_order'] = None
         self['version_tag'] = None # position of the directory (for security)
         self['gauge'] = [0, 1]
+        self['case_sensitive'] = True
+        # attribute which might be define if needed
+        #self['name2pdg'] = {'name': pdg}
+        
 
     def filter(self, name, value):
         """Filter for model property values"""
@@ -992,6 +996,11 @@ class Model(PhysicsObject):
             if not (isinstance(value, list)):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a list" % type(value)
+
+        elif name == 'case_sensitive':
+            if not value in [True ,False]:
+                raise self.PhysicsObjectError, \
+                    "Object of type %s is not a boolean" % type(value)
         return True
 
     def get(self, name):
@@ -1011,7 +1020,15 @@ class Model(PhysicsObject):
             if self['interactions']:
                 self['interactions'].synchronize_interactions_with_particles(\
                                                           self['particle_dict'])
-                
+        if name == 'modelpath':
+            modeldir = self.get('version_tag').rsplit('##',1)[0]
+            if os.path.exists(modeldir):
+                return modeldir
+            modeldir = os.path.join(os.path.dirname(modeldir),
+                                    os.path.basename(modeldir).rsplit("-",1)[0])
+            if os.path.exists(modeldir):
+                return modeldir 
+            raise Exception, 'Invalid Path information: %s' % self.get('version_tag')        
 
         if (name == 'interaction_dict') and not self[name]:
             if self['interactions']:
@@ -1033,7 +1050,13 @@ class Model(PhysicsObject):
             if self['interactions']:
                 self['expansion_order'] = \
                    dict([(order, -1) for order in self.get('coupling_orders')])
-
+                   
+        if (name == 'name2pdg') and 'name2pdg' not in self:
+            self['name2pdg'] = {}
+            for p in self.get('particles'):
+                self['name2pdg'][p.get('antiname')] = -1*p.get('pdg_code')
+                self['name2pdg'][p.get('name')] =  p.get('pdg_code')
+                
         return Model.__bases__[0].get(self, name) # call the mother routine
 
     def set(self, name, value):
@@ -1081,15 +1104,32 @@ class Model(PhysicsObject):
                 'couplings','lorentz', 'gauge']
 
     def get_particle(self, id):
-        """Return the particle corresponding to the id"""
+        """Return the particle corresponding to the id / name"""
         
         try:
             return self["particle_dict"][id]
         except Exception:
-            try:
-                return self.get("particle_dict")[id]
-            except Exception:
-                return None
+            if isinstance(id, int):
+                try:
+                    return self.get("particle_dict")[id]
+                except Exception:
+                    return None
+            else:
+                if not hasattr(self, 'name2part'):
+                    self.create_name2part()
+                try: 
+                    return self.name2part[id]
+                except:
+                    return None
+
+    def create_name2part(self):
+        """create a dictionary name 2 part"""
+        
+        self.name2part = {}
+        for part in self.get("particle_dict"):
+            self.name2part[part.get('name')] = part
+            
+            
 
     def get_lorentz(self, name):
         """return the lorentz object from the associate name"""
@@ -1315,7 +1355,7 @@ class Model(PhysicsObject):
     @ staticmethod
     def load_default_name():
         """ load the default for name convention """
-        
+
         logger.info('Change particles name to pass to MG5 convention')    
         default = {}
         for line in open(os.path.join(MG5DIR, 'input', \

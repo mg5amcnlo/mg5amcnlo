@@ -536,6 +536,8 @@ c variable, not yet defined) will not be needed in the computation of probne
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
+        if(scalemax.ge.etot)scalemax=etot
+        if(scalemin.ge.scalemax)scalemin=scalemax
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -600,8 +602,6 @@ C For processes that have jets at the Born level, we need to include a
 C theta-function: The radiation from the shower should always be softer
 C than the jets at the Born, hence no need to include the MC counter
 C terms when the radiation is hard.
-C
-C THIS NEEDS TO BE UPDATED FOR OTHER MC'S AS WELL
 C
       if(pt_hardness.gt.shower_S_scale(nFKSprocess*2-1))then
          emsca=etot
@@ -1016,7 +1016,8 @@ c
 c End of loop over colour partners
       enddo
 c Assign emsca on statistical basis
-      if(extra.and.wgt.gt.1.d-30)then
+c$$$      if(extra.and.wgt.gt.1.d-30)then
+      if(dampMCsubt.and.wgt.gt.1.d-30)then
         rrnd=ran2()
         wgt1=0.d0
         jpartner=0
@@ -1169,6 +1170,14 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
 
+c Radiation hardness needed (pt_hardness) for the theta function
+c Should be zero if there are no jets at the Born
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
+     &     ,pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
+     &     ,pt_hardness
+
       double precision becl,delta
 c alsf and besf are the parameters that control gfunsoft
       double precision alsf,besf
@@ -1239,6 +1248,8 @@ c variable, not yet defined) will not be needed in the computation of probne
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
+        if(scalemax.ge.etot)scalemax=etot
+        if(scalemin.ge.scalemax)scalemin=scalemax
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -1298,6 +1309,19 @@ c this is standard MC@NLO
         probne=bogus_probne_fun(ptHWPP)
       endif
 c
+C
+C For processes that have jets at the Born level, we need to include a
+C theta-function: The radiation from the shower should always be softer
+C than the jets at the Born, hence no need to include the MC counter
+C terms when the radiation is hard.
+C
+      if(pt_hardness.gt.shower_S_scale(nFKSprocess*2-1))then
+         emsca=etot
+         wgt=0.d0
+         flagmc=.false.
+         return
+      endif
+C
       wgt=0.d0
       nofpartners=ipartners(0)
       flagmc=.false.
@@ -1688,7 +1712,8 @@ c
 c End of loop over colour partners
       enddo
 c Assign emsca on statistical basis
-      if(extra.and.wgt.gt.1.d-30)then
+c$$$      if(extra.and.wgt.gt.1.d-30)then
+      if(dampMCsubt.and.wgt.gt.1.d-30)then
         rrnd=ran2()
         wgt1=0.d0
         jpartner=0
@@ -1717,7 +1742,9 @@ c
           emsca=emscav(mpartner)
         endif
       endif
-      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
+c Where in the dead zone, so we can set emsca to shat or scalemax 
+c$$$      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
+      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=scalemax
 c Additional information for LHE
       if(AddInfoLHE)then
         fksfather_lhe(nFKSprocess)=fksfather
@@ -1795,8 +1822,7 @@ c      include "fks.inc"
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_partner(0:3),p_born_fksfather(0:3),
      # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
-     # xmrec2,www,massmax,massmin,delta_scale,ma2
-      parameter(delta_scale=10d0)
+     # xmrec2,www,massmax,massmin,ma2
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -1843,6 +1869,14 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
 
+c Radiation hardness needed (pt_hardness) for the theta function
+c Should be zero if there are no jets at the Born
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
+     &     ,pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
+     &     ,pt_hardness
+
       double precision becl,delta
 c alsf and besf are the parameters that control gfunsoft
       double precision alsf,besf
@@ -1871,11 +1905,10 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 
       integer mstj50,mstp67
       double precision en_fks,en_mother,theta2,theta2_cc
-      double precision upper_scale,fff
-      common/cupscale/upper_scale,fff
+      double precision upper_scale
+      common/cupscale/upper_scale
 
 c
-      double precision sum_mass
       double precision pmass(nexternal)
       include "pmass.inc"
 c
@@ -1916,21 +1949,13 @@ c variable, not yet defined) will not be needed in the computation of probne
       etot=2d0*sqrt( ebeam(1)*ebeam(2) )
       emsca=etot
       if(dampMCsubt)then
-        sum_mass=0d0
-        do i=1,nexternal
-           sum_mass=sum_mass+pmass(i)
-        enddo
-        sum_mass=max(sum_mass,delta_scale)
-
         emsca=0.d0
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
-
-        scalemin=max(scalemin,sum_mass)
-        scalemax=min(scalemax,sqrt((1-xi_i_fks)*shat))
-        if(scalemax.lt.scalemin)scalemax=scalemin
-
+        scalemax=min(scalemax,ref_scale)
+        if(scalemax.ge.etot)scalemax=etot
+        if(scalemin.ge.scalemax)scalemin=scalemax
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -1990,6 +2015,19 @@ c this is standard MC@NLO
         probne=bogus_probne_fun(tPY6Q)
       endif
 c
+C
+C For processes that have jets at the Born level, we need to include a
+C theta-function: The radiation from the shower should always be softer
+C than the jets at the Born, hence no need to include the MC counter
+C terms when the radiation is hard.
+C
+      if(pt_hardness.gt.shower_S_scale(nFKSprocess*2-1))then
+         emsca=etot
+         wgt=0.d0
+         flagmc=.false.
+         return
+      endif
+C
       wgt=0.d0
       nofpartners=ipartners(0)
       flagmc=.false.
@@ -2041,18 +2079,7 @@ c authors of Pythia don't know
          endif
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
-            sum_mass=0d0
-            do i=1,nexternal
-               sum_mass=sum_mass+pmass(i)
-            enddo
-            sum_mass=max(sum_mass,delta_scale)
-
-            fff=1d0
-            upper_scale=sqrt(x*shat)
-            upper_scale=upper_scale*fff
-            upper_scale=max(upper_scale,sum_mass)
-            upper_scale=min(upper_scale,sqrt(x*shat))
-
+            call assign_scalemax(shat,xi_i_fks,upper_scale)
             xifake(npartner)=xi(npartner)
             if(ileg.eq.3)xifake(npartner)=xi(npartner)+xm12
             if(sqrt(xifake(npartner)).gt.upper_scale)lzone(npartner)=.false.
@@ -2069,19 +2096,19 @@ c strictly page 354 of hep-ph/0603175
                xmrec2=xm12
                www=-q2q+q1q-uk
             endif
-            ma2=xmm2+www
-c Recall that xm22 = 0 if ileg = 4
-            if(ma2/s.lt.-tiny)then
-               write(*,*)'error A in xmcsubt_PY6Q'
-               stop
-            elseif(ma2/s.lt.0d0)then
-               ma2=0d0
-            endif
+c
             if(www.lt.-tiny)then
-               write(*,*)'error C in xmcsubt_PY6Q'
+               write(*,*)'error A in xmcsubt_PY6Q'
                stop
             elseif(www.lt.0d0)then
                www=0d0
+            endif
+            ma2=xmm2+www
+            if(ma2/s.lt.-tiny)then
+               write(*,*)'error B in xmcsubt_PY6Q'
+               stop
+            elseif(ma2/s.lt.0d0)then
+               ma2=0d0
             endif
             ma=sqrt(ma2)
             mbeff=sqrt(xmm2)
@@ -2091,7 +2118,7 @@ c Recall that xm22 = 0 if ileg = 4
 c The following constraint is deduced by imposing (p1+p2-kmother)**2=krecoil**2 and
 c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=ma**2
             if(abs(en_mother-(s-xmrec2+ma2)/(2*sqrt(s)))/en_mother.ge.tiny)then
-               write(*,*)'error B in xmcsubt_PY6Q'
+               write(*,*)'error C in xmcsubt_PY6Q'
                write(*,*)en_mother,(s-xmrec2+ma2)/(2*sqrt(s))
                stop
             endif
@@ -2469,7 +2496,8 @@ c
 c End of loop over colour partners
       enddo
 c Assign emsca on statistical basis
-      if(extra.and.wgt.gt.1.d-30)then
+c$$$      if(extra.and.wgt.gt.1.d-30)then
+      if(dampMCsubt.and.wgt.gt.1.d-30)then
         rrnd=ran2()
         wgt1=0.d0
         jpartner=0
@@ -2498,7 +2526,9 @@ c
           emsca=emscav(mpartner)
         endif
       endif
-      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
+c Where in the dead zone, so we can set emsca to shat or scalemax 
+c$$$      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
+      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=scalemax
 c Additional information for LHE
       if(AddInfoLHE)then
         fksfather_lhe(nFKSprocess)=fksfather
@@ -2570,11 +2600,12 @@ c      include "fks.inc"
       common/cileg/ileg
       double precision tk,uk,q1q,q2q,E0sq(nexternal),dE0sqdx(nexternal),
      # dE0sqdc(nexternal),x,yi,yj,xij,z(nexternal),xi(nexternal),
-     # xjac(nexternal),zPY6PT,xiPY6PT,xjacPY6PT_xiztoxy,ap,Q,
-     # beta,xfact,prefact,kn,knbar,kn0,beta3,betad,betas,
+     # xjac(nexternal),xifake(nexternal),zPY6PT,xiPY6PT,xjacPY6PT_xiztoxy,ap,Q,
+     # beta,xfact,prefact,kn,knbar,kn0,betad,betas,parp67,
      # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,
-     # ztmp,xitmp,xjactmp,get_angle,w1,w2,
+     # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,thetac,ycc,
      # p_born_partner(0:3),p_born_fksfather(0:3)
+      logical lzcc
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -2621,6 +2652,14 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
 
+c Radiation hardness needed (pt_hardness) for the theta function
+c Should be zero if there are no jets at the Born
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
+     &     ,pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
+     &     ,pt_hardness
+
       double precision becl,delta
 c alsf and besf are the parameters that control gfunsoft
       double precision alsf,besf
@@ -2647,15 +2686,16 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       parameter (vtf=1.d0/2.d0)
       parameter (vca=3.d0)
 
-      integer mstj50,mstp67,en_fks,en_mother,theta2,theta2_cc
-      double precision upper_scale,fff
-      common/cupscale/upper_scale,fff
+      integer mstj50,mstp67
+      double precision en_fks,en_mother,theta2,theta2_cc
+      double precision upper_scale
+      common/cupscale/upper_scale
 
 c
-      double precision ma2,mb2
       double precision pmass(nexternal)
       include "pmass.inc"
 c
+
       if (softtest.or.colltest) then
          tiny=1d-8
       else
@@ -2696,6 +2736,9 @@ c variable, not yet defined) will not be needed in the computation of probne
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
+        scalemax=min(scalemax,ref_scale)
+        if(scalemax.ge.etot)scalemax=etot
+        if(scalemin.ge.scalemax)scalemin=scalemax
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -2755,19 +2798,28 @@ c this is standard MC@NLO
         probne=bogus_probne_fun(ptPY6PT)
       endif
 c
+C
+C For processes that have jets at the Born level, we need to include a
+C theta-function: The radiation from the shower should always be softer
+C than the jets at the Born, hence no need to include the MC counter
+C terms when the radiation is hard.
+C
+      if(pt_hardness.gt.shower_S_scale(nFKSprocess*2-1))then
+         emsca=etot
+         wgt=0.d0
+         flagmc=.false.
+         return
+      endif
+C
       wgt=0.d0
       nofpartners=ipartners(0)
       flagmc=.false.
 c
-cooooooooooooooooooooooooooooo
-      ma2=0d0
-      mb2=0d0
-cooooooooooooooooooooooooooooo
-      ztmp=zPY6PT(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q,ma2)
-      xitmp=xiPY6PT(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q,ma2,mb2)
+      ztmp=zPY6PT(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
+      xitmp=xiPY6PT(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
       xjactmp=xjacPY6PT_xiztoxy(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,
-     &                       q1q,q2q,ma2)
-
+     &                       q1q,q2q)
+c
       do npartner=1,ipartners(0)
 c This loop corresponds to the sum over colour lines l in the
 c xmcsubt note
@@ -2775,20 +2827,42 @@ c xmcsubt note
             xi(npartner)=xitmp
             xjac(npartner)=xjactmp
 
-c$$$
-c$$$c Compute deadzones
-c$$$
-c$$$
+c Compute deadzones:
+            lzone(npartner)=.true.
+            parp67=1d0
+            mstp67=2
+            if(ileg.le.2)then
+               lzcc=.false.
+               thetac=0d0
+               ycc=1-parp67*x/(2*(1-x)**2)
+               if(mstp67.eq.0)then
+                  lzcc=.true.
+                  thetac=1d0
+               elseif(mstp67.eq.1)then
+                  if(yi.ge.ycc)then
+                     lzcc=.true.
+                     thetac=1d0
+                  endif
+               elseif(mstp67.eq.2)then
+                  lzcc=.true.
+                  thetac=min(1d0,(1d0-ycc)/(1d0-yi))
+               else
+                  write(*,*)'Unknown mstp67 ',mstp67
+                  stop
+               endif
+               if(.not.lzcc)lzone(npartner)=.false.
+            else
+               write(*,*)'No way'
+               stop
+            endif
 
-c Implementation of a maximum scale for the shower: the following scale
-c simulates boson mass for VB production. It could be modified in future
-        if(.not.dampMCsubt)then
-           lzone(npartner)=.false.
-           fff=1.d0
-           upper_scale=sqrt(x*shat)
-           upper_scale=upper_scale*fff
-           if(sqrt(xi(npartner)).le.upper_scale)lzone(npartner)=.true.
-        endif
+c Implementation of a maximum scale for the shower if the shape is not active.
+         if(.not.dampMCsubt)then
+            call assign_scalemax(shat,xi_i_fks,upper_scale)
+            xifake(npartner)=xi(npartner)
+            if(ileg.eq.3)xifake(npartner)=xi(npartner)+xm12
+            if(sqrt(xifake(npartner)).gt.upper_scale)lzone(npartner)=.false.
+         endif
 c
 c Compute MC subtraction terms
         if(lzone(npartner))then
@@ -2801,11 +2875,11 @@ c g --> g g (icode=1) and go --> go g (SUSY) splitting
                  N_p=2
                  if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
-c$$$                    xkern=(g**2/N_p)*8*vca/s
-c$$$                    xkernazi=0.d0
+                    xkern=(g**2/N_p)*8*vca/s
+                    xkernazi=0.d0
                  elseif(1-yi.lt.tiny)then
-c$$$                    xkern=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
-c$$$                    xkernazi=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
+                    xkern=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
+                    xkernazi=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
@@ -2826,8 +2900,8 @@ c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
                 w2=-q2q+q1q-uk
                 if(1-x.lt.tiny)then
-c$$$                  xkern=0.d0
-c$$$                  xkernazi=0.d0
+                  xkern=0.d0
+                  xkernazi=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -2845,8 +2919,8 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
                 if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
-c$$$                  xkern=(g**2/N_p)*8*vca/s
-c$$$                  xkernazi=0.d0
+                  xkern=(g**2/N_p)*8*vca/s
+                  xkernazi=0.d0
                 elseif(1-yj.lt.tiny)then
                   xkern=(g**2/N_p)*( 8*vca*
      &                  (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
@@ -2873,11 +2947,11 @@ c g --> q qbar splitting (icode=2)
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=1
                  if(1-x.lt.tiny)then
-c$$$                    xkern=0.d0
-c$$$                    xkernazi=0.d0
+                    xkern=0.d0
+                    xkernazi=0.d0
                  elseif(1-yi.lt.tiny)then
-c$$$                    xkern=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
-c$$$                    xkernazi=0.d0
+                    xkern=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
+                    xkernazi=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
@@ -2892,13 +2966,13 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
                 if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
-c$$$                  xkern=0.d0
-c$$$                  xkernazi=0.d0
+                  xkern=0.d0
+                  xkernazi=0.d0
                 elseif(1-yj.lt.tiny)then
-c$$$                  xkern=(g**2/N_p)*( 4*vtf*(1-x)*
-c$$$     &                  (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
-c$$$     &                  ( (s-xm12)**2*(s*x-xm12) )
-c$$$                  xkernazi=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+                  xkern=(g**2/N_p)*( 4*vtf*(1-x)*
+     &                  (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
+     &                  ( (s-xm12)**2*(s*x-xm12) )
+                  xkernazi=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
@@ -2926,16 +3000,17 @@ c$$$                  xkernazi=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
 c q --> g q (or qbar --> g qbar) splitting (icode=3)
 c the fks parton is the one associated with 1 - z: this is because its
 c rescaled energy is 1 - x and in the soft limit, where x --> z --> 1,
-c it has to coincide with the fraction appearing in the AP kernel
+c it has to coincide with the fraction appearing in the AP kernel.
+c The definition of z here does tend to 1 only in the massless case
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
                  if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
-c$$$                    xkern=0.d0
-c$$$                    xkernazi=0.d0
+                    xkern=0.d0
+                    xkernazi=0.d0
                  elseif(1-yi.lt.tiny)then
-c$$$                    xkern=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
-c$$$                    xkernazi=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
+                    xkern=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
+                    xkernazi=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
@@ -2954,8 +3029,12 @@ c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
                 w2=-q2q+q1q-uk
                 if(1-x.lt.tiny)then
-c$$$                  xkern=0.d0
-c$$$                  xkernazi=0.d0
+                  betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+                  betas=1+(xm12-xm22)/s
+                  z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
+                  dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
+                  xkern=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+(1-z0)**2)/(z0*s)
+                  xkernazi=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -2972,13 +3051,13 @@ c$$$                  xkernazi=0.d0
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 if(1-x.lt.tiny)then
-c$$$                  xkern=0.d0
-c$$$                  xkernazi=0.d0
+                  xkern=0.d0
+                  xkernazi=0.d0
                 elseif(1-yj.lt.tiny)then
-c$$$                  xkern=(g**2/N_p)*
-c$$$     &                  ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
-c$$$     &                  ( (s-xm12)*(s*x-xm12)**2 )
-c$$$                  xkernazi=0.d0
+                  xkern=(g**2/N_p)*
+     &                  ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
+     &                  ( (s-xm12)*(s*x-xm12)**2 )
+                  xkernazi=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
@@ -2998,11 +3077,11 @@ c q --> q g splitting (icode=4) and sq --> sq g (SUSY) splitting
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=1
                  if(1-x.lt.tiny)then
-c$$$                    xkern=(g**2/N_p)*8*vcf/s
-c$$$                    xkernazi=0.d0
+                    xkern=(g**2/N_p)*8*vcf/s
+                    xkernazi=0.d0
                  elseif(1-yi.lt.tiny)then
-c$$$                    xkern=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
-c$$$                    xkernazi=0.d0
+                    xkern=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
+                    xkernazi=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
@@ -3018,9 +3097,12 @@ c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
                 w2=-q2q+q1q-uk
                 if(1-x.lt.tiny)then
-c$$$                  beta3=sqrt(1-4*s*xm12/(s+xm12-xm22)**2)
-c$$$                  xkern=(g**2/N_p)*8*vcf*(1-yj)*beta3/(s*(1-yj*beta3))
-c$$$                  xkernazi=0.d0
+                  betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+                  betas=1+(xm12-xm22)/s
+                  z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
+                  dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
+                  xkern=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+z0**2)/((1-z0)*s)
+                  xkernazi=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -3043,13 +3125,13 @@ c Non-QCD branching, here taken to be squark->squark gluon
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 if(1-x.lt.tiny)then
-c$$$                  xkern=(g**2/N_p)*8*vcf/s
-c$$$                  xkernazi=0.d0
+                  xkern=(g**2/N_p)*8*vcf/s
+                  xkernazi=0.d0
                 elseif(1-yj.lt.tiny)then
-c$$$                  xkern=(g**2/N_p)*4*vcf*
-c$$$     &                  ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
-c$$$     &                  ( s*(s-xm12)*(s*x-xm12) )
-c$$$                  xkernazi=0.d0
+                  xkern=(g**2/N_p)*4*vcf*
+     &                  ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
+     &                  ( s*(s-xm12)*(s*x-xm12) )
+                  xkernazi=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
@@ -3108,8 +3190,8 @@ c Dead zone
             emscwgt(npartner)=0.d0
           endif
         endif
-        xkern=xkern*gfactsf
-        xkernazi=xkernazi*gfactazi*gfactsf
+        xkern=xkern*gfactsf*thetac
+        xkernazi=xkernazi*gfactazi*gfactsf*thetac
         born_red=0.d0
         born_red_tilde=0.d0
         do cflows=1,colorflow(npartner,0)
@@ -3135,7 +3217,8 @@ c
 c End of loop over colour partners
       enddo
 c Assign emsca on statistical basis
-      if(extra.and.wgt.gt.1.d-30)then
+c$$$      if(extra.and.wgt.gt.1.d-30)then
+      if(dampMCsubt.and.wgt.gt.1.d-30)then
         rrnd=ran2()
         wgt1=0.d0
         jpartner=0
@@ -3164,7 +3247,9 @@ c
           emsca=emscav(mpartner)
         endif
       endif
-      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
+c Where in the dead zone, so we can set emsca to shat or scalemax 
+c$$$      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
+      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=scalemax
 c Additional information for LHE
       if(AddInfoLHE)then
         fksfather_lhe(nFKSprocess)=fksfather
@@ -3244,8 +3329,7 @@ c      include "fks.inc"
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_partner(0:3),p_born_fksfather(0:3),
      # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
-     # xmrec2,www,massmax,massmin,delta_scale,ma2
-      parameter(delta_scale=10d0)
+     # xmrec2,www,massmax,massmin,ma2
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -3292,6 +3376,14 @@ c Stuff to be written (depending on AddInfoLHE) onto the LHE file
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
 
+c Radiation hardness needed (pt_hardness) for the theta function
+c Should be zero if there are no jets at the Born
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
+     &     ,pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
+     &     ,pt_hardness
+
       double precision becl,delta
 c alsf and besf are the parameters that control gfunsoft
       double precision alsf,besf
@@ -3320,12 +3412,11 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 
       integer mstj50,mstp67
       double precision en_fks,en_mother,theta2,theta2_cc
-      double precision upper_scale,fff
-      common/cupscale/upper_scale,fff
+      double precision upper_scale
+      common/cupscale/upper_scale
 
       double precision xma2,xmb2,sb
 c
-      double precision sum_mass
       double precision pmass(nexternal)
       include "pmass.inc"
 c
@@ -3366,21 +3457,13 @@ c variable, not yet defined) will not be needed in the computation of probne
       etot=2d0*sqrt( ebeam(1)*ebeam(2) )
       emsca=etot
       if(dampMCsubt)then
-        sum_mass=0d0
-        do i=1,nexternal
-           sum_mass=sum_mass+pmass(i)
-        enddo
-        sum_mass=max(sum_mass,delta_scale)
-
         emsca=0.d0
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
-
-        scalemin=max(scalemin,sum_mass)
-        scalemax=min(scalemax,sqrt((1-xi_i_fks)*shat))
-        if(scalemax.lt.scalemin)scalemax=scalemin
-
+        scalemax=min(scalemax,ref_scale)
+        if(scalemax.ge.etot)scalemax=etot
+        if(scalemin.ge.scalemax)scalemin=scalemax
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -3440,6 +3523,19 @@ c this is standard MC@NLO
         probne=bogus_probne_fun(ptPY8)
       endif
 c
+C
+C For processes that have jets at the Born level, we need to include a
+C theta-function: The radiation from the shower should always be softer
+C than the jets at the Born, hence no need to include the MC counter
+C terms when the radiation is hard.
+C
+      if(pt_hardness.gt.shower_S_scale(nFKSprocess*2-1))then
+         emsca=etot
+         wgt=0.d0
+         flagmc=.false.
+         return
+      endif
+C
       wgt=0.d0
       nofpartners=ipartners(0)
       flagmc=.false.
@@ -3472,18 +3568,7 @@ c
 c Compute deadzones:
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
-            sum_mass=0d0
-            do i=1,nexternal
-               sum_mass=sum_mass+pmass(i)
-            enddo
-            sum_mass=max(sum_mass,delta_scale)
-
-            fff=1d0
-            upper_scale=sqrt(x*shat)
-            upper_scale=upper_scale*fff
-            upper_scale=max(upper_scale,sum_mass)
-            upper_scale=min(upper_scale,sqrt(x*shat))
-
+            call assign_scalemax(shat,xi_i_fks,upper_scale)
             xifake(npartner)=xi(npartner)
             if(ileg.eq.3)xifake(npartner)=xi(npartner)+xm12
             if(sqrt(xifake(npartner)).gt.upper_scale)lzone(npartner)=.false.
@@ -3927,7 +4012,8 @@ c
 c End of loop over colour partners
       enddo
 c Assign emsca on statistical basis
-      if(extra.and.wgt.gt.1.d-30)then
+c$$$      if(extra.and.wgt.gt.1.d-30)then
+      if(dampMCsubt.and.wgt.gt.1.d-30)then
         rrnd=ran2()
         wgt1=0.d0
         jpartner=0
@@ -4481,8 +4567,7 @@ c since they never enter isr formulae in MC functions
             elseif(MonteCarlo.eq.'PYTHIA6Q')then
                qMC=sqrt(abs(-xtk))
             elseif(MonteCarlo.eq.'PYTHIA6PT')then
-               write(*,*)'no such MonteCarlo yet'
-               stop
+               qMC=sqrt(abs(-xtk*xi_i_fks))
             elseif(MonteCarlo.eq.'PYTHIA8')then
                qMC=sqrt(abs(-xtk*xi_i_fks))
             endif
@@ -4497,8 +4582,7 @@ c since they never enter isr formulae in MC functions
             elseif(MonteCarlo.eq.'PYTHIA6Q')then
                qMC=sqrt(abs(-xuk))
             elseif(MonteCarlo.eq.'PYTHIA6PT')then
-               write(*,*)'no such MonteCarlo yet'
-               stop
+               qMC=sqrt(abs(-xuk*xi_i_fks))
             elseif(MonteCarlo.eq.'PYTHIA8')then
                qMC=sqrt(abs(-xuk*xi_i_fks))
             endif
@@ -5729,11 +5813,11 @@ c outgoing parton #4 (massless)
 
 
 c Begin of PY6PT stuff
-      function zPY6PT(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2)
+      function zPY6PT(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
 c Returns PYTHIA energy shower variable
       implicit none
       integer ileg
-      real*8 zPY6PT,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,xma2
+      real*8 zPY6PT,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny
       parameter(tiny=1.d-5)
 c
       if(ileg.gt.4.or.ileg.le.0)then
@@ -5743,34 +5827,18 @@ c
 
 c incoming parton #1 (left)
       if(ileg.eq.1)then
-         if((1-x)**2.lt.4*xma2/s)then
-            zPY6PT=-1d0
-            return
-c this constraint comes from the fact that the FKS velocity,
-c bbeta = sqrt(1-4*xma2/s/(1-x)**2), has to be real
-         endif
-         zPY6PT=x+xma2/s
+         zPY6PT=x
 c incoming parton #2 (right)
       elseif(ileg.eq.2)then
-         if((1-x)**2.lt.4*xma2/s)then
-            zPY6PT=-1d0
-            return
-c this constraint comes from the fact that the FKS velocity,
-c bbeta = sqrt(1-4*xma2/s/(1-x)**2), has to be real
-         endif
-         zPY6PT=x+xma2/s
+         zPY6PT=x
 c outgoing parton #3 (massive)
       elseif(ileg.eq.3)then
-         if(1-x.lt.tiny)then
-         else
-         endif
+         write(*,*)'No way'
+         stop
 c outgoing parton #4 (massless)
       elseif(ileg.eq.4)then
-         if(1-x.lt.tiny)then
-         elseif(1-yj.lt.tiny)then
-         else
-c z here is the energy sharing in the radiator + recoiler cm
-         endif
+         write(*,*)'No way'
+         stop
       endif
 
       return
@@ -5778,51 +5846,32 @@ c z here is the energy sharing in the radiator + recoiler cm
 
 
 
-      function xiPY6PT(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2,xmb2)
+      function xiPY6PT(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
 c Returns PYTHIA evolution shower variable
       implicit none
       integer ileg
       real*8 xiPY6PT,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,z,zPY6PT,
-     &xma2,xmb2,bbeta,tiny
+     &tiny
       parameter(tiny=1.d-5)
 c
       if(ileg.gt.4.or.ileg.le.0)then
          write(*,*)'error #1 in xiPY6PT, unknown ileg ',ileg
          stop
       endif
-c xma2 = mass squared of the "fks" particle in ISR
-c xmb2 = mass squared of the virtual particle in ISR
 c incoming parton #1 (left)
       if(ileg.eq.1)then
-         if((1-x)**2.lt.4*xma2/s)then
-            xiPY6PT=-1d0
-            return
-c this constraint comes from the fact that the FKS velocity,
-c bbeta = sqrt(1-4*xma2/s/(1-x)**2), has to be real
-         endif
-         bbeta=sqrt(1-4*xma2/(s*(1-x)**2))
-         xiPY6PT=(1-x-xma2/s)*(s*(1-x)/2*(1-bbeta*yi)-xma2+xmb2)
+         xiPY6PT=s*(1-x)**2*(1-yi)/2
 c incoming parton #2 (right)
       elseif(ileg.eq.2)then
-         if((1-x)**2.lt.4*xma2/s)then
-            xiPY6PT=-1d0
-            return
-c this constraint comes from the fact that the FKS velocity,
-c bbeta = sqrt(1-4*xma2/s/(1-x)**2), has to be real
-         endif
-         bbeta=sqrt(1-4*xma2/(s*(1-x)**2))
-         xiPY6PT=(1-x-xma2/s)*(s*(1-x)/2*(1-bbeta*yi)-xma2+xmb2)
+         xiPY6PT=s*(1-x)**2*(1-yi)/2
 c outgoing parton #3 (massive)
       elseif(ileg.eq.3)then
-         if(1-x.lt.tiny)then
-         else
-         endif
+         write(*,*)'No way'
+         stop
 c outgoing parton #4 (massless)
       elseif(ileg.eq.4)then
-         if(1-x.lt.tiny)then
-         elseif(1-yj.le.tiny)then
-         else
-         endif
+         write(*,*)'No way'
+         stop
       endif
 
       return
@@ -5831,11 +5880,11 @@ c outgoing parton #4 (massless)
 
 
 
-      function xjacPY6PT_xiztoxy(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2)
+      function xjacPY6PT_xiztoxy(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
 c Returns PYTHIA jacobian |d(xi_PY6PT,z_PY6PT)/d(x,y)|
       implicit none
       integer ileg
-      real*8 xjacPY6PT_xiztoxy,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2,
+      real*8 xjacPY6PT_xiztoxy,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,
      &z,zPY6PT,en_fks,en_fks_sister,mom_fks_sister,xt,tiny,tmp,w1,w2,bbeta,
      &afun,bfun,cfun,signfac,beta,dzPY6PTdenfks,dzPY6PTdenfkssis,dxiPY6PTdenfks,
      &dxiPY6PTdenfkssis,dadx,dady,dbdx,dbdy,dcdx,dcdy,denfksdx,denfksdy,
@@ -5849,35 +5898,18 @@ c
       endif
 c incoming parton #1 (left)
       if(ileg.eq.1)then
-         if((1-x)**2.lt.4*xma2/s)then
-            xjacPY6PT_xiztoxy=0d0
-            return
-c this constraint comes from the fact that the FKS velocity,
-c bbeta = sqrt(1-4*xma2/s/(1-x)**2), has to be real
-         endif
-         bbeta=sqrt(1-4*xma2/(s*(1-x)**2))
-         tmp=-s*(1-x)/2*bbeta*(1-x-xma2/s)
+         tmp=-s*(1-x)**2/2
 c incoming parton #2 (right)
       elseif(ileg.eq.2)then
-         if((1-x)**2.lt.4*xma2/s)then
-            xjacPY6PT_xiztoxy=0d0
-            return
-c this constraint comes from the fact that the FKS velocity,
-c bbeta = sqrt(1-4*xma2/s/(1-x)**2), has to be real
-         endif
-         bbeta=sqrt(1-4*xma2/(s*(1-x)**2))
-         tmp=-s*(1-x)/2*bbeta*(1-x-xma2/s)
+         tmp=-s*(1-x)**2/2
 c outgoing parton #3 (massive)
       elseif(ileg.eq.3)then
-         if(1-x.lt.tiny)then
-         else
-         endif
+         write(*,*)'No way'
+         stop
 c outgoing parton #4 (massless)
       elseif(ileg.eq.4)then
-         if(1-x.lt.tiny)then
-         elseif(1-yj.le.tiny)then
-         else
-         endif
+         write(*,*)'No way'
+         stop
       endif
 
       xjacPY6PT_xiztoxy=abs(tmp)
@@ -6288,13 +6320,12 @@ c
 
       double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks
       double precision shattmp,dot,emsca_bare,ref_scale,scalemin,
-     & scalemax,rrnd,ran2,emscainv,dum1,dum2,dum3,dum4,dum5,dum6,
-     & qMC,ptresc,one,zero,delta_scale
+     & scalemax,rrnd,ran2,emscainv,dum1,dum2,dum3,dum4,dum5,xxm12,
+     & qMC,ptresc,one,zero
       parameter(zero=0d0)
       parameter(one=1d0)
-      parameter(delta_scale=10d0)
 
-      integer idum,i
+      integer iileg,i
 
       logical emscasharp
       logical extra
@@ -6309,11 +6340,13 @@ c
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
 
-      double precision sum_mass
+      double precision eetot
       double precision pmass(nexternal)
       include "pmass.inc"
 c
 c
+      MonteCarlo=shower_mc
+      eetot=2d0*sqrt( ebeam(1)*ebeam(2) )
 c Consistency check -- call to set_cms_stuff() must be done prior to
 c entering this function
       shattmp=2d0*dot(pp(0,1),pp(0,2))
@@ -6323,23 +6356,17 @@ c entering this function
         stop
       endif
 
-      if(dampMCsubt)then
-        sum_mass=0d0
-        do i=1,nexternal
-           sum_mass=sum_mass+pmass(i)
-        enddo
-        sum_mass=max(sum_mass,delta_scale)
+      extra=.true.
+      call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,iileg,
+     &                xxm12,dum1,dum2,dum3,dum4,dum5,qMC,extra)
 
+      if(dampMCsubt)then
         ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
-
-        if(MonteCarlo(1:7).eq.'PYTHIA6')then
-           scalemin=max(scalemin,sum_mass)
-           scalemax=min(scalemax,sqrt((1-xi_i_fks)*shat))
-           if(scalemax.lt.scalemin)scalemax=scalemin
-        endif
-
+        if(MonteCarlo(1:6).eq.'PYTHIA')scalemax=min(scalemax,ref_scale)
+        if(scalemax.ge.eetot)scalemax=eetot
+        if(scalemin.ge.scalemax)scalemin=scalemax
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -6348,30 +6375,25 @@ c entering this function
           rrnd=emscainv(rrnd,one)
           emsca_bare=scalemin+rrnd*(scalemax-scalemin)
         endif
-      else
-        emsca=2d0*sqrt( ebeam(1)*ebeam(2) )
-        return
-      endif
 
-      extra=.true.
-      call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,idum,
-     &                dum1,dum2,dum3,dum4,dum5,dum6,qMC,extra)
-
-      if(emscasharp)then
-        if(qMC.le.scalemax)then
-          emsca=emsca_bare
+        if(emscasharp)then
+           if(qMC.le.scalemax)then
+              emsca=emsca_bare
+           else
+              emsca=scalemax
+           endif
         else
-          emsca=scalemax
+           ptresc=(qMC-scalemin)/(scalemax-scalemin)
+           if(ptresc.le.0.d0)then
+              emsca=emsca_bare
+           elseif(ptresc.lt.1.d0)then
+              emsca=emsca_bare
+           else
+              emsca=scalemax
+           endif
         endif
       else
-        ptresc=(qMC-scalemin)/(scalemax-scalemin)
-        if(ptresc.le.0.d0)then
-          emsca=emsca_bare
-        elseif(ptresc.lt.1.d0)then
-          emsca=emsca_bare
-        else
-          emsca=scalemax
-        endif
+         emsca=eetot
       endif
 
       return
@@ -6380,38 +6402,22 @@ c entering this function
 
       subroutine assign_scalemax(sh,xi,xxscalemax)
       implicit none
-      include "nexternal.inc"
-      include "coupl.inc"
       include "madfks_mcatnlo.inc"
+      include "run.inc"
 
       integer i
-      double precision sh,xi,ref_scale,xxscalemax,xxscalemin,
-     &     delta_scale,zero
-      parameter(delta_scale=10d0)
-      parameter(zero=0d0)
+      double precision sh,xi,ref_scale,xxscalemax,xxscalemin,eetot
 
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
-
-      double precision sum_mass
-      double precision pmass(nexternal)
-      include "pmass.inc"
 c
+      MonteCarlo=shower_mc
+      eetot=2d0*sqrt( ebeam(1)*ebeam(2) )
       ref_scale=sqrt((1-xi)*sh)
       xxscalemin=max(frac_low*ref_scale,scaleMClow)
       xxscalemax=max(frac_upp*ref_scale,xxscalemin+scaleMCdelta)
-
-      if(MonteCarlo(1:6).eq.'PYTHIA')then
-         sum_mass=0d0
-         do i=1,nexternal
-            sum_mass=sum_mass+pmass(i)
-         enddo
-         sum_mass=max(sum_mass,delta_scale)
-
-         xxscalemin=max(xxscalemin,sum_mass)
-         xxscalemax=min(xxscalemax,ref_scale)
-         if(xxscalemax.lt.xxscalemin)xxscalemax=xxscalemin
-      endif
+      if(MonteCarlo(1:6).eq.'PYTHIA')xxscalemax=min(xxscalemax,ref_scale)
+      if(xxscalemax.ge.eetot)xxscalemax=eetot
 
       return
       end

@@ -71,3 +71,10 @@ $(BINDIR)combine_events: $(COMBINE)
 	$(FC) $(FFLAGS) -o combine_events $(COMBINE) $(LIBDIR)/libmodel.a $(LIBDIR)/libpdf.a 
 	mv combine_events $(BINDIR)
 
+clean:
+	rm -f *.o
+	rm -f param_card.inc run_card.inc
+	cd MODEL; make clean
+	cd PDF; make clean
+	cd DHELAS; make clean
+	rm -f $(BINDIR)/combine_events $(BINDIR)/gen_ximprove
