@@ -446,7 +446,7 @@ c          print *,'Added BW for resonance ',i,icl(i),this_config
       
       end
 
-      logical function findmt(idij,icgs,nbw,ibwlist)
+      logical function findmt(idij,icgs)
 c**************************************************************************
 c     input:
 c            idij, icgs
@@ -462,7 +462,7 @@ c**************************************************************************
       include 'run.inc'
       include 'maxconfigs.inc'
 
-      integer idij,nbw,ibwlist(2,nexternal),icgs(0:n_max_cg)
+      integer idij,icgs(0:n_max_cg)
       logical foundbw
       integer i, ii, j, jj, il, igsbk(0:n_max_cg)
 
@@ -555,9 +555,6 @@ c**************************************************************************
       integer mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
 
-      integer nbw,ibwlist(2,nexternal)
-      logical isbw(n_max_cl)
-
       data (pz(i),i=0,3)/1d0,0d0,0d0,1d0/
 
       integer combid
@@ -609,7 +606,7 @@ c     cluster only combinable legs (acc. to diagrams)
                icgs(0)=0
                idij=combid(idi,idj)
                pt2ij(idij)=1.0d37
-               if (findmt(idij,icgs,nbw,ibwlist)) then
+               if (findmt(idij,icgs)) then
                   if (btest(mlevel,4)) then
                      write(*,*)'diagrams: ',(icgs(k),k=1,icgs(0))
                   endif
@@ -709,7 +706,7 @@ c        Set info for LH clustering output
             enddo
          endif
 c     Reset igraphs with new mother
-         if (.not.findmt(imocl(n),igraphs,nbw,ibwlist)) then
+         if (.not.findmt(imocl(n),igraphs)) then
             write(*,*) 'cluster.f: Error. Invalid combination.' 
             return
          endif
@@ -864,7 +861,7 @@ c     cluster only combinable legs (acc. to diagrams)
                      idij=combid(idi,idj)
 c                     write (*,*) 'RECALC !!! ',idij
                      pt2ij(idij)=1.0d37
-                     if (findmt(idij,icgs,nbw,ibwlist)) then
+                     if (findmt(idij,icgs)) then
                         if (btest(mlevel,4)) then
                            write(*,*)'diagrams: ',(icgs(k),k=1,icgs(0))
                        endif

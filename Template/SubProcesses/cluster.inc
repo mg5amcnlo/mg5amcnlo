@@ -18,6 +18,10 @@ c     resmap gives potential resonances for diagrams
       logical clustered
       common/cl_val/pcl,pt2ijcl,zcl,mt2ij,mt2last,imocl,idacl,igraphs,ipdgcl,
      &    clustered
+c     variable for keeping track of BWs
+      integer nbw,ibwlist(2,nexternal)
+      logical isbw(n_max_cl)
+      common/cl_isbw/nbw,isbw,ibwlist
 c     variable for LH output of clustering info (R,E,S,I)
       integer icluster(4,nexternal)
       common/cl_iclus/icluster

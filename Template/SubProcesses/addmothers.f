@@ -26,7 +26,7 @@
       double precision qicl(-nexternal+3:2*nexternal-3), factpm
       double precision xtarget
       data iseed/0/
-      integer lconfig
+      integer lconfig,idij(-nexternal+3:nexternal)
 
 c     Variables for combination of color indices (including multipart. vert)
       integer maxcolmp
@@ -75,7 +75,7 @@ c      integer ncols,ncolflow(maxamps),ncolalt(maxamps),icorg
 c      common/to_colstats/ncols,ncolflow,ncolalt,icorg
 
       double precision pt
-      integer get_color,elim_indices,set_colmp,fix_tchannel_color
+      integer get_color,elim_indices,set_colmp,fix_tchannel_color,combid
       real ran1
       external pt,ran1,get_color,elim_indices,set_colmp,fix_tchannel_color
 
@@ -91,7 +91,7 @@ c   Choose the config (diagram) which was actually used to produce the event
 c   
 c   ...unless the diagram is passed in igraphs(1); then use that diagram
       lconfig=iconfig
-      if (igraphs(0).ne.0) then
+      if (ickkw.gt.0) then
          if (btest(mlevel,3)) then
             write(*,*)'unwgt.f: write out diagram ',igraphs(1)
          endif
@@ -165,6 +165,13 @@ c
 c     Get mother information from chosen graph
 c     
 
+c     Set idij for external particles (needed to keep track of BWs)
+        if(ickkw.gt.0) then
+           do i=1,nexternal
+              idij(i)=ishft(1,i-1)
+           enddo
+        endif
+
 c     First check number of resonant s-channel propagators
         ns=0
         nres=0
@@ -179,6 +186,8 @@ c       Daughters
                 if(ida(j).gt.0) ida(j)=isym(ida(j),jsym)
              enddo
           endif
+c         Set idij (needed to keep track of BWs)
+          if(ickkw.gt.0) idij(i)=combid(idij(ida(1)),idij(ida(2)))
 c       Decide s- or t-channel
           if(i.gt.-nexternal+2.and.
      $         iabs(sprop(numproc,i,lconfig)).gt.0) then ! s-channel propagator
@@ -238,7 +247,8 @@ c          if((igscl(0).ne.0.and.
 c     $       (iabs(jpart(1,i)).gt.5.and.iabs(jpart(1,i)).lt.11).or.
 c     $       (iabs(jpart(1,i)).gt.16.and.iabs(jpart(1,i)).ne.21)).or.
 c     $       (igscl(0).eq.0.and.OnBW(i))) then 
-          if(OnBW(i)) then 
+          if(ickkw.eq.0.and.OnBW(i).or.
+     $       ickkw.gt.0.and.isbw(idij(i))) then 
 c         Resonance whose mass should be preserved
             jpart(6,i)=2
             nres=nres+1
