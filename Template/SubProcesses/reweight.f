@@ -980,6 +980,9 @@ C     Present process number
       INTEGER SUBDIAG(MAXSPROC),IB(2)
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
       data IB/1,2/
+C     ICONFIG has this config number
+      INTEGER MCONFIG(0:LMAXCONFIGS), ICONFIG
+      COMMON/TO_MCONFIGS/MCONFIG, ICONFIG
 c     Common block for reweighting info
 c     q2bck holds the central q2fact scales
       integer jlast(2)
@@ -992,7 +995,7 @@ c     q2bck holds the central q2fact scales
       include 'leshouche.inc'
 
 C   local variables
-      integer i, j, idi, idj
+      integer i, j, idi, idj,ijet
       real*8 PI
       parameter( PI = 3.14159265358979323846d0 )
 
@@ -1110,9 +1113,19 @@ c     Prepare for resetting q2fact based on PDF reweighting
       endif
 
 c     Prepare checking for parton vertices
+      ijet=1
       do i=1,nexternal
          j=ishft(1,i-1)
-         goodjet(j)=isparton(ipdgcl(j,igraphs(1),iproc))
+         if(i.le.2)then
+            goodjet(j)=isparton(ipdgcl(j,igraphs(1),iproc))
+         elseif(ijet.le.njetstore(iconfig).and.
+     $        i.eq. iqjetstore(ijet,iconfig)) then
+            goodjet(j)=.true.
+            ijet=ijet+1
+         else
+            goodjet(j)=.false.
+         endif
+      if(btest(mlevel,4)) print *,'Set goodjet ',j,goodjet(j)
       enddo
 c   
 c   Set strong coupling used
