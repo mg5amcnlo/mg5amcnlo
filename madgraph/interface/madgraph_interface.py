@@ -3727,10 +3727,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         import urllib
         path = {}
         
-        if args[0] == 'MCatNLO-utilities':
-            logger.warning('For internal testings, please use the MCatNLO-utilities provided in this distribution. Remember to update them when releasing beta2.MZ')
-            return
-
         name = {'td_mac': 'td', 'td_linux':'td', 'Delphes':'Delphes', 
                 'pythia-pgs':'pythia-pgs', 'ExRootAnalysis': 'ExRootAnalysis',
                 'MadAnalysis':'MadAnalysis', 'MCatNLO-utilities':'MCatNLO-utilities'}
