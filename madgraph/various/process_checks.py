@@ -1430,8 +1430,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 else:
                     res += output
             return cls.parse_check_output(res,format='tuple')[0][0]
-        except IOError:
-            logging.warning("Error while running MadLoop. Exception = %s")
+        except IOError as e:
+            logging.warning("Error while running MadLoop. Exception = %s"%str(e))
             return None    
 
 def evaluate_helicities(process, param_card = None, mg_root="", 
@@ -2264,9 +2264,13 @@ def output_stability(stability, mg_root, reusing=False):
             logger.info('Stability plot output to file %s. '%fig_output_file)
             plt.savefig(fig_output_file)
         return res_str
-    except ImportError:
-        res_str += "\n= Install matplotlib to get a "+\
-                   "graphical display of the results of this check."
+    except Exception as e:
+        if isinstance(e, ImportError):
+            res_str += "\n= Install matplotlib to get a "+\
+                               "graphical display of the results of this check."
+        else:
+            res_str += "\n= Could not produce the stability plot because of "+\
+                                                "the following error: %s"%str(e)
         return res_str
   
 def output_timings(process, timings):
