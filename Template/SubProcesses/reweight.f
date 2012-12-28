@@ -1122,6 +1122,9 @@ c     Prepare checking for parton vertices
      $        i.eq. iqjetstore(ijet,iconfig)) then
             goodjet(j)=.true.
             ijet=ijet+1
+         elseif(isparton(ipdgcl(j,igraphs(1),iproc)).and.
+     $          .not.isjet(ipdgcl(j,igraphs(1),iproc))) then
+            goodjet(j)=.true.            
          else
             goodjet(j)=.false.
          endif
