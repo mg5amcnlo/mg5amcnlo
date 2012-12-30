@@ -200,6 +200,8 @@ c**************************************************
       double precision p(0:3,nexternal)
       integer imo,ida1,ida2,i,idmo,idda1,idda2
       integer ipdg(n_max_cl),ipart(2,n_max_cl)
+      logical isjet
+      external isjet
 
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
@@ -222,15 +224,45 @@ c           This is last clustering - keep mother ipart
             ipart(1,imo)=ipart(1,imo)
          elseif(ipart(1,ida2).ge.1.and.ipart(1,ida2).le.2)then
             ipart(1,imo)=ipart(1,ida2)        
+c           Transmit jet PDG code
+            if(isjet(idmo)) then
+               if(idda1.lt.21.and.isjet(idda1).and.
+     $              (idda2.eq.21.or.idda2.eq.22))
+     $              ipdg(imo)=-idda1
+               if(idda2.lt.21.and.isjet(idda2).and.
+     $              (idda1.eq.21.or.idda1.eq.22))
+     $              ipdg(imo)=idda2
+            endif
          elseif(ipart(1,ida1).ge.1.and.ipart(1,ida1).le.2)then
             ipart(1,imo)=ipart(1,ida1)
+c           Transmit jet PDG code
+            if(isjet(idmo)) then
+               if(idda2.lt.21.and.isjet(idda2).and.
+     $            (idda1.eq.21.or.idda1.eq.22))
+     $              ipdg(imo)=-idda2
+               if(idda1.lt.21.and.isjet(idda1).and.
+     $            (idda2.eq.21.or.idda2.eq.22))
+     $              ipdg(imo)=idda1
+            endif
          endif
          if (btest(mlevel,4))
-     $        write(*,*) ' -> ',(ipart(i,imo),i=1,2)
+     $        write(*,*) ' -> ',(ipart(i,imo),i=1,2),
+     $        ' (',ipdg(imo),')'
          return
       endif        
 
 c     FS clustering
+c     Transmit parton PDG code for parton vertex
+      if(isjet(idmo)) then
+         if(idda1.lt.21.and.isjet(idda1).and.
+     $        (idda2.eq.21.or.idda2.eq.22))
+     $        ipdg(imo)=idda1
+         if(idda2.lt.21.and.isjet(idda2).and.
+     $        (idda1.eq.21.or.idda1.eq.22))
+     $        ipdg(imo)=idda2
+         idmo=ipdg(imo)
+      endif
+
       if(idmo.eq.21.and.idda1.eq.21.and.idda2.eq.21)then
 c     gluon -> 2 gluon splitting: Choose hardest gluon
         if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
@@ -266,7 +298,7 @@ c     Color singlet
       endif
       
       if (btest(mlevel,4)) then
-        write(*,*) ' -> ',(ipart(i,imo),i=1,2)
+        write(*,*) ' -> ',(ipart(i,imo),i=1,2),' (',ipdg(imo),')'
       endif
 
       return
@@ -1041,17 +1073,7 @@ c   Since we use pdf reweighting, need to know particle identities
       if (btest(mlevel,1)) then
          write(*,*) 'Set process number ',ipsel
       endif
-c     Set incoming particle identities
-      ipdgcl(1,igraphs(1),iproc)=idup(1,ipsel,iproc)
-      ipdgcl(2,igraphs(1),iproc)=idup(2,ipsel,iproc)
-      if (btest(mlevel,2)) then
-         write(*,*) 'Set particle identities: ',
-     $        1,ipdgcl(1,igraphs(1),iproc),
-     $        ' and ',
-     $        2,ipdgcl(2,igraphs(1),iproc)
 
-      endif
-      
 c     Store pdf information for systematics studies (initial)
       if(use_syst)then
          do j=1,2
@@ -1116,6 +1138,12 @@ c     Prepare checking for parton vertices
       ijet=1
       do i=1,nexternal
          j=ishft(1,i-1)
+c        Set jet identities according to chosen subprocess
+         if(isjet(idup(i,ipsel,iproc)))
+     $        ipdgcl(j,igraphs(1),iproc)=idup(i,ipsel,iproc)
+         if (btest(mlevel,2))
+     $        write(*,*) 'Set particle identities: ',
+     $        i,ipdgcl(j,igraphs(1),iproc)
          if(i.le.2)then
             goodjet(j)=isparton(ipdgcl(j,igraphs(1),iproc))
          elseif(ijet.le.njetstore(iconfig).and.
