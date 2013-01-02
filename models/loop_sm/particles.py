@@ -115,7 +115,7 @@ G = Particle(pdg_code = 21,
              LeptonNumber = 0,
              GhostNumber = 0)
 
-gh = Particle(pdg_code = 100033,
+gh = Particle(pdg_code = 82,
              name = 'gh',
              antiname = 'gh~',
              spin = -1,

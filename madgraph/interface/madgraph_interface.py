@@ -800,7 +800,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             args.append('MadGraph5')
         else:
             self.help_tutorial()
-            raise self.InvalidCmd('Too manu arguments for tutorial')
+            raise self.InvalidCmd('Too many arguments for tutorial')
 
 
     
@@ -2182,7 +2182,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self.options = {}
         self._generate_info = "" # store the first generated process
         self._model_v4_path = None
-        self._use_lower_part_names = False
         self._export_dir = None
         self._export_format = 'madevent'
         self._mgme_dir = MG4DIR
@@ -2316,7 +2315,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Define a multiparticle"""
 
         self.avoid_history_duplicate('define %s' % line, ['define'])
-        if self._use_lower_part_names:
+        if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()
         # Make sure there are spaces around = and |
@@ -3059,7 +3058,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             for order in squared_orders:
                 orders[order]=squared_orders[order]
 
-        if self._use_lower_part_names:
+        if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()
 
@@ -3249,7 +3248,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
            a set of id of final states particles. [Used by MadSpin]
         """
                 
-        if self._use_lower_part_names:
+        if not self._curr_model['case_sensitive']:
             procline = procline.lower()
         pids = self._curr_model.get('name2pdg')
             
@@ -3619,12 +3618,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         self._couplings = list(set(sum([i.get('orders').keys() for i in \
                                         self._curr_model.get('interactions')], [])))
-        # Check if we can use case-independent particle names
-        self._use_lower_part_names = \
-            (self._particle_names == \
-             [p.get('name').lower() for p in self._curr_model.get('particles')] + \
-             [p.get('antiname').lower() for p in self._curr_model.get('particles')])
-
+        
         self.add_default_multiparticles()
         
     
@@ -3681,7 +3675,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if line.startswith('#'):
                 continue
             try:
-                if self._use_lower_part_names:
+                if not self._curr_model['case_sensitive']:
                     multipart_name = line.lower().split()[0]
                 else:
                     multipart_name = line.split()[0]

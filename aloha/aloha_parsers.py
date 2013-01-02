@@ -28,7 +28,6 @@ import sys
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path))
 
-from madgraph import MadGraph5Error, MG5DIR
 import aloha_lib
 from aloha_object import *
 import vendor.ply.lex as lex

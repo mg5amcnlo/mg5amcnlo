@@ -1030,6 +1030,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 #            self.options_madevent['automatic_html_opening'] = False
 
         mode = 'aMC@' + argss[0]
+        if options['parton']:
+            mode = 'noshower'
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
@@ -1293,10 +1295,13 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 raise aMCatNLOError('%s is not a valid parton shower. Please use one of the following: %s' \
                     % (shower, ', '.join(shower_list)))
 
-            if not options['only_generation']:
+            if mode in ['aMC@NLO', 'aMC@LO']:
                 logger.info('Doing %s matched to parton shower' % mode[4:])
-            else:
+            elif mode == 'noshower':
+                logger.info('Generating events without running the shower.')
+            elif options['only_generation']:
                 logger.info('Generating events starting from existing results')
+            
 
             for i, status in enumerate(mcatnlo_status):
                 if i == 2 or not options['only_generation']:

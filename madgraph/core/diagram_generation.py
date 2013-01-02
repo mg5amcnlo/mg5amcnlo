@@ -422,10 +422,9 @@ class Amplitude(base_objects.PhysicsObject):
             if not returndiag:
                 self['diagrams'] = res
                 raise InvalidCmd, 'The number of fermion is odd'
-                return res
             else:
                 raise InvalidCmd, 'The number of fermion is odd'
-                return res, res
+
 
         # Then check same number of incoming and outgoing fermions (if
         # no Majorana particles in model)
@@ -435,10 +434,8 @@ class Amplitude(base_objects.PhysicsObject):
             if not returndiag:
                 self['diagrams'] = res
                 raise InvalidCmd, 'The number of of incoming/outcoming fermions are different'
-                return res
             else:
                 raise InvalidCmd, 'The number of of incoming/outcoming fermions are different'
-                return res, res
         
         # Finally check that charge (conserve by all interactions) of the process
         #is globally conserve for this process.
@@ -1114,9 +1111,20 @@ class DecayChainAmplitude(Amplitude):
                         decay_ids.remove(l.get('id'))
             
             if decay_ids:
-                raise InvalidCmd, \
-                 "Decay without corresponding particle in core process. " + \
-                 "Please check your process definition."
+                logger.warning("Warning: " + \
+                 "Decay without corresponding particle in core process found. " + \
+                 "Please check your process definition carefully.")
+
+                # Remove unused decays from the process list
+                for dc in reversed(self['decay_chains']):
+                    for a in reversed(dc.get('amplitudes')):
+                        # Remove the amplitudes from this decay chain
+                        if a.get('process').get('legs')[0].get('id') in decay_ids:
+                            dc.get('amplitudes').remove(a)
+                    if not dc.get('amplitudes'):
+                        # If no amplitudes left, remove the decay chain
+                        self['decay_chains'].remove(dc)
+                    
 
         elif argument != None:
             # call the mother routine

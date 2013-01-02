@@ -924,7 +924,7 @@ class Model(PhysicsObject):
         self['expansion_order'] = None
         self['version_tag'] = None # position of the directory (for security)
         self['gauge'] = [0, 1]
-        
+        self['case_sensitive'] = True
         # attribute which might be define if needed
         #self['name2pdg'] = {'name': pdg}
         
@@ -996,6 +996,11 @@ class Model(PhysicsObject):
             if not (isinstance(value, list)):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a list" % type(value)
+
+        elif name == 'case_sensitive':
+            if not value in [True ,False]:
+                raise self.PhysicsObjectError, \
+                    "Object of type %s is not a boolean" % type(value)
         return True
 
     def get(self, name):

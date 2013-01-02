@@ -1244,7 +1244,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'madspin_card.dat')):
             return
-        
+                
         # First need to load MadSpin
         
         # Check that MG5 directory is present .
@@ -1261,7 +1261,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             The variable mg5_path might not be correctly configured.'''
         
         self.update_status('Running MadSpin', level='madspin')        
-        
+        if not '-from_cards' in line:
+            self.keep_cards(['madspin_card.dat'])
+            self.ask_edit_cards(['madspin_card.dat'], 'fixed', plot=False)        
         self.help_decay_events(skip_syntax=True)
 
         # load the name of the event file
@@ -1270,30 +1272,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # args now alway content the path to the valid files
         madspin_cmd = interface_madspin.MadSpinInterface(args[0]) 
         
-        if '-from_cards' in args:
-            path = pjoin(self.me_dir, 'Cards', 'madspin_card.dat')
-            madspin_cmd.import_command_file(path)
-        else:        
-            logger.info('Please enter the definition of each branch ')
-            logger.info('associated with the decay channel you want to consider')
-            logger.info('Please use the mg5 syntax, e.g. ')
-            logger.info(' A > B C , ( C > D E , E > F G )')
-            while 1: 
-                decaybranch=self.ask('New branch: (if you are done, type enter) \n','done')
-                if decaybranch == 'done' or decaybranch == '':
-                    break
-                else: 
-                    madspin_cmd.exec_cmd('decay %s' % decaybranch, printcmd=True, precmd=True)
-                            
-            logger.info("An estimation of the maximum weight is needed for the unweighting ")
-            answer=self.ask("Enter the maximum weight, or enter a negative number if unknown \n",-1.0)
-            answer=answer.replace("\n","") 
-            if float(answer) > 0:
-                madspin_cmd.exec_cmd('set max_weight %s' % answer)
-            else:
-                logger.info("The maximum weight will be evaluated")
-    
-            madspin_cmd.exec_cmd('launch')
+
+        path = pjoin(self.me_dir, 'Cards', 'madspin_card.dat')
+        madspin_cmd.import_command_file(path)
                 
         # create a new run_name directory for this output
         i = 1

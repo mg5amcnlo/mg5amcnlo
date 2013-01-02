@@ -15,7 +15,7 @@ from __future__ import division
 #
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
-################################################################################
+###############################################################################
 """
 ####################################################################
 #
@@ -40,6 +40,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 os.sys.path.append("../.")
 import string
+import itertools
 #import madgraph.core.base_objects as base_objects
 #import madgraph.core.helas_objects as helas_objects
 #import madgraph.core.diagram_generation as diagram_generation
@@ -1111,7 +1112,10 @@ class production_topo(dict):
 #                     In that case, just change slightly the invariant t
                 if (-ptsq/(pp*pp) <1e-6 ):
                     oldt=t
-                    p1z=pp
+                    if (p1z>0):
+                        p1z=pp
+                    else:
+                        p1z=-pp
                     pt=0.0
                     t=m1*m1+ma2-2.0*p1E*E_acms+2.0*p_acms*p1z
                     diff_t=abs((t-oldt)/t)*100
@@ -1391,7 +1395,7 @@ class width_estimate:
                 elif item not in ponctuation : # case 3: we have a particle originating from a branching
                     final.append(item)
                     if next_symbol=='' or next_symbol in ponctuation:
-                                                  #end of a splitting, verify that it exists
+                        #end of a splitting, verify that it exists
                         if initial not in self.br.keys():
                             logger.debug('Branching fractions of particle '+initial+' are unknown')
 	        	    return 0
@@ -1424,10 +1428,13 @@ class width_estimate:
 				     (d2==self.br[initial][chan]['daughters'][0] and \
                                      d1==self.br[initial][chan]['daughters'][1]):
                                       split=" "+initial+" > "+d1+" "+d2+" "
+                                      # For the tag we need to order d1 d2, so that equivalent tags can be correctly idetified
+                                      list_daughters=sorted([d1,d2])
+                                      tag_split="|"+initial+">"+list_daughters[0]+list_daughters[1]
                                       counter+=1
-                                      splittings['s'+str(counter)]={}
-                                      splittings['s'+str(counter)]['config']=split
-                                      splittings['s'+str(counter)]['br']=self.br[initial][chan]['br']
+                                      splittings[tag_split]={}
+                                      splittings[tag_split]['config']=split
+                                      splittings[tag_split]['br']=self.br[initial][chan]['br']
 				      got_it=1
                                       break # to avoid double counting in cases such as w+ > j j 
                                 if got_it: break                   
@@ -1503,7 +1510,7 @@ class width_estimate:
                 pid_part=-label2pid[part]
                 if self.pid2label[pid_part] not in particle_set:
                     particle_set.append(self.pid2label[pid_part])
- 
+        particle_set = list(set(particle_set))
     
         commandline="import model %s\n" % self.model
         commandline+="generate %s > all all \n" % particle_set[0]
@@ -1578,9 +1585,8 @@ class width_estimate:
         # erase old info
         del self.br
         self.br={}
-        
-
-        
+        particle_set = list(set(particle_set))
+        misc.sprint('PASSS HERE')
         argument = {'particles': particle_set, 
                     'input': pjoin(self.path_me, 'param_card.dat'),
                     'output': pjoin(self.path_me, 'param_card.dat')}
@@ -2264,8 +2270,10 @@ class decay_misc:
 
 
     def get_symm_fac(self, decay_processes):
-        """  get the symmetry factor associated with associated resonance """
-
+        """  get the symmetry factor associated with associated resonance 
+             NOT USED ANYMORE
+        """
+        
         dico_initpart={}
 
         for index in decay_processes.keys():
@@ -2523,8 +2531,24 @@ class decay_misc:
            multi_decay_processes[tag_decay]['cumul_br']=cumul
         return sum_br
 
+    def get_identical(self,decay_processes):
+        """
+          return a dictionary  label : (indices)
+          with   'label' the label of a particle to be decayed in the production process
+                 '[indices]' the list of indices identifying the decay branches associated with 'label' 
+        """
 
+        ident_part={}
+        for item in decay_processes.keys():
+            line=decay_processes[item]
+            curr_list=line.split()
+            init_part=curr_list[0]
+            if init_part not in ident_part.keys():
+                ident_part[init_part]=[ item ]
+            else:
+                ident_part[init_part].append(item)
 
+        return ident_part
 
     def generate_tag_decay(self,multi_decay_processes,decay_tags ):
         """ generate randomly the tag for the decay config. using a probability law 
@@ -2578,6 +2602,57 @@ class decay_misc:
  
             if sd<mean*1e-6: return x
         return 0
+
+    def item_belong_to_list(self,item, thelist):
+        """check if an item belongs to a list of items, but after converting all items to string 
+           NOT USED
+        """
+
+        for it in thelist:
+            if str(it)==str(item): return True
+        return False
+
+
+    def symmetrize_tags(self, decay_tags, identical_part):
+        """ add new tags that are obtained by symmetrizing identical particles 
+            Also need a mapping to retrieve the information in 'branching per channel'
+        """ 
+
+        new_decay_tags=[]
+        mapping_tag2branch={}
+        for item in decay_tags: 
+            new_decay_tags.append(item)
+            # the mapping in that case is just the identity
+            mapping_tag2branch[item]=range(len(item))
+            
+
+        for list_ident in identical_part.values():
+            # 1. get the complete list of permutation of indices in list_ident
+            # 2. create the corresponding tags and verify if they should be added
+            # 3. update the mapping 'mapping_tag2branch' so that we can retrieve information 
+            #    from  'branching_per_channel' 
+            nb_sym=len(list_ident)
+            all_per=itertools.permutations(list_ident)
+            for i in range(math.factorial(nb_sym)):
+                this_per=all_per.next()
+                #print this_per
+                for tag in decay_tags:
+                     # bluid the new potential tag:
+                     new_tag=list(tag)
+                     for ind, part in enumerate(list_ident):
+                         new_tag[this_per[ind]]=tag[part]
+                     new_tag=tuple(new_tag)
+                     if new_tag not in  new_decay_tags:
+                         new_decay_tags.append(new_tag)
+                         mapping_tag2branch[new_tag]=range(len(new_tag))
+                         # also need to update extended branching
+                         for ind, part in enumerate(list_ident):
+                             mapping_tag2branch[new_tag][this_per[ind]]=ind
+                         #print new_tag
+                         #print mapping_tag2branch[new_tag]
+ 
+        return new_decay_tags, mapping_tag2branch
+
 
     def check_param_card(self, param_card):
         raise Exception
@@ -2687,8 +2762,8 @@ class decay_all_events:
 
 # extract all resonances in the decay:
         resonances=decay_tools.get_resonances(decay_processes.values())
-        logger.info('List of resonances:')
-        logger.info(resonances)
+        logger.debug('List of resonances:')
+        logger.debug(resonances)
 
         label2width={}
         label2mass={}
@@ -2768,10 +2843,11 @@ class decay_all_events:
         list_particle_to_decay=decay_processes.keys()
         list_particle_to_decay.sort()
 
+        # also determine which particles are identical
+        identical_part=decay_tools.get_identical(decay_processes)
+
 #       2. then use a tuple to identify a decay channel
-#
 #       (tag1 , tag2 , tag3, ...)  
-#
 #       where the number of entries is the number of branches, 
 #       tag1 is the tag that identifies the final state of branch 1, 
 #       tag2 is the tag that identifies the final state of branch 2, 
@@ -2783,20 +2859,30 @@ class decay_all_events:
         for part in list_particle_to_decay:  # loop over particle to decay in the production process
             branch_tags=[ fs for fs in branching_per_channel[part]] # list of tags in a given branch
             decay_tags=decay_tools.update_tag_decays(decay_tags, branch_tags)
+#      Now here is how we account for symmetry if identical particles:
+#      EXAMPLE:  (Z > mu+ mu- ) (Z> e+ e-)
+#      currently in decay_tags, the first Z is mapped onto the channel mu+ mu- 
+#                               the second Z is mapped onto the channel e+ e-
+#                              => we need to add the symmetric channel obtained by 
+#                                 swapping the role of the first Z and the role of the snd Z 
+        decay_tags, map_tag2branch =\
+            decay_tools.symmetrize_tags(decay_tags, identical_part)
+
+
 
 #       2.b. then build the dictionary multi_decay_processes = multi dico
 #       first key = a tag in decay_tags
 #       second key :  ['br'] = float with the branching fraction for the FS associated with 'tag'   
-#                     ['config'] = a list of strings, each of then giving the definition of a branch    
+#                     ['config'] = a list of strings, each of them giving the definition of a branch    
 
         multi_decay_processes={}
         for tag in decay_tags:
-#           compute br + get the congis
+#           compute br + get the config
             br=1.0
             list_branches={}
             for index, part in enumerate(list_particle_to_decay):
-                br=br*branching_per_channel[part][tag[index]]['br']
-                list_branches[part]=branching_per_channel[part][tag[index]]['config']
+                br=br*branching_per_channel[map_tag2branch[tag][part]][tag[index]]['br']
+                list_branches[part]=branching_per_channel[map_tag2branch[tag][part]][tag[index]]['config']
             multi_decay_processes[tag]={}
             multi_decay_processes[tag]['br']=br
             multi_decay_processes[tag]['config']=list_branches
@@ -2805,7 +2891,6 @@ class decay_all_events:
 #       keep track of sum of br over the decay channels at work, since we need to rescale
 #       the event weight by this number
         sum_br=decay_tools.set_cumul_proba_for_tag_decay(multi_decay_processes,decay_tags)
-
 
 
 #      Now we have a dictionary (multi_decay_processes) of which values 
@@ -2828,7 +2913,10 @@ class decay_all_events:
         topologies={}
 
         dico_branchindex2label=decay_tools.get_dico_branchindex2label(decay_processes)
-        symm_fac=decay_tools.get_symm_fac(decay_processes)
+        #print 'dico_branchindex2label'
+        #print dico_branchindex2label
+        symm_fac=1.0    #decay_tools.get_symm_fac(decay_processes)
+        # the symmetry factor is not used anymore, since we explicitely generate ALL possible decay channels
         logger.info('Symmetry factor: '+str(symm_fac))
 
 

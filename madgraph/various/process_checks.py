@@ -34,6 +34,7 @@ import re
 import subprocess
 import time
 import datetime
+import errno
 
 import aloha
 import aloha.aloha_writers as aloha_writers
@@ -1326,16 +1327,22 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 progress_bar.start()
         # Flag to know if the run was interrupted or not
         interrupted = False
-        for i in range(start_index,start_index+nPoints): 
+        # Flag to know wheter the run for one specific PS point got an IOError
+        # and must be retried
+        retry = 0
+        # We do not use a for loop because we want to manipulate the updater.
+        i=start_index
+        while i<(start_index+nPoints):
             # To be added to the returned statistics  
             qp_dict={}
             dp_dict={}
             UPS = None
             EPS = None
-            try:
-                # Pick an eligible PS point with rambo
+            # Pick an eligible PS point with rambo, if not already done
+            if retry==0:
                 p = pick_PS_point(process)
-#                print "I use P_%i="%i,p
+#           print "I use P_%i="%i,p
+            try:
                 if progress_bar!=None:
                     progress_bar.update(i+1-start_index)
                 # Write it in the input file
@@ -1377,6 +1384,35 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             except KeyboardInterrupt:
                 interrupted = True
                 break
+            except IOError, e:
+                if e.errno == errno.EINTR:
+                    if retry==3:
+                        logger.error("Failed three times consecutively because"+
+                                               " of system call interruptions.")
+                        raise
+                    else:
+                        logger.debug("Recovered from a system call interruption.")                        
+                    # We will retry this PS point
+                    retry = retry+1
+                    # Make sure the MadLoop process is properly killed
+                    try:
+                        StabChecker.kill()
+                    except Exception: 
+                        pass
+                    StabChecker = subprocess.Popen(\
+                               [os.path.join(dir_path,'StabilityCheckDriver')], 
+                               stdin=subprocess.PIPE, stdout=subprocess.PIPE, 
+                                           stderr=subprocess.PIPE, cwd=dir_path)
+                    continue
+                else:
+                    raise
+                
+            # Successfully processed a PS point so,
+            #  > reset retry
+            retry = 0
+            #  > Update the while loop counter variable
+            i=i+1
+            
             # Update the returned statistics
             DP_stability.append(dp_dict)
             QP_stability.append(qp_dict)
@@ -1430,8 +1466,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 else:
                     res += output
             return cls.parse_check_output(res,format='tuple')[0][0]
-        except IOError:
-            logging.warning("Error while running MadLoop. Exception = %s")
+        except IOError as e:
+            logging.warning("Error while running MadLoop. Exception = %s"%str(e))
             return None    
 
 def evaluate_helicities(process, param_card = None, mg_root="", 
@@ -2049,7 +2085,6 @@ def output_stability(stability, mg_root, reusing=False):
         which means events for which the reading direction test shows an
         accuracy two digits higher than it really is according to the other
         tests."""
-        
         powers=[]
         for eval in eval_list:
             loop_dir_evals = [eval['CTModeA'],eval['CTModeB']]
@@ -2145,6 +2180,7 @@ def output_stability(stability, mg_root, reusing=False):
         res_str += "|= QP Median accuracy............ %.2e\n"%median(UPS_stability_QP)
         res_str += "|= QP Max accuracy............... %.2e\n"%min(UPS_stability_QP)
         res_str += "|= QP Min accuracy............... %.2e\n"%max(UPS_stability_QP)
+        print "I have UPS=",[stability['QP_stability'][U[0]] for U in UPS]
         (pmed,pmin,pfrac)=loop_direction_test_power(\
                                  [stability['QP_stability'][U[0]] for U in UPS])
         res_str += "|= UPS QP loop_dir test power.... %s,%s\n"\
@@ -2264,9 +2300,13 @@ def output_stability(stability, mg_root, reusing=False):
             logger.info('Stability plot output to file %s. '%fig_output_file)
             plt.savefig(fig_output_file)
         return res_str
-    except ImportError:
-        res_str += "\n= Install matplotlib to get a "+\
-                   "graphical display of the results of this check."
+    except Exception as e:
+        if isinstance(e, ImportError):
+            res_str += "\n= Install matplotlib to get a "+\
+                               "graphical display of the results of this check."
+        else:
+            res_str += "\n= Could not produce the stability plot because of "+\
+                                                "the following error: %s"%str(e)
         return res_str
   
 def output_timings(process, timings):

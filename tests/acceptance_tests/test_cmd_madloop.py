@@ -45,7 +45,7 @@ path = os.path
 #===============================================================================
 class TestCmdLoop(unittest.TestCase):
     """this treats all the command not related to MG_ME"""
-    
+    logger_saved_info = {}
     def setUp(self):
         """ Initialize the test """
         self.interface = MGCmd.MasterCmd()
@@ -72,7 +72,8 @@ class TestCmdLoop(unittest.TestCase):
         """ exec a line in the interface """        
         self.interface.onecmd(line)
     
-    def setup_logFile_for_logger(self,full_logname,restore=False,level='DEBUG'):
+    @classmethod
+    def setup_logFile_for_logger(cls,full_logname,restore=False,level='DEBUG'):
         """ Setup the logger by redirecting them all to logfiles in tmp """
         
         logs = full_logname.split('.')
@@ -85,16 +86,16 @@ class TestCmdLoop(unittest.TestCase):
                 pass
             my_logger = logging.getLogger(logname)
             if restore:
-                my_logger.setLevel(self.logger_saved_info[logname][1])
+                my_logger.setLevel(cls.logger_saved_info[logname][1])
             else:
-                self.logger_saved_info[logname] = (copy.copy(my_logger.handlers),\
+                cls.logger_saved_info[logname] = (copy.copy(my_logger.handlers),\
                                                                 my_logger.level)
                 my_logger.setLevel(level)
             allHandlers = copy.copy(my_logger.handlers)
             for h in allHandlers:
                 my_logger.removeHandler(h)
             if restore:
-                for h in self.logger_saved_info[logname][0]:
+                for h in cls.logger_saved_info[logname][0]:
                     my_logger.addHandler(h)
             else:
                 hdlr = logging.FileHandler('/tmp/%s.log'%logname)
