@@ -59,6 +59,7 @@ try:
     import madgraph.various.cluster as cluster
     import madgraph.various.misc as misc
     import madgraph.various.gen_crossxhtml as gen_crossxhtml
+    import madgraph.various.sum_html as sum_html
     import madgraph.various.shower_card as shower_card
 
     from madgraph import InvalidCmd, aMCatNLOError
@@ -75,6 +76,7 @@ except ImportError, error:
     import internal.cluster as cluster
     import internal.save_load_object as save_load_object
     import internal.gen_crossxhtml as gen_crossxhtml
+    import internal.sum_html as sum_html
     import internal.shower_card as shower_card
     aMCatNLO = True
 
@@ -267,7 +269,7 @@ class CmdExtended(common_run.CommonRunCmd):
         """action to perform to close nicely on a keyboard interupt"""
         try:
             if hasattr(self, 'results'):
-                self.update_status('Stop by the user', level=None, makehtml=False, error=True)
+                self.update_status('Stop by the user', level=None, makehtml=True, error=True)
                 self.add_error_log_in_html()
         except:
             pass
@@ -996,14 +998,14 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.cluster_mode = 2
         elif options['cluster']:
             self.cluster_mode = 1
-
-#        if self.options_madevent['automatic_html_opening']:
-#            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-#            self.options_madevent['automatic_html_opening'] = False
-
         
         mode = argss[0]
         self.ask_run_configuration(mode, options)
+
+        if self.options_madevent['automatic_html_opening']:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.options_madevent['automatic_html_opening'] = False
+
         self.compile(mode, options) 
         self.run(mode, options)
 
@@ -1025,14 +1027,15 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         elif options['cluster']:
             self.cluster_mode = 1
 
-#        if self.options_madevent['automatic_html_opening']:
-#            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-#            self.options_madevent['automatic_html_opening'] = False
-
         mode = 'aMC@' + argss[0]
         if options['parton']:
             mode = 'noshower'
         self.ask_run_configuration(mode, options)
+
+        if self.options_madevent['automatic_html_opening']:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.options_madevent['automatic_html_opening'] = False
+
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
         if self.check_mcatnlo_dir() and not options['parton']:
@@ -1064,14 +1067,15 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         elif options['cluster']:
             self.cluster_mode = 1
 
-#        if self.options['automatic_html_opening']:
-#            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-#            self.options['automatic_html_opening'] = False
-
         mode = argss[0]
         if mode in ['LO', 'NLO']:
             options['parton'] = True
         mode = self.ask_run_configuration(mode, options)
+
+        if self.options['automatic_html_opening']:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.options['automatic_html_opening'] = False
+
         if '+' in mode:
             mode = mode.split('+')[0]
         self.compile(mode, options) 
@@ -1124,7 +1128,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 ' shell')
             return False
 
-    def update_status(self, status, level, makehtml=False, force=True, 
+    def update_status(self, status, level, makehtml=True, force=True, 
                       error=False, starttime = None, update_results=False):
         
         common_run.CommonRunCmd.update_status(self, status, level, makehtml, 
@@ -1333,6 +1337,10 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
                     self.cross_sect_dict = self.read_results(output, mode)
                     self.print_summary(i, mode)
+
+                    cross, error = sum_html.make_all_html_results(self, folder_names[mode])
+                    self.results.add_detail('cross', cross)
+                    self.results.add_detail('error', error) 
 
         if self.cluster_mode == 1:
             #if cluster run, wait 15 sec so that event files are transferred back
@@ -1783,7 +1791,7 @@ Integrated cross-section
             #This is only for case when you want to trick the interface
             logger.warning('Trying to run data on unknown run.')
             self.results.add_run(name, self.run_card)
-            self.results.update('add run %s' % name, 'all', makehtml=False)
+            self.results.update('add run %s' % name, 'all', makehtml=True)
         else:
             for tag in upgrade_tag[level]:
                 
@@ -2003,7 +2011,7 @@ Integrated cross-section
         starttime = time.time()
         #logger.info('     Waiting for submitted jobs to complete')
         update_status = lambda i, r, f: self.update_status((i, r, f, run_type), 
-                      starttime=starttime, level='parton', update_results=False)
+                      starttime=starttime, level='parton', update_results=True)
         try:
             self.cluster.wait(self.me_dir, update_status)
         except:
@@ -2237,6 +2245,9 @@ Integrated cross-section
         madloop_log = pjoin(self.me_dir, 'compile_madloop.log')
         reweight_log = pjoin(self.me_dir, 'compile_reweight.log')
         test_log = pjoin(self.me_dir, 'test.log')
+
+        self.update_status('Compiling the code', level=None, update_results=True)
+
 
         libdir = pjoin(self.me_dir, 'lib')
         sourcedir = pjoin(self.me_dir, 'Source')

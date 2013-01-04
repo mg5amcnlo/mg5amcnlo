@@ -219,6 +219,7 @@ c
          write(*,*)'Final result [ABS]:',resA,' +/-',errA
          write(*,*)'Final result:',resS,' +/-',errS
          write(*,*)'chi**2 per D.o.F.:',chi2
+c write the results.dat file 
          open(unit=58,file='results.dat',status='unknown')
          write(58,*)resA, errA, 0d0, 0, 0, 0, 0, 0d0 ,0d0, resS 
          close(58)
@@ -287,6 +288,10 @@ c Prepare the MINT folding
          write(*,*)'Final result [ABS]:',resA,' +/-',errA
          write(*,*)'Final result:',resS,' +/-',errS
          write(*,*)'chi**2 per D.o.F.:',chi2
+c write the results.dat file 
+         open(unit=58,file='results.dat',status='unknown')
+         write(58,*)resA, errA, 0d0, 0, 0, 0, 0, 0d0 ,0d0, resS 
+         close(58)
 
 c to save grids:
          open (unit=12, file='mint_grids_NLO',status='unknown')
