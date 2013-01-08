@@ -1222,7 +1222,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 npoints = self.run_card['npoints_FO_grid']
                 niters = self.run_card['niters_FO_grid']
                 self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 1, npoints, niters) 
-                self.update_status('Setting up grids', level=None)
+                self.update_status('Setting up grids', level=None, update_results=True)
                 self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
                 p = misc.Popen(['./combine_results_FO.sh', 'born_G*'], \
                                    stdout=subprocess.PIPE, \
@@ -1230,6 +1230,9 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(0, mode)
+                cross, error = sum_html.make_all_html_results(self, ['grid*'])
+                self.results.add_detail('cross', cross)
+                self.results.add_detail('error', error) 
 
                 npoints = self.run_card['npoints_FO']
                 niters = self.run_card['niters_FO']
@@ -1237,7 +1240,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 self.update_status('Computing cross-section', level=None)
                 self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
             elif mode == 'NLO':
-                self.update_status('Setting up grid', level=None)
+                self.update_status('Setting up grid', level=None, update_results=True)
                 npoints = self.run_card['npoints_FO_grid']
                 niters = self.run_card['niters_FO_grid']
                 self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'grid', 1, npoints, niters) 
@@ -1248,11 +1251,14 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(0, mode)
+                cross, error = sum_html.make_all_html_results(self, ['grid*'])
+                self.results.add_detail('cross', cross)
+                self.results.add_detail('error', error) 
 
                 npoints = self.run_card['npoints_FO_grid']
                 niters = self.run_card['niters_FO_grid']
                 self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 3, npoints, niters) 
-                self.update_status('Improving grid using NLO', level=None)
+                self.update_status('Improving grid using NLO', level=None, update_results=True)
                 self.run_all(job_dict, [['0', 'novB', '0', 'grid']], \
                                  'Improving grids using NLO')
                 p = misc.Popen(['./combine_results_FO.sh', 'novB_G*'], \
@@ -1260,6 +1266,9 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(0, mode)
+                cross, error = sum_html.make_all_html_results(self, ['novB*'])
+                self.results.add_detail('cross', cross)
+                self.results.add_detail('error', error) 
 
                 npoints = self.run_card['npoints_FO']
                 niters = self.run_card['niters_FO']
@@ -1287,6 +1296,12 @@ Please, shower the Les Houches events before using them for physics analyses."""
                      pjoin(self.me_dir, 'Events', self.run_name))
             logger.info('The results of this run and the TopDrawer file with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+
+
+            cross, error = sum_html.make_all_html_results(self, folder_names[mode])
+            self.results.add_detail('cross', cross)
+            self.results.add_detail('error', error) 
+            self.update_status('Run completed', level='parton', update_results=True)
             return
 
         elif mode in ['aMC@NLO', 'aMC@LO','noshower']:
