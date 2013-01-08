@@ -392,7 +392,7 @@ def make_all_html_results(cmd, folder_names = []):
             else:
                 for folder in folder_names:
                     dir = folder.replace('*', name)
-                    P_comb.add_results(name, pjoin(P_path,dir,'results.dat'), mfactor)
+                    P_comb.add_results(dir, pjoin(P_path,dir,'results.dat'), mfactor)
 
         P_comb.compute_values()
         P_text += P_comb.get_html(run, unit)

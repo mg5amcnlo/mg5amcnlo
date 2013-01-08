@@ -603,7 +603,9 @@ class OneTagResults(dict):
             
             if 'lhe' not in self.parton and \
                         (exists(pjoin(path,"unweighted_events.lhe.gz")) or
-                         exists(pjoin(path,"unweighted_events.lhe"))):
+                         exists(pjoin(path,"unweighted_events.lhe")) or
+                         exists(pjoin(path,"events.lhe.gz")) or
+                         exists(pjoin(path,"events.lhe"))):
                 self.parton.append('lhe')
         
             if 'root' not in self.parton and \
@@ -707,7 +709,12 @@ class OneTagResults(dict):
                                                          'gridpack', 'gridpack')
             
             if 'lhe' in self.parton:
-                link = './Events/%(run_name)s/unweighted_events.lhe'
+                if exists(pjoin(self.me_dir, 'Events', self['run_name'], 'unweighted_events.lhe')) or\
+                  exists(pjoin(self.me_dir, 'Events', self['run_name'], 'unweighted_events.lhe.gz')):
+                    link = './Events/%(run_name)s/unweighted_events.lhe'
+                elif exists(pjoin(self.me_dir, 'Events', self['run_name'], 'events.lhe')) or\
+                  exists(pjoin(self.me_dir, 'Events', self['run_name'], 'events.lhe.gz')):
+                    link = './Events/%(run_name)s/events.lhe'
                 level = 'parton'
                 name = 'LHE'
                 out += self.special_link(link, level, name) 

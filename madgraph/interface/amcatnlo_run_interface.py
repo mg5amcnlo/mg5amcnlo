@@ -1568,7 +1568,7 @@ Integrated cross-section
         if not options['noreweight']:
             scale_pdf_info = self.run_reweight(options['reweightonly'])
 
-        self.update_status('Collecting events', level='parton')
+        self.update_status('Collecting events', level='parton', update_results=True)
         misc.compile(['collect_events'], 
                     cwd=pjoin(self.me_dir, 'SubProcesses'))
         p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
@@ -1589,6 +1589,8 @@ Integrated cross-section
             self.print_summary(2, mode, scale_pdf_info)
         logger.info('The %s.gz file has been generated.\n' \
                 % (evt_file))
+        self.results.add_detail('nb_event', nevents)
+        self.update_status('Events generated', level='parton', update_results=True)
         return evt_file
 
 
@@ -1825,6 +1827,32 @@ Integrated cross-section
                 tagRun = self.results[self.run_name][i]
                 if tagRun.pythia:
                     return tagRun['tag']
+
+
+    def store_result(self):
+        """ tar the pythia results. This is done when we are quite sure that 
+        the pythia output will not be use anymore """
+
+        if not self.run_name:
+            return
+
+        self.results.save()
+
+        if not self.to_store:
+            return 
+        
+        tag = self.run_card['run_tag']
+#        if 'pythia' in self.to_store:
+#            self.update_status('Storing Pythia files of Previous run', level='pythia', error=True)
+#            os.system('mv -f %(path)s/pythia_events.hep %(path)s/%(name)s/%(tag)s_pythia_events.hep' % 
+#                  {'name': self.run_name, 'path' : pjoin(self.me_dir,'Events'),
+#                   'tag':tag})
+#            os.system('gzip -f %s/%s_pythia_events.hep' % ( 
+#                                pjoin(self.me_dir,'Events',self.run_name), tag))
+#            self.to_store.remove('pythia')
+#            self.update_status('Done', level='pythia',makehtml=False,error=True)
+        
+        self.to_store = []
             
 
     def banner_to_mcatnlo(self, evt_file):
@@ -2569,15 +2597,15 @@ Please, shower the Les Houches events before using them for physics analyses."""
             os.remove(pjoin(self.me_dir,'RunWeb'))
         except Exception:
             pass
-#        try:
-#            self.store_result()
-#        except:
-#            # If nothing runs they they are no result to update
-#            pass
-#        try:
-#            self.update_status('', level=None)
-#        except Exception, error:         
-#            pass
+        try:
+            self.store_result()
+        except:
+            # If nothing runs they they are no result to update
+            pass
+        try:
+            self.update_status('', level=None)
+        except Exception, error:         
+            pass
         devnull = os.open(os.devnull, os.O_RDWR) 
         try:
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
