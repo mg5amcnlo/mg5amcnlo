@@ -460,7 +460,7 @@ c     q2bck holds the central q2fact scales
       common/to_stot/stot,m1,m2
 
 C   local variables
-      integer i, j, idi, idj
+      integer i, j, idi, idj, k
       real*8 PI
       parameter( PI = 3.14159265358979323846d0 )
       integer iforest(2,-max_branch:-1,lmaxconfigs)
@@ -954,14 +954,30 @@ c
          endif
          do i=1,2
             do j=1,2
-               if(ipart(j,ida(i)).gt.2)then
+c              First adjust goodjet based on iqjets
+               if(goodjet(ida(i)).and.ipart(j,ida(i)).gt.2)then
+                  fail=.true.
+                  do k=1,njets
+                     if(ipart(j,ida(i)).eq.iqjets(k,1))then
+                        fail=.false.
+                        exit
+                     endif
+                  enddo
+                  if(fail) goodjet(ida(i))=.false.
+               endif
+c              Now reset ptclus if jet vertex
+               if(ipart(j,ida(i)).gt.2.and.
+     $              isjetvx(imocl(n),idacl(n,1),idacl(n,2),
+     $               ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)
+     $              .and.goodjet(ida(i))) then
                   ptclus(ipart(j,ida(i)))=
      $                 max(ptclus(ipart(j,ida(i))),dsqrt(pt2ijcl(n)))
-                  if(.not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
-     $               ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)
-     $               .or..not.goodjet(ida(i)))
-     $                 ptclus(ipart(j,ida(i)))=etot
+               else if(ptclus(ipart(j,ida(i))).eq.0d0) then
+                  ptclus(ipart(j,ida(i)))=etot
                endif
+               if (btest(mlevel,3))
+     $              write(*,*) 'Set ptclus for ',ipart(j,ida(i)),
+     $              ' to ', ptclus(ipart(j,ida(i))),ida(i),goodjet(ida(i))
             enddo
          enddo
       enddo
