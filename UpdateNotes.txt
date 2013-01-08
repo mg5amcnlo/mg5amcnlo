@@ -1,5 +1,10 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.5.7 (08/01/13)  OM+JA: Fixed crash linked to model_v4 for processes containing wwww or
+                      zzww interactions. (See bug #1095603. Thanks to Tim Lu) 
+                  OM: Fix problem in the ./bin/mg5 file command when some question are 
+                      present in the file.
+                    
 1.5.6 (20/12/12)  JA: Replaced error with warning when there are decay processes
                       without corresponding core processes final state (see 
                       Question #216037). If you get this warning, please check

@@ -632,7 +632,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     logger.debug('piping')
                     self.store_line(line)
                     return None # print the question and use the pipe
-                logger.debug(question_instance.question)
+                logger.info(question_instance.question)
                 logger.warning('The answer to the previous question is not set in your input file')
                 logger.warning('Use %s value' % default)
                 return str(default)
@@ -650,11 +650,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             return line
         elif hasattr(question_instance, 'do_%s' % line.split()[0]):
             #This is a command line, exec it and check next line
-            
             logger.info(line)
             fct = getattr(question_instance, 'do_%s' % line.split()[0])
             fct(' '.join(line.split()[1:]))
             return self.check_answer_in_input_file(question_instance, default, path)
+
         # No valid answer provides
         elif self.haspiping:
             self.store_line(line)
@@ -1019,9 +1019,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             # execute the line
             if line:
                 self.exec_cmd(line, precmd=True)
-            if self.stored_line: # created by intermediate question
-                line, self.stored_line  = self.stored_line, None
+            stored = self.get_stored_line()
+            while stored:
+                line = stored
                 self.exec_cmd(line, precmd=True)
+                stored = self.get_stored_line()
 
         # If a child was open close it
         if self.child:
