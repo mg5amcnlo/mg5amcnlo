@@ -220,8 +220,9 @@ c Add the minimal jet pTs to tau
                   xm(i)=emass(i)+ptj
                elseif (is_a_lp(i)) then
 c Add the postively charged lepton pTs to tau
+                  taumin(iFKS)=taumin(iFKS)+emass(i)
                   if (j_fks.gt.nincoming)
-     &                 taumin(iFKS)=taumin(iFKS)+emass(i)+ptl
+     &                 taumin(iFKS)=taumin(iFKS)+ptl
                   taumin_s(iFKS)=taumin_s(iFKS)+emass(i)+ptl
                   taumin_j(iFKS)=taumin_j(iFKS)+emass(i)+ptl
                   xm(i)=emass(i)+ptl
@@ -243,8 +244,9 @@ c lepton pT
                   enddo
                elseif (is_a_lm(i)) then
 c Add the negatively charged lepton pTs to tau
+                  taumin(iFKS)=taumin(iFKS)+emass(i)
                   if (j_fks.gt.nincoming)
-     &                 taumin(iFKS)=taumin(iFKS)+emass(i)+ptl
+     &                 taumin(iFKS)=taumin(iFKS)+ptl
                   taumin_s(iFKS)=taumin_s(iFKS)+emass(i)+ptl
                   taumin_j(iFKS)=taumin_j(iFKS)+emass(i)+ptl
                   xm(i)=emass(i)+ptl
