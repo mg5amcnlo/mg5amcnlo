@@ -2510,7 +2510,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     ############################################################################      
     def do_refine(self, line):
         """Advanced commands: launch survey for the current process """
-        devnull = os.open(os.devnull, os.O_RDWR)  
+        devnull = open(os.devnull, 'w')  
         self.nb_refine += 1
         args = self.split_arg(line)
         # Check argument's validity
@@ -2590,6 +2590,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.results.add_detail('error', error)   
 
         self.update_status('finish refine', 'parton', makehtml=False)
+        devnull.close()
         
     ############################################################################ 
     def do_combine_events(self, line):
@@ -2729,7 +2730,7 @@ calculator."""
 
         run = self.run_name
         tag = self.run_card['run_tag']
-        devnull = os.open(os.devnull, os.O_RDWR)
+        devnull = open(os.devnull, 'w')
 
         if not os.path.exists(pjoin(self.me_dir, 'Events', run)):
             os.mkdir(pjoin(self.me_dir, 'Events', run))
@@ -2792,6 +2793,7 @@ calculator."""
                 misc.call(['gzip', output], stdout=devnull, stderr=devnull, 
                                                                      cwd=O_path) 
         self.update_status('End Parton', level='parton', makehtml=False)
+        devnull.close()
 
     ############################################################################ 
     def do_create_gridpack(self, line):
@@ -3890,12 +3892,13 @@ calculator."""
             self.update_status('', level=None)
         except Exception, error:         
             pass
+        devnull = open(os.devnull, 'w')
         try:
-            devnull = os.open(os.devnull, os.O_RDWR) 
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)
         except:
             pass
+        devnull.close()
 
         return super(MadEventCmd, self).do_quit(line)
     
@@ -4650,6 +4653,7 @@ class GridPackCmd(MadEventCmd):
         self.total_jobs = 0
         subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
                    P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
+        devnull = os.open(os.devnull, os.O_RDWR)
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -4661,7 +4665,7 @@ class GridPackCmd(MadEventCmd):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(pjoin(Pdir, match))
             
-            devnull = os.open(os.devnull, os.O_RDWR)
+
             logfile = pjoin(Pdir, 'gen_ximprove.log')
             proc = misc.Popen([pjoin(bindir, 'gen_ximprove')],
                                     stdin=subprocess.PIPE,
@@ -4702,6 +4706,7 @@ class GridPackCmd(MadEventCmd):
         
         
         self.update_status('finish refine', 'parton', makehtml=False)
+        devnull.close()
 
 
 class AskforEditCard(cmd.OneLinePathCompletion):

@@ -3053,7 +3053,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         else:
             misc.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
         # Untar the file
-        returncode = misc.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR, 
+        returncode = misc.call(['tar', '-xzpf', '%s.tgz' % name], cwd=MG5DIR, 
                                      stdout=open(os.devnull, 'w'))
         if returncode:
             raise MadGraph5Error, 'Fail to download correctly the File. Stop'

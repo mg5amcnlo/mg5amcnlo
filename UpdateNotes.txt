@@ -4,6 +4,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       zzww interactions. (See bug #1095603. Thanks to Tim Lu) 
                   OM: Fix problem in the ./bin/mg5 file command when some question are 
                       present in the file.
+                  OM: Fix a crash in multi_run for more than 300 successive runs.
+                      (Thanks to Diptimoy)
                     
 1.5.6 (20/12/12)  JA: Replaced error with warning when there are decay processes
                       without corresponding core processes final state (see 
