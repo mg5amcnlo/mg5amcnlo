@@ -1468,7 +1468,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             return cls.parse_check_output(res,format='tuple')[0][0]
         except IOError as e:
             logging.warning("Error while running MadLoop. Exception = %s"%str(e))
-            return None    
+            raise e 
 
 def evaluate_helicities(process, param_card = None, mg_root="", 
                                                           cmass_scheme = False):
