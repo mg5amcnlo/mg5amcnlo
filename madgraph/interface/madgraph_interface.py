@@ -363,7 +363,7 @@ class HelpToCmd(cmd.HelpCmd):
         
     def help_check(self):
 
-        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition")
+        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition [--energy=]")
         logger.info("-- check a process or set of processes. Options:")
         logger.info("full: Perform all three checks described below:")
         logger.info("   permutation, gauge and lorentz_invariance.")
@@ -378,6 +378,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("If param_card is given, that param_card is used instead")
         logger.info("   of the default values for the model.")
         logger.info("For process syntax, please see help generate")
+        logger.info("the options --energy allows to change the \sqrt(S)")
 
     def help_generate(self):
 
@@ -567,7 +568,10 @@ class CheckValidForCmd(cmd.CheckCmd):
         if any([',' in elem for elem in args]):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
-        self.check_process_format(" ".join(args[1:]))
+        if not args[-1].startswith('--energy='):
+            args.append('--energy=1000')
+        
+        self.check_process_format(" ".join(args[1:-1]))
 
         return param_card
     
@@ -1259,6 +1263,7 @@ class CompleteForCmd(cmd.CompleteCmd):
     def complete_check(self, text, line, begidx, endidx):
         "Complete the check command"
 
+        out = {}
         args = self.split_arg(line[0:begidx])
 
         # Format
@@ -1276,10 +1281,15 @@ class CompleteForCmd(cmd.CompleteCmd):
         model_comp = self.model_completion(text, ' '.join(args[2:]))
 
         if len(args) == 2:
-            return model_comp + self.path_completion(text)
+            out['particles'] = model_comp
+            out['path to param_card'] = self.path_completion(text)
+            out['options'] = self.list_completion(text, ['--energy='])
+            return self.deal_multiple_categories(out)
 
         if len(args) > 2:
-            return model_comp
+            out['particles'] = model_comp
+            out['options'] = self.list_completion(text, ['--energy='])
+            return self.deal_multiple_categories(out)
             
         
     def complete_tutorial(self, text, line, begidx, endidx):
@@ -2330,8 +2340,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Check args validity
         param_card = self.check_check(args)
-
+        energy = float(args[-1].split('=')[1])
+        args = args[:-1]
         line = " ".join(args[1:])
+        
         myprocdef = self.extract_process(line)
 
         # Check that we have something    
@@ -2357,19 +2369,22 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
                                                         param_card = param_card,
-                                                        quick = True)
+                                                        quick = True,
+                                                        energy=energy)
             nb_processes += len(comparisons[0])
 
         if args[0] in ['lorentz_invariance', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
                                                       param_card = param_card,
-                                                      cmass_scheme = mass_scheme)
+                                                      cmass_scheme = mass_scheme,
+                                                      energy=energy)
             nb_processes += len(lorentz_result)
             
         if args[0] in  ['gauge', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
                                                       param_card = param_card,
-                                                      cmass_scheme = mass_scheme)
+                                                      cmass_scheme = mass_scheme,
+                                                      energy=energy)
             nb_processes += len(gauge_result)
 
         if args[0] in  ['gauge', 'full'] and len(self._curr_model.get('gauge')) == 2:
@@ -2397,7 +2412,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
-                                                cmass_scheme = mass_scheme)
+                                                cmass_scheme = mass_scheme,
+                                                energy=energy)
             
             
             # restore previous settings
