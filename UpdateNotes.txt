@@ -4,6 +4,10 @@ Update notes for MadGraph 5 (in reverse time order)
                       zzww interactions. (See bug #1095603. Thanks to Tim Lu) 
                   OM: Fix problem in the ./bin/mg5 file command when some question are 
                       present in the file.
+                  OM+DBF: Change the automatically the electroweak-scheme when passing to 
+                      complex-mass scheme.
+                  OM+DBF: Remove the model sm_mw of the model database. 
+
                     
 1.5.6 (20/12/12)  JA: Replaced error with warning when there are decay processes
                       without corresponding core processes final state (see 
