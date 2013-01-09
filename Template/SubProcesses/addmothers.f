@@ -341,11 +341,26 @@ c
             pb(j,ito(i))=pb(j,i)
           enddo
         enddo
+c
+c     Set correct mother number for clustering info
+c
+        if (icluster(1,1).ne.0) then
+           do i=1,nexternal-2
+              if(icluster(4,i).gt.0)then
+                 icluster(4,i)=ito(icluster(4,i))
+              else
+                 icluster(4,i)=-1
+              endif
+              if(icluster(3,i).eq.0)then
+                 icluster(3,i)=-1
+              endif
+           enddo
+        endif
 
         if(ickkw.gt.0) then
            write(cform,'(a4,i2,a6)') '(a1,',max(nexternal,10),'e15.7)'
            write(buff,cform) '#',(ptclus(i),i=3,nexternal)
-         endif
+        endif
         npart = nexternal+nres
 
       return

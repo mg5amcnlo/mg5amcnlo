@@ -354,6 +354,8 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
+      integer nqcd(lmaxconfigs)
+      include 'config_nqcd.inc'
       
       logical filgrp
       external filgrp
@@ -371,6 +373,12 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
          enddo
       enddo
       do i=start_config,end_config
+         if(nqcd(this_config).ne.nqcd(i)) then
+            if(btest(mlevel,3))
+     $           write(*,*) 'Skipping config ',i,' since nqcd: ',
+     $           nqcd(this_config),nqcd(i)
+            cycle
+         endif
          heavyrad(i)=.false.
 c         write (*,*) ' at graph ',i
          do j=1,nexternal
@@ -383,7 +391,8 @@ c         write (*,*) ' at graph ',i
             enddo
          enddo
          inpids=nexternal
-c         print *,'Inserting graph ',i
+         if(btest(mlevel,3))
+     $        write(*,*) 'Inserting graph ',i
  10      if (filgrp(i,inpids,ipids)) goto 10
          if(btest(mlevel,4).and.heavyrad(i)) then
             write(*,*)' set heavyrad of ',i,' to T'
@@ -415,7 +424,8 @@ c**************************************************************************
       include 'nexternal.inc'
 C $B$ NGRAPHS $E$ !this is a tag for MadWeight
 
-      integer nbw,ibwlist(nexternal)
+c     ibwlist has ijid, propid
+      integer nbw,ibwlist(2,nexternal)
       logical isbw(*)
 
       logical             OnBW(-nexternal:0)     !Set if event is on B.W.
@@ -456,7 +466,8 @@ C $B$ ONBW $B$ !this is a tag for MadWeight
         if(OnBW(i))then
 C $E$ ONBW $E$ !this is a tag for MadWeight
           ibw=ibw+1
-          ibwlist(ibw)=icl(i)
+          ibwlist(1,ibw)=icl(i)
+          ibwlist(2,ibw)=i
           isbw(icl(i))=.true.
 c          print *,'Added BW for resonance ',i,icl(i),this_config
           if(ibw.eq.nbw) return
@@ -478,7 +489,7 @@ c**************************************************************************
       include 'cluster.inc'
       include 'message.inc'
 
-      integer idij,nbw,ibwlist(nexternal),icgs(0:n_max_cg)
+      integer idij,nbw,ibwlist(2,nexternal),icgs(0:n_max_cg)
       logical foundbw
       integer i, ii, j, jj, il, igsbk(0:n_max_cg)
 
@@ -494,7 +505,7 @@ c     if first clustering, set possible graphs
 c        check if we have constraint from onshell resonances
            foundbw=.true.
            do j=1,nbw
-             if(resmap(ibwlist(j),id_cl(iproc,idij,i)))then
+             if(resmap(ibwlist(1,j),id_cl(iproc,idij,i)))then
                cycle
              endif
              foundbw=.false.
@@ -552,8 +563,8 @@ c     output:
 c            true if tree structure identified
 c**************************************************************************
       implicit none
-      include 'run.inc'
       include 'genps.inc'
+      include 'run.inc'
       include 'nexternal.inc'
       include 'maxamps.inc'
       include 'cluster.inc'
@@ -570,7 +581,7 @@ c**************************************************************************
       integer mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
 
-      integer nbw,ibwlist(nexternal)
+      integer nbw,ibwlist(2,nexternal)
       data isbw/n_max_cl*.false./
 
       data (pz(i),i=0,3)/1d0,0d0,0d0,1d0/
@@ -580,6 +591,9 @@ c**************************************************************************
       external findmt
       double precision dj, pydj, djb, pyjb, dot, SumDot, zclus
       external dj, pydj, djb, pyjb, dot, SumDot, zclus, combid
+      integer next4
+      parameter(next4=4*nexternal)
+      data icluster/next4*0/
 
       if (btest(mlevel,1))
      $   write (*,*)'New event'
@@ -592,7 +606,7 @@ c**************************************************************************
 c     Check if any resonances are on the BW, store results in to_checkbw
       call checkbw(nbw,ibwlist,isbw)
       if(btest(mlevel,4).and.nbw.gt.0)
-     $     write(*,*) 'Found BWs: ',(ibwlist(i),i=1,nbw)
+     $     write(*,*) 'Found BWs: ',(ibwlist(1,i),i=1,nbw)
 
 c     initialize index map
       do i=1,nexternal
@@ -682,6 +696,10 @@ c     Make sure that initial-state particles are daughters
          imocl(n)=imap(3,2)
          pt2ijcl(n)=pcl(4,imocl(n))
          zcl(n)=0.
+c        Set info for LH clustering output
+         icluster(1,n)=1
+         icluster(2,n)=3
+         icluster(3,n)=2
          igraphs(0)=1
          igraphs(1)=this_config
          cluster=.true.
@@ -703,6 +721,19 @@ c     combine winner
             write(*,*)'winner ',n,': ',idacl(n,1),'&',idacl(n,2),
      &           ' -> ',minpt2ij,', z = ',zcl(n)
          endif
+c        Set info for LH clustering output
+         icluster(1,n)=imap(iwin,1)
+         icluster(2,n)=imap(jwin,1)
+         icluster(3,n)=0
+         icluster(4,n)=0
+         if (isbw(imocl(n))) then
+            do i=1,nbw
+               if(ibwlist(1,i).eq.imocl(n))then
+                  icluster(4,n)=ibwlist(2,i)
+                  exit
+               endif
+            enddo
+         endif
 c     Reset igraphs with new mother
          if (.not.findmt(imocl(n),igraphs,nbw,ibwlist)) then
             write(*,*) 'cluster.f: Error. Invalid combination.' 
@@ -720,6 +751,8 @@ c     Set mt2ij to m^2+pt^2
      $              ' (cf ',sqrt(pt2ijcl(n)),')'
             endif
             iwinp=imap(3-iwin,2);
+c        Set partner info for LH clustering output
+            icluster(3,n)=imap(3-iwin,1)
             do i=0,3
                pcl(i,imocl(n))=pcl(i,idacl(n,1))-pcl(i,idacl(n,2))
 c            enddo
@@ -798,9 +831,13 @@ c         Make sure that initial-state particle is always among daughters
             idacl(n+1,1)=imap(1,2)
             idacl(n+1,2)=imap(2,2)
             imocl(n+1)=imap(3,2)
-
 c            if(pcl(0,imocl(n)).gt.0d0)then
             pt2ijcl(n+1)=djb(pcl(0,imap(3,2)))
+c        Set info for LH clustering output
+            icluster(1,n+1)=1
+            icluster(2,n+1)=3
+            icluster(3,n+1)=2
+            icluster(4,n+1)=0
             if (btest(mlevel,3)) then
               write(*,*) 'Last vertex is ',imap(1,2),imap(2,2),imap(3,2)
               write(*,*) '            -> ',pt2ijcl(n+1),sqrt(pt2ijcl(n+1))

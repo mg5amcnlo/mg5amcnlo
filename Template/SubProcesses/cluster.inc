@@ -19,12 +19,12 @@ c     resmap gives potential resonances for diagrams
       logical clustered
       common/cl_val/pcl,pt2ijcl,zcl,mt2ij,mt2last,imocl,idacl,igraphs,ipdgcl,
      &    isbw,clustered
+c     variable for LH output of clustering info (R,E,S,I)
+      integer icluster(4,nexternal)
+      common/cl_iclus/icluster
 c     parameters for qcd jets
       double precision ptclus(nexternal)
       common/cl_jets/ptclus
-c     process (i.e. particle identities) chosen if ickkw=2
-      integer iprocset
-      common/cl_iproc/iprocset
 c     parameters for sudakovs
       double precision m_colfac(-6:21),m_dlog(-6:21),m_slog(-6:21),
      &     m_power(-6:21,3,2),m_qmass(21)

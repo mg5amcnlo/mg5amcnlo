@@ -38,3 +38,12 @@ c
 c
 	double precision trunc_max
         parameter (trunc_max=0.01)
+
+c     Parameter for string buffer length for systematics variations info
+        integer s_bufflen
+        parameter (s_bufflen=26+3+(max_particles-1)*9+
+     $                       2*(max_particles-1)*15)
+
+c     Parameter for string buffer length for clustering info
+        integer clus_bufflen
+        parameter (clus_bufflen=43)
