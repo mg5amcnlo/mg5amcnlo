@@ -261,9 +261,19 @@ class MatrixElementEvaluator(object):
         mass = [m.real for m in mass]
         #mass = [math.sqrt(m.real) for m in mass]
 
+
+
         # Make sure energy is large enough for incoming and outgoing particles
         energy = max(energy, sum(mass[:nincoming]) + 200.,
                      sum(mass[nincoming:]) + 200.)
+
+        if nfinal == 1:
+            p = []
+            energy = mass[-1]
+            p.append([energy/2,0,0,energy/2])
+            p.append([energy/2,0,0,-energy/2])
+            p.append([mass[-1],0,0,0])
+            return p, 1.0
 
         e2 = energy**2
         m1 = mass[0]
