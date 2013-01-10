@@ -273,7 +273,7 @@ c     gluon -> 2 gluon splitting: Choose hardest gluon
           ipart(1,imo)=ipart(1,ida2)
           ipart(2,imo)=ipart(2,ida2)
         endif
-      else if(idmo.eq.21.and.idda1.eq.-idda2)then
+      else if(idmo.eq.21)then
 c     gluon -> quark anti-quark: use both, but take hardest as 1
         if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
      $     p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
@@ -479,7 +479,7 @@ C   local variables
 
 c     Variables for keeping track of jets
       logical goodjet(n_max_cl)
-      integer njets,iqjets(0:nexternal-2,2)
+      integer njets,iqjets(nexternal)
       integer fsnum(2),ida(2),imo,jcode
       logical chclusold,fail,increasecode
       save chclusold
@@ -528,6 +528,7 @@ c     Reset chcluster to run_card value
         write(*,*)'  process: ',iproc
         write(*,*)'  graphs (',igraphs(0),'):',(igraphs(i),i=1,igraphs(0))
         write(*,*)'}'
+        write(*,*)'iconfig is ',iconfig
       endif
 
 c     If last clustering is s-channel QCD (e.g. ttbar) use mt2last instead
@@ -565,7 +566,7 @@ c   external particle clustering scales)
          ipart(1,ishft(1,i-1))=i
          ipart(2,ishft(1,i-1))=0
       enddo
-      do n=1,nexternal-2
+      do n=1,nexternal-3
         call ipartupdate(p,imocl(n),idacl(n,1),idacl(n,2),
      $       ipdgcl(1,igraphs(1),iproc),ipart)
       enddo
@@ -588,9 +589,8 @@ c     Prepare beam related variables for scale and jet determination
 
 c   Go through clusterings and set factorization scale points for use in dsig
 c   as well as which FS particles count as jets (from jet vertices)
-      njets=0
-      do i=1,2
-         iqjets(0,i)=0
+      do i=1,nexternal
+         iqjets(i)=0
       enddo
       if (nexternal.eq.3) goto 10
       jcode=1
@@ -599,6 +599,7 @@ c   as well as which FS particles count as jets (from jet vertices)
         do i=1,2
           do j=1,2
             if(idacl(n,i).eq.ibeam(j))then
+c             IS clustering
               ibeam(j)=imocl(n)
               if(n.lt.nexternal-2) then
                  ida(i)=idacl(n,i)
@@ -609,7 +610,6 @@ c   as well as which FS particles count as jets (from jet vertices)
                  ida(3-i)=imocl(n)
                  imo=idacl(n,3-i)
               endif
-c             IS clustering
 c             Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
 c             f1(x1,pt2E) is given by DSIG, just need to set scale.
               if(qcdline(j).and.jfirst(j).eq.0)then
@@ -641,18 +641,14 @@ c             parton vertices again.
                   increasecode=.false.
                endif
 c             Consider t-channel jet radiations as jets only if
-c             FS line is a jet line and it's final state
-              fsnum(1)=ifsno(ida(3-i),ipart)
-              if(goodjet(ida(3-i)).and.fsnum(1).gt.0.and.
-     $           iqjets(njets,1).ne.fsnum(1)) then
-                 njets=njets+1
-                 iqjets(njets,1)=fsnum(1)
+c             FS line is a jet line
+              if(goodjet(ida(3-i))) then
                  if(partonline(j).or.
      $              ipdgcl(ida(3-i),igraphs(1),iproc).eq.21)then
 c                   Need to include gluon to avoid soft singularity
-                    iqjets(njets,2)=1 ! 1 means for sure jet
+                    iqjets(ipart(1,ida(3-i)))=1 ! 1 means for sure jet
                  else
-                    iqjets(njets,2)=jcode ! jcode means possible jet
+                    iqjets(ipart(1,ida(3-i)))=jcode ! jcode means possible jet
                  endif
               endif
 c             Trace QCD line through event
@@ -664,54 +660,51 @@ c             Trace QCD line through event
           enddo
         enddo
         if (imocl(n).ne.ibeam(1).and.imocl(n).ne.ibeam(2)) then
-c           FS clustering
-           if(.not.isqcd(ipdgcl(imocl(n),igraphs(1),iproc)).or.
-     $        .not.isqcd(ipdgcl(idacl(n,1),igraphs(1),iproc)).or.
-     $        .not.isqcd(ipdgcl(idacl(n,2),igraphs(1),iproc))) then
+c          FS clustering
+c          Check QCD jet, take care so it's not a decay
+           if(.not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
+     $        ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)) then
+c          Remove non-gluon jets that lead up to non-jet vertices
+              if(ipart(1,imocl(n)).gt.2)then
+                 if(ipdgcl(ishft(1,ipart(1,imocl(n))-1),igraphs(1),iproc).ne.21)
+     $              iqjets(ipart(1,imocl(n)))=0
+              endif
+              if(ipart(2,imocl(n)).gt.2)then
+                 if(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),iproc).ne.21)
+     $             iqjets(ipart(2,imocl(n)))=0
+              endif
+c          Set goodjet to false for mother
               goodjet(imocl(n))=.false.
               cycle
            endif
-c          Check QCD jet, take care so it's not a decay
-           if(isjetvx(imocl(n),idacl(n,1),idacl(n,2),
-     $        ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2))then
-              fsnum(1)=ifsno(idacl(n,1),ipart)
-              if(isjet(ipdgcl(idacl(n,1),igraphs(1),iproc)).and.
-     $           fsnum(1).gt.0) then
-                 njets=njets+1
-                 iqjets(njets,1)=fsnum(1)
-                 iqjets(njets,2)=1
-              endif
-              fsnum(1)=ifsno(idacl(n,2),ipart)
-              if(isjet(ipdgcl(idacl(n,2),igraphs(1),iproc)).and.
-     $             fsnum(1).gt.0) then
-                 njets=njets+1
-                 iqjets(njets,1)=fsnum(1)
-                 iqjets(njets,2)=1
-              endif
-              goodjet(imocl(n))=
-     $             (isjet(ipdgcl(imocl(n),igraphs(1),iproc)).and.
-     $             goodjet(idacl(n,1)).and.goodjet(idacl(n,1)))
-           else
-              goodjet(imocl(n))=.false.              
+c          This is a jet vertex, so set jet flag for final-state jets
+           fsnum(1)=ifsno(idacl(n,1),ipart)
+           if(isjet(ipdgcl(idacl(n,1),igraphs(1),iproc)).and.
+     $          fsnum(1).gt.0) then
+              iqjets(fsnum(1))=1
            endif
+           fsnum(1)=ifsno(idacl(n,2),ipart)
+           if(isjet(ipdgcl(idacl(n,2),igraphs(1),iproc)).and.
+     $          fsnum(1).gt.0) then
+              iqjets(fsnum(1))=1
+           endif
+           goodjet(imocl(n))=
+     $          (isjet(ipdgcl(imocl(n),igraphs(1),iproc)).and.
+     $          goodjet(idacl(n,1)).and.goodjet(idacl(n,1)))
         endif
       enddo
 
       if (btest(mlevel,4))then
-         write(*,*) 'QCD jets (before): ',(iqjets(i,1),i=1,njets)
-         write(*,*) '    jet status:    ',(iqjets(i,2),i=1,njets)         
+         write(*,*) 'QCD jet status (before): ',(iqjets(i),i=3,nexternal)
       endif
 c     Now take care of possible jets
       if(.not. partonline(1).or..not.partonline(2))then
 c       First reduce jcode by one if one remaining partonline
         if(partonline(1).or.partonline(2)) jcode=jcode-1
 c       There parton emissions with code <= jcode are not jets
-         do i=njets,1,-1
-            if(iqjets(i,2).gt.1.and.iqjets(i,2).le.jcode)then
-               njets=njets-1
-               do j=i,njets
-                  iqjets(j,1)=iqjets(j+1,1)
-               enddo
+         do i=3,nexternal
+            if(iqjets(i).gt.1.and.iqjets(i).le.jcode)then
+               iqjets(i)=0
             endif
          enddo
       endif
@@ -724,39 +717,46 @@ c       There parton emissions with code <= jcode are not jets
      $     ' jlast is ',jlast(1),jlast(2),
      $     ' and jcentral is ',jcentral(1),jcentral(2)
 
-c     Sort external jet numbers
-      if(njets.gt.1) call sortint(njets,iqjets(1,1))
-
-      if (btest(mlevel,3))
-     $     write(*,*) 'QCD jets (final): ',(iqjets(i,1),i=1,njets)
-
+      if (btest(mlevel,3)) then
+         write(*,'(a$)') 'QCD jets (final): '
+         do i=3,nexternal
+            if(iqjets(i).gt.0) write(*,'(i3$)') i
+         enddo
+         write(*,*)
+      endif
       if(njetstore(iconfig).eq.-1) then
 c     Store external jet numbers if first time
-         njetstore(iconfig)=njets
-         do i=1,njets
-            iqjetstore(i,iconfig)=iqjets(i,1)
+         njets=0
+         do i=3,nexternal
+            if(iqjets(i).gt.0)then
+               njets=njets+1
+               iqjetstore(njets,iconfig)=i
+            endif
          enddo
+         njetstore(iconfig)=njets
          if (btest(mlevel,4))
-     $        write(*,*) 'Storing jets: ',(iqjets(i,1),i=1,njets)
+     $        write(*,*) 'Storing jets: ',(iqjetstore(i,iconfig),i=1,njets)
       else
 c     Otherwise, check that we have the right jets
 c     if not, recluster according to iconfig
          fail=.false.
+         njets=0
+         do i=1,nexternal
+            if(iqjets(i).gt.0)then
+               njets=njets+1
+               if (iqjetstore(njets,iconfig).ne.i) fail=.true.
+            endif
+         enddo
          if(njets.ne.njetstore(iconfig)) fail=.true.
-         if(.not.fail) then
-            do i=1,njets
-               if(iqjets(i,1).ne.iqjetstore(i,iconfig)) fail=.true.
-            enddo
-         endif
          if (fail) then
             if (igraphs(1).eq.iconfig) then
                open(unit=26,file='../../../error',status='unknown',err=999)
                write(*,*) 'Error: Failed despite same graph: ',iconfig
-               write(*,*) 'Have jets ',(iqjets(i,1),i=1,njets)
+               write(*,*) 'Have jets (>0)',(iqjets(i),i=1,nexternal)
                write(*,*) 'Should be ',
      $              (iqjetstore(i,iconfig),i=1,njetstore(iconfig))
                write(26,*) 'Error: Failed despite same graph: ',iconfig,
-     $              '. Have jets ',(iqjets(i,1),i=1,njets),
+     $              '. Have jets (>0)',(iqjets(i),i=1,nexternal),
      $              ', should be ',
      $              (iqjetstore(i,iconfig),i=1,njetstore(iconfig))
                stop
@@ -794,22 +794,19 @@ c        Check if any of vertex daughters among jets
             do i=1,2
                fsnum(1)=ifsno(idacl(n,i),ipart)
                if(fsnum(1).gt.0)then
-                  do j=1,njets
-                     if(iqjets(j,1).eq.fsnum(1))then
+                  if(iqjets(fsnum(1)).gt.0)then
 c                       Daughter among jets - check xqcut
-                        if(sqrt(pt2ijcl(n)).lt.xqcut)then
-                           if (btest(mlevel,3))
-     $                          write(*,*) 'Failed xqcut: ',n,
-     $                          ipdgcl(idacl(n,1),igraphs(1),iproc),
-     $                          ipdgcl(idacl(n,2),igraphs(1),iproc),
-     $                          sqrt(pt2ijcl(n))
-                           setclscales=.false.
-                           clustered = .false.
-                           return
-                        endif
-                        exit
+                     if(sqrt(pt2ijcl(n)).lt.xqcut)then
+                        if (btest(mlevel,3))
+     $                       write(*,*) 'Failed xqcut: ',n,
+     $                       ipdgcl(idacl(n,1),igraphs(1),iproc),
+     $                       ipdgcl(idacl(n,2),igraphs(1),iproc),
+     $                       sqrt(pt2ijcl(n))
+                        setclscales=.false.
+                        clustered = .false.
+                        return
                      endif
-                  enddo
+                  endif
                endif
             enddo
          enddo
@@ -956,28 +953,22 @@ c
             do j=1,2
 c              First adjust goodjet based on iqjets
                if(goodjet(ida(i)).and.ipart(j,ida(i)).gt.2)then
-                  fail=.true.
-                  do k=1,njets
-                     if(ipart(j,ida(i)).eq.iqjets(k,1))then
-                        fail=.false.
-                        exit
-                     endif
-                  enddo
-                  if(fail) goodjet(ida(i))=.false.
+                  if(iqjets(ipart(j,ida(i))).eq.0) goodjet(ida(i))=.false.
                endif
 c              Now reset ptclus if jet vertex
-               if(ipart(j,ida(i)).gt.2.and.
-     $              isjetvx(imocl(n),idacl(n,1),idacl(n,2),
+               if(ipart(j,ida(i)).gt.2) then
+                  if(isjetvx(imocl(n),idacl(n,1),idacl(n,2),
      $               ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)
      $              .and.goodjet(ida(i))) then
-                  ptclus(ipart(j,ida(i)))=
-     $                 max(ptclus(ipart(j,ida(i))),dsqrt(pt2ijcl(n)))
-               else if(ptclus(ipart(j,ida(i))).eq.0d0) then
-                  ptclus(ipart(j,ida(i)))=etot
+                     ptclus(ipart(j,ida(i)))=
+     $                    max(ptclus(ipart(j,ida(i))),dsqrt(pt2ijcl(n)))
+                  else if(ptclus(ipart(j,ida(i))).eq.0d0) then
+                     ptclus(ipart(j,ida(i)))=etot
+                  endif
+                  if (btest(mlevel,3))
+     $                 write(*,*) 'Set ptclus for ',ipart(j,ida(i)),
+     $                 ' to ', ptclus(ipart(j,ida(i))),ida(i),goodjet(ida(i))
                endif
-               if (btest(mlevel,3))
-     $              write(*,*) 'Set ptclus for ',ipart(j,ida(i)),
-     $              ' to ', ptclus(ipart(j,ida(i))),ida(i),goodjet(ida(i))
             enddo
          enddo
       enddo

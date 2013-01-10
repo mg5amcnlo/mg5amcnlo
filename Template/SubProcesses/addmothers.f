@@ -26,7 +26,7 @@
       double precision qicl(-nexternal+3:2*nexternal-3), factpm
       double precision xtarget
       data iseed/0/
-      integer lconfig,idij(-nexternal+3:nexternal)
+      integer lconfig,idij(-nexternal+2:nexternal)
 
 c     Variables for combination of color indices (including multipart. vert)
       integer maxcolmp
@@ -185,9 +185,9 @@ c       Daughters
              do j=1,2
                 if(ida(j).gt.0) ida(j)=isym(ida(j),jsym)
              enddo
+c            Set idij (needed to keep track of BWs)
+             if(ickkw.gt.0) idij(i)=combid(idij(ida(1)),idij(ida(2)))
           endif
-c         Set idij (needed to keep track of BWs)
-          if(ickkw.gt.0) idij(i)=combid(idij(ida(1)),idij(ida(2)))
 c       Decide s- or t-channel
           if(i.gt.-nexternal+2.and.
      $         iabs(sprop(numproc,i,lconfig)).gt.0) then ! s-channel propagator
