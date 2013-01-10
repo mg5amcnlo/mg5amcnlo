@@ -2,13 +2,17 @@ Update notes for MadGraph 5 (in reverse time order)
 
 1.5.7 (08/01/13)  OM+JA: Fixed crash linked to model_v4 for processes containing wwww or
                       zzww interactions. (See bug #1095603. Thanks to Tim Lu) 
+                  OM: Fix a bug affecting 2>1 process when the final states particles is 
+                      (outcoming fermion) introduced in version 1.5.0. (Thanks to 
+                      B. Fuks) 
                   OM: Fix problem in the ./bin/mg5 file command when some question are 
                       present in the file.
                   OM: Fix a crash in multi_run for more than 300 successive runs.
                       (Thanks to Diptimoy)
                   OM: Allow to choose the center of mass energy for the check command.
                   OM: small change in the pbs cluster submission (see question #218824)
-                    
+                  OM: Adding possibility to check gauge/lorentz/...for  2>1 processes.                    
+
 1.5.6 (20/12/12)  JA: Replaced error with warning when there are decay processes
                       without corresponding core processes final state (see 
                       Question #216037). If you get this warning, please check
