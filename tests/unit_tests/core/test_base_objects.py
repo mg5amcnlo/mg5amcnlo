@@ -932,41 +932,42 @@ class ModelTest2(unittest.TestCase):
         
         # Check that the Width of the W is not anymore in the external parameter
         # and the yukawa
-        self.assertEqual(len(self.model['parameters'][('external',)]) -4,
+        self.assertEqual(len(self.model['parameters'][('external',)]) -3,
                          len(model['parameters'][('external',)]) )
         
         
-        # Check that the Width of the W is in internal parameter
-        WW = None
-        WComplex = None
-        MW = None
-        for param in model['parameters'][('aEWM1',)]:
-            if param.name not in ['CMASS_MW', 'WW', 'MW']:
-                continue
-            elif param.name == 'CMASS_MW':
-                WComplex = param
-                self.assertFalse(WW)
-            elif param.name == 'WW':
-                WW = param
-            else:
-                MW = param
-                self.assertFalse(WW)
-                self.assertFalse(WComplex)
-        self.assertTrue(WW)
-        self.assertTrue(MW)
-        self.assertTrue(WComplex)
-        # Check that WW and MW are the real/imaginary part
-        self.assertEqual(WW.expr, '-1 * im(CMASS_MW**2) / MW')
-        self.assertEqual('cmath.sqrt(re(%s**2))' % WComplex.expr, MW.expr)
+#        # Check that the Width of the W is in internal parameter
+#        WW = None
+#        WComplex = None
+#        MW = None
+#        for param in model['parameters'][('aEWM1',)]:
+#            if param.name not in ['CMASS_MW', 'WW', 'MW']:
+#                continue
+#            elif param.name == 'CMASS_MW':
+#                WComplex = param
+#                self.assertFalse(WW)
+#            elif param.name == 'WW':
+#                WW = param
+#            else:
+#                MW = param
+#                self.assertFalse(WW)
+#                self.assertFalse(WComplex)
+#        self.assertFalse(WW)
+#        self.assertFalse(MW)
+#        self.assertTrue(WComplex)
+#        # Check that WW and MW are the real/imaginary part
+#        self.assertEqual(WW.expr, '-1 * im(CMASS_MW**2) / MW')
+#        self.assertEqual('cmath.sqrt(re(%s**2))' % WComplex.expr, MW.expr)
         
         # Check that MZ has a complex_mass definition
         # and that the width and the mass are external
         found = 0
         for param in model['parameters'][('external',)]:
-            if param.name in ['WZ','MZ']:
+            if param.name in ['WZ','MZ','WW','MW']:
                 self.assertEqual(param.type, 'real')
                 found += 1
-        self.assertEqual(found, 2)
+                
+        self.assertEqual(found, 4)
         
         found=0
         for param in model['parameters'][tuple([])]:

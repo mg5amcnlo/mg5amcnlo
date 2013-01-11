@@ -630,7 +630,7 @@ class TestCmdShell2(unittest.TestCase,
                 value = line.split('=')[1]
                 value = value. split('GeV')[0]
                 value = eval(value)
-                self.assertAlmostEqual(value, 1.951829785476705e-2)
+                self.assertAlmostEqual(value, 0.019538610404713896)
 
     def test_load_feynman(self):
         """ Test that feynman gauge assignment works """
