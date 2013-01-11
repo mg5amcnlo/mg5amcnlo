@@ -2231,7 +2231,6 @@ def output_stability(stability, mg_root, reusing=False):
         res_str += "|= QP Median accuracy............ %.2e\n"%median(UPS_stability_QP)
         res_str += "|= QP Max accuracy............... %.2e\n"%min(UPS_stability_QP)
         res_str += "|= QP Min accuracy............... %.2e\n"%max(UPS_stability_QP)
-        print "I have UPS=",[stability['QP_stability'][U[0]] for U in UPS]
         (pmed,pmin,pfrac)=loop_direction_test_power(\
                                  [stability['QP_stability'][U[0]] for U in UPS])
         res_str += "|= UPS QP loop_dir test power.... %s,%s\n"\
