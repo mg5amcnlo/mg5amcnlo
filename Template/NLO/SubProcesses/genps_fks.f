@@ -1906,14 +1906,15 @@ c Generate invariant masses for all s-channel branchings of the Born
          smin = (m(itree(1,ibranch))+m(itree(2,ibranch)))**2
          smax = (sqrtshat_born-totalmass+sqrt(smin))**2
 
+         if(smax.lt.smin.or.smax.lt.0.d0.or.smin.lt.0.d0)then
+            write(*,*)'Error #13 in genps_fks.f'
+            write(*,*)smin,smax,ibranch
+            stop
+         endif
+
 c Choose the appropriate s given our constraints smin,smax
          if(qwidth(ibranch).ne.0.d0)then
 c Breit Wigner
-            if(smax.lt.smin.or.smax.lt.0.d0.or.smin.lt.0.d0)then
-               write(*,*)'Error #13 in genps_fks.f'
-               write(*,*)smin,smax,ibranch
-               stop
-            endif
             xm02=qmass(ibranch)**2
             bwmdpl=smax-xm02
             bwmdmn=xm02-smin
