@@ -99,6 +99,39 @@ class FakeInterface(object):
 
 logger = logging.getLogger('madgraph.various.process_checks')
 
+
+# Helper function to boost momentum
+def boost_momenta(p, boost_direction=1, beta=0.5):
+    """boost the set momenta in the 'boost direction' by the 'beta' 
+       factor"""
+    boost_p = []    
+    gamma = 1/ math.sqrt(1 - beta**2)
+    for imp in p:
+        bosst_p = imp[boost_direction]
+        E, px, py, pz = imp
+        boost_imp = []
+        # Energy:
+        boost_imp.append(gamma * E - gamma * beta * bosst_p)
+        # PX
+        if boost_direction == 1:
+            boost_imp.append(-gamma * beta * E + gamma * px)
+        else: 
+            boost_imp.append(px)
+        # PY
+        if boost_direction == 2:
+            boost_imp.append(-gamma * beta * E + gamma * py)
+        else: 
+            boost_imp.append(py)    
+        # PZ
+        if boost_direction == 3:
+            boost_imp.append(-gamma * beta * E + gamma * pz)
+        else: 
+            boost_imp.append(pz) 
+        #Add the momenta to the list
+        boost_p.append(boost_imp)                   
+            
+    return boost_p
+
 #===============================================================================
 # Helper class MatrixElementEvaluator
 #===============================================================================
@@ -1148,6 +1181,10 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         # PS points is also evaluated in quadruple precision
         accuracy_threshold=1.0e-1
         
+        # Number of lorentz transformations to consider for the stability test
+        # (along with the loop direction test which is performed by default)
+        num_rotations = 1
+        
         # Each evaluations is performed in different ways to assess its stability.
         # There are two dictionaries, one for the double precision evaluation
         # and the second one for quadruple precision (if it was needed).
@@ -1245,20 +1282,33 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             """ Write out the specified PS point to the file dir_path/PS.input
             while rotating it if rotation!=0. We consider only rotations of 90
             but one could think of having rotation of arbitrary angle too.
-            rotation=1 => (x'=z,y'=-x,z'=-y)
-            rotation=2 => (x'=-z,y'=y,z'=x)"""
+            The first two possibilities, 1 and 2 are a rotation and boost 
+            along the z-axis so that improve_ps can still work.
+            rotation=0  => No rotation
+            rotation=1  => Z-axis pi/2 rotation
+            rotation=2  => Z-axis pi/4 rotation
+            rotation=3  => Z-axis boost            
+            rotation=4 => (x'=z,y'=-x,z'=-y)
+            rotation=5 => (x'=-z,y'=y,z'=x)"""
             if rotation==0:
                 p_out=copy.copy(ps)
             elif rotation==1:
-                p_out=[[pm[0],pm[3],-pm[1],-pm[2]] for pm in ps]
+                p_out = [[pm[0],-pm[2],pm[1],pm[3]] for pm in ps]
             elif rotation==2:
+                sq2 = math.sqrt(2.0)
+                p_out = [[pm[0],(pm[1]-pm[2])/sq2,(pm[1]+pm[2])/sq2,pm[3]] for pm in ps]
+            elif rotation==3:
+                p_out = boost_momenta(ps, 3)     
+            # From this point the transformations will prevent the
+            # improve_ps script of MadLoop to work.      
+            elif rotation==4:
+                p_out=[[pm[0],pm[3],-pm[1],-pm[2]] for pm in ps]
+            elif rotation==5:
                 p_out=[[pm[0],-pm[3],pm[2],pm[1]] for pm in ps]
             else:
                 raise MadGraph5Error("Rotation id %i not implemented"%rotation)
             
-            return '\n'.join([' '.join(['%.16E'%pi for pi in p]) for p in ps])
-            
-            misc.write_PS_input(os.path.join(dir_path, 'PS.input'),p_out)  
+            return '\n'.join([' '.join(['%.16E'%pi for pi in p]) for p in p_out])
   
         def pick_PS_point(proc):
             """ Randomly generate a PS point and make sure it is eligible. Then
@@ -1352,7 +1402,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 dp_dict['CTModeA']=dp_res[-1]
                 dp_res.append(self.get_me_value(StabChecker,PSPoint,2))
                 dp_dict['CTModeB']=dp_res[-1]
-                for rotation in range(1,3):
+                for rotation in range(1,num_rotations+1):
                     PSPoint = format_PS_point(p,rotation)
                     dp_res.append(self.get_me_value(StabChecker,PSPoint,1))
                     dp_dict['Rotation%i'%rotation]=dp_res[-1]
@@ -1369,7 +1419,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                     qp_dict['CTModeA']=qp_res[-1]
                     qp_res.append(self.get_me_value(StabChecker,PSPoint,5))
                     qp_dict['CTModeB']=qp_res[-1]
-                    for rotation in range(1,3):
+                    for rotation in range(1,num_rotations+1):
                         PSPoint = format_PS_point(p,rotation)
                         qp_res.append(self.get_me_value(StabChecker,PSPoint,4))
                         qp_dict['Rotation%i'%rotation]=qp_res[-1]
@@ -1468,7 +1518,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             return cls.parse_check_output(res,format='tuple')[0][0]
         except IOError as e:
             logging.warning("Error while running MadLoop. Exception = %s"%str(e))
-            return None    
+            raise e 
 
 def evaluate_helicities(process, param_card = None, mg_root="", 
                                                           cmass_scheme = False):
@@ -2088,8 +2138,9 @@ def output_stability(stability, mg_root, reusing=False):
         powers=[]
         for eval in eval_list:
             loop_dir_evals = [eval['CTModeA'],eval['CTModeB']]
+            # CTModeA is the reference so we keep it in too
             other_evals = [eval[key] for key in eval.keys() if key not in \
-                                               ['CTModeA','CTModeB','Accuracy']]
+                                                         ['CTModeB','Accuracy']]
             if accuracy(other_evals)!=0.0 and accuracy(loop_dir_evals)!=0.0:
                 powers.append(accuracy(loop_dir_evals)/accuracy(other_evals))
         
@@ -3056,40 +3107,6 @@ def get_value(process, evaluator, p=None):
     
     if mvalue and mvalue['m2']:
         return {'process':process.base_string(),'value':mvalue,'p':p}
-
-
-
-def boost_momenta(p, boost_direction=1, beta=0.5):
-    """boost the set momenta in the 'boost direction' by the 'beta' 
-       factor"""
-    boost_p = []    
-    gamma = 1/ math.sqrt(1 - beta**2)
-    for imp in p:
-        bosst_p = imp[boost_direction]
-        E, px, py, pz = imp
-        boost_imp = []
-        # Energy:
-        boost_imp.append(gamma * E - gamma * beta * bosst_p)
-        # PX
-        if boost_direction == 1:
-            boost_imp.append(-gamma * beta * E + gamma * px)
-        else: 
-            boost_imp.append(px)
-        # PY
-        if boost_direction == 2:
-            boost_imp.append(-gamma * beta * E + gamma * py)
-        else: 
-            boost_imp.append(py)    
-        # PZ
-        if boost_direction == 3:
-            boost_imp.append(-gamma * beta * E + gamma * pz)
-        else: 
-            boost_imp.append(pz) 
-        #Add the momenta to the list
-        boost_p.append(boost_imp)                   
-            
-    return boost_p
-
 
 def output_lorentz_inv_loop(comparison_results, output='text'):
     """Present the results of a comparison in a nice list format for loop 
