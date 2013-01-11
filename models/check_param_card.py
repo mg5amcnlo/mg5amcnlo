@@ -248,7 +248,7 @@ class ParamCard(dict):
         if isinstance(input_path, str):
             input = open(input_path)
         else:
-            input = input_path # helpfull for the test
+            input = input_path #Use for banner loading and test
 
 
         cur_block = None
@@ -335,19 +335,18 @@ class ParamCard(dict):
                     value =defaultcard[block].get(tuple(lhaid)).value
             else:
                 value =defaultcard[block].get(tuple(lhaid)).value
-            #value = str(value).lower()
             fout.writelines(' %s = %s' % (variable, ('%e' % value).replace('e','d')))
             
         
         
                 
-    def append(self, object):
+    def append(self, obj):
         """add an object to this"""
         
-        assert isinstance(object, Block)
-        self[object.name] = object
-        if not object.name.startswith('decay_table'): 
-            self.order.append(object)
+        assert isinstance(obj, Block)
+        self[obj.name] = obj
+        if not obj.name.startswith('decay_table'): 
+            self.order.append(obj)
         
         
     def has_block(self, name):

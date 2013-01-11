@@ -1,40 +1,24 @@
 !
-! numfunc is called instead of numfuncrec, in this version,
-! only in the multiprecision routines.
-!
- module dimensions 
-  implicit none                    
-  integer, public :: dmns,dmns_d,dmns_c,dmns_b,dmns_a
-  contains
-! 
-  subroutine load_dimensions
-  use maxnumden
-  implicit none
-  dmns  = maxden
-  dmns_a=        2**(maxden-1)
-  dmns_b= dmns_a+2**(maxden-2)
-  dmns_c= dmns_b+2**(maxden-3)
-  dmns_d= dmns_c+2**(maxden-4)
-  end subroutine
- end module dimensions 
+! in this version numfunc or numfuncrec is used if 
+! ext_num_for_r1=.true. or .false, in  ctsinit
 !
  module scale
-  include 'cts_mprec.h'
   implicit none                    
+  private
   include 'cts_dpr.h'
    , public :: roots,limit,musq,muscale
-  integer, public ::  scaloop
-  logical, public :: stablen=.true.
+  integer, public :: scaloop
+  logical, public :: stablen=.true.,ext_num_for_r1=.true.
   include 'cts_dpr.h'
-  , public :: precstablen,n_mp= 0,n_unst= 0,n_tot= 0
+   , public :: precstablen,n_mp= 0,n_unst= 0,n_tot= 0
   include 'cts_dpr.h'
    , public :: llimit= 0.3d0
-  include 'cts_dpc.h' 
-   :: aus
  end module scale
 !
  module qt2value
   include 'cts_mprec.h'
+  implicit none
+  private
   include 'cts_dpc.h'
    , public :: qt2
   include 'cts_mpc.h'
@@ -47,15 +31,17 @@
   use def_propagator                                       
   use def_mp_propagator                                       
   use qt2value
-  use combinatorics
+  use maxnumden 
   implicit none
+  private
+  public :: load_denominators,value,load_vden,dp_allocate_den,mp_allocate_den
   type(propagator), dimension(:), public, allocatable :: den
   type(mp_propagator), dimension(:), public, allocatable :: mp_den
-  integer ierr
   include 'cts_dpc.h'
    , dimension(:,:), public, allocatable :: vden
   include 'cts_mpc.h'
    , dimension(:,:), public, allocatable :: mp_vden
+  integer, private :: ierr
   save den,vden
 !
   interface load_denominators
@@ -85,14 +71,13 @@
    type(propagator), intent(in) :: denvec(0:nden-1)
    include 'cts_dpr.h' 
     :: p
-   integer :: k
-   integer(kind=8) :: twotok
+   integer :: k,kplus1
    if (nden.gt.maxden) stop 'too many denominators in input!'
    call initden(p)
    do k=0,nden-1
-      twotok= string(k+1)
-      den(twotok)=denvec(k)
-      den(twotok)%i=twotok
+      kplus1= k+1
+      den(kplus1)=denvec(k)
+      den(kplus1)%i=kplus1
    enddo
   end subroutine load_dp_denominators
 !
@@ -101,14 +86,13 @@
    type(mp_propagator), intent(in) :: denvec(0:nden-1)
    include 'cts_mpr.h' 
     :: p
-   integer(kind=8) :: twotok
-   integer :: k
+   integer :: k,kplus1
    if (nden.gt.maxden) stop 'too many denominators in input!'
    call initden(p)
    do k=0,nden-1
-      twotok= string(k+1)
-      mp_den(twotok)=denvec(k)
-      mp_den(twotok)%i=twotok
+      kplus1= k+1
+      mp_den(kplus1)=denvec(k)
+      mp_den(kplus1)%i=kplus1
    enddo
   end subroutine load_mp_denominators
 !
@@ -116,9 +100,8 @@
   use dimensions
   include 'cts_dpr.h' 
    :: p
-  integer :: j,kk,k
-  do j= 1,dmns
-   kk= string(j)
+  integer :: kk,k
+  do kk= 1,dmns
    den(kk)%i = -1
    den(kk)%m2= 0.d0
    do k= 0,3
@@ -131,9 +114,8 @@
   use dimensions
   include 'cts_mpr.h' 
    :: p
-  integer :: j,kk,k
-  do j= 1,dmns
-   kk= string(j)
+  integer :: kk,k
+  do kk= 1,dmns
    mp_den(kk)%i = -1
    mp_den(kk)%m2= 0.d0
    do k= 0,3
@@ -182,39 +164,80 @@
 !
   subroutine dp_allocate_den
    use dimensions
+   use maxsolutions
    allocate (vden(1:dmns_a, max_solutions), stat=ierr)
    allocate (den(1:dmns_a), stat=ierr)
   end subroutine dp_allocate_den
 !
   subroutine mp_allocate_den
    use dimensions
+   use maxsolutions
    allocate (mp_vden(1:dmns_a, max_solutions), stat=ierr)
    allocate (mp_den(1:dmns_a), stat=ierr)
   end subroutine mp_allocate_den
 !
-  subroutine dp_load_vden(q,i,j)
+  subroutine dp_load_vden(q,i,j,p0,m20)
+   use tensor_operations  
    include 'cts_dpc.h'
     , intent(in), dimension(0:3) :: q
+   include 'cts_dpr.h'
+    , intent(in), dimension(0:3) :: p0
+   include 'cts_dpc.h'
+    :: m20
+   include 'cts_dpc.h'
+    :: ps(0:3),psq(0:3),pspsq,res 
    integer, intent(in) :: i,j
-   if (den(i)%i.gt.0) vden(i,j) = value(den(i),q)
+   integer :: k
+!!   if (den(i)%i.gt.0) vden(i,j) = value(den(i),q)
+   do k= 0,3
+    ps(k)  = den(i)%p(k)-p0(k)
+    psq(k) = ps(k)+2.d0*(q(k)+p0(k))
+   enddo
+   call contr(ps,psq,pspsq)
+   res= m20-den(i)%m2
+   res= res+pspsq
+   vden(i,j)= res
   end subroutine dp_load_vden
 !
-  subroutine mp_load_vden(q,i,j)
+  subroutine mp_load_vden(q,i,j,p0,m20)
+   use tensor_operations  
    include 'cts_mpc.h'
     , intent(in), dimension(0:3) :: q
+   include 'cts_mpr.h'
+    , intent(in), dimension(0:3) :: p0
+   include 'cts_mpc.h'
+    :: m20
+   include 'cts_mpc.h'
+    :: ps(0:3),psq(0:3),pspsq,res 
    integer, intent(in) :: i,j
-   if (mp_den(i)%i.gt.0) mp_vden(i,j) = value(mp_den(i),q)
+   integer :: k
+!!   if (mp_den(i)%i.gt.0) mp_vden(i,j) = value(mp_den(i),q)
+   do k= 0,3
+    ps(k)  = den(i)%p(k)-p0(k)
+    psq(k) = ps(k)+2.d0*(q(k)+p0(k))
+   enddo
+   call contr(ps,psq,pspsq)
+   res= m20-den(i)%m2
+   res= res+pspsq
+   mp_vden(i,j)= res
   end subroutine mp_load_vden
+!
  end module denominators
 !
  module cuttings
+  include 'cts_mprec.h'
   use tensor_operations  
   use def_solcut
   use def_mp_solcut
   use denominators
   use constants
+  use def_propagator                                       
+  use def_mp_propagator                                       
+  use qt2value
   implicit none
-  integer, private :: i,j,kk
+  private
+  public :: cut 
+  integer, private :: i,kk
   interface cut
    module procedure dp_cutting4
    module procedure dp_cutting3
@@ -384,8 +407,6 @@
     :: cc,ca3,cb3,root,cb3p,cb3m,al1,al2,bet,gm,z
    include 'cts_dpc.h'
     , dimension(0:3) :: l1,l2,l3,l4
-   include 'cts_dpc.h' 
-    :: ps(0:3),psq(0:3),pspsq,res 
    integer :: k
 !
    p0= den0%p 
@@ -464,25 +485,14 @@
 !  computing all denominators at the solutions
 ! 
    do i= 1,2
-    do j= 1,dmns
-     kk= string(j)
+    do kk= 1,dmns
      if (kk.eq.den0%i.or. &
          kk.eq.den1%i.or. &
          kk.eq.den2%i.or. &
          kk.eq.den3%i) then
       vden(kk,i)= c0(p)
      else
-! comment
-!      call load_vden(cut4%q(:,i),kk,i)
-      do k= 0,3
-       ps(k)  = den(kk)%p(k)-p0(k)
-       psq(k) = ps(k)+2.d0*(cut4%q(k,i)+p0(k))
-      enddo
-      call contr(ps,psq,pspsq)
-      res= den0%m2-den(kk)%m2
-      res= res+pspsq
-      vden(kk,i)= res
-! comment
+      call load_vden(cut4%q(:,i),kk,i,p0,den0%m2)
      endif 
     enddo
    enddo
@@ -507,8 +517,6 @@
     :: x10,x20,x3,x4,q3caus
    include 'cts_dpc.h'
     :: cc,tau,ca3,al1,al2,bet,gm,z,cc4 
-   include 'cts_dpc.h'
-    :: ps(0:3),psq(0:3),pspsq,res 
    include 'cts_dpc.h'
     , dimension(0:3)  :: l1,l2,l3,l4
    integer :: k,nsol
@@ -550,7 +558,7 @@
     cut3%l4(i)= l4(i)
    enddo
    cc4= cc**4
-   if  (abs(cc4).gt.tiny(p)) then
+   if  (abs(cc4).gt.my_tiny(p)) then
     phi= atan2(dimag(cc4),dreal(cc4))
    else
     phi= 0.d0
@@ -707,24 +715,13 @@
 !  computing all denominators at the solutions
 ! 
    do i= 1,nsol
-    do j= 1,dmns
-     kk= string(j)
+    do kk= 1,dmns
      if (kk.eq.den0%i.or. &
          kk.eq.den1%i.or. &
          kk.eq.den2%i) then
       vden(kk,i)= c0(p)
      else
-! comment
-!      call load_vden(cut3%q(:,i),kk,i)
-      do k= 0,3
-       ps(k)  = den(kk)%p(k)-p0(k)
-       psq(k) = ps(k)+2.d0*(cut3%q(k,i)+p0(k))
-      enddo
-      call contr(ps,psq,pspsq)
-      res= den0%m2-den(kk)%m2
-      res= res+pspsq
-      vden(kk,i)= res
-! comment
+      call load_vden(cut3%q(:,i),kk,i,p0,den0%m2)
      endif 
     enddo
    enddo
@@ -750,8 +747,6 @@
     :: yv0,yvsigma,yvlambda,y3,y4
    include 'cts_dpc.h' 
     :: tau,taul,cc3,al,al2,bet,gm,cf0,cflambda,cfsigma,q2caus
-   include 'cts_dpc.h' 
-    :: ps(0:3),psq(0:3),pspsq,res 
    include 'cts_dpc.h'
     , dimension(0:3)  :: l1,l2,l3,l4
 
@@ -825,7 +820,7 @@
    if (dmr.eq.-1) then
 ! comment: later on b_4-b_8 not to be computed with rational=.true. 
     cc3= cf0**3
-    if  (abs(cc3).gt.tiny(p)) then
+    if  (abs(cc3).gt.my_tiny(p)) then
      phi= atan2(dimag(cc3),dreal(cc3))
     else
      phi= 0.d0
@@ -834,7 +829,7 @@
     cut2%tau= tau
     nsol= 9
     cc3= cflambda**2
-    if  (abs(cc3).gt.tiny(p)) then
+    if  (abs(cc3).gt.my_tiny(p)) then
      phi= atan2(dimag(cc3),dreal(cc3))
     else
      phi= 0.d0
@@ -881,7 +876,7 @@
     enddo
    elseif (dmr.eq.0) then
     cc3= cf0**3
-    if  (abs(cc3).gt.tiny(p)) then
+    if  (abs(cc3).gt.my_tiny(p)) then
      phi= atan2(dimag(cc3),dreal(cc3))
     else
      phi= 0.d0
@@ -899,7 +894,7 @@
     else
      nsol= 9
      cc3= cflambda**2
-     if  (abs(cc3).gt.tiny(p)) then
+     if  (abs(cc3).gt.my_tiny(p)) then
       phi= atan2(dimag(cc3),dreal(cc3))
      else
       phi= 0.d0
@@ -948,7 +943,7 @@
    elseif (dmr.eq.1) then
     nsol= 4
     cc3= cf0**2
-    if  (abs(cc3).gt.tiny(p)) then
+    if  (abs(cc3).gt.my_tiny(p)) then
      phi= atan2(dimag(cc3),dreal(cc3))
     else
      phi= 0.d0
@@ -991,23 +986,12 @@
 !  computing all denominators at the solutions
 ! 
    do i= 1,nsol
-    do j= 1,dmns
-     kk= string(j)
+    do kk= 1,dmns
      if (kk.eq.den0%i.or. &
          kk.eq.den1%i) then
       vden(kk,i)= c0(p)
      else
-! comment
-!      call load_vden(cut2%q(:,i),kk,i)
-      do k= 0,3
-       ps(k)  = den(kk)%p(k)-p0(k)
-       psq(k) = ps(k)+2.d0*(cut2%q(k,i)+p0(k))
-      enddo
-      call contr(ps,psq,pspsq)
-      res= den0%m2-den(kk)%m2
-      res= res+pspsq
-      vden(kk,i)= res
-! comment
+      call load_vden(cut2%q(:,i),kk,i,p0,den0%m2)
      endif 
     enddo
    enddo
@@ -1031,8 +1015,6 @@
    integer, intent(in) :: dmr
    include 'cts_dpc.h'
     , dimension(0:3)  :: l1,l2,l3,l4
-   include 'cts_dpc.h' 
-    :: ps(0:3),psq(0:3),pspsq,res 
    logical :: computing=.true.
    save computing,v,k
    if (computing) then
@@ -1081,22 +1063,11 @@
 !  computing all denominators at the solutions
 ! 
    do i= 1,nsol
-    do j= 1,dmns
-     kk= string(j)
+    do kk= 1,dmns
      if (kk.eq.den0%i) then
       vden(kk,i)= c0(p)
      else
-! comment
-!      call load_vden(cut1%q(:,i),kk,i)
-      do ky= 0,3
-       ps(ky)  = den(kk)%p(ky)-p0(ky)
-       psq(ky) = ps(ky)+2.d0*(cut1%q(ky,i)+p0(ky))
-      enddo
-      call contr(ps,psq,pspsq)
-      res= den0%m2-den(kk)%m2
-      res= res+pspsq
-      vden(kk,i)= res
-! comment
+      call load_vden(cut1%q(:,i),kk,i,p0,den0%m2)
      endif 
     enddo
    enddo
@@ -1119,8 +1090,6 @@
     :: cf0
    include 'cts_dpc.h'
     , dimension(0:3)  :: l1,l2,l3,l4
-   include 'cts_dpc.h' 
-    :: ps(0:3),psq(0:3),pspsq,res 
    integer :: ky,nsol
    logical :: computing=.true.
    save computing,v,k,l3,l4 
@@ -1208,22 +1177,11 @@
 !  computing all denominators at the solutions
 ! 
    do i= 1,nsol
-    do j= 1,dmns
-     kk= string(j)
+    do kk= 1,dmns
      if (kk.eq.den0%i) then
       vden(kk,i)= c0(p)
      else
-! comment
-!      call load_vden(cut1%q(:,i),kk,i)
-      do ky= 0,3
-       ps(ky)  = den(kk)%p(ky)-p0(ky)
-       psq(ky) = ps(ky)+2.d0*(cut1%q(ky,i)+p0(ky))
-      enddo
-      call contr(ps,psq,pspsq)
-      res= den0%m2-den(kk)%m2
-      res= res+pspsq
-      vden(kk,i)= res
-! comment
+      call load_vden(cut1%q(:,i),kk,i,p0,den0%m2)
      endif 
     enddo
    enddo
@@ -1327,15 +1285,14 @@
 !  computing all denominators at the solutions
 ! 
    do i= 1,2
-    do j= 1,dmns
-     kk= string(j)
+    do kk= 1,dmns
      if (kk.eq.den0%i.or. &
          kk.eq.den1%i.or. &
          kk.eq.den2%i.or. &
          kk.eq.den3%i) then
       mp_vden(kk,i)= c0(p)
      else
-      call load_vden(cut4%q(:,i),kk,i)
+      call load_vden(cut4%q(:,i),kk,i,p0,den0%m2)
      endif 
     enddo
    enddo
@@ -1360,8 +1317,6 @@
     :: x10,x20,x3,x4,q3caus
    include 'cts_mpc.h'
     :: cc,tau,ca3,al1,al2,bet,gm,z,cc4 
-   include 'cts_mpc.h'
-    :: ps(0:3),psq(0:3),pspsq,res 
    include 'cts_mpc.h'
     , dimension(0:3)  :: l1,l2,l3,l4
    integer :: k,nsol
@@ -1403,7 +1358,7 @@
     cut3%l4(i)= l4(i)
    enddo
    cc4= cc**4
-   if  (abs(cc4).gt.mp_tiny(p)) then
+   if  (abs(cc4).gt.my_tiny(p)) then
     rpart= (cc4+conjg(cc4))/2.d0  
     ipart= (cc4-conjg(cc4))/(2.d0*ci(p))  
     phi= atan2(ipart,rpart) 
@@ -1562,24 +1517,13 @@
 !  computing all denominators at the solutions
 ! 
    do i= 1,nsol  
-    do j= 1,dmns
-     kk= string(j)
+    do kk= 1,dmns
      if (kk.eq.den0%i.or. &
          kk.eq.den1%i.or. &
          kk.eq.den2%i) then
       mp_vden(kk,i)= c0(p)
      else
-! comment
-!      call load_vden(cut3%q(:,i),kk,i)
-      do k= 0,3
-       ps(k)  = mp_den(kk)%p(k)-p0(k)
-       psq(k) = ps(k)+2.d0*(cut3%q(k,i)+p0(k))
-      enddo
-      call contr(ps,psq,pspsq)
-      res= den0%m2-mp_den(kk)%m2
-      res= res+pspsq
-      mp_vden(kk,i)= res
-! comment
+      call load_vden(cut3%q(:,i),kk,i,p0,den0%m2)
      endif 
     enddo
    enddo
@@ -1605,8 +1549,6 @@
     :: yv0,yvsigma,yvlambda,y3,y4
    include 'cts_mpc.h'
     :: tau,taul,cc3,al,al2,bet,gm,cf0,cflambda,cfsigma,q2caus
-   include 'cts_mpc.h'
-    :: ps(0:3),psq(0:3),pspsq,res 
    include 'cts_mpc.h'
     , dimension(0:3)  :: l1,l2,l3,l4
 
@@ -1681,7 +1623,7 @@
    if (dmr.eq.-1) then
 ! comment: later on b_4-b_8 not to be computed with rational=.true. 
     cc3= cf0**3
-    if  (abs(cc3).gt.mp_tiny(p)) then
+    if  (abs(cc3).gt.my_tiny(p)) then
      rpart= (cc3+conjg(cc3))/2.d0  
      ipart= (cc3-conjg(cc3))/(2.d0*ci(p))  
      phi= atan2(ipart,rpart)
@@ -1692,7 +1634,7 @@
     cut2%tau= tau
     nsol= 9
     cc3= cflambda**2
-    if  (abs(cc3).gt.mp_tiny(p)) then
+    if  (abs(cc3).gt.my_tiny(p)) then
      rpart= (cc3+conjg(cc3))/2.d0  
      ipart= (cc3-conjg(cc3))/(2.d0*ci(p))  
      phi= atan2(ipart,rpart)
@@ -1741,7 +1683,7 @@
     enddo
    elseif (dmr.eq.0) then
     cc3= cf0**3
-    if  (abs(cc3).gt.mp_tiny(p)) then
+    if  (abs(cc3).gt.my_tiny(p)) then
      rpart= (cc3+conjg(cc3))/2.d0  
      ipart= (cc3-conjg(cc3))/(2.d0*ci(p))  
      phi= atan2(ipart,rpart)
@@ -1761,7 +1703,7 @@
     else
      nsol= 9
      cc3= cflambda**2
-     if  (abs(cc3).gt.mp_tiny(p)) then
+     if  (abs(cc3).gt.my_tiny(p)) then
       rpart= (cc3+conjg(cc3))/2.d0  
       ipart= (cc3-conjg(cc3))/(2.d0*ci(p))  
       phi= atan2(ipart,rpart)
@@ -1812,7 +1754,7 @@
    elseif (dmr.eq.1) then
     nsol= 4
     cc3= cf0**2
-    if  (abs(cc3).gt.mp_tiny(p)) then
+    if  (abs(cc3).gt.my_tiny(p)) then
      rpart= (cc3+conjg(cc3))/2.d0  
      ipart= (cc3-conjg(cc3))/(2.d0*ci(p))  
      phi= atan2(ipart,rpart)
@@ -1857,23 +1799,12 @@
 !  computing all denominators at the solutions
 ! 
    do i= 1,nsol
-    do j= 1,dmns
-     kk= string(j)
+    do kk= 1,dmns
      if (kk.eq.den0%i.or. &
          kk.eq.den1%i) then
       mp_vden(kk,i)= c0(p)
      else
-! comment
-!      call load_vden(cut2%q(:,i),kk,i)
-      do k= 0,3
-       ps(k)  = mp_den(kk)%p(k)-p0(k)
-       psq(k) = ps(k)+2.d0*(cut2%q(k,i)+p0(k))
-      enddo
-      call contr(ps,psq,pspsq)
-      res= den0%m2-mp_den(kk)%m2
-      res= res+pspsq
-      mp_vden(kk,i)= res
-! comment
+      call load_vden(cut2%q(:,i),kk,i,p0,den0%m2)
      endif 
     enddo
    enddo
@@ -1897,8 +1828,6 @@
    integer, intent(in) :: dmr
    include 'cts_mpc.h'
     , dimension(0:3)  :: l1,l2,l3,l4
-   include 'cts_mpc.h'
-    :: ps(0:3),psq(0:3),pspsq,res 
    logical :: computing=.true.
    save computing,v,k
    if (computing) then
@@ -1947,19 +1876,11 @@
 !  computing all denominators at the solutions
 ! 
    do i= 1,nsol
-    do j= 1,dmns
-     kk= string(j)
+    do kk= 1,dmns
      if (kk.eq.den0%i) then
       mp_vden(kk,i)= c0(p)
      else
-      do ky= 0,3
-       ps(ky)  = mp_den(kk)%p(ky)-p0(ky)
-       psq(ky) = ps(ky)+2.d0*(cut1%q(ky,i)+p0(ky))
-      enddo
-      call contr(ps,psq,pspsq)
-      res= den0%m2-mp_den(kk)%m2
-      res= res+pspsq
-      mp_vden(kk,i)= res
+      call load_vden(cut1%q(:,i),kk,i,p0,den0%m2)
      endif 
     enddo
    enddo
@@ -1982,8 +1903,6 @@
     :: cf0
    include 'cts_mpc.h'
     , dimension(0:3)  :: l1,l2,l3,l4
-   include 'cts_mpc.h' 
-    :: ps(0:3),psq(0:3),pspsq,res 
    integer :: ky,nsol
    logical :: computing=.true.
    save computing,v,k,l3,l4 
@@ -2071,22 +1990,11 @@
 !  computing all denominators at the solutions
 ! 
    do i= 1,nsol
-    do j= 1,dmns
-     kk= string(j)
+    do kk= 1,dmns
      if (kk.eq.den0%i) then
       mp_vden(kk,i)= c0(p)
      else
-! comment
-!      call load_vden(cut1%q(:,i),kk,i)
-      do ky= 0,3
-       ps(ky)  = mp_den(kk)%p(ky)-p0(ky)
-       psq(ky) = ps(ky)+2.d0*(cut1%q(ky,i)+p0(ky))
-      enddo
-      call contr(ps,psq,pspsq)
-      res= den0%m2-mp_den(kk)%m2
-      res= res+pspsq
-      mp_vden(kk,i)= res
-! comment
+      call load_vden(cut1%q(:,i),kk,i,p0,den0%m2)
      endif 
     enddo
    enddo
@@ -2095,13 +2003,23 @@
  end module cuttings
 !
  module coefficients
+  include 'cts_mprec.h'
   use cuttings
   use dimensions
+  use constants
+  use def_solcut
+  use def_mp_solcut
+  use denominators
+  use qt2value
+  use tensor_operations
   implicit none
+  private
+  public :: get_coefficients,dp_allocate_arrays,mp_allocate_arrays
+  integer, private :: ierr
 !
 ! variables for the rational terms
 !
-  logical, private :: inf=.false.
+  logical, private :: inf=.false.,inf_sv
   include 'cts_dpc.h'
    , public :: rat1,save_rat1 
   include 'cts_mpc.h'
@@ -2114,13 +2032,13 @@
   include 'cts_dpc.h'
    , dimension(:,:), public, allocatable :: save_dcoeff
   include 'cts_dpc.h'
-   , dimension(:,:), public, allocatable :: tvec,p0vec
+   , dimension(:,:), public, allocatable :: tvec,p0vecd
   include 'cts_mpc.h'
    , dimension(:,:), public, allocatable :: mp_dcoeff
   include 'cts_mpc.h'
    , dimension(:,:), public, allocatable :: save_mp_dcoeff
   include 'cts_mpc.h'
-   , dimension(:,:), public, allocatable :: mp_tvec,mp_p0vec
+   , dimension(:,:), public, allocatable :: mp_tvec,mp_p0vecd
 !
 ! variables for the 3-point sector:
 !
@@ -2131,16 +2049,19 @@
   include 'cts_dpc.h'
    , dimension(:,:), public, allocatable :: save_ccoeff
   include 'cts_dpc.h'
+   , dimension(:,:), public, allocatable :: p0vecc
+  include 'cts_dpc.h'
    , dimension(:,:), public, allocatable :: l3vec,l4vec    
   include 'cts_dpc.h'
    , dimension(:), public, allocatable   :: c4_rat1    
-! also for the 2,1-point sectors
   include 'cts_mpc.h'
    , dimension(:,:), public, allocatable :: mp_ccoeff
   include 'cts_mpc.h'
    , dimension(:,:), public, allocatable :: mp_ccoeff_2
   include 'cts_mpc.h'
    , dimension(:,:), public, allocatable :: save_mp_ccoeff
+  include 'cts_mpc.h'
+   , dimension(:,:), public, allocatable :: mp_p0vecc
   include 'cts_mpc.h'
    , dimension(:,:), public, allocatable :: mp_l3vec,mp_l4vec 
   include 'cts_mpc.h'
@@ -2155,7 +2076,11 @@
   include 'cts_dpc.h'
    , dimension(:,:), public, allocatable :: save_bcoeff
   include 'cts_dpc.h'
-   , dimension(:,:), public, allocatable :: vveca,vvecb
+   , dimension(:,:), public, allocatable :: p0vecb
+  include 'cts_dpc.h'
+   , dimension(:,:), public, allocatable :: l5vec,l6vec    
+  include 'cts_dpc.h'
+   , dimension(:,:), public, allocatable :: vvecb
   include 'cts_dpc.h'
    , dimension(:), public, allocatable :: vveck1,b_rat1,b3_rat1
   include 'cts_mpc.h'
@@ -2165,7 +2090,11 @@
   include 'cts_mpc.h'
    , dimension(:,:), public, allocatable :: save_mp_bcoeff
   include 'cts_mpc.h'
-   , dimension(:,:), public, allocatable :: mp_vveca, mp_vvecb  
+   , dimension(:,:), public, allocatable :: mp_p0vecb
+  include 'cts_mpc.h'
+   , dimension(:,:), public, allocatable :: mp_l5vec,mp_l6vec 
+  include 'cts_mpc.h'
+   , dimension(:,:), public, allocatable :: mp_vvecb  
   include 'cts_mpc.h'
    , dimension(:), public, allocatable :: mp_vveck1,mp_b_rat1,mp_b3_rat1
 !
@@ -2178,6 +2107,12 @@
   include 'cts_dpc.h'
    , dimension(:,:), public, allocatable :: save_acoeff
   include 'cts_dpc.h'
+   , dimension(:,:), public, allocatable :: p0veca
+  include 'cts_dpc.h'
+   , dimension(:,:), public, allocatable :: l7vec,l8vec    
+  include 'cts_dpc.h'
+   , dimension(:,:), public, allocatable :: vveca
+  include 'cts_dpc.h'
    , dimension(:,:), public, allocatable :: kvec
   include 'cts_dpc.h'
    , dimension(:), public, allocatable   :: a_rat1
@@ -2186,21 +2121,29 @@
   include 'cts_mpc.h'
    , dimension(:,:), public, allocatable :: save_mp_acoeff
   include 'cts_mpc.h'
+   , dimension(:,:), public, allocatable :: mp_p0veca
+  include 'cts_mpc.h'
+   , dimension(:,:), public, allocatable :: mp_l7vec,mp_l8vec 
+  include 'cts_mpc.h'
+   , dimension(:,:), public, allocatable :: mp_vveca  
+  include 'cts_mpc.h'
    , dimension(:,:), public, allocatable :: mp_kvec
   include 'cts_mpc.h'
    , dimension(:), public, allocatable   :: mp_a_rat1
 !
-  save dcoeff,tvec,p0vec
+  save dcoeff,tvec,p0veca,p0vecb,p0vecc,p0vecd
   save ccoeff,ccoeff_2,l3vec,l4vec,c4_rat1
-  save bcoeff,bcoeff_2,vveca,vvecb,vveck1,b_rat1,b3_rat1
-  save acoeff,acoeff_2,kvec,a_rat1
-  save mp_dcoeff,mp_tvec,mp_p0vec
+  save bcoeff,bcoeff_2,l5vec,l6vec
+  save vveca,vvecb,vveck1,b_rat1,b3_rat1
+  save acoeff,acoeff_2,kvec,a_rat1,l7vec,l8vec
+  save mp_dcoeff,mp_tvec,mp_p0veca,mp_p0vecb,mp_p0vecc,mp_p0vecd
   save mp_ccoeff,mp_ccoeff_2,mp_l3vec,mp_l4vec,mp_c4_rat1
-  save mp_bcoeff,mp_bcoeff_2,mp_vveca,mp_vvecb,mp_vveck1,mp_b_rat1,mp_b3_rat1
+  save mp_bcoeff,mp_bcoeff_2,mp_l5vec,mp_l6vec
+  save mp_vveca,mp_vvecb,mp_vveck1,mp_b_rat1,mp_b3_rat1
   save mp_acoeff,mp_kvec,mp_a_rat1
   save save_dcoeff,save_ccoeff,save_bcoeff,save_acoeff
   save save_mp_dcoeff,save_mp_ccoeff,save_mp_bcoeff,save_mp_acoeff
-  save rat1,save_rat1,mp_rat1,save_mp_rat1 
+  save rat1,save_rat1,mp_rat1,save_mp_rat1,mp_l7vec,mp_l8vec 
 !
   interface get_coefficients
     module procedure dp_get_coefficients
@@ -2301,33 +2244,33 @@
 !
   subroutine dp_allocate_arrays(np)
   integer, intent(in) :: np
-  call dp_allocate_genvec
   if (np.ge.4) call dp_allocate_vectorsd
   if (np.ge.3) call dp_allocate_vectorsc
   if (np.ge.2) call dp_allocate_vectorsb
   if (np.ge.1) call dp_allocate_vectorsa
   end subroutine dp_allocate_arrays
 !
-  subroutine dp_allocate_genvec
-   allocate (p0vec(0:3,dmns_d), stat=ierr)
-   allocate (l3vec(0:3,dmns_c), stat=ierr)  
-   allocate (l4vec(0:3,dmns_c), stat=ierr)  
-     allocate (c4_rat1(dmns_c), stat=ierr)  
-  end subroutine dp_allocate_genvec
-!
   subroutine dp_allocate_vectorsd
+   allocate      (p0vecd(0:3,dmns_d), stat=ierr)
    allocate      (dcoeff(0:1,dmns_d), stat=ierr)
    allocate (save_dcoeff(0:1,dmns_d), stat=ierr)
    allocate        (tvec(0:3,dmns_d), stat=ierr)
   end subroutine dp_allocate_vectorsd
 !
   subroutine dp_allocate_vectorsc
+   allocate      (p0vecc(0:3,dmns_c), stat=ierr)
+   allocate       (l3vec(0:3,dmns_c), stat=ierr)  
+   allocate       (l4vec(0:3,dmns_c), stat=ierr)  
    allocate      (ccoeff(0:6,dmns_c), stat=ierr)
    allocate    (ccoeff_2(0:2,dmns_c), stat=ierr)
    allocate (save_ccoeff(0:6,dmns_c), stat=ierr)
+   allocate         (c4_rat1(dmns_c), stat=ierr)  
   end subroutine dp_allocate_vectorsc
 !
   subroutine dp_allocate_vectorsb
+   allocate      (p0vecb(0:3,dmns_b), stat=ierr)
+   allocate       (l5vec(0:3,dmns_b), stat=ierr)  
+   allocate       (l6vec(0:3,dmns_b), stat=ierr)  
    allocate      (bcoeff(0:8,dmns_b), stat=ierr)
    allocate        (bcoeff_2(dmns_b), stat=ierr)
    allocate (save_bcoeff(0:8,dmns_b), stat=ierr)
@@ -2339,6 +2282,9 @@
 !
   subroutine dp_allocate_vectorsa
    allocate  (vveca(0:3,dmns_a),      stat=ierr)
+   allocate (p0veca(0:3,dmns_a),      stat=ierr)
+   allocate  (l7vec(0:3,dmns_a),      stat=ierr)  
+   allocate  (l8vec(0:3,dmns_a),      stat=ierr)  
    allocate (acoeff(0:4,dmns_a),      stat=ierr)
    allocate   (acoeff_2(dmns_a),      stat=ierr)
    allocate (save_acoeff(0:4,dmns_a), stat=ierr)
@@ -2348,33 +2294,33 @@
 !
   subroutine mp_allocate_arrays(np)
   integer, intent(in) :: np
-  call mp_allocate_genvec
   if (np.ge.4) call mp_allocate_vectorsd
   if (np.ge.3) call mp_allocate_vectorsc
   if (np.ge.2) call mp_allocate_vectorsb
   if (np.ge.1) call mp_allocate_vectorsa
   end subroutine mp_allocate_arrays
 !
-  subroutine mp_allocate_genvec
-   allocate (mp_p0vec(0:3,dmns_d), stat=ierr)
-   allocate (mp_l3vec(0:3,dmns_c), stat=ierr)  
-   allocate (mp_l4vec(0:3,dmns_c), stat=ierr)  
-   allocate   (mp_c4_rat1(dmns_c), stat=ierr)  
-  end subroutine mp_allocate_genvec
-!
   subroutine mp_allocate_vectorsd
+   allocate (mp_p0vecd(0:3,dmns_d), stat=ierr)
    allocate (mp_dcoeff(0:1,dmns_d), stat=ierr)
    allocate (save_mp_dcoeff(0:1,dmns_d), stat=ierr)
    allocate (mp_tvec(0:3,dmns_d), stat=ierr)
   end subroutine mp_allocate_vectorsd
 !
   subroutine mp_allocate_vectorsc
+   allocate      (mp_p0vecc(0:3,dmns_c), stat=ierr)
+   allocate       (mp_l3vec(0:3,dmns_c), stat=ierr)  
+   allocate       (mp_l4vec(0:3,dmns_c), stat=ierr)  
    allocate      (mp_ccoeff(0:6,dmns_c), stat=ierr)
    allocate    (mp_ccoeff_2(0:2,dmns_c), stat=ierr)
    allocate (save_mp_ccoeff(0:6,dmns_c), stat=ierr)
+   allocate         (mp_c4_rat1(dmns_c), stat=ierr)  
   end subroutine mp_allocate_vectorsc
 !
   subroutine mp_allocate_vectorsb
+   allocate      (mp_p0vecb(0:3,dmns_b), stat=ierr)
+   allocate       (mp_l5vec(0:3,dmns_b), stat=ierr)  
+   allocate       (mp_l6vec(0:3,dmns_b), stat=ierr)  
    allocate      (mp_bcoeff(0:8,dmns_b), stat=ierr)
    allocate        (mp_bcoeff_2(dmns_b), stat=ierr)
    allocate (save_mp_bcoeff(0:8,dmns_b), stat=ierr)
@@ -2387,6 +2333,9 @@
   subroutine mp_allocate_vectorsa
    allocate  (mp_vveca(0:3,dmns_a)     , stat=ierr)
    allocate (save_mp_acoeff(0:4,dmns_a), stat=ierr)
+   allocate (mp_p0veca(0:3,dmns_a),      stat=ierr)
+   allocate  (mp_l7vec(0:3,dmns_a),      stat=ierr)  
+   allocate  (mp_l8vec(0:3,dmns_a),      stat=ierr)  
    allocate (mp_acoeff(0:4,dmns_a),      stat=ierr)
    allocate   (mp_kvec(0:3,dmns_a),      stat=ierr) 
    allocate     (mp_a_rat1(dmns_a),      stat=ierr) 
@@ -2414,7 +2363,7 @@
    include 'cts_dpc.h' 
     :: rat_aus,rat_aus1,rat_aus2
    include 'cts_dpc.h' 
-    :: qt2_0,qt2_1,qt2_2,qt2_inf
+    :: qt2_0,qt2_1,qt2_2,qt2_inf,qt2_sv
    integer :: k,ib,iteration,itermax,dmr1
    logical :: computing=.true.
    include 'cts_dpc.h' 
@@ -2439,7 +2388,7 @@
    endif
    qt2_1=  ql*ql*0.001d0   
    qt2_2=  ql*ql*0.003d0   
-   qt2_inf =  ql*ql*1.d14
+   qt2_inf =  ql*ql*1.d8
    qt2= qt2_0
    rational=.false.              
    if (number_propagators.ge.4) call getd(p,numdummy,number_propagators,dmr)
@@ -2510,7 +2459,6 @@
       call load_rat(iteration)
     enddo
    elseif (dmr.eq.-1) then
-    dmr1= dmr
 !-comment-new
 !    do iteration= 1,3
     do iteration= 1,2
@@ -2526,11 +2474,11 @@
       else
        qt2 = qt2_2
       endif
-      if (number_propagators.ge.4) call getd(p,numdummy,number_propagators,dmr1)
-      if (number_propagators.ge.3) call getc(p,numdummy,number_propagators,dmr1)
+      if (number_propagators.ge.4) call getd(p,numdummy,number_propagators,dmr)
+      if (number_propagators.ge.3) call getc(p,numdummy,number_propagators,dmr)
       if ((iteration.eq.1).or.(iteration.eq.3)) then  
-       if (number_propagators.ge.2)call getb(p,numdummy,number_propagators,dmr1)
-       if (number_propagators.ge.1)call geta(p,numdummy,number_propagators,dmr1)
+       if (number_propagators.ge.2)call getb(p,numdummy,number_propagators,dmr)
+       if (number_propagators.ge.1)call geta(p,numdummy,number_propagators,dmr)
       endif
       call load_set(iteration+1)
     enddo
@@ -2542,33 +2490,41 @@
     rat1_b = 0.d0
     rat1_a = 0.d0
     if (number_propagators.ge.1) then
-     do k= 1,nbn1(number_propagators)
-      ib= mbn1(number_propagators,k)
+     do ib= 1,dmns_1
       rat1_a = rat1_a-0.5d0*a_rat1(ib)*(aset(ib,2)-aset(ib,1))/qt2_1 
      enddo
     endif
     if (number_propagators.ge.2) then
-     do k= 1,nbn2(number_propagators)
-      ib= mbn2(number_propagators,k)
+     do ib= 1,dmns_2
       rat1_b = rat1_b-0.5d0*b_rat1(ib)*(bset(ib,2) -bset(ib,1) )/qt2_1 
       rat1_b = rat1_b+     b3_rat1(ib)*(bset3(ib,2)-bset3(ib,1))/qt2_1/12.d0 
      enddo
     endif
     if (number_propagators.ge.3) then
-     do k= 1,nbn3(number_propagators)
-      ib= mbn3(number_propagators,k)
+     do ib= 1,dmns_3
       rat_aus= (cset(ib,2)-cset(ib,3))/2.d0/qt2_1
       rat1_c= rat1_c-0.5d0*rat_aus 
       rat1_c= rat1_c-c4_rat1(ib)*(cset(ib,2)-cset(ib,1) &
               -rat_aus*qt2_1)/qt2_1/qt2_1/12.d0
      enddo
     endif
-    if (number_propagators.ge.4) then
-     do k= 1,nbn4(number_propagators)
-      ib= mbn4(number_propagators,k)
+    if (number_propagators.eq.4) then
+     do ib= 1,dmns_4
       rat_aus= (dset(ib,2)-dset(ib,3))/2.d0/qt2_1
       rat1_d= rat1_d-(dset(ib,2)-dset(ib,1)-rat_aus*qt2_1)/qt2_1/qt2_1/6.d0
      enddo
+    endif
+    if (number_propagators.gt.4) then
+     inf_sv= inf
+     qt2_sv= qt2
+     inf=.true. 
+     qt2= qt2_inf
+     call getd(p,numdummy,number_propagators,dmr)
+     do ib= 1,dmns_4
+      rat1_d= rat1_d-dcoeff(0,ib)/qt2/qt2/6.d0
+     enddo
+     qt2= qt2_sv
+     inf= inf_sv 
     endif
     rat1= rat1_d+rat1_c+rat1_b+rat1_a
     call load_rat(1)
@@ -2581,22 +2537,19 @@
 !!$    rat1_b = 0.d0
 !!$    rat1_a = 0.d0
 !!$    if (number_propagators.ge.1) then
-!!$     do k= 1,nbn1(number_propagators)
-!!$      ib= mbn1(number_propagators,k)
+!!$     do ib= 1,dmns_1
 !!$      rat1_a = rat1_a-0.5d0*a_rat1(ib)*(aset(ib,4)- aset(ib,1))/qt2_2 
 !!$     enddo
 !!$    endif
 !!$    if (number_propagators.ge.2) then
-!!$     do k= 1,nbn2(number_propagators)
-!!$      ib= mbn2(number_propagators,k)
+!!$     do ib= 1,dmns_2
 !!$      rat1_b = rat1_b-0.5d0*b_rat1(ib)*(bset(ib,4)- bset(ib,1) )/qt2_2 
 !!$      rat1_b = rat1_b+     b3_rat1(ib)*(bset3(ib,4)-bset3(ib,1))/qt2_2/12.d0 
 !!$     enddo
 !!$    endif
 !!$    rat_aus = (qt2_2-qt2_1)
 !!$    if (number_propagators.ge.3) then
-!!$     do k= 1,nbn3(number_propagators)
-!!$      ib= mbn3(number_propagators,k)
+!!$     do ib= 1,dmns_3
 !!$      rat_aus1= (cset(ib,2)-cset(ib,1))/qt2_1
 !!$      rat_aus2= (cset(ib,4)-cset(ib,1))/qt2_2
 !!$      rat1_c = rat1_c-0.5d0*(rat_aus1*qt2_2-rat_aus2*qt2_1)/rat_aus 
@@ -2604,8 +2557,7 @@
 !!$     enddo
 !!$    endif
 !!$    if (number_propagators.ge.4) then
-!!$     do k= 1,nbn4(number_propagators)
-!!$      ib= mbn4(number_propagators,k)
+!!$     do ib= 1,dmns_4
 !!$      rat_aus1= (dset(ib,2)-dset(ib,1))/qt2_1
 !!$      rat_aus2= (dset(ib,4)-dset(ib,1))/qt2_2
 !!$      rat1_d  = rat1_d-(rat_aus2-rat_aus1)/rat_aus/6.d0
@@ -2631,8 +2583,7 @@
     if (number_propagators.ge.1) then
      print*,'   '
      print*,'   '
-     do k= 1,nbn1(number_propagators)
-      ib= mbn1(number_propagators,k)
+     do ib= 1,dmns_1
       print*,'     acoeff(0,',ib,')=',     acoeff(0,ib)
       print*,'save_acoeff(0,',ib,')=',save_acoeff(0,ib)
      enddo
@@ -2640,8 +2591,7 @@
     if (number_propagators.ge.2) then
      print*,'   '
      print*,'   '
-     do k= 1,nbn2(number_propagators)
-      ib= mbn2(number_propagators,k)
+     do ib= 1,dmns_2
       print*,'     bcoeff(0,',ib,')=',     bcoeff(0,ib)
       print*,'save_bcoeff(0,',ib,')=',save_bcoeff(0,ib)
       print*,'     bcoeff(3,',ib,')=',     bcoeff(3,ib)
@@ -2651,8 +2601,7 @@
     if (number_propagators.ge.3) then
      print*,'   '
      print*,'   '
-     do k= 1,nbn3(number_propagators)
-      ib= mbn3(number_propagators,k)
+     do ib= 1,dmns_3
       print*,'     ccoeff(0,',ib,')=',     ccoeff(0,ib)
       print*,'save_ccoeff(0,',ib,')=',save_ccoeff(0,ib)
      enddo
@@ -2660,8 +2609,7 @@
     if (number_propagators.ge.4) then
      print*,'   '
      print*,'   '
-     do k= 1,nbn4(number_propagators)
-      ib= mbn4(number_propagators,k)
+     do ib= 1,dmns_4
       print*,'     dcoeff(0,',ib,')=',     dcoeff(0,ib)
       print*,'save_dcoeff(0,',ib,')=',save_dcoeff(0,ib)
      enddo
@@ -2682,8 +2630,7 @@
    include 'cts_dpc.h'
     , intent(out) :: rat1_b
    rat1_b= 0.d0
-   do k= 1,nbn2(number_propagators)
-     ib= mbn2(number_propagators,k)
+   do ib= 1,dmns_2
      bcoeff_2(ib)= (bcoeff(0,ib)-save_bcoeff(0,ib))/qt2  
      rat1_b= rat1_b+bcoeff_2(ib)*b_rat1(ib)
    enddo
@@ -2694,8 +2641,7 @@
    include 'cts_dpc.h'
     , intent(out) :: rat1_c
    rat1_c= 0.d0
-   do k= 1,nbn3(number_propagators)
-     ib= mbn3(number_propagators,k)
+   do ib= 1,dmns_3
      ccoeff_2(0,ib)= (ccoeff(0,ib)-save_ccoeff(0,ib))/qt2  
      ccoeff_2(1,ib)= (ccoeff(1,ib)-save_ccoeff(1,ib))/qt2  
      ccoeff_2(2,ib)= (ccoeff(2,ib)-save_ccoeff(2,ib))/qt2  
@@ -2722,18 +2668,17 @@
 !  contribution from the a sector:
 !
    if (iteration.eq.1) then
-    do i= 1,nbn1(np)
-     ib= mbn1(np,i)
+    do ib= 1,dmns_1
      do k= 0,3
-      qp0(k)= q(k)+p0vec(k,ib) 
+      qp0(k)= q(k)+p0veca(k,ib) 
      enddo
-     call contr(l3vec(:,ib),qp0,l3qp0)
-     call contr(l4vec(:,ib),qp0,l4qp0)
+     call contr(l7vec(:,ib),qp0,l3qp0)
+     call contr(l8vec(:,ib),qp0,l4qp0)
      call contr(vveca(:,ib),qp0,vqp0)
      call contr(kvec(:,ib),qp0,kqp0)
      sumdena= 0.d0 
      do k= 2,np
-      sumdena= sumdena+(value(den(bn1(np,k,i)),q)-qt2)
+      sumdena= sumdena+(value(den(bbn1(k,ib)),q)-qt2)
      enddo
      start= start+(                    &
               save_acoeff(0,ib)        & 
@@ -2743,18 +2688,17 @@
              +save_acoeff(4,ib)*l4qp0)*sumdena 
     enddo  
    else
-    do i= 1,nbn1(np)
-     ib= mbn1(np,i)
+    do ib= 1,dmns_1
      do k= 0,3
-      qp0(k)= q(k)+p0vec(k,ib) 
+      qp0(k)= q(k)+p0veca(k,ib) 
      enddo
-     call contr(l3vec(:,ib),qp0,l3qp0)
-     call contr(l4vec(:,ib),qp0,l4qp0)
+     call contr(l7vec(:,ib),qp0,l3qp0)
+     call contr(l8vec(:,ib),qp0,l4qp0)
      call contr(vveca(:,ib),qp0,vqp0)
      call contr(kvec(:,ib),qp0,kqp0)
      sumdena= 0.d0 
      do k= 2,np
-      sumdena= sumdena+(value(den(bn1(np,k,i)),q)-qt2)
+      sumdena= sumdena+(value(den(bbn1(k,ib)),q)-qt2)
      enddo
      start= start+(               &
               acoeff(0,ib)        & 
@@ -2767,17 +2711,16 @@
 !
 !  contribution from the b sector:
 !
-   do i= 1,nbn2(np)
-    ib= mbn2(np,i)
+   do ib= 1,dmns_2
     do k= 0,3
-     qp0(k)= q(k)+p0vec(k,ib) 
+     qp0(k)= q(k)+p0vecb(k,ib) 
     enddo
-    call contr(l3vec(:,ib),qp0,l3qp0)
-    call contr(l4vec(:,ib),qp0,l4qp0)
+    call contr(l5vec(:,ib),qp0,l3qp0)
+    call contr(l6vec(:,ib),qp0,l4qp0)
     call contr(vvecb(:,ib),qp0,vqp0)
     sumdenb= 0.d0 
     do k= 3,np
-     sumdenb= sumdenb+(value(den(bn2(np,k,i)),q)-qt2)
+     sumdenb= sumdenb+(value(den(bbn2(k,ib)),q)-qt2)
     enddo
     if (iteration.eq.1) start= start+save_bcoeff(0,ib)
     if (iteration.eq.2) start= start+(bset(ib,2)+bset(ib,3))/2.d0
@@ -2795,10 +2738,9 @@
 !
 !  contribution from the c sector:
 !
-   do i= 1,nbn3(np)
-    ib= mbn3(np,i)
+   do ib= 1,dmns_3
     do k= 0,3 
-     qp0(k)= q(k)+p0vec(k,ib) 
+     qp0(k)= q(k)+p0vecc(k,ib) 
     enddo
     call contr(l3vec(:,ib),qp0,l3qp0)
     call contr(l4vec(:,ib),qp0,l4qp0)
@@ -2862,27 +2804,23 @@
    subroutine load_set(n)
    integer, intent(in) :: n
    if (number_propagators.ge.1) then
-    do k= 1,nbn1(number_propagators)
-     ib= mbn1(number_propagators,k)
+    do ib= 1,dmns_1
      aset(ib,n)= acoeff(0,ib)
     enddo
    endif
    if (number_propagators.ge.2) then
-    do k= 1,nbn2(number_propagators)
-     ib= mbn2(number_propagators,k)
+    do ib= 1,dmns_2
      bset (ib,n)= bcoeff(0,ib)
      bset3(ib,n)= bcoeff(3,ib)
     enddo
    endif
    if (number_propagators.ge.3) then
-    do k= 1,nbn3(number_propagators)
-     ib= mbn3(number_propagators,k)
+    do ib= 1,dmns_3
      cset(ib,n)= ccoeff(0,ib)
     enddo
    endif
    if (number_propagators.ge.4) then
-    do k= 1,nbn4(number_propagators)
-     ib= mbn4(number_propagators,k)
+    do ib= 1,dmns_4
      dset(ib,n)= dcoeff(0,ib)
     enddo
    endif
@@ -2898,20 +2836,17 @@
     :: r_aus,r_aus1,r_aus2,r_aus3
    if     (dmr.ge.0) then
     if (number_propagators.ge.1) then
-     do k= 1,nbn1(number_propagators)
-      ib= mbn1(number_propagators,k)
+     do ib= 1,dmns_1
       acoeff(0,ib) = aset(ib,3)
      enddo
     endif
     if (number_propagators.ge.2) then
-     do k= 1,nbn2(number_propagators)
-      ib= mbn2(number_propagators,k)
+     do ib= 1,dmns_2
       bcoeff(0,ib)= (bset(ib,2)+bset(ib,3))/2.d0 
      enddo
     endif
     if (number_propagators.ge.3) then
-     do k= 1,nbn3(number_propagators)
-      ib= mbn3(number_propagators,k)
+     do ib= 1,dmns_3
       ccoeff(0,ib)= (cset(ib,2)+cset(ib,3))/2.d0
       ccoeff(1,ib)= save_ccoeff(1,ib) ! to put it to the true value  
       ccoeff(2,ib)= save_ccoeff(2,ib) ! to put it to the true value
@@ -2931,29 +2866,25 @@
     r_aus = (qt2_2-qt2_1)
     r_aus3= (qt2_2+qt2_1)
     if (number_propagators.ge.1) then
-     do k= 1,nbn1(number_propagators)
-      ib= mbn1(number_propagators,k)
+     do ib= 1,dmns_1
       acoeff(0,ib)= (qt2_2*aset(ib,2)-qt2_1*aset(ib,4))/r_aus
      enddo
     endif
     if (number_propagators.ge.2) then
-     do k= 1,nbn2(number_propagators)
-      ib= mbn2(number_propagators,k)
+     do ib= 1,dmns_2
       bcoeff(0,ib)= (qt2_2* bset(ib,2) -qt2_1*bset(ib,4))/r_aus
       bcoeff(3,ib)= (qt2_2*bset3(ib,2)-qt2_1*bset3(ib,4))/r_aus
      enddo
     endif
     if (number_propagators.ge.3) then
-     do k= 1,nbn3(number_propagators)
-      ib= mbn3(number_propagators,k)
+     do ib= 1,dmns_3
       r_aus1= (cset(ib,2)+cset(ib,3))/2.d0
       r_aus2= cset(ib,4)-qt2_2*(cset(ib,2)-cset(ib,3))/2.d0/qt2_1
       ccoeff(0,ib)= (r_aus1*qt2_2**2-r_aus2*qt2_1**2)/r_aus/r_aus3
      enddo
     endif
     if (number_propagators.ge.4) then
-     do k= 1,nbn4(number_propagators)
-      ib= mbn4(number_propagators,k)
+     do ib= 1,dmns_4
       r_aus1= (dset(ib,2)+dset(ib,3))/2.d0
       r_aus2= dset(ib,4)-qt2_2*(dset(ib,2)-dset(ib,3))/2.d0/qt2_1
       dcoeff(0,ib)= (r_aus1*qt2_2**2-r_aus2*qt2_1**2)/r_aus/r_aus3
@@ -2990,7 +2921,7 @@
    include 'cts_mpc.h' 
     :: rat_aus,rat_aus1,rat_aus2
    include 'cts_mpc.h' 
-    :: qt2_0,qt2_1,qt2_2,qt2_inf
+    :: qt2_0,qt2_1,qt2_2,qt2_inf,mpqt2_sv
    integer :: k,ib,iteration,dmr1
    logical :: computing=.true.
    include 'cts_mpc.h' 
@@ -3012,7 +2943,7 @@
    endif
    qt2_1=  ql*ql*0.001d0    
    qt2_2=  ql*ql*0.003d0   
-   qt2_inf =  ql*ql*1.d14
+   qt2_inf =  ql*ql*1.d16 
    mpqt2= qt2_0
    rational=.false.              
    if (number_propagators.ge.4) call getd(p,numdummy,number_propagators,dmr)
@@ -3085,7 +3016,6 @@
       call load_rat(iteration)
     enddo
    elseif (dmr.eq.-1) then
-    dmr1= dmr
 !-comment-new
 !    do iteration= 1,3
     do iteration= 1,2
@@ -3101,11 +3031,11 @@
       else
        mpqt2 = qt2_2
       endif
-      if (number_propagators.ge.4) call getd(p,numdummy,number_propagators,dmr1)
-      if (number_propagators.ge.3) call getc(p,numdummy,number_propagators,dmr1)
+      if (number_propagators.ge.4) call getd(p,numdummy,number_propagators,dmr)
+      if (number_propagators.ge.3) call getc(p,numdummy,number_propagators,dmr)
       if ((iteration.eq.1).or.(iteration.eq.3)) then  
-       if (number_propagators.ge.2)call getb(p,numdummy,number_propagators,dmr1)
-       if (number_propagators.ge.1)call geta(p,numdummy,number_propagators,dmr1)
+       if (number_propagators.ge.2)call getb(p,numdummy,number_propagators,dmr)
+       if (number_propagators.ge.1)call geta(p,numdummy,number_propagators,dmr)
       endif
       call load_set(iteration+1)
     enddo
@@ -3117,33 +3047,41 @@
     rat1_b = 0.d0
     rat1_a = 0.d0
     if (number_propagators.ge.1) then
-     do k= 1,nbn1(number_propagators)
-      ib= mbn1(number_propagators,k)
+     do ib= 1,dmns_1
       rat1_a = rat1_a-0.5d0*mp_a_rat1(ib)*(aset(ib,2)-aset(ib,1))/qt2_1 
      enddo
     endif
     if (number_propagators.ge.2) then
-     do k= 1,nbn2(number_propagators)
-      ib= mbn2(number_propagators,k)
+     do ib= 1,dmns_2
       rat1_b = rat1_b-0.5d0*mp_b_rat1(ib)*(bset(ib,2) -bset(ib,1))/qt2_1 
       rat1_b = rat1_b+     mp_b3_rat1(ib)*(bset3(ib,2)-bset3(ib,1))/qt2_1/12.d0 
      enddo
     endif
     if (number_propagators.ge.3) then
-     do k= 1,nbn3(number_propagators)
-      ib= mbn3(number_propagators,k)
+     do ib= 1,dmns_3
       rat_aus= (cset(ib,2)-cset(ib,3))/2.d0/qt2_1
       rat1_c= rat1_c-0.5d0*rat_aus 
       rat1_c= rat1_c-mp_c4_rat1(ib)*(cset(ib,2)-cset(ib,1) &
              -rat_aus*qt2_1)/qt2_1/qt2_1/12.d0
      enddo
     endif
-    if (number_propagators.ge.4) then
-     do k= 1,nbn4(number_propagators)
-      ib= mbn4(number_propagators,k)
+    if (number_propagators.eq.4) then
+     do ib= 1,dmns_4
       rat_aus= (dset(ib,2)-dset(ib,3))/2.d0/qt2_1
       rat1_d = rat1_d-(dset(ib,2)-dset(ib,1)-rat_aus*qt2_1)/qt2_1/qt2_1/6.d0
      enddo
+    endif
+    if (number_propagators.gt.4) then
+     inf_sv= inf
+     mpqt2_sv= mpqt2
+     inf=.true.
+     mpqt2= qt2_inf
+     call getd(p,numdummy,number_propagators,dmr)
+     do ib= 1,dmns_4
+      rat1_d= rat1_d-mp_dcoeff(0,ib)/mpqt2/mpqt2/6.d0
+     enddo
+     mpqt2= mpqt2_sv
+     inf= inf_sv 
     endif
     mp_rat1= rat1_d+rat1_c+rat1_b+rat1_a
     call load_rat(1)
@@ -3156,22 +3094,19 @@
 !!$    rat1_b = 0.d0
 !!$    rat1_a = 0.d0
 !!$    if (number_propagators.ge.1) then
-!!$     do k= 1,nbn1(number_propagators)
-!!$      ib= mbn1(number_propagators,k)
+!!$     do ib= 1,dmns_1
 !!$      rat1_a = rat1_a-0.5d0*mp_a_rat1(ib)*(aset(ib,4)- aset(ib,1))/qt2_2 
 !!$     enddo
 !!$    endif
 !!$    if (number_propagators.ge.2) then
-!!$     do k= 1,nbn2(number_propagators)
-!!$      ib= mbn2(number_propagators,k)
+!!$     do ib= 1,dmns_2
 !!$      rat1_b = rat1_b-0.5d0*mp_b_rat1(ib)*(bset(ib,4)- bset(ib,1))/qt2_2 
 !!$      rat1_b = rat1_b+     mp_b3_rat1(ib)*(bset3(ib,4)-bset3(ib,1))/qt2_2/12.d0 
 !!$     enddo
 !!$    endif
 !!$    rat_aus = (qt2_2-qt2_1)
 !!$    if (number_propagators.ge.3) then
-!!$     do k= 1,nbn3(number_propagators)
-!!$      ib= mbn3(number_propagators,k)
+!!$     do ib= 1,dmns_3
 !!$      rat_aus1= (cset(ib,2)-cset(ib,1))/qt2_1
 !!$      rat_aus2= (cset(ib,4)-cset(ib,1))/qt2_2
 !!$      rat1_c = rat1_c-0.5d0*(rat_aus1*qt2_2-rat_aus2*qt2_1)/rat_aus 
@@ -3179,8 +3114,7 @@
 !!$     enddo
 !!$    endif
 !!$    if (number_propagators.ge.4) then
-!!$     do k= 1,nbn4(number_propagators)
-!!$      ib= mbn4(number_propagators,k)
+!!$     do ib= 1,dmns_4
 !!$      rat_aus1= (dset(ib,2)-dset(ib,1))/qt2_1
 !!$      rat_aus2= (dset(ib,4)-dset(ib,1))/qt2_2
 !!$      rat1_d  = rat1_d-(rat_aus2-rat_aus1)/rat_aus/6.d0
@@ -3203,11 +3137,12 @@
    contains
 !   
    subroutine compare
+    include 'cts_dpc.h' 
+     :: aus
     if (number_propagators.ge.1) then
      print*,'   '
      print*,'   '
-     do k= 1,nbn1(number_propagators)
-      ib= mbn1(number_propagators,k)
+     do ib= 1,dmns_1
       aus= mp_acoeff(0,ib)
       print*,'     mp_acoeff(0,ib)=',aus     
       aus= save_mp_acoeff(0,ib)
@@ -3217,8 +3152,7 @@
     if (number_propagators.ge.2) then
      print*,'   '
      print*,'   '
-     do k= 1,nbn2(number_propagators)
-      ib= mbn2(number_propagators,k)
+     do ib= 1,dmns_2
       aus= mp_bcoeff(0,ib)
       print*,'     mp_bcoeff(0,ib)=',aus     
       aus= save_mp_bcoeff(0,ib)
@@ -3232,8 +3166,7 @@
     if (number_propagators.ge.3) then
      print*,'   '
      print*,'   '
-     do k= 1,nbn3(number_propagators)
-      ib= mbn3(number_propagators,k)
+     do ib= 1,dmns_3
       aus= mp_ccoeff(0,ib)
       print*,'     mp_ccoeff(0,ib)=',aus     
       aus= save_mp_ccoeff(0,ib)
@@ -3243,8 +3176,7 @@
     if (number_propagators.ge.4) then
      print*,'   '
      print*,'   '
-     do k= 1,nbn4(number_propagators)
-      ib= mbn4(number_propagators,k)
+     do ib= 1,dmns_4
       aus= mp_dcoeff(0,ib)
       print*,'     mp_dcoeff(0,',ib,')=',aus
       aus= save_mp_dcoeff(0,ib)
@@ -3273,8 +3205,7 @@
    include 'cts_mpc.h'
     , intent(out) :: rat1_b
    rat1_b= 0.d0
-   do k= 1,nbn2(number_propagators)
-     ib= mbn2(number_propagators,k)
+   do ib= 1,dmns_2
      mp_bcoeff_2(ib)= (mp_bcoeff(0,ib)-save_mp_bcoeff(0,ib))/mpqt2
      rat1_b= rat1_b+mp_bcoeff_2(ib)*mp_b_rat1(ib)
    enddo
@@ -3285,8 +3216,7 @@
    include 'cts_mpc.h'
     , intent(out) :: rat1_c
    rat1_c= 0.d0
-   do k= 1,nbn3(number_propagators)
-     ib= mbn3(number_propagators,k)
+   do ib= 1,dmns_3
      mp_ccoeff_2(0,ib)= (mp_ccoeff(0,ib)-save_mp_ccoeff(0,ib))/mpqt2  
      mp_ccoeff_2(1,ib)= (mp_ccoeff(1,ib)-save_mp_ccoeff(1,ib))/mpqt2  
      mp_ccoeff_2(2,ib)= (mp_ccoeff(2,ib)-save_mp_ccoeff(2,ib))/mpqt2  
@@ -3316,18 +3246,17 @@
 !  contribution from the a sector:
 !
    if (iteration.eq.1) then
-    do i= 1,nbn1(np)
-     ib= mbn1(np,i)
+    do ib= 1,dmns_1
      do k= 0,3
-      qp0(k)= mpq(k)+mp_p0vec(k,ib) 
+      qp0(k)= mpq(k)+mp_p0veca(k,ib) 
      enddo
-     call contr(mp_l3vec(:,ib),qp0,l3qp0)
-     call contr(mp_l4vec(:,ib),qp0,l4qp0)
+     call contr(mp_l7vec(:,ib),qp0,l3qp0)
+     call contr(mp_l8vec(:,ib),qp0,l4qp0)
      call contr(mp_vveca(:,ib),qp0,vqp0)
      call contr(mp_kvec(:,ib),qp0,kqp0)
      sumdena= 0.d0 
      do k= 2,np
-      sumdena= sumdena+(value(mp_den(bn1(np,k,i)),mpq)-mpqt2)
+      sumdena= sumdena+(value(mp_den(bbn1(k,ib)),mpq)-mpqt2)
      enddo
      start= start+(                    &
               save_mp_acoeff(0,ib)        & 
@@ -3337,18 +3266,17 @@
              +save_mp_acoeff(4,ib)*l4qp0)*sumdena 
     enddo  
    else
-    do i= 1,nbn1(np)
-     ib= mbn1(np,i)
+    do ib= 1,dmns_1
      do k= 0,3
-      qp0(k)= mpq(k)+mp_p0vec(k,ib) 
+      qp0(k)= mpq(k)+mp_p0veca(k,ib) 
      enddo
-     call contr(mp_l3vec(:,ib),qp0,l3qp0)
-     call contr(mp_l4vec(:,ib),qp0,l4qp0)
+     call contr(mp_l7vec(:,ib),qp0,l3qp0)
+     call contr(mp_l8vec(:,ib),qp0,l4qp0)
      call contr(mp_vveca(:,ib),qp0,vqp0)
      call contr(mp_kvec(:,ib),qp0,kqp0)
      sumdena= 0.d0 
      do k= 2,np
-      sumdena= sumdena+(value(mp_den(bn1(np,k,i)),mpq)-mpqt2)
+      sumdena= sumdena+(value(mp_den(bbn1(k,ib)),mpq)-mpqt2)
      enddo
      start= start+(                  &
               mp_acoeff(0,ib)        & 
@@ -3361,17 +3289,16 @@
 !
 !  contribution from the b sector:
 !
-   do i= 1,nbn2(np)
-    ib= mbn2(np,i)
+   do ib= 1,dmns_2
     do k= 0,3
-     qp0(k)= mpq(k)+mp_p0vec(k,ib) 
+     qp0(k)= mpq(k)+mp_p0vecb(k,ib) 
     enddo
-    call contr(mp_l3vec(:,ib),qp0,l3qp0)
-    call contr(mp_l4vec(:,ib),qp0,l4qp0)
+    call contr(mp_l5vec(:,ib),qp0,l3qp0)
+    call contr(mp_l6vec(:,ib),qp0,l4qp0)
     call contr(mp_vvecb(:,ib),qp0,vqp0)
     sumdenb= 0.d0 
     do k= 3,np
-     sumdenb= sumdenb+(value(mp_den(bn2(np,k,i)),mpq)-mpqt2)
+     sumdenb= sumdenb+(value(mp_den(bbn2(k,ib)),mpq)-mpqt2)
     enddo
     if (iteration.eq.1) start= start+save_mp_bcoeff(0,ib)
     if (iteration.eq.2) start= start+(bset(ib,2)+bset(ib,3))/2.d0
@@ -3389,10 +3316,9 @@
 !
 !  contribution from the c sector:
 !
-   do i= 1,nbn3(np)
-    ib= mbn3(np,i)
+   do ib= 1,dmns_3
     do k= 0,3 
-     qp0(k)= mpq(k)+mp_p0vec(k,ib) 
+     qp0(k)= mpq(k)+mp_p0vecc(k,ib) 
     enddo
     call contr(mp_l3vec(:,ib),qp0,l3qp0)
     call contr(mp_l4vec(:,ib),qp0,l4qp0)
@@ -3462,27 +3388,23 @@
    subroutine load_set(n)
    integer, intent(in) :: n
    if (number_propagators.ge.1) then
-    do k= 1,nbn1(number_propagators)
-     ib= mbn1(number_propagators,k)
+    do ib= 1,dmns_1
      aset(ib,n)= mp_acoeff(0,ib)
     enddo
    endif
    if (number_propagators.ge.2) then
-    do k= 1,nbn2(number_propagators)
-     ib= mbn2(number_propagators,k)
+    do ib= 1,dmns_2
      bset (ib,n)= mp_bcoeff(0,ib)
      bset3(ib,n)= mp_bcoeff(3,ib)
     enddo
    endif
    if (number_propagators.ge.3) then
-    do k= 1,nbn3(number_propagators)
-     ib= mbn3(number_propagators,k)
+    do ib= 1,dmns_3
      cset(ib,n)= mp_ccoeff(0,ib)
     enddo
    endif
    if (number_propagators.ge.4) then
-    do k= 1,nbn4(number_propagators)
-     ib= mbn4(number_propagators,k)
+    do ib= 1,dmns_4
      dset(ib,n)= mp_dcoeff(0,ib)
     enddo
    endif
@@ -3498,20 +3420,17 @@
     :: r_aus,r_aus1,r_aus2,r_aus3
    if     (dmr.ge.0) then
     if (number_propagators.ge.1) then
-     do k= 1,nbn1(number_propagators)
-      ib= mbn1(number_propagators,k)
+     do ib= 1,dmns_1
       mp_acoeff(0,ib) = aset(ib,3)
      enddo
     endif
     if (number_propagators.ge.2) then
-     do k= 1,nbn2(number_propagators)
-      ib= mbn2(number_propagators,k)
+     do ib= 1,dmns_2
       mp_bcoeff(0,ib)= (bset(ib,2)+bset(ib,3))/2.d0 
      enddo
     endif
     if (number_propagators.ge.3) then
-     do k= 1,nbn3(number_propagators)
-      ib= mbn3(number_propagators,k)
+     do ib= 1,dmns_3
       mp_ccoeff(0,ib)= (cset(ib,2)+cset(ib,3))/2.d0
       mp_ccoeff(1,ib)= save_mp_ccoeff(1,ib) ! to put it to the true value  
       mp_ccoeff(2,ib)= save_mp_ccoeff(2,ib) ! to put it to the true value
@@ -3531,29 +3450,25 @@
     r_aus = (qt2_2-qt2_1)
     r_aus3= (qt2_2+qt2_1)
     if (number_propagators.ge.1) then
-     do k= 1,nbn1(number_propagators)
-      ib= mbn1(number_propagators,k)
+     do ib= 1,dmns_1
       mp_acoeff(0,ib)= (qt2_2*aset(ib,2)-qt2_1*aset(ib,4))/r_aus
      enddo
     endif
     if (number_propagators.ge.2) then
-     do k= 1,nbn2(number_propagators)
-      ib= mbn2(number_propagators,k)
+     do ib= 1,dmns_2
       mp_bcoeff(0,ib)= (qt2_2* bset(ib,2) -qt2_1*bset(ib,4))/r_aus
       mp_bcoeff(3,ib)= (qt2_2*bset3(ib,2)-qt2_1*bset3(ib,4))/r_aus
      enddo
     endif
     if (number_propagators.ge.3) then
-     do k= 1,nbn3(number_propagators)
-      ib= mbn3(number_propagators,k)
+     do ib= 1,dmns_3
       r_aus1= (cset(ib,2)+cset(ib,3))/2.d0
       r_aus2= cset(ib,4)-qt2_2*(cset(ib,2)-cset(ib,3))/2.d0/qt2_1
       mp_ccoeff(0,ib)= (r_aus1*qt2_2**2-r_aus2*qt2_1**2)/r_aus/r_aus3
      enddo
     endif
     if (number_propagators.ge.4) then
-     do k= 1,nbn4(number_propagators)
-      ib= mbn4(number_propagators,k)
+     do ib= 1,dmns_4
       r_aus1= (dset(ib,2)+dset(ib,3))/2.d0
       r_aus2= dset(ib,4)-qt2_2*(dset(ib,2)-dset(ib,3))/2.d0/qt2_1
       mp_dcoeff(0,ib)= (r_aus1*qt2_2**2-r_aus2*qt2_1**2)/r_aus/r_aus3
@@ -3731,14 +3646,13 @@
    np= number_propagators
    if     (np.lt.4) then
    else
-    do i= 1,nbn4(np)
-     ib= mbn4(np,i)
-     call cut(den(bn4(np,1,i)),den(bn4(np,2,i)),den(bn4(np,3,i)), &
-              den(bn4(np,4,i)),cut4) 
+    do ib= 1,dmns_4
+     call cut(den(bbn4(1,ib)),den(bbn4(2,ib)),den(bbn4(3,ib)), &
+              den(bbn4(4,ib)),cut4) 
      do k= 0,3
       tvec(k,ib) =  cut4%t(k)
-      p0vec(k,ib)=  den(bn4(np,1,i))%p(k)
-      qpp0(k)= cut4%q(k,1)+p0vec(k,ib)
+      p0vecd(k,ib)=  den(bbn4(1,ib))%p(k)
+      qpp0(k)= cut4%q(k,1)+p0vecd(k,ib)
      enddo
      call contr(tvec(:,ib),qpp0,tqpp0)
      f1= fnum(1) 
@@ -3751,6 +3665,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_dpr.h' 
     :: p
    include 'cts_dpc.h' 
@@ -3759,15 +3674,19 @@
    integer :: k
    allden= c1(p) 
    do k= 5,np
-    allden= allden*vden(den(bn4(np,k,i))%i,j)
+    allden= allden*vden(den(bbn4(k,ib))%i,j)
    enddo
    mprec=.false.
    dpq  = cut4%q(:,j)
 ! comment
-   if (rational.and.(.not.inf)) then 
-    call numfuncrec(np,cut4%q(:,j),j,dpres) 
-   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
+   else 
+    if (rational.and.(.not.inf)) then 
+     call numfuncrec(np,cut4%q(:,j),j,dpres) 
+    else
+     call numfunc(numdummy)
+    endif
    endif
 ! comment
    fnum= dpres/allden
@@ -3799,27 +3718,25 @@
    if     (np.lt.3) then
    else   
     if     (dmr.eq.3) then
-     do i= 1,nbn3(np)
-      ib= mbn3(np,i)
-      call cut(den(bn3(np,1,i)),den(bn3(np,2,i)),den(bn3(np,3,i)),cut3,dmr) 
+     do ib= 1,dmns_3
+      call cut(den(bbn3(1,ib)),den(bbn3(2,ib)),den(bbn3(3,ib)),cut3,dmr) 
       ccoeff(0,ib)= fnum(1)
       c4_rat1(ib) = 0.d0
       do k= 0,3
        l3vec(k,ib) =  cut3%l3(k)
        l4vec(k,ib) =  cut3%l4(k)
-       p0vec(k,ib) =  den(bn3(np,1,i))%p(k) 
+       p0vecc(k,ib) =  den(bbn3(1,ib))%p(k) 
       enddo
      enddo
     elseif (dmr.eq.2) then
-     do i= 1,nbn3(np)
-      ib= mbn3(np,i)
-      call cut(den(bn3(np,1,i)),den(bn3(np,2,i)),den(bn3(np,3,i)),cut3,dmr) 
+     do ib= 1,dmns_3
+      call cut(den(bbn3(1,ib)),den(bbn3(2,ib)),den(bbn3(3,ib)),cut3,dmr) 
       do k= 0,3
        l3vec(k,ib) =  cut3%l3(k)
        l4vec(k,ib) =  cut3%l4(k)
-       p0vec(k,ib) =  den(bn3(np,1,i))%p(k) 
+       p0vecc(k,ib) =  den(bbn3(1,ib))%p(k) 
       enddo
-      cc = cut3%cc
+      cc = cut3%cc; if (abs(cc).lt.1.d-60) cc= 0.d0;! fix 20.12.2012
       tau= cut3%tau
       c34= -2.d0*cut3%gm
       cden1= cc*tau
@@ -3837,9 +3754,8 @@
       c4_rat1(ib) = 0.d0
      enddo
     elseif (dmr.eq.1) then
-     do i= 1,nbn3(np)
-      ib= mbn3(np,i)
-      call cut(den(bn3(np,1,i)),den(bn3(np,2,i)),den(bn3(np,3,i)),cut3,dmr) 
+     do ib= 1,dmns_3
+      call cut(den(bbn3(1,ib)),den(bbn3(2,ib)),den(bbn3(3,ib)),cut3,dmr) 
       if (rational) then
        r(0) = fnum(1)-fnuminv(1,1)
        r(4) = fnum(2)-fnuminv(2,1)
@@ -3850,7 +3766,7 @@
        do k= 0,3
         l3vec(k,ib) =  cut3%l3(k)
         l4vec(k,ib) =  cut3%l4(k)
-        p0vec(k,ib) =  den(bn3(np,1,i))%p(k) 
+        p0vecc(k,ib) =  den(bbn3(1,ib))%p(k) 
        enddo
       endif 
       cc = cut3%cc
@@ -3879,9 +3795,8 @@
       c4_rat1(ib) = 0.d0
      enddo
     elseif (dmr.eq.0) then
-     do i= 1,nbn3(np)
-      ib= mbn3(np,i)
-      call cut(den(bn3(np,1,i)),den(bn3(np,2,i)),den(bn3(np,3,i)),cut3,dmr) 
+     do ib= 1,dmns_3
+      call cut(den(bbn3(1,ib)),den(bbn3(2,ib)),den(bbn3(3,ib)),cut3,dmr) 
       cc = cut3%cc
       tau= cut3%tau
       c34= -2.d0*cut3%gm
@@ -3904,7 +3819,7 @@
        do k= 0,3
         l3vec(k,ib) =  cut3%l3(k)
         l4vec(k,ib) =  cut3%l4(k)
-        p0vec(k,ib) =  den(bn3(np,1,i))%p(k) 
+        p0vecc(k,ib) =  den(bbn3(1,ib))%p(k) 
        enddo
       endif
       r(0) = fnum(1)
@@ -3940,13 +3855,12 @@
      enddo
     elseif (dmr.eq.-1) then
 ! comment: later on c_5 and c_6 not to be computed with rational=.true. 
-     do i= 1,nbn3(np)
-      ib= mbn3(np,i)
-      call cut(den(bn3(np,1,i)),den(bn3(np,2,i)),den(bn3(np,3,i)),cut3,dmr) 
+     do ib= 1,dmns_3
+      call cut(den(bbn3(1,ib)),den(bbn3(2,ib)),den(bbn3(3,ib)),cut3,dmr) 
       do k= 0,3
        l3vec(k,ib) =  cut3%l3(k)
        l4vec(k,ib) =  cut3%l4(k)
-       p0vec(k,ib) =  den(bn3(np,1,i))%p(k) 
+       p0vecc(k,ib) =  den(bbn3(1,ib))%p(k) 
       enddo
       cc = cut3%cc
       tau= cut3%tau
@@ -3995,6 +3909,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_dpr.h' 
     :: p
    include 'cts_dpc.h' 
@@ -4003,15 +3918,19 @@
    integer :: k
    allden= c1(p) 
    do k= 4,np
-    allden= allden*vden(den(bn3(np,k,i))%i,j)
+    allden= allden*vden(den(bbn3(k,ib))%i,j)
    enddo
    mprec=.false.
    dpq  = cut3%q(:,j)
 ! comment
-   if (rational) then
-    call numfuncrec(np,cut3%q(:,j),j,dpres) 
-   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
+   else 
+    if (rational) then
+     call numfuncrec(np,cut3%q(:,j),j,dpres) 
+    else
+     call numfunc(numdummy)
+    endif
    endif
 ! comment
    fnum=  (dpres-numd(np,cut3%q(:,j),j))/allden
@@ -4027,7 +3946,7 @@
    integer, intent(in) :: j,level
    integer :: k
    do k= 0,3
-    qp0(k)= cut3%q(k,j)+p0vec(k,ib)
+    qp0(k)= cut3%q(k,j)+p0vecc(k,ib)
    enddo
    call contr(qp0,l3vec(:,ib),l3qp0)
    call contr(qp0,l4vec(:,ib),l4qp0)
@@ -4068,13 +3987,12 @@
    if     (np.lt.2) then
    else
     if     (dmr.eq.2) then
-     do i= 1,nbn2(np)
-      ib= mbn2(np,i)
-      call cut(den(bn2(np,1,i)),den(bn2(np,2,i)),cut2,dmr) 
+     do ib= 1,dmns_2
+      call cut(den(bbn2(1,ib)),den(bbn2(2,ib)),cut2,dmr) 
       do k= 0,3 
-       p0vec(k,ib)=  den(bn2(np,1,i))%p(k) 
-       l3vec(k,ib)=  cut2%l3(k)
-       l4vec(k,ib)=  cut2%l4(k)
+       p0vecb(k,ib)=  den(bbn2(1,ib))%p(k) 
+       l5vec(k,ib)=  cut2%l3(k)
+       l6vec(k,ib)=  cut2%l4(k)
        vvecb(k,ib)=  cut2%v(k)
       enddo
       gm= cut2%gm
@@ -4084,13 +4002,12 @@
       b3_rat1(ib)= 0.d0
      enddo
     elseif (dmr.eq.1) then
-     do i= 1,nbn2(np)
-      ib= mbn2(np,i)
-      call cut(den(bn2(np,1,i)),den(bn2(np,2,i)),cut2,dmr) 
+     do ib= 1,dmns_2
+      call cut(den(bbn2(1,ib)),den(bbn2(2,ib)),cut2,dmr) 
       do k= 0,3 
-       p0vec(k,ib)=  den(bn2(np,1,i))%p(k) 
-       l3vec(k,ib)=  cut2%l3(k)
-       l4vec(k,ib)=  cut2%l4(k)
+       p0vecb(k,ib)=  den(bbn2(1,ib))%p(k) 
+       l5vec(k,ib)=  cut2%l3(k)
+       l6vec(k,ib)=  cut2%l4(k)
        vvecb(k,ib)=  cut2%v(k)
       enddo 
       tau= cut2%tau 
@@ -4114,18 +4031,17 @@
       b3_rat1(ib)= 0.d0
      enddo
     elseif (dmr.eq.0) then
-     do i= 1,nbn2(np)
-      ib= mbn2(np,i)
-      call cut(den(bn2(np,1,i)),den(bn2(np,2,i)),cut2,dmr) 
+     do ib= 1,dmns_2
+      call cut(den(bbn2(1,ib)),den(bbn2(2,ib)),cut2,dmr) 
       if (rational) then
        bcoeff(0,ib)= 0.d0
        bcoeff(0,ib)= sfun(1)
        cycle
       else
        do k= 0,3 
-        p0vec(k,ib)=  den(bn2(np,1,i))%p(k) 
-        l3vec(k,ib)=  cut2%l3(k)
-        l4vec(k,ib)=  cut2%l4(k)
+        p0vecb(k,ib)=  den(bbn2(1,ib))%p(k) 
+        l5vec(k,ib)=  cut2%l3(k)
+        l6vec(k,ib)=  cut2%l4(k)
         vvecb(k,ib)=  cut2%v(k)
        enddo
       endif 
@@ -4175,13 +4091,12 @@
      enddo
     elseif (dmr.eq.-1) then
 ! comment: later on b_4-b_8 not to be computed with rational=.true. 
-     do i= 1,nbn2(np)
-      ib= mbn2(np,i)
-      call cut(den(bn2(np,1,i)),den(bn2(np,2,i)),cut2,dmr) 
+     do ib= 1,dmns_2
+      call cut(den(bbn2(1,ib)),den(bbn2(2,ib)),cut2,dmr) 
       do k= 0,3 
-       p0vec(k,ib)=  den(bn2(np,1,i))%p(k) 
-       l3vec(k,ib)=  cut2%l3(k)
-       l4vec(k,ib)=  cut2%l4(k)
+       p0vecb(k,ib)=  den(bbn2(1,ib))%p(k) 
+       l5vec(k,ib)=  cut2%l3(k)
+       l6vec(k,ib)=  cut2%l4(k)
        vvecb(k,ib)=  cut2%v(k)
       enddo
       tau= cut2%tau
@@ -4238,6 +4153,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_dpr.h' 
     :: p
    include 'cts_dpc.h' 
@@ -4246,15 +4162,19 @@
    integer :: k
    allden= c1(p) 
    do k= 3,np
-    allden= allden*vden(den(bn2(np,k,i))%i,j)
+    allden= allden*vden(den(bbn2(k,ib))%i,j)
    enddo
    mprec=.false.
    dpq  = cut2%q(:,j)
 ! comment
-   if (rational) then
-    call numfuncrec(np,cut2%q(:,j),j,dpres) 
-   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
+   else 
+    if (rational) then
+     call numfuncrec(np,cut2%q(:,j),j,dpres) 
+    else
+     call numfunc(numdummy)
+    endif
    endif
 ! comment
    fnum =  (dpres                                  &
@@ -4270,10 +4190,10 @@
     , dimension(0:3) :: qp0
    integer :: k
    do k= 0,3
-    qp0(k)= cut2%q(k,j)+p0vec(k,ib)
+    qp0(k)= cut2%q(k,j)+p0vecb(k,ib)
    enddo
-   call contr(qp0,l3vec(:,ib),l3qp0)
-   call contr(qp0,l4vec(:,ib),l4qp0)
+   call contr(qp0,l5vec(:,ib),l3qp0)
+   call contr(qp0,l6vec(:,ib),l4qp0)
    sfun= fnum(j)-bcoeff(0,ib)          &
                 -bcoeff(1,ib)*l3qp0    &
                 -bcoeff(2,ib)*l4qp0    &
@@ -4291,10 +4211,10 @@
     , dimension(0:3) :: qp0
    integer :: k
    do k= 0,3
-    qp0(k)= cut2%q(k,j)+p0vec(k,ib)
+    qp0(k)= cut2%q(k,j)+p0vecb(k,ib)
    enddo
-   call contr(qp0,l3vec(:,ib),l3qp0)
-   call contr(qp0,l4vec(:,ib),l4qp0)
+   call contr(qp0,l5vec(:,ib),l3qp0)
+   call contr(qp0,l6vec(:,ib),l4qp0)
    call contr(qp0,vvecb(:,ib),vqp0)
    ufun= sf-bcoeff(7,ib)*vqp0*l3qp0 &
            -bcoeff(8,ib)*vqp0*l4qp0
@@ -4321,22 +4241,20 @@
     stop
    else 
     if     (dmr.eq.1) then
-     do i= 1,nbn1(np)
-      ib= mbn1(np,i)
-      call cut(den(bn1(np,1,i)),cut1,dmr) 
+     do ib= 1,dmns_1
+      call cut(den(bbn1(1,ib)),cut1,dmr) 
       acoeff(0,ib)= fnum(1)
       do k= 0,3 
-       p0vec(k,ib)= den(bn1(np,1,i))%p(k)
-       l3vec(k,ib)= cut1%l3(k)
-       l4vec(k,ib)= cut1%l4(k)
+       p0veca(k,ib)= den(bbn1(1,ib))%p(k)
+       l7vec(k,ib)= cut1%l3(k)
+       l8vec(k,ib)= cut1%l4(k)
        vveca(k,ib)= cut1%v(k)
        kvec(k,ib) = cut1%k(k)
       enddo
      enddo
     elseif (dmr.eq.0) then
-     do i= 1,nbn1(np)
-      ib= mbn1(np,i)
-      call cut(den(bn1(np,1,i)),cut1,dmr) 
+     do ib= 1,dmns_1
+      call cut(den(bbn1(1,ib)),cut1,dmr) 
       f1= fnum(1)
       f2= fnum(2)
       f3= fnum(3)
@@ -4353,9 +4271,9 @@
       acoeff(3,ib)= (r1*cexpk1(p)*tau12(p)-cf0*r2)/rden*tau11(p)
       acoeff(4,ib)= (r2-cf0*r1/cexpk1(p)/tau12(p))/rden/tau11(p)
       do k= 0,3 
-       p0vec(k,ib)= den(bn1(np,1,i))%p(k)
-       l3vec(k,ib)= cut1%l3(k)
-       l4vec(k,ib)= cut1%l4(k)
+       p0veca(k,ib)= den(bbn1(1,ib))%p(k)
+       l7vec(k,ib)= cut1%l3(k)
+       l8vec(k,ib)= cut1%l4(k)
        vveca(k,ib)= cut1%v(k)
        kvec(k,ib) = cut1%k(k)
       enddo
@@ -4370,6 +4288,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_dpr.h' 
     :: p
    include 'cts_dpc.h' 
@@ -4378,15 +4297,19 @@
    integer :: k
    allden= c1(p) 
    do k= 2,np
-    allden= allden*vden(den(bn1(np,k,i))%i,j)
+    allden= allden*vden(den(bbn1(k,ib))%i,j)
    enddo
    mprec=.false.
    dpq= cut1%q(:,j)
 ! comment
-   if (rational) then
-    call numfuncrec(np,cut1%q(:,j),j,dpres) 
-   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
+   else 
+    if (rational) then
+     call numfuncrec(np,cut1%q(:,j),j,dpres) 
+    else
+     call numfunc(numdummy)
+    endif
    endif
 ! comment
    fnum =  (dpres                                  &
@@ -4416,26 +4339,24 @@
     stop
    else   
     if     (dmr.eq.1) then
-     do i= 1,nbn1(np)
-      ib= mbn1(np,i)
-      call cut(den(bn1(np,1,i)),cut1,dmr) 
+     do ib= 1,dmns_1
+      call cut(den(bbn1(1,ib)),cut1,dmr) 
       do k= 0,3 
-       p0vec(k,ib)= den(bn1(np,1,i))%p(k)
-       l3vec(k,ib)= cut1%l3(k)
-       l4vec(k,ib)= cut1%l4(k)
+       p0veca(k,ib)= den(bbn1(1,ib))%p(k)
+       l7vec(k,ib)= cut1%l3(k)
+       l8vec(k,ib)= cut1%l4(k)
        vveca(k,ib)= cut1%v(k)
        kvec(k,ib) = cut1%k(k)
       enddo
       acoeff(0,ib)= fnum(1)
      enddo
     elseif ((dmr.eq.0).or.(dmr.eq.-1)) then
-     do i= 1,nbn1(np)
-      ib= mbn1(np,i)
-      call cut(den(bn1(np,1,i)),cut1,dmr) 
+     do ib= 1,dmns_1
+      call cut(den(bbn1(1,ib)),cut1,dmr) 
       do k= 0,3 
-       p0vec(k,ib)= den(bn1(np,1,i))%p(k)
-       l3vec(k,ib)= cut1%l3(k)
-       l4vec(k,ib)= cut1%l4(k)
+       p0veca(k,ib)= den(bbn1(1,ib))%p(k)
+       l7vec(k,ib)= cut1%l3(k)
+       l8vec(k,ib)= cut1%l4(k)
        vveca(k,ib)= cut1%v(k)
        kvec(k,ib) = cut1%k(k)
       enddo
@@ -4465,6 +4386,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_dpr.h' 
     :: p
    include 'cts_dpc.h' 
@@ -4473,15 +4395,19 @@
    integer :: k
    allden= c1(p) 
    do k= 2,np
-    allden= allden*vden(den(bn1(np,k,i))%i,j)
+    allden= allden*vden(den(bbn1(k,ib))%i,j)
    enddo
    mprec=.false.
    dpq= cut1%q(:,j)
 ! comment
-   if (rational) then
-    call numfuncrec(np,cut1%q(:,j),j,dpres) 
-   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
+   else 
+    if (rational) then
+     call numfuncrec(np,cut1%q(:,j),j,dpres) 
+    else
+     call numfunc(numdummy)
+    endif
    endif
 ! comment
    fnum =  (dpres                                  &
@@ -4510,26 +4436,25 @@
    np= number_propagators
    if     (np.lt.4) then
    else   
-    do i= 1,nbn4(np)
-     ib= mbn4(np,i)
+    do ib= 1,dmns_4
      allden= c1(p)
      if     (j.eq.0) then
       do k= 5,np
-       allden= allden*value(den(bn4(np,k,i)),q) 
+       allden= allden*value(den(bbn4(k,ib)),q) 
       enddo
      elseif (j.lt.0) then
       do k= 5,np
-       allden= allden*(vden(den(bn4(np,k,i))%i,jj)-qt2) 
+       allden= allden*(vden(den(bbn4(k,ib))%i,jj)-qt2) 
       enddo
      else
       do k= 5,np
-       allden= allden*vden(den(bn4(np,k,i))%i,j)
+       allden= allden*vden(den(bbn4(k,ib))%i,j)
        if (allden.eq.c0(p)) cycle
       enddo
      endif
      if (allden.eq.c0(p)) cycle
      do k= 0,3
-      qp0(k)= q(k)+p0vec(k,ib) 
+      qp0(k)= q(k)+p0vecd(k,ib) 
      enddo
      call contr(tvec(:,ib),qp0,tqp0)
      if (j.lt.0) then
@@ -4565,26 +4490,25 @@
    np= number_propagators
    if     (np.lt.3) then
    else
-    do i= 1,nbn3(np)
-     ib= mbn3(np,i)
+    do ib= 1,dmns_3
      allden= c1(p)
      if     (j.eq.0) then
       do k= 4,np
-       allden= allden*value(den(bn3(np,k,i)),q)
+       allden= allden*value(den(bbn3(k,ib)),q)
       enddo
      elseif (j.lt.0) then
       do k= 4,np
-       allden= allden*(vden(den(bn3(np,k,i))%i,jj)-qt2)
+       allden= allden*(vden(den(bbn3(k,ib))%i,jj)-qt2)
       enddo
      else
       do k= 4,np
-       allden= allden*vden(den(bn3(np,k,i))%i,j)
+       allden= allden*vden(den(bbn3(k,ib))%i,j)
        if (allden.eq.c0(p)) cycle
       enddo
      endif
      if (allden.eq.c0(p)) cycle
      do k= 0,3 
-      qp0(k)= q(k)+p0vec(k,ib) 
+      qp0(k)= q(k)+p0vecc(k,ib) 
      enddo
      call contr(l3vec(:,ib),qp0,l3qp0)
      call contr(l4vec(:,ib),qp0,l4qp0)
@@ -4633,29 +4557,28 @@
    np= number_propagators
    if     (np.lt.2) then
    else    
-    do i= 1,nbn2(np)
-     ib= mbn2(np,i)
+    do ib= 1,dmns_2
      allden= c1(p)
      if     (j.eq.0) then
       do k= 3,np
-       allden= allden*value(den(bn2(np,k,i)),q)
+       allden= allden*value(den(bbn2(k,ib)),q)
       enddo
      elseif (j.lt.0) then
       do k= 3,np
-       allden= allden*(vden(den(bn2(np,k,i))%i,jj)-qt2)
+       allden= allden*(vden(den(bbn2(k,ib))%i,jj)-qt2)
       enddo
      else
       do k= 3,np
-       allden= allden*vden(den(bn2(np,k,i))%i,j)
+       allden= allden*vden(den(bbn2(k,ib))%i,j)
        if (allden.eq.c0(p)) cycle
       enddo
      endif
      if (allden.eq.c0(p)) cycle
      do k= 0,3
-      qp0(k)= q(k)+p0vec(k,ib) 
+      qp0(k)= q(k)+p0vecb(k,ib) 
      enddo
-     call contr(l3vec(:,ib),qp0,l3qp0)
-     call contr(l4vec(:,ib),qp0,l4qp0)
+     call contr(l5vec(:,ib),qp0,l3qp0)
+     call contr(l6vec(:,ib),qp0,l4qp0)
      call contr(vvecb(:,ib),qp0,vqp0)
      if (j.lt.0) then
       start= start+(                             &
@@ -4711,29 +4634,28 @@
     print*,'number_propagators=', number_propagators,' not allowed'
     stop
    else 
-    do i= 1,nbn1(np)
-     ib= mbn1(np,i)
+    do ib= 1,dmns_1
      allden= c1(p)
      if     (j.eq.0) then
       do k= 2,np
-       allden= allden*value(den(bn1(np,k,i)),q)
+       allden= allden*value(den(bbn1(k,ib)),q)
       enddo
      elseif (j.lt.0) then
       do k= 2,np
-       allden= allden*(vden(den(bn1(np,k,i))%i,jj)-qt2)
+       allden= allden*(vden(den(bbn1(k,ib))%i,jj)-qt2)
       enddo
      else
       do k= 2,np
-       allden= allden*vden(den(bn1(np,k,i))%i,j)
+       allden= allden*vden(den(bbn1(k,ib))%i,j)
        if (allden.eq.c0(p)) cycle
       enddo
      endif  
      if (allden.eq.c0(p)) cycle
      do k= 0,3
-      qp0(k)= q(k)+p0vec(k,ib) 
+      qp0(k)= q(k)+p0veca(k,ib) 
      enddo
-     call contr(l3vec(:,ib),qp0,l3qp0)
-     call contr(l4vec(:,ib),qp0,l4qp0)
+     call contr(l7vec(:,ib),qp0,l3qp0)
+     call contr(l8vec(:,ib),qp0,l4qp0)
      call contr(vveca(:,ib),qp0,vqp0)
      call contr(kvec(:,ib),qp0,kqp0)
      if (j.lt.0) then 
@@ -4792,14 +4714,13 @@
    np= number_propagators
    if     (np.lt.4) then
    else   
-    do i= 1,nbn4(np)
-     ib= mbn4(np,i)
-     call cut(mp_den(bn4(np,1,i)),mp_den(bn4(np,2,i)),mp_den(bn4(np,3,i)), &
-              mp_den(bn4(np,4,i)),cut4) 
+    do ib= 1,dmns_4
+     call cut(mp_den(bbn4(1,ib)),mp_den(bbn4(2,ib)),mp_den(bbn4(3,ib)), &
+              mp_den(bbn4(4,ib)),cut4) 
      do k= 0,3
       mp_tvec(k,ib) =  cut4%t(k)
-      mp_p0vec(k,ib)=  mp_den(bn4(np,1,i))%p(k)
-      qpp0(k)= cut4%q(k,1)+mp_p0vec(k,ib)
+      mp_p0vecd(k,ib)=  mp_den(bbn4(1,ib))%p(k)
+      qpp0(k)= cut4%q(k,1)+mp_p0vecd(k,ib)
      enddo
      call contr(mp_tvec(:,ib),qpp0,tqpp0)
      f1= fnum(1) 
@@ -4812,6 +4733,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_mpr.h' 
     :: p
    include 'cts_mpc.h' 
@@ -4820,16 +4742,20 @@
    integer :: k
    allden= c1(p) 
    do k= 5,np
-    allden= allden*mp_vden(mp_den(bn4(np,k,i))%i,j)
+    allden= allden*mp_vden(mp_den(bbn4(k,ib))%i,j)
    enddo
    mprec=.true.
    mpq= cut4%q(:,j)
 ! comment
-!!   if (rational.and.(.not.inf)) then 
-!!    call numfuncrec(np,cut4%q(:,j),j,mpres) 
-!!   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
-!!   endif
+   else 
+    if (rational.and.(.not.inf)) then 
+     call numfuncrec(np,cut4%q(:,j),j,mpres) 
+    else
+     call numfunc(numdummy)
+    endif
+   endif
 ! comment
    fnum= mpres/allden
    end function fnum
@@ -4860,25 +4786,23 @@
    if     (np.lt.3) then
    else   
     if     (dmr.eq.3) then
-     do i= 1,nbn3(np)
-      ib= mbn3(np,i)
-      call cut(mp_den(bn3(np,1,i)),mp_den(bn3(np,2,i)),mp_den(bn3(np,3,i)),cut3,dmr) 
+     do ib= 1,dmns_3
+      call cut(mp_den(bbn3(1,ib)),mp_den(bbn3(2,ib)),mp_den(bbn3(3,ib)),cut3,dmr) 
       mp_ccoeff(0,ib)= fnum(1)
       mp_c4_rat1(ib) = 0.d0
       do k= 0,3
        mp_l3vec(k,ib) =  cut3%l3(k)
        mp_l4vec(k,ib) =  cut3%l4(k)
-       mp_p0vec(k,ib) =  mp_den(bn3(np,1,i))%p(k) 
+       mp_p0vecc(k,ib) =  mp_den(bbn3(1,ib))%p(k) 
       enddo
      enddo
     elseif (dmr.eq.2) then
-     do i= 1,nbn3(np)
-      ib= mbn3(np,i)
-      call cut(mp_den(bn3(np,1,i)),mp_den(bn3(np,2,i)),mp_den(bn3(np,3,i)),cut3,dmr) 
+     do ib= 1,dmns_3
+      call cut(mp_den(bbn3(1,ib)),mp_den(bbn3(2,ib)),mp_den(bbn3(3,ib)),cut3,dmr) 
       do k= 0,3
        mp_l3vec(k,ib) =  cut3%l3(k)
        mp_l4vec(k,ib) =  cut3%l4(k)
-       mp_p0vec(k,ib) =  den(bn3(np,1,i))%p(k) 
+       mp_p0vecc(k,ib) =  den(bbn3(1,ib))%p(k) 
       enddo
       cc = cut3%cc
       tau= cut3%tau
@@ -4898,9 +4822,8 @@
       mp_c4_rat1(ib) = 0.d0
      enddo
     elseif (dmr.eq.1) then
-     do i= 1,nbn3(np)
-      ib= mbn3(np,i)
-      call cut(mp_den(bn3(np,1,i)),mp_den(bn3(np,2,i)),mp_den(bn3(np,3,i)),cut3,dmr) 
+     do ib= 1,dmns_3
+      call cut(mp_den(bbn3(1,ib)),mp_den(bbn3(2,ib)),mp_den(bbn3(3,ib)),cut3,dmr) 
       if (rational) then
        r(0) = fnum(1)-fnuminv(1,1)
        r(4) = fnum(2)-fnuminv(2,1)
@@ -4911,7 +4834,7 @@
        do k= 0,3
         mp_l3vec(k,ib) =  cut3%l3(k)
         mp_l4vec(k,ib) =  cut3%l4(k)
-        mp_p0vec(k,ib) =  mp_den(bn3(np,1,i))%p(k) 
+        mp_p0vecc(k,ib) =  mp_den(bbn3(1,ib))%p(k) 
        enddo
       endif 
       cc = cut3%cc
@@ -4940,9 +4863,8 @@
       mp_c4_rat1(ib) = 0.d0
      enddo
     elseif (dmr.eq.0) then
-     do i= 1,nbn3(np)
-      ib= mbn3(np,i)
-      call cut(mp_den(bn3(np,1,i)),mp_den(bn3(np,2,i)),mp_den(bn3(np,3,i)),cut3,dmr) 
+     do ib= 1,dmns_3
+      call cut(mp_den(bbn3(1,ib)),mp_den(bbn3(2,ib)),mp_den(bbn3(3,ib)),cut3,dmr) 
       cc = cut3%cc
       tau= cut3%tau
       c34= -2.d0*cut3%gm
@@ -4965,7 +4887,7 @@
        do k= 0,3
         mp_l3vec(k,ib) =  cut3%l3(k)
         mp_l4vec(k,ib) =  cut3%l4(k)
-        mp_p0vec(k,ib) =  mp_den(bn3(np,1,i))%p(k) 
+        mp_p0vecc(k,ib) =  mp_den(bbn3(1,ib))%p(k) 
        enddo
       endif
       r(0) = fnum(1)
@@ -5001,13 +4923,12 @@
      enddo
     elseif (dmr.eq.-1) then
 ! comment: later on c_5 and c_6 not to be computed with rational=.true. 
-     do i= 1,nbn3(np)
-      ib= mbn3(np,i)
-      call cut(mp_den(bn3(np,1,i)),mp_den(bn3(np,2,i)),mp_den(bn3(np,3,i)),cut3,dmr) 
+     do ib= 1,dmns_3
+      call cut(mp_den(bbn3(1,ib)),mp_den(bbn3(2,ib)),mp_den(bbn3(3,ib)),cut3,dmr) 
       do k= 0,3
        mp_l3vec(k,ib) =  cut3%l3(k)
        mp_l4vec(k,ib) =  cut3%l4(k)
-       mp_p0vec(k,ib) =  mp_den(bn3(np,1,i))%p(k) 
+       mp_p0vecc(k,ib) =  mp_den(bbn3(1,ib))%p(k) 
       enddo
       cc = cut3%cc
       tau= cut3%tau
@@ -5056,6 +4977,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_mpr.h' 
     :: p
    include 'cts_mpc.h' 
@@ -5064,16 +4986,20 @@
    integer :: k
    allden= c1(p) 
    do k= 4,np
-    allden= allden*mp_vden(mp_den(bn3(np,k,i))%i,j)
+    allden= allden*mp_vden(mp_den(bbn3(k,ib))%i,j)
    enddo
    mprec=.true.
    mpq= cut3%q(:,j)
 ! comment
-!!   if (rational) then
-!!    call numfuncrec(np,cut3%q(:,j),j,mpres) 
-!!   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
-!!   endif
+   else 
+    if (rational) then
+     call numfuncrec(np,cut3%q(:,j),j,mpres) 
+    else
+     call numfunc(numdummy)
+    endif
+   endif
 ! comment
    fnum=  (mpres-numd(np,cut3%q(:,j),j))/allden
    end function fnum
@@ -5088,7 +5014,7 @@
    integer, intent(in) :: j,level
    integer :: k
    do k= 0,3
-    qp0(k)= cut3%q(k,j)+mp_p0vec(k,ib) 
+    qp0(k)= cut3%q(k,j)+mp_p0vecc(k,ib) 
    enddo
    call contr(qp0,mp_l3vec(:,ib),l3qp0)
    call contr(qp0,mp_l4vec(:,ib),l4qp0)
@@ -5128,13 +5054,12 @@
    if     (np.lt.2) then
    else
     if     (dmr.eq.2) then
-     do i= 1,nbn2(np)
-      ib= mbn2(np,i)
-      call cut(mp_den(bn2(np,1,i)),mp_den(bn2(np,2,i)),cut2,dmr) 
+     do ib= 1,dmns_2
+      call cut(mp_den(bbn2(1,ib)),mp_den(bbn2(2,ib)),cut2,dmr) 
       do k= 0,3 
-       mp_p0vec(k,ib)=  mp_den(bn2(np,1,i))%p(k) 
-       mp_l3vec(k,ib)=  cut2%l3(k)
-       mp_l4vec(k,ib)=  cut2%l4(k)
+       mp_p0vecb(k,ib)=  mp_den(bbn2(1,ib))%p(k) 
+       mp_l5vec(k,ib)=  cut2%l3(k)
+       mp_l6vec(k,ib)=  cut2%l4(k)
        mp_vvecb(k,ib)=  cut2%v(k)
       enddo
       gm= cut2%gm
@@ -5144,13 +5069,12 @@
       mp_b3_rat1(ib)= 0.d0
      enddo
     elseif (dmr.eq.1) then
-     do i= 1,nbn2(np)
-      ib= mbn2(np,i)
-      call cut(mp_den(bn2(np,1,i)),mp_den(bn2(np,2,i)),cut2,dmr) 
+     do ib= 1,dmns_2
+      call cut(mp_den(bbn2(1,ib)),mp_den(bbn2(2,ib)),cut2,dmr) 
       do k= 0,3 
-       mp_p0vec(k,ib)=  mp_den(bn2(np,1,i))%p(k) 
-       mp_l3vec(k,ib)=  cut2%l3(k)
-       mp_l4vec(k,ib)=  cut2%l4(k)
+       mp_p0vecb(k,ib)=  mp_den(bbn2(1,ib))%p(k) 
+       mp_l5vec(k,ib)=  cut2%l3(k)
+       mp_l6vec(k,ib)=  cut2%l4(k)
        mp_vvecb(k,ib)=  cut2%v(k)
       enddo 
       tau= cut2%tau 
@@ -5174,18 +5098,17 @@
       mp_b3_rat1(ib)= 0.d0
      enddo
     elseif (dmr.eq.0) then
-     do i= 1,nbn2(np)
-      ib= mbn2(np,i)
-      call cut(mp_den(bn2(np,1,i)),mp_den(bn2(np,2,i)),cut2,dmr) 
+     do ib= 1,dmns_2
+      call cut(mp_den(bbn2(1,ib)),mp_den(bbn2(2,ib)),cut2,dmr) 
       if (rational) then
        mp_bcoeff(0,ib)= 0.d0
        mp_bcoeff(0,ib)= sfun(1)
        cycle
       else
        do k= 0,3 
-        mp_p0vec(k,ib)=  mp_den(bn2(np,1,i))%p(k) 
-        mp_l3vec(k,ib)=  cut2%l3(k)
-        mp_l4vec(k,ib)=  cut2%l4(k)
+        mp_p0vecb(k,ib)=  mp_den(bbn2(1,ib))%p(k) 
+        mp_l5vec(k,ib)=  cut2%l3(k)
+        mp_l6vec(k,ib)=  cut2%l4(k)
         mp_vvecb(k,ib)=  cut2%v(k)
        enddo
       endif 
@@ -5235,13 +5158,12 @@
      enddo
     elseif (dmr.eq.-1) then
 ! comment: later on b_4-b_8 not to be computed with rational=.true. 
-     do i= 1,nbn2(np)
-      ib= mbn2(np,i)
-      call cut(mp_den(bn2(np,1,i)),mp_den(bn2(np,2,i)),cut2,dmr) 
+     do ib= 1,dmns_2
+      call cut(mp_den(bbn2(1,ib)),mp_den(bbn2(2,ib)),cut2,dmr) 
       do k= 0,3 
-       mp_p0vec(k,ib)=  mp_den(bn2(np,1,i))%p(k) 
-       mp_l3vec(k,ib)=  cut2%l3(k)
-       mp_l4vec(k,ib)=  cut2%l4(k)
+       mp_p0vecb(k,ib)=  mp_den(bbn2(1,ib))%p(k) 
+       mp_l5vec(k,ib)=  cut2%l3(k)
+       mp_l6vec(k,ib)=  cut2%l4(k)
        mp_vvecb(k,ib)=  cut2%v(k)
       enddo
       tau= cut2%tau
@@ -5298,6 +5220,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_mpr.h' 
     :: p
    include 'cts_mpc.h' 
@@ -5306,16 +5229,20 @@
    integer :: k
    allden= c1(p) 
    do k= 3,np
-    allden= allden*mp_vden(mp_den(bn2(np,k,i))%i,j)
+    allden= allden*mp_vden(mp_den(bbn2(k,ib))%i,j)
    enddo
    mprec=.true.
    mpq= cut2%q(:,j)
 ! comment
-!!   if (rational) then
-!!    call numfuncrec(np,cut2%q(:,j),j,mpres) 
-!!   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
-!!   endif
+   else 
+    if (rational) then
+     call numfuncrec(np,cut2%q(:,j),j,mpres) 
+    else
+     call numfunc(numdummy)
+    endif
+   endif
 ! comment
    fnum =  (mpres                                  &
            -numd(number_propagators,cut2%q(:,j),j) &
@@ -5330,10 +5257,10 @@
     , dimension(0:3) :: qp0
    integer :: k
    do k= 0,3
-    qp0(k)= cut2%q(k,j)+mp_p0vec(k,ib)
+    qp0(k)= cut2%q(k,j)+mp_p0vecb(k,ib)
    enddo
-   call contr(qp0,mp_l3vec(:,ib),l3qp0)
-   call contr(qp0,mp_l4vec(:,ib),l4qp0)
+   call contr(qp0,mp_l5vec(:,ib),l3qp0)
+   call contr(qp0,mp_l6vec(:,ib),l4qp0)
    sfun= fnum(j)-mp_bcoeff(0,ib)          &
                 -mp_bcoeff(1,ib)*l3qp0    &
                 -mp_bcoeff(2,ib)*l4qp0    &
@@ -5351,10 +5278,10 @@
     , dimension(0:3) :: qp0
    integer :: k
    do k= 0,3
-    qp0(k)= cut2%q(k,j)+mp_p0vec(k,ib)
+    qp0(k)= cut2%q(k,j)+mp_p0vecb(k,ib)
    enddo
-   call contr(qp0,mp_l3vec(:,ib),l3qp0)
-   call contr(qp0,mp_l4vec(:,ib),l4qp0)
+   call contr(qp0,mp_l5vec(:,ib),l3qp0)
+   call contr(qp0,mp_l6vec(:,ib),l4qp0)
    call contr(qp0,mp_vvecb(:,ib),vqp0)
    ufun= sf-mp_bcoeff(7,ib)*vqp0*l3qp0 &
            -mp_bcoeff(8,ib)*vqp0*l4qp0
@@ -5381,22 +5308,20 @@
     stop
    else 
     if     (dmr.eq.1) then
-     do i= 1,nbn1(np)
-      ib= mbn1(np,i)
-      call cut(mp_den(bn1(np,1,i)),cut1,dmr) 
+     do ib= 1,dmns_1
+      call cut(mp_den(bbn1(1,ib)),cut1,dmr) 
       mp_acoeff(0,ib)= fnum(1)
       do k= 0,3 
-       mp_p0vec(k,ib)= mp_den(bn1(np,1,i))%p(k)
-       mp_l3vec(k,ib)= cut1%l3(k)
-       mp_l4vec(k,ib)= cut1%l4(k)
+       mp_p0veca(k,ib)= mp_den(bbn1(1,ib))%p(k)
+       mp_l7vec(k,ib)= cut1%l3(k)
+       mp_l8vec(k,ib)= cut1%l4(k)
        mp_vveca(k,ib)= cut1%v(k)
        mp_kvec(k,ib) = cut1%k(k)
       enddo
      enddo
     elseif (dmr.eq.0) then
-     do i= 1,nbn1(np)
-      ib= mbn1(np,i)
-      call cut(mp_den(bn1(np,1,i)),cut1,dmr) 
+     do ib= 1,dmns_1
+      call cut(mp_den(bbn1(1,ib)),cut1,dmr) 
       f1= fnum(1)
       f2= fnum(2)
       f3= fnum(3)
@@ -5413,9 +5338,9 @@
       mp_acoeff(3,ib)= (r1*cexpk1(p)*tau12(p)-cf0*r2)/rden*tau11(p)
       mp_acoeff(4,ib)= (r2-cf0*r1/cexpk1(p)/tau12(p))/rden/tau11(p)
       do k= 0,3 
-       mp_p0vec(k,ib)= mp_den(bn1(np,1,i))%p(k)
-       mp_l3vec(k,ib)= cut1%l3(k)
-       mp_l4vec(k,ib)= cut1%l4(k)
+       mp_p0veca(k,ib)= mp_den(bbn1(1,ib))%p(k)
+       mp_l7vec(k,ib)= cut1%l3(k)
+       mp_l8vec(k,ib)= cut1%l4(k)
        mp_vveca(k,ib)= cut1%v(k)
        mp_kvec(k,ib) = cut1%k(k)
       enddo
@@ -5430,6 +5355,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_mpr.h' 
     :: p
    include 'cts_mpc.h' 
@@ -5438,16 +5364,20 @@
    integer :: k
    allden= c1(p) 
    do k= 2,np
-    allden= allden*mp_vden(mp_den(bn1(np,k,i))%i,j)
+    allden= allden*mp_vden(mp_den(bbn1(k,ib))%i,j)
    enddo
    mprec=.true.
    mpq= cut1%q(:,j)
 ! comment
-!!   if (rational) then
-!!    call numfuncrec(np,cut1%q(:,j),j,mpres) 
-!!   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
-!!   endif
+   else 
+    if (rational) then
+     call numfuncrec(np,cut1%q(:,j),j,mpres) 
+    else
+     call numfunc(numdummy)
+    endif
+   endif
 ! comment
    fnum =  (mpres                                  &
            -numd(number_propagators,cut1%q(:,j),j) &
@@ -5476,26 +5406,24 @@
     stop
    else   
     if     (dmr.eq.1) then
-     do i= 1,nbn1(np)
-      ib= mbn1(np,i)
-      call cut(mp_den(bn1(np,1,i)),cut1,dmr) 
+     do ib= 1,dmns_1
+      call cut(mp_den(bbn1(1,ib)),cut1,dmr) 
       do k= 0,3 
-       mp_p0vec(k,ib)= mp_den(bn1(np,1,i))%p(k)
-       mp_l3vec(k,ib)= cut1%l3(k)
-       mp_l4vec(k,ib)= cut1%l4(k)
+       mp_p0veca(k,ib)= mp_den(bbn1(1,ib))%p(k)
+       mp_l7vec(k,ib)= cut1%l3(k)
+       mp_l8vec(k,ib)= cut1%l4(k)
        mp_vveca(k,ib)= cut1%v(k)
        mp_kvec(k,ib) = cut1%k(k)
       enddo
       mp_acoeff(0,ib)= fnum(1)
      enddo
     elseif ((dmr.eq.0).or.(dmr.eq.-1)) then
-     do i= 1,nbn1(np)
-      ib= mbn1(np,i)
-      call cut(mp_den(bn1(np,1,i)),cut1,dmr) 
+     do ib= 1,dmns_1
+      call cut(mp_den(bbn1(1,ib)),cut1,dmr) 
       do k= 0,3 
-       mp_p0vec(k,ib)= mp_den(bn1(np,1,i))%p(k)
-       mp_l3vec(k,ib)= cut1%l3(k)
-       mp_l4vec(k,ib)= cut1%l4(k)
+       mp_p0veca(k,ib)= mp_den(bbn1(1,ib))%p(k)
+       mp_l7vec(k,ib)= cut1%l3(k)
+       mp_l8vec(k,ib)= cut1%l4(k)
        mp_vveca(k,ib)= cut1%v(k)
        mp_kvec(k,ib) = cut1%k(k)
       enddo
@@ -5526,6 +5454,7 @@
 !
    function fnum(j)
    use inout
+   use scale
    include 'cts_mpr.h' 
     :: p
    include 'cts_mpc.h' 
@@ -5534,16 +5463,20 @@
    integer :: k
    allden= c1(p) 
    do k= 2,np
-    allden= allden*mp_vden(mp_den(bn1(np,k,i))%i,j)
+    allden= allden*mp_vden(mp_den(bbn1(k,ib))%i,j)
    enddo
    mprec=.true.
    mpq= cut1%q(:,j)
 ! comment
-!!   if (rational) then
-!!    call numfuncrec(np,cut1%q(:,j),j,mpres) 
-!!   else
+   if (ext_num_for_r1) then
     call numfunc(numdummy)
-!!   endif
+   else 
+    if (rational) then
+     call numfuncrec(np,cut1%q(:,j),j,mpres) 
+    else
+     call numfunc(numdummy)
+    endif
+   endif
 ! comment
    fnum =  (mpres                                  &
            -numd(number_propagators,cut1%q(:,j),j) &
@@ -5571,26 +5504,25 @@
    np= number_propagators
    if     (np.lt.4) then
    else   
-    do i= 1,nbn4(np)
-     ib= mbn4(np,i)
+    do ib= 1,dmns_4
      allden= c1(p)
      if     (j.eq.0) then
       do k= 5,np
-       allden= allden*value(mp_den(bn4(np,k,i)),q) 
+       allden= allden*value(mp_den(bbn4(k,ib)),q) 
       enddo
      elseif (j.lt.0) then
       do k= 5,np
-       allden= allden*(mp_vden(mp_den(bn4(np,k,i))%i,jj)-mpqt2) 
+       allden= allden*(mp_vden(mp_den(bbn4(k,ib))%i,jj)-mpqt2) 
       enddo
      else
       do k= 5,np
-       allden= allden*mp_vden(mp_den(bn4(np,k,i))%i,j)
+       allden= allden*mp_vden(mp_den(bbn4(k,ib))%i,j)
        if (allden.eq.c0(p)) cycle
       enddo
      endif
      if (allden.eq.c0(p)) cycle
      do k= 0,3
-      qp0(k)= q(k)+mp_p0vec(k,ib) 
+      qp0(k)= q(k)+mp_p0vecd(k,ib) 
      enddo
      call contr(mp_tvec(:,ib),qp0,tqp0)
      if (j.lt.0) then
@@ -5626,26 +5558,25 @@
    np= number_propagators
    if     (np.lt.3) then
    else   
-    do i= 1,nbn3(np)
-     ib= mbn3(np,i)
+    do ib= 1,dmns_3
      allden= c1(p)
      if     (j.eq.0) then
       do k= 4,np
-       allden= allden*value(mp_den(bn3(np,k,i)),q)
+       allden= allden*value(mp_den(bbn3(k,ib)),q)
       enddo
      elseif (j.lt.0) then
       do k= 4,np
-       allden= allden*(mp_vden(mp_den(bn3(np,k,i))%i,jj)-mpqt2)
+       allden= allden*(mp_vden(mp_den(bbn3(k,ib))%i,jj)-mpqt2)
       enddo
      else
       do k= 4,np
-       allden= allden*mp_vden(mp_den(bn3(np,k,i))%i,j)
+       allden= allden*mp_vden(mp_den(bbn3(k,ib))%i,j)
        if (allden.eq.c0(p)) cycle
       enddo
      endif
      if (allden.eq.c0(p)) cycle
      do k= 0,3 
-      qp0(k)= q(k)+mp_p0vec(k,ib) 
+      qp0(k)= q(k)+mp_p0vecc(k,ib) 
      enddo
      call contr(mp_l3vec(:,ib),qp0,l3qp0)
      call contr(mp_l4vec(:,ib),qp0,l4qp0)
@@ -5694,29 +5625,28 @@
    np= number_propagators
    if     (np.lt.2) then
    else   
-    do i= 1,nbn2(np)
-     ib= mbn2(np,i)
+    do ib= 1,dmns_2
      allden= c1(p)
      if     (j.eq.0) then
       do k= 3,np
-       allden= allden*value(mp_den(bn2(np,k,i)),q)
+       allden= allden*value(mp_den(bbn2(k,ib)),q)
       enddo
      elseif (j.lt.0) then
       do k= 3,np
-       allden= allden*(mp_vden(mp_den(bn2(np,k,i))%i,jj)-mpqt2)
+       allden= allden*(mp_vden(mp_den(bbn2(k,ib))%i,jj)-mpqt2)
       enddo
      else
       do k= 3,np
-       allden= allden*mp_vden(mp_den(bn2(np,k,i))%i,j)
+       allden= allden*mp_vden(mp_den(bbn2(k,ib))%i,j)
        if (allden.eq.c0(p)) cycle
       enddo
      endif
      if (allden.eq.c0(p)) cycle
      do k= 0,3
-      qp0(k)= q(k)+mp_p0vec(k,ib) 
+      qp0(k)= q(k)+mp_p0vecb(k,ib) 
      enddo
-     call contr(mp_l3vec(:,ib),qp0,l3qp0)
-     call contr(mp_l4vec(:,ib),qp0,l4qp0)
+     call contr(mp_l5vec(:,ib),qp0,l3qp0)
+     call contr(mp_l6vec(:,ib),qp0,l4qp0)
      call contr(mp_vvecb(:,ib),qp0,vqp0)
      if (j.lt.0) then
       start= start+(                             &
@@ -5772,29 +5702,28 @@
     print*,'number_propagators=', number_propagators,' not allowed'
     stop
    else 
-    do i= 1,nbn1(np)
-     ib= mbn1(np,i)
+    do ib= 1,dmns_1
      allden= c1(p)
      if     (j.eq.0) then
       do k= 2,np
-       allden= allden*value(mp_den(bn1(np,k,i)),q)
+       allden= allden*value(mp_den(bbn1(k,ib)),q)
       enddo
      elseif (j.lt.0) then
       do k= 2,np
-       allden= allden*(mp_vden(mp_den(bn1(np,k,i))%i,jj)-mpqt2)
+       allden= allden*(mp_vden(mp_den(bbn1(k,ib))%i,jj)-mpqt2)
       enddo
      else
       do k= 2,np
-       allden= allden*mp_vden(mp_den(bn1(np,k,i))%i,j)
+       allden= allden*mp_vden(mp_den(bbn1(k,ib))%i,j)
        if (allden.eq.c0(p)) cycle
       enddo
      endif  
      if (allden.eq.c0(p)) cycle
      do k= 0,3
-      qp0(k)= q(k)+mp_p0vec(k,ib) 
+      qp0(k)= q(k)+mp_p0veca(k,ib) 
      enddo
-     call contr(mp_l3vec(:,ib),qp0,l3qp0)
-     call contr(mp_l4vec(:,ib),qp0,l4qp0)
+     call contr(mp_l7vec(:,ib),qp0,l3qp0)
+     call contr(mp_l8vec(:,ib),qp0,l4qp0)
      call contr(mp_vveca(:,ib),qp0,vqp0)
      call contr(mp_kvec(:,ib),qp0,kqp0)
      if (j.lt.0) then 
@@ -5860,7 +5789,7 @@
    num_b= numb(number_propagators,dpq,0)
    num_a= numa(number_propagators,dpq,0)
    numrec= (num_d+num_c+num_b+num_a)
-   abnum= max(tiny(p),abs(numerator)) 
+   abnum= max(my_tiny(p),abs(numerator)) 
    precr = dabs(dreal(numerator)-dreal(numrec))/abnum
    preci = dabs(dimag(numerator)-dimag(numrec))/abnum
    prec= max(precr,preci)
@@ -5902,7 +5831,7 @@
    diff= numrec
    partreal1= (diff+conjg(diff))/2.d0  
    imagpart1= (diff-conjg(diff))/(2.d0*ci(p))  
-   abnum= max(abs(numerator),mp_tiny(p)) 
+   abnum= max(abs(numerator),my_tiny(p)) 
    precr = abs(partreal-partreal1)/abnum
    preci = abs(imagpart-imagpart1)/abnum
    prec= max(precr,preci)

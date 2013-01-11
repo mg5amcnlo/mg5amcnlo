@@ -58,7 +58,7 @@ class TestCmdShell1(unittest.TestCase):
     def test_generate(self):
         """command 'generate' works"""
         
-        self.do('load model %s' % self.join_path(_pickle_path, 'sm.pkl'))
+        self.do('import model sm')
         self.cmd._curr_model.pass_particles_name_in_mg_default()
         self.do('generate e+ e- > e+ e-')
         self.assertTrue(self.cmd._curr_amps)

@@ -48,15 +48,16 @@
       integer number_propagators
       integer rnk,rango,imode
       integer scaloop
-      logical stable,discarded
+      logical stable,discarded,ext_num_for_r1
 !
       rootsvalue= 50.d0
       limitvalue= 1.d-2
       imode  = 0     
       scaloop= 2 
       muscale= 1.d0 
+      ext_num_for_r1=.true.
 !---------------------------------------------------------------------
-! To initialize CutTools call ctsinit(limitvalue,scaloop)
+! To initialize CutTools call ctsinit(limitvalue,scaloop,ext_num_for_r1)
 !
 ! INPUT:
 !
@@ -69,9 +70,13 @@
 !                               scaloop= 1 -> looptools (not implemented) 
 !                               scaloop= 2 -> avh (complex masses)   
 !                               scaloop= 3 -> qcdloop.  
+!
+!      logical ext_num_for_r1 -> numfunc or numfuncrec is used in the
+!                                computation of R1 if put to .true. 
+!                                or .false
 ! OUTPUT: none
 !---------------------------------------------------------------------
-      call ctsinit(limitvalue,scaloop)
+      call ctsinit(limitvalue,scaloop,ext_num_for_r1)
 
       number_propagators= 6 
       rango= 6

@@ -379,6 +379,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
             if valid_diag:
                 newloopselection.append(diag)
         self['loop_diagrams']=newloopselection
+        # To monitor what are the diagrams filtered, simply comment the line
+        # directly above and uncomment the two directly below.
+#        self['loop_diagrams'] = base_objects.DiagramList(
+#        [diag for diag in self['loop_diagrams'] if diag not in newloopselection])
 
     def check_factorization(self):
         """ Makes sure that all non perturbed orders factorize the born diagrams

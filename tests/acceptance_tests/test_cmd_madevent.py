@@ -64,14 +64,29 @@ class TestMECmdShell(unittest.TestCase):
             for p in process:
                 interface.onecmd('add process %s' % p)
 
-        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            interface.onecmd('install pythia-pgs')
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
 
-        misc.compile(cwd=pjoin(MG5DIR, 'pythia-pgs'))
+        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
+            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
+                             stdin=subprocess.PIPE,
+                             stdout=stdout,stderr=stderr)
+            out = p.communicate('install pythia-pgs')
+        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
+        if not os.path.exists(pjoin(MG5DIR, 'MadAnalysis')):
+            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
+                             stdin=subprocess.PIPE,
+                             stdout=stdout,stderr=stderr)
+            out = p.communicate('install MadAnalysis')
+        misc.compile(cwd=pjoin(MG5DIR,'MadAnalysis'))
+
         if not misc.which('root'):
             raise Exception, 'root is require for this test'
-        if not os.path.exists(pjoin(MG5DIR, 'MadAnalysis')):
-            interface.onecmd('install MadAnalysis')
         interface.exec_cmd('set pythia-pgs_path %s --no_save' % pjoin(MG5DIR, 'pythia-pgs'))
         interface.exec_cmd('set madanalysis_path %s --no_save' % pjoin(MG5DIR, 'MadAnalysis'))
         interface.onecmd('output madevent /tmp/MGPROCESS/ -f')            
@@ -281,7 +296,7 @@ class TestMEfromfile(unittest.TestCase):
         except Exception, error:
             pass
         import subprocess
-        if logging.getLogger('madgraph').level != 50:
+        if logging.getLogger('madgraph').level <= 20:
             stdout=None
             stderr=None
         else:
@@ -290,7 +305,7 @@ class TestMEfromfile(unittest.TestCase):
             stderr=devnull
 
         if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            p = subprocess.Popen([pjoin(_file_path, os.path.pardir,'bin','mg5')],
+            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
             out = p.communicate('install pythia-pgs')
@@ -337,6 +352,30 @@ class TestMEfromfile(unittest.TestCase):
         self.assertTrue('lhe' in data[0].pythia)
         self.assertTrue('log' in data[0].pythia)
         self.assertTrue('hep' in data[0].pythia)
+    
+    def test_decay_width_nlo_model(self):
+        """ """
+        
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            pass
+        
+        cmd = MGCmd.MasterCmd()
+        cmd.run_cmd('import model loop_sm')
+        self.assertEqual(cmd.cmd.__name__, 'aMCatNLOInterface')
+        #cmd.run_cmd('switch MG5')
+        #self.assertEqual(cmd.cmd.__name__, 'MadGraphCmd')
+        cmd.run_cmd('set automatic_html_opening False --no_save')
+        cmd.run_cmd('generate w+ > all all')
+        self.assertEqual(cmd.cmd.__name__, 'MadGraphCmd')
+        cmd.run_cmd('output  /tmp/MGPROCESS -f')
+        cmd.run_cmd('launch -f')
+        data = self.load_result('run_01')
+        self.assertNotEqual(data[0]['cross'], 0)
+        
+        
+        
 
 #===============================================================================
 # TestCmd

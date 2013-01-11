@@ -384,7 +384,7 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
     --pert_particles : pdgs of particles taking part to interactions
     --soft_particles : pdgs of massless particles in pert_particles
     """
-    ghost_list = [-100033, 100033]
+    ghost_list = [82, -82]
     ghost_list += [ p['get_pdg_code'] for p in model.get('particles') if p.get('spin') < 0]
     qcd_inter = MG.InteractionList()
     pert_parts = []

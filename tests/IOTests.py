@@ -56,6 +56,7 @@ class IOTest(object):
                    '-../../Source/MODEL/param_read.inc',
                    '-../../Source/MODEL/param_write.inc']            
     helas_files = ['../../Source/DHELAS/[.+\.(f|inc)]']
+    
     # We also exclude the helas_files because they are sourced from unordered
     # dictionaries.
     all_files = proc_files+model_files
@@ -262,7 +263,7 @@ class IOTestManager(unittest.TestCase):
         else:
             self.all_tests[(folderName, testName)] = IOtest
 
-    def runIOTests(self, update = False, force = False, verbose=False, \
+    def runIOTests(self, update = False, force = 0, verbose=False, \
                                                        testKeys='instanceList'):
         """ Run the IOTests for this instance (defined in self.instance_tests)
             and compare the files of the chosen tests against the hardcoded ones
@@ -278,29 +279,40 @@ class IOTestManager(unittest.TestCase):
             it will create/update/remove the files instead of testing them.
             The argument tests can be a list of tuple-keys describing the tests
             to cover. Otherwise it is the instance_test list.
-            The force argument must be true if you do not want to monitor the 
-            modifications on the updated files.
+            The force argument must be 10 if you do not want to monitor the 
+            modifications on the updated files. If it is 0 you will monitor
+            all modified file and if 1 you will monitor each modified file of
+            a given name only once.
         """
         
         # First make sure that the tarball need not be untarred
-        # Extract the tarball for hardcoded comparison if necessary
-        if not path.isdir(_hc_comparison_files):
-            if path.isfile(_hc_comparison_tarball):
-                tar = tarfile.open(_hc_comparison_tarball,mode='r:bz2')
-                tar.extractall(path.dirname(_hc_comparison_files))
-                tar.close()
-            else:
-                raise MadGraph5Error, \
-              "Could not find the comparison tarball %s."%_hc_comparison_tarball
+        # Extract the tarball for hardcoded in all cases to make sure the 
+        # IOTestComparison folder is synchronized with it.
+        if path.isdir(_hc_comparison_files):
+            try:
+                shutil.rmtree(_hc_comparison_files)
+            except IOError:
+                pass
+        if path.isfile(_hc_comparison_tarball):
+            tar = tarfile.open(_hc_comparison_tarball,mode='r:bz2')
+            tar.extractall(path.dirname(_hc_comparison_files))
+            tar.close()
+        else:
+            raise MadGraph5Error, \
+          "Could not find the comparison tarball %s."%_hc_comparison_tarball
 
         # In update = True mode, we keep track of the modification to 
         # provide summary information
         modifications={'updated':[],'created':[], 'removed':[]}
         
+        # List all the names of the files for which modifications have been
+        # reviewed at least once
+        reviewed_file_names = set([])
+        
         # Chose what test to cover
         if testKeys == 'instanceList':
             testKeys = self.instance_tests
-            
+        
         if verbose: print "\n== Operational mode : file %s ==\n"%\
                                            ('UPDATE' if update else 'TESTING')
         for (folder_name, test_name) in testKeys:
@@ -348,7 +360,9 @@ class IOTestManager(unittest.TestCase):
                                                                path.isdir(file):
                         continue
                     if path.basename(file) not in activeFiles:
-                        if not force:
+                        if force==0 or (force==1 and \
+                                path.basename(file) not in reviewed_file_names):
+                            reviewed_file_names.add(path.basename(file))
                             answer = Cmd.timed_input(question=
 """Obsolete ref. file %s in %s/%s detected, delete it? [y/n] >"""\
                                     %(path.basename(file),folder_name,test_name)
@@ -414,7 +428,7 @@ class IOTestManager(unittest.TestCase):
                             
                 else:                        
                     if not path.isdir(pjoin(_hc_comparison_files,folder_name)):
-                        if not force:
+                        if force==0:
                             if folder_name in refused_Folders:
                                 continue
                             answer = Cmd.timed_input(question=
@@ -429,7 +443,7 @@ class IOTestManager(unittest.TestCase):
                         os.makedirs(pjoin(_hc_comparison_files,folder_name))
                     if not path.isdir(pjoin(_hc_comparison_files,folder_name,
                                                                     test_name)):
-                        if not force:
+                        if force==0:
                             if (folder_name,test_name) in refused_testNames:
                                 continue
                             answer = Cmd.timed_input(question=
@@ -466,14 +480,16 @@ class IOTestManager(unittest.TestCase):
                             file = open(tmp_path,'w')
                             file.write(target)
                             file.close()
-                            if not force:
+                            if force==0 or (force==1 and path.basename(\
+                                   comparison_path) not in reviewed_file_names):
+                                reviewed_file_names.add(\
+                                                 path.basename(comparison_path))
                                 text = \
 """File %s in test %s/%s differs by the following (reference file first):
 """%(fname,folder_name,test_name)
                                 text += misc.Popen(['diff',str(comparison_path),
                                   str(tmp_path)],stdout=subprocess.PIPE).\
                                                                 communicate()[0]
-                                os.remove(tmp_path)
                                 # Remove the last newline
                                 if text[-1]=='\n':
                                     text=text[:-1]
@@ -484,7 +500,8 @@ class IOTestManager(unittest.TestCase):
                                     print "Difference displayed in editor."
                                 answer = Cmd.timed_input(question=
 """Ref. file %s differs from the new one (see diff. before), update it? [y/n] >"""%fname
-                                                                   ,default="y")                      
+                                                                   ,default="y")
+                                os.remove(tmp_path)                   
                                 if answer not in ['Y','y','']:
                                     if verbose: print "    > [ IGNORED ] %s"\
                                                                           %fname
@@ -500,7 +517,10 @@ class IOTestManager(unittest.TestCase):
                             modifications['updated'].append(
                                       '/'.join(comparison_path.split('/')[-3:]))
                     else:
-                        if not force:
+                        if force==0 or (force==1 and path.basename(\
+                                   comparison_path) not in reviewed_file_names):
+                            reviewed_file_names.add(\
+                                                 path.basename(comparison_path))
                             answer = Cmd.timed_input(question=
 """New file %s detected, create it? [y/n] >"""%fname
                                                                    ,default="y")
@@ -524,4 +544,4 @@ class IOTestManager(unittest.TestCase):
             return modifications
         else:
             return 'test_over'
-        
+ 
