@@ -5,6 +5,7 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Fix a bug affecting 2>1 process when the final states particles is 
                       (outcoming fermion) introduced in version 1.5.0. (Thanks to 
                       B. Fuks) 
+                  OM: Fix a problem of fermion flow for v4 model (thanks to A. Abrahantes) 
                   OM: Fix problem in the ./bin/mg5 file command when some question are 
                       present in the file.
                   OM: Fix a crash in multi_run for more than 300 successive runs.
