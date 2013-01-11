@@ -224,8 +224,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         maxparticles = max([me.get_nexternal_ninitial()[0] \
                               for me in matrix_elements])
 
-        lines = "integer max_particles\n"
-        lines += "parameter (max_particles=%d)" % maxparticles
+        lines = "integer max_particles, max_branch\n"
+        lines += "parameter (max_particles=%d) \n" % maxparticles
+        lines += "parameter (max_branch=max_particles-1)"
 
         # Write the file
         writer.writelines(lines)
@@ -368,9 +369,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                  fortran_model)
 
         filename = 'configs_and_props_info.inc'
-        self.write_configs_and_props_info_file(writers.FortranWriter(filename), 
-                                               matrix_element,
-                                               fortran_model)
+        nconfigs=self.write_configs_and_props_info_file(
+                              writers.FortranWriter(filename), 
+                              matrix_element,
+                              fortran_model)
+
+        filename = 'ngraphs.inc'
+        self.write_ngraphs_file(writers.FortranWriter(filename),
+                            nconfigs)
 
 #write the wrappers
         filename = 'real_me_chooser.f'
@@ -684,10 +690,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                         else:
                             mass = "abs(%s)" % particle.get('mass')
                     # Get width
-                            if particle.get('width').lower() == 'zero':
-                                width = particle.get('width')
-                            else:
-                                width = "abs(%s)" % particle.get('width')
+                        if particle.get('width').lower() == 'zero':
+                            width = particle.get('width')
+                        else:
+                            width = "abs(%s)" % particle.get('width')
     
                         pow_part = 1 + int(particle.is_boson())
     
@@ -709,7 +715,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # Write the file
         writer.writelines(lines+lines2)
 
-
+        return max_iconfig
 
 
 
@@ -888,7 +894,7 @@ end
         self.write_ngraphs_file(writers.FortranWriter(filename),
                             nconfigs)
 
-        filename = 'born_ncombs.inc'
+        filename = 'ncombs.inc'
         self.write_ncombs_file(writers.FortranWriter(filename),
                                matrix_element.born_matrix_element,
                                fortran_model)
@@ -2060,7 +2066,7 @@ C
     
         # ncomb (used for clustering) is 2^(nexternal)
         file = "       integer    n_max_cl\n"
-        file = file + "parameter (n_max_cl=%d)" % (2 ** nexternal)
+        file = file + "parameter (n_max_cl=%d)" % (2 ** (nexternal+1))
     
         # Write the file
         writer.writelines(file)

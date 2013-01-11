@@ -1,11 +1,11 @@
 c*************************************************************************
 c	Parameters used by cluster
 c*************************************************************************
-      include 'born_ncombs.inc'
-      include 'born_ngraphs.inc'
+      include 'ncombs.inc'
+      include 'ngraphs.inc'
 c     parameters for clustering:
 c     id_cl gives diagrams for propagators     
-      integer id_cl(maxsproc,n_max_cl,0:n_max_cg)
+      integer id_cl(fks_configs,n_max_cl,0:n_max_cg)
       logical heavyrad(n_max_cg)
       common/cl_map/id_cl,heavyrad
 c     resmap gives potential resonances for diagrams
@@ -15,7 +15,7 @@ c     resmap gives potential resonances for diagrams
       double precision pcl(0:4,n_max_cl) ! 4 is mass**2
       logical isbw(n_max_cl)
       integer imocl(nexternal), idacl(nexternal,2), igraphs(0:n_max_cg)
-      integer ipdgcl(n_max_cl,n_max_cg,maxsproc)
+      integer ipdgcl(n_max_cl,n_max_cg,fks_configs)
       logical clustered
       common/cl_val/pcl,pt2ijcl,zcl,mt2ij,mt2last,imocl,idacl,igraphs,ipdgcl,
      &    isbw,clustered

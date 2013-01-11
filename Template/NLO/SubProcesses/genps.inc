@@ -6,8 +6,7 @@ c*************************************************************************
 c       Parameters used by genps and dsample, you must recompile
 c	dsample if you change anything below
 c*************************************************************************
-      integer    max_particles  , max_branch
-      parameter (max_particles=10, max_branch=max_particles-2)
+	include 'maxparticles.inc'
       integer    max_tree    , max_dim
       parameter (max_tree=200, max_dim=max_tree*(max_branch+1))
       integer    ng     , maxdim     , maxinvar     , maxconfigs

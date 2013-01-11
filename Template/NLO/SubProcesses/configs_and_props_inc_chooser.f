@@ -8,21 +8,19 @@ c MAPCONFIG())
       double precision ZERO
       parameter (ZERO=0d0)
       include 'maxparticles.inc'
-      integer max_branch
-      parameter (max_branch=max_particles-1)
-      include 'maxconfigs.inc'
+      include 'ngraphs.inc'
       integer i,j,k
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      integer mapconfig(0:lmaxconfigs)
+      integer iforest(2,-max_branch:-1,n_max_cg)
+      integer sprop(-max_branch:-1,n_max_cg)
+      integer tprid(-max_branch:-1,n_max_cg)
+      integer mapconfig(0:n_max_cg)
       common/c_configs_inc/iforest,sprop,tprid,mapconfig
-      double precision ppmass(-max_branch:nexternal,lmaxconfigs)
-      double precision ppwidth(-max_branch:-1,lmaxconfigs)
-      integer ppow(-max_branch:-1,lmaxconfigs)
-      common/c_props_inc/ppmass,ppwidth,ppow
+      double precision prmass(-max_branch:nexternal,n_max_cg)
+      double precision prwidth(-max_branch:-1,n_max_cg)
+      integer prow(-max_branch:-1,n_max_cg)
+      common/c_props_inc/prmass,prwidth,prow
       double precision pmass(nexternal)
       include 'configs_and_props_info.inc'
       include "pmass.inc"
@@ -32,9 +30,9 @@ c
      $        /' increase max_branch',max_branch,max_branch_used
          stop
       endif
-      if (lmaxconfigs_used.gt.lmaxconfigs) then
+      if (lmaxconfigs_used.gt.n_max_cg) then
          write (*,*) 'ERROR in configs_and_propsinc_chooser:'/
-     $        /' increase lmaxconfigs' ,lmaxconfigs,lmaxconfigs_used
+     $        /' increase n_max_cg' ,n_max_cg,lmaxconfigs_used
          stop
       endif
 c
@@ -52,14 +50,14 @@ c information.
                enddo
                sprop(j,i)=SPROP_D(nFKSprocess,j,i)
                tprid(j,i)=TPRID_D(nFKSprocess,j,i)
-               ppmass(j,i)=PMASS_D(nFKSprocess,j,i)
-               ppwidth(j,i)=PWIDTH_D(nFKSprocess,j,i)
-               ppow(j,i)=POW_D(nFKSprocess,j,i)
+               prmass(j,i)=PMASS_D(nFKSprocess,j,i)
+               prwidth(j,i)=PWIDTH_D(nFKSprocess,j,i)
+               prow(j,i)=POW_D(nFKSprocess,j,i)
             enddo
 c for the mass, also fill for the external masses
-            ppmass(0,i)=0d0
+            prmass(0,i)=0d0
             do j=1,nexternal
-               ppmass(j,i)=pmass(j)
+               prmass(j,i)=pmass(j)
             enddo
          endif
       enddo
