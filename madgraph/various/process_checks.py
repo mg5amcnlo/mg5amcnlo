@@ -35,6 +35,8 @@ import subprocess
 import time
 import datetime
 import errno
+# If psutil becomes standard, the RAM check can be performed with it instead
+#import psutil
 
 import aloha
 import aloha.aloha_writers as aloha_writers
@@ -76,6 +78,100 @@ def clean_added_globals(to_clean):
     for value in list(to_clean):
         del globals()[value]
         to_clean.remove(value)
+
+#===============================================================================
+# Helper class for timing and RAM flashing of subprocesses.
+#===============================================================================
+class ProcessTimer:
+  def __init__(self,*args,**opts):
+    self.cmd_args = args
+    self.cmd_opts = opts
+    self.execution_state = False
+
+  def execute(self):
+    self.max_vms_memory = 0
+    self.max_rss_memory = 0
+
+    self.t1 = None
+    self.t0 = time.time()
+    self.p = subprocess.Popen(*self.cmd_args,**self.cmd_opts)
+    self.execution_state = True
+
+  def poll(self):
+    if not self.check_execution_state():
+      return False
+
+    self.t1 = time.time()
+    flash = subprocess.Popen("ps %i -o rss"%self.p.pid,
+                                              shell=True,stdout=subprocess.PIPE)
+    stdout_list = flash.communicate()[0].split('\n')
+    rss_memory = int(stdout_list[1])
+    # for now we ignore vms
+    vms_memory = 0
+
+    # This is the neat version using psutil
+#    try:
+#      pp = psutil.Process(self.p.pid)
+#
+#      # obtain a list of the subprocess and all its descendants
+#      descendants = list(pp.get_children(recursive=True))
+#      descendants = descendants + [pp]
+#
+#      rss_memory = 0
+#      vms_memory = 0
+#
+#      # calculate and sum up the memory of the subprocess and all its descendants 
+#      for descendant in descendants:
+#        try:
+#          mem_info = descendant.get_memory_info()
+#
+#          rss_memory += mem_info[0]
+#          vms_memory += mem_info[1]
+#        except psutil.error.NoSuchProcess:
+#          # sometimes a subprocess descendant will have terminated between the time
+#          # we obtain a list of descendants, and the time we actually poll this
+#          # descendant's memory usage.
+#          pass
+#
+#    except psutil.error.NoSuchProcess:
+#      return self.check_execution_state()
+
+    self.max_vms_memory = max(self.max_vms_memory,vms_memory)
+    self.max_rss_memory = max(self.max_rss_memory,rss_memory)
+
+    return self.check_execution_state()
+
+  def is_running(self):
+    # Version with psutil
+#    return psutil.pid_exists(self.p.pid) and self.p.poll() == None
+    return self.p.poll() == None
+
+  def check_execution_state(self):
+    if not self.execution_state:
+      return False
+    if self.is_running():
+      return True
+    self.executation_state = False
+    self.t1 = time.time()
+    return False
+
+  def close(self,kill=False):
+
+    if self.p.poll() == None:
+        if kill:
+            self.p.kill()
+        else:
+            self.p.terminate()
+
+    # Again a neater handling with psutil
+#    try:
+#      pp = psutil.Process(self.p.pid)
+#      if kill:
+#        pp.kill()
+#      else:
+#        pp.terminate()
+#    except psutil.error.NoSuchProcess:
+#      pass
 
 #===============================================================================
 # Fake interface to be instancied when using process_checks from tests instead.
@@ -782,7 +878,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         LoopMatrixElementEvaluator.__init__(self,*args, **kwargs)
 
     @classmethod
-    def make_and_run(cls, dir_name):
+    def make_and_run(cls, dir_name,checkRam=False):
         """ Compile the check program in the directory dir_name.
         Return the compilation and running time. """
 
@@ -803,17 +899,39 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             logging.info("Error while executing make in %s" % dir_name)
             return None, None
 
-        start=time.time()
-        retcode = subprocess.call('./check',
+        if not checkRam:
+            start=time.time()
+            retcode = subprocess.call('./check',
                                    cwd=dir_name, stdout=devnull, stderr=devnull)
-        run_time = time.time()-start
+            run_time = time.time()-start
+            ram_usage = None
+        else:
+            ptimer = ProcessTimer(['./check'], cwd=dir_name, shell=False, \
+                                 stdout=devnull, stderr=devnull, close_fds=True)
+            try:
+                ptimer.execute()
+                #poll as often as possible; otherwise the subprocess might 
+                # "sneak" in some extra memory usage while you aren't looking
+                # Accuracy of .2 seconds is enough for the timing.
+                while ptimer.poll():
+                    time.sleep(.2)
+            finally:
+                #make sure that we don't leave the process dangling.
+                ptimer.close()
+            # Notice that ptimer.max_vms_memory is also available if needed.
+            ram_usage = ptimer.max_rss_memory
+            # Unfortunately the running time is less precise than with the
+            # above version
+            run_time = (ptimer.t1 - ptimer.t0)
+            retcode = ptimer.p.returncode
+
         devnull.close()
-        
+
         if retcode != 0:
             logging.warning("Error while executing ./check in %s" % dir_name)
-            return None, None
+            return None, None, None
 
-        return compilation_time, run_time
+        return compilation_time, run_time, ram_usage
     
     @classmethod
     def get_MadLoop_Params(cls,MLCardPath):
@@ -898,7 +1016,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             # initialization is performed.
             cls.fix_PSPoint_in_check(SubProc_dir, read_ps = False, 
                                                          npoints = curr_attempt)
-            compile_time, run_time = cls.make_and_run(run_dir)
+            compile_time, run_time, ram_usage = cls.make_and_run(run_dir)
             if compile_time==None:
                 logging.error("Failed at running the process in %s."%run_dir)
                 attempts = None
@@ -1085,11 +1203,11 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             # PS point run to evaluate it.
             self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
                                   read_ps = False, npoints = 3, hel_config = -1)
-            compile_time, run_time = self.make_and_run(dir_name)
+            compile_time, run_time, ram_usage = self.make_and_run(dir_name)
             time_per_ps_estimate = run_time/3.0
         
         self.boot_time_setup(dir_name,bootandstop=True)
-        compile_time, run_time = self.make_and_run(dir_name)
+        compile_time, run_time, ram_usage = self.make_and_run(dir_name)
         res_timings['Booting_time'] = run_time
         self.boot_time_setup(dir_name,bootandstop=False)
 
@@ -1111,8 +1229,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         res_timings['n_contrib_hel']=n_contrib_hel
         res_timings['n_tot_hel']=len(helicities)
         
-        # We aim at a 20 sec run
-        target_pspoints_number = max(int(20.0/time_per_ps_estimate)+1,5)
+        # We aim at a 30 sec run
+        target_pspoints_number = max(int(30.0/time_per_ps_estimate)+1,5)
 
         logger.info("Checking timing for process %s "%proc_name+\
                                     "with %d PS points."%target_pspoints_number)
@@ -1120,17 +1238,19 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
              read_ps = False, npoints = target_pspoints_number*2, \
                                                   hel_config = contributing_hel)
-        compile_time, run_time = self.make_and_run(dir_name)
+        compile_time, run_time, ram_usage = self.make_and_run(dir_name)
         if compile_time == None: return None
         res_timings['run_polarized_total']=\
                (run_time-res_timings['Booting_time'])/(target_pspoints_number*2)
 
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
              read_ps = False, npoints = target_pspoints_number, hel_config = -1)
-        compile_time, run_time = self.make_and_run(dir_name)
+        compile_time, run_time, ram_usage = self.make_and_run(dir_name, 
+                                                                  checkRam=True)
         if compile_time == None: return None
         res_timings['run_unpolarized_total']=\
                    (run_time-res_timings['Booting_time'])/target_pspoints_number
+        res_timings['ram_usage'] = ram_usage
         
         if not self.loop_optimized_output:
             return res_timings
@@ -1143,7 +1263,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
              read_ps = False, npoints = target_pspoints_number, hel_config = -1)
-        compile_time, run_time = self.make_and_run(dir_name)
+        compile_time, run_time, ram_usage = self.make_and_run(dir_name)
         if compile_time == None: return None
         res_timings['run_unpolarized_coefs']=\
                    (run_time-res_timings['Booting_time'])/target_pspoints_number
@@ -1151,7 +1271,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
              read_ps = False, npoints = target_pspoints_number*2, \
                                                   hel_config = contributing_hel)
-        compile_time, run_time = self.make_and_run(dir_name)
+        compile_time, run_time, ram_usage = self.make_and_run(dir_name)
         if compile_time == None: return None
         res_timings['run_polarized_coefs']=\
                (run_time-res_timings['Booting_time'])/(target_pspoints_number*2)    
@@ -1436,12 +1556,13 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 break
             except IOError, e:
                 if e.errno == errno.EINTR:
-                    if retry==3:
-                        logger.error("Failed three times consecutively because"+
+                    if retry==100:
+                        logger.error("Failed hundred times consecutively because"+
                                                " of system call interruptions.")
                         raise
                     else:
-                        logger.debug("Recovered from a system call interruption.")                        
+                        logger.debug("Recovered from a system call interruption."+\
+                                        "PSpoint #%i, Attempt #%i."%(i,retry+1))                        
                     # We will retry this PS point
                     retry = retry+1
                     # Make sure the MadLoop process is properly killed
@@ -2413,8 +2534,6 @@ def output_timings(process, timings):
         res_str += "|= Loop evaluation (OPP) time %.3gms (%d%%)\n"\
                                   %(loop_time,int(round(100.0*loop_time/total)))
     res_str += "\n= Miscellaneous ========================\n"
-    res_str += "|= Loading time (Color data). ~%.3gms\n"\
-                                               %(timings['Booting_time']*1000.0)
     res_str += "|= Number of hel. computed... %s/%s\n"\
                 %(f(timings['n_contrib_hel'],'%d'),f(timings['n_tot_hel'],'%d'))
     res_str += "|= Number of loop diagrams... %s\n"%f(timings['n_loops'],'%d')
@@ -2426,11 +2545,15 @@ def output_timings(process, timings):
         if timings['loop_wfs_ranks']!=None:
             for i, r in enumerate(timings['loop_wfs_ranks']):
                 res_str += "||= # of loop wfs of rank %d.. %d\n"%(i,r)
+    res_str += "|= Loading time (Color data). ~%.3gms\n"\
+                                               %(timings['Booting_time']*1000.0)
+    res_str += "|= Maximum RAM usage (rss)... %s\n"\
+                                  %f(float(timings['ram_usage']/1000.0),'%.3gMb')                                            
     res_str += "\n= Output disk size =====================\n"
-    res_str += "|= Source directory sources.. %s\n"%f(timings['du_source'],'%s')
-    res_str += "|= Process sources........... %s\n"%f(timings['du_process'],'%s')    
-    res_str += "|= Color and helicity data... %s\n"%f(timings['du_color'],'%s')
-    res_str += "|= Executable size........... %s\n"%f(timings['du_exe'],'%s')
+    res_str += "|= Source directory sources.. %s\n"%f(timings['du_source'],'%sb')
+    res_str += "|= Process sources........... %s\n"%f(timings['du_process'],'%sb')    
+    res_str += "|= Color and helicity data... %s\n"%f(timings['du_color'],'%sb')
+    res_str += "|= Executable size........... %s\n"%f(timings['du_exe'],'%sb')
     
     return res_str
 

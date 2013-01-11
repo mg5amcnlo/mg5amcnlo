@@ -195,7 +195,7 @@ class MadLoopLauncher(ExtLauncher):
                   read_ps = os.path.isfile(os.path.join(curr_path, 'PS.input')),
                   npoints = 1)
                 # check
-                t1, t2 =  evaluator.make_and_run(curr_path)
+                t1, t2, ram_usage = evaluator.make_and_run(curr_path)
                 if t1==None or t2==None:
                     raise MadGraph5Error,"Error while running process %s."\
                                                                      %shell_name
