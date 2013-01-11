@@ -1030,6 +1030,8 @@ class OneTagResults(dict):
         
         if command.startswith('pythia'):
             button = 'launch pythia'
+        if command.startswith('shower'):
+            button = 'shower events'
         elif command.startswith('remove banner'):
             button = 'remove banner'
         elif command.startswith('remove'):
@@ -1038,8 +1040,12 @@ class OneTagResults(dict):
             button = 're-run from the banner'
         else:
             button = 'launch detector simulation'
-        
-        header = 'Launch ./bin/madevent in a shell, and run the following command: '
+
+        if exists(pjoin(self.me_dir,'bin','madevent')):
+            header = 'Launch ./bin/madevent in a shell, and run the following command: '
+        elif exists(pjoin(self.me_dir,'bin','aMCatNLO')):
+            header = 'Launch ./bin/aMCatNLO in a shell, and run the following command: '
+
         return "<INPUT TYPE=SUBMIT VALUE='%s' onClick=\"alert('%s')\">" % (button, header + command)
 
 
