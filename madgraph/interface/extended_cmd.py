@@ -289,10 +289,12 @@ class BasicCmd(cmd.Cmd):
 
         if base_dir is None:
             base_dir = os.getcwd()
-
         base_dir = os.path.expanduser(os.path.expandvars(base_dir))
         
+        if text == '~':
+            text = '~/'
         prefix, text = os.path.split(text)
+        prefix = os.path.expanduser(os.path.expandvars(prefix))
         base_dir = os.path.join(base_dir, prefix)
         if prefix:
             prefix += os.path.sep
@@ -646,21 +648,21 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         options = question_instance.allow_arg
         if line in options:
             return line
-        elif path and os.path.exists(line):
-            return line
         elif hasattr(question_instance, 'do_%s' % line.split()[0]):
             #This is a command line, exec it and check next line
             logger.info(line)
             fct = getattr(question_instance, 'do_%s' % line.split()[0])
             fct(' '.join(line.split()[1:]))
             return self.check_answer_in_input_file(question_instance, default, path)
-
+        elif path:
+            line = os.path.expanduser(os.path.expandvars(line))
+            if os.path.exists(line):
+                return line
         # No valid answer provides
-        elif self.haspiping:
+        if self.haspiping:
             self.store_line(line)
             return None # print the question and use the pipe
         else:
-            print 'invalid value for the questions -> put as not answered', line
             logger.info(question_instance.question)
             logger.warning('The answer to the previous question is not set in your input file')
             logger.warning('Use %s value' % default)
@@ -791,7 +793,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
         This allow to pass extra argument for internal call.
         """
-        
+        if '~/' in line and os.environ.has_key('HOME'):
+            line = line.replace('~/', '%s/' % os.environ['HOME'])
+        line = os.path.expandvars(line)
         cmd, arg, line = self.parseline(line)
         if not line:
             return self.emptyline()

@@ -4718,7 +4718,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         cmd.OneLinePathCompletion.__init__(self, *args, **opt)
         self.me_dir = self.mother_interface.me_dir
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
-        self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
+        try:
+            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
+        except check_param_card.InvalidParamCard:
+            logger.error('Current param_card is not valid. We are going to use the default one.')
+            files.cp(pjoin(self.me_dir,'Cards','param_card_default.dat'), 
+                     pjoin(self.me_dir,'Cards','param_card.dat'))
+            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
         default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
     
         self.pname2block = {}
