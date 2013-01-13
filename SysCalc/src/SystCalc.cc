@@ -164,7 +164,7 @@ SystCalc::SystCalc(istream& conffile,
     _PDFsets.erase(_PDFsets.begin()+getMaxNumSets()-1,_PDFsets.end());
   }
   // Initialize all PDF sets
-  for(int i=0; i < max(int(_PDFsets.size()), getMaxNumSets()-1); i++) {
+  for(int i=0; i < _PDFsets.size(); i++) {
     cout << "Init PDF set " << _PDFsets[i] << endl;
     int pdfnum = i+1; // Has to start with 1, otherwise get segfault in LHAPDF
     if(atoi(_PDFsets[i].c_str()) > 0)
