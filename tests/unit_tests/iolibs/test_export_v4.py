@@ -4788,25 +4788,25 @@ CALL FSIXXX(W(1,2),W(1,4),MGVX494,Mneu1,Wneu1,W(1,8))
 CALL HIOXXX(W(1,5),W(1,7),MGVX494,Msl2,Wsl2,W(1,9))
 # Amplitude(s) for diagram number 1
 CALL IOSXXX(W(1,8),W(1,6),W(1,9),MGVX350,AMP(1))
-CALL OXXXXX(P(0,2),me,NHEL(2),-1*IC(2),W(1,9))
-CALL IXXXXX(P(0,1),me,NHEL(1),+1*IC(1),W(1,10))
-CALL FSICXX(W(1,10),W(1,3),MGVX350,Mneu1,Wneu1,W(1,11))
-CALL HIOXXX(W(1,11),W(1,6),MGVX350,Msl2,Wsl2,W(1,10))
-CALL FSOCXX(W(1,9),W(1,4),MGVX494,Mneu1,Wneu1,W(1,11))
+CALL IXXXXX(P(0,1),me,NHEL(1),+1*IC(1),W(1,9))
+CALL FSICXX(W(1,9),W(1,3),MGVX350,Mneu1,Wneu1,W(1,10))
+CALL HIOXXX(W(1,10),W(1,6),MGVX350,Msl2,Wsl2,W(1,9))
+CALL OXXXXX(P(0,2),me,NHEL(2),-1*IC(2),W(1,10))
+CALL FSOCXX(W(1,10),W(1,4),MGVX494,Mneu1,Wneu1,W(1,11))
 # Amplitude(s) for diagram number 2
-CALL IOSXXX(W(1,5),W(1,11),W(1,10),MGVX494,AMP(2))
-CALL FSIXXX(W(1,5),W(1,4),MGVX494,Mneu1,Wneu1,W(1,9))
+CALL IOSXXX(W(1,5),W(1,11),W(1,9),MGVX494,AMP(2))
+CALL FSIXXX(W(1,5),W(1,4),MGVX494,Mneu1,Wneu1,W(1,10))
 CALL HIOXXX(W(1,2),W(1,7),MGVX494,Msl2,Wsl2,W(1,12))
 # Amplitude(s) for diagram number 3
-CALL IOSXXX(W(1,9),W(1,6),W(1,12),MGVX350,AMP(3))
+CALL IOSXXX(W(1,10),W(1,6),W(1,12),MGVX350,AMP(3))
 CALL OXXXXX(P(0,5),me,NHEL(5),+1*IC(5),W(1,12))
 CALL FSOCXX(W(1,12),W(1,4),MGVX494,Mneu1,Wneu1,W(1,7))
 # Amplitude(s) for diagram number 4
-CALL IOSXXX(W(1,2),W(1,7),W(1,10),MGVX494,AMP(4))
-CALL FSOXXX(W(1,6),W(1,3),MGVX350,Mneu1,Wneu1,W(1,10))
+CALL IOSXXX(W(1,2),W(1,7),W(1,9),MGVX494,AMP(4))
+CALL FSOXXX(W(1,6),W(1,3),MGVX350,Mneu1,Wneu1,W(1,9))
 CALL HIOXXX(W(1,8),W(1,1),MGVX350,Msl2,Wsl2,W(1,6))
 # Amplitude(s) for diagram number 5
-CALL IOSXXX(W(1,5),W(1,10),W(1,6),MGVX494,AMP(5))
+CALL IOSXXX(W(1,5),W(1,9),W(1,6),MGVX494,AMP(5))
 CALL IXXXXX(P(0,6),me,NHEL(6),-1*IC(6),W(1,6))
 CALL FSICXX(W(1,6),W(1,3),MGVX350,Mneu1,Wneu1,W(1,8))
 CALL HIOXXX(W(1,8),W(1,1),MGVX350,Msl2,Wsl2,W(1,6))
@@ -4814,9 +4814,9 @@ CALL HIOXXX(W(1,8),W(1,1),MGVX350,Msl2,Wsl2,W(1,6))
 CALL IOSXXX(W(1,5),W(1,11),W(1,6),MGVX494,AMP(6))
 # Amplitude(s) for diagram number 7
 CALL IOSXXX(W(1,2),W(1,7),W(1,6),MGVX494,AMP(7))
-CALL HIOXXX(W(1,9),W(1,1),MGVX350,Msl2,Wsl2,W(1,6))
+CALL HIOXXX(W(1,10),W(1,1),MGVX350,Msl2,Wsl2,W(1,6))
 # Amplitude(s) for diagram number 8
-CALL IOSXXX(W(1,2),W(1,10),W(1,6),MGVX494,AMP(8))""".split('\n'))
+CALL IOSXXX(W(1,2),W(1,9),W(1,6),MGVX494,AMP(8))""".split('\n'))
 
         # Test find_outgoing_number
         goal_numbers = [1, 2, 3, 2, 3, 1, 2, 3, 1, 1, 3, 2, 3, 3]
@@ -7900,13 +7900,13 @@ CALL FSICXX(W(1,3),W(1,6),MGVX350,Mneu1,Wneu1,W(1,7))
 CALL HIOXXX(W(1,1),W(1,5),MGVX494,Msl2,Wsl2,W(1,3))
 # Amplitude(s) for diagram number 1
 CALL IOSXXX(W(1,7),W(1,2),W(1,3),MGVX350,AMP(1))
-CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,3))
-CALL FSICXX(W(1,3),W(1,4),MGVX350,Mneu1,Wneu1,W(1,7))
 CALL OXXXXX(P(0,5),zero,NHEL(5),+1*IC(5),W(1,3))
-CALL FSOXXX(W(1,3),W(1,6),MGVX350,Mneu1,Wneu1,W(1,4))
-CALL HIOXXX(W(1,1),W(1,4),MGVX494,Msl2,Wsl2,W(1,3))
+CALL FSOXXX(W(1,3),W(1,6),MGVX350,Mneu1,Wneu1,W(1,7))
+CALL HIOXXX(W(1,1),W(1,7),MGVX494,Msl2,Wsl2,W(1,3))
+CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,7))
+CALL FSICXX(W(1,7),W(1,4),MGVX350,Mneu1,Wneu1,W(1,1))
 # Amplitude(s) for diagram number 2
-CALL IOSXXX(W(1,7),W(1,2),W(1,3),MGVX350,AMP(2))""".split('\n'))
+CALL IOSXXX(W(1,1),W(1,2),W(1,3),MGVX350,AMP(2))""".split('\n'))
 
         exporter = export_v4.ProcessExporterFortranME()
 
@@ -7939,6 +7939,7 @@ CALL IOSXXX(W(1,7),W(1,2),W(1,3),MGVX350,AMP(2))""".split('\n'))
         me = matrix_elements[0]
 
         myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
+
         # This has been checked against v4
         self.assertEqual(myfortranmodel.get_matrix_element_calls(me),
         """CALL IXXXXX(P(0,1),zero,NHEL(1),+1*IC(1),W(1,1))
@@ -7952,13 +7953,13 @@ CALL FSIXXX(W(1,3),W(1,6),MGVX494,Mneu1,Wneu1,W(1,7))
 CALL HIOXXX(W(1,1),W(1,5),MGVX494,Msl2,Wsl2,W(1,3))
 # Amplitude(s) for diagram number 1
 CALL IOSXXX(W(1,7),W(1,2),W(1,3),MGVX350,AMP(1))
-CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,3))
-CALL FSICXX(W(1,3),W(1,4),MGVX350,Mneu1,Wneu1,W(1,7))
 CALL OXXXXX(P(0,5),zero,NHEL(5),+1*IC(5),W(1,3))
-CALL FSOCXX(W(1,3),W(1,6),MGVX494,Mneu1,Wneu1,W(1,4))
-CALL HIOXXX(W(1,1),W(1,4),MGVX494,Msl2,Wsl2,W(1,3))
+CALL FSOCXX(W(1,3),W(1,6),MGVX494,Mneu1,Wneu1,W(1,7))
+CALL HIOXXX(W(1,1),W(1,7),MGVX494,Msl2,Wsl2,W(1,3))
+CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,7))
+CALL FSICXX(W(1,7),W(1,4),MGVX350,Mneu1,Wneu1,W(1,1))
 # Amplitude(s) for diagram number 2
-CALL IOSXXX(W(1,7),W(1,2),W(1,3),MGVX350,AMP(2))""".split('\n'))
+CALL IOSXXX(W(1,1),W(1,2),W(1,3),MGVX350,AMP(2))""".split('\n'))
 
         self.assertEqual(exporter.get_JAMP_lines(me)[0],
                          "JAMP(1)=+AMP(1)-AMP(2)")
@@ -8025,24 +8026,24 @@ CALL HIOXXX(W(1,1),W(1,6),MGVX494,Msl2,Wsl2,W(1,3))
 CALL IOSXXX(W(1,11),W(1,2),W(1,3),MGVX350,AMP(3))
 # Amplitude(s) for diagram number 4
 CALL IOSXXX(W(1,12),W(1,2),W(1,3),MGVX350,AMP(4))
-CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,3))
-CALL FVICXX(W(1,3),W(1,5),MGVX12,zero,zero,W(1,12))
-CALL FSICXX(W(1,12),W(1,4),MGVX350,Mneu1,Wneu1,W(1,5))
-CALL OXXXXX(P(0,6),zero,NHEL(6),+1*IC(6),W(1,12))
-CALL FVOXXX(W(1,12),W(1,9),MGVX12,zero,zero,W(1,4))
-CALL FSOXXX(W(1,4),W(1,8),MGVX350,Mneu1,Wneu1,W(1,9))
-CALL HIOXXX(W(1,1),W(1,9),MGVX494,Msl2,Wsl2,W(1,4))
-# Amplitude(s) for diagram number 5
-CALL IOSXXX(W(1,5),W(1,2),W(1,4),MGVX350,AMP(5))
-CALL FSOXXX(W(1,12),W(1,7),MGVX350,Mneu1,Wneu1,W(1,9))
+CALL OXXXXX(P(0,6),zero,NHEL(6),+1*IC(6),W(1,3))
+CALL FVOXXX(W(1,3),W(1,9),MGVX12,zero,zero,W(1,12))
+CALL FSOXXX(W(1,12),W(1,8),MGVX350,Mneu1,Wneu1,W(1,9))
 CALL HIOXXX(W(1,1),W(1,9),MGVX494,Msl2,Wsl2,W(1,12))
+CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,9))
+CALL FVICXX(W(1,9),W(1,5),MGVX12,zero,zero,W(1,8))
+CALL FSICXX(W(1,8),W(1,4),MGVX350,Mneu1,Wneu1,W(1,5))
+# Amplitude(s) for diagram number 5
+CALL IOSXXX(W(1,5),W(1,2),W(1,12),MGVX350,AMP(5))
+CALL FSOXXX(W(1,3),W(1,7),MGVX350,Mneu1,Wneu1,W(1,8))
+CALL HIOXXX(W(1,1),W(1,8),MGVX494,Msl2,Wsl2,W(1,3))
 # Amplitude(s) for diagram number 6
-CALL IOSXXX(W(1,5),W(1,2),W(1,12),MGVX350,AMP(6))
-CALL FSICXX(W(1,3),W(1,10),MGVX350,Mneu1,Wneu1,W(1,5))
+CALL IOSXXX(W(1,5),W(1,2),W(1,3),MGVX350,AMP(6))
+CALL FSICXX(W(1,9),W(1,10),MGVX350,Mneu1,Wneu1,W(1,5))
 # Amplitude(s) for diagram number 7
-CALL IOSXXX(W(1,5),W(1,2),W(1,4),MGVX350,AMP(7))
+CALL IOSXXX(W(1,5),W(1,2),W(1,12),MGVX350,AMP(7))
 # Amplitude(s) for diagram number 8
-CALL IOSXXX(W(1,5),W(1,2),W(1,12),MGVX350,AMP(8))""".split('\n'))
+CALL IOSXXX(W(1,5),W(1,2),W(1,3),MGVX350,AMP(8))""".split('\n'))
 
         # Test amp2 lines        
         amp2_lines = \

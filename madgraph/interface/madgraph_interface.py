@@ -3970,7 +3970,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
-        elif not os.path.isdir(self._export_dir):
+        if self._export_format not in \
+                ['madevent', 'standalone', 'standalone_cpp'] and \
+                not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
         if self._export_format in ['madevent', 'standalone']:
