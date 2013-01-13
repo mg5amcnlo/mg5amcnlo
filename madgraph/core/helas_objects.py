@@ -2702,7 +2702,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     helas_diagram.get('amplitudes').append(amp)
 
             # After generation of all wavefunctions and amplitudes,
-            # first make sure that all mothers come before daughters
+            # first sort the wavefunctions according to number
+            diagram_wavefunctions.sort(lambda wf1, wf2: \
+                                       wf1.get('number') - wf2.get('number'))
+            
+            # Then make sure that all mothers come before daughters
             iwf = len(diagram_wavefunctions) - 1
             while iwf > 0:
                 this_wf = diagram_wavefunctions[iwf]
@@ -2718,13 +2722,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         break
                 if not moved: iwf -= 1
 
-            # Add wavefunctions to diagram
+            # Finally, add wavefunctions to diagram
             helas_diagram.set('wavefunctions', diagram_wavefunctions)
 
-            # Sort the wavefunctions according to number
-            diagram_wavefunctions.sort(lambda wf1, wf2: \
-                          wf1.get('number') - wf2.get('number'))
-            
             if optimization:
                 wavefunctions.extend(diagram_wavefunctions)
                 wf_mother_arrays.extend([wf.to_array() for wf \
