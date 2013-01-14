@@ -750,7 +750,11 @@ class PBSCluster(Cluster):
         if log is None:
             log = '/dev/null'
         
-        text += prog
+        if not os.path.isabs(prog):
+            text += "./%s" % prog
+        else:
+            text+= prog
+        
         if argument:
             text += ' ' + ' '.join(argument)
 

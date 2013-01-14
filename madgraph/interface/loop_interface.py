@@ -608,7 +608,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             stab_statistics = int(argss[1])
             argss = argss[:1]+argss[2:]
         # Now make sure the process is acceptable
-        proc = " ".join(argss[1:])
+        proc = " ".join(argss[1:-1])
         myprocdef = self.extract_process(proc)
         self.validate_model('virtual')
         self.proc_validity(myprocdef,'ML5_check')

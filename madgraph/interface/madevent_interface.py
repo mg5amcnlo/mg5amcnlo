@@ -3103,16 +3103,13 @@ calculator."""
             self.update_status('', level=None)
         except Exception, error:        
             pass
+        devnull = open(os.devnull, 'w')
         try:
-            devnull = open(os.devnull, 'w') 
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)
         except Exception:
             pass
-        try:
-            devnull.close()
-        except Exception:
-            pass
+        devnull.close()
 
         return super(MadEventCmd, self).do_quit(line)
     
@@ -3507,6 +3504,7 @@ class GridPackCmd(MadEventCmd):
         self.total_jobs = 0
         subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
                    P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
+        devnull = os.open(os.devnull, os.O_RDWR)
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -3518,7 +3516,7 @@ class GridPackCmd(MadEventCmd):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(pjoin(Pdir, match))
             
-            devnull = os.open(os.devnull, os.O_RDWR)
+
             logfile = pjoin(Pdir, 'gen_ximprove.log')
             proc = misc.Popen([pjoin(bindir, 'gen_ximprove')],
                                     stdin=subprocess.PIPE,
@@ -3559,10 +3557,10 @@ class GridPackCmd(MadEventCmd):
         
         
         self.update_status('finish refine', 'parton', makehtml=False)
+        devnull.close()
+
 
 
 AskforEditCard = common_run.AskforEditCard
-    
-    
 
 

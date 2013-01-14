@@ -552,7 +552,7 @@ class TestCmdShell2(unittest.TestCase,
         self.do('define p = u c~ g d s b~ b h')
         self.assertEqual(self.cmd._multiparticles['p'],
                          [21, 2, 1, 3, 5, -4, -5, 25])
-        
+
     def test_madevent_decay_chain(self):
         """Test decay chain output"""
 
@@ -621,6 +621,21 @@ class TestCmdShell2(unittest.TestCase,
                                                     'P1_udx_wp_wp_epve',
                                                     'madevent')))
         
+    def test_export_matrix_v4(self):
+        """Test that the matrix.f is coherent"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmtree(self.out_dir)
+
+        self.do('import model_v4 mssm')
+        self.do('set group_subprocesses False')
+        self.do('generate g b > t1 go > t t t~ n1 x1- / a w+ h+ h1 h2 h3 z t2 b2  t~  QED=2 @1')
+        self.do('output madevent %s ' % self.out_dir)
+        
+        #The optimization in the output checks the coherence of the matrix.f
+        # and catch the unwanted behavior of the matrix.f if any
+
+        
     def test_complex_mass_SA(self):
         """ Test that the complex_mass compile in fortran """
         
@@ -637,7 +652,7 @@ class TestCmdShell2(unittest.TestCase,
                 value = line.split('=')[1]
                 value = value. split('GeV')[0]
                 value = eval(value)
-                self.assertAlmostEqual(value, 1.951829785476705e-2)
+                self.assertAlmostEqual(value, 0.019538610404713896)
 
     def test_load_feynman(self):
         """ Test that feynman gauge assignment works """

@@ -433,12 +433,12 @@ class HelpToCmd(cmd.HelpCmd):
         
     def help_check(self):
 
-        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition",'$MG:color:BLUE')
+        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition [--energy=]",'$MG:color:BLUE')
         logger.info("-- check a process or set of processes.",'$MG:color:BLACK')
         logger.info("General options:",'$MG:color:BLACK')
         logger.info("o full:",'$MG:color:GREEN')
         logger.info("   Perform all four checks described below:")
-        logger.info("   permutation, gauge and lorentz_invariance.")
+        logger.info("   permutation, brs, gauge and lorentz_invariance.")
         logger.info("o permutation:",'$MG:color:GREEN')
         logger.info("   Check that the model and MG5 are working properly")
         logger.info("   by generating permutations of the process and checking")
@@ -448,7 +448,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   gauge invariant (comparing Feynman and unitary gauges)")
         logger.info("   This check if for now not available for loop processes.")
         logger.info("o brs:",'$MG:color:GREEN')
-        logger.info("   Check that the ward identities are satisfied if the ")
+        logger.info("   Check that the Ward identities are satisfied if the ")
         logger.info("   process has at least one massless gauge boson as an")
         logger.info("   external particle.")
         logger.info("o lorentz_invariance:",'$MG:color:GREEN')
@@ -457,6 +457,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("Comments",'$MG:color:GREEN')         
         logger.info(" > If param_card is given, that param_card is used ")
         logger.info("   instead of the default values for the model.")
+        logger.info(" > \"--energy=\" allows to change the default value of sqrt(S).")
         logger.info(" > Except for the 'gauge' test, all checks above are also")
         logger.info("   available for loop processes with ML5 ('virt=' mode)")
         logger.info("Example: check full p p > j j",'$MG:color:GREEN')
@@ -741,7 +742,10 @@ class CheckValidForCmd(cmd.CheckCmd):
         if any([',' in elem for elem in args]):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
-        self.check_process_format(" ".join(args[1:]))
+        if not args[-1].startswith('--energy='):
+            args.append('--energy=1000')
+        
+        self.check_process_format(" ".join(args[1:-1]))
 
         return param_card
     
@@ -1584,6 +1588,7 @@ class CompleteForCmd(cmd.CompleteCmd):
     def complete_check(self, text, line, begidx, endidx):
         "Complete the check command"
 
+        out = {}
         args = self.split_arg(line[0:begidx])
 
         # Format
@@ -1601,7 +1606,8 @@ class CompleteForCmd(cmd.CompleteCmd):
         model_comp_and_path = self.deal_multiple_categories(\
           {'Process completion': self.model_completion(text, ' '.join(args[2:]),
           line, categories = False, allowed_loop_mode=['virt']), 
-          'Param_card.dat path completion:':self.path_completion(text)})
+          'Param_card.dat path completion:':self.path_completion(text),
+          'options': self.list_completion(text, ['--energy='])})
 
         if len(args) == 2:
             return model_comp_and_path
@@ -2308,7 +2314,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             ndiags = sum([amp.get_number_of_diagrams() for \
                               amp in self._curr_amps])
             logger.info("Total: %i processes with %i diagrams" % \
-                  (len(self._curr_amps), ndiags))                
+                  (len(self._curr_amps), ndiags))        
+                
   
     # Define a multiparticle label
     def do_define(self, line, log=True):
@@ -2737,7 +2744,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if args[0] in ['stability', 'profile']:
             stab_statistics = int(args[1])
             args = args[:1]+args[2:]
-        
+
+        energy = float(args[-1].split('=')[1])
+        args = args[:-1]        
         proc_line = " ".join(args[1:])
         myprocdef = self.extract_process(proc_line)
 
@@ -2830,6 +2839,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if args[0] in  ['gauge', 'full'] and \
           len(self._curr_model.get('gauge')) == 2 and\
                         myprocdef.get('perturbation_couplings') in [[],['QCD']]:
+
             line = " ".join(args[1:])
             myprocdef = self.extract_process(line)
             if gauge == 'unitary':
@@ -2848,10 +2858,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
+                                                energy=energy,
                                                 cuttools=CT_dir,
                                                 reuse = reuse,
                                                 cmd = self)
-            
             
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
@@ -2864,7 +2874,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                             quick = True,
                                             cuttools=CT_dir,
                                             reuse = reuse,
-                                            cmd = self)
+                                            cmd = self,
+                                            energy=energy)
             nb_processes += len(comparisons[0])
 
         if args[0] in ['lorentz', 'full']:
@@ -2873,7 +2884,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                           param_card = param_card,
                                           cuttools=CT_dir,
                                           reuse = reuse,
-                                          cmd = self)
+                                          cmd = self,
+                                          energy=energy)
             nb_processes += len(lorentz_result)
         
         if args[0] in  ['brs', 'full']:
@@ -2881,7 +2893,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                           param_card = param_card,
                                           cuttools=CT_dir,
                                           reuse = reuse,
-                                          cmd = self)
+                                          cmd = self,
+                                          energy=energy)
             nb_processes += len(gauge_result)     
             
         cpu_time2 = time.time()
@@ -3754,7 +3767,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             misc.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
 
         # Untar the file
-        returncode = misc.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR, 
+        returncode = misc.call(['tar', '-xzpf', '%s.tgz' % name], cwd=MG5DIR, 
                                      stdout=open(os.devnull, 'w'))
 
         if returncode:
@@ -4773,7 +4786,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 group = False
             elif self.options['group_subprocesses'] == 'Auto' and \
                                          self._curr_amps[0].get_ninitial() == 1:
-                   group = False 
+                group = False 
 
 
 
