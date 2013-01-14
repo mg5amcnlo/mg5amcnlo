@@ -54,8 +54,6 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 	cuts.o fastjetfortran_madfks.o boostwdir2.o 			\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o
 
-# Files for splitting of the jobs
-WRITE_AJOB_BASIC=write_ajob_basic.o write_ajob.o
 
 %.o : %.f
 	$(FC) $(FFLAGS) -c $<

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #  MZ, 2012-06-14
 import os
+import sys
 
 class SplitJobsError(Exception):
     pass
@@ -40,7 +41,14 @@ for (k, max_n) in max_events.items():
         max_dict[k] = max(max_n/20, 100)
         if max_dict[k]:
             print 'Max number of events in splitted job is %d' % max_dict[k]
-    
+
+
+if len(sys.argv) == 2:
+    # read from the passed argument
+    new_max = int(sys.argv[1]) 
+    for k in max_events.keys():
+        max_dict[k] = new_max
+
 while True:
     for job in jobs:
         if max_dict[job['type']]:
@@ -54,6 +62,8 @@ while True:
     for k, tot in ntot_dict.items():
         if tot:
             print '  %d %s-events jobs' % (tot, k)
+    if len(sys.argv) == 2:
+        break
     yes = input('Is this acceptable? (1: yes 0: no) ')
     if yes == 1:
         break
@@ -64,7 +74,6 @@ while True:
             print 'Max %s-events per channel found is %d' % (k, max_n)
             new_max = input('Give new maximum if you want to split jobs ') 
             max_dict[k] = new_max
-
 
 
 splitted_lines = []
@@ -86,7 +95,7 @@ for job in jobs:
         splitted_lines.append('%s     %d     %9e' % (filename.ljust(40), split_nevts, split_xsec))
         nevts_filename = os.path.join(dir,'nevts__%d' % (i+1))
         nevts_file = open(nevts_filename, 'w')
-        nevts_file.write('%d' % split_nevts)
+        nevts_file.write('%d\n' % split_nevts)
         nevts_file.close()
     print '%s, %s, Original %d, after splitting %d' % (job['dir'], job['channel'], job['nevts'], job_events)
 

@@ -1311,20 +1311,37 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         self.print_summary(2,mode)
                         return
 
+                    #check if need to split jobs (only on a cluster)
+                    split = i == 2 and self.run_card['nevt_job'] > 0 and self.cluster_mode == 1
+
+                    if split:
+                        # split the event generation
+                        p = misc.Popen([pjoin(self.me_dir, 'bin', 'internal', 'split_jobs.py')] + \
+                                   [self.run_card['nevt_job']],
+                                   stdout = devnull,
+                                   cwd = pjoin(self.me_dir, 'SubProcesses'))
+
                     self.update_status(status, level='parton')
                     if mode in ['aMC@NLO', 'noshower']:
                         self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
                         self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
-                        self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
+                        self.run_all(job_dict, 
+                                     [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], 
+                                     status, split_jobs = split)
                         
                     elif mode == 'aMC@LO':
                         self.write_madinMMC_file(
                             pjoin(self.me_dir, 'SubProcesses'), 'born', i) 
-                        self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
+                        self.run_all(job_dict, 
+                                     [['2', 'B', '%d' % i]], 
+                                     '%s at LO' % status, split_jobs = split)
 
                 if (i < 2 and not options['only_generation']) or i == 1 :
-                    p = misc.Popen(['./combine_results.sh'] + [ '%d' % i,'%d' % nevents, '%s' % req_acc ] + folder_names[mode],
-                            stdout=subprocess.PIPE, cwd = pjoin(self.me_dir, 'SubProcesses'))
+                    p = misc.Popen(['./combine_results.sh'] + \
+                                   ['%d' % i,'%d' % nevents, '%s' % req_acc ] + \
+                                   folder_names[mode],
+                                   stdout=subprocess.PIPE, 
+                                   cwd = pjoin(self.me_dir, 'SubProcesses'))
                     output = p.communicate()
                     files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d_abs.txt' % i), \
                              pjoin(self.me_dir, 'Events', self.run_name))
@@ -2010,20 +2027,57 @@ Integrated cross-section
             self.cluster.remove()
             raise
 
-    def run_all(self, job_dict, arg_list, run_type='monitor'):
+    def run_all(self, job_dict, arg_list, run_type='monitor', split_jobs = False):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
         self.njobs = sum(len(jobs) for jobs in job_dict.values()) * len(arg_list)
+        njob_split = 0
         self.ijob = 0
         if self.cluster_mode == 0:
             self.update_status((self.njobs - 1, 1, 0, run_type), level='parton')
         for args in arg_list:
             for Pdir, jobs in job_dict.items():
                 for job in jobs:
-                    self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                    if not split_jobs:
+                        self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                    else:
+                        print args
+                        to_split = self.find_jobs_to_split(Pdir, job, args[1])
+                        for n in to_split:
+                            self.run_exe(job, args + [n], run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                        njob_split += len(to_split)
                     # print some statistics if running serially
         if self.cluster_mode == 2:
             time.sleep(1) # security to allow all jobs to be launched
+        if njob_split > 0:
+            self.njobs = njob_split
         self.wait_for_complete(run_type)
+
+    def find_jobs_to_split(self, pdir, job, arg):
+        """looks into the nevents_unweighed_splitted file to check how many
+        split jobs are needed for this (pdir, job). arg is F, B or V"""
+        # find the number of the integration channel
+        splittings = []
+        ajob = open(pjoin(self.me_dir, 'SubProcesses', pdir, job)).read()
+        pattern = re.compile('for i in (\d+) ; do')
+        match = re.search(pattern, ajob)
+        channel = match.groups()[0]
+        # then open the nevents_unweighted_splitted file and look for the 
+        # number of splittings to be done
+        nevents_file = open(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted_splitted')).read()
+        pattern = re.compile(r'%s_(\d+).lhe' % \
+                         (pjoin(pdir, 'G%s%s' % (arg,channel), 'events')))
+        matches = re.findall(pattern, nevents_file)
+        for m in matches:
+            splittings.append(m[0])
+        return splittings
+
+
+
+
+
+
+
+
 
 
     def run_exe(self, exe, args, run_type, cwd=None):
