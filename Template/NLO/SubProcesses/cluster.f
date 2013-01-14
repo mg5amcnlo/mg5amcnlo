@@ -1,3 +1,92 @@
+      subroutine crossp(p1,p2,p)
+c**************************************************************************
+c     input:
+c            p1, p2    vectors to cross
+c**************************************************************************
+      implicit none
+      real*8 p1(0:3), p2(0:3), p(0:3)
+
+      p(0)=0d0
+      p(1)=p1(2)*p2(3)-p1(3)*p2(2)
+      p(2)=p1(3)*p2(1)-p1(1)*p2(3)
+      p(3)=p1(1)*p2(2)-p1(2)*p2(1)
+
+      return 
+      end
+
+      subroutine rotate(p1,p2,n,nn2,ct,st,d)
+c**************************************************************************
+c     input:
+c            p1        vector to be rotated
+c            n         vector perpendicular to plane of rotation
+c            nn2       squared norm of n to improve numerics
+c            ct, st    cos/sin theta of rotation in plane 
+c            d         direction: 1 there / -1 back
+c     output:
+c            p2        p1 rotated using defined rotation
+c**************************************************************************
+      implicit none
+      real*8 p1(0:3), p2(0:3), n(0:3), at(0:3), ap(0:3), cr(0:3)
+      double precision nn2, ct, st, na, nn
+      integer d, i
+
+      if (nn2.eq.0d0) then
+         do i=0,3
+            p2(i)=p1(i)
+         enddo   
+         return
+      endif
+      nn=dsqrt(nn2)
+      na=(n(1)*p1(1)+n(2)*p1(2)+n(3)*p1(3))/nn2
+      do i=1,3
+         at(i)=n(i)*na
+         ap(i)=p1(i)-at(i)
+      enddo
+      p2(0)=p1(0)
+      call crossp(n,ap,cr)
+      do i=1,3
+         if (d.ge.0) then
+            p2(i)=at(i)+ct*ap(i)+st/nn*cr(i)
+         else 
+            p2(i)=at(i)+ct*ap(i)-st/nn*cr(i)
+         endif
+      enddo
+      
+      return 
+      end
+
+
+      subroutine constr(p1,p2,n,nn2,ct,st)
+c**************************************************************************
+c     input:
+c            p1, p2    p1 rotated onto p2 defines plane of rotation
+c     output:
+c            n         vector perpendicular to plane of rotation
+c            nn2       squared norm of n to improve numerics
+c            ct, st    cos/sin theta of rotation in plane 
+c**************************************************************************
+      implicit none
+      real*8 p1(0:3), p2(0:3), n(0:3), tr(0:3)
+      double precision nn2, ct, st, mct
+
+      ct=p1(1)*p2(1)+p1(2)*p2(2)+p1(3)*p2(3)
+      ct=ct/dsqrt(p1(1)**2+p1(2)**2+p1(3)**2)
+      ct=ct/dsqrt(p2(1)**2+p2(2)**2+p2(3)**2)
+      mct=ct
+c     catch bad numerics
+      if (mct-1d0>0d0) mct=0d0
+      st=dsqrt(1d0-mct*mct)
+      call crossp(p1,p2,n)
+      nn2=n(1)**2+n(2)**2+n(3)**2
+c     don't rotate if nothing to rotate
+      if (nn2.le.1d-34) then
+         nn2=0d0
+         return
+      endif
+      return 
+      end
+
+
       integer function combid(i,j)
 c**************************************************************************
 c     input:
@@ -257,7 +346,7 @@ c**************************************************************************
       include 'genps.inc'
       include 'nexternal.inc'
       include 'ngraphs.inc'
-      integer nbw,ibwlist(nexternal)
+      integer nbw,ibwlist(nexternal),i
       logical isbw(*)
 c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
 c  NLO RUNNING DOESN'T SET THE ONBW 
@@ -269,8 +358,8 @@ c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
       integer iforest(2,-max_branch:-1,n_max_cg)
       integer sprop(-max_branch:-1,n_max_cg)
       integer tprid(-max_branch:-1,n_max_cg)
-      integer mapconfig(0:n_max_cg)
-      common/c_configs_inc/iforest,sprop,tprid,mapconfig
+      integer mapconfig_dummy(0:n_max_cg)
+      common/c_configs_inc/iforest,sprop,tprid,mapconfig_dummy
       integer icl(-(nexternal-3):nexternal)
       integer ibw
       nbw=0
@@ -395,6 +484,7 @@ c Include
       include 'genps.inc'
       include 'cluster.inc'
       include 'message.inc'
+      include 'real_from_born_configs.inc'
 c Argument
       double precision p(0:3,nexternal)
 c Local
@@ -405,6 +495,8 @@ c Local
       double precision pz(0:3)
       data (pz(i),i=0,3)/1d0,0d0,0d0,1d0/
 c Common
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer            mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
 c External
@@ -417,11 +509,6 @@ c SET THE DEFAULT KTSCHEME
       integer ickkw,ktscheme
       ktscheme=1
       ickkw=1
-
-c FIXTHIS FIXTHIS FIXTHIS: the this_config is a Born configuration,
-c but we compare it to Real-emission configurations
-      write (*,*) 'not the correct this_config in cluster.f'
-      stop
 
       if (btest(mlevel,1))
      $   write (*,*)'New event'
@@ -527,7 +614,7 @@ c     Make sure that initial-state particles are daughters
          pt2ijcl(n)=pcl(4,imocl(n))
          zcl(n)=0.
          igraphs(0)=1
-         igraphs(1)=this_config
+         igraphs(1)=real_from_born_conf(this_config,nFKSprocess)
          cluster=.true.
          clustered=.true.
          return
@@ -645,12 +732,14 @@ c     Make sure that initial-state particle is always among daughters
                write(*,*) 'Last vertex is',imap(1,2),imap(2,2),imap(3,2)
                write(*,*) '          ->',pt2ijcl(n+1),sqrt(pt2ijcl(n+1))
             endif
-c     If present channel among graphs, use only this channel
+c     If present channel among graphs, use only this channel.
 c     This is important when we have mixed QED-QCD
             do i=1,igraphs(0)
-               if (igraphs(i).eq.this_config) then
+               if (igraphs(i).eq.
+     &              real_from_born_conf(this_config,nFKSprocess)) then
                   igraphs(0)=1
-                  igraphs(1)=this_config
+                  igraphs(1)=
+     &                 real_from_born_conf(this_config,nFKSprocess)
                   exit
                endif
             enddo
@@ -712,7 +801,7 @@ c     check whether 2->(n-1) process w/ cms energy > 0 remains
                      zij(idij)=zclus(pcl(0,idi),pcl(0,idj),pcl(0
      $                    ,iwinp))
                   endif
-c                 prefer clustering when outgoing in direction of incoming
+c     prefer clustering when outgoing in direction of incoming
                   if(sign(1d0,pcl(3,idi)).ne.sign(1d0,pcl(3,idj)))
      $                 pt2ij(idij)=pt2ij(idij)*(1d0+1d-6)
                endif

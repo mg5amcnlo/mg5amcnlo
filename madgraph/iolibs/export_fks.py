@@ -373,6 +373,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                               writers.FortranWriter(filename), 
                               matrix_element,
                               fortran_model)
+        
+        filename = 'real_from_born_configs.inc'
+        self.write_real_from_born_configs(
+                              writers.FortranWriter(filename), 
+                              matrix_element,
+                              fortran_model)
 
         filename = 'ngraphs.inc'
         self.write_ngraphs_file(writers.FortranWriter(filename),
@@ -585,6 +591,41 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         #return to the initial dir
         os.chdir(old_pos)               
+
+    def write_real_from_born_configs(self, writer, matrix_element, fortran_model):
+        """Writes the real_from_born_configs.inc file that contains
+        the mapping to go for a given born configuration (that is used
+        e.g. in the multi-channel phase-space integration to the
+        corresponding real-emission diagram, i.e. the real emission
+        diagram in which the combined ij is split in i_fks and
+        j_fks."""
+        lines=[]
+        lines2=[]
+        max_links=0
+        born_me=matrix_element.born_matrix_element
+        for iFKS, conf in enumerate(matrix_element.get_fks_info_list()):
+            iFKS=iFKS+1
+            fks_matrix_element=matrix_element.real_processes[conf['n_me'] - 1].matrix_element
+            links=fks_common.link_rb_configs(
+                born_me.get('base_amplitude'),
+                fks_matrix_element.get('base_amplitude'),
+                conf['fks_info']['i'],conf['fks_info']['j'],conf['fks_info']['ij'])
+            max_links=max(max_links,len(links))
+            for i,diags in enumerate(links):
+                if not i == diags['born_conf']:
+                    print links
+                    raise MadGraph5Error, "born_conf should be canonically ordered"
+            real_configs=', '.join(['%d' % int(diags['real_conf']+1) for diags in links])
+            lines.append("data (real_from_born_conf(irfbc,%d),irfbc=1,%d) /%s/" \
+                             % (iFKS,len(links),real_configs))
+
+        lines2.append("integer irfbc")
+        lines2.append("integer real_from_born_conf(%d,%d)" \
+                         % (max_links,len(matrix_element.get_fks_info_list())))
+        # Write the file
+        writer.writelines(lines2+lines)
+
+
 
     def write_configs_and_props_info_file(self, writer, matrix_element, fortran_model):
         """writes the configs_and_props_info.inc file that cointains

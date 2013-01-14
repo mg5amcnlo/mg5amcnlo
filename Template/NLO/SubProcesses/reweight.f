@@ -1,3 +1,137 @@
+      double precision function gamma(q0)
+c**************************************************
+c   calculates the branching probability
+c**************************************************
+      implicit none
+      include 'nexternal.inc'
+      include 'message.inc'
+      include 'nFKSconfigs.inc'
+      include 'cluster.inc'
+      include 'sudakov.inc'
+      include 'run.inc'
+      integer i
+      double precision q0, val, add, add2
+      double precision qr,lf
+      double precision alphas
+      external alphas
+      double precision pi
+      parameter (pi=3.141592654d0)
+
+      gamma=0.0d0
+
+      if (Q1<m_qmass(iipdg)) return
+      m_lastas=Alphas(alpsfact*q0)
+      val=2d0*m_colfac(iipdg)*m_lastas/PI/q0
+c   if (m_mode & bpm::power_corrs) then
+      qr=q0/Q1
+      if(m_pca(iipdg,iimode).eq.0)then
+        lf=log(1d0/qr-1d0)
+      else 
+        lf=log(1d0/qr)
+      endif
+      val=val*(m_dlog(iipdg)*(1d0+m_kfac*m_lastas/(2d0*PI))*lf+m_slog(iipdg)
+     $   +qr*(m_power(iipdg,1,iimode)+qr*(m_power(iipdg,2,iimode)
+     $   +qr*m_power(iipdg,3,iimode))))
+c   else
+c   val=val*m_dlog*(1d0+m_kfac*m_lastas/(2d0*PI))*log(Q1/q0)+m_slog;
+c   endif
+      if(m_qmass(iipdg).gt.0d0)then
+        val=val+m_colfac(iipdg)*m_lastas/PI/q0*(0.5-q0/m_qmass(iipdg)*
+     $     atan(m_qmass(iipdg)/q0)-
+     $     (1.0-0.5*(q0/m_qmass(iipdg))**2)*log(1.0+(m_qmass(iipdg)/q0)**2))
+      endif
+      val=max(val,0d0)
+      if (iipdg.eq.21) then
+        add=0d0
+        do i=-6,-1
+          if(m_qmass(abs(i)).gt.0d0)then
+            add2=m_colfac(i)*m_lastas/PI/q0/
+     $         (1.0+(m_qmass(abs(i))/q0)**2)*
+     $         (1.0-1.0/3.0/(1.0+(m_qmass(abs(i))/q0)**2))
+          else
+            add2=2d0*m_colfac(i)*m_lastas/PI/q0*(m_slog(i)
+     $         +qr*(m_power(i,1,iimode)+qr*(m_power(i,2,iimode)
+     $         +qr*m_power(i,3,iimode))))
+          endif
+          add=add+max(add2,0d0)
+        enddo
+        val=val+add
+      endif
+      
+      gamma = max(val,0d0)
+
+      if (btest(mlevel,6)) then
+        write(*,*)'       \\Delta^I_{',iipdg,'}(',
+     &     q0,',',q1,') -> ',gamma
+        write(*,*) val,m_lastas,m_dlog(iipdg),m_slog(iipdg)
+        write(*,*) m_power(iipdg,1,iimode),m_power(iipdg,2,iimode)
+     $       ,m_power(iipdg,3,iimode)
+      endif
+
+      return
+      end
+
+      double precision function sud(q0,Q11,ipdg,imode)
+c**************************************************
+c   actually calculates is sudakov weight
+c**************************************************
+      implicit none
+      include 'message.inc'
+      include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      include 'cluster.inc'      
+      integer ipdg,imode
+      double precision q0, Q11
+      double precision gamma,DGAUSS
+      external gamma,DGAUSS
+      double precision eps
+      parameter (eps=1d-5)
+      
+      sud=0.0d0
+
+      Q1=Q11
+      iipdg=iabs(ipdg)
+      iimode=imode
+
+      sud=exp(-DGAUSS(gamma,q0,Q1,eps))
+
+      if (btest(mlevel,6)) then
+        write(*,*)'       \\Delta^',imode,'_{',ipdg,'}(',
+     &     2*log10(q0/q1),') -> ',sud
+      endif
+
+      return
+      end
+
+      double precision function sudwgt(q0,q1,q2,ipdg,imode)
+c**************************************************
+c   calculates is sudakov weight
+c**************************************************
+      implicit none
+      include 'message.inc'
+      integer ipdg,imode
+      double precision q0, q1, q2
+      double precision sud
+      external sud
+      
+      sudwgt=1.0d0
+
+      if(q2.le.q1)then
+         if(q2.lt.q1.and.btest(mlevel,4))
+     $        write(*,*)'Warning! q2 < q1 in sudwgt. Return 1.'
+         return
+      endif
+
+      sudwgt=sud(q0,q2,ipdg,imode)/sud(q0,q1,ipdg,imode)
+
+      if (btest(mlevel,5)) then
+        write(*,*)'       \\Delta^',imode,'_{',ipdg,'}(',
+     &     q0,',',q1,',',q2,') -> ',sudwgt
+      endif
+
+      return
+      end
+
       logical function isqcd(ipdg)
 c**************************************************
 c   determines whether particle is qcd particle
@@ -243,23 +377,32 @@ c**************************************************
 
 c Include
       include 'nexternal.inc'
+      include 'run.inc'
       include 'nFKSconfigs.inc'
       include 'maxparticles.inc'
       include 'cluster.inc'
       include 'message.inc'
-      double precision ZERO
+      include 'coupl.inc'
+      double precision ZERO,PI
       parameter (ZERO=0d0)
+      parameter( PI = 3.14159265358979323846d0 )
 c Argument
       double precision p(0:3,nexternal)
 c Local
-      integer i,j,n,ibeam(2),jlast(2),jfirst(2),jcentral(2)
-      logical clustered,partonline(2),qcdline(2)
+      integer i,j,n,ibeam(2),jlast(2),jfirst(2),jcentral(2),ipart(2
+     $     ,n_max_cl)
+      logical partonline(2),qcdline(2)
+      integer nwarning
+      data nwarning /0/
 c Common
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
+      double precision q2bck(2)
+      common /to_q2bck/q2bck
 c External
-      logical cluster,isqcd,isparton,isjetvx
-      external cluster,isqcd,isparton,isjetvx
+      logical cluster,isqcd,isparton,isjetvx,isjet
+      double precision alphas
+      external cluster,isqcd,isparton,isjetvx,isjet,alphas
 c
       setclscales=.true.
 c   
@@ -482,63 +625,45 @@ c   employing the information in common/cl_val/
 c**************************************************
       implicit none
 
-      include 'message.inc'
-      include 'genps.inc'
-      include 'maxconfigs.inc'
+c Include
       include 'nexternal.inc'
-      include 'maxamps.inc'
+      include 'nFKSconfigs.inc'
       include 'cluster.inc'
+      include 'message.inc'
       include 'run.inc'
       include 'coupl.inc'
-C   
-C   ARGUMENTS 
-C   
-      DOUBLE PRECISION P(0:3,NEXTERNAL)
-
-C   global variables
-C     Present process number
-      INTEGER IMIRROR,IPROC
-      COMMON/TO_MIRROR/IMIRROR, IPROC
-      integer              IPSEL
-      COMMON /SubProc/ IPSEL
-      INTEGER SUBDIAG(MAXSPROC),IB(2)
-      COMMON/TO_SUB_DIAG/SUBDIAG,IB
-      data IB/1,2/
-c     q2bck holds the central q2fact scales
-      real*8 q2bck(2)
-      common /to_q2bck/q2bck
-      double precision stot,m1,m2
-      common/to_stot/stot,m1,m2
-
-C   local variables
-      integer i, j, idi, idj
-      real*8 PI
+      double precision ZERO,PI
+      parameter (ZERO=0d0)
       parameter( PI = 3.14159265358979323846d0 )
-
-      integer mapconfig(0:lmaxconfigs), this_config
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      include 'configs.inc'
-      real*8 xptj,xptb,xpta,xptl,xmtc
-      real*8 xetamin,xqcut,deltaeta
-      common /to_specxpt/xptj,xptb,xpta,xptl,xmtc,xetamin,xqcut,deltaeta
-      double precision asref, pt2prev(n_max_cl),pt2pdf(n_max_cl),pt2min
-      integer n, ibeam(2), iqcd(0:2)
-      integer idfl, idmap(-nexternal:nexternal)
-c     ipart gives external particle number chain
-      integer ipart(2,n_max_cl)
-      double precision xnow(2)
-      double precision xtarget,tmp,pdfj1,pdfj2,q2now,etot
-      integer iseed,np
-      data iseed/0/
+c Argument
+      double precision p(0:3,nexternal)
+c Local
       logical isvx
+      integer i,j,n,ipart(2,n_max_cl),ibeam(2)
+      double precision pt2min,etot,pt2prev(n_max_cl),pt2pdf(n_max_cl)
+     $     ,xnow(2),asref,q2now,tmp,pdfj1,pdfj2
+      integer ib(2)
+      data ib /1,2/
+c Common
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      double precision q2bck(2)
+      common /to_q2bck/q2bck
+c External
+      logical ispartonvx,isqcd,isparton,isjetvx,isjet
+      double precision alphas,getissud,pdg2pdf,sudwgt
+      external ispartonvx,alphas,isqcd,isparton,isjetvx,getissud,pdg2pdf
+     $     ,isjet,sudwgt
 
-      logical isqcd,isjet,isparton,isjetvx,ispartonvx
-      double precision alphas,getissud,pdg2pdf, sudwgt
-      real xran1
-      external isqcd,isjet,isparton,ispartonvx
-      external alphas, isjetvx, getissud, pdg2pdf, xran1,  sudwgt
+c$$$c SET THE DEFAULT KTSCHEME
+      double precision xqcut
+c$$$      logical hmult,pdfwgt
+c$$$      integer ickkw
+      xqcut=0d0
+c$$$      hmult=.false.
+c$$$      pdfwgt=.false.
+c$$$      ickkw=1
+      
 
       rewgt=1.0d0
       clustered=.false.
@@ -547,7 +672,7 @@ c     ipart gives external particle number chain
 
 c   Set mimimum kt scale, depending on highest mult or not
       if(hmult.or.ickkw.eq.1)then
-        pt2min=0
+        pt2min=0d0
       else
         pt2min=xqcut**2
       endif
@@ -555,11 +680,11 @@ c   Set mimimum kt scale, depending on highest mult or not
      $     write(*,*) 'pt2min set to ',pt2min
 
 c   Set etot, used for non-radiating partons
-      etot=sqrt(stot)
+      etot=sqrt(4d0*ebeam(1)*ebeam(2))
 
 c   Since we use pdf reweighting, need to know particle identities
       if (btest(mlevel,1)) then
-         write(*,*) 'Set process number ',ipsel
+         write(*,*) 'Set process number ',nFKSprocess
       endif
 
 c   Preparing graph particle information (ipart, needed to keep track of
@@ -590,10 +715,10 @@ c   external particle clustering scales)
          write(*,*)'rewgt: identified tree {'
          do i=1,nexternal-2
             write(*,*)'  ',i,': ',idacl(i,1),'(',ipdgcl(idacl(i,1)
-     $           ,igraphs(1),iproc),')','&',idacl(i,2),'('
-     $           ,ipdgcl(idacl(i ,2),igraphs(1),iproc),')',' -> '
-     $           ,imocl(i),'(' ,ipdgcl(imocl(i),igraphs(1),iproc),')'
-     $           ,', ptij = ' ,dsqrt(pt2ijcl(i))
+     $           ,igraphs(1),nFKSprocess),')','&',idacl(i,2),'('
+     $           ,ipdgcl(idacl(i ,2),igraphs(1),nFKSprocess),')',' -> '
+     $           ,imocl(i),'(' ,ipdgcl(imocl(i),igraphs(1),nFKSprocess)
+     $           ,')' ,', ptij = ' ,dsqrt(pt2ijcl(i))
          enddo
          write(*,*)'  graphs (',igraphs(0),'):',(igraphs(i),i=1
      $        ,igraphs(0))
@@ -613,11 +738,11 @@ c     Prepare for resetting q2fact based on PDF reweighting
          q2fact(2)=0d0
       endif
 c   
-c   Set strong coupling used
+c     Set strong coupling used
 c   
       asref=G**2/(4d0*PI)
 
-c   Perform alpha_s reweighting based on type of vertex
+c     Perform alpha_s reweighting based on type of vertex
       do n=1,nexternal-2
 c       scale for alpha_s reweighting
          q2now=pt2ijcl(n)
@@ -626,22 +751,27 @@ c       scale for alpha_s reweighting
          endif
          if (btest(mlevel,3)) then
             write(*,*)'  ',n,': ',idacl(n,1),'(',ipdgcl(idacl(n,1)
-     $           ,igraphs(1),iproc),')&',idacl(n,2),'(',ipdgcl(idacl(n
-     $           ,2) ,igraphs(1),iproc),') -> ',imocl(n),'('
-     $           ,ipdgcl(imocl(n) ,igraphs(1),iproc),'), ptij = '
-     $           ,dsqrt(q2now) 
+     $           ,igraphs(1),nFKSprocess),')&',idacl(n,2),'('
+     $           ,ipdgcl(idacl(n ,2) ,igraphs(1),nFKSprocess),') -> '
+     $           ,imocl(n),'(' ,ipdgcl(imocl(n) ,igraphs(1),nFKSprocess)
+     $           ,'), ptij = ' ,dsqrt(q2now) 
          endif
 c     perform alpha_s reweighting only for vertices where a parton is produced
 c     and not for the last clustering (use non-fixed ren. scale for these)
          if (n.lt.nexternal-2)then
             if(ispartonvx(imocl(n),idacl(n,1),idacl(n,2),
-     $           ipdgcl(1,igraphs(1),iproc),ipart,.false.)) then
+     $           ipdgcl(1,igraphs(1),nFKSprocess),ipart,.false.)) then
 c       alpha_s weight
+c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
+c  the renormalization scale should be set as the geometric mean of all
+c  scales involved: we cannot simply reweight the alpha_s's here.
+c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
                rewgt=rewgt*alphas(alpsfact*sqrt(q2now))/asref
                if (btest(mlevel,3)) then
                   write(*,*)' reweight vertex: ',ipdgcl(imocl(n)
-     $                 ,igraphs(1),iproc),ipdgcl(idacl(n,1),igraphs(1)
-     $                 ,iproc),ipdgcl(idacl(n,2),igraphs(1),iproc)
+     $                 ,igraphs(1),nFKSprocess),ipdgcl(idacl(n,1)
+     $                 ,igraphs(1) ,nFKSprocess),ipdgcl(idacl(n,2)
+     $                 ,igraphs(1),nFKSprocess)
                   write(*,*)'       as: ',alphas(alpsfact*dsqrt(q2now)),
      $                 '/',asref,' -> ',alphas(alpsfact*dsqrt(q2now))
      $                 /asref
@@ -653,56 +783,55 @@ c   Update starting values for Final State parton showering
          do i=1,2               ! Loop over 2 daughers
             do j=1,2            ! Loop over 2 ipart elements
 c FIXTHIS FIXTHIS FIXTHIS: These seems a rather strange "if" statement.
-               if(ipart(j,idacl(n,i)).gt.0.and.ipart(j,idacl(n,i)).gt.2)
-     $              then
-                  ptclus(ipart(j,idacl(n,i)))=
-     &                 max(ptclus(ipart(j,idacl(n,i))),dsqrt(pt2ijcl(n)))
-                  if(ickkw.ne.2.and.
-     $                 (.not.isqcd(ipdgcl(imocl(n),igraphs(1),iproc))
-     $                 .or. ipart(1,idacl(n,3-i)).le.2.and.
-     $                 .not.isqcd(ipdgcl(idacl(n,3-i),igraphs(1),iproc))
-     $                 .or. isbw(imocl(n))))then
-c             For particles originating in non-qcd t-channel vertices or decay vertices,
-c             set origination scale to machine energy since we don't want these
-c             to be included in matching.
-                     ptclus(ipart(j,idacl(n,i)))=etot
-                  endif
-                  if (btest(mlevel,3)) write(*,*) 'Set ptclus for '
-     $                 ,ipart(j,idacl(n,i)), ' to ', ptclus(ipart(j
-     $                 ,idacl(n,i))), ipdgcl(imocl(n),igraphs(1),iproc),
-     $                 isqcd(ipdgcl(imocl(n),igraphs(1),iproc))
-     $                 ,isbw(imocl(n))
+               if ( .not.( ipart(j,idacl(n,i)).gt.0 .and. 
+     &              ipart(j,idacl(n,i)).gt.2 ) ) cycle
+               ptclus(ipart(j,idacl(n,i)))=max(
+     &              ptclus(ipart(j,idacl(n,i))) , dsqrt(pt2ijcl(n)) )
+               if(ickkw.ne.2.and.
+     $              (.not.isqcd(ipdgcl(imocl(n),igraphs(1),nFKSprocess))
+     $              .or. ipart(1,idacl(n,3-i)).le.2.and.
+     $              .not.isqcd(ipdgcl(idacl(n,3-i),igraphs(1),nFKSprocess))
+     $              .or. isbw(imocl(n))))then
+c     For particles originating in non-qcd t-channel vertices or decay
+c     vertices, set origination scale to machine energy since we don't
+c     want these to be included in matching.
+                  ptclus(ipart(j,idacl(n,i)))=etot
                endif
+               if (btest(mlevel,3)) write(*,*) 'Set ptclus for '
+     $              ,ipart(j,idacl(n,i)), ' to ', ptclus(ipart(j
+     $              ,idacl(n,i))), ipdgcl(imocl(n),igraphs(1)
+     $              ,nFKSprocess), isqcd(ipdgcl(imocl(n),igraphs(1)
+     $              ,nFKSprocess)) ,isbw(imocl(n))
             enddo
          enddo
 c     Special case for last 1,2->i vertex
          if(n.eq.nexternal-2)then
             ptclus(ipart(1,imocl(n)))=
      $           max(ptclus(ipart(1,imocl(n))),dsqrt(pt2ijcl(n)))
-            if(ickkw.ne.2.and.
-     $           (.not.isqcd(ipdgcl(idacl(n,1),igraphs(1),iproc)).or.
-     $           .not.isqcd(ipdgcl(idacl(n,2),igraphs(1),iproc))))then
-c             For particles originating in non-qcd vertices or decay vertices,
-c             set origination scale to machine energy since we don't want these
-c             to be included in matching.
+            if(ickkw.ne.2.and.(.not.
+     &         isqcd(ipdgcl(idacl(n,1),igraphs(1),nFKSprocess)).or..not.
+     $         isqcd(ipdgcl(idacl(n,2),igraphs(1),nFKSprocess))))then
+c     For particles originating in non-qcd vertices or decay vertices,
+c     set origination scale to machine energy since we don't want these
+c     to be included in matching.
                ptclus(ipart(1,imocl(n)))=etot
             endif
             if (btest(mlevel,3))
      $           write(*,*) 'Set ptclus for ',ipart(1,imocl(n)),
      $           ' to ', ptclus(ipart(1,imocl(n))),
-     $           ipdgcl(idacl(n,1),igraphs(1),iproc),
-     $           ipdgcl(idacl(n,2),igraphs(1),iproc)
+     $           ipdgcl(idacl(n,1),igraphs(1),nFKSprocess),
+     $           ipdgcl(idacl(n,2),igraphs(1),nFKSprocess)
          endif
 c   Update particle tree map
          call ipartupdate(p,imocl(n),idacl(n,1),idacl(n,2),
-     $        ipdgcl(1,igraphs(1),iproc),ipart)
+     $        ipdgcl(1,igraphs(1),nFKSprocess),ipart)
 c     Cycle if we don't need to perform PDF or, if ickkw=2, Sudakov
 c     reweighting
          if(.not.(ickkw.eq.2.or.pdfwgt)) cycle
          isvx=.false.
          do i=1,2               ! loop over daughters
 c     If the daugher i is not charge under QCD: cycle
-            if (.not.isqcd(ipdgcl(idacl(n,i),igraphs(1),iproc)))
+            if (.not.isqcd(ipdgcl(idacl(n,i),igraphs(1),nFKSprocess)))
      $           cycle
             if(ickkw.eq.2.and.pt2min.eq.0d0) then
                pt2min=pt2ijcl(n)
@@ -714,7 +843,7 @@ c     If the daugher i is not charge under QCD: cycle
      $           p(0,i)**2-p(1,i)**2-p(2,i)**2-p(3,i)**2)
 c     Initial State:
             do j=1,2            ! Loop over the two beams
-               if (isparton(ipdgcl(idacl(n,i),igraphs(1),iproc))
+               if (isparton(ipdgcl(idacl(n,i),igraphs(1),nFKSprocess))
      $              .and.idacl(n,i).eq.ibeam(j)) then
 c     is sudakov weight - calculate only once for each parton line where
 c     parton line ends with change of parton id or non-radiation vertex
@@ -722,40 +851,50 @@ c     parton line ends with change of parton id or non-radiation vertex
                   ibeam(j)=imocl(n)
 c     Perform Sudakov reweighting if ickkw=2
                   if(ickkw.eq.2.and.
-     $                 (ipdgcl(idacl(n,i),igraphs(1),iproc).ne.
-     $                 ipdgcl(imocl(n),igraphs(1),iproc).or.
+     $                 (ipdgcl(idacl(n,i),igraphs(1),nFKSprocess).ne.
+     $                  ipdgcl(imocl(n),igraphs(1),nFKSprocess).or.
      $                 .not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
-     $                 ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)).and.
-     $                 pt2prev(idacl(n,i)).lt.pt2ijcl(n))then
-                     tmp=min(1d0,max(getissud(ibeam(j),ipdgcl(idacl(n,i),
-     $                    igraphs(1),iproc),xnow(j),xnow(3-j),pt2ijcl(n)),1d-20)/
-     $                    max(getissud(ibeam(j),ipdgcl(idacl(n,i),
-     $                    igraphs(1),iproc),xnow(j),xnow(3-j),pt2prev(idacl(n,i))),1d-20))
+     $                 ipdgcl(1,igraphs(1),nFKSprocess),
+     &                                     ipart,n.eq.nexternal-2)).and.
+     $                 pt2prev(idacl(n,i)).lt.pt2ijcl(n)  )then
+c tmp is the ratio of the two sudakovs
+                     tmp=min(1d0,max(
+     &                    getissud(ibeam(j),
+     &                        ipdgcl(idacl(n,i),igraphs(1),nFKSprocess),
+     &                        xnow(j),xnow(3-j),pt2ijcl(n)) ,
+     &                    1d-20 ) /
+     $                    max(
+     &                    getissud(ibeam(j),
+     &                        ipdgcl(idacl(n,i),igraphs(1),nFKSprocess),
+     &                        xnow(j),xnow(3-j),pt2prev(idacl(n,i))) ,
+     &                    1d-20 ))
                      rewgt=rewgt*tmp
                      pt2prev(imocl(n))=pt2ijcl(n)
                      if (btest(mlevel,3)) then
                         write(*,*)' reweight line: ',ipdgcl(idacl(n ,i)
-     $                       ,igraphs(1),iproc), idacl(n,i)
+     $                       ,igraphs(1),nFKSprocess), idacl(n,i)
                         write(*,*)'     pt2prev, pt2new, x1, x2: '
      $                       ,pt2prev(idacl(n,i)),pt2ijcl(n),xnow(j)
      $                       ,xnow(3-j)
                         write(*,*)'           Sud: ',tmp
                         write(*,*)'        -> rewgt: ',rewgt
                      endif
-                  else if(ickkw.eq.2) then
+                  elseif(ickkw.eq.2) then
                      pt2prev(imocl(n))=pt2prev(idacl(n,i))
                   endif
 c     End Sudakov reweighting when we reach a non-radiation vertex
                   if(ickkw.eq.2.and..not.
      $                 ispartonvx(imocl(n),idacl(n,1),idacl(n,2),
-     $                 ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)) then
+     $                            ipdgcl(1,igraphs(1),nFKSprocess),
+     $                            ipart,n.eq.nexternal-2) ) then
                      pt2prev(imocl(n))=1d30
                      if (btest(mlevel,3)) then
                         write(*,*)' rewgt: ending reweighting for vx' ,
      $                       idacl(n,1),idacl(n,2),imocl(n)
      $                       ,' with ids ',ipdgcl(idacl(n,1) ,igraphs(1)
-     $                       ,iproc),ipdgcl(idacl(n,2) ,igraphs(1)
-     $                       ,iproc),ipdgcl(imocl(n) ,igraphs(1),iproc)
+     $                       ,nFKSprocess),ipdgcl(idacl(n,2) ,igraphs(1)
+     $                       ,nFKSprocess),ipdgcl(imocl(n) ,igraphs(1)
+     $                       ,nFKSprocess)
                      endif
                   endif
 c     PDF reweighting
@@ -765,11 +904,18 @@ c     f1(x1,pt2E) is given by DSIG, already set scale for that
                      xnow(j)=xnow(j)*zcl(n)
                   endif
 c     PDF scale
+
+c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
+c We cannot do PDF reweighting at NLO. Needs to be carefully checked
+c that we get the correct factorization scale.
+c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
+
                   q2now=min(pt2ijcl(n), q2bck(j))
 c     Set PDF scale to central factorization scale if non-radiating
 c     vertex or last 2->2
                   if(.not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
-     $                 ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)) then
+     $                            ipdgcl(1,igraphs(1),nFKSprocess),
+     $                                   ipart,n.eq.nexternal-2) ) then
                      q2now=q2bck(j)
                   endif
                   if (btest(mlevel,3))
@@ -785,13 +931,13 @@ c     vertex or last 2->2
                      if (btest(mlevel,3))
      $                    write(*,*)' set pt2pdf for ',imocl(n),
      $                    ' to: ',sqrt(pt2pdf(imocl(n)))
-                  else if(pt2pdf(idacl(n,i)).lt.q2now
-     $                    .and.isjet(ipdgcl(idacl(n,i),igraphs(1),iproc))) then
+                  else if(pt2pdf(idacl(n,i)).lt.q2now .and.
+     $                    isjet(ipdgcl(idacl(n,i),igraphs(1),nFKSprocess))) then
                      pdfj1=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
-     $                    igraphs(1),iproc)*sign(1,lpp(IB(j))),
+     $                    igraphs(1),nFKSprocess)*sign(1,lpp(IB(j))),
      $                    xnow(j),sqrt(q2now))
                      pdfj2=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
-     $                    igraphs(1),iproc)*sign(1,lpp(IB(j))),
+     $                    igraphs(1),nFKSprocess)*sign(1,lpp(IB(j))),
      $                    xnow(j),sqrt(pt2pdf(idacl(n,i))))
                      if(pdfj2.lt.1d-10)then
 c     Scale too low for heavy quark
@@ -804,7 +950,7 @@ c     Scale too low for heavy quark
                      rewgt=rewgt*pdfj1/pdfj2
                      if (btest(mlevel,3)) then
                         write(*,*)' reweight ',n,i,ipdgcl(idacl(n,i)
-     $                       ,igraphs(1),iproc),' by pdfs: '
+     $                       ,igraphs(1),nFKSprocess),' by pdfs: '
                         write(*,*)'     x, ptprev, ptnew: ',xnow(j),
      $                       sqrt(pt2pdf(idacl(n,i))),sqrt(q2now)
                         write(*,*)'           PDF: ',pdfj1,' / '
@@ -822,18 +968,18 @@ c     If no reweighting, just copy daughter scale for mother
             enddo
 c     Final State sudakov weight
             if(ickkw.eq.2.and.pt2prev(idacl(n,i)).lt.pt2ijcl(n).and.
-     $           (isvx.or.ipdgcl(idacl(n,i),igraphs(1),iproc).ne.
-     $           ipdgcl(imocl(n),igraphs(1),iproc).or.
-     $           (ipdgcl(idacl(n,i),igraphs(1),iproc).ne.
-     $           ipdgcl(idacl(n,3-i),igraphs(1),iproc).and.
+     $           (isvx.or.ipdgcl(idacl(n,i),igraphs(1),nFKSprocess).ne.
+     $           ipdgcl(imocl(n),igraphs(1),nFKSprocess).or.
+     $           (ipdgcl(idacl(n,i),igraphs(1),nFKSprocess).ne.
+     $           ipdgcl(idacl(n,3-i),igraphs(1),nFKSprocess).and.
      $           pt2prev(idacl(n,i)).gt.pt2prev(idacl(n,3-i))))) then
                tmp=sudwgt(sqrt(pt2min),sqrt(pt2prev(idacl(n,i))),
      $              dsqrt(pt2ijcl(n)),ipdgcl(idacl(n,i),igraphs(1)
-     $              ,iproc),1)
+     $              ,nFKSprocess),1)
                rewgt=rewgt*tmp
                if (btest(mlevel,3)) then
                   write(*,*)' reweight fs line: ',ipdgcl(idacl(n,i)
-     $                 ,igraphs(1),iproc), idacl(n,i)
+     $                 ,igraphs(1),nFKSprocess), idacl(n,i)
                   write(*,*)'     pt2prev, pt2new: ',pt2prev(idacl(n
      $                 ,i)),pt2ijcl(n)
                   write(*,*)'           Sud: ',tmp
@@ -845,14 +991,15 @@ c     Final State sudakov weight
             endif 
          enddo
          if (ickkw.eq.2.and.n.eq.nexternal-2.and.
-     $        isqcd(ipdgcl(imocl(n),igraphs(1),iproc)).and.
+     $        isqcd(ipdgcl(imocl(n),igraphs(1),nFKSprocess)).and.
      $        pt2prev(imocl(n)).lt.pt2ijcl(n))then
             tmp=sudwgt(sqrt(pt2min),sqrt(pt2prev(imocl(n))),
-     $           dsqrt(pt2ijcl(n)),ipdgcl(imocl(n),igraphs(1),iproc),1)
+     $           dsqrt(pt2ijcl(n)),ipdgcl(imocl(n),igraphs(1)
+     $           ,nFKSprocess),1)
             rewgt=rewgt*tmp
             if (btest(mlevel,3)) then
                write(*,*)' reweight last fs line: ',ipdgcl(imocl(n)
-     $              ,igraphs(1),iproc), imocl(n)
+     $              ,igraphs(1),nFKSprocess), imocl(n)
                write(*,*)'     pt2prev, pt2new: ',pt2prev(imocl(n))
      $              ,pt2ijcl(n)
                write(*,*)'           Sud: ',tmp
