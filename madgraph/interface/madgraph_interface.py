@@ -4730,12 +4730,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         #################
         ## Other Output #
         #################
-        if not force and not noclean and os.path.isdir(self._export_dir)\
-               and self._export_format in ['madevent', 'standalone']:
-            # Don't ask if user already specified force or noclean
-            logger.info('INFO: directory %s already exists.' % self._export_dir)
-            logger.info('If you continue this directory will be deleted and replaced.')
-            answer = self.ask('Do you want to continue?', 'y', ['y','n'])
+        if not noclean and os.path.isdir(self._export_dir)\
+               and self._export_format in ['madevent', 'standalone','standalone_ms']:
+            if not force:
+                # Don't ask if user already specified force or noclean
+                logger.info('INFO: directory %s already exists.' % self._export_dir)
+                logger.info('If you continue this directory will be deleted and replaced.')
+                answer = self.ask('Do you want to continue?', 'y', ['y','n'])
+            else:
+                answer = 'y'
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
             else:
@@ -4746,7 +4749,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
-        elif not os.path.isdir(self._export_dir):
+        if self._export_format not in \
+                ['madevent', 'standalone', 'standalone_cpp', 'standalone_ms'] and \
+                not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
         if self._export_format in ['madevent', 'standalone', 'standalone_ms']:

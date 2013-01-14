@@ -621,21 +621,6 @@ class TestCmdShell2(unittest.TestCase,
                                                     'P1_udx_wp_wp_epve',
                                                     'madevent')))
         
-    def test_export_matrix_v4(self):
-        """Test that the matrix.f is coherent"""
-
-        if os.path.isdir(self.out_dir):
-            shutil.rmtree(self.out_dir)
-
-        self.do('import model_v4 mssm')
-        self.do('set group_subprocesses False')
-        self.do('generate g b > t1 go > t t t~ n1 x1- / a w+ h+ h1 h2 h3 z t2 b2  t~  QED=2 @1')
-        self.do('output madevent %s ' % self.out_dir)
-        
-        #The optimization in the output checks the coherence of the matrix.f
-        # and catch the unwanted behavior of the matrix.f if any
-
-        
     def test_complex_mass_SA(self):
         """ Test that the complex_mass compile in fortran """
         

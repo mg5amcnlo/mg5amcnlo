@@ -332,7 +332,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if isinstance(arguments[0], base_objects.Leg) and \
                    isinstance(arguments[1], int) and \
                    isinstance(arguments[2], base_objects.Model):
-
                 super(HelasWavefunction, self).__init__()
                 leg = arguments[0]
                 interaction_id = arguments[1]
@@ -357,6 +356,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 # the decay is applied
                 if self['state'] == 'final' and self.get('pdg_code') in decay_ids:
                     self.set('decay', True)
+
                 # Set fermion flow state. Initial particle and final
                 # antiparticle are incoming, and vice versa for
                 # outgoing
@@ -936,31 +936,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         new_wf.set('number', old_wf.get('number'))
                     diagram_wavefunctions[old_wf_index] = new_wf
                 except ValueError:
-                    # Make sure that new_wf comes before any wavefunction
-                    # which has it as mother
-                    if len(self['mothers']) == 0:
-                        #insert at the beginning
-                        if diagram_wavefunctions:
-                            wf_nb = diagram_wavefunctions[0].get('number')
-                            for w in diagram_wavefunctions:
-                                w.set('number', w.get('number') + 1)
-                            new_wf.set('number', wf_nb)
-                            diagram_wavefunctions.insert(0, new_wf)
-                        else:
-                            diagram_wavefunctions.insert(0, new_wf)
-                    else:
-                        for i, wf in enumerate(diagram_wavefunctions):
-                            if self in wf.get('mothers'):
-                                # Update wf numbers
-                                new_wf.set('number', wf.get('number'))
-                                for w in diagram_wavefunctions[i:]:
-                                    w.set('number', w.get('number') + 1)
-                                # Insert wavefunction
-                                diagram_wavefunctions.insert(i, new_wf)
-                                break
-                        else:
-                            diagram_wavefunctions.append(new_wf)
-                        
+                    diagram_wavefunctions.append(new_wf)
 
             # Set new mothers
             new_wf.set('mothers', mothers)
@@ -1667,7 +1643,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
            self.get('color') != other.get('color') or \
            self['decay'] != other['decay'] or \
            self['decay'] and self['particle'] != other['particle']:
-            
             return False
 
         # Check that mothers have the same numbers (only relevant info)
@@ -1740,7 +1715,7 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                other_fermions[iferm+1].get_with_flow('state'):
                 clashes.append([other_fermions[iferm],
                                 other_fermions[iferm+1]])
-                
+
         if not clashes:
             return wf_number
 
@@ -1799,6 +1774,7 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                        number_to_wavefunctions)
                 # Already ran for all clashes, abort loop
                 break
+
         return wf_number
 
     def insert_own_mothers(self):
@@ -1893,13 +1869,13 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
 
         # Return list 1,2,... for which indices are needed
         conjugates = [i+1 for (i,c) in enumerate(conjugates) if c]
-        
+
         return conjugates
 
     @staticmethod
     def extract_wavefunctions(mothers):
         """Recursively extract the wavefunctions from mothers of mothers"""
-        
+
         wavefunctions = copy.copy(mothers)
         for wf in mothers:
             wavefunctions.extend(HelasWavefunctionList.\
@@ -2885,7 +2861,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         Note that we need special treatment for decay chains, since
         the end product then is a wavefunction, not an amplitude.
         """
-
+        
         assert  isinstance(amplitude, diagram_generation.Amplitude), \
                     "Missing or erraneous arguments for generate_helas_diagrams"
         assert isinstance(optimization, int), \
@@ -2940,7 +2916,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         amplitude_number = 0
         diagram_number = 0
 
-        for i,diagram in enumerate(diagram_list):
+        for diagram in diagram_list:
+
             # List of dictionaries from leg number to wave function,
             # keeps track of the present position in the tree.
             # Need one dictionary per coupling multiplicity (diagram)
@@ -3085,7 +3062,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                               wf_number,
                                               False,
                                               number_to_wavefunctions)
-
                 done_color = {}
                 for i, coupl_key in enumerate(keys):
                     color = coupl_key[0]
@@ -3116,13 +3092,29 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     helas_diagram.get('amplitudes').append(amp)
 
             # After generation of all wavefunctions and amplitudes,
-            # add wavefunctions to diagram
+            # first sort the wavefunctions according to number
+            diagram_wavefunctions.sort(lambda wf1, wf2: \
+                                       wf1.get('number') - wf2.get('number'))
+            
+            # Then make sure that all mothers come before daughters
+            iwf = len(diagram_wavefunctions) - 1
+            while iwf > 0:
+                this_wf = diagram_wavefunctions[iwf]
+                moved = False
+                for i,wf in enumerate(diagram_wavefunctions[:iwf]):
+                    if this_wf in wf.get('mothers'):
+                        diagram_wavefunctions.pop(iwf)
+                        diagram_wavefunctions.insert(i, this_wf)
+                        this_wf.set('number', wf.get('number'))
+                        for w in diagram_wavefunctions[i+1:]:
+                            w.set('number',w.get('number')+1)
+                        moved = True
+                        break
+                if not moved: iwf -= 1
+
+            # Finally, add wavefunctions to diagram
             helas_diagram.set('wavefunctions', diagram_wavefunctions)
 
-            # Sort the wavefunctions according to number
-            diagram_wavefunctions.sort(lambda wf1, wf2: \
-                          wf1.get('number') - wf2.get('number'))
-            
             if optimization:
                 wavefunctions.extend(diagram_wavefunctions)
                 wf_mother_arrays.extend([wf.to_array() for wf \
@@ -3168,7 +3160,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     last_lign[wfin.get('number')] = pos
                     assert wfin.get('number') in first.values()
                 first[pos] = wf.get('number')
-
             for amp in diag['amplitudes']:
                 pos+=1
                 for wfin in amp.get('mothers'):

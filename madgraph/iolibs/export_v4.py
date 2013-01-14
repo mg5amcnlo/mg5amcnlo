@@ -82,7 +82,7 @@ class ProcessExporterFortran(object):
         """create the directory run_name as a copy of the MadEvent
         Template, and clean the directory
         """
-        
+
         #First copy the full template tree if dir_path doesn't exit
         if not os.path.isdir(self.dir_path):
             assert self.mgme_dir, \
@@ -898,7 +898,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         #First copy the full template tree if dir_path doesn't exit
         if os.path.isdir(self.dir_path):
             return
-        
+       
         logger.info('initialize a new standalone directory: %s' % \
                         os.path.basename(self.dir_path))
         temp_dir = pjoin(self.mgme_dir, 'Template/LO')

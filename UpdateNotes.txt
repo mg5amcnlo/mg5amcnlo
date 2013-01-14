@@ -25,7 +25,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       B. Fuks) 
                   OM: Fix a problem of fermion flow for v4 model (thanks to A. Abrahantes) 
                   OM+DBF: Change the automatically the electroweak-scheme when passing to 
-                      complex-mass scheme.
+                      complex-mass scheme: the mass of the W is the an external parameter
+                      and Gf is an internal parameter fixed by LO gauge relation. 
                   OM+DBF: Remove the model sm_mw of the model database. 
                   OM: Fix problem in the ./bin/mg5 file command when some question are 
                       present in the file.
