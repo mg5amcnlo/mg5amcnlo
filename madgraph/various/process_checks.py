@@ -2537,16 +2537,26 @@ def check_gauge_process(process, evaluator):
     else:
         matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                                optimized_output=evaluator.loop_optimized_output)
-        
-    brsvalue = evaluator.evaluate_matrix_element(matrix_element, gauge_check = True,
-                                                 output='jamp')
+
+    p, w_rambo = evaluator.get_momenta(process)
+
+    MLOptions = {'ImprovePS':True,'ForceMP':True}
+
+    brsvalue = evaluator.evaluate_matrix_element(matrix_element, p=p, gauge_check = True,
+                                                 output='jamp',MLOptions=MLOptions)
 
     if not isinstance(amplitude,loop_diagram_generation.LoopAmplitude):
         matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = False)
      
-    mvalue = evaluator.evaluate_matrix_element(matrix_element, gauge_check = False,
-                                               output='jamp')
+    mvalue = evaluator.evaluate_matrix_element(matrix_element, p=p, gauge_check = False,
+                                               output='jamp',MLOptions=MLOptions)
+
+    for boost in range(1,4):
+        boost_p = boost_momenta(p, boost)
+        brsvalue0 = evaluator.evaluate_matrix_element(matrix_element, p=boost_p, gauge_check = True, output='jamp',MLOptions=MLOptions)
+        mvalue0 =  evaluator.evaluate_matrix_element(matrix_element, p=boost_p, gauge_check = False, output='jamp',MLOptions=MLOptions)
+        if mvalue and mvalue['m2']: print mvalue0['m2'], brsvalue0['m2'], brsvalue0['m2']/mvalue0['m2']
 
     if mvalue and mvalue['m2']:
         return {'process':process,'value':mvalue,'brs':brsvalue}

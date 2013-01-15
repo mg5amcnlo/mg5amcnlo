@@ -621,11 +621,11 @@ R2_GGGAvecDown = Coupling(name = 'R2_GGGAvecDown',
 # R2 for SS
 
 R2_HHboson1 = Coupling(name = 'R2_HHboson1',
-                       value = '1./7.*((MW**2/4.0+MZ**2/(8.0*cw**2)+(1-12*lhv)/4.0*(1+1./(2.*cw**4))*MW**2)*(complex(0,1)*R2SS))',
+                       value = '((MW**2/4.0+MZ**2/(8.0*cw**2)+(1-12*lhv)/4.0*(1+1./(2.*cw**4))*MW**2)*(complex(0,1)*R2SS))',
                        order = {'QED':2})
 
 R2_HHboson2 = Coupling(name = 'R2_HHboson2',
-                       value = '1./7.*((-1./12.0-1./(24.0*cw**2))*(complex(0,1)*R2SS))',
+                       value = '((-1./12.0-1./(24.0*cw**2))*(complex(0,1)*R2SS))',
                        order = {'QED':2})
 
 R2_HHe1 = Coupling(name = 'R2_HHe1',
@@ -701,20 +701,20 @@ R2_HHt2 = Coupling(name = 'R2_HHt2',
                    order = {'QED':2})
 
 R2_G0G0boson1 = Coupling(name = 'R2_G0G0boson1',
-                       value = '1./8.*((MW**2/4.0+MH**2/(8.0*cw**2)+(1-4*lhv)/4.0*(1+1./(2.*cw**4))*MW**2)*(complex(0,1)*R2SS))',
+                       value = '((MW**2/4.0+MH**2/(8.0*cw**2)+(1-4*lhv)/4.0*(1+1./(2.*cw**4))*MW**2)*(complex(0,1)*R2SS))',
                        order = {'QED':2})
 
 R2_G0G0boson2 = Coupling(name = 'R2_G0G0boson2',
-                       value = '1./8.*((-1./12.0-1./(24.0*cw**2))*(complex(0,1)*R2SS))',
+                       value = '((-1./12.0-1./(24.0*cw**2))*(complex(0,1)*R2SS))',
                        order = {'QED':2})
 
 
 R2_GmGpboson1 = Coupling(name = 'R2_GmGpboson1',
-                       value = '1./13.*(((MZ**2 + MH**2)/8.0+MW**2/(8.0*cw**2)+((6-8*lhv)*cw**4 - 4*cw**2 + (1-4*lhv))/(8.0*cw**4)*MW**2)*(complex(0,1)*R2SS))',
+                       value = '(((MZ**2 + MH**2)/8.0+MW**2/(8.0*cw**2)+((6-8*lhv)*cw**4 - 4*cw**2 + (1-4*lhv))/(8.0*cw**4)*MW**2)*(complex(0,1)*R2SS))',
                        order = {'QED':2})
 
 R2_GmGpboson2 = Coupling(name = 'R2_GmGpboson2',
-                       value = '1./13.*((-1./12.0-1./(24.0*cw**2))*(complex(0,1)*R2SS))',
+                       value = '((-1./12.0-1./(24.0*cw**2))*(complex(0,1)*R2SS))',
                        order = {'QED':2})
 
 
@@ -809,16 +809,16 @@ R2_AAC1 = Coupling(name = 'R2_AAC1',
                    order = {'QED':2})
 
 R2_AAboson1 = Coupling(name = 'R2_AAboson1',
-                       value = '1./3.*((1./48.+lhv/24.)*(complex(0,1)*R2VV))',
+                       value = '((1./48.+lhv/24.)*(complex(0,1)*R2VV))',
                        order = {'QED':2})
 
 R2_AAboson2 = Coupling(name = 'R2_AAboson2',
-                   value = '1./3.*(-lhv/24.*(complex(0,1)*R2VV))',
+                   value = '(-lhv/24.*(complex(0,1)*R2VV))',
                    order = {'QED':2})
 
 
 R2_AAboson3 = Coupling(name = 'R2_AAboson3',
-                       value = '1./3.*(-MW**2/8.*(complex(0,1)*R2VV))',
+                       value = '(-MW**2/8.*(complex(0,1)*R2VV))',
                        order = {'QED':2})
 
 R2_AAl = Coupling(name = 'R2_AAl',
@@ -874,19 +874,19 @@ R2_AZC1 = Coupling(name = 'R2_AZC1',
                    order = {'QED':2})
 
 R2_AZboson1 = Coupling(name = 'R2_AZboson1',
-                       value = '1./3.*((1./48.+lhv/24.)*(cw/sw)*(complex(0,1)*R2VV))',
+                       value = '((1./48.+lhv/24.)*(cw/sw)*(complex(0,1)*R2VV))',
                        order = {'QED':2})
 
 R2_AZboson2 = Coupling(name = 'R2_AZboson2',
-                   value = '1./3.*(-lhv*cw/(24.*sw)*(complex(0,1)*R2VV))',
+                   value = '(-lhv*cw/(24.*sw)*(complex(0,1)*R2VV))',
                    order = {'QED':2})
 
 R2_AZboson3 = Coupling(name = 'R2_AZboson3',
-                       value = '1./3.*(-MW**2/8.*(cw/sw)*(complex(0,1)*R2VV))',
+                       value = '(-MW**2/8.*(cw/sw)*(complex(0,1)*R2VV))',
                        order = {'QED':2})
 
 R2_AZl = Coupling(name = 'R2_AZl',
-                   value = '1./(24.*cw)*(1./(24.0*sw)-sw/6.)*(complex(0,1)*R2VV)',
+                   value = '1./(4.*cw)*(1./(24.0*sw)-sw/6.)*(complex(0,1)*R2VV)',
                    order = {'QED':2})
 
 R2_AZe3 = Coupling(name = 'R2_AZe3',
@@ -938,17 +938,17 @@ R2_ZZC1 = Coupling(name = 'R2_ZZC1',
                    order = {'QED':2})
 
 R2_ZZboson1 = Coupling(name = 'R2_ZZboson1',
-                       value = '1./7.*(1./48.+lhv/24.)*(cw**2/sw**2)*(complex(0,1)*R2VV)',
+                       value = '(1./48.+lhv/24.)*(cw**2/sw**2)*(complex(0,1)*R2VV)',
                        order = {'QED':2})
 
 R2_ZZboson2 = Coupling(name = 'R2_ZZboson2',
-                   value = '1./7.*(-lhv*cw**2/(24.*sw**2)*(complex(0,1)*R2VV))',
+                   value = '(-lhv*cw**2/(24.*sw**2)*(complex(0,1)*R2VV))',
                    order = {'QED':2})
 
 
 
 R2_ZZboson3 = Coupling(name = 'R2_ZZboson3',
-                       value = '1./7.*(-MW**2/8.*(cw**2/sw**2)*(complex(0,1)*R2VV))',
+                       value = '(-MW**2/8.*(cw**2/sw**2)*(complex(0,1)*R2VV))',
                        order = {'QED':2})
 
 R2_ZZl = Coupling(name = 'R2_ZZl',
@@ -1008,15 +1008,15 @@ R2_WWC1 = Coupling(name = 'R2_WWC1',
                    order = {'QED':2})
 
 R2_WWboson1 = Coupling(name = 'R2_WWboson1',
-                       value = '1./13.*((1./48.+lhv/24.)*(1/sw**2)*(complex(0,1)*R2VV))',
+                       value = '((1./48.+lhv/24.)*(1./sw**2)*(complex(0,1)*R2VV))',
                        order = {'QED':2})
 
 R2_WWboson2 = Coupling(name = 'R2_WWboson2',
-                   value = '1./13.*(-lhv/(24.*sw**2)*(complex(0,1)*R2VV))',
+                   value = '(-lhv/(24.*sw**2)*(complex(0,1)*R2VV))',
                    order = {'QED':2})
 
 R2_WWboson3 = Coupling(name = 'R2_WWboson3',
-                       value = '1./13.*(-MW**2/(8.*sw**2)*(complex(0,1)*R2VV))',
+                       value = '(-MW**2/(8.*sw**2)*(complex(0,1)*R2VV))',
                        order = {'QED':2})
 
 R2_WWl = Coupling(name = 'R2_WWl',
@@ -7033,3 +7033,54 @@ UV_Htt = Coupling(name = 'UV_Htt',
 UV_Hbb = Coupling(name = 'UV_Hbb',
                  value = '-((complex(0,1)*yb)/cmath.sqrt(2))*UV_yuk_b',
                  order = {'QED':1,'QCD':2})
+
+UV_GUULEW = Coupling(name = 'UV_GUULEW',
+                     value = '-complex(0,1)/2.*G*(complexconjugate(uWcft_UV_EW_L)+uWcft_UV_EW_L)',
+                     order = {'QED':2,'QCD':1})
+
+UV_GUUREW = Coupling(name = 'UV_GUUREW',
+                     value = '-complex(0,1)/2.*G*(complexconjugate(uWcft_UV_EW_R)+uWcft_UV_EW_R)',
+                     order = {'QED':2,'QCD':1})
+
+UV_GDDLEW = Coupling(name = 'UV_GDDLEW',
+                     value = '-complex(0,1)/2.*G*(complexconjugate(dWcft_UV_EW_L)+dWcft_UV_EW_L)',
+                     order = {'QED':2,'QCD':1})
+
+UV_GDDREW = Coupling(name = 'UV_GDDREW',
+                     value = '-complex(0,1)/2.*G*(complexconjugate(dWcft_UV_EW_R)+dWcft_UV_EW_R)',
+                     order = {'QED':2,'QCD':1})
+
+UV_GSSLEW = Coupling(name = 'UV_GSSLEW',
+                     value = '-complex(0,1)/2.*G*(complexconjugate(sWcft_UV_EW_L)+sWcft_UV_EW_L)',
+                     order = {'QED':2,'QCD':1})
+
+UV_GSSREW = Coupling(name = 'UV_GSSREW',
+                     value = '-complex(0,1)/2.*G*(complexconjugate(sWcft_UV_EW_R)+sWcft_UV_EW_R)',
+                     order = {'QED':2,'QCD':1})
+
+UV_GCCLEW = Coupling(name = 'UV_GCCLEW',
+                     value = '-complex(0,1)/2.*G*(complexconjugate(cWcft_UV_EW_L)+cWcft_UV_EW_L)',
+                     order = {'QED':2,'QCD':1})
+
+UV_GCCREW = Coupling(name = 'UV_GCCREW',
+                     value = '-complex(0,1)/2.*G*(complexconjugate(cWcft_UV_EW_R)+cWcft_UV_EW_R)',
+                     order = {'QED':2,'QCD':1})
+
+UV_GBBLEW = Coupling(name = 'UV_GBBLEW',
+                     value = '-complex(0,1)/2.*G*(complexconjugate(bWcft_UV_EW_L)+bWcft_UV_EW_L)',
+                     order = {'QED':2,'QCD':1})
+
+UV_GBBREW = Coupling(name = 'UV_GBBREW',
+                     value = '-complex(0,1)/2.*G*(complexconjugate(bWcft_UV_EW_R)+bWcft_UV_EW_R)',
+                     order = {'QED':2,'QCD':1})
+
+UV_GTTLEW = Coupling(name = 'UV_GTTLEW',
+                     value = '-complex(0,1)/2.*G*(complexconjugate(tWcft_UV_EW_L)+tWcft_UV_EW_L)',
+                     order = {'QED':2,'QCD':1})
+
+UV_GTTREW = Coupling(name = 'UV_GTTREW',
+                     value = '-complex(0,1)/2.*G*(complexconjugate(tWcft_UV_EW_R)+tWcft_UV_EW_R)',
+                     order = {'QED':2,'QCD':1})
+
+
+

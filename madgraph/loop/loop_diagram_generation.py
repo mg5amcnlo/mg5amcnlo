@@ -306,8 +306,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 raise MadGraph5Error, "Before using the user_filter, please "+\
                        "make sure that the loop diagrams have been tgged first."
             valid_diag = True
-            #if i!=14:valid_diag=False
-            if i in [1,3,10,12,19,21,29,30,33,34,46,48]:valid_diag=False
+            if i not in [27] :valid_diag=False
+                #if i in [1,3,10,12,19,21,29,30,33,34,46,48]:valid_diag=False
             #if 22 in diag.get_loop_lines_pdgs():
             #     valid_diag=False
             # Ex. 1: Chose the topology, i.e. number of loop line.
@@ -379,8 +379,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                     logger.warning(warning_msg)
                     warned=True
             # HSS, 13/12/2012
-            # add 'and ...'
-            if sum([loop_orders[order] for order in pert_loop_order])<2 and 'QED' not in self['process']['perturbation_couplings']:
+            if sum([loop_orders[order] for order in pert_loop_order])< (2 if self['process']['perturbation_couplings']==['QCD'] else 1):
             # HSS
             #if sum([loop_orders[order] for order in pert_loop_order])>=2:
                 valid_diag=False
