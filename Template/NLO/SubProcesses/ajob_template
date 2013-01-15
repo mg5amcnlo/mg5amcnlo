@@ -28,6 +28,10 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         if [[ ! -e $j ]]; then
             mkdir $j
         fi
+        if [[ -e nevents.tar ]]; then
+            tar -xvf nevents.tar
+        fi
+        
         cd $j
         if [[ "$4" != "" ]]; then
             if [[ "$4" == "H" ||"$4" == "S" || "$4" == "V" || "$4" == "B" || "$4" == "F" ]]; then
@@ -114,7 +118,9 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         echo "Time in seconds: ${T}" >>log.txt
     elif [[ $1 == '2' ]]; then
         if [[ $runnumber != 0 ]]; then
-            mv -f nevts__$runnumber nevts
+            mv -f ../nevts_${j}_$runnumber nevts
+            
+            rm -f ../nevts*
             echo "$runnumber" >& moffset.dat
         fi
         if [[ $3 == '0' || $3 == '2' ]]; then

@@ -2,6 +2,7 @@
 #  MZ, 2012-06-14
 import os
 import sys
+import tarfile
 
 class SplitJobsError(Exception):
     pass
@@ -78,6 +79,12 @@ while True:
 
 splitted_lines = []
 tot_events = 0
+
+dirs = set([j['dir'] for j in jobs])
+tar_dict = {}
+for dir in dirs:
+    tar_dict[dir] = tarfile.open(os.path.join(dir, 'nevents.tar'),'w')
+
 for job in jobs:
     dir = os.path.join(job['dir'], job['channel'])
     job_events = 0
@@ -93,15 +100,24 @@ for job in jobs:
         tot_events += split_nevts
         job_events += split_nevts
         splitted_lines.append('%s     %d     %9e' % (filename.ljust(40), split_nevts, split_xsec))
-        nevts_filename = os.path.join(dir,'nevts__%d' % (i+1))
+        nevts_filename = os.path.join(job['dir'],'nevts_%s_%d' % \
+                (job['channel'], i+1))
         nevts_file = open(nevts_filename, 'w')
         nevts_file.write('%d\n' % split_nevts)
         nevts_file.close()
+        tar_dict[job['dir']].add(nevts_filename, 
+                arcname=os.path.split(nevts_filename)[1])
+        os.remove(nevts_filename)
+        
     print '%s, %s, Original %d, after splitting %d' % (job['dir'], job['channel'], job['nevts'], job_events)
+
 
 new_nevents_file = open('nevents_unweighted_splitted', 'w')
 new_nevents_file.write('\n'.join(splitted_lines))
 new_nevents_file.close()
+
+for dir in dirs:
+    tar_dict[dir].close()
         
 print 'Done, total %d events' %  tot_events
 

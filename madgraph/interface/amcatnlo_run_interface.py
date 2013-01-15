@@ -32,6 +32,7 @@ import sys
 import traceback
 import time
 import signal
+import tarfile
 
 try:
     import readline
@@ -1312,14 +1313,36 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         return
 
                     #check if need to split jobs (only on a cluster)
-                    split = i == 2 and self.run_card['nevt_job'] > 0 and self.cluster_mode == 1
+                    # at least one channel must have enough events
+                    try:
+                        nevents_unweighted = open(pjoin(self.me_dir, 
+                                                    'SubProcesses', 
+                                                    'nevents_unweighted')).read().split('\n')
+                    except IOError:
+                        nevents_unweighted = []
+
+                    split = i == 2 and \
+                            int(self.run_card['nevt_job']) > 0 and \
+                            self.cluster_mode == 1 and \
+                            any([int(l.split()[1]) > int(self.run_card['nevt_job']) \
+                                for l in nevents_unweighted if l])
 
                     if split:
+                        # safety check in order not to have too many splittings
+                        if any([int(l.split()[1]) / int(self.run_card['nevt_job']) > 50 \
+                                for l in nevents_unweighted if l]):
+                            nevt_job = int(max([int(l.split()[1]) \
+                                        for l in nevents_unweighted if l]) / 50)
+                            logger.info('nevt_job too small in the run_card.\n' + \
+                                'Setting it to %d' % nevt_job)
+                            self.run_card['nevt_job'] = str(nevt_job)
                         # split the event generation
-                        p = misc.Popen([pjoin(self.me_dir, 'bin', 'internal', 'split_jobs.py')] + \
+                        misc.call([pjoin(self.me_dir, 'bin', 'internal', 'split_jobs.py')] + \
                                    [self.run_card['nevt_job']],
                                    stdout = devnull,
                                    cwd = pjoin(self.me_dir, 'SubProcesses'))
+                        assert os.path.exists(pjoin(self.me_dir, 'SubProcesses', 
+                            'nevents_unweighted_splitted'))
 
                     self.update_status(status, level='parton')
                     if mode in ['aMC@NLO', 'noshower']:
@@ -1357,8 +1380,48 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     'Waiting while files are transferred back from the cluster nodes',
                     level='parton')
             time.sleep(10)
+         # if splitting the event generation, recombine the event file per integration channel   
+        if split:
+            self.combine_jobs(job_dict.keys(), folder_names[mode])
 
         return self.reweight_and_collect_events(options, mode, nevents)
+
+
+    def combine_jobs(self, p_dirs, g_dirs):
+        """combine back the events generated with splitted jobs"""
+
+        misc.compile(['combine_jobs'], 
+                    cwd=pjoin(self.me_dir, 'SubProcesses'))
+        logger.info('Recombining event files for each integration channel...')
+        for p in p_dirs:
+            nevts_tar = tarfile.open(pjoin(self.me_dir, 'SubProcesses', p, 'nevents.tar'))
+            for g_dir in g_dirs:
+                for g in [d for d in os.listdir(pjoin(self.me_dir, 'SubProcesses',p)) if \
+                        os.path.isdir(pjoin(self.me_dir, 'SubProcesses',p,d)) and \
+                        d.startswith(g_dir.replace('*',''))]: 
+                    nevts_g = [f for f in nevts_tar.getnames() if g in f]
+                    this_dir = pjoin(self.me_dir, 'SubProcesses', p, g)
+                    for f in nevts_g:
+                        nevts_tar.extract(f, path=pjoin(self.me_dir, 'SubProcesses',p,g))
+                        files.mv(pjoin(this_dir, f), pjoin(this_dir, f.replace(g,'')))
+
+                    logfile = pjoin(this_dir, 'log_combine_jobs.txt')
+                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'combine_jobs'), this_dir)
+                    misc.call([pjoin(this_dir, 'combine_jobs')], cwd = this_dir,
+                          stdout = open(logfile, 'w'))
+                    #check that combine_job has gone through all the files, i.e. that none of
+                    # them is left in the dir.
+                    # otherwise some error occurred
+                    leftover_files = [f for f in os.listdir(this_dir) if f.startswith('events_')]
+                    if leftover_files:
+                        logger.info(' '.join(leftover_files)) 
+                        raise aMCatNLOError(('combine_jobs failed in %s.\n' % this_dir) + \
+                                    'Try to run it manually to find why.') 
+
+            nevts_tar.close()
+
+
+
 
     def read_results(self, output, mode):
         """extract results (cross-section, absolute cross-section and errors)
@@ -2040,7 +2103,6 @@ Integrated cross-section
                     if not split_jobs:
                         self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
                     else:
-                        print args
                         to_split = self.find_jobs_to_split(Pdir, job, args[1])
                         for n in to_split:
                             self.run_exe(job, args + [n], run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
@@ -2064,19 +2126,12 @@ Integrated cross-section
         # then open the nevents_unweighted_splitted file and look for the 
         # number of splittings to be done
         nevents_file = open(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted_splitted')).read()
-        pattern = re.compile(r'%s_(\d+).lhe' % \
+        pattern = re.compile(r"%s_(\d+).lhe" % \
                          (pjoin(pdir, 'G%s%s' % (arg,channel), 'events')))
         matches = re.findall(pattern, nevents_file)
         for m in matches:
-            splittings.append(m[0])
+            splittings.append(m)
         return splittings
-
-
-
-
-
-
-
 
 
 
@@ -2144,7 +2199,7 @@ Integrated cross-section
             for name in to_add:
                 input_files.append(pjoin(cwd, name))
 
-                to_check = ['HelFilter.dat','LoopFilter.dat']
+                to_check = ['HelFilter.dat','LoopFilter.dat', 'nevents.tar']
             for name in to_check:
                 if os.path.exists(pjoin(cwd, name)):
                     input_files.append(pjoin(cwd, name))
