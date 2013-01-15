@@ -181,10 +181,11 @@ def find_orders(amp): #test_written
     orders = {}
     for diag in amp.get('diagrams'):
         for order, value in diag.get('orders').items():
-            try:
-                orders[order] = max(orders[order], value)
-            except KeyError:
-                orders[order] = value
+            if value != 0 or order in amp['process']['orders'].keys():
+                try:
+                    orders[order] = max(orders[order], value)
+                except KeyError:
+                    orders[order] = value
     return orders
 
 
