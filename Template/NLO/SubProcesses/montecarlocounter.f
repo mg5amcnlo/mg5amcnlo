@@ -4415,8 +4415,8 @@ c OUTPUTS:  ileg,xm12,xm22,xtk,xuk,xq1q,xq2q,qMC
       parameter (zero=0.d0)
 
       double precision pp(0:3,nexternal)
-      double precision sh,xi_i_fks,y_ij_fks,yitmp,xij
-      double precision xm12,xm22,xtk,xuk,xq1q,xq2q,qMC
+      double precision sh,xi_i_fks,y_ij_fks,yitmp,xij,xx,yi,yj
+      double precision xm12,xm22,xtk,xuk,xq1q,xq2q,qMC,zPY8
       double precision beta1,beta2,eps1,eps2,w1,w2,zeta1,zeta2
       double precision en_fks,en_fks_sister,z,qMCarg
       integer ileg,j,i,nfinal
@@ -4586,9 +4586,11 @@ c since they never enter isr formulae in MC functions
                write(*,*)'no such MonteCarlo yet'
                stop
             elseif(MonteCarlo.eq.'PYTHIA8')then
-c$$$               z=zPY8(ileg,xm12,xm22,sh,x,yi,yj,xtk,xuk,xq1q,xq2q)
-c$$$               qMC=sqrt(z*(1-z)*w1)
-c$$$c do !!
+               xx=1-xi_i_fks
+               yi=0d0
+               yj=y_ij_fks
+               z=zPY8(ileg,xm12,xm22,sh,xx,yi,yj,xtk,xuk,xq1q,xq2q)
+               qMC=sqrt(z*(1-z)*w1)
             endif
          endif
       elseif(ileg.eq.4)then
@@ -4630,7 +4632,6 @@ c$$$c do !!
                en_fks_sister=sqrt(sh)*(1-xi_i_fks-xm12/sh)/(2-xi_i_fks*(1-y_ij_fks))
                z=en_fks_sister/(en_fks + en_fks_sister)
                qMC=sqrt(z*(1-z)*w2)
-c check that indeed the variable cut by SCALUP be the evolution variable
             endif
          endif
       else
