@@ -222,10 +222,10 @@ c#endif
             ip = -((1+nh)/2)
             im =  (1-nh)/2
 
-            fo(1) = im     * sqm(im)
-            fo(2) = ip*nsf * sqm(im)
-            fo(3) = im*nsf * sqm(-ip)
-            fo(4) = ip     * sqm(-ip)
+            fo(3) = im     * sqm(im)
+            fo(4) = ip*nsf * sqm(im)
+            fo(5) = im*nsf * sqm(-ip)
+            fo(6) = ip     * sqm(-ip)
 
          else
 
