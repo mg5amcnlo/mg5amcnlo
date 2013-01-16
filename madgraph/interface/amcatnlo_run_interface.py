@@ -1201,7 +1201,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                                  os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
                                  if file.startswith(obj[:-1]) and \
                                 (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
-                                 os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
+                                 os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
                     files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_rm])
 
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
