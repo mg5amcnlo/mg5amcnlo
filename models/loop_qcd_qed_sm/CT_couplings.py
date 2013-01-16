@@ -1380,7 +1380,7 @@ R2_G0tt_b = Coupling(name = 'R2_G0tt_b',
                     order = {'QED':3})
 
 R2_G0dd = Coupling(name = 'R2_G0dd',
-                  value = '(-MD/(4*MW*sw)*(-(1+lhv)/(72.*cw**2)-1./(64.0*cw**2*sw**2))*R2SFF)',
+                  value = '(-MD/(4*MW*sw)*((1+lhv)/(72.*cw**2)-1./(64.0*cw**2*sw**2))*R2SFF)',
                   order = {'QED':3})
 
 R2_G0dd_u = Coupling(name = 'R2_G0dd_u',
@@ -1396,7 +1396,7 @@ R2_G0dd_t = Coupling(name = 'R2_G0dd_t',
                     order = {'QED':3})
 
 R2_G0ss = Coupling(name = 'R2_G0ss',
-                  value = '(-MS/(4*MW*sw)*(-(1+lhv)/(72.*cw**2)-1./(64.0*cw**2*sw**2))*R2SFF)',
+                  value = '(-MS/(4*MW*sw)*((1+lhv)/(72.*cw**2)-1./(64.0*cw**2*sw**2))*R2SFF)',
                   order = {'QED':3})
 
 R2_G0ss_u = Coupling(name = 'R2_G0ss_u',
@@ -1412,7 +1412,7 @@ R2_G0ss_t = Coupling(name = 'R2_G0ss_t',
                     order = {'QED':3})
 
 R2_G0bb = Coupling(name = 'R2_G0bb',
-                  value = '(-MB/(4*MW*sw)*(-(1+lhv)/(72.*cw**2)-1./(64.0*cw**2*sw**2))*R2SFF)',
+                  value = '(-MB/(4*MW*sw)*((1+lhv)/(72.*cw**2)-1./(64.0*cw**2*sw**2))*R2SFF)',
                   order = {'QED':3})
 
 R2_G0bb_u = Coupling(name = 'R2_G0bb_u',
@@ -1524,75 +1524,75 @@ R2_txbGp2Cp = Coupling(name = 'R2_txbGp2Cp',
                        order = {'QED':3})
 
 R2_dxuGm2Cm = Coupling(name = 'R2_dxuGm2Cm',
-                       value = '(-MU*CKM11/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)-(3+2*MD**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(-MU*CKM11/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)+(3+2*MD**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_dxuGm2Cp = Coupling(name = 'R2_dxuGm2Cp',
-                       value = '(MD*CKM11/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)-(3+2*MU**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(MD*CKM11/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)+(3+2*MU**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_sxuGm2Cm = Coupling(name = 'R2_sxuGm2Cm',
-                       value = '(-MU*CKM12/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)-(3+2*MS**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(-MU*CKM12/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)+(3+2*MS**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_sxuGm2Cp = Coupling(name = 'R2_sxuGm2Cp',
-                       value = '(MS*CKM12/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)-(3+2*MU**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(MS*CKM12/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)+(3+2*MU**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_bxuGm2Cm = Coupling(name = 'R2_bxuGm2Cm',
-                       value = '(-MU*CKM13/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)-(3+2*MB**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(-MU*CKM13/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)+(3+2*MB**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_bxuGm2Cp = Coupling(name = 'R2_bxuGm2Cp',
-                       value = '(MB*CKM13/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)-(3+2*MU**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(MB*CKM13/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)+(3+2*MU**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_dxcGm2Cm = Coupling(name = 'R2_dxcGm2Cm',
-                       value = '(-MC*CKM21/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)-(3+2*MD**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(-MC*CKM21/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)+(3+2*MD**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_dxcGm2Cp = Coupling(name = 'R2_dxcGm2Cp',
-                       value = '(MD*CKM21/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)-(3+2*MC**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(MD*CKM21/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)+(3+2*MC**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_sxcGm2Cm = Coupling(name = 'R2_sxcGm2Cm',
-                       value = '(-MC*CKM22/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)-(3+2*MS**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(-MC*CKM22/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)+(3+2*MS**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_sxcGm2Cp = Coupling(name = 'R2_sxcGm2Cp',
-                       value = '(MS*CKM22/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)-(3+2*MC**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(MS*CKM22/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)+(3+2*MC**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_bxcGm2Cm = Coupling(name = 'R2_bxcGm2Cm',
-                       value = '(-MC*CKM23/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)-(3+2*MB**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(-MC*CKM23/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)+(3+2*MB**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_bxcGm2Cp = Coupling(name = 'R2_bxcGm2Cp',
-                       value = '(MB*CKM23/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)-(3+2*MC**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(MB*CKM23/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)+(3+2*MC**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_dxtGm2Cm = Coupling(name = 'R2_dxtGm2Cm',
-                       value = '(-MT*CKM31/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)-(3+2*MD**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(-MT*CKM31/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)+(3+2*MD**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_dxtGm2Cp = Coupling(name = 'R2_dxtGm2Cp',
-                       value = '(MD*CKM31/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)-(3+2*MT**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(MD*CKM31/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)+(3+2*MT**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_sxtGm2Cm = Coupling(name = 'R2_sxtGm2Cm',
-                       value = '(-MT*CKM32/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)-(3+2*MS**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(-MT*CKM32/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)+(3+2*MS**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_sxtGm2Cp = Coupling(name = 'R2_sxtGm2Cp',
-                       value = '(MS*CKM32/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)-(3+2*MT**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(MS*CKM32/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)+(3+2*MT**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_bxtGm2Cm = Coupling(name = 'R2_bxtGm2Cm',
-                       value = '(-MT*CKM33/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)-(3+2*MB**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(-MT*CKM33/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)+(1+lhv)/(18.*cw**2)+(3+2*MB**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_bxtGm2Cp = Coupling(name = 'R2_bxtGm2Cp',
-                       value = '(MB*CKM33/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)-(3+2*MT**2/MW**2)/(32.*sw**2))*R2SFF)',
+                       value = '(MB*CKM33/(4*cmath.sqrt(2)*MW*sw)*(1./(32.*cw**2)-(1+lhv)/(36.*cw**2)+(3+2*MT**2/MW**2)/(32.*sw**2))*R2SFF)',
                        order = {'QED':3})
 
 R2_vexeGpCm = Coupling(name = 'R2_vexeGpCm',
@@ -1620,8 +1620,7 @@ R2_tauxvtGmCp = Coupling(name = 'R2_tauxvtGmCp',
                        order = {'QED':3})
 
 R2_ddA2Cp = Coupling(name = 'R2_ddA2Cp',
-                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(-1./27.)-(1+lhv)/(2.0*cw**2)*(-1./18.)+(1+lhv)/(4.*sw**2*cw**2)*(-1./12.)\
-                      +MD**2/(16*MW**2*sw**2)*(-1./3.))*(-complex(0,1)*R2SFF))',
+                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(-1./27.)-(1+lhv)/(2.0*cw**2)*(-1./18.)+(1+lhv)/(4.*sw**2*cw**2)*(-1./12.)+MD**2/(16*MW**2*sw**2)*(-1./3.))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ddA2Cp_u = Coupling(name = 'R2_ddA2Cp_u',
@@ -1637,8 +1636,7 @@ R2_ddA2Cp_t = Coupling(name = 'R2_ddA2Cp_t',
                      order = {'QED':3})
 
 R2_ssA2Cp = Coupling(name = 'R2_ssA2Cp',
-                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(-1./27.)-(1+lhv)/(2.0*cw**2)*(-1./18.)+(1+lhv)/(4.*sw**2*cw**2)*(-1./12.)\
-                      +MS**2/(16*MW**2*sw**2)*(-1./3.))*(-complex(0,1)*R2SFF))',
+                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(-1./27.)-(1+lhv)/(2.0*cw**2)*(-1./18.)+(1+lhv)/(4.*sw**2*cw**2)*(-1./12.)+MS**2/(16*MW**2*sw**2)*(-1./3.))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ssA2Cp_u = Coupling(name = 'R2_ssA2Cp_u',
@@ -1654,8 +1652,7 @@ R2_ssA2Cp_t = Coupling(name = 'R2_ssA2Cp_t',
                      order = {'QED':3})
 
 R2_bbA2Cp = Coupling(name = 'R2_bbA2Cp',
-                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(-1./27.)-(1+lhv)/(2.0*cw**2)*(-1./18.)+(1+lhv)/(4.*sw**2*cw**2)*(-1./12.)\
-                      +MB**2/(16*MW**2*sw**2)*(-1./3.))*(-complex(0,1)*R2SFF))',
+                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(-1./27.)-(1+lhv)/(2.0*cw**2)*(-1./18.)+(1+lhv)/(4.*sw**2*cw**2)*(-1./12.)+MB**2/(16*MW**2*sw**2)*(-1./3.))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_bbA2Cp_u = Coupling(name = 'R2_bbA2Cp_u',
@@ -1719,8 +1716,7 @@ R2_bbA2Cm_t = Coupling(name = 'R2_bbA2Cm_t',
                      order = {'QED':3})
 
 R2_uuA2Cp = Coupling(name = 'R2_uuA2Cp',
-                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(8./27.)-(1+lhv)/(2.0*cw**2)*(2./9.)+(1+lhv)/(4.*sw**2*cw**2)*(1./6.)\
-                      +MU**2/(16*MW**2*sw**2)*(2./3.))*(-complex(0,1)*R2SFF))',
+                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(8./27.)-(1+lhv)/(2.0*cw**2)*(2./9.)+(1+lhv)/(4.*sw**2*cw**2)*(1./6.)+MU**2/(16*MW**2*sw**2)*(2./3.))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_uuA2Cp_d = Coupling(name = 'R2_uuA2Cp_d',
@@ -1736,8 +1732,7 @@ R2_uuA2Cp_b = Coupling(name = 'R2_uuA2Cp_b',
                      order = {'QED':3})
 
 R2_ccA2Cp = Coupling(name = 'R2_ccA2Cp',
-                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(8./27.)-(1+lhv)/(2.0*cw**2)*(2./9.)+(1+lhv)/(4.*sw**2*cw**2)*(1./6.)\
-                      +MC**2/(16*MW**2*sw**2)*(2./3.))*(-complex(0,1)*R2SFF))',
+                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(8./27.)-(1+lhv)/(2.0*cw**2)*(2./9.)+(1+lhv)/(4.*sw**2*cw**2)*(1./6.)+MC**2/(16*MW**2*sw**2)*(2./3.))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ccA2Cp_d = Coupling(name = 'R2_ccA2Cp_d',
@@ -1753,8 +1748,7 @@ R2_ccA2Cp_b = Coupling(name = 'R2_ccA2Cp_b',
                      order = {'QED':3})
 
 R2_ttA2Cp = Coupling(name = 'R2_ttA2Cp',
-                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(8./27.)-(1+lhv)/(2.0*cw**2)*(2./9.)+(1+lhv)/(4.*sw**2*cw**2)*(1./6.)\
-                      +MT**2/(16*MW**2*sw**2)*(2./3.))*(-complex(0,1)*R2SFF))',
+                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(8./27.)-(1+lhv)/(2.0*cw**2)*(2./9.)+(1+lhv)/(4.*sw**2*cw**2)*(1./6.)+MT**2/(16*MW**2*sw**2)*(2./3.))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ttA2Cp_d = Coupling(name = 'R2_ttA2Cp_d',
@@ -1818,18 +1812,15 @@ R2_ttA2Cm_b = Coupling(name = 'R2_ttA2Cm_b',
                      order = {'QED':3})
 
 R2_eeACp = Coupling(name = 'R2_eeACp',
-                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(-1)-(1+lhv)/(2.0*cw**2)*(-1./2.)+(1+lhv)/(4.*sw**2*cw**2)*(-1./4.)\
-                      +Me**2/(16*MW**2*sw**2)*(-1))*(-complex(0,1)*R2SFF))',
+                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(-1)-(1+lhv)/(2.0*cw**2)*(-1./2.)+(1+lhv)/(4.*sw**2*cw**2)*(-1./4.)+Me**2/(16*MW**2*sw**2)*(-1))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_mmACp = Coupling(name = 'R2_mmACp',
-                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(-1)-(1+lhv)/(2.0*cw**2)*(-1./2.)+(1+lhv)/(4.*sw**2*cw**2)*(-1./4.)\
-                      +MM**2/(16*MW**2*sw**2)*(-1))*(-complex(0,1)*R2SFF))',
+                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(-1)-(1+lhv)/(2.0*cw**2)*(-1./2.)+(1+lhv)/(4.*sw**2*cw**2)*(-1./4.)+MM**2/(16*MW**2*sw**2)*(-1))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_tautauACp = Coupling(name = 'R2_tautauACp',
-                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(-1)-(1+lhv)/(2.0*cw**2)*(-1./2.)+(1+lhv)/(4.*sw**2*cw**2)*(-1./4.)\
-                      +MTA**2/(16*MW**2*sw**2)*(-1))*(-complex(0,1)*R2SFF))',
+                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(-1)-(1+lhv)/(2.0*cw**2)*(-1./2.)+(1+lhv)/(4.*sw**2*cw**2)*(-1./4.)+MTA**2/(16*MW**2*sw**2)*(-1))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_eeACm = Coupling(name = 'R2_eeACm',
@@ -1861,244 +1852,235 @@ R2_vtvtACp = Coupling(name = 'R2_vtvtACp',
                      order = {'QED':3})
 
 R2_ddZ2Cp = Coupling(name = 'R2_ddZ2Cp',
-                     value = '((1./16.*cw)*((1+lhv)*(-sw/cw**2*(Qd**3)+(1+2*sw**2)/(sw*cw**2)*(Qd**2*I3d)-3/(sw*cw**2)*(Qd*I3d**2)\
-                       +1./(sw**3*cw**2)*(I3d**3))-Qd*MD**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Qd**3)+(1+2*sw**2)/(sw*cw**2)*(Qd**2*I3d)-3/(sw*cw**2)*(Qd*I3d**2)+1./(sw**3*cw**2)*(I3d**3))-Qd*MD**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ddZ2Cp_u = Coupling(name = 'R2_ddZ2Cp_u',
-                     value = '(-(1./16.*cw)*(SCKM11/sw)*(MU**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM11/sw)*(MU**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ddZ2Cp_c = Coupling(name = 'R2_ddZ2Cp_c',
-                     value = '(-(1./16.*cw)*(SCKM21/sw)*(MC**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM21/sw)*(MC**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ddZ2Cp_t = Coupling(name = 'R2_ddZ2Cp_t',
-                     value = '(-(1./16.*cw)*(SCKM31/sw)*(MT**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM31/sw)*(MT**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ssZ2Cp = Coupling(name = 'R2_ssZ2Cp',
-                     value = '((1./16.*cw)*((1+lhv)*(-sw/cw**2*(Qd**3)+(1+2*sw**2)/(sw*cw**2)*(Qd**2*I3d)-3/(sw*cw**2)*(Qd*I3d**2)\
-                       +1./(sw**3*cw**2)*(I3d**3))-Qd*MS**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Qd**3)+(1+2*sw**2)/(sw*cw**2)*(Qd**2*I3d)-3/(sw*cw**2)*(Qd*I3d**2)+1./(sw**3*cw**2)*(I3d**3))-Qd*MS**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ssZ2Cp_u = Coupling(name = 'R2_ssZ2Cp_u',
-                     value = '(-(1./16.*cw)*(SCKM12/sw)*(MU**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM12/sw)*(MU**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ssZ2Cp_c = Coupling(name = 'R2_ssZ2Cp_c',
-                     value = '(-(1./16.*cw)*(SCKM22/sw)*(MC**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM22/sw)*(MC**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ssZ2Cp_t = Coupling(name = 'R2_ssZ2Cp_t',
-                     value = '(-(1./16.*cw)*(SCKM32/sw)*(MT**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM32/sw)*(MT**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_bbZ2Cp = Coupling(name = 'R2_bbZ2Cp',
-                     value = '((1./16.*cw)*((1+lhv)*(-sw/cw**2*(Qd**3)+(1+2*sw**2)/(sw*cw**2)*(Qd**2*I3d)-3/(sw*cw**2)*(Qd*I3d**2)\
-                       +1./(sw**3*cw**2)*(I3d**3))-Qd*MB**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Qd**3)+(1+2*sw**2)/(sw*cw**2)*(Qd**2*I3d)-3/(sw*cw**2)*(Qd*I3d**2)+1./(sw**3*cw**2)*(I3d**3))-Qd*MB**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_bbZ2Cp_u = Coupling(name = 'R2_bbZ2Cp_u',
-                     value = '(-(1./16.*cw)*(SCKM13/sw)*(MU**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM13/sw)*(MU**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_bbZ2Cp_c = Coupling(name = 'R2_bbZ2Cp_c',
-                     value = '(-(1./16.*cw)*(SCKM23/sw)*(MC**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM23/sw)*(MC**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_bbZ2Cp_t = Coupling(name = 'R2_bbZ2Cp_t',
-                     value = '(-(1./16.*cw)*(SCKM33/sw)*(MT**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM33/sw)*(MT**2/(4*MW**2)*Qu+(1+lhv)/2.*(Qu+(cw**2 - I3u)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ddZ2Cm = Coupling(name = 'R2_ddZ2Cm',
-                     value = '((1./16.*cw)*((1+lhv)*(-sw/cw**2*(Qd**3))-MD**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Qd**3))-MD**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ddZ2Cm_u = Coupling(name = 'R2_ddZ2Cm_u',
-                     value = '((1./16.*cw)*(SCKM11)*(-MD**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM11)*(-MD**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ddZ2Cm_c = Coupling(name = 'R2_ddZ2Cm_c',
-                     value = '((1./16.*cw)*(SCKM21)*(-MD**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM21)*(-MD**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ddZ2Cm_t = Coupling(name = 'R2_ddZ2Cm_t',
-                     value = '((1./16.*cw)*(SCKM31)*(-MD**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM31)*(-MD**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ssZ2Cm = Coupling(name = 'R2_ssZ2Cm',
-                     value = '((1./16.*cw)*((1+lhv)*(-sw/cw**2*(Qd**3))-MS**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Qd**3))-MS**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ssZ2Cm_u = Coupling(name = 'R2_ssZ2Cm_u',
-                     value = '((1./16.*cw)*(SCKM12)*(-MS**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM12)*(-MS**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ssZ2Cm_c = Coupling(name = 'R2_ssZ2Cm_c',
-                     value = '((1./16.*cw)*(SCKM22)*(-MS**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM22)*(-MS**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ssZ2Cm_t = Coupling(name = 'R2_ssZ2Cm_t',
-                     value = '((1./16.*cw)*(SCKM32)*(-MS**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM32)*(-MS**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_bbZ2Cm = Coupling(name = 'R2_bbZ2Cm',
-                     value = '((1./16.*cw)*((1+lhv)*(-sw/cw**2*(Qd**3))-MB**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Qd**3))-MB**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_bbZ2Cm_u = Coupling(name = 'R2_bbZ2Cm_u',
-                     value = '((1./16.*cw)*(SCKM13)*(-MB**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM13)*(-MB**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_bbZ2Cm_c = Coupling(name = 'R2_bbZ2Cm_c',
-                     value = '((1./16.*cw)*(SCKM23)*(-MB**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM23)*(-MB**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_bbZ2Cm_t = Coupling(name = 'R2_bbZ2Cm_t',
-                     value = '((1./16.*cw)*(SCKM33)*(-MB**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM33)*(-MB**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_uuZ2Cp = Coupling(name = 'R2_uuZ2Cp',
-                     value = '((1./16.*cw)*((1+lhv)*(-sw/cw**2*(Qu**3)+(1+2*sw**2)/(sw*cw**2)*(Qu**2*I3u)-3/(sw*cw**2)*(Qu*I3u**2)\
-                       +1./(sw**3*cw**2)*(I3u**3))-Qu*MU**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Qu**3)+(1+2*sw**2)/(sw*cw**2)*(Qu**2*I3u)-3/(sw*cw**2)*(Qu*I3u**2)+1./(sw**3*cw**2)*(I3u**3))-Qu*MU**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_uuZ2Cp_d = Coupling(name = 'R2_uuZ2Cp_d',
-                     value = '(-(1./16.*cw)*(SCKM11/sw)*(MD**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM11/sw)*(MD**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_uuZ2Cp_s = Coupling(name = 'R2_uuZ2Cp_s',
-                     value = '(-(1./16.*cw)*(SCKM12/sw)*(MS**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM12/sw)*(MS**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_uuZ2Cp_b = Coupling(name = 'R2_uuZ2Cp_b',
-                     value = '(-(1./16.*cw)*(SCKM13/sw)*(MB**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM13/sw)*(MB**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ccZ2Cp = Coupling(name = 'R2_ccZ2Cp',
-                     value = '((1./16.*cw)*((1+lhv)*(-sw/cw**2*(Qu**3)+(1+2*sw**2)/(sw*cw**2)*(Qu**2*I3u)-3/(sw*cw**2)*(Qu*I3u**2)\
-                       +1./(sw**3*cw**2)*(I3u**3))-Qu*MC**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Qu**3)+(1+2*sw**2)/(sw*cw**2)*(Qu**2*I3u)-3/(sw*cw**2)*(Qu*I3u**2)+1./(sw**3*cw**2)*(I3u**3))-Qu*MC**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ccZ2Cp_d = Coupling(name = 'R2_ccZ2Cp_d',
-                     value = '(-(1./16.*cw)*(SCKM21/sw)*(MD**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM21/sw)*(MD**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ccZ2Cp_s = Coupling(name = 'R2_ccZ2Cp_s',
-                     value = '(-(1./16.*cw)*(SCKM22/sw)*(MS**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM22/sw)*(MS**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ccZ2Cp_b = Coupling(name = 'R2_ccZ2Cp_b',
-                     value = '(-(1./16.*cw)*(SCKM23/sw)*(MB**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM23/sw)*(MB**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ttZ2Cp = Coupling(name = 'R2_ttZ2Cp',
-                     value = '((1./16.*cw)*((1+lhv)*(-sw/cw**2*(Qu**3)+(1+2*sw**2)/(sw*cw**2)*(Qu**2*I3u)-3/(sw*cw**2)*(Qu*I3u**2)\
-                       +1./(sw**3*cw**2)*(I3u**3))-Qu*MT**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Qu**3)+(1+2*sw**2)/(sw*cw**2)*(Qu**2*I3u)-3/(sw*cw**2)*(Qu*I3u**2)+1./(sw**3*cw**2)*(I3u**3))-Qu*MT**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ttZ2Cp_d = Coupling(name = 'R2_ttZ2Cp_d',
-                     value = '(-(1./16.*cw)*(SCKM31/sw)*(MD**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM31/sw)*(MD**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ttZ2Cp_s = Coupling(name = 'R2_ttZ2Cp_s',
-                     value = '(-(1./16.*cw)*(SCKM32/sw)*(MS**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM32/sw)*(MS**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ttZ2Cp_b = Coupling(name = 'R2_ttZ2Cp_b',
-                     value = '(-(1./16.*cw)*(SCKM33/sw)*(MB**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '(-(1./(16.*cw))*(SCKM33/sw)*(MB**2/(4*MW**2)*Qd+(1+lhv)/2.*(Qd-(cw**2 +I3d)/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_uuZ2Cm = Coupling(name = 'R2_uuZ2Cm',
-                     value = '((1./16.*cw)*((1+lhv)*(-sw/cw**2*(Qu**3))-MU**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Qu**3))-MU**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_uuZ2Cm_d = Coupling(name = 'R2_uuZ2Cm_d',
-                     value = '((1./16.*cw)*(SCKM11)*(-MU**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM11)*(-MU**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_uuZ2Cm_s = Coupling(name = 'R2_uuZ2Cm_s',
-                     value = '((1./16.*cw)*(SCKM12)*(-MU**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM12)*(-MU**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_uuZ2Cm_b = Coupling(name = 'R2_uuZ2Cm_b',
-                     value = '((1./16.*cw)*(SCKM13)*(-MU**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM13)*(-MU**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ccZ2Cm = Coupling(name = 'R2_ccZ2Cm',
-                     value = '((1./16.*cw)*((1+lhv)*(-sw/cw**2*(Qu**3))-MC**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Qu**3))-MC**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ccZ2Cm_d = Coupling(name = 'R2_ccZ2Cm_d',
-                     value = '((1./16.*cw)*(SCKM21)*(-MC**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM21)*(-MC**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ccZ2Cm_s = Coupling(name = 'R2_ccZ2Cm_s',
-                     value = '((1./16.*cw)*(SCKM22)*(-MC**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM22)*(-MC**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ccZ2Cm_b = Coupling(name = 'R2_ccZ2Cm_b',
-                     value = '((1./16.*cw)*(SCKM23)*(-MC**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM23)*(-MC**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ttZ2Cm = Coupling(name = 'R2_ttZ2Cm',
-                     value = '((1./16.*cw)*((1+lhv)*(-sw/cw**2*(Qu**3))-MT**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Qu**3))-MT**2/(4*MW**2*sw)*(Qu-I3u/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ttZ2Cm_d = Coupling(name = 'R2_ttZ2Cm_d',
-                     value = '((1./16.*cw)*(SCKM31)*(-MT**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM31)*(-MT**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ttZ2Cm_s = Coupling(name = 'R2_ttZ2Cm_s',
-                     value = '((1./16.*cw)*(SCKM32)*(-MT**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM32)*(-MT**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ttZ2Cm_b = Coupling(name = 'R2_ttZ2Cm_b',
-                     value = '((1./16.*cw)*(SCKM33)*(-MT**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
+                     value = '((1./(16.*cw))*(SCKM33)*(-MT**2/(4*MW**2*sw)*(Qd-I3d/sw**2))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_eeZCp = Coupling(name = 'R2_eeZCp',
-                     value = '(1./16.*cw)*((1+lhv)*(-sw/cw**2*(Ql**3)+(1+2*sw**2)/(sw*cw**2)*(Ql**2*I3l)-3/(sw*cw**2)*(Ql*I3l**2)\
-                       +1./(sw**3*cw**2)*(I3l**3))-Ql*Me**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF)',
+                     value = '(1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Ql**3)+(1+2*sw**2)/(sw*cw**2)*(Ql**2*I3l)-3/(sw*cw**2)*(Ql*I3l**2)+1./(sw**3*cw**2)*(I3l**3))-Ql*Me**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF)',
                      order = {'QED':3})
 
 R2_mmZCp = Coupling(name = 'R2_mmZCp',
-                     value = '(1./16.*cw)*((1+lhv)*(-sw/cw**2*(Ql**3)+(1+2*sw**2)/(sw*cw**2)*(Ql**2*I3l)-3/(sw*cw**2)*(Ql*I3l**2)\
-                       +1./(sw**3*cw**2)*(I3l**3))-Ql*MM**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF)',
+                     value = '(1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Ql**3)+(1+2*sw**2)/(sw*cw**2)*(Ql**2*I3l)-3/(sw*cw**2)*(Ql*I3l**2)+1./(sw**3*cw**2)*(I3l**3))-Ql*MM**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF)',
                      order = {'QED':3})
 
 R2_tautauZCp = Coupling(name = 'R2_tautauZCp',
-                     value = '(1./16.*cw)*((1+lhv)*(-sw/cw**2*(Ql**3)+(1+2*sw**2)/(sw*cw**2)*(Ql**2*I3l)-3/(sw*cw**2)*(Ql*I3l**2)\
-                       +1./(sw**3*cw**2)*(I3l**3))-Ql*MTA**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF)',
+                     value = '(1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Ql**3)+(1+2*sw**2)/(sw*cw**2)*(Ql**2*I3l)-3/(sw*cw**2)*(Ql*I3l**2)+1./(sw**3*cw**2)*(I3l**3))-Ql*MTA**2/(4*MW**2*sw))*(-complex(0,1)*R2SFF)',
                      order = {'QED':3})
 
 R2_llZCp = Coupling(name = 'R2_llZCp',
-                     value = '-(1./16.*cw)*(1./sw)*((1+lhv)/2.*(cw**2 - I3v)/sw**2)*(-complex(0,1)*R2SFF)',
+                     value = '-(1./(16.*cw))*(1./sw)*((1+lhv)/2.*(cw**2 - I3v)/sw**2)*(-complex(0,1)*R2SFF)',
                      order = {'QED':3})
 
 R2_eeZCm = Coupling(name = 'R2_eeZCm',
-                     value = '(1./16.*cw)*((1+lhv)*(-sw/cw**2*(Ql**3))-Me**2/(4*MW**2*sw)*(Ql-I3l/sw**2))*(-complex(0,1)*R2SFF)',
+                     value = '(1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Ql**3))-Me**2/(4*MW**2*sw)*(Ql-I3l/sw**2))*(-complex(0,1)*R2SFF)',
                      order = {'QED':3})
 
 R2_eeZCm_v = Coupling(name = 'R2_eeZCm_v',
-                     value = '(1./16.*cw)*(-Me**2/(4*MW**2*sw)*(-I3v/sw**2))*(-complex(0,1)*R2SFF)',
+                     value = '(1./(16.*cw))*(-Me**2/(4*MW**2*sw)*(-I3v/sw**2))*(-complex(0,1)*R2SFF)',
                      order = {'QED':3})
 
 R2_mmZCm = Coupling(name = 'R2_mmZCm',
-                     value = '(1./16.*cw)*((1+lhv)*(-sw/cw**2*(Ql**3))-MM**2/(4*MW**2*sw)*(Ql-I3l/sw**2))*(-complex(0,1)*R2SFF)',
+                     value = '(1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Ql**3))-MM**2/(4*MW**2*sw)*(Ql-I3l/sw**2))*(-complex(0,1)*R2SFF)',
                      order = {'QED':3})
 
 R2_mmZCm_v = Coupling(name = 'R2_mmZCm_v',
-                     value = '(1./16.*cw)*(-MM**2/(4*MW**2*sw)*(-I3v/sw**2))*(-complex(0,1)*R2SFF)',
+                     value = '(1./(16.*cw))*(-MM**2/(4*MW**2*sw)*(-I3v/sw**2))*(-complex(0,1)*R2SFF)',
                      order = {'QED':3})
 
 R2_tautauZCm = Coupling(name = 'R2_tautauZCm',
-                     value = '(1./16.*cw)*((1+lhv)*(-sw/cw**2*(Ql**3))-MTA**2/(4*MW**2*sw)*(Ql-I3l/sw**2))*(-complex(0,1)*R2SFF)',
+                     value = '(1./(16.*cw))*((1+lhv)*(-sw/cw**2*(Ql**3))-MTA**2/(4*MW**2*sw)*(Ql-I3l/sw**2))*(-complex(0,1)*R2SFF)',
                      order = {'QED':3})
 
 R2_tautauZCm_v = Coupling(name = 'R2_tautauZCm_v',
-                     value = '(1./16.*cw)*(-MTA**2/(4*MW**2*sw)*(-I3v/sw**2))*(-complex(0,1)*R2SFF)',
+                     value = '(1./(16.*cw))*(-MTA**2/(4*MW**2*sw)*(-I3v/sw**2))*(-complex(0,1)*R2SFF)',
                      order = {'QED':3})
 
 R2_vvZCp = Coupling(name = 'R2_vvZCp',
@@ -2438,43 +2420,43 @@ R2_ZGmGpm = Coupling(name= 'R2_ZGmGpm',
                    order = {'QED':3})
 
 R2_ZGmGptau = Coupling(name= 'R2_ZGmGptau',
-                   value = '-complex(0,1)/(48.*sw*cw)*Me**2/(MW**2)*(-Ql-I3v/sw**2)*R2SFF',
+                   value = '-complex(0,1)/(48.*sw*cw)*MTA**2/(MW**2)*(-Ql-I3v/sw**2)*R2SFF',
                    order = {'QED':3})
 
 R2_ZGmGpud = Coupling(name= 'R2_ZGmGpud',
-                   value = '-complex(0,1)/(48.*sw*cw)*SCKM11*Ncol*(MU**2 +MD**2 +(MU**2*I3d-MD**2*I3u)/sw**2)/(MW**2)*(-Ql-I3v/sw**2)*R2SFF',
+                   value = '-complex(0,1)/(48.*sw*cw)*SCKM11*Ncol*(MU**2 +MD**2 +(MU**2*I3d-MD**2*I3u)/sw**2)/(MW**2)*R2SFF',
                    order = {'QED':3})
 
 R2_ZGmGpus = Coupling(name= 'R2_ZGmGpus',
-                   value = '-complex(0,1)/(48.*sw*cw)*SCKM12*Ncol*(MU**2 +MS**2 +(MU**2*I3d-MS**2*I3u)/sw**2)/(MW**2)*(-Ql-I3v/sw**2)*R2SFF',
+                   value = '-complex(0,1)/(48.*sw*cw)*SCKM12*Ncol*(MU**2 +MS**2 +(MU**2*I3d-MS**2*I3u)/sw**2)/(MW**2)*R2SFF',
                    order = {'QED':3})
 
 R2_ZGmGpub = Coupling(name= 'R2_ZGmGpub',
-                   value = '-complex(0,1)/(48.*sw*cw)*SCKM13*Ncol*(MU**2 +MB**2 +(MU**2*I3d-MB**2*I3u)/sw**2)/(MW**2)*(-Ql-I3v/sw**2)*R2SFF',
+                   value = '-complex(0,1)/(48.*sw*cw)*SCKM13*Ncol*(MU**2 +MB**2 +(MU**2*I3d-MB**2*I3u)/sw**2)/(MW**2)*R2SFF',
                    order = {'QED':3})
 
 R2_ZGmGpcd = Coupling(name= 'R2_ZGmGpcd',
-                   value = '-complex(0,1)/(48.*sw*cw)*SCKM21*Ncol*(MC**2 +MD**2 +(MC**2*I3d-MD**2*I3u)/sw**2)/(MW**2)*(-Ql-I3v/sw**2)*R2SFF',
+                   value = '-complex(0,1)/(48.*sw*cw)*SCKM21*Ncol*(MC**2 +MD**2 +(MC**2*I3d-MD**2*I3u)/sw**2)/(MW**2)*R2SFF',
                    order = {'QED':3})
 
 R2_ZGmGpcs = Coupling(name= 'R2_ZGmGpcs',
-                   value = '-complex(0,1)/(48.*sw*cw)*SCKM22*Ncol*(MC**2 +MS**2 +(MC**2*I3d-MS**2*I3u)/sw**2)/(MW**2)*(-Ql-I3v/sw**2)*R2SFF',
+                   value = '-complex(0,1)/(48.*sw*cw)*SCKM22*Ncol*(MC**2 +MS**2 +(MC**2*I3d-MS**2*I3u)/sw**2)/(MW**2)*R2SFF',
                    order = {'QED':3})
 
-R2_ZGmGpcb = Coupling(name= 'R2_ZGmGpus',
-                   value = '-complex(0,1)/(48.*sw*cw)*SCKM23*Ncol*(MC**2 +MB**2 +(MC**2*I3d-MB**2*I3u)/sw**2)/(MW**2)*(-Ql-I3v/sw**2)*R2SFF',
+R2_ZGmGpcb = Coupling(name= 'R2_ZGmGpcb',
+                   value = '-complex(0,1)/(48.*sw*cw)*SCKM23*Ncol*(MC**2 +MB**2 +(MC**2*I3d-MB**2*I3u)/sw**2)/(MW**2)*R2SFF',
                    order = {'QED':3})
 
 R2_ZGmGptd = Coupling(name= 'R2_ZGmGptd',
-                   value = '-complex(0,1)/(48.*sw*cw)*SCKM31*Ncol*(MT**2 +MD**2 +(MT**2*I3d-MD**2*I3u)/sw**2)/(MW**2)*(-Ql-I3v/sw**2)*R2SFF',
+                   value = '-complex(0,1)/(48.*sw*cw)*SCKM31*Ncol*(MT**2 +MD**2 +(MT**2*I3d-MD**2*I3u)/sw**2)/(MW**2)*R2SFF',
                    order = {'QED':3})
 
 R2_ZGmGpts = Coupling(name= 'R2_ZGmGpts',
-                   value = '-complex(0,1)/(48.*sw*cw)*SCKM32*Ncol*(MT**2 +MS**2 +(MT**2*I3d-MS**2*I3u)/sw**2)/(MW**2)*(-Ql-I3v/sw**2)*R2SFF',
+                   value = '-complex(0,1)/(48.*sw*cw)*SCKM32*Ncol*(MT**2 +MS**2 +(MT**2*I3d-MS**2*I3u)/sw**2)/(MW**2)*R2SFF',
                    order = {'QED':3})
 
 R2_ZGmGptb = Coupling(name= 'R2_ZGmGptb',
-                   value = '-complex(0,1)/(48.*sw*cw)*SCKM33*Ncol*(MT**2 +MB**2 +(MT**2*I3d-MB**2*I3u)/sw**2)/(MW**2)*(-Ql-I3v/sw**2)*R2SFF',
+                   value = '-complex(0,1)/(48.*sw*cw)*SCKM33*Ncol*(MT**2 +MB**2 +(MT**2*I3d-MB**2*I3u)/sw**2)/(MW**2)*R2SFF',
                    order = {'QED':3})
 
 R2_WGpH = Coupling(name = 'R2_WGpH',
@@ -3321,15 +3303,15 @@ R2_AAAZ = Coupling(name = 'R2_AAAZ',
                    order = {'QED':4})
 
 R2_AAAZl = Coupling(name = 'R2_AAAZl',
-                   value = '-1./12.*(sw/cw*Ql**4 -1/(2*sw*cw)*Ql**3*I3l)*(complex(0,1)*R24S)',
+                   value = '-1./12.*(sw/cw*Ql**4 -1./(2*sw*cw)*Ql**3*I3l)*(complex(0,1)*R24S)',
                    order = {'QED':4})
 
 R2_AAAZu = Coupling(name = 'R2_AAAZu',
-                   value = '-Ncol/12.*(sw/cw*Qu**4 -1/(2*sw*cw)*Qu**3*I3u)*(complex(0,1)*R24S)',
+                   value = '-Ncol/12.*(sw/cw*Qu**4 -1./(2*sw*cw)*Qu**3*I3u)*(complex(0,1)*R24S)',
                    order = {'QED':4})
 
 R2_AAAZd = Coupling(name = 'R2_AAAZd',
-                   value = '-Ncol/12.*(sw/cw*Qd**4 -1/(2*sw*cw)*Qd**3*I3d)*(complex(0,1)*R24S)',
+                   value = '-Ncol/12.*(sw/cw*Qd**4 -1./(2*sw*cw)*Qd**3*I3d)*(complex(0,1)*R24S)',
                    order = {'QED':4})
 
 R2_AAZZ = Coupling(name = 'R2_AAZZ',
@@ -3353,15 +3335,15 @@ R2_AZZZ = Coupling(name = 'R2_AZZZ',
                    order = {'QED':4})
 
 R2_AZZZl = Coupling(name = 'R2_AZZZl',
-                   value = '-1./12.*(sw**3/cw**3*Ql**4 -3./2.*sw/cw**3*Ql**3*I3l+3./(2.*sw*cw**3)*Ql**2*I3l**2 -1/(2*sw**3*cw**3)*Ql*I3l**3)*(complex(0,1)*R24S)',
+                   value = '-1./12.*(sw**3/cw**3*Ql**4 -3./2.*sw/cw**3*Ql**3*I3l+3./(2.*sw*cw**3)*Ql**2*I3l**2 -1./(2*sw**3*cw**3)*Ql*I3l**3)*(complex(0,1)*R24S)',
                    order = {'QED':4})
 
 R2_AZZZu = Coupling(name = 'R2_AZZZu',
-                   value = '-Ncol/12.*(sw**3/cw**3*Qu**4 -3./2.*sw/cw**3*Qu**3*I3u+3./(2.*sw*cw**3)*Qu**2*I3u**2 -1/(2*sw**3*cw**3)*Qu*I3u**3)*(complex(0,1)*R24S)',
+                   value = '-Ncol/12.*(sw**3/cw**3*Qu**4 -3./2.*sw/cw**3*Qu**3*I3u+3./(2.*sw*cw**3)*Qu**2*I3u**2 -1./(2*sw**3*cw**3)*Qu*I3u**3)*(complex(0,1)*R24S)',
                    order = {'QED':4})
 
 R2_AZZZd = Coupling(name = 'R2_AZZZd',
-                   value = '-Ncol/12.*(sw**3/cw**3*Qd**4 -3./2.*sw/cw**3*Qd**3*I3d+3./(2.*sw*cw**3)*Qd**2*I3d**2 -1/(2*sw**3*cw**3)*Qd*I3d**3)*(complex(0,1)*R24S)',
+                   value = '-Ncol/12.*(sw**3/cw**3*Qd**4 -3./2.*sw/cw**3*Qd**3*I3d+3./(2.*sw*cw**3)*Qd**2*I3d**2 -1./(2*sw**3*cw**3)*Qd*I3d**3)*(complex(0,1)*R24S)',
                    order = {'QED':4})
 
 R2_ZZZZ = Coupling(name = 'R2_ZZZZ',
@@ -3369,19 +3351,19 @@ R2_ZZZZ = Coupling(name = 'R2_ZZZZ',
                    order = {'QED':4})
 
 R2_ZZZZl = Coupling(name = 'R2_ZZZZl',
-                   value = '1./12.*(sw**4/cw**4*Ql**4 -2.*sw**2/cw**4*Ql**3*I3l+3./(cw**4)*Ql**2*I3l**2 -2/(sw**2*cw**4)*Ql*I3l**3+1/(2*sw**4*cw**4)*I3l**4)*(complex(0,1)*R24S)',
+                   value = '1./12.*(sw**4/cw**4*Ql**4 -2.*sw**2/cw**4*Ql**3*I3l+3./(cw**4)*Ql**2*I3l**2 -2./(sw**2*cw**4)*Ql*I3l**3+1./(2*sw**4*cw**4)*I3l**4)*(complex(0,1)*R24S)',
                    order = {'QED':4})
 
 R2_ZZZZu = Coupling(name = 'R2_ZZZZu',
-                   value = 'Ncol/12.*(sw**4/cw**4*Qu**4 -2.*sw**2/cw**4*Qu**3*I3u+3./(cw**4)*Qu**2*I3u**2 -2/(sw**2*cw**4)*Qu*I3u**3+1/(2*sw**4*cw**4)*I3u**4)*(complex(0,1)*R24S)',
+                   value = 'Ncol/12.*(sw**4/cw**4*Qu**4 -2.*sw**2/cw**4*Qu**3*I3u+3./(cw**4)*Qu**2*I3u**2 -2./(sw**2*cw**4)*Qu*I3u**3+1./(2*sw**4*cw**4)*I3u**4)*(complex(0,1)*R24S)',
                    order = {'QED':4})
 
 R2_ZZZZd = Coupling(name = 'R2_ZZZZd',
-                   value = 'Ncol/12.*(sw**4/cw**4*Qd**4 -2.*sw**2/cw**4*Qd**3*I3d+3./(cw**4)*Qd**2*I3d**2 -2/(sw**2*cw**4)*Qd*I3d**3+1/(2*sw**4*cw**4)*I3d**4)*(complex(0,1)*R24S)',
+                   value = 'Ncol/12.*(sw**4/cw**4*Qd**4 -2.*sw**2/cw**4*Qd**3*I3d+3./(cw**4)*Qd**2*I3d**2 -2./(sw**2*cw**4)*Qd*I3d**3+1./(2*sw**4*cw**4)*I3d**4)*(complex(0,1)*R24S)',
                    order = {'QED':4})
 
 R2_ZZZZv = Coupling(name = 'R2_ZZZZv',
-                   value = '1./12.*(1/(2*sw**4*cw**4)*I3v**4)*(complex(0,1)*R24S)',
+                   value = '1./12.*(1./(2*sw**4*cw**4)*I3v**4)*(complex(0,1)*R24S)',
                    order = {'QED':4})
 
 R2_AAWW1 = Coupling(name = 'R2_AAWW1',
@@ -3401,75 +3383,75 @@ R2_AAWW2lv = Coupling(name = 'R2_AAWW2lv',
                     order = {'QED':4})
 
 R2_AAWW1ud = Coupling(name = 'R2_AAWW1ud',
-                    value = '1./(16*sw**2)*25/27.*Ncol*SCKM11*(complex(0,1)*R24S)',
+                    value = '1./(16*sw**2)*25./27.*Ncol*SCKM11*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW2ud = Coupling(name = 'R2_AAWW2ud',
-                    value = '-1./(16*sw**2)*11/27.*Ncol*SCKM11*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw**2)*11./27.*Ncol*SCKM11*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW1us = Coupling(name = 'R2_AAWW1us',
-                    value = '1./(16*sw**2)*25/27.*Ncol*SCKM12*(complex(0,1)*R24S)',
+                    value = '1./(16*sw**2)*25./27.*Ncol*SCKM12*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW2us = Coupling(name = 'R2_AAWW2us',
-                    value = '-1./(16*sw**2)*11/27.*Ncol*SCKM12*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw**2)*11./27.*Ncol*SCKM12*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW1ub = Coupling(name = 'R2_AAWW1ub',
-                    value = '1./(16*sw**2)*25/27.*Ncol*SCKM13*(complex(0,1)*R24S)',
+                    value = '1./(16*sw**2)*25./27.*Ncol*SCKM13*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW2ub = Coupling(name = 'R2_AAWW2ub',
-                    value = '-1./(16*sw**2)*11/27.*Ncol*SCKM13*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw**2)*11./27.*Ncol*SCKM13*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW1cd = Coupling(name = 'R2_AAWW1cd',
-                    value = '1./(16*sw**2)*25/27.*Ncol*SCKM21*(complex(0,1)*R24S)',
+                    value = '1./(16*sw**2)*25./27.*Ncol*SCKM21*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW2cd = Coupling(name = 'R2_AAWW2cd',
-                    value = '-1./(16*sw**2)*11/27.*Ncol*SCKM21*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw**2)*11./27.*Ncol*SCKM21*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW1cs = Coupling(name = 'R2_AAWW1cs',
-                    value = '1./(16*sw**2)*25/27.*Ncol*SCKM22*(complex(0,1)*R24S)',
+                    value = '1./(16*sw**2)*25./27.*Ncol*SCKM22*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW2cs = Coupling(name = 'R2_AAWW2cs',
-                    value = '-1./(16*sw**2)*11/27.*Ncol*SCKM22*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw**2)*11./27.*Ncol*SCKM22*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW1cb = Coupling(name = 'R2_AAWW1cb',
-                    value = '1./(16*sw**2)*25/27.*Ncol*SCKM23*(complex(0,1)*R24S)',
+                    value = '1./(16*sw**2)*25./27.*Ncol*SCKM23*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW2cb = Coupling(name = 'R2_AAWW2cb',
-                    value = '-1./(16*sw**2)*11/27.*Ncol*SCKM23*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw**2)*11./27.*Ncol*SCKM23*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW1td = Coupling(name = 'R2_AAWW1td',
-                    value = '1./(16*sw**2)*25/27.*Ncol*SCKM31*(complex(0,1)*R24S)',
+                    value = '1./(16*sw**2)*25./27.*Ncol*SCKM31*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW2td = Coupling(name = 'R2_AAWW2td',
-                    value = '-1./(16*sw**2)*11/27.*Ncol*SCKM31*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw**2)*11./27.*Ncol*SCKM31*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW1ts = Coupling(name = 'R2_AAWW1ts',
-                    value = '1./(16*sw**2)*25/27.*Ncol*SCKM32*(complex(0,1)*R24S)',
+                    value = '1./(16*sw**2)*25./27.*Ncol*SCKM32*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW2ts = Coupling(name = 'R2_AAWW2ts',
-                    value = '-1./(16*sw**2)*11/27.*Ncol*SCKM32*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw**2)*11./27.*Ncol*SCKM32*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW1tb = Coupling(name = 'R2_AAWW1tb',
-                    value = '1./(16*sw**2)*25/27.*Ncol*SCKM33*(complex(0,1)*R24S)',
+                    value = '1./(16*sw**2)*25./27.*Ncol*SCKM33*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AAWW2tb = Coupling(name = 'R2_AAWW2tb',
-                    value = '-1./(16*sw**2)*11/27.*Ncol*SCKM33*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw**2)*11./27.*Ncol*SCKM33*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW1 = Coupling(name = 'R2_AZWW1',
@@ -3489,75 +3471,75 @@ R2_AZWW2lv = Coupling(name = 'R2_AZWW2lv',
                     order = {'QED':4})
 
 R2_AZWW1ud = Coupling(name = 'R2_AZWW1ud',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM11*(25/27.-11/(2*sw**2))*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM11*(25./27.-11./(12*sw**2))*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW2ud = Coupling(name = 'R2_AZWW2ud',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM11*(5./(12*sw**2)-11/27.)*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM11*(5./(12*sw**2)-11./27.)*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW1us = Coupling(name = 'R2_AZWW1us',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM12*(25/27.-11/(2*sw**2))*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM12*(25./27.-11./(12*sw**2))*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW2us = Coupling(name = 'R2_AZWW2us',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM12*(5./(12*sw**2)-11/27.)*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM12*(5./(12*sw**2)-11./27.)*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW1ub = Coupling(name = 'R2_AZWW1ub',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM13*(25/27.-11/(2*sw**2))*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM13*(25./27.-11./(12*sw**2))*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW2ub = Coupling(name = 'R2_AZWW2ub',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM13*(5./(12*sw**2)-11/27.)*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM13*(5./(12*sw**2)-11./27.)*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW1cd = Coupling(name = 'R2_AZWW1cd',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM21*(25/27.-11/(2*sw**2))*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM21*(25./27.-11./(12*sw**2))*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW2cd = Coupling(name = 'R2_AZWW2cd',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM21*(5./(12*sw**2)-11/27.)*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM21*(5./(12*sw**2)-11./27.)*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW1cs = Coupling(name = 'R2_AZWW1cs',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM22*(25/27.-11/(2*sw**2))*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM22*(25./27.-11./(12*sw**2))*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW2cs = Coupling(name = 'R2_AZWW2cs',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM22*(5./(12*sw**2)-11/27.)*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM22*(5./(12*sw**2)-11./27.)*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW1cb = Coupling(name = 'R2_AZWW1cb',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM23*(25/27.-11/(2*sw**2))*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM23*(25./27.-11./(12*sw**2))*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW2cb = Coupling(name = 'R2_AZWW2cb',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM23*(5./(12*sw**2)-11/27.)*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM23*(5./(12*sw**2)-11./27.)*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW1td = Coupling(name = 'R2_AZWW1td',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM31*(25/27.-11/(2*sw**2))*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM31*(25./27.-11./(12*sw**2))*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW2td = Coupling(name = 'R2_AZWW2td',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM31*(5./(12*sw**2)-11/27.)*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM31*(5./(12*sw**2)-11./27.)*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW1ts = Coupling(name = 'R2_AZWW1ts',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM32*(25/27.-11/(2*sw**2))*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM32*(25./27.-11./(12*sw**2))*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW2ts = Coupling(name = 'R2_AZWW2ts',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM32*(5./(12*sw**2)-11/27.)*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM32*(5./(12*sw**2)-11./27.)*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW1tb = Coupling(name = 'R2_AZWW1tb',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM33*(25/27.-11/(2*sw**2))*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM33*(25./27.-11./(12*sw**2))*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_AZWW2tb = Coupling(name = 'R2_AZWW2tb',
-                    value = '-1./(16*sw*cw)*Ncol*SCKM33*(5./(12*sw**2)-11/27.)*(complex(0,1)*R24S)',
+                    value = '-1./(16*sw*cw)*Ncol*SCKM33*(5./(12*sw**2)-11./27.)*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_ZZWW1 = Coupling(name = 'R2_ZZWW1',
@@ -3569,7 +3551,7 @@ R2_ZZWW2 = Coupling(name = 'R2_ZZWW2',
                     order = {'QED':4})
 
 R2_ZZWW1lv = Coupling(name = 'R2_ZZWW1lv',
-                    value = '1./(16*cw**2)*(1-11./(6.*sw**2)+11/(12*sw**4))*(complex(0,1)*R24S)',
+                    value = '1./(16*cw**2)*(1-11./(6.*sw**2)+11./(12*sw**4))*(complex(0,1)*R24S)',
                     order = {'QED':4})
 
 R2_ZZWW2lv = Coupling(name = 'R2_ZZWW2lv',
@@ -7035,51 +7017,51 @@ UV_Hbb = Coupling(name = 'UV_Hbb',
                  order = {'QED':1,'QCD':2})
 
 UV_GUULEW = Coupling(name = 'UV_GUULEW',
-                     value = '-complex(0,1)/2.*G*(complexconjugate(uWcft_UV_EW_L)+uWcft_UV_EW_L)',
+                     value = 'complex(0,1)/2.*G*(complexconjugate(uWcft_UV_EW_L)+uWcft_UV_EW_L)',
                      order = {'QED':2,'QCD':1})
 
 UV_GUUREW = Coupling(name = 'UV_GUUREW',
-                     value = '-complex(0,1)/2.*G*(complexconjugate(uWcft_UV_EW_R)+uWcft_UV_EW_R)',
+                     value = 'complex(0,1)/2.*G*(complexconjugate(uWcft_UV_EW_R)+uWcft_UV_EW_R)',
                      order = {'QED':2,'QCD':1})
 
 UV_GDDLEW = Coupling(name = 'UV_GDDLEW',
-                     value = '-complex(0,1)/2.*G*(complexconjugate(dWcft_UV_EW_L)+dWcft_UV_EW_L)',
+                     value = 'complex(0,1)/2.*G*(complexconjugate(dWcft_UV_EW_L)+dWcft_UV_EW_L)',
                      order = {'QED':2,'QCD':1})
 
 UV_GDDREW = Coupling(name = 'UV_GDDREW',
-                     value = '-complex(0,1)/2.*G*(complexconjugate(dWcft_UV_EW_R)+dWcft_UV_EW_R)',
+                     value = 'complex(0,1)/2.*G*(complexconjugate(dWcft_UV_EW_R)+dWcft_UV_EW_R)',
                      order = {'QED':2,'QCD':1})
 
 UV_GSSLEW = Coupling(name = 'UV_GSSLEW',
-                     value = '-complex(0,1)/2.*G*(complexconjugate(sWcft_UV_EW_L)+sWcft_UV_EW_L)',
+                     value = 'complex(0,1)/2.*G*(complexconjugate(sWcft_UV_EW_L)+sWcft_UV_EW_L)',
                      order = {'QED':2,'QCD':1})
 
 UV_GSSREW = Coupling(name = 'UV_GSSREW',
-                     value = '-complex(0,1)/2.*G*(complexconjugate(sWcft_UV_EW_R)+sWcft_UV_EW_R)',
+                     value = 'complex(0,1)/2.*G*(complexconjugate(sWcft_UV_EW_R)+sWcft_UV_EW_R)',
                      order = {'QED':2,'QCD':1})
 
 UV_GCCLEW = Coupling(name = 'UV_GCCLEW',
-                     value = '-complex(0,1)/2.*G*(complexconjugate(cWcft_UV_EW_L)+cWcft_UV_EW_L)',
+                     value = 'complex(0,1)/2.*G*(complexconjugate(cWcft_UV_EW_L)+cWcft_UV_EW_L)',
                      order = {'QED':2,'QCD':1})
 
 UV_GCCREW = Coupling(name = 'UV_GCCREW',
-                     value = '-complex(0,1)/2.*G*(complexconjugate(cWcft_UV_EW_R)+cWcft_UV_EW_R)',
+                     value = 'complex(0,1)/2.*G*(complexconjugate(cWcft_UV_EW_R)+cWcft_UV_EW_R)',
                      order = {'QED':2,'QCD':1})
 
 UV_GBBLEW = Coupling(name = 'UV_GBBLEW',
-                     value = '-complex(0,1)/2.*G*(complexconjugate(bWcft_UV_EW_L)+bWcft_UV_EW_L)',
+                     value = 'complex(0,1)/2.*G*(complexconjugate(bWcft_UV_EW_L)+bWcft_UV_EW_L)',
                      order = {'QED':2,'QCD':1})
 
 UV_GBBREW = Coupling(name = 'UV_GBBREW',
-                     value = '-complex(0,1)/2.*G*(complexconjugate(bWcft_UV_EW_R)+bWcft_UV_EW_R)',
+                     value = 'complex(0,1)/2.*G*(complexconjugate(bWcft_UV_EW_R)+bWcft_UV_EW_R)',
                      order = {'QED':2,'QCD':1})
 
 UV_GTTLEW = Coupling(name = 'UV_GTTLEW',
-                     value = '-complex(0,1)/2.*G*(complexconjugate(tWcft_UV_EW_L)+tWcft_UV_EW_L)',
+                     value = 'complex(0,1)/2.*G*(complexconjugate(tWcft_UV_EW_L)+tWcft_UV_EW_L)',
                      order = {'QED':2,'QCD':1})
 
 UV_GTTREW = Coupling(name = 'UV_GTTREW',
-                     value = '-complex(0,1)/2.*G*(complexconjugate(tWcft_UV_EW_R)+tWcft_UV_EW_R)',
+                     value = 'complex(0,1)/2.*G*(complexconjugate(tWcft_UV_EW_R)+tWcft_UV_EW_R)',
                      order = {'QED':2,'QCD':1})
 
 

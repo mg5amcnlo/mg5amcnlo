@@ -199,6 +199,7 @@ VVVV5 = Lorentz(name = 'VVVV5',
                 spins = [ 3, 3, 3, 3 ],
                 structure = 'Metric(1,4)*Metric(2,3) - (Metric(1,3)*Metric(2,4))/2. - (Metric(1,2)*Metric(3,4))/2.')
 
+
 ##############################################
 # UV CounterTerms Lorentz structures for QED #
 # Generate by WriteUFO automatically         # 
@@ -241,12 +242,12 @@ l_HMass7 = Lorentz(name = 'l_HMass7',
 
 l_vevexMass8 = Lorentz(name = 'l_vevexMass8',
                        spins = [ 2, 2 ],
-                       structure = 'P(-1,2)*Gamma(-1,2,-2)*ProjM(-2,1)')
+                       structure = 'P(-1,1)*Gamma(-1,2,-2)*ProjM(-2,1)')
 
 
 l_vevexMass9 = Lorentz(name = 'l_vevexMass9',
                        spins = [ 2, 2 ],
-                       structure = 'P(-1,1)*Gamma(-1,2,-2)*ProjP(-2,1)')
+                       structure = 'P(-1,2)*Gamma(-1,2,-2)*ProjP(-2,1)')
 
 
 l_vevexMass10 = Lorentz(name = 'l_vevexMass10',

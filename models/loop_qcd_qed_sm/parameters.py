@@ -1174,46 +1174,46 @@ CKMucdb = Parameter(name = 'CKMucdb',
                     nature = 'internal',
                     type = 'complex',
                     value = 'CKM11*CKM23*complexconjugate(CKM13)*complexconjugate(CKM21)+CKM13*CKM21*complexconjugate(CKM11)*complexconjugate(CKM23)',
-                    texname = '\\text{CKMucds}')
+                    texname = '\\text{CKMucdb}')
 
 CKMucsb = Parameter(name = 'CKMucsb',
                     nature = 'internal',
                     type = 'complex',
                     value = 'CKM12*CKM23*complexconjugate(CKM13)*complexconjugate(CKM22)+CKM22*CKM13*complexconjugate(CKM12)*complexconjugate(CKM23)',
-                    texname = '\\text{CKMucds}')
+                    texname = '\\text{CKMucsb}')
 
 CKMutds = Parameter(name = 'CKMutds',
                     nature = 'internal',
                     type = 'complex',
                     value = 'CKM11*CKM32*complexconjugate(CKM12)*complexconjugate(CKM31)+CKM12*CKM31*complexconjugate(CKM11)*complexconjugate(CKM32)',
-                    texname = '\\text{CKMucds}')
+                    texname = '\\text{CKMutds}')
 
 CKMutdb = Parameter(name = 'CKMutdb',
                     nature = 'internal',
                     type = 'complex',
                     value = 'CKM11*CKM33*complexconjugate(CKM13)*complexconjugate(CKM31)+CKM13*CKM31*complexconjugate(CKM11)*complexconjugate(CKM33)',
-                    texname = '\\text{CKMucds}')
+                    texname = '\\text{CKMutdb}')
 
 CKMutsb = Parameter(name = 'CKMutsb',
                     nature = 'internal',
                     type = 'complex',
                     value = 'CKM12*CKM33*complexconjugate(CKM13)*complexconjugate(CKM32)+CKM13*CKM32*complexconjugate(CKM12)*complexconjugate(CKM33)',
-                    texname = '\\text{CKMucds}')
+                    texname = '\\text{CKMutsb}')
 
 CKMctds = Parameter(name = 'CKMctds',
                     nature = 'internal',
                     type = 'complex',
                     value = 'CKM21*CKM32*complexconjugate(CKM22)*complexconjugate(CKM31)+CKM22*CKM31*complexconjugate(CKM21)*complexconjugate(CKM32)',
-                    texname = '\\text{CKMucds}')
+                    texname = '\\text{CKMctds}')
 
 CKMctdb = Parameter(name = 'CKMctdb',
                     nature = 'internal',
                     type = 'complex',
                     value = 'CKM21*CKM33*complexconjugate(CKM23)*complexconjugate(CKM31)+CKM23*CKM31*complexconjugate(CKM21)*complexconjugate(CKM33)',
-                    texname = '\\text{CKMucds}')
+                    texname = '\\text{CKMctdb}')
 
 CKMctsb = Parameter(name = 'CKMctsb',
                     nature = 'internal',
                     type = 'complex',
                     value = 'CKM22*CKM33*complexconjugate(CKM23)*complexconjugate(CKM32)+CKM32*CKM23*complexconjugate(CKM22)*complexconjugate(CKM33)',
-                    texname = '\\text{CKMucds}')
+                    texname = '\\text{CKMctsb}')

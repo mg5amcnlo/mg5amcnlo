@@ -1116,7 +1116,7 @@ V_bbG02 = CTVertex(name = 'V_bbG02',
 V_eeG0 = CTVertex(name = 'V_eeG0',
                    particles = [ P.e__plus__, P.e__minus__, P.G0 ],
                    color = [ '1' ],
-                   lorentz = [ L.FFS4 ],
+                   lorentz = [ L.FFS2 ],
                    loop_particles = [[[P.Z,P.e__minus__]],[[P.W__plus__, P.G__plus__, P.ve]]],
                    couplings = {(0,0,0):C.R2_G0ee, (0,0,1):C.R2_G0ee_v},
                    type = 'R2')
@@ -1124,7 +1124,7 @@ V_eeG0 = CTVertex(name = 'V_eeG0',
 V_mmG0 = CTVertex(name = 'V_mmG0',
                    particles = [ P.m__plus__, P.m__minus__, P.G0 ],
                    color = [ '1' ],
-                   lorentz = [ L.FFS4 ],
+                   lorentz = [ L.FFS2 ],
                    loop_particles = [[[P.Z,P.m__minus__]],[[P.W__plus__, P.G__plus__,P.vm]]],
                    couplings = {(0,0,0):C.R2_G0mm, (0,0,1):C.R2_G0mm_v},
                    type = 'R2')
@@ -1132,7 +1132,7 @@ V_mmG0 = CTVertex(name = 'V_mmG0',
 V_tautauG0 = CTVertex(name = 'V_tautauG0',
                    particles = [ P.tt__plus__, P.tt__minus__, P.G0 ],
                    color = [ '1' ],
-                   lorentz = [ L.FFS4 ],
+                   lorentz = [ L.FFS2 ],
                    loop_particles = [[[P.Z,P.tt__minus__]],[[P.W__plus__,P.G__plus__,P.vt]]],
                    couplings = {(0,0,0):C.R2_G0tautau, (0,0,1):C.R2_G0tautau_v},
                    type = 'R2')
@@ -1487,12 +1487,6 @@ V_R2ttZ2 = CTVertex(name = 'V_R2ttZ2',
                            (0,1,0):C.R2_ttZ2Cm, (0,1,1):C.R2_ttZ2Cm_d, (0,1,2):C.R2_ttZ2Cm_s,(0,1,3):C.R2_ttZ2Cm_b},
               type = 'R2')
 
-######################################################################################################
-#
-# HSS 21/09/2012
-# Following, we just select one diagram instead of treating diagrams equally as above
-#
-######################################################################################################
 
 V_R2eeZ = CTVertex(name = 'V_R2eeZ',
               particles = [ P.e__plus__, P.e__minus__, P.Z ],
@@ -2065,7 +2059,7 @@ V_R2GmGpHH = CTVertex(name = 'V_R2GmGpHH',
                    particles = [ P.G__minus__, P.G__plus__, P.H, P.H ],
                    color = [ '1' ],
                    lorentz = [ L.SSSS1 ],
-                   loop_particles = [[[P.W__plus__,P.Z,P.H,P.A]],
+                   loop_particles = [[[P.H]],
                                      [[P.e__minus__,P.ve]],[[P.m__minus__,P.vm]],[[P.tt__minus__,P.vt]],
                                      [[P.u,P.d]],[[P.u,P.s]],[[P.u,P.b]],
                                      [[P.c,P.d]],[[P.c,P.s]],[[P.c,P.b]],
