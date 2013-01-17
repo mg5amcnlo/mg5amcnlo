@@ -1302,7 +1302,6 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                                  proc.get('legs') if l.get('state')]
                     for id in decay_id:
                         curr_final_id.remove(id)
-                    print curr_final_id
                     # extend with the decay final state
                     curr_final_id += [l.get('id') for dec in \
                                      proc.get('decay_chains') for l in \
@@ -1411,7 +1410,6 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                              proc.get('legs') if l.get('state')]
                 for id in decay_id:
                     curr_id.remove(id)
-                print curr_id
                 # extend with the decay final state
                 curr_id += [l.get('id') for dec in \
                                  proc.get('decay_chains') for l in \

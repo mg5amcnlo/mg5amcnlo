@@ -1,5 +1,8 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.5.8 (xx/xx/13)  OM: Fix bug in pythia8 output for process using decay chains syntax.
+                      See bug #1099790.
+
 1.5.7 (15/01/13)  OM+JA: Fixed crash linked to model_v4 for processes containing wwww or
                       zzww interactions. (See bug #1095603. Thanks to Tim Lu) 
                   OM: Fix a bug affecting 2>1 process when the final states particles is 
