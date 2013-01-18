@@ -1201,7 +1201,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                                  os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
                                  if file.startswith(obj[:-1]) and \
                                 (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
-                                 os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
+                                 os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
                     files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_rm])
 
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
@@ -1884,8 +1884,12 @@ Integrated cross-section
         content += 'ZWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 23).value
         content += 'WMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 24).value
         content += 'WWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 24).value
-        content += 'HGGMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 25).value
-        content += 'HGGWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 25).value
+        try:
+            content += 'HGGMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 25).value
+            content += 'HGGWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 25).value
+        except KeyError:
+            content += 'HGGMASS=120.\n'
+            content += 'HGGWIDTH=0.00575308848\n'
         content += 'beammom1=%s\n' % self.banner.get_detail('run_card', 'ebeam1')
         content += 'beammom2=%s\n' % self.banner.get_detail('run_card', 'ebeam2')
         content += 'BEAM1=%s\n' % self.banner.get_detail('run_card', 'lpp1')
