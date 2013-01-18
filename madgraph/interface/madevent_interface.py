@@ -4166,6 +4166,7 @@ calculator."""
             cards.append('delphes_card.dat')
 
         if self.force:
+            self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
             return
 
         def get_question(mode):
