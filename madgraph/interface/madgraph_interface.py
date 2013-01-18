@@ -1206,6 +1206,8 @@ This will take effect only in a NEW terminal
             if path == 'auto' and self._export_format in \
                      ['madevent', 'standalone', 'standalone_cpp']:
                 self.get_default_path()
+                if '-noclean' not in args and os.path.exists(self._export_dir):
+                    args.append('-noclean')
             elif path != 'auto':
                 self._export_dir = path
             elif path == 'auto':
@@ -1217,12 +1219,14 @@ This will take effect only in a NEW terminal
             if self._export_format != 'pythia8':
                 # No valid path
                 self.get_default_path()
+                if '-noclean' not in args and os.path.exists(self._export_dir):
+                    args.append('-noclean')
             else:
                 if self.options['pythia8_path']:
                     self._export_dir = self.options['pythia8_path']
                 else:
                     self._export_dir = '.'
-                    
+
         self._export_dir = os.path.realpath(self._export_dir)
 
     def get_default_path(self):
@@ -3659,7 +3663,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Now that we have the model we can split the information
         lines = reader.extract_command_lines(self._curr_model)
-
         for line in lines:
             self.exec_cmd(line, precmd=True)
     
