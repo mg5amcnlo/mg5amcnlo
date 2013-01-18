@@ -1573,7 +1573,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                         raise
                     else:
                         logger.debug("Recovered from a system call interruption."+\
-                                        "PSpoint #%i, Attempt #%i."%(i,retry+1))                        
+                                        "PSpoint #%i, Attempt #%i."%(i,retry+1))
+                        # Sleep for half a second. Safety measure.
+                        time.sleep(0.5)                        
                     # We will retry this PS point
                     retry = retry+1
                     # Make sure the MadLoop process is properly killed
@@ -2263,9 +2265,9 @@ def output_stability(stability, mg_root, reusing=False):
           P = accuracy(loop_dir_test) / accuracy(all_test)
         So that P is large if the loop direction test is effective.
         The tuple returned is (log(median(P)),log(min(P)),frac)
-        where frac is the fraction of events with powers smaller than -2
+        where frac is the fraction of events with powers smaller than -3
         which means events for which the reading direction test shows an
-        accuracy two digits higher than it really is according to the other
+        accuracy three digits higher than it really is according to the other
         tests."""
         powers=[]
         for eval in eval_list:
@@ -2347,8 +2349,7 @@ def output_stability(stability, mg_root, reusing=False):
     (pmed,pmin,pfrac)=loop_direction_test_power(stability['DP_stability'])
     res_str += "|= Overall DP loop_dir test power %s,%s\n"\
                                                 %(f(pmed,'%.1f'),f(pmin,'%.1f'))
-    res_str += "|= Fraction of evts with power<-3 %s\n"\
-                                                                %f(pfrac,'%.2e')
+    res_str += "|= Fraction of evts with power<-3 %s\n"%f(pfrac,'%.2e')
     res_str += "\n= Number of Unstable PS points    : %i\n"%len(UPS)
     if len(UPS)>0:
         res_str += "|= DP Median inaccuracy.......... %.2e\n"%median(UPS_stability_DP)
@@ -2367,8 +2368,7 @@ def output_stability(stability, mg_root, reusing=False):
                                  [stability['QP_stability'][U[0]] for U in UPS])
         res_str += "|= UPS QP loop_dir test power.... %s,%s\n"\
                                                 %(f(pmed,'%.1f'),f(pmin,'%.1f'))
-        res_str += "|= UPS QP fraction with power<-3. %s\n"\
-                                                                %f(pfrac,'%.2e')
+        res_str += "|= UPS QP fraction with power<-3. %s\n"%f(pfrac,'%.2e')
         (pmed,pmin,pmax)=test_consistency(\
                                  [stability['DP_stability'][U[0]] for U in UPS],
                                  [stability['QP_stability'][U[0]] for U in UPS])
