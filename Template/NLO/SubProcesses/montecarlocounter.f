@@ -1123,7 +1123,7 @@ c      include "fks.inc"
      # xjac(nexternal),zHWPP,xiHWPP,xjacHWPP_xiztoxy,ap,Q,
      # beta,xfact,prefact,kn,knbar,kn0,betae0,betad,betas,
      # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,w1,w2,
-     # xitmp,xjactmp,ztmp,xma2,upper_scale2,xmp2,lambda
+     # xitmp,xjactmp,ztmp,upper_scale2,xmp2,lambda
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -3415,7 +3415,6 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision upper_scale
       common/cupscale/upper_scale
 
-      double precision xma2,xmb2,sb
 c
       double precision pmass(nexternal)
       include "pmass.inc"
@@ -3540,23 +3539,10 @@ C
       nofpartners=ipartners(0)
       flagmc=.false.
 c
-c Assign xma2 and xmb2 before calling the shower variables
-      xma2=0d0
-      xmb2=0d0
-c$$$      if(isr)then
-c$$$         if(PDG_type(i_type).eq.4)xma2=(cmass)**2
-c$$$         if(PDG_type(m_type).eq.4)xmb2=(cmass)**2
-c$$$         if(PDG_type(i_type).eq.5)xma2=(bmass)**2
-c$$$         if(PDG_type(m_type).eq.5)xmb2=(bmass)**2
-c$$$c PYTHIA8 seems to apply mass corrections even in the charm case,
-c$$$c so the cmass lines are included for generality, should the cmass
-c$$$c parameter in param_card.dat be different from 0 sometimes
-c$$$      endif
-
-      ztmp=zPY8(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q,xma2)
-      xitmp=xiPY8(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q,xma2,xmb2)
+      ztmp=zPY8(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
+      xitmp=xiPY8(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
       xjactmp=xjacPY8_xiztoxy(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,
-     &                       q1q,q2q,xma2)
+     &                       q1q,q2q)
 c
       do npartner=1,ipartners(0)
 c This loop corresponds to the sum over colour lines l in the
@@ -3566,6 +3552,7 @@ c xmcsubt note
          xjac(npartner)=xjactmp
 c
 c Compute deadzones:
+c COLOUR COHERENCE!!!
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
             call assign_scalemax(shat,xi_i_fks,upper_scale)
@@ -3573,29 +3560,16 @@ c Implementation of a maximum scale for the shower if the shape is not active.
             if(ileg.eq.3)xifake(npartner)=xi(npartner)+xm12
             if(sqrt(xifake(npartner)).gt.upper_scale)lzone(npartner)=.false.
          endif
-
 c z limits, following  pages 14-16 of hep-ph/0408302
          lzone(npartner)=.true.
          if(ileg.le.2)then
-            sb=z(npartner)*shat
-            if(xma2.ne.0.and.xmb2.ne.0)then
-               if(xma2.ne.xmb2)then
-                  write(*,*)'Unknown masses in xmcsubt_PY8',sqrt(xma2),sqrt(xmb2)
-                  stop
-               endif
-               zplus=sqrt(sb)*(sqrt(sb)-sqrt(xmb2))/(sb+sqrt(xmb2*sb)-xmb2)
-            elseif(xmb2.ne.0d0.and.xma2.eq.0d0)then
-c this formula is a convenient rewriting of equation (39) in hep-ph/0408302
-               zplus=(sqrt(xmb2**2-2*xmb2*xi(npartner)+4*sb*xi(npartner)+xi(npartner)**2)+
-     &                xmb2-2*sb-xi(npartner))/(2*xmb2-2*sb)
-            elseif(xmb2.eq.0d0.and.xma2.eq.0d0)then
-               zplus=1-sqrt(xi(npartner)/sb)*
-     &                (sqrt(1+xi(npartner)/(4*sb))-sqrt(xi(npartner)/(4*sb)))
-            endif
+            zplus=1-sqrt(xi(npartner)/z(npartner)/shat)*
+     &           (sqrt(1+xi(npartner)/(4*z(npartner)*shat))-sqrt(xi(npartner)/(4*z(npartner)*shat)))
             if(z(npartner).gt.zplus)lzone(npartner)=.false.
-         elseif(ileg.le.4)then
-c The definition of z and its constraints for final state radiation
-c are the same as for PY6Q
+         endif
+c z limits for the 'constrained' definition, following
+c strictly page 354 of hep-ph/0603175
+         if(ileg.gt.2)then
             if(ileg.eq.3)then
                xmm2=xm12
                xmrec2=xm22
@@ -3605,19 +3579,19 @@ c are the same as for PY6Q
                xmrec2=xm12
                www=-q2q+q1q-uk
             endif
-            ma2=xmm2+www
-c Recall that xm22 = 0 if ileg = 4
-            if(ma2/s.lt.-tiny)then
-               write(*,*)'error A in xmcsubt_PY8'
-               stop
-            elseif(ma2/s.lt.0d0)then
-               ma2=0d0
-            endif
+c
             if(www.lt.-tiny)then
-               write(*,*)'error C in xmcsubt_PY8'
+               write(*,*)'error A in xmcsubt_PY8'
                stop
             elseif(www.lt.0d0)then
                www=0d0
+            endif
+            ma2=xmm2+www
+            if(ma2/s.lt.-tiny)then
+               write(*,*)'error B in xmcsubt_PY8'
+               stop
+            elseif(ma2/s.lt.0d0)then
+               ma2=0d0
             endif
             ma=sqrt(ma2)
             mbeff=sqrt(xmm2)
@@ -3627,12 +3601,12 @@ c Recall that xm22 = 0 if ileg = 4
 c The following constraint is deduced by imposing (p1+p2-kmother)**2=krecoil**2 and
 c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=ma**2
             if(abs(en_mother-(s-xmrec2+ma2)/(2*sqrt(s)))/en_mother.ge.tiny)then
-               write(*,*)'error B in xmcsubt_PY8'
+               write(*,*)'error C in xmcsubt_PY8'
                write(*,*)en_mother,(s-xmrec2+ma2)/(2*sqrt(s))
                stop
             endif
             if(ma.le.en_mother)then
-               betaa=sqrt(1-ma**2/en_mother**2)
+               betaa=sqrt(1-ma2/en_mother**2)
             elseif(ma.le.en_mother*(1+tiny))then
                betaa=1d0
             else
@@ -3649,10 +3623,7 @@ c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=m
                zminus=0d0
             endif
             if(z(npartner).lt.zminus.or.
-     &           z(npartner).gt.zplus)lzone(npartner)=.false.
-         else
-            write(*,*)'Unknown ileg in PY8 ',ileg
-            stop
+     &         z(npartner).gt.zplus)lzone(npartner)=.false.
          endif
 
 c Compute MC subtraction terms
@@ -3737,17 +3708,15 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
 c g --> q qbar splitting (icode=2)
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=1
-                 if(xma2.eq.0d0.and.1-x.lt.tiny)then
+                 if(1-x.lt.tiny)then
                     xkern=0.d0
                     xkernazi=0.d0
-                 elseif(xma2.eq.0d0.and.1-yi.lt.tiny)then
+                 elseif(1-yi.lt.tiny)then
                     xkern=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
                     xkernazi=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
-c...........................................................................
-cc PUT THE MASSIVE KERNELS
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
                     xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
@@ -3869,17 +3838,15 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
 c q --> q g splitting (icode=4) and sq --> sq g (SUSY) splitting
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=1
-                 if(xma2.eq.0d0.and.1-x.lt.tiny)then
+                 if(1-x.lt.tiny)then
                     xkern=(g**2/N_p)*8*vcf/s
                     xkernazi=0.d0
-                 elseif(xma2.eq.0d0.and.1-yi.lt.tiny)then
+                 elseif(1-yi.lt.tiny)then
                     xkern=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
                     xkernazi=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
-c...........................................................................
-cc PUT THE MASSIVE KERNELS
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
                     xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
@@ -4042,7 +4009,9 @@ c
           emsca=emscav(mpartner)
         endif
       endif
-      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
+c Where in the dead zone, so we can set emsca to shat or scalemax 
+c$$$      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
+      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=scalemax
 c Additional information for LHE
       if(AddInfoLHE)then
         fksfather_lhe(nFKSprocess)=fksfather
@@ -4446,8 +4415,8 @@ c OUTPUTS:  ileg,xm12,xm22,xtk,xuk,xq1q,xq2q,qMC
       parameter (zero=0.d0)
 
       double precision pp(0:3,nexternal)
-      double precision sh,xi_i_fks,y_ij_fks,yitmp,xij
-      double precision xm12,xm22,xtk,xuk,xq1q,xq2q,qMC
+      double precision sh,xi_i_fks,y_ij_fks,yitmp,xij,xx,yi,yj
+      double precision xm12,xm22,xtk,xuk,xq1q,xq2q,qMC,zPY8
       double precision beta1,beta2,eps1,eps2,w1,w2,zeta1,zeta2
       double precision en_fks,en_fks_sister,z,qMCarg
       integer ileg,j,i,nfinal
@@ -4566,9 +4535,8 @@ c since they never enter isr formulae in MC functions
                qMC=xi_i_fks/2.d0*sqrt(sh*(1-y_ij_fks**2))
             elseif(MonteCarlo.eq.'PYTHIA6Q')then
                qMC=sqrt(abs(-xtk))
-            elseif(MonteCarlo.eq.'PYTHIA6PT')then
-               qMC=sqrt(abs(-xtk*xi_i_fks))
-            elseif(MonteCarlo.eq.'PYTHIA8')then
+            elseif(MonteCarlo.eq.'PYTHIA6PT'.or.
+     &             MonteCarlo.eq.'PYTHIA8')then
                qMC=sqrt(abs(-xtk*xi_i_fks))
             endif
          endif
@@ -4581,9 +4549,8 @@ c since they never enter isr formulae in MC functions
                qMC=xi_i_fks/2.d0*sqrt(sh*(1-y_ij_fks**2))
             elseif(MonteCarlo.eq.'PYTHIA6Q')then
                qMC=sqrt(abs(-xuk))
-            elseif(MonteCarlo.eq.'PYTHIA6PT')then
-               qMC=sqrt(abs(-xuk*xi_i_fks))
-            elseif(MonteCarlo.eq.'PYTHIA8')then
+            elseif(MonteCarlo.eq.'PYTHIA6PT'.or.
+     &             MonteCarlo.eq.'PYTHIA8')then
                qMC=sqrt(abs(-xuk*xi_i_fks))
             endif
          endif
@@ -4619,9 +4586,11 @@ c since they never enter isr formulae in MC functions
                write(*,*)'no such MonteCarlo yet'
                stop
             elseif(MonteCarlo.eq.'PYTHIA8')then
-c$$$               z=zPY8(ileg,xm12,xm22,sh,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2)
-c$$$               qMC=sqrt(z*(1-z)*w1)
-c$$$c do !!
+               xx=1-xi_i_fks
+               yi=0d0
+               yj=y_ij_fks
+               z=zPY8(ileg,xm12,xm22,sh,xx,yi,yj,xtk,xuk,xq1q,xq2q)
+               qMC=sqrt(z*(1-z)*w1)
             endif
          endif
       elseif(ileg.eq.4)then
@@ -4663,7 +4632,6 @@ c$$$c do !!
                en_fks_sister=sqrt(sh)*(1-xi_i_fks-xm12/sh)/(2-xi_i_fks*(1-y_ij_fks))
                z=en_fks_sister/(en_fks + en_fks_sister)
                qMC=sqrt(z*(1-z)*w2)
-c check that indeed the variable cut by SCALUP be the evolution variable
             endif
          endif
       else
@@ -5921,11 +5889,11 @@ c outgoing parton #4 (massless)
 
 
 c Begin of PY8 stuff
-      function zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2)
+      function zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
 c Returns PYTHIA energy shower variable
       implicit none
       integer ileg
-      real*8 zPY8,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,w1,w2,xma2,
+      real*8 zPY8,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,w1,w2,
      &en_fks,en_fks_sister,mom_fks_sister,tiny,f,betad,betas
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
@@ -5942,22 +5910,10 @@ c
 
 c incoming parton #1 (left)
       if(ileg.eq.1)then
-         if((1-x)**2.lt.4*xma2/s)then
-            zPY8=-1d0
-            return
-c this constraint comes from the fact that the FKS velocity,
-c bbeta = sqrt(1-4*xma2/s/(1-x)**2), has to be real
-         endif
-         zPY8=x+xma2/s
+         zPY8=x
 c incoming parton #2 (right)
       elseif(ileg.eq.2)then
-         if((1-x)**2.lt.4*xma2/s)then
-            zPY8=-1d0
-            return
-c this constraint comes from the fact that the FKS velocity,
-c bbeta = sqrt(1-4*xma2/s/(1-x)**2), has to be real
-         endif
-         zPY8=x+xma2/s
+         zPY8=x
 c outgoing parton #3 (massive)
       elseif(ileg.eq.3)then
          w1=-xq1q+xq2q-xtk
@@ -5997,13 +5953,13 @@ c outgoing parton #4 (massless)
 
 
 
-      function xiPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2,xmb2)
+      function xiPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
 c Returns PYTHIA evolution shower variable
       implicit none
       integer ileg
-      real*8 xiPY8,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,z,zPY8,xma2,xmb2,
+      real*8 xiPY8,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,z,zPY8,
      &en_fks,en_fks_sister,mom_fks_sister,xt,tiny,w1,w2,beta,betas,beta3,
-     &bbeta,betad,z0
+     &betad,z0
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -6014,28 +5970,12 @@ c
          write(*,*)'error #1 in xiPY8, unknown ileg ',ileg
          stop
       endif
-c xma2 = mass squared of the "fks" particle in ISR
-c xmb2 = mass squared of the virtual particle in ISR
 c incoming parton #1 (left)
       if(ileg.eq.1)then
-         if((1-x)**2.lt.4*xma2/s)then
-            xiPY8=-1d0
-            return
-c this constraint comes from the fact that the FKS velocity,
-c bbeta = sqrt(1-4*xma2/s/(1-x)**2), has to be real
-         endif
-         bbeta=sqrt(1-4*xma2/(s*(1-x)**2))
-         xiPY8=(1-x-xma2/s)*(s*(1-x)/2*(1-bbeta*yi)-xma2+xmb2)
+         xiPY8=s*(1-x)**2*(1-yi)/2
 c incoming parton #2 (right)
       elseif(ileg.eq.2)then
-         if((1-x)**2.lt.4*xma2/s)then
-            xiPY8=-1d0
-c this constraint comes from the fact that the FKS velocity,
-c bbeta = sqrt(1-4*xma2/s/(1-x)**2), has to be real
-            return
-         endif
-         bbeta=sqrt(1-4*xma2/(s*(1-x)**2))
-         xiPY8=(1-x-xma2/s)*(s*(1-x)/2*(1-bbeta*yi)-xma2+xmb2)
+         xiPY8=s*(1-x)**2*(1-yi)/2
 c outgoing parton #3 (massive)
       elseif(ileg.eq.3)then
          w1=-xq1q+xq2q-xtk
@@ -6047,7 +5987,7 @@ c outgoing parton #3 (massive)
             z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
             xiPY8=s*(1-x)*betas*(1-yj*beta3)/2*z0*(1-z0)
          else
-            z=zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2)
+            z=zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
             xiPY8=z*(1-z)*w1
          endif
 c outgoing parton #4 (massless)
@@ -6059,7 +5999,7 @@ c outgoing parton #4 (massless)
          else
             en_fks=sqrt(s)*(1-x)/2.d0
             en_fks_sister=sqrt(s)*(x-xm12/s)/(2-(1-x)*(1-yj))
-            z=zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2)
+            z=zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
             xt=2*en_fks*en_fks_sister*(1-yj)
             xiPY8=z*(1-z)*xt
          endif
@@ -6075,11 +6015,11 @@ c outgoing parton #4 (massless)
 
 
 
-      function xjacPY8_xiztoxy(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2)
+      function xjacPY8_xiztoxy(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
 c Returns PYTHIA jacobian |d(xi_PY8,z_PY8)/d(x,y)|
       implicit none
       integer ileg
-      real*8 xjacPY8_xiztoxy,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2,
+      real*8 xjacPY8_xiztoxy,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,
      &z,zPY8,en_fks,en_fks_sister,mom_fks_sister,mom_fks_sister_p,
      &mom_fks_sister_m,xt,tiny,tmp,w1,w2,afun,bfun,cfun,signfac,beta,
      &dzPY8denfks,dzPY8denfkssis,dxiPY8denfks,dxiPY8denfkssis,
@@ -6099,24 +6039,10 @@ c
       endif
 c incoming parton #1 (left)
       if(ileg.eq.1)then
-         if((1-x)**2.lt.4*xma2/s)then
-            xjacPY8_xiztoxy=0d0
-c this constraint comes from the fact that the FKS velocity,
-c bbeta = sqrt(1-4*xma2/s/(1-x)**2), has to be real
-            return
-         endif
-         bbeta=sqrt(1-4*xma2/(s*(1-x)**2))
-         tmp=-s*(1-x)/2*bbeta*(1-x-xma2/s)
+         tmp=-s*(1-x)**2/2
 c incoming parton #2 (right)
       elseif(ileg.eq.2)then
-         if((1-x)**2.lt.4*xma2/s)then
-            xjacPY8_xiztoxy=0d0
-c this constraint comes from the fact that the FKS velocity,
-c bbeta = sqrt(1-4*xma2/s/(1-x)**2), has to be real
-            return
-         endif
-         bbeta=sqrt(1-4*xma2/(s*(1-x)**2))
-         tmp=-s*(1-x)/2*bbeta*(1-x-xma2/s)
+         tmp=-s*(1-x)**2/2
 c outgoing parton #3 (massive)
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
@@ -6158,7 +6084,7 @@ c
                en_fks_sister=sqrt(xm12)
             endif
             beta=sqrt(1-xm12/en_fks_sister**2)
-            z=zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2)
+            z=zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
             f=xm12/(s+xm12-xm22-2*sqrt(s)*(en_fks+en_fks_sister))
             fprime=2*sqrt(s)*f**2/xm12
             dzPY8denfks   =( f+en_fks*fprime-z )/( en_fks_sister+en_fks )

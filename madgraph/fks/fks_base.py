@@ -22,7 +22,6 @@ import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.fks.fks_common as fks_common
-#import madgraph.fks.fks_real as fks_real
 import copy
 import logging
 import array
@@ -247,11 +246,7 @@ class FKSRealProcess(object):
                 orders[order] +=1
             except KeyError:
                 pass
-            if order == 'QCD':
-                orders['WEIGHTED'] +=1
-            else: 
-                orders['WEIGHTED'] +=2
-
+            orders['WEIGHTED'] += born_proc.get('model').get('order_hierarchy')[order]
         self.process.set('orders', orders)
 
         legs = [(leg.get('id'), leg) for leg in leglist]
@@ -378,21 +373,10 @@ class FKSProcess(object):
                     self.nincoming += 1
             # find the correct qcd/qed orders from born_amp
             self.orders = fks_common.find_orders(self.born_amp)
-            #self.born_proc['orders'] = orders
                 
             self.ndirs = 0
             for order in self.born_proc.get('perturbation_couplings'):
                 self.find_reals(order)
-#            self.find_color_links()
-
-
-
-#    def find_color_links(self): #test written
-#        """Finds all the possible color links between two legs of the born.
-#        Uses the find_color_links function in fks_common.
-#        """
-#        self.color_links = fks_common.find_color_links(self.leglist, symm=True)
-#        return self.color_links
 
 
     def generate_real_amplitudes(self, pdg_list, real_amp_list):

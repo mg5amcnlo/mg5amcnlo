@@ -3818,12 +3818,11 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
               'cuttools_dir': cmd._cuttools_dir,
               'fortran_compiler':cmd.options['fortran_compiler']}
         if not cmd.options['loop_optimized_output']:
-            logger.info("Writing out the aMC@NLO code, starting from born process")
+            logger.info("Writing out the aMC@NLO code")
             ExporterClass = export_fks.ProcessExporterFortranFKS
             options['export_format']='FKS5_default'
         else:
-            logger.info("Writing out the aMC@NLO code, starting from "+\
-                                           "born process using optimized Loops")
+            logger.info("Writing out the aMC@NLO code, using optimized Loops")
             ExporterClass = export_fks.ProcessOptimizedExporterFortranFKS
             options['export_format']='FKS5_optimized'
         return ExporterClass(cmd._mgme_dir, cmd._export_dir, options)
