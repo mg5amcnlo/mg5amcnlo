@@ -49,6 +49,10 @@ acsc = Function(name = 'acsc',
              arguments = ('z',),
              expression = 'cmath.asin(1./z)')
 
+# Heaviside theta function
 
+theta_function = Function(name = 'theta_function',
+             arguments = ('x','y','z'),
+             expression = 'y if x else z')
 
 
