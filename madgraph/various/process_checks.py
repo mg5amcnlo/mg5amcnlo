@@ -2788,6 +2788,7 @@ def check_lorentz_process(process, evaluator):
                          process.nice_string().replace('Process', 'process'))
         return None
 
+    
     # Generate phase space point to use
     p, w_rambo = evaluator.get_momenta(process)
     ps=""
