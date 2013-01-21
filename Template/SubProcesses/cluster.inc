@@ -13,12 +13,15 @@ c     resmap gives potential resonances for diagrams
       common/res_map/resmap
       double precision pt2ijcl(nexternal),zcl(nexternal),mt2ij(nexternal),mt2last
       double precision pcl(0:4,n_max_cl) ! 4 is mass**2
-      logical isbw(n_max_cl)
       integer imocl(nexternal), idacl(nexternal,2), igraphs(0:n_max_cg)
       integer ipdgcl(n_max_cl,n_max_cg,maxsproc)
       logical clustered
       common/cl_val/pcl,pt2ijcl,zcl,mt2ij,mt2last,imocl,idacl,igraphs,ipdgcl,
-     &    isbw,clustered
+     &    clustered
+c     variable for keeping track of BWs
+      integer nbw,ibwlist(2,nexternal)
+      logical isbw(n_max_cl)
+      common/cl_isbw/nbw,isbw,ibwlist
 c     variable for LH output of clustering info (R,E,S,I)
       integer icluster(4,nexternal)
       common/cl_iclus/icluster

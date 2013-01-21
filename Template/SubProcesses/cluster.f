@@ -266,15 +266,6 @@ c     Set pdg code for propagator
                      if(confsub(iproc,ignum).eq.0) cycle
                      if(sprop(iproc,k,ignum).ne.0)then
                         ipdgcl(icmp(l),ignum,iproc)=sprop(iproc,k,ignum)
-c                       If this is radiation off heavy FS particle, set heavyrad to true
-                        if(isjet(ipdgcl(ipids(i,1,ipnum),ignum,iproc)).and.
-     $                       .not.isjet(ipdgcl(ipids(j,1,ipnum),ignum,iproc)).and.
-     $                       ipdgcl(ipids(j,1,ipnum),ignum,iproc).eq.sprop(iproc,k,ignum).or.
-     $                       isjet(ipdgcl(ipids(j,1,ipnum),ignum,iproc)).and.
-     $                       .not.isjet(ipdgcl(ipids(i,1,ipnum),ignum,iproc)).and.
-     $                       ipdgcl(ipids(i,1,ipnum),ignum,iproc).eq.sprop(iproc,k,ignum))then
-                           heavyrad(ignum) = .true.
-                        endif
                      else if(tprid(k,ignum).ne.0)then
                         ipdgcl(icmp(l),ignum,iproc)=tprid(k,ignum)
                      else if(ipnum.eq.3)then
@@ -342,7 +333,6 @@ c**************************************************************************
       include 'nexternal.inc'
       include 'maxamps.inc'
       include 'cluster.inc'
-      include 'run.inc'
       include 'message.inc'
 C $B$ IFOREST $B$ !this is a tag for MadWeight
       integer mapconfig(0:lmaxconfigs), this_config
@@ -360,13 +350,8 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
       logical filgrp
       external filgrp
 
-      if(chcluster) then
-         start_config=this_config
-         end_config=this_config
-      else
-         start_config=1
-         end_config=mapconfig(0)
-      endif
+      start_config=1
+      end_config=mapconfig(0)
       do iproc=1,maxsproc
          do i=1,n_max_cl
             id_cl(iproc,i,0)=0
@@ -379,7 +364,6 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
      $           nqcd(this_config),nqcd(i)
             cycle
          endif
-         heavyrad(i)=.false.
 c         write (*,*) ' at graph ',i
          do j=1,nexternal
             ipids(j,1,nexternal)=ishft(1,j-1)
@@ -394,21 +378,7 @@ c         write (*,*) ' at graph ',i
          if(btest(mlevel,3))
      $        write(*,*) 'Inserting graph ',i
  10      if (filgrp(i,inpids,ipids)) goto 10
-         if(btest(mlevel,4).and.heavyrad(i)) then
-            write(*,*)' set heavyrad of ',i,' to T'
-         endif
       enddo
-c     Ensure that there are some allowed clusterings
-      do i=start_config,end_config
-         if(.not.heavyrad(i)) goto 20
-      enddo
-      if(btest(mlevel,4)) then
-         write(*,*)' Reset all heavyrad to .false.'
-      endif      
-      do i=start_config,end_config
-         heavyrad(i)=.false.
-      enddo
- 20   continue
       filmap=.true.
       return
       end
@@ -476,7 +446,7 @@ c          print *,'Added BW for resonance ',i,icl(i),this_config
       
       end
 
-      logical function findmt(idij,icgs,nbw,ibwlist)
+      logical function findmt(idij,icgs)
 c**************************************************************************
 c     input:
 c            idij, icgs
@@ -488,20 +458,30 @@ c**************************************************************************
       include 'maxamps.inc'
       include 'cluster.inc'
       include 'message.inc'
+      include 'genps.inc'
+      include 'run.inc'
+      include 'maxconfigs.inc'
 
-      integer idij,nbw,ibwlist(2,nexternal),icgs(0:n_max_cg)
+      integer idij,icgs(0:n_max_cg)
       logical foundbw
       integer i, ii, j, jj, il, igsbk(0:n_max_cg)
 
 c     IPROC has the present process number
       INTEGER IMIRROR,IPROC
       COMMON/TO_MIRROR/IMIRROR, IPROC
+C     ICONFIG has this config number
+      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
+      COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
 
       findmt=.false.
 c     if first clustering, set possible graphs
       if (icgs(0).eq.0) then
          ii=0
          do i=1,id_cl(iproc,idij,0)
+c        if chcluster, allow only this config
+           if(chcluster)then
+              if(id_cl(iproc,idij,i).ne.iconfig) cycle
+           endif
 c        check if we have constraint from onshell resonances
            foundbw=.true.
            do j=1,nbw
@@ -510,12 +490,6 @@ c        check if we have constraint from onshell resonances
              endif
              foundbw=.false.
  10        enddo
-c        check if this diagram has radiation off heavy particle
-c        For now, turn this off if there is a bw in the process,
-c        since this created problems when the bw included a radiated part.
-c        This is something that might need to be thought more about later
-c        (in order for b matching to work...)
-           if(nbw.eq.0.and.heavyrad(id_cl(iproc,idij,i))) cycle
            if((nbw.eq.0.or.foundbw))then
               ii=ii+1
               icgs(ii)=id_cl(iproc,idij,i)
@@ -581,9 +555,6 @@ c**************************************************************************
       integer mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
 
-      integer nbw,ibwlist(2,nexternal)
-      data isbw/n_max_cl*.false./
-
       data (pz(i),i=0,3)/1d0,0d0,0d0,1d0/
 
       integer combid
@@ -635,7 +606,7 @@ c     cluster only combinable legs (acc. to diagrams)
                icgs(0)=0
                idij=combid(idi,idj)
                pt2ij(idij)=1.0d37
-               if (findmt(idij,icgs,nbw,ibwlist)) then
+               if (findmt(idij,icgs)) then
                   if (btest(mlevel,4)) then
                      write(*,*)'diagrams: ',(icgs(k),k=1,icgs(0))
                   endif
@@ -735,7 +706,7 @@ c        Set info for LH clustering output
             enddo
          endif
 c     Reset igraphs with new mother
-         if (.not.findmt(imocl(n),igraphs,nbw,ibwlist)) then
+         if (.not.findmt(imocl(n),igraphs)) then
             write(*,*) 'cluster.f: Error. Invalid combination.' 
             return
          endif
@@ -890,7 +861,7 @@ c     cluster only combinable legs (acc. to diagrams)
                      idij=combid(idi,idj)
 c                     write (*,*) 'RECALC !!! ',idij
                      pt2ij(idij)=1.0d37
-                     if (findmt(idij,icgs,nbw,ibwlist)) then
+                     if (findmt(idij,icgs)) then
                         if (btest(mlevel,4)) then
                            write(*,*)'diagrams: ',(icgs(k),k=1,icgs(0))
                        endif
@@ -913,26 +884,16 @@ c     final state clustering
 c     initial state clustering, only if hadronic collision
 c     check whether 2->(n-1) process w/ cms energy > 0 remains
                           iwinp=imap(3-j,2);
-                          do k=0,3
-                             pcl(k,idij)=pcl(k,idj)-pcl(k,idi)
-c                           pcmsp(k)=pcl(k,idij)+pcl(k,iwinp)
-                          enddo
-c                       ecms2=pcmsp(0)**2-pcmsp(1)**2-
-c                       $                          pcmsp(2)**2-pcmsp(3)**2
-c                       if (ecms2.gt.0.1d0.and.
-c                       if ((nleft.eq.4.or.ecms2.gt.0.1d0).and.
-c                         if((lpp(j).ne.0)) then
-                            if(ickkw.eq.2.or.ktscheme.eq.2)then
-                              pt2ij(idij)=pyjb(pcl(0,idi),
-     $                           pcl(0,idj),pcl(0,iwinp),zij(idij))
-                            else
-                              pt2ij(idij)=djb(pcl(0,idi))
-                              zij(idij)=zclus(pcl(0,idi),pcl(0,idj),pcl(0,iwinp))
-                            endif
+                          if(ickkw.eq.2.or.ktscheme.eq.2)then
+                             pt2ij(idij)=pyjb(pcl(0,idi),
+     $                            pcl(0,idj),pcl(0,iwinp),zij(idij))
+                          else
+                             pt2ij(idij)=djb(pcl(0,idi))
+                             zij(idij)=zclus(pcl(0,idi),pcl(0,idj),pcl(0,iwinp))
+                          endif
 c                 prefer clustering when outgoing in direction of incoming
-                            if(sign(1d0,pcl(3,idi)).ne.sign(1d0,pcl(3,idj)))
+                          if(sign(1d0,pcl(3,idi)).ne.sign(1d0,pcl(3,idj)))
      $                         pt2ij(idij)=pt2ij(idij)*(1d0+1d-6)
-c                          endif
                         endif
                         if (btest(mlevel,4)) then
                           write(*,*)'         ',idi,'&',idj,' part ',iwinp,' -> ',idij,

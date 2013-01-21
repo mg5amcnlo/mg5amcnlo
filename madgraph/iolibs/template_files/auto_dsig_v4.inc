@@ -99,7 +99,7 @@ C   Only run if IMODE is 0
 C     Select a flavor combination (need to do here for right sign)
          CALL RANMAR(R)
          IPSEL=0
-         DO WHILE (R.GT.0D0 .AND. IPSEL.LT.IPROC)
+         DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
             IPSEL=IPSEL+1
             R=R-DABS(PD(IPSEL))/PD(0)
          ENDDO
