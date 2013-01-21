@@ -466,8 +466,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 mp_file = open(mp_file_path,'w')
                 mp_file.write(mp_new_file_content)
                 mp_file.close()
-
-        # Evaluate the matrix element for the momenta p        
+    # hahadebug
+        # Evaluate the matrix element for the momenta p
         finite_m2 = self.get_me_value(process.shell_string_v4(), 0,\
                                                export_dir, p,verbose=False)[0][0]
 
@@ -2703,7 +2703,7 @@ def check_lorentz(processes, param_card = None,cuttools="", cmd = FakeInterface(
         results = run_multiprocs_no_crossings(check_lorentz_process,
                                            multiprocess,
                                            evaluator)
-        # raise NameError,"haha"
+        #raise NameError,"haha"
         if multiprocess.get('perturbation_couplings')!=[]:
             # Clean temporary folders created for the running of the loop processes
             clean_up(mg_root)
@@ -2790,13 +2790,13 @@ def check_lorentz_process(process, evaluator):
 
     # Generate phase space point to use
     p, w_rambo = evaluator.get_momenta(process)
-    #ps=""
-    #for pi in p:
-    #   for pij in pi:
-    #      ps=ps+str(pij)+"  "
-    #   ps=ps+"\n"
-    # open(os.path.join('/afs/cern.ch/work/h/hshao/aMCatNLO_EW','PS.input'),'w').write(ps)
-    # Generate the HelasMatrixElement for the process
+    ps=""
+    for pi in p:
+       for pij in pi:
+          ps=ps+str(pij)+"  "
+       ps=ps+"\n"
+    open(os.path.join('/Users/erdissshaw/Works/aMCatNLO_EW','PS0.input'),'w').write(ps)
+     # Generate the HelasMatrixElement for the process
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
         matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = True)
@@ -2849,12 +2849,12 @@ def check_lorentz_process(process, evaluator):
     else:
         for boost in range(1,4):
             boost_p = boost_momenta(p,boost)
-            #ps=""
-                #for pi in boost_p:
-                #for pij in pi:
-                #    ps=ps+str(pij)+"      "
-            #ps=ps+"\n"
-            #open(os.path.join('/Users/erdissshaw/Works/aMCatNLO_EW','PS%s.input')%boost,'w').write(ps)
+            ps=""
+            for pi in boost_p:
+                for pij in pi:
+                    ps=ps+str(pij)+"      "
+                ps=ps+"\n"
+            open(os.path.join('/Users/erdissshaw/Works/aMCatNLO_EW','PS%s.input')%boost,'w').write(ps)
 
             results.append(evaluator.evaluate_matrix_element(matrix_element,
                     p=boost_p,output='jamp',MLOptions = MLOptions))
