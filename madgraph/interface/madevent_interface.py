@@ -896,11 +896,18 @@ class CheckValidForCmd(object):
         except:
             raise self.ConfigurationError, '''Can\'t load MG5.
             The variable mg5_path should not be correctly configure.'''
-            
+        
+        ufo_path = pjoin(self.me_dir,'bin','internal', 'ufomodel')
         # Import model
         if not MADEVENT:
             modelname = self.find_model_name()
-            model = import_ufo.import_model(modelname, decay=True)
+            restrict_file = None
+            if os.path.exists(pjoin(ufo_path, 'restrict_default.dat')):
+                restrict_file = pjoin(ufo_path, 'restrict_default.dat')
+            model = import_ufo.import_model(modelname, decay=True, 
+                        restrict_file=restrict_file)
+            
+            
         else:
             model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
                                         decay=True)
@@ -2685,7 +2692,7 @@ calculator."""
             self.ask_edit_cards(['param'], [], plot=False)
         
         model = args['model']
-        
+
         data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 
                                                               'param_card.dat'))
         

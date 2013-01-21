@@ -66,7 +66,7 @@ def find_ufo_path(model_name):
 
     return model_path
 
-def import_model(model_name, decay=False):
+def import_model(model_name, decay=False, restrict_file=None):
     """ a practical and efficient way to import a model"""
     
     # check if this is a valid path or if this include restriction file       
@@ -86,12 +86,13 @@ def import_model(model_name, decay=False):
         if split[-1] == 'full':
             restrict_file = None
     else:
-        # Check if by default we need some restrictions
         restrict_name = ""
-        if os.path.exists(os.path.join(model_path,'restrict_default.dat')):
-            restrict_file = os.path.join(model_path,'restrict_default.dat')
-        else:
-            restrict_file = None
+        # Check if by default we need some restrictions
+        if not restrict_file:  
+            if os.path.exists(os.path.join(model_path,'restrict_default.dat')):
+                restrict_file = os.path.join(model_path,'restrict_default.dat')
+            else:
+                restrict_file = None
     
     #import the FULL model
     model = import_full_model(model_path, decay) 
