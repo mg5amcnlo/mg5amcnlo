@@ -417,7 +417,6 @@ class MatrixElementEvaluator(object):
             energy = options['energy']
             events = options['events']
             to_skip = 0
-            print 'events path is ', events
             
         if not (isinstance(process, base_objects.Process) and \
                 isinstance(energy, (float,int))):

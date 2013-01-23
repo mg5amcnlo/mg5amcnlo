@@ -2744,7 +2744,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         options= {'events':None} # If the momentum needs to be picked from a event file
 
         if param_card and 'banner' == madevent_interface.MadEventCmd.detect_card_type(param_card):
-            print "this is an event file"
+            logger.info("Will use the param_card contained in the banner and  the events associated")
             import madgraph.various.banner as banner
             options['events'] = param_card
             mybanner = banner.Banner(param_card)
