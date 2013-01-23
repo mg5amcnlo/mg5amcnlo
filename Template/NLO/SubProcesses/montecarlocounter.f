@@ -1822,7 +1822,7 @@ c      include "fks.inc"
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_partner(0:3),p_born_fksfather(0:3),
      # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
-     # xmrec2,www,massmax,massmin,ma2
+     # xmrec2,www,massmax,massmin,ma2,xma2
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -2061,9 +2061,12 @@ c Compute deadzones:
             endif
          endif
          if(mstj50.eq.2)then
-c This is ok for massless ileg=4. For ileg=3 even the
-c authors of Pythia don't know 
             if(ileg.gt.2.and.ipartners(npartner).le.2)then
+c$$$            if(ileg.eq.4.and.ipartners(npartner).le.2)then
+c$$$ uncomment the line above if one can establish angular constraints
+c$$$ do not apply to resonance branchings (for sure it does not to t->bW,
+c$$$ but to t->tg I'm not yet sure). If this is the case then xma2 below
+c$$$ is useless
                do i=0,3
                   p_born_partner(i)=p_born(i,ipartners(npartner))
                   p_born_fksfather(i)=p_born(i,fksfather)
@@ -2072,8 +2075,9 @@ c authors of Pythia don't know
                theta2_cc=theta2_cc**2
                en_fks=sqrt(s)*(1-x)/2.d0
                en_mother=en_fks/(1-z(npartner))
+               xma2=xm12*(4-ileg)
                theta2=max(z(npartner)/(1-z(npartner)),(1-z(npartner))/z(npartner))*
-     &                xi(npartner)/en_mother**2
+     &                (xi(npartner)+xma2)/en_mother**2
                if(theta2.ge.theta2_cc)lzone(npartner)=.false.
             endif
          endif
@@ -3411,7 +3415,7 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       parameter (vca=3.d0)
 
       integer mstj50,mstp67
-      double precision en_fks,en_mother,theta2,theta2_cc
+      double precision en_fks,en_mother,theta2,theta2_cc,pt2father
       double precision upper_scale
       common/cupscale/upper_scale
 
@@ -3552,16 +3556,21 @@ c xmcsubt note
          xjac(npartner)=xjactmp
 c
 c Compute deadzones:
-c COLOUR COHERENCE!!!
+          lzone(npartner)=.true.
+          if(ileg.ge.3)then
+             pt2father=p_born(1,fksfather)**2+p_born(2,fksfather)**2
+             if(xi(npartner).ge.pt2father)lzone(npartner)=.false.
+c check!!
+c compute an effective xi variable for the father and impose
+c the constraint there?
+          endif
+
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
             call assign_scalemax(shat,xi_i_fks,upper_scale)
-            xifake(npartner)=xi(npartner)
-            if(ileg.eq.3)xifake(npartner)=xi(npartner)+xm12
-            if(sqrt(xifake(npartner)).gt.upper_scale)lzone(npartner)=.false.
+            if(sqrt(xi(npartner)).gt.upper_scale)lzone(npartner)=.false.
          endif
 c z limits, following  pages 14-16 of hep-ph/0408302
-         lzone(npartner)=.true.
          if(ileg.le.2)then
             zplus=1-sqrt(xi(npartner)/z(npartner)/shat)*
      &           (sqrt(1+xi(npartner)/(4*z(npartner)*shat))-sqrt(xi(npartner)/(4*z(npartner)*shat)))
