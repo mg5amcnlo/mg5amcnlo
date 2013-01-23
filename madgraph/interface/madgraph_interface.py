@@ -457,6 +457,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("Comments",'$MG:color:GREEN')         
         logger.info(" > If param_card is given, that param_card is used ")
         logger.info("   instead of the default values for the model.")
+        logger.info("   If that file is an (LHE) event file. The param_card of the banner")
+        logger.info("   is used and the first event compatible with the requested process")
+        logger.info("   is used for the computation of the square matrix elements")
         logger.info(" > \"--energy=\" allows to change the default value of sqrt(S).")
         logger.info(" > Except for the 'gauge' test, all checks above are also")
         logger.info("   available for loop processes with ML5 ('virt=' mode)")
@@ -2734,10 +2737,20 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # Perform checks
     def do_check(self, line):
         """Check a given process or set of processes"""
-        args = self.split_arg(line)
+        
+        args = self.split_arg(line)        
         # Check args validity
         param_card = self.check_check(args)
-        
+        options= {'events':None} # If the momentum needs to be picked from a event file
+
+        if param_card and 'banner' == madevent_interface.MadEventCmd.detect_card_type(param_card):
+            print "this is an event file"
+            import madgraph.various.banner as banner
+            options['events'] = param_card
+            mybanner = banner.Banner(param_card)
+            param_card = mybanner.charge_card('param_card')
+ 
+
         # Back up the gauge for later
         gauge = str(self.options['gauge'])
         
@@ -2749,7 +2762,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             stab_statistics = int(args[1])
             args = args[:1]+args[2:]
 
-        energy = float(args[-1].split('=')[1])
+        options['energy'] = float(args[-1].split('=')[1])
         args = args[:-1]        
         proc_line = " ".join(args[1:])
         myprocdef = self.extract_process(proc_line)
@@ -2862,7 +2875,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
-                                                energy=energy,
+                                                options=options,
                                                 cuttools=CT_dir,
                                                 reuse = reuse,
                                                 cmd = self)
@@ -2879,7 +2892,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                             cuttools=CT_dir,
                                             reuse = reuse,
                                             cmd = self,
-                                            energy=energy)
+                                            options=options)
             nb_processes += len(comparisons[0])
 
         if args[0] in ['lorentz', 'full']:
@@ -2889,7 +2902,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                           cuttools=CT_dir,
                                           reuse = reuse,
                                           cmd = self,
-                                          energy=energy)
+                                          options=options)
             nb_processes += len(lorentz_result)
         
         if args[0] in  ['brs', 'full']:
@@ -2898,7 +2911,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                           cuttools=CT_dir,
                                           reuse = reuse,
                                           cmd = self,
-                                          energy=energy)
+                                          options=options)
             nb_processes += len(gauge_result)     
             
         cpu_time2 = time.time()
