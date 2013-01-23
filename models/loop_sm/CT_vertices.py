@@ -30,27 +30,42 @@ V_R23G = CTVertex(name = 'V_R23G',
 #  4-gluon R2 vertex
 #=============================================================================================
 
+# The CT Vertex below is the one written by hand from the expression in the QCD R2 paper
+# This implementation seems to yield correct result for g g > g g g but not for g g > g g g g
+# or anytime one of the outter gluon of the vertex is offshell.
+
 # Keep in mind that Delta8(a,b) is 2 Tr(a,b)
 
-V_R24G = CTVertex(name = 'V_R24G',
-              particles = [ P.G, P.G, P.G,  P.G ],
-              color = [ 'Tr(1,2)*Tr(3,4)' , 'Tr(1,3)*Tr(2,4)' , 'Tr(1,4)*Tr(2,3)', \
-                        'd(-1,1,2)*d(-1,3,4)' , 'd(-1,1,3)*d(-1,2,4)' , 'd(-1,1,4)*d(-1,2,3)'],
-              lorentz = [  L.R2_4G_1234, L.R2_4G_1324, L.R2_4G_1423 ],
-              loop_particles = [ [[P.G]], [[P.u],[P.d],[P.c],[P.s],[P.b],[P.t]] ],
-              couplings = {(0,0,0):C.GC_4GR2_Gluon_delta5,(0,1,0):C.GC_4GR2_Gluon_delta7,(0,2,0):C.GC_4GR2_Gluon_delta7, \
-                           (1,0,0):C.GC_4GR2_Gluon_delta7,(1,1,0):C.GC_4GR2_Gluon_delta5,(1,2,0):C.GC_4GR2_Gluon_delta7, \
-                           (2,0,0):C.GC_4GR2_Gluon_delta7,(2,1,0):C.GC_4GR2_Gluon_delta7,(2,2,0):C.GC_4GR2_Gluon_delta5, \
-                           (3,0,0):C.GC_4GR2_4Struct,(3,1,0):C.GC_4GR2_2Struct,(3,2,0):C.GC_4GR2_2Struct, \
-                           (4,0,0):C.GC_4GR2_2Struct,(4,1,0):C.GC_4GR2_4Struct,(4,2,0):C.GC_4GR2_2Struct, \
-                           (5,0,0):C.GC_4GR2_2Struct,(5,1,0):C.GC_4GR2_2Struct,(5,2,0):C.GC_4GR2_4Struct , \
-                           (0,0,1):C.GC_4GR2_Fermion_delta11,(0,1,1):C.GC_4GR2_Fermion_delta5,(0,2,1):C.GC_4GR2_Fermion_delta5, \
-                           (1,0,1):C.GC_4GR2_Fermion_delta5,(1,1,1):C.GC_4GR2_Fermion_delta11,(1,2,1):C.GC_4GR2_Fermion_delta5, \
-                           (2,0,1):C.GC_4GR2_Fermion_delta5,(2,1,1):C.GC_4GR2_Fermion_delta5,(2,2,1):C.GC_4GR2_Fermion_delta11, \
-                           (3,0,1):C.GC_4GR2_11Struct,(3,1,1):C.GC_4GR2_5Struct,(3,2,1):C.GC_4GR2_5Struct, \
-                           (4,0,1):C.GC_4GR2_5Struct,(4,1,1):C.GC_4GR2_11Struct,(4,2,1):C.GC_4GR2_5Struct, \
-                           (5,0,1):C.GC_4GR2_5Struct,(5,1,1):C.GC_4GR2_5Struct,(5,2,1):C.GC_4GR2_11Struct },
-              type = 'R2')
+#V_R24G = CTVertex(name = 'V_R24G',
+#              particles = [ P.G, P.G, P.G,  P.G ],
+#              color = [ 'Tr(1,2)*Tr(3,4)' , 'Tr(1,3)*Tr(2,4)' , 'Tr(1,4)*Tr(2,3)', \
+#                        'd(-1,1,2)*d(-1,3,4)' , 'd(-1,1,3)*d(-1,2,4)' , 'd(-1,1,4)*d(-1,2,3)'],
+#              lorentz = [  L.R2_4G_1234, L.R2_4G_1324, L.R2_4G_1423 ],
+#              loop_particles = [ [[P.G]], [[P.u],[P.d],[P.c],[P.s],[P.b],[P.t]] ],
+#              couplings = {(0,0,0):C.GC_4GR2_Gluon_delta5,(0,1,0):C.GC_4GR2_Gluon_delta7,(0,2,0):C.GC_4GR2_Gluon_delta7, \
+#                           (1,0,0):C.GC_4GR2_Gluon_delta7,(1,1,0):C.GC_4GR2_Gluon_delta5,(1,2,0):C.GC_4GR2_Gluon_delta7, \
+#                           (2,0,0):C.GC_4GR2_Gluon_delta7,(2,1,0):C.GC_4GR2_Gluon_delta7,(2,2,0):C.GC_4GR2_Gluon_delta5, \
+#                           (3,0,0):C.GC_4GR2_4Struct,(3,1,0):C.GC_4GR2_2Struct,(3,2,0):C.GC_4GR2_2Struct, \
+#                           (4,0,0):C.GC_4GR2_2Struct,(4,1,0):C.GC_4GR2_4Struct,(4,2,0):C.GC_4GR2_2Struct, \
+#                           (5,0,0):C.GC_4GR2_2Struct,(5,1,0):C.GC_4GR2_2Struct,(5,2,0):C.GC_4GR2_4Struct , \
+#                           (0,0,1):C.GC_4GR2_Fermion_delta11,(0,1,1):C.GC_4GR2_Fermion_delta5,(0,2,1):C.GC_4GR2_Fermion_delta5, \
+#                           (1,0,1):C.GC_4GR2_Fermion_delta5,(1,1,1):C.GC_4GR2_Fermion_delta11,(1,2,1):C.GC_4GR2_Fermion_delta5, \
+#                           (2,0,1):C.GC_4GR2_Fermion_delta5,(2,1,1):C.GC_4GR2_Fermion_delta5,(2,2,1):C.GC_4GR2_Fermion_delta11, \
+#                           (3,0,1):C.GC_4GR2_11Struct,(3,1,1):C.GC_4GR2_5Struct,(3,2,1):C.GC_4GR2_5Struct, \
+#                           (4,0,1):C.GC_4GR2_5Struct,(4,1,1):C.GC_4GR2_11Struct,(4,2,1):C.GC_4GR2_5Struct, \
+#                           (5,0,1):C.GC_4GR2_5Struct,(5,1,1):C.GC_4GR2_5Struct,(5,2,1):C.GC_4GR2_11Struct },
+#              type = 'R2')
+
+# The CT Vertex below is the one written automatically by FR
+# Gives the same result as above for g g > g g but not as soon as one of the outter gluon is offshell.
+
+V_R2RGA = CTVertex(name = 'V_R2RGA',
+               type = 'R2',
+               particles = [ P.G, P.G, P.G, P.G ],
+               color = [ 'd(-1,1,3)*d(-1,2,4)', 'd(-1,1,3)*f(-1,2,4)', 'd(-1,1,4)*d(-1,2,3)', 'd(-1,1,4)*f(-1,2,3)', 'd(-1,2,3)*f(-1,1,4)', 'd(-1,2,4)*f(-1,1,3)', 'f(-1,1,2)*f(-1,3,4)', 'f(-1,1,3)*f(-1,2,4)', 'f(-1,1,4)*f(-1,2,3)', 'Identity(1,2)*Identity(3,4)', 'Identity(1,3)*Identity(2,4)', 'Identity(1,4)*Identity(2,3)' ],
+               lorentz = [ L.R2RGA_VVVV10, L.R2RGA_VVVV2, L.R2RGA_VVVV3, L.R2RGA_VVVV5 ],
+               loop_particles = [ [ [P.b], [P.c], [P.d], [P.s], [P.t], [P.u] ], [ [P.G] ] ],
+               couplings = {(2,1,0):C.R2GC_137_43,(2,1,1):C.R2GC_137_44,(0,1,0):C.R2GC_137_43,(0,1,1):C.R2GC_137_44,(4,1,0):C.R2GC_145_58,(4,1,1):C.R2GC_145_59,(3,1,0):C.R2GC_145_58,(3,1,1):C.R2GC_145_59,(8,1,0):C.R2GC_138_45,(8,1,1):C.R2GC_138_46,(7,1,0):C.R2GC_144_56,(7,1,1):C.R2GC_144_57,(6,1,0):C.R2GC_141_50,(6,1,1):C.R2GC_141_51,(5,1,0):C.R2GC_145_58,(5,1,1):C.R2GC_145_59,(1,1,0):C.R2GC_145_58,(1,1,1):C.R2GC_145_59,(11,0,0):C.R2GC_140_48,(11,0,1):C.R2GC_140_49,(10,0,0):C.R2GC_140_48,(10,0,1):C.R2GC_140_49,(9,0,1):C.R2GC_139_47,(2,2,0):C.R2GC_137_43,(2,2,1):C.R2GC_137_44,(0,2,0):C.R2GC_137_43,(0,2,1):C.R2GC_137_44,(6,2,0):C.R2GC_142_52,(6,2,1):C.R2GC_142_53,(4,2,0):C.R2GC_145_58,(4,2,1):C.R2GC_145_59,(3,2,0):C.R2GC_145_58,(3,2,1):C.R2GC_145_59,(8,2,0):C.R2GC_144_56,(8,2,1):C.R2GC_144_57,(5,2,0):C.R2GC_145_58,(5,2,1):C.R2GC_145_59,(1,2,0):C.R2GC_145_58,(1,2,1):C.R2GC_145_59,(7,2,0):C.R2GC_138_45,(7,2,1):C.R2GC_138_46,(2,3,0):C.R2GC_137_43,(2,3,1):C.R2GC_137_44,(0,3,0):C.R2GC_137_43,(0,3,1):C.R2GC_137_44,(4,3,0):C.R2GC_145_58,(4,3,1):C.R2GC_145_59,(3,3,0):C.R2GC_145_58,(3,3,1):C.R2GC_145_59,(8,3,0):C.R2GC_143_54,(8,3,1):C.R2GC_143_55,(7,3,0):C.R2GC_143_54,(7,3,1):C.R2GC_143_55,(5,3,0):C.R2GC_145_58,(5,3,1):C.R2GC_145_59,(1,3,0):C.R2GC_145_58,(1,3,1):C.R2GC_145_59})
 
 #=============================================================================================
 
