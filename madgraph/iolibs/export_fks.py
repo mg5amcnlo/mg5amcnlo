@@ -395,6 +395,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                    matrix_element, 
                                    fortran_model)
 
+        filename = 'get_color.f'
+        self.write_colors_file(writers.FortranWriter(filename),
+                               matrix_element)
+
         filename = 'nexternal.inc'
         (nexternal, ninitial) = \
                 matrix_element.real_processes[0].get_nexternal_ninitial()
@@ -939,10 +943,6 @@ end
         self.write_ncombs_file(writers.FortranWriter(filename),
                                matrix_element.born_matrix_element,
                                fortran_model)
-
-        filename = 'get_color.f'
-        self.write_colors_file(writers.FortranWriter(filename),
-                               matrix_element.born_matrix_element)
 
         filename = 'born_maxamps.inc'
         maxamps = len(matrix_element.get('diagrams'))
@@ -2134,9 +2134,11 @@ C
     #===========================================================================
     # write_colors_file
     #===========================================================================
-    def write_colors_file(self, writer, matrix_elements):
+    def write_colors_file(self, writer, matrix_element):
         """Write the get_color.f file for MadEvent, which returns color
         for all particles used in the matrix element."""
+
+        matrix_elements=matrix_element.real_processes[0].matrix_element
 
         if isinstance(matrix_elements, helas_objects.HelasMatrixElement):
             matrix_elements = [matrix_elements]
@@ -2145,15 +2147,16 @@ C
 
         # We need the both particle and antiparticle wf_ids, since the identity
         # depends on the direction of the wf.
-        wf_ids = set(sum([sum([sum([[wf.get_pdg_code(),wf.get_anti_pdg_code()] \
-                                    for wf in d.get('wavefunctions')],[]) \
-                               for d in me.get('diagrams')], []) \
-                          for me in matrix_elements], []))
-
-        leg_ids = set(sum([sum([[l.get('id') for l in \
-                                 p.get_legs_with_decays()] for p in \
-                                me.get('processes')], []) for me in
-                           matrix_elements], []))
+        wf_ids = set(sum([sum([sum([sum([[wf.get_pdg_code(),wf.get_anti_pdg_code()] \
+                              for wf in d.get('wavefunctions')],[]) \
+                              for d in me.get('diagrams')],[]) \
+                              for me in [real_proc.matrix_element]],[])\
+                              for real_proc in matrix_element.real_processes],[]))
+        leg_ids = set(sum([sum([sum([[l.get('id') for l in \
+                                p.get_legs_with_decays()] for p in \
+                                me.get('processes')], []) for me in \
+                                [real_proc.matrix_element]], []) for real_proc in \
+                                matrix_element.real_processes],[]))
         particle_ids = sorted(list(wf_ids.union(leg_ids)))
 
         lines = """function get_color(ipdg)

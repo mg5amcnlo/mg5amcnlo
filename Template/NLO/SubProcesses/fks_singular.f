@@ -1087,6 +1087,13 @@ c
       DOUBLE PRECISION       CONV
       PARAMETER (CONV=389379660d0)  !CONV TO PICOBARNS
 
+c FxFx merging
+      logical rewgt_mohdr_calculated,rewgt_izero_calculated
+      double precision rewgt_mohdr,rewgt_izero
+      logical setclscales
+      double precision rewgt
+      external setclscales,rewgt
+
       double precision pmass(nexternal)
       include "pmass.inc"
 
@@ -1128,6 +1135,12 @@ c
       dsigH=0d0
       MCcntcalled=.false.
 c
+c FxFx merging
+      ickkw=2
+      ktscheme=1
+      rewgt_mohdr_calculated=.false.
+      rewgt_izero_calculated=.false.
+
       if(doreweight)then
         if(.not.AddInfoLHE)then
           write(*,*)'Error in dsigF'
@@ -1227,6 +1240,15 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       call set_cms_stuff(izero)
       if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
      #      nocntevents ) goto 547
+c Compute the scales and sudakov-reweighting for the FxFx merging
+      if (ickkw.eq.2.and..not.rewgt_izero_calculated) then
+         if (.not. setclscales(p1_cnt(0,1,0))) then
+            write (*,*) 'ERROR in setclscales izero'
+            stop
+         endif
+         rewgt_izero=rewgt(p1_cnt(0,1,0))
+         rewgt_izero_calculated=.true.
+      endif
 
       gfactsf=1.d0
       gfactcl=1.d0
@@ -1242,6 +1264,15 @@ c for the collinear, soft and/or soft-collinear subtraction terms
      &     abrv(1:2).eq.'vi' .or. nbody) goto 540
 
       call set_cms_stuff(mohdr)
+c     Compute the scales and sudakov-reweighting for the FxFx merging
+        if (ickkw.eq.2.and..not.rewgt_mohdr_calculated) then
+           if (.not. setclscales(pp)) then
+              write (*,*) 'ERROR in setclscales mohdr'
+              stop
+           endif
+           rewgt_mohdr=rewgt(pp)
+           rewgt_mohdr_calculated=.true.
+        endif
       call set_alphaS(pp)
       if(doreweight)then
          wgtmuR2_all(1,nFKSprocess*2)=muR2_current/muR_over_ref**2
@@ -1325,6 +1356,7 @@ c
 c Set scales for all counterevents, using soft kinematics as done
 c in the case of parton-level NLO computations
 
+      call set_cms_stuff(izero)
       call set_alphaS(p1_cnt(0,1,0))
       if(doreweight)then
          if (nbody) then
@@ -1665,6 +1697,15 @@ c Set the ybst_til_tolab before applying the cuts.
          wgtxbj_all(2,1,nFKSprocess*2-1)=xbk(2)
       endif
       if (passcuts(pp,rwgt)) then
+c     Compute the scales and sudakov-reweighting for the FxFx merging
+        if (ickkw.eq.2.and..not.rewgt_mohdr_calculated) then
+           if (.not. setclscales(pp)) then
+              write (*,*) 'ERROR in setclscales mohdr'
+              stop
+           endif
+           rewgt_mohdr=rewgt(pp)
+           rewgt_mohdr_calculated=.true.
+        endif
         call set_alphaS(pp)
         x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
         ffact = f_damp(x)

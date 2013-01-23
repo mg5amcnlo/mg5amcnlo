@@ -1,72 +1,67 @@
       double precision function gamma(q0)
-c**************************************************
-c   calculates the branching probability
-c**************************************************
+c*******************************************************
+c   Calculates the argument of the exponent
+c   o. It takes only terms logarithmic in log(Q/q0) and 
+c      constants into account (up to NLL)
+c   o. Mass effects are ignored
+c   o. Flavor thresholds are ignored
+c******************************************************
       implicit none
+c Include
       include 'nexternal.inc'
-      include 'message.inc'
+      include 'coupl.inc'
       include 'nFKSconfigs.inc'
       include 'cluster.inc'
-      include 'sudakov.inc'
-      include 'run.inc'
-      integer i
-      double precision q0, val, add, add2
-      double precision qr,lf
+c Constants
+      double precision ZERO,PI,CA,CF,kappa,beta0,a1qq,a2qq,b1qq,b2qq
+     $     ,a1gg,a2gg,b1gg,b2gg
+      parameter (ZERO=0d0)
+      parameter (PI = 3.14159265358979323846d0)
+      parameter (CA = 3d0)
+      parameter (CF = 4d0/3d0)
+c      parameter (NF = 5d0)      ! NF is determined in coupl.inc
+      parameter (beta0 = (11d0*CA - 2d0*NF)/(12d0*pi))
+      parameter (kappa = CA*(67d0/18d0 - pi**2/6d0) - NF*5d0/9d0)
+      parameter (a1gg=CA/(2d0*Pi))
+      parameter (a2gg=CA/(4d0*Pi**2)*kappa)
+      parameter (b1gg=-beta0)
+      parameter (b2gg=0d0)
+      parameter (a1qq=CF/(2d0*Pi))
+      parameter (a2qq=CF/(4d0*Pi**2)*kappa)
+      parameter (b1qq=CF*(-3d0/(4d0*pi)))
+      parameter (b2qq=0d0)
+c Argument
+      double precision q0
+c Local
+      logical isgluon
+      double precision alphasq0
+c External
       double precision alphas
       external alphas
-      double precision pi
-      parameter (pi=3.141592654d0)
 
       gamma=0.0d0
+      if (abs(iipdg).le.NF) then
+c Quark Sudakov
+         isgluon=.false.
+      elseif (iipdg.eq.21) then
+c Gluon Sudakov
+         isgluon=.true.
+      else
+         write (*,*) 'ERROR in reweight.f: do not know'/
+     $        /' which Sudakov to compute',iipdg
+         stop
+      endif
+      alphasq0=alphas(q0)
+c factor 2 because we are integrating over q, not q^2      
+      if (isgluon) then
+         gamma=2d0*((a1gg*alphasq0 + a2gg*alphasq0**2)*2d0*log(Q1/q0) + 
+     &              (b1gg*alphasq0 + b2gg*alphasq0**2) ) /q0
+      else
+         gamma=2d0*((a1qq*alphasq0 + a2qq*alphasq0**2)*2d0*log(Q1/q0) + 
+     &              (b1qq*alphasq0 + b2qq*alphasq0**2) ) /q0
+      endif
 
-      if (Q1<m_qmass(iipdg)) return
-      m_lastas=Alphas(alpsfact*q0)
-      val=2d0*m_colfac(iipdg)*m_lastas/PI/q0
-c   if (m_mode & bpm::power_corrs) then
-      qr=q0/Q1
-      if(m_pca(iipdg,iimode).eq.0)then
-        lf=log(1d0/qr-1d0)
-      else 
-        lf=log(1d0/qr)
-      endif
-      val=val*(m_dlog(iipdg)*(1d0+m_kfac*m_lastas/(2d0*PI))*lf+m_slog(iipdg)
-     $   +qr*(m_power(iipdg,1,iimode)+qr*(m_power(iipdg,2,iimode)
-     $   +qr*m_power(iipdg,3,iimode))))
-c   else
-c   val=val*m_dlog*(1d0+m_kfac*m_lastas/(2d0*PI))*log(Q1/q0)+m_slog;
-c   endif
-      if(m_qmass(iipdg).gt.0d0)then
-        val=val+m_colfac(iipdg)*m_lastas/PI/q0*(0.5-q0/m_qmass(iipdg)*
-     $     atan(m_qmass(iipdg)/q0)-
-     $     (1.0-0.5*(q0/m_qmass(iipdg))**2)*log(1.0+(m_qmass(iipdg)/q0)**2))
-      endif
-      val=max(val,0d0)
-      if (iipdg.eq.21) then
-        add=0d0
-        do i=-6,-1
-          if(m_qmass(abs(i)).gt.0d0)then
-            add2=m_colfac(i)*m_lastas/PI/q0/
-     $         (1.0+(m_qmass(abs(i))/q0)**2)*
-     $         (1.0-1.0/3.0/(1.0+(m_qmass(abs(i))/q0)**2))
-          else
-            add2=2d0*m_colfac(i)*m_lastas/PI/q0*(m_slog(i)
-     $         +qr*(m_power(i,1,iimode)+qr*(m_power(i,2,iimode)
-     $         +qr*m_power(i,3,iimode))))
-          endif
-          add=add+max(add2,0d0)
-        enddo
-        val=val+add
-      endif
-      
-      gamma = max(val,0d0)
-
-      if (btest(mlevel,6)) then
-        write(*,*)'       \\Delta^I_{',iipdg,'}(',
-     &     q0,',',q1,') -> ',gamma
-        write(*,*) val,m_lastas,m_dlog(iipdg),m_slog(iipdg)
-        write(*,*) m_power(iipdg,1,iimode),m_power(iipdg,2,iimode)
-     $       ,m_power(iipdg,3,iimode)
-      endif
+c$$$      gamma = max(0d0,gamma)
 
       return
       end
@@ -371,10 +366,10 @@ c     FS clustering
 
       logical function setclscales(p)
 c**************************************************
-c     Calculate dynamic scales based on clustering
+c     Calculate dynamic scales used in the central
+c     hard (lowest-multiplicity) process.
 c**************************************************
       implicit none
-
 c Include
       include 'nexternal.inc'
       include 'run.inc'
@@ -392,6 +387,7 @@ c Local
       integer i,j,n,ibeam(2),jlast(2),jfirst(2),jcentral(2),ipart(2
      $     ,n_max_cl)
       logical partonline(2),qcdline(2)
+      double precision pt_tmp
       integer nwarning
       data nwarning /0/
 c Common
@@ -400,15 +396,14 @@ c Common
       double precision q2bck(2)
       common /to_q2bck/q2bck
 c External
-      logical cluster,isqcd,isparton,isjetvx,isjet
+      logical cluster,isqcd,isparton,isjetvx,isjet,ispartonvx
       double precision alphas
-      external cluster,isqcd,isparton,isjetvx,isjet,alphas
+      external cluster,isqcd,isparton,isjetvx,isjet,alphas,ispartonvx
 c
       setclscales=.true.
 c   
 c   Cluster the configuration
 c   
-      
       clustered = cluster(p(0,1))
       if(.not.clustered) then
          write(*,*) 'Error: Clustering failed in cluster.f.'
@@ -445,6 +440,37 @@ c     (i.e. geom. average of transverse mass of t and t~)
          endif
       endif
 
+c     For FxFx merging, we need to know what the first QCD clustering is
+c     (this one is non-physical for the S-events) because that one
+c     should be skipped.
+      ifxfx(1)=-1
+      ifxfx(2)=-1
+      pt_tmp=99d9
+      do n=1,nexternal-2        ! loop over cluster nodes
+         if (ispartonvx(imocl(n),idacl(n,1),idacl(n,2),ipdgcl(1
+     $        ,igraphs(1),nFKSprocess),ipart,.false.)) then
+            if (ifxfx(1).lt.0 .or. pt2ijcl(n).lt.pt_tmp) then
+               ifxfx(1)=n
+               pt_tmp=pt2ijcl(n)
+            endif
+         endif
+      enddo
+      pt_tmp=99d9
+      do n=1,nexternal-2        ! loop over cluster nodes
+         if (ispartonvx(imocl(n),idacl(n,1),idacl(n,2),ipdgcl(1
+     $        ,igraphs(1),nFKSprocess),ipart,.false.)) then
+            if ((ifxfx(2).lt.0 .or. pt2ijcl(n).lt.pt_tmp) .and.
+     $           n.ne.ifxfx(1)) then
+               ifxfx(2)=n
+               pt_tmp=pt2ijcl(n)
+            endif
+         endif
+      enddo
+      if (btest(mlevel,3)) then
+         write(*,*)'setclscales: ifxfx has been found to be',ifxfx(1)
+     $        ,ifxfx(2)
+      endif
+
       do i=1,2
          ibeam(i)=ishft(1,i-1)
          jfirst(i)=0
@@ -465,7 +491,7 @@ c     initial state emission - this is what we want
 c     Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
 c     f1(x1,pt2E) is given by DSIG, just need to set scale.
                   ibeam(j)=imocl(n)
-                  if(jfirst(j).eq.0)then
+                  if(jfirst(j).eq.0 .and. ifxfx(1).ne.n)then
 c FIXTHIS FIXTHIS FIXTHIS: ipart not defined here???
                      if(isjetvx(imocl(n),idacl(n,1),idacl(n,2),
      $                    ipdgcl(1,igraphs(1),nFKSprocess),ipart,
@@ -524,51 +550,47 @@ c     Set central scale to mT2
      $     (fixed_ren_scale.or.scale.gt.0)) return
 
 c     Ensure that last scales are at least as big as first scales
-      if(jlast(1).gt.0)
-     $     pt2ijcl(jlast(1))=max(pt2ijcl(jlast(1)),pt2ijcl(jfirst(1)))
-      if(jlast(2).gt.0)
-     $     pt2ijcl(jlast(2))=max(pt2ijcl(jlast(2)),pt2ijcl(jfirst(2)))
+      if(jlast(1).gt.0) pt2ijcl(jlast(1))=max(pt2ijcl(jlast(1))
+     $     ,pt2ijcl(jfirst(1)))
+      if(jlast(2).gt.0) pt2ijcl(jlast(2))=max(pt2ijcl(jlast(2))
+     $     ,pt2ijcl(jfirst(2)))
 
 c     Set renormalization scale to geom. aver. of central scales
 c     if both beams are qcd
-      if(scale.eq.0d0) then
-         if(jcentral(1).gt.0.and.jcentral(2).gt.0) then
-            scale=(pt2ijcl(jcentral(1))*pt2ijcl(jcentral(2)))**0.25d0
-         elseif(jcentral(1).gt.0) then
-            scale=sqrt(pt2ijcl(jcentral(1)))
-         elseif(jcentral(2).gt.0) then
-            scale=sqrt(pt2ijcl(jcentral(2)))
-         else
-            scale=sqrt(pt2ijcl(nexternal-2))
-         endif
-         scale = scalefact*scale
-         if(scale.gt.0)
-     $        G = SQRT(4d0*PI*ALPHAS(scale))
+      if(jcentral(1).gt.0.and.jcentral(2).gt.0) then
+         scale=(pt2ijcl(jcentral(1))*pt2ijcl(jcentral(2)))**0.25d0
+      elseif(jcentral(1).gt.0) then
+         scale=sqrt(pt2ijcl(jcentral(1)))
+      elseif(jcentral(2).gt.0) then
+         scale=sqrt(pt2ijcl(jcentral(2)))
+      else
+         scale=sqrt(pt2ijcl(nexternal-2))
       endif
+      scale = scalefact*scale
+      if(scale.gt.0)
+     $     G = SQRT(4d0*PI*ALPHAS(scale))
       if (btest(mlevel,3))
      $     write(*,*) 'Set ren scale to ',scale
 
-      if(ickkw.gt.0.and.q2fact(1).gt.0) then
-c     Use the fixed or previously set scale for central scale
-         if(jcentral(1).gt.0) pt2ijcl(jcentral(1))=q2fact(1)
-         if(jcentral(2).gt.0.and.jcentral(2).ne.jcentral(1))
-     $        pt2ijcl(jcentral(2))=q2fact(2)
-      endif
+c$$$      if(ickkw.gt.0.and.q2fact(1).gt.0) then
+c$$$c     Use the fixed or previously set scale for central scale
+c$$$         if(jcentral(1).gt.0) pt2ijcl(jcentral(1))=q2fact(1)
+c$$$         if(jcentral(2).gt.0.and.jcentral(2).ne.jcentral(1))
+c$$$     $        pt2ijcl(jcentral(2))=q2fact(2)
+c$$$      endif
 
-      if(nexternal.eq.3.and.nincoming.eq.2.and.q2fact(1).eq.0) then
+      if(nexternal.eq.3.and.nincoming.eq.2) then
          q2fact(1)=pt2ijcl(nexternal-2)
          q2fact(2)=pt2ijcl(nexternal-2)
       endif
 
-      if(q2fact(1).eq.0d0) then
 c     Use the geom. average of central scale and first non-radiation vertex
-         if(jlast(1).gt.0) q2fact(1)=sqrt(pt2ijcl(jlast(1))*pt2ijcl(jcentral(1)))
-         if(jlast(2).gt.0) q2fact(2)=sqrt(pt2ijcl(jlast(2))*pt2ijcl(jcentral(2)))
-         if(jcentral(1).gt.0.and.jcentral(1).eq.jcentral(2))then
+      if(jlast(1).gt.0) q2fact(1)=sqrt(pt2ijcl(jlast(1))*pt2ijcl(jcentral(1)))
+      if(jlast(2).gt.0) q2fact(2)=sqrt(pt2ijcl(jlast(2))*pt2ijcl(jcentral(2)))
+      if(jcentral(1).gt.0.and.jcentral(1).eq.jcentral(2))then
 c     We have a qcd line going through the whole event, use single scale
-            q2fact(1)=max(q2fact(1),q2fact(2))
-            q2fact(2)=q2fact(1)
-         endif
+         q2fact(1)=max(q2fact(1),q2fact(2))
+         q2fact(2)=q2fact(1)
       endif
       if(.not. fixed_fac_scale) then
          q2fact(1)=scalefact**2*q2fact(1)
@@ -594,7 +616,6 @@ c     Use the minimum scale found for fact scale in ME
          if(jlast(2).gt.0.and.jfirst(2).lt.jlast(2))
      $        q2fact(2)=min(pt2ijcl(jfirst(2)),q2fact(2))
       endif
-
 c     Check that factorization scale is >= 2 GeV
       if(lpp(1).ne.0.and.q2fact(1).lt.4d0.or.
      $   lpp(2).ne.0.and.q2fact(2).lt.4d0)then
@@ -602,6 +623,7 @@ c     Check that factorization scale is >= 2 GeV
              nwarning=nwarning+1
              write(*,*) 'Warning: Too low fact scales: ',
      $            sqrt(q2fact(1)), sqrt(q2fact(2))
+             write (*,*) pt2ijcl,ifxfx
           endif
          if(nwarning.eq.11) then
              nwarning=nwarning+1
@@ -654,12 +676,17 @@ c External
       double precision alphas,getissud,pdg2pdf,sudwgt
       external ispartonvx,alphas,isqcd,isparton,isjetvx,getissud,pdg2pdf
      $     ,isjet,sudwgt
+c FxFx
+      integer nFxFx_ren_scales
+      double precision FxFx_ren_scales(nexternal)
+      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
 
 c$$$c SET THE DEFAULT KTSCHEME
       double precision xqcut
 c$$$      logical hmult,pdfwgt
 c$$$      integer ickkw
       xqcut=0d0
+      hmult=.true.
 c$$$      hmult=.false.
 c$$$      pdfwgt=.false.
 c$$$      ickkw=1
@@ -676,6 +703,10 @@ c   Set mimimum kt scale, depending on highest mult or not
       else
         pt2min=xqcut**2
       endif
+c For FxFx merging, pt2min should be set equal to the 2nd smallest (QCD)
+c clustering scale
+      pt2min=pt2ijcl(ifxfx(2))
+
       if (btest(mlevel,3))
      $     write(*,*) 'pt2min set to ',pt2min
 
@@ -741,6 +772,7 @@ c
 c     Set strong coupling used
 c   
       asref=G**2/(4d0*PI)
+      nFxFx_ren_scales=0
 
 c     Perform alpha_s reweighting based on type of vertex
       do n=1,nexternal-2
@@ -762,20 +794,22 @@ c     and not for the last clustering (use non-fixed ren. scale for these)
             if(ispartonvx(imocl(n),idacl(n,1),idacl(n,2),
      $           ipdgcl(1,igraphs(1),nFKSprocess),ipart,.false.)) then
 c       alpha_s weight
-c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
-c  the renormalization scale should be set as the geometric mean of all
-c  scales involved: we cannot simply reweight the alpha_s's here.
-c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
-               rewgt=rewgt*alphas(alpsfact*sqrt(q2now))/asref
+c$$$c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
+c$$$c  the renormalization scale should be set as the geometric mean of all
+c$$$c  scales involved: we cannot simply reweight the alpha_s's here.
+c$$$c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
+               nFxFx_ren_scales=nFxFx_ren_scales+1
+               FxFx_ren_scales(nFxFx_ren_scales)=sqrt(q2now)
+c$$$               rewgt=rewgt*alphas(sqrt(q2now))/asref
                if (btest(mlevel,3)) then
                   write(*,*)' reweight vertex: ',ipdgcl(imocl(n)
      $                 ,igraphs(1),nFKSprocess),ipdgcl(idacl(n,1)
      $                 ,igraphs(1) ,nFKSprocess),ipdgcl(idacl(n,2)
-     $                 ,igraphs(1),nFKSprocess)
-                  write(*,*)'       as: ',alphas(alpsfact*dsqrt(q2now)),
-     $                 '/',asref,' -> ',alphas(alpsfact*dsqrt(q2now))
-     $                 /asref
-                  write(*,*)' and G=',SQRT(4d0*PI*ALPHAS(scale))
+     $                 ,igraphs(1),nFKSprocess),sqrt(q2now)
+c$$$                  write(*,*)'       as: ',alphas(dsqrt(q2now)),
+c$$$     $                 '/',asref,' -> ',alphas(dsqrt(q2now))
+c$$$     $                 /asref
+c$$$                  write(*,*)' and G=',SQRT(4d0*PI*ALPHAS(scale))
                endif
             endif
          endif
@@ -858,16 +892,23 @@ c     Perform Sudakov reweighting if ickkw=2
      &                                     ipart,n.eq.nexternal-2)).and.
      $                 pt2prev(idacl(n,i)).lt.pt2ijcl(n)  )then
 c tmp is the ratio of the two sudakovs
-                     tmp=min(1d0,max(
-     &                    getissud(ibeam(j),
-     &                        ipdgcl(idacl(n,i),igraphs(1),nFKSprocess),
-     &                        xnow(j),xnow(3-j),pt2ijcl(n)) ,
-     &                    1d-20 ) /
-     $                    max(
-     &                    getissud(ibeam(j),
-     &                        ipdgcl(idacl(n,i),igraphs(1),nFKSprocess),
-     &                        xnow(j),xnow(3-j),pt2prev(idacl(n,i))) ,
-     &                    1d-20 ))
+c Sudakov including PDFs:
+c$$$                     tmp=min(1d0,max(
+c$$$     &                    getissud(ibeam(j),
+c$$$     &                        ipdgcl(idacl(n,i),igraphs(1),nFKSprocess),
+c$$$     &                        xnow(j),xnow(3-j),pt2ijcl(n)) ,
+c$$$     &                    1d-20 ) /
+c$$$     $                    max(
+c$$$     &                    getissud(ibeam(j),
+c$$$     &                        ipdgcl(idacl(n,i),igraphs(1),nFKSprocess),
+c$$$     &                        xnow(j),xnow(3-j),pt2prev(idacl(n,i))) ,
+c$$$     &                    1d-20 ))
+c Sudakov excluding PDFs:
+                     tmp=sudwgt(sqrt(pt2min),sqrt(pt2prev(idacl(n,i))),
+     $                    dsqrt(pt2ijcl(n)),ipdgcl(idacl(n,i),igraphs(1)
+     $                    ,nFKSprocess),1)
+
+
                      rewgt=rewgt*tmp
                      pt2prev(imocl(n))=pt2ijcl(n)
                      if (btest(mlevel,3)) then
@@ -904,66 +945,66 @@ c     f1(x1,pt2E) is given by DSIG, already set scale for that
                      xnow(j)=xnow(j)*zcl(n)
                   endif
 c     PDF scale
-
-c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
-c We cannot do PDF reweighting at NLO. Needs to be carefully checked
-c that we get the correct factorization scale.
-c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
-
-                  q2now=min(pt2ijcl(n), q2bck(j))
-c     Set PDF scale to central factorization scale if non-radiating
-c     vertex or last 2->2
-                  if(.not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
-     $                            ipdgcl(1,igraphs(1),nFKSprocess),
-     $                                   ipart,n.eq.nexternal-2) ) then
-                     q2now=q2bck(j)
-                  endif
-                  if (btest(mlevel,3))
-     $                 write(*,*)' set q2now for pdf to ',sqrt(q2now)
-                  if(q2fact(j).eq.0d0.and.ickkw.eq.2)then
-                     q2fact(j)=pt2min ! Starting scale for PS
-                     pt2pdf(imocl(n))=q2now
-                     if (btest(mlevel,3))
-     $                    write(*,*)' set fact scale ',j,
-     $                    ' for PS scale to: ',sqrt(q2fact(j))
-                  else if(pt2pdf(idacl(n,i)).eq.0d0)then
-                     pt2pdf(imocl(n))=q2now
-                     if (btest(mlevel,3))
-     $                    write(*,*)' set pt2pdf for ',imocl(n),
-     $                    ' to: ',sqrt(pt2pdf(imocl(n)))
-                  else if(pt2pdf(idacl(n,i)).lt.q2now .and.
-     $                    isjet(ipdgcl(idacl(n,i),igraphs(1),nFKSprocess))) then
-                     pdfj1=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
-     $                    igraphs(1),nFKSprocess)*sign(1,lpp(IB(j))),
-     $                    xnow(j),sqrt(q2now))
-                     pdfj2=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
-     $                    igraphs(1),nFKSprocess)*sign(1,lpp(IB(j))),
-     $                    xnow(j),sqrt(pt2pdf(idacl(n,i))))
-                     if(pdfj2.lt.1d-10)then
-c     Scale too low for heavy quark
-                        rewgt=0d0
-                        if (btest(mlevel,3)) write(*,*)
-     $                       'Too low scale for quark pdf: ',
-     $                       sqrt(pt2pdf(idacl(n,i))),pdfj2,pdfj1
-                        return
-                     endif
-                     rewgt=rewgt*pdfj1/pdfj2
-                     if (btest(mlevel,3)) then
-                        write(*,*)' reweight ',n,i,ipdgcl(idacl(n,i)
-     $                       ,igraphs(1),nFKSprocess),' by pdfs: '
-                        write(*,*)'     x, ptprev, ptnew: ',xnow(j),
-     $                       sqrt(pt2pdf(idacl(n,i))),sqrt(q2now)
-                        write(*,*)'           PDF: ',pdfj1,' / '
-     $                       ,pdfj2
-                        write(*,*)'        -> rewgt: ',rewgt
-                     endif
-c     Set scale for mother as this scale
-                     pt2pdf(imocl(n))=q2now                           
-                  else if(pt2pdf(idacl(n,i)).ge.q2now) then
-c     If no reweighting, just copy daughter scale for mother
-                     pt2pdf(imocl(n))=pt2pdf(idacl(n,i))
-                  endif
-                  cycle         ! go to the next daugther or cluster node
+c SKIP PDF REWEIGHTING
+c$$$c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
+c$$$c We cannot do PDF reweighting at NLO. Needs to be carefully checked
+c$$$c that we get the correct factorization scale.
+c$$$c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
+c$$$
+c$$$                  q2now=min(pt2ijcl(n), q2bck(j))
+c$$$c     Set PDF scale to central factorization scale if non-radiating
+c$$$c     vertex or last 2->2
+c$$$                  if(.not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
+c$$$     $                            ipdgcl(1,igraphs(1),nFKSprocess),
+c$$$     $                                   ipart,n.eq.nexternal-2) ) then
+c$$$                     q2now=q2bck(j)
+c$$$                  endif
+c$$$                  if (btest(mlevel,3))
+c$$$     $                 write(*,*)' set q2now for pdf to ',sqrt(q2now)
+c$$$                  if(q2fact(j).eq.0d0.and.ickkw.eq.2)then
+c$$$                     q2fact(j)=pt2min ! Starting scale for PS
+c$$$                     pt2pdf(imocl(n))=q2now
+c$$$                     if (btest(mlevel,3))
+c$$$     $                    write(*,*)' set fact scale ',j,
+c$$$     $                    ' for PS scale to: ',sqrt(q2fact(j))
+c$$$                  else if(pt2pdf(idacl(n,i)).eq.0d0)then
+c$$$                     pt2pdf(imocl(n))=q2now
+c$$$                     if (btest(mlevel,3))
+c$$$     $                    write(*,*)' set pt2pdf for ',imocl(n),
+c$$$     $                    ' to: ',sqrt(pt2pdf(imocl(n)))
+c$$$                  else if(pt2pdf(idacl(n,i)).lt.q2now .and.
+c$$$     $                    isjet(ipdgcl(idacl(n,i),igraphs(1),nFKSprocess))) then
+c$$$                     pdfj1=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
+c$$$     $                    igraphs(1),nFKSprocess)*sign(1,lpp(IB(j))),
+c$$$     $                    xnow(j),sqrt(q2now))
+c$$$                     pdfj2=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
+c$$$     $                    igraphs(1),nFKSprocess)*sign(1,lpp(IB(j))),
+c$$$     $                    xnow(j),sqrt(pt2pdf(idacl(n,i))))
+c$$$                     if(pdfj2.lt.1d-10)then
+c$$$c     Scale too low for heavy quark
+c$$$                        rewgt=0d0
+c$$$                        if (btest(mlevel,3)) write(*,*)
+c$$$     $                       'Too low scale for quark pdf: ',
+c$$$     $                       sqrt(pt2pdf(idacl(n,i))),pdfj2,pdfj1
+c$$$                        return
+c$$$                     endif
+c$$$                     rewgt=rewgt*pdfj1/pdfj2
+c$$$                     if (btest(mlevel,3)) then
+c$$$                        write(*,*)' reweight ',n,i,ipdgcl(idacl(n,i)
+c$$$     $                       ,igraphs(1),nFKSprocess),' by pdfs: '
+c$$$                        write(*,*)'     x, ptprev, ptnew: ',xnow(j),
+c$$$     $                       sqrt(pt2pdf(idacl(n,i))),sqrt(q2now)
+c$$$                        write(*,*)'           PDF: ',pdfj1,' / '
+c$$$     $                       ,pdfj2
+c$$$                        write(*,*)'        -> rewgt: ',rewgt
+c$$$                     endif
+c$$$c     Set scale for mother as this scale
+c$$$                     pt2pdf(imocl(n))=q2now                           
+c$$$                  else if(pt2pdf(idacl(n,i)).ge.q2now) then
+c$$$c     If no reweighting, just copy daughter scale for mother
+c$$$                     pt2pdf(imocl(n))=pt2pdf(idacl(n,i))
+c$$$                  endif
+                  goto 10       !  Skip the Final state Sudakov
                endif
             enddo
 c     Final State sudakov weight
@@ -973,6 +1014,7 @@ c     Final State sudakov weight
      $           (ipdgcl(idacl(n,i),igraphs(1),nFKSprocess).ne.
      $           ipdgcl(idacl(n,3-i),igraphs(1),nFKSprocess).and.
      $           pt2prev(idacl(n,i)).gt.pt2prev(idacl(n,3-i))))) then
+
                tmp=sudwgt(sqrt(pt2min),sqrt(pt2prev(idacl(n,i))),
      $              dsqrt(pt2ijcl(n)),ipdgcl(idacl(n,i),igraphs(1)
      $              ,nFKSprocess),1)
@@ -989,6 +1031,7 @@ c     Final State sudakov weight
             else
                pt2prev(imocl(n))=pt2prev(idacl(n,i))
             endif 
+ 10         continue
          enddo
          if (ickkw.eq.2.and.n.eq.nexternal-2.and.
      $        isqcd(ipdgcl(imocl(n),igraphs(1),nFKSprocess)).and.

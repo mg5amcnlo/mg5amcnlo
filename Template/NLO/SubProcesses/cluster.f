@@ -300,10 +300,8 @@ c Set up which configuration should be included
       start_config=1
       end_config=mapconfig(0)
 c Initialize all the clustering ID's to zero
-      do iFKS=1,fks_configs
-         do i=1,n_max_cl
-            id_cl(iFKS,i,0)=0
-         enddo
+      do i=1,n_max_cl
+         id_cl(nFKSprocess,i,0)=0
       enddo
 c Loop over the configurations
       do i=start_config,end_config
@@ -485,6 +483,7 @@ c Include
       include 'cluster.inc'
       include 'message.inc'
       include 'real_from_born_configs.inc'
+      include 'run.inc'
 c Argument
       double precision p(0:3,nexternal)
 c Local
@@ -504,11 +503,6 @@ c External
       logical findmt
       double precision dj, pydj, djb, pyjb, dot, SumDot, zclus
       external findmt,dj, pydj, djb, pyjb, dot, SumDot, zclus, combid
-
-c SET THE DEFAULT KTSCHEME
-      integer ickkw,ktscheme
-      ktscheme=1
-      ickkw=1
 
       if (btest(mlevel,1))
      $   write (*,*)'New event'
@@ -545,8 +539,11 @@ c     fill combine table, first pass only (others are done below),
 c     determine all ptij
             do j=1,i-1
                idj=ishft(1,j-1)
-               if (btest(mlevel,4))
-     $              write (*,*)'i = ',i,'(',idi,'), j = ',j,'(',idj,')'
+               if (btest(mlevel,4)) then
+                  write (*,*)'i = ',i,'(',idi,'), j = ',j,'(',idj,')'
+                  write (*,*)'nbw =',nbw,ibwlist
+               endif
+     
 c     cluster only combinable legs (acc. to diagrams)
                icgs(0)=0
                idij=combid(idi,idj)
@@ -633,6 +630,7 @@ c     combine winner
          if (btest(mlevel,2)) then
             write(*,*)'winner ',n,': ',idacl(n,1),'&',idacl(n,2),
      &           ' -> ',minpt2ij,', z = ',zcl(n)
+            write (*,*) 'iwin,jwin:',iwin,jwin,imocl(n)
          endif
 c     Reset igraphs with new mother
          if (.not.findmt(imocl(n),igraphs,nbw,ibwlist)) then
@@ -770,7 +768,7 @@ c     Reset diagram list icgs
 c     cluster only combinable legs (acc. to diagrams)
                if (.not.findmt(idij,icgs,nbw,ibwlist)) cycle
                if (btest(mlevel,4)) then
-                  write(*,*)'diagrams: ',(icgs(k),k=1,icgs(0))
+                  write(*,*)'diagrams: ',(icgs(k),k=1,icgs(0)),i,j,idi,idj
                endif
                if (j.ne.1.and.j.ne.2) then
 c     final state clustering                     

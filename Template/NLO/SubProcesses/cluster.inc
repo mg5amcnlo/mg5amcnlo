@@ -35,3 +35,5 @@ c     parameters for sudakovs
       double precision Q1
       integer iipdg,iimode
       common/gamma_args/Q1,iipdg,iimode
+      integer ifxfx(2)
+      common/c_ifxfx/ifxfx

@@ -252,6 +252,10 @@ c            dj = 2d0*p1(0)*p2(0)*(1d0-costh)    !JADE
       else
         pt1 = p1(1)**2+p1(2)**2
         pt2 = p2(1)**2+p2(2)**2
+        if (pt1.eq.0d0 .or. pt2.eq.0d0) then
+           dj=0d0
+           return
+        endif
         p1a = dsqrt(pt1+p1(3)**2)
         p2a = dsqrt(pt2+p2(3)**2)
         eta1 = 0.5d0*log((p1a+p1(3))/(p1a-p1(3)))
@@ -261,17 +265,17 @@ c        ptm2 = max((p2(0)-p2(3))*(p2(0)+p2(3)),0d0)
         dj = max(p1(4),p2(4))+min(pt1,pt2)*2d0*(cosh(eta1-eta2)-
      &     (p1(1)*p2(1)+p1(2)*p2(2))/dsqrt(pt1*pt2))/D**2
 
-c        write(*,'(a,5e16.4)')'Mom(1): ',(p1(j),j=1,3),p1(0),p1(4)
-c        write(*,'(a,5e16.4)')'Mom(2): ',(p2(j),j=1,3),p2(0),p2(4)
-c       print *,'pT1: ',sqrt(pt1),' pT2: ',sqrt(pt2)
-c       print *,'deltaR: ',sqrt(2d0*(cosh(eta1-eta2)-
-c     &     (p1(1)*p2(1)+p1(2)*p2(2))/dsqrt(pt1*pt2))/D**2),
-c     $      ' m: ',sqrt(SumDot(p1,p2,1d0))
-c     write(*,*) 'p1  = ',p1(0),',',p1(1),',',p1(2),',',p1(3)
-c     write(*,*) 'pm1 = ',pm1,', p1a = ',p1a,'eta1 = ',eta1
-c     write(*,*) 'p2  = ',p2(0),',',p2(1),',',p2(2),',',p2(3)
-c     write(*,*) 'pm2 = ',pm2,', p2a = ',p2a,'eta2 = ',eta2
-c     write(*,*) 'dj = ',dj
+c$$$        write(*,'(a,5e16.4)')'Mom(1): ',(p1(j),j=1,3),p1(0),p1(4)
+c$$$        write(*,'(a,5e16.4)')'Mom(2): ',(p2(j),j=1,3),p2(0),p2(4)
+c$$$       print *,'pT1: ',sqrt(pt1),' pT2: ',sqrt(pt2)
+c$$$       print *,'deltaR: ',sqrt(2d0*(cosh(eta1-eta2)-
+c$$$     &     (p1(1)*p2(1)+p1(2)*p2(2))/dsqrt(pt1*pt2))/D**2),
+c$$$     $      ' m: ',sqrt(SumDot(p1,p2,1d0))
+c$$$      write(*,*) 'p1  = ',p1(0),',',p1(1),',',p1(2),',',p1(3)
+c$$$      write(*,*) 'p1a = ',p1a,'eta1 = ',eta1
+c$$$      write(*,*) 'p2  = ',p2(0),',',p2(1),',',p2(2),',',p2(3)
+c$$$      write(*,*) 'p2a = ',p2a,'eta2 = ',eta2
+c$$$      write(*,*) 'dj = ',dj
       endif
       end
       
