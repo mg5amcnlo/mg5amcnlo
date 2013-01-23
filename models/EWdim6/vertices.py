@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules 1.7.124
+# This file was automatically created by FeynRules 1.7.127
 # Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Fri 18 Jan 2013 14:52:43
+# Date: Tue 22 Jan 2013 16:20:54
 
 
 from object_library import all_vertices, Vertex
