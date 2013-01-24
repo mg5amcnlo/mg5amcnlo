@@ -601,19 +601,21 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         else:
             obj = SmartQuestion
 
-        question_instance = obj(allow_arg=choices, default=default, 
+        question_instance = obj(question, allow_arg=choices, default=default, 
                                                    mother_interface=self, **opt)
-        question_instance.question = question
 
         answer = self.check_answer_in_input_file(question_instance, default, path_msg)
         if answer is not None:
             if ask_class:
-                question_instance.default(answer)
+                answer = question_instance.default(answer)
             return answer
         
+        question = question_instance.question
         value =   Cmd.timed_input(question, default, timeout=timeout,
                                  fct=question_instance, fct_timeout=fct_timeout)
 
+        if value == default and ask_class:
+            value = question_instance.default(default)
         return value
  
     
@@ -1324,8 +1326,9 @@ class SmartQuestion(BasicCmd):
         BasicCmd.preloop(self)
         
 
-    def __init__(self,  allow_arg=[], default=None, mother_interface=None, 
-                                                                   *arg, **opt):
+    def __init__(self, question, allow_arg=[], default=None, 
+                                            mother_interface=None, *arg, **opt):
+        self.question = question
         self.wrong_answer = 0 # forbids infinite loop
         self.allow_arg = [str(a) for a in allow_arg]
         self.history_header = ''
@@ -1351,9 +1354,14 @@ class SmartQuestion(BasicCmd):
             self.stdout.write(line)
             self.stdout.flush()
         try:
-            return Cmd.list_completion(text, self.allow_arg)
+            out = {}
+            out[' Options'] = Cmd.list_completion(text, self.allow_arg)
+            out[' Recognized command'] = BasicCmd.completenames(self, text)
+            
+            return self.deal_multiple_categories(out)
         except Exception, error:
             print error
+            
             
     def reask(self, reprint_opt=True):
         pat = re.compile('\[(\d*)s to answer\]')
@@ -1440,7 +1448,7 @@ class OneLinePathCompletion(SmartQuestion):
             self.stdout.flush()
         try:
             out = {}
-            out[' Options'] = SmartQuestion.completenames(self, text, line)
+            out[' Options'] = Cmd.list_completion(text, self.allow_arg)
             out[' Path from ./'] = Cmd.path_completion(text, only_dirs = False)
             out[' Recognized command'] = BasicCmd.completenames(self, text)
             

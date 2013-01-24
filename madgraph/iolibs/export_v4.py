@@ -1270,7 +1270,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         except OSError as error:
             pass
         model_path = model.get('modelpath')
-        # This is not safe if there is a '##' or '-' in the path.
         shutil.copytree(model_path, 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
