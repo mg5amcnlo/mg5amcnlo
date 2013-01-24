@@ -80,7 +80,8 @@ ML5_processes_long =  [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':
                        ('g g > g g g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}),
                        ('u u~ > z z z',{'QED':3,'QCD':0},['QCD'],{'QCD':2,'QED':6}),
                        ('u d~ > h t b~',{'QED':3,'QCD':0},['QCD'],{'QCD':2,'QED':6}),
-                       ('u u~ > w+ w- z',{'QED':3,'QCD':0},['QCD'],{'QCD':2,'QED':6})]
+                       ('u u~ > w+ w- z',{'QED':3,'QCD':0},['QCD'],{'QCD':2,'QED':6}),
+                       ('g g > g t t~',{'QED':0,'QCD':3},['QCD'],{'QCD':8,'QED':0})]
 
 ML5_processes_long_dic = dict((procToFolderName(elem[0]),elem) for elem in \
                                                              ML5_processes_long)
@@ -281,6 +282,14 @@ class ML5Test(unittest.TestCase):
     #===========================================================================
     # Now the long checks against results previsouly generated in MadLoop 5.
     #===========================================================================
+
+#   ('g g > g t t~ ',{'QED':0,'QCD':3},['QCD'],{'QCD':8,'QED':0})
+    def test_long_sm_vs_stored_ML5_gg_gttx(self):
+        proc = "gg_gttx"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
 
 #   ('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2})
     def test_long_sm_vs_stored_ML5_gg_httx(self):

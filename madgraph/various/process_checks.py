@@ -682,10 +682,13 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
     @classmethod
     def fix_PSPoint_in_check(cls, dir_name, read_ps = True, npoints = 1,
-                             hel_config = -1):
+                             hel_config = -1, mu_r=0.0):
         """Set check_sa.f to be reading PS.input assuming a working dir dir_name.
         if hel_config is different than -1 then check_sa.f is configured so to
-        evaluate only the specified helicity."""
+        evaluate only the specified helicity.
+        If mu_r > 0.0, then the renormalization constant value will be hardcoded
+        directly in check_sa.f, if is is 0 it will be set to Sqrt(s) and if it
+        is < 0.0 the value in the param_card.dat is used."""
 
         file = open(os.path.join(dir_name,'check_sa.f'), 'r')
         check_sa = file.read()
@@ -701,6 +704,12 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         else:
             check_sa = re.sub(r"SLOOPMATRIX\S+\)","SLOOPMATRIX(P,MATELEM)",\
                                                                        check_sa)
+        if mu_r > 0.0:
+            check_sa = re.sub(r"MU_R=SQRTS","MU_R=%s"%\
+                                        (("%.17e"%f).replace('e','d')),check_sa)
+        elif mu_r < 0.0:
+            check_sa = re.sub(r"MU_R=SQRTS","",check_sa)
+            
         file.write(check_sa)
         file.close()
 

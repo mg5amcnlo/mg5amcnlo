@@ -127,9 +127,7 @@
 !---  In standalone mode, always use sqrt_s as the renormalization
 !     scale.
       SQRTS=dsqrt(dabs(DOT(PIN(0),PIN(0))))
-      IF(.NOT.READPS) THEN
-        MU_R=SQRTS
-      ENDIF
+      MU_R=SQRTS
 
 !---  Update the couplings with the new MU_R
       CALL UPDATE_AS_PARAM()
