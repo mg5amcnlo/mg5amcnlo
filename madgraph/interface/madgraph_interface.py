@@ -4696,7 +4696,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         ## Other Output #
         #################
         if not noclean and os.path.isdir(self._export_dir)\
-               and self._export_format in ['madevent', 'standalone','standalone_ms']:
+               and self._export_format in ['madevent', 'standalone']:
             if not force:
                 # Don't ask if user already specified force or noclean
                 logger.info('INFO: directory %s already exists.' % self._export_dir)
