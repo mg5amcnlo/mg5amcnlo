@@ -102,7 +102,7 @@ class ProcessTimer:
       return False
 
     self.t1 = time.time()
-    flash = subprocess.Popen("ps %i -o rss"%self.p.pid,
+    flash = subprocess.Popen("ps -p %i -o rss"%self.p.pid,
                                               shell=True,stdout=subprocess.PIPE)
     stdout_list = flash.communicate()[0].split('\n')
     rss_memory = int(stdout_list[1])
