@@ -2129,6 +2129,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_type': 'condor',
                        'cluster_temp_path': None,
                        'cluster_queue': None,
+                       'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
                        'lhapdf':'lhapdf-config',
                        'cluster_temp_path':None
@@ -4551,7 +4552,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             elif log:
                 logger.info('Note that you have to reload the model') 
 
-		
         elif args[0] == 'fortran_compiler':
             if args[1] != 'None':
                 if log:
@@ -4601,6 +4601,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         elif args[0] in ['timeout', 'auto_update']:
                 self.options[args[0]] = int(args[1]) 
         
+        elif args[0] == 'cluster_status_update':
+            if '(' in args[1]:
+                data = ' '.join([a for a in args[1:] if not a.startswith('-')])
+                data = data.replace('(','').replace(')','').replace(',',' ').split()
+                first, second = data[:2]
+            else: 
+                first, second = args[1:3]            
+            
+            self.options[args[0]] = (int(first), int(second))
+             
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])

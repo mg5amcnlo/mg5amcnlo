@@ -314,6 +314,33 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     helporder = ['Main commands', 'Documented commands', 'Require MG5 directory',
                    'Advanced commands']
 
+    # The three options categories are treated on a different footage when a 
+    # set/save configuration occur. current value are kept in self.options
+    options_configuration = {'pythia8_path': './pythia8',
+                       'madanalysis_path': './MadAnalysis',
+                       'pythia-pgs_path':'./pythia-pgs',
+                       'td_path':'./td',
+                       'delphes_path':'./Delphes',
+                       'exrootanalysis_path':'./ExRootAnalysis',
+                       'MCatNLO-utilities_path':'./MCatNLO-utilities',
+                       'timeout': 60,
+                       'web_browser':None,
+                       'eps_viewer':None,
+                       'text_editor':None,
+                       'fortran_compiler':None,
+                       'auto_update':7,
+                       'cluster_type': 'condor',
+                       'cluster_status_update': (600, 30)}
+    
+    options_madgraph= {'stdout_level':None}
+    
+    options_madevent = {'automatic_html_opening':True,
+                         'run_mode':2,
+                         'cluster_queue':'madgraph',
+                         'nb_core': None,
+                         'cluster_temp_path':None}
+    
+
 
     def __init__(self, me_dir, options, *args, **opts):
         """common"""
@@ -1019,6 +1046,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.options['nb_core'] = self.nb_core
         elif args[0] == 'timeout':
             self.options[args[0]] = int(args[1]) 
+        elif args[0] == 'cluster_status_update':
+            if '(' in args[1]:
+                data = ' '.join([a for a in args[1:] if not a.startswith('-')])
+                data = data.replace('(','').replace(')','').replace(',',' ').split()
+                first, second = data[:2]
+            else: 
+                first, second = args[1:3]            
+            
+            self.options[args[0]] = (int(first), int(second))
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -1047,13 +1083,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             
         if run_mode in [0, 2]:
             self.cluster = cluster.MultiCore(nb_core, 
-                                     temp_dir=self.options['cluster_temp_path'])
+                             cluster_temp_path=self.options['cluster_temp_path'])
             
         if self.cluster_mode == 1:
             opt = self.options
             cluster_name = opt['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](opt['cluster_queue'],
-                                                        opt['cluster_temp_path'])
+            self.cluster = cluster.from_name[cluster_name](**opt)
 
     def add_error_log_in_html(self, errortype=None):
         """If a ME run is currently running add a link in the html output"""
@@ -1127,10 +1162,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def set_configuration(self, config_path=None, final=True, initdir=None, amcatnlo=False):
         """ assign all configuration variable from file 
             ./Cards/mg5_configuration.txt. assign to default if not define """
+            
         if not hasattr(self, 'options') or not self.options:  
             self.options = dict(self.options_configuration)
             self.options.update(self.options_madgraph)
             self.options.update(self.options_madevent) 
+            
         if not config_path:
             if os.environ.has_key('MADGRAPH_BASE'):
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
