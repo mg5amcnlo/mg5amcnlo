@@ -59,7 +59,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.model = None
         
         self.options = {'max_weight': -1, 'BW_effect': 1, 
-                        'curr_dir': os.path.realpath(os.getcwd())}
+                        'curr_dir': os.path.realpath(os.getcwd()),
+                        'Nevents_for_max_weigth': 20,
+                        'max_weight_ps_point': 10000,
+                        'BW_cut':15}
         
 
         
@@ -227,7 +230,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         elif args[0] == 'seed':
             import random
             random.seed(int(args[1]))
-            self.seed = int(args[1]) 
+            self.seed = int(args[1])
+        else:
+             self.options[args[0]] = int(args[1])
     
     def complete_set(self,  text, line, begidx, endidx):
         
@@ -236,7 +241,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         # Format
         if len(args) == 1:
-            opts = ['max_weight', 'BW_effect', 'seed']
+            opts = self.options.keys() + ['seed']
             return self.list_completion(text, opts) 
         elif len(args) == 2:
             if args[1] == 'BW_effect':

@@ -488,7 +488,7 @@ class dc_branch(dict):
                     self.banner.param["Block mass"][abs(self.label2pid[self["tree"][res]["d2"]["label"]])]=mass
 
 
-    def transpole(self,pole,width):
+    def transpole(self,pole,width, BW_cut):
 
         """ routine for the generation of a p^2 according to 
             a Breit Wigner distribution
@@ -496,8 +496,8 @@ class dc_branch(dict):
             [ M_pole^2 - 30*M_pole*Gamma , M_pole^2 + 30*M_pole*Gamma ] 
         """
 
-        zmin = math.atan(-30.0)/width
-        zmax = math.atan(30.0)/width
+        zmin = math.atan(-BW_cut)/width
+        zmax = math.atan(BW_cut)/width
 
         z=zmin+(zmax-zmin)*random.random()
         y = pole+width*math.tan(width*z)
@@ -505,7 +505,7 @@ class dc_branch(dict):
         jac=(width/math.cos(width*z))**2*(zmax-zmin)
         return y, jac
 
-    def generate_momenta(self,mom_init,ran, pid2width,pid2mass,resonnances,BW_effects):
+    def generate_momenta(self,mom_init,ran, pid2width,pid2mass,resonnances,BW_cut):
         """Generate the momenta in each decay branch 
              If ran=1: the generation is random, with 
                                      a. p^2 of each resonance generated according to a BW distribution 
@@ -558,7 +558,7 @@ class dc_branch(dict):
 #         or set to the pole mass (external leg or BW mode off)
 #         If ran=0, just read the value from the previous generation of momenta 
 #                             (this is used for reshuffling purposes) 
-            if d1>0 or not BW_effects :
+            if d1>0 or not BW_cut :
                 mB=float(self.banner.get('param_card', 'mass', 
                          abs(self.label2pid[self["tree"][res]["d1"]["label"]])).value)
             elif ran==0:    # reshuffling phase
@@ -569,7 +569,7 @@ class dc_branch(dict):
 #             Just a convention
                 pole=0.25         #pid2mass[pid]**2/mA**2
                 width=pid2width[pid]*pid2mass[pid]/(4.0*pid2mass[pid]**2)     #/mA**2
-                mB, jac=self.transpole(pole,width)
+                mB, jac=self.transpole(pole,width, BW_cut)
                 mB=math.sqrt(mB*4.0*pid2mass[pid]**2)
 #             record the mass for the reshuffling phase, 
 #             in case the point passes the reweighting creteria
@@ -577,7 +577,7 @@ class dc_branch(dict):
 #             update the weigth of the phase-space point
                 weight=weight*jac
 
-            if d2>0 or not BW_effects:
+            if d2>0 or not BW_cut:
                 mC=float(self.banner.get('param_card', 'mass', 
                     abs(self.label2pid[self["tree"][res]["d2"]["label"]])).value)
             elif ran==0:
@@ -588,7 +588,7 @@ class dc_branch(dict):
 #             Just a convention
                 pole=0.25    #pid2mass[pid]**2/mA**2
                 width=pid2width[pid]*pid2mass[pid]/(4.0*pid2mass[pid]**2) #mA**2
-                mC, jac=self.transpole(pole,width)
+                mC, jac=self.transpole(pole,width, BW_cut)
                 mC=math.sqrt(mC*4.0*pid2mass[pid]**2)
 #             record the mass for the reshuffling phase, 
 #             in case the point passes the reweighting creteria
@@ -1653,7 +1653,7 @@ class decay_misc:
    
 
     def decay_one_event(self,curr_event,decay_struct,pid2color_dico,\
-                        to_decay, pid2width,pid2mass,resonnances,BW_effects,ran=1):
+                        to_decay, pid2width,pid2mass,resonnances,BW_cut,ran=1):
 
 # Consider the production event recorded in "curr_event", and decay it
 # according to the structure recoreded in "decay_struct".
@@ -1691,8 +1691,9 @@ class decay_misc:
                     # sanity check
                     if mom_init.m<1e-6:
                         logger.debug('Decaying particle with mass less than 1e-6 GeV in decay_one_event')
+                    
                     decay_products, jac=decay_struct[branch_id].generate_momenta(mom_init,\
-                                        ran, pid2width,pid2mass,resonnances,BW_effects)
+                                        ran, pid2width,pid2mass,resonnances,BW_cut)
 
                     if ran==1:
                         if decay_products==0: return 0, 0
@@ -2318,82 +2319,6 @@ class decay_misc:
                     if part >0: # reset the mass only if "part" is an external particle
                         topo["branchings"][-2]["m2"]=math.sqrt(topo["get_mass2"][part])
 
-
-    def transpole(self,pole,width):
-
-        """ routine for the generation of a p^2 according to 
-            a Breit Wigner distribution
-            the generation window is 
-            [ M_pole^2 - 30*M_pole*Gamma , M_pole^2 + 30*M_pole*Gamma ] 
-        """
-
-        zmin = math.atan(-30.0)/width
-        zmax = math.atan(30.0)/width
-
-        z=zmin+(zmax-zmin)*random.random()
-        y = pole+width*math.tan(width*z)
-
-        jac=(width/math.cos(width*z))**2*(zmax-zmin)
-        return y, jac
-
-
-    def generate_BW_masses (self,topo, to_decay, pid2name, pid2width, pid2mass,s):
-        """Generate the BW masses of the particles to be decayed in the production event    """    
-
-        weight=1.0
-        for part in topo["get_id"].keys():
-            pid=topo["get_id"][part]
-            if pid2name[pid] in to_decay:
-                mass=0.25
-                width=pid2width[pid]*pid2mass[pid]/(2.0*pid2mass[pid])**2
-                virtualmass2, jac=self.transpole(mass,width)
-                virtualmass2=virtualmass2*(2.0*pid2mass[pid])**2
-                weight=weight*jac
-                #print "need to generate BW mass of "+str(part)
-                ##print "mass: "+str(pid2mass[pid])
-                #print "width: "+str(pid2width[pid])
-                #print "virtual mass: "+str(math.sqrt(virtualmass2))
-                #print "jac: "+str(jac)
-                old_mass=topo["get_mass2"][part]
-                topo["get_mass2"][part]=virtualmass2
-                # sanity check
-                if pid2mass[pid]<1e-6:
-                    logger.debug('A decaying particle has a mass of less than 1e-6 GeV')
-# for debugg purposes:
-                if abs((pid2mass[pid]-math.sqrt(topo["get_mass2"][part]))/pid2mass[pid])>1.0 :
-                    logger.debug('Mass after BW smearing affected by more than 100 % (1)') 
-                    logger.debug('Pole mass: '+str(pid2mass[pid]))
-                    logger.debug('Virtual mass: '+str(math.sqrt(topo["get_mass2"][part])))
-                                       
-                #print topo["get_mass2"]         
-
-#    need to check if last branch is a t-branching. If it is, 
-#    we need to update the value of branch["m2"]
-
-        if len(topo["branchings"])>0:  # Exclude 2>1 self.topologiesopologies
-            if topo["branchings"][-1]["type"]=="t":
-                if topo["branchings"][-2]["type"]!="t":
-                    logger.debug('last branching is t-channel')
-                    logger.debug('but last-but-one branching is not t-channel')
-                else:
-                    part=topo["branchings"][-1]["index_d2"] 
-                    if part >0: # reset the mass only if "part" refers to an external particle 
-                        old_mass=topo["branchings"][-2]["m2"]
-                        topo["branchings"][-2]["m2"]=math.sqrt(topo["get_mass2"][part])
-                        #sanity check
-
-                        if abs(old_mass-topo["branchings"][-2]["m2"])>1e-10:
-                            if abs((old_mass-topo["branchings"][-2]["m2"])/old_mass)>1.0 :
-                                logger.debug('Mass after BW smearing affected by more than 100 % (2)')
-                                logger.debug('Previous value: '+ str(old_mass))
-                                logger.debug('New mass: '+ str((topo["branchings"][-2]["m2"])))
-                                try:
-                                    pid=topo["get_id"][part]
-                                    logger.debug('pole mass: %s' % pid2mass[pid])
-                                except Exception:
-                                    pass
-        return weight
-
     @staticmethod
     def modify_param_card(pid2widths, path_me):
         """Modify the param_card w/r to what is read from the banner:
@@ -2826,20 +2751,15 @@ class decay_all_events:
         #==========================================================================
         decay_me_tags, map_decay_me = self.get_identical_decay(resonances)
         
-        
-
-# Estimation of the maximum weight
-#=================================
-        self.evtfile.seek(0)
- 
-        os.system("date")
-# Now we are ready to start the evaluation of the maximum weight 
+        # Estimation of the maximum weight
+        #=================================
         if max_weight_arg>0:
             max_weight={}
-            for tag_decay in decay_me_tags: max_weight[tag_decay]=max_weight_arg
+            for tag_decay in decay_me_tags: 
+                max_weight[tag_decay]=max_weight_arg
         else:
-            numberev=20                   # number of events
-            numberps=10000                # number of phase pace points per event
+            numberev = self.options['Nevents_for_max_weigth'] # number of events
+            numberps = self.options['max_weight_ps_point'] # number of phase pace points per event
 
             logger.info('  ')
             logger.info('   Estimating the maximum weight    ')
@@ -2859,17 +2779,8 @@ class decay_all_events:
                     probe_weight[ev][tag_decay]=0.0
                 tag_production, to_decay_label, to_decay_map = self.load_event(decay_me_tags)
 
-                p, p_str=curr_event.give_momenta()
-#            Note here that no momentum reshuffling is done, 
-#            since we don't know yet which topology should be used.    
-#            so light quarks and gluons in the final state may have a small mass
+                mg5_me_prod, prod_values = self.evaluate_me_production(tag_production)
 
-                
-                prod_values = self.calculate_matrix_element('prod', 
-                                         self.production_path[tag_production], p_str)
-                prod_values=prod_values.replace("\n", "")
-                prod_values=prod_values.split()
-                mg5_me_prod = float(prod_values[0])
 
                 tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
 
@@ -2902,39 +2813,8 @@ class decay_all_events:
                     decay_tools.set_light_parton_massless(self.topologiesopologies[tag_production][tag_topo])
 
                 for dec in range(numberps):
-
-#        try to reshuffle the momenta 
-                    if  BW_effects:
-                        try_reshuffle=0
-                        while 1:
-                            try_reshuffle+=1
-                            BW_weight_prod=decay_tools.generate_BW_masses(\
-                                            self.topologiesopologies[tag_production][tag_topo], \
-                                            to_decay_label.values(),self.pid2label, self.pid2width,self.pid2mass, \
-                                            curr_event.shat)
-                            
-                            succeed=self.topologiesopologies[tag_production][tag_topo].reshuffle_momenta()
-                            # sanlity check
-                            for part in self.topologiesopologies[tag_production][tag_topo]['get_momentum'].keys():
-                                if part in to_decay_map and \
-                                self.topologiesopologies[tag_production][tag_topo]['get_momentum'][part].m<1.0:
-                                    logger.debug('Mass of a particle to decay is less than 1 GeV')
-                                    logger.debug('in reshuffling loop')
-                            # end sanity check
-                            if succeed: break
-                            if try_reshuffle==10:
-                                logger.debug( 'tried 10x to reshuffle the momenta, failed')
-                                logger.debug( ' So let us try with another topology')
-                                tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
-                                self.topologiesopologies[tag_production][tag_topo].dress_topo_from_event(\
-                                                                                    curr_event,to_decay_label)
-                                self.topologiesopologies[tag_production][tag_topo].extract_angles()
-                                # keep original masses in the event
-#                                decay_tools.set_light_parton_massless(self.topologiesopologies\
-#                                                            [tag_production][tag_topo])
-                                try_reshuffle=0
-                    else: 
-                        BW_weight_prod=1.0
+                    BW_weight_prod, tag_topo = self.reshuffle_event(tag_production, tag_topo, 
+                                      to_decay_label, to_decay_map, prod_values)
 
                     self.topologiesopologies[tag_production][tag_topo].topo2event(curr_event,to_decay_label)
 
@@ -2947,27 +2827,19 @@ class decay_all_events:
 #                   There might be several decay channels -> loop over them
 
                     for tag_decay in decay_me_tags:
-
+                        BW_cut = self.options['BW_cut'] if BW_effects else 0
                         decayed_event, BW_weight_decay=decay_tools.decay_one_event(\
                                             curr_event,self.decay_struct[tag_production][tag_decay], \
                                             self.pid2color, to_decay_map, self.pid2width, \
-                                            self.pid2mass, resonances,BW_effects)
+                                            self.pid2mass, resonances,BW_cut)
 
                         if decayed_event==0:
                             logger.warning('failed to decay event properly')
                             continue
-#     set the momenta for the production event and the decayed event:
-                        p, p_str=curr_event.give_momenta()    
-                        p_full, p_full_str=decayed_event.give_momenta()    
-
-#     start with production weight:
-                        prod_values =self.calculate_matrix_element('prod',
-                                         self.production_path[tag_production], p_str)
-
-                        prod_values=prod_values.replace("\n", "")
-                        prod_values=prod_values.split()
-                        mg5_me_prod = float(prod_values[0])
-#     then decayed weight:
+                        
+                        mg5_me_prod, prod_values = self.evaluate_me_production(tag_production)
+                        #     then decayed weight:
+                        p_full, p_full_str=decayed_event.give_momenta() 
                         full_values =self.calculate_matrix_element('full',
                                          self.decay_path[tag_production][tag_decay], p_full_str)
 
@@ -2983,7 +2855,7 @@ class decay_all_events:
                         if (weight>probe_weight[ev][tag_decay]): probe_weight[ev][tag_decay]=weight
 
                 for  index,tag_decay in enumerate(decay_me_tags):
-                  logger.info('Event '+str(ev+1)+\
+                    logger.info('Event '+str(ev+1)+\
                             ' , decay config '+str(index+1)+' : '+str(probe_weight[ev][tag_decay])+' %s' % running_time)
 
 # Computation of the maximum weight used in the unweighting procedure
@@ -3004,8 +2876,6 @@ class decay_all_events:
 #                logger.info('     -> W_max = average + 4 * standard deviation')
                 max_weight[tag_decay]=ave_weight+4.0*std_weight
                 logger.info('      Using maximum weight '+str(max_weight[tag_decay]))
-
-
 #
         os.system("date")
         logger.info(' ' )
@@ -3063,16 +2933,9 @@ class decay_all_events:
                 running_time = misc.format_timer(time.time()-starttime)
                 logger.info('Event nb %s %s' % (event_nb, running_time))
             trial_nb=0
-
-
-
-# First evaluate production matrix element
-            p, p_str=curr_event.give_momenta()
-            prod_values = self.calculate_matrix_element('prod', 
-                                         self.production_path[tag_production], p_str)
-            prod_values=prod_values.replace("\n", "")
-            prod_values=prod_values.split()
-            mg5_me_prod = float(prod_values[0])
+            
+            # First evaluate production matrix element            
+            mg5_me_prod, prod_values = self.evaluate_me_production(tag_production)
 
 #     select topology based on sigle-diagram weights
             tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
@@ -3085,55 +2948,26 @@ class decay_all_events:
                 decay_tools.set_light_parton_massless(self.topologiesopologies[tag_production][tag_topo])
 
             while 1:
-                trial_nb+=1
-
-#         try to reshuffle the event:
-                if BW_effects:
-                    try_reshuffle=0
-                    while 1:
-                        try_reshuffle+=1
-                        BW_weight_prod=decay_tools.generate_BW_masses(self.topologiesopologies[tag_production][tag_topo], \
-                                                        to_decay_label.values(),self.pid2label, self.pid2width,self.pid2mass, \
-                                                        curr_event.shat)
-                        succeed=self.topologiesopologies[tag_production][tag_topo].reshuffle_momenta()
-                        if succeed: break
-                        if try_reshuffle==10:
-                            logger.debug('WARNING: tried 10x to reshuffle the momenta, failed')
-                            logger.debug(' So let us try with another topology')
-#                        print "Event: "+str(event_nb)
-#                        self.topologiesopologies[tag_production][tag_topo].print_topo()
-                            tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
-                            self.topologiesopologies[tag_production][tag_topo].dress_topo_from_event(curr_event,to_decay_label)
-                            self.topologiesopologies[tag_production][tag_topo].extract_angles()
-
-                            # keep original masses in the production event
-#                            decay_tools.set_light_parton_massless(self.topologiesopologies[tag_production][tag_topo])
-                            try_reshuffle=0
-
-                else:
-                    BW_weight_prod=1.0
+                BW_weight_prod, tag_topo = self.reshuffle_event(tag_production, tag_topo, 
+                                      to_decay_label, to_decay_map, prod_values)
 
 #               Here we need to select a decay configuration on a random basis:
                 tag_decay=decay_tools.generate_tag_decay(self.multi_decay_processes,decay_tags)
 
                 self.topologiesopologies[tag_production][tag_topo].topo2event(curr_event,to_decay_label)
+                BW_cut = self.options['BW_cut'] if BW_effects else 0
                 decayed_event, BW_weight_decay=decay_tools.decay_one_event(curr_event,self.decay_struct[tag_production][tag_decay], \
-                                            self.pid2color, to_decay_map, self.pid2width, self.pid2mass, resonances,BW_effects)
+                                            self.pid2color, to_decay_map, self.pid2width, self.pid2mass, resonances,BW_cut)
 
                 if decayed_event==0: 
                     logger.info('failed to decay one event properly')
                     continue # means we had mA<mB+mC in one splitting A->B+C
-                p, p_str=curr_event.give_momenta()    
-                p_full, p_full_str=decayed_event.give_momenta()    
- 
-#        Now evaluate the matrix elements ...
-#            start with production weight: 
-                prod_values = self.calculate_matrix_element('prod', 
-                                         self.production_path[tag_production], p_str)
-                prod_values=prod_values.replace("\n", "")
-                prod_values=prod_values.split()
-                mg5_me_prod = float(prod_values[0])
+                
+                
+                mg5_me_prod, prod_values = self.evaluate_me_production(tag_production)
+
 #            then decayed weight:
+                p_full, p_full_str=decayed_event.give_momenta()
                 full_value = self.calculate_matrix_element('full', 
                                          self.decay_path[tag_production][map_decay_me[tag_decay]], p_full_str)
                 mg5_me_full = float(full_value)
@@ -3164,8 +2998,9 @@ class decay_all_events:
                     else:
                         self.topologiesopologies[tag_production][tag_topo].topo2event(curr_event,to_decay_label)
                     curr_event.reset_resonances() # re-evaluate the momentum of each resonance in prod. event
+                    BW_cut = self.options['BW_cut'] if BW_effects else 0
                     decayed_event, BW_weight_decay=decay_tools.decay_one_event(curr_event,self.decay_struct[tag_production][tag_decay], \
-                                            self.pid2color, to_decay_map, self.pid2width, self.pid2mass, resonances,BW_effects,ran=0)
+                                            self.pid2color, to_decay_map, self.pid2width, self.pid2mass, resonances,BW_cut,ran=0)
                     decayed_event.wgt=decayed_event.wgt*sum_br*float(symm_fac)
                     outputfile.write(decayed_event.string_event())
 #                print "number of trials: "+str(trial_nb)
@@ -3181,12 +3016,12 @@ class decay_all_events:
         logger.info('Average number of trial points per production event: '\
             +str(float(trial_nb_all_events)/float(event_nb)))
         logger.info('Number of subprocesses '+str(len(self.decay_path)))
-	self.terminate_fortran_executables()
+        self.terminate_fortran_executables()
         shutil.rmtree(pjoin(self.path_me,'production_me'))
         shutil.rmtree(pjoin(self.path_me,'full_me'))
 
-	# set the environment variable GFORTRAN_UNBUFFERED_ALL 
-	# to its original value
+        # set the environment variable GFORTRAN_UNBUFFERED_ALL 
+        # to its original value
         os.environ['GFORTRAN_UNBUFFERED_ALL']='n'
 
 
@@ -3390,8 +3225,10 @@ class decay_all_events:
                 else:
                     self.calculator_nbcall[key] = self.calculator_nbcall[key] //10
         
-        
-        return prod_values
+        if mode == 'prod':
+            return prod_values
+        else:
+            return float(prod_values)
     
     
     def load_event(self, decay_me_tags):
@@ -3448,6 +3285,63 @@ class decay_all_events:
             logger.debug('Done.')
         return tag_production, to_decay_label, to_decay_map
         
+    def reshuffle_event(self, tag_production, tag_topo, to_decay_label, to_decay_map, prod_values):
+        """reshuffle event"""
+        
+        decay_tools = decay_misc()
+        
+        try_reshuffle=0
+        while 1:
+            try_reshuffle+=1
+            if try_reshuffle > 10:
+                logger.debug('current %s' % try_reshuffle)                
+            BW_weight_prod = self.generate_BW_masses(\
+                   self.topologiesopologies[tag_production][tag_topo], \
+                   to_decay_label.values(),self.pid2label, self.pid2width,self.pid2mass, \
+                   self.curr_event.shat)
+
+            succeed=self.topologiesopologies[tag_production][tag_topo].reshuffle_momenta()
+            # sanlity check
+            for part in self.topologiesopologies[tag_production][tag_topo]['get_momentum'].keys():
+                if part in to_decay_map and \
+                       self.topologiesopologies[tag_production][tag_topo]['get_momentum'][part].m<1.0:
+                    logger.debug('Mass of a particle to decay is less than 1 GeV')
+                    logger.debug('in reshuffling loop')
+            # end sanity check
+            if succeed:
+                if try_reshuffle > 10:
+                    logger.debug('pass at %s' % try_reshuffle)
+                break
+            if try_reshuffle % 10 == 0:
+                logger.debug( 'tried %ix to reshuffle the momenta, failed'% try_reshuffle)
+                logger.debug( ' So let us try with another topology')
+                tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
+                self.topologiesopologies[tag_production][tag_topo].dress_topo_from_event(\
+                                                         self.curr_event,to_decay_label)
+                self.topologiesopologies[tag_production][tag_topo].extract_angles()
+
+                # sometimes not possible to set the masses of the external partons to zero,
+                # keep the original masses
+#                    decay_tools.set_light_parton_massless(self.topologiesopologies\
+#                                              [tag_production][tag_topo])
+                continue
+                #try_reshuffle=0
+                if try_reshuffle >100:
+                    misc.sprint('fail 100 times')
+                    break
+ 
+        return BW_weight_prod, tag_topo
+ 
+        
+    def evaluate_me_production(self, tag_production):
+        """return the numerical value of the matrix element"""
+        p, p_str=self.curr_event.give_momenta()
+        prod_values = self.calculate_matrix_element('prod',
+                               self.production_path[tag_production], p_str)
+        prod_values=prod_values.replace("\n", "")
+        prod_values=prod_values.split()
+        mg5_me_prod = float(prod_values[0])
+        return mg5_me_prod, prod_values
         
     def get_identical_decay(self, resonances):
         """identify the various decay which are identical to each other"""
@@ -3464,13 +3358,9 @@ class decay_all_events:
         # load the first event and create all production/decay channel
         tag_production, to_decay_label, to_decay_map = self.load_event(decay_tags)
 
+        mg5_me_prod, prod_values = self.evaluate_me_production(tag_production)
+
         # select a topology for the reshuffling
-        p, p_str=curr_event.give_momenta()
-        prod_values = self.calculate_matrix_element('prod',
-                               self.production_path[tag_production], p_str)
-        prod_values=prod_values.replace("\n", "")
-        prod_values=prod_values.split()
-        mg5_me_prod = float(prod_values[0])
         tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
 
         # extract the canonical phase-space variable based on that topology       
@@ -3480,99 +3370,122 @@ class decay_all_events:
         # Breit-Wigner effects + reshuffling      
         decay_tools.set_light_parton_massless(self.topologiesopologies[tag_production][tag_topo])
         for dec in range(100):
-            try_reshuffle=0
-            while 1:
-                try_reshuffle+=1
-                if try_reshuffle > 10:
-                    logger.debug('current %s' % try_reshuffle)                
-                BW_weight_prod=decay_tools.generate_BW_masses(\
-                       self.topologiesopologies[tag_production][tag_topo], \
-                       to_decay_label.values(),self.pid2label, self.pid2width,self.pid2mass, \
-                       curr_event.shat)
-
-                succeed=self.topologiesopologies[tag_production][tag_topo].reshuffle_momenta()
-                # sanlity check
-                for part in self.topologiesopologies[tag_production][tag_topo]['get_momentum'].keys():
-                    if part in to_decay_map and \
-                           self.topologiesopologies[tag_production][tag_topo]['get_momentum'][part].m<1.0:
-                        logger.debug('Mass of a particle to decay is less than 1 GeV')
-                        logger.debug('in reshuffling loop')
-                # end sanity check
-                if succeed:
-                    if try_reshuffle > 10:
-                        logger.debug('pass at %s' % try_reshuffle)
-                    break
-                if try_reshuffle % 10 == 0:
-                    logger.debug( 'tried %ix to reshuffle the momenta, failed'% try_reshuffle)
-                    logger.debug( ' So let us try with another topology')
-                    tag_topo, cumul_proba=decay_tools.select_one_topo(prod_values)
-                    self.topologiesopologies[tag_production][tag_topo].dress_topo_from_event(\
-                                                             curr_event,to_decay_label)
-                    self.topologiesopologies[tag_production][tag_topo].extract_angles()
-
-                    # sometimes not possible to set the masses of the external partons to zero,
-                    # keep the original masses
-#                    decay_tools.set_light_parton_massless(self.topologiesopologies\
-#                                              [tag_production][tag_topo])
-                    continue
-                    #try_reshuffle=0
-                    if try_reshuffle >100:
-                        misc.sprint('fail 100 times')
-                        break
-
-
-            decayed_event, BW_weight_decay=decay_tools.decay_one_event(\
+            BW_weight_prod, tag_topo = self.reshuffle_event(tag_production, tag_topo, 
+                                      to_decay_label, to_decay_map, prod_values)
+            BW_cut = self.options['BW_cut'] if BW_effects else 0
+            decayed_event, BW_weight_decay = decay_tools.decay_one_event(\
                      curr_event,self.decay_struct[tag_production][decay_tags[0]], \
                      self.pid2color, to_decay_map, self.pid2width, \
-                     self.pid2mass, resonances,BW_effects)
+                     self.pid2mass, resonances,BW_cut)
 
             if decayed_event==0:
                 logger.warning('failed to decay event properly')
                 continue
             for tag_decay in decay_tags:
-#     set the momenta for the production event and the decayed event:
-                p, p_str=curr_event.give_momenta()
+                #     set the momenta for the production event and the decayed event:
+                mg5_me_prod, prod_values = self.evaluate_me_production(tag_production)
                 p_full, p_full_str=decayed_event.give_momenta()
-
-#     Evaluate matrix elements
-#     start with production weight:
-                prod_values =self.calculate_matrix_element('prod',
-                 self.production_path[tag_production], p_str)
-
-                prod_values=prod_values.replace("\n", "")
-                prod_values=prod_values.split()
-                mg5_me_prod = float(prod_values[0])
-#     then decayed weight:
-                full_values =self.calculate_matrix_element('full',
+                #     then decayed weight:
+                mg5_me_full =self.calculate_matrix_element('full',
                             self.decay_path[tag_production][tag_decay], p_full_str)
-
-                mg5_me_full = float(full_values)
-                    #mg5_me_full = float(external.communicate(input=p_full_str)[0])
-                mg5_me_full=mg5_me_full*BW_weight_prod*BW_weight_decay
                 os.chdir(self.curr_dir)
-                if(not mg5_me_full>0 or not mg5_me_prod >0 ):
-                    logger.warning('WARNING: NEGATIVE MATRIX ELEMENT !!')
-                weight=mg5_me_full/mg5_me_prod
+                weight=mg5_me_full*BW_weight_prod*BW_weight_decay/mg5_me_prod
                 check_weights[tag_decay].append(weight)
 
 #       verify if some matrix elements are identical up to an overal factor                
         map_decay_me={}
         decay_me_tags=[]
         for tag_decay in decay_tags:
-             tag=decay_tools.check_decay_tag(tag_decay,map_decay_me.values(),check_weights)
-             if tag==0:
-                 map_decay_me[tag_decay]=tag_decay
-                 decay_me_tags.append(tag_decay)
-             else:
-                 map_decay_me[tag_decay]=tag
-                 self.terminate_fortran_executables(self.decay_path[tag_production][tag_decay])
-                 shutil.rmtree(pjoin(self.path_me,'full_me', 'SubProcesses',self.decay_path[tag_production][tag_decay]))
+            tag=decay_tools.check_decay_tag(tag_decay,map_decay_me.values(),check_weights)
+            if tag==0:
+                map_decay_me[tag_decay]=tag_decay
+                decay_me_tags.append(tag_decay)
+            else:
+                map_decay_me[tag_decay]=tag
+                self.terminate_fortran_executables(self.decay_path[tag_production][tag_decay])
+                shutil.rmtree(pjoin(self.path_me,'full_me', 'SubProcesses',self.decay_path[tag_production][tag_decay]))
 
         logger.info('Out of %d decay channels, %s matrix elements are independent ' % (len(decay_tags), len(decay_me_tags)))
 #        for tag in decay_me_tags:
 #            logger.info(self.multi_decay_processes[tag])
+        self.evtfile.seek(0)
         return decay_me_tags, map_decay_me
         
+    def transpole(self,pole,width):
 
+        """ routine for the generation of a p^2 according to 
+            a Breit Wigner distribution
+            the generation window is 
+            [ M_pole^2 - 30*M_pole*Gamma , M_pole^2 + 30*M_pole*Gamma ] 
+        """
+
+        gap = float(self.options['BW_cut'])
+
+        zmin = math.atan(-gap)/width
+        zmax = math.atan(gap)/width
+
+        z=zmin+(zmax-zmin)*random.random()
+        y = pole+width*math.tan(width*z)
+
+        jac=(width/math.cos(width*z))**2*(zmax-zmin)
+        return y, jac
+
+
+    def generate_BW_masses (self,topo, to_decay, pid2name, pid2width, pid2mass,s):
+        """Generate the BW masses of the particles to be decayed in the production event    """    
+
+        weight=1.0
+        for part in topo["get_id"].keys():
+            pid=topo["get_id"][part]
+            if pid2name[pid] in to_decay:
+                mass=0.25
+                width=pid2width[pid]*pid2mass[pid]/(2.0*pid2mass[pid])**2
+                virtualmass2, jac=self.transpole(mass,width)
+                virtualmass2=virtualmass2*(2.0*pid2mass[pid])**2
+                weight=weight*jac
+                #print "need to generate BW mass of "+str(part)
+                ##print "mass: "+str(pid2mass[pid])
+                #print "width: "+str(pid2width[pid])
+                #print "virtual mass: "+str(math.sqrt(virtualmass2))
+                #print "jac: "+str(jac)
+                old_mass=topo["get_mass2"][part]
+                topo["get_mass2"][part]=virtualmass2
+                # sanity check
+                if pid2mass[pid]<1e-6:
+                    logger.debug('A decaying particle has a mass of less than 1e-6 GeV')
+# for debugg purposes:
+                if abs((pid2mass[pid]-math.sqrt(topo["get_mass2"][part]))/pid2mass[pid])>1.0 :
+                    logger.debug('Mass after BW smearing affected by more than 100 % (1)') 
+                    logger.debug('Pole mass: '+str(pid2mass[pid]))
+                    logger.debug('Virtual mass: '+str(math.sqrt(topo["get_mass2"][part])))
+                                       
+                #print topo["get_mass2"]         
+
+#    need to check if last branch is a t-branching. If it is, 
+#    we need to update the value of branch["m2"]
+
+        if len(topo["branchings"])>0:  # Exclude 2>1 self.topologiesopologies
+            if topo["branchings"][-1]["type"]=="t":
+                if topo["branchings"][-2]["type"]!="t":
+                    logger.debug('last branching is t-channel')
+                    logger.debug('but last-but-one branching is not t-channel')
+                else:
+                    part=topo["branchings"][-1]["index_d2"] 
+                    if part >0: # reset the mass only if "part" refers to an external particle 
+                        old_mass=topo["branchings"][-2]["m2"]
+                        topo["branchings"][-2]["m2"]=math.sqrt(topo["get_mass2"][part])
+                        #sanity check
+
+                        if abs(old_mass-topo["branchings"][-2]["m2"])>1e-10:
+                            if abs((old_mass-topo["branchings"][-2]["m2"])/old_mass)>1.0 :
+                                logger.debug('Mass after BW smearing affected by more than 100 % (2)')
+                                logger.debug('Previous value: '+ str(old_mass))
+                                logger.debug('New mass: '+ str((topo["branchings"][-2]["m2"])))
+                                try:
+                                    pid=topo["get_id"][part]
+                                    logger.debug('pole mass: %s' % pid2mass[pid])
+                                except Exception:
+                                    pass
+        return weight
 
 
