@@ -326,7 +326,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     del self.list_branches[str(particle)][0] 
                     
         if not self.decay_processes:
-            logger.info("327Nothing to decay ...")
+            logger.info("Nothing to decay ...")
             return
 
         model_line = self.banner.get('proc_card', 'full_model_line')

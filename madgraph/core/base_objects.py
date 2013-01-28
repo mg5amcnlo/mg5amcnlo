@@ -2620,6 +2620,34 @@ class Process(PhysicsObject):
                        leg.get('number') == number,
                        self.get('legs'))[0].get('id')
 
+    def get_initial_final_ids(self):
+        """return a tuple of two tuple containing the id of the initial/final
+           state particles. Each list is ordered"""
+           
+        initial = []
+        final = [l.get('id') for l in self.get('legs')\
+              if l.get('state') or initial.append(l.get('id'))]
+        initial.sort()
+        final.sort()
+        return (tuple(initial), tuple(final))
+    
+    def get_final_ids_after_decay(self):
+        """Give the pdg code of the process including decay"""
+        
+        finals = self.get_final_ids()
+        to_add = []
+        for proc in self.get('decay_chains'):
+            init = proc.get_initial_ids()[0]
+            while 1:
+                try:
+                    finals.remove(init)
+                except:
+                    break
+            to_add += proc.get_final_ids_after_decay()
+        finals += to_add
+        return finals 
+    
+
     def get_final_legs(self):
         """Gives the final state legs"""
 

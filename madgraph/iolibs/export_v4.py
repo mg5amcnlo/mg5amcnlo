@@ -82,7 +82,7 @@ class ProcessExporterFortran(object):
         """create the directory run_name as a copy of the MadEvent
         Template, and clean the directory
         """
-
+        
         #First copy the full template tree if dir_path doesn't exit
         if not os.path.isdir(self.dir_path):
             assert self.mgme_dir, \
@@ -898,7 +898,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         #First copy the full template tree if dir_path doesn't exit
         if os.path.isdir(self.dir_path):
             return
-       
+        
         logger.info('initialize a new standalone directory: %s' % \
                         os.path.basename(self.dir_path))
         temp_dir = pjoin(self.mgme_dir, 'Template/LO')
@@ -1011,6 +1011,23 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # Create the directory PN_xx_xxxxx in the specified path
         dirpath = pjoin(self.dir_path, 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
+
+        if self.opt['sa_for_decay']:
+            # avoid symmetric output
+            proc = matrix_element.get('processes')[0]
+            leg0 = proc.get('legs')[0]
+            leg1 = proc.get('legs')[1]
+            if not leg1.get('state'):
+                proc.get('legs')[0] = leg1
+                proc.get('legs')[1] = leg0
+                dirpath2 =  pjoin(self.dir_path, 'SubProcesses', \
+                       "P%s" % proc.shell_string())
+                #restore original order
+                proc.get('legs')[1] = leg1
+                proc.get('legs')[0] = leg0                
+                if os.path.exists(dirpath2):
+                    logger.info('Symmetric directory exists')
+                    return 0
 
         try:
             os.mkdir(dirpath)
@@ -1270,6 +1287,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         except OSError as error:
             pass
         model_path = model.get('modelpath')
+        # This is not safe if there is a '##' or '-' in the path.
         shutil.copytree(model_path, 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))

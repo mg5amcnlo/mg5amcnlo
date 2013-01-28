@@ -3613,6 +3613,45 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
  
             #convert and excecute the card
             self.import_mg4_proc_card(proc_card)
+
+    def remove_pointless_decay(self, param_card):
+        """ For simple decay chain: remove diagram that are not in the BR.
+            param_card should be a ParamCard instance."""
+            
+        assert isinstance(param_card, check_param_card.ParamCard)
+        
+        # Collect amplitudes
+        amplitudes = diagram_generation.AmplitudeList()
+        for amp in self._curr_amps:
+            amplitudes.extend(amp.get_amplitudes())
+
+        to_remove = []        
+        for amp in amplitudes:
+            mother = [l.get('id') for l in amp['process'].get('legs') \
+                                                        if not l.get('state')]
+            if 1 == len(mother):
+                decay_table = param_card['decay'].decay_table[abs(mother[0])]
+                # create the tuple associate to the decay mode
+                child = [l.get('id') for l in amp['process'].get('legs') \
+                                                              if l.get('state')]
+                if not mother[0] > 0:
+                    child = [-id for id in child]
+                child.sort()
+                child.insert(0, len(child))
+
+                #check if the decay is present or not:
+                if tuple(child) not in decay_table.keys():
+                    to_remove.append(amp)
+                    
+        def remove_amp(amps):
+            for amp in amps[:]:
+                if amp in to_remove:
+                    amps.remove(amp)
+                if isinstance(amp, diagram_generation.DecayChainAmplitude):
+                    remove_amp(amp.get('decay_chains'))
+                    for decay in amp.get('decay_chains'):
+                        remove_amp(decay.get('amplitudes'))
+        remove_amp(self._curr_amps) 
     
     def import_ufo_model(self, model_name):
         """ import the UFO model """
@@ -4888,11 +4927,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Fortran MadGraph Standalone
         if self._export_format in ['standalone', 'standalone_ms']:
-            for me in matrix_elements:
-                calls = calls + \
-                        self._curr_exporter.generate_subprocess_directory_v4(\
+            for me in matrix_elements[:]:
+                new_calls = self._curr_exporter.generate_subprocess_directory_v4(\
                             me, self._curr_fortran_model)
-
+                if not new_calls:
+                    matrix_elements.remove(me)
+                calls = calls + new_calls
+                
         # Just the matrix.f files
         if self._export_format == 'matrix':
             for me in matrix_elements:
