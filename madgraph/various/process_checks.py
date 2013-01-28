@@ -102,7 +102,7 @@ class ProcessTimer:
       return False
 
     self.t1 = time.time()
-    flash = subprocess.Popen("ps %i -o rss"%self.p.pid,
+    flash = subprocess.Popen("ps -p %i -o rss"%self.p.pid,
                                               shell=True,stdout=subprocess.PIPE)
     stdout_list = flash.communicate()[0].split('\n')
     rss_memory = int(stdout_list[1])
@@ -264,7 +264,8 @@ class MatrixElementEvaluator(object):
     # Helper function evaluate_matrix_element
     #===============================================================================
     def evaluate_matrix_element(self, matrix_element, p=None, full_model=None, 
-                                gauge_check=False, auth_skipping=None, output='m2'):
+                                gauge_check=False, auth_skipping=None, output='m2',
+                                energy=1000):
         """Calculate the matrix element and evaluate it for a phase space point
            output is either m2, amp, jamp
         """
@@ -389,7 +390,7 @@ class MatrixElementEvaluator(object):
 
         # Generate phase space point to use
         if not p:
-            p, w_rambo = self.get_momenta(process)
+            p, w_rambo = self.get_momenta(process, energy)
 
         # Evaluate the matrix element for the momenta p
         exec("data = Matrix_%s()" % process.shell_string())
@@ -409,7 +410,7 @@ class MatrixElementEvaluator(object):
         positive z axis."""
 
         if not (isinstance(process, base_objects.Process) and \
-                isinstance(energy, float)):
+                isinstance(energy, (float,int))):
             raise rambo.RAMBOError, "Not correct type for arguments to get_momenta"
 
         sorted_legs = sorted(process.get('legs'), lambda l1, l2:\
@@ -425,12 +426,22 @@ class MatrixElementEvaluator(object):
         mass = [m.real for m in mass]
         #mass = [math.sqrt(m.real) for m in mass]
 
+
+
         # Make sure energy is large enough for incoming and outgoing particles
         energy = max(energy, sum(mass[:nincoming]) + 200.,
                      sum(mass[nincoming:]) + 200.)
 
-        m1 = mass[0]
+        if nfinal == 1:
+            p = []
+            energy = mass[-1]
+            p.append([energy/2,0,0,energy/2])
+            p.append([energy/2,0,0,-energy/2])
+            p.append([mass[-1],0,0,0])
+            return p, 1.0
 
+        e2 = energy**2
+        m1 = mass[0]
         p = []
 
         masses = rambo.FortranList(nfinal)
@@ -509,7 +520,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
     #===============================================================================
     # Helper function evaluate_matrix_element for loops
     #===============================================================================
-    def evaluate_matrix_element(self, matrix_element, p=None, 
+    def evaluate_matrix_element(self, matrix_element, p=None, energy=1000,
                              gauge_check=False, auth_skipping=None, output='m2', 
                                                   PS_name = None, MLOptions={}):
         """Calculate the matrix element and evaluate it for a phase space point
@@ -533,7 +544,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
         # Generate phase space point to use
         if not p:
-            p, w_rambo = self.get_momenta(process)
+            p, w_rambo = self.get_momenta(process, energy=energy)
         
         if matrix_element in [el[0] for el in \
                                 self.stored_quantities['loop_matrix_elements']]:  
@@ -671,10 +682,13 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
     @classmethod
     def fix_PSPoint_in_check(cls, dir_name, read_ps = True, npoints = 1,
-                             hel_config = -1):
+                             hel_config = -1, mu_r=0.0):
         """Set check_sa.f to be reading PS.input assuming a working dir dir_name.
         if hel_config is different than -1 then check_sa.f is configured so to
-        evaluate only the specified helicity."""
+        evaluate only the specified helicity.
+        If mu_r > 0.0, then the renormalization constant value will be hardcoded
+        directly in check_sa.f, if is is 0 it will be set to Sqrt(s) and if it
+        is < 0.0 the value in the param_card.dat is used."""
 
         file = open(os.path.join(dir_name,'check_sa.f'), 'r')
         check_sa = file.read()
@@ -690,6 +704,12 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         else:
             check_sa = re.sub(r"SLOOPMATRIX\S+\)","SLOOPMATRIX(P,MATELEM)",\
                                                                        check_sa)
+        if mu_r > 0.0:
+            check_sa = re.sub(r"MU_R=SQRTS","MU_R=%s"%\
+                                        (("%.17e"%f).replace('e','d')),check_sa)
+        elif mu_r < 0.0:
+            check_sa = re.sub(r"MU_R=SQRTS","",check_sa)
+            
         file.write(check_sa)
         file.close()
 
@@ -1562,7 +1582,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                         raise
                     else:
                         logger.debug("Recovered from a system call interruption."+\
-                                        "PSpoint #%i, Attempt #%i."%(i,retry+1))                        
+                                        "PSpoint #%i, Attempt #%i."%(i,retry+1))
+                        # Sleep for half a second. Safety measure.
+                        time.sleep(0.5)                        
                     # We will retry this PS point
                     retry = retry+1
                     # Make sure the MadLoop process is properly killed
@@ -1684,7 +1706,7 @@ def evaluate_helicities(process, param_card = None, mg_root="",
     return cumulative_helEvals
     
 def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
-                                opt=None):
+                                opt=None, energy=1000):
     """A wrapper function for running an iteration of a function over
     a multiprocess, without having to first create a process list
     (which makes a big difference for very large multiprocesses.
@@ -1740,11 +1762,11 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
                         value = opt[process.base_string()]
                     except Exception:
                         continue
-                    result = function(process, stored_quantities, value)
+                    result = function(process, stored_quantities, value, energy=energy)
                 else:
-                    result = function(process, stored_quantities, opt)
+                    result = function(process, stored_quantities, opt, energy=energy)
             else:
-                result = function(process, stored_quantities)
+                result = function(process, stored_quantities, energy=energy)
                         
             if result:
                 results.append(result)
@@ -1944,9 +1966,8 @@ def check_timing(process_definition, param_card= None, cuttools="",
 #===============================================================================
 # check_processes
 #===============================================================================
-
 def check_processes(processes, param_card = None, quick = [],cuttools="",
-                                          reuse = False, cmd = FakeInterface()):
+                             energy=1000, reuse = False, cmd = FakeInterface()):
     """Check processes by generating them with all possible orderings
     of particles (which means different diagram building and Helas
     calls), and comparing the resulting matrix element values."""
@@ -1971,7 +1992,8 @@ def check_processes(processes, param_card = None, quick = [],cuttools="",
         results = run_multiprocs_no_crossings(check_process,
                                               multiprocess,
                                               evaluator,
-                                              quick)
+                                              quick,
+                                              energy)
 
         if "used_lorentz" not in evaluator.stored_quantities:
             evaluator.stored_quantities["used_lorentz"] = []
@@ -2020,7 +2042,7 @@ def check_processes(processes, param_card = None, quick = [],cuttools="",
                                  sorted_ids, process, model):
             continue
         # Get process result
-        res = check_process(process, evaluator, quick)
+        res = check_process(process, evaluator, quick, energy)
         if res:
             comparison_results.append(res)
 
@@ -2033,7 +2055,7 @@ def check_processes(processes, param_card = None, quick = [],cuttools="",
     
     return comparison_results, evaluator.stored_quantities["used_lorentz"]
 
-def check_process(process, evaluator, quick):
+def check_process(process, evaluator, quick, energy):
     """Check the helas calls for a process by generating the process
     using all different permutations of the process legs (or, if
     quick, use a subset of permutations), and check that the matrix
@@ -2131,7 +2153,7 @@ def check_process(process, evaluator, quick):
 
         if order == range(1,len(legs) + 1):
             # Generate phase space point to use
-            p, w_rambo = evaluator.get_momenta(process)
+            p, w_rambo = evaluator.get_momenta(process, energy)
 
         # Generate the HelasMatrixElement for the process
         if not isinstance(amplitude,loop_diagram_generation.LoopAmplitude):
@@ -2252,9 +2274,9 @@ def output_stability(stability, mg_root, reusing=False):
           P = accuracy(loop_dir_test) / accuracy(all_test)
         So that P is large if the loop direction test is effective.
         The tuple returned is (log(median(P)),log(min(P)),frac)
-        where frac is the fraction of events with powers smaller than -2
+        where frac is the fraction of events with powers smaller than -3
         which means events for which the reading direction test shows an
-        accuracy two digits higher than it really is according to the other
+        accuracy three digits higher than it really is according to the other
         tests."""
         powers=[]
         for eval in eval_list:
@@ -2336,8 +2358,7 @@ def output_stability(stability, mg_root, reusing=False):
     (pmed,pmin,pfrac)=loop_direction_test_power(stability['DP_stability'])
     res_str += "|= Overall DP loop_dir test power %s,%s\n"\
                                                 %(f(pmed,'%.1f'),f(pmin,'%.1f'))
-    res_str += "|= Fraction of evts with power<-3 %s\n"\
-                                                                %f(pfrac,'%.2e')
+    res_str += "|= Fraction of evts with power<-3 %s\n"%f(pfrac,'%.2e')
     res_str += "\n= Number of Unstable PS points    : %i\n"%len(UPS)
     if len(UPS)>0:
         res_str += "|= DP Median inaccuracy.......... %.2e\n"%median(UPS_stability_DP)
@@ -2356,8 +2377,7 @@ def output_stability(stability, mg_root, reusing=False):
                                  [stability['QP_stability'][U[0]] for U in UPS])
         res_str += "|= UPS QP loop_dir test power.... %s,%s\n"\
                                                 %(f(pmed,'%.1f'),f(pmin,'%.1f'))
-        res_str += "|= UPS QP fraction with power<-3. %s\n"\
-                                                                %f(pfrac,'%.2e')
+        res_str += "|= UPS QP fraction with power<-3. %s\n"%f(pfrac,'%.2e')
         (pmed,pmin,pmax)=test_consistency(\
                                  [stability['DP_stability'][U[0]] for U in UPS],
                                  [stability['QP_stability'][U[0]] for U in UPS])
@@ -2642,7 +2662,7 @@ def fixed_string_length(mystr, length):
 # check_gauge
 #===============================================================================
 def check_gauge(processes, param_card = None,cuttools="", reuse = False, 
-                                                         cmd = FakeInterface()):
+                                     energy=1000, cmd = FakeInterface()):
     """Check gauge invariance of the processes by using the BRS check.
     For one of the massless external bosons (e.g. gluon or photon), 
     replace the polarization vector (epsilon_mu) with its momentum (p_mu)
@@ -2672,7 +2692,9 @@ def check_gauge(processes, param_card = None,cuttools="", reuse = False,
                     evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
         results = run_multiprocs_no_crossings(check_gauge_process,
                                            multiprocess,
-                                           evaluator)
+                                           evaluator,
+                                           energy=energy
+                                           )
         
         if multiprocess.get('perturbation_couplings')!=[] and not reuse:
             # Clean temporary folders created for the running of the loop processes
@@ -2715,7 +2737,7 @@ def check_gauge(processes, param_card = None,cuttools="", reuse = False,
         #    continue
         
         # Get process result
-        result = check_gauge_process(process, evaluator)
+        result = check_gauge_process(process, evaluator,energy=energy)
         if result:
             comparison_results.append(result)
 
@@ -2726,7 +2748,7 @@ def check_gauge(processes, param_card = None,cuttools="", reuse = False,
     return comparison_results
 
 
-def check_gauge_process(process, evaluator):
+def check_gauge_process(process, evaluator, energy=1000):
     """Check gauge invariance for the process, unless it is already done."""
 
     model = process.get('model')
@@ -2779,16 +2801,16 @@ def check_gauge_process(process, evaluator):
     else:
         matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                                optimized_output=evaluator.loop_optimized_output)
-        
+
     brsvalue = evaluator.evaluate_matrix_element(matrix_element, gauge_check = True,
-                                                 output='jamp')
+                                                 output='jamp', energy=energy)
 
     if not isinstance(amplitude,loop_diagram_generation.LoopAmplitude):
         matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = False)
           
     mvalue = evaluator.evaluate_matrix_element(matrix_element, gauge_check = False,
-                                               output='jamp')
+                                               output='jamp', energy=energy)
     
     if mvalue and mvalue['m2']:
         return {'process':process,'value':mvalue,'brs':brsvalue}
@@ -2903,7 +2925,7 @@ def output_gauge(comparison_results, output='text'):
 #===============================================================================
 # check_lorentz
 #===============================================================================
-def check_lorentz(processes, param_card = None,cuttools="", \
+def check_lorentz(processes, param_card = None,cuttools="", energy=1000, \
                                           reuse = False, cmd = FakeInterface()):
     """ Check if the square matrix element (sum over helicity) is lorentz 
         invariant by boosting the momenta with different value."""
@@ -2933,7 +2955,8 @@ def check_lorentz(processes, param_card = None,cuttools="", \
                                                      particle.get('width')] = 0.
         results = run_multiprocs_no_crossings(check_lorentz_process,
                                            multiprocess,
-                                           evaluator)
+                                           evaluator,
+                                           energy=energy)
         
         if multiprocess.get('perturbation_couplings')!=[] and not reuse:
             # Clean temporary folders created for the running of the loop processes
@@ -2976,7 +2999,7 @@ def check_lorentz(processes, param_card = None,cuttools="", \
         #    continue
         
         # Get process result
-        result = check_lorentz_process(process, evaluator)
+        result = check_lorentz_process(process, evaluator,energy=energy)
         if result:
             comparison_results.append(result)
 
@@ -2987,7 +3010,7 @@ def check_lorentz(processes, param_card = None,cuttools="", \
     return comparison_results
 
 
-def check_lorentz_process(process, evaluator):
+def check_lorentz_process(process, evaluator,energy=1000):
     """Check gauge invariance for the process, unless it is already done."""
 
     amp_results = []
@@ -3021,7 +3044,7 @@ def check_lorentz_process(process, evaluator):
         return None
 
     # Generate phase space point to use
-    p, w_rambo = evaluator.get_momenta(process)
+    p, w_rambo = evaluator.get_momenta(process, energy)
 
     # Generate the HelasMatrixElement for the process
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
@@ -3035,7 +3058,7 @@ def check_lorentz_process(process, evaluator):
 
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
         data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
-                                                 auth_skipping = True)
+                                                 auth_skipping = True, energy=energy)
     else:
         data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
                 auth_skipping = True, PS_name = 'original', MLOptions=MLOptions)
@@ -3091,11 +3114,11 @@ def check_lorentz_process(process, evaluator):
         
     return {'process': process, 'results': results}
 
-
 #===============================================================================
 # check_gauge
 #===============================================================================
 def check_unitary_feynman(processes_unit, processes_feynm, param_card=None, 
+                               energy=1000,
                                cuttools="", reuse=False, cmd = FakeInterface()):
     """Check gauge invariance of the processes by flipping
        the gauge of the model
@@ -3127,7 +3150,9 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
 
         output_u = run_multiprocs_no_crossings(get_value,
                                            multiprocess_unit,
-                                           evaluator)
+                                           evaluator,
+                                           energy=energy)
+        
         clean_added_globals(ADDED_GLOBAL)
        # Clear up previous run if checking loop output
         if processes_unit.get('perturbation_couplings')!=[]:
@@ -3158,9 +3183,9 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
                     evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
 
         output_f = run_multiprocs_no_crossings(get_value, multiprocess_feynm,
-                                                            evaluator, momentum)  
+                                                            evaluator, momentum,
+                                                            energy=energy)  
         output = [processes_unit]        
-
         for data in output_f:
             local_dico = {}
             local_dico['process'] = data['process']
@@ -3181,7 +3206,7 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
     else:
         raise InvalidCmd("processes is of non-supported format")
 
-def get_value(process, evaluator, p=None):
+def get_value(process, evaluator, p=None, energy=1000):
     """Return the value/momentum for a phase space point"""
     
     for i, leg in enumerate(process.get('legs')):
@@ -3214,8 +3239,8 @@ def get_value(process, evaluator, p=None):
     
     if not p:
         # Generate phase space point to use
-        p, w_rambo = evaluator.get_momenta(process)
-
+        p, w_rambo = evaluator.get_momenta(process, energy)
+        
     # Generate the HelasMatrixElement for the process
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
         matrix_element = helas_objects.HelasMatrixElement(amplitude,
@@ -3225,7 +3250,7 @@ def get_value(process, evaluator, p=None):
            gen_color = True, optimized_output = evaluator.loop_optimized_output)
 
     mvalue = evaluator.evaluate_matrix_element(matrix_element, p=p,
-                                                                  output='jamp')
+                                               output='jamp')
     
     if mvalue and mvalue['m2']:
         return {'process':process.base_string(),'value':mvalue,'p':p}

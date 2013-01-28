@@ -937,19 +937,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     diagram_wavefunctions[old_wf_index] = new_wf
                 except ValueError:
                     diagram_wavefunctions.append(new_wf)
-                    # Make sure that new_wf comes before any wavefunction
-                    # which has it as mother
-                    for i, wf in enumerate(diagram_wavefunctions):
-                        if self in wf.get('mothers'):
-                            # Remove new_wf, in order to insert it below
-                            diagram_wavefunctions.pop()
-                            # Update wf numbers
-                            new_wf.set('number', wf.get('number'))
-                            for w in diagram_wavefunctions[i:]:
-                                w.set('number', w.get('number') + 1)
-                            # Insert wavefunction
-                            diagram_wavefunctions.insert(i, new_wf)
-                            break
 
             # Set new mothers
             new_wf.set('mothers', mothers)
@@ -3105,13 +3092,29 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     helas_diagram.get('amplitudes').append(amp)
 
             # After generation of all wavefunctions and amplitudes,
-            # add wavefunctions to diagram
+            # first sort the wavefunctions according to number
+            diagram_wavefunctions.sort(lambda wf1, wf2: \
+                                       wf1.get('number') - wf2.get('number'))
+            
+            # Then make sure that all mothers come before daughters
+            iwf = len(diagram_wavefunctions) - 1
+            while iwf > 0:
+                this_wf = diagram_wavefunctions[iwf]
+                moved = False
+                for i,wf in enumerate(diagram_wavefunctions[:iwf]):
+                    if this_wf in wf.get('mothers'):
+                        diagram_wavefunctions.pop(iwf)
+                        diagram_wavefunctions.insert(i, this_wf)
+                        this_wf.set('number', wf.get('number'))
+                        for w in diagram_wavefunctions[i+1:]:
+                            w.set('number',w.get('number')+1)
+                        moved = True
+                        break
+                if not moved: iwf -= 1
+
+            # Finally, add wavefunctions to diagram
             helas_diagram.set('wavefunctions', diagram_wavefunctions)
 
-            # Sort the wavefunctions according to number
-            diagram_wavefunctions.sort(lambda wf1, wf2: \
-                          wf1.get('number') - wf2.get('number'))
-            
             if optimization:
                 wavefunctions.extend(diagram_wavefunctions)
                 wf_mother_arrays.extend([wf.to_array() for wf \

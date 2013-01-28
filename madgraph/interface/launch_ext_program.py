@@ -191,9 +191,11 @@ class MadLoopLauncher(ExtLauncher):
                 self.treat_input_file('PS.input', default='n', 
                   msg='Phase-space point for process %s.'%shell_name,\
                                                              dir_path=curr_path)
+                # We use mu_r=1.0 to use the one defined by the user in the
+                # param_car.dat
                 evaluator.fix_PSPoint_in_check(sub_path, 
                   read_ps = os.path.isfile(os.path.join(curr_path, 'PS.input')),
-                  npoints = 1)
+                  npoints = 1, mu_r=-1.0)
                 # check
                 t1, t2, ram_usage = evaluator.make_and_run(curr_path)
                 if t1==None or t2==None:

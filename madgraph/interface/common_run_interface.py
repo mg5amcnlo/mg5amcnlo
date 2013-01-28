@@ -1323,12 +1323,18 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     """A class for asking a question where in addition you can have the 
     set command define and modifying the param_card/run_card correctly"""
     
-    def __init__(self, cards=[], mode='auto', *args, **opt):
+    def __init__(self, question, cards=[], mode='auto', *args, **opt):
         
-        cmd.OneLinePathCompletion.__init__(self, *args, **opt)
+        cmd.OneLinePathCompletion.__init__(self, question, *args, **opt)
         self.me_dir = self.mother_interface.me_dir
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
-        self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
+        try:
+            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
+        except check_param_card.InvalidParamCard:
+            logger.error('Current param_card is not valid. We are going to use the default one.')
+            files.cp(pjoin(self.me_dir,'Cards','param_card_default.dat'), 
+                     pjoin(self.me_dir,'Cards','param_card.dat'))
+            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
         default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
     
         self.pname2block = {}
@@ -1660,13 +1666,17 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         elif os.path.exists(line):
             self.copy_file(line)
             self.value = 'repeat'
-        elif line.strip() != '0' and line.strip() != 'done' and str(line) != 'EOF':
+        elif line.strip() != '0' and line.strip() != 'done' and \
+            str(line) != 'EOF' and line.strip() in self.allow_arg:
             self.open_file(line)
             self.value = 'repeat'
         else:
             self.value = line
         
+        return line
+    
 
+        
     def copy_file(self, path):
         """detect the type of the file and overwritte the current file"""
         

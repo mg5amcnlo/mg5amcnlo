@@ -62,6 +62,76 @@ GC_4GR2_11Struct = Coupling(name = 'GC_4GR2_11Struct',
                  value = '-11.0*complex(0,1)*RGR2',
                  order = {'QCD':4})
 
+# From the auto UFO from FR
+
+R2GC_137_43 = Coupling(name = 'R2GC_137_43',
+                       value = '(complex(0,1)*G**4)/(192.*cmath.pi**2)',
+                       order = {'QCD':4})
+
+R2GC_137_44 = Coupling(name = 'R2GC_137_44',
+                       value = '-(complex(0,1)*G**4)/(64.*cmath.pi**2)',
+                       order = {'QCD':4})
+
+R2GC_138_45 = Coupling(name = 'R2GC_138_45',
+                       value = '-(complex(0,1)*G**4)/(192.*cmath.pi**2)',
+                       order = {'QCD':4})
+
+R2GC_138_46 = Coupling(name = 'R2GC_138_46',
+                       value = '(complex(0,1)*G**4)/(64.*cmath.pi**2)',
+                       order = {'QCD':4})
+
+R2GC_139_47 = Coupling(name = 'R2GC_139_47',
+                       value = '-(complex(0,1)*G**4)/(48.*cmath.pi**2)',
+                       order = {'QCD':4})
+
+R2GC_140_48 = Coupling(name = 'R2GC_140_48',
+                       value = '(complex(0,1)*G**4)/(288.*cmath.pi**2)',
+                       order = {'QCD':4})
+
+R2GC_140_49 = Coupling(name = 'R2GC_140_49',
+                       value = '-(complex(0,1)*G**4)/(32.*cmath.pi**2)',
+                       order = {'QCD':4})
+
+R2GC_141_50 = Coupling(name = 'R2GC_141_50',
+                       value = '-(complex(0,1)*G**4)/(16.*cmath.pi**2)',
+                       order = {'QCD':4})
+
+R2GC_141_51 = Coupling(name = 'R2GC_141_51',
+                       value = '(-7*complex(0,1)*G**4)/(32.*cmath.pi**2)',
+                       order = {'QCD':4})
+
+R2GC_142_52 = Coupling(name = 'R2GC_142_52',
+                       value = '(complex(0,1)*G**4)/(16.*cmath.pi**2)',
+                       order = {'QCD':4})
+
+R2GC_142_53 = Coupling(name = 'R2GC_142_53',
+                       value = '(7*complex(0,1)*G**4)/(32.*cmath.pi**2)',
+                       order = {'QCD':4})
+
+R2GC_143_54 = Coupling(name = 'R2GC_143_54',
+                       value = '(11*complex(0,1)*G**4)/(192.*cmath.pi**2)',
+                       order = {'QCD':4})
+
+R2GC_143_55 = Coupling(name = 'R2GC_143_55',
+                       value = '(15*complex(0,1)*G**4)/(64.*cmath.pi**2)',
+                       order = {'QCD':4})
+
+R2GC_144_56 = Coupling(name = 'R2GC_144_56',
+                       value = '(-3*complex(0,1)*G**4)/(64.*cmath.pi**2)',
+                       order = {'QCD':4})
+
+R2GC_144_57 = Coupling(name = 'R2GC_144_57',
+                       value = '(-17*complex(0,1)*G**4)/(64.*cmath.pi**2)',
+                       order = {'QCD':4})
+
+R2GC_145_58 = Coupling(name = 'R2GC_145_58',
+                       value = '-G**4/(192.*cmath.pi**2)',
+                       order = {'QCD':4})
+
+R2GC_145_59 = Coupling(name = 'R2GC_145_59',
+                       value = 'G**4/(64.*cmath.pi**2)',
+                       order = {'QCD':4})
+
 #=============================================================================================
 
 R2_GQQ = Coupling(name = 'R2_GQQ',

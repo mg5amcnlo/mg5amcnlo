@@ -290,10 +290,12 @@ class BasicCmd(cmd.Cmd):
 
         if base_dir is None:
             base_dir = os.getcwd()
-
         base_dir = os.path.expanduser(os.path.expandvars(base_dir))
         
+        if text == '~':
+            text = '~/'
         prefix, text = os.path.split(text)
+        prefix = os.path.expanduser(os.path.expandvars(prefix))
         base_dir = os.path.join(base_dir, prefix)
         if prefix:
             prefix += os.path.sep
@@ -599,19 +601,21 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         else:
             obj = SmartQuestion
 
-        question_instance = obj(allow_arg=choices, default=default, 
+        question_instance = obj(question, allow_arg=choices, default=default, 
                                                    mother_interface=self, **opt)
-        question_instance.question = question
 
         answer = self.check_answer_in_input_file(question_instance, default, path_msg)
         if answer is not None:
             if ask_class:
-                question_instance.default(answer)
+                answer = question_instance.default(answer)
             return answer
         
+        question = question_instance.question
         value =   Cmd.timed_input(question, default, timeout=timeout,
                                  fct=question_instance, fct_timeout=fct_timeout)
 
+        if value == default and ask_class:
+            value = question_instance.default(default)
         return value
  
     
@@ -631,7 +635,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     logger.debug('piping')
                     self.store_line(line)
                     return None # print the question and use the pipe
-                logger.debug(question_instance.question)
+                logger.info(question_instance.question)
                 logger.warning('The answer to the previous question is not set in your input file')
                 logger.warning('Use %s value' % default)
                 return str(default)
@@ -645,21 +649,21 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         options = question_instance.allow_arg
         if line in options:
             return line
-        elif path and os.path.exists(line):
-            return line
         elif hasattr(question_instance, 'do_%s' % line.split()[0]):
             #This is a command line, exec it and check next line
-            
             logger.info(line)
             fct = getattr(question_instance, 'do_%s' % line.split()[0])
             fct(' '.join(line.split()[1:]))
             return self.check_answer_in_input_file(question_instance, default, path)
+        elif path:
+            line = os.path.expanduser(os.path.expandvars(line))
+            if os.path.exists(line):
+                return line
         # No valid answer provides
-        elif self.haspiping:
+        if self.haspiping:
             self.store_line(line)
             return None # print the question and use the pipe
         else:
-            print 'invalid value for the questions -> put as not answered', line
             logger.info(question_instance.question)
             logger.warning('The answer to the previous question is not set in your input file')
             logger.warning('Use %s value' % default)
@@ -795,7 +799,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
         This allow to pass extra argument for internal call.
         """
-        
+        if '~/' in line and os.environ.has_key('HOME'):
+            line = line.replace('~/', '%s/' % os.environ['HOME'])
+        line = os.path.expandvars(line)
         cmd, arg, line = self.parseline(line)
         if not line:
             return self.emptyline()
@@ -967,9 +973,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             # execute the line
             if line:
                 self.exec_cmd(line, precmd=True)
-            if self.stored_line: # created by intermediate question
-                line, self.stored_line  = self.stored_line, None
+            stored = self.get_stored_line()
+            while stored:
+                line = stored
                 self.exec_cmd(line, precmd=True)
+                stored = self.get_stored_line()
 
         # If a child was open close it
         if self.child:
@@ -1318,8 +1326,9 @@ class SmartQuestion(BasicCmd):
         BasicCmd.preloop(self)
         
 
-    def __init__(self,  allow_arg=[], default=None, mother_interface=None, 
-                                                                   *arg, **opt):
+    def __init__(self, question, allow_arg=[], default=None, 
+                                            mother_interface=None, *arg, **opt):
+        self.question = question
         self.wrong_answer = 0 # forbids infinite loop
         self.allow_arg = [str(a) for a in allow_arg]
         self.history_header = ''
@@ -1345,9 +1354,14 @@ class SmartQuestion(BasicCmd):
             self.stdout.write(line)
             self.stdout.flush()
         try:
-            return Cmd.list_completion(text, self.allow_arg)
+            out = {}
+            out[' Options'] = Cmd.list_completion(text, self.allow_arg)
+            out[' Recognized command'] = BasicCmd.completenames(self, text)
+            
+            return self.deal_multiple_categories(out)
         except Exception, error:
             print error
+            
             
     def reask(self, reprint_opt=True):
         pat = re.compile('\[(\d*)s to answer\]')
@@ -1434,7 +1448,7 @@ class OneLinePathCompletion(SmartQuestion):
             self.stdout.flush()
         try:
             out = {}
-            out[' Options'] = SmartQuestion.completenames(self, text, line)
+            out[' Options'] = Cmd.list_completion(text, self.allow_arg)
             out[' Path from ./'] = Cmd.path_completion(text, only_dirs = False)
             out[' Recognized command'] = BasicCmd.completenames(self, text)
             
