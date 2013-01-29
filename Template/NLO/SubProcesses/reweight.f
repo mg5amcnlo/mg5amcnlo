@@ -127,6 +127,69 @@ c**************************************************
       return
       end
 
+      
+      double precision function sud_exp(q0,Q11,ipdg,imode)
+      implicit none
+      include 'coupl.inc'
+      integer ipdg,imode
+      double precision lq,q0,Q11
+      double precision ZERO,PI,CA,CF,kappa,beta0,a1qq,a2qq,b1qq,b2qq
+     $     ,a1gg,a2gg,b1gg,b2gg
+      parameter (ZERO=0d0)
+      parameter (PI = 3.14159265358979323846d0)
+      parameter (CA = 3d0)
+      parameter (CF = 4d0/3d0)
+c      parameter (NF = 5d0)      ! NF is determined in coupl.inc
+      parameter (beta0 = (11d0*CA - 2d0*NF)/(12d0*pi))
+      parameter (a1gg=CA/(2d0*Pi))
+      parameter (b1gg=-beta0)
+      parameter (a1qq=CF/(2d0*Pi))
+      parameter (b1qq=CF*(-3d0/(4d0*pi)))
+      sud_exp=0d0
+      if (Q11.gt.q0) then
+         lq=2d0*log(Q11/q0)
+         if (ipdg.eq.21) then
+            sud_exp=-0.5d0*a1gg*lq**2+b1gg*lq
+         elseif (abs(ipdg).le.NF) then
+            sud_exp=-0.5d0*a1qq*lq**2+b1qq*lq
+         else
+            write (*,*) 'error in sud_exp',ipdg
+         endif
+      endif
+      return
+      end
+
+
+      double precision function sudwgt_exp(q0,q1,q2,ipdg,imode)
+c**************************************************
+c   calculates is sudakov weight expanded up to order alpha_s
+c   (not including the alpha_s factor itself).
+c**************************************************
+      implicit none
+      include 'message.inc'
+      integer ipdg,imode
+      double precision q0, q1, q2
+      double precision sud_exp
+      external sud_exp
+      
+      sudwgt_exp=0d0
+
+      if(q2.le.q1)then
+         if(q2.lt.q1.and.btest(mlevel,4))
+     $        write(*,*)'Warning! q2 < q1 in sudwgt. Return 0.'
+         return
+      endif
+
+      sudwgt_exp=sud_exp(q0,q2,ipdg,imode) - sud_exp(q0,q1,ipdg,imode)
+
+      if (btest(mlevel,5)) then
+        write(*,*)'       \\Delta^',imode,'_{',ipdg,'}(',
+     &     q0,',',q1,',',q2,')|alphs_s -> ',sudwgt_exp
+      endif
+
+      return
+      end
+
       logical function isqcd(ipdg)
 c**************************************************
 c   determines whether particle is qcd particle
@@ -399,6 +462,11 @@ c External
       logical cluster,isqcd,isparton,isjetvx,isjet,ispartonvx
       double precision alphas
       external cluster,isqcd,isparton,isjetvx,isjet,alphas,ispartonvx
+c FxFx
+      integer nFxFx_ren_scales
+      double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
+      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
+     $     ,FxFx_fac_scale
 c
       setclscales=.true.
 c   
@@ -566,9 +634,8 @@ c     if both beams are qcd
       else
          scale=sqrt(pt2ijcl(nexternal-2))
       endif
+      FxFx_ren_scales(0)=scale   ! do not include scalefact here
       scale = scalefact*scale
-      if(scale.gt.0)
-     $     G = SQRT(4d0*PI*ALPHAS(scale))
       if (btest(mlevel,3))
      $     write(*,*) 'Set ren scale to ',scale
 
@@ -616,23 +683,26 @@ c     Use the minimum scale found for fact scale in ME
          if(jlast(2).gt.0.and.jfirst(2).lt.jlast(2))
      $        q2fact(2)=min(pt2ijcl(jfirst(2)),q2fact(2))
       endif
-c     Check that factorization scale is >= 2 GeV
-      if(lpp(1).ne.0.and.q2fact(1).lt.4d0.or.
-     $   lpp(2).ne.0.and.q2fact(2).lt.4d0)then
-         if(nwarning.le.10) then
-             nwarning=nwarning+1
-             write(*,*) 'Warning: Too low fact scales: ',
-     $            sqrt(q2fact(1)), sqrt(q2fact(2))
-             write (*,*) pt2ijcl,ifxfx
-          endif
-         if(nwarning.eq.11) then
-             nwarning=nwarning+1
-             write(*,*) 'No more warnings written out this run.'
-          endif
-         setclscales=.false.
-         clustered = .false.
-         return
-      endif
+      FxFx_fac_scale(1)=sqrt(q2fact(1))
+      FxFx_fac_scale(2)=sqrt(q2fact(2))
+      
+c$$$c     Check that factorization scale is >= 2 GeV
+c$$$      if(lpp(1).ne.0.and.q2fact(1).lt.4d0.or.
+c$$$     $   lpp(2).ne.0.and.q2fact(2).lt.4d0)then
+c$$$         if(nwarning.le.10) then
+c$$$             nwarning=nwarning+1
+c$$$             write(*,*) 'Warning: Too low fact scales: ',
+c$$$     $            sqrt(q2fact(1)), sqrt(q2fact(2))
+c$$$             write (*,*) pt2ijcl,ifxfx
+c$$$          endif
+c$$$         if(nwarning.eq.11) then
+c$$$             nwarning=nwarning+1
+c$$$             write(*,*) 'No more warnings written out this run.'
+c$$$          endif
+c$$$         setclscales=.false.
+c$$$         clustered = .false.
+c$$$         return
+c$$$      endif
 
       if (btest(mlevel,3))
      $     write(*,*) 'Set fact scales to ',sqrt(q2fact(1)),sqrt(q2fact(2))
@@ -640,7 +710,7 @@ c     Check that factorization scale is >= 2 GeV
       end
       
 
-      double precision function rewgt(p)
+      double precision function rewgt(p,rewgt_exp)
 c**************************************************
 c   reweight the hard me according to ckkw
 c   employing the information in common/cl_val/
@@ -658,12 +728,12 @@ c Include
       parameter (ZERO=0d0)
       parameter( PI = 3.14159265358979323846d0 )
 c Argument
-      double precision p(0:3,nexternal)
+      double precision p(0:3,nexternal),rewgt_exp
 c Local
       logical isvx
       integer i,j,n,ipart(2,n_max_cl),ibeam(2)
       double precision pt2min,etot,pt2prev(n_max_cl),pt2pdf(n_max_cl)
-     $     ,xnow(2),asref,q2now,tmp,pdfj1,pdfj2
+     $     ,xnow(2),asref,q2now,tmp,tmp2,pdfj1,pdfj2
       integer ib(2)
       data ib /1,2/
 c Common
@@ -673,12 +743,12 @@ c Common
       common /to_q2bck/q2bck
 c External
       logical ispartonvx,isqcd,isparton,isjetvx,isjet
-      double precision alphas,getissud,pdg2pdf,sudwgt
+      double precision alphas,getissud,pdg2pdf,sudwgt,sudwgt_exp
       external ispartonvx,alphas,isqcd,isparton,isjetvx,getissud,pdg2pdf
-     $     ,isjet,sudwgt
+     $     ,isjet,sudwgt,sudwgt_exp
 c FxFx
       integer nFxFx_ren_scales
-      double precision FxFx_ren_scales(nexternal)
+      double precision FxFx_ren_scales(0:nexternal)
       common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
 
 c$$$c SET THE DEFAULT KTSCHEME
@@ -693,6 +763,7 @@ c$$$      ickkw=1
       
 
       rewgt=1.0d0
+      rewgt_exp=0.0d0
       clustered=.false.
 
       if(ickkw.le.0) return
@@ -771,7 +842,6 @@ c     Prepare for resetting q2fact based on PDF reweighting
 c   
 c     Set strong coupling used
 c   
-      asref=G**2/(4d0*PI)
       nFxFx_ren_scales=0
 
 c     Perform alpha_s reweighting based on type of vertex
@@ -794,22 +864,13 @@ c     and not for the last clustering (use non-fixed ren. scale for these)
             if(ispartonvx(imocl(n),idacl(n,1),idacl(n,2),
      $           ipdgcl(1,igraphs(1),nFKSprocess),ipart,.false.)) then
 c       alpha_s weight
-c$$$c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
-c$$$c  the renormalization scale should be set as the geometric mean of all
-c$$$c  scales involved: we cannot simply reweight the alpha_s's here.
-c$$$c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
                nFxFx_ren_scales=nFxFx_ren_scales+1
                FxFx_ren_scales(nFxFx_ren_scales)=sqrt(q2now)
-c$$$               rewgt=rewgt*alphas(sqrt(q2now))/asref
                if (btest(mlevel,3)) then
                   write(*,*)' reweight vertex: ',ipdgcl(imocl(n)
      $                 ,igraphs(1),nFKSprocess),ipdgcl(idacl(n,1)
      $                 ,igraphs(1) ,nFKSprocess),ipdgcl(idacl(n,2)
      $                 ,igraphs(1),nFKSprocess),sqrt(q2now)
-c$$$                  write(*,*)'       as: ',alphas(dsqrt(q2now)),
-c$$$     $                 '/',asref,' -> ',alphas(dsqrt(q2now))
-c$$$     $                 /asref
-c$$$                  write(*,*)' and G=',SQRT(4d0*PI*ALPHAS(scale))
                endif
             endif
          endif
@@ -907,9 +968,11 @@ c Sudakov excluding PDFs:
                      tmp=sudwgt(sqrt(pt2min),sqrt(pt2prev(idacl(n,i))),
      $                    dsqrt(pt2ijcl(n)),ipdgcl(idacl(n,i),igraphs(1)
      $                    ,nFKSprocess),1)
-
-
+                     tmp2=sudwgt_exp(sqrt(pt2min)
+     $                    ,sqrt(pt2prev(idacl(n,i))),dsqrt(pt2ijcl(n))
+     $                    ,ipdgcl(idacl(n,i),igraphs(1),nFKSprocess),1)
                      rewgt=rewgt*tmp
+                     rewgt_exp=rewgt_exp+tmp2
                      pt2prev(imocl(n))=pt2ijcl(n)
                      if (btest(mlevel,3)) then
                         write(*,*)' reweight line: ',ipdgcl(idacl(n ,i)
@@ -918,7 +981,9 @@ c Sudakov excluding PDFs:
      $                       ,pt2prev(idacl(n,i)),pt2ijcl(n),xnow(j)
      $                       ,xnow(3-j)
                         write(*,*)'           Sud: ',tmp
+                        write(*,*)'           Sud_exp: ',tmp2
                         write(*,*)'        -> rewgt: ',rewgt
+                        write(*,*)'        -> rewgt_exp: ',rewgt_exp
                      endif
                   elseif(ickkw.eq.2) then
                      pt2prev(imocl(n))=pt2prev(idacl(n,i))
@@ -1018,14 +1083,20 @@ c     Final State sudakov weight
                tmp=sudwgt(sqrt(pt2min),sqrt(pt2prev(idacl(n,i))),
      $              dsqrt(pt2ijcl(n)),ipdgcl(idacl(n,i),igraphs(1)
      $              ,nFKSprocess),1)
+               tmp2=sudwgt_exp(sqrt(pt2min),sqrt(pt2prev(idacl(n,i))),
+     $              dsqrt(pt2ijcl(n)),ipdgcl(idacl(n,i),igraphs(1)
+     $              ,nFKSprocess),1)
                rewgt=rewgt*tmp
+               rewgt_exp=rewgt_exp+tmp2
                if (btest(mlevel,3)) then
                   write(*,*)' reweight fs line: ',ipdgcl(idacl(n,i)
      $                 ,igraphs(1),nFKSprocess), idacl(n,i)
                   write(*,*)'     pt2prev, pt2new: ',pt2prev(idacl(n
      $                 ,i)),pt2ijcl(n)
                   write(*,*)'           Sud: ',tmp
+                  write(*,*)'           Sud_exp: ',tmp2
                   write(*,*)'        -> rewgt: ',rewgt
+                  write(*,*)'        -> rewgt_exp: ',rewgt_exp
                endif
                pt2prev(imocl(n))=pt2ijcl(n)
             else
@@ -1039,14 +1110,20 @@ c     Final State sudakov weight
             tmp=sudwgt(sqrt(pt2min),sqrt(pt2prev(imocl(n))),
      $           dsqrt(pt2ijcl(n)),ipdgcl(imocl(n),igraphs(1)
      $           ,nFKSprocess),1)
+            tmp2=sudwgt_exp(sqrt(pt2min),sqrt(pt2prev(imocl(n))),
+     $           dsqrt(pt2ijcl(n)),ipdgcl(imocl(n),igraphs(1)
+     $           ,nFKSprocess),1)
             rewgt=rewgt*tmp
+            rewgt_exp=rewgt_exp+tmp2
             if (btest(mlevel,3)) then
                write(*,*)' reweight last fs line: ',ipdgcl(imocl(n)
      $              ,igraphs(1),nFKSprocess), imocl(n)
                write(*,*)'     pt2prev, pt2new: ',pt2prev(imocl(n))
      $              ,pt2ijcl(n)
                write(*,*)'           Sud: ',tmp
+               write(*,*)'           Sud_exp: ',tmp2
                write(*,*)'        -> rewgt: ',rewgt
+               write(*,*)'        -> rewgt_exp: ',rewgt_exp
             endif
          endif
       enddo
@@ -1063,7 +1140,7 @@ c     Final State sudakov weight
       endif
 
       if (btest(mlevel,3)) then
-        write(*,*)'} ->  w = ',rewgt
+        write(*,*)'} ->  w = ',rewgt,' w_exp=',rewgt_exp
       endif
       return
       end

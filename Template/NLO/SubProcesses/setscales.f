@@ -218,7 +218,7 @@ c a scale to be used as a reference for renormalization scale
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
       integer i,imurtype
-      parameter (imurtype=1)
+      parameter (imurtype=-1)
 c for 'geometric mean'
       integer j
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
@@ -227,6 +227,11 @@ c for 'geometric mean'
       double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
       double precision rfj,sycut,palg,fastjetdmergemax
      &     ,tmp1,tmp2,xm2
+c FxFx
+      integer nFxFx_ren_scales
+      double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
+      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
+     $     ,FxFx_fac_scale
 c
       tmp=0
       if(imurtype.eq.1)then
@@ -295,6 +300,22 @@ c  particles (e.g. top quarks or Higgs) into account.
             endif
          endif
          temp_scale_id='geometric mean #3'
+      elseif(imurtype.eq.-1)then
+c FxFx merging scale:
+c     Note that nFxFx_ren_scales includes the one scale that corresponds
+c     to the real-emission one (and is zero for the n-body conf.). Skip
+c     that scale here.
+         if (nint(wgtbpower).gt.nFxFx_ren_scales-1) then
+            tmp=FxFx_ren_scales(0)**
+     &           (nint(wgtbpower)-(nFxFx_ren_scales-1))
+         else
+            tmp=1d0
+         endif
+         do i=2,nFxFx_ren_scales
+            tmp=tmp*FxFx_ren_scales(i)
+         enddo
+         tmp=tmp**(1d0/wgtbpower)
+         temp_scale_id='FxFx merging scale'
       else
         write(*,*)'Unknown option in muR_ref_dynamic',imurtype
         stop
@@ -368,7 +389,12 @@ c a scale to be used as a reference for factorizations scales
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
       integer i,imuftype
-      parameter (imuftype=1)
+      parameter (imuftype=-1)
+c FxFx
+      integer nFxFx_ren_scales
+      double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
+      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
+     $     ,FxFx_fac_scale
 c
       tmp=0
       if(imuftype.eq.1)then
@@ -379,6 +405,9 @@ c
         enddo
         tmp=sqrt(tmp)
         temp_scale_id='Sqrt[sum_i pT(i)**2], i=final state'
+      elseif(imuftype.eq.-1)then
+        tmp=sqrt(FxFx_fac_scale(1)*FxFx_fac_scale(2))
+        temp_scale_id='FxFx merging scale'
       else
         write(*,*)'Unknown option in muF_ref_dynamic',imuftype
         stop
