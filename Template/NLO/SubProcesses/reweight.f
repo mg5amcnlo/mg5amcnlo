@@ -61,8 +61,6 @@ c factor 2 because we are integrating over q, not q^2
      &              (b1qq*alphasq0 + b2qq*alphasq0**2) ) /q0
       endif
 
-c$$$      gamma = max(0d0,gamma)
-
       return
       end
 
@@ -776,7 +774,11 @@ c   Set mimimum kt scale, depending on highest mult or not
       endif
 c For FxFx merging, pt2min should be set equal to the 2nd smallest (QCD)
 c clustering scale
-      pt2min=pt2ijcl(ifxfx(2))
+      if (pt2ijcl(ifxfx(2)).gt.0d0) then
+         pt2min=pt2ijcl(ifxfx(2))
+      else
+         pt2min=1.0d37
+      endif
 
       if (btest(mlevel,3))
      $     write(*,*) 'pt2min set to ',pt2min
