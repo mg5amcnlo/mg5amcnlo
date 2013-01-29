@@ -1400,8 +1400,25 @@ class Model(PhysicsObject):
             if not isinstance(width, ParamCardVariable):
                 width.expr = 're(%s)' % width.expr
             if particle.get('mass') != 'ZERO':
+                    
                 mass = self.get_parameter(particle.get('mass'))
-                
+                # special SM treatment to change the gauge scheme automatically.
+                if particle.get('pdg_code') == 24:
+                    if hasattr(mass, 'expr') and mass.expr == 'cmath.sqrt(MZ__exp__2/2. + cmath.sqrt(MZ__exp__4/4. - (aEW*cmath.pi*MZ__exp__2)/(Gf*sqrt__2)))':
+                        # Make MW an external parameter
+                        MW = ParamCardVariable(mass.name, mass.value, 'mass', (24,))
+                        self.get('parameters')[('external',)].append(MW)
+                        self.get('parameters')[mass.depend].remove(mass)
+                        # Make Gf an internal parameter
+                        new_param = ModelVariable('Gf',
+                        '-aEW*MZ**2*cmath.pi/(cmath.sqrt(2)*%(MW)s**2*(%(MW)s**2 - MZ**2))' %\
+                        {'MW': mass.name}, 'complex', mass.depend)
+                        Gf = self.get_parameter('Gf')
+                        self.get('parameters')[('external',)].remove(Gf)
+                        self.add_param(new_param, ['aEW'])
+                        # Use the new mass for the future modification
+                        mass = MW
+                        
                 # Add A new parameter CMASS
                 #first compute the dependencies (as,...)
                 depend = list(set(mass.depend + width.depend))

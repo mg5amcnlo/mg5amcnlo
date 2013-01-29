@@ -802,31 +802,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         'shower' : ['generate_events [OPTIONS]']
     }
     
-    # The three options categories are treated on a different footage when a 
-    # set/save configuration occur. current value are kept in self.options
-    options_configuration = {'pythia8_path': './pythia8',
-                       'madanalysis_path': './MadAnalysis',
-                       'pythia-pgs_path':'./pythia-pgs',
-                       'td_path':'./td',
-                       'delphes_path':'./Delphes',
-                       'exrootanalysis_path':'./ExRootAnalysis',
-                       'MCatNLO-utilities_path':'./MCatNLO-utilities',
-                       'timeout': 60,
-                       'web_browser':None,
-                       'eps_viewer':None,
-                       'text_editor':None,
-                       'fortran_compiler':None,
-                       'auto_update':7,
-                       'cluster_type': 'condor'}
-    
-    options_madgraph= {'stdout_level':None}
-    
-    options_madevent = {'automatic_html_opening':True,
-                         'run_mode':2,
-                         'cluster_queue':'madgraph',
-                         'nb_core': None,
-                         'cluster_temp_path':None}
-    
     
     ############################################################################
     def __init__(self, me_dir = None, options = {}, *completekey, **stdin):
@@ -1201,7 +1176,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                                  os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
                                  if file.startswith(obj[:-1]) and \
                                 (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
-                                 os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
+                                 os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
                     files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_rm])
 
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
@@ -1225,7 +1200,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                                    cwd=pjoin(self.me_dir, 'SubProcesses'))
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(0, mode)
+                self.print_summary(options, 0, mode)
 
                 npoints = self.run_card['npoints_FO']
                 niters = self.run_card['niters_FO']
@@ -1243,7 +1218,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                                     cwd=pjoin(self.me_dir, 'SubProcesses'))
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(0, mode)
+                self.print_summary(options, 0, mode)
 
                 npoints = self.run_card['npoints_FO_grid']
                 niters = self.run_card['niters_FO_grid']
@@ -1255,7 +1230,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                                    stdout=subprocess.PIPE, cwd=pjoin(self.me_dir, 'SubProcesses'))
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(0, mode)
+                self.print_summary(options, 0, mode)
 
                 npoints = self.run_card['npoints_FO']
                 niters = self.run_card['niters_FO']
@@ -1272,7 +1247,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                                 cwd=pjoin(self.me_dir, 'SubProcesses'))
             output = p.communicate()
             self.cross_sect_dict = self.read_results(output, mode)
-            self.print_summary(1, mode)
+            self.print_summary(options, 1, mode)
             misc.call(['./combine_plots_FO.sh'] + folder_names[mode], \
                                 stdout=devnull, 
                                 cwd=pjoin(self.me_dir, 'SubProcesses'))
@@ -1308,7 +1283,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     # if the number of events requested is zero,
                     # skip mint step 2
                     if i==2 and nevents==0:
-                        self.print_summary(2,mode)
+                        self.print_summary(options, 2,mode)
                         return
 
                     self.update_status(status, level='parton')
@@ -1332,7 +1307,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                              pjoin(self.me_dir, 'Events', self.run_name))
 
                     self.cross_sect_dict = self.read_results(output, mode)
-                    self.print_summary(i, mode)
+                    self.print_summary(options, i, mode)
 
         if self.cluster_mode == 1:
             #if cluster run, wait 15 sec so that event files are transferred back
@@ -1390,7 +1365,7 @@ Integrated cross-section
             return {'xsect' : float(match.groups()[1]),
                     'errt' : float(match.groups()[2])}
 
-    def print_summary(self, step, mode, scale_pdf_info={}):
+    def print_summary(self, options, step, mode, scale_pdf_info={}):
         """print a summary of the results contained in self.cross_sect_dict.
         step corresponds to the mintMC step, if =2 (i.e. after event generation)
         some additional infos are printed"""
@@ -1470,7 +1445,8 @@ Integrated cross-section
                           '\n      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb' % \
                         self.cross_sect_dict
 
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.':
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.' \
+                        and not options['noreweight']:
                    message = message + \
                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
@@ -1578,7 +1554,7 @@ Integrated cross-section
         files.mv(pjoin(self.me_dir, 'SubProcesses', filename), evt_file)
         misc.call(['gzip %s' % evt_file], shell=True)
         if not options['reweightonly']:
-            self.print_summary(2, mode, scale_pdf_info)
+            self.print_summary(options, 2, mode, scale_pdf_info)
         logger.info('The %s.gz file has been generated.\n' \
                 % (evt_file))
         return evt_file
@@ -1851,8 +1827,12 @@ Integrated cross-section
         content += 'ZWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 23).value
         content += 'WMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 24).value
         content += 'WWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 24).value
-        content += 'HGGMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 25).value
-        content += 'HGGWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 25).value
+        try:
+            content += 'HGGMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 25).value
+            content += 'HGGWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 25).value
+        except KeyError:
+            content += 'HGGMASS=120.\n'
+            content += 'HGGWIDTH=0.00575308848\n'
         content += 'beammom1=%s\n' % self.banner.get_detail('run_card', 'ebeam1')
         content += 'beammom2=%s\n' % self.banner.get_detail('run_card', 'ebeam2')
         content += 'BEAM1=%s\n' % self.banner.get_detail('run_card', 'lpp1')

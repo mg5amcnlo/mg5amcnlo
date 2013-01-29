@@ -62,7 +62,7 @@ c = Particle(pdg_code = 4,
              antiname = 'c~',
              spin = 2,
              color = 3,
-             mass = Param.ZERO,
+             mass = Param.MC,
              width = Param.ZERO,
              texname = 'c',
              antitexname = 'c',
@@ -325,7 +325,7 @@ t.loop_particles = [[[t,G]]]
 t.counterterm = {(1,0,0):CTParam.tWcft_UV.value}
 
 G.loop_particles = [[[c]],[[b]],[[t]]]
-G.counterterm = {(1,0,1):CTParam.GWcft_UV_c.value,(1,0,1):CTParam.GWcft_UV_b.value,(1,0,2):CTParam.GWcft_UV_t.value}
+G.counterterm = {(1,0,0):CTParam.GWcft_UV_c.value,(1,0,1):CTParam.GWcft_UV_b.value,(1,0,2):CTParam.GWcft_UV_t.value}
 
 # Set counterterms values
 

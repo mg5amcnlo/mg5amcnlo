@@ -87,7 +87,7 @@ class GaugeComparator(unittest.TestCase):
         # Do some cleanup
         my_comp.cleanup()
        
-    def compare_cross_section(self, my_proc_list = [], orders = {}, model = 'sm_mw',
+    def compare_cross_section(self, my_proc_list = [], orders = {}, model = 'sm',
                         filename = "", print_result = False,
                         tolerance = 1e-02):
         """ """
@@ -141,7 +141,7 @@ class GaugeComparator(unittest.TestCase):
         #my_proc_list = ['u u~ > c c~', 'e+ e- > u u~']
         # Store list of non-zero processes and results in file                                                                                                                          
         self.compare_cross_section(my_proc_list,
-                             orders = {'QED':99, 'QCD':99},model = 'sm_mw',
+                             orders = {'QED':99, 'QCD':99},model = 'sm',
                              filename = "short_cs_sm_gauge.log")
 
     @test_aloha.set_global(loop=False, unitary=False, mp=False, cms=False)
@@ -149,12 +149,12 @@ class GaugeComparator(unittest.TestCase):
         """Test a semi-complete list of sm 2->4 processes"""
         # Create a list of processes to check automatically       
         my_proc_list = ['e+ e- > u u~ d d~','u u~ > u u~ d d~', 'c s~ > u u~ c s~',
-             'e+ e- > ta+ ta- vta vta~']
+             'e+ e- > ta+ ta- vta vta~','b b~ > b b~']
 
         # Store list of non-zero processes and results in file
         self.compare_processes(my_proc_list,
                              orders = {'QED':99, 'QCD':99},
-                             model = "sm_mw",
+                             model = "sm",
                              energy = 90,
                              filename = "sm_gauge_4_e90.log",
                              tolerance = 1e-3)
@@ -168,19 +168,19 @@ class GaugeComparator(unittest.TestCase):
         my_proc_list = ['d d~ > u d~ s c~']        
         # Store list of non-zero processes and results in file                                                                                                                          
         self.compare_cross_section(my_proc_list,
-                             orders = {'QED':99, 'QCD':99},model = 'sm_mw',
+                             orders = {'QED':99, 'QCD':99},model = 'sm',
                              filename = "short_cs_sm_gauge_2.log")
         
         my_proc_list = ['p p > b b~ u d~ s c~']
         # Store list of non-zero processes and results in file                                                                                                                          
         self.compare_cross_section(my_proc_list,
-                             orders = {'QED':99, 'QCD':99},model = 'sm_mw',
+                             orders = {'QED':99, 'QCD':99},model = 'sm',
                              filename = "short_cs_sm_gauge_2-2.log")
         
         my_proc_list = [ 'p p > b b~ e+ ve mu- vm~']
         # Store list of non-zero processes and results in file                                                                                                                          
         self.compare_cross_section(my_proc_list,
-                             orders = {'QED':99, 'QCD':99},model = 'sm_mw',
+                             orders = {'QED':99, 'QCD':99},model = 'sm',
                              filename = "short_cs_sm_gauge_2-2.log")
     
     def test_gauge_2(self):
@@ -194,14 +194,14 @@ class GaugeComparator(unittest.TestCase):
         # Store list of non-zero processes and results in file
         self.compare_processes(my_proc_list,
                              orders = {'QED':99, 'QCD':99},
-                             model = "sm_mw",
+                             model = "sm",
                              energy = 90,
                              filename = "sm_gauge_2_e90.log",
                              tolerance = 1e-3)   
         # Do the test for high energy
         self.compare_processes(my_proc_list,
                              orders = {'QED':99, 'QCD':99},
-                             model = "sm_mw",
+                             model = "sm",
                              energy = 500,
                              filename = "sm_gauge_2_e500.log",
                              tolerance = 1e-3)   
@@ -216,7 +216,7 @@ class GaugeComparator(unittest.TestCase):
         # Store list of non-zero processes and results in file 
         self.compare_processes(my_proc_list,
                              orders = {'QED':99, 'QCD':99},
-                             model = "sm_mw",
+                             model = "sm",
                              energy = 90,
                              filename = "sm_gauge_3_e90.log",
                              tolerance = 1e-3)   
@@ -224,7 +224,7 @@ class GaugeComparator(unittest.TestCase):
         # Do the test for high energy 
         self.compare_processes(my_proc_list,
                              orders = {'QED':99, 'QCD':99},
-                             model = "sm_mw",
+                             model = "sm",
                              energy = 500,
                              filename = "sm_gauge_3_e500.log",
                              tolerance = 1e-3)   
@@ -238,7 +238,7 @@ class GaugeComparator(unittest.TestCase):
         # Store list of non-zero processes and results in file
         self.compare_processes(my_proc_list,
                              orders = {'QED':99, 'QCD':99},
-                             model = "sm_mw",
+                             model = "sm",
                              energy = 500,
                              filename = "sm_gauge_4_e500.log",
                              tolerance = 1e-3)
@@ -252,7 +252,7 @@ class GaugeComparator(unittest.TestCase):
         # Store list of non-zero processes and results in file
         self.compare_processes(my_proc_list,
                              orders = {'QED':99, 'QCD':99},
-                             model = "sm_mw",
+                             model = "sm",
                              energy = 90,
                              filename = "sm_gauge_6_e90.log",
                              tolerance = 1e-3)
@@ -266,7 +266,7 @@ class GaugeComparator(unittest.TestCase):
         # Store list of non-zero processes and results in file
         self.compare_processes(my_proc_list,
                              orders = {'QED':99, 'QCD':99},
-                             model = "sm_mw",
+                             model = "sm",
                              energy = 500,
                              filename = "sm_gauge_6_e500.log",
                              tolerance = 1e-3)          
